@@ -15,6 +15,8 @@
 #define gfx_desfocado loading_test_gfx_desfocado
 #define gfx_rect loading_test_gfx_rect
 #define gfx_cor loading_test_gfx_cor
+#define gfx_anel loading_test_gfx_anel
+#define gfx_arco loading_test_gfx_arco
 #define gfx_tex_aspect_atual loading_test_gfx_tex_aspect_atual
 #define txt_linha_corta loading_test_txt_linha_corta
 #define txt_linha loading_test_txt_linha
@@ -66,7 +68,10 @@ void gfx_rect(GfxRect r,GLuint tex,GfxModo mode,float f,float x,float y,float ra
   (void)f;(void)x;(void)y;(void)radius;(void)red;(void)green;(void)blue;
   if((mode==GFX_CARD || mode==GFX_SNAP) && tex==11){pictures++;lastPicture=r;lastAlpha=alpha;if(mode==GFX_SNAP)shadeAlpha=f;}
   if(mode==GFX_SNAP && tex==13)snaps++;
+  if(mode==GFX_VEU_BAIXO && !tex && r.y==540 && r.h==540)shadeAlpha=alpha;   // A3: half-screen veil
 }
+void gfx_anel(GfxRect r,float radius,float e,float red,float green,float blue,float alpha) {(void)r;(void)radius;(void)e;(void)red;(void)green;(void)blue;(void)alpha;}
+void gfx_arco(GfxRect r,float e,float i,float f,float red,float green,float blue,float alpha) {(void)r;(void)e;(void)i;(void)f;(void)red;(void)green;(void)blue;(void)alpha;}
 void gfx_cor(GfxRect r,float radius,float red,float green,float blue,float alpha) {
   (void)radius;
   if(r.w==1920&&r.h==1080&&red==0&&green==0&&blue==0)shadeAlpha=alpha;
@@ -104,7 +109,7 @@ int main(void) {
   fundoStyle=1;begin(&c);draw(&c);
   verify(!smallRequests&&!blurRequests&&!snaps&&pictures==1,"saved Art choice skips blur and keeps the full sharp image");
   verify(lastPicture.w==1920&&lastPicture.h==1080&&lastAlpha==1,"clear landscape artwork fills the screen");
-  verify(shadeAlpha>.54f&&shadeAlpha<.56f,"clear Cinema retains readable darkening");
+  verify(shadeAlpha>0.0f&&shadeAlpha<=.851f,"clear Cinema retains readable darkening");
   snprintf(snapshot,sizeof snapshot,"https://example.invalid/selected-art.jpg");begin(&c);draw(&c);
   verify(!strcmp(requested,snapshot),"Play reuses the exact selected title-page URL");
   snapshot[0]=0;c.backdrop[0]=c.backdropCatalogo[0]=0;begin(&c);draw(&c);

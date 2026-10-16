@@ -204,12 +204,13 @@ int main(void) {
   valor[AJ_ABERTURA_ADDON] = 0; assert(ajustes_abertura_addon()); valor[AJ_ABERTURA_ADDON] = 1;
   // #508: o fundo da tela Cinema da abertura: Arte borrada por padrao (o de
   // sempre), local, com os valores na ordem Desligado/Arte/Arte borrada.
-  assert(valor[AJ_ABERTURA_FUNDO] == 2 && ajustes_abertura_fundo() == 2);
+  assert(valor[AJ_ABERTURA_FUNDO] == 1 && ajustes_abertura_fundo() == 1);   // A3: sharp + veil
   assert(!strcmp(CHAVE[AJ_ABERTURA_FUNDO], "aberturaFundoLocal") && somenteDesteAparelho(AJ_ABERTURA_FUNDO));
   valor[AJ_ABERTURA_FUNDO] = 0; assert(ajustes_abertura_fundo() == 0);
   valor[AJ_ABERTURA_FUNDO] = 1; assert(ajustes_abertura_fundo() == 1);
-  valor[AJ_ABERTURA_FUNDO] = 7; assert(ajustes_abertura_fundo() == 2);   // fora da lista: o padrao
-  valor[AJ_ABERTURA_FUNDO] = 2;
+  valor[AJ_ABERTURA_FUNDO] = 2; assert(ajustes_abertura_fundo() == 2);
+  valor[AJ_ABERTURA_FUNDO] = 7; assert(ajustes_abertura_fundo() == 1);   // fora da lista: o padrao
+  valor[AJ_ABERTURA_FUNDO] = 1;
   assert(OPCOES[AJ_ABERTURA_FUNDO].n == 3 && !strcmp(OPCOES[AJ_ABERTURA_FUNDO].valores[0], "Desligado") &&
          !strcmp(OPCOES[AJ_ABERTURA_FUNDO].valores[1], "Arte") && !strcmp(OPCOES[AJ_ABERTURA_FUNDO].valores[2], "Arte borrada"));
   // #205: o tamanho dos cards de episodio da Moderna — Medio de fabrica, local,

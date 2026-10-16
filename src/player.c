@@ -5383,18 +5383,24 @@ static GLuint foscoSobreVideo(const CatItem *c) {
   return alvo.tex;
 }
 
+// A3: o logo e o Play do detalhe no ultimo quadro dele (player_morph_de).
+static GfxRect morphLogo, morphPlay;
+static Uint32 morphEm;
+void player_morph_de(GfxRect logo, GfxRect play) {
+  morphLogo = logo; morphPlay = play; morphEm = SDL_GetTicks();
+}
+
 // A TELA CINEMA DA ABERTURA (#205, abrecine.h). Tudo multiplicado pelo veu,
 // que so cai com o quadro real (o crossfade e o veu saindo por cima dele).
-// CUSTO: no Cinema padrao, a arte desfocada e a copia 96x54 de sempre
-// (gfx_desfocado), uma passada; a nitida so enquanto recua (~1 s). O Cinema
-// sem desfoque usa so a textura do detalhe, sem pedir a copia pequena.
-// O preto so com o furo aberto
-// (sem furo o preto opaco de baixo ja esta la). Logo, trilho e linha sao
+// CUSTO: na Arte (padrao), a textura do detalhe e uma rampa de meia tela, sem
+// copia nem blur. A Arte borrada e a copia 96x54 de sempre (gfx_desfocado),
+// uma passada; a nitida so enquanto recua (~1 s). O preto so com o furo aberto
+// (sem furo o preto opaco de baixo ja esta la). Logo, anel e linha sao
 // retangulos pequenos.
 static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
   float v = cine.veu, f = cine.foco, t = (float)(agora - cine.desde) / 1000.0f;
-  float resp, entra, cy = NV_TELA_H * 0.46f, base;
+  float entra, cx = NV_TELA_W * 0.5f, tm, k, base, y;
   int reduz = ajustes_animacoes_reduzidas();
   // #508: preserve the saved Off / Art / Blurred art choice. Reuse the
   // title page's own artwork without starting a second metadata request.
@@ -5402,14 +5408,27 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   const char *arte = nf ? cinemaArteObter(c) : NULL;
   const char *marca = c ? artehero_logo_sessao(c) : NULL;
   GLuint ts = arte ? tex_obter_hero(arte) : 0, tb = nf == 2 && arte ? tex_obter_larg(arte, 480) : 0, lg;
+  // A3 (dono, 16/10): o logo do detalhe vai ao centro e o Play vira um anel
+  // pequeno EMBAIXO dele, 900 ms em ease-out-expo, sem quique. Parte do quadro
+  // do detalhe so se ele estava na tela quando a abertura comecou.
+  static Uint32 morphDe;
+  static int morph;
+  static GfxRect l0, p0;
+  GfxRect anel = { cx - 28.0f, 756.0f, 56.0f, 56.0f }, ra = anel;
   if (v <= 0.0f) return;
+  if (morphDe != cine.desde) {
+    morphDe = cine.desde; l0 = morphLogo; p0 = morphPlay;
+    morph = !reduz && morphEm && p0.w > 0.0f && (Sint32)(cine.desde - morphEm) < 1000;
+  }
+  tm = !morph || t >= 0.9f ? 1.0f : t > 0.0f ? t / 0.9f : 0.0f;
+  k = tm >= 1.0f ? 1.0f : 1.0f - powf(2.0f, -10.0f * tm);
+  entra = morph || reduz ? 1.0f : (t < 0.4f ? t / 0.4f : 1.0f);
   if (furou || !player_carregando()) gfx_cor(tela, 0.0f, 0, 0, 0, v);
   if (tb) tb = gfx_desfocado(tb, arte);
   gfx_tex_aspect_atual = arte ? tex_aspecto(arte) : 0.0f;
-  // #508 ARTE NITIDA: o mesmo backdrop, sem desfoque nem recuo, com o VEU
-  // ESCURO do GFX_SNAP (o mesmo 0,55 da Borrada parada) para o logo, o episodio
-  // e o trilho nao perderem leitura sobre a arte. uPar.x = 1 (so o dither): o
-  // B-spline do 2 e para a copia de 96x54, e esticaria a arte grande em blocos.
+  // ARTE (o padrao): o backdrop NITIDO, sem desfoque nem recuo, e o veu da
+  // rampa do hero da Home (smoothstep^2, preto) da base ate a METADE da tela,
+  // para o logo e o anel lerem. Duas passadas, nenhuma copia, nenhum blur.
   if (nf == 1) {
     GfxRect alvo = tela;
     // A poster fallback stays in proportion, including on a portrait phone.
@@ -5418,85 +5437,93 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
       if (ar < tela.w / tela.h) { alvo.w = tela.h * ar; alvo.x = (tela.w - alvo.w) * 0.5f; }
       else { alvo.h = tela.w / ar; alvo.y = (tela.h - alvo.h) * 0.5f; }
     }
-    if (ts) gfx_rect(alvo, ts, GFX_SNAP, 0.55f, 1.0f, 0.0f, 0.0f, 0, 0, 0, v);
+    if (ts) gfx_rect(alvo, ts, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, v);
+    gfx_tex_aspect_atual = 0.0f;
+    gfx_rect((GfxRect){ 0, NV_TELA_H * 0.5f, NV_TELA_W, NV_TELA_H * 0.5f }, 0, GFX_VEU_BAIXO,
+             0, 0, 0, 0.0f, 0, 0, 0, 0.85f * v * (morph ? k : entra));
   } else {
-  // Recua para 45%: a arte vira luz de fundo, o logo fica sozinho na frente.
-  // Pelo GFX_SNAP com o nv_dither e o B-spline ligados (uPar.x = 2) e o escurecimento na
-  // mesma passada (uFoco), como o fundo da tela DV: o GFX_CARD nao tem ruido,
-  // e a arte desfocada e escura saia em faixas de 8 bits no OLED (dono, 11/10:
-  // "falta o dither no background"). A copia desfocada ja e 16:9 como a tela.
+  // ARTE BORRADA: recua para 45%, a arte vira luz de fundo (a copia 96x54 de
+  // sempre, gfx_desfocado). Pelo GFX_SNAP com o nv_dither e o B-spline ligados
+  // (uPar.x = 2) e o escurecimento na mesma passada (uFoco): sem o ruido, a
+  // arte desfocada e escura saia em faixas de 8 bits no OLED (dono, 11/10).
   if (tb) gfx_rect(tela, tb, GFX_SNAP, 0.55f * f, 2.0f, 0.0f, 0.0f, 0, 0, 0, v);
   { float as = v * (tb ? 1.0f - f : 1.0f - 0.55f * f);
     if (ts && as > 0.01f) gfx_rect(tela, ts, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, as); }
   }
   gfx_tex_aspect_atual = 0.0f;
 
-  // O logo fica PARADO (dono, 11/10: sem aumentar e diminuir); so o trilho anda.
-  resp = 1.0f;
-  entra = reduz ? 1.0f : (t < 0.4f ? t / 0.4f : 1.0f);
+  // O LOGO: a mesma textura do detalhe, so o quad anda e escala ate o centro.
   lg = marca ? tex_obter_larg_qualquer(marca, 640) : 0;
   if (lg) {
-    float ar = tex_aspecto(marca), lw = 640.0f, lh = ar > 0.0f ? lw / ar : 200.0f, k = 1.0f;
-    if (lh > 220.0f) { lh = 220.0f; lw = lh * ar; }
-    gfx_rect((GfxRect){ NV_TELA_W * 0.5f - lw * k * 0.5f, cy - lh * k * 0.5f, lw * k, lh * k }, lg,
-             tex_marca_escura(marca) ? GFX_MARCA : GFX_TEXTO, 0, 0, 0, 0, .96f, .96f, .97f,
-             v * entra * (0.88f + 0.12f * resp));
-    base = cy + lh * 0.5f;
+    float ar = tex_aspecto(marca), lw = 560.0f, lh = ar > 0.0f ? lw / ar : 172.0f;
+    GfxRect r;
+    if (lh > 172.0f) { lh = 172.0f; lw = lh * ar; }
+    r = (GfxRect){ cx - lw * 0.5f, anel.y - 64.0f - lh, lw, lh };
+    if (morph && l0.w > 0.0f) {
+      r.x = l0.x + (r.x - l0.x) * k; r.y = l0.y + (r.y - l0.y) * k;
+      r.w = l0.w + (r.w - l0.w) * k; r.h = l0.h + (r.h - l0.h) * k;
+    }
+    gfx_rect(r, lg, tex_marca_escura(marca) ? GFX_MARCA : GFX_TEXTO, 0, 0, 0, 0, .96f, .96f, .97f,
+             v * entra);
   } else {
     TxtLinha l = txt_linha_corta(TXT_TITULO2, c ? c->titulo : "", 255, 255, 255, 255, 1400.0f);
-    txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, cy - l.h * 0.5f, v * entra * (0.88f + 0.12f * resp));
-    base = cy + l.h * 0.5f;
+    txt_desenhar_alpha(l, cx - l.w * 0.5f, anel.y - 64.0f - l.h, v * entra);
   }
 
-  // O EPISODIO, entre o logo e o trilho (so serie; filme nao tem linha).
-  if (linhaEp[0]) {
-    TxtLinha l = txt_linha_corta(TXT_ILHA_SUB, linhaEp, 243, 242, 239, 170, 1100.0f);
-    txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, base + 14.0f, v * entra);
+  // O PLAY VIRA O ANEL: a pilula encolhe ate o circulo (raio = h/2), o branco
+  // some nos primeiros 45% e a borda vira o trilho; o arco acende nos ultimos 40%.
+  if (morph) {
+    float aw = 1.0f - tm / 0.45f;
+    ra.x = p0.x + (anel.x - p0.x) * k; ra.y = p0.y + (anel.y - p0.y) * k;
+    ra.w = p0.w + (anel.w - p0.w) * k; ra.h = p0.h + (anel.h - p0.h) * k;
+    if (aw > 0.0f) gfx_cor(ra, 0.5f, 1, 1, 1, aw * v);
   }
-  // Como na carga da Home: a barra so enche com progresso medido.
+  gfx_anel(ra, 0.5f, 3.0f, 1, 1, 1, 0.16f * v * entra);
+  // Como na carga da Home: o arco so enche com progresso medido.
   // Samsung informa porcentagem; segundos de buffer dos demais nao sao %.
   { VideoStats stats;
     int pct;
+    float r, g, b, aa = v * entra * (morph ? (tm - 0.6f) / 0.4f : 1.0f);
     video_estatisticas(&stats);
     pct = !esperandoFonte && stats.bufferPct >= 0 && stats.bufferPct <= 100 ? stats.bufferPct : -1;
-    float tw = 200.0f, sw = 64.0f, x0 = NV_TELA_W * 0.5f - tw * 0.5f, y = base + 48.0f, r, g, b;
-    // A barra leva a cor do logo, como a Imersiva (dono, 14/10); sem paleta, o realce.
+    // O arco leva a cor do logo, como a Imersiva (dono, 14/10); sem paleta, o realce.
     if (!corviva_logo_acento(&r, &g, &b)) corFocoPlayer(&r, &g, &b);
-    gfx_cor((GfxRect){ x0, y, tw, 3.0f }, 0.5f, 1, 1, 1, 0.16f * v * entra);
-    if (pct >= 0) {
-      if (pct > 0) gfx_cor((GfxRect){ x0, y, tw * pct / 100.0f, 3.0f }, 0.5f, r, g, b, 0.9f * v * entra);
-    } else if (!reduz) {
-      float p = fmodf(t / 1.6f, 1.0f), e = p * p * (3.0f - 2.0f * p);
-      float a0 = x0 - sw + (tw + sw) * e, a1 = a0 + sw;
-      if (a0 < x0) a0 = x0;
-      if (a1 > x0 + tw) a1 = x0 + tw;
-      if (a1 > a0) gfx_cor((GfxRect){ a0, y, a1 - a0, 3.0f }, 0.5f, r, g, b, 0.9f * v * entra);
-    }
-    // O nome do add-on (e a tentativa), so com o ajuste ligado. A barra ja diz
-    // que esta carregando; nao ha texto de etapa.
-    if (ajustes_abertura_addon()) {
-      const Stream *st = stream_item(stream_atual());
-      char det[260];
-      snprintf(det, sizeof det, "%s", st ? st->provedor : "");
-      // O nome e uma linha, como os rotulos da ilha.
-      for (char *p = det; *p; p++) if ((unsigned char)*p < 32) *p = ' ';
-      if (tentativaN >= 2 && tentativaM >= tentativaN) {
-        size_t n = strlen(det);
-        snprintf(det + n, sizeof det - n, "%s", n ? " \xc2\xb7 " : "");
-        n = strlen(det);
-        snprintf(det + n, sizeof det - n, i18n("Fonte %d de %d"), tentativaN, tentativaM);
-      }
-      if (det[0]) {
-        TxtLinha d = txt_linha_corta(TXT_G19M, det, 243, 242, 239, 140, 1100.0f);
-        txt_desenhar_alpha(d, NV_TELA_W * 0.5f - d.w * 0.5f, y + 22.0f, v * entra);
-      } }
-    // DEMOROU: uma linha so, curta e calma, que entra devagar.
-    if (abrecine_demorando(&cine, agora)) {
-      float d = (float)(agora - cine.desde - ABRECINE_DEMORA_MS) / 600.0f;
-      TxtLinha l = txt_linha(TXT_G19M, i18n("Só mais um instante…"), 243, 242, 239, 255);
-      txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, y + (ajustes_abertura_addon() ? 56.0f : 22.0f),
-                         0.62f * v * (reduz || d > 1.0f ? 1.0f : d));
+    if (aa > 0.0f) {
+      if (pct > 0) gfx_arco(ra, 3.0f, 0.0f, pct / 100.0f, r, g, b, 0.9f * aa);
+      else if (pct < 0 && !reduz) gfx_arco(ra, 3.0f, fmodf(t / 1.2f, 1.0f), 0.25f, r, g, b, 0.9f * aa);
     } }
+
+  // UMA LINHA QUIETA sob o anel: o episodio (so serie). O add-on so com o
+  // ajuste ligado; a de demora so depois de 8 s.
+  base = ra.y + ra.h + 30.0f; y = base;
+  if (linhaEp[0]) {
+    TxtLinha l = txt_linha_corta(TXT_ILHA_SUB, linhaEp, 243, 242, 239, 170, 1100.0f);
+    txt_desenhar_alpha(l, cx - l.w * 0.5f, y, v * entra);
+    y += 34.0f;
+  }
+  if (ajustes_abertura_addon()) {
+    const Stream *st = stream_item(stream_atual());
+    char det[260];
+    snprintf(det, sizeof det, "%s", st ? st->provedor : "");
+    // O nome e uma linha, como os rotulos da ilha.
+    for (char *p = det; *p; p++) if ((unsigned char)*p < 32) *p = ' ';
+    if (tentativaN >= 2 && tentativaM >= tentativaN) {
+      size_t n = strlen(det);
+      snprintf(det + n, sizeof det - n, "%s", n ? " \xc2\xb7 " : "");
+      n = strlen(det);
+      snprintf(det + n, sizeof det - n, i18n("Fonte %d de %d"), tentativaN, tentativaM);
+    }
+    if (det[0]) {
+      TxtLinha d = txt_linha_corta(TXT_G19M, det, 243, 242, 239, 140, 1100.0f);
+      txt_desenhar_alpha(d, cx - d.w * 0.5f, y, v * entra);
+      y += 34.0f;
+    } }
+  // DEMOROU: uma linha so, curta e calma, que entra devagar.
+  if (abrecine_demorando(&cine, agora)) {
+    float d = (float)(agora - cine.desde - ABRECINE_DEMORA_MS) / 600.0f;
+    TxtLinha l = txt_linha(TXT_G19M, i18n("Só mais um instante…"), 243, 242, 239, 255);
+    txt_desenhar_alpha(l, cx - l.w * 0.5f, y, 0.62f * v * (reduz || d > 1.0f ? 1.0f : d));
+  }
 }
 
 #ifdef NV_TPK

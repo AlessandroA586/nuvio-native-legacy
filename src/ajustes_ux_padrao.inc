@@ -289,7 +289,7 @@
   1, /* addon name on the Cinema opening (#205): Desligado, local */
   0, 0, 0, 0, /* hero synopsis/ratings/year/runtime: Ligado, the look as always */
   0, /* curation address (#205): action; the URL lives in curadoria.txt */
-  2, /* opening screen backdrop (#508): Arte borrada, as always, local */
+  1, /* opening screen backdrop (#508): Arte (sharp + veil, A3), local */
   0, /* hero synopsis size: Normal, the original 22/30 */
   1, /* episode card size (#205): Medio, as always */
   1, /* video preload and next episode buffer: Desligado, independent source setting */

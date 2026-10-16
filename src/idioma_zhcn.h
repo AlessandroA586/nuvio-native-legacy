@@ -3323,7 +3323,7 @@
   T("O fio de %s", "沿着 %s"),
   T("O fio entre elas: %s.", "两者之间的联系：%s。"),
   T("O foco ficou mais claro", "焦点更清晰了"),
-  T("O fundo da tela Cinema da abertura. Desligado: preto. Arte: o backdrop do título, nítido, com véu escuro. Arte borrada (padrão): o mesmo backdrop, desfocado e escurecido, como sempre. Vale só nesta TV.", "影院开场画面的背景。关闭：黑色。海报：作品的背景图，清晰，置于暗色遮罩之下。模糊海报（默认）：同一背景，模糊并变暗，与以往相同。仅限这台电视。"),
+  T("O fundo da tela Cinema da abertura. Desligado: preto. Arte (padrão): o backdrop do título, nítido, com véu escuro. Arte borrada: o mesmo backdrop, desfocado e escurecido, como sempre. Vale só nesta TV.", "影院开场画面的背景。关闭：黑色。海报（默认）：作品的背景图，清晰，置于暗色遮罩之下。模糊海报：同一背景，模糊并变暗，与以往相同。仅限这台电视。"),
   T("O fundo que você escolhe no Xperience para cada coleção passa a ser o herói dela aqui, em 4K e nas cores da marca. As abas da página de coleção ficaram como o resto do app, e na Samsung a home não engasga mais enquanto uma fileira carrega.", "你在 Xperience 中为每个合集选的背景，在这里会成为该合集的主视觉，以 4K 和品牌色呈现。合集页的标签页与应用其他部分保持一致，在三星上，行加载时主页也不再卡顿。"),
   T("O guia precisa de um addon de canais (como o FrostView TV) instalado na conta.", "指南需要在账号中安装频道附加组件（例如 FrostView TV）。"),
   T("O guia se enche por dois caminhos: um addon de canais (como o FrostView TV) instalado na conta, ou um portal IPTV cadastrado em Ajustes › Conta.", "指南有两种方式填充内容：在账号中安装频道附加组件（例如 FrostView TV），或在 设置 › 账号 中登记 IPTV 门户。"),

@@ -18,6 +18,9 @@
 //
 // Com NULL, aguarda a consulta de fontes; nao simula uma reproducao.
 void player_abrir(int indiceCatalogo, const char *url);
+// A3: o logo e o Play do detalhe neste quadro; a abertura que comeca logo
+// depois parte deles (o logo vai ao centro, o Play vira o anel).
+void player_morph_de(GfxRect logo, GfxRect play);
 void player_definir_episodio(int temporada, int episodio);
 void player_do_inicio(void);
 // Posicao confiavel para preparar o Android: registro com duracao conhecida,
