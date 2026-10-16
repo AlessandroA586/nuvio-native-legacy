@@ -818,6 +818,7 @@ void lst_itens_mais(void) {
   if (!simkl) desc_vertudo_mais();
 }
 
+#ifndef LST_SO_ITENS
 void lst_abrir_sessao(void) {
   lst_esquecer();
   pthread_mutex_lock(&trava);
@@ -829,3 +830,4 @@ void lst_abrir_sessao(void) {
   pthread_mutex_unlock(&itTrava);
   lst_iniciar();
 }
+#endif

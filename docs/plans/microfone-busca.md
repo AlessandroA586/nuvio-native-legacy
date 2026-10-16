@@ -2,8 +2,9 @@
 
 ## O que é
 
-Nas duas buscas — a da barra lateral e o Spotlight do CH- — o teclado do Nuvio Legacy continua
-sendo o teclado de digitar. Ao lado do botão "Digitar pelo celular" fica um botão de microfone.
+Nas duas buscas — a da barra lateral e o Spotlight do CH- — o `.wgt` mantém o teclado da TV
+para digitar; o `.tpk` usa o teclado do Nuvio Legacy. Ao lado do botão "Digitar pelo celular"
+fica um botão de microfone.
 OK nele abre o **teclado da Samsung só para usar o microfone dele**:
 
 1. OK no microfone → o teclado da Samsung sobe; o campo diz "Aperte o microfone do controle e
@@ -43,7 +44,7 @@ Ajuste **Tela inicial › Mais opções › Barra lateral › Botão de microfon
 Sem o campo do teclado da Samsung (o host não conseguiu montar o IME), nunca há botão.
 
 Nos Ajustes a linha segue o padrão das outras: ícone de microfone, a frase de benefício ("Busque
-falando, pelo microfone do controle."), a ajuda com os três valores, o "O que muda" (para
+falando, pelo microfone do controle."), a ajuda com os três valores, o "O que muda" no `.tpk` (para
 digitar continua o teclado do Nuvio) e uma cena gerada própria (`ajcHMicBusca`): a barra da
 busca com o microfone no acento ao lado do celular, e o laço teclado da Samsung → controle
 ouvindo → texto chegando. No Automático o controle ganha o selo de "a TV tem microfone"; no
@@ -56,13 +57,14 @@ Desligado fica a vaga vazia e o controle apagado. Os valores ficam no seletor da
   Registra o botão com o que a TV respondeu sobre microfone. Nenhuma permissão nova: quem ouve
   é o teclado da Samsung.
 - `tools/tizen-shell.html` (`.wgt`): o `<input>` escondido e o `window.nvTexto` que já
-  existiam agora servem só ao botão. `nvTexto.microfone` guarda o `getCapability`; o teclado
-  fechando sozinho (blur) com texto entrega, como no `.tpk`.
+  existiam continuam servindo à digitação e também ao botão. `nvTexto.microfone` guarda o
+  `getCapability`; o teclado fechando sozinho (blur) com texto entrega, como no `.tpk`.
+  A ponte continua disponível sem `window.tizen` (PC/VIDAA), como na integração.
 - `src/entrada_texto.c`: `nv_tpk_voz_registrar` (host → C), `texto_sistema_mic_modo` (o
-  ajuste) e `micPermitido()` comum ao `.tpk` e ao `.wgt`. Anuncia `TS_VOZ` sem `TS_TECLADO`,
-  então digitar continua no teclado do app. `texto_sistema_voz_pelo_teclado()` diz que a voz é
-  esse botão. No `.wgt` isto tira o "OK no campo abre o teclado da TV" que existia antes: o
-  teclado da Samsung só abre pelo microfone, igual ao `.tpk`.
+  ajuste) e `micPermitido()` comum ao `.tpk` e ao `.wgt`. No `.tpk` de release anuncia
+  `TS_VOZ` sem `TS_TECLADO`. No `.wgt`, com `window.nvTexto`, anuncia `TS_TECLADO` mais
+  `TS_VOZ` quando permitido pelo ajuste e pela capacidade: OK no campo abre o teclado da TV,
+  mesmo com o botão desligado. `texto_sistema_voz_pelo_teclado()` diz que a voz é esse botão.
 - `src/sistexto.c`: com o teclado da Samsung aberto pelo botão, o estado é `ST_DIGITANDO`,
   `st_aviso()` é o aviso do controle, e o texto só sai em `ST_FIM`; tudo limpo quando o teclado
   fecha.
@@ -91,6 +93,20 @@ não tem o host do teclado e fica sem botão. O ajuste só aparece no `.tpk` de 
   Automático, local) e a tela.
 - `tools/idiomas.py`, `tools/varredura-i18n.py`: as 5 strings novas nas 29 tabelas (aviso do
   controle, nome do ajuste, ajuda, benefício, "O que muda").
+
+## Correção da integração do PR #465 (12/10/2026)
+
+- O `.wgt` **mantém** o teclado da TV. Removida a atribuição contrária
+  no comentário de `entrada_texto.c`; o botão de microfone permanece.
+- `wgt_voz.sh`: **rc 1 → 0** ao exigir `TS_TECLADO | TS_VOZ`,
+  `st_ime_disponivel() == 1` e digitação pelo IME. Com o microfone desligado ou ausente,
+  `TS_TECLADO` continua disponível. Sem `nvTexto`, nenhuma capacidade é anunciada.
+- `wgt_voz_shell.js`: **rc 1 → 0** para a ponte sem Tizen (PC/VIDAA), restaurando a integração.
+- Mantidas as chamadas `Cancelar` em `OnPause`/`SoltaTudo`: removê-las faz
+  `tpk_voz_host.sh` falhar (**rc 1**) nos casos de pausa, fechamento e abertura enfileirada;
+  restaurá-las passa (**rc 0**), incluindo compilação do host nas APIs 8/9/11.
+- `ajustes_secoes.sh`: **rc 1 preexistente**, reproduzido com os arquivos do HEAD anterior
+  à correção: sete opções `AJ_PROF_*` ausentes do catálogo. Não relacionado ao teclado.
 
 ## Falta na TV
 

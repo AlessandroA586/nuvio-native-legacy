@@ -23,7 +23,7 @@ void nv_tpk_texto_fim(int confirmou);
 
 const char *desc_tmdb_idioma(void) { return "pt-BR"; }
 
-static int iniciou, parou;
+static int iniciou, parou, valorRecebido;
 static void hIniciar(void) { iniciou++; }
 static void hParar(void) { parou++; }
 
@@ -32,7 +32,7 @@ static int ler(int dono, char *t, size_t n) {
   SDL_Event e;
   texto_sistema_quadro();
   while (SDL_PollEvent(&e)) st_evento(&e);
-  return st_ler(dono, t, n);
+  return st_ler_valor(dono, t, n, &valorRecebido);
 }
 
 static const char *HINT = "Aperte o microfone do controle e fale.";
@@ -75,7 +75,7 @@ int main(void) {
   // A fala chega pelo teclado, mas fica com ele enquanto ele cobre a tela.
   nv_tpk_texto_valor("o poderoso");
   r = ler(ST_BUSCA, t, sizeof t);
-  assert(r == ST_NADA && !t[0]);
+  assert(r == ST_NADA && !t[0] && !valorRecebido);
   assert(!strcmp(st_aviso(), HINT));
   nv_tpk_texto_valor("o poderoso chefão");
   r = ler(ST_BUSCA, t, sizeof t);
@@ -83,7 +83,7 @@ int main(void) {
   // Concluido: so agora o texto inteiro entra (e a busca roda).
   nv_tpk_texto_fim(1);
   r = ler(ST_BUSCA, t, sizeof t);
-  assert(r == ST_FIM && !strcmp(t, "o poderoso chefão"));
+  assert(r == ST_FIM && !strcmp(t, "o poderoso chefão") && valorRecebido);
   assert(st_estado() == ST_PARADO && !texto_sistema_aberto());
   assert(!st_aviso()[0]);                 // o aviso some com o teclado
 
@@ -93,7 +93,7 @@ int main(void) {
   nv_tpk_texto_valor("matrix");
   nv_tpk_texto_fim(0);
   r = ler(ST_SPOT, t, sizeof t);
-  assert(r == ST_CANCELOU && !t[0] && st_estado() == ST_PARADO && !st_aviso()[0]);
+  assert(r == ST_CANCELOU && !t[0] && !valorRecebido && st_estado() == ST_PARADO && !st_aviso()[0]);
 
   // O teclado do app depois do botao: o texto volta a chegar normalmente
   // (a trava do "so o final" era so da sessao do microfone).
@@ -101,7 +101,12 @@ int main(void) {
   assert(st_ime_abrir(ST_BUSCA, "", 64));
   st_teste_evento("Tabc");
   r = ler(ST_BUSCA, t, sizeof t);
-  assert(r == ST_TEXTO && !strcmp(t, "abc"));
+  assert(r == ST_TEXTO && !strcmp(t, "abc") && valorRecebido);
+  // Integration: an empty edit followed by Back still counts as received text.
+  st_teste_evento("T");
+  st_teste_evento("X");
+  r = ler(ST_BUSCA, t, sizeof t);
+  assert(r == ST_CANCELOU && !t[0] && valorRecebido);
   st_fechar(ST_BUSCA);
   st_teste_ligar(0);
 

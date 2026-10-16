@@ -11,6 +11,7 @@
 #include "sistexto.h"
 #include "descoberta.h"
 #include "entrada_texto.h"
+#include "ajustes.h"
 #ifdef NV_ANDROID
 #include "android.h"
 #endif
@@ -44,11 +45,19 @@ static int teste(void) {
 // imetv: SDL_StartTextInput do SDL da LG, MEDIDO na C9 com microfone no
 // teclado; <input> escondido no .wgt; host .NET no .tpk canario). Este modulo
 // so traduz os avisos dele para a mesma fila do Android (st_evento).
+int st_teclado_modo(void) {
+#ifdef NV_TECLADO_SIS
+  return ajustes_teclado_android();
+#else
+  return st_abre_sozinho() ? ajustes_teclado_android() : 0;   // teste() faz o papel do Android
+#endif
+}
+int st_teclado_do_app(void) { return !st_abre_sozinho() && st_teclado_modo() == 1; }
 int st_ime_disponivel(void) {
 #ifdef NV_ANDROID
   return 1;
 #else
-  return teste() || (texto_sistema_disponivel() & TS_TECLADO) != 0;
+  return !st_teclado_do_app() && (teste() || (texto_sistema_disponivel() & TS_TECLADO) != 0);
 #endif
 }
 int st_voz_disponivel(void) {
@@ -206,9 +215,9 @@ int st_ler_valor(int d, char *dst, size_t n, int *valorRecebido) {
         if (valorRecebido) *valorRecebido = 1;
         snprintf(dst, n, "%s", v); r = ST_TEXTO; break;
       case 'D': case 'V':
+        if (valorRecebido) *valorRecebido = 1;
         micTeclado = 0;
         if (aviso == AVISO_MIC_CONTROLE) aviso = "";
-        if (valorRecebido) *valorRecebido = 1;
         snprintf(dst, n, "%s", v);
         printf("[texto] %s: %d bytes\n", t == 'D' ? "teclado concluiu" : "voz final", (int)strlen(v));
         fflush(stdout);

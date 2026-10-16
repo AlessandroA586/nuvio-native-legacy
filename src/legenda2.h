@@ -67,14 +67,16 @@ Leg2Estado legenda2_estado(void);
 // until legenda2_estado() says so.
 const char *legenda2_identidade(void);
 
-// Offsets in ms, positive = earlier (same sign as legenda_cues). The manual
-// getter/setter use a mutex-protected mirror. The app binds its one persisted
-// Settings value below; the standalone loader needs no Settings dependency.
-// Manual and combined offsets are bounded to LEG_ATRASO_MANUAL_MAX; AutoSync
-// itself remains bounded to 30 seconds and is cleared on selection/session reset.
+// Manual offset in ms from the UI's point of view: positive = subtitle later.
+// AutoSync (offAuto) stays in lookup space (positive = earlier); legenda2_cues
+// subtracts the manual part before the lookup. The manual getter/setter use a
+// mutex-protected mirror. The app binds its one persisted Settings value below;
+// the standalone loader needs no Settings dependency. Manual and combined
+// offsets are bounded to LEG_ATRASO_MANUAL_MAX; AutoSync itself remains bounded
+// to 30 seconds and is cleared on selection/session reset.
 int  legenda2_offset_manual(void);
 void legenda2_definir_offset_manual(int ms);
-void legenda2_definir_offset_auto(int ms);   // AutoSync (F05); 0 = none
+void legenda2_definir_offset_auto(int ms);   // AutoSync (F05), lookup space; 0 = none
 int  legenda2_offset_total(void);
 
 // Optional UI-thread persistence binding. Read the initial saved value before

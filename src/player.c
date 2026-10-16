@@ -68,7 +68,9 @@ static void avisarCascaAberto(int v) { android_player_tela_cheia(v); }
 static void avisarCascaAberto(int v) { (void)v; }
 #endif
 #include "trakt.h"
+#include "simkl.h"
 #include "traktscrobble.h"
+#include "watchstate_envio.h"
 #include "sync.h"
 #include "parental.h"
 #include "plrguia.h"
@@ -76,6 +78,7 @@ static void avisarCascaAberto(int v) { (void)v; }
 #include "streams.h"
 #include "badges.h"
 #include "legenda.h"
+#include "imgsub.h"
 #include "assrender.h"
 #include "mkvass.h"
 #include "relogio.h"
@@ -108,6 +111,7 @@ static void avisarCascaAberto(int v) { (void)v; }
 #include "legsync.h"   // F05 AutoSync: lifecycle + offset (hunks marcados F05)
 #include "progresso.h"
 #include "fontevolta.h"
+#include "retomamorna.h"
 #include "marco.h"
 #include "ilha_voo.h"   /* NV_ILHA_VOO_MS: quanto dura o voo da saida */
 #include "plrui.h"
@@ -237,12 +241,11 @@ static CreditosAuto creditosAuto;
 //
 // O PRECO DE RETER MAIS: o pipeline e um so. Enquanto a sessao esta retida o
 // trailer do destaque da home nao toca (home_trailer_passo exige
-// !player_retido(), app.c) — sao ate 2 min de home sem trailer
-// depois de sair para a ilha. Abrir uma pagina de titulo, outro video, trocar
+// !player_retido(), app.c) — pelo prazo escolhido, ou sem limite,
+// a home fica sem trailer. Abrir uma pagina de titulo, outro video, trocar
 // de perfil/conta ou dispensar a ilha soltam na hora, como antes. Passado o
 // prazo, o Retomar ainda evita a busca nos addons pela fonte guardada
 // (fontevolta.h).
-#define PLR_RETIDO_MS 120000u
 // RETIDO SO PARA O VOO (Android, 05/10/2026). Sem "Manter o video pronto ao
 // sair" a saida fechava a sessao ANTES do voo (fecharSessao(0) -> video_parar,
 // "[player] saida: video parar 3 ms"): o SurfaceView ficava vazio, o
@@ -260,6 +263,7 @@ static CreditosAuto creditosAuto;
 static int retidoVoo;
 static int retido, prepararRetencao, retidoPerfil, retomarMkv;
 static Uint32 retidoDesde;
+static int quadroCapturado;
 // SAIDA PARA A ILHA SEM O FADE DO PLAYER (Android): o voo comeca assim que a
 // pausa foi confirmada (evento 3, ~3 ms na TCL), em vez de ~430 ms de OSD
 // apagando sobre o video parado antes de a home aparecer. Sem confirmacao no
@@ -331,10 +335,6 @@ static AoVivoEpg shotEpg;
 #endif
 static int   pedFaixas = 0;
 static int   esperandoFonte = 0;   // aberto sem URL, esperando o addon responder
-// Pre-busca da legenda ASS segurando o video (ver player_definir_fonte): a url
-// que vai ao pipeline quando ela acabar. "" = nenhuma.
-static char   prebuscaUrl[4096];
-static Uint32 prebuscaDesde;
 #ifdef NV_ANDROID
 static struct {
   unsigned token;
@@ -362,12 +362,14 @@ static double monoSeg(void) {
 // Prova de reproducao da fonte principal, independente de posicao/seek.
 static char fonteSessao[4096];
 static double assistidoSeg, assistidoMono, assistidoPos;
+static double eofDesde = -1.0;
 static int assistidoAmostra;
 static unsigned trailerSessao;
 // Ultima posicao gravada DURANTE a sessao (gravarProgressoParcial); -1 = nenhuma.
 static double parcialPos = -1.0;
 static int parcialPausa;
 static void zerarAssistido(void) {
+  eofDesde = -1.0;
   assistidoSeg = 0; assistidoAmostra = 0; trailerSessao = trailer_geracao();
   parcialPos = -1.0; parcialPausa = 0;
   snprintf(fonteSessao, sizeof fonteSessao, "%s", comVideo ? video_url_atual() : "");
@@ -784,7 +786,6 @@ void player_erro_fonte(void) {
 #endif
   esperandoFonte = 0; erroFonte = 1; visivel = 0; tocando = 0; soBarra = 0;
   erroBotao = 0;
-  prebuscaUrl[0] = 0;                // erro no meio da pre-busca: o video nao sai
   erroTitulo[0] = erroDica[0] = 0;   // erro sem motivo nao herda o do anterior
 }
 void player_erro_fonte_motivo(const char *titulo, const char *dica) {
@@ -1073,16 +1074,19 @@ static const char *prefsArquivo(void) {
 // ESTILO DA LEGENDA: preferencia DO APARELHO, como o aspecto — nao vai em
 // ajustes.txt, que espelha as chaves de layout do app web. Padrao: tamanho 2
 // (o do aparelho), branco, sem fundo, posicao central, contorno.
-static VideoLegendaEstilo legEstilo = { 120, 0, 0, 3, 1, 0, 0, TXT_FAMILIA_INTER };
+// -1 preserves the legacy outline preference until a border colour is chosen.
+static VideoLegendaEstilo legEstilo = { 120, 0, 0, 3, 1, 0, 0, TXT_FAMILIA_INTER, 0, -1 };
 // Ver player_leg_estilo_tocou, em player.h: o que a pessoa mexeu vence o que o
 // arquivo ASS pede. Persistido junto com o resto — a preferencia nao pode
 // valer so ate desligar a TV.
 static int legTocado = PLR_LEG_NADA;
 
+static int prefsGravar(void);
 static void prefsLer(void) {
   prefsLidas = 1;
+  legEstilo.corBorda = -1;
   FILE *f = fopen(prefsArquivo(), "r");
-  char chave[64]; int v;
+  char chave[64]; int v, sinalNovo = 0, temAtraso = 0, bordaExplicita = 0;
   if (!f) return;
   while (fscanf(f, "%63s %d", chave, &v) == 2) {
     // Valor de outra versao (ou arquivo editado a mao) cai no padrao em vez de
@@ -1098,14 +1102,23 @@ static void prefsLer(void) {
     else if (!strcmp(chave, "leg_fundo")   && v >= 0 && v <= 4)  legEstilo.fundo = v;
     else if (!strcmp(chave, "leg_pos")     && v >= 0 && v <= 7)  legEstilo.posicao = v;
     else if (!strcmp(chave, "leg_borda")   && v >= 0 && v <= 2)  legEstilo.borda = v;
-    else if (!strcmp(chave, "leg_cor_borda") && v >= 0 && v < VIDEO_LEG_NCORES) legEstilo.corBorda = v;
-    else if (!strcmp(chave, "leg_atraso")  && v >= -LEG_ATRASO_MANUAL_MAX && v <= LEG_ATRASO_MANUAL_MAX) legEstilo.atrasoMs = v;
+    else if (!strcmp(chave, "leg_atraso")  && v >= -LEG_ATRASO_MANUAL_MAX && v <= LEG_ATRASO_MANUAL_MAX) { legEstilo.atrasoMs = v; temAtraso = 1; }
+    else if (!strcmp(chave, "leg_atraso_sinal") && v == 1) sinalNovo = 1;
+    else if (!strcmp(chave, "leg_cor_borda") && v >= -1 && v < VIDEO_LEG_NCORES) legEstilo.corBorda = v;
+    else if (!strcmp(chave, "leg_cor_borda_explicita") && v == 1) bordaExplicita = 1;
     else if (!strcmp(chave, "leg_opacidade") && v >= 0 && v <= 3) legEstilo.opacidade = v;
     else if (!strcmp(chave, "leg_familia") && v >= 0 && v < TXT_FAMILIA_N) legEstilo.familia = v;
     else if (!strcmp(chave, "leg_negrito") && (v == 0 || v == 1)) legEstilo.negrito = v;
     else if (!strcmp(chave, "leg_tocado")  && v >= 0) legTocado = v;
   }
   fclose(f);
+  // Older players wrote default Black even when no border colour was chosen.
+  if (!bordaExplicita && legEstilo.corBorda == 0 && !(legTocado & PLR_LEG_COR_BORDA))
+    legEstilo.corBorda = -1;
+  // One-time migration: leg_atraso saved before the sign fix (positive =
+  // later) was tuned under the inverted sign. Negate once; the marker written
+  // by prefsGravar keeps this from running again.
+  if (!sinalNovo && temAtraso) { legEstilo.atrasoMs = -legEstilo.atrasoMs; prefsGravar(); }
 }
 
 static int prefsGravar(void) {
@@ -1121,11 +1134,13 @@ static int prefsGravar(void) {
   fprintf(f, "leg_pos %d\n",     legEstilo.posicao);
   fprintf(f, "leg_borda %d\n",   legEstilo.borda);
   fprintf(f, "leg_atraso %d\n",  legEstilo.atrasoMs);
+  fprintf(f, "leg_atraso_sinal 1\n");
   fprintf(f, "leg_opacidade %d\n", legEstilo.opacidade);
   fprintf(f, "leg_familia %d\n", legEstilo.familia);
   fprintf(f, "leg_negrito %d\n", legEstilo.negrito);
   fprintf(f, "leg_tocado %d\n", legTocado);
   fprintf(f, "leg_cor_borda %d\n", legEstilo.corBorda);
+  fprintf(f, "leg_cor_borda_explicita 1\n");
   int erro = ferror(f);
   if (fclose(f)) erro = 1;
   if (erro || rename(temporario, destino)) { remove(temporario); return 0; }
@@ -1147,7 +1162,7 @@ const VideoLegendaEstilo *player_leg_estilo_padrao(void) {
 int player_leg_estilo_definir(const VideoLegendaEstilo *estilo, int tocou) {
   if (!estilo || estilo->tamanho < TXT_LEG_PCT_MIN || estilo->tamanho > TXT_LEG_PCT_MAX ||
       estilo->tamanho % 10 || estilo->cor < 0 || estilo->cor >= VIDEO_LEG_NCORES ||
-      estilo->corBorda < 0 || estilo->corBorda >= VIDEO_LEG_NCORES ||
+      estilo->corBorda < -1 || estilo->corBorda >= VIDEO_LEG_NCORES ||
       estilo->familia < 0 || estilo->familia >= TXT_FAMILIA_N ||
       estilo->fundo < 0 || estilo->fundo > 4 || estilo->posicao < 0 || estilo->posicao > 7 ||
       estilo->borda < 0 || estilo->borda > 2 || estilo->opacidade < 0 || estilo->opacidade > 3 ||
@@ -1409,7 +1424,14 @@ static void aplicarAspecto(void) {
   // A FONTE sai do `d` inteiro e o DESTINO e o recuado: e o mesmo conteudo,
   // menor. Calcular a fonte a partir do retangulo ja recuado espremeria a
   // imagem, porque o recuo mudaria a regra de tres sem mudar o quadro.
+  // O LOG UMA LINHA por aplicacao e o que o aparelho devolve na duvida:
+  // sem URL nem ficha, so modo + destino + recorte — a troca que nao chega
+  // ao plano fica visivel no registro da TV.
   { PlrRect o = destinoComRecuo(d);
+    printf("[aspecto] modo=%d rect=%d,%d %dx%d crop=%d,%d %dx%d\n",
+           aspecto, (int)(o.x + 0.5f), (int)(o.y + 0.5f),
+           (int)(o.w + 0.5f), (int)(o.h + 0.5f), sx, sy, sw, sh);
+    fflush(stdout);
     video_janela_fonte(sx, sy, sw, sh,
                        (int)(o.x + 0.5f), (int)(o.y + 0.5f),
                        (int)(o.w + 0.5f), (int)(o.h + 0.5f)); }
@@ -1484,11 +1506,27 @@ void player_aspecto_ciclar(void) {
   toastAte = SDL_GetTicks() + PLR_TOAST_MS;
 }
 
+static void alvoStream(char *dst, unsigned tam);
+
+// Warm resume (#492): the id of this title/episode goes with the cache arming,
+// so the Android shell keeps the downloaded part of the LAST title when the
+// player closes and reuses it when the same title opens again. Channels and
+// trailers (never armed) send nothing.
+static void armarTituloGuardado(void) {
+  char alvo[64];
+  alvo[0] = 0;
+  if (!ehCanal()) alvoStream(alvo, sizeof alvo);
+  cacheboost_backend_morno(ajustes_retomada_morna());
+  cacheboost_backend_titulo(alvo);
+}
+
 void player_abrir(int indiceCatalogo, const char *url) {
 #ifdef NV_TOUCH_UI
   avToqueCanal[0] = 0;
 #endif
+  retomamorna_cancelar();
   creditosauto_zerar(&creditosAuto);
+  quadroCapturado = 0;
   player_descartar_retido();
   // O trailer usa o mesmo plano de video (LG) — solta antes de o player
   // carregar a fonte, senao o load novo pisa no mediaId do trailer.
@@ -1547,6 +1585,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   durFonteAcaoAte = 0;
   abrindoExp = 0; abrindoT = 0.0f; abrindoDesde = 0;
   memset(&cine, 0, sizeof cine);
+  cine.calado = 1;
   erroTitulo[0] = erroDica[0] = 0;
   pedGuia = pedZap = pedGuiaCheio = 0;
   memset(&zapEst, 0, sizeof zapEst); bannerAV = 0.0f; botaoAV = 0; infoAV = 0; pedRecarregar = 0;
@@ -1576,14 +1615,15 @@ void player_abrir(int indiceCatalogo, const char *url) {
   // guarda o ultimo modo escolhido na mao, que continua valendo para "Ultimo usado".
   { int pad = ajustes_proporcao_padrao(); if (pad >= 0 && pad < PLR_ASP_N) aspecto = pad; }
   toastAte = 0; toastTexto[0] = 0; avisouAudio = 0;
-  prebuscaUrl[0] = 0;
   // Reconexao so no filme/episodio: canal ao vivo tem o watchdog de app.c.
   video_definir_reconexao(!ehCanal());
   video_definir_modo_live(ehCanal() ? ajustes_livetv_modo() : 0);
   // F07: seek cache for this open (live channels never; the backend also
   // refuses HLS/DASH). Arms only the next video_tocar: trailers stay uncached.
   cacheboost_backend_cache(ehCanal() ? 0 : ajustes_cache_seek_mb());
-  cacheboost_backend_buffer(ajustes_buffer_preset());
+  epT = itemFixo.temporada; epE = itemFixo.episodio;
+  armarTituloGuardado();
+  cacheboost_backend_buffer(cacheboost_buffer_mb(ajustes_buffer_preset(), memlog_livre_mb()));
   loadEm = SDL_GetTicks();
   { char px[96];
     if (url && *url) { memlog_evento("load"); memQuadroPendente = 1; }
@@ -1624,21 +1664,9 @@ void player_abrir(int indiceCatalogo, const char *url) {
 int player_aberto(void)    { return aberto; }
 int player_quer_sair(void) { return pediuSair; }
 
-// --- PRE-BUSCA DA LEGENDA ASS ANTES DO VIDEO (#92, v1.4.7) -------------------
-//
-// No registro do relato (webOS 25, Torrentio -> Real-Debrid) todo Range do
-// mkvass feito com o video tocando era cortado (77465 e 11929 bytes, sempre)
-// e o resto era recusado, enquanto o video — o mesmo arquivo — tocava. Nao se
-// sabe se e o CDN limitando conexoes ao arquivo com o pipeline segurando uma
-// (hipotese, nao provada), a rede da pessoa ou o webOS 25. O que se pode fazer
-// sem saber: ler o que a legenda precisa ANTES de a URL ir ao pipeline. A tela
-// fica em "abrindo fonte" (esperandoFonte) ate a pre-busca acabar ou vencer
-// MKVASS_PREBUSCA_MS; dai o video comeca com o que chegou e o fio segue.
-//
-// SO PARA MKV COM LEGENDA A COLHER: sessao de VOD em tela cheia, preferencia
-// de legenda ligada e a fonte DIZENDO que e .mkv (url, arquivo ou descricao).
-// MP4, HLS, canal, PiP e quem nao quer legenda nao esperam nada. Um MKV cuja
-// legenda no idioma nao e ASS custa um Range (o cabecalho) antes do video.
+// --- PRE-BUSCA LATERAL DA LEGENDA ------------------------------------------
+// O pipeline abre imediatamente; mkvass colhe pelo playhead em fio proprio.
+// Recusas do CDN seguem o recuo/fallback sem segurar o video.
 #ifndef __EMSCRIPTEN__
 static int temMkv(const char *t) {
   const char *p;
@@ -1706,7 +1734,7 @@ static int preTituloCriar(int indiceCatalogo, int t, int e, const Stream *s, uns
   snprintf(preTitulo.cab, sizeof preTitulo.cab, "%s", s->cabecalhos);
   snprintf(preTitulo.idioma, sizeof preTitulo.idioma, "%s", pref ? pref : "");
   snprintf(preTitulo.audio, sizeof preTitulo.audio, "%s", ling_audio());
-  preTitulo.buffer = ajustes_buffer_preset(); preTitulo.cacheMb = ajustes_cache_seek_mb();
+  preTitulo.buffer = cacheboost_buffer_mb(ajustes_buffer_preset(), memlog_livre_mb()); preTitulo.cacheMb = ajustes_cache_seek_mb();
   serie = !strcmp(c->tipo, "series");
   if (c->progresso > 0 && c->progresso < ajustes_cw_concluido() &&
       (!serie || (t == c->temporada && e == c->episodio))) {
@@ -1773,16 +1801,9 @@ static int preTituloLegendaUsar(const char *url) {
     player_precarregar_cancelar(preTitulo.token);
     return 0;
   }
-  if (mkvass_prebusca_fase() == 1 &&
-      SDL_GetTicks() - preTitulo.desde < MKVASS_PREBUSCA_MS) {
-    snprintf(prebuscaUrl, sizeof prebuscaUrl, "%s", url);
-    prebuscaDesde = preTitulo.desde;
-    esperandoFonte = 1;
-    memset(&preTitulo, 0, sizeof preTitulo);
-    return 1;
-  }
+  // O video nao espera a legenda: o worker adotado segue em paralelo.
   memset(&preTitulo, 0, sizeof preTitulo);
-  return 2;
+  return 1;
 }
 #endif
 
@@ -1792,8 +1813,9 @@ static void tocarFonte(const char *url) {
   video_definir_reconexao(!ehCanal());
   video_definir_modo_live(ehCanal() ? ajustes_livetv_modo() : 0);
   cacheboost_backend_cache(ehCanal() ? 0 : ajustes_cache_seek_mb());   // F07, ver player_abrir
+  armarTituloGuardado();
   memlog_evento("load"); memQuadroPendente = 1;
-  cacheboost_backend_buffer(ajustes_buffer_preset());
+  cacheboost_backend_buffer(cacheboost_buffer_mb(ajustes_buffer_preset(), memlog_livre_mb()));
   { char px[96];
 #ifdef NV_ANDROID
     // app.c define episodio e "do inicio" antes de entregar a fonte. O
@@ -1877,6 +1899,9 @@ static void dvTelaAtualizar(float dt, Uint32 agora) {
   DvtelaSinais s;
   int saiu;
   if (!dvtela_visivel()) return;
+  { const CatItem *c = item();
+    dvtela_apresentacao(ajustes_abertura_detalhada(), c ? artehero_logo_sessao(c) : "",
+                        c ? c->titulo : "", linhaEp); }
   memset(&s, 0, sizeof s);
   if (dvtela_ativa()) {
     video_dv_fase(&f);
@@ -1905,6 +1930,8 @@ void player_definir_retomada_fonte(double segundos) {
 }
 void player_definir_fonte(const char *url) {
   if ((!aberto && !mini) || !url || !*url) return;
+  // A primeira fonte ainda pode aproveitar a legenda antecipada na espera.
+  if (comVideo) legenda_pre_descartar(i18n("troca de fonte"));
   durFonteAvisada = pedProximaFonte = 0;
   // Fonte nova: a duracao esperada conhecida nao vale mais (mesmo titulo,
   // episodio outro, catalogo pode ter andado).
@@ -1918,36 +1945,26 @@ void player_definir_fonte(const char *url) {
   esperandoFonte = 0;
   erroFonte = 0;
   dvTelaFonte(url);
-#ifndef __EMSCRIPTEN__
-  prebuscaUrl[0] = 0;
 #ifdef NV_ANDROID
-  int preparada = preTituloLegendaUsar(url);
-  if (preparada == 1) return;
-  if (preparada == 2) { tocarFonte(url); return; }
+  if (preTituloLegendaUsar(url)) { tocarFonte(url); return; }
 #endif
-  if (prebuscaCabe(url) && mkvass_prebuscar(url, escolherLegendaPrebusca, retomarPct / 100.0)) {
-    // O video espera (player_atualizar solta): a tela segue em "abrindo fonte".
-    if (comVideo) { video_parar(); comVideo = 0; mkvass_video_aberto(0); }
-    snprintf(prebuscaUrl, sizeof prebuscaUrl, "%s", url);
-    prebuscaDesde = SDL_GetTicks();
-    esperandoFonte = 1;
-    return;
-  }
-#endif
+  mkvass_parar();
   tocarFonte(url);
+#ifndef __EMSCRIPTEN__
+  if (comVideo && prebuscaCabe(url))
+    mkvass_prebuscar(url, escolherLegendaPrebusca, retomarPct / 100.0);
+#endif
 }
 
 void player_voltar_a_esperar(void) {
   if (!aberto) return;
+  legenda_pre_descartar(i18n("fonte descartada"));
   // A fonte foi descartada: a tela do DV sai e o cartao de sempre conta a
   // troca ("Fonte falhou, tentando a proxima"); a proxima, se for DV, a traz.
   if (dvtela_ativa()) { dvtela_sair(DVT_SAIDA_FONTE, dvRelogio()); video_dv_tela(0); }
   if (comVideo) { video_parar(); comVideo = 0; }
   mkvass_parar();
   mkvass_video_aberto(0);
-#ifndef __EMSCRIPTEN__
-  prebuscaUrl[0] = 0;
-#endif
   esperandoFonte = 1; erroFonte = 0; tocando = 1; pausaPessoa = 0;
   erroTitulo[0] = erroDica[0] = 0;
   retomadaAplicada = 0; inicioImagem = 0;
@@ -1982,6 +1999,9 @@ int player_duracao_midia(double *seg) {
 int  player_carregando(void) { return esperandoFonte || (comVideo && !video_pronto()); }
 int  player_controles_visiveis(void) { return visivel; }
 int   player_foco_na_barra(void) { return barraFoco; }
+// UP belongs to the player while controls are up (button row -> seek bar, bar ->
+// Skip Intro), the loading card expands, or the pause panel is shown.
+int   player_cima_dele(void) { return visivel || skipFoco || player_carregando() || pausao_visivel(); }
 float player_fileira(void) { return fileira; }
 int   player_so_barra(void) { return soBarra && visivel; }
 float player_posicao_seg(void) { return posSeg; }
@@ -1994,6 +2014,81 @@ static void idTrakt(const CatItem *ci, char *dst, size_t n) {
   size_t l = idbase_len(base);   // "tmdb:t123", "kitsu:41370" guardam o ':' do prefixo
   if (epT > 0 && epE > 0) snprintf(dst, n, "%.*s:%d:%d", (int)l, base, epT, epE);
   else snprintf(dst, n, "%s", base);
+}
+
+// WATCH_STATE v2 (#466): o player avisa os addons que declaram o resource
+// (AIOStreams) de start, pause e stop. So enfileira: quem entrega e o fio de
+// watchstate_envio.c, entao nada aqui espera por rede. Mesmas guardas do
+// Trakt (sem canal, sem servidor pessoal, sem clipe/trailer de duracao
+// errada) e identidade sem ambiguidade: filme com IMDb puro, ou episodio com
+// temporada e episodio conhecidos. estado: -1 recusado nesta sessao, 0 fora,
+// 1 tocando (start enviado), 2 pausado.
+static struct { int estado; WsEvento ev; } ws;
+
+static int wsIdentidade(WsEvento *e) {
+  const CatItem *c = item();
+  size_t n;
+  memset(e, 0, sizeof *e);
+  if (!c || !c->imdb[0] || jfid_e(c->imdb) || ehCanal() || !idbase_e_imdb(c->imdb) ||
+      !isdigit((unsigned char)c->imdb[2])) return 0;
+  n = strlen(c->imdb);
+  if (n >= sizeof e->imdb || strcspn(c->imdb, ":") != n) return 0;
+  if (!strcmp(c->tipo, "series") && epT > 0 && epE > 0) {
+    snprintf(e->tipo, sizeof e->tipo, "series");
+    snprintf(e->videoId, sizeof e->videoId, "%s:%d:%d", c->imdb, epT, epE);
+    e->season = epT; e->episode = epE;
+  } else if (!strcmp(c->tipo, "movie") && epT <= 0) {
+    snprintf(e->tipo, sizeof e->tipo, "movie");
+    snprintf(e->videoId, sizeof e->videoId, "%s", c->imdb);
+    e->season = e->episode = -1;
+  } else return 0;
+  snprintf(e->metaId, sizeof e->metaId, "%s", c->imdb);
+  snprintf(e->imdb, sizeof e->imdb, "%s", c->imdb);
+  if (c->tmdb > 0) snprintf(e->tmdb, sizeof e->tmdb, "%ld", c->tmdb);
+  return 1;
+}
+
+// Posicao REAL (nao a pos=dur que o disco guarda ao concluir) e duracao so
+// quando o pipeline descreve este titulo; durMs 0 faz a chave sair do corpo.
+static void wsEmitir(int ev, int played, int duracaoBoa) {
+  WsEvento e = ws.ev;
+  e.ev = ev; e.played = played;
+  e.atMs = (long long)time(NULL) * 1000LL;
+  e.posMs = isfinite(posSeg) && posSeg > 0.0f ? (long long)((double)posSeg * 1000.0) : 0;
+  e.durMs = duracaoBoa && isfinite(duracaoSeg) && duracaoSeg >= 120.0f ?
+            (long long)((double)duracaoSeg * 1000.0) : 0;
+  wsenvio_emitir(&e);
+}
+
+// A sessao ainda e a do snapshot? (troca de episodio sem passar por fecharSessao)
+static int wsMesma(void) {
+  WsEvento a;
+  return wsIdentidade(&a) && !strcmp(a.videoId, ws.ev.videoId);
+}
+
+static void wsTocando(void) {
+  if (ws.estado < 0 || ws.estado == 1) return;
+  if (ws.estado == 0) {
+    if (!wsIdentidade(&ws.ev) ||
+        player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo())) { ws.estado = -1; return; }
+    ws.ev.iniMs = (long long)time(NULL) * 1000LL;
+  } else if (!wsMesma()) { ws.estado = 0; return; }
+  ws.estado = 1;
+  wsEmitir(WS_START, 0, 1);
+}
+
+static void wsPausou(void) {
+  if (ws.estado != 1) return;
+  if (!wsMesma()) { ws.estado = 0; return; }
+  ws.estado = 2;
+  wsEmitir(WS_PAUSE, 0, 1);
+}
+
+// Encerramento: so com start enviado. `played` vem da regra do player (e da
+// prova de reproducao), nao da supressao 80-90% do Trakt.
+static void wsParou(int played, int duracaoBoa) {
+  if (ws.estado > 0 && wsMesma()) wsEmitir(WS_STOP, played, duracaoBoa);
+  ws.estado = 0;
 }
 
 // O ALVO DO STREAM desta sessao, no formato que app.c usa para pedir fontes
@@ -2057,7 +2152,11 @@ static void lembrarFonte(void) {
 }
 
 static void fecharSessao(int manter) {
+  imgsub_gl_limpar();
   int jaRetido = retido;
+  if (!jaRetido && !quadroCapturado && ajustes_retomada_morna() && comVideo && !ehCanal()) {
+    quadroCapturado = 1; cacheboost_backend_quadro(1);
+  }
   // A tela do DV nao sobrevive a sessao (Voltar ja a tirou; aqui e o resto:
   // troca de titulo, encerramento pelo app).
   if (dvtela_ativa()) { dvtela_sair(DVT_SAIDA_VOLTAR, dvRelogio()); video_dv_tela(0); }
@@ -2191,9 +2290,13 @@ static void fecharSessao(int manter) {
     // activity (jfid.h). The server got its own stop check-in above.
     if (ci && ci->imdb[0] && !jfid_e(ci->imdb)) {
       char id[64];
+      int simklScr;
       idTrakt(ci, id, sizeof id);
       // Trakt also completes by percentage, so an invalid duration cannot be sent.
       if (!duracaoContradita) trakt_marcar(id, pos, duracaoSeg, assistidoSeg, assistiu);
+      // Simkl (#459): mesmo scrobble, independente de o Trakt estar ligado.
+      // Sem vinculo, id fora do IMDb ou guarda recusando: SCR_NADA.
+      simklScr = simkl_scrobble(SCR_EV_SAIU, id, pos, duracaoSeg, assistidoSeg, assistiu);
       // "ASSISTIU" para os amigos, so quando CONCLUIU e so se ela ligou a
       // atividade (ou os "vistos recentemente" do perfil). Largar aos 8% nao
       // assistiu nada — e nao chega a lugar nenhum.
@@ -2221,6 +2324,9 @@ static void fecharSessao(int manter) {
       // rever um episodio ja visto nao reescreve historico.
       if (assistiu) {
         int dest = visto_destinos() & ~VISTO_TRAKT;
+        // O stop do scrobble ja fecha o visto no Simkl (e cai no historico
+        // sozinho se falhar): mandar o historico de novo seria pedido em dobro.
+        if (simklScr == SCR_STOP) dest &= ~VISTO_SIMKL;
         if (epT > 0 && epE > 0) {
           if (vistoep_estado(ci->imdb, epT, epE) != 1) {
             VistoPar par = { (short)epT, (short)epE };
@@ -2240,6 +2346,7 @@ static void fecharSessao(int manter) {
     // comecou agora nao entrava ate a proxima volta.
     desc_refazer_continuar();
   }
+  if (!jaRetido) wsParou(!duracaoErrada && prova && assistiu, !duracaoErrada);
   if (!jaRetido && comVideo && !ehCanal() && (!prova || !assistiu)) {
     printf("[visto] encerramento player pos=%.3f dur=%.3f assistido=%.3fs fonte=%d prova=%d id=%s T%dE%d\n",
            (double)posSeg, (double)duracaoSeg, assistidoSeg, fontePrincipal(), prova,
@@ -2265,7 +2372,7 @@ static void fecharSessao(int manter) {
     // ainda aguarda legendas. Voltar/Stop nao deixa o token armado para
     // outra abertura. O Next ja armado sobrevive ao fechamento do video
     // anterior, que ainda tem comVideo e usa pararMantendoPreparo.
-    if (!manter && !comVideo && (preTitulo.adotado || prebuscaUrl[0]))
+    if (!manter && !comVideo && preTitulo.adotado)
       player_precarregar_cancelar(0);
 #endif
     if (comVideo && !manter) video_parar();
@@ -2280,7 +2387,6 @@ static void fecharSessao(int manter) {
     // do anterior. mkvass_parar grava o sidecar parcial com o que ja veio.
     mkvass_parar();
     mkvass_video_aberto(0);
-    prebuscaUrl[0] = 0;
     if (!manter) legenda_desligar();
     printf("[player] saida: video %s %u ms, resto %u ms\n", manter ? "retido" : "parar",
            (unsigned)(tv - t0), (unsigned)(SDL_GetTicks() - tv));
@@ -2332,6 +2438,9 @@ static int podeReter(void) {
 void player_preparar_retencao(void) {
   // Antes do fade terminar, para o ack chegar enquanto a tela ainda e do
   // player. Sem confirmacao na saida, o app usa o fechamento normal.
+  if (!quadroCapturado && ajustes_retomada_morna() && comVideo && !ehCanal()) {
+    quadroCapturado = 1; cacheboost_backend_quadro(1);
+  }
   if (prepararRetencao || retido || !podeReter()) return;
   prepararRetencao = 1;
 #ifdef NV_ANDROID
@@ -2386,7 +2495,7 @@ int player_suspender(void) {
   if (retidoVoo)
     printf("[player] sessao pausada so ate o voo pousar (teto %u ms), depois solta\n", PLR_RETIDO_VOO_MS);
   else
-    printf("[player] sessao pausada pronta para retomar (teto %u ms)\n", PLR_RETIDO_MS);
+    printf("[player] sessao pausada pronta para retomar (teto %u ms; 0 = sem limite)\n", ajustes_manter_video_ms());
   return 1;
 }
 
@@ -2402,11 +2511,19 @@ void player_descartar_retido(void) {
   retomarMkv = 0; retidoVoo = 0;
 }
 
+void player_ciclo_evento(Uint32 tipo) {
+  if (tipo == SDL_APP_WILLENTERBACKGROUND || tipo == SDL_APP_DIDENTERBACKGROUND ||
+      tipo == SDL_APP_LOWMEMORY || tipo == SDL_APP_TERMINATING) {
+    player_descartar_retido(); retomamorna_cancelar();
+  }
+}
+
 void player_validar_retido(Uint32 agora) {
   const char *por = NULL;
   if (!retido) return;
   // (Sint32): `agora` e o do inicio do quadro e retidoDesde pode ser mais novo.
-  if ((Sint32)(agora - retidoDesde) >= (Sint32)PLR_RETIDO_MS) por = "prazo";
+  unsigned prazo = ajustes_manter_video_ms();
+  if (!retidoVoo && prazo && (Sint32)(agora - retidoDesde) >= (Sint32)prazo) por = "prazo";
   else if (retidoVoo && (Sint32)(agora - retidoDesde) >= (Sint32)PLR_RETIDO_VOO_MS) por = "voo pousou";
   else if (perfis_ativo() != retidoPerfil || strcmp(retidoConta, sessao_usuario())) por = "perfil";
   else if (strcmp(retidoUrl, video_url_atual())) por = "outro video";
@@ -2425,7 +2542,7 @@ int player_retomar_retido(const char *imdb, int t, int e) {
   if (!imdb || strcmp(imdb, itemFixo.imdb) || t != epT || e != epE) {
     player_descartar_retido(); return 0;
   }
-  retido = 0; retidoVoo = 0; aberto = 1; saindo = pediuSair = 0;
+  retido = 0; retidoVoo = 0; quadroCapturado = 0; aberto = 1; saindo = pediuSair = 0;
   desc_episodios_garantir(idxAtual());
   entrada = 1.0f; visivel = 0; anim = 0.0f; soBarra = 0;
   scrubbing = barraFoco = scrubToque = 0; scrubInicio = 0.0; encolhe = 1.0f; encolheT = encolheAlvo = 0.0f;
@@ -3008,7 +3125,7 @@ int player_janela_proximo(double antecedencia) {
 // Toda tecla acorda os controles, inclusive a que ja executou alguma acao: no
 // aparelho nao existe comando que aconteca com a barra escondida sem trazer a
 // barra junto — o usuario precisa ver o efeito do que apertou.
-static void acordar(void) { visivel = 1; ultimoInput = SDL_GetTicks(); }
+static void acordar(void) { abrecine_acordou(&cine, player_carregando()); visivel = 1; ultimoInput = SDL_GetTicks(); }
 // Tira os controles da frente (BAIXO na fileira, CIMA no topo, #305). Nao
 // chama acordar(): isso os recolocaria no mesmo evento e o comando pareceria
 // quebrado. O proximo toque direcional os revela de novo.
@@ -3718,32 +3835,7 @@ void player_atualizar(float dt, Uint32 agora) {
     }
     reconVisto = t; }
   janelaPasso(agora);
-  if (!aberto) {
-    prebuscaUrl[0] = 0;
-    return;
-  }
-
-  // PRE-BUSCA: solta o video quando ela acabou (pronta, desistiu, nada a
-  // colher) ou quando o teto venceu — o que nao chegou vem em segundo plano.
-  // (Na Samsung prebuscaUrl nunca e preenchida: o bloco nao roda.)
-  if (prebuscaUrl[0]) {
-    int fase = mkvass_prebusca_fase();
-    Uint32 esperou = agora - prebuscaDesde;
-    if (fase != 1 || esperou >= (Uint32)MKVASS_PREBUSCA_MS) {
-      char u[sizeof prebuscaUrl];
-      long ped = 0, bytes = 0; int col = 0, tot = 0;
-      mkvass_estatisticas(&ped, &bytes, &col, &tot);
-      printf("[player] pre-busca da legenda: video solto apos %u ms (%s; %d/%d blocos, %ld Ranges, %ld KB)\n",
-             (Sint32)esperou < 0 ? 0u : (unsigned)esperou,
-             fase == 1 ? "teto vencido, o resto segue em segundo plano"
-             : "a pre-busca acabou", col, tot, ped, bytes / 1024);
-      fflush(stdout);
-      snprintf(u, sizeof u, "%s", prebuscaUrl);
-      prebuscaUrl[0] = 0;
-      esperandoFonte = 0;
-      tocarFonte(u);
-    }
-  }
+  if (!aberto) return;
 
   entrada = anim_mola(entrada, saindo ? 0.0f : 1.0f, dt, NV_MOLA_TELA);
   // ZAPPING: o prazo do debounce vence aqui. O banner segura o OSD longe enquanto
@@ -4011,7 +4103,8 @@ void player_atualizar(float dt, Uint32 agora) {
   // curto (<120 s, clipe de erro do provedor) e canal ao vivo nao falam.
   { int ok = fontePrincipal() && video_pronto() && video_ativo() && tocando && !scrubbing &&
              !saindo && !erroFonte && !esperandoFonte && !ehCanal() &&
-             duracaoSeg >= 120.0f;
+             duracaoSeg >= 120.0f &&
+             !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo());   // PRONTO do trailer (129 s) nao e deste titulo
     static float tocouS, parcialRelogio, parcialSeek;
     static int scrubAnterior;
     const CatItem *cs = item();
@@ -4021,7 +4114,11 @@ void player_atualizar(float dt, Uint32 agora) {
       if (epT > 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
       else snprintf(id, sizeof id, "%s", cs->imdb);
       tocouS += dt;
-      if (tocouS >= PLR_SCR_TOCOU_S) trakt_scrobble(SCR_EV_TOCANDO, id, posSeg, duracaoSeg, assistidoSeg, 0);
+      if (tocouS >= PLR_SCR_TOCOU_S) {
+        trakt_scrobble(SCR_EV_TOCANDO, id, posSeg, duracaoSeg, assistidoSeg, 0);
+        simkl_scrobble(SCR_EV_TOCANDO, id, posSeg, duracaoSeg, assistidoSeg, 0);
+        wsTocando();
+      }
       parcialRelogio += dt;
       if (parcialRelogio >= PLR_PARCIAL_INTERVALO_S) {
         parcialRelogio = 0.0f;
@@ -4030,11 +4127,14 @@ void player_atualizar(float dt, Uint32 agora) {
     } else {
       // Pausou (ou o video parou de andar): so fala se ha um start em pe.
       if (tocouS > 0.0f && cs && cs->imdb[0] && fontePrincipal() && video_pronto() && !ehCanal() &&
-          duracaoSeg >= 120.0f && !scrubbing) {
+          duracaoSeg >= 120.0f && !scrubbing &&
+          !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo())) {
         char id[64];
         if (epT > 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
         else snprintf(id, sizeof id, "%s", cs->imdb);
         trakt_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg, 0);
+        simkl_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg, 0);
+        if (!saindo) wsPausou();
         parcialPausa = 1;
       }
       tocouS = 0.0f;
@@ -4124,9 +4224,6 @@ void player_atualizar(float dt, Uint32 agora) {
     // 90% em ~1h42 de exibicao e abriria o painel de relacionados no meio da
     // programacao.
     if (!ehCanal()) {
-      { double cr0 = credEfetivo();
-        posplay_marcador_real(cr0 > 1.0 && duracaoSeg - cr0 <= credJanela() &&
-                              (credFonteAtual == CRED_FONTE_CAPITULO || credFonteAtual == CRED_FONTE_INTRODB)); }
       posplay_atualizar(dt, agora, posSeg, duracaoSeg, eSerie, idxAtual(),
                         eSerie && player_janela_proximo(0));
     }
@@ -4136,13 +4233,28 @@ void player_atualizar(float dt, Uint32 agora) {
     // SERIE SO COM A LISTA DE EPISODIOS NA MAO: sem ela, player_proximo_episodio
     // e NULL e todo episodio pareceria "o ultimo disponivel" (o #151 mostra que
     // a lista pode chegar tarde ou nao chegar).
+    int listaConhecida = !eSerie ||
+      (cat_n_episodios(idxAtual()) > 0 && !desc_episodios_carregando(idxAtual()));
     if (!ehCanal() && ci && comVideo && video_pronto() && duracaoSeg >= 120.0f &&
-        (!eSerie || (cat_n_episodios(idxAtual()) > 0 && !desc_episodios_carregando(idxAtual())))) {
+        listaConhecida) {
       const CatEp *px = eSerie ? player_proximo_episodio() : NULL;
       double cr = credEfetivo();
       reacao_player_atualizar(dt, agora, ci, eSerie, posSeg, duracaoSeg, cr,
                               px != NULL, px && px->temporada != epT);
-    } else reacao_player_atualizar(dt, agora, NULL, 0, 0, 0, 0, 0, 0); }
+    } else reacao_player_atualizar(dt, agora, NULL, 0, 0, 0, 0, 0, 0);
+    // webOS conserva terminou depois de buscar: confira o fim e o recuo.
+    // Espera a lista so enquanto carrega, por no maximo 8 s no EOF.
+    int noFim = !saindo && fontePrincipal() && video_ativo() && video_terminou() &&
+      !ehCanal() && !scrubbing && !retomandoSalto && !aguardaBusca &&
+      duracaoSeg > 1.0f && posSeg >= duracaoSeg - 1.0f && video_pos() >= duracaoSeg - 1.0;
+    double agoraEof = monoSeg();
+    if (!noFim) eofDesde = -1.0;
+    else {
+      if (eofDesde < 0.0) eofDesde = agoraEof;
+      if ((!eSerie || !desc_episodios_carregando(idxAtual()) || agoraEof - eofDesde >= 8.0) &&
+          !player_proximo_episodio()) { saindo = 1; pediuSair = 1; }
+    }
+  }
   // Com o painel no ar os controles nao somem: eles sao a saida do dono.
   if (posplay_visivel()) ultimoInput = agora;
 
@@ -4177,7 +4289,7 @@ void player_atualizar(float dt, Uint32 agora) {
                    // esta condicao o painel subia sozinho no meio de um avanco
                    // longo — o "componente que aparece quando ta pausado
                    // piscando" do relato.
-                   !ehCanal() && !tocando && !scrubbing && !retomandoSalto && !saindo && !erroFonte &&
+                   !ehCanal() && !abrecine_osd_calado(&cine) && !tocando && !scrubbing && !retomandoSalto && !saindo && !erroFonte &&
                    !player_carregando() &&
                    // O preroll do caminho proprio (DV/DTS) nao e pausa: o
                    // fluxo carregou e o primeiro quadro ainda nao veio. Era o
@@ -4191,6 +4303,9 @@ void player_atualizar(float dt, Uint32 agora) {
   // comportamento original, com o painel ocupando o rodape sozinho, so que
   // ancorado mais abaixo — onde a barra ficaria. Um lugar, um conteudo.
   if (pausao_visivel()) visivel = 0;
+  // ABERTURA SEM OSD (dono, 14/10): o filme entra suave, sem controles, ate a
+  // primeira tecla — tambem no Dolby Vision que comeca pausado.
+  if (abrecine_osd_calado(&cine) && !ehCanal() && !erroFonte) visivel = 0;
   // A tela do DV cobre tudo: os controles nao sobem por baixo dela.
   if (dvtela_visivel()) visivel = 0;
   // O painel de pos-reproducao tambem toma o rodape para si. BAIXO devolve os
@@ -4434,7 +4549,7 @@ static void blocoLinha(LegBloco *bl, TxtEstilo est, const char *linha, int r, in
   // Latin text comes back byte-identical.
   if (txt_bidi_legenda(fam, est, linha, visual, sizeof visual) > 0) linha = visual;
   bl->cor[bl->n]   = txt_linha_corta_enfase(est, linha, r, g, b, 255, PLR_LEG_LARG, fam, enf);
-  { unsigned cor = video_legenda_borda_rgb(legEstilo.corBorda);
+  { unsigned cor = ajustes_leg_borda_rgb(legEstilo.corBorda);
     bl->borda[bl->n] = legEstilo.borda ? txt_linha_corta_enfase(est, linha, (cor >> 16) & 255, (cor >> 8) & 255, cor & 255, 255, PLR_LEG_LARG, fam, enf) : (TxtLinha){0}; }
   if (bl->cor[bl->n].w > bl->w) bl->w = bl->cor[bl->n].w;
   bl->h += bl->cor[bl->n].h + (bl->n ? 5 : 0);
@@ -4627,23 +4742,33 @@ static void desenharLegendaExternaCorpo(void) {
 }
 
 static void desenharLegendaPrincipal(float *topoPilha){
+  // Gate collector output, preserving native callback rendering below.
+  int overlay = faixas_legenda_overlay();
   PlrRect bitmapArea = areaVideoLegenda();
   float bitmapAlpha = (legEstilo.opacidade==3?.25f:legEstilo.opacidade==2?.5f:
                       legEstilo.opacidade==1?.75f:1.f) * entrada;
-  if (video_dts_legenda_desenhar(posLegenda(), legEstilo.atrasoMs,
+  if (overlay && video_dts_legenda_desenhar(posLegenda(), legEstilo.atrasoMs,
+        bitmapArea.x, bitmapArea.y, bitmapArea.w, bitmapArea.h, bitmapAlpha)) {
+    imgsub_gl_limpar();
+    return;
+  }
+  // PGS decodificado pelo app (mkvass): so ha quadros quando a faixa e de imagem.
+  if (overlay && imgsub_desenhar(legsync_posicao(posLegenda()) + legsync_offset_ms(legEstilo.atrasoMs) / 1000.0,
         bitmapArea.x, bitmapArea.y, bitmapArea.w, bitmapArea.h, bitmapAlpha)) return;
   /* Authored ASS keeps its styles until the corresponding user setting
    * changes. Size remains proportional; opacity and delay apply globally. */
   int r, g, b;
   // F05: manual + automatico aceito, UMA vez, so para o documento dono do
-  // overlay (sem ele, o manual intacto). Positivo adianta, como sempre.
+  // overlay (sem ele, o manual intacto). O estilo guarda o ATRASO da pessoa
+  // (positivo = a legenda aparece mais tarde); legsync_offset_ms ja devolve o
+  // deslocamento de busca (positivo adianta, como sempre).
   int atraso = legsync_offset_ms(legEstilo.atrasoMs);
   // Escala/trechos aceitos: o instante na legenda, nao no video (o mesmo
   // para libass e para o desenho do app).
   double posLeg = legsync_posicao(posLegenda());
   assrender_aplicar_invalidacao();
   assrender_definir_cor(0, 0, 0, 0);
-  if (assrender_ativo()) {
+  if (overlay && assrender_ativo()) {
     PlrRect area = areaVideoLegenda();
     {
       static const char *const families[] = {
@@ -4662,7 +4787,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
       style.rgb = (r << 16) | (g << 8) | b;
       style.background = legEstilo.fundo >= 0 && legEstilo.fundo <= 4 ? legEstilo.fundo : 0;
       style.border = legEstilo.borda; style.bold = legEstilo.negrito;
-      style.outlineRgb = (int)video_legenda_borda_rgb(legEstilo.corBorda);
+      style.outlineRgb = (int)ajustes_leg_borda_rgb(legEstilo.corBorda);
       style.overrides = legTocado;
       style.marginV = (int)(1080.f - base);
       assrender_definir_texto_estilo(&style);
@@ -4685,7 +4810,7 @@ static void desenharLegendaPrincipal(float *topoPilha){
     return;
   }
   LegendaCue cues[LEGENDA_SIMULTANEAS];
-  int n = legenda_cues(posLeg, atraso, cues, LEGENDA_SIMULTANEAS), i;
+  int n = overlay ? legenda_cues(posLeg, atraso, cues, LEGENDA_SIMULTANEAS) : 0, i;
   // Sem legenda externa, a EMBUTIDA que o player nativo nao desenha (#122):
   // o mesmo overlay, com a mesma folha de estilo da pessoa.
   if (n <= 0 && comVideo && player_texto_legenda_nativa(cues[0].texto, sizeof cues[0].texto)) {
@@ -5197,13 +5322,24 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   float v = cine.veu, f = cine.foco, t = (float)(agora - cine.desde) / 1000.0f;
   float resp, entra, cy = NV_TELA_H * 0.46f, base;
   int reduz = ajustes_animacoes_reduzidas();
-  const char *arte = c && c->backdrop[0] ? artehero_url(c) : NULL;
+  // #508: o fundo da tela e escolha da pessoa. 0 = Desligado (preto), 1 = Arte
+  // (o backdrop do titulo, nitido, com veu escuro), 2 = Arte borrada (o de
+  // sempre). Sem o pedido, nada de arte: o preto de baixo fica.
+  int nf = ajustes_abertura_fundo();
+  const char *arte = nf && c && c->backdrop[0] ? artehero_url(c) : NULL;
   const char *marca = c ? artehero_logo_sessao(c) : NULL;
-  GLuint ts = arte ? tex_obter_hero(arte) : 0, tb = arte ? tex_obter_larg(arte, 480) : 0, lg;
+  GLuint ts = arte ? tex_obter_hero(arte) : 0, tb = nf == 2 && arte ? tex_obter_larg(arte, 480) : 0, lg;
   if (v <= 0.0f) return;
   if (furou || !player_carregando()) gfx_cor(tela, 0.0f, 0, 0, 0, v);
   if (tb) tb = gfx_desfocado(tb, arte);
   gfx_tex_aspect_atual = arte ? tex_aspecto(arte) : 0.0f;
+  // #508 ARTE NITIDA: o mesmo backdrop, sem desfoque nem recuo, com o VEU
+  // ESCURO do GFX_SNAP (o mesmo 0,55 da Borrada parada) para o logo, o episodio
+  // e o trilho nao perderem leitura sobre a arte. uPar.x = 1 (so o dither): o
+  // B-spline do 2 e para a copia de 96x54, e esticaria a arte grande em blocos.
+  if (nf == 1) {
+    if (ts) gfx_rect(tela, ts, GFX_SNAP, 0.55f, 1.0f, 0.0f, 0.0f, 0, 0, 0, v);
+  } else {
   // Recua para 45%: a arte vira luz de fundo, o logo fica sozinho na frente.
   // Pelo GFX_SNAP com o nv_dither e o B-spline ligados (uPar.x = 2) e o escurecimento na
   // mesma passada (uFoco), como o fundo da tela DV: o GFX_CARD nao tem ruido,
@@ -5212,6 +5348,7 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   if (tb) gfx_rect(tela, tb, GFX_SNAP, 0.55f * f, 2.0f, 0.0f, 0.0f, 0, 0, 0, v);
   { float as = v * (tb ? 1.0f - f : 1.0f - 0.55f * f);
     if (ts && as > 0.01f) gfx_rect(tela, ts, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, as); }
+  }
   gfx_tex_aspect_atual = 0.0f;
 
   // O logo fica PARADO (dono, 11/10: sem aumentar e diminuir); so o trilho anda.
@@ -5231,23 +5368,53 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
     base = cy + l.h * 0.5f;
   }
 
-  // O TRILHO: 200 x 3, um brilho de 64 px na cor de acento correndo da
-  // esquerda para a direita. Sem porcentagem: a abertura nao tem progresso real.
-  { float tw = 200.0f, sw = 64.0f, x0 = NV_TELA_W * 0.5f - tw * 0.5f, y = base + 56.0f, r, g, b;
+  // O EPISODIO, entre o logo e o trilho (so serie; filme nao tem linha).
+  if (linhaEp[0]) {
+    TxtLinha l = txt_linha_corta(TXT_ILHA_SUB, linhaEp, 243, 242, 239, 170, 1100.0f);
+    txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, base + 14.0f, v * entra);
+  }
+  // Como na carga da Home: a barra so enche com progresso medido.
+  // Samsung informa porcentagem; segundos de buffer dos demais nao sao %.
+  { VideoStats stats;
+    int pct;
+    video_estatisticas(&stats);
+    pct = !esperandoFonte && stats.bufferPct >= 0 && stats.bufferPct <= 100 ? stats.bufferPct : -1;
+    float tw = 200.0f, sw = 64.0f, x0 = NV_TELA_W * 0.5f - tw * 0.5f, y = base + 48.0f, r, g, b;
+    // A barra leva a cor do logo, como a Imersiva (dono, 14/10); sem paleta, o realce.
+    if (!corviva_logo_acento(&r, &g, &b)) corFocoPlayer(&r, &g, &b);
     gfx_cor((GfxRect){ x0, y, tw, 3.0f }, 0.5f, 1, 1, 1, 0.16f * v * entra);
-    if (!reduz) {
+    if (pct >= 0) {
+      if (pct > 0) gfx_cor((GfxRect){ x0, y, tw * pct / 100.0f, 3.0f }, 0.5f, r, g, b, 0.9f * v * entra);
+    } else if (!reduz) {
       float p = fmodf(t / 1.6f, 1.0f), e = p * p * (3.0f - 2.0f * p);
       float a0 = x0 - sw + (tw + sw) * e, a1 = a0 + sw;
       if (a0 < x0) a0 = x0;
       if (a1 > x0 + tw) a1 = x0 + tw;
-      corFocoPlayer(&r, &g, &b);
       if (a1 > a0) gfx_cor((GfxRect){ a0, y, a1 - a0, 3.0f }, 0.5f, r, g, b, 0.9f * v * entra);
     }
+    // O nome do add-on (e a tentativa), so com o ajuste ligado. A barra ja diz
+    // que esta carregando; nao ha texto de etapa.
+    if (ajustes_abertura_addon()) {
+      const Stream *st = stream_item(stream_atual());
+      char det[260];
+      snprintf(det, sizeof det, "%s", st ? st->provedor : "");
+      // O nome e uma linha, como os rotulos da ilha.
+      for (char *p = det; *p; p++) if ((unsigned char)*p < 32) *p = ' ';
+      if (tentativaN >= 2 && tentativaM >= tentativaN) {
+        size_t n = strlen(det);
+        snprintf(det + n, sizeof det - n, "%s", n ? " \xc2\xb7 " : "");
+        n = strlen(det);
+        snprintf(det + n, sizeof det - n, i18n("Fonte %d de %d"), tentativaN, tentativaM);
+      }
+      if (det[0]) {
+        TxtLinha d = txt_linha_corta(TXT_G19M, det, 243, 242, 239, 140, 1100.0f);
+        txt_desenhar_alpha(d, NV_TELA_W * 0.5f - d.w * 0.5f, y + 22.0f, v * entra);
+      } }
     // DEMOROU: uma linha so, curta e calma, que entra devagar.
     if (abrecine_demorando(&cine, agora)) {
       float d = (float)(agora - cine.desde - ABRECINE_DEMORA_MS) / 600.0f;
       TxtLinha l = txt_linha(TXT_G19M, i18n("Só mais um instante…"), 243, 242, 239, 255);
-      txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, y + 32.0f,
+      txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, y + (ajustes_abertura_addon() ? 56.0f : 22.0f),
                          0.62f * v * (reduz || d > 1.0f ? 1.0f : d));
     } }
 }
@@ -5312,7 +5479,8 @@ void player_desenhar(Uint32 agora) {
   // raio 0 e o quad de tela inteira: o recorte (cover) do shader e o que impede
   // a arte 16:9 de esticar quando a tela nao for exatamente 16:9.
   GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
-  int furar = player_com_video() && !esperandoFonte;   // abrindo a fonte: sem furo, so preto
+  int quadroMorno = player_carregando() && !erroFonte && cacheboost_backend_quadro(3);
+  int furar = (player_com_video() && !esperandoFonte) || quadroMorno;   // abrindo a fonte: sem furo, so preto
 #ifdef NV_SHOT_HOOKS
   if (shotSemFuro && encolhe > 0.999f) furar = 0;   // capturas: a arte faz de video
 #endif
@@ -5460,7 +5628,7 @@ void player_desenhar(Uint32 agora) {
     abrindoFundoUlt = agora;
     if (dtf > 0.1f) dtf = 0.1f;
     // A CINEMA tem o proprio crossfade (o veu dela), que espera o quadro real.
-    if (abrecine_cinema(&cine)) abrindoFundo = 0.0f;
+    if (quadroMorno || abrecine_cinema(&cine)) abrindoFundo = 0.0f;
     else if (player_carregando() && !ehCanal()) abrindoFundo = 1.0f;
     else if (abrindoFundo > 0.0f) {
       abrindoFundo = ajustes_animacoes_reduzidas() ? 0.0f : anim_mola(abrindoFundo, 0.0f, dtf, 12.0f);
@@ -5468,7 +5636,7 @@ void player_desenhar(Uint32 agora) {
       else if (player_com_video() && !erroFonte && !saindo && !ehCanal())
         gfx_cor(tela, 0.0f, 0.0f, 0.0f, 0.0f, abrindoFundo);
     }
-    if (abrecine_cinema(&cine) && !dvtela_visivel()) desenharCinema(agora, c, furar); }
+    if (!quadroMorno && abrecine_cinema(&cine) && !dvtela_visivel()) desenharCinema(agora, c, furar); }
   // Uma abertura NOVA (a anterior acabou, ou o player reabriu): volta ao compacto
   // e zera o relogio. Ao acabar, o estado fica como esta para o cartao sair com o
   // mesmo conteudo (a saida e a da ilha, plrilha.c).
@@ -6134,6 +6302,8 @@ static void desenharOsdCorpo(Uint32 agora, float a, float ac, const CatItem *c) 
 // CAPTURAS (tests/player_glass_shot.c): poe o player num estado de tela sem
 // pipeline. `agora` e o relogio do harness (o mesmo passado a desenhar).
 void player_shot_video(int sim) { comVideo = sim; shotSemFuro = sim; }
+// O furo de verdade (alfa 0, como na TV) em vez da arte fazendo de video.
+void player_shot_furo_real(void) { shotSemFuro = 0; }
 void player_shot_canal(const AoVivoEpg *e, int numero, int atrasS, int botaoFoco, int info) {
   shotEpgOk = e != NULL; if (e) shotEpg = *e; shotNumero = numero; shotAtras = atrasS;
   botaoAV = botaoFoco; infoAV = info;
@@ -6146,7 +6316,7 @@ void player_shot_estado(Uint32 agora, float pos, float dur, int toca, int bt,
   tocando = toca; botao = bt; barraFoco = barra; soBarra = so;
   cheio = so ? 0.0f : 1.0f;
   fileira = barra ? 0.0f : 1.0f;
-  visivel = 1; ultimoInput = agora; anim = 1.0f; entrada = 1.0f;
+  visivel = 1; ultimoInput = agora; anim = 1.0f; entrada = 1.0f; cine.calado = 0;
   esperandoFonte = 0; erroFonte = 0;
 }
 // Move so o foco (sem zerar molas): o que o controle remoto faz de verdade.

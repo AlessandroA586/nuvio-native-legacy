@@ -22,8 +22,6 @@ int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
 int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le o ajuste
 int ajustes_ocultar_filmes_vistos(void) { return 0; }    // #366: descoberta.c le o ajuste
 #include "../src/descoberta.c"
-int ajustes_cw_concluido(void) { return 90; }
-int ajustes_cw_minimo(void) { return 1; }
 unsigned cat_revisao_itens(void) { return 0; }
 int cat_visto(const CatItem *item) { (void)item; return 0; }
 int cat_copiar_por_id(const char *id, const char *tipo, CatItem *item) {
@@ -109,6 +107,8 @@ void cat_republicar_fileiras(const CatFileira *f, int n) { guardar(f, n); }
 void  SDL_Delay(Uint32 ms)                 { usleep(ms * 1000); }
 int   ajustes_cw_fonte(void)               { return 0; }
 int   ajustes_cw_ordem(void)               { return 0; }   // Padrao (issue #127)
+int ajustes_cw_concluido(void)             { return 90; }   // padrao (issue #326)
+int ajustes_cw_minimo(void)                { return 1; }    // padrao (issue #326)
 int   ajustes_itens_fileira(void)          { return 12; }   // padrao (#163)
 int   ajustes_cw_mostrar_nao_exibidos(void) { return 1; }
 int   ajustes_cw_proximo(void) { return 1; }

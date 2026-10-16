@@ -38,9 +38,9 @@
 // O QUE CADA PLATAFORMA FAZ (detalhes e o que foi medido: entrada_texto.c)
 //   LG webOS  SDL_StartTextInput do SDL DA TV (libsdl2-webos, com text_model).
 //   Android   SDL_StartTextInput (IME do sistema; Gboard tem microfone).
-//   .wgt      so o botao de microfone das buscas: <input> escondido no
-//             tizen-shell.html, focus() chama o teclado da Samsung para o
-//             microfone dele (TS_VOZ sem TS_TECLADO).
+//   .wgt      <input> escondido no tizen-shell.html: focus() chama o teclado
+//             da Samsung para digitar (TS_TECLADO) e para o botao de
+//             microfone das buscas (TS_VOZ, conforme o ajuste).
 //   .tpk      host .NET. Release: o mesmo botao (Voz.cs). Canario: teclado e
 //             ditado (Texto.cs).
 //   Mac       nada (o teclado fisico ja escreve).

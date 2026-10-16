@@ -265,6 +265,12 @@ typedef struct {
   // mundo que recebe a base de um canal (lembrete, fontecache, spotlight,
   // diagnostico da Live TV) herda este teto, e por isso continua em 600.
   char base[600];
+  // TIPO DECLARADO do catalogo de onde o canal saiu ("tv", "channel",
+  // "channels", "live", "iptv"). E o nome de tipo que vai no pedido de
+  // stream: um manifesto MISTO (filme+serie+canal, como o do M3U Mux e de
+  // qualquer addon de IPTV caseiro) declara cada catalogo com o tipo dele e o
+  // /stream/<tipo>/ so responde pelo declarado. Vazio = nao se sabe.
+  char tipo[16];
   int  cat;      // indice em cats[]
   int  epg;      // -1 = ainda nao resolvido; -2 = sem grade real
   char epgId[64];  // id do canal no XMLTV do provedor (Xtream), quando ha
@@ -762,6 +768,10 @@ static int lerPagina(const GFonte *f, int skip, int teto, int *novos) {
       // nao entra — protege o guia de catalogo mal declarado.
       if (js_texto(p, fim, "type", mtipo, sizeof mtipo) &&
           mtipo[0] && !ehCanal(mtipo)) { p = js_prox(fim); continue; }
+      // O tipo DO ITEM quando ele declara um de canal ("tv" dentro de um
+      // catalogo "channel", por exemplo); sem declaracao vale o do catalogo.
+      // E este nome que vai ao /stream/, e nao um adivinhado pelo app.
+      snprintf(c.tipo, sizeof c.tipo, "%s", mtipo[0] ? mtipo : f->tipo);
       if (!js_texto(p, fim, "poster", c.logo, sizeof c.logo))
         js_texto(p, fim, "logo", c.logo, sizeof c.logo);
       js_texto(p, fim, "description", c.desc, sizeof c.desc);
@@ -1569,11 +1579,12 @@ int guia_canais_para_teste(GuiaVariante *out, char bases[][600], int max, char *
 static int pedLivetvDiag;
 int guia_pediu_livetv_diag(void) { int v = pedLivetvDiag; pedLivetvDiag = 0; return v; }
 
-static char pedidoBase[600];
+static char pedidoBase[600], pedidoTipo[16];
 static void previewPedir(GCanal *c) {
   if (!c || !c->id[0]) return;
   canalParaItem(c, &pedPreviewItem);
   snprintf(pedidoBase, sizeof pedidoBase, "%s", c->base);
+  snprintf(pedidoTipo, sizeof pedidoTipo, "%s", c->tipo);
   snprintf(previewId, sizeof previewId, "%s", c->id);
   pedPreview = 1;
 }
@@ -1613,7 +1624,7 @@ static void desenharDica(void) {
                  (gRetrato() ? gTopoFim : G_TOPO_Y + G_TOPO_H) + 16.0f,
                  (float)t.w + 40.0f, 44.0f };
   if (gRetrato() && p.x < G_AREA_X) p.x = G_AREA_X;
-  gfx_cor(p, 0.5f, 0.13f, 0.14f, 0.18f, 0.97f * da);
+  gfx_vidro_ou_solido(p, 0.5f, GFX_VIDRO_DENS, da, 0.13f, 0.14f, 0.18f, 0.97f);
   gfx_anel_fora(p, 0.5f, 0.0f, 2.0f, ar, ag, ab, 0.85f * da);
   txt_desenhar_alpha(t, p.x + 20.0f, p.y + (p.h - (float)t.h) * 0.5f, da);
 }
@@ -1725,7 +1736,12 @@ int guia_pediu_canal(CatItem *saida) {
 static void canalParaItem(const GCanal *c, CatItem *dst) {
   memset(dst, 0, sizeof *dst);
   snprintf(dst->imdb,    sizeof dst->imdb,    "%s", c->id);
-  snprintf(dst->tipo,    sizeof dst->tipo,    "%s", "channel");
+  // O CatItem tipo so conhece dois nomes de canal (ver player.c, home.c e os
+  // "channel"/"tv" espalhados pelo app): o declarado fica quando e um dos
+  // dois, e os demais ("live", "channels", "iptv") viram "channel". O nome
+  // cru para a consulta de stream esta em GCanal.tipo / guia_canal_tipo().
+  snprintf(dst->tipo,    sizeof dst->tipo,    "%s",
+           !strcasecmp(c->tipo, "tv") ? "tv" : "channel");
   snprintf(dst->titulo,  sizeof dst->titulo,  "%s", c->nome);
   snprintf(dst->poster,  sizeof dst->poster,  "%s", c->logo);
   snprintf(dst->backdrop,sizeof dst->backdrop,"%s", c->logo);
@@ -1738,6 +1754,10 @@ static void canalParaItem(const GCanal *c, CatItem *dst) {
 // fora do CatItem de proposito: ele e gravado em disco (catalogo-rede.bin) e
 // um campo novo invalidaria o cache de todo mundo por um dado de sessao.
 const char *guia_canal_origem(void) { return pedidoBase; }
+// O tipo DECLARADO do catalogo do mesmo canal, para o /stream/<tipo>/ ir
+// pelo nome que o addon usa. "channel" sem declaracao: e o que este caminho
+// sempre pediu antes de conhecer o tipo.
+const char *guia_canal_tipo(void) { return pedidoTipo[0] ? pedidoTipo : "channel"; }
 
 static time_t janelaIni(time_t agoraT);
 static time_t instanteFoco(time_t agoraT);
@@ -1789,13 +1809,15 @@ static void acaoOk(void) {
 // quando a lista ja esta carregada; senao so a identidade guardada.
 int guia_item_do_canal(const char *id, const char *nome, const char *base, CatItem *it) {
   GCanal *c = canalPorId(id);
-  if (c) { canalParaItem(c, it); snprintf(pedidoBase, sizeof pedidoBase, "%s", c->base); return 1; }
+  if (c) { canalParaItem(c, it); snprintf(pedidoBase, sizeof pedidoBase, "%s", c->base);
+           snprintf(pedidoTipo, sizeof pedidoTipo, "%s", c->tipo); return 1; }
   if (!id || !id[0]) return 0;
   memset(it, 0, sizeof *it);
   snprintf(it->imdb, sizeof it->imdb, "%s", id);
   snprintf(it->tipo, sizeof it->tipo, "%s", "channel");
   snprintf(it->titulo, sizeof it->titulo, "%s", nome ? nome : "");
   snprintf(pedidoBase, sizeof pedidoBase, "%s", base ? base : "");
+  pedidoTipo[0] = 0;   // so a identidade: tipo desconhecido, vale o padrao
   return 1;
 }
 
@@ -1813,6 +1835,7 @@ static void pedirCanal(GCanal *c) {
   pedPreview = 0; previewId[0] = 0; previewPreso = 0;
   canalParaItem(c, &pedido);
   snprintf(pedidoBase, sizeof pedidoBase, "%s", c->base);
+  snprintf(pedidoTipo, sizeof pedidoTipo, "%s", c->tipo);
   pediuCanal = 1;
   // No overlay o OK TROCA o canal e volta ao video: ficar aberto por cima da
   // troca deixaria a pessoa assistindo atras de uma grade que ela ja usou.
@@ -1833,7 +1856,10 @@ static int zapAlvo(const char *idAtual, int dir, CatItem *saida, int aplicar) {
   alvo = aovivo_ordem(nCanais, alvo, dir);
   canalParaItem(&canais[alvo], saida);
   // A origem so muda quando o zap VAI tocar; o banner do zapping so espia.
-  if (aplicar) snprintf(pedidoBase, sizeof pedidoBase, "%s", canais[alvo].base);
+  if (aplicar) {
+    snprintf(pedidoBase, sizeof pedidoBase, "%s", canais[alvo].base);
+    snprintf(pedidoTipo, sizeof pedidoTipo, "%s", canais[alvo].tipo);
+  }
   return 1;
 }
 int guia_zap(const char *idAtual, int dir, CatItem *saida) {
@@ -2239,8 +2265,8 @@ void guia_evento(const SDL_Event *e) {
 
   // CH+/- do controle da LG (scancodes 480/481 do SDL_webOS.h): dentro do
   // guia eles pulam CATEGORIA, nao canal — e a mesma leitura do "segurar"
-  // sem exigir o gesto. No Tizen o CH+ chega como "s" (tizen-shell.html), e o
-  // CH- nao chega — a casca nao o registra.
+  // sem exigir o gesto. No .wgt o CH+ chega como "s" (tizen-shell.html),
+  // azul de mentira, e o CH- como CH_DOWN cru.
   if (e->key.keysym.scancode == NV_SCANCODE_CH_UP ||
       e->key.keysym.scancode == NV_SCANCODE_CH_DOWN ||
       (!overlay && k == SDLK_s)) {
@@ -2432,6 +2458,7 @@ static void epgPaisesEscolher(void) {
 // consultar de novo a cada quadro.
 static int epgDo(GCanal *c) {
   if (c->epg == -1) {
+    if (epg_estado() == EPG_FALHOU) return -2;
     if (epg_estado() != EPG_PRONTO) return -1;
     c->epg = c->epgId[0] ? epg_match_id(c->epgId) : -1;
     if (c->epg < 0) c->epg = epg_match(c->nome);
@@ -2461,8 +2488,15 @@ static int gProximo(GCanal *c, time_t t, int k, EpgProg *p) {
   if (epg >= 0) return epg_proximo(epg, t, k, p);
   return xtCurta(c) && xtepg_proximo(c->id, t, k, p);
 }
-static int gTemGrade(GCanal *c) {
-  return epgDo(c) >= 0 || (xtream_e_id(c->id) && xtepg_tem(c->id));
+// 0 = grade disponivel, -1 = pedido pendente, -2 = sem grade.
+static int gEstadoGrade(GCanal *c) {
+  int epg = epgDo(c);
+  if (epg >= 0) return 0;
+  if (xtCurta(c)) {
+    if (xtepg_tem(c->id)) return 0;
+    if (xtepg_carregando(c->id)) return -1;
+  }
+  return epg;
 }
 static int gFaixaDesde(GCanal *c, time_t de, time_t ate, int pular, EpgProg *out, int cap) {
   int epg = epgDo(c);
@@ -2840,7 +2874,7 @@ static void desenharCard(GCanal *c, float x, float y, float foco, float a,
   EpgProg ag, px;
   int temAgora = gAgora(c, agoraT, &ag);
   int temProx  = gProximo(c, agoraT, 0, &px);
-  int epg = gTemGrade(c) ? 0 : -1;
+  int epg = gEstadoGrade(c);
 
   // FOCO = O CARTAO PREENCHIDO NA COR DO FUNDO DO LOGO, sem anel. Pedido do
   // dono (16/09), olhando a captura do guia: "quando ta selecionado ficar com
@@ -3061,7 +3095,7 @@ static void desenharHero(float a, time_t agoraT, time_t tFoco) {
   if (!c) return;
   ajustes_acento(&ar, &ag, &ab);
   tem = gAgora(c, tFoco, &p);
-  epg = gTemGrade(c) ? 0 : -1;
+  epg = gEstadoGrade(c);
   noAr = tem && p.ini <= agoraT && agoraT < p.fim;
 
   // PREVIEW. O plano de video vive ATRAS da superficie GL; o furo e o que o
@@ -3091,15 +3125,16 @@ static void desenharHero(float a, time_t agoraT, time_t tFoco) {
       if (pc != c) {
         TxtLinha t = txt_linha_corta(TXT_PG_ROTULO, pc->nome, 245, 246, 250, 255, pv.w - sw - 80.0f);
         GfxRect r = { pv.x + 20.0f + sw + 8.0f, pv.y + pv.h - 52.0f, (float)t.w + 24.0f, 32.0f };
-        gfx_cor(r, 0.5f, 0.02f, 0.02f, 0.03f, 0.72f * a);
+        if (ajustes_vidro()) gfx_vidro_chip(r, 0.5f, 0.72f, a);
+        else gfx_cor(r, 0.5f, 0.02f, 0.02f, 0.03f, 0.72f * a);
         txt_desenhar_alpha(t, r.x + 12.0f, r.y + (r.h - (float)t.h) * 0.5f, a);
       } }
   } else if (anda) {
     // encolhendo: nada aqui, o furo do degrau vem por cima de tudo
   } else {
-    gfx_cor(pv, raio, 0.078f, 0.080f, 0.088f, a);
+    gfx_vidro_ou_solido(pv, raio, GFX_VIDRO_DENS, a, 0.078f, 0.080f, 0.088f, 1.0f);
     // Uma luz so, bem fraca, na cor de realce: tira a cara de caixa vazia.
-    gfx_luz_canto(pv, raio, pv.w * 0.82f, -pv.h * 0.2f, pv.w * 0.85f,
+    if (!ajustes_vidro()) gfx_luz_canto(pv, raio, pv.w * 0.82f, -pv.h * 0.2f, pv.w * 0.85f,
                   ar, ag, ab, 0.10f * a);
     { float lw = gRetrato() ? fminf(320.0f, pv.w - 40.0f) : 320.0f;
       float lh = gRetrato() ? fminf(170.0f, fmaxf(20.0f, pv.h - 120.0f)) : 170.0f;
@@ -3197,7 +3232,8 @@ static void desenharHero(float a, time_t agoraT, time_t tFoco) {
                 : 0.0f;
       GfxRect tr = { x, y, 440.0f, 4.0f };
       GfxRect an = { tr.x, tr.y, tr.w * f, tr.h };
-      gfx_cor(tr, 0.5f, 1, 1, 1, 0.14f * a);
+      if (ajustes_vidro()) gfx_vidro_chip(tr, 0.5f, 0.55f, a);
+      else gfx_cor(tr, 0.5f, 1, 1, 1, 0.14f * a);
       gfx_cor(an, 0.5f, ar, ag, ab, a);
       y += 4.0f + 22.0f;
     } }
@@ -3842,7 +3878,7 @@ static void desenharLinhaLista(GCanal *c, float y, int focada, float a,
   float ppm = G_L_FAIXA_W / (float)G_L_JANELA_MIN;
   GfxRect col = { G_AREA_X, y, G_L_COL, h };
   // Grade da XMLTV ou, no Xtream, a curta (#158): ver gFaixa.
-  int epg = (epgDo(c) >= 0 || (xtCurta(c) && xtepg_tem(c->id))) ? 0 : -1;
+  int epg = gEstadoGrade(c);
 
   if (passo == 0) {
     // GLASS UI: a coluna do canal nao tem superficie propria; o foco e a
@@ -4509,8 +4545,8 @@ static void buscaDesenhar(Uint32 agora) {
   ajustes_acento(&ar, &ag, &ab);
   gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0, 0.80f * ea);
   { GfxRect p = { x0 - 40.0f, 40.0f, G_BUSCA_W + 80.0f, NV_TELA_H - 80.0f };
-    gfx_cor(p, 28.0f / p.h, 0.070f, 0.072f, 0.080f, ea);
-    gfx_luz_canto(p, 28.0f / p.h, p.w * 0.30f, -p.w * 0.25f, p.w * 1.45f, ar, ag, ab, 0.06f * ea); }
+    gfx_vidro_ou_solido(p, 28.0f / p.h, GFX_VIDRO_DENS_MODAL, ea, 0.070f, 0.072f, 0.080f, 1.0f);
+    if (!ajustes_vidro()) gfx_luz_canto(p, 28.0f / p.h, p.w * 0.30f, -p.w * 0.25f, p.w * 1.45f, ar, ag, ab, 0.06f * ea); }
   snprintf(b, sizeof b, i18n("Busca: “%s”"), buscaTexto);
   txt_desenhar_alpha(txt_linha_corta(TXT_HEADLINE, b, 242, 243, 247, 255, G_BUSCA_W), x0, 72.0f, ea);
   if (!buscaN())

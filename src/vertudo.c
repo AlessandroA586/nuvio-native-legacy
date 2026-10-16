@@ -1,5 +1,7 @@
 #include "imdbnota.h"
+#include "vertudo_pag.h"
 #include "vertudo.h"
+#include "marcastream.h"
 #include "posterprov.h"
 #include "idioma.h"
 #include "badges.h"
@@ -21,6 +23,10 @@
 #include "focoprof.h"
 #include "corviva.h"
 #include "ctxlista.h"
+#include "vistocont.h"
+#include "cwordem.h"
+#include "progresso.h"
+#include <time.h>
 #include "ctxmenu.h"
 #include "ponteiro.h"
 #include "rolagemtoque.h"
@@ -57,23 +63,29 @@ static float vtCardAltura(void);
 #define VT_CARD_BASE_W 248.0f
 #define VT_CARD_W   vtCardLargura()
 #define VT_CARD_H   vtCardAltura()
-#define VT_GAP_X    16.0f                 // .seeall-grid: gap 20px 16px
+// .seeall-grid tinha 16; na TV o dono pediu mais ar entre os cartazes (13/10).
+#define VT_GAP_X    (vtTelefone() ? 16.0f : 28.0f)
 #define VT_GAP_Y    (20.0f + 40.0f)       // gap + a linha de titulo sob o cartaz
+// GRADE na TV: sem o nome sob o cartaz (o painel ja diz tudo), so o vao.
+#define VT_GRADE_GAP_Y (vtTelefone() ? VT_GAP_Y : 44.0f)
 #define VT_TOPO    (collection ? 332.0f : 244.0f)
 // LARGURA UTIL DA GRADE: as 5 colunas de sempre (5 x 248 + 4 x 16). Toda
 // exibicao cabe nela, e o painel de detalhe a direita nunca e invadido.
 #define VT_CW      vtLarguraUtil()
 // A linha da filmografia (exibicao "Linha do tempo"): cartao deitado de 236.
 #define VT_LINHA_H 236.0f
+#define VT_TL_GAP  28.0f   // vao entre os cartoes da linha = o do seletor ao 1o (253+52 -> 332)
 
 // PAINEL DE DETALHE, a direita. Medidas do web (.seeall-detail), que as ancora
-// explicitamente na tela real de 1920x1080: top 170, right 104, largura 336.
+// explicitamente na tela real de 1920x1080: top 170, largura 336. A margem
+// direita e a da ilha do relogio (14/10, "margem componente solto"): o painel
+// termina na mesma vertical que ela, nao 40 px antes.
 //
 // FIXO e nao rolando junto: o proprio CSS registra que `position: sticky` nao
 // existe no Chromium 53 da TV e que sem `fixed` o painel sumia assim que o dono
 // descia. Aqui nao ha fluxo nenhum — ele so nao recebe scrollY.
 #define VT_PAN_W   336.0f
-#define VT_PAN_X   (NV_TELA_W - 104.0f - VT_PAN_W)
+#define VT_PAN_X   (NV_TELA_W - NV_ILHA_MARGEM_D - VT_PAN_W)
 #define VT_PAN_VAO  24.0f   // vao minimo entre a ultima coluna e o painel
 #define VT_PAN_Y   VT_TOPO
 #define VT_PAN_ART_H 330.0f
@@ -114,8 +126,7 @@ static float vtCabecalhoLargura(float x, float original) {
 }
 static GfxRect vtTimelineCard(float cy) {
   float x = vtInicio() + (vtTimelineRetrato() ? 96.0f : 158.0f);
-  float w = 1000.0f;
-  if (vtTelefone()) w = fminf(w, vtFim() - x);
+  float w = vtTelefone() ? fminf(1000.0f, vtFim() - x) : vtFim() - x;
   return (GfxRect){x, cy, w, VT_CARD_H};
 }
 static GfxRect vtTimelineArte(GfxRect card) {
@@ -146,7 +157,7 @@ static float vtCardLargura(void) {
   if (!vtTelefone() || timeline) return VT_CARD_BASE_W;
   return fmaxf(1.0f, (vtFim() - vtInicio() - (VT_COLS - 1) * VT_GAP_X) / VT_COLS);
 }
-static float vtCardAltura(void) { return timeline ? 236.0f : VT_CARD_W * 1.5f; }
+static float vtCardAltura(void) { return timeline ? VT_LINHA_H : VT_CARD_W * 1.5f; }
 static float tabAnim[COL_SOURCE_MAX];
 static int order[VT_MAX], orderN=-1;
 static char catalogId[96];
@@ -171,12 +182,36 @@ static char catalogId[96];
 // artes saem do mesmo tex_cache por largura; Mural pede a arte deitada, que o
 // cache ja tem das fileiras da home.
 static const char *LAY_NOME[VT_LAY_N] = {
-  "Padrão", "Grade", "Linha do tempo", "Ranking", "Saga", "Décadas", "Mural", "Vitrine"
+  "Padrão", "Grade", "Linha do tempo", "Ranking", "Saga", "Décadas", "Mural", "Vitrine",
+  "Fluxo de capas"
+};
+static const char *LAY_ICONE[VT_LAY_N] = {
+  "aj_sliders-horizontal", "aj_layout-dashboard", "aj_rows-3", "aj_list-ordered", "aj_layers", "aj_calendar", "aj_images",
+  "aj_monitor-play", "aj_film"
+};
+// A ordem do botao "Exibição": a horizontal logo depois da vertical.
+static const unsigned char LAY_CICLO[] = {
+  VT_LAY_GRADE, VT_LAY_LINHA, VT_LAY_FLUXO, VT_LAY_RANKING, VT_LAY_SAGA,
+  VT_LAY_DECADAS, VT_LAY_MURAL, VT_LAY_VITRINE,
+  VT_LAY_AUTO   // "Padrão": a pasta volta a seguir o ajuste do perfil (#535)
 };
 static int layEscolha;            // gravada (VT_LAY_AUTO = nunca escolheu)
 static int semVitrineAuto;        // aberta por vertudo_abrir (ver layAuto)
 static int lay = VT_LAY_GRADE;    // a que esta na tela
 static float pillAnim;            // foco no botao "Exibição"
+// O seletor nasce recolhido (so a exibicao aberta); OK abre o trilho inteiro e
+// `exibCursor` anda nele (indice em LAY_CICLO). Escolher, Voltar ou sair recolhe.
+static int exibAberta, exibCursor;
+// ESTILO DAS ABAS (#205). Menu suspenso: lista aberta e o item sob o cursor.
+// Barra central: onde esta o realce que desliza. Paginas: o deslize do carrossel
+// (+1 entrando da direita, -1 da esquerda, 0 em repouso).
+static int   ddAberto, ddCursor;
+static float ddAnim, barraX, barraW = -1.0f, barraAlvoX, barraAlvoW, pgSlide;
+// CAPSULA DO FOCO QUE DESLIZA entre as abas de sempre (chips/topo): o mesmo
+// modelo da barra central. capA e o alfa (foco na fileira de abas ou nao),
+// capX/capW a posicao animada, capAlvoX/capAlvoW a aba com o cursor.
+static float capX, capW = -1.0f, capAlvoX, capAlvoW, capA;
+static void abasReiniciar(void);
 static float celX[VT_MAX], celY[VT_MAX], celW[VT_MAX], celH[VT_MAX];
 static short celLin[VT_MAX], celCol[VT_MAX];
 static int   celN = -1, celLay = -1;
@@ -195,10 +230,47 @@ static float x0Atual;
 // player marca um capitulo). Nunca por quadro: cada consulta copia o CatItem.
 static unsigned char celVisto[VT_MAX];
 static int sagaVistos;
+// "Voce viu N de M" do cabecalho: titulos distintos (tt/tmdb/episodio) da lista.
+static int vcVistos, vcTotal;
+// Geometria do ultimo cabecalho desenhado (sobretitulo, nome) e pontos do anel:
+// os testes de captura conferem o arranjo sem ler pixel.
+static GfxRect cabEb, cabTt, cabSw;
+static int cabPontos;
+static float cabFim, vitHeroTopo;   // Vitrine: pe do cabecalho e topo do bloco do destaque
+static float cabCy = 218.0f;        // centro da linha do anel e do seletor
 static Uint32 vistosEm;             // ajustes_conteudo_x() do quadro (desenho)
 
+// LINHA DO TEMPO ANIMADA (13/10): o foco de cada ano (0..1, mola) e o y do
+// preenchimento da linha (coordenada da grade; < 0 = posicionar sem animar).
+// Floats por quadro, nenhuma textura; a mola ja respeita a animacao reduzida.
+static float tlFoco[VT_MAX], tlProg = -1.0f;
+#define VT_TL_PONTO (VT_LINHA_H * 0.5f)   // centro do ponto do ano: o centro do cartao
+
+// LINHA DO TEMPO HORIZONTAL (Cover Flow, 13/10; 14/10 sem inclinacao): o cartaz
+// em foco no centro, grande; os vizinhos RETOS atras dele, menores, escuros e
+// sobrepostos (profundidade so por escala, recobrimento e veu). A faixa vai de
+// ponta a ponta e a ficha do titulo fica ABAIXO da linha do tempo. `fluxoPos` e
+// o foco em mola (< 0 = posicionar sem animar).
+#define VT_FLX_W (vtTelefone() ? 200.0f : 220.0f)
+#define VT_FLX_H (VT_FLX_W * 1.5f)
+static float fluxoPos = -1.0f;
+static float fluxoFim(void) { return vtTelefone() ? vtFim() : NV_TELA_W - 48.0f; }
+static float fluxoCentro(float x0) { return (x0 + fluxoFim()) * 0.5f; }
+static float fluxoLinhaY(void) { return VT_TOPO + 40.0f + VT_FLX_H + 64.0f; }
+static float fluxoInfoY(void) { return fluxoLinhaY() + 76.0f; }
+// Caixa do titulo i e quanto ele escurece (0 no foco). O 6o vizinho cai na ponta.
+static GfxRect fluxoRect(int i, float x0, float *sombra) {
+  float W = VT_FLX_W, H = VT_FLX_H, d = i - fluxoPos, ad = fabsf(d), s = fminf(ad, 1.0f);
+  float A = W * 0.78f, alem = fmaxf(0.0f, ad - 1.0f);
+  float S = fmaxf(W * 0.3f, (fluxoFim() - x0) * 0.5f - A) / 5.0f * 0.97f;
+  float off = ad < 1.0f ? d * A : copysignf(A + alem * S, d);
+  float k = fmaxf(0.4f, 1.0f - 0.18f * s - 0.07f * alem), w = W * k, h = H * k;
+  if (sombra) *sombra = fminf(0.85f, 0.5f * s + 0.1f * alem);
+  return (GfxRect){ fluxoCentro(x0) + off - w * 0.5f, VT_TOPO + 40.0f + (H - h) * 0.5f, w, h };
+}
+
 static int ordenaPorAno(void) {
-  return lay == VT_LAY_LINHA || lay == VT_LAY_SAGA || lay == VT_LAY_DECADAS;
+  return lay == VT_LAY_LINHA || lay == VT_LAY_FLUXO || lay == VT_LAY_SAGA || lay == VT_LAY_DECADAS;
 }
 // MICRO-ANIMACOES (revela.h): a arte chegando por cartaz e a onda da grade.
 // A onda e ARMADA quando uma grade nova e pedida (abrir, trocar de fonte) e
@@ -225,6 +297,42 @@ static void corColecao(float *r,float *g,float *b) {
   else if (grupo("Themes")) {*r=.34f;*g=.13f;*b=.38f;}
   else if (grupo("Film Collections") || grupo("TV Collections"))
     {*r=.12f;*g=.27f;*b=.40f;}
+}
+
+// SERVICO DE STREAMING (pedido do dono, 13/10): sem o rotulo "STREAMING" no
+// topo, o wordmark do servico no lugar do titulo e o degrade na cor da marca.
+// O wordmark e o da pasta, ou o do TMDB; sem nenhum, fica o titulo em texto.
+static const MarcaStream *marcaServico(void) {
+  return grupo("Streaming") ? marca_stream(collection->title) : NULL;
+}
+static const char *wordmarkServico(void) {
+  const char *u;
+  if (!grupo("Streaming")) return "";
+  if (collection->logo[0]) return collection->logo;
+  u = marca_stream_logo(marcaServico());
+  return u;
+}
+// O degrade do destaque na cor da marca, por cima da arte e sob o texto. Cor
+// ja escura (marcastream.h): o branco do texto segue passando de 4,5:1. `h` e
+// a altura: a faixa do cabecalho, ou a tela toda sob a arte inteira da Dinamica.
+static void degradeMarca(float a, float h) {
+  const MarcaStream *m = marcaServico();
+  float c[3];
+  CorvivaPaleta p;
+  const char *w;
+  if (m) { c[0] = m->r; c[1] = m->g; c[2] = m->b; }
+  else {
+    // Servico fora da tabela: a cor sai do wordmark (corviva), escurecida.
+    if (!grupo("Streaming") || !*(w = wordmarkServico()) || !corviva_paleta(w, &p) || !p.ok) return;
+    c[0] = p.grad[2][0] * 0.55f; c[1] = p.grad[2][1] * 0.55f; c[2] = p.grad[2][2] * 0.55f;
+  }
+  // A BASE DA FAIXA ESVANECE EM ALFA (uPar.x = onde o esvanecer comeca, em
+  // fracao da altura): o degradê e a cor da marca sobre o Frost, e sem isso a
+  // borda inferior era um degrau duro no meio da tela (Netflix na TCL: vermelho
+  // em cima, teal embaixo, corte seco a ~48% da altura).
+  { float faixas = fminf(240.0f, h * 0.5f);
+    gfx_rect((GfxRect){ 0.0f, 0.0f, NV_TELA_W, h }, 0, GFX_FUNDO_DIN, 0.15f,
+             1.0f - faixas / h, 0, 0, c[0], c[1], c[2], 0.78f * a); }
 }
 
 // As abas de fonte pertencem ao mesmo fluxo de selecao da folha de fontes.
@@ -260,7 +368,7 @@ static const char *rotuloGrupo(void) {
   return "COLEÇÃO";
 }
 static const char *legendaGrupo(void) {
-  if (lay == VT_LAY_LINHA) return grupo("Directors") ? "Filmografia em ordem cronológica"
+  if (lay == VT_LAY_LINHA || lay == VT_LAY_FLUXO) return grupo("Directors") ? "Filmografia em ordem cronológica"
                                                     : "Em ordem cronológica";
   if (lay == VT_LAY_SAGA) return "Saga em ordem de lançamento";
   if (lay == VT_LAY_DECADAS) return "Organizado por década";
@@ -384,11 +492,6 @@ static void gravarEscolha(const ColFolder *pasta, int v) {
   free(txt);
 }
 
-static int contem(const char *s, const char *termo) {
-  size_t n = strlen(termo);
-  for (; s && *s; s++) if (!strncasecmp(s, termo, n)) return 1;
-  return 0;
-}
 // AUTOMATICO, pelo conteudo da pasta. Ver o cabecalho de VtLayout.
 static int layAuto(void) {
   if (!collection) return VT_LAY_GRADE;
@@ -419,7 +522,11 @@ static void resolverLayout(void) {
 // depois que a sonda leu o manifesto daquele addon. Uma pasta que veio do
 // PACOTE ja traz a base escrita.
 static const char *baseDaFonte(const ColSource *s) {
+#if defined(NV_TPK40) || defined(NV_UM_FIO)
+  static char base[NV_ADDON_URL_MAX]; // no compiler TLS on Tizen 4/5 (rede.h)
+#else
   static _Thread_local char base[NV_ADDON_URL_MAX];
+#endif
   if (s->base[0]) return s->base;
   addons_base_por_id_copiar(s->addonId, base, sizeof base);
   return base;
@@ -497,16 +604,15 @@ static void carregarFonte(void) {
   desc_vertudo_filtro_desde(base,s->type,s->catId,s->genre,vitPaginaFonte());
 }
 
+static int cursorInicial(void);
 void vertudo_colecao(const ColFolder *folder) {
   int i;
   if(!folder||!folder->nSources)return;
   vitCancelar();
   memset(tabAnim, 0, sizeof tabAnim);
-#ifdef NV_TOUCH_UI
-  tabRol = 0.0f;
-#endif
+  tabRol = 0.0f;   // a faixa renasce no logo, sem herdar a rolagem da pasta anterior
   collection=folder;source=tabCursor=0;tabFocus=folder->nSources>1;aberta=1;pedAbrir=-1;
-  pillAnim=0;layEscolha=escolhaGravada(folder);semVitrineAuto=0;
+  pillAnim=0;exibAberta=0;vcTotal=0;abasReiniciar();layEscolha=escolhaGravada(folder);semVitrineAuto=0;
   // COMECAR NA PRIMEIRA FONTE QUE TEM ENDERECO, e nao teimosamente na fonte 0.
   // Numa pasta com varias abas e comum que so parte dos addons esteja instalada
   // aqui; abrir na aba morta faz a pasta inteira parecer vazia.
@@ -514,6 +620,10 @@ void vertudo_colecao(const ColFolder *folder) {
     if (folder->sources[i].prov[0] || baseDaFonte(&folder->sources[i])[0])
       { source = tabCursor = i; break; }
   snprintf(titulo,sizeof titulo,"%s",folder->title);openSource();
+  // O cursor do cabecalho nasce na posicao certa (no Menu suspenso e o botao
+  // do catalogo, nao o indice da fonte aberta), senao o OK nasce em "Exibição"
+  // quando a primeira fonte com endereco e a quinta ou mais (#205).
+  tabCursor = cursorInicial();
   if(lay==VT_LAY_VITRINE)tabFocus=0;   // sem barra de abas: o foco nasce nas fileiras
 }
 
@@ -524,13 +634,13 @@ void vertudo_abrir(const char *base, const char *tipo, const char *catId,
 #ifdef NV_TOUCH_UI
   toqueLivre = 0;
   toquerol_limpar(&toqueAbas);
-  tabRol = 0.0f;
 #endif
+  tabRol = 0.0f;
   memset(tabAnim, 0, sizeof tabAnim);
   snprintf(titulo, sizeof titulo, "%s", tit ? tit : "");
   collection=col_por_catalogo(base,tipo,catId);
   limparFocoCatalogo();
-  source=tabCursor=tabFocus=0;orderN=-1;celLay=-1;pillAnim=0;
+  source=tabCursor=tabFocus=0;orderN=-1;celLay=-1;pillAnim=0;exibAberta=0;vcTotal=0;abasReiniciar();
   layEscolha=escolhaGravada(collection);semVitrineAuto=1;
   if(layEscolha==VT_LAY_VITRINE)layEscolha=VT_LAY_AUTO;   // "Ver tudo" e uma fileira so
   if(collection) {
@@ -607,6 +717,7 @@ static GfxRect celulaRect(int i, const CatItem *it, const char **arte) {
   }
   { const char *pp = posterprov_card_addon(it->origem, it->imdb, it->tmdb, it->tipo, it->poster);
     *arte = pp[0] ? pp : it->backdrop; }
+  if (lay == VT_LAY_FLUXO) return fluxoRect(i, x0, NULL);
   return (GfxRect){ cx, cy, celW[i], celH[i] };
 }
 
@@ -636,13 +747,25 @@ static int celulaAceitaMenu(void) {
 }
 static int vistoItem(const CatItem *it) { return cat_visto(it) || desc_filme_visto(it); }
 static void contarVistos(int n) {
+  static VcEntrada ent[VT_MAX];
+  static char ids[VT_MAX][64], tipos[VT_MAX][8];
+  int ne = 0;
   sagaVistos = 0;
   for (int i = 0; i < n && i < VT_MAX; i++) {
     CatItem it;
-    celVisto[i] = viewItem(i, &it) && vistoItem(&it);
+    int ok = viewItem(i, &it);
+    celVisto[i] = ok && vistoItem(&it);
     sagaVistos += celVisto[i];
+    if (!ok) continue;
+    snprintf(ids[ne], sizeof ids[ne], "%s", it.imdb);
+    snprintf(tipos[ne], sizeof tipos[ne], "%s", it.tipo);
+    ent[ne] = (VcEntrada){ ids[ne], it.tmdb, tipos[ne], celVisto[i] };
+    ne++;
   }
+  vcTotal = vistocont_contar(ent, ne, &vcVistos);
 }
+// A lista de pessoas (Directors) mostra o contador e as marcas da timeline.
+static int listaDePessoa(void) { return collection && !strcasecmp(collection->group, "Directors"); }
 
 // --- A TABELA DE CELULAS ------------------------------------------------------
 static void cel(int i, float x, float y, float w, float h, int lin, int col) {
@@ -676,8 +799,14 @@ static void montar(int n) {
   celFim = 0.0f; decN = 0;
   if (ordenaPorAno() && n != orderN) ordenar(n);
   switch (lay) {
+    case VT_LAY_FLUXO:
+      // Uma linha so: esquerda/direita andam no tempo, cima vai as abas.
+      fluxoPos = -1.0f;
+      for (i = 0; i < n; i++) cel(i, i * (VT_FLX_W + VT_GAP_X), 0, VT_FLX_W, VT_FLX_H, 0, i);
+      break;
     case VT_LAY_LINHA:
-      for (i = 0; i < n; i++) cel(i, 0, i * (VT_LINHA_H + VT_GAP_Y), 1158.0f, VT_LINHA_H, i, 0);
+      tlProg = -1.0f;
+      for (i = 0; i < n; i++) cel(i, 0, i * (VT_LINHA_H + VT_TL_GAP), 1158.0f, VT_LINHA_H, i, 0);
       break;
     case VT_LAY_RANKING: {
       // Quatro por linha: o numeral mora no vao a ESQUERDA do cartaz, como o
@@ -738,6 +867,8 @@ static void montar(int n) {
       // Blocos de cinco: um grande (2x2) e quatro pequenos, o grande trocando
       // de lado a cada bloco. Linha de cima: o grande e os dois pequenos do
       // alto; linha de baixo: os outros dois.
+      // Pequenos 16:9 e o grande com a altura exata de dois pequenos e o vao,
+      // cabendo em VT_CW com o vao mais largo da TV (13/10).
       float g = VT_GAP_X,
             sh = fminf(vtTelefone() ? 172.0f : 174.0f, (VT_CW - 2.0f * g - 16.0f / 9.0f * g) / (64.0f / 9.0f)),
             sw = sh * 16.0f / 9.0f,
@@ -763,14 +894,14 @@ static void montar(int n) {
     default: {  // GRADE: preserva o recuo da rail fixa (#359).
       int cols = VT_COLS;
       for (i = 0; i < n; i++)
-        cel(i, (i % cols) * (VT_CARD_W + VT_GAP_X), (i / cols) * (VT_CARD_H + VT_GAP_Y),
+        cel(i, (i % cols) * (VT_CARD_W + VT_GAP_X), (i / cols) * (VT_CARD_H + VT_GRADE_GAP_Y),
             VT_CARD_W, VT_CARD_H, i / cols, i % cols);
       break; }
   }
   celN = n; celLay = lay;
   celTelefone = vtTelefone(); celAreaW = vtFim() - vtInicio(); celTelaH = NV_TELA_H;
   if (foco >= n) foco = n ? n - 1 : 0;
-  if (lay == VT_LAY_SAGA) { contarVistos(n); vistosEm = SDL_GetTicks(); }
+  if (lay == VT_LAY_SAGA || listaDePessoa()) { contarVistos(n); vistosEm = SDL_GetTicks(); }
 }
 static int precisaMontar(int n);
 static int atualizarGrade(void) {
@@ -812,6 +943,112 @@ static int vizinhoNaLinha(int n, int lin) {
 // O botao "Exibição" mora na faixa das abas: cursor = nAbas.
 static int nAbas(void) {
   return collection && collection->nSources > 1 && lay != VT_LAY_VITRINE ? collection->nSources : 0;
+}
+
+// --- ESTILO DAS ABAS (#205, Ajustes > Home > "Estilo das abas") -----------------
+//
+// Pedido do dono: "outras opcoes tb, mais elegantes, tanto um dropdown (Movies
+// ou TV Shows e ai as opcoes), a barra centralizada no topo, ou paginas com
+// efeito carrossel". Cada estilo e so desenho + o que o D-pad faz no cabecalho;
+// o modelo e o de sempre (tabFocus, tabCursor, source), entao a grade, o painel
+// e o resto da pagina nao sabem qual estilo esta ligado.
+//   Chips   cursor = a aba; uma fileira de pilulas (o de sempre).
+//   Menu    cursor = [Filmes] [Séries] [catalogo v]; OK no catalogo abre a lista.
+//   Barra   cursor = a aba; pilula de vidro no centro do alto, o realce desliza.
+//   Paginas cursor = a pagina; Esquerda/Direita trocam de pagina na hora.
+// Em todos o cursor == cabN() e o botao "Exibição".
+enum { VT_AB_CHIPS, VT_AB_MENU, VT_AB_BARRA, VT_AB_PAGINAS, VT_AB_TOPO };
+static int estiloAbas(void) {
+  int e = ajustes_abas_estilo();
+  return nAbas() && e > VT_AB_CHIPS && e <= VT_AB_TOPO ? e : VT_AB_CHIPS;
+}
+static int abaSerie(int i) { return !strcmp(collection->sources[i].type, "series"); }
+// So ha primeiro nivel (Filmes/Séries) quando a colecao tem os dois tipos.
+static int doisTipos(void) {
+  int f = 0, s = 0;
+  for (int i = 0; collection && i < collection->nSources; i++) { if (abaSerie(i)) s = 1; else f = 1; }
+  return f && s;
+}
+// Os catalogos de um tipo (serie 0/1), em ordem; devolve quantos.
+static int abasDoTipo(int serie, int *idx) {
+  int n = 0;
+  for (int i = 0; collection && i < collection->nSources; i++) if (abaSerie(i) == serie) idx[n++] = i;
+  return n;
+}
+// Quantas posicoes de cursor ha antes do botao "Exibição".
+static int cabN(void) {
+  if (estiloAbas() == VT_AB_MENU) return doisTipos() ? 3 : 1;
+  return nAbas();
+}
+static int cursorInicial(void) {
+  if (estiloAbas() == VT_AB_MENU) return cabN() - 1;   // o botao do catalogo
+  return nAbas() ? source : 0;
+}
+static void abasReiniciar(void) {
+  ddAberto = ddCursor = 0; ddAnim = pgSlide = 0.0f; barraW = -1.0f;
+  capW = -1.0f; capA = 0.0f;
+}
+// A capsula do foco nas abas de sempre: persegue a aba com o cursor com a
+// mola do resto do foco (NV_MOLA_FOCO), em vez de acender e apagar no lugar
+// (o "tudo meio duro" da Netflix na TCL). Nos outros estilos ela fica fora.
+static void abasCapsulaAtualizar(float dt) {
+  int est = estiloAbas();
+  float alvoA = collection && tabFocus && tabCursor < cabN() &&
+                (est == VT_AB_CHIPS || est == VT_AB_TOPO) ? 1.0f : 0.0f;
+  capA = anim_mola(capA, alvoA, dt, alvoA > capA ? NV_MOLA_FOCO : NV_MOLA_DESFOCO);
+  if (capW < 0.0f) { capX = capAlvoX; capW = capAlvoW; }
+  else { capX = anim_mola(capX, capAlvoX, dt, NV_MOLA_FOCO * 0.6f);
+         capW = anim_mola(capW, capAlvoW, dt, NV_MOLA_FOCO * 0.6f); }
+}
+static void alternarEstiloAbas(void) {
+  ajustes_definir_abas_estilo((ajustes_abas_estilo() + 1) % (VT_AB_TOPO + 1));
+  abasReiniciar(); tabRol = 0;
+  tabFocus = 1; tabCursor = cabN() + 1;
+}
+#define VT_DD_RH 48.0f   // linha do menu suspenso
+// JANELA DO MENU SUSPENSO (#205): com 16 catalogos a lista parava alem do pe
+// da tela e o foco sumia ao descer. A altura fica no espaco util e a janela
+// segue o cursor; devolve em *vis quantas linhas cabem.
+static int ddJanela(int n, int cursor, float py, int *vis) {
+  int v = (int)((NV_TELA_H - py - 24.0f - 12.0f) / VT_DD_RH), base;
+  if (v < 1) v = 1;
+  if (v > n) v = n;
+  *vis = v;
+  base = v < n ? cursor - v + 1 : 0;
+  if (base < 0) base = 0;
+  if (base > n - v) base = n - v;
+  return base;
+}
+// Paginas: trocar de pagina e abrir a fonte; o deslize e so da pagina nova.
+static void irPagina(int novo) {
+  pgSlide = anim_politica_reduzida ? 0.0f : (novo > source ? 1.0f : -1.0f);
+  source = novo; openSource();
+}
+// Menu suspenso: OK num botao de tipo escolhe o primeiro catalogo dele (se o
+// tipo ja e o da fonte aberta, mantem) e abre a lista; OK no catalogo abre.
+static void menuOk(void) {
+  int cat = cabN() - 1, idx[COL_SOURCE_MAX], n;
+  if (tabCursor < cat) {
+    n = abasDoTipo(tabCursor, idx);
+    if (!n) return;
+    if (abaSerie(source) != tabCursor) { source = idx[0]; openSource(); }
+    tabCursor = cat;
+  }
+  n = abasDoTipo(abaSerie(source), idx);
+  if (n < 2) { tabFocus = 0; if (desc_vertudo_erro()) desc_vertudo_mais(); return; }
+  ddAberto = 1; ddCursor = 0;
+  for (int i = 0; i < n; i++) if (idx[i] == source) ddCursor = i;
+}
+static void ddEvento(SDL_Keycode k) {
+  int idx[COL_SOURCE_MAX], n = abasDoTipo(abaSerie(source), idx);
+  if (k == SDLK_UP) { if (ddCursor > 0) ddCursor--; }
+  else if (k == SDLK_DOWN) { if (ddCursor < n - 1) ddCursor++; }
+  else if (k == SDLK_LEFT || k == SDLK_RIGHT) ddAberto = 0;
+  else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
+    ddAberto = 0;
+    if (ddCursor < n && (idx[ddCursor] != source || desc_vertudo_erro())) { source = idx[ddCursor]; openSource(); }
+    tabFocus = 0;
+  }
 }
 
 // --- VITRINE ------------------------------------------------------------------
@@ -1467,17 +1704,53 @@ static int primeiraFonte(void) {
     if (collection->sources[i].prov[0] || baseDaFonte(&collection->sources[i])[0]) return i;
   return 0;
 }
-// A PROXIMA EXIBICAO, e ela fica gravada para esta pasta (o botao "Exibição").
-static void alternarExibicao(void) {
-  int antes = lay, prox = (layEscolha + 1) % VT_LAY_N;
-  layEscolha = prox; gravarEscolha(collection, prox);
+// A EXIBICAO ESCOLHIDA no trilho aberto, e ela fica gravada para esta pasta.
+static void escolherExibicao(int prox) {
+  int antes = lay;
+  exibAberta = 0;
+  layEscolha = prox; if (!perftv_enabled) gravarEscolha(collection, prox);
   resolverLayout(); foco = 0; scrollY = velY = 0; armarOnda();
   if (lay != antes && (lay == VT_LAY_VITRINE || antes == VT_LAY_VITRINE)) {
     // A Vitrine nao tem aba aberta e as outras exibicoes precisam de uma: a
     // fonte volta para a primeira que tem endereco, e o cursor para o botao.
     source = primeiraFonte(); openSource();
   }
-  tabCursor = nAbas();
+  tabCursor = cabN();   // o botao "Exibição", em qualquer estilo de abas
+}
+
+// OK no botao recolhido: abre o trilho com o cursor na exibicao aberta.
+static void abrirSeletor(void) {
+  for (int k = 0; k < (int)sizeof LAY_CICLO; k++) if (LAY_CICLO[k] == lay) exibCursor = k;
+  // Telefone: o trilho aberto nao e desenhado, entao OK troca direto para a proxima.
+  if (vtTelefone()) { escolherExibicao(LAY_CICLO[(exibCursor + 1) % (int)sizeof LAY_CICLO]); return; }
+  exibAberta = 1;
+}
+// A PROXIMA EXIBICAO, e ela fica gravada para esta pasta (atalho do perftv).
+// Parte da escolha gravada: depois de "Padrão" vem a primeira.
+static void alternarExibicao(void) {
+  int de = layEscolha >= VT_LAY_AUTO && layEscolha < VT_LAY_N ? layEscolha : lay;
+  for (int k = 0; k < (int)sizeof LAY_CICLO; k++)
+    if (LAY_CICLO[k] == de) { escolherExibicao(LAY_CICLO[(k + 1) % (int)sizeof LAY_CICLO]); return; }
+}
+
+const char *vertudo_perf_tag(void) {
+  static const char *const tags[] = {
+    "collection-auto", "collection-grid", "collection-timeline", "collection-ranking",
+    "collection-saga", "collection-decades", "collection-wall", "collection-showcase",
+    "collection-cover-flow"
+  };
+  return lay >= 0 && lay < VT_LAY_N ? tags[lay] : "collection-unknown";
+}
+void vertudo_perf_cycle(void) {
+  if (!perftv_enabled) return;
+  if (!aberta || !collection) {
+    const ColFolder *f = col_folder(0);
+    if (!f || !f->nSources) return;
+    vertudo_colecao(f);
+    layEscolha = VT_LAY_GRADE; resolverLayout();
+    source = primeiraFonte(); openSource();
+  } else alternarExibicao();
+  tabFocus = 0;
 }
 
 static void vitEvento(int k) {
@@ -1486,12 +1759,13 @@ static void vitEvento(int k) {
   vitProjetar();
   vitMexeu = 1;
   if (tabFocus) {   // o botao "Exibição", acima do destaque
-    if (k == SDLK_LEFT) pedMenu = 1;
+    if (k == SDLK_LEFT) { if (tabCursor > cabN()) tabCursor--; else pedMenu = 1; }
+    else if (k == SDLK_UP && ajustes_menu_topo()) pedMenu = 1;
     else if (k == SDLK_DOWN && (vitTemItens() || temMaisVistos())) {
       tabFocus = 0;
       if (!vitTemItens()) vitFocarMais();
     }
-    else if (enter) alternarExibicao();
+    else if (enter) abrirSeletor();   // sem abas, sem botao de estilo
     return;
   }
   if (vitFR >= vitN) return;
@@ -1504,7 +1778,7 @@ static void vitEvento(int k) {
   } else if (k == SDLK_UP) {
     int r = vitLinhaVizinha(vitFR, -1);
     if (r >= 0) { vitColLemb[vitFR] = vitFC; vitFR = r; vitFC = vitColLemb[r]; }
-    else tabFocus = 1, tabCursor = nAbas();
+    else tabFocus = 1, tabCursor = cabN();
   } else if (enter) {
     const CatItem *it = vitItem(vitFR, vitFC);
     if (it) abrirItem(it);
@@ -1517,11 +1791,14 @@ static void vitEvento(int k) {
 // Medidas das fileiras: as da Home (home_vitrine_medida). O topo da primeira e
 // o da Home Moderna; a fileira em foco sobe para ele e a seguinte espia embaixo.
 #define VIT_TITULO_H 46.0f
+#define VIT_CAB_FOLGA 24.0f   // entre o pe do cabecalho e o bloco do destaque
 static float vitPasso(void) {
   float w, h, p, rot;
   home_vitrine_medida(&w, &h, &p, &rot);
   return VIT_TITULO_H + h + rot + 40.0f;
 }
+// Topo da primeira fileira: o do layout da Home (home_vitrine_topo).
+static float vitTopo(void) { return home_vitrine_topo(vitPasso()); }
 
 #ifdef NV_TOUCH_UI
 static float vitToqueMaxY(void) {
@@ -1708,25 +1985,48 @@ void vertudo_evento(const SDL_Event *e) {
   if (e->type != SDL_KEYDOWN) return;
   k = e->key.keysym.sym;
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE ||
-      e->key.keysym.scancode == NV_SCANCODE_BACK) { vitCancelar(); aberta = 0; return; }
+      e->key.keysym.scancode == NV_SCANCODE_BACK) {
+    if (ddAberto) { ddAberto = 0; return; }   // Voltar fecha a lista, nao a pagina
+    if (exibAberta) { exibAberta = 0; return; }   // e recolhe o seletor
+    vitCancelar(); aberta = 0; return;
+  }
   if (n > VT_MAX) n = VT_MAX;
+  exibAberta = exibAberta && tabFocus && tabCursor == cabN();   // o ponteiro tirou o foco
+  if (exibAberta) {   // o trilho aberto fica com as setas ate escolher ou sair
+    if (k == SDLK_RIGHT) { if (exibCursor + 1 < (int)sizeof LAY_CICLO) exibCursor++; return; }
+    if (k == SDLK_LEFT && exibCursor > 0) { exibCursor--; return; }
+    exibAberta = 0;
+    if (k == SDLK_RETURN || k == SDLK_KP_ENTER) { escolherExibicao(LAY_CICLO[exibCursor]); return; }
+  }
   if (lay == VT_LAY_VITRINE) { vitEvento(k); return; }
+  // #414: OK on the current catalog retries even while the header has focus.
+  // Other tabs, the layout button and the Menu selector (menuOk) keep theirs.
+  if ((k == SDLK_RETURN || k == SDLK_KP_ENTER) && desc_vertudo_erro() &&
+      (!collection || !tabFocus || (estiloAbas() != VT_AB_MENU && tabCursor < cabN() && tabCursor == cursorInicial()))) {
+    desc_vertudo_mais(); return;
+  }
   if(collection&&tabFocus) {
-    int na = nAbas();
-    if(k==SDLK_LEFT){ if(tabCursor>0)tabCursor--; else pedMenu=1; }
-    if(k==SDLK_RIGHT&&tabCursor<na)tabCursor++;
+    int na = cabN(), est = estiloAbas();
+    if(ddAberto) { ddEvento(k); return; }
+    if(k==SDLK_LEFT||(k==SDLK_UP&&ajustes_menu_topo())){ if(k==SDLK_LEFT&&tabCursor>0)tabCursor--; else pedMenu=1; }
+    if(k==SDLK_RIGHT&&tabCursor<na+(nAbas()>0))tabCursor++;   // o estilo so com abas
+    // Paginas: a seta ja troca de pagina (o deslize e o feedback).
+    if((k==SDLK_LEFT||k==SDLK_RIGHT)&&est==VT_AB_PAGINAS&&tabCursor<na&&tabCursor!=source)irPagina(tabCursor);
     if(k==SDLK_RETURN||k==SDLK_KP_ENTER) {
-      if(tabCursor>=na) {
-        // O cursor continua no botao: da para passar por todas as exibicoes
-        // de uma vez so com OK.
-        alternarExibicao();
+      if(tabCursor>na) alternarEstiloAbas();
+      else if(tabCursor==na) {
+        abrirSeletor();
+      } else if(est==VT_AB_MENU) menuOk();
+      else if(est==VT_AB_PAGINAS) {
+        // Um clique numa seta/ponto so move o cursor; o OK que o segue troca.
+        if(tabCursor!=source)irPagina(tabCursor); else tabFocus=0;
       } else {source=tabCursor;openSource();tabFocus=0;}
     }
     if(k==SDLK_DOWN&&(n>0||temMaisVistos()))tabFocus=0;
     return;
   }
   if (precisaMontar(n)) montar(n);
-  if(k==SDLK_UP&&collection&&(n<1||celLin[foco]==0)){tabFocus=1;tabCursor=nAbas()?source:0;return;}
+  if(k==SDLK_UP&&collection&&(n<1||celLin[foco]==0)){tabFocus=1;tabCursor=cursorInicial();return;}
   if((k==SDLK_RETURN||k==SDLK_KP_ENTER)&&desc_vertudo_erro()){desc_vertudo_mais();return;}
   if ((k == SDLK_RETURN || k == SDLK_KP_ENTER) && !e->key.repeat && temMaisVistos()) {
     carregarMaisVistos(0, 0); return;
@@ -1736,15 +2036,25 @@ void vertudo_evento(const SDL_Event *e) {
   if (n < 1) return;
   if (k == SDLK_RIGHT && foco + 1 < n) foco++;
   else if (k == SDLK_LEFT) foco--;
+  else if (k == SDLK_DOWN && lay == VT_LAY_FLUXO) return;
   else if (k == SDLK_DOWN) { int v = vizinhoNaLinha(n, celLin[foco] + 1);
                              foco = v >= 0 ? v : n - 1; }
   else if (k == SDLK_UP) { int v = vizinhoNaLinha(n, celLin[foco] - 1);
-                           if (v >= 0) foco = v; }
+                           if (v >= 0) foco = v; else if (ajustes_menu_topo()) pedMenu = 1; }
   else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) abrirFocado();
   lembrarFoco();
   // Chegando perto do fim, pede a proxima pagina. Antes de o dono ver o vazio,
   // e nao quando ele ja esta olhando para ele.
-  if (foco >= n - 12) desc_vertudo_mais();
+  if (vertudo_quer_mais(ordenaPorAno(), n, foco, 600, desc_vertudo_carregando(),
+                        desc_vertudo_fim(), desc_vertudo_erro())) desc_vertudo_mais();
+}
+
+// TETO DO SCROLL PARA A LINHA EM FOCO (vertudo_atualizar): o maior scroll
+// que mantem o TOPO do cartaz focado inteiro abaixo do recorte do cabecalho
+// (VT_TOPO - 12), com folga para tudo o que o foco puxa para fora da caixa
+// (focoprof.h). Linha 0 devolve negativo — scroll zero, cartaz colado no VT_TOPO.
+static float tetoScrollFoco(float celY, float celH) {
+  return celY + 12.0f - (celH * FOCO_ZOOM * 0.5f + NV_ANEL_FOCO);
 }
 
 void vertudo_atualizar(float dt, Uint32 agora) {
@@ -1758,6 +2068,10 @@ void vertudo_atualizar(float dt, Uint32 agora) {
   // botao (ctxlista.h).
   if (ctxhold_passo(&hold, agora, 1) && menuNoFocado()) ctxhold_cancelar(&hold);
   if (n > VT_MAX) n = VT_MAX;
+  // Tela cronologica pede todas as paginas sem esperar o foco descer.
+  if (ordenaPorAno() && vertudo_quer_mais(1, n, foco, VT_MAX, desc_vertudo_carregando(),
+                                          desc_vertudo_fim(), desc_vertudo_erro()))
+    desc_vertudo_mais();
   // A SONDA PODE CHEGAR DEPOIS DA TELA. Enquanto a fonte nao tem endereco,
   // reconferir por quadro custa uma varredura de poucas strings (addons_n e
   // dezenas, nao milhares) e SO acontece no estado de erro — assim a colecao se
@@ -1768,15 +2082,32 @@ void vertudo_atualizar(float dt, Uint32 agora) {
     if (baseDaFonte(s)[0]) openSource();
   }
   for (int i = 0; i < COL_SOURCE_MAX; i++) {
-    float alvoTab = collection && tabFocus && i == tabCursor && i < nAbas() ? 1.0f : 0.0f;
+    float alvoTab = collection && tabFocus && i == tabCursor && i < cabN() ? 1.0f : 0.0f;
     tabAnim[i] = anim_mola(tabAnim[i], alvoTab, dt,
                            alvoTab > tabAnim[i] ? NV_MOLA_FOCO : NV_MOLA_DESFOCO);
   }
-  { float alvoP = collection && tabFocus && tabCursor >= nAbas() ? 1.0f : 0.0f;
+  { float alvoP = collection && tabFocus && tabCursor == cabN() ? 1.0f : 0.0f;
     pillAnim = anim_mola(pillAnim, alvoP, dt, alvoP > pillAnim ? NV_MOLA_FOCO : NV_MOLA_DESFOCO); }
+  abasCapsulaAtualizar(dt);
+  if (!tabFocus) ddAberto = 0;
+  ddAnim = anim_mola(ddAnim, ddAberto ? 1.0f : 0.0f, dt, NV_MOLA_FOCO);
+  pgSlide = anim_mola(pgSlide, 0.0f, dt, NV_MOLA_TELA);
+  if (barraW < 0.0f) { barraX = barraAlvoX; barraW = barraAlvoW; }
+  else { barraX = anim_mola(barraX, barraAlvoX, dt, NV_MOLA_FOCO * 0.6f);
+         barraW = anim_mola(barraW, barraAlvoW, dt, NV_MOLA_FOCO * 0.6f); }
   if (lay == VT_LAY_VITRINE) { vitAtualizar(dt, agora); return; }
   n = atualizarGrade();
-  if (lay == VT_LAY_SAGA && n <= 200 && (Sint32)(agora - vistosEm) > 1500)
+  if (lay == VT_LAY_LINHA && celN > 0) {
+    float alvoP = celY[foco < celN ? foco : celN - 1] + VT_TL_PONTO;
+    for (int i = 0; i < celN; i++) {
+      float alvoF = i == foco && !tabFocus ? 1.0f : 0.0f;
+      tlFoco[i] = anim_mola(tlFoco[i], alvoF, dt, alvoF > tlFoco[i] ? NV_MOLA_FOCO : NV_MOLA_DESFOCO);
+    }
+    tlProg = tlProg < 0.0f ? alvoP : anim_mola(tlProg, alvoP, dt, NV_MOLA_FOCO);
+  }
+  if (lay == VT_LAY_FLUXO && celN > 0)
+    fluxoPos = fluxoPos < 0.0f ? (float)foco : anim_mola(fluxoPos, (float)foco, dt, NV_MOLA_FOCO);
+  if ((lay == VT_LAY_SAGA || listaDePessoa()) && n <= 200 && (Sint32)(agora - vistosEm) > 1500)
     { contarVistos(n); vistosEm = agora; }
   // Mira a linha focada a 30% da altura util, como o resto do app faz.
   alvo = n ? VT_TOPO + celY[foco] - NV_TELA_H * 0.30f : 0.0f;
@@ -1786,6 +2117,15 @@ void vertudo_atualizar(float dt, Uint32 agora) {
   if (lay == VT_LAY_DECADAS && n)
     for (int k = 0; k < decN; k++) if (decY[k] + VT_DEC_H == celY[foco]) { alvo -= VT_DEC_H; break; }
   if(tabFocus)alvo=0;
+  // O CARTAZ EM FOCO NAO ENTRA POR BAIXO DO RECORTE DO CABECALHO. A mira em
+  // 30% deixa o topo da linha focada a 4 px do corte (VT_TOPO - 12), e o que o
+  // foco tem por fora da caixa — o crescimento de FOCO_ZOOM ou o anel de
+  // NV_ANEL_FOCO (focoprof.h) — era cortado no topo (dono, 14/10: "quando ta
+  // focado, fica cortado no top"). O teto garante a folga; a Home resolve o
+  // mesmo problema mantendo a fileira em foco sempre no mesmo Y, abaixo do
+  // corte dela.
+  if (n && celN > 0 && foco >= 0 && foco < celN) { float teto = tetoScrollFoco(celY[foco], celH[foco]);
+    if (alvo > teto) alvo = teto; }
   maxY = VT_TOPO + celFim + VT_GAP_Y - NV_TELA_H + 120.0f;
   if (maxY < 0.0f) maxY = 0.0f;
   if (alvo < 0.0f) alvo = 0.0f;
@@ -1801,20 +2141,43 @@ void vertudo_atualizar(float dt, Uint32 agora) {
 //
 // Sem ele o dono ve 50 cartazes e nenhuma informacao; era o que faltava para a
 // tela deixar de ser so uma parede de imagens.
+//
+// FICHA DIAGRAMADA (dono, 13/10: "na lateral nao colocar o poster de novo,
+// vamos colocar mais informacoes sobre o titulo"). So a Grade (a exibicao de
+// cartazes), o Cover Flow, o Ranking e as Decadas dispensam o cartaz lateral,
+// porque la o cartaz ja esta na celula grande — Decadas vale para o streaming
+// tambem, a mesma tela (dono, 14/10: "no modo ranking dos streaming ainda ta
+// mostrando o poster, tem que tirar, decades tb"); nas outras o cartaz fica.
+// Com o cartaz na ficha, a LOGO tambem nao entra: so o nome escrito (dono,
+// 14/10: "quando tem poster nas infos nao colocar a logo"). Ordem:
+// logo/titulo, ano e
+// duracao com a classificacao, generos, notas, sinopse e, quando o catalogo ja
+// os trouxe,
+// direcao e elenco. Nada aqui pede rede: e so o que o CatItem tem.
+static int painelComCartaz(void) {
+  return lay != VT_LAY_GRADE && lay != VT_LAY_FLUXO && lay != VT_LAY_RANKING &&
+         lay != VT_LAY_DECADAS;
+}
+static float painelCredito(const char *rot, const char *val, float y, float a) {
+  TxtLinha r = txt_linha(TXT_MINI, rot, 160, 168, 182, 255);
+  txt_desenhar_alpha(r, VT_PAN_X, y, a);
+  y += r.h + 4.0f;
+  return y + txt_bloco_corta(TXT_DET_META2, val, 226, 230, 238, VT_PAN_X, y, VT_PAN_W, 30.0f, a, 2) + 14.0f;
+}
 static void painel(float a) {
   CatItem it;
-  float y = VT_PAN_Y;
+  // A base fica a mesma distancia da borda que a direita (a da ilha).
+  float y = VT_PAN_Y, base = NV_TELA_H - NV_ILHA_MARGEM_D;
+  int cartaz = painelComCartaz();
+  char elenco[200] = "";
   if (!viewItem(foco, &it)) return;
-  float artH = VT_PAN_ART_H;
-  if (it.sinopse[0]) artH -= fmaxf(0, sinopse_entrelinha(TXT_DET_META2, 34) - 34);
-  float artW = artH * (VT_PAN_ART_W / VT_PAN_ART_H);
 
-  // O contexto lateral usa o cartaz, nunca repete a cena da timeline.
-  // Mantém a geometria 2:3 mesmo sem arte para não deslocar os metadados.
-  { GfxRect r = { VT_PAN_X, y, artW, artH };
+  if (cartaz) {
+    // Mantém a geometria 2:3 mesmo sem arte para não deslocar os metadados.
+    GfxRect r = { VT_PAN_X, y, VT_PAN_ART_W, VT_PAN_ART_H };
     const char *arte = it.poster[0] ? it.poster : it.backdrop;
-    float raio = 12.0f / artW;
-    GLuint t = arte[0] ? tex_obter_larg(arte, artW) : 0;
+    float raio = ajustes_raio_poster_px() / VT_PAN_ART_H;   // o raio de cartaz do app
+    GLuint t = arte[0] ? tex_obter_larg(arte, VT_PAN_ART_W) : 0;
     gfx_cor(r, raio, 1, 1, 1, 0.05f * a);
     if (t) {
       gfx_tex_aspect_atual = tex_aspecto(arte);
@@ -1823,81 +2186,78 @@ static void painel(float a) {
     } else {
       TxtLinha falta = txt_linha_corta(TXT_HERO_META, "Sem pôster", 185, 191, 204, 255, r.w-24);
       txt_desenhar_alpha(falta, r.x+(r.w-falta.w)*.5f, r.y+(r.h-falta.h)*.5f, a);
-    } }
-  y += artH + 18.0f;
-  float badgeW=badges_desenhar(badges_provedor(it.provNome),VT_PAN_X,y,VT_PAN_W,28,a);
-  if(badgeW>0)y+=40;
+    }
+    y += VT_PAN_ART_H + 20.0f;
+  } else y += 8.0f;
 
-  // LOGO no lugar do titulo quando existe (max 264x82 no web); o nome escrito
-  // com a fonte da interface so quando nao ha logo.
-  { GLuint tl = it.logo[0] ? tex_obter_logo_larg(it.logo, 264.0f) : 0;
-    float ap = it.logo[0] ? tex_aspecto(it.logo) : 0.0f;
+  // LOGO so quando a ficha NAO tem o cartaz: com o poster ao lado o nome
+  // escrito com a fonte da interface (dono, 14/10: "quando tem poster nas
+  // infos nao colocar a logo"). Sem o cartaz ele cresce e e a ancora da ficha.
+  { float maxW = VT_PAN_W, maxH = cartaz ? 82.0f : 128.0f;
+    GLuint tl = !cartaz && it.logo[0] ? tex_obter_logo_larg(it.logo, maxW) : 0;
+    float ap = tl ? tex_aspecto(it.logo) : 0.0f;
     if (tl && ap > 0.0f) {
-      float wL = 264.0f, hL = wL / ap;
-      if (hL > 82.0f) { hL = 82.0f; wL = hL * ap; }
+      float wL = maxW, hL = wL / ap;
+      if (hL > maxH) { hL = maxH; wL = hL * ap; }
       { GfxRect rl = { VT_PAN_X, y, wL, hL };
         GfxModo m = tex_marca_escura(it.logo) ? GFX_MARCA : GFX_TEXTO;
         gfx_tex_aspect_atual = 0.0f;
         gfx_rect(rl, tl, m, 0, 0, 0, 0.0f, 1, 1, 1, a); }
-      y += hL + 4.0f;
+      y += hL + 16.0f;
     } else {
-      TxtLinha t = txt_linha_corta(TXT_HEADLINE, it.titulo, 245, 245, 245, 255,
-                                   VT_PAN_W);
-      txt_desenhar_alpha(t, VT_PAN_X, y, a);
-      y += t.h + 6.0f;
+      // Titulo longo nao corta na 2a linha ("The Beat of the..."): desce um
+      // degrau da escala e ganha a 3a.
+      TxtEstilo es = cartaz ? TXT_HEADLINE : TXT_TITULO2;
+      float ld = cartaz ? 38.0f : 58.0f;
+      int nl = 2;
+      if (txt_bloco(es, it.titulo, 0, 0, 0, 0, 0, VT_PAN_W, ld, 0.0f, 0) > 2.0f * ld + 1.0f) {
+        es = cartaz ? TXT_CALLOUT : TXT_HEADLINE; ld = cartaz ? 34.0f : 44.0f; nl = 3; }
+      y += txt_bloco_corta(es, it.titulo, 245, 245, 245, VT_PAN_X, y, VT_PAN_W, ld, a, nl) + 18.0f;
     } }
 
-  if (it.genero[0]) {
-    TxtLinha t = txt_linha_corta(TXT_CAPTION, it.genero, 220, 231, 244, 255,
-                                 VT_PAN_W);
-    txt_desenhar_alpha(t, VT_PAN_X, y, a * 0.72f);
-    y += t.h + 6.0f;
-  }
-  // Pastilha da nota, no amarelo do IMDb que o web usa (245,197,24).
-  int imdbRating = imdbnota_obter(it.imdb, it.nota, !strcmp(it.tipo,"series"));
-  if (imdbRating > 0) {
-    char n[16];
-    snprintf(n, sizeof n, "%.1f", imdbRating / 10.0f); idioma_decimal_texto(n, ajustes_idioma());
-    { TxtLinha t = txt_linha(TXT_CAPTION, n, 23, 19, 10, 255);
-      GfxRect r = { VT_PAN_X, y + 8.0f, t.w + 26.0f, t.h + 8.0f };
-      gfx_cor(r, 8.0f / (t.h + 8.0f), 0.961f, 0.773f, 0.094f, 0.92f * a);
-      txt_desenhar_alpha(t, VT_PAN_X + 13.0f, y + 12.0f, a);
-      y += r.h + 14.0f; }
-  }
-  if (it.meta[0]) {
-    TxtLinha t = txt_linha_corta(TXT_DET_META2, it.meta, 240, 240, 240, 255,
-                                 VT_PAN_W);
-    txt_desenhar_alpha(t, VT_PAN_X, y, a * 0.92f);
-    y += t.h + 12.0f;
-  }
-  if (it.sinopse[0]) {
-    // Ate onde couber sem passar da base util (o web corta em
-    // max-height: 100% - 210).
-    int linhas = (int)((NV_TELA_H - 48.0f - y) / 34.0f);
-    if (linhas > 8) linhas = 8;
-    if (linhas > 0)
-      sinopse_bloco(TXT_DET_META2, it.sinopse, 236, 236, 236,
-                VT_PAN_X, y, VT_PAN_W, 34.0f, a * 0.86f, linhas);
-  }
-}
+  // Ano · duracao (ou temporadas) e o selo da classificacao na mesma linha.
+  { float x = VT_PAN_X;
+    if (it.meta[0]) {
+      TxtLinha t = txt_linha_corta(TXT_DET_META2, it.meta, 240, 241, 244, 255, VT_PAN_W - 90.0f);
+      txt_desenhar_alpha(t, x, y + (BADGE_H - t.h) * 0.5f, a);
+      x += t.w + 14.0f;
+    }
+    if (it.classificacao[0]) badge_desenhar(x, y, it.classificacao, BADGE_NEUTRO, a);
+    if (it.meta[0] || it.classificacao[0]) y += BADGE_H + 12.0f; }
+  if (it.genero[0])
+    y += txt_bloco_corta(TXT_CAPTION, it.genero, 196, 205, 219, VT_PAN_X, y, VT_PAN_W, 28.0f, a * 0.9f, 2) + 14.0f;
 
-static const char *retratoLocal(const ColFolder *folder) {
-  static char caminho[700];
-  if (!folder || !folder->frameDir[0]) return "";
-  snprintf(caminho, sizeof caminho, "%s/portrait.png", folder->frameDir);
-  if (access(caminho, R_OK) == 0) return caminho;
-  snprintf(caminho, sizeof caminho, "%s/portrait.jpg", folder->frameDir);
-  return access(caminho, R_OK) == 0 ? caminho : "";
-}
+  // Notas: IMDb (amarelo da marca) e os servicos onde o titulo esta.
+  { int nota = imdbnota_obter(it.imdb, it.nota, !strcmp(it.tipo, "series"));
+    float x = VT_PAN_X, w = badge_imdb(x, y, nota, 0, a);
+    if (w > 0) x += w + 18.0f;
+    w = badges_desenhar(badges_provedor(it.provNome), x, y, VT_PAN_X + VT_PAN_W - x, BADGE_H, a);
+    if (x > VT_PAN_X || w > 0) y += BADGE_H + 20.0f; }
 
-// Uma única arte full-width, dissolvendo na mesma cor do corpo. Directors usa
-// o retrato vertical local quando o pacote ja o tem; o hero horizontal dessa
-// colecao e um placeholder neutro e so acrescenta uma camada sem informacao.
-// Usa os shaders e o cache existentes, sem blur ou novas texturas por frame.
+  // Os creditos ficam na base; a sinopse ocupa o que sobra entre os dois.
+  for (int k = 0, m = 0; k < it.nElenco && k < 3; k++)
+    if (it.elenco[k].nome[0])
+      m += snprintf(elenco + m, sizeof elenco - (size_t)m, "%s%s", m ? ", " : "", it.elenco[k].nome);
+  { float creditos = (it.direcao[0] ? 92.0f : 0.0f) + (elenco[0] ? 92.0f : 0.0f);
+    if (it.sinopse[0]) {
+      // Sem espaco para tudo, os creditos saem antes das tres linhas da sinopse.
+      float ld = sinopse_entrelinha(TXT_DET_META2, 32.0f);
+      int linhas = (int)((base - creditos - y) / ld), cabe = (int)((base - y - 12.0f) / ld);
+      if (linhas < 3) linhas = cabe < 3 ? cabe : 3;
+      if (linhas > (cartaz ? 6 : 9)) linhas = cartaz ? 6 : 9;
+      if (linhas > 0) {
+        y += 6.0f;
+        y += txt_bloco_corta(sinopse_estilo(TXT_DET_META2), it.sinopse, 226, 229, 236,
+                             VT_PAN_X, y, VT_PAN_W, ld, a * 0.9f, linhas) + 18.0f;
+      }
+    }
+    if (it.direcao[0] && y + 70.0f <= base) y = painelCredito(i18n("Direção"), it.direcao, y, a);
+    if (elenco[0] && y + 70.0f <= base) painelCredito(i18n("Elenco"), elenco, y, a); }
+}
 // FUNDO DA COLECAO: sempre Frost ou a arte borrada da pasta, nunca a arte crua
 // ("em colecoes deixa o fundo sempre frost ou blur", 04/10/2026). Ajustes >
 // Fundo = Frost fica Frost; senao a arte borrada (fundo.c), e sem a arte
-// ainda cai no Frost. A arte de cabecalho (editorial, retrato) vem POR CIMA.
+// ainda cai no Frost. A arte de cabecalho (editorial) vem POR CIMA.
 static void fundoColecao(float a) {
   GfxRect tela={0,0,NV_TELA_W,NV_TELA_H};
   GLuint t=0;
@@ -1910,6 +2270,7 @@ static void fundoColecao(float a) {
 }
 static void themeBackground(float a) {
   fundoColecao(a);
+  degradeMarca(a, NV_SHELF_TOP);
   if(collection) {
     if(collection->editorial) {
       GLuint art=tex_obter_hero(collection->detailHero);
@@ -1923,29 +2284,6 @@ static void themeBackground(float a) {
       }
       if(art)gfx_rect(header,art,collection->editorial==2?GFX_EDITORIAL:GFX_TEXTO,0,0,0,0,1,1,1,a);
       return;
-    }
-    if(grupo("Directors")) {
-      const char *foto=retratoLocal(collection);
-      if(!foto[0]) {
-        diretor_pedir(collection->title);
-        foto=diretor_foto(collection->title);
-      }
-      GLuint tp=foto[0]?tex_obter_larg(foto,260.0f):0;
-      if(tp) {
-        // O painel do item selecionado começa em VT_PAN_Y. O retrato ocupa
-        // apenas o cabeçalho e termina antes dele, sem atravessar pôster ou
-        // sinopse como uma segunda camada.
-        GfxRect rp={1660,18,260,300};
-        if (vtTelefone()) rp.x = NV_TELA_W - 48.0f - rp.w;
-        if (vtTimelineRetrato()) rp = (GfxRect){NV_TELA_W - 204.0f,18,156,180};
-        gfx_tex_aspect_atual=tex_aspecto(foto);
-        gfx_rect(rp,tp,GFX_RETRATO,
-                 0,0,0,0,0,0,0,a*.88f);
-        gfx_tex_aspect_atual=0;
-      }
-    } else {
-      const char *art=col_banner(collection);
-      (void)art;   /* o banner agora e o fundo borrado (fundoColecao) */
     }
   }
 }
@@ -1963,6 +2301,11 @@ static void ponteiroAba(int i, int b) {
 #endif
   tabFocus = 1; tabCursor = i;
 }
+// Menu suspenso: um item da lista. O OK do clique escolhe (ddEvento).
+static void ponteiroDd(int i, int b) {
+  (void)b;
+  tabFocus = 1; tabCursor = cabN() - 1; ddAberto = 1; ddCursor = i;
+}
 static void ponteiroCartaz(int i, int b) {
   (void)b;
   atualizarGrade();
@@ -1973,31 +2316,331 @@ static void ponteiroCartaz(int i, int b) {
 #ifdef NV_TOUCH_UI
   toqueLivre = 0;
 #endif
-  tabFocus = 0; foco = i;
+  tabFocus = 0; foco = i; ddAberto = 0;
   lembrarFoco();
   if (foco >= nItens() - VT_COLS * 2) desc_vertudo_mais();
 }
 
+// Streaming com a lista pronta: a contagem e "organizado por servico" so
+// poluiam o cabecalho sob o wordmark. Carregando/erro/sem fonte seguem falando.
+static int legendaOculta(void) {
+  return grupo("Streaming")&&nItens()>0&&!semFonte&&!desc_vertudo_erro();
+}
+#define VT_ABA_FADE 72.0f
+// ROTULOS DAS ABAS, NA ORDEM DO CATALOGO (sources[0..n]). NOME DA ABA (01/10,
+// pasta Netflix mostrava "streaming_netflix_movies · Movies"): o nome legivel
+// da fonte (titulo da conta, senao o do manifesto — #76) e NUNCA o id cru.
+// Sem nome, ou com o mesmo nome da pasta ("Netflix" na pasta Netflix), so o
+// tipo: "Filmes" / "Séries". O tipo so acompanha quando duas abas teriam o
+// mesmo texto.
+static void abaRotulos(char rot[][180], int nAbas) {
+  static char nomeAba[COL_SOURCE_MAX][128];
+  if(nAbas>COL_SOURCE_MAX)nAbas=COL_SOURCE_MAX;
+  for(int i=0;i<nAbas;i++) {
+    const ColSource *s=&collection->sources[i];
+    col_nome_fonte(s,desc_nome_catalogo(baseDaFonte(s),s->type,s->catId),nomeAba[i],sizeof nomeAba[i]);
+    if(!strcasecmp(nomeAba[i],collection->title))nomeAba[i][0]=0;
+  }
+  for(int i=0;i<nAbas;i++) {
+    const ColSource *s=&collection->sources[i];
+    const char *tipo=i18n(!strcmp(s->type,"series")?"Séries":"Filmes");
+    int repete=0;
+    for(int j=0;j<nAbas&&nomeAba[i][0];j++) if(j!=i&&!strcmp(nomeAba[i],nomeAba[j]))repete=1;
+    if(!nomeAba[i][0])snprintf(rot[i],180,"%s",tipo);
+    else if(repete)snprintf(rot[i],180,"%s · %s",nomeAba[i],tipo);
+    else snprintf(rot[i],180,"%s",nomeAba[i]);
+  }
+}
+// A faixa rola o minimo para a aba alvo entrar inteira, fora da zona de
+// esmaecimento. Voltando para as primeiras abas, se a alvo cabe inteira sem
+// rolar, a fileira ENCONSTA NO LOGO (rol 0): o respiro fixo de antes escondia
+// a primeira aba atras do esmaecimento e a fileira parecia comecar na segunda,
+// desalinhada do cabecalho.
+static float abaRolRecentrar(float rol,float ini,float fim,float fimMax,float W) {
+  if(fim-rol>W-VT_ABA_FADE)rol=fim-(W-VT_ABA_FADE);
+  if(ini-rol<VT_ABA_FADE)rol=fim<=W-VT_ABA_FADE?0.0f:fmaxf(0.0f,ini-VT_ABA_FADE);
+  if(rol>fimMax)rol=fimMax;
+  return rol<0?0:rol;
+}
+// Opacidade de uma aba perto das bordas da faixa: some antes de chegar no
+// botao "Exibicao" (ou na borda esquerda rolada) em vez de ser cortada seco.
+// O esmaecimento segue a borda que ENTRA/SAI: pela borda de dentro, uma aba
+// pela metade na borda sumia INTEIRA — a primeira aba da Netflix rolava para
+// tras do esmaecimento e a fileira parecia comecar na segunda.
+static float abaFade(float x,float larg,float x0,float W,int maisEsq,int maisDir) {
+  float f=1.0f;
+  if(maisDir)f=fminf(f,(x0+W-x)/VT_ABA_FADE);
+  if(maisEsq)f=fminf(f,(x+larg-x0)/VT_ABA_FADE);
+  return f<0?0:f;
+}
+
+// --- ESTILO DAS ABAS: desenho (#205) -----------------------------------------
+// Os tres estilos novos usam a mesma altura/linha das pilulas de sempre (Y=253,
+// H=52) e as mesmas cores (corFocoFonte + tintas do tema), so mudam o arranjo.
+#define VT_AB_Y 253.0f
+#define VT_AB_H 52.0f
+#define VT_AB_PAD 22.0f
+// 0 = baixo, 1 = esquerda, 2 = direita; triangulo cheio feito de tiras.
+static void abaSeta(float cx, float cy, int dir, float r, float g, float b, float a) {
+  for (int k = 0; k < 5; k++) {
+    float t = 10.0f - 2.0f * k;
+    if (dir == 0) gfx_cor((GfxRect){cx - t * .5f, cy - 4.0f + 2.0f * k, t, 2}, 0, r, g, b, a);
+    else gfx_cor((GfxRect){dir == 2 ? cx - 4.0f + 2.0f * k : cx + 2.0f - 2.0f * k, cy - t * .5f, 2, t}, 0, r, g, b, a);
+  }
+}
+static float abaTexto(const char *s, float maxw) {
+  return txt_linha_corta(TXT_HERO_META, s, 176, 176, 176, 255, maxw).w;
+}
+static void ponteiroCab(int i, int b) {
+  (void)b;
+#ifdef NV_TOUCH_UI
+  toqueLivre = 0;
+  toquerol_limpar(&toqueAbas);
+#endif
+  tabFocus = 1; tabCursor = i;
+}
+// Pilula de texto centrado: realce na cor do tema quando `sel`, vidro leve no
+// resto; o foco (fa) acende por cima como nas abas de sempre.
+static void abaPilula(GfxRect p, const char *s, int f, int sel, float fa, float a, float tw) {
+  if (sel) {
+    float sr, sg, sb; corFocoFonte(&sr, &sg, &sb);
+    gfx_cor(p, NV_RAIO_PILL, sr, sg, sb, a * (0.62f + 0.38f * fa));
+  } else gfx_cor(p, NV_RAIO_PILL, 1, 1, 1, .04f * a * (1 - fa));
+  if (fa > .001f) focoAbaFonte(p, fa, a);
+  int cor = f ? ajustes_tinta_foco() : sel ? ajustes_tinta_foco2() : 176;
+  TxtLinha t = txt_linha_corta(TXT_HERO_META, s, cor, cor, cor, 255, tw);
+  txt_desenhar_alpha(t, p.x + (p.w - t.w) * .5f, p.y + (p.h - t.h) * .5f, a);
+}
+
+// MENU SUSPENSO: [Filmes] [Séries] [catalogo v] e a lista caindo do catalogo.
+static void abasMenu(float x0, float W, char rot[][180], float a) {
+  const float H = VT_AB_H, PAD = VT_AB_PAD, GAP = 12.0f, Y = VT_AB_Y, SETA = 30.0f;
+  int cat = cabN() - 1, tipos = doisTipos();
+  float x = x0, catX = x0, catW = 0;
+  for (int i = 0; i <= cat; i++) {
+    int isCat = i == cat;
+    const char *s = isCat ? rot[source] : i18n(i ? "Séries" : "Filmes");
+    float tw = fminf(420.0f, W - PAD * 2 - (isCat ? SETA : 0));
+    float w = abaTexto(s, tw) + PAD * 2 + (isCat ? SETA : 0);
+    GfxRect p = {x, Y, w, H};
+    int f = tabFocus && tabCursor == i, sel = !isCat && tipos && abaSerie(source) == i;
+    ponteiro_alvo(p.x, p.y, p.w, p.h, ponteiroCab, NULL, i, 0);
+    abaPilula(p, s, f, sel, tabAnim[i], a, tw);
+    if (isCat) {
+      int cor = f ? ajustes_tinta_foco() : 176;
+      abaSeta(p.x + p.w - PAD - 5.0f, p.y + H * .5f + ddAnim * -1.0f, 0, cor / 255.0f, cor / 255.0f, cor / 255.0f, a);
+      catX = p.x; catW = p.w;
+    }
+    x += w + GAP;
+  }
+  if (ddAnim < .01f) return;
+  int idx[COL_SOURCE_MAX], n = abasDoTipo(abaSerie(source), idx);
+  if (!n) return;
+  const float RH = VT_DD_RH, RPAD = 18.0f;
+  float pw = catW;
+  for (int k = 0; k < n; k++) pw = fmaxf(pw, abaTexto(rot[idx[k]], 420.0f) + RPAD * 2);
+  float px = catX, py = Y + H + 8.0f - (1.0f - ddAnim) * 10.0f;
+  int vis, base = ddJanela(n, ddCursor, py, &vis);   // limitada, segue o foco
+  float ph = vis * RH + 12.0f, aa = a * ddAnim;
+  if (px + pw > x0 + W) px = fmaxf(x0, x0 + W - pw);
+  gfx_vidro_material((GfxRect){px, py, pw, ph}, 22.0f, GFX_VIDRO_DENS, aa);
+  for (int k = base; k < base + vis; k++) {
+    GfxRect row = {px + 6.0f, py + 6.0f + (k - base) * RH, pw - 12.0f, RH};
+    int f = ddAberto && ddCursor == k, atual = idx[k] == source;
+    if (ddAberto) ponteiro_alvo(row.x, row.y, row.w, row.h, ponteiroDd, NULL, k, 0);
+    if (f) {
+      float sr, sg, sb; corFocoFonte(&sr, &sg, &sb);
+      gfx_cor(row, NV_RAIO_PILL, sr, sg, sb, aa * .85f);
+    } else if (atual) gfx_cor(row, NV_RAIO_PILL, 1, 1, 1, .07f * aa);
+    int cor = f ? ajustes_tinta_foco() : atual ? 245 : 190;
+    TxtLinha t = txt_linha_corta(TXT_HERO_META, rot[idx[k]], cor, cor, cor, 255, pw - RPAD * 2);
+    txt_desenhar_alpha(t, row.x + RPAD, row.y + (RH - t.h) * .5f, aa);
+  }
+}
+
+// BARRA CENTRAL: todas as abas numa pilula de vidro no meio; o realce desliza.
+// Devolve 0 quando nao cabe (o chamador cai nas pilulas rolaveis).
+static int abasBarra(float x0, float W, char rot[][180], int n, float a) {
+  const float H = VT_AB_H - 8.0f, PAD = 20.0f, GAP = 4.0f, Y = VT_AB_Y, IN = 4.0f;
+  float larg[COL_SOURCE_MAX], total = 0;
+  for (int i = 0; i < n; i++) {
+    larg[i] = abaTexto(rot[i], 240.0f) + PAD * 2;
+    total += larg[i] + (i ? GAP : 0);
+  }
+  float cw = total + IN * 2;
+  if (cw > W) return 0;
+  float cx = x0 + (W - cw) * .5f, x = cx + IN;
+  int alvo = tabFocus ? tabCursor : source;
+  if (alvo >= n) alvo = source;
+  float ax = x, aw = larg[0], pos[COL_SOURCE_MAX];
+  for (int i = 0; i < n; i++) {
+    pos[i] = x;
+    if (i == alvo) { ax = x; aw = larg[i]; }
+    x += larg[i] + GAP;
+  }
+  barraAlvoX = ax; barraAlvoW = aw;
+  if (barraW < 0.0f) { barraX = ax; barraW = aw; }
+  gfx_vidro_painel((GfxRect){cx, Y, cw, VT_AB_H}, VT_AB_H * .5f, .55f, a);
+  float fo = 0;
+  for (int i = 0; i < n; i++) fo = fmaxf(fo, tabAnim[i]);
+  float sr, sg, sb; corFocoFonte(&sr, &sg, &sb);
+  GfxRect hl = {barraX, Y + IN, barraW, H};
+  gfx_cor(hl, NV_RAIO_PILL, sr, sg, sb, a * (0.62f + 0.38f * fo));
+  if (fo > .001f) focoAbaFonte(hl, fo, a);
+  for (int i = 0; i < n; i++) {
+    GfxRect p = {pos[i], Y + IN, larg[i], H};
+    ponteiro_alvo(p.x, p.y, p.w, p.h, ponteiroAba, NULL, i, 0);
+    // O realce so esta em cima da aba sob o cursor quando ele chega; ate la a
+    // tinta acompanha o realce pela distancia ao centro dele.
+    float cobre = 1.0f - fminf(1.0f, fabsf((p.x + p.w * .5f) - (barraX + barraW * .5f)) / (p.w * .5f + barraW * .5f));
+    int sobre = cobre > .5f;
+    int cor = sobre ? (tabFocus ? ajustes_tinta_foco() : ajustes_tinta_foco2()) : 176;
+    TxtLinha t = txt_linha_corta(TXT_HERO_META, rot[i], cor, cor, cor, 255, larg[i] - PAD * 2);
+    txt_desenhar_alpha(t, p.x + (p.w - t.w) * .5f, p.y + (H - t.h) * .5f, a);
+    // A aberta, quando o cursor esta em outra: um ponto embaixo do nome.
+    if (i == source && alvo != source)
+      gfx_cor((GfxRect){p.x + p.w * .5f - 2.0f, Y + VT_AB_H - 7.0f, 4, 4}, .5f, sr, sg, sb, a);
+  }
+  return 1;
+}
+
+// PAGINAS: [<] [ nome ] [>] e pontos; o nome desliza como num carrossel.
+static void abasPaginas(float x0, float W, char rot[][180], int n, float a) {
+  const float H = VT_AB_H, PAD = VT_AB_PAD, GAP = 10.0f, Y = VT_AB_Y;
+  float pw = 0;
+  for (int i = 0; i < n; i++) pw = fmaxf(pw, abaTexto(rot[i], 420.0f));
+  pw = fminf(pw + PAD * 2, fmaxf(120.0f, W - H * 2 - GAP * 2 - n * 20.0f));
+  float tw = pw - PAD * 2, x = x0;
+  int f = tabFocus && tabCursor < n;
+  float sr, sg, sb; corFocoFonte(&sr, &sg, &sb);
+  for (int lado = 0; lado < 2; lado++) {
+    int alvo = source + (lado ? 1 : -1), ok = alvo >= 0 && alvo < n;
+    GfxRect b = {lado ? x0 + H + GAP + pw + GAP : x0, Y, H, H};
+    gfx_vidro_painel(b, H * .5f, .55f, a * (ok ? 1.0f : .45f));
+    int cor = ok ? 226 : 110;
+    abaSeta(b.x + H * .5f, Y + H * .5f, lado ? 2 : 1, cor / 255.0f, cor / 255.0f, cor / 255.0f, a);
+    if (ok) ponteiro_alvo(b.x, b.y, b.w, b.h, ponteiroCab, NULL, alvo, 0);
+  }
+  x = x0 + H + GAP;
+  GfxRect p = {x, Y, pw, H};
+  float fa = tabAnim[source < n ? source : 0];
+  if (f) gfx_cor(p, NV_RAIO_PILL, sr, sg, sb, a * (0.62f + 0.38f * fa));
+  else gfx_vidro_painel(p, NV_RAIO_PILL, .55f, a);
+  if (fa > .001f) focoAbaFonte(p, fa, a);
+  int cor = f ? ajustes_tinta_foco() : 240;
+  TxtLinha t = txt_linha_corta(TXT_HERO_META, rot[source], cor, cor, cor, 255, tw);
+  gfx_recorte(p.x, p.y, p.w, p.h);
+  txt_desenhar_alpha(t, p.x + (p.w - t.w) * .5f + pgSlide * 56.0f, p.y + (H - t.h) * .5f,
+                     a * (1.0f - fminf(1.0f, fabsf(pgSlide))));
+  gfx_sem_recorte();
+  // Pontos: a pagina aberta e a mais larga, na cor do tema.
+  float dx = x0 + H + GAP + pw + GAP + H + 18.0f;
+  for (int i = 0; i < n; i++) {
+    float dw = i == source ? 22.0f : 8.0f;
+    if (dx + dw > x0 + W) break;
+    GfxRect d = {dx, Y + H * .5f - 4.0f, dw, 8};
+    if (i == source) gfx_cor(d, .5f, sr, sg, sb, a);
+    else gfx_cor(d, .5f, 1, 1, 1, .28f * a);
+    ponteiro_alvo(d.x - 6.0f, Y, dw + 12.0f, H, ponteiroCab, NULL, i, 0);
+    dx += dw + 12.0f;
+  }
+}
+
+// --- CABECALHO, DIRECAO A (dono, 14/10) ---------------------------------------
+// Sobretitulo na linha da ilha do relogio, o nome grande embaixo e, na linha
+// seguinte, o anel de vistos + contagem a esquerda e o seletor de exibicao a
+// direita, colado na borda da ilha. Sem caixa: o vidro fica so no controle.
+//
+// ANEL: um ponto por titulo, ate VT_ANEL_MAX; acima disso o anel acende a
+// fracao e o numero diz o resto. Nada visto = so a ficha com o total (um anel
+// apagado lia como barra quebrada). Tudo visto = pontos no acento + check.
+#define VT_ANEL_MAX 24
+static void anelVistos(float cx, float cy, float a) {
+  const float R = 26.0f;
+  float ar, ag, ab;
+  char num[12];
+  int n = vcTotal < VT_ANEL_MAX ? vcTotal : VT_ANEL_MAX, todo = vcVistos >= vcTotal;
+  int acesos = vcTotal <= VT_ANEL_MAX ? vcVistos : vcVistos * VT_ANEL_MAX / vcTotal;
+  ajustes_acento(&ar, &ag, &ab);
+  cabPontos = 0;
+  if (!vcVistos) {
+    GfxRect f = { cx - R - 4.0f, cy - R - 4.0f, (R + 4.0f) * 2.0f, (R + 4.0f) * 2.0f };
+    gfx_cor(f, 0.5f, 1, 1, 1, 0.10f * a);
+    gfx_anel(f, 0.5f, 1.5f, 1, 1, 1, 0.16f * a);
+    snprintf(num, sizeof num, "%d", vcTotal);
+  } else {
+    float s = n > 16 ? 5.0f : 7.0f;
+    if (!todo) acesos = acesos < 1 ? 1 : acesos >= n ? n - 1 : acesos;
+    else gfx_rect((GfxRect){ cx - R * 2.2f, cy - R * 2.2f, R * 4.4f, R * 4.4f }, 0, GFX_SOMBRA, 1, 0, 0,
+                  0.5f, ar, ag, ab, 0.22f * a);
+    for (int i = 0; i < n; i++) {
+      float t = -1.5707963f + 6.2831853f * i / n;
+      GfxRect d = { cx + R * cosf(t) - s * 0.5f, cy + R * sinf(t) - s * 0.5f, s, s };
+      if (todo) gfx_cor(d, 0.5f, ar, ag, ab, a);
+      else gfx_cor(d, 0.5f, 1, 1, 1, (i < acesos ? 0.96f : 0.20f) * a);
+    }
+    cabPontos = n;
+    if (todo) { gfx_icone((GfxRect){ cx - 14.0f, cy - 14.0f, 28, 28 }, "aj_check", ar, ag, ab, a); return; }
+    snprintf(num, sizeof num, "%d", vcVistos);
+  }
+  TxtLinha t = txt_linha(TXT_ILHA_NOME, num, 242, 243, 247, 255);
+  txt_desenhar_alpha(t, cx - t.w * 0.5f, cy - t.h * 0.5f, a);
+}
+// Anel + "N de M assistidos" e, embaixo, a legenda (no acento quando completo).
+static void linhaVistos(float x0, float cy, float a) {
+  char forte[64], meta[200];
+  int todo = vcVistos >= vcTotal;
+  anelVistos(x0 + 30.0f, cy, a);
+  if (vcVistos) snprintf(forte, sizeof forte, i18n("%d de %d assistidos"), vcVistos, vcTotal);
+  else snprintf(forte, sizeof forte, i18n("%d títulos"), vcTotal);
+  snprintf(meta, sizeof meta, todo ? "%s  ·  %s" : "%.0s%s", i18n("Completo"), i18n(legendaGrupo()));
+  TxtLinha f = txt_linha(TXT_ILHA_NOME, forte, 242, 243, 247, 255);
+  TxtLinha m = txt_linha_corta(TXT_DET_META2, meta, 186, 192, 203, 255, 760.0f);
+  txt_desenhar_alpha(f, x0 + 84.0f, cy - f.h - 1.0f, a);
+  if (todo) { float ar, ag, ab; ajustes_acento(&ar, &ag, &ab);
+              txt_desenhar_tom(txt_linha_corta(TXT_DET_META2, meta, 255, 255, 255, 255, 760.0f),
+                               x0 + 84.0f, cy + 3.0f, ar, ag, ab, a); }
+  else txt_desenhar_alpha(m, x0 + 84.0f, cy + 3.0f, a);
+  cabFim = fmaxf(cabFim, fmaxf(cy + 30.0f, cy + 3.0f + m.h));   // anel (R + 4) e legenda
+}
+
 static void themeHeader(float a,float x0) {
-  float r,g,b;corColecao(&r,&g,&b);
   TxtLinha eyebrow=vtTelefone()
     ?txt_linha_corta(TXT_HERO_META,rotuloGrupo(),197,202,211,255,vtCabecalhoLargura(x0,960))
     :txt_linha(TXT_HERO_META,rotuloGrupo(),197,202,211,255);
-  txt_desenhar_alpha(eyebrow,x0,40,a);
+  float ey=NV_ILHA_Y+(NV_ILHA_H-eyebrow.h)*.5f,fim;
+  if(!grupo("Streaming"))txt_desenhar_alpha(eyebrow,x0,ey,a);
+  cabEb=(GfxRect){x0,ey,eyebrow.w,eyebrow.h};
   int ehDiretor=collection&&!strcasecmp(collection->group,"Directors");
   // O wordmark de uma coleção de diretores pode conter cabeça ou lettering
   // composto. No cabeçalho da filmografia, o nome textual e o retrato limpo
   // deixam a identidade legível sem duplicar a mesma informação visual.
-  GLuint logo=!ehDiretor&&collection&&!collection->editorial&&collection->logo[0]
-             ?tex_obter_logo_larg(collection->logo,560):0;
-  float aspect=logo?tex_aspecto(collection->logo):0;
+  const char *wm=grupo("Streaming")?wordmarkServico():collection?collection->logo:"";
+  GLuint logo=!ehDiretor&&collection&&!collection->editorial&&wm[0]
+             ?tex_obter_logo_larg(wm,560):0;
+  float aspect=logo?tex_aspecto(wm):0;
   if(logo&&aspect>0) {
     // Wordmark oficial, grande o bastante para leitura a distancia. O PNG
     // transparente e importado em ate 800px, portanto 560px nao interpola para
     // cima nem perde a silhueta original da marca.
-    float w=vtCabecalhoLargura(x0,560),h=w/aspect;if(h>108){h=108;w=h*aspect;}
-    gfx_rect((GfxRect){x0,83,w,h},logo,tex_marca_escura(collection->logo)?GFX_MARCA:GFX_TEXTO,0,0,0,0,.96f,.97f,.98f,a);
-  } else {TxtLinha title=txt_linha_corta(TXT_TITULO1,titulo,242,243,247,255,vtCabecalhoLargura(x0,940));txt_desenhar_alpha(title,x0,80,a);}
+    float w=vtCabecalhoLargura(x0,560),h=w/aspect,y=grupo("Streaming")?56:83;if(h>108){h=108;w=h*aspect;}
+    gfx_rect((GfxRect){x0,y,w,h},logo,tex_marca_escura(wm)?GFX_MARCA:GFX_TEXTO,0,0,0,0,.96f,.97f,.98f,a);
+    fim=y+h;
+  } else {
+    // Nome em 76; o que nao cabe cai para 56 em ate duas linhas (uma so com
+    // abas: a fileira delas mora logo abaixo).
+    float lw=vtCabecalhoLargura(x0,940);
+    if(vtTelefone()||txt_linha(TXT_TITULO1,titulo,242,243,247,255).w<=lw) {
+      TxtLinha title=txt_linha_corta(TXT_TITULO1,titulo,242,243,247,255,lw);
+      txt_desenhar_alpha(title,x0,80,a);
+      cabTt=(GfxRect){x0,80,title.w,title.h};fim=80+title.h;
+    } else {
+      float h=txt_bloco_corta(TXT_TITULO2,titulo,242,243,247,x0,86,lw,62,a,nAbas()?1:2);
+      cabTt=(GfxRect){x0,86,lw,h};fim=86+h;
+    }
+  }
+  cabCy=fmaxf(218.0f,fim+40.0f);
+  if(nAbas())cabCy=fminf(cabCy,VT_AB_Y-NV_CTRL_H*.5f-6.0f);   // acima da fileira das abas
   char caption[180];int n=nItens();
   if(semFonte) {
     snprintf(caption,sizeof caption,"%s",
@@ -2005,14 +2648,15 @@ static void themeHeader(float a,float x0) {
   }
   else if(desc_vertudo_erro())snprintf(caption,sizeof caption,"Não foi possível carregar. OK para tentar novamente.");
   else if(!n)snprintf(caption,sizeof caption,"%s",desc_vertudo_carregando()?"Carregando títulos…":"Nenhum título nesta lista.");
-  else snprintf(caption,sizeof caption,i18n("%d títulos%s  ·  %s"),n,desc_vertudo_fim()?"":i18n(" carregados"),i18n(legendaGrupo()));
+  else snprintf(caption,sizeof caption,i18n("%d títulos%s  ·  %s"),n,"",i18n(legendaGrupo()));
   // SAGA: quanto da franquia ja foi visto, na mesma linha.
   if(lay==VT_LAY_SAGA&&n>0&&!semFonte&&!desc_vertudo_erro()) {
     char vis[64]; size_t k=strlen(caption);
     snprintf(vis,sizeof vis,i18n("%d de %d assistidos"),sagaVistos,n>VT_MAX?VT_MAX:n);
     snprintf(caption+k,sizeof caption-k,"  ·  %s",vis);
   }
-  TxtLinha sub=txt_linha_corta(TXT_DET_META2,caption,196,202,213,255,vtTelefone()?fminf(960.0f,NV_TELA_W-x0-48.0f):960.0f);txt_desenhar_alpha(sub,x0,192,a);
+  if(listaDePessoa()&&vcTotal>0&&!semFonte&&!desc_vertudo_erro()&&!vtTelefone()) linhaVistos(x0,cabCy,a);
+  else if(!legendaOculta()){TxtLinha sub=txt_linha_corta(TXT_DET_META2,caption,196,202,213,255,vtTelefone()?fminf(960.0f,NV_TELA_W-x0-48.0f):760.0f);txt_desenhar_alpha(sub,x0,cabCy-sub.h*.5f,a);}
   if(collection&&collection->nSources>1) {
     // ABAS NO PADRAO DO APP (19/09/2026, "deixar mais parecido com o restante").
     // Antes: pilula de 304x58 fixa com anel, sublinhado e escala no foco —
@@ -2024,35 +2668,31 @@ static void themeHeader(float a,float x0) {
     // quase transparentes. `tabAnim` cruza o repouso e o foco em vez de
     // escalar.
     // A faixa termina antes da coluna do painel: ali mora o botao "Exibição".
-    const float H=52.0f,PAD=22.0f,GAP=12.0f,W=VT_PAN_X-x0-28;
+    const float H=52.0f,PAD=22.0f,GAP=12.0f,W=vtFim()-x0-64;
     float margem = vtTelefone() ? 0.0f : 6.0f;
     float textoW = vtTelefone() ? fminf(420.0f, W-PAD*2) : 420.0f;
     float larg[COL_SOURCE_MAX],pos[COL_SOURCE_MAX],px=0;
     static char rot[COL_SOURCE_MAX][180];
     int nAbas=collection->nSources;
-    // NOME DA ABA (01/10, pasta Netflix mostrava "streaming_netflix_movies ·
-    // Movies"): o nome legivel da fonte (titulo da conta, senao o do
-    // manifesto — #76) e NUNCA o id cru. Sem nome, ou com o mesmo nome da
-    // pasta ("Netflix" na pasta Netflix), so o tipo: "Filmes" / "Séries". O
-    // tipo so acompanha o nome quando duas abas teriam o mesmo texto.
-    static char nomeAba[COL_SOURCE_MAX][128];
+    if(nAbas>COL_SOURCE_MAX)nAbas=COL_SOURCE_MAX;
+    abaRotulos(rot,nAbas);
     for(int i=0;i<nAbas;i++) {
-      const ColSource *s=&collection->sources[i];
-      col_nome_fonte(s,desc_nome_catalogo(baseDaFonte(s),s->type,s->catId),nomeAba[i],sizeof nomeAba[i]);
-      if(!strcasecmp(nomeAba[i],collection->title))nomeAba[i][0]=0;
-    }
-    for(int i=0;i<nAbas;i++) {
-      const ColSource *s=&collection->sources[i];
-      const char *tipo=i18n(!strcmp(s->type,"series")?"Séries":"Filmes");
-      int repete=0;
-      for(int j=0;j<nAbas&&nomeAba[i][0];j++) if(j!=i&&!strcmp(nomeAba[i],nomeAba[j]))repete=1;
-      if(!nomeAba[i][0])snprintf(rot[i],sizeof rot[i],"%s",tipo);
-      else if(repete)snprintf(rot[i],sizeof rot[i],"%s · %s",nomeAba[i],tipo);
-      else snprintf(rot[i],sizeof rot[i],"%s",nomeAba[i]);
       // Medida com a cor de repouso; a cor certa e reaplicada no desenho (o
       // cache de linhas guarda as duas).
       larg[i]=txt_linha_corta(TXT_HERO_META,rot[i],176,176,176,255,textoW).w+PAD*2;pos[i]=px;px+=larg[i]+GAP;
     }
+    // Estilos novos (#205): desenham o proprio arranjo; a barra que nao cabe na
+    // largura cai nas pilulas rolaveis (as de sempre), sem mudar o D-pad.
+    int est=estiloAbas();
+    // Onde a capsula do foco vai: a aba com o cursor, nos estilos que a usam.
+    if(est==VT_AB_CHIPS||est==VT_AB_TOPO) {
+      int focoAba=tabFocus&&tabCursor<nAbas?tabCursor:-1;
+      if(focoAba>=0){capAlvoX=pos[focoAba];capAlvoW=larg[focoAba];}
+    }
+    {
+      if(est==VT_AB_MENU){abasMenu(x0,W,rot,a);return;}
+      if(est==VT_AB_PAGINAS){abasPaginas(x0,W,rot,nAbas,a);return;}
+      if(est==VT_AB_BARRA&&abasBarra(x0,W,rot,nAbas,a))return; }
     // ROLAGEM PELO CURSOR, nao por indice: as abas tem larguras diferentes,
     // entao "seis por vez" nao existe mais. A aba com o cursor (ou a aberta,
     // quando o cursor esta na grade) entra inteira; a rolagem so anda o que
@@ -2063,56 +2703,164 @@ static void themeHeader(float a,float x0) {
 #ifdef NV_TOUCH_UI
     if (!toqueAbas.livre)
 #endif
-    { if(fim-tabRol>W)tabRol=fim-W; if(ini-tabRol<0)tabRol=ini; }
-    if(tabRol<0)tabRol=0;
+      tabRol=abaRolRecentrar(tabRol,ini,fim,fmaxf(0.0f,px-GAP-W),W);
 #ifdef NV_TOUCH_UI
     tabRol = anim_clamp(tabRol, 0.0f, fmaxf(0.0f, px-GAP-W));
     toquerol_vincular(&toqueAbas, (GfxRect){x0-margem,244,W+2*margem,H+12}, gfx_escala(),
                      0.0f, fmaxf(0.0f, px-GAP-W), 0, &tabRol);
 #endif
     gfx_recorte(x0-margem,244,W+2*margem,H+12);
+    // A CAPSULA DO FOCO DESLIZA da aba antiga para a nova (mola, como a barra
+    // central): no Topo e um sublinhado na cor do acento; nas pílulas e o
+    // preenchimento com a luz de sempre. Sem foco nas abas ela desvanece.
+    // VEM ANTES das abas: os rotulos ficam por cima dela — desenhada por
+    // ultimo, a capsula tampava o texto da aba focada (Chips, Netflix na TCL).
+    if(capA>.01f) {
+      // capX e relativo a faixa (pos[]); as abas desenham em x0+pos-tabRol.
+      // Sem o +x0 a capsula nasce x0 px a esquerda da aba (sob o logo).
+      float cx=x0+capX-tabRol;
+      float ca=a*abaFade(cx,capW,x0,W,tabRol>0.5f,px-GAP-tabRol>W+0.5f)*capA;
+      if(ca>.005f) {
+        if(est==VT_AB_TOPO) {
+          float sr,sg,sb;corFocoFonte(&sr,&sg,&sb);
+          gfx_cor((GfxRect){cx+PAD,253.0f+H-4.0f,fmaxf(4.0f,capW-PAD*2),3.0f},.5f,sr,sg,sb,ca);
+        } else focoAbaFonte((GfxRect){cx,253.0f,capW,H},1.0f,ca);
+      }
+    }
     for(int i=0;i<nAbas;i++) {
       float x=x0+pos[i]-tabRol;
       if(x+larg[i]<=x0-margem||x>=x0+W+margem)continue;
       int f=tabFocus&&tabCursor==i,selecionada=source==i;
       float fa=tabAnim[i];
+      float ah=a*abaFade(x,larg[i],x0,W,tabRol>0.5f,px-GAP-tabRol>W+0.5f);
       GfxRect pill={x,253,larg[i],H};
+      if(ah<.005f)continue;
       ponteiro_alvo(fmaxf(pill.x,x0-margem),pill.y,fminf(pill.x+pill.w,x0+W+margem)-fmaxf(pill.x,x0-margem),pill.h,ponteiroAba,NULL,i,0);
-      if (selecionada) {
-        float sr, sg, sb; corFocoFonte(&sr, &sg, &sb);
-        gfx_cor(pill, NV_RAIO_PILL, sr, sg, sb,
-                a * (0.62f + 0.38f * fa));
-      } else gfx_cor(pill,NV_RAIO_PILL,1,1,1,.04f*a*(1-fa));
-      if(fa>.001f) focoAbaFonte(pill, fa, a);
-      int cor=f?ajustes_tinta_foco():selecionada?ajustes_tinta_foco2():176;
+      if(est==VT_AB_TOPO) {
+        // Foco de botao = pilula cheia no acento, sem anel (layout.h).
+        int cor=f?ajustes_tinta_foco():selecionada?255:160;
+        if(f)focoAbaFonte(pill,1,ah);
+        TxtLinha t=txt_linha_corta(selecionada?TXT_ILHA_SECAO:TXT_HERO_META,rot[i],cor,cor,cor,255,textoW);
+        txt_desenhar_alpha(t,x+PAD,pill.y+(H-t.h)*.5f,ah);
+        // Uma marca so para a aba aberta: a capsula deslizante ja e o foco,
+        // entao ela nao acende quando o cursor esta em cima (igual ao Chips).
+        if(selecionada&&!f)gfx_cor((GfxRect){x+PAD,pill.y+H-4,fminf(t.w,32.0f),3},.5f,1,1,1,ah);
+        continue;
+      }
+      gfx_cor(pill,NV_RAIO_PILL,1,1,1,.04f*ah*(1-fa));
+      int cor=f?ajustes_tinta_foco():selecionada?255:176;
       TxtLinha t=txt_linha_corta(TXT_HERO_META,rot[i],cor,cor,cor,255,textoW);
-      txt_desenhar_alpha(t,x+PAD,pill.y+(H-t.h)*.5f,a);
-    }gfx_sem_recorte();
+      txt_desenhar_alpha(t,x+PAD,pill.y+(H-t.h)*.5f,ah);
+      // A aba aberta, sem o foco em cima: a mesma marca curta do estilo Topo,
+      // branca — sobre o degradê da marca a pílula da cor do tema sozinha nao
+      // marcava nada (Netflix na TCL, "sem indicador de aba aberta").
+      if(selecionada)gfx_cor((GfxRect){x+PAD,pill.y+H-4,fminf(t.w,32.0f),3},.5f,1,1,1,.85f*ah*(1.0f-fa));
+    }
+    gfx_sem_recorte();
+  }
+}
+
+// ESTADO DO TITULO NO CARTAO (U4): o check unico do app (badges.c) quando visto,
+// senao a barra fina de "parou em". Serve a todas as exibicoes.
+static void marcaEstado(GfxRect r, const CatItem *it, float a) {
+  if (vistoItem(it)) {
+    if (ajustes_selo_visto()) badges_check_cartao(r, 0, a);
+  } else if (it->progresso > 0) badges_progresso(r, it->progresso / 100.0f, a);
+}
+
+// LINHA DE ESTADO DA LINHA DO TEMPO (U5): "Visto em 12 mar 2024" (ultima vez que
+// o app soube: lastWatchedMs do progresso, que Nuvio/Trakt/Simkl alimentam),
+// "Visto" sem data, ou "Parou em 47 min". Vazio quando nao ha estado. A
+// contagem de reproducoes ("2x") nao existe nos dados do app, entao nao entra.
+static void estadoLinha(const CatItem *it, int visto, char *dst, size_t cap) {
+  ProgRegistro rec;
+  char key[64];
+  int tem;
+  dst[0] = 0;
+  prog_chave(key, sizeof key, it->imdb, 0, 0);
+  tem = it->imdb[0] && prog_por_chave(key, &rec);
+  if (visto) {
+    char dt[48];
+    if (tem && rec.lastWatchedMs > 0 &&
+        cwo_data_curta(rec.lastWatchedMs, (long long)time(NULL) * 1000, ajustes_idioma(), 0, dt, sizeof dt)) {
+      snprintf(dst, cap, i18n("Visto em %s"), dt);
+    } else snprintf(dst, cap, "%s", i18n("Visto"));
+  } else if (it->progresso > 0 && tem && rec.posSeg >= 60.0) {
+    snprintf(dst, cap, i18n("Parou em %d min"), (int)(rec.posSeg / 60.0));
   }
 }
 
 static void timelineCard(int i,float cy,float a,float x0) {
   CatItem it;if(!viewItem(i,&it))return;
   int sel=i==foco&&!tabFocus;float r,g,b;corColecao(&r,&g,&b);
-  // A linha organiza a cronologia; não é uma borda decorativa de card.
-  float rail = vtTimelineRetrato() ? 64.0f : 109.0f;
-  gfx_cor((GfxRect){x0+rail,cy-30,2,VT_CARD_H+VT_GAP_Y},0,.48f,.47f,.46f,a*.6f);
-  gfx_cor((GfxRect){x0+rail-7,cy+24,16,16},.5f,sel?.95f:r,sel?.95f:g,sel?.97f:b,a);
+  // A linha organiza a cronologia; não é uma borda decorativa de card. O
+  // trecho ate o ano em foco fica preenchido (o tempo que ja passou), com
+  // tiques entre um ano e o seguinte.
+  float rail = vtTimelineRetrato() ? 64.0f : 109.0f, rx = x0 + rail;
+  // O trecho de cada cartao vai de meio vao acima a meio vao abaixo: os
+  // trechos emendam e o ponto cai no meio. Sem tiques soltos entre os anos.
+  float t = i < VT_MAX ? tlFoco[i] : 0.0f, segY = cy - VT_TL_GAP * 0.5f, segH = VT_CARD_H + VT_TL_GAP;
+  float fim = tlProg < 0.0f ? segY : tlProg + cy - celY[i];   // o mesmo deslocamento do cartao
+  gfx_cor((GfxRect){rx,segY,2,segH},0,.48f,.47f,.46f,a*.45f);
+  if(fim>segY)gfx_cor((GfxRect){rx-1,segY,4,fminf(segH,fim-segY)},0,r,g,b,a*.95f);
+  int visto=vistoItem(&it);
+  float ar,ag,ab;ajustes_acento(&ar,&ag,&ab);
+  // Visto: disco no acento com o check; nao visto: ponto da cronologia.
+  { float d=16.0f+10.0f*t,pc=cy+VT_TL_PONTO,passou=fim>=pc;
+    if(visto)badges_check_disco(rx+1,pc,26.0f,a);
+    else{
+      if(t>.01f)gfx_cor((GfxRect){rx+1-(d+14)*.5f,pc-(d+14)*.5f,d+14,d+14},.5f,r,g,b,a*.28f*t);
+      gfx_cor((GfxRect){rx+1-d*.5f,pc-d*.5f,d,d},.5f,sel?.95f:passou?r:.30f,sel?.95f:passou?g:.30f,
+              sel?.97f:passou?b:.32f,a); } }
+  // O ano em foco sobe UM degrau da escala (21 -> 28) e acende; os outros
+  // ficam apagados. Centrado no ponto, ancorado a direita, rente a linha.
   char year[16];int y=yearOf(&it);if(y==9999)snprintf(year,sizeof year,"—");else snprintf(year,sizeof year,"%d",y);
-  TxtLinha yr=txt_linha(vtTimelineRetrato()?TXT_DET_META2:TXT_CW_TITULO,year,219,210,195,255);txt_desenhar_alpha(yr,x0,cy+14,a);
+  if(vtTimelineRetrato()){TxtLinha yr=txt_linha(TXT_DET_META2,year,219,210,195,255);txt_desenhar_alpha(yr,x0,cy+14,a);}
+  else{
+    TxtLinha yp=txt_linha(TXT_HERO_META,year,219,210,195,255);
+    if(t<.99f)txt_desenhar_alpha(yp,rx-22-yp.w,cy+VT_TL_PONTO-yp.h*.5f,a*.55f*(1-t));
+    if(t>.01f){TxtLinha yg=txt_linha(TXT_CALLOUT,year,245,240,230,255);
+      txt_desenhar_alpha(yg,rx-22-yg.w,cy+VT_TL_PONTO-yg.h*.5f,a*t);}
+  }
+  // Os cartoes fora do foco recuam um pouco (sem foco na grade, todos iguais).
+  if(!tabFocus)a*=.70f+.30f*t;
   GfxRect card=vtTimelineCard(cy), artRect=vtTimelineArte(card);
-  float x=card.x,tx=vtTelefone()?artRect.x+artRect.w+24.0f:x+418.0f;
-  float tw=vtTelefone()?card.x+card.w-tx-24.0f:550.0f;
-  if(sel)gfx_cor((GfxRect){x-4,cy-4,card.w+8,VT_CARD_H+8},.045f,.94f,.95f,.97f,a);
-  gfx_cor(card,.04f,.09f,.095f,.105f,a);
+  float tx=vtTelefone()?artRect.x+artRect.w+24.0f:card.x+418.0f;
+  float tw=card.x+card.w-tx-(vtTelefone()?24.0f:32.0f);
+  // FOCO DE LINHA (layout.h, NV_COR_FOCO e material da ilha): o cartao e uma
+  // linha que da para preencher, entao a superficie sobe um degrau e NENHUM
+  // contorno (dono, 14/10: "o contorno no componente que ja nao usamos mais").
+  // Raios concentricos: o do cartaz do app na arte, + o recuo no cartao.
+  float rp=ajustes_raio_poster_px(),rc=(rp+12.0f)/card.h,ra=rp/artRect.h,k=tabFocus?0.0f:t;
+  if(ajustes_vidro()){gfx_vidro_painel(card,rc,.55f,a);gfx_cor(card,rc,1,1,1,.13f*k*a);}
+  else gfx_cor(card,rc,.09f+.08f*k,.095f+.081f*k,.105f+.099f*k,a);
+  if(visto){gfx_cor(card,rc,ar,ag,ab,.07f*a);
+    gfx_cor((GfxRect){card.x,card.y+12,3,card.h-24},.5f,ar,ag,ab,a);}
+  // ARTE PREENCHE O QUADRO 16:9 (cover). Sem backdrop: o cartaz desfocado
+  // preenche e o cartaz nitido fica no meio — nunca uma moldura cinza.
   const char *art=it.backdrop[0]?it.backdrop:it.poster;GLuint tex=art[0]?tex_obter_larg(art,390):0;
-  if(tex){gfx_tex_aspect_atual=tex_aspecto(art);gfx_rect(artRect,tex,GFX_CARD,0,0,0,.04f,0,0,0,a);gfx_tex_aspect_atual=0;}
-  else { gfx_cor(artRect,.04f,.16f,.16f,.18f,a);
-         txt_desenhar_alpha(txt_linha(TXT_MINI,"Sem arte",184,188,198,255),
-                            vtTelefone()?artRect.x+artRect.w*.5f-32.0f:x+158,vtTelefone()?artRect.y+artRect.h*.5f-10.0f:y+104,a*.9f); }
+  GLuint fundo=tex&&!it.backdrop[0]?gfx_desfocado(tex,art):tex;
+  if(fundo){gfx_card_forcar_cover_atual=1;gfx_tex_aspect_atual=tex_aspecto(art);
+    gfx_rect(artRect,fundo,GFX_CARD,0,0,0,ra,0,0,0,a);gfx_card_forcar_cover_atual=0;gfx_tex_aspect_atual=0;}
+  else gfx_cor(artRect,ra,NV_COR_ESQUELETO_R,NV_COR_ESQUELETO_G,NV_COR_ESQUELETO_B,a);
+  if(tex&&!it.backdrop[0]){float pw=artRect.h*fminf(1.0f,tex_aspecto(art));
+    gfx_cor(artRect,ra,0,0,0,.25f*a);
+    gfx_tex_aspect_atual=tex_aspecto(art);
+    gfx_rect((GfxRect){artRect.x+(artRect.w-pw)*.5f,artRect.y,pw,artRect.h},tex,GFX_CARD,0,0,0,ra,0,0,0,a);
+    gfx_tex_aspect_atual=0;}
+  else if(!tex){TxtLinha sa=txt_linha(TXT_MINI,"Sem arte",184,188,198,255);
+    txt_desenhar_alpha(sa,artRect.x+(artRect.w-sa.w)*.5f,artRect.y+(artRect.h-sa.h)*.5f,a*.9f);}
+  marcaEstado(artRect,&it,a);
   TxtLinha name=txt_linha_corta(TXT_CW_TITULO,it.titulo,242,243,247,255,tw);txt_desenhar_alpha(name,tx,cy+22,a);
   TxtLinha genre=txt_linha_corta(TXT_HERO_META,it.genero,187,194,207,255,tw);txt_desenhar_alpha(genre,tx,cy+64,a);
-  sinopse_bloco(TXT_DET_META2, it.sinopse,209,214,225,tx,cy+106,vtTelefone()?tw:545.0f,30,a,3);
+  char est[80];estadoLinha(&it,visto,est,sizeof est);
+  if(est[0]){
+    float ix=tx;
+    if(visto){gfx_icone((GfxRect){tx,cy+102,22,22},"check",ar,ag,ab,a);ix=tx+28.0f;}
+    TxtLinha el=txt_linha_corta(TXT_HERO_META,est,visto?ar*255:226,visto?ag*255:230,visto?ab*255:238,255,tw-(ix-tx));
+    txt_desenhar_alpha(el,ix,cy+102+(22-el.h)*.5f,a);
+  }
+  sinopse_bloco_corta(TXT_DET_META2,it.sinopse,209,214,225,tx,cy+(est[0]?138:106),tw,30,a,est[0]?2:3);
 }
 
 // --- PECAS COMUNS DAS EXIBICOES ----------------------------------------------
@@ -2148,6 +2896,92 @@ static const char *artePoster(const CatItem *it) {
   const char *pp = posterprov_card_addon(it->origem, it->imdb, it->tmdb, it->tipo, it->poster);
   return pp[0] ? pp : it->backdrop;
 }
+
+static void fluxoCartaz(int i, float x0, float a, Uint32 agora) {
+  CatItem it;
+  float sombra;
+  GfxRect r = fluxoRect(i, x0, &sombra), c;
+  // Mesmo recorte de fluxoDesenhar: descarte antes de pedir arte ou textura.
+  if (r.x + r.w <= x0 - 24.0f || r.x >= fluxoFim() + 24.0f ||
+      r.y + r.h <= VT_TOPO - 12.0f || r.y >= NV_TELA_H) return;
+  if (!viewItem(i, &it)) return;
+  ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, VT_TOPO - 12.0f, NV_TELA_H, ponteiroCartaz, NULL, i, 0);
+  c = cartaoArte(i, r, artePoster(&it), a, agora, i == foco && !tabFocus);   // o foco da Home
+  if (sombra > 0.01f) gfx_cor(c, raioCard(c.w, c.h), 0.0f, 0.0f, 0.0f, a * sombra);
+}
+static void fluxoDesenhar(int n, float x0, float a, Uint32 agora) {
+  float ax = x0, aw = fluxoFim() - x0, cx = fluxoCentro(x0), ly = fluxoLinhaY();
+  float r, g, b;
+  int c = (int)lroundf(fluxoPos), k;
+  int vizinhos = ptv_gpu_fraca_atual() || gfx_efeitos_leves() ? 2 : 6;
+  if (n <= 0 || fluxoPos < 0.0f) return;
+  corColecao(&r, &g, &b);
+  gfx_recorte(ax - 24.0f, VT_TOPO - 12.0f, aw + 48.0f, NV_TELA_H - VT_TOPO + 12.0f);
+  // Do mais longe para o foco: o vizinho mais perto cobre o de tras.
+  for (k = vizinhos; k >= 1; k--) {
+    if (c - k >= 0) fluxoCartaz(c - k, x0, a, agora);
+    if (c + k < n) fluxoCartaz(c + k, x0, a, agora);
+  }
+  if (c >= 0 && c < n) fluxoCartaz(c, x0, a, agora);
+  // A linha do tempo: preenchida ate o centro (o tempo que ja passou), um
+  // tique e o ano sob cada titulo; o do foco cresce como na vertical.
+  gfx_cor((GfxRect){ ax, ly, aw, 2 }, 0, .48f, .47f, .46f, a * .45f);
+  if (fluxoPos > 0.0f) gfx_cor((GfxRect){ ax, ly - 1, (cx - ax) * fminf(fluxoPos, 1.0f), 4 }, 0, r, g, b, a * .95f);
+  for (k = c - vizinhos; k <= c + vizinhos; k++) {
+    CatItem it;
+    char ano[16];
+    float sombra, t, tx;
+    GfxRect q;
+    int y;
+    if (k < 0 || k >= n || !viewItem(k, &it)) continue;
+    q = fluxoRect(k, x0, &sombra); tx = q.x + q.w * 0.5f;
+    if (tx < ax || tx > ax + aw) continue;
+    t = 1.0f - fminf(fabsf(k - fluxoPos), 1.0f);
+    gfx_cor((GfxRect){ tx - 1.0f, ly - 6.0f, 2, 14 }, 0, .62f, .61f, .60f, a * (1.0f - sombra));
+    y = yearOf(&it);
+    if (y == 9999) snprintf(ano, sizeof ano, "—"); else snprintf(ano, sizeof ano, "%d", y);
+    if (t < 0.99f) { TxtLinha yp = txt_linha(TXT_HERO_META, ano, 219, 210, 195, 255);
+      txt_desenhar_alpha(yp, tx - yp.w * 0.5f, ly + 18.0f, a * 0.55f * (1.0f - t) * (1.0f - sombra * 0.5f)); }
+    if (t > 0.01f) { TxtLinha yg = txt_linha(TXT_TITULO2, ano, 245, 240, 230, 255);
+      txt_desenhar_alpha(yg, tx - yg.w * 0.5f, ly + 14.0f + (1.0f - t) * 10.0f, a * t); }
+  }
+  gfx_cor((GfxRect){ cx - 9.0f, ly - 8.0f, 18, 18 }, .5f, .95f, .95f, .97f, a);
+  gfx_sem_recorte();
+}
+
+// A ficha do titulo do Cover Flow, ABAIXO da linha do tempo e rente a esquerda:
+// logo (ou nome), ano · duracao, generos, IMDb e a sinopse, compacta.
+static void fluxoInfo(float a, float x0) {
+  CatItem it;
+  float y = fluxoInfoY(), x = x0, w = fminf(1000.0f, fluxoFim() - x0);
+  int nota;
+  GLuint tl;
+  if (!viewItem(foco, &it)) return;
+  tl = it.logo[0] ? tex_obter_logo_larg(it.logo, 360.0f) : 0;
+  if (tl && tex_aspecto(it.logo) > 0.0f) {
+    float ap = tex_aspecto(it.logo), hL = 52.0f, wL = hL * ap;
+    if (wL > 360.0f) { wL = 360.0f; hL = wL / ap; }
+    gfx_rect((GfxRect){ x, y, wL, hL }, tl, tex_marca_escura(it.logo) ? GFX_MARCA : GFX_TEXTO,
+             0, 0, 0, 0.0f, 1, 1, 1, a);
+    y += hL + 10.0f;
+  } else y += txt_bloco_corta(TXT_HEADLINE, it.titulo, 245, 245, 245, x, y, w, 38.0f, a, 1) + 10.0f;
+  if (it.meta[0]) {
+    TxtLinha t = txt_linha_corta(TXT_DET_META2, it.meta, 240, 241, 244, 255, 260.0f);
+    txt_desenhar_alpha(t, x, y + (BADGE_H - t.h) * 0.5f, a);
+    x += t.w + 14.0f;
+  }
+  if (it.classificacao[0]) { badge_desenhar(x, y, it.classificacao, BADGE_NEUTRO, a); x += 70.0f; }
+  if (it.genero[0]) {
+    TxtLinha g = txt_linha_corta(TXT_CAPTION, it.genero, 196, 205, 219, 255, 420.0f);
+    txt_desenhar_alpha(g, x, y + (BADGE_H - g.h) * 0.5f, a * 0.9f);
+    x += g.w + 18.0f;
+  }
+  nota = imdbnota_obter(it.imdb, it.nota, !strcmp(it.tipo, "series"));
+  badge_imdb(x, y, nota, 0, a);
+  y += BADGE_H + 8.0f;
+  if (it.sinopse[0])
+    txt_bloco_corta(TXT_DET_META2, it.sinopse, 226, 229, 236, x0, y, w, 30.0f, a * 0.9f, 2);
+}
 static const char *arteDeitada(const CatItem *it) {
   return it->backdrop[0] ? it->backdrop : it->poster;
 }
@@ -2181,10 +3015,11 @@ static void cartazGrade(int i, const CatItem *it, float cx, float cy, float w, f
       gfx_tex_aspect_atual = 0.0f;
     }
   } else cartaoArte(i, (GfxRect){ cx, cy, w, h }, artePoster(it), ac, agora, sel);
-  { TxtLinha l = txt_linha_corta(TXT_DET_META2, it->titulo, c, c, c, 255, w);
+  marcaEstado((GfxRect){ cx, cy, w, h }, it, ac);
+  if (lay != VT_LAY_GRADE || vtTelefone()) { TxtLinha l = txt_linha_corta(TXT_DET_META2, it->titulo, c, c, c, 255, w);
     txt_desenhar_alpha(l, cx, cy + h + 10.0f, ac * (sel ? 1.0f : 0.86f)); }
   if (ranked && lay == VT_LAY_GRADE) {
-    char rank[8];snprintf(rank,sizeof rank,"%d",i+1);
+    char rank[8];snprintf(rank,sizeof rank,"%d",it->ranking > 0 ? it->ranking : i+1);
     TxtLinha edge=txt_linha(TXT_RANK,rank,234,236,241,255),ink=txt_linha(TXT_RANK,rank,17,18,22,255);
     float x=cx-10,y=cy+h-edge.h;
     for(int dx=-2;dx<=2;dx+=2)for(int dy=-2;dy<=2;dy+=2)txt_desenhar_alpha(edge,x+dx,y+dy,ac);
@@ -2198,7 +3033,7 @@ static void rankingCard(int i, const CatItem *it, float cx, float cy, float w, f
                         float ac, Uint32 agora, int sel) {
   char num[8];
   TxtLinha nu;
-  snprintf(num, sizeof num, "%d", i + 1);
+  snprintf(num, sizeof num, "%d", it->ranking > 0 ? it->ranking : i + 1);
   nu = txt_linha(TXT_RANK_GRANDE, num, 255, 255, 255, 255);
   if (nu.tex && nu.w > 0) {
     // Cabe no vao (100 px) mais o pedaco que o cartaz cobre; "100" encolhe.
@@ -2212,6 +3047,7 @@ static void rankingCard(int i, const CatItem *it, float cx, float cy, float w, f
              nu.tex, GFX_TEXTO, 0, 0, 0, 0.0f, ar, ag, ab, ac * (i < 3 ? 0.95f : 0.62f));
   }
   cartaoArte(i, (GfxRect){ cx, cy, w, h }, artePoster(it), ac, agora, sel);
+  marcaEstado((GfxRect){ cx, cy, w, h }, it, ac);
   { int c = sel ? 255 : 214;
     TxtLinha l = txt_linha_corta(TXT_DET_META2, it->titulo, c, c, c, 255, w);
     txt_desenhar_alpha(l, cx, cy + h + 10.0f, ac * (sel ? 1.0f : 0.86f)); }
@@ -2246,17 +3082,8 @@ static void sagaCard(int i, const CatItem *it, float cx, float cy, float w, floa
     snprintf(nn, sizeof nn, "%02d", i + 1);
     l = txt_linha(TXT_TITULO2, nn, 246, 247, 250, 255);
     txt_desenhar_alpha(l, r.x + 20.0f, r.y + r.h - l.h - 14.0f, ac * 0.96f);
-    if (visto) {
-      TxtLinha v = txt_linha(TXT_CAPTION, "Assistido", 20, 20, 24, 255);
-      GfxRect p = { r.x + r.w - v.w - 40.0f, r.y + 14.0f, v.w + 26.0f, v.h + 8.0f };
-      gfx_cor(p, 0.5f, ar, ag, ab, 0.95f * ac);
-      { int tf = ajustes_tinta_foco(); TxtLinha vt = txt_linha(TXT_CAPTION, "Assistido", tf, tf, tf, 255);
-        txt_desenhar_alpha(vt, p.x + 13.0f, p.y + 4.0f, ac); }
-    } else if (it->progresso > 0) {
-      GfxRect tr = { r.x + 20.0f, r.y + r.h - 10.0f, r.w - 40.0f, 4.0f };
-      gfx_cor(tr, 0.5f, 1, 1, 1, 0.25f * ac);
-      gfx_cor((GfxRect){ tr.x, tr.y, tr.w * it->progresso / 100.0f, tr.h }, 0.5f, ar, ag, ab, ac);
-    } }
+    if (visto) badges_check_cartao(r, 0, ac);
+    else if (it->progresso > 0) badges_progresso(r, it->progresso / 100.0f, ac); }
   snprintf(cap, sizeof cap, i18n("Capítulo %d"), i + 1);
   { TxtLinha e = txt_linha(TXT_MINI, cap, 170, 176, 188, 255);
     int c = sel ? 255 : 226;
@@ -2279,11 +3106,12 @@ static void muralTile(int i, const CatItem *it, float cx, float cy, float w, flo
   int grande = vtTelefone() ? i % 5 == ((i / 5) & 1 ? 2 : 0) : w > 400.0f;
   float pad = grande ? 28.0f : 18.0f, yb = r.y + r.h - pad;
   gfx_veu_base(r, raioCard(r.w, r.h), grande ? 0.55f : 0.62f, 0.85f * ac);
+  int nome = ajustes_mural_titulos();   // #521
   if (grande && it->meta[0]) {
     TxtLinha m = txt_linha_corta(TXT_HERO_META, it->meta, 222, 226, 234, 255, r.w - 2 * pad);
     yb -= m.h; txt_desenhar_alpha(m, r.x + pad, yb, ac * 0.92f); yb -= 8.0f;
   }
-  if (ajustes_mural_titulos()) { GLuint tl = grande && it->logo[0] ? tex_obter_logo_larg(it->logo, 320.0f) : 0;
+  if (nome) { GLuint tl = grande && it->logo[0] ? tex_obter_logo_larg(it->logo, 320.0f) : 0;
     float ap = tl ? tex_aspecto(it->logo) : 0.0f;
     if (tl && ap > 0.0f) {
       float wl = vtTelefone() ? fminf(320.0f, r.w - 2 * pad) : 320.0f, hl = wl / ap;
@@ -2317,52 +3145,75 @@ static void cabecalhoDecada(int k, float x0, float y, float a) {
                      VT_CW - (22.0f + t.w + q.w + 44.0f), 1.0f }, 0, 1, 1, 1, a * 0.16f);
 }
 
-// O BOTAO "Exibição": mora na faixa das abas, sobre a coluna do painel. Um
-// pequeno simbolo de grade e o nome da exibicao atual; com o foco, o
-// preenchimento no acento das abas e a dica de que OK troca.
-// SEM ABAS (uma fonte so) ele vai para o inicio da faixa, onde as abas
-// estariam: a coluna do painel e do retrato do diretor fica livre.
+// O SELETOR DE EXIBICAO (direcao A, 14/10): segmentado de vidro com um icone
+// por exibicao, na ordem do ciclo; a aberta mostra o nome. Fica na linha do
+// anel (`cy`), terminando na borda direita da ilha do relogio. FOCO = a pilula
+// cheia da barra de cima; a dica "OK troca" so aparece entao, a esquerda.
+// UM CONTROLE SO (dono, 14/10: "esse botao de style tab ta solto"): o estilo
+// das abas, quando ha abas, e o ultimo segmento do MESMO trilho.
 #ifdef NV_TOUCH_UI
+// Telefone: tocar no seletor troca para a proxima exibicao (o trilho aberto
+// nao e desenhado la).
 static void toqueExibicao(int a, int b) {
   (void)a; (void)b;
   if (!vtTelefone() || !collection || !aberta) return;
   toqueLivre = 0; toquerol_limpar(&toqueAbas);
-  tabFocus = 1; tabCursor = nAbas();
+  tabFocus = 1; tabCursor = cabN();
   alternarExibicao();
 }
 #endif
-static void botaoExibicao(float a, float x0) {
-  float x = nAbas() ? VT_PAN_X : x0, y = 253.0f, H = 52.0f;
-  float maxW = nAbas() && grupo("Directors") ? 172.0f : VT_PAN_W;
-  float f = pillAnim, sr, sg, sb;
-  int cor = f > 0.5f ? ajustes_tinta_foco() : 214;
-  TxtLinha t = txt_linha_corta(TXT_HERO_META, LAY_NOME[layEscolha], cor, cor, cor, 255, maxW - 70.0f);
-  // VITRINE: no canto de cima, a direita do nome da colecao.
-  if (lay == VT_LAY_VITRINE) { x = NV_TELA_W - 104.0f - (t.w + 70.0f); y = 40.0f; }
-  GfxRect pill = { x, y, t.w + 70.0f, H };
+static void botaoExibicao(float a, float cy) {
+  const float H = NV_CTRL_H, S = 52.0f, P = 4.0f;
+  float f = pillAnim, xd = NV_TELA_W - (vtTelefone() ? 48.0f : NV_ILHA_MARGEM_D);
+  int est = nAbas() > 0, fe = tabFocus && tabCursor == cabN() + 1, nl = (int)sizeof LAY_CICLO;
+  // RECOLHIDO (dono, 15/10): so a exibicao aberta, ate o OK abrir o trilho.
+  int aberto = exibAberta && tabFocus && tabCursor == cabN() && !vtTelefone(), so = !aberto;
+  int tinta = gfx_vidro_tinta(f), tn = gfx_vidro_tinta(aberto && LAY_CICLO[exibCursor] != lay ? 0.0f : f);
+  TxtLinha nome = txt_linha_corta(TXT_AJ_SEG, LAY_NOME[lay], tn, tn, tn, 255, 260.0f);
+  float selW = 50.0f + nome.w + 20.0f, w = P * 2.0f + S * ((so ? 0 : nl - 1) + est) + selW;
+  float x = xd - w, sx = x + P;
+  GfxRect trilho = { x, cy - H * 0.5f, w, H };
+  cabSw = trilho; cabFim = fmaxf(cabFim, trilho.y + trilho.h);
 #ifdef NV_TOUCH_UI
   if (vtTelefone()) {
     // The drawing stays unchanged; reserve a 48dp touch target in the header.
     float minimo = 144.0f / vtEscala();
-    float hitW = fmaxf(pill.w, minimo), hitH = fmaxf(pill.h, minimo);
-    float hitX = fminf(pill.x, NV_TELA_W - 48.0f - hitW);
-    float hitY = fmaxf(0.0f, pill.y + (pill.h - hitH) * .5f);
+    float hitW = fmaxf(trilho.w, minimo), hitH = fmaxf(trilho.h, minimo);
+    float hitX = fminf(trilho.x, NV_TELA_W - 48.0f - hitW);
+    float hitY = fmaxf(0.0f, trilho.y + (trilho.h - hitH) * .5f);
     if (lay != VT_LAY_VITRINE) hitY = fminf(hitY, VT_TOPO - 12.0f - hitH);
     ponteiro_alvo(hitX, hitY, hitW, hitH, NULL, toqueExibicao, 0, 0);
   }
 #endif
-  corFocoFonte(&sr, &sg, &sb);
-  // Sobre a arte do destaque a pilula precisa de fundo proprio para ler.
-  if (lay == VT_LAY_VITRINE) gfx_cor(pill, NV_RAIO_PILL, 0, 0, 0, 0.42f * a * (1.0f - f));
-  gfx_cor(pill, NV_RAIO_PILL, 1, 1, 1, 0.07f * a * (1.0f - f));
-  if (f > 0.001f) focoAbaFonte(pill, f, a);
-  { float gx = x + 22.0f, gy = y + (H - 18.0f) * 0.5f, c = cor / 255.0f;
-    for (int q = 0; q < 4; q++)
-      gfx_cor((GfxRect){ gx + (q & 1) * 10.0f, gy + (q >> 1) * 10.0f, 8.0f, 8.0f }, 0.25f, c, c, c, a); }
-  txt_desenhar_alpha(t, x + 50.0f, y + (H - t.h) * 0.5f, a);
-  if (f > 0.05f) {
-    TxtLinha d = txt_linha(TXT_MINI, "OK troca a exibição", 186, 192, 204, 255);
-    txt_desenhar_alpha(d, x + 4.0f, y + H + 6.0f, a * f * 0.9f);
+  // O material da ilha do relogio (ilha.c): vidro, ou o plano com aro quando o
+  // vidro esta desligado (efeitos minimos, TVs antigas).
+  if (ajustes_vidro()) gfx_vidro_painel(trilho, NV_RAIO_PILL, 0.62f, a);
+  else { gfx_cor(trilho, NV_RAIO_PILL, 0.12f, 0.124f, 0.143f, 0.92f * a);
+         gfx_anel(trilho, NV_RAIO_PILL, 1.5f, 1, 1, 1, 0.085f * a); }
+  for (int k = 0; k < nl; k++) {
+    int sel = LAY_CICLO[k] == lay, cur = aberto ? k == exibCursor : sel;
+    if (so && !sel) continue;
+    GfxRect s = { sx, trilho.y + P, sel ? selW : S, H - P * 2.0f };
+    float ic = cur && f > 0.5f ? tinta / 255.0f : 1.0f;
+    if (sel) gfx_cor(s, NV_RAIO_PILL, 1, 1, 1, 0.14f * (1.0f - (cur ? f : 0.0f)) * a);
+    if (cur) gfx_vidro_pilula_cheia(s, NV_RAIO_PILL, f, a);
+    if (sel) txt_desenhar_alpha(nome, s.x + 50.0f, s.y + (s.h - nome.h) * 0.5f, a);
+    gfx_icone((GfxRect){ s.x + 15.0f, s.y + (s.h - 22.0f) * 0.5f, 22, 22 }, LAY_ICONE[LAY_CICLO[k]],
+              ic, ic, ic, (sel || cur ? 1.0f : 0.58f) * a);
+    sx += s.w;
+  }
+  if (est) {   // o estilo das abas: o ultimo segmento do mesmo trilho
+    GfxRect seg = { sx, trilho.y + P, S, H - P * 2.0f };
+    float c = fe ? gfx_vidro_tinta(1.0f) / 255.0f : 1.0f;
+    if (fe) gfx_vidro_pilula_cheia(seg, NV_RAIO_PILL, 1.0f, a);
+    else gfx_cor((GfxRect){ seg.x, seg.y + 10.0f, 1.0f, seg.h - 20.0f }, 0, 1, 1, 1, 0.14f * a);
+    gfx_icone((GfxRect){ seg.x + 15.0f, seg.y + (seg.h - 22.0f) * 0.5f, 22, 22 }, "aj_layout-list", c, c, c,
+              (fe ? 1.0f : 0.58f) * a);
+    ponteiro_alvo(seg.x, seg.y, seg.w, seg.h, ponteiroCab, NULL, cabN() + 1, 0);
+  }
+  if (f > 0.05f) {   // a dica so no foco, na mesma linha: a grade fica livre
+    TxtLinha d = txt_linha(TXT_ILHA_SUB, "OK troca a exibição", 225, 228, 235, 255);
+    txt_desenhar_alpha(d, x - 20.0f - d.w, cy - d.h * 0.5f, 0.72f * f * a);
   }
 }
 
@@ -2382,7 +3233,7 @@ static void botaoMaisVistos(float a, float x0, float y, int linha) {
 
 static void vitDesenhar(float a, float x0) {
   vitProjetar();
-  float w, h, passo, rot, pas = vitPasso();
+  float w, h, passo, rot, pas = vitPasso(), topo = vitTopo();
   CatItem *hero = vitChave(vitHeroAtual), *ant = vitChave(vitHeroAnt);
   int arte = 0;
   home_vitrine_medida(&w, &h, &passo, &rot);
@@ -2405,17 +3256,21 @@ static void vitDesenhar(float a, float x0) {
     arte |= home_vitrine_arte(hero, a * (ant ? vitHeroEntra : 1.0f));
   }
   if (!arte) fundoColecao(a);
-  if (hero) home_vitrine_texto(hero, a);
+  degradeMarca(a, home_vitrine_layout() == HOME_LAYOUT_DINAMICA ? NV_TELA_H : NV_SHELF_TOP);
+  // O bloco do destaque comeca abaixo do cabecalho (anel e legenda descem ate
+  // ~34 px do centro da linha), com folga: logo largo, alto ou nome em texto.
+  cabCy = NV_ILHA_Y + NV_ILHA_H + 14.0f + NV_CTRL_H * 0.5f;
+  if (hero) vitHeroTopo = home_vitrine_texto(hero, topo, cabCy + 34.0f + VIT_CAB_FOLGA, a);
 
   // As fileiras, recortadas abaixo do texto do destaque.
-  gfx_recorte(0.0f, NV_SHELF_TOP - 8.0f, NV_TELA_W, NV_TELA_H - NV_SHELF_TOP + 8.0f);
+  gfx_recorte(0.0f, topo - 8.0f, NV_TELA_W, NV_TELA_H - topo + 8.0f);
   for (int r = 0; r < vitN; r++) {
-    float y = NV_SHELF_TOP + r * pas - vitScroll, cy = y + VIT_TITULO_H;
+    float y = topo + r * pas - vitScroll, cy = y + VIT_TITULO_H;
     float ac = a * (r == vitFR ? 1.0f : 0.78f);
     VitLin *l = &vitLin[r];
     TxtLinha tt;
     if (y > NV_TELA_H) break;
-    if (y + pas < NV_SHELF_TOP - 8.0f) continue;
+    if (y + pas < topo - 8.0f) continue;
     tt = txt_linha_corta(TXT_ROW_TITULO, l->nome[0] ? l->nome : "—", 245, 246, 249, 255, 900);
     txt_desenhar_alpha(tt, x0, y, ac);
     if (l->n > 0) {
@@ -2476,16 +3331,35 @@ static void vitDesenhar(float a, float x0) {
       : desc_vertudo_erro() ? "Não foi possível carregar. OK para tentar novamente."
       : desc_vertudo_carregando() ? "Carregando títulos…" : "Nenhum título nesta lista.";
     txt_desenhar_alpha(txt_linha_corta(TXT_DET_META2, msg, 196, 202, 213, 255, 1200),
-                       x0, NV_SHELF_TOP + 20.0f, a);
+                       x0, topo + 20.0f, a);
   }
   gfx_sem_recorte();
 
   // A faixa de cima: a colecao a que isto pertence e o botao "Exibição".
   { TxtLinha eb = txt_linha(TXT_HERO_META, rotuloGrupo(), 214, 219, 227, 255);
-    TxtLinha tt = txt_linha_corta(TXT_TITULO2, titulo, 246, 247, 250, 255, 900);
-    txt_desenhar_alpha(eb, x0, 36.0f, a * 0.85f);
-    txt_desenhar_alpha(tt, x0, 62.0f, a); }
-  botaoExibicao(a, x0);
+    const char *wm = wordmarkServico();
+    GLuint tl = wm[0] ? tex_obter_logo_larg(wm, 420.0f) : 0;
+    float ap = tl ? tex_aspecto(wm) : 0.0f;
+    if (tl && ap > 0.0f) {   // o wordmark cabe na linha da ilha
+      float wl = 420.0f, hl = wl / ap;
+      if (hl > NV_ILHA_H) { hl = NV_ILHA_H; wl = hl * ap; }
+      gfx_rect((GfxRect){ x0, NV_ILHA_Y, wl, hl }, tl, tex_marca_escura(wm) ? GFX_MARCA : GFX_TEXTO,
+               0, 0, 0, 0, .96f, .97f, .98f, a);
+    } else {
+      // UMA LINHA SO (dono, 14/10): sobretitulo e nome lado a lado, na mesma
+      // linha de base, centrados na ilha do relogio; o nome corta antes dela.
+      float ex = grupo("Streaming") ? x0 : x0 + eb.w + 20.0f;
+      TxtLinha tt = txt_linha_corta(TXT_TITULO3, titulo, 246, 247, 250, 255,
+                                    NV_TELA_W - NV_ILHA_MARGEM_D - NV_ILHA_REP_W - 40.0f - ex);
+      float ty = NV_ILHA_Y + (NV_ILHA_H - tt.h) * 0.5f, base = ty + tt.h * 0.8f;
+      if (!grupo("Streaming")) txt_desenhar_alpha(eb, x0, base - eb.h * 0.8f, a * 0.85f);
+      txt_desenhar_alpha(tt, ex, ty, a);
+      cabEb = (GfxRect){ x0, base - eb.h * 0.8f, eb.w, eb.h }; cabTt = (GfxRect){ ex, ty, tt.w, tt.h };
+    } }
+  // Anel e seletor na linha de baixo, como nas outras exibicoes.
+  cabFim = 0.0f;
+  if (listaDePessoa() && vcTotal > 0 && !vtTelefone()) linhaVistos(x0, cabCy, a);
+  botaoExibicao(a, cabCy);
 #ifdef NV_TOUCH_UI
   if (vtTelefone()) vitPonteiroPronto = 1;
 #endif
@@ -2545,9 +3419,10 @@ void vertudo_desenhar(Uint32 agora) {
     if (presa >= 0 && presaA > 0.01f) cabecalhoDecada(presa, x0, VT_TOPO, a * presaA);
     gfx_sem_recorte();
   }
+  if (lay == VT_LAY_FLUXO) fluxoDesenhar(n, x0, a, agora);
   gfx_recorte(0.0f, corteTopo, NV_TELA_W, NV_TELA_H - corteTopo);
   gradePonteiroRevisao = gradeRevisao; gradePonteiroValido = 1;
-  for (i = 0; i < n; i++) {
+  for (i = 0; lay != VT_LAY_FLUXO && i < n; i++) {
     float cx = x0 + celX[i], cy = VT_TOPO + celY[i] - scrollY;
     float w = celW[i], h = celH[i];
     CatItem it;
@@ -2559,12 +3434,15 @@ void vertudo_desenhar(Uint32 agora) {
     // coluna e pela fileira visiveis (revela.h). So na primeira aparicao.
     float entra = ondaEm ? revela_entra(ondaEm, revela_onda_atraso(celCol[i],
                                          celLin[i] - lin0), agora) : 1.0f;
-    float ac = a * entra;
+    // PAGINAS (#205): a pagina nova entra deslizando do lado de onde veio.
+    float desl = pgSlide * 72.0f;
+    float ac = a * entra * (1.0f - 0.8f * fminf(1.0f, fabsf(pgSlide)));
     if (ac < 0.005f) continue;
+    cx += desl;
     cy += (1.0f - entra) * NV_ENTRA_DY;
     if (lay == VT_LAY_LINHA) { GfxRect r=vtTimelineCard(cy); ponteiro_alvo_faixa(r.x,r.y,r.w,r.h,corteTopo,NV_TELA_H,ponteiroCartaz,NULL,i,0); }
     else ponteiro_alvo_faixa(cx,cy,w,h+40.0f,corteTopo,NV_TELA_H,ponteiroCartaz,NULL,i,0);
-    if (lay == VT_LAY_LINHA) { timelineCard(i, cy, ac, x0); continue; }
+    if (lay == VT_LAY_LINHA) { timelineCard(i, cy, ac, x0 + desl); continue; }
     if (!viewItem(i, &it)) continue;
     switch (lay) {
       case VT_LAY_RANKING: rankingCard(i, &it, cx, cy, w, h, ac, agora, sel); break;
@@ -2579,12 +3457,17 @@ void vertudo_desenhar(Uint32 agora) {
     float h=vtTelefone()&&!timeline?VT_CARD_H:372.0f;
     gfx_cor((GfxRect){x0+i*(w+VT_GAP_X),VT_TOPO,w,h},.06f,.12f,.13f,.15f,a);
   }
+  // O que passa da base apaga no fundo, nao e cortado seco na borda da tela.
+  // O painel vem depois e fica por cima.
+  if (n > 0 && lay != VT_LAY_FLUXO)
+    gfx_rect((GfxRect){ 0, NV_TELA_H - 120.0f, NV_TELA_W, 120.0f }, 0, GFX_VEU_BAIXO,
+             0, 0, 0, 0, NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 0.92f * a);
   gfx_sem_recorte();
 
   // CABECALHO por cima do recorte, entao ele nunca compete com a arte.
   themeHeader(a,x0);
-  if (collection) botaoExibicao(a, x0);
+  if (collection) botaoExibicao(a, cabCy);
 
-  if (n > 0 && !vtTelefone()) painel(a);
+  if (n > 0 && !vtTelefone()) { if (lay == VT_LAY_FLUXO) fluxoInfo(a, x0); else painel(a); }
   if (vtTelefone()) gfx_escala_sair(escalaAnterior);
 }

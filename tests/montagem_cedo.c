@@ -48,6 +48,7 @@ int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le 
 int ajustes_ocultar_filmes_vistos(void) { return 0; }    // #366: descoberta.c le o ajuste
 #include "../src/descoberta.c"
 #include "jellyfin_stub.inc"
+#include "nvtmp.h"
 Uint32 SDL_GetTicks(void) { return 0; }
 
 #define BASE "https://addon.example/abc"
@@ -111,6 +112,8 @@ int addons_copiar_identidades(AddonIdentidade *saida, int max, unsigned versao, 
 }
 int addons_travar_lista(unsigned versao, int perfil) { (void)versao; (void)perfil; return 0; }
 void addons_destravar_lista(void) {}
+void addons_lista_travar(void) {}
+void addons_lista_destravar(void) {}
 const char *addons_base_por_id(const char *id) { return id && !strcmp(id, AID) ? baseAtual() : ""; }
 void  addons_manifesto_lido(int i, const char *c) { (void)i; (void)c; }
 int addons_identidade_recebida(const char *base, unsigned versao, NvPerfilSessao sessao,
@@ -411,7 +414,7 @@ static void zerar(void) {
 int main(void) {
   const char *tmp = getenv("TMPDIR");
   snprintf(dirDados, sizeof dirDados, "%snuvio-montagem-cedo-%d",
-           tmp && *tmp ? tmp : "/tmp/", (int)getpid());
+           nvt("/"), (int)getpid());
   assert(mkdir(dirDados, 0700) == 0);
   desc_tmdb(dirDados);
   homeestado_iniciar();

@@ -12,6 +12,7 @@
 // O que e de rede (Seekr, intro, guia parental) entra por gancho de captura
 // (NV_SHOT_HOOKS): nada aqui consulta servico nem gasta cota.
 #include "catalogo.h"
+#include "nvtmp.h"
 #include "player.h"
 #include "pausao.h"
 #include "ajustes.h"
@@ -328,7 +329,7 @@ static int quer(int argc, char **argv, const char *id) {
 }
 
 int main(int argc, char **argv) {
-  saida = argc > 1 ? argv[1] : "/tmp/nv-player-glass";
+  saida = argc > 1 ? argv[1] : nvt("/nv-player-glass");
   { const char *v = getenv("NUVIO_SHOT_VIDRO"); material = v && *v == '1' ? "vidro" : "solido"; }
   { const char *m = getenv("NUVIO_SHOT_MOCK"); snprintf(mock, sizeof mock, "%s", m ? m : ""); }
   SDL_SetHint("SDL_MAC_BACKGROUND_APP", "1");
@@ -356,6 +357,7 @@ int main(int argc, char **argv) {
     ajustes_dir(getenv("NUVIO_DADOS")); }
   ajustes_iniciar();
   if (!strcmp(material, "vidro")) ajustes_definir_vidro(1);
+  ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_OPAC / _FOSCO
   { struct tm lt; time_t t = time(NULL);
     localtime_r(&t, &lt); lt.tm_hour = 20; lt.tm_min = 19; lt.tm_sec = 0;
     plrilha_shot_hora(mktime(&lt)); }
@@ -376,6 +378,22 @@ int main(int argc, char **argv) {
     player_shot_estado(relogio, 4360.0f, 9420.0f, 1, 0, 0, 0);
     quadros(60);
     salvar("osd");
+  }
+  // O OSD sobre video 2.39:1 de verdade (#fpsplayer, S90D): furo alfa 0 com as
+  // faixas pretas em cima e embaixo, como o .tpk desenha.
+  if (quer(argc, argv, "osd-furo")) {
+    VideoSimulacao v;
+    memset(&v, 0, sizeof v);
+    v.largura = 3840; v.altura = 1606; v.pronto = 1;
+    abrir(&filme); video_simular(&v);
+    player_shot_video(1); player_shot_furo_real();
+    quadros(10);
+    player_shot_estado(relogio, 4360.0f, 9420.0f, 1, 0, 0, 0);
+    quadros(60);
+    { int i;   // tocando: a barra de progresso anda todo quadro
+      for (i = 0; i < 60; i++) { player_shot_estado(relogio, 4361.0f + i / 60.0f, 9420.0f, 1, 0, 0, 0); quadros(1); } }
+    salvar("osd-furo");
+    player_shot_video(0); simular(0, 0, "", 0, 0);
   }
   // UI EM HDR (#205): o mesmo OSD com o video SDR e com Dolby Vision.
   if (quer(argc, argv, "osd-sdr") || quer(argc, argv, "osd-hdr")) {
@@ -611,6 +629,9 @@ int main(int argc, char **argv) {
     player_shot_carregando(1);
     quadros(90);  salvar("cinema-inicio");
     quadros(460); salvar("cinema-demorando");
+    ajustes_shot_valor("aberturaAddonLocal", 0);   // 0 = Ligado
+    quadros(2);   salvar("cinema-addon-ligado");
+    ajustes_shot_valor("aberturaAddonLocal", 1);
     // O primeiro quadro: a fonte abriu e o video anda. O veu sai por cima dele.
     player_shot_carregando(0); player_shot_video(1);
     memset(&v, 0, sizeof v);
@@ -626,6 +647,53 @@ int main(int argc, char **argv) {
     quadros(90);  salvar("detalhada");
     player_shot_carregando(0);
     ajustes_shot_valor("telaAberturaLocal", 0);
+    // Serie: a linha do episodio, a etapa e a fonte sob o trilho.
+    snprintf(st.rotulo, sizeof st.rotulo, "Fallout.S01E03.The.Head.2160p.WEB-DL.DDP5.1.Atmos.DV.HDR10.H265-NTb\nRAW ADDON DETAILS");
+    stream_definir_lista(&st, 1);
+    abrir(&serie); simular(0, 0, "", 0, 0);
+    stream_definir_atual(0);
+    player_shot_carregando(1);
+    quadros(90);  salvar("cinema-serie");
+    { VideoStats stats;
+      video_stats_vazio(&stats); stats.bufferPct = 37;
+      video_simular_estatisticas(&stats);
+      player_shot_video(1); player_shot_carregando(0);
+      quadros(30); salvar("cinema-buffer");
+      video_simular_estatisticas(NULL);
+      player_shot_video(0);
+    }
+    { CatItem semLogo = serie;
+      semLogo.logo[0] = 0;
+      abrir(&semLogo); simular(0, 0, "", 0, 0);
+      stream_definir_atual(0);
+      player_shot_carregando(1);
+      quadros(90); salvar("cinema-sem-logo");
+    }
+    player_shot_carregando(0);
+  }
+  if (quer(argc, argv, "cinema-fundo-off") || quer(argc, argv, "cinema-fundo-nitida") ||
+      quer(argc, argv, "cinema-fundo-borrada")) {
+    // #508: o fundo da tela Cinema da abertura em tres modos — Desligado, Arte
+    // (nitida) e Arte borrada (o padrao) — mesma abertura, so o ajuste muda.
+    Stream st;
+    int q;
+    static const char *ids[3] = { "cinema-fundo-off", "cinema-fundo-nitida", "cinema-fundo-borrada" };
+    memset(&st, 0, sizeof st);
+    snprintf(st.rotulo, sizeof st.rotulo, "Project Hail Mary 2160p");
+    snprintf(st.provedor, sizeof st.provedor, "AIOStreams");
+    snprintf(st.url, sizeof st.url, "http://exemplo/phm.mkv");
+    stream_definir_lista(&st, 1);
+    for (q = 0; q < 3; q++) {
+      if (!quer(argc, argv, ids[q])) continue;
+      ajustes_shot_valor("aberturaFundoLocal", q);
+      abrir(&filme); simular(0, 0, "", 0, 0);
+      stream_definir_atual(0);
+      player_shot_carregando(1);
+      quadros(120);
+      salvar(ids[q]);
+      player_shot_carregando(0);
+    }
+    ajustes_shot_valor("aberturaFundoLocal", 2);   // o padrao de volta
   }
   if (quer(argc, argv, "carregando")) {
     Stream st;

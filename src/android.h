@@ -36,6 +36,9 @@ int  android_st_teclado(const char *inicial, int max);
 int  android_st_ditar(const char *idioma);
 void android_st_fechar(void);
 int  android_st_evento(char *dst, size_t n);
+// #205: NuvioActivity.volumesExternos (getExternalFilesDirs), one path per line,
+// index 0 = primary/emulated. 1 = veio texto em dst.
+int  android_volumes_externos(char *dst, size_t n);
 // ONDE ASSISTIR (ondever.c). Lista: "pacote\tnome" por linha, malloc (free
 // pelo chamador), NULL se falhou. Abrir/loja: 1 = abriu.
 char *android_listar_apps(void);
