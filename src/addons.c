@@ -465,12 +465,12 @@ static int carregarSemTrava(const char *dirArte) {
       size_t lenUrl = fimUrl ? (size_t)(fimUrl - (tab + 1)) : strlen(tab + 1);
       if (!nv_addon_url_cabe(linha, lenUrl)) continue; }
     memset(&addon[nAddon], 0, sizeof addon[nAddon]);
-    // Terceira coluna (opcional): 1 = fornece stream. Ausente vale 1, para
-    // arquivo antigo continuar funcionando.
-    memset(&addon[nAddon], 0, sizeof addon[nAddon]);
+    // Sem coluna de capacidade vale 1 como na conta (ver addons_definir_lista):
+    // legenda=0 escondia addon de legenda ate a sonda, e uma sonda que falha
+    // o deixava fora das legendas para sempre (#552).
     addon[nAddon].fonte = 1;
     addon[nAddon].catalogo = 1;
-    addon[nAddon].legenda = 0;
+    addon[nAddon].legenda = 1;
     { char *tab2 = strchr(tab + 1, '\t');
       if (tab2) {
         char *tab3;
@@ -1667,9 +1667,10 @@ static int alternarSemTrava(int i) {
 // "[addons] N vindos da conta", que seria mentira para uma lista que veio do
 // guia.
 //
-// Capacidades nascem SUPOSTAS como no carregador do arquivo (fonte e catalogo
-// sim, legenda nao) e `sondado` em 0: a sonda do manifesto corrige depois, e
-// ate la o custo de supor e uma consulta vazia.
+// Capacidades nascem SUPOSTAS como na lista da conta: tudo 1, inclusive
+// legenda (ver addons_definir_lista). `sondado` em 0 ate a sonda do
+// manifesto: ate la uma consulta vazia a mais e melhor que um addon de
+// legenda instalado pelo guia nunca ser consultado (#552).
 //
 // Devolve 1 se entrou, 0 se a lista esta cheia ou o addon ja existe. Comparacao
 // por base NORMALIZADA, e nao pela URL crua: "<base>", "<base>/" e
@@ -1703,7 +1704,7 @@ static int adicionarSemTrava(const char *nome, const char *urlManifest) {
   snprintf(addon[nAddon].base, sizeof addon[nAddon].base, "%s", nova);
   addon[nAddon].fonte = 1;
   addon[nAddon].catalogo = 1;
-  addon[nAddon].legenda = 0;
+  addon[nAddon].legenda = 1;
   addon[nAddon].ativo = 1;
   addon[nAddon].sondado = 0;
   addon[nAddon].canalLido = 0; addon[nAddon].nCanal = 0; addon[nAddon].mudoSeg = 0;
