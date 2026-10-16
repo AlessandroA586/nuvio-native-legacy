@@ -167,6 +167,7 @@ static void avisarCascaAberto(int v) { (void)v; }
 #define PLR_BTN_D         68.0f
 #define PLR_BTN_GAP       12.0f
 #define PLR_GAP_ROW       38.0f   // topo da barra -> topo dos botoes
+#define PLR_TOQUE_CELULA  144.0f  // antes da escala UI; 48 dp numa tela de 360 dp
 // Onde a barra fica (topo do trilho): com o OSD inteiro, e na busca so com a
 // barra (#128) — mais baixa, sem nada embaixo dela alem do tempo. Com o Seekr
 // ligado a busca deixa 30 px a mais para a ilha da miniatura.
@@ -200,10 +201,10 @@ static void avisarCascaAberto(int v) { (void)v; }
 #define PG_LIMITE_SEG     45.0f
 
 // Transporte compacto. Os saltos continuam acessiveis pelas setas na barra.
-// A ORDEM DO MOCKUP APROVADO (03/10): Play, Legendas, Audio, Proporcao,
-// Fontes, Episodios/Relacionados — o que se usa junto fica junto.
+// IDs estaveis: a ordem visual e de navegacao vem de transporteAcoes.
+// Na serie, Anterior/Proximo ficam ao lado do Play; o restante conserva a ordem.
 enum { PLR_PLAY, PLR_CC, PLR_AUDIO, PLR_ASPECTO,
-       PLR_FONTES, PLR_EPISODIOS, PLR_NBTNS };
+       PLR_FONTES, PLR_EPISODIOS, PLR_ANTERIOR, PLR_PROXIMO, PLR_RECARREGAR, PLR_NBTNS };
 
 // Avanco em curso: enquanto vale, posSeg e do DONO e nao do pipeline.
 static int    scrubbing, scrubPassos, scrubTocava, scrubDir, scrubToque;
@@ -222,6 +223,9 @@ static int    posVisSolto;   // 1 = ainda deslizando ate o alvo
 static int   aberto = 0, saindo = 0, pediuSair = 0;
 static int   idx = 0;
 #define PLR_SCR_TOCOU_S 5.0f   // #179: reproducao continua antes do /scrobble/start
+// Reproducao real minima para a SAIDA gravar o ponto (ver `prova`). Nao e o
+// limiar do start: um seek logo depois de abrir nao pode custar o ponto.
+#define PLR_PROVA_MIN_S 1.0
 static int   tocando = 1;
 static int   pausaPessoa;   // pausa pedida pela pessoa (player_pausa_pessoa, #302)
 static int retomandoSalto; // seek requested playback; buffering is not user pause
@@ -360,9 +364,13 @@ static double assistidoSeg, assistidoMono, assistidoPos;
 static double eofDesde = -1.0;
 static int assistidoAmostra;
 static unsigned trailerSessao;
+// Ultima posicao gravada DURANTE a sessao (gravarProgressoParcial); -1 = nenhuma.
+static double parcialPos = -1.0;
+static int parcialPausa;
 static void zerarAssistido(void) {
   eofDesde = -1.0;
   assistidoSeg = 0; assistidoAmostra = 0; trailerSessao = trailer_geracao();
+  parcialPos = -1.0; parcialPausa = 0;
   snprintf(fonteSessao, sizeof fonteSessao, "%s", comVideo ? video_url_atual() : "");
 }
 static int fontePrincipal(void) {
@@ -560,6 +568,9 @@ static double retomarFonteSeg = -1.0;
 static double basePos, baseDur;
 static int basePct, baseTocou, baseT = -1, baseE = -1;
 static int epT, epE, pedFontes, erroFonte, pedProxT, pedProxE;
+static int trocaEpisodio, episodioPedidoMarcado, confirmacaoTransporteRetida;
+static Uint32 episodioPedidoEm, recarregarPedidoEm;
+static int recarregarPedidoMarcado;
 static void medirAssistido(void) {
   double m = monoSeg(), p = video_pos();
   int ok = fontePrincipal() && video_ativo() && video_pronto() && video_tocando() &&
@@ -678,6 +689,18 @@ int player_pediu_fontes(void) { int p = pedFontes; pedFontes = 0; return p; }
 int player_pediu_proximo(int *t,int *e) {
   if(!pedProxT||!pedProxE)return 0;
   if(t)*t=pedProxT;if(e)*e=pedProxE;pedProxT=pedProxE=0;return 1;
+}
+int player_transporte_pedido_pendente(void) {
+  return (pedProxT > 0 && pedProxE > 0) || (!ehCanal() && pedRecarregar);
+}
+void player_episodio_pedido_liberar(void) {
+  if (!pedProxT && !pedProxE) trocaEpisodio = 0;
+}
+const CatEp *player_anterior_episodio(void) {
+  int ix = idxAtual(), n = cat_n_episodios(ix);
+  const CatEp *base = n > 0 ? cat_episodio(ix, 0) : NULL;
+  int i = prox_indice_anterior(base, n, epT, epE);
+  return i >= 0 ? cat_episodio(ix, i) : NULL;
 }
 // A regra mora em prox_indice_seguinte (proximo.h), a mesma do cartao.
 const CatEp *player_proximo_episodio(void) {
@@ -1489,7 +1512,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
     // overlay do guia dependem dela. Idempotente.
     if (canalSessao) { guia_carregar(); epg_iniciar(); } }
   tocando = 1; pausaPessoa = 0; retomandoSalto = 0; visivel = 1; anim = 0.0f; entrada = 0.0f; soBarra = 0; cheio = 1.0f; fileira = 1.0f;
-  pedFontes = erroFonte = pedFaixas = pedProxT = pedProxE = 0; inicioImagem = 0;
+  pedFontes = erroFonte = pedFaixas = pedProxT = pedProxE = trocaEpisodio = 0; inicioImagem = 0;
   durFonteAvisada = durFontePulou = pedProximaFonte = 0;
   durFonteAcaoAte = 0;
   abrindoExp = 0; abrindoT = 0.0f; abrindoDesde = 0;
@@ -2126,15 +2149,38 @@ static void fecharSessao(int manter) {
            (double)duracaoSeg, catDur);
     fflush(stdout);
   }
+  // PARIDADE COM O NUVIOTV OFICIAL (saveWatchProgress / saveWatchProgressInternal):
+  // grava ao sair se o video da fonte principal chegou a aparecer, a duracao e
+  // a real e a posicao passa de 1 s — quem pula para 94% e sai encontra 94% no
+  // Continuar assistindo, como no oficial. Ate aqui eram 5 s TOCADOS: com um
+  // seek logo depois de abrir (4,5 s tocados), a saida nao gravava nada.
+  // O que fica de Legacy e PLR_PROVA_MIN_S de reproducao real: aqui o trailer
+  // usa a MESMA pipeline (#205) e, sem nada tocado, a duracao pode ser a dele.
   int prova = fontePrincipal() && duracaoReal && !esperandoFonte && !erroFonte && !video_falhou() &&
-              isfinite(posSeg) && isfinite(duracaoSeg) && assistidoSeg >= PLR_SCR_TOCOU_S;
+              isfinite(posSeg) && isfinite(duracaoSeg) && posSeg >= 1.0f &&
+              assistidoSeg >= PLR_PROVA_MIN_S;
   // Prova do VISTO (#205): o que esta sessao tocou desde a base — o ponto
   // retomado, e so quando o registro diz que ele foi alcancado tocando e a
   // duracao e a mesma (a de um trailer de 129 s nao empresta a base do filme).
   double base = baseDur > 0.0 ? basePos : duracaoSeg * basePct / 100.0;
   if (!baseTocou || (baseDur > 0.0 && fabs(baseDur - duracaoSeg) > fmax(5.0, duracaoSeg * 0.02))) base = 0.0;
   int chegou;
-  int assistiu = player_regra_visto(base, assistidoSeg, posSeg, concluiuAgora(credEfetivo()), &chegou);
+  // `chegou` (alcancado tocando) continua sendo a regra #205: ele so diz COMO a
+  // posicao foi alcancada, para a base da proxima sessao. O VISTO segue o
+  // oficial: posicao >= 90% (ou o fim de Legacy: creditos / cartao A seguir).
+  // VISTO = a regra de Legacy OU a do oficial. A de Legacy (#205/#100) conclui
+  // antes dos 90% — no marcador de creditos ou no cartao A seguir — mas so com
+  // o trecho realmente tocado. A do oficial (WatchProgress.isCompleted) e so a
+  // POSICAO >= 90%, inclusive depois de um seek.
+  double cred = credEfetivo();
+  int duracaoContradita = cred > 1.0 && cred - duracaoSeg > intro_creditos_janela(duracaoSeg);
+  int fimLegacy = player_regra_visto(base, assistidoSeg, posSeg, concluiuAgora(cred), &chegou);
+  // A known later ending disproves completion by the reported percentage.
+  int assistiu = !duracaoContradita && scrobble_concluiu(posSeg, duracaoSeg, fimLegacy);
+  // Concluido e concluido: o registro leva o "alcancado tocando" que o selo
+  // de visto do catalogo (cat_visto) le, como o markAsCompleted do oficial.
+  if (assistiu) chegou = 1;
+  if (duracaoContradita) chegou = 0;
   // Sem ela a posicao REAL continua gravada (barra, Continuar assistindo,
   // conta): so o arredondamento para 100% e o visto ficam de fora.
   if (!duracaoErrada && !jaRetido && prova && video_pronto() && duracaoSeg >= 120.0f &&
@@ -2178,7 +2224,8 @@ static void fecharSessao(int manter) {
       char id[64];
       int simklScr;
       idTrakt(ci, id, sizeof id);
-      trakt_marcar(id, pos, duracaoSeg, assistidoSeg, assistiu);
+      // Trakt also completes by percentage, so an invalid duration cannot be sent.
+      if (!duracaoContradita) trakt_marcar(id, pos, duracaoSeg, assistidoSeg, assistiu);
       // Simkl (#459): mesmo scrobble, independente de o Trakt estar ligado.
       // Sem vinculo, id fora do IMDb ou guarda recusando: SCR_NADA.
       simklScr = simkl_scrobble(SCR_EV_SAIU, id, pos, duracaoSeg, assistidoSeg, assistiu);
@@ -2280,6 +2327,7 @@ static void fecharSessao(int manter) {
   retido = manter; if (!manter) retidoVoo = 0;
   prepararRetencao = 0; saidaIlhaDesde = 0;
   esperandoFonte = 0; aberto = 0; saindo = 0; pediuSair = 0;
+  pedProxT = pedProxE = trocaEpisodio = pedRecarregar = 0;
   scrubbing = scrubToque = 0; scrubInicio = 0.0;
   mini = 0; querMini = 0; miniGuia = 0; janAtiva = 0;
   avisarCascaAberto(0);
@@ -2331,6 +2379,40 @@ void player_preparar_retencao(void) {
   saidaIlhaDesde = SDL_GetTicks() | 1u;
 #endif
   video_pausar(1);
+}
+
+// O PONTO GRAVADO DURANTE A SESSAO, e nao so ao sair — paridade com o NuvioTV
+// oficial (PlayerRuntimeControllerPlaybackEvents.kt): saveWatchProgress ao
+// pausar e ~0,7 s depois de um seek, e saveWatchProgressIfNeeded a cada 90 s
+// tocando, so quando a posicao andou >= 5 s. Mesmas guardas da saida (fonte
+// principal com video, duracao real e nao suspeita, nao canal). So o PONTO:
+// o visto e o scrobble continuam com a saida e com o pause do Trakt/Simkl.
+#define PLR_PARCIAL_INTERVALO_S 90.0f
+#define PLR_PARCIAL_SEEK_S 0.7f
+#define PLR_PARCIAL_LIMIAR_S 5.0
+static void gravarProgressoParcial(int conta, const char *porque) {
+  const CatItem *ci = item();
+  double base;
+  int chegou;
+  if (!ci || !ci->imdb[0] || jfid_e(ci->imdb) || !comVideo || !fontePrincipal() || !duracaoReal ||
+      !video_pronto() || esperandoFonte || erroFonte || video_falhou() || ehCanal() || scrubbing ||
+      !isfinite(posSeg) || !isfinite(duracaoSeg) || duracaoSeg < 120.0f || posSeg < 1.0f ||
+      assistidoSeg < PLR_PROVA_MIN_S ||
+      player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo()))
+    return;
+  if (parcialPos >= 0.0 && fabs(posSeg - parcialPos) < PLR_PARCIAL_LIMIAR_S) return;
+  base = baseDur > 0.0 ? basePos : duracaoSeg * basePct / 100.0;
+  if (!baseTocou || (baseDur > 0.0 && fabs(baseDur - duracaoSeg) > fmax(5.0, duracaoSeg * 0.02))) base = 0.0;
+  (void)player_regra_visto(base, assistidoSeg, posSeg, 0, &chegou);
+  // Contradictory credits also invalidate the catalogue's watched proof.
+  double cred = credEfetivo();
+  if (cred > 1.0 && cred - duracaoSeg > intro_creditos_janela(duracaoSeg)) chegou = 0;
+  cat_salvar_progresso_ep(idxAtual(), posSeg, duracaoSeg, epT, epE, chegou);
+  if (conta) sync_sujar_progresso();
+  parcialPos = posSeg;
+  printf("[visto] ponto gravado (%s) pos=%.1f dur=%.1f (%.0f%%)\n", porque, (double)posSeg,
+         (double)duracaoSeg, 100.0 * posSeg / duracaoSeg);
+  fflush(stdout);
 }
 
 int player_suspender(void) {
@@ -2651,6 +2733,70 @@ void player_mini_desenhar(Uint32 agora) {
 // ficar la sem fazer nada.
 static int temUltimoBotao(void) {
   return epT > 0 || extras_n_relacionados() > 0;
+}
+
+typedef struct { int id, habilitada; } PlrAcao;
+static int transporteSerie(void) { return !ehCanal() && epT > 0 && epE > 0; }
+static int transporteAcoes(PlrAcao a[PLR_NBTNS]) {
+  int n = 0, serie = transporteSerie();
+  int pronto = serie && !trocaEpisodio && !pedRecarregar && !player_carregando() && !erroFonte && !saindo;
+  if (serie) a[n++] = (PlrAcao){PLR_ANTERIOR, pronto && player_anterior_episodio() != NULL};
+  a[n++] = (PlrAcao){PLR_PLAY, 1};
+  if (serie) a[n++] = (PlrAcao){PLR_PROXIMO, pronto && player_proximo_episodio() != NULL};
+  if (!ehCanal()) a[n++] = (PlrAcao){PLR_RECARREGAR,
+      !trocaEpisodio && !pedRecarregar && comVideo && !player_carregando() &&
+      !erroFonte && !saindo && !video_reconectando() && video_url_atual()[0]};
+  a[n++] = (PlrAcao){PLR_CC, 1};
+  a[n++] = (PlrAcao){PLR_AUDIO, 1};
+  a[n++] = (PlrAcao){PLR_ASPECTO, 1};
+  a[n++] = (PlrAcao){PLR_FONTES, 1};
+  if (temUltimoBotao()) a[n++] = (PlrAcao){PLR_EPISODIOS, 1};
+  return n;
+}
+static int transporteHabilitado(int id) {
+  PlrAcao a[PLR_NBTNS]; int n = transporteAcoes(a);
+  for (int i = 0; i < n; i++) if (a[i].id == id) return a[i].habilitada;
+  return 0;
+}
+static void transporteMover(int direcao) {
+  if (direcao != -1 && direcao != 1) return;
+  PlrAcao a[PLR_NBTNS]; int n = transporteAcoes(a), atual = -1;
+  for (int i = 0; i < n; i++) if (a[i].id == botao) atual = i;
+  if (atual < 0) { botao = PLR_PLAY; return; }
+  for (int i = atual + direcao; i >= 0 && i < n; i += direcao)
+    if (a[i].habilitada) { botao = a[i].id; return; }
+}
+static int transporteToque(void) { return telefoneui_ativo() && !ehCanal(); }
+static int transporteDuasLinhas(void) {
+  if (!transporteToque()) return 0;
+  PlrAcao a[PLR_NBTNS]; int n = transporteAcoes(a);
+  return NV_LAYOUT_REAL_H > NV_LAYOUT_REAL_W ||
+      (NV_VTELA_W - PLR_MARGEM * 2.0f) * gfx_escala_ui() < n * PLR_TOQUE_CELULA;
+}
+static int transportePrimeiraLinha(void) { return transporteSerie() ? 4 : 2; }
+static float transporteCelulaH(void) { return PLR_TOQUE_CELULA / gfx_escala_ui(); }
+static float transporteBarraY(void) {
+  if (!transporteToque()) return PLR_BARRA_Y;
+  int linhas = transporteDuasLinhas() ? 2 : 1;
+  return NV_VTELA_H - (64.0f + PLR_TOQUE_CELULA * linhas + 12.0f * (linhas - 1)) / gfx_escala_ui() - PLR_GAP_ROW;
+}
+static int transporteCompacto(void) {
+  return transporteToque() || (!ehCanal() && NV_VTELA_W - PLR_MARGEM * 2.0f < 1280.0f);
+}
+static int transporteMoverLinha(int direcao) {
+  if (!transporteDuasLinhas()) return 0;
+  PlrAcao a[PLR_NBTNS]; int n = transporteAcoes(a), p = transportePrimeiraLinha(), atual = -1;
+  for (int i = 0; i < n; i++) if (a[i].id == botao) atual = i;
+  if (atual < 0 || (direcao < 0 && atual < p) || (direcao > 0 && atual >= p)) return 0;
+  int inicio = direcao > 0 ? p : 0, quantidade = direcao > 0 ? n - p : p;
+  float coluna = atual < p ? (atual + 0.5f) / p : (atual - p + 0.5f) / (n - p);
+  int melhor = -1; float distancia = 2.0f;
+  for (int i = 0; i < quantidade; i++) if (a[inicio + i].habilitada) {
+    float d = fabsf((i + 0.5f) / quantidade - coluna);
+    if (d < distancia) { distancia = d; melhor = inicio + i; }
+  }
+  if (melhor < 0) return 0;
+  botao = a[melhor].id; return 1;
 }
 
 // A JANELA DO CARTAO DE PROXIMO EPISODIO.
@@ -3264,7 +3410,57 @@ static void terminarSalto(void) {
   scrubToque = 0; scrubInicio = 0.0;
 }
 
+static int ativarBotao(int i, int repetiu) {
+  if (!aberto || saindo || !transporteHabilitado(i)) return 0;
+  // Uma abertura rapida pode devolver o foco ao Play antes do OK ser solto.
+  // So uma confirmacao nova pode aciona-lo depois de trocar de episodio.
+  if (repetiu && confirmacaoTransporteRetida) return 0;
+  switch (i) {
+    case PLR_ANTERIOR: case PLR_PROXIMO: {
+      Uint32 agora = SDL_GetTicks();
+      const CatEp *ep;
+      char alvo[64];
+      if (repetiu || trocaEpisodio ||
+          (episodioPedidoMarcado && agora - episodioPedidoEm < 400u)) return 0;
+      ep = i == PLR_ANTERIOR ? player_anterior_episodio() : player_proximo_episodio();
+      if (!ep || ep->temporada <= 0 || ep->episodio <= 0 ||
+          !cat_id_stream(idxAtual(), ep->temporada, ep->episodio, alvo, sizeof alvo) || !alvo[0]) return 0;
+      // Copiar os numeros agora: a lista do catalogo pode ser republicada.
+      // Nao aprender creditos nem marcar o episodio atual como terminado.
+      pedProxT = ep->temporada; pedProxE = ep->episodio;
+      trocaEpisodio = episodioPedidoMarcado = 1; episodioPedidoEm = agora;
+      confirmacaoTransporteRetida = 1;
+      posplay_troca_manual();
+      return 1;
+    }
+    case PLR_RECARREGAR: {
+      Uint32 agora = SDL_GetTicks();
+      if (repetiu || (recarregarPedidoMarcado && agora - recarregarPedidoEm < 400u)) return 0;
+      pedRecarregar = recarregarPedidoMarcado = confirmacaoTransporteRetida = 1;
+      recarregarPedidoEm = agora;
+      posplay_troca_manual();
+      return 1;
+    }
+    case PLR_PLAY: alternarTocando(); break;
+    case PLR_ASPECTO: player_aspecto_ciclar(); break;
+    case PLR_CC: pedFaixas = 2; break;
+    case PLR_AUDIO: pedFaixas = 1; break;
+    case PLR_FONTES: pedFontes = 1; break;
+    case PLR_EPISODIOS:
+      if (ehCanal()) pedGuia = 1;
+      else if (epT > 0) episodios_abrir(idxAtual(), epT, epE);
+      else posplay_abrir_relacionados(idxAtual());
+      break;
+    default: return 0;
+  }
+  if (!repetiu) confirmacaoTransporteRetida = 0;
+  return 1;
+}
+
 void player_evento(const SDL_Event *e) {
+  if (e->type == SDL_KEYUP && (e->key.keysym.sym == SDLK_RETURN ||
+      e->key.keysym.sym == SDLK_KP_ENTER || e->key.keysym.sym == SDLK_SPACE))
+    confirmacaoTransporteRetida = 0;
   // O painel de pos-reproducao come a tecla quando esta no ar; ele e a coisa
   // mais recente na tela e o dono esta olhando para ele. O 2 e o BAIXO: ele
   // dispensa o painel E pede a barra de tempo de volta, que e o gesto que o
@@ -3286,6 +3482,8 @@ void player_evento(const SDL_Event *e) {
     if (r) { if (r == 2) acordar(); return; } }
   if (!aberto || saindo || e->type != SDL_KEYDOWN) return;
   SDL_Keycode k = e->key.keysym.sym;
+  if (e->key.repeat && confirmacaoTransporteRetida &&
+      (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE)) return;
 
   if (durFonteAcaoAte && durFonteAcaoAte == toastAte && SDL_GetTicks() < durFonteAcaoAte &&
       (k == SDLK_RETURN || k == SDLK_KP_ENTER)) { durFonteTentar(0, 0); return; }
@@ -3454,27 +3652,7 @@ void player_evento(const SDL_Event *e) {
     // Na barra o OK pausa/retoma: e o que sobra de util, ja que a barra nao
     // tem acao propria no web.
     if (barraFoco) { alternarTocando(); acordar(); return; }
-    switch (botao) {
-      case PLR_PLAY:    alternarTocando(); break;
-      case PLR_ASPECTO: player_aspecto_ciclar(); break;
-      // CC e AUDIO abrem a MESMA folha, mas em colunas diferentes: apertar
-      // "legendas" e cair no audio fazia os dois botoes parecerem um so.
-      case PLR_CC:      pedFaixas = 2;     break;   // 2 = coluna da legenda
-      case PLR_FONTES:  pedFontes = 1; break;
-      // MESMO LUGAR, DOIS PAPEIS. Numa serie o ultimo botao abre a lista de
-      // episodios; num filme nao ha lista, e o lugar passa a ser a porta de
-      // volta para os relacionados — que o dono pediu depois de a dispensa
-      // passar a grudar. Um botao a mais na fileira custaria largura que a
-      // serie nao tem sobrando.
-      case PLR_EPISODIOS:
-        // Canal nao tem episodio nem "relacionados": o mesmo lugar vira a
-        // porta do guia, que e a lista de escolha dele.
-        if (ehCanal()) pedGuia = 1;
-        else if (epT > 0) episodios_abrir(idxAtual(), epT, epE);
-        else posplay_abrir_relacionados(idxAtual());
-        break;
-      default:          pedFaixas = 1;     break;   // 1 = coluna do audio
-    }
+    ativarBotao(botao, e->key.repeat);
     acordar();
     return;
   }
@@ -3488,6 +3666,7 @@ void player_evento(const SDL_Event *e) {
   // Audio e Legendas ficam nos botoes deles. O unico alvo acima da barra e o
   // "Pular abertura", quando existe — e esse esta mesmo em cima dela.
   if (k == SDLK_UP) {
+    if (!barraFoco && transporteMoverLinha(-1)) { acordar(); return; }
     if (!barraFoco) barraFoco = 1;
     else if (trechoPulavel(NULL)) skipFoco = 1;
     else { esconderControles(); return; }   // #305: CIMA no topo tira a interface da frente
@@ -3503,6 +3682,7 @@ void player_evento(const SDL_Event *e) {
     return;
   }
   if (k == SDLK_DOWN) {
+    if (transporteMoverLinha(1)) { acordar(); return; }
     // BAIXO a partir da fileira significa "tirar os controles da frente".
     // Nao chama acordar(): isso recolocaria a barra no mesmo evento e faria o
     // comando parecer quebrado. O proximo toque direcional a revela de novo.
@@ -3511,10 +3691,8 @@ void player_evento(const SDL_Event *e) {
   }
   // Sem rotacao nas pontas: a fileira e curta e cabe inteira no olhar; dar a
   // volta no fim le como erro, nao como atalho.
-  if (k == SDLK_LEFT  && botao > 0)          botao--;
-  // O ULTIMO BOTAO existe no filme tambem: la ele e "Relacionados". Antes so a
-  // serie chegava nele (era so "Episodios") e o filme parava um antes.
-  else if (k == SDLK_RIGHT && botao < PLR_NBTNS - (temUltimoBotao() ? 1 : 2)) botao++;
+  if (k == SDLK_LEFT) transporteMover(-1);
+  else if (k == SDLK_RIGHT) transporteMover(1);
   acordar();
 }
 
@@ -3859,7 +4037,8 @@ void player_atualizar(float dt, Uint32 agora) {
              !saindo && !erroFonte && !esperandoFonte && !ehCanal() &&
              duracaoSeg >= 120.0f &&
              !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo());   // PRONTO do trailer (129 s) nao e deste titulo
-    static float tocouS;
+    static float tocouS, parcialRelogio, parcialSeek;
+    static int scrubAnterior;
     const CatItem *cs = item();
     if (cs && jfid_e(cs->imdb)) cs = NULL;   // never scrobble personal-server items
     if (ok && cs && cs->imdb[0]) {
@@ -3872,6 +4051,11 @@ void player_atualizar(float dt, Uint32 agora) {
         simkl_scrobble(SCR_EV_TOCANDO, id, posSeg, duracaoSeg, assistidoSeg, 0);
         wsTocando();
       }
+      parcialRelogio += dt;
+      if (parcialRelogio >= PLR_PARCIAL_INTERVALO_S) {
+        parcialRelogio = 0.0f;
+        gravarProgressoParcial(0, "90 s tocando");
+      }
     } else {
       // Pausou (ou o video parou de andar): so fala se ha um start em pe.
       if (tocouS > 0.0f && cs && cs->imdb[0] && fontePrincipal() && video_pronto() && !ehCanal() &&
@@ -3883,8 +4067,22 @@ void player_atualizar(float dt, Uint32 agora) {
         trakt_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg, 0);
         simkl_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg, 0);
         if (!saindo) wsPausou();
+        parcialPausa = 1;
       }
       tocouS = 0.0f;
+      parcialRelogio = 0.0f;
+    }
+    if (parcialPausa && !video_bufferando_ms() && !scrubbing) {
+      gravarProgressoParcial(1, "pausa");
+      parcialPausa = 0;
+    }
+    // ~0,7 s depois de soltar um seek, grava o ponto novo (oficial:
+    // scheduleProgressSyncAfterSeek). Vale pausado ou tocando.
+    if (scrubAnterior && !scrubbing) parcialSeek = PLR_PARCIAL_SEEK_S;
+    scrubAnterior = scrubbing;
+    if (parcialSeek > 0.0f && (parcialSeek -= dt) <= 0.0f) {
+      parcialSeek = 0.0f;
+      gravarProgressoParcial(1, "seek");
     } }
 
   // "A SEGUIR" QUE SOME (#151). Aberto pelo Continuar assistindo, o episodio
@@ -4066,9 +4264,12 @@ void player_atualizar(float dt, Uint32 agora) {
                       soBarra ? NV_MOLA_DESFOCO : NV_MOLA_FOCO);
   { float alvoF = (barraFoco && !ponteiroNoPlayer()) ? 0.0f : 1.0f;
     fileira = anim_mola(fileira, alvoF, dt, alvoF > fileira ? NV_MOLA_FOCO : NV_MOLA_DESFOCO); }
+  PlrAcao acoes[PLR_NBTNS]; int nAcoes = transporteAcoes(acoes), habilitadas[PLR_NBTNS] = {0};
+  for (int i = 0; i < nAcoes; i++) habilitadas[acoes[i].id] = acoes[i].habilitada;
+  if (botao < 0 || botao >= PLR_NBTNS || !habilitadas[botao]) botao = PLR_PLAY;
   for (int i = 0; i < PLR_NBTNS; i++) {
     // Foco na barra: o botao fecha (antes ficava aberto sem texto).
-    float alvo = (visivel && botao == i && !barraFoco) ? 1.0f : 0.0f;
+    float alvo = (visivel && habilitadas[i] && botao == i && !barraFoco) ? 1.0f : 0.0f;
     focoB[i] = anim_mola(focoB[i], alvo, dt,
                          alvo > focoB[i] ? NV_MOLA_FOCO : NV_MOLA_DESFOCO);
   }
@@ -4235,6 +4436,9 @@ static const char *iconeBotao(int i) {
     case PLR_AUDIO:     return "pl_audio-lines";
     case PLR_ASPECTO:   return "pl_ratio";
     case PLR_FONTES:    return "pl_layers";
+    case PLR_ANTERIOR:  return "pl_chevron-left";
+    case PLR_PROXIMO:   return "pl_chevron-right";
+    case PLR_RECARREGAR:return "pl_rotate-ccw";
     default:            return epT > 0 ? "pl_list-video" : "pl_film";
   }
 }
@@ -4245,6 +4449,9 @@ static const char *rotuloBotao(int i) {
     case PLR_AUDIO:     return "\xc3\x81udio";
     case PLR_ASPECTO:   return "Propor\xc3\xa7\xc3\xa3o";
     case PLR_FONTES:    return "Fontes";
+    case PLR_ANTERIOR:  return "Episódio anterior";
+    case PLR_PROXIMO:   return "Próximo episódio";
+    case PLR_RECARREGAR:return "Recarregar";
     default:            return ehCanal() ? "Guia" : epT > 0 ? "Epis\xc3\xb3""dios" : "Relacionados";
   }
 }
@@ -4408,6 +4615,8 @@ float player_base_legenda(float baseNormal, int cartaoProximoNoAr) {
 }
 static float baseLegendaPrincipal(void) {
   float base = (visivel && !faixas_estilo_topo() ? 760.f : 1000.f) - leg2Reserva;
+  if (visivel && transporteToque() && !faixas_estilo_topo())
+    base = fminf(base, (transporteBarraY() - 48.0f) * gfx_escala_ui() - leg2Reserva);
   // A LEGENDA SOBE SO ENQUANTO O CARTAO ESTA NA TELA (2.0.3). Subia pela
   // JANELA do cartao (a oferta do proximo), nao pelo cartao: ela continua
   // verdadeira depois de Voltar/Baixo dispensar o cartao (e ate o fim do
@@ -4619,9 +4828,19 @@ static void ponteiroPlayPause(int a, int b) {
 }
 static void ponteiroBotao(int i, int b) {
   (void)b;
-  if (i < 0 || i >= PLR_NBTNS) return;
+  if (i < 0 || i >= PLR_NBTNS || !transporteHabilitado(i)) return;
   botao = i; barraFoco = 0; skipFoco = 0; acordar();
 }
+static void ponteiroAtivarBotao(int i, int b) {
+  (void)b;
+  if (!transporteHabilitado(i)) return;
+  ponteiroBotao(i, 0);
+  // Conservar a prioridade dos paineis, como o Enter sintetizado do ponteiro.
+  SDL_Event e; SDL_zero(e); e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RETURN;
+  player_evento(&e);
+  e.type = SDL_KEYUP; player_evento(&e);
+}
+static void ponteiroBotaoInativo(int i, int b) { (void)i; (void)b; }
 static void ponteiroBarra(int a, int b) { (void)a; (void)b; barraFoco = 1; skipFoco = 0; acordar(); }
 // Clique na barra PROCURA ali — o que o mouse faz em qualquer player. Canal ao
 // vivo nao tem para onde ir.
@@ -4685,7 +4904,7 @@ static void desenharAcoesEpisodioCorpo(void){
     const float h=64.0f;
     float w=22.0f+26.0f+12.0f+(float)t.w+28.0f;
     float k=anim, xa=posplay_visivel() ? NV_VTELA_W-PLR_MARGEM-w : PLR_MARGEM, ya=NV_VTELA_H-120.0f;
-    float xb=NV_VTELA_W-PLR_MARGEM-w, yb=PLR_BARRA_Y-36.0f-h;
+    float xb=NV_VTELA_W-PLR_MARGEM-w, yb=transporteBarraY()-36.0f-h;
     GfxRect p={xa+(xb-xa)*k,ya+(yb-ya)*k,w,h};
     int tinta=sel?plrui_tinta():243;
     float kt=tinta/255.0f;
@@ -5734,12 +5953,15 @@ static void desenharOsdCorpo(Uint32 agora, float a, float ac, const CatItem *c) 
   // botoes 38 abaixo dela, o tempo na linha dos botoes, o titulo 36 acima.
   // Tudo entre as margens da ilha (PLR_MARGEM): a barra nao vai de ponta a ponta.
   float ySo = ajustes_seekr_ligado() ? PLR_BARRA_Y_SEEKR : PLR_BARRA_Y_SO;
-  float yBarra   = (PLR_BARRA_Y + (ySo - PLR_BARRA_Y) * (1.0f - cheio)) + desce;
+  float yCheio = transporteBarraY();
+  float yBarra   = (yCheio + (ySo - yCheio) * (1.0f - cheio)) + desce;
   float yRowTopo = yBarra + PLR_GAP_ROW;
   float cyBotoes = yRowTopo + PLR_BTN_D * 0.5f;
   float bx = PLR_MARGEM, bw = NV_VTELA_W - PLR_MARGEM * 2.0f;
   float cx = PLR_MARGEM;
   float cw = bw;
+  int transporteCurto = transporteCompacto();
+  float cyTempo = transporteCurto ? yRowTopo - 16.0f : cyBotoes;
   float frac = ehCanal()
              ? fracCanal()
              : (duracaoSeg > 0.0f ? anim_clamp(posVis / duracaoSeg, 0.0f, 1.0f) : 0.0f);
@@ -5836,29 +6058,57 @@ static void desenharOsdCorpo(Uint32 agora, float a, float ac, const CatItem *c) 
   // Com o foco na barra a fileira desce PLR_DESLIZE/2 e apaga (`fileira`).
   if (fileira > 0.01f) {
     float x = cx, af = ac * fileira, dy = (1.0f - fileira) * PLR_DESLIZE * 0.5f;
-    float yRow = yRowTopo + dy, cyB = cyBotoes + dy;
-    for (int i = 0; i < PLR_NBTNS - (temUltimoBotao() ? 0 : 1); i++) {
-      float f = focoB[i];
+    PlrAcao acoes[PLR_NBTNS]; int nAcoes = transporteAcoes(acoes);
+    int toque = transporteToque(), duas = transporteDuasLinhas(), primeira = transportePrimeiraLinha();
+    float celulaH = transporteCelulaH(), espaco = 12.0f / gfx_escala_ui();
+    float diametro = toque ? (PLR_TOQUE_CELULA - 16.0f) / gfx_escala_ui() : transporteCurto ?
+        fminf(PLR_BTN_D, (cw - (nAcoes - 1) * PLR_BTN_GAP) / nAcoes) : PLR_BTN_D;
+    float yRow = yRowTopo + dy;
+    for (int j = 0; j < nAcoes; j++) {
+      int i = acoes[j].id, habilitada = acoes[j].habilitada;
+      float f = habilitada ? focoB[i] : 0.0f, alpha = habilitada ? af : af * 0.35f;
       const char *ic = iconeBotao(i), *rot = rotuloBotao(i);
       TxtLinha lr = txt_linha(TXT_G21B, rot, 0, 0, 0, 255);
       float wCheio = 22.0f + 30.0f + 12.0f + (float)lr.w + 28.0f;
-      float w = PLR_BTN_D + (wCheio - PLR_BTN_D) * f;
-      GfxRect r = { x, yRow, w, PLR_BTN_D };
+      float w = transporteCurto ? diametro : PLR_BTN_D + (wCheio - PLR_BTN_D) * f;
+      GfxRect r = { x, yRow, w, diametro }, alvo = r;
+      if (toque) {
+        int linha = duas && j >= primeira, inicio = linha ? primeira : 0;
+        int colunas = duas ? (linha ? nAcoes - primeira : primeira) : nAcoes;
+        float celulaW = cw / colunas;
+        alvo = (GfxRect){cx + (j - inicio) * celulaW, yRow + linha * (celulaH + espaco), celulaW, celulaH};
+        r = (GfxRect){alvo.x + (celulaW - diametro) * 0.5f,
+                      alvo.y + (celulaH - diametro) * 0.5f, diametro, diametro};
+      }
+      float cyB = r.y + r.h * 0.5f;
       int tinta = (int)(242.0f + (plrui_tinta() - 242.0f) * f);
       float k = tinta / 255.0f;
-      if (f > 0.02f) plrui_pilula_foco(r, af * f);
-      if (f < 0.98f) plrui_disco_osd(r, af * (1.0f - f));
+      if (f > 0.02f) plrui_pilula_foco(r, alpha * f);
+      if (f < 0.98f) plrui_disco_osd(r, alpha * (1.0f - f));
       if (ponteiroNoPlayer() && af > 0.3f)
-        ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroBotao, NULL, i, 0);
-      { float ix = x + (PLR_BTN_D - 30.0f) * 0.5f + (22.0f - (PLR_BTN_D - 30.0f) * 0.5f) * f;
-        gfx_icone((GfxRect){ ix, cyB - 15.0f, 30.0f, 30.0f }, ic, k, k, k, af * 0.96f);
-        if (f > 0.05f) {
+        ponteiro_alvo(alvo.x, alvo.y, alvo.w, alvo.h, habilitada ? ponteiroBotao : NULL,
+                      habilitada ? ponteiroAtivarBotao : ponteiroBotaoInativo, i, 0);
+      { float tamanho = toque ? 64.0f / gfx_escala_ui() : 30.0f;
+        float ix = transporteCurto ? r.x + (diametro - tamanho) * 0.5f :
+          x + (PLR_BTN_D - 30.0f) * 0.5f + (22.0f - (PLR_BTN_D - 30.0f) * 0.5f) * f;
+        gfx_icone((GfxRect){ ix, cyB - tamanho * 0.5f, tamanho, tamanho }, ic, k, k, k, alpha * 0.96f);
+        if (!transporteCurto && f > 0.05f) {
           TxtLinha l = txt_linha(TXT_G21B, rot, tinta, tinta, tinta, 255);
           gfx_recorte(r.x, r.y, r.w, r.h);
           txt_desenhar_alpha(l, ix + 30.0f + 12.0f, cyB - (float)l.h * 0.5f, af * f);
           gfx_sem_recorte();
         } }
-      x += w + PLR_BTN_GAP;
+      if (!toque) x += w + PLR_BTN_GAP;
+    }
+    if (transporteCurto && !barraFoco && transporteHabilitado(botao)) {
+      char atual[24], dur[24], total[32];
+      plrui_tempo(atual, sizeof atual, posVisSolto ? posVis : posSeg);
+      plrui_tempo(dur, sizeof dur, duracaoSeg); snprintf(total, sizeof total, "/ %s", dur);
+      float reserva = txt_largura(TXT_G22M, atual) + txt_largura(TXT_G22M, total) + 32.0f;
+      if (cw > reserva) {
+        TxtLinha l = txt_linha_corta(TXT_G21B, rotuloBotao(botao), 243, 242, 239, 235, cw - reserva);
+        txt_desenhar_alpha(l, cx, cyTempo - (float)l.h * 0.5f, af);
+      }
     }
   }
 
@@ -5871,15 +6121,16 @@ static void desenharOsdCorpo(Uint32 agora, float a, float ac, const CatItem *c) 
     char t1[24], t2[32], d[24];
     if (ehCanal()) {
       TxtLinha l = txt_linha(TXT_ILHA_NOME, i18n("AO VIVO"), 243, 242, 239, 235);
-      txt_desenhar_alpha(l, cx + cw - l.w, cyBotoes - (float)l.h * 0.5f, a);
+      txt_desenhar_alpha(l, cx + cw - l.w, cyTempo - (float)l.h * 0.5f, a);
     } else {
       plrui_tempo(t1, sizeof t1, posVisSolto ? posVis : posSeg);
       plrui_tempo(d, sizeof d, duracaoSeg);
       snprintf(t2, sizeof t2, "/ %s", d);
       if (cheio > 0.01f) {
-        TxtLinha l2 = txt_linha(TXT_ILHA_NOME, t2, 243, 242, 239, 128);
-        TxtLinha l1 = txt_linha(TXT_ILHA_NOME, t1, 243, 242, 239, 235);
-        float xr = cx + cw - l2.w, y = cyBotoes - (float)l1.h * 0.5f;
+        TxtEstilo estilo = transporteCurto ? TXT_G22M : TXT_ILHA_NOME;
+        TxtLinha l2 = txt_linha(estilo, t2, 243, 242, 239, 128);
+        TxtLinha l1 = txt_linha(estilo, t1, 243, 242, 239, 235);
+        float xr = cx + cw - l2.w, y = cyTempo - (float)l1.h * 0.5f;
         txt_desenhar_alpha(l2, xr, y, a * cheio);
         txt_desenhar_alpha(l1, xr - 8.0f - l1.w, y, a * cheio);
       }

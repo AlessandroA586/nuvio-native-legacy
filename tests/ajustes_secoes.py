@@ -20,7 +20,7 @@ enum = re.search(r"typedef enum \{(.*?)\n\} OpcaoId;", fonte, re.S)
 if not enum:
     sys.exit("FALHA: enum OpcaoId nao encontrado em " + args.fonte)
 corpo = re.sub(r"//[^\n]*", "", enum.group(1))
-corpo = re.sub(r"^\s*#[^\n]*", "", corpo, flags=re.M)
+corpo = re.sub(r"^\s*#[^\n]*", "", corpo, flags=re.M)  # #ifdef NV_ANDROID slots
 opcoes = [n.strip() for n in corpo.split(",") if n.strip() and n.strip() != "AJ_N"]
 # Retired from the screen on purpose; the enum slot stays (positional valor[]/CHAVE[]).
 RETIRADAS = {

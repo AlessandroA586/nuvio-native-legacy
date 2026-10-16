@@ -609,6 +609,8 @@ void gfx_vidro_ou_solido(GfxRect r, float raio, float dens, float a,
 void gfx_vidro_sujar(void);
 // Capturas e passadas de desfoque do quadro corrente (zeradas em gfx_novo_quadro).
 extern int gfx_vidro_capturas, gfx_vidro_passadas;
+// Blur writes and framebuffer copy area, in drawable screens per frame.
+extern double gfx_vidro_fill, gfx_vidro_copia;
 // O quadro tem video vivo (furo) por baixo: o vidro sai chapado ate o proximo
 // gfx_novo_quadro (a tela ali e o furo, nao o que passa no video).
 void gfx_vidro_fosco_bloquear(void);

@@ -1898,10 +1898,15 @@ typedef struct { unsigned hash; float cap[4]; int valida; } VidroEntrada;
 static VidroEntrada vidroAnt[VID_N], vidroCur[VID_N];
 static int vidroNAnt, vidroNCur, vidroNVidros, vidroNFuros, vidroSujo = 1, vidroCapNoQuadro;
 static unsigned vidroHash;
+#ifdef NV_WEBOS
+static unsigned vidroCapturaHash;
+static int vidroCapturaValida;
+#endif
 static float vidroDesde[4];   // caixa do que foi pintado na tela desde a ultima captura
 static float vidroCapQ[4];    // a ultima captura deste quadro
 static float vidroVidros[VID_N][4], vidroFuros[VID_NFUROS][4];
 int gfx_vidro_capturas, gfx_vidro_passadas;
+double gfx_vidro_fill, gfx_vidro_copia;
 static void vidroSoma(const void *p, size_t n) {
   const unsigned char *b = p;
   while (n--) vidroHash = (vidroHash ^ *b++) * 16777619u;
@@ -1927,7 +1932,12 @@ static int vidroDentro(GfxRect r) {
 }
 // Conteudo que muda sem passar pelo hash (textura reenviada no lugar, nome
 // de textura reaproveitado): nenhum vidro reaproveita a captura antiga.
-void gfx_vidro_sujar(void) { vidroSujo = 1; }
+void gfx_vidro_sujar(void) {
+  vidroSujo = 1;
+#ifdef NV_WEBOS
+  vidroCapturaValida = 0;
+#endif
+}
 static void vidroAplicarSujo(void) {
   int k;
   if (!vidroSujo) return;
@@ -1993,6 +2003,7 @@ void gfx_novo_quadro(void) {
   memset(vidroDesde, 0, sizeof vidroDesde); memset(vidroCapQ, 0, sizeof vidroCapQ);
   vidroHash = 2166136261u; vidroCapNoQuadro = 0; vidroNVidros = 0; vidroNFuros = 0;
   gfx_vidro_capturas = 0; gfx_vidro_passadas = 0;
+  gfx_vidro_fill = gfx_vidro_copia = 0.0;
   ambFonte = 0; dinPendente = 0; dinAdiado = 0; dinNOp = 0;
   gfx_n_assados = 0;
 }
@@ -3146,6 +3157,9 @@ static void vidLiberar(void) {
   vidGrab = vidH2 = vidQa = vidQb = vidRuido = vidH2Fbo = vidQaFbo = vidQbFbo = 0;
   if (vidProg) glDeleteProgram(vidProg);
   vidProg = 0; vidW = vidH = 0;
+#ifdef NV_WEBOS
+  vidroCapturaValida = 0;
+#endif
   memset(vidroAnt, 0, sizeof vidroAnt); memset(vidroCur, 0, sizeof vidroCur);
   gfx_tex_esquecer(0);
 }
@@ -3249,6 +3263,10 @@ static void vidPassada(GLuint src, GLuint fbo, int w, int h, const float uv[4], 
   glBindTexture(GL_TEXTURE_2D, src);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   gfx_vidro_passadas++;
+#ifdef NV_WEBOS
+  gfx_vidro_fill += (double)w * h * (uv[2] - uv[0]) * (uv[3] - uv[1]) /
+                    ((double)telaRealW * telaRealH);
+#endif
   if (perftv_enabled) perftv_blur++;
 }
 // Captura e desfoca a regiao `reg` (layout de tela) da tela atual em vidH2.
@@ -3298,12 +3316,36 @@ static int vidCapturar(const float reg[4]) {
   if (blendLigado) glEnable(GL_BLEND);
   progAtual = -1; texAtual = 0;
   gfx_vidro_capturas++;
+#ifdef NV_WEBOS
+  gfx_vidro_copia += (double)(x1 - x0) * (y1 - y0) / ((double)telaRealW * telaRealH);
+#endif
   GFX_OUTRO_FIM();
   return 1;
 }
 
 // O backdrop desfocado para o vidro `r` (layout de tela), ou 0 = chapado.
 static GLuint vidroFonte(GfxRect r) {
+#ifdef NV_WEBOS
+  // The home chrome can draw between glass regions: its bounding box defeats
+  // region sharing and causes four copies + twenty blur draws per frame.
+  // Freeze the clean backdrop before the first glass, shared by all regions.
+  // Cross-frame reuse only while vidroHash matches: any change to what was
+  // painted forces a recapture, so a stale backdrop is never sampled after a
+  // transition. Android keeps its original path.
+  if (vidH2 && vidW == telaW && vidH == telaH &&
+      (vidroCapNoQuadro || (vidroCapturaValida && vidroCapturaHash == vidroHash))) {
+    vidroCapNoQuadro = 1;
+    return vidH2;
+  }
+  {
+    float full[4] = { 0, 0, NV_TELA_W, NV_TELA_H };
+    if (!vidCapturar(full)) return 0;
+    vidroCapNoQuadro = 1;
+    vidroCapturaHash = vidroHash;
+    vidroCapturaValida = 1;
+    return vidH2;
+  }
+#endif
   float need[4], cap[4];
   int i = vidroNCur, k, fonte = 0;
   need[0] = r.x - VID_ALCANCE; need[1] = r.y - VID_ALCANCE;

@@ -66,6 +66,7 @@ void detail_volta_notar(int novo);
 int  detail_pediu_assistido(void);
 int  detail_pediu_amigos(char *imdb, size_t tam); // OK na ilha de amigos: o imdb do titulo, uma vez
 int  detail_pediu_marcar(void);       // botao "+"
+int  detail_pediu_fontes_ep(int *temporada, int *episodio);
 int  detail_pediu_fontes(void);       // OK segurado, ou o botao "..."
 // O episodio travado junto com o pedido de fontes (toque no card com
 // "Escolher a fonte ao reproduzir", ou "Fontes deste episodio" no menu).

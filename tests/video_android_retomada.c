@@ -29,6 +29,7 @@ void *SDL_AndroidGetJNIEnv(void) { return &env; }
 void *SDL_AndroidGetActivity(void) { return NULL; }
 Uint32 SDL_GetTicks(void) { return relogio; }
 SDL_mutex *SDL_CreateMutex(void) { return (SDL_mutex *)(uintptr_t)1; }
+const char *ling_audio(void) { return ""; }
 void marco(const char *s) { (void)s; }
 void vel_log(int cent, const char *estado) { (void)cent; (void)estado; }
 
@@ -215,6 +216,23 @@ int main(int argc, char **argv) {
   Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_PRIMEIRO_QUADRO, 0, 0);
   assert(video_pausa_confirmada());
   puts("ok reconexao de seek pausado conserva pausa e posicao");
+
+  // A completed paused reconnect must not override a later playing reload.
+  Java_space_nuvio_nativelegacy_NvPlayer_nativePos(NULL, NULL, 2461000);
+  video_bombear();
+  assert(!nv_recon_ativa(&recon));
+  video_pausar(0);
+  assert(video_recarregar());
+  pausas = chamadasPausa;
+  posicoes = chamadasPosicao;
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_ERRO, 2000, -1);
+  video_bombear(); relogio += 3000; video_bombear();
+  assert(chamadasPosicao == posicoes + 1 && recebidoMs == 2461000);
+  assert(chamadasPausa == pausas && !pausaPedida);
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_PRONTO, 7200000, 0);
+  video_bombear();
+  assert(chamadasPausa == pausas && !pausaPedida);
+  puts("ok playing reload retry ignores completed reconnect pause");
 
   // A intencao de pausar vale mesmo se a queda chegar antes do ack.
   video_parar(); video_definir_reconexao(1);

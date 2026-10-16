@@ -187,6 +187,9 @@ int ajustes_fonte_usar_outros(void);
 // R9b: 0 Equilibrio, 1 Qualidade maxima, 2 Começar rápido / 0 Preferir, 1 Indiferente, 2 Evitar HDR e DV.
 int ajustes_fonte_prioridade(void);
 int ajustes_fonte_hdr(void);
+// 1 = a escolha automatica prefere fontes que anunciam o Idioma do audio
+// (ling_audio) ou audio duplo, na mesma resolucao; nunca filtra (fontenota.h).
+int ajustes_fonte_idioma_audio(void);
 
 // Idioma da interface: um IDIOMA_* de idiomacod.h (pt, en, ro, uk, ru, fr, de, es). Valor
 // gravado fora do intervalo (arquivo editado a mao) cai em portugues.
@@ -460,6 +463,8 @@ int   ajustes_relogio_ligado(void);
 int   ajustes_relogio_pos(void);
 int   ajustes_relogio_12h(void);   // 1 = 12 h com AM/PM (relogio.h)
 // Local interface factor: 0.8..1.5, or automatic from physical panel size.
+// #477: synopsis typography follows the local Synopsis size (Normal/Grande).
+int ajustes_sinopse_tamanho(void);
 float ajustes_tamanho_ui(void);
 // Settings only: 0.8/0.9/1.0, default 0.9; independent of global UI zoom.
 float ajustes_tamanho_ajustes(void);

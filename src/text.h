@@ -194,6 +194,12 @@ typedef enum {
   TXT_TV_ROTULO,        // item da barra       25 / 500
   TXT_TV_SECAO,         // "STREAMING"         24 / 700
   TXT_HERO_SIN_GRANDE, // optional hero synopsis, 24/400
+  // #477: corpos exclusivos das sinopses; 100% usa o original.
+  TXT_SINOPSE_19, TXT_SINOPSE_21, TXT_SINOPSE_22, TXT_SINOPSE_23,
+  TXT_SINOPSE_24, TXT_SINOPSE_25, TXT_SINOPSE_26, TXT_SINOPSE_27,
+  TXT_SINOPSE_28, TXT_SINOPSE_29, TXT_SINOPSE_30, TXT_SINOPSE_31,
+  TXT_SINOPSE_33, TXT_SINOPSE_34, TXT_SINOPSE_35, TXT_SINOPSE_39,
+  TXT_SINOPSE_20, // 125% de 16px; append-only, preserva os estilos anteriores
   TXT_NFONTES
 } TxtEstilo;
 

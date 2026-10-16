@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-15 20:48",
+ "atualizado_em": "2026-10-15 22:49",
  "base": "5544c3e4c",
- "nota": "Sync 2026-10-15 20:48, HEAD integracao/2.0.5 84dc18246; instalado cb7ece972 (Android Success, C9 rc=1). Ver escrivao/estado.md.",
+ "nota": "Sync 2026-10-15 21:48, HEAD integracao/2.0.5 d626daf5c (84dc18246 ajustestestes merged); instalado cb7ece972 (Android Success, C9 rc=1). Running: estatresp, vidroc9, amigosestilo-b. Ver escrivao/estado.md.",
  "itens": [
   {
    "numero": 1,
@@ -8643,8 +8643,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Job i419recs done 20:05: commit d6b41e1 so teste posplay. Sem device Tizen. Ja corrigido em 2.0.5 pelos commits v2.0.5. [sync 2026-10-15: agente/205-i419recs integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Job i419recs done 20:05: commit d6b41e1 so teste posplay. Sem device Tizen. Ja corrigido em 2.0.5 pelos commits v2.0.5. [sync 2026-10-15: agente/205-i419recs integrada] Escrivao 10-15 22:49: merged via agente/205-i419recs (f9ccde55c).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/419",
    "criada_em": "2026-10-10",
    "alvo": "ja-lancada"
@@ -8870,8 +8870,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-11"
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente. | Escrivao 2026-10-15 07:50: sem merge ainda; review OK y, branch nao mergeado | Escrivao 15/10 09:48: review OK ainda sem merge. | Escrivão 10/15 12:48: branch i429hbs ainda nao integrada (2 commits fora) | Escrivao 10-15 13:48: review y OK (j-revg-i429hbs-y 23:11), branch f59554839 ainda NAO mergeado. [sync 2026-10-15: agente/205-i429hbs integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente. | Escrivao 2026-10-15 07:50: sem merge ainda; review OK y, branch nao mergeado | Escrivao 15/10 09:48: review OK ainda sem merge. | Escrivão 10/15 12:48: branch i429hbs ainda nao integrada (2 commits fora) | Escrivao 10-15 13:48: review y OK (j-revg-i429hbs-y 23:11), branch f59554839 ainda NAO mergeado. [sync 2026-10-15: agente/205-i429hbs integrada] Escrivao 10-15 22:49: merged via agente/205-i429hbs (e8d9086a4).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/429",
    "criada_em": "2026-10-10",
    "alvo": "ja-lancada"
@@ -9215,8 +9215,8 @@
     "ultimo_comentario_por": "Copil48",
     "ultima_nossa": ""
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Job i462sync done 20:07: 84095af auto sync rejection translated tracks; tests autosync.sh/legsync.sh rc 0. [sync 2026-10-15: agente/205-i18n462 integrada] [sync 2026-10-15: agente/205-i462sync integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Job i462sync done 20:07: 84095af auto sync rejection translated tracks; tests autosync.sh/legsync.sh rc 0. [sync 2026-10-15: agente/205-i18n462 integrada] [sync 2026-10-15: agente/205-i462sync integrada] Escrivao 10-15 22:49: merged via agente/205-i462sync (da9e686a7).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/462",
    "alvo": "2.0.6"
   },
@@ -9534,8 +9534,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "testar troca de perfil no TCL",
-   "notas": "Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 07:10: mesmo caso de #488; correcoes portadas na head nova do autor (pr/493-v3), review OK 06:50. | Escrivao 10-15 08:50: pr/493-v3 carrega #482 (review OK 06:50, nao mergeado). | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 22:49: merged via agente/205-i488perfil (f51aa3d76).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/482",
    "criada_em": "2026-10-13"
   },
@@ -9595,7 +9595,8 @@
    "release": "2.0.5",
    "conserto": [
     "edff609f/c670c37e/20bb2f3a (agente/205-p2p486, integrados em integracao/2.0.5)",
-    "16351755c (merge agente/205-p2p486 em integracao/2.0.5)"
+    "16351755c (merge agente/205-p2p486 em integracao/2.0.5)",
+    "cdb45cb92 (merge em integracao/2.0.5)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -9603,8 +9604,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso. | Escrivao 2026-10-15 11:48: prompt p-205-p2p486 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: p2p486 merged, mas p2pusb (#486/#505) segue aberto | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-p2p486 integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso. | Escrivao 2026-10-15 11:48: prompt p-205-p2p486 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: p2p486 merged, mas p2pusb (#486/#505) segue aberto | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-p2p486 integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/486",
    "criada_em": "2026-10-13",
    "alvo": "ja-lancada"
@@ -9629,8 +9630,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR. | Escrivao 10-15 08:50: pr/493-v3 (3 ahead, review OK 06:50, nao mergeado) substitui o pr/493 velho; #488 segue nele. | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15 10:50: reaberta no GH; pr/493-v3 review OK sem merge. | Escrivao 2026-10-15 11:48: prompt p-205-perfil488 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i488perfil integrada] [sync 2026-10-15: agente/205-perfil488 integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR. | Escrivao 10-15 08:50: pr/493-v3 (3 ahead, review OK 06:50, nao mergeado) substitui o pr/493 velho; #488 segue nele. | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15 10:50: reaberta no GH; pr/493-v3 review OK sem merge. | Escrivao 2026-10-15 11:48: prompt p-205-perfil488 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i488perfil integrada] [sync 2026-10-15: agente/205-perfil488 integrada] Escrivao 10-15 22:49: merged via agente/205-i488perfil (f51aa3d76).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/488",
    "criada_em": "2026-10-13"
   },
@@ -9697,8 +9698,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Review OK j-revg-i495ilha 19:55. Merged 9734ecc2b. Escrivao antigo dizia sem review: errado. [sync 2026-10-15: agente/205-i495ilha integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Review OK j-revg-i495ilha 19:55. Merged 9734ecc2b. Escrivao antigo dizia sem review: errado. [sync 2026-10-15: agente/205-i495ilha integrada] Escrivao 10-15 22:49: merged via agente/205-i495ilha (9734ecc2b).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/495",
    "criada_em": "2026-10-14",
    "alvo": "2.0.5"
@@ -9748,7 +9749,7 @@
   {
    "numero": 499,
    "titulo": "Cached / not cached indicator on Debrid sources (torbox, real-debrid, premiumize, alldebrid)",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "feature",
    "status": "integrada",
@@ -9766,8 +9767,7 @@
    "proximo_passo": "testar na TV; sai com 2.0.5",
    "notas": "Snapshot 2026-10-14 10:15: aab8e18d \"Mark debrid-cached sources with a lightning icon in the source list (#499)\" e ancestral de integracao/2.0.5 (merge 57aee24f agente/205-499cache). Nenhum job j-revg-499cache: conserto integrado sem review registrado. OPEN no GitHub. [sync 2026-10-15: agente/205-499cache integrada]",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/499",
-   "criada_em": "2026-10-14",
-   "alvo": "ja-lancada"
+   "criada_em": "2026-10-14"
   },
   {
    "numero": 500,
@@ -9786,8 +9786,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels bug. Sem triagem local. [sync 2026-10-15: agente/205-i500q integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels bug. Sem triagem local. [sync 2026-10-15: agente/205-i500q integrada] Escrivao 10-15 22:49: merged via agente/205-i500q (bf9edb493).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/500",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6"
@@ -9906,8 +9906,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review. | Escrivao 2026-10-15 11:48: prompt p-205-i505* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: escopo em agente/205-p2pusb | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-i505 integrada] [sync 2026-10-15: agente/205-p2pusb integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review. | Escrivao 2026-10-15 11:48: prompt p-205-i505* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: escopo em agente/205-p2pusb | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-i505 integrada] [sync 2026-10-15: agente/205-p2pusb integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/505",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6"
@@ -10021,8 +10021,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Criada 2026-10-14 (snapshot 14:46). [sync 2026-10-15: agente/205-i510q integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Criada 2026-10-14 (snapshot 14:46). [sync 2026-10-15: agente/205-i510q integrada] Escrivao 10-15 22:49: merged via agente/205-i510q (abff3d67b).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/510",
    "criada_em": "2026-10-14",
    "alvo": "futuro"
@@ -10069,8 +10069,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Review OK j-revg-i512temporada-r2 19:57. Merged 1b47d82f8. P2 aberto: episodio sem releaseDate nao marca CWO_SEM_DATA (trakt.c:616). | Escrivao 2026-10-15 11:48: prompt p-205-i512temporada* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i512temporada integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Review OK j-revg-i512temporada-r2 19:57. Merged 1b47d82f8. P2 aberto: episodio sem releaseDate nao marca CWO_SEM_DATA (trakt.c:616). | Escrivao 2026-10-15 11:48: prompt p-205-i512temporada* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i512temporada integrada] Escrivao 10-15 22:49: merged via agente/205-i512temporada (1b47d82f8).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/512",
    "criada_em": "2026-10-14",
    "alvo": "2.0.5"
@@ -10092,8 +10092,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead. | Escrivao 2026-10-15 07:50: merge 84add4581 em integracao/2.0.5 | Escrivao 10-15 08:50: BLOQUEIA w/x/y antes; v OK 06:49; merged. | Escrivao 15/10 09:48: Android 84add4581 Success; C9 rc=255 (TV nao confirmado). | Escrivao 2026-10-15 11:48: prompt p-205-i513autoplay* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: agente/205-i513autoplay integrado (84add4581, instalado Android) [sync 2026-10-15: GitHub closed] [sync 2026-10-15: agente/205-i513autoplay integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead. | Escrivao 2026-10-15 07:50: merge 84add4581 em integracao/2.0.5 | Escrivao 10-15 08:50: BLOQUEIA w/x/y antes; v OK 06:49; merged. | Escrivao 15/10 09:48: Android 84add4581 Success; C9 rc=255 (TV nao confirmado). | Escrivao 2026-10-15 11:48: prompt p-205-i513autoplay* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: agente/205-i513autoplay integrado (84add4581, instalado Android) [sync 2026-10-15: GitHub closed] [sync 2026-10-15: agente/205-i513autoplay integrada] Escrivao 10-15 22:49: merged via agente/205-i513autoplay (84add4581).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/513",
    "criada_em": "2026-10-14"
   },
@@ -10135,8 +10135,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar. [sync 2026-10-15: agente/205-i521q em_job] [sync 2026-10-15 19:50: agente/205-i521q merged em integracao/2.0.5 (5184d0a1b); fix do BLOQUEIA incluso]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar. [sync 2026-10-15: agente/205-i521q em_job] [sync 2026-10-15 19:50: agente/205-i521q merged em integracao/2.0.5 (5184d0a1b); fix do BLOQUEIA incluso] Escrivao 10-15 22:49: merged via agente/205-i521q (5184d0a1b).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/521",
    "criada_em": "2026-10-15",
    "alvo": "futuro"
@@ -10158,8 +10158,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Issue nova 2026-10-15 11:33 (issues.json, label bug). Sem triagem local. [sync 2026-10-15: agente/205-i524q integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Issue nova 2026-10-15 11:33 (issues.json, label bug). Sem triagem local. [sync 2026-10-15: agente/205-i524q integrada] Escrivao 10-15 22:49: merged via agente/205-i524q (e2fe84954).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/524",
    "criada_em": "2026-10-15",
    "alvo": "futuro"
@@ -10181,8 +10181,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Escrivao 2026-10-15 11:48: item novo (issues.json), alvo 2.0.6 provisório [sync 2026-10-15: agente/205-i528q integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Escrivao 2026-10-15 11:48: item novo (issues.json), alvo 2.0.6 provisório [sync 2026-10-15: agente/205-i528q integrada] Escrivao 10-15 22:49: merged via agente/205-i528q (f5c785d4f).",
    "criada_em": "2026-10-15",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/528",
    "alvo": "2.0.6"
@@ -10204,8 +10204,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job. [sync 2026-10-15: agente/205-i529q em_revisao] [sync 2026-10-15 19:50: agente/205-i529q merged em integracao/2.0.5 (f8fbd3bd3)]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job. [sync 2026-10-15: agente/205-i529q em_revisao] [sync 2026-10-15 19:50: agente/205-i529q merged em integracao/2.0.5 (f8fbd3bd3)] Escrivao 10-15 22:49: merged via agente/205-i529q (f8fbd3bd3).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/529",
    "criada_em": "2026-10-15"
   },
@@ -10226,8 +10226,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "testar na TV; sai com 2.0.5",
-   "notas": "Escrivao 10/15 13:48: novo no GitHub 2026-10-15 (Subtitle issues), sem prompt de job. [sync 2026-10-15: agente/205-i530q integrada]",
+   "proximo_passo": "already in TV build; ship with 2.0.5",
+   "notas": "Escrivao 10/15 13:48: novo no GitHub 2026-10-15 (Subtitle issues), sem prompt de job. [sync 2026-10-15: agente/205-i530q integrada] Escrivao 10-15 22:49: merged via agente/205-i530q (cbd542148).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/530",
    "criada_em": "2026-10-15",
    "alvo": "2.0.6"
@@ -10252,6 +10252,27 @@
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/539",
    "criada_em": "2026-10-15",
    "alvo": "2.1"
+  },
+  {
+   "numero": 542,
+   "titulo": "Torbox cloud library",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "feature",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "triar; sem job",
+   "notas": "Entered mapa 2026-10-15 from issues.json; feature request, not in 2.0.5 scope.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/542",
+   "criada_em": "2026-10-16",
+   "alvo": "futuro"
   }
  ],
  "validacoes": [
