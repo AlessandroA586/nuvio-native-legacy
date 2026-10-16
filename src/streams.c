@@ -16,6 +16,7 @@
 #include "limpa.h"
 #include "vazao.h"
 #include <ctype.h>
+#include <arpa/inet.h>
 #include <strings.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -511,10 +512,45 @@ static int soP2P(const Stream *s) {
 // para um servidor de streaming local.
 static int pedeP2P(const Stream *s) {
   if (!s->notWebReady) return 0;
-  if (strncmp(s->url, "http", 4)) return 1;
-  const char *h = strstr(s->url, "://");
-  h = h ? h + 3 : s->url;
-  return !strncmp(h, "127.", 4) || !strncmp(h, "localhost", 9) || !strncmp(h, "[::1]", 5) || !strncmp(h, "0.0.0.0", 7);
+  const char *h = s->url, *end, *hostEnd;
+  if (!strncasecmp(h, "http://", 7)) h += 7;
+  else if (!strncasecmp(h, "https://", 8)) h += 8;
+  else return 1;
+  end = h + strcspn(h, "/?#");
+  for (const char *p = h; p < end; p++)
+    if (*p == '@') h = p + 1;
+  int ipv6 = h < end && *h == '[';
+  if (ipv6) {
+    h++;
+    hostEnd = memchr(h, ']', (size_t)(end - h));
+    if (!hostEnd) return 1;
+  } else {
+    hostEnd = h + strcspn(h, ":/?#");
+  }
+  const char *port = hostEnd + ipv6;
+  if (port < end) {
+    if (*port++ != ':' || port == end) return 1;
+    unsigned value = 0;
+    for (; port < end; port++) {
+      if (*port < '0' || *port > '9') return 1;
+      value = value * 10 + (unsigned)(*port - '0');
+      if (value > 65535) return 1;
+    }
+  }
+  char host[256];
+  size_t len = (size_t)(hostEnd - h);
+  if (!len || len >= sizeof host) return 1;
+  memcpy(host, h, len); host[len] = 0;
+  if (ipv6) {
+    struct in6_addr addr;
+    static const unsigned char loopback[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+    return inet_pton(AF_INET6, host, &addr) != 1 ||
+           !memcmp(&addr, loopback, sizeof loopback);
+  }
+  struct in_addr addr;
+  return !strcasecmp(host, "localhost") ||
+         (inet_pton(AF_INET, host, &addr) == 1 &&
+          ((ntohl(addr.s_addr) >> 24) == 127 || addr.s_addr == 0));
 }
 
 static int fonteOferecida(const Stream *s) {

@@ -105,6 +105,57 @@ static void conferirFolhaCheia(const Stream *l, int n, const char *cenario) {
   printf("fontes_lista: %s: %d de %d na folha\n", cenario, stream_folha_n(), N_TOTAL);
 }
 
+// #552: classify the parsed hostname, never userinfo or a hostname prefix.
+static void conferirHostP2P(void) {
+  static const struct { const char *url; int p2p; } cases[] = {
+    {"http://LOCALHOST:11470/hash/0", 1},
+    {"https://LocalHost/hash/0", 1},
+    {"http://localhost", 1},
+    {"http://127.0.0.1:11470/hash/0", 1},
+    {"http://127.255.1.2/hash/0", 1},
+    {"http://0.0.0.0?hash=0", 1},
+    {"http://[::1]:11470/hash/0", 1},
+    {"http://[0:0:0:0:0:0:0:1]/hash/0", 1},
+    {"http://user:pass@LOCALHOST:11470/hash/0", 1},
+    {"http://user:pass@[::1]:11470/hash/0", 1},
+    {"HTTPS://user:pass@127.5.6.7:11470/hash/0", 1},
+    {"http://localhost.example.org/hash/0", 0},
+    {"http://LOCALHOST.example.org:80/hash/0", 0},
+    {"http://127.0.0.1.example.org/hash/0", 0},
+    {"http://0.0.0.0.example.org/hash/0", 0},
+    {"http://0.0.0.01/hash/0", 0},
+    {"http://localhost@remote.example.org/hash/0", 0},
+    {"http://127.0.0.1:pass@remote.example.org/hash/0", 0},
+    {"HTTP://remote.example.org:80/hash/0", 0},
+    {"https://remote.example.org?next=@localhost", 0},
+    {"https://remote.example.org/#@localhost", 0},
+    {"http://128.0.0.1/hash/0", 0},
+    {"http://[::10]/hash/0", 0},
+    {"httpx://remote.example.org/hash/0", 1},
+    {"ftp://remote.example.org/hash/0", 1}
+  };
+  for (int ligado = 0; ligado <= 1; ligado++) {
+    ajustes_definir_p2p_ligado(ligado);
+    for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++) {
+      Stream s;
+      direta(&s, "hostname", 0, 1080, 0);
+      snprintf(s.url, sizeof s.url, "%s", cases[i].url);
+      s.notWebReady = 1;
+      int hidden = !ligado && cases[i].p2p;
+      for (int incremental = 0; incremental <= 1; incremental++) {
+        stream_definir_lista(NULL, 0);
+        if (incremental) stream_lista_acrescentar(&s, 1, 0);
+        else stream_definir_lista(&s, 1);
+        if (stream_n() != !hidden || stream_torrents_para_p2p() != hidden) {
+          fprintf(stderr, "hostname classification failed: %s (P2P=%d, incremental=%d)\n",
+                  cases[i].url, ligado, incremental);
+          exit(1);
+        }
+      }
+    }
+  }
+}
+
 int main(void) {
   Stream l[N_TOTAL];
   char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-fontes-lista-XXXXXX");
@@ -236,6 +287,7 @@ int main(void) {
     tecla(SDLK_ESCAPE);
   }
   free(v);
+  conferirHostP2P();
   puts("fontes_lista: notWebReady com url http oferecido, so P2P-puro exige P2P, externalUrl oculto");
   return 0;
 }
