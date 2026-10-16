@@ -36,6 +36,8 @@ int ajustes_ocultar_filmes_vistos(void) { return 0; }    // #366: descoberta.c l
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
+#define NV_TEST_SESSAO_PROPRIA
+#define NV_TEST_SOCIAL_PROPRIO
 #include "jellyfin_stub.inc"
 
 Uint32 SDL_GetTicks(void) { return 0; }
@@ -173,6 +175,9 @@ int   simkl_e_a_seguir(const char *id)     { (void)id; return 0; }
 int   simkl_plantowatch(CatItem *s, int m) { (void)s; (void)m; return 0; }
 int   ajustes_salvos_no_simkl(void)        { return 0; }
 int   trakt_enfeitar_lote(CatItem *s, int n) { (void)s; (void)n; return 0; }
+int trakt_enfeitar_lote_sessao(CatItem *s, int n, uint64_t sessao) {
+  (void)sessao; return trakt_enfeitar_lote(s, n);
+}
 int   trakt_lista(const char *q, CatItem *s, int m) { (void)q; (void)s; (void)m; return 0; }
 int   trakt_lista_cresc(const char *q, CatItem **s, int m) { (void)q; (void)s; (void)m; return 0; }
 // O servico social proprio (recomenda.c) fica fora deste teste: a uniao e so o que o Trakt trouxe.

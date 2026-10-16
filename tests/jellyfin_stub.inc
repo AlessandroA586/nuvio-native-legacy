@@ -15,6 +15,9 @@ int servidores_ficha(CatItem *item, CatEp *eps, int maxEps) { (void)item; (void)
 unsigned servidores_fileiras_versao(void) { return 0; }
 int servidores_passo(void) { return 0; }
 
+// Isolated discovery fixtures do not retry account writes; real modules override.
+__attribute__((weak)) int contapend_reenviar(void) { return 0; }
+
 // Mach-O weak_import em descoberta.c: fixtures isolados precisam de definicoes
 // fortes para linkar no macOS (ver perfisessao.h).
 #ifndef NV_TEST_SESSAO_PROPRIA
