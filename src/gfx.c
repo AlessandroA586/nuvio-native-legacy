@@ -3073,7 +3073,7 @@ void gfx_anel(GfxRect r, float raio, float esp,
       float x0 = m / r.w, x1 = 1.0f - x0, y0 = m / r.h, y1 = 1.0f - y0;
       const float f[4][4] = { { 0, 0, 1, y0 }, { 0, y1, 1, 1 }, { 0, y0, x0, y1 }, { x1, y0, 1, y1 } };
       int k;
-      gfx_ambiente_descarregar();
+      if (ambPendente) gfx_ambiente_descarregar();   // keeps a deferred Dynamic background deferred
       for (k = 0; k < 4; k++) {
         memcpy(subAtual, f[k], sizeof subAtual);
         gfx_rect(r, 0, GFX_ANEL, 0, esp / r.h, 0, raio, cr, cg, cb, ca);
@@ -3879,7 +3879,7 @@ void gfx_luz_canto(GfxRect r, float raio, float cx, float cy, float alcance,
     gfx_rect(r, 0, GFX_LUZ, alcance / r.h, cx / r.w, cy / r.h, raio, cr, cg, cb, ca);
     return;
   }
-  gfx_ambiente_descarregar();   // the pending light paints with the full quad first
+  if (ambPendente) gfx_ambiente_descarregar();   // pending light first; deferred background stays deferred
   subAtual[0] = x0; subAtual[1] = y0; subAtual[2] = x1; subAtual[3] = y1;
   gfx_rect(r, 0, GFX_LUZ, alcance / r.h, cx / r.w, cy / r.h, raio, cr, cg, cb, ca);
   subAtual[0] = subAtual[1] = 0.0f; subAtual[2] = subAtual[3] = 1.0f;
