@@ -38,6 +38,18 @@ static void vt_zerar(void) { vtCap = vtPas = vtMax = vtN = 0; vtFill = vtTela = 
 static void vt_relatar(const char *tela, int parado) {
   int ok = parado == 2 ? vtMax <= 1 && vtCap * 30 <= vtN + 29 : parado ? vtCap == 0 : vtMax <= 1;
   double n = vtN ? vtN : 1;
+  // Fill budget (full 1080p screens per frame) and lines rasterized per frame.
+  // Before the overdraw pass: comments 3.92, sources 6.27, search 2.64 with
+  // 3.50 lines/frame moving, explore 2.45, settings 4.40.
+  static const struct { const char *tela; double fill, txt; } orc[] = {
+    { "detail-comments", 3.35, 0.5 }, { "detail-sources", 5.40, 0.5 }, { "search", 2.55, 0.5 },
+    { "explore", 2.20, 0.5 }, { "settings", 4.20, 0.5 } };
+  for (size_t k = 0; k < sizeof orc / sizeof orc[0]; k++)
+    if (!strcmp(orc[k].tela, tela) && (vtTela / n > orc[k].fill || vtTxt / n > orc[k].txt)) {
+      printf("FAIL: %s %s fill %.2f > %.2f or text-raster %.2f > %.2f\n", tela, parado ? "static" : "moving",
+             vtTela / n, orc[k].fill, vtTxt / n, orc[k].txt);
+      ok = 0;
+    }
   printf("vidro_telas %s %s: captures/frame=%.2f passes/frame=%.2f blur-pixels/frame=%.0f max=%d frames=%d fill/frame=%.2f rects/frame=%.0f text-raster/frame=%.2f\n",
          tela, parado ? "static" : "moving", vtCap / n, vtPas / n, vtFill / n * 1920 * 1080, vtMax, vtN,
          vtTela / n, vtRect / n, vtTxt / n);

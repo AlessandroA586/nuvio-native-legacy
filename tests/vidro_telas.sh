@@ -1,7 +1,8 @@
 #!/bin/bash
 # Glass budget per screen on the webOS renderer (gfx.c with -DNV_WEBOS), offline:
 # details with the sources sheet, details Trakt comments row, Search, Explore,
-# Settings. Each: 0 captures/frame static, at most 1 while moving focus.
+# Settings. Each: 0 captures/frame static, at most 1 while moving focus, and
+# a per-screen fill / text-raster budget (vidro_telas.h).
 #   bash tests/vidro_telas.sh [png-dir]
 # NUVIO_VIDRO_BASELINE=<rev>: same harness against that revision's gfx.c.
 set -eu
@@ -38,6 +39,8 @@ for shot in detalhe_glass busca explorar ajustes; do
   data=$(mktemp -d "$work/nuvio-detglass-dados.XXXXXX")
   NUVIO_DADOS="$data" NUVIO_TESTE_DIR="$data" NUVIO_VIDRO_TELAS="$out" \
     sandbox-exec -p '(version 1) (allow default) (deny network*)' "$work/$shot" "$work/$shot-out" \
-    | grep -E '^(vidro_telas|PASS|FAIL)' || status=1
+    > "$work/$shot.log" || status=1
+  grep -E '^(vidro_telas|PASS|FAIL)' "$work/$shot.log" || status=1
+  grep -q '^FAIL' "$work/$shot.log" && status=1
 done
 exit "$status"
