@@ -3059,7 +3059,8 @@ static float desenharFaixas(const Stream *s, float x, float y, float w, int sel,
   }
   return altura;
 }
-static int audioDeclaradoPt(const Stream *s) {
+static int audioDeclaradoLingua(const Stream *s, const char *alvo) {
+  if (!alvo || !*alvo) alvo = "es";
   const char *p = s->audioIdiomas;
   const char *fim = p + strnlen(p, sizeof s->audioIdiomas);
   // A mesma lista que aparece em "Audio:" governa o chip. Legendas nunca
@@ -3073,27 +3074,53 @@ static int audioDeclaradoPt(const Stream *s) {
     memcpy(raw, p, len); raw[len] = 0;
     const char *cod = faixaIdiomaDoNome(raw);
     if (!cod && faixaIdiomaEtiqueta(raw, codigo, sizeof codigo)) cod = codigo;
-    if (cod && ling_casa(cod, "pt")) return 1;
+    if (cod && ling_casa(cod, alvo)) return 1;
     p = f ? f + 1 : fim;
   }
   return 0;
+}
+static int audioDeclaradoPt(const Stream *s) {
+  return audioDeclaradoLingua(s, ling_audio());
 }
 // O IDIOMA nao tem logo no pacote de selos, entao vai como texto no fim da
 // fileira. Os rotulos antigos continuam onde o addon nao informa audio;
 // quando informa, nenhum deles contradiz a lista declarada.
 static const char *idiomaDa(const Stream *s) {
-  int podePt = !s->audioIdiomas[0] || audioDeclaradoPt(s);
-  if (podePt && (temNoTexto(s, "dublado") || temNoTexto(s, "dub"))) return "Dublado";
-  if (podePt && temNoTexto(s, "dual")) return "Dual áudio";
-  // Uma secao de legendas em portugues nao anuncia audio em portugues.
-  if (podePt && (s->audioIdiomas[0] || !s->legendaIdiomas[0]) &&
-      (temNoTexto(s, "portuguese") || temNoTexto(s, "português") ||
-       temNoTexto(s, "pt-br") || temNoTexto(s, "ptbr"))) return "Dual áudio";
+  const char *alvo = ling_audio();
+  if (!alvo || !*alvo) alvo = "es";
+  int podeAlvo = !s->audioIdiomas[0] || audioDeclaradoLingua(s, alvo);
+  if (ling_casa(alvo, "es")) {
+    if (podeAlvo && (temNoTexto(s, "latino") || temNoTexto(s, "lat") ||
+                     temNoTexto(s, "castellano") || temNoTexto(s, "spanish") ||
+                     temNoTexto(s, "español") || temNoTexto(s, "espanol"))) return "Dublado";
+    if (podeAlvo && (temNoTexto(s, "dual") || temNoTexto(s, "multi"))) return "Dual áudio";
+  } else {
+    if (podeAlvo && (temNoTexto(s, "dublado") || temNoTexto(s, "dub"))) return "Dublado";
+    if (podeAlvo && temNoTexto(s, "dual")) return "Dual áudio";
+    if (podeAlvo && (s->audioIdiomas[0] || !s->legendaIdiomas[0]) &&
+        (temNoTexto(s, "portuguese") || temNoTexto(s, "português") ||
+         temNoTexto(s, "pt-br") || temNoTexto(s, "ptbr"))) return "Dual áudio";
+  }
   if (temNoTexto(s, "legendado") || temNoTexto(s, "leg")) return "Legendado";
   return NULL;
 }
 static int temAudioPt(const Stream *s) {
-  if (s->audioIdiomas[0]) return audioDeclaradoPt(s);
+  const char *alvo = ling_audio();
+  if (!alvo || !*alvo) alvo = "es";
+  if (s->audioIdiomas[0]) return audioDeclaradoLingua(s, alvo);
+  if (ling_casa(alvo, "es")) {
+    if (temNoTexto(s, "latino") || temNoTexto(s, "lat") ||
+        temNoTexto(s, "castellano") || temNoTexto(s, "spanish") ||
+        temNoTexto(s, "español") || temNoTexto(s, "espanol") ||
+        temNoTexto(s, "dublado") || temNoTexto(s, "dual")) return 1;
+  } else if (ling_casa(alvo, "pt")) {
+    if (temNoTexto(s, "dublado") || temNoTexto(s, "dub") ||
+        temNoTexto(s, "dual") || temNoTexto(s, "portuguese") ||
+        temNoTexto(s, "português") || temNoTexto(s, "pt-br") ||
+        temNoTexto(s, "ptbr")) return 1;
+  } else {
+    if (temNoTexto(s, alvo)) return 1;
+  }
   const char *id = idiomaDa(s);
   return id && strcmp(id, "Legendado");
 }
@@ -3297,6 +3324,7 @@ static float alturaLinha(int i, int automatica) {
     float ab = grupo == 1 && nOrdem == foco ? abreFoco : nOrdem == linhaAnt ? abreAnt : 0.0f;
     float vis = nl > FOLHA_ADDON_FECHADA ? FOLHA_ADDON_FECHADA + (nl - FOLHA_ADDON_FECHADA) * ab : (float)nl;
     h = 20 + 40 + vis * FOLHA_ADDON_LD + 18 + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0);
+    if (stream_selos_ha(&lista[i])) h += 30.0f;
     if (h < 96) h = 96;
   } else {
     // The connection line opens with the focused row even without a file name.
@@ -4185,8 +4213,8 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
         : "Filtra para fontes que o debrid já tem (tocam na hora, sem baixar antes). OK liga o filtro.";
     else if(botaoDe(foco)==BT_DUB)
       ajuda=soDub
-        ? "Mostrando só fontes com áudio em português. OK tira o filtro."
-        : "Filtra para fontes dubladas ou com áudio em português. OK liga o filtro.";
+        ? "Mostrando só fontes dubladas no seu idioma. OK tira o filtro."
+        : "Filtra para fontes com áudio no seu idioma preferido. OK liga o filtro.";
     else if(botaoDe(foco)==BT_SO_MP4)
       ajuda=soMp4
         ? "Mostrando só containers MP4 (útil para achar Dolby Vision em MP4). OK tira o filtro."
@@ -4459,25 +4487,36 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       int nl=linhasAddon(s,ls,FOLHA_ADDON_LINHAS);
       // abertura da linha: a mesma mola da altura (alturaLinha)
       float abr = grupo==1 && row==foco ? abreFoco : row==linhaAnt ? abreAnt : 0.0f;
+      float vis = 0.0f;
       for(int k=0;k<nl;k++){
         float ak = anim;
         if(k>=FOLHA_ADDON_FECHADA){ if(abr<.02f) break; ak = anim*abr; }
+        vis += 1.0f;
         // A primeira linha do addon costuma ser a de numeros (tamanho, taxa):
         // um degrau mais clara. As outras no cinza da especificacao.
         int c = k==0 ? (sel?215:180) : (sel?170:130);
         float px=tx, maxw=k==0?txtW:tr-tx, ly=cy+k*FOLHA_ADDON_LD;
         for(int pc=0;pc<ls[k].n && maxw-(px-tx)>30;pc++){
+          int cr=c, cg=c, cb=c;
+          if(temPalavra(ls[k].tx[pc],"español")||temPalavra(ls[k].tx[pc],"espanol")||
+             temPalavra(ls[k].tx[pc],"latino")||temPalavra(ls[k].tx[pc],"castellano")){
+            cr=110; cg=231; cb=183;
+          }
           if(ls[k].ic[pc]){
             // O icone na altura do texto, na mesma tinta; so vale se couber.
-            gfx_icone((GfxRect){px,ly+3,22,22},ls[k].ic[pc],c/255.0f,c/255.0f,c/255.0f,ak);
+            gfx_icone((GfxRect){px,ly+3,22,22},ls[k].ic[pc],cr/255.0f,cg/255.0f,cb/255.0f,ak);
             px+=22+8;
           }
           if(ls[k].tx[pc][0] && maxw-(px-tx)>30){
-            TxtLinha lp=txt_linha_corta(TXT_PG_FIM,ls[k].tx[pc],c,c,c,255,maxw-(px-tx));
+            TxtLinha lp=txt_linha_corta(TXT_PG_FIM,ls[k].tx[pc],cr,cg,cb,255,maxw-(px-tx));
             txt_desenhar_alpha(lp,px,ly,ak);
             px+=lp.w+18;
           }
         }
+      }
+      if(stream_selos_ha(s)){
+        float by = cy + vis * FOLHA_ADDON_LD + 4.0f;
+        stream_selos_fileira(s, tx, by, tr - tx, 22.0f, sel ? 1.0f : 0.75f, anim);
       }
       continue;
     }

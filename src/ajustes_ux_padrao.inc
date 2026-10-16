@@ -16,7 +16,7 @@
   1,                /* escolher a fonte ao reproduzir: DESLIGADO (V_LIGA: 1 = Desligado) */
   0,                /* fonte automatica: melhor fonte (a regra de sempre) */
   2,                /* outra fonte se falhar: ate 2 (eram 7 fixas ate a 1.4.3) */
-  0,                /* texto das fontes: do Nuvio */
+  1,                /* texto das fontes: do addon */
 
   0,                /* posteres deitados: LIGADO (perfil do dono; fabrica: desligado) */
   0,                /* fundo em tela cheia: LIGADO (perfil; fabrica: desligado) */
