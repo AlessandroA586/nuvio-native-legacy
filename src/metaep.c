@@ -35,7 +35,7 @@ static void ids_do_video(const char *video, const char *fim, MetaEpInfo *out) {
 
 int metaep_buscar(const char *corpo, int t, int e, MetaEpInfo *out) {
   const char *p;
-  if (!corpo || t <= 0 || e <= 0) return 0;
+  if (!corpo || t <= 0 || e <= 0 || js_videos_temporadas_falsas(corpo)) return 0;
   p = js_array(corpo, NULL, "videos");
   while (p) {
     const char *f = js_fim(p);
@@ -61,7 +61,7 @@ int metaep_existe(const char *corpo, int t, int e) {
 
 static const char *video_por_se(const char *corpo, int t, int e,
                                 const char **fim) {
-  const char *p = js_array(corpo, NULL, "videos");
+  const char *p = js_videos_temporadas_falsas(corpo) ? NULL : js_array(corpo, NULL, "videos");
   while (p) {
     const char *f = js_fim(p);
     int tv = metaep_temporada(p, f);
@@ -98,7 +98,7 @@ int metaep_proximo(const char *corpo, int t, int e, MetaEpInfo *out) {
   const char *p;
   int melhorT = 0, melhorE = 0;
   MetaEpInfo melhor;
-  if (!corpo || t <= 0 || e <= 0) return 0;
+  if (!corpo || t <= 0 || e <= 0 || js_videos_temporadas_falsas(corpo)) return 0;
   memset(&melhor, 0, sizeof melhor);
   p = js_array(corpo, NULL, "videos");
   while (p) {

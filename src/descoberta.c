@@ -7230,10 +7230,17 @@ static int epSetNovo(EpSet *s, int t, int e) {
 // `brutos` (opcional), quantos videos com temporada > 0, repeticoes incluidas.
 // Video sem numero de episodio nao e repeticao de outro (regra do #328): cada
 // um conta.
+//
+// VIDEOS[] COM TEMPORADA FALSA: um addon que numera a temporada pelo indice do
+// episodio ("season":N,"episode":1 em cada video, "released" so com o ano) cria
+// uma aba por episodio (The Blacklist: Season 20+, cada uma com 1 episodio).
+// Reject only the episode-1/year-only pattern shared by all videos[] readers.
+// Sparse catalogs and missing dates alone do not prove malformed numbering.
 static int metaContarEpisodios(const char *corpo, int *brutos) {
   const char *v = corpo ? js_array(corpo, NULL, "videos") : NULL;
   EpSet set = { 0 };
   int n = 0, b = 0;
+  if (js_videos_temporadas_falsas(corpo)) { if (brutos) *brutos = 0; return 0; }
   while (v) {
     const char *f = js_fim(v);
     int t = videoTemporada(v, f);
@@ -7303,7 +7310,7 @@ static int metaArquivosCompativeis(const char *arquivos, const char *catalogo) {
 // So entram videos com temporada > 0. Devolve quantos.
 static int parsearEpisodios(const char *corpo, CatEp *eps, int max) {
   int n = 0;
-  const char *p = js_array(corpo, NULL, "videos");
+  const char *p = metaContarEpisodios(corpo, NULL) ? js_array(corpo, NULL, "videos") : NULL;
   EpSet set = { 0 };
   while (p && n < max) {
     const char *f = js_fim(p);
@@ -8348,7 +8355,7 @@ static void *buscarEps(void *u) {
       edit.nTemporadas = tp.n;
       memcpy(edit.temporadas, tp.t, sizeof(int) * (size_t)tp.n);
     } else
-    { const char *v = js_array(corpo, NULL, "videos");
+    { const char *v = desc_meta_n_episodios(corpo) ? js_array(corpo, NULL, "videos") : NULL;
       edit.nTemporadas = 0;
       while (v) {
         const char *fv = js_fim(v);
