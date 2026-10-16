@@ -39,6 +39,8 @@
 #include "p2p.h"
 #include "p2pmotor.h"
 #include "fonteauto.h"
+#include "fontenota.h"
+#include "linguas.h"
 #include "fontesmortas.h"
 #include "video.h"
 #include "botoes.h"
@@ -108,6 +110,14 @@ static void medirCabecalho(void);
 
 static Stream *lista;
 static int n = 0;
+static int cacheConfirmado(const Stream *s) {
+  return s->emCache && !s->cacheNegado && (!s->foraCache || s->cacheNativo) && !s->urlP2P && !s->naoVideo;
+}
+static void cacheConfirmar(Stream *s) {
+  s->emCache = 1;
+  s->cacheNegado = 0;
+  s->cacheNativo = 1;
+}
 // ORDEM DE EXIBICAO (#221). `lista` so cresce no fim (stream_lista_acrescentar)
 // e e por isso que os indices dela nao mudam com a busca em andamento: a
 // verificacao, a fonte tocando, a preferida e as excluidas sao todas indices.
@@ -125,7 +135,8 @@ static int nAutomaticasExcluidas;
 static int decoder4k[4] = { -1, -1, -1, -1 }; // HEVC, AVC, VP9, AV1
 static int decoderFalhaAltura[4];             // apenas a lista atual
 static int excedeDecoder(const Stream *s);
-static int temAudioPt(const Stream *s);
+static int temAudioPreferido(const Stream *s);
+static inline int temAudioPt(const Stream *s) { return temAudioPreferido(s); }
 static void audioPtCacheInvalidar(void);
 static void folhaCachesInvalidar(void);
 static pthread_mutex_t autoExclTrava = PTHREAD_MUTEX_INITIALIZER;
@@ -137,6 +148,7 @@ static pthread_mutex_t verTrava = PTHREAD_MUTEX_INITIALIZER;
 static unsigned listaGeracao;
 static void cancelarConferenciasSemTrava(void);
 static int atual = -1, recarregar;
+static int canalFolha;
 static char contexto[320];
 // O ALVO DA LISTA — issue #101. Ver a nota longa em streams.h: `alvoPedido` e
 // o carimbo do proximo pedido e `alvoLista` o da lista que esta em memoria.
@@ -352,13 +364,51 @@ static int ehInformativa(const Stream *s) {
   // pega a linha de aviso antes de qualquer pedido.
   return s->naoVideo || naovideo_nome(s->rotulo, s->descricao, s->altura, s->tamanhoMB);
 }
+void stream_filtro_dados(const Stream *s, FonteFiltroDados *dados) {
+  if (!dados) return;
+  if (!s) { memset(dados, 0, sizeof *dados); return; }
+  if (s->filtroLido) { *dados = s->filtro; return; }
+  char texto[sizeof s->rotulo + sizeof s->descricao + 2], resolucao[24] = "";
+  snprintf(texto, sizeof texto, "%s\n%s", s->rotulo, s->descricao);
+  if (s->altura > 0) snprintf(resolucao, sizeof resolucao, "%dp", s->altura);
+  FonteFiltroEntrada entrada = {0};
+  entrada.resolucao = resolucao; entrada.filename = s->arquivo; entrada.texto = texto;
+  entrada.tamanhoBytes = s->tamanhoBytes;
+  if (!entrada.tamanhoBytes && s->tamanhoMB > 0)
+    entrada.tamanhoBytes = (uint64_t)s->tamanhoMB > UINT64_MAX / UINT64_C(1048576)
+                        ? UINT64_MAX : (uint64_t)s->tamanhoMB * UINT64_C(1048576);
+  fontefiltro_classificar(&entrada, dados);
+}
+static void filtroCompletar(Stream *s) {
+  if (!s->filtroLido) { stream_filtro_dados(s, &s->filtro); s->filtroLido = 1; }
+}
+int stream_filtro_permite(const Stream *s) {
+  if (!s) return 0;
+  if (!fontefalha_filtro_ativo()) return 1;
+  FonteFiltroConfig cfg; FonteFiltroDados dados;
+  fontefalha_filtro(&cfg); stream_filtro_dados(s, &dados);
+  return fontefiltro_permite(&cfg, &dados);
+}
+int stream_filtro_bloqueou(void) {
+  if (!fontefalha_filtro_ativo()) return 0;
+  FonteFiltroConfig cfg; fontefalha_filtro(&cfg);
+  pthread_mutex_lock(&verTrava);
+  int bloqueou = n > 0;
+  for (int i = 0; i < n && bloqueou; i++)
+    if (fontefiltro_permite(&cfg, &lista[i].filtro)) bloqueou = 0;
+  pthread_mutex_unlock(&verTrava);
+  return bloqueou;
+}
 // Fora do automatico: ja descartada nesta sessao OU linha de aviso/placeholder do
 // addon ("Meteor - Not configured", "Embed69 - {}", "... error"). Esses so ficam
 // na folha manual (#284: 75% Android / 60% Samsung / 41% LG falham quando o
 // automatico os escolhe, contra 6/14/9% das fontes com resolucao).
-static int foraDoAuto(int i) {
-  return automaticaExcluida(i) || (i >= 0 && i < n && (lista[i].foraCache || ehInformativa(&lista[i]) || excedeDecoder(&lista[i]) || fontesmortas_idade(&lista[i]) >= 0));
+static int foraDoAutoComFiltro(int i, const FonteFiltroConfig *filtro) {
+  return automaticaExcluida(i) || (i >= 0 && i < n &&
+      ((!canalFolha && (filtro ? !fontefiltro_permite(filtro, &lista[i].filtro) : !stream_filtro_permite(&lista[i]))) ||
+       lista[i].foraCache || ehInformativa(&lista[i]) || excedeDecoder(&lista[i]) || fontesmortas_idade(&lista[i]) >= 0));
 }
+static int foraDoAuto(int i) { return foraDoAutoComFiltro(i, NULL); }
 int stream_automatico_disponivel(int indice) { return indice >= 0 && indice < n && !foraDoAuto(indice); }
 long stream_vod_falhou_ha(int indice) { return indice >= 0 && indice < n ? fontesmortas_idade(&lista[indice]) : -1; }
 void stream_vod_falhou(int indice) {
@@ -460,12 +510,33 @@ static int soP2P(const Stream *s) {
   return !s->url[0] && s->infoHash[0] && !debrid_ativo() && p2p_ativo();
 }
 
+static int fonteOferecida(const Stream *s) {
+  return (!s->notWebReady || p2p_ativo()) &&
+         (s->url[0] || debrid_ativo() || p2p_ativo());
+}
+
 static Uint32 recebidaEm;
 static int temRecebidaEm;
 // Torrents que a ultima lista jogou fora por falta de debrid: com 0 na lista e
 // isto > 0, a causa da folha vazia e "falta conta de debrid", nao "os addons
 // nao tem" (1.3.12: "145 torrents sem debrid descartados" e folha vazia).
 static int descartadosSemDebrid;
+// #505: subconjunto descartado por pedir P2P (notWebReady). Separado porque a
+// causa muda: debrid nao o oferece — ligar uma conta nao o traz de volta.
+static int descartadosP2P;
+// #486: a dica "ligue o P2P" so e dita quando este pacote tem P2P. Perguntar o
+// motor AQUI, no fio da tela, abriria a libnuvio_engine.so no .tpk (dlopen em
+// p2pmotor.c, carregamento adiado de proposito); o trabalhador confere antes
+// de enfileirar a resposta. A publicacao e a tela so leem o atomico.
+static _Atomic int motorP2pParaDica;
+void stream_preparar_dica_p2p(const Stream *l, int qtd) {
+  if (!l || p2p_ativo() || ajustes_p2p_url()[0]) return;
+  for (int i = 0; i < qtd; i++) {
+    if (l[i].url[0] || !l[i].infoHash[0]) continue;
+    atomic_store(&motorP2pParaDica, p2pmotor_disponivel());
+    return;
+  }
+}
 
 Uint32 stream_idade_ms(void) {
   return temRecebidaEm ? SDL_GetTicks() - recebidaEm : 0xFFFFFFFFu;
@@ -477,6 +548,7 @@ void stream_definir_lista(const Stream *l, int qtd) {
 
 static int selosPacoteDa(Stream *s);
 static void selosAgendar(int ini, int qtd);
+static void textoAddonLimpar(void);
 void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
   int i, k = 0;
   Stream *nova = l && qtd > 0 ? malloc(sizeof(Stream) * (size_t)qtd) : NULL;
@@ -485,12 +557,18 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
   // que nunca toca (shouldListStream do web). O servidor P2P experimental
   // (p2p.h) tambem o resolve, e so quando ligado.
   for (i = 0; i < qtd && nova; i++)
-    if (l[i].url[0] || debrid_ativo() || p2p_ativo()) nova[k++] = l[i];
-  if (nova && qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
-  descartadosSemDebrid = nova ? qtd - k : 0;
-  for (i = 0; i < k && nova; i++) nova[i].selosPacoteVer = 0;   // os selos saem do fio de fundo (selosAgendar)
+    if (fonteOferecida(&l[i])) nova[k++] = l[i];
+  if (nova && qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
+  descartadosSemDebrid = 0;
+  descartadosP2P = 0;
+  for (i = 0; i < qtd && nova; i++)
+    // #505: tambem o notWebReady, que pede P2P — a folha vazia tem de dizer
+    // "ligue o P2P", nunca fingir que o addon nao mandou nada.
+    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += l[i].notWebReady; }
+  for (i = 0; i < k && nova; i++) { nova[i].selosPacoteVer = 0; filtroCompletar(&nova[i]); }   // os selos saem do fio de fundo (selosAgendar)
   pthread_mutex_lock(&verTrava);
   free(lista); lista = nova; n = nova ? k : 0; atual = -1;
+  textoAddonLimpar();
   fitN = 0; // raw identities have been replaced; preserve an open snapshot
   free(chave); free(exib); chave = NULL; exib = NULL;
   if (n > 0) {
@@ -503,6 +581,7 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
   temRecebidaEm = 1;
   listaGeracao++;
   folhaCachesInvalidar();
+  audioPtCacheInvalidar();
   cancelarConferenciasSemTrava();
   pthread_mutex_unlock(&verTrava);
   selosAgendar(0, n);
@@ -542,6 +621,7 @@ static _Atomic int foraCacheFoco = -1;
 static void atualizarProvedores(void);
 static int aberta, foco, grupo;
 static float rolagem, velRol;
+
 static int montarSujo = 1;
 static int cabecalhoSujo = 1;
 static unsigned provCacheGer = 0;
@@ -551,7 +631,6 @@ static int abasCacheN = -1;
 static int abasCacheSoMp4 = -1;
 static int abasCacheSoCache = -1;
 static int abasCacheSoDub = -1;
-static int abasCacheNProv = -1;
 static int autoCacheIdx[2] = { -1, -1 };
 static unsigned autoCacheGer[2] = { 0, 0 };
 static int autoCacheN[2] = { -1, -1 };
@@ -561,18 +640,9 @@ static void folhaCachesInvalidar(void) {
   montarSujo = 1;
   cabecalhoSujo = 1;
   provCacheGer = 0;
-  provCacheN = -1;
   abasCacheGer = 0;
-  abasCacheN = -1;
-  abasCacheSoMp4 = -1;
-  abasCacheSoCache = -1;
-  abasCacheSoDub = -1;
-  abasCacheNProv = -1;
   autoCacheGer[0] = 0;
   autoCacheGer[1] = 0;
-  autoCacheN[0] = -1;
-  autoCacheN[1] = -1;
-  audioPtCacheInvalidar();
 }
 
 void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
@@ -584,11 +654,12 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
   nova = malloc(sizeof(Stream) * (size_t)qtd);
   if (!nova) return;
   for (i = 0; i < qtd; i++)
-    if (l[i].url[0] || debrid_ativo() || p2p_ativo()) nova[k++] = l[i];
-  if (qtd - k) printf("[fonte] %d torrents sem debrid descartados\n", qtd - k);
-  descartadosSemDebrid += qtd - k;
+    if (fonteOferecida(&l[i])) nova[k++] = l[i];
+  if (qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
+  for (i = 0; i < qtd; i++)
+    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += l[i].notWebReady; }   // #505: idem
   if (!k) { free(nova); return; }
-  for (i = 0; i < k; i++) nova[i].selosPacoteVer = 0;
+  for (i = 0; i < k; i++) { nova[i].selosPacoteVer = 0; filtroCompletar(&nova[i]); }
   // O CARTAO EM FOCO E O QUE FICA PARADO. Guardado pelo indice da lista (que
   // nao muda), e nao pela linha (que muda quando entra coisa acima).
   if (aberta && grupo == 1 && n > 0) {
@@ -621,7 +692,6 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
     exib[pos] = idx;
   }
   n = total;
-  folhaCachesInvalidar();
   if (!temRecebidaEm) { recebidaEm = SDL_GetTicks(); temRecebidaEm = 1; }
   pthread_mutex_unlock(&verTrava);
   selosAgendar(total - k, k);
@@ -679,6 +749,46 @@ static int cabeNaAltura(const Stream *s) {
   return !teto || !s->altura || s->altura <= teto;
 }
 
+#ifdef NV_VIDAA
+// TABELA DE REGRAS DA VIDAA (Hisense) -----------------------------------------
+//
+// Fonte: medicoes de TERCEIROS contra o navegador dela (NoobyGains /
+// stremio-vidaa-tv), NAO VERIFICADAS neste aparelho — trocar os pesos aqui
+// se a VIDAA de verdade discordar. Aplicada DEPOIS da tabela da LG (logo
+// acima, no corpo de pontos()) e forte o bastante para reverter qualquer
+// bonus que aquela tabela ja tenha somado — a VIDAA discorda da LG em pelo
+// menos um ponto (DV em MP4), entao nao da para so ACRESCENTAR regras.
+//
+//   - DV EM MP4 TRAVA O NAVEGADOR da VIDAA — o oposto exato da LG (onde MP4 e
+//     o container que toca DV de verdade, ver o comentario grande acima).
+//     Penalidade forte o bastante para anular os +100000/+10000 que a tabela
+//     de cima ja somou para esta mesma combinacao.
+//   - DV EM MKV continua com bonus: e a LG que rebaixa DV em MKV para HDR10,
+//     nao a VIDAA — nao ha motivo medido para penalizar aqui.
+//   - AV1 nao decodifica (nem hardware nem software no navegador dela).
+//   - ACIMA DE 4K da tela preta.
+//   - http:// NA URL DO STREAM e conteudo misto — a pagina da VIDAA e https
+//     (rede.c ja reescreve para o proxy quando da, mas a pontuacao nao deve
+//     favorecer uma fonte que so toca as custas de um desvio).
+//   - MP4 SEM DV e o container que o <video> HTML5 toca com mais
+//     confiabilidade: bonus leve, so para desempatar MP4 x MKV equivalentes.
+typedef struct { const char *nome; int (*bate)(const Stream *s); long pontos; } RegraVidaa;
+static int rvDvMp4(const Stream *s)     { return s->mp4 && s->dolbyVision; }
+static int rvDvMkv(const Stream *s)     { return !s->mp4 && s->dolbyVision; }
+static int rvAv1(const Stream *s)       { return s->av1; }
+static int rvAcimaDe4k(const Stream *s) { return s->altura > 2160; }
+static int rvHttp(const Stream *s)      { return !strncmp(s->url, "http://", 7); }
+static int rvMp4SemDv(const Stream *s)  { return s->mp4 && !s->dolbyVision; }
+static const RegraVidaa REGRAS_VIDAA[] = {
+  { "dv-em-mp4 trava o navegador",  rvDvMp4,     -200000 },
+  { "dv-em-mkv ok nesta tv",        rvDvMkv,        10000 },
+  { "av1 nao decodifica",           rvAv1,        -150000 },
+  { "acima de 4k da tela preta",    rvAcimaDe4k,  -150000 },
+  { "http:// e conteudo misto",     rvHttp,       -150000 },
+  { "mp4 sem dv e mais confiavel",  rvMp4SemDv,      3000 },
+};
+#define N_REGRAS_VIDAA (sizeof REGRAS_VIDAA / sizeof REGRAS_VIDAA[0])
+#endif
 // FAIXA DE TAMANHO DA ESCOLHA AUTOMATICA (Ajustes > Reproducao > Imagem e som:
 // "Tamanho maximo" / "Tamanho minimo", em GB). Pedido de quem tem franquia de
 // dados curta: o automatico so pega arquivo dentro da faixa. Mesma regra do
@@ -902,6 +1012,126 @@ static int degrauRes(const Stream *s) {
   return s->altura >= 2160 ? 3 : s->altura >= 1080 ? 2 : s->altura >= 720 ? 1 : 0;
 }
 
+// EVIDENCIA DE QUALIDADE ALEM DA RESOLUCAO (fontenota.h): tipo de lancamento,
+// bitrate confiavel, audio, codec, idioma preferido e compatibilidade. Antes
+// disto dois 1080p SDR empatavam e o +300 do MP4 decidia (Code Geass S1E3: um
+// WEB-DL de 2 Mbps em MP4 na frente de um REMUX de 36 Mbps).
+//
+// CACHE POR INDICE DA LISTA: pontos() roda por fonte a cada quadro com a folha
+// aberta, e a nota varre o texto inteiro da fonte. O texto nao muda depois de
+// a fonte entrar; mudam a lista (geracao), a duracao conhecida e a preferencia
+// de idioma — qualquer uma delas zera o cache.
+static pthread_mutex_t notaTrava = PTHREAD_MUTEX_INITIALIZER;
+static FonteNota *notaCache;
+static int notaCacheN, notaCacheCap;
+static unsigned notaCacheGer;
+static double notaCacheDur;
+static char notaCacheIdioma[16];
+static double duracaoDaLista(void) {
+  double seg = 0;
+  pthread_mutex_lock(&fitMetaTrava);
+  if (alvoLista[0])
+    for (int i = 0; i < FIT_DUR_SLOTS; i++)
+      if (!strcmp(fitDur[i].alvo, alvoLista)) {
+        seg = fitDur[i].midiaSeg ? fitDur[i].midiaSeg : fitDur[i].metaSeg;
+        break;
+      }
+  pthread_mutex_unlock(&fitMetaTrava);
+  return seg;
+}
+static const char *idiomaPreferidoFonte(void) {
+  const char *c = ajustes_fonte_idioma_audio() ? ling_audio() : "";
+  const char *alvoLingPontos = ling_audio();
+  if (alvoLingPontos && *alvoLingPontos && strcmp(alvoLingPontos, "*") != 0) {
+    if (temAudioPreferido(s)) p += 200000L;
+  }
+  return c ? c : "";
+}
+static int faixaIdiomaInformado(const char *raw, size_t n);
+static const char *faixaIdiomaDoNome(const char *raw);
+static size_t faixaIdiomaEtiqueta(const char *raw, char *codigo, size_t tam);
+// O audio que o addon DECLAROU (audioIdiomas) contra a preferencia: 1 se ha
+// lista, com *nivel = FN_IDIOMA_EXPLICITO quando a preferencia esta nela.
+static int idiomaDeclaradoNota(const Stream *s, const char *pref, int *nivel) {
+  const char *p = s->audioIdiomas;
+  const char *fim = p + strnlen(p, sizeof s->audioIdiomas);
+  int lista = 0;
+  *nivel = FN_IDIOMA_NADA;
+  while (p < fim) {
+    const char *f = memchr(p, ',', (size_t)(fim - p)), *ate = f ? f : fim;
+    char raw[sizeof s->audioIdiomas + 1], codigo[32];
+    const char *cod;
+    size_t len;
+    while (p < ate && isspace((unsigned char)*p)) p++;
+    while (ate > p && isspace((unsigned char)ate[-1])) ate--;
+    len = (size_t)(ate - p);
+    memcpy(raw, p, len); raw[len] = 0;
+    if (faixaIdiomaInformado(raw, len)) {
+      lista = 1;
+      cod = faixaIdiomaDoNome(raw);
+      if (!cod && faixaIdiomaEtiqueta(raw, codigo, sizeof codigo)) cod = codigo;
+      if (cod && ling_casa(cod, pref)) *nivel = FN_IDIOMA_EXPLICITO;
+    }
+    p = f ? f + 1 : fim;
+  }
+  return lista;
+}
+static void notaAvaliar(const Stream *s, double dur, const char *idioma, FonteNota *nt) {
+  FonteNotaEntrada e;
+  memset(&e, 0, sizeof e);
+  e.rotulo = s->rotulo; e.descricao = s->descricao; e.arquivo = s->arquivo;
+  e.altura = s->altura; e.bytes = s->tamanhoBytes; e.tamanhoMB = s->tamanhoMB;
+  e.duracaoSeg = dur; e.idiomaPref = idioma;
+  if (idioma[0]) e.temIdiomaDeclarado = idiomaDeclaradoNota(s, idioma, &e.idiomaDeclarado);
+  // Dicas dos selos: cobrem o `title` do addon, que o parser so guarda quando
+  // falta a descricao (fontenota.h).
+  { uint64_t b = s->badges;
+    e.tierDica = b & badges_bit("q-remux") ? FN_TIER_REMUX : b & badges_bit("q-bluray") ? FN_TIER_BLURAY
+               : b & badges_bit("q-webdl") ? FN_TIER_WEBDL : b & badges_bit("q-webrip") ? FN_TIER_WEBRIP : 0;
+    e.audioDica = b & (badges_bit("a-truehd") | badges_bit("a-truehd-dv") | badges_bit("a-dtshdma") |
+                       badges_bit("a-dtsx")) ? FN_AUD_SEM_PERDA
+                : b & (badges_bit("a-atmos") | badges_bit("a-atmos-dv") | badges_bit("a-ddp") | badges_bit("a-dd") |
+                       badges_bit("a-dd-dv") | badges_bit("a-dts") | badges_bit("a-dtshd")) ? FN_AUD_SURROUND : 0;
+    e.codecDica = b & badges_bit("co-x265") ? FN_CODEC_HEVC : b & badges_bit("co-av1") ? FN_CODEC_AV1
+                : b & badges_bit("co-x264") ? FN_CODEC_AVC : 0; }
+#ifdef NV_LINUX_DESKTOP
+  e.semHi10p = 0;   // o desktop decodifica em software
+#else
+  e.semHi10p = 1;   // TV/Android: Hi10P nao tem decodificador de hardware
+#endif
+  fontenota_avaliar(&e, nt);
+}
+static void notaDe(const Stream *s, FonteNota *nt) {
+  double dur = duracaoDaLista();
+  const char *idioma = idiomaPreferidoFonte();
+  int i = lista && s >= lista && s < lista + n ? (int)(s - lista) : -1;
+  if (i < 0) { notaAvaliar(s, dur, idioma, nt); return; }
+  pthread_mutex_lock(&notaTrava);
+  if (notaCacheGer != listaGeracao || notaCacheDur != dur || strcmp(notaCacheIdioma, idioma)) {
+    notaCacheN = 0; notaCacheGer = listaGeracao; notaCacheDur = dur;
+    snprintf(notaCacheIdioma, sizeof notaCacheIdioma, "%s", idioma);
+  }
+  if (i >= notaCacheN) {
+    if (n > notaCacheCap) {
+      FonteNota *nv = realloc(notaCache, sizeof *nv * (size_t)n);
+      if (!nv) { pthread_mutex_unlock(&notaTrava); notaAvaliar(s, dur, idioma, nt); return; }
+      notaCache = nv; notaCacheCap = n;
+    }
+    while (notaCacheN <= i) { notaAvaliar(&lista[notaCacheN], dur, idioma, &notaCache[notaCacheN]); notaCacheN++; }
+  }
+  *nt = notaCache[i];
+  pthread_mutex_unlock(&notaTrava);
+}
+// Evidencia + idioma de uma fonte, para comparar duas da mesma resolucao
+// (memoria do automatico, stream_grupo_sem_perda).
+// Evidence gap allowed before automatic memory yields to the current winner.
+#define STREAM_MEMORIA_MARGEM 300
+static long notaComparavel(const Stream *s) {
+  FonteNota nt;
+  notaDe(s, &nt);
+  return fontenota_evidencia(&nt) + nt.ptsIdioma;
+}
+
 // QUALIDADE do modo Equilibrio e Qualidade maxima, sempre < 50000 (as multas de
 // origem/cache/teto abaixo sao >= 140000, entao nenhum HDR compensa um plugin
 // ou uma fonte fora de cache).
@@ -915,6 +1145,9 @@ static long qualidade(const Stream *s, int modo) {
   q += s->altura / 10;
   if (s->mp4) q += 300;
   if (s->dolbyAtmos && ajustes_dolby_atmos()) q += 200;
+  // Tipo de lancamento, bitrate, audio, codec e idioma, DENTRO do degrau: um
+  // REMUX 1080p passa do WEB-DL 1080p, nunca de um 4K (fontenota_somar).
+  { FonteNota nt; notaDe(s, &nt); q = fontenota_somar(q, &nt, 1); }
   return q;
 }
 
@@ -968,7 +1201,6 @@ static long multasDeAlvo(const Stream *s, const char *alvo) {
   return m;
 }
 
-static long multasDe(const Stream *s) { return multasDeAlvo(s, NULL); }
 static long pontosDoAlvo(const Stream *s, const char *alvo) {
   long p = 0;
   // DOLBY VISION SO VALE PONTO EM MP4 — e isto e medida, nao teoria.
@@ -1003,12 +1235,17 @@ static long pontosDoAlvo(const Stream *s, const char *alvo) {
       p -= gb > 10 ? 40000 : gb * 4000;
       { int pref = ajustes_fonte_hdr(), h = nivelHdr(s);
         if (pref == 0) p += h * 50; else if (pref == 2 && h) p -= 50; }
+      // Sem a evidencia de qualidade (o modo e abrir rapido), mas com o idioma
+      // preferido e a compatibilidade (Hi10P, 4K upscale).
+      { FonteNota nt; notaDe(s, &nt); p = fontenota_somar(p, &nt, 0); }
     } else p += qualidade(s, modo);
   }
-  const char *alvoLingPontos = ling_audio();
-  if (alvoLingPontos && *alvoLingPontos && strcmp(alvoLingPontos, "*") != 0) {
-    if (temAudioPt(s)) p += 200000L;
+#ifdef NV_VIDAA
+  { unsigned k;
+    for (k = 0; k < N_REGRAS_VIDAA; k++)
+      if (REGRAS_VIDAA[k].bate(s)) p += REGRAS_VIDAA[k].pontos;
   }
+#endif
   p -= multasDeAlvo(s, alvo);
   return p;
 }
@@ -1263,7 +1500,10 @@ static int playlistVazia(const char *url, const char *cabecalhos) {
 // conferida fora da trava. A geracao diz se o indice ainda e da mesma lista;
 // sem ela, a url resolvida de um episodio ia parar na linha de mesmo numero
 // do episodio seguinte.
-typedef struct { unsigned geracao; _Atomic int abortou; unsigned rodada; int antecipada; uint64_t sessao; } Conferencia;
+typedef struct {
+  unsigned geracao; _Atomic int abortou; unsigned rodada; int antecipada; uint64_t sessao;
+  FonteFiltroConfig filtro;
+} Conferencia;
 // A CONFERENCIA DA CORRIDA PARALELA mora no heap, com contagem: os fios de
 // fonteparalela que ainda conferem quando ela volta continuam lendo e
 // escrevendo nela (c->abortou, c->rodada). Na pilha de stream_primeira_boa, o
@@ -1275,6 +1515,9 @@ static void soltarConf(void *u) {
   if (atomic_fetch_sub(&d->refs, 1) == 1) free(d);
 }
 
+#ifdef NV_VIDAA
+__attribute__((unused))
+#endif
 static int resolverUrl(const char *url, const char *cabecalhos, int segundos,
                         char *fim, unsigned tam, char *mime, unsigned mimeTam, long *corpo) {
   const char *vetor[8];
@@ -1325,7 +1568,7 @@ static int verificarUma(int i, Conferencia *c) {
     pthread_mutex_unlock(&verTrava);
     return 0;
   }
-  if (lista[i].foraCache || excedeDecoder(&lista[i]) || fontesmortas_idade(&lista[i]) >= 0) {
+  if ((!canalFolha && !fontefiltro_permite(&c->filtro, &lista[i].filtro)) || lista[i].foraCache || excedeDecoder(&lista[i]) || fontesmortas_idade(&lista[i]) >= 0) {
     pthread_mutex_unlock(&verTrava); return 0;
   }
   snprintf(url, sizeof url, "%s", lista[i].url);
@@ -1342,6 +1585,7 @@ static int verificarUma(int i, Conferencia *c) {
       pthread_mutex_lock(&verTrava);
       if (nv_perfil_sessao_atual(c->sessao) && listaGeracao == c->geracao && i < n) {
         snprintf(lista[i].url, sizeof lista[i].url, "%s", url);
+        cacheConfirmar(&lista[i]); // o resolvedor cache-only ja confirmou, sem nova consulta
         ok = 1;
       } else c->abortou = 1;
       pthread_mutex_unlock(&verTrava);
@@ -1349,6 +1593,7 @@ static int verificarUma(int i, Conferencia *c) {
       pthread_mutex_lock(&verTrava);
       if (nv_perfil_sessao_atual(c->sessao) && listaGeracao == c->geracao && i < n && fora) {
         lista[i].foraCache = 1;
+        lista[i].cacheNativo = 0;
         // #205: se for a carta em foco na folha, ela muda de lugar no proximo
         // montar(). Avisar o fio da UI, que prende o foco pelo indice (o
         // mesmo focoFixo de stream_lista_acrescentar).
@@ -1359,24 +1604,38 @@ static int verificarUma(int i, Conferencia *c) {
     }
   } else if (!url[0]) {
     ok = 0;
-  } else if (!resolverUrl(url, cab, 10, fim, sizeof fim, mime, sizeof mime, &corpo)) {
-    printf("[fonte] %d nao resolveu\n", i);
-  } else if (naovideo_mime(mime, fim, corpo)) {
-    // Linha de aviso do addon (doacao, Discord, "indisponivel"): a URL leva a
-    // uma pagina, nao a um video. Fica marcada na folha e o automatico passa
-    // para a proxima da ordem da pessoa sem abrir o player.
-    printf("[fonte] nao e video: %s %s\n", addon[0] ? addon : "?",
-           mime[0] ? mime : (corpo >= 0 ? "corpo-minusculo" : "sem-tipo"));
-    fflush(stdout);
-    pthread_mutex_lock(&verTrava);
-    if (nv_perfil_sessao_atual(c->sessao) && listaGeracao == c->geracao && i < n) lista[i].naoVideo = 1;
-    pthread_mutex_unlock(&verTrava);
-  } else if (enderecoDeAviso(fim)) {
-    printf("[fonte] %d e aviso (%.60s)\n", i, fim);
-  } else if (!nv_perfil_sessao_atual(c->sessao)) { c->abortou = 1;
-  } else if (playlistVazia(fim, cab)) {
-    printf("[fonte] %d tem playlist vazia (canal fora do ar)\n", i);
-  } else ok = 1;
+  } else {
+    // -1 so sai na VIDAA: url de video nunca passa pelo /v1/proxy, entao um
+    // bloqueio de conteudo misto ou de CORS e rotineiro ali, nao prova de fonte
+    // morta. Mesma politica de playlistVazia: sem como conferir, presume viva.
+    // Sem tipo/tamanho do corpo ali (mime vazio, corpo -1): naovideo_mime nao pega.
+#ifdef NV_VIDAA
+    int r = rede_url_final_vidaa(url, 10, fim, sizeof fim);
+#else
+    int r = resolverUrl(url, cab, 10, fim, sizeof fim, mime, sizeof mime, &corpo);
+#endif
+    if (r < 0) {
+      printf("[fonte] %d sem confirmacao (bloqueio de rede na vidaa); presumindo viva\n", i);
+      ok = 1;
+    } else if (!r) {
+      printf("[fonte] %d nao resolveu\n", i);
+    } else if (naovideo_mime(mime, fim, corpo)) {
+      // Linha de aviso do addon (doacao, Discord, "indisponivel"): a URL leva a
+      // uma pagina, nao a um video. Fica marcada na folha e o automatico passa
+      // para a proxima da ordem da pessoa sem abrir o player.
+      printf("[fonte] nao e video: %s %s\n", addon[0] ? addon : "?",
+             mime[0] ? mime : (corpo >= 0 ? "corpo-minusculo" : "sem-tipo"));
+      fflush(stdout);
+      pthread_mutex_lock(&verTrava);
+      if (nv_perfil_sessao_atual(c->sessao) && listaGeracao == c->geracao && i < n) lista[i].naoVideo = 1;
+      pthread_mutex_unlock(&verTrava);
+    } else if (enderecoDeAviso(fim)) {
+      printf("[fonte] %d e aviso (%.60s)\n", i, fim);
+    } else if (!nv_perfil_sessao_atual(c->sessao)) { c->abortou = 1;
+    } else if (playlistVazia(fim, cab)) {
+      printf("[fonte] %d tem playlist vazia (canal fora do ar)\n", i);
+    } else ok = 1;
+  }
   return ok;
 }
 
@@ -1475,6 +1734,26 @@ int stream_qtd_torrents(void) {
   return q;
 }
 
+// #486: Torrentio sem debrid e P2P desligado = torrents descartados calados; a
+// folha so falava do debrid e o cartao do player era o generico. Com P2P neste
+// pacote (motor ou servidor), quantos ele tocaria; 0 = nada a sugerir.
+// O CONTADOR vem ANTES de qualquer pergunta: folha e cartao chamam a cada
+// quadro e uma consulta sem torrent descartado nao pode tocar o resto — a
+// disponibilidade do motor NAO e perguntada aqui (dlopen do .tpk no fio da
+// tela): vem guardada do fio da consulta (stream_preparar_dica_p2p).
+// .wgt: o P2P fica oculto nos Ajustes e ajustes_p2p_ligado() e sempre 0
+// (a8e7685d) — "ligue o P2P" seria uma dica impossivel de seguir.
+int stream_torrents_para_p2p(void) {
+  int p2p = descartadosP2P;
+  if (!debrid_ativo()) p2p += descartadosSemDebrid - descartadosP2P;
+  if (p2p <= 0 || p2p_ativo()) return 0;
+#ifdef __EMSCRIPTEN__
+  return 0;
+#else
+  return (ajustes_p2p_url()[0] || atomic_load(&motorP2pParaDica)) ? p2p : 0;
+#endif
+}
+
 unsigned stream_lista_geracao(void) {
   unsigned g;
   pthread_mutex_lock(&verTrava);
@@ -1494,6 +1773,10 @@ int stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
   if (listaGeracao != geracao || i < 0 || i >= n) {
     pthread_mutex_unlock(&verTrava);
     return -1;
+  }
+  if (!canalFolha && !stream_filtro_permite(&lista[i])) {
+    pthread_mutex_unlock(&verTrava);
+    return 0;
   }
   // Ja resolvida (pelo automatico, ou por uma escolha anterior desta lista):
   // e a url pronta, sem ir a rede.
@@ -1532,6 +1815,7 @@ int stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
     else {
       lista[i].urlP2P = viaP2P;
       lista[i].debridServico = viaP2P ? 0 : debrid_servico_por_nome(servico) + 1;
+      if (!viaP2P) cacheConfirmar(&lista[i]);
       if (!p2pmotor_e_url(url)) snprintf(lista[i].url, sizeof lista[i].url, "%s", url);
       else lista[i].url[0] = 0;
     }
@@ -1541,6 +1825,15 @@ int stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
     printf("[fonte] %d torrent escolhido nao abriu no servidor P2P (erro %d)\n", i,
            p2p_ultimo_erro());
   } else if (r == DEBRID_BAIXANDO) {
+    pthread_mutex_lock(&verTrava);
+    if (listaGeracao == geracao && i < n) {
+      lista[i].emCache = 0;
+      lista[i].cacheNativo = 0;
+      lista[i].cacheNegado = 1;
+      lista[i].foraCache = 1;
+      atomic_store(&foraCacheFoco, i);
+    }
+    pthread_mutex_unlock(&verTrava);
     printf("[fonte] %d torrent escolhido esta baixando no %s (%d%%)\n", i,
            servico && servico[0] ? servico : "debrid", pct ? *pct : -1);
   } else {
@@ -1596,12 +1889,21 @@ static void logarEscolha(int escolhida, int pref, int modoPrimeira) {
              r.razao == SF_SEM_DURACAO ? "no runtime" : r.razao == SF_SEM_HOST ? "no host" : "no measurement");
   printf("[fonte] auto pick: \"%s\" [%s] points=%ld reason=%s | prefs: priority=%s hdr=%s dv=%s | size=%s | fit=%s | runner-up=",
          w->rotulo, a, pe, escolhida == pref ? "remembered for this title" : modoPrimeira ? "first in addon order"
-         : "best score (quality/HDR > cached > addon over plugin)",
+         : "best score (resolution > HDR > release/bitrate/audio > cached > addon over plugin)",
          ajustes_fonte_prioridade() == 1 ? "max-quality" : ajustes_fonte_prioridade() == 2 ? "smoothness" : "balanced",
          ajustes_fonte_hdr() == 1 ? "indifferent" : ajustes_fonte_hdr() == 2 ? "avoid" : "prefer",
          ajustes_dolby_vision() ? "on" : "off", tam, fit);
   if (vice >= 0) printf("\"%s\" [%s] points=%ld\n", lista[vice].rotulo, b, pv);
   else printf("none\n");
+  // POR QUE ELA VENCEU, parcela por parcela (fontenota_explicar): so campos
+  // derivados — nenhuma URL, chave de debrid ou texto cru da fonte.
+  { FonteNota nw, nr;
+    char ew[256], er[256] = "none";
+    const char *lp = idiomaPreferidoFonte();
+    notaDe(w, &nw); fontenota_explicar(&nw, ew, sizeof ew);
+    if (vice >= 0) { notaDe(&lista[vice], &nr); fontenota_explicar(&nr, er, sizeof er); }
+    printf("[fonte] auto pick evidence: winner {%s} | runner-up {%s} | lang-pref=%s runtime=%.0fs\n",
+           ew, er, lp[0] ? lp : "off", duracaoDaLista()); }
   pthread_mutex_unlock(&verTrava);
 }
 
@@ -1652,22 +1954,7 @@ static int falhaCandidatas(unsigned geracao, int escolhida, int primeira, FonteF
   copia = malloc(sizeof *copia * (size_t)total);
   c = calloc((size_t)total, sizeof *c);
   if (!ordem || !fila || !rk || !pts || !acima || !excl || !grp || !copia || !c) goto fim;
-  const char *alvoLing = ling_audio();
-  int temLinguaConfig = (alvoLing && *alvoLing && strcmp(alvoLing, "*") != 0);
-  int tetoRes = alturaMax();
-  int haCandidatasComLingua = 0;
-  if (temLinguaConfig && escolhida < 0) {
-    for (int q = 0; q < total; q++) {
-      int i = ORD(q);
-      const Stream *s = &lista[i];
-      if ((!s->foraCache || s->infoHash[0]) && !ehInformativa(s) &&
-          (!tetoRes || !s->altura || s->altura <= tetoRes) &&
-          temAudioPt(s)) {
-        haCandidatasComLingua = 1;
-        break;
-      }
-    }
-  }
+  memcpy(copia, lista, sizeof *copia * (size_t)total);
   for (int q = 0; q < total; q++) {
     int i = ORD(q);
     const Stream *s = &lista[i];
@@ -1679,13 +1966,8 @@ static int falhaCandidatas(unsigned geracao, int escolhida, int primeira, FonteF
     // O addon pode estar dizendo "fora de cache no TB"; isso nao responde
     // pelo RD/PM/AD. Hash nativo passa apenas pelo resolvedor cache-only da
     // rota escolhida. URL direta fora de cache continua fora do automatico.
-    int exclui = (s->urlP2P || (s->foraCache && !s->infoHash[0]) || ehInformativa(s) || excedeDecoder(s) ||
+    excl[q] = (unsigned char)(s->urlP2P || (s->foraCache && !s->infoHash[0]) || ehInformativa(s) || excedeDecoder(s) ||
                  (!s->infoHash[0] && (automaticaExcluida(i) || fontesmortas_idade(s) >= 0)));
-    if (escolhida < 0) {
-      if (tetoRes && s->altura > tetoRes) exclui = 1;
-      if (temLinguaConfig && (!haCandidatasComLingua || !temAudioPt(s))) exclui = 1;
-    }
-    excl[q] = (unsigned char)exclui;
     grp[q] = (signed char)grupoDe(i);
     // Escolha explicita continua podendo tocar fora das regras do automatico.
     // As alternativas conservam os filtros; somente esta linha e preferida.
@@ -1700,7 +1982,7 @@ static int falhaCandidatas(unsigned geracao, int escolhida, int primeira, FonteF
   nf = fonteauto_fila_o(ajustes_fonte_primeira() ? FONTEAUTO_PRIMEIRA : FONTEAUTO_MELHOR,
                        total, pref, pts, acima, excl, grp, rk,
                        ajustes_fonte_ordem_uso(), total, fila);
-  regraBloqueou = (!nf && total > 0);
+  regraBloqueou = !nf && livres > 0;
   for (int q = 0; q < nf; q++) {
     int i = ordem[fila[q]];
     const Stream *s = &copia[i];
@@ -1712,6 +1994,7 @@ static int falhaCandidatas(unsigned geracao, int escolhida, int primeira, FonteF
     }
     stream_falha_identidade(s, id, (unsigned)tam);
     c[q].indice = i; c[q].nativa = s->infoHash[0] != 0;
+    c[q].filtro = s->filtro;
     c[q].ordemAddon = s->addonOrdem;
     snprintf(c[q].addon, sizeof c[q].addon, "%s", s->addonChave);
     c[q].identidade = id;
@@ -1810,6 +2093,7 @@ struct StreamPreparo {
   FonteFalhaCandidata *candidatas;
   int n, nc, teto, falhaAtiva;
   FonteFalhaSessao *politica;
+  FonteFiltroConfig filtro;
   DebridContexto debrid;
   uint64_t configuracao;
   uint64_t sessaoPerfil;
@@ -1827,7 +2111,8 @@ uint64_t stream_preparo_config_atual(void) {
     ajustes_fonte_usar_outros(), ajustes_fonte_ordem_uso(), ajustes_fonte_prioridade(),
     ajustes_fonte_hdr(), ajustes_dolby_vision(), ajustes_dv_mkv(), ajustes_dolby_atmos(),
     ajustes_tamanho_min_gb(), ajustes_tamanho_max_gb(), ajustes_buffer_preset(),
-    ajustes_cache_seek_mb(), ajustes_fonte_conferir_varias(), ajustes_fonte_tocar_conferindo() };
+    ajustes_cache_seek_mb(), ajustes_fonte_conferir_varias(), ajustes_fonte_tocar_conferindo(),
+    ajustes_fonte_idioma_audio() };
   unsigned versao = fonteregra_versao();
   uint64_t sessaoPerfil = nv_perfil_sessao_ler();
   uint64_t h = preparoMarca(UINT64_C(14695981039346656037), &cfg, sizeof cfg);
@@ -1841,6 +2126,8 @@ uint64_t stream_preparo_config_atual(void) {
     h = preparoMarca(h, contexto.chave[i], strlen(contexto.chave[i]) + 1);
   const char *qualidade = ajustes_qualidade();
   h = preparoMarca(h, qualidade, strlen(qualidade));
+  const char *idioma = idiomaPreferidoFonte();
+  h = preparoMarca(h, idioma, strlen(idioma));
   // Capacidade de hardware participa dos filtros. Erros aprendidos da lista
   // atual nao invalidam o proximo episodio nem sao instalados por ele.
   h = preparoMarca(h, decoder4k, sizeof decoder4k);
@@ -1882,6 +2169,8 @@ static int preparoGrupoSemPerda(int i, void *u) {
   if (p->melhor < 0 || p->melhor == i) return 1;
   for (int j = 0; j < p->n; j++) if (p->ordem[j] == p->melhor) { ga = p->grupo[j]; break; }
   const Stream *s = &p->fontes[i], *melhor = &p->fontes[p->melhor];
+  if (!ajustes_fonte_primeira() && ajustes_fonte_prioridade() != 2 && s->altura == melhor->altura &&
+      notaComparavel(s) + STREAM_MEMORIA_MARGEM < notaComparavel(melhor)) return 0;
   return p->grupo[q] <= ga && s->altura >= melhor->altura && s->dolbyVision >= melhor->dolbyVision &&
          !(p->lg && s->altura == melhor->altura && stream_e_mp4(melhor) && !stream_e_mp4(s));
 }
@@ -1906,7 +2195,8 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
   int resolverNativo = debrid_ativo() || p2p_ativo(), preferidaNormal = -1;
   for (int i = 0; i < total; i++) if (fontes[i].url[0] || resolverNativo) {
     if (i == preferidaNext) preferidaNormal = p->n;
-    p->fontes[p->n] = fontes[i]; p->fontes[p->n++].selosPacoteVer = 0;
+    p->fontes[p->n] = fontes[i]; p->fontes[p->n].selosPacoteVer = 0;
+    filtroCompletar(&p->fontes[p->n++]);
   }
   // Mesma normalizacao do setter da lista em foreground. O indice da
   // vencedora e da politica ja nasce no vetor que sera instalado no Next.
@@ -1914,6 +2204,7 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
   if (!total) goto erro;
   p->n = total; p->configuracao = stream_preparo_config_atual();
   debrid_contexto_capturar(&p->debrid); fontefalha_config(&cfg);
+  p->filtro = cfg.filtro;
   p->falhaAtiva = cfg.provedores || cfg.addons;
   p->teto = p->falhaAtiva ? 0 : fonteauto_tentativas(ajustes_fonte_primeira() ? FONTEAUTO_PRIMEIRA : FONTEAUTO_MELHOR, 8);
   for (int i = 0; i < DEBRID_N; i++) if (debrid_servico_disponivel(i)) disponiveis |= 1u << i;
@@ -1929,31 +2220,12 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
     while (q > 0 && fontes[ordem[q-1]].addonOrdem > fontes[i].addonOrdem) { ordem[q] = ordem[q-1]; q--; }
     ordem[q] = i;
   }
-  const char *alvoLingPreparo = ling_audio();
-  int temLinguaPreparo = (alvoLingPreparo && *alvoLingPreparo && strcmp(alvoLingPreparo, "*") != 0);
-  int tetoResPreparo = alturaMax();
-  int haCandidatasLinguaPreparo = 0;
-  if (temLinguaPreparo && preferidaNext < 0) {
-    for (int q = 0; q < total; q++) {
-      int i = ordem[q]; const Stream *s = &fontes[i];
-      if ((!s->foraCache || s->infoHash[0]) && !ehInformativa(s) &&
-          (!tetoResPreparo || !s->altura || s->altura <= tetoResPreparo) &&
-          temAudioPt(s)) {
-        haCandidatasLinguaPreparo = 1;
-        break;
-      }
-    }
-  }
   for (int q = 0; q < total; q++) {
     int i = ordem[q]; const Stream *s = &fontes[i];
     pts[q] = pontosDoAlvo(s, alvo ? alvo : ""); acima[q] = !cabeNoTeto(s);
-    int exclui = s->urlP2P || (s->foraCache && !s->infoHash[0]) || ehInformativa(s) || excedeDecoder(s) ||
-                 (!s->infoHash[0] && fontesmortas_idade(s) >= 0);
-    if (preferidaNext < 0) {
-      if (tetoResPreparo && s->altura > tetoResPreparo) exclui = 1;
-      if (temLinguaPreparo && (!haCandidatasLinguaPreparo || !temAudioPt(s))) exclui = 1;
-    }
-    excl[q] = (unsigned char)exclui;
+    excl[q] = !fontefiltro_permite(&p->filtro, &s->filtro) ||
+              s->urlP2P || (s->foraCache && !s->infoHash[0]) || ehInformativa(s) || excedeDecoder(s) ||
+              (!s->infoHash[0] && fontesmortas_idade(s) >= 0);
     grupo[q] = grupoDaFonte(&escopo, s); rank[q] = fonteregra_ordem_rank(s->provedor);
     if (i == preferidaNext && fonteregra_no_escopo(&escopo, ehPlugin(s))) pref = q;
   }
@@ -1982,6 +2254,7 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
     c->identidade = strdup(identidade);
     if (!c->identidade) goto erro;
     c->indice = i; c->nativa = s->infoHash[0] != 0; c->ordemAddon = s->addonOrdem;
+    c->filtro = s->filtro;
     snprintf(c->addon, sizeof c->addon, "%s", s->addonChave); p->nc++;
   }
   free(ordem); free(fila); free(rank); free(pts); free(acima); free(excl); free(grupo);
@@ -2022,6 +2295,7 @@ int stream_preparo_resolver(StreamPreparo *p, int (*cancelado)(void *), void *ct
     if (!ok || !url[0] || !fontefalha_url_registrar(p->politica, url)) continue;
     *fonte = *s; snprintf(fonte->url, sizeof fonte->url, "%s", url);
     fonte->debridServico = r.servico + 1; fonte->urlP2P = 0;
+    if (s->infoHash[0]) cacheConfirmar(fonte);
     p->fontes[r.indice] = *fonte;
     if (indice) *indice = r.indice;
     if (politica && p->falhaAtiva) { *politica = p->politica; p->politica = NULL; }
@@ -2037,6 +2311,7 @@ int stream_preparo_renovar(StreamPreparo *p, int indice, int (*cancelado)(void *
   if (!p || !p->fontes || !fonte || indice < 0 || indice >= p->n ||
       !nv_perfil_sessao_atual(p->sessaoPerfil) || (cancelado && cancelado(ctx))) return 0;
   const Stream *s = &p->fontes[indice];
+  if (!fontefiltro_permite(&p->filtro, &s->filtro)) return 0;
   char url[4096] = "", fim[4096], mime[96] = "";
   int ok = 0, fora = 0;
   long corpo = -1;
@@ -2053,6 +2328,7 @@ int stream_preparo_renovar(StreamPreparo *p, int indice, int (*cancelado)(void *
   debrid_contexto_sair();
   if (!ok || !url[0] || !nv_perfil_sessao_atual(p->sessaoPerfil) || (cancelado && cancelado(ctx))) return 0;
   *fonte = *s; snprintf(fonte->url, sizeof fonte->url, "%s", url);
+  if (s->infoHash[0]) cacheConfirmar(fonte);
   p->fontes[indice] = *fonte;
   return 1;
 }
@@ -2081,6 +2357,7 @@ int stream_falha_aplicar_sessao(int indice, unsigned geracao, int servico,
     memmove(lista[indice].url, url, strlen(url) + 1);
     lista[indice].debridServico = servico + 1;
     lista[indice].urlP2P = 0;
+    if (lista[indice].infoHash[0]) cacheConfirmar(&lista[indice]);
     ok = 1;
   }
   pthread_mutex_unlock(&verTrava);
@@ -2099,7 +2376,8 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
   unsigned char *acima, *excl;
   signed char *grp;
   int *rk, ordemUso = ajustes_fonte_ordem_uso();
-  Conferencia c = { 0, 0, 0, -1, sessao };
+  Conferencia c = { .antecipada = -1, .sessao = sessao };
+  fontefalha_filtro(&c.filtro);
   Uint32 tVerif = 0;
   tentativas = fonteauto_tentativas(modo, tentativas);
   pthread_mutex_lock(&verTrava);
@@ -2131,21 +2409,6 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
       free(pts); free(acima); free(excl); free(grp); free(rk);
       return -1;
     }
-    const char *alvoLing = ling_audio();
-    int temLinguaConfig = (alvoLing && *alvoLing && strcmp(alvoLing, "*") != 0);
-    int tetoRes = alturaMax();
-    int haCandidatasComLingua = 0;
-    if (temLinguaConfig) {
-      for (q = 0; q < total; q++) {
-        int i = ORD(q);
-        if ((!lista[i].foraCache || lista[i].infoHash[0]) && !ehInformativa(&lista[i]) &&
-            (!tetoRes || !lista[i].altura || lista[i].altura <= tetoRes) &&
-            temAudioPt(&lista[i])) {
-          haCandidatasComLingua = 1;
-          break;
-        }
-      }
-    }
     for (q = 0; q < total; q++) {
       int i = ORD(q);
       ordem[q] = i;
@@ -2155,10 +2418,7 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
       if (i == pref && fonteregra_no_escopo(&cfgEscopo, ehPlugin(&lista[i]))) posPref = q;
       pts[q] = pontos(&lista[i]);
       acima[q] = (unsigned char)!cabeNoTeto(&lista[i]);
-      int exclui = foraDoAuto(i);
-      if (tetoRes && lista[i].altura > tetoRes) exclui = 1;
-      if (temLinguaConfig && (!haCandidatasComLingua || !temAudioPt(&lista[i]))) exclui = 1;
-      excl[q] = (unsigned char)exclui;
+      excl[q] = (unsigned char)foraDoAutoComFiltro(i, &c.filtro);
       grp[q] = (signed char)grupoDe(i);
       rk[q] = fonteregra_ordem_rank(lista[i].provedor);
       if (!excl[q]) livres++;
@@ -2172,11 +2432,11 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
   free(pts); free(acima); free(excl); free(grp); free(rk);
   if (nf < 1) {
     // Havia fonte, mas as regras de Ajustes nao deixam nenhuma (#202).
-    if (total > 0) {
+    if (livres > 0) {
       pthread_mutex_lock(&verTrava);
       if (nv_perfil_sessao_atual(c.sessao) && listaGeracao == c.geracao) regraBloqueou = 1;
       pthread_mutex_unlock(&verTrava);
-      printf("[fonte] auto-play: %d fonte(s), nenhuma atende aos requisitos de idioma/resolucao; abrindo a lista\n", total);
+      printf("[fonte] auto-play: %d fonte(s), nenhuma passa nas regras (permitidos/regex); abrindo a lista\n", livres);
     }
     return -1;
   }
@@ -2217,6 +2477,7 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
     ConfDona *d = malloc(sizeof *d);
     if (d) {
       d->c.sessao = c.sessao; d->c.geracao = c.geracao; d->c.rodada = c.rodada; d->c.antecipada = c.antecipada;
+      d->c.filtro = c.filtro;
       atomic_init(&d->c.abortou, (int)c.abortou);
       atomic_init(&d->refs, 2);
       escolhida = fonteparalela_soltando(fila, nf, kk, verificarOuParar, falhouUma, &d->c, &t1,
@@ -2246,6 +2507,26 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
          modo == FONTEAUTO_PRIMEIRA ? "primeira da lista" : "melhor fonte",
          tocadas, nf, c.abortou ? ", lista trocada no meio" : "");
   if (escolhida >= 0) { printf("[fonte] %d ok\n", escolhida); logarEscolha(escolhida, pref, modo == FONTEAUTO_PRIMEIRA); }
+#ifdef NV_VIDAA
+  // QUAIS REGRAS DA TABELA DA VIDAA PESARAM na fonte escolhida — sem isto a
+  // pontuacao e uma caixa preta quando alguem perguntar "por que tocou este
+  // MKV e nao aquele MP4 4K". So imprime as que BATERAM (a maioria das
+  // fontes nao bate regra nenhuma, e "nenhuma" tambem e informacao).
+  if (escolhida >= 0 && escolhida < n) {
+    const Stream *s = &lista[escolhida];
+    char motivos[256] = "";
+    size_t u = 0;
+    unsigned k;
+    for (k = 0; k < N_REGRAS_VIDAA; k++) {
+      if (!REGRAS_VIDAA[k].bate(s)) continue;
+      int esc = snprintf(motivos + u, sizeof motivos - u, "%s%s(%+ld)",
+                          u ? "; " : "", REGRAS_VIDAA[k].nome, REGRAS_VIDAA[k].pontos);
+      if (esc < 0 || (size_t)esc >= sizeof motivos - u) break;
+      u += (size_t)esc;
+    }
+    printf("[fonte] vidaa: regras em %d: %s\n", escolhida, motivos[0] ? motivos : "nenhuma");
+  }
+#endif
   { FonteRegraCfg c = regraCfg();
     if (escolhida >= 0 && (fonteregra_ativa(&c) || ordemUso)) {
       static const char *const ESC_[3] = { "all", "addons-only", "plugins-only" };
@@ -2587,7 +2868,8 @@ static int automaticoCom(int regras) {
   long *pts = lg ? malloc(sizeof *pts * (size_t)n) : NULL;
   signed char *grp = lg ? malloc((size_t)n) : NULL;
   if (lg && (!idx || !pts || !grp)) lg = 0;
-
+  // NA ORDEM DE EXIBICAO (#221), que e a da lista inteira: com a lista
+  // enchendo por addon o indice e a ordem de CHEGADA, nao a dos addons.
   int temLinguaConfig = (alvoLing && *alvoLing && strcmp(alvoLing, "*") != 0);
   int tetoRes = alturaMax();
   int haCandidatasComLingua = 0;
@@ -2596,21 +2878,19 @@ static int automaticoCom(int regras) {
       int i = ORD(k);
       if ((!lista[i].foraCache || lista[i].infoHash[0]) && !ehInformativa(&lista[i]) &&
           (!tetoRes || !lista[i].altura || lista[i].altura <= tetoRes) &&
-          temAudioPt(&lista[i])) {
+          temAudioPreferido(&lista[i])) {
         haCandidatasComLingua = 1;
         break;
       }
     }
   }
 
-  // NA ORDEM DE EXIBICAO (#221), que e a da lista inteira: com a lista
-  // enchendo por addon o indice e a ordem de CHEGADA, nao a dos addons.
   for (int k = 0; k < n; k++) {
     int i = ORD(k), g = regras ? grupoDe(i) : 0;
     if ((regras ? foraDoAuto(i) : lista[i].foraCache || automaticaExcluida(i) || ehInformativa(&lista[i])) || g < 0) continue;
     if (regras) {
       if (tetoRes && lista[i].altura > tetoRes) continue;
-      if (temLinguaConfig && (!haCandidatasComLingua || !temAudioPt(&lista[i]))) continue;
+      if (temLinguaConfig && (!haCandidatasComLingua || !temAudioPreferido(&lista[i]))) continue;
     }
     long p = pontos(&lista[i]);
     if (lg) { idx[m] = i; pts[m] = p; grp[m] = (signed char)g; m++; }
@@ -2656,14 +2936,9 @@ int stream_proxima_sem_perda(int atual) {
   int melhor = -1, gMelhor = 0;
   long maior = 0;
   if (atual < 0 || atual >= n) return 0;
-  const char *alvoLing = ling_audio();
-  int temLinguaConfig = (alvoLing && *alvoLing && strcmp(alvoLing, "*") != 0);
-  int tetoRes = alturaMax();
   for (int k = 0; k < n; k++) {
     int i = ORD(k), g = grupoDe(i);
     if (i == atual || foraDoAuto(i) || g < 0) continue;
-    if (tetoRes && lista[i].altura > tetoRes) continue;
-    if (temLinguaConfig && !temAudioPt(&lista[i])) continue;
     long p = pontos(&lista[i]);
     if (melhor < 0 || g < gMelhor || (g == gMelhor && p > maior)) { maior = p; melhor = i; gMelhor = g; }
   }
@@ -2672,21 +2947,16 @@ int stream_proxima_sem_perda(int atual) {
          lista[melhor].dolbyVision >= lista[atual].dolbyVision;
 }
 // Chamar sob verTrava: tanto lista quanto exib podem ser substituidas pela UI.
-static int proximaVODSemTrava(int atualIdx) {
+static int proximaVODComFiltro(int atualIdx, const FonteFiltroConfig *filtro) {
   // A vencedora inicial pode estar no fim: percorrer TODAS as nao tentadas,
   // na ordem do addon. Falhas anteriores ja estao excluidas nesta lista.
-  const char *alvoLing = ling_audio();
-  int temLinguaConfig = (alvoLing && *alvoLing && strcmp(alvoLing, "*") != 0);
-  int tetoRes = alturaMax();
   for (int k = 0; k < n; k++) {
     int i = ORD(k);
-    if (i == atualIdx || foraDoAuto(i) || grupoDe(i) < 0) continue;
-    if (tetoRes && lista[i].altura > tetoRes) continue;
-    if (temLinguaConfig && !temAudioPt(&lista[i])) continue;
-    return i;
+    if (i != atualIdx && !foraDoAutoComFiltro(i, filtro) && grupoDe(i) >= 0) return i;
   }
   return -1;
 }
+static int proximaVODSemTrava(int atualIdx) { return proximaVODComFiltro(atualIdx, NULL); }
 int stream_proxima_vod(int atualIdx) {
   int i;
   pthread_mutex_lock(&verTrava);
@@ -2695,7 +2965,8 @@ int stream_proxima_vod(int atualIdx) {
   return i;
 }
 int stream_verificar_proxima_vod_sessao(int atualIdx, int tentativas, int *conferidas, uint64_t sessao) {
-  Conferencia c = { 0, 0, 0, -1, sessao };
+  Conferencia c = { .antecipada = -1, .sessao = sessao };
+  fontefalha_filtro(&c.filtro);
   if (conferidas) *conferidas = 0;
   int i = atualIdx;
   c.geracao = stream_lista_geracao();
@@ -2704,7 +2975,7 @@ int stream_verificar_proxima_vod_sessao(int atualIdx, int tentativas, int *confe
   while (tentativas-- > 0) {
     pthread_mutex_lock(&verTrava);
     if (!nv_perfil_sessao_atual(c.sessao) || listaGeracao != c.geracao) c.abortou = 1;
-    i = c.abortou ? -1 : proximaVODSemTrava(atualIdx);
+    i = c.abortou ? -1 : proximaVODComFiltro(atualIdx, &c.filtro);
     pthread_mutex_unlock(&verTrava);
     if (i < 0) break;
     if (conferidas) (*conferidas)++;
@@ -2735,10 +3006,56 @@ int stream_grupo_sem_perda(int i) {
   if (lista[i].altura < lista[a].altura || lista[i].dolbyVision < lista[a].dolbyVision) return 0;
   if (lgMp4Primeiro() && lista[i].altura == lista[a].altura &&
       stream_e_mp4(&lista[a]) && !stream_e_mp4(&lista[i])) return 0;
+  // A MEMORIA DO AUTOMATICO NAO PRENDE UMA RELEASE PIOR (Code Geass, 14/10): o
+  // WEB-DL de 2 Mbps escolhido num episodio voltava pelo bingeGroup no
+  // seguinte, mesmo com um REMUX na lista, porque so resolucao e DV contavam
+  // aqui. Na "Melhor fonte" com evidencia (Equilibrio/Qualidade maxima), a
+  // lembrada perde quando a do automatico tem evidencia claramente maior na
+  // mesma resolucao. A escolha MANUAL (fontepref manual) nao passa por aqui.
+  if (!ajustes_fonte_primeira() && ajustes_fonte_prioridade() != 2 && lista[i].altura == lista[a].altura &&
+      notaComparavel(&lista[i]) + STREAM_MEMORIA_MARGEM < notaComparavel(&lista[a])) {
+    printf("[fonte] auto memory: \"%s\" skipped, \"%s\" has stronger release evidence\n",
+           lista[i].rotulo, lista[a].rotulo);
+    return 0;
+  }
   return 1;
 }
 int stream_automatico(void) { return automaticoCom(1); }
 int stream_automatico_canal(void) { return automaticoCom(0); }
+
+// "PRIMEIRA DA LISTA" NA FOLHA: o selo "Melhor para esta TV" e a primeira linha
+// diziam a vencedora da PONTUACAO mesmo com a fonte automatica em "Primeira da
+// lista", enquanto stream_primeira_boa tocava a primeira na ordem do addon. A
+// mesma fila de stream_primeira_boa (fonteauto_fila_o, modo PRIMEIRA, grupos,
+// teto e ordem dos add-ons), sem a lembrada — automaticaDaFolha ja a poe na
+// frente. Chamar com a lista estavel (fio da tela).
+static int automaticoPrimeira(void) {
+  int fila[1], nf, q, r = -1, total = n;
+  long *pts; unsigned char *acima, *excl; signed char *grp; int *rk, *ordem;
+  if (total < 1) return -1;
+  pts = calloc((size_t)total, sizeof *pts); acima = calloc((size_t)total, 1);
+  excl = calloc((size_t)total, 1); grp = calloc((size_t)total, 1);
+  rk = calloc((size_t)total, sizeof *rk); ordem = calloc((size_t)total, sizeof *ordem);
+  if (pts && acima && excl && grp && rk && ordem) {
+    for (q = 0; q < total; q++) {
+      int i = ORD(q);
+      ordem[q] = i;
+      acima[q] = (unsigned char)!cabeNoTeto(&lista[i]);
+      excl[q] = (unsigned char)foraDoAuto(i);
+      grp[q] = (signed char)grupoDe(i);
+      rk[q] = fonteregra_ordem_rank(lista[i].provedor);
+    }
+    nf = fonteauto_fila_o(FONTEAUTO_PRIMEIRA, total, -1, pts, acima, excl, grp, rk,
+                          ajustes_fonte_ordem_uso(), 1, fila);
+    if (nf > 0) r = ordem[fila[0]];
+  }
+  free(pts); free(acima); free(excl); free(grp); free(rk); free(ordem);
+  return r;
+}
+// A que a folha marca como automatica: a do modo em vigor.
+static int automaticoDaFolhaModo(void) {
+  return !canalFolha && ajustes_fonte_primeira() ? automaticoPrimeira() : automaticoCom(!canalFolha);
+}
 
 
 
@@ -2754,7 +3071,8 @@ static int grupo, filtro, soMp4, soCache, soDub;
 // "EM CACHE" E "DUBLADO" (dono, 02/10, escolheu entre tres): filtros como o
 // MP4, e nao grupos — resolucao x HDR/SDR ja da ate 8 grupos, e mais um eixo
 // picotaria a lista em grupos de 1 ou 2 fontes. Em cache = o debrid ja tem o
-// arquivo (Stream.foraCache e 0), toca agora; Dublado = audio em portugues.
+// arquivo (Stream.foraCache e 0), toca agora; Audio = idioma escolhido, ou o
+// idioma da interface (que em Automatico acompanha conta/aparelho).
 enum { BT_RECARREGAR, BT_SEM_HDR, BT_SO_MP4, BT_CACHE, BT_DUB, BT_FECHAR };
 static int botaoDe(int i) {
   if (!video_pode_forcar_sdr()) i++;
@@ -2766,11 +3084,19 @@ static int botaoDe(int i) {
   return BT_FECHAR;
 }
 static int nBotoes(void) { return video_pode_forcar_sdr() ? 6 : 5; }
+static const char *idiomaFiltroAudio(void) {
+  return ling_audio_fonte(idioma_iso(ajustes_idioma()));
+}
 static const char *rotuloBotao(int b) {
   if (b == BT_SEM_HDR) return "Sem HDR";
   if (b == BT_SO_MP4)  return "Só MP4";
   if (b == BT_CACHE)   return "Em cache";
-  if (b == BT_DUB)     return "Dublado";
+  if (b == BT_DUB) {
+    static char rotulo[96];
+    const char *pref = idiomaFiltroAudio();
+    snprintf(rotulo, sizeof rotulo, i18n("Áudio: %s"), pref[0] ? ling_selo(pref) : i18n("Todos"));
+    return rotulo;
+  }
   return NULL;
 }
 static int botaoLigado(int b) {
@@ -2782,12 +3108,14 @@ static const char *iconeBotao(int b) {
 static char provedores[13][96];
 static int nProvedores;
 
+static int temAudioPreferido(const Stream *s);
 // Os chips (MP4, cache, dublado) valem para a lista E para a contagem de cada
 // aba; o addon so para a lista.
 static int passaChips(int i) {
+  if (!canalFolha && !stream_filtro_permite(&lista[i])) return 0;
   if (soMp4 && !lista[i].mp4) return 0;
-  if (soCache && lista[i].foraCache) return 0;
-  if (soDub && !temAudioPt(&lista[i])) return 0;
+  if (soCache && !cacheConfirmado(&lista[i])) return 0;
+  if (soDub && !temAudioPreferido(&lista[i])) return 0;
   return 1;
 }
 static int passaFiltro(int i) {
@@ -2800,7 +3128,6 @@ static int passaFiltro(int i) {
 // Abas na ORDEM DE EXIBICAO (a dos addons), e a aba escolhida segue pelo
 // NOME: com a lista enchendo (#221) um addon novo pode entrar antes dela.
 static void atualizarProvedores(void) {
-  if (provCacheGer == listaGeracao && provCacheN == n && nProvedores > 0) return;
   char escolhido[96];
   snprintf(escolhido, sizeof escolhido, "%s", filtro > 0 && filtro < nProvedores ? provedores[filtro] : "");
   nProvedores = 1;
@@ -2817,8 +3144,6 @@ static void atualizarProvedores(void) {
     filtro = j < nProvedores ? j : 0;
   }
   if(filtro>=nProvedores) filtro=0;
-  provCacheGer = listaGeracao;
-  provCacheN = n;
 }
 static int nFiltrados(void) {
   if (filtro == -1) return ondever_n(alvoPedido);
@@ -2833,7 +3158,7 @@ static int nFiltrados(void) {
 // Uma vez por quadro, nunca por linha: stream_automatico percorre a lista.
 static int automaticaDaFolha(void) {
   return preferida >= 0 && !lista[preferida].foraCache && !automaticaExcluida(preferida) &&
-         (canalFolha || !excedeDecoder(&lista[preferida])) ? preferida : automaticoCom(!canalFolha);
+         (canalFolha || (!excedeDecoder(&lista[preferida]) && stream_filtro_permite(&lista[preferida]))) ? preferida : automaticoDaFolhaModo();
 }
 
 // A LISTA AGRUPADA POR RESOLUCAO. A ordem da lista (a pontuacao) vale DENTRO
@@ -2912,22 +3237,15 @@ static void rotuloQualidade(const Stream *s, char *res, size_t nr, char *faixa, 
   else snprintf(faixa, nf, "SDR");
 }
 static int *ordem;
-static float *linhaY, *linhaH, *linhaBaseH, *linhaExtraH;
+static float *linhaY, *linhaH;
 static int ordemCap, nOrdem;
 static float secY[FOLHA_GRUPOS], alturaTotal;
 static int secN[FOLHA_GRUPOS];
+// A linha em foco abre (abreFoco 0->1) e a que perdeu o foco fecha (abreAnt
+// 1->0) ao mesmo tempo: abrir uma e fechar a outra no mesmo quadro empurraria
+// a lista inteira de uma vez.
 static float abreFoco = 1.0f, abreAnt;
 static int linhaAnt = -1, focoVisto = -1;
-static unsigned montarGeracao = 0;
-static int montarN = -1;
-static int montarFiltro = -999;
-static int montarSoMp4 = -1;
-static int montarSoCache = -1;
-static int montarSoDub = -1;
-static int montarMelhor = -999;
-static int montarOrdemAddon = -1;
-static float prevAbreFoco = -1.0f, prevAbreAnt = -1.0f;
-static int prevFoco = -1, prevLinhaAnt = -1;
 
 
 // MODO "DO ADDON" (Ajustes > Texto das fontes; dono, 02/10: "tem que ter a
@@ -2936,7 +3254,7 @@ static int prevFoco = -1, prevLinhaAnt = -1;
 // veio — o AIOStreams do dono manda "11.1 GB | 30.1 Mbps |", o grupo, os
 // idiomas e o arquivo, cada um numa linha. Glifo que a Inter nao tem (o ⚡ e o
 // ⚑ do formatador) cai fora em text.c, sem virar quadrado.
-#define FOLHA_ADDON_LINHAS 8
+#define FOLHA_ADDON_LINHAS 5
 // Fora do foco a linha mostra so as 2 primeiras linhas do addon; a linha em
 // foco abre (mola abreFoco) e mostra todas, ate FOLHA_ADDON_LINHAS. Com 5
 // linhas em todas as fontes a lista caberia em 3 telas; assim ela continua
@@ -2959,9 +3277,7 @@ static void linhaLimpa(char *d, size_t tam, const char *ini, size_t n) {
 static const struct { const char *emoji, *icone; } EMOJI_ICONE[] = {
   { "\xF0\x9F\x92\xBE", "aj_hard-drive" },   // 💾
   { "\xF0\x9F\x91\xA4", "aj_users" },        // 👤
-  { "\xF0\x9F\x8E\xA5", "aj_clapperboard" }, // 🎥
   { "\xF0\x9F\x8E\x9E", "aj_film" },         // 🎞
-  { "\xF0\x9F\x8E\xA7", "aj_audio-lines" },  // 🎧
   { "\xF0\x9F\x94\x8A", "aj_volume-2" },     // 🔊
   { "\xF0\x9F\x8C\x90", "aj_globe" },        // 🌐
   { "\xE2\x9A\x99",     "aj_settings-2" },  // ⚙
@@ -3032,8 +3348,65 @@ static void tituloAddon(const Stream *s, char *buf, size_t tam) {
     t[k++] = (char)c;
   }
   t[k] = 0;
-  nv_limpar_texto(t, lim, sizeof lim, NV_LIMPA_UMA_LINHA);
+  const char *nome = t;
+  if (cacheConfirmado(s) && !strncmp(nome, "⚡", strlen("⚡"))) {
+    nome += strlen("⚡");
+    if (!strncmp(nome, "\xEF\xB8\x8F", 3)) nome += 3;
+    while (*nome == ' ') nome++;
+  }
+  nv_limpar_texto(nome, lim, sizeof lim, NV_LIMPA_UMA_LINHA);
   snprintf(buf, tam, "%s", lim[0] ? lim : s->provedor);
+}
+
+// #479: montar() roda nos eventos, duas vezes no update e no desenho.
+// O texto cru nao muda com foco/altura; cada indice e limpo uma vez. Acrescentar
+// preserva as cartas prontas, trocar a lista libera tudo. Texturas continuam
+// no cache de text.c (nao guardar GLuint que o LRU pode despejar).
+typedef struct {
+  char titulo[96];
+  int nl;
+  LinhaAddon linhas[FOLHA_ADDON_LINHAS];
+} TextoAddon;
+static TextoAddon *textoAddon;
+static int textoAddonN, textoAddonCap;
+static void textoAddonLimpar(void) {
+  free(textoAddon); textoAddon = NULL; textoAddonN = textoAddonCap = 0;
+}
+static const TextoAddon *textoAddonDa(int i) {
+  static TextoAddon reserva;
+  if (textoAddonCap < n) {
+    TextoAddon *t = realloc(textoAddon, (size_t)n * sizeof *t);
+    if (!t) {
+      reserva.nl = linhasAddon(&lista[i], reserva.linhas, FOLHA_ADDON_LINHAS);
+      tituloAddon(&lista[i], reserva.titulo, sizeof reserva.titulo);
+      return &reserva;
+    }
+    textoAddon = t; textoAddonCap = n;
+  }
+  while (textoAddonN <= i) {
+    TextoAddon *t = &textoAddon[textoAddonN];
+    t->nl = linhasAddon(&lista[textoAddonN], t->linhas, FOLHA_ADDON_LINHAS);
+    tituloAddon(&lista[textoAddonN], t->titulo, sizeof t->titulo);
+    textoAddonN++;
+  }
+  return &textoAddon[i];
+}
+
+// O mesmo indicador nas duas apresentacoes, sem depender de emoji na fonte
+// da TV. Negativa posterior, P2P e resposta que nao e video nunca sao prontas.
+static void legendaProvedor(const Stream *s, char *buf, size_t tam) {
+  char origem[160];
+  const char *estado = cacheConfirmado(s) ? "Em cache" : s->cacheNegado && !s->foraCache ? "Fora do cache" : NULL;
+  if (!s->url[0] && s->infoHash[0] && s->temSemeadores)
+    snprintf(origem, sizeof origem, "%d seeds · %s", s->semeadores, s->provedor);
+  else snprintf(origem, sizeof origem, "%s", s->provedor);
+  if (estado) snprintf(buf, tam, "%s · %s", i18n(estado), origem);
+  else snprintf(buf, tam, "%s", origem);
+}
+static float desenharCache(const Stream *s, float x, float y, float anim) {
+  if (!cacheConfirmado(s)) return 0;
+  gfx_icone((GfxRect){x,y+4,22,22},"aj_zap",.88f,.78f,.46f,anim);
+  return 30;
 }
 
 static int temPalavra(const char *s, const char *p) {
@@ -3048,89 +3421,6 @@ static int temPalavra(const char *s, const char *p) {
 }
 static int temNoTexto(const Stream *s, const char *p) {
   return temPalavra(s->rotulo, p) || temPalavra(s->descricao, p) || temPalavra(s->arquivo, p);
-}
-static int ehIdiomaEspanhol(const char *txt) {
-  if (!txt || !*txt) return 0;
-  unsigned char c = (unsigned char)txt[0];
-  if (c == 'e' || c == 'E') {
-    if (!strncasecmp(txt, "es-", 3) || !strcasecmp(txt, "es") ||
-        !strcasecmp(txt, "español") || !strcasecmp(txt, "espanol") ||
-        !strcasecmp(txt, "spa") || !strncasecmp(txt, "esp", 3)) return 1;
-  } else if (c == 'l' || c == 'L') {
-    if (!strcasecmp(txt, "latino") || !strcasecmp(txt, "latam") ||
-        !strcasecmp(txt, "latteam") || !strncasecmp(txt, "lat", 3)) return 1;
-  } else if (c == 'c' || c == 'C') {
-    if (!strcasecmp(txt, "castellano") || !strcasecmp(txt, "cast")) return 1;
-  } else if (c == 's' || c == 'S') {
-    if (!strcasecmp(txt, "spanish") || !strcasecmp(txt, "spa")) return 1;
-  } else if (c == 'd' || c == 'D') {
-    if (!strcasecmp(txt, "doblaje") || !strcasecmp(txt, "doblado") ||
-        !strcasecmp(txt, "dual")) return 1;
-  }
-  return temPalavra(txt, "latino") || temPalavra(txt, "latam") ||
-         temPalavra(txt, "castellano") || temPalavra(txt, "cast") ||
-         temPalavra(txt, "spanish") || temPalavra(txt, "español") ||
-         temPalavra(txt, "ESPAÑOL") || temPalavra(txt, "espanol") ||
-         temPalavra(txt, "ESPANOL") || temPalavra(txt, "es-419") ||
-         temPalavra(txt, "es-es") || temPalavra(txt, "es-mx") ||
-         temPalavra(txt, "es-ar") || temPalavra(txt, "es-co") ||
-         temPalavra(txt, "es-cl") || temPalavra(txt, "es-la") ||
-         temPalavra(txt, "spa") || temPalavra(txt, "LatTeam") ||
-         temPalavra(txt, "doblaje") || temPalavra(txt, "doblado");
-}
-static float desenharIdiomasLinha(const char *txt, float px, float py, float maxw, int sel, float anim) {
-  float curX = px;
-  const char *p = txt;
-  while (*p && (curX - px) < maxw) {
-    while (*p && (*p == ' ' || *p == '\t' || *p == '|' || *p == '/' || *p == ',')) {
-      if (*p == '|' || *p == '/' || *p == ',') {
-        char sep[4] = { *p, ' ', 0 };
-        TxtLinha lsep = txt_linha(TXT_PG_FIM, sep, 110, 110, 110, 255);
-        if ((curX - px) + lsep.w > maxw) break;
-        txt_desenhar_alpha(lsep, curX, py, anim);
-        curX += lsep.w + 6.0f;
-      }
-      p++;
-    }
-    if (!*p) break;
-    const char *fim = p;
-    while (*fim && *fim != '|' && *fim != '/' && *fim != ',') fim++;
-    char token[64];
-    size_t tlen = (size_t)(fim - p);
-    if (tlen >= sizeof token) tlen = sizeof token - 1;
-    memcpy(token, p, tlen); token[tlen] = 0;
-    while (tlen > 0 && isspace((unsigned char)token[tlen - 1])) { token[--tlen] = 0; }
-    if (token[0]) {
-      int es = ehIdiomaEspanhol(token);
-      int cr = es ? 110 : (sel ? 210 : 170);
-      int cg = es ? 231 : (sel ? 210 : 170);
-      int cb = es ? 183 : (sel ? 210 : 170);
-      TxtLinha ltok = txt_linha_corta(TXT_PG_FIM, token, cr, cg, cb, 255, maxw - (curX - px));
-      txt_desenhar_alpha(ltok, curX, py, anim);
-      curX += ltok.w + 6.0f;
-    }
-    p = fim;
-  }
-  return curX - px;
-}
-static int addonLinhasUteis(const Stream *s, int *temIdioma) {
-  LinhaAddon ls[FOLHA_ADDON_LINHAS];
-  int nl = linhasAddon(s, ls, FOLHA_ADDON_LINHAS);
-  int uteis = 0;
-  if (temIdioma) *temIdioma = 0;
-  for (int k = 0; k < nl; k++) {
-    int tem = 0;
-    for (int pc = 0; pc < ls[k].n; pc++) {
-      if (!temPalavra(ls[k].tx[pc], "debrid") && strcasecmp(ls[k].tx[pc], "debrid") != 0) {
-        tem = 1;
-        if (ls[k].ic[pc] && !strcmp(ls[k].ic[pc], "aj_globe")) {
-          if (temIdioma) *temIdioma = 1;
-        }
-      }
-    }
-    if (tem) uteis++;
-  }
-  return uteis;
 }
 // Somente os idiomas DECLARADOS na resposta do addon. Nao usa o nome do
 // arquivo, as mascaras dos filtros nem as faixas descobertas pelo player.
@@ -3170,15 +3460,8 @@ static const char *faixaIdiomaDoNome(const char *raw) {
     { "Slovak", "sk" }, { "Slovenian", "sl" }, { "Swedish", "sv" },
     { "Thai", "th" }, { "Turkish", "tr" }, { "Ukrainian", "uk" },
     { "Vietnamese", "vi" }, { "Filipino", "tl" }, { "Tagalog", "tl" },
-    { "Castilian", "es" }, { "Español", "es" }, { "Espanol", "es" },
-    { "Latino", "es" }, { "Latin American Spanish", "es" },
-    { "Spanish (Latin America)", "es" }, { "Castellano", "es" },
-    { "Spanish", "es" }, { "spa", "es" }, { "esp", "es" },
-    { "es-419", "es" }, { "es-es", "es" }, { "es-mx", "es" },
-    { "es-ar", "es" }, { "es-co", "es" }, { "cas", "es" },
-    { "cast", "es" }, { "latam", "es" }, { "lat", "es" },
-    { "Doblaje Latino", "es" }, { "Audio Latino", "es" }, { "Audio Castellano", "es" },
-    { "Ingles", "en" }, { "Frances", "fr" }, { "Alemao", "de" }
+    { "Castilian", "es" }, { "Español", "es" }, { "Ingles", "en" },
+    { "Frances", "fr" }, { "Alemao", "de" }
   };
   // Alias de entrada do addon; comparar sem traduzir os dados recebidos.
   if (!strcasecmp(raw, "Português (PT)")) return "pt-PT";
@@ -3299,39 +3582,13 @@ static float desenharFaixas(const Stream *s, float x, float y, float w, int sel,
     char idiomas[4096], linha[4224];
     int c = sel ? 180 : 140;
     if (!stream_faixas_texto(s, legendas, idiomas, sizeof idiomas)) continue;
-    snprintf(linha, sizeof linha, "%s: ", i18n(legendas ? "Legendas" : "Áudio"));
-    TxtLinha lPre = txt_linha(TXT_PG_FIM, linha, 120, 120, 120, 255);
-    txt_desenhar_alpha(lPre, x, y + altura, a);
-    float px = x + lPre.w;
-    const char *p = idiomas;
-    while (*p && w - (px - x) > 20) {
-      const char *sep = strstr(p, ", ");
-      size_t n = sep ? (size_t)(sep - p) : strlen(p);
-      char item[128];
-      if (n >= sizeof item) n = sizeof item - 1;
-      memcpy(item, p, n); item[n] = 0;
-      int cr = c, cg = c, cb = c;
-      if (!legendas && (temPalavra(item, "Español") || temPalavra(item, "Espanol") ||
-                        temPalavra(item, "Latino") || temPalavra(item, "Castellano") ||
-                        temPalavra(item, "Spanish"))) {
-        cr = 110; cg = 231; cb = 183;
-      }
-      TxtLinha lItem = txt_linha_corta(TXT_PG_FIM, item, cr, cg, cb, 255, w - (px - x));
-      txt_desenhar_alpha(lItem, px, y + altura, a);
-      px += lItem.w;
-      if (sep) {
-        TxtLinha lSep = txt_linha(TXT_PG_FIM, ", ", 120, 120, 120, 255);
-        txt_desenhar_alpha(lSep, px, y + altura, a);
-        px += lSep.w;
-        p = sep + 2;
-      } else break;
-    }
+    snprintf(linha, sizeof linha, "%s: %s", i18n(legendas ? "Legendas" : "Áudio"), idiomas);
+    txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM, linha, c, c, c - 2, 255, w), x, y + altura, a);
     altura += FOLHA_FAIXA_H;
   }
   return altura;
 }
-static int audioDeclaradoLingua(const Stream *s, const char *alvo) {
-  if (!alvo || !*alvo) alvo = "es";
+static int audioDeclaradoEm(const Stream *s, const char *pref) {
   const char *p = s->audioIdiomas;
   const char *fim = p + strnlen(p, sizeof s->audioIdiomas);
   // A mesma lista que aparece em "Audio:" governa o chip. Legendas nunca
@@ -3345,35 +3602,23 @@ static int audioDeclaradoLingua(const Stream *s, const char *alvo) {
     memcpy(raw, p, len); raw[len] = 0;
     const char *cod = faixaIdiomaDoNome(raw);
     if (!cod && faixaIdiomaEtiqueta(raw, codigo, sizeof codigo)) cod = codigo;
-    if (cod && ling_casa(cod, alvo)) return 1;
-    if (ling_casa(alvo, "es")) {
-      if (temPalavra(raw, "latino") || temPalavra(raw, "latam") ||
-          temPalavra(raw, "castellano") || temPalavra(raw, "cast") ||
-          temPalavra(raw, "spanish") || temPalavra(raw, "español") ||
-          temPalavra(raw, "ESPAÑOL") || temPalavra(raw, "espanol") ||
-          temPalavra(raw, "ESPANOL") || temPalavra(raw, "es-419") ||
-          temPalavra(raw, "es-es") || temPalavra(raw, "es-mx") ||
-          temPalavra(raw, "es-ar") || temPalavra(raw, "es-co") ||
-          temPalavra(raw, "es-cl") || temPalavra(raw, "es-la") ||
-          temPalavra(raw, "spa") || temPalavra(raw, "doblaje") ||
-          temPalavra(raw, "doblado")) return 1;
-    }
+    if (cod && ling_casa(cod, pref)) return 1;
     p = f ? f + 1 : fim;
   }
   return 0;
-}
-static int audioDeclaradoPt(const Stream *s) {
-  return audioDeclaradoLingua(s, ling_audio());
 }
 // O IDIOMA nao tem logo no pacote de selos, entao vai como texto no fim da
 // fileira. Os rotulos antigos continuam onde o addon nao informa audio;
 // quando informa, nenhum deles contradiz a lista declarada.
 static const char *idiomaDa(const Stream *s) {
-  if (temAudioPt(s)) {
-    if (temNoTexto(s, "dual") || (s->audioIdiomas[0] && strchr(s->audioIdiomas, ','))) return "Dual áudio";
-    return "Dublado";
-  }
-  if (temNoTexto(s, "legendado") || temNoTexto(s, "leg") || temNoTexto(s, "sub") || temNoTexto(s, "subs")) return "Legendado";
+  int podePt = !s->audioIdiomas[0] || audioDeclaradoEm(s, "pt");
+  if (podePt && (temNoTexto(s, "dublado") || temNoTexto(s, "dub"))) return "Dublado";
+  if (podePt && temNoTexto(s, "dual")) return "Dual áudio";
+  // Uma secao de legendas em portugues nao anuncia audio em portugues.
+  if (podePt && (s->audioIdiomas[0] || !s->legendaIdiomas[0]) &&
+      (temNoTexto(s, "portuguese") || temNoTexto(s, "português") ||
+       temNoTexto(s, "pt-br") || temNoTexto(s, "ptbr"))) return "Dual áudio";
+  if (temNoTexto(s, "legendado") || temNoTexto(s, "leg")) return "Legendado";
   return NULL;
 }
 static int *audioPtCache = NULL;
@@ -3388,55 +3633,18 @@ static void audioPtCacheInvalidar(void) {
   pthread_mutex_unlock(&audioPtTrava);
 }
 
-static int temAudioPtReal(const Stream *s);
-
-static int temAudioPt(const Stream *s) {
+static int temAudioPreferidoReal(const Stream *s) {
   if (!s) return 0;
-  const char *alvo = ling_audio();
-  if (!alvo || !*alvo || !strcmp(alvo, "*")) alvo = "es";
-  if (lista && s >= lista && s < lista + n) {
-    int idx = (int)(s - lista);
-    int res = -1;
-    pthread_mutex_lock(&audioPtTrava);
-    if (audioPtCacheGer != listaGeracao || audioPtCacheCap < n || strcmp(audioPtCacheLing, alvo) != 0) {
-      if (audioPtCacheCap < n) {
-        int cap = n + 64;
-        int *c = realloc(audioPtCache, (size_t)cap * sizeof(int));
-        if (c) {
-          audioPtCache = c;
-          audioPtCacheCap = cap;
-        }
-      }
-      if (audioPtCache && audioPtCacheCap >= n) {
-        for (int i = 0; i < n; i++) audioPtCache[i] = -1;
-        audioPtCacheGer = listaGeracao;
-        snprintf(audioPtCacheLing, sizeof(audioPtCacheLing), "%s", alvo);
-      }
-    }
-    if (audioPtCache && idx < audioPtCacheCap) {
-      res = audioPtCache[idx];
-    }
-    pthread_mutex_unlock(&audioPtTrava);
-    if (res >= 0) return res;
+  const char *pref = idiomaFiltroAudio();
+  if (!pref || !*pref || !strcmp(pref, "*")) pref = ling_audio();
+  if (!pref || !*pref || !strcmp(pref, "*")) pref = "es";
 
-    res = temAudioPtReal(s);
-
-    pthread_mutex_lock(&audioPtTrava);
-    if (audioPtCache && audioPtCacheGer == listaGeracao && idx < audioPtCacheCap) {
-      audioPtCache[idx] = res;
-    }
-    pthread_mutex_unlock(&audioPtTrava);
-    return res;
+  if (s->audioIdiomas[0]) {
+    if (audioDeclaradoEm(s, pref)) return 1;
   }
-  return temAudioPtReal(s);
-}
 
-static int temAudioPtReal(const Stream *s) {
-  if (!s) return 0;
-  const char *alvo = ling_audio();
-  if (!alvo || !*alvo || !strcmp(alvo, "*")) alvo = "es";
-  if (s->audioIdiomas[0]) return audioDeclaradoLingua(s, alvo);
-  if (ling_casa(alvo, "es")) {
+  // Fallback to tags/filename for Spanish / Latino / Portuguese
+  if (ling_casa(pref, "es")) {
     if (temNoTexto(s, "latino") || temNoTexto(s, "latam") ||
         temNoTexto(s, "castellano") || temNoTexto(s, "spanish") ||
         temNoTexto(s, "español") || temNoTexto(s, "ESPAÑOL") ||
@@ -3451,22 +3659,74 @@ static int temAudioPtReal(const Stream *s) {
         temNoTexto(s, "dual latino") || temNoTexto(s, "dual castellano") ||
         temNoTexto(s, "dual español") || temNoTexto(s, "dual espanol")) return 1;
     return 0;
-  } else if (ling_casa(alvo, "pt") || ling_casa(alvo, "pob")) {
+  } else if (ling_casa(pref, "pt") || ling_casa(pref, "pob")) {
     if (temNoTexto(s, "dublado") || temNoTexto(s, "dub") ||
         temNoTexto(s, "portuguese") || temNoTexto(s, "português") ||
         temNoTexto(s, "portugues") || temNoTexto(s, "pt-br") ||
         temNoTexto(s, "ptbr") || temNoTexto(s, "pt-pt") ||
         temNoTexto(s, "dual audio") || temNoTexto(s, "dual áudio")) return 1;
     return 0;
-  } else if (ling_casa(alvo, "en")) {
+  } else if (ling_casa(pref, "en")) {
     if (temNoTexto(s, "english") || temNoTexto(s, "eng")) return 1;
     return 0;
   } else {
-    if (temNoTexto(s, alvo)) return 1;
-    const char *nomeLing = ling_nome(alvo);
+    if (temNoTexto(s, pref)) return 1;
+    const char *nomeLing = ling_nome(pref);
     if (nomeLing && nomeLing[0] && temNoTexto(s, nomeLing)) return 1;
     return 0;
   }
+}
+
+static int temAudioPreferido(const Stream *s) {
+  if (!s) return 0;
+  const char *pref = idiomaFiltroAudio();
+  if (!pref || !*pref || !strcmp(pref, "*")) pref = ling_audio();
+  if (!pref || !*pref || !strcmp(pref, "*")) pref = "es";
+
+  if (lista && s >= lista && s < lista + n) {
+    int idx = (int)(s - lista);
+    int res = -1;
+    pthread_mutex_lock(&audioPtTrava);
+    if (audioPtCacheGer != listaGeracao || audioPtCacheCap < n || strcmp(audioPtCacheLing, pref) != 0) {
+      if (audioPtCacheCap < n) {
+        int cap = n + 64;
+        int *c = realloc(audioPtCache, (size_t)cap * sizeof(int));
+        if (c) {
+          audioPtCache = c;
+          audioPtCacheCap = cap;
+        }
+      }
+      if (audioPtCache && audioPtCacheCap >= n) {
+        for (int i = 0; i < n; i++) audioPtCache[i] = -1;
+        audioPtCacheGer = listaGeracao;
+        snprintf(audioPtCacheLing, sizeof(audioPtCacheLing), "%s", pref);
+      }
+    }
+    if (audioPtCache && idx < audioPtCacheCap) {
+      res = audioPtCache[idx];
+    }
+    pthread_mutex_unlock(&audioPtTrava);
+    if (res >= 0) return res;
+
+    res = temAudioPreferidoReal(s);
+
+    pthread_mutex_lock(&audioPtTrava);
+    if (audioPtCache && audioPtCacheGer == listaGeracao && idx < audioPtCacheCap) {
+      audioPtCache[idx] = res;
+    }
+    pthread_mutex_unlock(&audioPtTrava);
+    return res;
+  }
+  return temAudioPreferidoReal(s);
+}
+static const char *ajudaFiltroAudio(void) {
+  static char ajuda[512];
+  const char *pref = idiomaFiltroAudio();
+  snprintf(ajuda, sizeof ajuda, i18n(soDub
+    ? "Idioma do filtro de áudio: %s. OK tira o filtro."
+    : "Idioma do filtro de áudio: %s. OK liga o filtro."),
+    pref[0] ? i18n(ling_nome(pref)) : i18n("Todos"));
+  return ajuda;
 }
 
 // O TITULO DA LINHA, modo "Do Nuvio": o NOME DO CONTEUDO (dono, 02/10: "deixar
@@ -3663,13 +3923,11 @@ static int temMarca(int i, int automatica) {
 static float alturaLinha(int i, int automatica) {
   float h = FOLHA_LINHA_H + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0);
   if (ajustes_fonte_texto_addon()) {
-    int temIdioma = 0;
-    int nu = addonLinhasUteis(&lista[i], &temIdioma);
-    h = 36.0f + 38.0f + (float)nu * FOLHA_ADDON_LD + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0.0f);
-    if (!temIdioma) h += linhasFaixas(&lista[i]) * FOLHA_FAIXA_H;
-    if (stream_selos_ha(&lista[i])) h += 32.0f;
-    if (h < 96.0f) h = 96.0f;
-    return h;
+    int nl = textoAddonDa(i)->nl;
+    float ab = grupo == 1 && nOrdem == foco ? abreFoco : nOrdem == linhaAnt ? abreAnt : 0.0f;
+    float vis = nl > FOLHA_ADDON_FECHADA ? FOLHA_ADDON_FECHADA + (nl - FOLHA_ADDON_FECHADA) * ab : (float)nl;
+    h = 20 + 40 + vis * FOLHA_ADDON_LD + 18 + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0);
+    if (h < 96) h = 96;
   } else {
     // The connection line opens with the focused row even without a file name.
     float extra = (arquivoDa(&lista[i])[0] ? FOLHA_ARQ_H : 0) + FOLHA_FIT_H * fitLinhas(i);
@@ -3678,31 +3936,12 @@ static float alturaLinha(int i, int automatica) {
   }
   return h + linhasFaixas(&lista[i]) * FOLHA_FAIXA_H;
 }
-static void precalcularAlturas(int row, int i, int automatica) {
-  if (i < 0) {
-    linhaBaseH[row] = FOLHA_LINHA_H;
-    linhaExtraH[row] = 0.0f;
-    return;
-  }
-  float baseH = FOLHA_LINHA_H + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0.0f);
-  float extraH = 0.0f;
-  if (ajustes_fonte_texto_addon()) {
-    int temIdioma = 0;
-    int nu = addonLinhasUteis(&lista[i], &temIdioma);
-    baseH = 36.0f + 38.0f + (float)nu * FOLHA_ADDON_LD + (temMarca(i, automatica) ? FOLHA_MARCA_H : 0.0f);
-    if (!temIdioma) baseH += (float)linhasFaixas(&lista[i]) * FOLHA_FAIXA_H;
-    if (stream_selos_ha(&lista[i])) baseH += 32.0f;
-    if (baseH < 96.0f) baseH = 96.0f;
-  } else {
-    extraH = (arquivoDa(&lista[i])[0] ? FOLHA_ARQ_H : 0.0f) + FOLHA_FIT_H * (float)fitLinhas(i);
-    baseH += (float)linhasFaixas(&lista[i]) * FOLHA_FAIXA_H;
-  }
-  linhaBaseH[row] = baseH;
-  linhaExtraH[row] = extraH;
-}
-static void porLinhaEstrutura(int i, int automatica) {
+static void porLinha(int i, float *y, int automatica) {
+  float h = alturaLinha(i, automatica);
   ordem[nOrdem] = i;
-  precalcularAlturas(nOrdem, i, automatica);
+  linhaY[nOrdem] = *y;
+  linhaH[nOrdem] = h;
+  *y += h + FOLHA_LINHA_GAP;
   nOrdem++;
 }
 // Tamanho para ordenar: desconhecido (0) vai para o fim do grupo.
@@ -3716,6 +3955,23 @@ static long tamanhoOrdem(int i) { return lista[i].tamanhoMB > 0 ? lista[i].taman
 static int *grupoTmp;
 static int *grupoFitTmp;
 static int grupoTmpCap;
+static unsigned montarGeracao = 0;
+static int montarN = -1;
+static int montarFiltro = -999;
+static int montarSoMp4 = -1;
+static int montarSoCache = -1;
+static int montarSoDub = -1;
+static int montarMelhor = -999;
+static int montarOrdemAddon = -1;
+
+static float prevAbreFoco = -1.0f;
+static float prevAbreAnt = -1.0f;
+static int prevFoco = -1;
+static int prevLinhaAnt = -1;
+
+static void porLinhaEstrutura(int i) {
+  ordem[nOrdem++] = i;
+}
 
 static void montarEstrutura(int automatica) {
   int g, i, k, m = -1, nt;
@@ -3728,21 +3984,13 @@ static void montarEstrutura(int automatica) {
     if (a) linhaY = a;
     float *b = realloc(linhaH, cap * sizeof *b);
     if (b) linhaH = b;
-    float *bh = realloc(linhaBaseH, cap * sizeof *bh);
-    if (bh) linhaBaseH = bh;
-    float *eh = realloc(linhaExtraH, cap * sizeof *eh);
-    if (eh) linhaExtraH = eh;
-    if (!o || !a || !b || !bh || !eh) { nOrdem = 0; return; }
+    if (!o || !a || !b) { nOrdem = 0; return; }
     ordemCap = cap;
   }
   if (filtro == -1) {
     memset(secN, 0, sizeof secN);
     nOrdem = needed;
-    for (k = 0; k < needed; k++) {
-      ordem[k] = -2-k;
-      linhaBaseH[k] = FOLHA_LINHA_H;
-      linhaExtraH[k] = 0.0f;
-    }
+    for (k = 0; k < needed; k++) ordem[k] = -2-k;
     montarSujo = 0;
     montarGeracao = listaGeracao;
     montarN = n;
@@ -3754,8 +4002,6 @@ static void montarEstrutura(int automatica) {
     montarOrdemAddon = ajustes_fonte_ordem_addon();
     return;
   }
-  // #400/#402: ordem do addon, com negativas de cache conhecidas no fim.
-  // A folha chama montar() a cada desenho: mudar o ajuste vale no proximo quadro.
   if (ajustes_fonte_ordem_addon()) {
     fitAtualizar();
     memset(secN, 0, sizeof secN);
@@ -3764,7 +4010,7 @@ static void montarEstrutura(int automatica) {
       i = ORD(k);
       if (!passaFiltro(i) || !!lista[i].foraCache != fora) continue;
       (void)grupoRes(&lista[i]);
-      porLinhaEstrutura(i, automatica);
+      porLinhaEstrutura(i);
     }
     montarSujo = 0;
     montarGeracao = listaGeracao;
@@ -3790,36 +4036,28 @@ static void montarEstrutura(int automatica) {
   if (melhorFolha >= 0 && melhorFolha < n && !lista[melhorFolha].foraCache && passaFiltro(melhorFolha) && nFiltrados() > 1 &&
       (melhorFolha >= fitN || fitClasses[melhorFolha] != SF_PESADA)) {
     m = melhorFolha;
-    porLinhaEstrutura(m, automatica);
+    porLinhaEstrutura(m);
   }
   for (g = 0; g < FOLHA_GRUPOS; g++) {
     secN[g] = 0;
     nt = 0;
-    // Na ordem dos addons (ORD), nao na de chegada: a lista enche addon a
-    // addon (#221) e o empate de tamanho fica com a ordem do addon.
     for (k = 0; k < n; k++) {
       i = ORD(k);
       if (i != m && !lista[i].foraCache && passaFiltro(i) && grupoRes(&lista[i]) == g) grupoTmp[nt++] = i;
     }
-    // Insercao estavel: em tamanho igual vale a ordem do addon.
     for (k = 1; k < nt; k++) {
       int v = grupoTmp[k], j = k - 1;
       while (j >= 0 && tamanhoOrdem(grupoTmp[j]) < tamanhoOrdem(v)) { grupoTmp[j + 1] = grupoTmp[j]; j--; }
       grupoTmp[j + 1] = v;
     }
-    // Preserve the approved quality groups and descending-size base order.
-    // Only measured-heavy sources move back within their own group.
     streamfit_particionar(grupoTmp, nt, fitClasses, fitN, grupoFitTmp);
-    // #205 (sobre o #402): "fora do cache" no fim DO PROPRIO grupo, em vez de
-    // despejadas depois de todos os grupos sem cabecalho nenhum em cima — a
-    // secao do grupo as abriga, na ordem do addon.
     for (k = 0; k < n; k++) {
       i = ORD(k);
       if (i != m && lista[i].foraCache && passaFiltro(i) && grupoRes(&lista[i]) == g) grupoTmp[nt++] = i;
     }
     if (!nt) continue;
     secN[g] = nt;
-    for (k = 0; k < nt; k++) porLinhaEstrutura(grupoTmp[k], automatica);
+    for (k = 0; k < nt; k++) porLinhaEstrutura(grupoTmp[k]);
   }
   montarSujo = 0;
   montarGeracao = listaGeracao;
@@ -3832,55 +4070,35 @@ static void montarEstrutura(int automatica) {
   montarOrdemAddon = ajustes_fonte_ordem_addon();
 }
 
-static void montarLinhasY(void) {
+static void montarLinhasY(int automatica) {
   float y = 0.0f;
   if (filtro == -1) {
     for (int k = 0; k < nOrdem; k++) {
       linhaY[k] = y;
       linhaH[k] = FOLHA_LINHA_H;
-      y += FOLHA_LINHA_H + FOLHA_LINHA_GAP;
+      y += linhaH[k] + FOLHA_LINHA_GAP;
     }
     alturaTotal = y;
     return;
   }
-  if (ajustes_fonte_ordem_addon()) {
-    for (int k = 0; k < nOrdem; k++) {
-      float h = linhaBaseH[k];
-      if (grupo == 1 && k == foco) h += linhaExtraH[k] * abreFoco;
-      else if (k == linhaAnt)      h += linhaExtraH[k] * abreAnt;
-      linhaH[k] = h;
-      linhaY[k] = y;
-      y += h + FOLHA_LINHA_GAP;
-    }
-    alturaTotal = y;
-    return;
-  }
-  int row = 0;
-  if (melhorFolha >= 0 && melhorFolha < n && !lista[melhorFolha].foraCache &&
-      passaFiltro(melhorFolha) && nFiltrados() > 1 &&
-      (melhorFolha >= fitN || fitClasses[melhorFolha] != SF_PESADA)) {
-    if (row < nOrdem) {
-      float h = linhaBaseH[row];
-      if (grupo == 1 && row == foco) h += linhaExtraH[row] * abreFoco;
-      else if (row == linhaAnt)      h += linhaExtraH[row] * abreAnt;
-      linhaH[row] = h;
-      linhaY[row] = y;
-      y += h + FOLHA_SEC_GAP;
-      row++;
-    }
+  int idxOrdem = 0;
+  if (melhorFolha >= 0 && melhorFolha < n && nOrdem > 0 && ordem[0] == melhorFolha) {
+    float h = alturaLinha(melhorFolha, automatica);
+    linhaY[0] = y;
+    linhaH[0] = h;
+    y += h + FOLHA_SEC_GAP;
+    idxOrdem = 1;
   }
   for (int g = 0; g < FOLHA_GRUPOS; g++) {
     int nt = secN[g];
     if (!nt) continue;
-    if (nOrdem && y > 0.0f) y += FOLHA_SEC_GAP;
+    if (idxOrdem > 0) y += FOLHA_SEC_GAP;
     secY[g] = y;
     y += FOLHA_SEC_H;
-    for (int k = 0; k < nt && row < nOrdem; k++, row++) {
-      float h = linhaBaseH[row];
-      if (grupo == 1 && row == foco) h += linhaExtraH[row] * abreFoco;
-      else if (row == linhaAnt)      h += linhaExtraH[row] * abreAnt;
-      linhaH[row] = h;
-      linhaY[row] = y;
+    for (int k = 0; k < nt && idxOrdem < nOrdem; k++, idxOrdem++) {
+      float h = alturaLinha(ordem[idxOrdem], automatica);
+      linhaY[idxOrdem] = y;
+      linhaH[idxOrdem] = h;
       y += h + FOLHA_LINHA_GAP;
     }
   }
@@ -3912,7 +4130,7 @@ static void montar(int automatica) {
                    foco != prevFoco ||
                    linhaAnt != prevLinhaAnt);
   if (mudouAnim) {
-    montarLinhasY();
+    montarLinhasY(automatica);
     prevAbreFoco = abreFoco;
     prevAbreAnt = abreAnt;
     prevFoco = foco;
@@ -3993,7 +4211,6 @@ void stream_folha_abrir(void) {
   int excl, aut, alvo;
   fitAbrir();
   aberta=1; escolha=-1; grupo=1; filtro=0; soMp4=0; soCache=0; soDub=0; recarregar=0;
-  folhaCachesInvalidar();
   folhaGeometria();
   atualizarProvedores();
   ondever_apps_atualizar();
@@ -4002,40 +4219,8 @@ void stream_folha_abrir(void) {
   // nao e a de maior pontuacao, entao abrir na linha 0 poria o realce numa
   // fonte qualquer de 4K enquanto a marca "automatica" fica la embaixo.
   aut = automaticaDaFolha();
-  melhorFolha = automaticoCom(!canalFolha);
+  melhorFolha = automaticoDaFolhaModo();
   alvo = atual >= 0 ? atual : aut;
-  if (alvo < 0) {
-    const char *alvoLing = ling_audio();
-    int teto = alturaMax();
-    for (int k = 0; k < n; k++) {
-      int i = ORD(k);
-      if ((!lista[i].foraCache || lista[i].infoHash[0]) && !ehInformativa(&lista[i]) &&
-          (!teto || !lista[i].altura || lista[i].altura <= teto) &&
-          temAudioPt(&lista[i])) {
-        alvo = i;
-        break;
-      }
-    }
-    if (alvo < 0) {
-      for (int k = 0; k < n; k++) {
-        int i = ORD(k);
-        if ((!lista[i].foraCache || lista[i].infoHash[0]) && !ehInformativa(&lista[i]) && temAudioPt(&lista[i])) {
-          alvo = i;
-          break;
-        }
-      }
-    }
-    if (alvo < 0 && teto) {
-      for (int k = 0; k < n; k++) {
-        int i = ORD(k);
-        if ((!lista[i].foraCache || lista[i].infoHash[0]) && !ehInformativa(&lista[i]) &&
-            (!lista[i].altura || lista[i].altura <= teto)) {
-          alvo = i;
-          break;
-        }
-      }
-    }
-  }
   abreFoco = 1; abreAnt = 0; linhaAnt = -1; foco = 0;
   montar(aut);
   foco = linhaDe(alvo);
@@ -4141,6 +4326,7 @@ const char *stream_detalhe_texto(void) { return detDesc; }
 int  stream_detalhe_tecla_abre(const SDL_Event *e) {
   SDL_Keycode k=e->key.keysym.sym;
   return k==SDLK_i || k==SDLK_F5 || (int)e->key.keysym.scancode==NV_SCANCODE_YELLOW
+      || (int)e->key.keysym.scancode==NV_SCANCODE_CH_DOWN
 #ifdef NV_ANDROID
       || k==SDLK_F9   // o Info do controle Android chega como F9 (NuvioActivity)
 #endif
@@ -4274,7 +4460,7 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
   }
   abreFoco = anim_mola(abreFoco, 1, dt, NV_MOLA_TELA);
   abreAnt  = anim_mola(abreAnt, 0, dt, NV_MOLA_TELA);
-  melhorFolha = automaticoCom(!canalFolha);
+  melhorFolha = automaticoDaFolhaModo();
   montar(automaticaDaFolha());
   if (focoFixo >= 0) {
     int r = grupo == 1 ? linhaDe(focoFixo) : -1;
@@ -4393,8 +4579,9 @@ static float desenharSelosPacote(const Stream *s, float x, float y, float maxW, 
           if (w > 144.0f) { w = 144.0f; ih = w / asp; }
           if (x + w + pad * 2.0f > x0 + maxW) break;
           { GfxRect p = (GfxRect){x, y - sobra, w + pad * 2.0f, ch};
-            gfx_cor(p, raio, 0.10f, 0.11f, 0.13f, 0.88f * a);
-            gfx_anel(p, raio, 1.5f, 1.0f, 1.0f, 1.0f, 0.20f * a); }
+            if (ajustes_vidro()) gfx_vidro_chip(p, raio, 0.88f, a);
+            else { gfx_cor(p, raio, 0.10f, 0.11f, 0.13f, 0.88f * a);
+                   gfx_anel(p, raio, 1.5f, 1.0f, 1.0f, 1.0f, 0.20f * a); } }
           if (f->arte == SELO_ARTE_COR) {
             gfx_tex_aspect_atual = 0.0f;
             gfx_rect((GfxRect){x + pad, y + (h - ih) * .5f, w, ih}, t, GFX_TEXTO, 0, 0, 0, 0.0f, 1, 1, 1, a);
@@ -4530,17 +4717,11 @@ static const char *iconeFiltro(int b) {
   return b == BT_SEM_HDR ? "aj_sun-dim" : b == BT_SO_MP4 ? "aj_film"
        : b == BT_CACHE ? "aj_zap" : b == BT_DUB ? "aj_languages" : NULL;
 }
-static int cabFoco = -999, cabGrupo = -999, cabNbt = -1;
 static void medirCabecalho(void) {
-  int nbt = nBotoes();
-  if (!cabecalhoSujo && cabFoco == foco && cabGrupo == grupo && cabNbt == nbt) return;
-  cabFoco = foco;
-  cabGrupo = grupo;
-  cabNbt = nbt;
-  cabecalhoSujo = 0;
   float rw = FOLHA_W - FOLHA_PAD_E - FOLHA_PAD_D;
   float tit = (float)txt_linha(TXT_ILHA_TITULO, "Fontes", 255, 255, 255, 255).w;
   float livre = rw - FOLHA_TXT - tit - 24.0f, soma = 0;
+  int nbt = nBotoes();
   for (nivelCab = 0; nivelCab < 3; nivelCab++) {
     float pad = nivelCab == 0 ? 20.0f : 14.0f;
     gapCab = nivelCab < 2 ? FOLHA_CHIP_GAP : 8.0f;
@@ -4680,38 +4861,6 @@ static void stream_folha_desenharCorpo_(Uint32 agora) {
     } else plrui_material(corpo,FOLHA_RAIO_IL,0,anim); }
   corpoFolha(x, FOLHA_W, anim, agora, 0);
 }
-
-static int abasCnt[14];
-static float abasIw[14];
-static float abasNomeW[14];
-static float abasNumW[14];
-static char abasNumStr[14][16];
-
-static void atualizarAbasContagem(void) {
-  memset(abasCnt, 0, sizeof abasCnt);
-  for (int i = 0; i < n; i++) {
-    if (!passaChips(i)) continue;
-    abasCnt[0]++;
-    for (int j = 1; j < nProvedores && j < 13; j++) {
-      if (!strcmp(provedores[j], lista[i].provedor)) { abasCnt[j]++; break; }
-    }
-  }
-  for (int i = -1; i < nProvedores && i + 1 < 14; i++) {
-    int qidx = i + 1;
-    snprintf(abasNumStr[qidx], sizeof abasNumStr[qidx], "%d", i < 0 ? ondever_n(alvoPedido) : abasCnt[i]);
-    const char *label = i < 0 ? "Onde ver" : i ? provedores[i] : "Todos";
-    abasNomeW[qidx] = (float)txt_linha_corta(TXT_HERO_META, label, 255, 255, 255, 255, 260).w;
-    abasNumW[qidx] = (float)txt_linha(TXT_PG_FIM, abasNumStr[qidx], 255, 255, 255, 255).w;
-    abasIw[qidx] = abasNomeW[qidx] + 10.0f + abasNumW[qidx] + 44.0f;
-  }
-  abasCacheGer = listaGeracao;
-  abasCacheN = n;
-  abasCacheSoMp4 = soMp4;
-  abasCacheSoCache = soCache;
-  abasCacheSoDub = soDub;
-  abasCacheNProv = nProvedores;
-}
-
 // `anim` aqui e o alfa do corpo (sombra a variavel da mola de proposito: na
 // ilha quem manda na opacidade e a forma, nao a mola da folha).
 static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
@@ -4756,9 +4905,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
         ? "Mostrando só fontes que o debrid já tem: tocam na hora. OK tira o filtro."
         : "Filtra para fontes que o debrid já tem (tocam na hora, sem baixar antes). OK liga o filtro.";
     else if(botaoDe(foco)==BT_DUB)
-      ajuda=soDub
-        ? "Mostrando só fontes dubladas no seu idioma. OK tira o filtro."
-        : "Filtra para fontes com áudio no seu idioma preferido. OK liga o filtro.";
+      ajuda=ajudaFiltroAudio();
     else if(botaoDe(foco)==BT_SO_MP4)
       ajuda=soMp4
         ? "Mostrando só containers MP4 (útil para achar Dolby Vision em MP4). OK tira o filtro."
@@ -4792,22 +4939,27 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     } }
   // SELETOR DE ADDON, segmentado: o selecionado em superficie clara, o foco
   // no acento. Quantas fontes cada addon tem, ao lado do nome.
-  { if (abasCacheGer != listaGeracao || abasCacheN != n ||
-        abasCacheSoMp4 != soMp4 || abasCacheSoCache != soCache ||
-        abasCacheSoDub != soDub || abasCacheNProv != nProvedores) {
-      atualizarAbasContagem();
-    }
-    float sx, segY=FOLHA_ABAS_Y+oy, maxW=rw+4.0f;
+  { int cnt[13]={0}; float iw[14], sx, segY=FOLHA_ABAS_Y+oy, maxW=rw+4.0f;
     const float pin=(FOLHA_ABAS_H-FOLHA_ABA_H)*.5f;
+    TxtLinha nome[14], num[14];
+    for(int i=0;i<n;i++){ if(!passaChips(i)) continue; cnt[0]++;
+      for(int j=1;j<nProvedores;j++) if(!strcmp(provedores[j],lista[i].provedor)){cnt[j]++;break;} }
+    for(int i=-1;i<nProvedores;i++){
+      int qidx=i+1;
+      int sel=i==filtro, foc=sel&&grupo==0, c=foc?ajustes_tinta_foco():sel?250:150;
+      char q[16]; snprintf(q,sizeof q,"%d",i<0?ondever_n(alvoPedido):cnt[i]);
+      nome[qidx]=txt_linha_corta(TXT_HERO_META,i<0?"Onde ver":i?provedores[i]:"Todos",c,c,c,255,260);
+      num[qidx]=txt_linha(TXT_PG_FIM,q,foc?c:sel?170:100,foc?c:sel?170:100,foc?c:sel?170:100,255);
+      iw[qidx]=nome[qidx].w+10.0f+num[qidx].w+44.0f; }
     int ini=-1; float soma;
-    for(;;){ soma=2*pin; for(int i=ini;i<=filtro&&i<nProvedores;i++) soma+=abasIw[i+1]+6.0f;
+    for(;;){ soma=2*pin; for(int i=ini;i<=filtro&&i<nProvedores;i++) soma+=iw[i+1]+6.0f;
       if(soma<=maxW||ini>=filtro) break; ini++; }
     soma=2*pin; int fim=ini;
-    while(fim<nProvedores && soma+abasIw[fim+1]+6.0f<=maxW){ soma+=abasIw[fim+1]+6.0f; fim++; }
+    while(fim<nProvedores && soma+iw[fim+1]+6.0f<=maxW){ soma+=iw[fim+1]+6.0f; fim++; }
     if(fim==ini) fim=ini+1;
 #ifdef NV_TOUCH_UI
     { float total = 2 * pin, antes = 0;
-      for (int i = -1; i < nProvedores; i++) { total += abasIw[i + 1] + 6; if (i < ini) antes += abasIw[i + 1] + 6; }
+      for (int i = -1; i < nProvedores; i++) { total += iw[i + 1] + 6; if (i < ini) antes += iw[i + 1] + 6; }
       if (!toqueFontesAbas.livre) toqueFontesAbasOffset = antes;
       toquerol_vincular(&toqueFontesAbas, (GfxRect){lx - 2, segY, maxW, FOLHA_ABAS_H}, gfx_escala(),
                        0, total - 6 - maxW, 0, &toqueFontesAbasOffset);
@@ -4824,7 +4976,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
 #endif
     for(int i=ini;i<fim;i++){
       int qidx=i+1;
-      GfxRect r={sx,segY+pin,abasIw[qidx],FOLHA_ABA_H}; int sel=i==filtro;
+      GfxRect r={sx,segY+pin,iw[qidx],FOLHA_ABA_H}; int sel=i==filtro;
       if (ptr) {
 #ifdef NV_TOUCH_UI
         float l = fmaxf(r.x, lx - 2), d = fminf(r.x + r.w, lx - 2 + maxW);
@@ -4835,17 +4987,11 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       }
       if(sel&&grupo==0) focoFonte(r,.5f,anim);
       else if(sel) { if (ajustes_vidro()) gfx_cor(r,.5f,1,1,1,.12f*anim); else gfx_cor(r,.5f,.204f,.212f,.243f,anim); }
-      int foc=sel&&grupo==0, c=foc?ajustes_tinta_foco():sel?250:150;
-      const char *label = i<0?"Onde ver":i?provedores[i]:"Todos";
-      TxtLinha nome = txt_linha_corta(TXT_HERO_META,label,c,c,c,255,260);
-      TxtLinha num = txt_linha(TXT_PG_FIM,abasNumStr[qidx],foc?c:sel?170:100,foc?c:sel?170:100,foc?c:sel?170:100,255);
-      txt_desenhar_alpha(nome,r.x+22,r.y+(FOLHA_ABA_H-nome.h)*.5f,anim);
-      txt_desenhar_alpha(num,r.x+22+abasNomeW[qidx]+10,r.y+(FOLHA_ABA_H-num.h)*.5f+1,anim);
-      sx+=abasIw[qidx]+6.0f;
-    }
-  }
+      txt_desenhar_alpha(nome[qidx],r.x+22,r.y+(FOLHA_ABA_H-nome[qidx].h)*.5f,anim);
+      txt_desenhar_alpha(num[qidx],r.x+22+nome[qidx].w+10,r.y+(FOLHA_ABA_H-num[qidx].h)*.5f+1,anim);
+      sx+=iw[qidx]+6.0f; } }
   automatica = automaticaDaFolha();
-  melhor = melhorFolha;
+  melhor = melhorFolha = automaticoDaFolhaModo();
   montar(automatica);
   nf=nOrdem;
   gfx_recorte(x,FOLHA_TOPO-8,w,folhaBase-(FOLHA_TOPO-8));
@@ -4875,18 +5021,13 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       txt_desenhar_alpha(l,tr-l.w,y+12,anim); }
     gfx_cor((GfxRect){lx,y+FOLHA_SEC_H-14,rw,1},0,1,1,1,.08f*anim);
   }
-  const CatItem *ciLogo = ajustes_fonte_texto_logo() && itemFolha >= 0 ? cat_item(itemFolha) : NULL;
-  const char *luLogo = ciLogo ? logotitulo_url(ciLogo, FOLHA_LOGO_W) : NULL;
-  GLuint ltLogo = luLogo ? tex_obter_larg_qualquer(luLogo, FOLHA_LOGO_W) : 0;
-  float laLogo = ltLogo ? tex_aspecto(luLogo) : 0.0f;
-  TxtLinha lsPonto = txt_linha(TXT_HERO_META, "·", 100, 100, 98, 255);
   for(int row=0;row<nf;row++) {
     float y=FOLHA_TOPO+linhaY[row]-rolagem, h=linhaH[row], cy, colW, txtW;
     int i=ordem[row], sel=grupo==1&&foco==row;
     const Stream *s=i>=0?&lista[i]:NULL;
     uint64_t tira, logos;
     if(y+h<FOLHA_TOPO-8 || y>NV_TELA_H) continue;
-    GfxRect r={lx,y+4.0f,rw,h-8.0f};
+    GfxRect r={lx,y,rw,h};
     if (i <= -2) {
       OndeVer o;
       if (ptr) ponteiro_alvo(r.x,r.y,r.w,r.h,ponteiroFolhaLinha,NULL,row,0);
@@ -4905,41 +5046,37 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       if (b > t) ponteiro_alvo(r.x, t, r.w, b - t, ponteiroFolhaLinha, NULL, row, 0);
     }
     if(sel){
+      // Foco so pela superficie clara: o contorno saiu a pedido do dono (02/10).
+      // No solido a superficie e um cinza opaco um degrau acima do miolo.
       if (ajustes_vidro()) gfx_cor(r,FOLHA_RAIO/h,1,1,1,.12f*anim);
       else gfx_cor(r,FOLHA_RAIO/h,.17f,.176f,.204f,anim);
-      gfx_anel(r, FOLHA_RAIO/h, 1.5f, 1.0f, 1.0f, 1.0f, .35f * anim);
-    } else {
-      gfx_cor(r, FOLHA_RAIO/h, 1.0f, 1.0f, 1.0f, .028f * anim);
-#ifdef NV_ANDROID
-      if (fabsf(velRol) < 5.0f) gfx_anel(r, FOLHA_RAIO/h, 1.0f, 1.0f, 1.0f, 1.0f, .08f * anim);
-#else
-      gfx_anel(r, FOLHA_RAIO/h, 1.0f, 1.0f, 1.0f, 1.0f, .08f * anim);
-#endif
     }
-    colW = 0.0f;
-    txtW = tr - tx;
-    if (!ajustes_fonte_texto_addon()) {
-      char gb[24]="";
+    // COLUNA DA DIREITA: tamanho grande, addon embaixo. Medida primeiro: o
+    // titulo e a fileira de logos param antes dela.
+    { char gb[24]="";
       TxtLinha lg, lu, lp;
       int cg=sel?250:218;
-      if(s->tamanhoMB) { snprintf(gb,sizeof gb,s->tamanhoMB>=102400?"%.0f":"%.1f",s->tamanhoMB/1024.0); plrui_decimal(gb); }
-      lg=txt_linha(TXT_CW_TITULO,gb,cg,cg,cg-2,255);
+      // No modo do addon o tamanho ja vem no texto dele; so o addon fica.
+      if(s->tamanhoMB && !ajustes_fonte_texto_addon()) { snprintf(gb,sizeof gb,s->tamanhoMB>=102400?"%.0f":"%.1f",s->tamanhoMB/1024.0); plrui_decimal(gb); }
+      lg=txt_linha(TXT_CW_TITULO,gb,250,250,248,255);
       lu=txt_linha(TXT_PG_FIM,"GB",120,120,118,255);
+      // TORRENT SEM DEBRID: quantos semeiam vai junto do addon. E o numero que
+      // diz se a fonte abre (log da 2.0.0 no Android: "metadados nao chegaram
+      // em 30 s"); a pessoa escolhia as cegas. "seeds" fica sem traducao: e o
+      // termo que quem usa torrent conhece em qualquer idioma.
       { char pv[160];
-        if(!s->url[0] && s->infoHash[0] && s->temSemeadores)
-          snprintf(pv,sizeof pv,"%d seeds · %s",s->semeadores,s->provedor);
-        else snprintf(pv,sizeof pv,"%s",s->provedor);
-        lp=txt_linha_corta(TXT_PG_FIM,pv,sel?150:110,sel?150:110,sel?148:108,255,340); }
+        legendaProvedor(s,pv,sizeof pv);
+        lp=txt_linha_corta(TXT_PG_FIM,pv,150,150,148,255,340); }
       colW=lp.w;
       if(gb[0] && lg.w+6+lu.w>colW) colW=lg.w+6+lu.w;
       cy=y+20+(temMarca(i,automatica)?FOLHA_MARCA_H:0);
       if(gb[0]){
         txt_desenhar_alpha(lu,tr-lu.w,cy+(lg.h-lu.h)-3,anim);
-        txt_desenhar_alpha(lg,tr-lu.w-6-lg.w,cy,anim); }
-      txt_desenhar_alpha(lp,tr-lp.w,gb[0]?cy+40:cy+6,anim);
-      if(sel) gfx_icone((GfxRect){tr-lp.w-30,(gb[0]?cy+40:cy+6)+3,20,20},"aj_info",.62f,.62f,.62f,anim*.85f);
-      txtW=tr-tx-colW-28;
-    }
+        txt_desenhar_tom(lg,tr-lu.w-6-lg.w,cy,cg/250.0f,cg/250.0f,(cg-2)/248.0f,anim); }
+      txt_desenhar_tom(lp,tr-lp.w,gb[0]?cy+40:cy+6,sel?1:110.0f/150,sel?1:110.0f/150,sel?1:108.0f/148,anim);
+      // Dica da tecla Info/Amarela: so na linha em foco, no canto do addon.
+      if(sel) gfx_icone((GfxRect){tr-lp.w-30,(gb[0]?cy+40:cy+6)+3,20,20},"aj_info",.62f,.62f,.62f,anim*.85f); }
+    txtW=tr-tx-colW-28;
     cy=y+20;
     // A MARCA: o que esta tocando (com o equalizador), a escolha anterior e a
     // automatica. Texto espacado no acento, e nao pilula: a pilula cheia era a
@@ -4988,7 +5125,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
         snprintf(dica, sizeof dica, i18n("falhou há %d min"), (int)(stream_vod_falhou_ha(i) / 60));
         mx += caixaAlta(dica,135,130,125,mx,cy,anim)+18;
       }
-      if(s->foraCache) mx += caixaAlta("Fora do cache",185,179,171,mx,cy,anim)+18;
+      if(s->foraCache && !cacheConfirmado(s)) mx += caixaAlta("Fora do cache",185,179,171,mx,cy,anim)+18;
       if(fitPesada(i)){
         gfx_cor((GfxRect){mx,cy+5,7,7},.5f,.80f,.70f,.52f,anim);
         caixaAlta("Acima da conexão",204,178,132,mx+16,cy,anim);
@@ -5004,17 +5141,19 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     { char nome[96];
       int c=(s->naoVideo || (!canalFolha && stream_vod_falhou_ha(i) >= 0))?(sel?150:105):(sel?255:205);   // apagada: aviso ou fonte falhada
       char ep[64]="";
+      float cacheW=desenharCache(s,tx,cy,anim*(sel?1.0f:.8f));
+      float nx=tx+cacheW, nw=txtW-cacheW;
       tira=0;
-      if(ajustes_fonte_texto_addon()) tituloAddon(s,nome,sizeof nome);
+      if(ajustes_fonte_texto_addon()) snprintf(nome,sizeof nome,"%s",textoAddonDa(i)->titulo);
       else tituloConteudo(s,nome,sizeof nome,ep,sizeof ep);
-      { float maxTituloW = (i == atual) ? (txtW - 130.0f) : txtW;
-        TxtLinha l=txt_linha_corta(TXT_CALLOUT,nome,c,c,c-2,255,maxTituloW);
+      { TxtLinha l=txt_linha_corta(TXT_CALLOUT,nome,255,255,253,255,nw);
         // LOGO DO TITULO no lugar do nome (ajuste em teste): a mesma logo do
         // hero/detalhe, encostada a esquerda numa caixa da altura do nome.
         // Sem logo (ausente ou ainda baixando) fica o nome escrito.
-        const char *lu = luLogo;
-        GLuint lt = ltLogo;
-        float la = laLogo;
+        const CatItem *ci = ajustes_fonte_texto_logo() && itemFolha >= 0 ? cat_item(itemFolha) : NULL;
+        const char *lu = ci ? logotitulo_url(ci, FOLHA_LOGO_W) : NULL;
+        GLuint lt = lu ? tex_obter_larg_qualquer(lu, FOLHA_LOGO_W) : 0;
+        float la = lt ? tex_aspecto(lu) : 0.0f;
         if (lt && la > .01f) {
           float lh = FOLHA_LOGO_H, lw = lh * la;
           if (lw > FOLHA_LOGO_W) { lw = FOLHA_LOGO_W; lh = lw / la; }
@@ -5022,69 +5161,44 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
           // A base da logo fica FOLHA_LOGO_VAO acima dos selos (que comecam em
           // cy + 40), e nao no meio da altura do nome: centrada, a logo de 40 px
           // encostava nos selos.
-          gfx_rect((GfxRect){tx, floorf(cy + 40.0f - FOLHA_LOGO_VAO - lh), lw, lh}, lt,
+          gfx_rect((GfxRect){nx, floorf(cy + 40.0f - FOLHA_LOGO_VAO - lh), lw, lh}, lt,
                    tex_marca_escura(lu) ? GFX_MARCA : GFX_TEXTO, 0, 0, 0, 0.0f, 1, 1, 1,
                    anim * (sel ? 1.0f : .80f));
           l.w = (int)(lw + .5f);
         } else
-        txt_desenhar_alpha(l,tx,cy,anim);
-        if (i == atual) {
-          float pw = 116.0f, ph = 24.0f;
-          GfxRect pr = { tr - pw, cy + 3.0f, pw, ph };
-          gfx_cor(pr, 5.0f, .06f, .48f, .33f, .85f * anim);
-          gfx_anel(pr, 5.0f, 1.0f, .43f, .90f, .71f, .85f * anim);
-          TxtLinha lrep = txt_linha(TXT_MINI, "Reproduciendo", 255, 255, 255, 255);
-          txt_desenhar_alpha(lrep, tr - pw + (pw - lrep.w) * 0.5f, cy + 3.0f + (ph - lrep.h) * 0.5f, anim);
-        }
+        txt_desenhar_tom(l,nx,cy,c/255.0f,c/255.0f,(c-2)/253.0f,anim);
         if(ep[0]){ int ce=sel?175:135;
-          TxtLinha le=txt_linha(TXT_PG_FIM,ep,ce,ce,ce,255);
+          TxtLinha le=txt_linha(TXT_PG_FIM,ep,175,175,175,255);
           // Na linha de base do nome, nao no meio da altura dele.
-          if(l.w+14+le.w<=maxTituloW) txt_desenhar_alpha(le,tx+l.w+14,cy+l.h-le.h-3,anim); } } }
-    cy+=38;
+          if(l.w+14+le.w<=nw) txt_desenhar_tom(le,nx+l.w+14,cy+l.h-le.h-3,ce/175.0f,ce/175.0f,ce/175.0f,anim); } } }
+    cy+=40;
     if(ajustes_fonte_texto_addon()) {
-      LinhaAddon ls[FOLHA_ADDON_LINHAS];
-      int nl=linhasAddon(s,ls,FOLHA_ADDON_LINHAS);
-      int temLinhaIdioma = 0;
-      float maxw = tr - tx;
-      for (int k = 0; k < nl; k++) {
-        float lx = tx;
-        int desenhouPeca = 0;
-        for (int pc = 0; pc < ls[k].n; pc++) {
-          if (temPalavra(ls[k].tx[pc], "debrid") || !strcasecmp(ls[k].tx[pc], "debrid"))
-            continue;
-          if (desenhouPeca && (lx - tx) + 12.0f < maxw) {
-            if (!ls[k].ic[pc]) {
-              TxtLinha ldot = txt_linha(TXT_PG_FIM, "·", 100, 100, 100, 255);
-              txt_desenhar_alpha(ldot, lx, cy, anim);
-              lx += ldot.w + 10.0f;
-            } else {
-              lx += 12.0f;
-            }
+      cy+=desenharFaixas(s,tx,cy,tr-tx,sel,anim);
+      const TextoAddon *t=textoAddonDa(i);
+      const LinhaAddon *ls=t->linhas;
+      int nl=t->nl;
+      // abertura da linha: a mesma mola da altura (alturaLinha)
+      float abr = grupo==1 && row==foco ? abreFoco : row==linhaAnt ? abreAnt : 0.0f;
+      for(int k=0;k<nl;k++){
+        float ak = anim;
+        if(k>=FOLHA_ADDON_FECHADA){ if(abr<.02f) break; ak = anim*abr; }
+        // A primeira linha do addon costuma ser a de numeros (tamanho, taxa):
+        // um degrau mais clara. As outras no cinza da especificacao.
+        int c = k==0 ? (sel?215:180) : (sel?170:130);
+        float px=tx, maxw=k==0?txtW:tr-tx, ly=cy+k*FOLHA_ADDON_LD;
+        for(int pc=0;pc<ls[k].n && maxw-(px-tx)>30;pc++){
+          if(ls[k].ic[pc]){
+            // O icone na altura do texto, na mesma tinta; so vale se couber.
+            gfx_icone((GfxRect){px,ly+3,22,22},ls[k].ic[pc],c/255.0f,c/255.0f,c/255.0f,ak);
+            px+=22+8;
           }
-          if (ls[k].ic[pc] && !strcmp(ls[k].ic[pc], "aj_globe")) {
-            temLinhaIdioma = 1;
-            gfx_icone((GfxRect){lx, cy + 2.0f, 18, 18}, "aj_globe", .75f, .75f, .75f, anim);
-            lx += 22.0f;
-            float wId = desenharIdiomasLinha(ls[k].tx[pc], lx, cy, maxw - (lx - tx), sel, anim);
-            lx += wId + 10.0f;
-            desenhouPeca = 1;
-          } else {
-            if (ls[k].ic[pc]) {
-              gfx_icone((GfxRect){lx, cy + 2.0f, 18, 18}, ls[k].ic[pc], sel ? .85f : .70f, sel ? .85f : .70f, sel ? .85f : .70f, anim);
-              lx += 22.0f;
-            }
-            TxtLinha lt = txt_linha_corta(TXT_PG_FIM, ls[k].tx[pc], sel ? 200 : 160, sel ? 200 : 160, sel ? 200 : 160, 255, maxw - (lx - tx));
-            txt_desenhar_alpha(lt, lx, cy, anim);
-            lx += lt.w + 10.0f;
-            desenhouPeca = 1;
+          if(ls[k].tx[pc][0] && maxw-(px-tx)>30){
+            int base=k==0?215:170;
+            TxtLinha lp=txt_linha_corta(TXT_PG_FIM,ls[k].tx[pc],base,base,base,255,maxw-(px-tx));
+            txt_desenhar_tom(lp,px,ly,(float)c/base,(float)c/base,(float)c/base,ak);
+            px+=lp.w+18;
           }
         }
-        if (desenhouPeca) cy += FOLHA_ADDON_LD;
-      }
-      if (!temLinhaIdioma) cy += desenharFaixas(s, tx, cy, tr - tx, sel, anim);
-      if (stream_selos_ha(s)) {
-        stream_selos_fileira(s, tx, cy + 4.0f, tr - tx, 22.0f, sel ? 1.0f : 0.75f, anim);
-        cy += 32.0f;
       }
       continue;
     }
@@ -5103,7 +5217,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
         rotuloQualidade(s,rs,sizeof rs,fx,sizeof fx,&hd);
         int cr=sel?240:200;
         TxtLinha lr=txt_linha(TXT_HERO_META,rs,cr,cr,cr-2,255);
-        TxtLinha ls=lsPonto;
+        TxtLinha ls=txt_linha(TXT_HERO_META,"·",100,100,98,255);
         TxtLinha lf=hd ? txt_linha(TXT_HERO_META,fx,(int)(120+(ai-120)*.45f),(int)(120+(ag*255-120)*.45f),(int)(118+(ab*255-118)*.45f)+18,255)
                        : txt_linha(TXT_HERO_META,fx,sel?170:140,sel?170:140,sel?168:138,255);
         float lx2=tx;
@@ -5197,13 +5311,23 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     // "os addons nao tem" seria falso), depois o resumo da consulta.
     char causa[160], frase[320];
     const char *s=addons_estado()==ADD_BUSCANDO?"Buscando fontes nos addons…":"Nenhuma fonte direta disponível. Use Recarregar para tentar novamente.";
+    if (!canalFolha && addons_estado()!=ADD_BUSCANDO && stream_filtro_bloqueou())
+      s = "Nenhuma fonte passa pelos filtros";
     if (addons_estado()!=ADD_BUSCANDO && n==0) {
-      int tem = 0;
-      if (descartadosSemDebrid > 0) {
-        snprintf(causa,sizeof causa,i18n("%d fontes precisam de uma conta de debrid, e nenhuma está ligada"),descartadosSemDebrid);
+      int tem = 0, p2p = stream_torrents_para_p2p();
+      // #505: o descarte que pede P2P (o notWebReady do .tpk) nao e falta de
+      // debrid — debrid ativo nao o oferece (fonteOferecida), e ligar uma
+      // conta nao o traz de volta. A causa certa e o P2P desligado.
+      if (p2p > 0) {
+        snprintf(causa,sizeof causa,"%s",i18n("As fontes desta lista são P2P (torrent)"));
+        tem = 1;
+      } else if (descartadosSemDebrid - descartadosP2P > 0 && !debrid_ativo()) {
+        snprintf(causa,sizeof causa,i18n("%d fontes precisam de uma conta de debrid, e nenhuma está ligada"),descartadosSemDebrid - descartadosP2P);
         tem = 1;
       } else tem = addons_motivo_vazio(causa,sizeof causa);
-      if (tem) { snprintf(frase,sizeof frase,"%s. %s",causa,i18n("Use Recarregar para tentar novamente.")); s=frase; }
+      if (tem) { snprintf(frase,sizeof frase,"%s. %s",causa,p2p > 0
+          ? i18n("Ligue o P2P em Ajustes ou conecte uma conta de debrid.")
+          : i18n("Use Recarregar para tentar novamente.")); s=frase; }
     }
     // Com servicos de streaming na lista, a frase vem DEPOIS deles.
     txt_bloco(TXT_PG_FIM,s,196,199,204,tx,FOLHA_TOPO+20,rw-52,28,anim,3);
