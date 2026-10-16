@@ -459,12 +459,10 @@ int contalib_aplicar_vistos(void) {
     // `continue` abaixo pulava a linha inteira. E por isso que o app nunca
     // soube quais episodios a pessoa viu, so quais SERIES.
     if (vistos[i].temporada > 0 || vistos[i].episodio > 0) {
-      // PELA PORTA DAS FONTES (vistoep.h): o jornal acima so segura a linha
-      // ate a conta confirmar o delete e a entrada ser podada (contapend_podar).
-      // Uma linha que ainda venha depois disso — copia guardada, pagina velha,
-      // delete aceito e nao aplicado — re-marcava o episodio. A desmarcacao da
-      // pessoa fica guardada a parte e e consultada aqui, com o watched_at da
-      // linha: so um visto MAIS NOVO que o gesto volta a marcar.
+      // Watched intent remains in the journal after confirmation and pruning.
+      // Its gate above rejects stale rows; vistoep_fonte also checks the
+      // separate unmark evidence when that gate is absent or has no entry.
+      // Only a watched_at newer than the gesture can mark the episode again.
       VistoFonte um;
       memset(&um, 0, sizeof um);
       int estado = contapend_estado ?
@@ -505,7 +503,7 @@ int contalib_aplicar_vistos(void) {
   if (ke || total.bloqueados || total.venceu || jornal) {
     printf("[vistoep] conta: +%d episodios (bloqueados %d; remoto mais novo %d)",
            total.vistos, total.bloqueados, total.venceu);
-    if (jornal) printf(" | %d seguros pelo jornal (delete ainda nao podado)", jornal);
+    if (jornal) printf(" | %d seguros pelo jornal (intencao de visto preservada)", jornal);
     printf("\n");
   }
   for (j = 0; j < nBarrado; j++) {

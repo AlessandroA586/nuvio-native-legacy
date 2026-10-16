@@ -297,7 +297,7 @@ int main(int argc, char **argv) {
   confere("T2E9 e E10 seguem desmarcados", t2Vistos(), 8);
 
   // ------------------------------------------------------------ conta
-  printf("\nconta Nuvio: a linha volta DEPOIS de o delete ser confirmado e podado:\n");
+  printf("\nconta Nuvio: a linha volta DEPOIS de o delete ser confirmado e da poda:\n");
   reabrir();
   logada = 1;
   { static const char *CONTA_ANTES =
@@ -318,11 +318,13 @@ int main(int argc, char **argv) {
     contalib_ler_vistos(CONTA_ANTES);
     contalib_aplicar_vistos();
     confere("com a entrada no jornal, a linha nao re-marca", vistoep_estado(SILO, 2, 6), 0);
-    // O ciclo seguinte poda o que foi confirmado antes dele (sync.c).
+    // Watched intent survives pruning: confirmation cannot make a stale pull win.
     agora += 10 * 60000;
     contapend_podar(agora);
-    confere("o jornal ja nao segura a linha (entrada podada)",
-            contapend_visto_oculto(SILO, 2, 6, 1758000000000LL), 0);
+    reabrir();
+    contapend_aplicar_local();  // Sync restores the map from retained intent.
+    confere("confirmed watched intent survives pruning and restart",
+            contapend_visto_oculto(SILO, 2, 6, 1758000000000LL), 1);
     // ... e a linha AINDA vem (copia guardada, pagina velha, delete que o
     // servidor aceitou e nao aplicou).
     contalib_ler_vistos(CONTA_ANTES);
