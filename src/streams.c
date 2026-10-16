@@ -16,6 +16,7 @@
 #include "limpa.h"
 #include "vazao.h"
 #include <ctype.h>
+#include <arpa/inet.h>
 #include <strings.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -506,8 +507,54 @@ static int soP2P(const Stream *s) {
   return !s->url[0] && s->infoHash[0] && !debrid_ativo() && p2p_ativo();
 }
 
+// #552: notWebReady so diz que o navegador nao toca (MKV, headers); os players
+// nativos tocam a url http(s). So pede P2P o que nao tem url http ou aponta
+// para um servidor de streaming local.
+static int pedeP2P(const Stream *s) {
+  if (!s->notWebReady) return 0;
+  const char *h = s->url, *end, *hostEnd;
+  if (!strncasecmp(h, "http://", 7)) h += 7;
+  else if (!strncasecmp(h, "https://", 8)) h += 8;
+  else return 1;
+  end = h + strcspn(h, "/?#");
+  for (const char *p = h; p < end; p++)
+    if (*p == '@') h = p + 1;
+  int ipv6 = h < end && *h == '[';
+  if (ipv6) {
+    h++;
+    hostEnd = memchr(h, ']', (size_t)(end - h));
+    if (!hostEnd) return 1;
+  } else {
+    hostEnd = h + strcspn(h, ":/?#");
+  }
+  const char *port = hostEnd + ipv6;
+  if (port < end) {
+    if (*port++ != ':' || port == end) return 1;
+    unsigned value = 0;
+    for (; port < end; port++) {
+      if (*port < '0' || *port > '9') return 1;
+      value = value * 10 + (unsigned)(*port - '0');
+      if (value > 65535) return 1;
+    }
+  }
+  char host[256];
+  size_t len = (size_t)(hostEnd - h);
+  if (!len || len >= sizeof host) return 1;
+  memcpy(host, h, len); host[len] = 0;
+  if (ipv6) {
+    struct in6_addr addr;
+    static const unsigned char loopback[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+    return inet_pton(AF_INET6, host, &addr) != 1 ||
+           !memcmp(&addr, loopback, sizeof loopback);
+  }
+  struct in_addr addr;
+  return !strcasecmp(host, "localhost") ||
+         (inet_pton(AF_INET, host, &addr) == 1 &&
+          ((ntohl(addr.s_addr) >> 24) == 127 || addr.s_addr == 0));
+}
+
 static int fonteOferecida(const Stream *s) {
-  return (!s->notWebReady || p2p_ativo()) &&
+  return (!pedeP2P(s) || p2p_ativo()) &&
          (s->url[0] || debrid_ativo() || p2p_ativo());
 }
 
@@ -560,7 +607,7 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
   for (i = 0; i < qtd && nova; i++)
     // #505: tambem o notWebReady, que pede P2P — a folha vazia tem de dizer
     // "ligue o P2P", nunca fingir que o addon nao mandou nada.
-    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += l[i].notWebReady; }
+    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += pedeP2P(&l[i]); }
   for (i = 0; i < k && nova; i++) { nova[i].selosPacoteVer = 0; filtroCompletar(&nova[i]); }   // os selos saem do fio de fundo (selosAgendar)
   pthread_mutex_lock(&verTrava);
   free(lista); lista = nova; n = nova ? k : 0; atual = -1;
@@ -628,7 +675,7 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
     if (fonteOferecida(&l[i])) nova[k++] = l[i];
   if (qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
   for (i = 0; i < qtd; i++)
-    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += l[i].notWebReady; }   // #505: idem
+    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += pedeP2P(&l[i]); }   // #505: idem
   if (!k) { free(nova); return; }
   for (i = 0; i < k; i++) { nova[i].selosPacoteVer = 0; filtroCompletar(&nova[i]); }
   // O CARTAO EM FOCO E O QUE FICA PARADO. Guardado pelo indice da lista (que
