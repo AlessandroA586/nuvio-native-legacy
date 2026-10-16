@@ -83,6 +83,13 @@ void p2pmotor_definir_usb(int usar);
 // 1 se ha pendrive gravavel agora — Ajustes cinza a opcao "Pendrive USB" com
 // isto. Resposta cacheada por ~2 s; a sonda nao cria nem apaga nada no volume.
 int p2pmotor_usb_presente(void);
+// Most actionable rejection from the last scan; NONE after success. No I/O.
+typedef enum {
+  P2PM_USB_NONE, P2PM_USB_NO_BASE, P2PM_USB_NOT_MOUNT, P2PM_USB_ALREADY_SEEN,
+  P2PM_USB_TIMEOUT, P2PM_USB_DATA_DIR, P2PM_USB_IO, P2PM_USB_READONLY,
+  P2PM_USB_DISABLED
+} P2pmUsbMotivo;
+P2pmUsbMotivo p2pmotor_usb_motivo(void);
 // A conta acima, pura (testes).
 uint64_t p2pmotor_teto_duro(uint64_t livre, unsigned escolhaMb);
 // #334: janela de streaming que o motor recebe para um teto duro (0 = sem

@@ -13,6 +13,7 @@
 #include "rede.h"
 #include <ctype.h>
 #include <dirent.h>
+#include <errno.h>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -73,6 +74,44 @@ static void usbMarcarDono(const char *raiz);
 static int usbENossa(const char *p2p);
 static struct stat usbVistos[USB_MAX_VISTOS];   // (dev,ino) ja olhados no scan
 static unsigned usbNVistos;
+static _Atomic int usbMotivo;
+// Shared by discovery and stale-cache cleanup; only mount roots qualify.
+static const char *const usbBases[] = {
+  "/tmp/usb", "/media/usb", "/mnt/media_rw",
+  "/opt/storage/usb", "/opt/media/USBDriveA1"
+};
+#define USB_SCAN_SECONDS 0.25
+// ponytail: linear lookup within the bounded scan; index only if profiling warrants it.
+typedef struct UsbLog {
+  struct UsbLog *next;
+  char path[700];
+  P2pmUsbMotivo reason, previous;
+  int error, previousError, seen;
+} UsbLog;
+static UsbLog *usbLogs;
+
+// With usbTrava held. Retain per-path outcomes across scans, never file contents.
+static void usbResultado(const char *path, P2pmUsbMotivo reason, int error) {
+  UsbLog *entry;
+  if ((int)reason > atomic_load(&usbMotivo)) atomic_store(&usbMotivo, reason);
+  for (entry = usbLogs; entry; entry = entry->next)
+    if (!strcmp(entry->path, path)) break;
+  if (!entry) {
+    entry = calloc(1, sizeof *entry);
+    if (!entry) return;
+    snprintf(entry->path, sizeof entry->path, "%s", path);
+    entry->previous = P2PM_USB_DISABLED; // Ensure the first result is logged.
+    entry->next = usbLogs;
+    usbLogs = entry;
+  }
+  entry->reason = reason;
+  entry->error = error;
+  entry->seen = 1;
+}
+static int usbRejeitar(const char *path, P2pmUsbMotivo reason, int error, int result) {
+  usbResultado(path, reason, error);
+  return result;
+}
 static unsigned vigiaMs = P2PM_VIGIA_MS;
 
 static const P2pmOps *ops(void) {
@@ -182,15 +221,21 @@ static int usbServe(const char *candidato, char *raiz, unsigned nr, int criar) {
   // Um lugar ja olhado NAO entra de novo: diretorios com varios hardlinks,
   // .tpk montando o mesmo disco em dois pontos e o usbExtra de teste (um
   // diretorio no mesmo disco de dados_dir) gerariam lojas ou leitura dupla.
-  if (stat(candidato, &st) != 0 || !S_ISDIR(st.st_mode)) return 0;
+  if (stat(candidato, &st) != 0)
+    return usbRejeitar(candidato, P2PM_USB_IO, errno, 0);
+  if (!S_ISDIR(st.st_mode)) return usbRejeitar(candidato, P2PM_USB_IO, ENOTDIR, -1);
   if (!usbExtra[0]) {
     struct stat parent;
     // Only mount roots qualify; writable containers live on the parent device.
-    if (snprintf(teste, sizeof teste, "%s/..", candidato) >= (int)sizeof teste ||
-        stat(teste, &parent) != 0 || parent.st_dev == st.st_dev) return 0;
+    if (snprintf(teste, sizeof teste, "%s/..", candidato) >= (int)sizeof teste)
+      return usbRejeitar(candidato, P2PM_USB_IO, ENAMETOOLONG, -1);
+    if (stat(teste, &parent) != 0) return usbRejeitar(candidato, P2PM_USB_IO, errno, -1);
+    if (parent.st_dev == st.st_dev)
+      return usbRejeitar(candidato, P2PM_USB_NOT_MOUNT, 0, 0);
   }
   for (i = 0; i < usbNVistos; i++)
-    if (usbVistos[i].st_dev == st.st_dev && usbVistos[i].st_ino == st.st_ino) return -1;
+    if (usbVistos[i].st_dev == st.st_dev && usbVistos[i].st_ino == st.st_ino)
+      return usbRejeitar(candidato, P2PM_USB_ALREADY_SEEN, 0, -1);
   if (usbNVistos < USB_MAX_VISTOS) usbVistos[usbNVistos++] = st;
   // dados_dir e os subdiretorios dele nao sao pendrive. Comparacao por
   // prefixo de caminho, nao st_dev: o pendrive e o disco interno tem dev
@@ -199,26 +244,44 @@ static int usbServe(const char *candidato, char *raiz, unsigned nr, int criar) {
   if (dados && dados[0]) {
     size_t nc = strlen(candidato), nd = strlen(dados);
     if ((!strncmp(candidato, dados, nd) && (candidato[nd] == 0 || candidato[nd] == '/')) ||
-        (!strncmp(dados, candidato, nc) && (dados[nc] == 0 || dados[nc] == '/'))) return -1;
+        (!strncmp(dados, candidato, nc) && (dados[nc] == 0 || dados[nc] == '/')))
+      return usbRejeitar(candidato, P2PM_USB_DATA_DIR, 0, -1);
   }
   // Injected read-only roots model mount containers on the same device.
-  if (usbExtra[0] && access(candidato, W_OK) != 0) return 0;
-  if (snprintf(p2p, sizeof p2p, "%s/p2p", candidato) >= (int)sizeof p2p) return -1;
+  if (usbExtra[0] && access(candidato, W_OK) != 0)
+    return usbRejeitar(candidato, P2PM_USB_READONLY, errno, 0);
+  if (snprintf(p2p, sizeof p2p, "%s/p2p", candidato) >= (int)sizeof p2p)
+    return usbRejeitar(candidato, P2PM_USB_IO, ENAMETOOLONG, -1);
   if (criar) {
     nosso = mkdir(p2p, 0700) == 0;
-    if (!nosso && (lstat(p2p, &st) != 0 || !S_ISDIR(st.st_mode) || !usbENossa(p2p))) return -1;
+    if (!nosso && errno != EEXIST)
+      return usbRejeitar(candidato, errno == EROFS || errno == EACCES ? P2PM_USB_READONLY : P2PM_USB_IO, errno, -1);
+    if (!nosso && (lstat(p2p, &st) != 0 || !S_ISDIR(st.st_mode) || !usbENossa(p2p)))
+      return usbRejeitar(candidato, P2PM_USB_DATA_DIR, 0, -1);
   }
   if (snprintf(teste, sizeof teste, "%s/.escrita-XXXXXX", criar ? p2p : candidato) >= (int)sizeof teste)
-    { if (nosso) rmdir(p2p); return -1; }
+    { if (nosso) rmdir(p2p); return usbRejeitar(candidato, P2PM_USB_IO, ENAMETOOLONG, -1); }
   fd = mkstemp(teste);
-  if (fd < 0) { if (nosso) rmdir(p2p); return -1; }
+  if (fd < 0) {
+    int error = errno;
+    if (nosso) rmdir(p2p);
+    return usbRejeitar(candidato, error == EROFS || error == EACCES ? P2PM_USB_READONLY : P2PM_USB_IO, error, -1);
+  }
   gravou = write(fd, "ok\n", 3) == 3;
+  int error = gravou ? 0 : errno;
   fechou = close(fd) == 0;
-  unlink(teste);
-  if (!gravou || !fechou) { if (nosso) rmdir(p2p); return -1; }
-  if (snprintf(raiz, nr, "%s", p2p) >= (int)nr) { if (nosso) rmdir(p2p); return -1; }
+  if (!fechou && !error) error = errno;
+  if (unlink(teste) != 0 && !error) error = errno;
+  if (!gravou || !fechou || error) {
+    if (nosso) rmdir(p2p);
+    return usbRejeitar(candidato, P2PM_USB_IO, error, -1);
+  }
+  if (snprintf(raiz, nr, "%s", p2p) >= (int)nr)
+    { if (nosso) rmdir(p2p); return usbRejeitar(candidato, P2PM_USB_IO, ENAMETOOLONG, -1); }
   if (nosso) usbMarcarDono(p2p);   // sem a marca, limpar_sobra nao apaga
-  if (criar && !usbENossa(p2p)) { if (nosso) rmdir(p2p); return -1; }
+  if (criar && !usbENossa(p2p))
+    { if (nosso) rmdir(p2p); return usbRejeitar(candidato, P2PM_USB_IO, EACCES, -1); }
+  usbResultado(candidato, P2PM_USB_NONE, 0);
   return 1;
 }
 
@@ -231,11 +294,16 @@ static int usbEscanearDirL(const char *base, char *raiz, unsigned nr, int fundo,
   if (!base || !base[0]) return 0;
   int volume = usbServe(base, raiz, nr, criar);
   if (volume) return volume > 0; // Rejected volumes are leaves, never containers.
-  if (fundo > 3 || lim->estourou) return 0;
+  if (fundo > 3 || lim->estourou)
+    return usbRejeitar(base, P2PM_USB_TIMEOUT, 0, 0);
   d = opendir(base);
-  if (!d) return 0;
+  if (!d) return usbRejeitar(base, P2PM_USB_IO, errno, 0);
   while (!lim->estourou && (e = readdir(d))) {
-    if (++lim->n > lim->max || agora() > lim->ate) { lim->estourou = 1; break; }
+    if (++lim->n > lim->max || agora() > lim->ate) {
+      lim->estourou = 1;
+      usbResultado(base, P2PM_USB_TIMEOUT, 0);
+      break;
+    }
     if (!strcmp(e->d_name, "p2p") || e->d_name[0] == '.') continue;
     if (snprintf(f, sizeof f, "%s/%s", base, e->d_name) >= (int)sizeof f) continue;
     // Links nao sao ponto de montagem: um link dentro de /tmp/usb poderia
@@ -243,7 +311,7 @@ static int usbEscanearDirL(const char *base, char *raiz, unsigned nr, int fundo,
     if (lstat(f, &st) != 0 || S_ISLNK(st.st_mode)) continue;
     if (S_ISDIR(st.st_mode)) {
       double start = agora();
-      LimTrab child = { .max = 256, .ate = start + 0.05 };
+      LimTrab child = { .max = 256, .ate = start + USB_SCAN_SECONDS };
       int found = usbEscanearDirL(f, raiz, nr, fundo + 1, criar, &child);
       lim->ate += agora() - start; // A slow volume cannot spend its siblings' time.
       if (found) { closedir(d); return 1; }
@@ -255,27 +323,51 @@ static int usbEscanearDirL(const char *base, char *raiz, unsigned nr, int fundo,
 
 static int usbEscanearDir(const char *base, char *raiz, unsigned nr, int fundo, int criar) {
   // Only containers consume traversal budget; volumes get one independent probe.
-  LimTrab lim = { .max = 256, .ate = agora() + 0.05 };
+  LimTrab lim = { .max = 256, .ate = agora() + USB_SCAN_SECONDS };
   return usbEscanearDirL(base, raiz, nr, fundo, criar, &lim);
 }
 
 // Com usbTrava presa. Com usbExtra (teste) o scan olha SO ele: as bases de
 // verdade variam por maquina e tornariam o teste indeterminado.
 static int usbEscanear(char *raiz, unsigned nr, int criar) {
-  const char *bases[8];
-  unsigned n = 0, i;
+  unsigned n = usbExtra[0] ? 1 : sizeof usbBases / sizeof usbBases[0];
+  int found = 0, exists = 0;
+  UsbLog *entry;
   usbNVistos = 0;
-  if (usbExtra[0]) bases[n++] = usbExtra;
-  else {
-    bases[n++] = "/tmp/usb";
-    bases[n++] = "/media/usb";
-#ifdef NV_TPK
-    bases[n++] = "/opt/storage/usb";
-#endif
+  atomic_store(&usbMotivo, P2PM_USB_NONE);
+  for (entry = usbLogs; entry; entry = entry->next) entry->seen = 0;
+  for (unsigned i = 0; i < n; i++) {
+    const char *base = usbExtra[0] ? usbExtra : usbBases[i];
+    struct stat st;
+    if (lstat(base, &st) != 0) {
+      if (errno != ENOENT) { exists = 1; usbResultado(base, P2PM_USB_IO, errno); }
+      continue;
+    }
+    exists = 1;
+    if (!S_ISDIR(st.st_mode)) { usbResultado(base, P2PM_USB_NOT_MOUNT, 0); continue; }
+    if (usbEscanearDir(base, raiz, nr, 0, criar)) { found = 1; break; }
   }
-  for (i = 0; i < n; i++)
-    if (usbEscanearDir(bases[i], raiz, nr, 0, criar)) return 1;
-  return 0;
+  if (!exists) usbResultado("", P2PM_USB_NO_BASE, 0);
+  if (found) atomic_store(&usbMotivo, P2PM_USB_NONE);
+  for (UsbLog **p = &usbLogs; *p;) {
+    static const char *const names[] = {
+      "accepted", "nenhuma base", "not a mount root", "already seen",
+      "timeout budget", "data dir", "I/O failure", "read-only", "P2P disabled"
+    };
+    entry = *p;
+    if (!entry->seen) { *p = entry->next; free(entry); continue; }
+    if (entry->reason != entry->previous || entry->error != entry->previousError) {
+      if (entry->reason == P2PM_USB_NO_BASE) printf("[p2p] usb: nenhuma base\n");
+      else if (entry->reason == P2PM_USB_NONE) printf("[p2p] usb: %s accepted\n", entry->path);
+      else printf("[p2p] usb: %s rejeitado: %s (errno=%d)\n",
+                  entry->path, names[entry->reason], entry->error);
+      entry->previous = entry->reason;
+      entry->previousError = entry->error;
+    }
+    p = &entry->next;
+  }
+  fflush(stdout);
+  return found;
 }
 
 static int pastasInternas(char *raiz, unsigned nr, char *mae, unsigned nm) {
@@ -415,6 +507,10 @@ int p2pmotor_usb_presente(void) {
   r = atomic_load(&usbTem);
   pthread_mutex_unlock(&usbTrava);
   return r;
+}
+
+P2pmUsbMotivo p2pmotor_usb_motivo(void) {
+  return ajustes_p2p_ligado() ? (P2pmUsbMotivo)atomic_load(&usbMotivo) : P2PM_USB_DISABLED;
 }
 
 // #334: a janela fica um pouco abaixo do teto duro (a vigia para em > duro e a
@@ -660,21 +756,17 @@ static void usbVarreSobraDir(const char *base, int fundo, const char *raizAtual)
   closedir(d);
 }
 static void usbVarreSobra(const char *raizAtual) {
-  const char *bases[8];
-  unsigned n = 0, i;
+  unsigned n, i;
   char extra[600];
   extra[0] = 0;
   pthread_mutex_lock(&usbTrava);
   snprintf(extra, sizeof extra, "%s", usbExtra);
-  if (extra[0]) bases[n++] = extra;   // mesma regra do scan: extra substitui
-  else {
-    bases[n++] = "/tmp/usb";
-    bases[n++] = "/media/usb";
-#ifdef NV_TPK
-    bases[n++] = "/opt/storage/usb";
-#endif
+  n = extra[0] ? 1 : sizeof usbBases / sizeof usbBases[0];
+  for (i = 0; i < n; i++) {
+    const char *base = extra[0] ? extra : usbBases[i];
+    struct stat st;
+    if (lstat(base, &st) == 0 && S_ISDIR(st.st_mode)) usbVarreSobraDir(base, 0, raizAtual);
   }
-  for (i = 0; i < n; i++) usbVarreSobraDir(bases[i], 0, raizAtual);
   pthread_mutex_unlock(&usbTrava);
 }
 void p2pmotor_limpar_sobra(void) {
