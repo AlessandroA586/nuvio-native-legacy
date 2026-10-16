@@ -16,6 +16,12 @@
 // Dubles: o teste nao sobe dados.c nem toca disco. O caminho devolve NULL de
 // proposito — assim carregar() sai cedo e a lista comeca vazia, que e o estado
 // de quem nunca abriu o app.
+// A conta nao faz parte deste teste do registro. Sem retrato de addons,
+// a fronteira adia limpeza vinculada; os casos abaixo fornecem listas explicitas.
+unsigned addons_versao(void) { return 0; }
+int addons_travar_lista(unsigned versao, int perfil) { (void)versao; (void)perfil; return 0; }
+void addons_destravar_lista(void) {}
+
 static int usaArquivo;
 int dados_gravar(const char *nome, const char *conteudo) {
   // COM ARQUIVO LIGADO, GRAVA DE VERDADE. Sem isto nao da para testar o par
@@ -703,24 +709,22 @@ int main(void) {
     // Lista da conta de OUTRO perfil (o 2, da sessao anterior): nada sai.
     assert(fil_podar_catalogos(ids, bases, 3, 2) == 0);
     assert(fil_n() == 4);
-    // Lista da conta DESTE perfil sem esses addons (removidos de verdade): so
-    // a linha intocada e fantasma. A desligada e a com forma sao escolha.
-    assert(fil_podar_catalogos(ids, bases, 3, 1) == 1);
-    assert(fil_n() == 3);
+    // Removidos de verdade: escolhas personalizadas tambem saem do arquivo.
+    assert(fil_podar_catalogos(ids, bases, 3, 1) == 3);
+    assert(fil_n() == 1);
     for (j = 0; j < fil_n(); j++) {
-      if (!strcmp(fil_chave(j), "org.plutotv_tv_pluto")) { achouPluto = 1; assert(fil_linha_oculta(j)); }
-      if (!strcmp(fil_chave(j), "com.aicat.x.nuvio_movie_list")) { achouBinge = 1; assert(fil_linha_tipo(j) == 2); }
+      if (!strcmp(fil_chave(j), "org.plutotv_tv_pluto")) achouPluto = 1;
+      if (!strcmp(fil_chave(j), "com.aicat.x.nuvio_movie_list")) achouBinge = 1;
       if (!strcmp(fil_chave(j), "org.meufutebol_tv_canais")) achouFut = 1;
     }
-    assert(achouPluto && achouBinge && !achouFut);
-    // E continua oculta depois de reler o arquivo gravado.
+    assert(!achouPluto && !achouBinge && !achouFut);
     fil_teste_recarregar();
     fil_definir_perfil(0); fil_definir_perfil(1);
-    assert(fil_oculta("org.plutotv_tv_pluto"));
+    assert(fil_n() == 1);
     remove("/tmp/fileirasui-p1.txt");
     fil_definir_perfil(0);
     usaArquivo = 0; }
-  puts("ok  poda: lista do pacote ou de outro perfil nao poda; escolha nunca e podada");
+  puts("ok  poda: pacote e outro perfil preservam; remocao confirmada apaga escolhas");
 
   // ADDON NOVO (vaga garantida, cotacat.h): so o que este perfil nunca viu e
   // sobre o qual nao decidiu nada.
@@ -1110,25 +1114,28 @@ int main(void) {
     fil_registrar("addonvivo_movie_real1", "Real1", "Vivo", "movie", 5);
     fil_registrar("addonvivo_movie_real2", "Real2", "Vivo", "movie", 5);
     fil_registrar("addonvivo_movie_real3", "Real3", "Vivo", "movie", 5);
-    // (1) a linha sem escolha do removido sai; a com escolha fica
-    assert(fil_podar_catalogos(ids, bases, 2, 1) == 1);
-    assert(fil_n() == 4);
-    for (j = 0; j < fil_n(); j++) assert(strcmp(fil_chave(j), "addonmorto_movie_solto") != 0);
-    // (2) a que ficou deixa de contar vaga e aparece como fora
-    assert(fil_marcar_sem_addon(ids, bases, ativos, 2, 1) == 1);
+    // Identidade desconhecida do desligado: ainda nao sabemos quem foi removido.
+    assert(fil_podar_catalogos(ids, bases, 2, 1) == 0);
+    assert(fil_n() == 5);
+    assert(fil_marcar_sem_addon(ids, bases, ativos, 2, 1) == 2);
     assert(fil_estado_chave("addonmorto_movie_top") == FIL_FORA);
     assert(fil_estado_chave("addonvivo_movie_real1") == FIL_NA_HOME);
     assert(fil_estado_chave("addonvivo_movie_real3") == FIL_NA_HOME);
-    // lista de outro perfil / do pacote nao marca nada
     assert(fil_marcar_sem_addon(ids, bases, ativos, 2, 2) == 0);
     assert(fil_marcar_sem_addon(ids, bases, ativos, 2, 0) == 0);
-    // o addon volta (ligado): a linha volta como estava, com a escolha
+    { const char *ids2[] = { "addonvivo", "desligado" };
+      assert(fil_podar_catalogos(ids2, bases, 2, 1) == 2);
+      assert(fil_n() == 3);
+      for (j = 0; j < fil_n(); j++) assert(strncmp(fil_chave(j), "addonmorto_", 11)); }
+    // Reinstalacao e nova descoberta: padrao novo, nao a forma que foi apagada.
     { const int todos[] = { 1, 1 };
       const char *ids2[] = { "addonvivo", "addonmorto" };
       const char *bases2[] = { "https://vivo.example", "https://off.example" };
-      assert(fil_marcar_sem_addon(ids2, bases2, todos, 2, 1) == 1);
-      assert(fil_estado_chave("addonmorto_movie_top") != FIL_FORA);
-      assert(fil_linha_tipo(0) == 2); }
+      assert(fil_podar_catalogos(ids2, bases2, 2, 1) == 0);
+      fil_registrar("addonmorto_movie_top", "Novo", "Novo", "movie", 5);
+      fil_marcar_sem_addon(ids2, bases2, todos, 2, 1);
+      for (j = 0; j < fil_n(); j++) if (!strcmp(fil_chave(j), "addonmorto_movie_top"))
+        assert(fil_linha_tipo(j) == FIL_TIPO_AUTO); }
     remove("/tmp/fileirasui-p1.txt");
     fil_definir_perfil(0);
     usaArquivo = 0; }
