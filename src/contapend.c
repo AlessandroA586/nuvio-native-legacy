@@ -1,6 +1,7 @@
 #include "arteurl.h"
 #include "contapend.h"
 #include "contacache.h"
+#define NV_DUBLE_SESSAO
 #include "perfisessao.h"
 #include "visto.h"
 #include "sessao.h"

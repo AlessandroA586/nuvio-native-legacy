@@ -1,8 +1,9 @@
 #include "vistoep.h"
+#define NV_DUBLE_SESSAO
+#define NV_DUBLE_CONTAPEND
 #include "perfisessao.h"
 #include "contapend.h"
 
-extern int contapend_estado(const char *, const char *, int, int, long long, int) NV_PERFIL_OPCIONAL;
 #include "js.h"
 #include <limits.h>
 #include <math.h>

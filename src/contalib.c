@@ -1,4 +1,6 @@
 #include "contalib.h"
+#define NV_DUBLE_SESSAO
+#define NV_DUBLE_CONTAPEND
 #include "perfisessao.h"
 #include "vistoep.h"
 #include <time.h>
@@ -14,7 +16,6 @@
 // declaracao em vez de mexer no cabecalho mantem a mudanca dentro dos arquivos
 // deste conserto; o lugar certo dela e catalogo.h, e isso esta no relatorio.
 extern void cat_historico_definir_id(const char *imdb, const char *tipo, int visto);
-extern int contapend_estado(const char *, const char *, int, int, long long, int) NV_PERFIL_OPCIONAL;
 
 static int (*listaOculta)(const char *id, long long ms);
 static int (*vistoOculto)(const char *id, int t, int e, long long ms);

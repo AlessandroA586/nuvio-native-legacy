@@ -1,3 +1,5 @@
+#define NV_DUBLE_SESSAO
+#define NV_DUBLE_CONTAPEND
 #include "jfid.h"
 #include "catalogo.h"
 #include "idbase.h"
@@ -18,7 +20,6 @@ __attribute__((weak)) int arte_reserva_registrar(const char *url, const char *im
 #include "sessao.h"
 #include "perfis.h"
 #include "perfisessao.h"
-extern int contapend_estado(const char *, const char *, int, int, long long, int) NV_PERFIL_OPCIONAL;
 #include <pthread.h>
 #include <stdio.h>
 #include <sys/stat.h>
