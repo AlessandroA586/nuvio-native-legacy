@@ -4695,7 +4695,9 @@ static void desenharLegendaPrincipal(float *topoPilha){
    * preservadas (faixas.c). */
   int r, g, b;
   // F05: manual + automatico aceito, UMA vez, so para o documento dono do
-  // overlay (sem ele, o manual intacto). Positivo adianta, como sempre.
+  // overlay (sem ele, o manual intacto). O estilo guarda o ATRASO da pessoa
+  // (positivo = a legenda aparece mais tarde); legsync_offset_ms ja devolve o
+  // deslocamento de busca (positivo adianta, como sempre).
   int atraso = legsync_offset_ms(legEstilo.atrasoMs);
   // Escala/trechos aceitos: o instante na legenda, nao no video (o mesmo
   // para libass e para o desenho do app).

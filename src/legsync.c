@@ -311,14 +311,16 @@ static int dona(void) {
 }
 
 int legsync_offset_ms(int manual) {
-  int total = manual;
+  // `manual` is the user's delay (positive = subtitle shown LATER). The lookup
+  // convention (legenda_cues, assrender, autosync) is the opposite: positive
+  // shifts the cue search earlier. Translate once, here: lookup = autoCorr -
+  // manual.
+  int total = -manual;
   unsigned g = legenda_geracao();      // fora de M: legenda.c tem lock proprio
   pthread_mutex_lock(&M);
   if (L.criado && L.primTipo == 1 && L.primFase == 1 && L.primDoc && g == L.primGer &&
-      legenda_documento_info(L.primDoc)->sessao == L.sessao) {
-    autosync_manual(L.sync, 0, manual);
-    total = autosync_offset_ms(L.sync, 0);
-  }
+      legenda_documento_info(L.primDoc)->sessao == L.sessao)
+    total += autosync_offset_ms(L.sync, 0);
   pthread_mutex_unlock(&M);
   return total;
 }
