@@ -1248,7 +1248,10 @@ static const char *arteDe(int i) {
   // (dono, 05/10/2026). So vale nesse sentido: fundo por fundo nao troca.
   if (i == idx && arteFixa[0] && arteFixaPoster) {
     const CatItem *c = cat_item(i);
-    if (c && c->backdrop[0]) { arteFixa[0] = 0; arteFixaPoster = 0; }
+    if (c && c->backdrop[0] && strcmp(c->backdrop, c->poster)) {
+      const char *u = arteDeViva(i);
+      if (u && strcmp(u, arteFixa)) { arteFixa[0] = 0; arteFixaPoster = 0; }
+    }
   }
   if (i == idx && arteFixa[0] && !tex_falhou(arteFixa)) return arteFixa;
   { const char *u = arteDeViva(i);
@@ -1257,7 +1260,7 @@ static const char *arteDe(int i) {
       snprintf(arteFixa, sizeof arteFixa, "%s", u);
       // Marcado AQUI, junto com o congelamento: arteDetalheEhPoster so marcava
       // se fosse chamada antes desta, e depois dela devolvia o 0 de fabrica.
-      arteFixaPoster = c && !c->backdrop[0] && c->poster[0];
+      arteFixaPoster = c && c->poster[0] && !strcmp(u, c->poster);
     }
     return u; }
 }
@@ -1291,7 +1294,8 @@ static int arteDetalheEhPoster(int i) {
   // que o enriquecimento pode ter posto no catalogo depois.
   if (i == idx && trocaarte_previa_fundo()) return 0;   // previa: sempre fundo
   if (i == idx && arteFixa[0]) return arteFixaPoster;
-  { int r = c && !c->backdrop[0] && c->poster[0];
+  { const char *u = arteDeViva(i);
+    int r = c && c->poster[0] && u && !strcmp(u, c->poster);
     if (i == idx) arteFixaPoster = r;
     return r; }
 }

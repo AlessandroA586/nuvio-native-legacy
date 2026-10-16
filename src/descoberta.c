@@ -7301,12 +7301,14 @@ static void generosDe(const char *corpo, char *lista, size_t tam, const char *ti
 // tudo isso do mesmo /meta que buscarEps ja tem na mao — entao o que falta e
 // copiar de la, e o detalhe fica igual em qualquer entrada.
 //
-// Sinopse pronta: completa lacunas de logo/ano/nota, sem trocar a arte atual.
+// Sinopse pronta: completa lacunas de logo/ano/nota e o fundo quando ainda e
+// so o cartaz da semente. Texto pronto nao significa que a arte ja chegou.
 // Sem sinopse: segue a regra de enriquecimento raso. Poster e generos ficam
 // (o poster ja esta na tela; os generos buscarEps ja regrava).
 static void completarRaso(CatItem *dst, const char *corpo, const char *tipo) {
   const char *m = corpo ? strstr(corpo, "\"meta\"") : NULL;
   CatItem *cheio;
+  int raso;
   if (!m || !dst) return;
   {
     // Logo/ano/nota nao dependem de sinopse nem de poster na ficha.
@@ -7325,14 +7327,17 @@ static void completarRaso(CatItem *dst, const char *corpo, const char *tipo) {
       }
     }
   }
-  if (dst->sinopse[0]) return;
+  raso = !dst->sinopse[0];
+  if (!raso && dst->backdrop[0] && strcmp(dst->backdrop, dst->poster)) return;
   cheio = malloc(sizeof *cheio);
   if (!cheio) return;
   if (deMeta(m, NULL, tipo, cheio)) {
-    snprintf(dst->sinopse, sizeof dst->sinopse, "%s", cheio->sinopse);
-    if (!dst->meta[0] && cheio->meta[0]) snprintf(dst->meta, sizeof dst->meta, "%s", cheio->meta);
-    if (!dst->nota && cheio->nota > 0) dst->nota = cheio->nota;
-    if (cheio->tmdb > 0 && dst->tmdb <= 0) dst->tmdb = cheio->tmdb;
+    if (raso) {
+      snprintf(dst->sinopse, sizeof dst->sinopse, "%s", cheio->sinopse);
+      if (!dst->meta[0] && cheio->meta[0]) snprintf(dst->meta, sizeof dst->meta, "%s", cheio->meta);
+      if (!dst->nota && cheio->nota > 0) dst->nota = cheio->nota;
+      if (cheio->tmdb > 0 && dst->tmdb <= 0) dst->tmdb = cheio->tmdb;
+    }
     // Fundo e logo do /meta MANDAM, inclusive o logo vazio: o do metahub que
     // o item raso montou pode nem existir, e a busca desenharia o nome.
     // Com a arte do addon ligada (Ajustes), o fundo e o logo que o catalogo do
@@ -7340,14 +7345,17 @@ static void completarRaso(CatItem *dst, const char *corpo, const char *tipo) {
     int fundoAddon = ajustes_fundo_addon() && dst->origem[0] &&
                      dst->backdropCatalogo[0] && strcmp(dst->backdropCatalogo, dst->poster);
     int logoAddon = ajustes_logo_addon() && dst->origem[0] && dst->logo[0];
-    if (cheio->backdrop[0] && !fundoAddon) {
+    // A fonte de complemento pode trazer a paisagem depois da sinopse.
+    // So uma paisagem real libera a reserva; outro poster nao e melhoria.
+    if (cheio->backdrop[0] && !fundoAddon &&
+        (raso || strcmp(cheio->backdrop, cheio->poster))) {
       snprintf(dst->backdrop, sizeof dst->backdrop, "%s", cheio->backdrop);
       snprintf(dst->backdropCatalogo, sizeof dst->backdropCatalogo, "%s", cheio->backdropCatalogo);
       snprintf(dst->backdropTmdb, sizeof dst->backdropTmdb, "%s", cheio->backdropTmdb);
       snprintf(dst->backdropTrakt, sizeof dst->backdropTrakt, "%s", cheio->backdropTrakt);
     }
-    if (!logoAddon && cheio->logo[0]) snprintf(dst->logo, sizeof dst->logo, "%s", cheio->logo);
-    if (!strcmp(dst->classificacao, "14")) dst->classificacao[0] = 0;
+    if (raso && !logoAddon && cheio->logo[0]) snprintf(dst->logo, sizeof dst->logo, "%s", cheio->logo);
+    if (raso && !strcmp(dst->classificacao, "14")) dst->classificacao[0] = 0;
   }
   free(cheio);
 }
@@ -7687,7 +7695,7 @@ static void fichaDe(CatItem *d, const char *corpo, int soVazios) {
 }
 
 // As fontes de COMPLEMENTO (a partir da segunda) preenchem o que a base deixou
-// vazio: ficha e sinopse/fundo/logo (completarRaso, que so age em item sem sinopse).
+// vazio: ficha e sinopse/fundo/logo (completarRaso tambem completa fundo raso).
 static void completarFicha(CatItem *d, const MetaFontes *mf, const char *tipo) {
   int i;
   for (i = 0; i < mf->n; i++) {
