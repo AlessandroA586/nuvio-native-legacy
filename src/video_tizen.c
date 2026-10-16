@@ -412,6 +412,22 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
     return 1;
   }
 
+  // #426 (Q80R, Tizen 5): o plano pausado nao recebe outro quadro para
+  // apresentar a geometria. Reenvia o destino apos ROI (o C deduplica o
+  // mesmo rect) e reaplica o modo, sem play/seek. O redesenho exige prova na TV.
+  function apresentarPausa(p, repetirRect) {
+    try {
+      if (p.getState() !== "PAUSED") return;
+      if (repetirRect) {
+        var r = paraTela(S.rect[0], S.rect[1], S.rect[2], S.rect[3]);
+        p.setDisplayRect(r[0], r[1], r[2], r[3]);
+      }
+      p.setDisplayMethod("PLAYER_DISPLAY_MODE_FULL_SCREEN");
+    } catch (e) {
+      try { console.log("[video] apresentar pausa recusou: " + e); } catch (e2) {}
+    }
+  }
+
   // RECORTE DE FONTE DE VERDADE: setVideoRoi.
   //
   // Este arquivo afirmava em tres lugares que o AVPlay "nao recorta a FONTE" e
@@ -432,6 +448,7 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
         try { console.log("[video] setVideoRoi recusou: " + e); } catch (e2) {} }
       return 0;
     }
+    apresentarPausa(p8, true);
     return 1;
   }
 
@@ -441,6 +458,7 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
     if (!p5 || !S.aberto) return 0;
     var r5 = paraTela(a, b, c, d);
     try { p5.setDisplayRect(r5[0], r5[1], r5[2], r5[3]); } catch (e) { return 0; }
+    apresentarPausa(p5, false);
     return 1;
   }
 

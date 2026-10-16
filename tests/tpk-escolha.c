@@ -17,6 +17,7 @@
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "nvtmp.h"
 
 const char *i18n(const char *s) { return s; }
 const char *ling_nome(const char *c) { return c; }
@@ -31,6 +32,7 @@ const char *ling_tipo_legenda_rotulo(int t) { (void)t; return ""; }
 const char *ling_do_nome(const char *nome) { (void)nome; return NULL; }
 int ling_letreiro(const char *nome, int forcado) { (void)nome; (void)forcado; return 0; }
 void mkvass_aceitar_texto(int sim) { (void)sim; }
+void mkvass_aceitar_imagem(int sim) { (void)sim; }
 
 void nv_tpk_video_registrar(void (*)(const char *, const char *), void (*)(void), void (*)(int),
                             void (*)(int), void (*)(int), void (*)(int, int, int, int), int (*)(void));
@@ -66,7 +68,7 @@ static int saidaFd = -1;
 static char saidaCam[512];
 static void capturar(void) {
   const char *d = getenv("TMPDIR");
-  snprintf(saidaCam, sizeof saidaCam, "%s/nuvio-tpk-escolha-log.txt", d && *d ? d : "/tmp");
+  snprintf(saidaCam, sizeof saidaCam, "%s/nuvio-tpk-escolha-log.txt", d && *d ? d : nvt_dir());
   fflush(stdout); saidaFd = dup(1);
   if (!freopen(saidaCam, "w", stdout)) saidaFd = -1;
 }

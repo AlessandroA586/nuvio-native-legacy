@@ -20,6 +20,9 @@ void vertudo_colecao(const ColFolder *folder);
 void vertudo_abrir(const char *base, const char *tipo, const char *catId,
                    const char *titulo);
 int  vertudo_aberta(void);
+const char *vertudo_perf_tag(void);
+// Perf-only navigation: first collection, then cycle without saving preferences.
+void vertudo_perf_cycle(void);
 // Some sem animar (o player saiu para a home: ilha_minimizar).
 void vertudo_fechar_seco(void);
 void vertudo_evento(const SDL_Event *e);

@@ -259,6 +259,23 @@ def contexto(txt, i):
 # virar teste ela nao impede a proxima regressao.
 IGNORAR = {
     "daqui em diante",  # episodios.c nomeModo: so no log [visto] menu, nunca rotulo
+    "fechar",  # main.c: nome do evento de janela so no log "[ciclo] janela="
+    # video_tpk.c: motivos de cartaoModo()/cartaoEncaixar(), so no log "[video] tpk cartao".
+    "cover maior que o painel", "cover sem prova nesta familia", "recorte de fonte",
+    # video_tpk.c: motivos de convIniciar/convSondar/convDesistir/convReabrir e o
+    # `como` do progressivo — todos impressos pelo proprio printf deles
+    # ("[dts-tpk] motivo: %s"), nenhum chega a tela.
+    "volta ao original", "volta ao audio da TV", "troca para o convertido",
+    "a TV nao listou audio", "a TV nao listou audio e o arquivo so tem DTS/TrueHD",
+    "o idioma de audio preferido so existe numa faixa DTS/TrueHD",
+    "o player nao preparou em 45 s",
+    "cabecalho lido antes de abrir: so DTS/TrueHD",
+    "cabecalho lido antes de abrir: o idioma preferido so existe em DTS/TrueHD",
+    "sem indice de quadros-chave para o HLS",
+    "absoluta (tempo da fonte)", "absoluta com os +10 s do fluxo",
+    "relativa ao comeco do fluxo", ", legenda escolhida mantida",
+    "a fonte nao abriu no conversor (%s)",
+    "o player recusou o fluxo convertido (erro 0x%08x)",
     # gpunivel.c: motivos passados a aplicar()/decidir(), que so fazem printf do
     # log "[gpu-nivel]"; nunca chegam a tela.
     "GPU fraca: referencia nao termina",
@@ -344,6 +361,12 @@ IGNORAR = {
     "-perfil",                      # sufixo de nome de arquivo (ajustes.c)
     "recomendacoes-perfil.txt",     # nome de arquivo do perfil publico (recomenda.c)
     "amigos-vistos.txt",            # nome de arquivo das novidades vistas (socialvis.c)
+    # Caches privados por conta/perfil e seus temporarios (catalogo.c), e o
+    # arquivo das novidades vistas por perfil (recomenda.c/socialvis.c).
+    # Usados apenas para ler, gravar e apagar arquivos; nunca texto de tela.
+    "%s/catalogo-%016llx-p%d.bin", "%s/catalogo-%016llx-p%d.bin.tmp",
+    "catalogo-%016llx-p%d.bin.tmp-", "catalogo-rede.bin.tmp-",
+    "amigos-vistos-p%d.txt",
     "%s/poster/%02d.jpg",           # caminho da arte dos dados de exemplo (socialvis.c, so teste)
     "biblioteca.h", "catalogo.h", "fileiras.h", "perfil.h", "legenda.h",
     "perfil.txt",                   # #include e nome de arquivo
@@ -407,6 +430,9 @@ IGNORAR = {
     "conta-%s-p%d.json", "conta-fora",
     # Chaves da ilha e do avisodisp da pilula "Episódio" dos comentarios (detail.c).
     "det-com-ep", "dica:comentarios-episodio",
+    # Chave do aviso "pessoa sem pagina" do OK no elenco (detail.c): chave
+    # interna da ilha, como "det-com-ep" — nunca texto de tela.
+    "det-elenco-sem-pagina",
     "conta-addons-pend-",  # prefixo de arquivo da fila offline, nunca texto de tela
     "hdr do pipeline: %s (fonte DV=%d)",
     # Tres marcos de video.c/video_tizen.c. O buffer e montado numa instrucao
@@ -486,6 +512,9 @@ IGNORAR = {
     # Marca/nome proprio, igual em toda lingua (mesma regra de "IMDb", "Trakt"):
     # o selo do formato na tela do Dolby Vision (dvtelaui.c) e o letreiro do Simkl.
     "HDR10", "DOLBY VISION", "SIMKL",
+    # menu.c (layout Dinamica): cabecalho de secao em CAIXA ALTA, como no tvOS.
+    # A chave traduzivel e "Streaming"; aqui o desenho fixa o rotulo em ASCII.
+    "STREAMING",
     # Log "[cor] fundo frost" e aviso da copia borrada (fundo.c): so printf.
     " (sem quadro pequeno)", "desenho direto (sem quadro pequeno)",
     "sem a copia desfocada da arte ainda (arte nao decodificada?): fundo liso",

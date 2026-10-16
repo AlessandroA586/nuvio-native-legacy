@@ -363,17 +363,17 @@ eval emcc $SOURCES ${EXTRA_SOURCES} -o "$SAIDA/index.html" -O2 "$ENV_D" ${NUVIO_
   `# Inspector da TV) mostra wasm-function[729] e nao diz o que e.` \
   --profiling-funcs \
   -sASYNCIFY -sASYNCIFY_STACK_SIZE=32768 \
-  `# SO main E dados_iniciar SAO INSTRUMENTADOS. Sem esta lista o ASYNCIFY` \
+  `# main, dados_iniciar E A PILHA DO INDICE Fribb SAO INSTRUMENTADOS. Sem a lista o ASYNCIFY` \
   `# instrumenta toda funcao que possa estar na pilha de uma chamada assincrona` \
   `# — e como nv_ceder_quadro e chamada do laco em main, isso era o app` \
   `# INTEIRO: cada funcao de desenho, decode e rede ganhava o codigo de` \
-  `# desenrolar/reenrolar pilha (custo em toda chamada, e wasm maior). As duas` \
-  `# unicas chamadas assincronas (nv_idbfs_montar em dados_iniciar e` \
-  `# nv_ceder_quadro em main) so tem main e dados_iniciar acima delas. Se` \
-  `# alguem puser outra EM_ASYNC_JS mais fundo, a TV aborta com "unreachable"` \
-  `# no desenrolar — e a lista aqui que precisa crescer. NUVIO_ASYNCIFY_TUDO=1` \
+  `# desenrolar/reenrolar pilha (custo em toda chamada, e wasm maior). As` \
+  `# chamadas de arranque (nv_idbfs_montar em dados_iniciar e` \
+  `# nv_ceder_quadro em main) so tem main e dados_iniciar acima delas; o` \
+  `# fetch em fluxo tem a pilha baixar -> rede_pedir. Outra EM_ASYNC_JS` \
+  `# mais fundo exige ampliar a lista, ou aborta. NUVIO_ASYNCIFY_TUDO=1` \
   `# volta ao comportamento antigo para comparar.` \
-  $( [ -n "${NUVIO_ASYNCIFY_TUDO:-}" ] || [ "$UM_FIO" = "1" ] || printf -- "-sASYNCIFY_ONLY=[main,dados_iniciar]" ) \
+  $( [ -n "${NUVIO_ASYNCIFY_TUDO:-}" ] || [ "$UM_FIO" = "1" ] || printf -- "-sASYNCIFY_ONLY=[main,dados_iniciar,baixar,pedirAniskip,malMapeado,mapaBaixar,rede_pedir]" ) \
   `# POOL DE 12. Ja esteve em 4, por um palpite meu que a evidencia derrubou:` \
   `# cortei supondo que o arranque estava LENTO por causa dos doze workers, e os` \
   `# marcos de tempo mostraram depois que ele estava CONGELADO, no WASM_BIGINT.` \

@@ -14,12 +14,19 @@
 #include <SDL2/SDL.h>
 #include <stdint.h>
 #include "streamfit.h"
+#include "fontefalha.h"
 
 // A lista cresce conforme a resposta dos addons; a UI virtualiza as linhas.
 
-typedef struct {
+typedef struct Stream {
   char rotulo[192];     // Nome curto da fonte
   char provedor[96];
+  // Origem real da instancia do addon, sem URL/token nem inferencia pelo nome.
+  char addonChave[FONTEFALHA_CHAVE];
+  int addonOrdem;
+  // 0 = URL do addon; servico nativo + 1 quando resolvida pelo failover.
+  int debridServico;
+  int urlP2P; // provenance da resolucao manual; nao e servico de debrid
   // 1024 e nao 512. MEDIDO: os links de reproducao do AIOStreams tem 525 a 547
   // caracteres (dois segmentos assinados), e com 512 TODOS eram cortados em
   // silencio. O servidor entao respondia com um MP4 de aviso de 120s que TOCA
@@ -41,6 +48,11 @@ typedef struct {
   // text/season-pack heuristics. 0 = no trustworthy exact-size provenance.
   // https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/responses/stream.md
   uint64_t tamanhoBytes;
+  // Idiomas declarados pelo addon para ESTA fonte. CSV limitado, sem inferir
+  // faixas pelo nome do arquivo nem sondar o video; vazio = nao informado.
+  // Legendas anexadas pelo addon tambem contam, sem afirmar que sao embutidas.
+  char audioIdiomas[512];
+  char legendaIdiomas[512];
   char descricao[2048];
   char arquivo[512];
   // O QUE O ADDON DECLARA COMO "a mesma fonte" entre episodios:
@@ -90,10 +102,12 @@ typedef struct {
   // poe estas no fim e o automatico as exclui; a escolha manual avisa que esta
   // baixando. Nao exclui nada: escolhida a dedo, toca como na 1.3.5.
   int  foraCache;
+  int  emCache;        // 1: addon confirma cache; 0: desconhecido (nunca inferir da URL)
   // A SONDA VIU A URL RESPONDER PAGINA (HTML/JSON/texto) e nao video (2.0.2,
   // naovideo.h): linha de aviso do addon. A folha a mostra apagada ("Nao e
   // video") e o automatico a pula. Marcada na verificacao, nunca no parser.
   int  naoVideo;
+  int  notWebReady;     // behaviorHints: so oferecer quando P2P esta ativo
   // PACOTE DE SELOS ATIVO (selospacote.h): os filtros que casaram com esta
   // fonte, calculados UMA vez (quando a lista chega, ou quando o pacote muda;
   // `selosPacoteVer` != selospacote_versao() manda recalcular), nunca no
@@ -105,6 +119,8 @@ typedef struct {
 
 // Parser sem rede: o chamador libera *saida. Retorna -1 se a alocacao falhar.
 int stream_extrair(const char *json, const char *provedor, Stream **saida);
+// Idiomas declarados para exibicao, sem rotulo. 0 = nenhum informado.
+int stream_faixas_texto(const Stream *fonte, int legendas, char *saida, unsigned tam);
 void stream_definir_atual(int indice);
 int stream_atual(void);
 void stream_folha_contexto(const char *texto);
@@ -136,6 +152,8 @@ void stream_definir_lista_idade(const Stream *lista, int n, Uint32 idade);
 // mesma da lista inteira de antes. Com a folha aberta, o foco fica no mesmo
 // cartao e a rolagem compensa as linhas que entraram acima dele.
 void stream_lista_acrescentar(const Stream *lista, int n, int ordemAddon);
+// No trabalhador, antes de publicar: pode carregar o motor P2P do pacote.
+void stream_preparar_dica_p2p(const Stream *lista, int n);
 // O addon (ordemAddon) de cada fonte, como entrou; 0 na lista inteira.
 int  stream_ordem_addon(int i);
 // A escolha automatica ja pode sair com a lista parcial? Ver
@@ -191,6 +209,44 @@ int  stream_proxima_vod(int atual);
 // Confere a proxima da ordem do addon fora do fio de desenho; -1 se acabou.
 // Devolve tambem quantas candidatas consumiram o orcamento (se nao NULL).
 int  stream_verificar_proxima_vod(int atual, int tentativas, int *conferidas);
+// Politica por reproducao; so o worker altera a sua copia da sessao. Nunca
+// grava URL/exclusoes na lista antes de o consumidor validar as geracoes.
+int stream_falha_verificar(FonteFalhaSessao *sessao, unsigned lista, int escolhida,
+                           int (*cancelado)(void *), void *ctx,
+                           int *indice, int *servico, char *url, unsigned tam);
+int stream_falha_aplicar(int indice, unsigned lista, int servico, const char *url);
+int stream_falha_aplicar_sessao(int indice, unsigned lista, int servico, const char *url, uint64_t sessao);
+// Renova somente a rota ja escolhida, sem reservar outra tentativa na
+// politica. O consumidor aceita e publica a URL depois de validar o alvo.
+int stream_falha_renovar(int indice, unsigned lista, int servico,
+                         int (*cancelado)(void *), void *ctx, char *url, unsigned tam);
+void stream_falha_identidade(const Stream *fonte, char *dst, unsigned tam);
+// Lista de outro episodio: construir na UI, onde as preferencias estao
+// estaveis. O snapshot possui sua lista/fila/credenciais/politica e nunca
+// instala a lista nem altera exclusoes da reproducao atual.
+typedef struct StreamPreparo StreamPreparo;
+StreamPreparo *stream_preparo_criar(const Stream *fontes, int n, int preferida);
+// Usa somente o runtime comprovado deste alvo para StreamFit; nunca herda
+// a duracao da reproducao em andamento. Sem alvo, a duracao e desconhecida.
+StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int n, int preferida, const char *alvo);
+void stream_preparo_definir_episodio(StreamPreparo *preparo, int temporada, int episodio);
+// Marca interna de preferencias/credenciais; nunca publicar em diagnosticos.
+uint64_t stream_preparo_config_atual(void);
+int stream_preparo_contexto_atual(const StreamPreparo *preparo);
+// BLOQUEIA no worker. 1 = fonte pronta, 0 = esgotou, -1 = cancelado.
+// `politica` recebe ownership da sessao (NULL sem failover); seus indices
+// pertencem a stream_preparo_lista. Fonte/indice so saem quando serve.
+int stream_preparo_resolver(StreamPreparo *preparo, int (*cancelado)(void *), void *ctx,
+                            Stream *fonte, int *indice, FonteFalhaSessao **politica);
+int stream_preparo_renovar(StreamPreparo *preparo, int indice, int (*cancelado)(void *),
+                           void *ctx, Stream *fonte);
+// Devolve ao snapshot a mesma politica ja gasta depois de uma falha nativa.
+// O resolver seguinte continua pares/URLs/limites sem recomecar a escolha.
+int stream_preparo_continuar(StreamPreparo *preparo, FonteFalhaSessao **politica);
+FonteFalhaSessao *stream_preparo_tomar_politica(StreamPreparo *preparo);
+const Stream *stream_preparo_lista(const StreamPreparo *preparo, int *n);
+Stream *stream_preparo_tomar_lista(StreamPreparo *preparo, int *n);
+void stream_preparo_liberar(StreamPreparo *preparo);
 // A fonte `i` pode ser seguida por um grupo lembrado SEM rebaixar o que o
 // automatico escolheria hoje: nao excluida pelas regras do dono, grupo de
 // regras igual ou melhor, resolucao e Dolby Vision iguais ou maiores e, na LG,
@@ -244,6 +300,7 @@ Uint32 stream_idade_ms(void);
 // que vai tocar e conferida. As que falham saem da fila desta lista
 // (stream_automatico_excluir) e nao sao conferidas de novo.
 int  stream_primeira_boa(int tentativas);
+int stream_primeira_boa_sessao(int tentativas, uint64_t sessao);
 // TOCAR ENQUANTO CONFERE (fonteantecipa.h): o indice da candidata que o player
 // ja pode abrir enquanto a conferencia dela roda, e o estado (FA_*). -1 = nada.
 int  stream_antecipada(int *estado);
@@ -297,6 +354,9 @@ unsigned stream_lista_geracao(void);
 // Quantos torrents SEM url (so infoHash) ha na lista: os que so o P2P ou o
 // debrid tocam. Serve ao cartao "nenhuma fonte serve" dizer que ha P2P.
 int  stream_qtd_torrents(void);
+// Torrents descartados (sem debrid nem P2P) que o P2P deste pacote tocaria se
+// ligado; 0 com debrid, P2P ligado ou sem P2P no pacote (#486).
+int  stream_torrents_para_p2p(void);
 int  stream_resolver_escolhida(int i, unsigned geracao, char *url, unsigned nu,
                                char *servico, unsigned ns, int *pct);
 
@@ -363,4 +423,7 @@ void stream_folha_desenhar(Uint32 agora);
 // Devolve 1 uma vez quando o usuario escolheu, com o indice em *escolhido.
 int  stream_folha_escolheu(int *escolhido);
 
+// Captured at dispatch, so a delayed worker cannot adopt another profile's list.
+int stream_canal_primeira_viva_sessao(int tentativas, uint64_t sessao);
+int stream_verificar_proxima_vod_sessao(int atualIdx, int tentativas, int *conferidas, uint64_t sessao);
 #endif

@@ -356,12 +356,15 @@ static void aj2CabecalhoA3(GfxRect fr, const char *titulo, float reservaDir, flo
 // RODAPE DA LISTA (A3): as dicas a esquerda e o aviso ("Ajuste salvo nesta
 // TV.") a direita, na mesma faixa abaixo da lista. Antes o aviso era desenhado
 // em cima da ultima linha (foto do dono, 04/10). Sem lugar para os dois, o
-// aviso fica e as dicas somem enquanto ele dura.
-static void aj2RodapeA3(GfxRect fr, const AjDica *d, int nd, float a) {
+// aviso fica e as dicas somem enquanto ele dura. `desenha`: 1 desenha e
+// registra, 2 so registra (replay de TV/desktop: a funcao escolhe de novo o
+// que aparece — mesmas dicas e a mesma supressao pelo aviso, nenhum alvo
+// invisivel).
+static void aj2RodapeA3(GfxRect fr, const AjDica *d, int nd, float a, int desenha) {
   float x = fr.x + 34.0f, w = fr.w - 68.0f, yc = fr.y + fr.h - AJ_A3_RODAPE * 0.5f - 6.0f;
   float wd = aj2DicasLinha(d, nd, x, yc, TXT_V2_KBD18, 34, 38, 10, TXT_V2_24, 8, 22, 0, a), wa = 0;
   int dicas = 1;
-  gfx_cor((GfxRect){ fr.x + 28.0f, fr.y + fr.h - AJ_A3_RODAPE, fr.w - 56.0f, 1 }, 0, 1, 1, 1, 0.07f * a);
+  if (desenha == 1) gfx_cor((GfxRect){ fr.x + 28.0f, fr.y + fr.h - AJ_A3_RODAPE, fr.w - 56.0f, 1 }, 0, 1, 1, 1, 0.07f * a);
 #ifdef NV_TOUCH_UI
   if (ajPontInline) { ajToqueBotoes(x + w, yc, a); return; }
 #endif
@@ -369,10 +372,10 @@ static void aj2RodapeA3(GfxRect fr, const AjDica *d, int nd, float a) {
     TxtLinha t = ajTxtC(TXT_V2_24, uxAviso, w - 34.0f);
     wa = t.w + 34.0f;
     if (wd + 24.0f + wa > w) dicas = 0;
-    ajIcone("aj_check", x + w - wa, yc - 11.0f, 22.0f, 0.7f * a);
-    txt_desenhar_alpha(t, x + w - t.w, yc - t.h * 0.5f, 0.75f * a);
+    if (desenha == 1) { ajIcone("aj_check", x + w - wa, yc - 11.0f, 22.0f, 0.7f * a);
+      txt_desenhar_alpha(t, x + w - t.w, yc - t.h * 0.5f, 0.75f * a); }
   }
-  if (dicas) aj2DicasLinha(d, nd, x, yc, TXT_V2_KBD18, 34, 38, 10, TXT_V2_24, 8, 22, 1, a);
+  if (dicas) aj2DicasLinha(d, nd, x, yc, TXT_V2_KBD18, 34, 38, 10, TXT_V2_24, 8, 22, desenha, a);
 }
 // PONTEIRO (#99) NA LISTA DA CATEGORIA. A linha sob o cursor ganha o foco
 // pelo mesmo focar() das setas (com o foco saindo do indice); o OK do clique
@@ -436,7 +439,7 @@ static void ajDesenharFolha(void) {
   }
   gfx_sem_recorte();
   nd = ajDicasDe(focoIndice ? -1 : focoOp, d);
-  aj2RodapeA3(fr, d, nd, aPag);
+  aj2RodapeA3(fr, d, nd, aPag, 1);
 }
 
 // --- MODAIS ----------------------------------------------------------------------
@@ -1140,7 +1143,7 @@ static void aj2InspetorDiferencas(void) {
 
 // --- A TELA ---------------------------------------------------------------------
 static int ajModalAberto(void) {
-  return (uxEditor && (uxRestaurar || uxAvisoRisco || uxEditor == 2)) || riscoFolha || frAberta || ajVinculoAtivo() ||
+  return (uxEditor && (uxRestaurar || uxAvisoRisco || uxEditor == 2)) || riscoFolha || frAberta || hcAberta || ajVinculoAtivo() ||
          teclado_aberto() || registro_envio_aberto() || apoioAberto;
 }
 #ifdef NV_TOUCH_UI
@@ -1158,6 +1161,14 @@ static void ajDesenharTela(void) {
   ajPontInline = 0;
 #endif
   ajFundoPagina();
+  // Pagina assentada sem vidro: o cabecalho e a lista sao opacos e vem logo,
+  // entao o Frost pendente so e pintado fora deles (ajIlhaMaterial faz o mesmo
+  // com uma ilha so; aqui sao duas antes da primeira).
+  if (!ajVid() && !modal && !filAberta && !uxEditor && p.rA <= 0.003f && uxIndice >= 1 &&
+      p.lA >= 0.999f && fabsf(p.lS - 1.0f) < 0.002f && fabsf(p.lDx) < 0.5f) {
+    GfxRect f[2] = { ajIlhaMiolo0(aj2PaginaR(), 36.0f), ajIlhaMiolo0(aj2ListaR(), 40.0f) };
+    gfx_ambiente_descarregar_fora(f, 2);
+  }
   if (filAberta) return;   // a folha de fileiras ocupa a tela (desenhada depois)
 #ifdef NV_TOUCH_UI
   ajPontInline = ajInlineAtivo(modal, &p);
@@ -1181,6 +1192,20 @@ static void ajDesenharTela(void) {
 #ifdef NV_TOUCH_UI
   if (ajPontInline) ajPontLista = 1;
 #endif
+  // #205: a edicao na linha (Mobile e TV) tem o rodape com os chips clicaveis.
+  // A camada dos alvos comeca aqui: as linhas registraram alvos no quadro
+  // assentado e um clique fora nao pode cair no OK de camada vazia.
+#ifdef NV_TOUCH_UI
+  if (ajPontInline) { ponteiro_camada(); ajToqueCamada(); }
+  else if (uxEditor && !modal)
+#else
+  if (uxEditor && !modal)
+#endif
+    { ponteiro_camada();
+#ifdef NV_TOUCH_UI
+      ajToqueCamada();
+#endif
+    }
   if (p.lA > 0.003f && uxIndice >= 1) {
     GfxRect fr = aj2ListaR();
     float oy = p.lOy > 0 ? p.lOy : aj2GradeOrigemY(uxIndice);
@@ -1194,7 +1219,7 @@ static void ajDesenharTela(void) {
   // sem alvo proprio, o clique e o OK (ponteiro.h, CAMADAS).
   if (modal || (uxEditor
 #ifdef NV_TOUCH_UI
-                && !ajPontInline
+                && !ajPontInline && !ajEditandoLinha(uxOp)
 #endif
                )) { ponteiro_camada();
 #ifdef NV_TOUCH_UI
@@ -1222,6 +1247,22 @@ static void ajDesenharTela(void) {
     TxtLinha t = ajTxtC(TXT_V2_24, uxAviso, fr.w - 100);
     txt_desenhar_alpha(t, fr.x + 50, fr.y + fr.h - 30, 0.7f);
   }
+  // #205: os modais de digitacao/aviso limparam os alvos do rodape. Na edicao
+  // na linha o rodape da lista continua na tela: repete o MESMO rodape sem
+  // desenhar (a funcao escolhe de novo quais chips cabem com o aviso, senao
+  // um alvo de OK/Voltar ficaria debaixo do "Ajuste salvo") para registrar os
+  // chips sobre um anteparo. No Mobile (ajPontInline) a camada do quadro ja e
+  // a da folha e o rodape tem os botoes de toque proprios — nao pode zerar
+  // aqui. TV e desktop sem toque tambem: o clique do ponteiro cancela.
+#ifdef NV_TOUCH_UI
+  if (ajEditandoLinha(uxOp) && !ajPontInline && !modal) { ponteiro_camada(); ajToqueCamada();
+#else
+  if (ajEditandoLinha(uxOp) && !modal) { ponteiro_camada();
+#endif
+    ponteiro_alvo(0, 0, (float)NV_TELA_W, (float)NV_TELA_H, NULL, NULL, 0, 0);
+    AJ_ESCALA_INI();
+    { AjDica d[4]; aj2RodapeA3(aj2ListaR(), d, ajDicasDe(focoIndice ? -1 : focoOp, d), 1.0f, 2); }
+    AJ_ESCALA_FIM(); }
   ajDesenharModais();
   if (registro_envio_aberto()) registro_envio_desenhar();
 }
@@ -1346,7 +1387,7 @@ static void ajSubLista(const AjSubLinha *L, int n, int foco, const AjDica *d, in
     snprintf(uxAviso, sizeof uxAviso, "%s", aviso);
     uxAvisoAte = SDL_GetTicks() + 1000;
   }
-  aj2RodapeA3(fr, d, nd, 1);
+  aj2RodapeA3(fr, d, nd, 1, 1);
 }
 // A coluna da esquerda: a cena gerada da linha (a mesma da categoria) e o
 // kicker, o titulo e o texto da linha em foco.
@@ -1496,6 +1537,95 @@ static void desenhaFolhaPermitidos(void) {
   }
 }
 
+// "Catálogos do destaque": busca no topo, fontes fixas, Sugeridos e os
+// catálogos por addon. Mesmo molde da folha de permitidos; o dedo foca a linha.
+static void ajPontHeroCat(int i, int col) {
+  (void)col;
+  if (hcAberta && !teclado_aberto() && hcFocavel(i)) hcFoco = i;
+}
+static void desenhaFolhaHeroCat(void) {
+  GfxRect m = { 460, 90, 1000, 900 };
+  float topo, base, y, alvo, total = 0, yFoco = 0;
+  const char *atual = fil_hero_fonte();
+  int i;
+  char sub[200];
+  hcMontar();
+  ponteiro_camada();
+  ajVeuModal();
+  ajCentraModal(&m);
+  ajIlha(m, 36, 1, 1);
+  snprintf(sub, sizeof sub, "%s", i18n("Escolha de onde vêm os títulos do destaque. Busque pelo nome do catálogo ou do addon."));
+  { char k[160];
+    snprintf(k, sizeof k, "%s · %s", i18n("Ajustes"), i18n("Destaque"));
+    topo = ajCabecalhoFolha(m, k, "Catálogos do destaque", sub, 0, 1); }
+  base = m.y + m.h - 96.0f;
+  for (i = 0; i < hcN; i++) {
+    float h = hcL[i].tipo == HC_CAB ? 48.0f : 84.0f;
+    if (i == hcFoco) yFoco = total + h * 0.5f;
+    total += h;
+  }
+  alvo = yFoco - (base - topo) * 0.5f;
+  if (alvo > total - (base - topo)) alvo = total - (base - topo);
+  if (alvo < 0) alvo = 0;
+#ifdef NV_TOUCH_UI
+  ajToqueCamada();
+  alvo = ajToqueRegistrar(AJT_FONTES, (GfxRect){m.x, topo, m.w, base - topo}, &ajToqueOffset[AJT_FONTES],
+                          total - (base - topo), alvo, 100 + (hcBusca[0] != 0));
+#endif
+  gfx_recorte(m.x, topo, m.w, base - topo);
+  y = topo - alvo;
+  for (i = 0; i < hcN; i++) {
+    int t = hcL[i].tipo, f = i == hcFoco;
+    float h = t == HC_CAB ? 48.0f : 84.0f;
+    GfxRect r = { m.x + 18, y, m.w - 36, h - 4 };
+    const char *nome = hcL[i].txt, *apoio = "";
+    char ap[200] = "";
+    int marcado = 0;
+    float tw = r.w - 22 - 64 - 90;
+    if (y + h >= topo && y <= base) {
+      if (t == HC_CAB) {
+        TxtLinha c = ajTxtC(TXT_ILHA_GENERO, hcL[i].idx ? nome : i18n(nome), r.w - 44);
+        txt_desenhar_alpha(c, r.x + 22, y + 22, 0.55f);
+      } else if (t == HC_VAZIO) {
+        TxtLinha c = ajTxtC(TXT_AJ_ROTULO, i18n(nome), r.w - 44);
+        txt_desenhar_alpha(c, r.x + 22, y + 24, 0.6f);
+      } else {
+        ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, topo, base, ajPontHeroCat, NULL, i, -1);
+        if (f) ajFocoLinha(r, 22, 1, 1);
+        if (t == HC_BUSCA) {
+          nome = hcBusca[0] ? hcBusca : i18n("Buscar catálogo");
+          apoio = hcBusca[0] ? i18n("OK para mudar a busca") : i18n("OK para digitar");
+          ajNeutro((GfxRect){ r.x + 22, y + 16, 48, 48 }, 14, 0.09f, 0.141f, 0.149f, 0.173f, 1);
+          ajIcone("aj_search", r.x + 22 + 14, y + 16 + 14, 20, 0.85f);
+        } else if (t == HC_FIXA) {
+          nome = i18n(nome);
+          marcado = hcL[i].idx ? (atual[0] == '*' && !atual[1]) : !atual[0];
+          ajNeutro((GfxRect){ r.x + 22, y + 16, 48, 48 }, 14, 0.09f, 0.141f, 0.149f, 0.173f, 1);
+          ajIcone("aj_film", r.x + 22 + 14, y + 16 + 14, 20, 0.85f);
+        } else {
+          int ix = hcL[i].idx;
+          nome = fil_titulo(ix);
+          snprintf(ap, sizeof ap, "%s%s%s", fil_linha_addon(ix), fil_linha_addon(ix)[0] && fil_linha_conteudo(ix)[0] ? " · " : "",
+                   fil_linha_conteudo(ix));
+          apoio = ap;
+          marcado = !strcmp(fil_chave(ix), atual);
+          ajRosto(nome, r.x + 22, y + 16, 48, 14, 0.09f, 0.85f, TXT_ILHA_INICIAL);
+        }
+        { TxtLinha tl = t == HC_CAT ? txt_linha_corta(TXT_AJ_ROTULO, nome, AJ_TX, tw) : ajTxtC(TXT_AJ_ROTULO, nome, tw);
+          TxtLinha c = ajTxtC(TXT_ILHA_GENERO, apoio, tw);
+          float ty = y + 40 - (tl.h + (apoio[0] ? 4 + c.h : 0)) * 0.5f;
+          txt_desenhar_alpha(tl, r.x + 22 + 48 + 16, ty, f ? 1.0f : 0.86f);
+          if (apoio[0]) txt_desenhar_alpha(c, r.x + 22 + 48 + 16, ty + tl.h + 4, 0.42f); }
+        if (marcado) ajChipLiga(r.x + r.w - 22, y + 40, 1, 1);
+      }
+    }
+    y += h;
+  }
+  gfx_sem_recorte();
+  { AjDica d[2] = { { "OK", "Escolher" }, { "Voltar", "Fechar" } };
+    ajDicas(d, 2, m.x + 44, m.y + m.h - 36, m.w - 88, 1); }
+}
+
 // "Ordem dos add-ons" (2.0.2): a lista na ordem do automatico, com as setas de
 // subir e descer em cada linha (o arranjo da folha de editar abas do social).
 // "Sem ordem" no topo apaga a ordem.
@@ -1564,6 +1694,75 @@ static void desenhaFolhaOrdem(void) {
   if (uxAviso[0]) {
     TxtLinha t = ajTxtC(TXT_AJ_SUB, uxAviso, 1100);
     txt_desenhar_alpha(t, (NV_VTELA_W - t.w) * 0.5f, NV_VTELA_H - 50, 0.8f);
+  }
+}
+
+// Same reorder/number-editor interaction as the add-on order sheet, with
+// explicit targets in TV and Mobile. Labels never identify persisted rows.
+static void faPont(int i, int col) {
+  if (frAberta < 4 || teclado_aberto() || i < 0 || i >= faN || col < 0 || col > 2) return;
+  faFoco = i; faCol = col;
+}
+static void faFechar(int a, int b) { (void)a; (void)b; if (frAberta >= 4) frAberta = 0; }
+static void desenhaFolhaFalha(void) {
+  GfxRect m = {460, 90, 1000, 900}; float topo, base, y, alvo;
+  faMontar(); ponteiro_camada(); ajVeuModal(); ajCentraModal(&m); ajIlha(m, 36, 1, 1);
+  topo = ajCabecalhoFolha(m, "Fontes e addons", frAberta == 4 ? "Ordem e limites dos provedores" : "Ordem e limites dos add-ons",
+                         i18n("Limites contam links distintos, incluindo o primeiro. Use as setas para ordenar e o número para ajustar."), 0, 1);
+  base = m.y + m.h - 96.0f;
+  alvo = faFoco * 84.0f - (base - topo - 80.0f) * 0.5f;
+  if (alvo > faN * 84.0f - (base - topo)) alvo = faN * 84.0f - (base - topo);
+  if (alvo < 0) alvo = 0;
+#ifdef NV_TOUCH_UI
+  ajToqueCamada();
+  alvo = ajToqueRegistrar(AJT_FONTES, (GfxRect){m.x, topo, m.w, base - topo}, &ajToqueOffset[AJT_FONTES],
+                          faN * 84.0f - (base - topo), alvo, frAberta);
+#endif
+  gfx_recorte(m.x, topo, m.w, base - topo); y = topo - alvo;
+  for (int i = 0; i < faN; i++, y += 84.0f) {
+    if (y + 80.0f < topo || y > base) continue;
+    GfxRect r = {m.x + 18.0f, y, m.w - 36.0f, 80.0f};
+    int f = i == faFoco; float bw = 56.0f, bx = r.x + r.w - 22.0f - 3.0f * bw - 16.0f;
+    float tw = fmaxf(1.0f, bx - (r.x + 36.0f) - 24.0f);
+    // Tapping the row edits its limit; reorder always has an explicit arrow.
+    ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, topo, base, faPont, NULL, i, 2);
+    if (f) ajFocoLinha(r, 22.0f, 1.0f, 1.0f);
+    TxtLinha t = txt_linha_corta(TXT_AJ_ROTULO, faItem[i].nome, AJ_TX, tw);
+    TxtLinha ap = ajTxtC(TXT_ILHA_GENERO, faItem[i].apoio, tw);
+    float ty = y + 40.0f - (t.h + (faItem[i].apoio[0] ? 4.0f + ap.h : 0.0f)) * 0.5f;
+    txt_desenhar_alpha(t, r.x + 36.0f, ty, f ? 1.0f : 0.86f);
+    if (faItem[i].apoio[0]) txt_desenhar_alpha(ap, r.x + 36.0f, ty + t.h + 4.0f, 0.42f);
+    for (int col = 0; col < 3; col++) {
+      GfxRect b = {bx + col * (bw + 8.0f), y + 12.0f, bw, bw};
+      int bf = f && faCol == col, sem = (col == 0 && i == 0) || (col == 1 && i + 1 == faN);
+      ponteiro_alvo_faixa(b.x, b.y, b.w, b.h, topo, base, faPont, NULL, i, col);
+      if (bf) ajPilulaAcento(b, 28.0f, 1.0f); else ajNeutro(b, 28.0f, 0.08f, AJ_CHIP_SOL, 1.0f);
+      if (col < 2) {
+        if (bf) ajIconeT(col ? "aj_arrow-down" : "aj_arrow-up", b.x + 14.0f, b.y + 14.0f, 28.0f, sem ? 0.3f : 1.0f);
+        else ajIcone(col ? "aj_arrow-down" : "aj_arrow-up", b.x + 14.0f, b.y + 14.0f, 28.0f, sem ? 0.3f : 0.85f);
+      } else {
+        char n[8]; snprintf(n, sizeof n, "%d", faLimite(i));
+        TxtLinha num = bf ? ajTxtT(TXT_V2_SEG, n) : ajTxt(TXT_V2_SEG, n);
+        txt_desenhar_alpha(num, b.x + (b.w - num.w) * 0.5f, b.y + (b.h - num.h) * 0.5f, 1.0f);
+      }
+    }
+  }
+  if (!faN) {
+    TxtLinha empty = ajTxtC(TXT_AJ_ROTULO, "Nenhum add-on instalado.", m.w - 88.0f);
+    txt_desenhar_alpha(empty, m.x + 44.0f, topo + 24.0f, 0.7f);
+  }
+  gfx_sem_recorte();
+  TxtLinha close = ajTxt(TXT_V2_SEG, "Fechar");
+  GfxRect fechar = {m.x + m.w - close.w - 84.0f, m.y + m.h - 76.0f, close.w + 40.0f, 48.0f};
+  ajNeutro(fechar, 24.0f, 0.10f, AJ_CHIP_SOL, 1.0f);
+  txt_desenhar_alpha(close, fechar.x + 20.0f, fechar.y + (fechar.h - close.h) * 0.5f, 0.9f);
+  ponteiro_alvo(fechar.x, fechar.y, fechar.w, fechar.h, NULL, faFechar, 0, 0);
+  if (!ajTelaCheia()) {
+    AjDica d[2] = {{"OK", "Editar"}, {"Voltar", "Fechar"}};
+    ajDicasLinha(d, 2, m.x + 44.0f, m.y + m.h - 66.0f, 1.0f);
+  }  if (uxAviso[0]) {
+    TxtLinha aviso = ajTxtC(TXT_AJ_SUB, uxAviso, NV_VTELA_W - 80.0f);
+    txt_desenhar_alpha(aviso, (NV_VTELA_W - aviso.w) * 0.5f, NV_VTELA_H - 50.0f, 0.8f);
   }
 }
 

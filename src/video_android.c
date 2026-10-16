@@ -56,9 +56,14 @@ static jmethodID mAbrirPosicao;
 // percentual conhecido (retomada da conta, sem registro local): o Kotlin
 // aplica fracao/10000 da duracao do CONTAINER antes do primeiro quadro.
 static jmethodID mAbrirRetomada;
+static jmethodID mPreparar, mPrepararProximo, mPrepararEstado, mCancelarPreparo, mAbrirPreparada;
+static jmethodID mPararMantendoPreparo;
+static unsigned preparoAdotar;
 // F07 (optional, like abrirPosicao): cache(mb) and ganho(pct). A shell without
 // them simply has no seek cache and no boost.
 static jmethodID mCache, mGanho, mBuffer;
+// Warm resume (#492, optional too): titulo(id) and descartarGuardado().
+static jmethodID mTitulo, mDescartar, mMorno, mQuadro;
 // #202 (opcional, como os de cima): velocidade(centesimos). Casca sem ele =
 // sem a linha da velocidade.
 static jmethodID mVelocidade;
@@ -80,12 +85,32 @@ static int resolverMetodos(JNIEnv *env) {
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mAbrirRetomada = NULL; }
   mCache = (*env)->GetStaticMethodID(env, gCls, "cache", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mCache = NULL; }
+  mTitulo = (*env)->GetStaticMethodID(env, gCls, "cacheTitle", "(Ljava/lang/String;)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mTitulo = NULL; }
+  mDescartar = (*env)->GetStaticMethodID(env, gCls, "descartarGuardado", "()V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mDescartar = NULL; }
+  mMorno = (*env)->GetStaticMethodID(env, gCls, "morno", "(I)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mMorno = NULL; }
+  mQuadro = (*env)->GetStaticMethodID(env, gCls, "quadro", "(I)I");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mQuadro = NULL; }
   mBuffer = (*env)->GetStaticMethodID(env, gCls, "buffer", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mBuffer = NULL; }
   mGanho = (*env)->GetStaticMethodID(env, gCls, "ganho", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mGanho = NULL; }
   mVelocidade = (*env)->GetStaticMethodID(env, gCls, "velocidade", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mVelocidade = NULL; }
+  mPreparar = (*env)->GetStaticMethodID(env, gCls, "preparar", "(Ljava/lang/String;Ljava/lang/String;IIIIILjava/lang/String;)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mPreparar = NULL; }
+  mPrepararProximo = (*env)->GetStaticMethodID(env, gCls, "prepararProximo", "(Ljava/lang/String;Ljava/lang/String;IIIIILjava/lang/String;)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mPrepararProximo = NULL; }
+  mPrepararEstado = (*env)->GetStaticMethodID(env, gCls, "prepararEstado", "(I)I");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mPrepararEstado = NULL; }
+  mCancelarPreparo = (*env)->GetStaticMethodID(env, gCls, "cancelarPreparo", "(I)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mCancelarPreparo = NULL; }
+  mAbrirPreparada = (*env)->GetStaticMethodID(env, gCls, "abrirPreparada", "(Ljava/lang/String;Ljava/lang/String;IIIILjava/lang/String;)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mAbrirPreparada = NULL; }
+  mPararMantendoPreparo = (*env)->GetStaticMethodID(env, gCls, "pararMantendoPreparo", "(I)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mPararMantendoPreparo = NULL; }
   return mAbrir && mParar && mPausar && mBuscar && mVolume && mJanela && mEscolher;
 }
 
@@ -228,6 +253,64 @@ static void kInt(jmethodID m, int v) {
   fimChamada(env);
 }
 
+static int precarregarVideo(const char *url, const char *cab, double segundos,
+                            double pct, int buffer, int cacheMb, unsigned token,
+                            const char *idiomaAudio, int proximo) {
+  JNIEnv *env;
+  jmethodID metodo;
+  jstring u, c, a;
+  int inicioMs, fracao, ok;
+  if (!url || !*url || !token || token > INT_MAX) return 0;
+  env = ambiente();
+  metodo = proximo ? mPrepararProximo : mPreparar;
+  if (!env || !metodo || !mPrepararEstado || !mCancelarPreparo || !mAbrirPreparada) return 0;
+  inicioMs = isfinite(segundos) && segundos > 0.0 && segundos <= INT_MAX / 1000.0
+               ? (int)(segundos * 1000.0) : 0;
+  fracao = !inicioMs && isfinite(pct) && pct > 0.0 && pct < 100.0
+               ? (int)(pct * 100.0 + 0.5) : 0;
+  u = paraJString(env, url);
+  c = u && !(*env)->ExceptionCheck(env) ? paraJString(env, cab ? cab : "") : NULL;
+  a = c && !(*env)->ExceptionCheck(env) ? paraJString(env, idiomaAudio ? idiomaAudio : "") : NULL;
+  if (!u || !c || !a) {
+    if (u) (*env)->DeleteLocalRef(env, u);
+    if (c) (*env)->DeleteLocalRef(env, c);
+    if (a) (*env)->DeleteLocalRef(env, a);
+    fimChamada(env); return 0;
+  }
+  (*env)->CallStaticVoidMethod(env, gCls, metodo, u, c, (jint)inicioMs,
+      (jint)fracao, (jint)token, (jint)buffer, (jint)cacheMb, a);
+  ok = !(*env)->ExceptionCheck(env);
+  (*env)->DeleteLocalRef(env, u); (*env)->DeleteLocalRef(env, c);
+  (*env)->DeleteLocalRef(env, a);
+  fimChamada(env);
+  return ok;
+}
+int video_precarregar(const char *url, const char *cab, double segundos,
+                     double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio) {
+  return precarregarVideo(url, cab, segundos, pct, buffer, cacheMb, token, idiomaAudio, 0);
+}
+int video_precarregar_proximo(const char *url, const char *cab, double segundos,
+                             double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio) {
+  return precarregarVideo(url, cab, segundos, pct, buffer, cacheMb, token, idiomaAudio, 1);
+}
+int video_precarregar_estado(unsigned token) {
+  JNIEnv *env = ambiente();
+  int estado;
+  if (!env || !mPrepararEstado || !token || token > INT_MAX) return 0;
+  estado = (*env)->CallStaticIntMethod(env, gCls, mPrepararEstado, (jint)token);
+  if ((*env)->ExceptionCheck(env)) { fimChamada(env); return 0; }
+  return estado >= -1 && estado <= 2 ? estado : 0;
+}
+void video_precarregar_cancelar(unsigned token) {
+  JNIEnv *env;
+  if (!token || preparoAdotar == token) preparoAdotar = 0;
+  env = ambiente();
+  if (env && mCancelarPreparo)
+    (*env)->CallStaticVoidMethod(env, gCls, mCancelarPreparo, (jint)token);
+  if (env) fimChamada(env);
+}
+void video_precarregar_adotar(unsigned token) { preparoAdotar = token <= INT_MAX ? token : 0; }
+
 // escolher(3, on): liga/desliga o tap no Kotlin (so posta ao fio principal).
 static void ligarTap(int on) {
   JNIEnv *env = ambiente();
@@ -274,6 +357,9 @@ static unsigned sessao;
 // at 100%. `cacheSessao` survives the reconnection reopens of that video.
 static int bufferPreset, bufferEnviado;
 static int cacheArmado = -1, cacheSessao, cacheEnviado, playerSessao;
+// Warm resume (#492): id of the title the player armed for the next open, the
+// one of this open (empty for trailers/channels) and the one Kotlin has.
+static char tituloArmado[96], tituloSessao[96], tituloEnviado[96];
 static int ganhoEnviado = CB_VOL_NORMAL;
 static int retomadaInicialEstado = -1;
 static pthread_mutex_t travaRetomada = PTHREAD_MUTEX_INITIALIZER;
@@ -287,6 +373,7 @@ static volatile int reconErroPend, reconErroCod, reconErroVideo;
 static int reconAudio = -1, reconLeg = -1;
 static volatile int reconFaixasPend;
 static int reconBuscarMs = -1;
+static int reconPausado;
 static char erroTxt[64];
 
 // Codigos do PlaybackException (Media3) que sao de REDE: IO_UNSPECIFIED 2000,
@@ -505,6 +592,15 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeErroTexto(JN
   fflush(stdout);
 }
 
+// #345: keep audio diagnostics in the uploaded app log, not only logcat.
+JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeAudioLog(JNIEnv *env, jclass cls, jstring texto) {
+  char t[512];
+  (void)cls;
+  deJString(env, texto, t, sizeof t);
+  printf("[video] android audio: %s\n", t);
+  fflush(stdout);
+}
+
 JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeHdr(JNIEnv *env, jclass cls, jstring hdr, jint dv, jint atmos) {
   char h[24];
   (void)cls;
@@ -573,6 +669,8 @@ int  video_registro_negado(void) { return 0; }
 
 // Abre urlAtual no Kotlin. Serve a fonte nova e ao recarregar da reconexao.
 static int abrirSessao(int inicioMs, int fracao) {
+  unsigned preparado = preparoAdotar;
+  preparoAdotar = 0;
   JNIEnv *env;
   ativo = 1; superficieEstavel = 0; prontoLoad = primeiroQuadro = falhou = terminou = tocando = 0;
   velEnviada = 100;
@@ -602,17 +700,46 @@ static int abrirSessao(int inicioMs, int fracao) {
     fimChamada(env);
     cacheEnviado = cacheSessao;
   }
+  if (mTitulo && strcmp(tituloSessao, tituloEnviado)) {
+    jstring t = paraJString(env, tituloSessao);
+    if (t) {
+      (*env)->CallStaticVoidMethod(env, gCls, mTitulo, t);
+      (*env)->DeleteLocalRef(env, t);
+      fimChamada(env);
+      snprintf(tituloEnviado, sizeof tituloEnviado, "%s", tituloSessao);
+    }
+  }
   {
-    jstring u = paraJString(env, urlAtual), c = paraJString(env, cabecalhos);
+    jstring u = paraJString(env, urlAtual);
+    jstring c = u && !(*env)->ExceptionCheck(env) ? paraJString(env, cabecalhos) : NULL;
     if (!u || !c) {
       if (u) (*env)->DeleteLocalRef(env, u);
       if (c) (*env)->DeleteLocalRef(env, c);
-      fimChamada(env); falhou = 1; return 0;
+      fimChamada(env);
+      if (preparado) video_precarregar_cancelar(preparado);
+      falhou = 1; return 0;
     }
     // abrirPosicao also when starting at 0: it is how the Kotlin side learns
     // this session's generation (StreamFit passive telemetry). At 0 the
     // resume state stays -1, exactly as the plain abrir path left it.
-    if (inicioMs <= 0 && fracao > 0 && mAbrirRetomada) {
+    if (preparado && mAbrirPreparada) {
+      jstring a = paraJString(env, ling_audio());
+      if (!a) {
+        (*env)->DeleteLocalRef(env, u); (*env)->DeleteLocalRef(env, c);
+        fimChamada(env);
+        video_precarregar_cancelar(preparado);
+        falhou = 1; return 0;
+      }
+      if (inicioMs > 0 || fracao > 0) estadoRetomada(0);
+      (*env)->CallStaticVoidMethod(env, gCls, mAbrirPreparada, u, c,
+          (jint)inicioMs, (jint)fracao, (jint)geracao, (jint)preparado, a);
+      (*env)->DeleteLocalRef(env, a);
+      if ((*env)->ExceptionCheck(env)) {
+        (*env)->ExceptionClear(env);
+        estadoRetomada(-1);
+        (*env)->CallStaticVoidMethod(env, gCls, mAbrir, u, c);
+      }
+    } else if (inicioMs <= 0 && fracao > 0 && mAbrirRetomada) {
       estadoRetomada(0);
       (*env)->CallStaticVoidMethod(env, gCls, mAbrirRetomada, u, c, (jint)0, (jint)fracao, (jint)geracao);
       if ((*env)->ExceptionCheck(env)) {
@@ -657,16 +784,26 @@ int video_tocar_retomada(const char *u, double segundos, double pct) {
   nv_recon_zerar(&recon);
   reconPermitida = reconProxima; reconProxima = 0;
   reconIniciou = 0; reconErroPend = 0;
-  reconAudio = reconLeg = -1; reconFaixasPend = 0; reconBuscarMs = -1;
+  reconAudio = reconLeg = -1; reconFaixasPend = 0; reconBuscarMs = -1; reconPausado = 0;
   playerSessao = cacheArmado >= 0;
   cacheSessao = cacheArmado > 0 ? cacheArmado : 0;
   cacheArmado = -1;
+  snprintf(tituloSessao, sizeof tituloSessao, "%s", playerSessao ? tituloArmado : "");
+  tituloArmado[0] = 0;
   return abrirSessao(inicioMs, fracao);
 }
 int video_tocar_posicao(const char *u, double segundos) { return video_tocar_retomada(u, segundos, 0.0); }
 
 void cacheboost_backend_buffer(int p) { bufferPreset = p >= 0 && p <= 3 ? p : 0; }
 void cacheboost_backend_cache(int mb) { cacheArmado = mb > 0 ? mb : 0; }
+void cacheboost_backend_titulo(const char *id) { snprintf(tituloArmado, sizeof tituloArmado, "%s", id ? id : ""); }
+void cacheboost_backend_descartar(void) { if (mDescartar) kSemArg(mDescartar); }
+void cacheboost_backend_morno(int ligado) { if (mMorno) kInt(mMorno, ligado); }
+int cacheboost_backend_quadro(int acao) {
+  JNIEnv *env = ambiente(); int r = 0;
+  if (env && mQuadro) { r = (*env)->CallStaticIntMethod(env, gCls, mQuadro, acao); fimChamada(env); }
+  return r;
+}
 void cacheboost_backend_ganho(int pct) {
   if (pct < CB_VOL_MIN) pct = CB_VOL_MIN;
   if (pct > CB_VOL_MAX) pct = CB_VOL_MAX;
@@ -693,7 +830,7 @@ void video_bombear(void) {
   if (prontoLoad && pos > 0.5) reconIniciou = 1;
   if (prontoLoad && reconBuscarMs < 0) nv_recon_progresso(&recon, pos);
   // O seek do recarregar sai com o player ja tocando.
-  if (reconBuscarMs >= 0 && prontoLoad && tocando) {
+  if (reconBuscarMs >= 0 && prontoLoad && (tocando || reconPausado)) {
     kInt(mBuscar, reconBuscarMs);
     printf("[video] reconexao: retomado em %ds\n", reconBuscarMs / 1000);
     fflush(stdout);
@@ -705,7 +842,10 @@ void video_bombear(void) {
     reconErroPend = 0;
     if (reconPermitida && urlAtual[0] && (reconIniciou || recon.tentativa) &&
         nv_recon_erro(&recon, rede, SDL_GetTicks(), pos)) {
-      if (!antes) { reconAudio = audioAtual; reconLeg = legAtual; }
+      if (!antes) {
+        reconAudio = audioAtual; reconLeg = legAtual;
+        reconPausado = pausaPedida;
+      }
       if (recon.tentativa != antes) {
         printf("[video] conexao caiu (%d): tentativa %d/%d, espera %us\n",
                reconErroCod, recon.tentativa, NV_RECON_MAX,
@@ -724,18 +864,36 @@ void video_bombear(void) {
     reconFaixasPend = 1;
     reconBuscarMs = recon.alvo > 1.0 ? (int)(recon.alvo * 1000.0) : -1;
     if (!abrirSessao(0, 0)) { reconErroCod = -1; reconErroPend = 1; }
+    else if (reconPausado) {
+      // abrirSessao nasce tocando. Enfileirar pause logo depois da abertura
+      // conserva o estado de um seek feito pausado; o seek de retomada acima
+      // aceita prontoLoad mesmo sem EV_TOCANDO.
+      pausaPedida = 1; pausaVista = 0;
+      kInt(mPausar, 1);
+    }
   }
 }
 void video_parar(void) {
   novaRetomada(-1);
   capmkv_zerar();   // fio de capitulos em voo nao alimenta o proximo titulo
   nv_recon_zerar(&recon);
-  reconErroPend = 0; reconErroVideo = 0; reconFaixasPend = 0; reconBuscarMs = -1;
-  if (ativo) kSemArg(mParar);
+  reconErroPend = 0; reconErroVideo = 0; reconFaixasPend = 0; reconBuscarMs = -1; reconPausado = 0;
+  if (ativo) {
+    // Troca de episodio: o consumidor ja destacou o proximo buffer. Soltar
+    // o decoder atual nao pode cancelar esse preparo nem o token da abertura.
+    JNIEnv *env = ambiente();
+    if (preparoAdotar && env && mPararMantendoPreparo)
+      kInt(mPararMantendoPreparo, (int)preparoAdotar);
+    else { preparoAdotar = 0; kSemArg(mParar); }
+  }
   ativo = prontoLoad = primeiroQuadro = tocando = 0; superficieEstavel = 0;
   pausaPedida = pausaVista = 0;
 }
-void video_pausar(int p) { pausaVista = 0; pausaPedida = p ? 1 : 0; kInt(mPausar, p ? 1 : 0); }
+void video_pausar(int p) {
+  pausaVista = 0; pausaPedida = p ? 1 : 0;
+  if (nv_recon_ativa(&recon)) reconPausado = pausaPedida;
+  kInt(mPausar, pausaPedida);
+}
 int video_pausa_confirmada(void) {
   return pausaPedida && pausaVista && !tocando && ativo && prontoLoad && primeiroQuadro &&
          !falhou && !terminou && !video_reconectando();

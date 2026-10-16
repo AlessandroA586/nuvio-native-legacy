@@ -44,6 +44,16 @@ int  video_tocar_posicao(const char *url, double segundos);
 // sobre a duracao do container ANTES do primeiro quadro; mesmo ack/estado.
 int  video_tocar_retomada(const char *url, double segundos, double pct);
 int  video_retomada_inicial_estado(void);
+// Fonte preparada na pagina do titulo: player pausado, sem imagem, audio ou
+// eventos da sessao de reproducao. Token identifica o dono; zero cancela todos.
+int  video_precarregar(const char *url, const char *cabecalhos, double segundos,
+                      double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio);
+int  video_precarregar_proximo(const char *url, const char *cabecalhos, double segundos,
+                              double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio);
+// 0 ausente, 1 preparando, 2 pronto, -1 falhou. Nao muda video_pronto().
+int  video_precarregar_estado(unsigned token);
+void video_precarregar_cancelar(unsigned token);
+void video_precarregar_adotar(unsigned token);
 #endif
 
 // Chamar UMA VEZ POR QUADRO. Hoje serve ao prazo do recuo de Dolby Vision
@@ -256,6 +266,11 @@ void   video_tpk_zoom_roi_definir(int ligado);
 int    video_tpk_zoom_roi(void);
 // trailer.c marca que o que toca agora e um trailer (so ele pode ter ROI fora da tela).
 void   video_tpk_trailer_marcar(int sim);
+void   video_tpk_cartao_marcar(int sim);   // o destino e o furo do cartao da home
+int    video_tpk_cartao_cover(void);       // 1 = o cartao recebe cover (recorte de fonte), 0 = encaixe
+void   video_tpk_cartao_destino(float x, float y, float w, float h, float *ox, float *oy, float *ow, float *oh);
+void   video_tpk_cartao_furo(float x, float y, float w, float h, float *ox, float *oy, float *ow, float *oh);
+void   video_tpk_tizen_definir(const char *versao);   // gpunivel.c: platform.version
 int    video_recorte_fonte_trailer(void);   // so o trailer: o ajuste em execucao
 #else
 static inline int video_recorte_fonte_trailer(void) { return video_recorte_fonte(); }

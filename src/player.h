@@ -7,6 +7,9 @@
 // preferencias do player, mas quem o define e o modulo de video.
 #include "video.h"
 #include "catalogo.h"
+#ifdef NV_ANDROID
+#include "streams.h"
+#endif
 #include "aovivo.h"
 #include <SDL2/SDL.h>
 
@@ -22,6 +25,17 @@ void player_do_inicio(void);
 // da duracao real; metadados/reservas nao servem para converter percentual.
 double player_regra_retomada_inicial(double posSalva, double durSalva,
                                      int percentual, int concluido);
+#ifdef NV_ANDROID
+// Prepara a mesma retomada do Play sem abrir sessao nem gravar progresso.
+int player_precarregar_fonte(int indiceCatalogo, int temporada, int episodio,
+                            int indiceFonte, unsigned token);
+unsigned player_precarregar_novo_token(void);
+int player_precarregar_proxima_fonte(int indiceCatalogo, int temporada, int episodio,
+                                    const Stream *fonte, unsigned token);
+int player_precarregar_estado(unsigned token);
+void player_precarregar_cancelar(unsigned token);
+void player_precarregar_adotar(unsigned token);
+#endif
 void player_episodio_atual(int *temporada, int *episodio);
 void player_aprender_creditos(void);
 int player_indice(void);
@@ -109,6 +123,9 @@ int  player_carregando(void);
 int  player_controles_visiveis(void);
 // Idem, para #121: foco na barra de tempo e a posicao que ela mostra.
 int   player_foco_na_barra(void);
+// 1 quando o CIMA e do player (controles na tela, "Pular abertura", cartao de
+// abertura, painel de pausa): as estatisticas fixadas cedem a tecla.
+int   player_cima_dele(void);
 // #128: 1 na busca que comecou com os controles escondidos, quando so a barra
 // e o tempo estao na tela.
 int   player_so_barra(void);
@@ -134,6 +151,10 @@ int   player_duracao_midia(double *seg);
 // no ultimo instante (ver stream_idade_ms), entao a tela abre antes de haver
 // URL e o video entra quando chega.
 void player_definir_fonte(const char *url);
+// Troca automatica do mesmo filme/episodio: preservar segundos, inclusive
+// quando a sessao foi iniciada com "Assistir do comeco". Chamar antes de parar.
+// Zero e um ponto valido (a pessoa voltou ao inicio), nao retomada ausente.
+void player_definir_retomada_fonte(double segundos);
 // Desfaz a fonte em curso SEM fechar a tela: o video para e a sessao volta a
 // "abrindo fonte", como logo depois de player_abrir. E o recuo da fonte
 // guardada (fontevolta.h) para a busca normal, sem a pessoa ver o player
@@ -173,6 +194,7 @@ int  player_retido_so_voo(void);
 int  player_retomar_retido(const char *imdb, int temporada, int episodio);
 void player_validar_retido(Uint32 agora);
 void player_descartar_retido(void);
+void player_ciclo_evento(Uint32 tipo);
 
 // --- MINI-PLAYER (PiP) DE CANAL ---------------------------------------------
 // Sair de um canal para a home nao mata a transmissao: o destino do plano de
