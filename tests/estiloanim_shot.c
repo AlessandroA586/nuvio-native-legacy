@@ -55,6 +55,23 @@ static void gravar(const char *png) {
   printf("  captura: %s\n", png);
 }
 
+// Soma de brilho (R+G+B) de um retangulo do quadro atual.
+static long brilho(GfxRect r) {
+  static unsigned char pix[1920 * 1080 * 4];
+  long soma = 0;
+  int x, y, x0 = (int)r.x, y0 = (int)r.y;
+  glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, pix);
+  for (y = y0; y < y0 + (int)r.h && y < 1080; y++)
+    for (x = x0; x < x0 + (int)r.w && x < 1920; x++) {
+      unsigned char *p = pix + ((1079 - y) * 1920 + x) * 4;
+      soma += p[0] + p[1] + p[2];
+    }
+  return soma;
+}
+
+static GfxRect medir;   // se w > 0, quadros() mede o brilho dele antes do swap
+static long medido;
+
 static void quadros(int n, const char *png) {
   int i;
   for (i = 0; i < n; i++) {
@@ -74,6 +91,7 @@ static void quadros(int n, const char *png) {
     home_desenhar(agora);
     ctx_atualizar(1.0f / 60.0f, agora);
     ctx_desenhar(agora);
+    if (medir.w > 0.0f) medido = brilho(medir);
     if (png && i == n - 1) gravar(png);
     SDL_GL_SwapWindow(janela);
     SDL_Delay(8);
@@ -258,14 +276,18 @@ int main(int argc, char **argv) {
     confere("progresso chega perto de 1 em ~330 ms", ctx_estilo_t() > 0.95f);
     quadros(60, NULL);
     confere("progresso final = 1", ctx_estilo_t() > 0.999f);
+    ctx_estilo_rect(&r);
     snprintf(png, sizeof png, "%s/estiloanim-final.png", saida);
     quadros(1, png);
     // VOLTAR: o seletor fecha animado (inverso da abertura), nao some de vez.
     e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_ESCAPE; ctx_evento(&e);
     e.type = SDL_KEYUP; ctx_evento(&e);
+    long meio, fim;
+    medir = r;
     quadros(1, NULL); t0 = ctx_estilo_t(); prev = 2; mono = 1; fi = 0;
     printf("  t(fechar)=%.3f\n", t0);
     confere("fechar nao zera o progresso de uma vez", t0 > 0.5f);
+    meio = medido;
     for (k = 1; k <= 20; k++) {
       snprintf(png, sizeof png, "%s/estiloanim-close-f%02d.png", saida, k);
       quadros(1, (fi < 3 && k == f[fi]) ? png : NULL);
@@ -276,7 +298,12 @@ int main(int argc, char **argv) {
     }
     confere("fechar: progresso monotono", mono);
     quadros(60, NULL);
-    confere("fechar: progresso final = 0", ctx_estilo_t() < 0.001f); }
+    confere("fechar: progresso final = 0", ctx_estilo_t() < 0.001f);
+    // O veu do menu nao pode apagar o seletor que some: no 1o quadro do
+    // fechamento o retangulo dele ainda e bem mais claro que o menu em repouso.
+    fim = medido; medir.w = 0.0f;
+    printf("  brilho meio=%ld fim=%ld rect=%.0f,%.0f %.0fx%.0f\n", meio, fim, r.x, r.y, r.w, r.h);
+    confere("fechar: seletor ainda visivel no inicio do fechamento", meio > fim * 4); }
   (void)gl;
   printf("\n%s\n", falhas ? "FALHOU" : "PASSOU");
   return falhas ? 1 : 0;

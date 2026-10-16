@@ -1966,6 +1966,8 @@ static void ctx_desenharCorpo_(Uint32 agora);
 void ctx_desenhar(Uint32 agora) {
   ESCALA_INI();
   ctx_desenharCorpo_(agora);
+  // Depois do corpo: o veu de 94% do menu apagaria o seletor que esta sumindo.
+  if (estSaindo && anim >= 0.01f && !(modoInline() && pagina == 0)) desenhaEstilos(anim);
   ESCALA_FIM();
 }
 // O cartao da home e em pixels reais; o menu desenha na tela virtual.
@@ -2014,7 +2016,6 @@ static void ctx_desenharCorpo_(Uint32 agora) {
   if (a < 0.01f) return;
   if (modoInline() && pagina == 0) return;   // a linha do painel se abre sozinha (salvospainel.c)
   if (pagina == 1) { desenhaEstilos(a); return; }
-  if (estSaindo) desenhaEstilos(a);   // por cima do menu, sumindo
   if (doLista) { desenhaLista(a); return; }
   ci = itemAtual();
   if (!ci) return;
