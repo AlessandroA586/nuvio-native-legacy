@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT="${NV_TEST_OUT:-${TMPDIR:-/tmp}}/nuvio-p2pusb-android-test"
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-p2pusb-android.XXXXXX")

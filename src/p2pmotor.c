@@ -25,6 +25,7 @@
 #include <unistd.h>
 #ifdef __ANDROID__
 #include "android.h"
+#include <sys/vfs.h>
 #endif
 
 // ------------------------------------------------------------------ estado
@@ -43,6 +44,7 @@ static pthread_t fioVigia;
 static char tidAtual[65], sidAtual[65], hashAtual[41], prefixoUrl[96];
 static int metaPronta;
 static char pastaRaiz[600], pastaMae[600];
+static int pastaFat;           // File limit bound to the active motor root.
 static uint64_t livreSubida;   // livre medido quando o motor subiu (#297)
 static uint64_t tamArquivo;    // tamanho do arquivo do pedido atual (#334); 0 = nao sei
 static int limpando;           // p2pmotor_limpar_sobra apagando a pasta (#334)
@@ -362,12 +364,11 @@ static void usbFs(const char *path, char *fs, size_t nfs) {
   const char *id;
   FILE *f = fopen(usbMounts[0] ? usbMounts : "/proc/mounts", "r");
   snprintf(fs, nfs, "?");
-  if (!f) return;
   if (!strncmp(path, "/storage/", 9) && (id = path + 9)[0]) {
     size_t l = strcspn(id, "/");
     snprintf(alvo, sizeof alvo, "/mnt/media_rw/%.*s", (int)l, id);
   }
-  while (fgets(linha, sizeof linha, f)) {
+  while (f && fgets(linha, sizeof linha, f)) {
     size_t l;
     if (sscanf(linha, "%511s %511s %63s", dev, mp, tipo) != 3) continue;
     l = strlen(mp);
@@ -377,20 +378,37 @@ static void usbFs(const char *path, char *fs, size_t nfs) {
       snprintf(fs, nfs, "%s", tipo);
     }
   }
-  fclose(f);
+  if (f) fclose(f);
+#ifdef __ANDROID__
+  // FUSE may hide media_rw in the app namespace. statfs can expose the
+  // backing type; if it still reports FUSE, keep the conservative limit.
+  if (!strcmp(fs, "?") || !strncmp(fs, "fuse", 4) || !strcmp(fs, "sdcardfs")) {
+    struct statfs st;
+    if (statfs(path, &st) == 0) {
+      if (st.f_type == 0x4d44) snprintf(fs, nfs, "vfat");
+      else if (st.f_type == 0xef53) snprintf(fs, nfs, "ext4");
+      else if ((unsigned long)st.f_type == 0x2011bab0) snprintf(fs, nfs, "exfat");
+    }
+  }
+#endif
 }
 
-// FAT32 holds files up to 4 GiB - 1: refuse a bigger one when the cache root
-// in use is the FAT32 USB volume.
+// Only known large-file filesystems bypass the FAT32/unknown backing cap.
+static int usbFsLimitado(const char *fs) {
+  return strcmp(fs, "exfat") && strcmp(fs, "ext4") && strcmp(fs, "ext3") &&
+         strcmp(fs, "ext2") && strcmp(fs, "ntfs") && strcmp(fs, "ntfs3") &&
+         strcmp(fs, "xfs") && strcmp(fs, "btrfs") && strcmp(fs, "f2fs") &&
+         strcmp(fs, "apfs") && strcmp(fs, "hfsplus") && strcmp(fs, "tmpfs") &&
+         strcmp(fs, "overlay");
+}
+
+// FAT32 and unknown backing types hold files below 4 GiB. The limit belongs
+// to the active root, regardless of later USB preference changes.
 static int usbFatExcede(uint64_t tam) {
-  char raiz[600];
   int r;
   pthread_mutex_lock(&trava);
-  snprintf(raiz, sizeof raiz, "%s", pastaRaiz);
+  r = pastaFat && tam >= (4ull << 30);
   pthread_mutex_unlock(&trava);
-  pthread_mutex_lock(&usbTrava);
-  r = usbFat && usbRaiz[0] && !strcmp(raiz, usbRaiz) && tam >= (4ull << 30);
-  pthread_mutex_unlock(&usbTrava);
   return r;
 }
 
@@ -438,8 +456,8 @@ static int usbEscanear(char *raiz, unsigned nr, int criar) {
   if (found) {
     atomic_store(&usbMotivo, P2PM_USB_NONE);
     usbFs(raiz, fs, sizeof fs);
-    int fat = !strcmp(fs, "vfat") || !strcmp(fs, "msdos");
-    if (fat && !usbFat) printf("[p2p] usb: %s is FAT32, files >= 4 GiB refused\n", raiz);
+    int fat = usbFsLimitado(fs);
+    if (fat && !usbFat) printf("[p2p] usb: %s is FAT32 or unknown backing (%s), files >= 4 GiB refused\n", raiz, fs);
     usbFat = fat;
   }
   for (UsbLog **p = &usbLogs; *p;) {
@@ -495,7 +513,8 @@ static int usbCacheValido(void) {
 // chamada re-sondava e um pendrive arrancado no meio da sessao trocava a raiz
 // em silencio. Raiz lembrada que sumiu (access falha): re-sonda uma vez e,
 // nao achando, cai para o interno — a promessa do ajuste.
-static int pastas(char *raiz, unsigned nr, char *mae, unsigned nm) {
+static int pastas(char *raiz, unsigned nr, char *mae, unsigned nm, int *fat) {
+  if (fat) *fat = 0;
   if (!raizInjetada[0] && ajustes_p2p_ligado() && atomic_load(&usbPreferido)) {
     int ok;
     pthread_mutex_lock(&usbTrava);
@@ -516,6 +535,7 @@ static int pastas(char *raiz, unsigned nr, char *mae, unsigned nm) {
     }
     if (usbRaiz[0]) {
       snprintf(raiz, nr, "%s", usbRaiz);
+      if (fat) *fat = usbFat;
       ok = 1;
     }
     else ok = 0;
@@ -728,7 +748,7 @@ int p2pmotor_resumo(char *detalhe, unsigned n) {
   int e;
   if (detalhe && n) detalhe[0] = 0;
   if (!ops()) return P2P_ERR_DESLIGADO;
-  if (!pastas(raiz, sizeof raiz, mae, sizeof mae)) return P2P_ERR_DISCO;
+  if (!pastas(raiz, sizeof raiz, mae, sizeof mae, NULL)) return P2P_ERR_DISCO;
   e = orcamento(mae, &mole, &duro, &livre);
   atomic_store(&tetoUltimoMb, e == P2P_OK ? (unsigned)(duro >> 20) : 0u);
   if (detalhe && n) snprintf(detalhe, n, "%s", p2pmotor_versao());
@@ -1151,8 +1171,8 @@ static int subir(const P2pmOps *o, unsigned g) {
   uint64_t mole = 0, duro = 0, livre = 0;
   P2pmConfig c;
   void *m = NULL;
-  int e;
-  if (!pastas(raiz, sizeof raiz, mae, sizeof mae)) return P2P_ERR_DISCO;
+  int e, fat = 0;
+  if (!pastas(raiz, sizeof raiz, mae, sizeof mae, &fat)) return P2P_ERR_DISCO;
   percorrer(raiz, 1, 0);   // sobra de uma sessao que caiu (ou da saida apressada)
   e = orcamento(mae, &mole, &duro, &livre);
   if (e != P2P_OK && atomic_load(&usbPreferido) && !raizInjetada[0]) {
@@ -1165,6 +1185,7 @@ static int subir(const P2pmOps *o, unsigned g) {
     pthread_mutex_unlock(&usbTrava);
     if (eraUsb) {
       if (!pastasInternas(raiz, sizeof raiz, mae, sizeof mae)) return P2P_ERR_DISCO;
+      fat = 0;
       percorrer(raiz, 1, 0);
       e = orcamento(mae, &mole, &duro, &livre);
       printf("[p2p-motor] USB indisponivel; caiu para interno\n");
@@ -1215,6 +1236,7 @@ static int subir(const P2pmOps *o, unsigned g) {
   vigiaViva = 1;
   motor = m;
   snprintf(pastaRaiz, sizeof pastaRaiz, "%s", raiz);
+  pastaFat = fat;
   snprintf(pastaMae, sizeof pastaMae, "%s", mae);
   memset(&estado, 0, sizeof estado);
   estado.disco_teto = mole;
@@ -1380,7 +1402,7 @@ static int resolverCom(Pedido *p, const char *h, int fileIdx, const char *fontes
     free(nomes); free(tams);
   }
   if (idx >= 0 && usbFatExcede(tamEscolhido)) {
-    printf("[p2p-motor] %.8s: arquivo %d tem %.0f MB, pendrive FAT32 aceita < 4096 MB: recusado\n",
+    printf("[p2p-motor] %.8s: arquivo %d tem %.0f MB, FAT32/unknown backing accepts < 4096 MB: refused\n",
            h, idx, (double)tamEscolhido / 1048576.0);
     soltarTorrent(p);
     return P2P_ERR_SEM_ESPACO;
