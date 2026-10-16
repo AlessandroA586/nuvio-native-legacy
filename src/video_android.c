@@ -37,6 +37,7 @@
 #include "streamfitpassiva.h"
 #include "audsync.h"
 #include "cacheboost.h"
+#include "tex_cache.h"
 #include "velocidade.h"
 #include <SDL2/SDL.h>
 #include <jni.h>
@@ -688,6 +689,10 @@ static int abrirSessao(int inicioMs, int fracao) {
   temEnv = 0;   // a SurfaceView nova ainda nao recebeu janela nenhuma
   if (!travaLeg) travaLeg = SDL_CreateMutex();
   unsigned geracao = novaRetomada(-1);
+  // Numero medido na TV TCL de 2,4 GB: 217 MB de textura + 96 MB de buffer +
+  // paralelo/preparo levaram o app a ~575 MB de PSS e o lmkd matou. A arte da
+  // home nao aparece durante o filme; o cache de disco refaz ela na volta.
+  tex_pressao_reproducao(1);
   env = ambiente();
   if (!env) { falhou = 1; printf("[video] android: NvPlayer indisponivel\n"); fflush(stdout); return 0; }
   // F07: the cache limit is sticky in Kotlin (read at each open), so it only
@@ -927,6 +932,7 @@ void video_parar(void) {
   }
   ativo = prontoLoad = primeiroQuadro = tocando = 0; superficieEstavel = 0;
   pausaPedida = pausaVista = 0;
+  tex_pressao_reproducao(0);
 }
 void video_pausar(int p) {
   pausaVista = 0; pausaPedida = p ? 1 : 0;

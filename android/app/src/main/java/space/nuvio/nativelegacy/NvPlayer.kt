@@ -98,6 +98,9 @@ object NvPlayer {
 
     private val principal = Handler(Looper.getMainLooper())
     private var activity: Activity? = null
+    // isLowRamDevice/memoryClass medidos no primeiro criarPlayer (0 = ainda
+    // nao mediu, 1 = pouca RAM, 2 = normal). CargaPlayer le sem Context.
+    @Volatile internal var poucaRamAparelho = false
     private var camada: FrameLayout? = null
     private var interfaceMobile = false
     private var superficie: SurfaceView? = null
@@ -371,9 +374,11 @@ object NvPlayer {
             minMs, maxMs, 2_500, 5_000, bytes, false, 0, false) {
         @Volatile var adotada = !preparando
         @Volatile var cancelada = false
-        // At most 1/16 of the heap, with the same heap ceiling as normal play.
-        private val tetoPreparo = (Runtime.getRuntime().maxMemory() / 16)
-            .coerceIn(8L shl 20, 16L shl 20).coerceAtMost(bytes.toLong()).toInt()
+        // At most 1/16 of the heap (1/32 on low-RAM, where the active player
+        // and the parallel downloader already press the limit), with the same
+        // heap ceiling as normal play.
+        private val tetoPreparo = (Runtime.getRuntime().maxMemory() / (if (poucaRamAparelho) 32 else 16))
+            .coerceIn(8L shl 20, (if (poucaRamAparelho) 8L else 16L) shl 20).coerceAtMost(bytes.toLong()).toInt()
         fun esperarCapacidade() {
             // HLS/DASH can load a whole large segment between LoadControl
             // checks. Pause reads at the same allocator ceiling as progressive
@@ -1142,12 +1147,21 @@ object NvPlayer {
     private fun criarPlayer(act: Activity, url: String, cabecalhos: String, preset: Int,
                             pedidoCache: Int, preparando: Boolean, geracao: Int, construir: Boolean = true,
                             idiomaAudio: String = "", titulo: String = ""): RecursosPlayer {
-        val tetoBuffer = (Runtime.getRuntime().maxMemory() / 4).coerceIn(32L shl 20, 96L shl 20).toInt()
+        // Em aparelho de pouca RAM (ActivityManager: isLowRamDevice ou
+        // memoryClass <= 128 MB, ex.: TCL 2,4 GB com memoryClass 192 passa)
+        // o teto do buffer cai para a metade: gpu-cache + buffer + pedacos
+        // paralelos + preparo do proximo titulo estouraram uma TV de 2,4 GB
+        // (PSS ~575 MB, lmkd matou o app). Aparelho com RAM sobrando nao muda.
         val heap = Runtime.getRuntime().maxMemory()
+        val am = act.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+        val poucaRam = (am != null && (am.isLowRamDevice || am.memoryClass <= 128)).also { poucaRamAparelho = it }
+        val tetoBuffer = if (poucaRam) (heap / 8).coerceIn(24L shl 20, 48L shl 20).toInt()
+                         else (heap / 4).coerceIn(32L shl 20, 96L shl 20).toInt()
         val (minMs, maxMs, bytes) = when (preset) {
             1 -> Triple(15_000, 25_000, tetoBuffer / 2)
             2 -> Triple(50_000, 80_000, tetoBuffer)
-            3 -> Triple(90_000, 150_000, (heap / 3).coerceIn(32L shl 20, 96L shl 20).toInt())
+            3 -> Triple(90_000, 150_000, (heap / 3).coerceIn(32L shl 20,
+                      (if (poucaRam) 48L else 96L) shl 20).toInt())
             else -> Triple(50_000, 50_000, tetoBuffer)
         }
         val r = RecursosPlayer(CargaPlayer(minMs, maxMs, bytes, preparando), maxMs, if (preparando) idiomaAudio else "")
