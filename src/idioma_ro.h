@@ -819,6 +819,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Activează Miniatura episodului pentru a estompa imaginea următorului episod."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Activează Miniaturi pe bara de timp pentru a ajusta miniaturile."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Activează Arată bannerul principal pentru a afișa cataloagele în partea de sus a paginii Acasă."),
+  T("Ative P2P para escolher onde guardar o cache.", "Activează P2P pentru a alege unde se stochează cache-ul."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Activează Ceas pe ecran: fără el, playerul nu are unde să se minimizeze."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Activează TMDB pentru a regla ce completează el."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Activează Trailer în evidență pentru a regla trailerul din partea de sus a paginii principale."),

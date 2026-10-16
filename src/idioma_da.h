@@ -820,6 +820,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Slå Afsnitsminiature til for at sløre billedet af næste afsnit."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Slå Miniaturer på tidslinjen til for at justere miniaturerne."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Slå Vis fremhævede til for at vise kataloger øverst på Hjem."),
+  T("Ative P2P para escolher onde guardar o cache.", "Aktivér P2P for at vælge, hvor cachen skal gemmes."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Slå Ur på skærmen til: uden det har afspilleren intet sted at minimere til."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Slå TMDB til for at justere, hvad det beriger."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Slå Trailer i toppen til for at justere traileren øverst på forsiden."),

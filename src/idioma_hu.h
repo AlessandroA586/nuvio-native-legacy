@@ -820,6 +820,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Kapcsold be az Epizód miniatűrt a következő epizód képének elmosásához."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Kapcsold be ezt: „Miniatűrök az idősávon”, hogy beállíthasd a miniatűröket."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Kapcsold be a Spotlight megjelenítését, hogy a katalógusok a főoldal tetején jelenjenek meg."),
+  T("Ative P2P para escolher onde guardar o cache.", "Kapcsold be a P2P funkciót a gyorsítótár helyének kiválasztásához."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Kapcsold be ezt: „Óra a képernyőn”: nélküle a lejátszó nem tud hová kicsinyedni."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Kapcsold be a TMDB-t, hogy beállíthasd, mit egészítsen ki."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Kapcsolja be a Kiemelt előzetest a kezdőlap tetején lévő előzetes beállításához."),

@@ -820,6 +820,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Zapnite Náhľad epizódy, aby ste mohli rozmazať obrázok ďalšej epizódy."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Zapnite „Náhľady na časovej osi“ a upravte náhľady."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Zapnite Zobraziť Spotlight, aby sa katalógy zobrazovali hore na domovskej obrazovke."),
+  T("Ative P2P para escolher onde guardar o cache.", "Zapnite P2P a vyberte, kam ukladať vyrovnávaciu pamäť."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Zapnite „Hodiny na obrazovke“: bez nich sa prehrávač nemá kam minimalizovať."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Zapnite TMDB, aby ste mohli upraviť, čo obohacuje."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Zapnite Trailer v úvode a nastavte trailer hore na domovskej obrazovke."),

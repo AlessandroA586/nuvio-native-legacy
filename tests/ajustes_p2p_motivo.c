@@ -2,7 +2,8 @@
 #include "../src/p2pmotor.h"
 static int tDisp, tUsb;
 static int tst_disp(void) { return tDisp; }
-static int tst_usb(void) { return tUsb; }
+int ajustes_p2p_ligado(void);
+static int tst_usb(void) { return ajustes_p2p_ligado() && tUsb; }
 #define p2pmotor_disponivel tst_disp
 #define p2pmotor_usb_presente tst_usb
 #include "../src/ajustes.c"
@@ -19,12 +20,23 @@ int main(void) {
   const char *ext = "O cache fica no servidor P2P configurado em Endereço do servidor P2P. Escolha Nesta TV para usar o motor desta TV.";
   const char *usb = "Conecte um pendrive USB com espaço livre na TV para guardar o cache nele. Sem pendrive o cache fica no armazenamento interno.";
   const char *lim = "O limite vale só para o motor desta TV. Com um servidor P2P configurado, quem guarda o cache é o servidor.";
+  const char *ligar = "Ative P2P para escolher onde guardar o cache.";
+  valor[AJ_P2P_LIGADO] = 1;
+  assert(!ajustes_p2p_ligado());
   tDisp = 0; tUsb = 1; p2pEndereco[0] = 0;
   ok(AJ_P2P_DESTINO, motor); ok(AJ_P2P_LIMITE, motor);
   tDisp = 1; snprintf(p2pEndereco, sizeof p2pEndereco, "http://x:1");
   ok(AJ_P2P_DESTINO, ext); ok(AJ_P2P_LIMITE, lim);
-  p2pEndereco[0] = 0; tUsb = 0;
+  p2pEndereco[0] = 0;
+  ok(AJ_P2P_DESTINO, ligar);
+  assert(!inativa(AJ_P2P_LIMITE));
+  tUsb = 0;
+  ok(AJ_P2P_DESTINO, ligar);
+  valor[AJ_P2P_LIGADO] = 0;
+  assert(ajustes_p2p_ligado());
   ok(AJ_P2P_DESTINO, usb);
+  tUsb = 1;
+  assert(!inativa(AJ_P2P_DESTINO));
   assert(!inativa(AJ_P2P_LIMITE));
   puts("ajustes_p2p_motivo: ok");
   return 0;

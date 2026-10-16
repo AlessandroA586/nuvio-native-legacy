@@ -6385,6 +6385,7 @@ static const char *ajudaOpcaoBase(int op) {
         return op == AJ_P2P_LIMITE
           ? "O limite vale só para o motor desta TV. Com um servidor P2P configurado, quem guarda o cache é o servidor."
           : "O cache fica no servidor P2P configurado em Endereço do servidor P2P. Escolha Nesta TV para usar o motor desta TV.";
+      if (!ajustes_p2p_ligado()) return "Ative P2P para escolher onde guardar o cache.";
       return "Conecte um pendrive USB com espaço livre na TV para guardar o cache nele. Sem pendrive o cache fica no armazenamento interno.";
     }
     if (op == AJ_DTS_AC3) return "Não disponível nesta TV. Só a LG converte o DTS dentro do app.";

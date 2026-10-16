@@ -820,6 +820,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Zet Afleveringsminiatuur aan om de afbeelding van de volgende aflevering te vervagen."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Zet Miniaturen op de tijdbalk aan om de miniaturen aan te passen."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Zet Spotlight tonen aan om catalogi bovenaan het startscherm te tonen."),
+  T("Ative P2P para escolher onde guardar o cache.", "Schakel P2P in om te kiezen waar de cache wordt opgeslagen."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Zet Klok op het scherm aan: zonder klok kan de speler nergens heen minimaliseren."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Zet TMDB aan om aan te passen wat het aanvult."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Zet Trailer in uitgelicht aan om de trailer bovenaan Home in te stellen."),

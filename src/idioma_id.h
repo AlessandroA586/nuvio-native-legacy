@@ -820,6 +820,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Aktifkan Thumbnail episode untuk mengaburkan gambar episode berikutnya."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Nyalakan Thumbnail di bilah waktu untuk mengatur thumbnail."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Aktifkan Tampilkan spotlight untuk menampilkan katalog di bagian atas layar Beranda."),
+  T("Ative P2P para escolher onde guardar o cache.", "Aktifkan P2P untuk memilih tempat menyimpan cache."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Nyalakan Jam di layar: tanpanya pemutar tidak punya tempat untuk diperkecil."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Aktifkan TMDB untuk mengatur apa yang diperkaya."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Aktifkan Trailer sorotan untuk mengatur trailer di bagian atas Beranda."),

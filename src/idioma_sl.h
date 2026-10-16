@@ -820,6 +820,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Vklopite Sličico epizode, da zameglite sliko naslednje epizode."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Vklopite »Sličice na časovni vrstici«, da prilagodite sličice."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Vklopite Prikaži Spotlight, da se katalogi prikažejo na vrhu domačega zaslona."),
+  T("Ative P2P para escolher onde guardar o cache.", "Vklopite P2P, da izberete, kam shraniti predpomnilnik."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Vklopite »Ura na zaslonu«: brez nje se predvajalnik nima kam pomanjšati."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Vklopite TMDB, da prilagodite, kaj obogati."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Vklopite Napovednik v izpostavljenem, da nastavite napovednik na vrhu domače strani."),

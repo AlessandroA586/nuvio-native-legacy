@@ -820,6 +820,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "次のエピソードの画像をぼかすには「エピソードのサムネイル」をオンにしてください。"),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "サムネイルを調整するには「タイムバーのサムネイル」をオンにしてください。"),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "ホームの上部にカタログを表示するには「注目を表示」をオンにしてください。"),
+  T("Ative P2P para escolher onde guardar o cache.", "P2Pを有効にして、キャッシュの保存先を選択してください。"),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "「画面に時計を表示」をオンにしてください。オフだとプレーヤーを最小化する場所がありません。"),
   T("Ative TMDB para ajustar o que ele enriquece.", "TMDB で補完する内容を調整するには、TMDB をオンにしてください。"),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "ホーム上部の予告編を調整するには「ヒーロー予告編」をオンにしてください。"),

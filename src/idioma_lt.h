@@ -820,6 +820,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Įjunkite Epizodo miniatiūrą, kad sulietumėte kito epizodo vaizdą."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Įjunkite „Miniatiūros laiko juostoje“, kad pakoreguotumėte miniatiūras."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Įjunkite Rodyti Spotlight, kad katalogai būtų rodomi Pradžios ekrano viršuje."),
+  T("Ative P2P para escolher onde guardar o cache.", "Įjunkite P2P, kad pasirinktumėte, kur saugoti talpyklą."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Įjunkite „Laikrodis ekrane“: be jo grotuvas neturi kur sumažėti."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Įjunkite TMDB, kad galėtumėte reguliuoti, ką jis papildo."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Įjunkite Išskirtą anonsą, kad nustatytumėte anonsą pagrindinio viršuje."),

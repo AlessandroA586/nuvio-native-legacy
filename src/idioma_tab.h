@@ -819,6 +819,7 @@
   { "Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Turn on Episode thumbnail to blur the next episode's image." },
   { "Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Turn on Seek bar thumbnails to adjust the thumbnails." },
   { "Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Turn on Show spotlight to display catalogs at the top of the Home screen." },
+  { "Ative P2P para escolher onde guardar o cache.", "Enable P2P to choose where to store the cache." },
   { "Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Turn on Clock on screen: without it the player has nowhere to minimise to." },
   { "Ative TMDB para ajustar o que ele enriquece.", "Turn on TMDB to adjust what it enriches." },
   { "Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Turn on Hero trailer to adjust the trailer at the top of Home." },

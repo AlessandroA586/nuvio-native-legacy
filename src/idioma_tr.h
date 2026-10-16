@@ -820,6 +820,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Sonraki bölümün görselini bulanıklaştırmak için Bölüm küçük resmini aç."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Küçük resimleri ayarlamak için Zaman çubuğunda küçük resimler seçeneğini açın."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Katalogları Ana ekranın üstünde göstermek için Spotlight'ı göster'i aç."),
+  T("Ative P2P para escolher onde guardar o cache.", "Önbelleğin nerede saklanacağını seçmek için P2P özelliğini aç."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Ekranda saat seçeneğini açın: o olmadan oynatıcının küçülecek yeri yok."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Neyi zenginleştireceğini ayarlamak için TMDB'yi aç."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Ana sayfanın üstündeki fragmanı ayarlamak için Öne çıkan fragmanı açın."),

@@ -819,6 +819,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Activez Miniature de l'épisode pour flouter l'image du prochain épisode."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Activez Miniatures sur la barre de temps pour régler les miniatures."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Activez Afficher la une pour afficher les catalogues en haut de l'accueil."),
+  T("Ative P2P para escolher onde guardar o cache.", "Activez P2P pour choisir où stocker le cache."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Activez Horloge à l’écran : sans elle, le lecteur n’a nulle part où se réduire."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Activez TMDB pour ajuster ce qu'il enrichit."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Activez Bande-annonce en vedette pour régler la bande-annonce en haut de l'accueil."),

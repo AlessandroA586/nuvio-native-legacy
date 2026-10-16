@@ -819,6 +819,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Включите «Миниатюру эпизода», чтобы размыть изображение следующего эпизода."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Включите «Миниатюры на шкале времени», чтобы настроить миниатюры."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Включите «Показывать главный баннер», чтобы отображать каталоги вверху главной."),
+  T("Ative P2P para escolher onde guardar o cache.", "Включите P2P, чтобы выбрать место хранения кеша."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Включите «Часы на экране»: без него плееру некуда сворачиваться."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Включите TMDB, чтобы настроить, что он дополняет."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Включите «Трейлер в баннере», чтобы настроить трейлер вверху главной."),

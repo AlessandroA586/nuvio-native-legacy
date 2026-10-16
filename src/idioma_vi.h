@@ -820,6 +820,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Bật Ảnh thu nhỏ tập để làm mờ hình của tập kế tiếp."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Bật Ảnh thu nhỏ trên thanh thời gian để điều chỉnh ảnh thu nhỏ."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Bật Hiển thị spotlight để hiện danh mục ở đầu màn hình Trang chủ."),
+  T("Ative P2P para escolher onde guardar o cache.", "Bật P2P để chọn nơi lưu bộ nhớ đệm."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Bật Đồng hồ trên màn hình: không có nó, trình phát không có chỗ để thu nhỏ."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Bật TMDB để chỉnh những gì nó bổ sung."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Bật Trailer nổi bật để chỉnh trailer ở đầu Trang chủ."),

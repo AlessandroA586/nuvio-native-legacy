@@ -820,6 +820,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Ενεργοποίησε τη Μικρογραφία επεισοδίου για να θολώσεις την εικόνα του επόμενου επεισοδίου."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Ενεργοποιήστε το «Μικρογραφίες στη γραμμή χρόνου» για να ρυθμίσετε τις μικρογραφίες."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Ενεργοποίησε το Εμφάνιση spotlight για να δείχνεις καταλόγους στην κορυφή της Αρχικής οθόνης."),
+  T("Ative P2P para escolher onde guardar o cache.", "Ενεργοποιήστε το P2P για να επιλέξετε πού θα αποθηκεύεται η προσωρινή μνήμη."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Ενεργοποιήστε το «Ρολόι στην οθόνη»: χωρίς αυτό η αναπαραγωγή δεν έχει πού να ελαχιστοποιηθεί."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Ενεργοποίησε το TMDB για να ρυθμίσεις τι εμπλουτίζει."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Ενεργοποιήστε το Τρέιλερ στην προβολή για να ρυθμίσετε το τρέιλερ στην κορυφή της αρχικής."),

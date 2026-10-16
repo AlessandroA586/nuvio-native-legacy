@@ -819,6 +819,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Увімкніть «Мініатюру епізоду», щоб розмити зображення наступного епізоду."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Увімкніть «Мініатюри на стрічці часу», щоб налаштувати мініатюри."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Увімкніть «Показувати головний банер», щоб відображати каталоги вгорі головної."),
+  T("Ative P2P para escolher onde guardar o cache.", "Увімкніть P2P, щоб вибрати місце зберігання кешу."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Увімкніть «Годинник на екрані»: без нього плеєру нікуди згортатися."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Увімкніть TMDB, щоб налаштувати, що він доповнює."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Увімкніть «Трейлер у банері», щоб налаштувати трейлер угорі головної."),

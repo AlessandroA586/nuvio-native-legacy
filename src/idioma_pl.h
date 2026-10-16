@@ -820,6 +820,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "Włącz miniaturę odcinka, aby rozmyć obraz następnego odcinka."),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "Włącz „Miniatury na pasku czasu”, aby dostosować miniatury."),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "Włącz Pokaż spotlight, aby wyświetlać katalogi na górze ekranu głównego."),
+  T("Ative P2P para escolher onde guardar o cache.", "Włącz P2P, aby wybrać miejsce przechowywania pamięci podręcznej."),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "Włącz „Zegar na ekranie”: bez niego odtwarzacz nie ma gdzie się zminimalizować."),
   T("Ative TMDB para ajustar o que ele enriquece.", "Włącz TMDB, aby dostosować, co uzupełnia."),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "Włącz Zwiastun w wyróżnieniu, aby dostosować zwiastun na górze strony głównej."),

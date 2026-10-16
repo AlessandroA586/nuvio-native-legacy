@@ -820,6 +820,7 @@
   T("Ative Miniatura do episódio para desfocar a imagem do próximo episódio.", "開啟「集數縮圖」後才能模糊下一集的圖片。"),
   T("Ative Miniaturas na barra de tempo para ajustar as miniaturas.", "開啟「時間軸縮圖」以調整縮圖。"),
   T("Ative Mostrar destaque para exibir os catálogos no topo da Home.", "開啟「顯示精選」後，才會在首頁頂部顯示片庫。"),
+  T("Ative P2P para escolher onde guardar o cache.", "啟用 P2P 以選擇快取的儲存位置。"),
   T("Ative Relógio na tela: sem ele o player não tem para onde minimizar.", "開啟「螢幕上的時鐘」：沒有它，播放器無處縮小。"),
   T("Ative TMDB para ajustar o que ele enriquece.", "開啟 TMDB 後才能調整它補充哪些內容。"),
   T("Ative Trailer no destaque para ajustar o trailer do topo da Home.", "開啟「焦點預告片」即可調整首頁頂部的預告片。"),
