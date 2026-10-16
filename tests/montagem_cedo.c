@@ -32,6 +32,12 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdint.h>
+// A conta nao esta ligada nesta fixture; as seis montagens usam a sessao 0.
+uint64_t perfis_sessao_geracao(void) { return 0; }
+int perfis_sessao_atual(uint64_t geracao) { return geracao == 0; }
+int perfis_sessao_travar(uint64_t geracao) { return geracao == 0; }
+void perfis_sessao_destravar(void) {}
 int arte_reserva_episodios(const char *imdb, const char *corpo) { (void)imdb; (void)corpo; return 0; }
 
 int ajustes_social(void) { return 1; }
@@ -89,9 +95,26 @@ int dados_apagar(const char *nome) {
 // ------------------------------------------------------------------ o addon
 // A lista "nova" do caso 1 troca a URL do addon (outro token no caminho, como
 // a conta faz): e isso que torna inutil o manifesto largado com a velha.
-static volatile unsigned versaoAddons = 1;
+static unsigned versaoAddons = 1;
+// Current addons.h snapshots borrow the same lock as fixture list writers.
+// This is a real ownership boundary, not an unlocked success stub.
+static pthread_mutex_t fixtureAddonListLock = PTHREAD_MUTEX_INITIALIZER;
+static _Thread_local unsigned fixtureAddonListDepth;
+static unsigned fixtureAddonListSnapshots;
+void addons_lista_travar(void) {
+  assert(!fixtureAddonListDepth);
+  assert(!pthread_mutex_lock(&fixtureAddonListLock));
+  fixtureAddonListDepth = 1;
+  __atomic_add_fetch(&fixtureAddonListSnapshots, 1, __ATOMIC_RELAXED);
+}
+void addons_lista_destravar(void) {
+  assert(fixtureAddonListDepth == 1);
+  fixtureAddonListDepth = 0;
+  assert(!pthread_mutex_unlock(&fixtureAddonListLock));
+}
 #define BASE_NOVA BASE "-v2"
-static const char *baseAtual(void)     { return versaoAddons > 1 ? BASE_NOVA : BASE; }
+static unsigned versaoAtual(void) { return __atomic_load_n(&versaoAddons, __ATOMIC_ACQUIRE); }
+static const char *baseAtual(void)     { return versaoAtual() > 1 ? BASE_NOVA : BASE; }
 int   addons_n(void)                   { return 1; }
 const char *addons_base(int i)         { (void)i; return baseAtual(); }
 int   addons_ativo(int i)              { (void)i; return 1; }
@@ -99,9 +122,24 @@ int   addons_fornece(int i, int oque)     { (void)i; (void)oque; return 0; }
 int   addons_sondado(int i)              { (void)i; return 0; }
 const char *addons_id_manifesto(int i) { (void)i; return AID; }
 const char *addons_nome(int i)         { (void)i; return "Addon"; }
-unsigned addons_versao(void)           { return versaoAddons; }
+unsigned addons_versao(void)           { return versaoAtual(); }
+// Este teste dubla a conta/fileiras; falta de retrato completo adia exclusao.
+int addons_copiar_identidades(AddonIdentidade *saida, int max, unsigned versao, int perfil) {
+  (void)saida; (void)max; (void)versao; (void)perfil; return -1;
+}
+int addons_travar_lista(unsigned versao, int perfil) { (void)versao; (void)perfil; return 0; }
+void addons_destravar_lista(void) {}
 const char *addons_base_por_id(const char *id) { return id && !strcmp(id, AID) ? baseAtual() : ""; }
 void  addons_manifesto_lido(int i, const char *c) { (void)i; (void)c; }
+int addons_identidade_recebida(const char *base, unsigned versao, NvPerfilSessao sessao,
+                              const char *corpo) {
+  (void)corpo;
+  return nv_perfil_sessao_atual(sessao) && versao == versaoAtual() && !strcmp(base, baseAtual());
+}
+int addons_manifesto_recebido(const char *base, unsigned versao, NvPerfilSessao sessao,
+                             const char *corpo) {
+  return addons_identidade_recebida(base, versao, sessao, corpo);
+}
 
 // ------------------------------------------------------------------ o relogio
 static unsigned long long agoraMs(void) {
@@ -137,6 +175,7 @@ static int imdbNaTela(const char *imdb, int (*campo)(const CatItem *)) {
 static int ehNaLista(const CatItem *c) { return c->naLista; }
 
 char *rede_baixar(const char *url, int t) {
+  assert(!fixtureAddonListDepth); // snapshots must release before transport
   char buf[600];
   const char *p;
   char id[16] = "";
@@ -213,6 +252,9 @@ enum { S_NADA, S_ADDONS, S_CREDENCIAL };
 static volatile int armadoSocial = S_NADA;
 // O servico social proprio (recomenda.c) fica fora deste teste: a uniao e so o que o Trakt trouxe.
 int   recomenda_social_mesclar(CatItem *i, int nTrakt, int max) { (void)i; (void)max; return nTrakt; }
+int recomenda_social_mesclar_sessao(CatItem *i, int nTrakt, int max, uint64_t sessao) {
+  return nv_perfil_sessao_atual(sessao) ? recomenda_social_mesclar(i, nTrakt, max) : 0;
+}
 unsigned recomenda_geracao(void) { return 1; }
 int trakt_social(CatItem *s, int m) {
   int a = armadoSocial;
@@ -220,7 +262,12 @@ int trakt_social(CatItem *s, int m) {
   armadoSocial = S_NADA;
   // (fioDaMontagem e marcado em trakt_continuar: o social corre em fio proprio.)
   // Lista nova = versao nova: o manifesto largado no comeco nao serve mais.
-  if (a == S_ADDONS) { versaoAddons++; desc_repetir_addons(); }
+  if (a == S_ADDONS) {
+    addons_lista_travar();
+    __atomic_add_fetch(&versaoAddons, 1, __ATOMIC_RELEASE);
+    addons_lista_destravar();
+    desc_repetir_addons();
+  }
   else if (a == S_CREDENCIAL) desc_repetir();
   if (fixtureSocial && m > 0) {
     memset(s, 0, sizeof *s);
@@ -257,6 +304,10 @@ void  fil_registrar_se_couber_de(const FilPassada *p, const char *c, const char 
 int   fil_podar_catalogos(const char *const *ids, const char *const *bases, int n,
                           int perfilDaLista) {
   (void)ids; (void)bases; (void)n; (void)perfilDaLista; return 0; }
+int fil_podar_catalogos_de(const char *const *ids, const char *const *bases, int n,
+                           int perfil, unsigned versao) {
+  (void)ids; (void)bases; (void)n; (void)perfil; (void)versao; return 0;
+}
 int fil_marcar_declaradas(const char *const *chaves, int n, int perfilDaLista) { (void)chaves; (void)n; (void)perfilDaLista; return 0; }
 int fil_marcar_sem_addon(const char *const *ids, const char *const *bases, const int *ativos, int n, int perfilDaLista) {
   (void)ids; (void)bases; (void)ativos; (void)n; (void)perfilDaLista; return 0;
@@ -326,6 +377,9 @@ int   simkl_e_a_seguir(const char *id)     { (void)id; return 0; }
 int   simkl_plantowatch(CatItem *s, int m) { (void)s; (void)m; return 0; }
 int   ajustes_salvos_no_simkl(void)        { return 0; }
 int   trakt_enfeitar_lote(CatItem *s, int n) { (void)s; return n; }
+int trakt_enfeitar_lote_sessao(CatItem *s, int n, uint64_t sessao) {
+  return nv_perfil_sessao_atual(sessao) ? trakt_enfeitar_lote(s, n) : 0;
+}
 int trakt_continuar(CatItem *s, int m) {
   fioDaMontagem = pthread_self(); temFioDaMontagem = 1;
   if (!fixtureCW || m < 1) return 0;
@@ -347,13 +401,19 @@ int   arte_reserva_registrar(const char *url, const char *imdb, int poster) {
 
 // ------------------------------------------------------------------ o teste
 static void esperarQuieto(void) {
-  int i, quieto = 0;
-  for (i = 0; i < 500 && !buscando; i++) usleep(2000);
-  for (i = 0; i < 10000 && quieto < 150; i++) {
+  unsigned long long inicio = agoraMs(), quietoDesde = 0;
+  // usleep pode agrupar despertares no macOS: 150 chamadas nao sao 300 ms.
+  while (!buscando && agoraMs() - inicio < 1000) usleep(2000);
+  inicio = agoraMs();
+  for (;;) {
+    unsigned long long agora;
     usleep(2000);
-    quieto = buscando ? 0 : quieto + 1;
+    agora = agoraMs();
+    if (buscando) quietoDesde = 0;
+    else if (!quietoDesde) quietoDesde = agora;
+    if (quietoDesde && agora - quietoDesde >= 300) return;
+    assert(agora - inicio < 20000);
   }
-  assert(quieto >= 150);
 }
 static int temFileira(const char *catId) {
   int r;
@@ -478,6 +538,8 @@ int main(void) {
     armadoCatalogo = NADA; }
   puts("ok  catalogo lento largado: a home segue, o fio termina sozinho");
 
+  assert(__atomic_load_n(&fixtureAddonListSnapshots, __ATOMIC_RELAXED) > 0);
+  assert(!fixtureAddonListDepth);
   puts("montagem_cedo: tudo ok");
   return 0;
 }
