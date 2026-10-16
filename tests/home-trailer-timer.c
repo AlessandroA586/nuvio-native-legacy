@@ -57,6 +57,8 @@ int ajustes_social(void) { return 1; }
 int ajustes_hist_conta(void) { return 1; }
 int ajustes_hero_ligado(void) { return 1; }
 int ajustes_trailer_hero(void) { return trailerSetting; }
+int ajustes_trailer_hero_vetado(void) { return 0; }
+int video_registro_negado(void) { return 0; }
 static int somSetting;
 int ajustes_trailer_som(void) { return somSetting; }
 Uint32 ajustes_trailer_hero_espera_ms(void) { return NV_TRAILER_HERO_ESPERA_MS; }
@@ -141,6 +143,10 @@ int extras_hero_trailer_obter(const char *imdb, char *dst, unsigned cap) {
   return 1;
 }
 
+// Trailer audio (Ajustes): -1 TMDB pending, 1 its first trailer is the chosen language.
+static int youtubeIdioma;
+int extras_hero_trailer_idioma_preferido(const char *imdb) { (void)imdb; return youtubeIdioma; }
+
 static int check(const char *name, int ok) {
   if (!ok) { fprintf(stderr, "FALHOU: %s\n", name); return 1; }
   printf("ok %s\n", name);
@@ -179,7 +185,7 @@ static void resetState(const char *id) {
   appleReady = 0;
   appleOpenFails = 0;
   imdbOpenFails = 0;layoutSetting = HOME_LAYOUT_PADRAO;
-  youtubeReady = 0;
+  youtubeReady = 0; youtubeIdioma = 0;
   imdbReady = 0; imdbAnswered = 1;
   trailerfonte_definir_imdb_tizen(1);
   trailerfonte_definir_imdb_primeiro_destaque(0); /* baseline LG/WGT order */
@@ -259,6 +265,25 @@ int main(void) {
   rc |= check("falha Apple libera IMDb", opened && strstr(lastSource, "imdb"));
   home_trailer_passo(1, 0.016f, start + NV_TRAILER_HERO_ESPERA_MS + 2);
   rc |= check("falha Apple nao repete IMDb", openedCount == 2);
+
+#ifdef __EMSCRIPTEN__
+  // TRAILER AUDIO: Apple answers first, TMDB later. The English Apple waits;
+  // the dubbed TMDB trailer opens once TMDB answers.
+  resetState("tt0000205");
+  appleReady = 1; imdbReady = 1; youtubeIdioma = -1;
+  home_trailer_passo(1, 0.016f, start);
+  home_trailer_passo(1, 0.016f, start + NV_TRAILER_HERO_ESPERA_MS);
+  rc |= check("audio do trailer: Apple pronta espera o TMDB", openedCount == 0);
+  youtubeIdioma = 1; youtubeReady = 1;
+  home_trailer_passo(1, 0.016f, start + NV_TRAILER_HERO_ESPERA_MS + 1);
+  rc |= check("audio do trailer: TMDB depois abre o dublado", opened && !strcmp(lastSource, "dQw4w9WgXcQ"));
+  // TMDB never answers: the window bounds the wait, then English.
+  resetState("tt0000206");
+  appleReady = 1; youtubeIdioma = -1;
+  home_trailer_passo(1, 0.016f, start);
+  home_trailer_passo(1, 0.016f, start + NV_TRAILER_HERO_MAX_ESPERA_MS);
+  rc |= check("audio do trailer: TMDB mudo cai na Apple no fim da janela", opened && strstr(lastSource, "apple"));
+#endif
 
   // A source which never reaches playing gets its own preparation window.
   // The fallback receives a fresh window too.

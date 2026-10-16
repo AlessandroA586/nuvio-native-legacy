@@ -5632,12 +5632,22 @@ static void heroTrailerVetoLog(void) {
   fflush(stdout);
 }
 
+// Next hero source after `qual` fails. Samsung: the hero only opens YouTube
+// for the dubbed trailer (Trailer audio), ranked first, so a failed embed
+// falls back to Apple -> IMDb instead of keeping the art.
+static int heroTrailerDepois(int qual) {
+#ifdef __EMSCRIPTEN__
+  if (qual == TRF_YOUTUBE || (heroTrailerFalhas & (1u << TRF_YOUTUBE)))
+    return trailerfonte_depois_dublado(trailerfonte_ajuste(), trailerfonte_tizen(), qual);
+#endif
+  return trailerfonte_depois_destaque(trailerfonte_ajuste(), trailerfonte_tizen(), qual);
+}
+
 static void heroTrailerFonteFalhou(void) {
   if(heroTrailerQual>0&&heroTrailerQual<=TRF_YOUTUBE)
     heroTrailerFalhas|=1u<<heroTrailerQual;
   if(heroTrailerQual==TRF_APPLE)heroTrailerAppleFalhou=1;
-  heroTrailerTentado=trailerfonte_depois_destaque(trailerfonte_ajuste(),
-                    trailerfonte_tizen(),heroTrailerQual)==0;
+  heroTrailerTentado=heroTrailerDepois(heroTrailerQual)==0;
   heroTrailerFonte=heroTrailerTentado?3:0;
   heroTrailerPreparandoAte=0;heroTrailerFade=0.0f;
 }
@@ -5824,7 +5834,7 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
       printf("[trailer] hero: sem playing em %d ms (%s, estado %d), %s\n",
              NV_TRAILER_HERO_PREPARA_MS, trailerfonte_nome(heroTrailerQual),
              trailer_estado(),
-             trailerfonte_depois_destaque(trailerfonte_ajuste(), trailerfonte_tizen(), heroTrailerQual)
+             heroTrailerDepois(heroTrailerQual)
                ? "tenta a proxima fonte" : "desiste");
       fflush(stdout);
       trailer_fechar();
@@ -5837,7 +5847,7 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
   if (heroTrailerQual>0 && heroTrailerFonte>0 && heroTrailerFonte<3 &&
       !trailer_aberto() && trailer_falhou() && !(heroTrailerFalhas&(1u<<heroTrailerQual))) {
     printf("[home-trailer] source failed source=%s action=%s\n",trailerfonte_nome(heroTrailerQual),
-           trailerfonte_depois_destaque(trailerfonte_ajuste(), trailerfonte_tizen(), heroTrailerQual)
+           heroTrailerDepois(heroTrailerQual)
              ? "try_next_source" : "keep_art");
     fflush(stdout);
     heroTrailerFonteFalhou();
@@ -5883,9 +5893,13 @@ void home_trailer_passo(int topo, float dt, Uint32 agora) {
     // erro 153 ("Video player configuration error") e o hero fecha sem
     // `playing` aos 6,5 s. O destaque troca a cada seta: e o pior lugar para
     // ele. Aqui so <video> (Apple, IMDb); o YouTube fica na pagina do titulo.
-    // A lista do TMDB ainda e pedida (heroTrailerYoutube), mas nao abre.
-    (void)heroTrailerYoutube;
-    c.youtube = NULL;
+    // A lista do TMDB ainda e pedida (heroTrailerYoutube), mas so abre o
+    // trailer no idioma escolhido em "Audio do trailer"; ate o TMDB responder
+    // (ou a janela vencer) o ingles da Apple/IMDb espera.
+    c.youtubeIdiomaPreferido = extras_hero_trailer_idioma_preferido(ci->imdb);
+    if (c.youtubeIdiomaPreferido < 0 && venceu) c.youtubeIdiomaPreferido = 0;
+    c.youtube = c.youtubeIdiomaPreferido > 0 ? heroTrailerYoutube(ci->imdb) : NULL;
+    if (heroTrailerFalhas & (1u << TRF_YOUTUBE)) { c.youtube = NULL; c.youtubeIdiomaPreferido = 0; }
     c.youtubeRespondeu = 1;
 #else
     c.youtubeRespondeu = venceu;
