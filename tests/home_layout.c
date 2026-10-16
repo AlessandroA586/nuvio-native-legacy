@@ -97,6 +97,9 @@ int main(void) {
     // O passo e o de um cartaz, nao o do painel; a altura reserva a ficha.
     assert(passoFil(1) < larguraFil(1) + 60.0f);
     assert(alturaTotalFil(1) > alturaFil(1) + 150.0f);
+    // Ano/nota embaixo do poster: o rotulo existe e a altura dele esta reservada.
+    assert(temRotulo(FILEIRA_HEROI_DIVIDIDO));
+    assert(alturaTotalFil(1) == alturaFil(1) + NV_POSTER_COPY_H + NV_DIV_META_H);
     memset(scrollX, 0, sizeof scrollX);
   }
   // Palco percorre as mesmas vagas e usa a mesma borda das fileiras comuns.

@@ -1444,6 +1444,7 @@ static int temRotulo(TipoFileira t) {
   // O rotulo abaixo do poster so existe no poster EM PE. No card deitado o web
   // poe a legenda DENTRO da moldura (.home-poster-landscape-copy) e esconde o
   // bloco de fora (.home-poster-card.is-landscape .home-poster-copy{display:none}).
+  if (t == FILEIRA_HEROI_DIVIDIDO) return 1;   // ano e nota embaixo do poster
   if (t == FILEIRA_REDONDA) return 1;   // pessoa sem nome embaixo nao se reconhece
   return t == FILEIRA_NORMAL && ajustes_rotulos_poster()
       && !ajustes_posteres_deitados();
@@ -5154,6 +5155,10 @@ static void desenhaHero(Uint32 agora, float saida) {
 #endif
 
   float aTexto = (1.0f - saida) * aVis * heroVisivelToque();
+  // Herói dividido em foco: o painel da fileira já mostra logo/meta/sinopse;
+  // fica só o fundo, para a ficha aparecer uma vez.
+  if (foco.fileira >= 0 && foco.fileira < nFileiras &&
+      fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO) aTexto = 0.0f;
   // MODO CINEMA: o bloco desce NV_CINEMA_DESCE enquanto apaga (o do detalhe) e
   // so o logo fica. `aCopy` e a opacidade do que SOME; o logo segue `aTexto`.
   float cin = trailercinema_t(&heroCinema);
@@ -6384,7 +6389,7 @@ static void desenhaRotuloCard(const CatItem *cItem, TipoFileira tipo, int deitad
                               int rotuloFora, float px, float py, float w, float h,
                               float raio) {
   if (tipo != FILEIRA_CONTINUE && tipo != FILEIRA_RETORNO && !editorial(tipo) &&
-      (ajustes_rotulos_poster() || tipo == FILEIRA_LARGA) && cItem) {
+      (ajustes_rotulos_poster() || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI_DIVIDIDO) && cItem) {
     const char *nome = cItem->titulo[0] ? cItem->titulo : NULL;
     const char *sub  = cItem->genero[0] ? cItem->genero : NULL;
     if (deitado && nome) {
@@ -6418,6 +6423,17 @@ static void desenhaRotuloCard(const CatItem *cItem, TipoFileira tipo, int deitad
       } else {
         txt_desenhar_alpha(tn, bx, py + h - base - tn.h, 0.98f);
       }
+    } else if (tipo == FILEIRA_HEROI_DIVIDIDO) {
+      // ano ★ nota, embaixo do poster
+      char l[64]; const char *e = strstr(cItem->meta, " \xc2\xb7 ");
+      int nota = imdbnota_obter(cItem->imdb, cItem->nota, !strcmp(cItem->tipo, "series"));
+      size_t n = e ? (size_t)(e - cItem->meta) : strlen(cItem->meta);
+      if (n > 12) n = 12;
+      snprintf(l, sizeof l, "%.*s", (int)n, cItem->meta);
+      if (nota > 0) snprintf(l + strlen(l), sizeof l - strlen(l), "%s\xe2\x98\x85 %d.%d", l[0] ? "  " : "", nota / 10, nota % 10);
+      if (l[0])
+        txt_desenhar_alpha(txt_linha_corta(TXT_CAPTION2, l, 235, 237, 242, 255, w),
+                           px + NV_POSTER_COPY_PADX, py + h + NV_POSTER_COPY_PADT, 0.9f);
     } else if (rotuloFora && nome) {
       float bx = px + NV_POSTER_COPY_PADX;
       float by = py + h + NV_POSTER_COPY_PADT;
