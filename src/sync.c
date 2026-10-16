@@ -16,6 +16,7 @@ void servidores_esquecer_todos(void);   // servidores.c: wipe every profile's to
 #include "colecoes.h"
 #include "colfileiras.h"
 #include "contalib.h"
+#include "visto.h"
 #include "salvosorg.h"
 #include "salvos.h"
 #include "mapa.h"
@@ -1242,6 +1243,7 @@ static void *rodar(void *u) {
   // como o resto. E a repeticao de quem falhou offline — cada ciclo tenta de
   // novo o que ainda nao teve 2xx.
   contapend_enviar();
+  contapend_reenviar();
 
   { SyncResumo r;
     memset(&r, 0, sizeof r);
@@ -1947,6 +1949,7 @@ void sync_trocar_perfil(int antes) {
 
 void sync_abrir_sessao(int antes) {
   NvPerfilSessao sessao = nv_perfil_sessao_ler();
+  visto_iniciar();
   char *c;
   if (antes > 0 && antes != perfis_ativo()) sync_trocar_perfil(antes);
   // A fresh opening of the same profile also starts a new history map.
@@ -1972,6 +1975,7 @@ void sync_abrir_sessao(int antes) {
   if (c) { contalib_ler_vistos(c); if (!trakt_ativo()) contalib_aplicar_vistos(); free(c); }
   c = contacache_ler(CC_COLECOES, perfis_ativo(), sessao_usuario(), NULL);
   if (c) { colfileiras_receber(c); free(c); }
+  contapend_aplicar_local();
 }
 
 int sync_perfil_pronto(void) {

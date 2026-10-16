@@ -18,6 +18,7 @@
 #include "../src/simkl.h"
 #include "../src/trakt.h"
 #include "../src/sessao.h"
+#include "../src/contapend.h"
 #include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -33,7 +34,7 @@
 unsigned int SDL_GetTicks(void) { return 0; }
 void marco(const char *m) { (void)m; }
 static const char *tokenSimkl = "";
-static int logada = 1;
+static int logada = 1, perfil = 2;
 const char *simklauth_token(void) { return tokenSimkl; }
 unsigned long long simklauth_credencial_copiar(char *dst, size_t tam) {
   if (dst && tam) snprintf(dst, tam, "%s", tokenSimkl);
@@ -47,11 +48,12 @@ void nuvem_url_escapar(const char *v, char *dst, unsigned tam) { snprintf(dst, t
 const char *i18n(const char *s) { return s; }
 const char *idioma_mes_data(int mes, const char *nomePt) { (void)mes; return nomePt; }
 int sessao_logada(void) { return logada; }
-const char *sessao_usuario(void) { return "usuario-teste"; }
+int perfis_sessao_atual(uint64_t g) { (void)g; return 1; }
+const char *sessao_usuario(void) { return logada ? "usuario-teste" : ""; }
 char *contacache_ler(const char *s, int p, const char *u, long *q) { (void)s; (void)p; (void)u; (void)q; return NULL; }
-int perfis_ativo(void) { return 2; }
+int perfis_ativo(void) { return perfil; }
 uint64_t perfis_sessao_geracao(void) { return 1; }
-int perfis_sessao_atual(uint64_t g) { return g == 1; }
+
 int perfis_sessao_travar(uint64_t g) { return g == 1; }
 void perfis_sessao_destravar(void) {}
 int sessao_token_copiar(char *dst, size_t n) {
@@ -64,9 +66,16 @@ int sessao_identidade_local_copiar(char *u, size_t nu, char *jwt, size_t nj) {
 }
 void sessao_token_recusado(const char *tok) { (void)tok; assert(0); }
 const char *dados_cliente_id(void) { return "cliente-teste"; }
-char *dados_ler(const char *n) { (void)n; return NULL; }
-int dados_gravar(const char *n, const char *c) { (void)n; (void)c; return 1; }
-int dados_apagar(const char *n) { (void)n; return 1; }
+static char *journal;
+char *dados_ler(const char *n) { return strstr(n, "conta-pend-") && journal ? strdup(journal) : NULL; }
+int dados_gravar(const char *n, const char *c) {
+  if (strstr(n, "conta-pend-")) { free(journal); journal = strdup(c); }
+  return 1;
+}
+int dados_apagar(const char *n) {
+  if (strstr(n, "conta-pend-")) { free(journal); journal = NULL; }
+  return 1;
+}
 int cat_indice_por_imdb(const char *imdb) { (void)imdb; return -1; }
 void cat_aplicar_progresso(int i, double p, double d, int t, int e) { (void)i; (void)p; (void)d; (void)t; (void)e; }
 void cat_historico_definir_id(const char *i, const char *t, int v) { (void)i; (void)t; (void)v; }
@@ -90,7 +99,9 @@ void rede_avisar_401(void (*f)(const char *url)) { (void)f; }
 // e o teste exige zero deles.
 #define MAXP 16
 static struct { char url[400], corpo[8192]; } post[MAXP];
-static int nPost, nOutro, bearerSimkl, bearerTrakt;
+static int nPost, nOutro, bearerSimkl, bearerTrakt, offline;
+static long long now = 1790000000000LL;
+static long long clockMs(void) { return now; }
 static const char *respostaSimkl = "{\"added\":{\"episodes\":3},\"not_found\":{\"movies\":[],\"shows\":[]}}";
 
 char *rede_postar_st(const char *url, int s, const char *const *cab, const char *corpo, int *st) {
@@ -104,7 +115,7 @@ char *rede_postar_st(const char *url, int s, const char *const *cab, const char 
     if (!strcmp(cab[k], "Authorization: Bearer " TK_SIMKL)) bearerSimkl++;
     if (!strcmp(cab[k], "Authorization: Bearer " TK_TRAKT)) bearerTrakt++;
   }
-  *st = 201;
+  *st = offline ? 503 : 201;
   return strdup(strstr(url, "api.simkl.com") ? respostaSimkl : "{}");
 }
 char *rede_postar(const char *u, int s, const char *const *c, const char *b) { int st; return rede_postar_st(u, s, c, b, &st); }
@@ -120,7 +131,7 @@ char *sessao_rpc(const char *funcao, const char *corpo, int *status) {
   snprintf(rpc[nRpc].fn, sizeof rpc[nRpc].fn, "%s", funcao);
   snprintf(rpc[nRpc].corpo, sizeof rpc[nRpc].corpo, "%s", corpo);
   nRpc++;
-  if (status) *status = 200;
+  if (status) *status = offline ? 503 : 200;
   return strdup("null");
 }
 
@@ -142,6 +153,9 @@ int main(void) {
   assert(fd >= 0);
   fflush(stdout);
   dup2(fd, 1);
+
+  contapend_relogio(clockMs);
+  visto_iniciar();
 
   // ---------- (a) sem Trakt, sem Simkl, conta logada
   assert(visto_destinos() == VISTO_CONTA);
@@ -258,12 +272,100 @@ int main(void) {
     zerar();
     assert(visto_episodios_ja("tt0903747:2:5", "series", cruza, 1, 0, VISTO_TRAKT));
     assert(!strcmp(post[0].url, "https://api.trakt.tv/sync/history/remove"));
-    // visto_titulo NUNCA fala com o Trakt: o titulo segue por
-    // trakt_assistido_tipo, intocado, com o estado que o ctxmenu espera.
+    // Whole-title writes share the durable watched queue.
     zerar();
     assert(visto_titulo_ja("tt1375666", "movie", NULL, 0, 1, VISTO_TRAKT));
-    assert(nPost == 0 && nRpc == 0);
-    OK("(d) Trakt ligado: /sync/history com o corpo de antes; titulo continua fora daqui"); }
+    assert(nPost == 1 && nRpc == 0);
+    assert(strstr(post[0].corpo, "\"movies\""));
+    OK("(d) Trakt: episode and whole-title history writes"); }
+
+  // #548: confirmed marks must survive restart and a stale startup pull.
+  zerar();
+  assert(visto_episodios_ja("tt5480001", "series", tres, 3, 1, VISTO_CONTA));
+  vistoep_esquecer();
+  contapend_esquecer();
+  contapend_podar(contapend_agora_ms() + 1000);
+  contapend_aplicar_local();
+  assert(vistoep_estado("tt5480001", 1, 2) == 1);
+  {
+    long long stale = contapend_agora_ms() - 10000;
+    int pull = contapend_estado("tt5480001", "series", 1, 2, stale, 1);
+    if (pull > 0)
+      vistoep_fonte("tt5480001", 1, 2, 1, stale, NULL);
+  }
+  assert(vistoep_estado("tt5480001", 1, 2) == 1);
+  OK("#548: mark, restart, confirmed-entry pruning, stale remote pull");
+
+  // Pending marks retry only failed destinations after process recreation.
+  free(journal); journal = NULL; contapend_esquecer();
+  for (int whole = 0; whole < 2; whole++) {
+    int temps[2] = {1, 2};
+    const char *id = whole ? "tt5480002" : "tt5480003";
+    now += 1000; offline = 1; zerar();
+    assert(!(whole ? visto_titulo_ja(id, "series", temps, 2, 1, visto_destinos())
+                    : visto_episodios_ja(id, "series", tres, 1, 1, visto_destinos())));
+    offline = 0; vistoep_esquecer(); contapend_esquecer(); zerar();
+    assert(contapend_enviar() >= 0);
+    assert(contapend_reenviar() >= 0);
+    assert(nRpc == 1 && nPost == 2);
+    contapend_aplicar_local();
+    if (whole) {
+      assert(contapend_estado(id, "series", 1, 1, 0, -1) == 1);
+      assert(contapend_estado(id, "series", 9, 9, 0, -1) == 1);
+    } else assert(vistoep_estado(id, 1, 1) == 1);
+    zerar(); assert(contapend_reenviar() >= 0 && nPost == 0);
+    now += 1000; offline = 1; zerar();
+    assert(!(whole ? visto_titulo_ja(id, "series", temps, 2, 0, visto_destinos())
+                    : visto_episodios_ja(id, "series", tres, 1, 0, visto_destinos())));
+    offline = 0; vistoep_esquecer(); contapend_esquecer(); zerar();
+    contapend_aplicar_local();
+    if (whole) assert(contapend_estado(id, "series", 1, 1, 0, -1) == 0);
+    else assert(vistoep_estado(id, 1, 1) == 0);
+    assert(contapend_enviar() >= 0 && contapend_reenviar() >= 0);
+    assert(nRpc == 1 && nPost == 2 && strstr(post[0].url, "/remove"));
+    if (whole) assert(strstr(post[1].corpo, "\"number\":2"));
+    {
+      long long stale = now - 10000;
+      int pull = contapend_estado(id, "series", 1, 1, stale, 1);
+      if (whole) assert(pull == 0);
+      else {
+        if (pull > 0) vistoep_fonte(id, 1, 1, 1, stale, NULL);
+        assert(vistoep_estado(id, 1, 1) == 0);
+      }
+    }
+    {
+      long long newer = now + 1000;
+      int pull = contapend_estado(id, "series", 1, 1, newer, 1);
+      if (whole) assert(pull == 1);
+      else {
+        if (pull > 0) vistoep_fonte(id, 1, 1, 1, newer, NULL);
+        assert(vistoep_estado(id, 1, 1) == 1);
+      }
+    }
+    {
+      long long stale = now - 1000;
+      int pull = contapend_estado(id, "series", 1, 1, stale, 0);
+      assert(pull == 1);
+      if (!whole) assert(vistoep_estado(id, 1, 1) == 1);
+    }
+    if (whole) assert(contapend_estado(id, "series", 1, 2, now - 1000, 1) == 0);
+  }
+  OK("#548: episode/whole-series mark and unmark, restart, stale/new timestamps, service retry");
+
+  now += 10000; zerar();
+  assert(visto_titulo_ja("tt5480004", "movie", NULL, 0, 0, visto_destinos()));
+  contapend_esquecer();
+  assert(contapend_estado("tt5480004", "movie", 0, 0, now - 1, 1) == 0);
+  assert(contapend_estado("tt5480004", "movie", 0, 0, now + 1000, 1) == 1);
+  perfil = 3;
+  assert(contapend_estado("tt5480004", "movie", 0, 0, 0, -1) == -1);
+  perfil = 2; logada = 0; now += 1000; zerar();
+  assert(visto_episodios_ja("tt5480005", "series", tres, 1, 1, VISTO_TRAKT | VISTO_SIMKL));
+  vistoep_esquecer();
+  assert(contapend_aplicar_local() >= 1);
+  assert(vistoep_estado("tt5480005", 1, 1) == 1 && nRpc == 0);
+  logada = 1;
+  OK("#548: movie timestamp precedence, profile isolation, trackers without Nuvio login");
 
   assert(bearerSimkl > 0 && bearerTrakt > 0);   // os tokens foram, no cabecalho
 

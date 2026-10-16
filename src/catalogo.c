@@ -18,6 +18,7 @@ __attribute__((weak)) int arte_reserva_registrar(const char *url, const char *im
 #include "sessao.h"
 #include "perfis.h"
 #include "perfisessao.h"
+extern int contapend_estado(const char *, const char *, int, int, long long, int) NV_PERFIL_OPCIONAL;
 #include <pthread.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -401,7 +402,7 @@ int cat_historico_estado_id(const char *imdb, const char *tipo) {
   p = historico_pos(imdb, tipo ? tipo : "movie", 0);
   estado = p >= 0 && historico[p].conhecido ? historico[p].visto : -1;
   pthread_mutex_unlock(&histTrava);
-  return estado;
+  return contapend_estado ? contapend_estado(imdb, tipo, 0, 0, 0, estado) : estado;
 }
 
 // Sob histTrava. Ausencia num snapshot Trakt nao apaga uma marca que veio

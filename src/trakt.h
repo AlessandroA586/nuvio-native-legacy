@@ -93,6 +93,7 @@ int trakt_enfeitar_lote_sessao(CatItem *saida, int n, uint64_t sessao);
 // id conhecido — o item veio do progresso da conta, nao do Trakt.
 typedef struct { uint64_t sessao; unsigned long long mapa, credencial; char aut[200], chave[140]; } TraktDestino;
 int trakt_destino_capturar(TraktDestino *);
+int trakt_titulo_marcar_destino(const TraktDestino *, const char *, const char *, int);
 int trakt_episodios_marcar_destino(const TraktDestino *, const char *, const VistoPar *, int, int);
 #define TRAKT_REMOVER_MAX 64
 typedef struct {

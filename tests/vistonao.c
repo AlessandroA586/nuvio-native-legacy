@@ -48,6 +48,8 @@ static long long agora = 1759000000000LL;   // 27/09/2025 19:06:40 UTC
 static long long relogio(void) { return agora; }
 int perfis_ativo(void) { return perfil; }
 int perfis_sessao_travar(uint64_t g) { return g == 0; }
+uint64_t perfis_sessao_geracao(void) { return 0; }
+int perfis_sessao_atual(uint64_t g) { return !g; }
 void perfis_sessao_destravar(void) {}
 int sessao_logada(void) { return logada; }
 const char *sessao_usuario(void) { return logada ? "u-123" : ""; }

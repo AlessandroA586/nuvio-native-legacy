@@ -22,6 +22,8 @@ static long long agora = 1759000000000LL;
 static long long relogio(void) { return agora; }
 int perfis_ativo(void) { return perfil; }
 int sessao_logada(void) { return logada; }
+int perfis_sessao_travar(uint64_t g) { return !g; }
+void perfis_sessao_destravar(void) {}
 const char *sessao_usuario(void) { return logada ? "u-123" : ""; }
 const char *dados_cliente_id(void) { return "cliente-teste"; }
 
@@ -213,16 +215,16 @@ int main(void) {
     assert(contapend_enviar() == 1 && nPushVis == 0 && nDelVis == 1); }
   OK("marcar+desmarcar offline coalesce: so o delete sobe");
 
-  // 3. ULTIMA MUDANCA VENCE no pull.
+  // 3. ULTIMA MUDANCA VENCE no pull (local evidence survives cycle pruning).
   zerar();
   agora = 1759000100000LL;
   fora = 1;
   assert(contapend_titulo("tt0111161", "movie", 0) == 1);
   // linha remota MAIS VELHA que o "desmarcar": oculta
   assert(contapend_visto_oculto("tt0111161", 0, 0, agora - 5000) == 1);
-  // outra TV re-marcou DEPOIS: a conta ganha e a pendente cai
-  assert(contapend_visto_oculto("tt0111161", 0, 0, agora + 5000) == 0);
-  assert(contapend_pendentes() == 0);
+  assert(contapend_estado("tt0111161", "movie", 0, 0, agora - 5000, 1) == 0);
+  // outra TV re-marcou DEPOIS: remote newer evidence wins for the screen
+  assert(contapend_estado("tt0111161", "movie", 0, 0, agora + 5000, 1) == 1);
   // um item sem gesto local nunca e oculto
   assert(contapend_visto_oculto("tt7777777", 1, 1, 1) == 0);
   // idem lista
@@ -230,6 +232,7 @@ int main(void) {
   assert(contapend_lista_oculta("tt0068646", agora - 1) == 1);
   assert(contapend_lista_oculta("tt0068646:1:2", agora - 1) == 1);  // sufixo de episodio
   assert(contapend_lista_oculta("tt0068646", agora + 1) == 0);
+
   OK("pull: linha remota velha nao re-marca o desmarcado; remota mais nova vence");
 
   // 4. LISTA: pagina que falha nao vira push (e nao apaga nada).
@@ -329,8 +332,8 @@ int main(void) {
   assert(contapend_visto_oculto("ttH", 0, 0, 0) == 0);
   assert(disco && strstr(disco, "ttH"));
   contapend_podar(agora + 1);
-  assert(!disco || !strstr(disco, "ttH"));
-  OK("poda: so confirmadas anteriores ao ciclo saem do jornal");
+  assert(disco && strstr(disco, "ttH"));
+  OK("poda: watched stays as evidence, stale remote loses until newer timestamp");
 
   // 9. Sem conta, nada entra.
   zerar();

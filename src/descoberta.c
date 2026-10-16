@@ -3325,7 +3325,10 @@ static int contaASeguir(CatItem *lista, int n, int max, int comOutraFonte) {
   return n;
 }
 
+
 static int montarContinuar(CatItem *saida, int max) {
+  // Discovery also runs for tracker-only users, without Nuvio cloud sync.
+  if (contapend_reenviar) contapend_reenviar();
   // static: dois lotes de 12 CatItem passam de 350 KB e montar() roda uma vez,
   // num fio so — a mesma razao do vetor de Decl mais abaixo.
   static CatItem doTrakt[CONT_MAX], daConta[CONT_MAX];

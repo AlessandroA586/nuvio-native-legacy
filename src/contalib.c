@@ -1,4 +1,5 @@
 #include "contalib.h"
+#include "perfisessao.h"
 #include "vistoep.h"
 #include <time.h>
 #include "catalogo.h"
@@ -13,6 +14,7 @@
 // declaracao em vez de mexer no cabecalho mantem a mudanca dentro dos arquivos
 // deste conserto; o lugar certo dela e catalogo.h, e isso esta no relatorio.
 extern void cat_historico_definir_id(const char *imdb, const char *tipo, int visto);
+extern int contapend_estado(const char *, const char *, int, int, long long, int) NV_PERFIL_OPCIONAL;
 
 static int (*listaOculta)(const char *id, long long ms);
 static int (*vistoOculto)(const char *id, int t, int e, long long ms);
@@ -464,8 +466,13 @@ int contalib_aplicar_vistos(void) {
       // linha: so um visto MAIS NOVO que o gesto volta a marcar.
       VistoFonte um;
       memset(&um, 0, sizeof um);
-      vistoep_fonte(vistos[i].id, vistos[i].temporada, vistos[i].episodio, 1,
-                    vistos[i].vistoMs, &um);
+      int estado = contapend_estado ?
+          contapend_estado(vistos[i].id, vistos[i].tipo, vistos[i].temporada, vistos[i].episodio,
+                           vistos[i].vistoMs, -1) : 1;
+      if (estado < 0) estado = 1;
+      vistoep_fonte(vistos[i].id, vistos[i].temporada, vistos[i].episodio,
+                    estado, vistos[i].vistoMs, &um);
+      if (!estado) um.bloqueados++;
       total.vistos += um.vistos;
       total.venceu += um.venceu;
       if (um.bloqueados) {
