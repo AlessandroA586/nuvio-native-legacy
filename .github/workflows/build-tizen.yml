@@ -1,0 +1,85 @@
+name: Build Samsung Tizen
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: 'Git ref to checkout (tag or branch)'
+        required: true
+        default: 'v2.0.5.2'
+      release_tag:
+        description: 'Target GitHub release tag'
+        required: true
+        default: 'v2.0.5.2'
+
+permissions:
+  contents: write
+
+jobs:
+  build-tizen:
+    name: Build Samsung Tizen Packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target_ref || 'v2.0.5.2' }}
+
+      - name: Install System Utilities (ffmpeg)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            6.0.x
+            8.0.x
+
+      - name: Install Tizen Workload
+        run: |
+          DOTNET_DIR="$(dirname "$(which dotnet)")"
+          echo "Installing Samsung Tizen Workload into $DOTNET_DIR"
+          curl -sSL https://raw.githubusercontent.com/Samsung/Tizen.NET/main/workload/scripts/workload-install.sh -o /tmp/workload-install.sh
+          sudo env "PATH=$PATH" "XDG_RUNTIME_DIR=/tmp" bash /tmp/workload-install.sh -d "$DOTNET_DIR" -u || true
+          sudo rm -rf /run/user/$(id -u)/.dotnet 2>/dev/null || true
+          sudo chown -R $(id -u):$(id -g) /run/user/$(id -u) "$HOME" "$DOTNET_DIR" 2>/dev/null || true
+          dotnet workload list || true
+
+      - name: Setup local.properties
+        run: |
+          cat <<EOF > local.properties
+          NUVIO_SUPABASE_URL=https://api.nuvio.tv
+          NUVIO_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxNTIxMzQ2LCJleHAiOjE5MzkyMDEzNDZ9.tmQaj682pwzehpqlgCDMnySOqiUvpgRbrE43T4VJpDI
+          TV_LOGIN_WEB_BASE_URL=https://nuvio.tv/tv-login
+          TMDB_API_KEY=01926d2187b6a5d861eefc750e9df3e3
+          TRAKT_CLIENT_ID=5783db7c46a5b22f072d4b224f9bd7dc2cbaba66dbe3515d1feb59e3ca72394c
+          TRAKT_CLIENT_SECRET=bf6e7561dafee902f5a2a67d2b31feac1563632f331f3958c978aff6389ea384
+          SIMKL_CLIENT_ID=dc20e0db975583b15096267cee79cd23b1f56d4bd301ce3c51e4a96a49c834a6
+          SIMKL_APP_NAME=nuvio
+          NUVIO_REC_URL=https://nuvio-recomendacoes.henriquef29.workers.dev
+          EOF
+
+      - name: Build Tizen Packages
+        run: |
+          sudo rm -rf /run/user/$(id -u)/.dotnet 2>/dev/null || true
+          sudo chown -R $(id -u):$(id -g) /run/user/$(id -u) "$HOME" 2>/dev/null || true
+          if dotnet workload list 2>/dev/null | grep -q tizen; then
+            bash tools/tpk.sh
+          else
+            NV_TPK_PACOTES="NuvioTpk40 NuvioTpk60 NuvioTpk65" bash tools/tpk.sh
+          fi
+
+      - name: Upload Tizen Artifacts to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag || 'v2.0.5.2' }}
+          files: |
+            build/tpk/*.tpk
+            build/tpk/*.so
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
