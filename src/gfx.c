@@ -3378,7 +3378,7 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
 // mesma passada de tela do ambPintar (GFX_SNAP, opaca e sem mistura com alfa
 // 1). Cada canal tem os seus quadros e a sua chave, entao a Borrada nao
 // disputa o quadro da Imersiva. O veu da Borrada nao e assado: entra na mesma
-// passada (uFoco do GFX_SNAP), e o quadro sem veu e a fonte do vidro fosco.
+// passada (uFoco do GFX_SNAP); o vidro fosco reaplica o mesmo veu na fonte.
 // fundo.c ainda confere UMA vez o pixel da tela contra a conta feita no CPU
 // e, se errar, volta ao desenho direto pela sessao (ver fundo.c).
 #define CAN_N 2      // canais: 0 Arte borrada, 1 Frost (a imersiva e o ambTex)
@@ -3432,7 +3432,14 @@ void gfx_luz_canal_desenhar(GLuint tex, float a, const float *veu, int pontilhar
     if (veu) gfx_rect(tela, tex, GFX_SNAP, veu[3], pontilhar ? 1.0f : 0.0f, 1.0f, 0.0f, veu[0], veu[1], veu[2], a);
     else gfx_rect(tela, tex, GFX_SNAP, 0.0f, pontilhar ? 1.0f : 0.0f, 1.0f, 0.0f, 0, 0, 0, a);
     ESC_REAL_FIM(); }
-  if (!fundoFim) vidroCanal(tex);   // o assado ja desfocado e a fonte do fosco
+  if (!fundoFim) {
+    vidroCanal(tex);   // The pre-blurred source carries the displayed veil.
+    if (veu) {
+      int i;
+      for (i = 0; i < 3; i++) fosVeu[i] = veu[i] * veu[3];
+      fosVeu[3] = 1.0f - veu[3];
+    }
+  }
   gfx_tex_aspect_atual = aspAnt; gfx_desliza_atual = deslAnt; gfx_card_forcar_cover_atual = coverAnt;
 }
 // DIAGNOSTICO (fundo.c, o despejo de uma vez por fundo por execucao): leituras

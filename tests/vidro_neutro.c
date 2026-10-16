@@ -144,6 +144,35 @@ int main(int argc, char **argv) {
     confere(sobe, "o vidro desfoca o backdrop real (a borda vira degrade)");
     salvar(dir, "vidro-borda.bmp");
   }
+  // The fused "Arte borrada" veil must match a separately drawn veil,
+  // both on the backdrop and in the frost source. NULL must reset it too.
+  {
+    const float veils[][4] = { {0.024f, 0.027f, 0.035f, 0.28f},
+                              {0.15f, 0.05f, 0.25f, 0.60f}, {0, 0, 0, 0} };
+    GLuint source = arte(0.5f, 0.5f);
+    int v, pass, c;
+    for (v = 0; v < 3; v++) {
+      double backdrop[2][3], glass[2][3];
+      for (pass = 0; pass < 2; pass++) {
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo); glViewport(0, 0, LW, LH);
+        gfx_novo_quadro();
+        glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
+        gfx_luz_canal_desenhar(source, 1.0f, pass && v < 2 ? veils[v] : NULL, 0);
+        if (!pass && v < 2)
+          gfx_cor((GfxRect){0, 0, LW, LH}, 0, veils[v][0], veils[v][1], veils[v][2], veils[v][3]);
+        media(900, 500, 40, 40, backdrop[pass]);
+        gfx_vidro_painel(painel, 36.0f / painel.h, 0.30f, 1.0f);
+        media(1450, 500, 40, 40, glass[pass]);
+      }
+      for (c = 0; c < 3; c++) {
+        confere(fabs(backdrop[0][c] - backdrop[1][c]) <= 2.0,
+                "Arte borrada: displayed backdrop keeps the same veil");
+        confere(fabs(glass[0][c] - glass[1][c]) <= 2.0,
+                "Arte borrada: frost source keeps the displayed veil");
+      }
+    }
+    glDeleteTextures(1, &source);
+  }
   printf("vidro_neutro: %s\n", falhas ? "FALHA" : "ok");
   return falhas ? 1 : 0;
 }
