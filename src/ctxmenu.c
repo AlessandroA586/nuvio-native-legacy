@@ -107,6 +107,7 @@ static LstLista  lista;
 static float anim, animV;
 // Abertura da pagina de estilos: exponencial de saida, sem repique (~200 ms).
 static float estPag;
+static int estSaindo;   // Voltar da pagina de estilos: o seletor some animado sobre o menu
 static int   operacao, intencao, estadoOperacao;
 static int   espelhoAplicado;
 // A ESCRITA EM ANDAMENTO E DO SIMKL, e nao do Trakt (issue #110): diz a
@@ -681,7 +682,7 @@ static void abrirComum(int indice) {
   detalhesOk = detalhesPend; detalhesPend = 0;
   temCartaz = 0; cartazFixo = 0;
   pagina = soFileira ? 1 : 0;
-  estPag = 0.0f;
+  estPag = 0.0f; estSaindo = 0;
   estFoco = -1;               // montar() poe o foco na forma atual
   ordemLinha = fil_origem_de(filChave) == FIL_ORIGEM_COLECAO;
   ordemSel = fil_ordem(filChave);
@@ -925,7 +926,7 @@ static void aplicar(void) {
     return;
   }
   if (acao == OP_ESTILO) {
-    pagina = 1; estFoco = -1; estPag = 0.0f;
+    pagina = 1; estFoco = -1; estPag = 0.0f; estSaindo = 0;
     memset(estAnim, 0, sizeof estAnim);
     montar();
     estAncorar(0.0f);
@@ -1139,7 +1140,7 @@ void ctx_evento(const SDL_Event *e) {
     if (pagina == 1) estRestaurar();
     if (pagina == 2) { pagina = 0; confExtra = -1; return; }   // Voltar = Cancelar
     if (pagina == 1 && !soFileira) {
-      pagina = 0; montar();
+      pagina = 0; montar(); estSaindo = 1;
       for (foco = 0; foco < nOps && ops[foco].acao != OP_ESTILO; foco++) {}
       if (foco >= nOps) foco = 0;
       return;
@@ -1222,6 +1223,10 @@ void ctx_atualizar(float dt, Uint32 agora) {
   // Pagina de estilos: so aqui, e so com a pagina aberta, o foco da lista anda.
   // Menu fechado (ou saido da pagina) por qualquer porta: desfaz o que nao foi
   // confirmado com OK.
+  if (estSaindo) {
+    estPag = (ajustes_animacoes_reduzidas() || !aberto || pagina == 1) ? 0.0f : anim_mola(estPag, 0.0f, dt, 14.0f);
+    if (estPag < 0.01f) { estPag = 0.0f; estSaindo = 0; }
+  } else
   estPag = (ajustes_animacoes_reduzidas() || !aberto || pagina != 1) ? (pagina == 1 ? 1.0f : 0.0f)
          : anim_mola(estPag, 1.0f, dt, 14.0f);
   if (aberto && pagina == 1) {
@@ -1567,7 +1572,7 @@ static void desenhaEstilos(float a) {
   m = estIlha(2.0f * EST_PAD + (float)n * (lin + EST_GAP) - EST_GAP);
   estIlhaRect = m;
   m.y += (1.0f - a) * 12.0f;
-  if (aberto && a > 0.5f && ponteiro_ativo()) {
+  if (aberto && pagina == 1 && a > 0.5f && ponteiro_ativo()) {
     ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ponteiroEstFora, 0, 0);
     ponteiro_alvo(m.x, m.y, m.w, m.h, NULL, NULL, 0, 0);
   }
@@ -2009,6 +2014,7 @@ static void ctx_desenharCorpo_(Uint32 agora) {
   if (a < 0.01f) return;
   if (modoInline() && pagina == 0) return;   // a linha do painel se abre sozinha (salvospainel.c)
   if (pagina == 1) { desenhaEstilos(a); return; }
+  if (estSaindo) desenhaEstilos(a);   // por cima do menu, sumindo
   if (doLista) { desenhaLista(a); return; }
   ci = itemAtual();
   if (!ci) return;

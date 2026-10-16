@@ -247,8 +247,8 @@ int main(int argc, char **argv) {
     confere("primeiro quadro nao esta em alfa cheio", t0 < 0.2f);
     for (k = 1; k <= 20; k++) {
       snprintf(png, sizeof png, "%s/estiloanim-f%02d.png", saida, k);
-      quadros(1, (k == f[fi] && fi < 3) ? png : NULL);
-      if (k == f[fi] && fi < 3) fi++;
+      quadros(1, (fi < 3 && k == f[fi]) ? png : NULL);
+      if (fi < 3 && k == f[fi]) fi++;
       t = ctx_estilo_t();
       if (t + 1e-6f < prev) mono = 0;
       prev = t;
@@ -259,7 +259,24 @@ int main(int argc, char **argv) {
     quadros(60, NULL);
     confere("progresso final = 1", ctx_estilo_t() > 0.999f);
     snprintf(png, sizeof png, "%s/estiloanim-final.png", saida);
-    quadros(1, png); }
+    quadros(1, png);
+    // VOLTAR: o seletor fecha animado (inverso da abertura), nao some de vez.
+    e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_ESCAPE; ctx_evento(&e);
+    e.type = SDL_KEYUP; ctx_evento(&e);
+    quadros(1, NULL); t0 = ctx_estilo_t(); prev = 2; mono = 1; fi = 0;
+    printf("  t(fechar)=%.3f\n", t0);
+    confere("fechar nao zera o progresso de uma vez", t0 > 0.5f);
+    for (k = 1; k <= 20; k++) {
+      snprintf(png, sizeof png, "%s/estiloanim-close-f%02d.png", saida, k);
+      quadros(1, (fi < 3 && k == f[fi]) ? png : NULL);
+      if (fi < 3 && k == f[fi]) fi++;
+      t = ctx_estilo_t();
+      if (t > prev + 1e-6f) mono = 0;
+      prev = t;
+    }
+    confere("fechar: progresso monotono", mono);
+    quadros(60, NULL);
+    confere("fechar: progresso final = 0", ctx_estilo_t() < 0.001f); }
   (void)gl;
   printf("\n%s\n", falhas ? "FALHOU" : "PASSOU");
   return falhas ? 1 : 0;
