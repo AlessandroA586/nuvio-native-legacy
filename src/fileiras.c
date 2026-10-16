@@ -1296,9 +1296,11 @@ int fil_escolhida(const char *chave) {
   pthread_mutex_lock(&trava);
   garantir();
   i = achar(chave);
-  if (i >= 0 && !linhas[i].oculta && !linhas[i].ocultaConta && !linhas[i].emColecao && !linhas[i].semAddon && !linhas[i].semDecl) {
+  if (i >= 0 && !linhas[i].oculta && !linhas[i].ocultaConta && !linhas[i].emColecao && !linhas[i].semAddon) {
     int p = posicaoLigada(i);
-    if (p < limite || linhas[i].fila) r = p;
+    // Explicit additions retain quota priority even while excluded from slots.
+    if ((!linhas[i].semDecl || linhas[i].visPessoal || linhas[i].fila) &&
+        (p < limite || linhas[i].fila)) r = p;
   }
   pthread_mutex_unlock(&trava);
   return r;

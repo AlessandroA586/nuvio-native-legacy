@@ -1202,6 +1202,39 @@ int main(void) {
     usaArquivo = 0; }
   puts("ok  #545: catalogo que nenhum manifesto declara nao ocupa vaga da home");
 
+  // #545: Explicit additions must regain quota priority while unavailable
+  // catalogs still consume no Home or queue slots.
+  for (int full = 0; full <= 1; full++) {
+    const char *decl[] = { "vivo_movie_a", "vivo_movie_b", "vivo_movie_c" };
+    const char *selected[] = { "vivo_movie_a", "vivo_movie_b", "vivo_movie_c", "vivo_movie_quota" };
+    int count = full ? 3 : 2, state;
+    fil_esquecer();
+    fil_definir_perfil(1);
+    fil_definir_limite(3);
+    for (int k = 0; k < count; k++)
+      fil_registrar(decl[k], "", "Vivo", "movie", 5);
+    fil_registrar("vivo_movie_quota", "", "Vivo", "movie", 5);
+    fil_marcar_declaradas(decl, count, 1);
+    fil_registrar_se_couber("vivo_movie_quota", "", "Vivo", "movie");
+    assert(fil_escolhida("vivo_movie_quota") == -1);
+    fil_adicionar(fil_teste_achar("vivo_movie_quota"), &state);
+    assert(state == (full ? FIL_NA_FILA : FIL_NA_HOME));
+    assert(fil_escolhida("vivo_movie_quota") == count);
+    fil_normalizar();
+    assert(fil_escolhida("vivo_movie_quota") == count);
+    assert(fil_estado_chave("vivo_movie_quota") == FIL_FORA);
+    assert(fil_n_na_home() == count && fil_n_capacidade() == count && fil_n_fila() == 0);
+    // The next discovery admits the explicitly selected catalog.
+    if (!full) selected[2] = "vivo_movie_quota";
+    fil_marcar_declaradas(selected, count + 1, 1);
+    fil_registrar("vivo_movie_quota", "", "Vivo", "movie", 5);
+    fil_normalizar();
+    assert(fil_estado_chave("vivo_movie_quota") == state);
+    assert(fil_n_na_home() == 3 && fil_n_fila() == full);
+    fil_definir_perfil(0);
+  }
+  puts("ok  #545: explicit additions regain quota priority without consuming unavailable slots");
+
   // #365: FANTASMAS EM "FORA DA HOME". Removido o addon, as suas linhas
   // "Fora da Home" — a sugestao automatica (oculta=2) e a oculta impunida
   // que sobrou de arquivo antigo (oculta=1, sem mais escolha nenhuma) —
