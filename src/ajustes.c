@@ -5574,6 +5574,12 @@ static int foraDestaPlataforma(int op) {
   // do indice; os oito AJ_MDB_* seguem as "Notas no titulo" (notaLigarPar).
   if (op == AJ_DESCOBRIR || op == AJ_AVANCADAS) return 1;
   if (op >= AJ_MDB_TRAKT && op <= AJ_MDB_MAL) return 1;
+  // #509: um so interruptor de som; AJ_DET_TRAILER_SOM fica so para a migracao.
+  if (op == AJ_DET_TRAILER_SOM) return 1;
+#ifndef __EMSCRIPTEN__
+  // O trailer dublado e um id do YouTube: o player nativo nao toca.
+  if (op == AJ_TRAILER_AUDIO) return 1;
+#endif
 #ifndef NV_TPK
   if (op == AJ_TRAILER_ZOOM_TPK) return 1;
 #endif
@@ -5596,7 +5602,7 @@ static int foraDestaPlataforma(int op) {
   if (op == AJ_P2P_DESTINO) return 1;
 #endif
 #ifndef NV_ANDROID
-  if (op == AJ_LEG_SYNC_AUDIO) return 1;
+  if (op == AJ_FONTE_PRECARREGAR || op == AJ_LEG_SYNC_AUDIO) return 1;
 #endif
 #ifdef __EMSCRIPTEN__
   if (op == AJ_P2P_LIGADO || op == AJ_P2P_URL || op == AJ_P2P_TESTAR || op == AJ_P2P_LIMITE || op == AJ_P2P_DESTINO) return 1;
