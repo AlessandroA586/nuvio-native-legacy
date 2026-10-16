@@ -39,6 +39,7 @@
 #include "aovivo.h"
 #include "ilha.h"
 #include "ondever.h"
+#include "estatvivoui.h"
 void ponteiro_teste_toque(int ligado);
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -77,6 +78,10 @@ static Uint32 relogio = 100000;
 static void (*extra)(void);
 // Fundo desenhado ANTES do player (o video claro/escuro por tras do anel).
 static void (*fundo)(void);
+static void estatsDesenhar(void) { estatvivo_desenhar(relogio); }
+#ifndef FOSCO_N
+#define FOSCO_N(id) ((void)0)
+#endif
 static void fundoClaro(void) { gfx_cor((GfxRect){ 0, 0, 1920, 1080 }, 0, 0.92f, 0.90f, 0.82f, 1.0f); }
 static void fundoEscuro(void) { gfx_cor((GfxRect){ 0, 0, 1920, 1080 }, 0, 0.03f, 0.03f, 0.04f, 1.0f); }
 static void quadros(int n) {
@@ -393,6 +398,36 @@ int main(int argc, char **argv) {
     { int i;   // tocando: a barra de progresso anda todo quadro
       for (i = 0; i < 60; i++) { player_shot_estado(relogio, 4361.0f + i / 60.0f, 9420.0f, 1, 0, 0, 0); quadros(1); } }
     salvar("osd-furo");
+    player_shot_video(0); simular(0, 0, "", 0, 0);
+  }
+  // FROST OVER LIVE VIDEO (owner, 16/10): 16:9 video fills the hole, so every
+  // player glass sits over it. FOSCO_N (tests/player_fosco.c) prints how many
+  // glasses had a blur source in the last frame of each scene.
+  if (quer(argc, argv, "fosco-osd") || quer(argc, argv, "fosco-audio") || quer(argc, argv, "fosco-stats")) {
+    VideoSimulacao v;
+    memset(&v, 0, sizeof v);
+    v.largura = 3840; v.altura = 2160; v.pronto = 1;
+    abrir(&filme); video_simular(&v);
+    player_shot_video(1); player_shot_furo_real();
+    quadros(10);
+    player_shot_estado(relogio, 4360.0f, 9420.0f, 1, 0, 0, 0);
+    quadros(60);
+    if (quer(argc, argv, "fosco-osd")) { salvar("fosco-osd"); FOSCO_N("fosco-osd"); }
+    if (quer(argc, argv, "fosco-audio")) {
+      player_shot_esconder();
+      faixas_abrir_em(0);
+      quadros(90);
+      salvar("fosco-audio"); FOSCO_N("fosco-audio");
+      faixas_evento(&(SDL_Event){ .key = { .type = SDL_KEYDOWN, .keysym = { .sym = SDLK_ESCAPE } } });
+      quadros(30);
+    }
+    if (quer(argc, argv, "fosco-stats")) {
+      player_shot_esconder();
+      estatvivo_abrir(); extra = estatsDesenhar;
+      quadros(60);
+      salvar("fosco-stats"); FOSCO_N("fosco-stats");
+      extra = NULL; estatvivo_fechar();
+    }
     player_shot_video(0); simular(0, 0, "", 0, 0);
   }
   // UI EM HDR (#205): o mesmo OSD com o video SDR e com Dolby Vision.
