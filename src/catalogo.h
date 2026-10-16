@@ -300,6 +300,12 @@ int cat_indice_por_imdb(const char *imdb);
 // Para fios que precisam reaproveitar metadados sem guardar cat_item().
 // Prefere a copia com poster; 0 quando o titulo ainda nao esta no catalogo.
 int cat_copiar_por_id(const char *id, const char *tipo, CatItem *saida);
+// Como a busca por IMDb, mas exige um tipo certo (movie/series/show).
+// Nao reutiliza uma copia de filme para um pedido de serie do mesmo id.
+int cat_indice_por_imdb_tipo(const char *imdb, const char *tipo);
+// Tipo explicito e sem conflito entre as copias do mesmo titulo. Copia sob
+// a trava; desconhecido ou filme/serie contraditorios devolvem 0.
+int cat_tipo_confirmado_por_id(const char *id, char *tipo, unsigned tam);
 // Como cat_indice_por_imdb, mas fica em `preferido` enquanto ele for o mesmo
 // titulo e prefere uma copia COM episodios (#151; ver catalogo.c).
 int cat_indice_titulo(const char *imdb, int preferido);
