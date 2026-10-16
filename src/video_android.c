@@ -902,7 +902,7 @@ void video_bombear(void) {
     if (!abrirSessao(recarregarPausa >= 0 ? recarregarPosMs : 0, 0))
       { reconErroCod = -1; reconErroPend = 1; }
     else if (recarregarPausa > 0) video_pausar(1);
-    else if (reconPausado) {
+    else if (recarregarPausa < 0 && reconPausado) {
       // abrirSessao nasce tocando. Enfileirar pause logo depois da abertura
       // conserva o estado de um seek feito pausado; o seek de retomada acima
       // aceita prontoLoad mesmo sem EV_TOCANDO.
