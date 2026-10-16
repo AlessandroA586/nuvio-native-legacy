@@ -82,6 +82,24 @@ int main(int argc, char **argv) {
   fprintf(stderr, "bbox %d..%d x %d..%d; esq %d dir %d cima %d baixo %d (0 = preto opaco)\n",
           x0, x1, y0, y1, lado[0], lado[1], lado[2], lado[3]);
   for (x = 0; x < 4; x++) if (lado[x] > 15) { printf("legenda_contorno_shot: FAIL (lado %d = %d)\n", x, lado[x]); return 1; }
+
+  // OPACIDADE SELECIONADA: o contorno compoe o alfa UMA vez, nao por estampa.
+  // A 25% sobre o quadro a 82% o lado do anel deve ler ~0.82*0.75 (~157);
+  // empilhando as 8 estampas translucidas ele ia a 1-0.75^3=58% (~89 ou menos).
+  glClearColor(.82f, .82f, .82f, 1); glClear(GL_COLOR_BUFFER_BIT);
+  if (antigo) {
+    txt_desenhar_alpha(bor, X + 2, Y + 2, .82f * .25f);
+    txt_desenhar_alpha(bor, X - 2, Y, .82f * .25f);
+    txt_desenhar_alpha(bor, X, Y - 2, .82f * .25f);
+  } else txt_desenhar_borda(bor, X, Y, 1, .25f);
+  txt_desenhar_alpha(cor, X, Y, .25f);
+  ler();
+  salvar(dir, antigo ? "contorno-opaco-antes" : "contorno-opaco-depois", (int)X - 30, (int)Y - 20, 100, cor.h + 40);
+  { int l2[4] = { px(x0 - 1, ym), px(x1 + 1, ym), px(xm, y0 - 1), px(xm, y1 + 1) };
+    fprintf(stderr, "alfa .25: esq %d dir %d cima %d baixo %d (~157 = uma passada de 25%%)\n",
+            l2[0], l2[1], l2[2], l2[3]);
+    for (x = 0; x < 4; x++) if (l2[x] < 120 || l2[x] > 200) {
+      printf("legenda_contorno_shot: FAIL (alfa composto: lado %d = %d)\n", x, l2[x]); return 1; } }
   printf("legenda_contorno_shot: ok\n");
   return 0;
 }
