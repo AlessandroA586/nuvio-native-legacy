@@ -121,9 +121,11 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload TPK
+      - name: Upload TPK and Auto-Update Binaries
         uses: actions/upload-artifact@v4
         with:
           name: NuvioTpk
-          path: build/tpk/*.tpk
+          path: |
+            build/tpk/*.tpk
+            build/tpk/*.so
           if-no-files-found: error
