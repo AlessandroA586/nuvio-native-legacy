@@ -123,6 +123,9 @@ int main(int argc, char **argv) {
   // chain, so 4K pays the 1080p blur pixels; 1080p goes to 1/4 in one pass.
   check(passes == captures * (width > 1920 ? 4 : 3), "blur passes per capture");
   check(captures && fill * width * height / captures <= 1.5e6, "blur pixels per capture capped at the 1080p chain");
+  // Only the regions the glasses read (bar, island, menu) are copied and blurred.
+  check(captures && copy / captures <= 0.5, "capture copies only the glass regions");
+  check(captures && fill * width * height / captures <= 2.5e5, "blur only the glass regions");
   check(fill / 20 <= (webos ? 1.4 : 1.0), "blur fill budget with intervening backdrop invalidation");
   shot(argv[2], "focus");
   // Upload invalidation must override temporal reuse; sample age must not be
