@@ -372,8 +372,8 @@ int layout_modo_mobile(void);
 // esta fração da largura útil; a fila de cartazes começa depois do vão; a
 // ficha (meta, chips, sinopse, elenco) mora abaixo da arte do painel.
 #define NV_DIV_PAINEL_F     0.45f
-#define NV_DIV_VAO          40.0f
-#define NV_DIV_META_H       230.0f
+#define NV_DIV_VAO          36.0f
+#define NV_DIV_META_H       150.0f
 // O numeral: corpo do TXT_RANK_GRANDE (os algarismos da Inter medem ~0,73 do
 // corpo, ~190 px contra o cartaz de 322 — perto de 60%, a proporcao da Apple),
 // quanto da largura dele fica POR BAIXO do cartaz, e a folga minima ate o

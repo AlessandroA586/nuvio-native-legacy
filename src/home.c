@@ -843,6 +843,9 @@ static GfxRect padBannerRect(void) {
 static float divPainelW(void) { return homeLarguraUtil() * NV_DIV_PAINEL_F; }
 static float divArteH(void) {
   float h = divPainelW() * 9.0f / 16.0f;
+  // Fit three complete 2:3 neighbours and two gaps in the remaining width.
+  float fit = (homeLarguraUtil() - divPainelW() - NV_DIV_VAO - 2 * NV_CARD_GAP) * 0.5f;
+  if (h > fit) h = fit;
   if (layoutHome() != HOME_LAYOUT_DINAMICA) {
     float hMax = NV_TELA_H - topoFileiras() - NV_LEGACY_ROW_HEAD_H - NV_DIV_META_H - 24.0f;
     if (h > hMax) h = hMax;
@@ -1464,6 +1467,7 @@ static float gapDe(TipoFileira t) {
   // Espaco entre titulos (Ajustes): so o vao medido escala, nunca o xOffTipo. Os
   // cards grandes crescem 6% no foco, entao o vao deles nao desce de 24.
   float f = ajustes_espaco_titulos();
+  if (t == FILEIRA_HEROI_DIVIDIDO) return NV_CARD_GAP;
   if (t == FILEIRA_DESTAQUE || t == FILEIRA_DESTAQUE_QUADRADO) {
     float g = NV_CARD_GAP_GRANDE * f;
     return g < NV_CARD_GAP ? NV_CARD_GAP : g;
@@ -1748,8 +1752,8 @@ static float extraTipo(TipoFileira t) {
        : t == FILEIRA_HEROI_DIVIDIDO ? NV_DIV_META_H : 0.0f;
 }
 static float alturaTotalFil(int r) {
-  return alturaFil(r) + (temRotulo(fileiras[r].tipo) ? NV_POSTER_COPY_H : 0.0f)
-       + extraTipo(fileiras[r].tipo);
+  return alturaFil(r) + (temRotulo(fileiras[r].tipo) && fileiras[r].tipo != FILEIRA_HEROI_DIVIDIDO
+                         ? NV_POSTER_COPY_H : 0.0f) + extraTipo(fileiras[r].tipo);
 }
 static float alfaFileiraHome(int r, float y, float topo, float corte) {
   float fade = anim_clamp((y - (topo - 80.0f)) / 80.0f, 0.0f, 1.0f);
@@ -6644,16 +6648,17 @@ static void desenhaRotuloCard(const CatItem *cItem, TipoFileira tipo, int deitad
         txt_desenhar_alpha(tn, bx, py + h - base - tn.h, 0.98f);
       }
     } else if (tipo == FILEIRA_HEROI_DIVIDIDO) {
-      // ano ★ nota, embaixo do poster
       char l[64]; const char *e = strstr(cItem->meta, " \xc2\xb7 ");
       int nota = imdbnota_obter(cItem->imdb, cItem->nota, !strcmp(cItem->tipo, "series"));
       size_t n = e ? (size_t)(e - cItem->meta) : strlen(cItem->meta);
       if (n > 12) n = 12;
-      snprintf(l, sizeof l, "%.*s", (int)n, cItem->meta);
-      if (nota > 0) snprintf(l + strlen(l), sizeof l - strlen(l), "%s\xe2\x98\x85 %d.%d", l[0] ? "  " : "", nota / 10, nota % 10);
-      if (l[0])
-        txt_desenhar_alpha(txt_linha_corta(TXT_CAPTION2, l, 235, 237, 242, 255, w),
-                           px + NV_POSTER_COPY_PADX, py + h + NV_POSTER_COPY_PADT, 0.9f);
+      snprintf(l, sizeof l, "%.*s%s", (int)n, cItem->meta, n && nota > 0 ? " · " : "");
+      float bw = badge_imdb_largura(nota), by = py + h + 18.0f;
+      TxtLinha year = txt_linha_corta(TXT_CAPTION2, l, 218,222,232,255, fmaxf(0, w - bw - 8));
+      float bh = fmaxf(34.0f, year.h);
+      if (l[0]) txt_desenhar(year, px, by + (bh - year.h) * 0.5f);
+      if (nota > 0 && bw <= w)
+        badge_imdb(px + (l[0] ? year.w + 8 : 0), by + (bh - BADGE_H) * 0.5f, nota, 0, 1);
     } else if (rotuloFora && nome) {
       float bx = px + NV_POSTER_COPY_PADX;
       float by = py + h + NV_POSTER_COPY_PADT;
@@ -6990,15 +6995,13 @@ static void desenhaHeroiCard(const CatItem *ci, int completo, const char *texto,
   }
 }
 
-// HERÓI DIVIDIDO (16/10): o painel a esquerda é o cartão Herói (arte deitada,
-// véu e logo) do título em foco na fileira, com a ficha embaixo — meta e
-// gênero, classificação e nota, três linhas de sinopse e o elenco. Os
-// vizinhos do foco já pedem a arte deitada, para o painel trocar sem buraco.
+// Split Hero A: logo on art; metadata and two synopsis lines share the caption band.
 static int divididoItem(int r) { return fileiraItemIndice(&fileiras[r], colunaDaFileira(r)); }
 // O cartaz `c` (centro cx, largura w) entra na fila a direita do painel? O que
 // ja passou fica atras do painel (pintado depois).
 static int divididoCartazVisivel(int r, float cx, float w) {
-  return cx + w * 0.5f >= homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO;
+  return cx - w * 0.5f >= homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO - 0.5f &&
+         cx + w * 0.5f <= homeConteudoDireita() + 0.5f;
 }
 static GfxRect divididoPainel(int r, float cardY) {
   return (GfxRect){ homeConteudoX() + bordaX(r), cardY, divPainelW(), divArteH() };
@@ -7018,7 +7021,7 @@ static void desenhaDividido(int r, float cardY) {
     }
   }
   desenhaHeroiCard(ci, 0, NULL, caminho, t, 1.0f, p.x, p.y, p.w, p.h,
-                   raioDe(p.w, p.h), 0.0f, 0.0f);
+                   raioDe(p.w, p.h), foco.fileira == r && !focoHero ? 1.0f : 0.0f, 0.0f);
   // O foco mora no painel: o poster dele nao e mais desenhado na fila.
   if (foco.fileira == r && !focoHero) {
     itemFoco = (HomeItem){ .indice = idx, .rect = p, .arte = caminho,
@@ -7028,26 +7031,10 @@ static void desenhaDividido(int r, float cardY) {
     ancoraFoco = p; temAncoraFoco = 1;
   }
   if (!ci) return;
-  { char linha[200];
-    snprintf(linha, sizeof linha, "%s%s%s", ci->meta, ci->meta[0] && ci->genero[0] ? " · " : "", ci->genero);
-    if (linha[0]) { TxtLinha m = txt_linha_corta(TXT_CW_META, linha, 218, 222, 232, 255, p.w);
-                    txt_desenhar(m, x, y); y += m.h + 12.0f; } }
-  { float bx = x;
-    int nota = imdbnota_obter(ci->imdb, ci->nota, !strcmp(ci->tipo, "series"));
-    if (ci->classificacao[0]) bx += badge_desenhar(bx, y, ci->classificacao, BADGE_NEUTRO, 1.0f) + BADGE_IMDB_GAP;
-    if (nota > 0) bx += badge_imdb(bx, y, nota, 0, 1.0f);
-    if (bx > x) y += BADGE_H + 14.0f; }
+  y += heroiMeta(ci, x, y, p.w) + 14.0f;
   if (ci->sinopse[0])
-    y += sinopse_bloco(TXT_HERO_SIN, ci->sinopse, 214, 218, 228, x, y, p.w, 30.0f, 0.95f, 3) + 10.0f;
-  { char elenco[240]; size_t n = 0; int k;
-    elenco[0] = 0;
-    for (k = 0; k < CAT_ELENCO_MAX && k < 4 && ci->elenco[k].nome[0]; k++)
-      n += (size_t)snprintf(elenco + n, sizeof elenco - n, "%s%s", k ? ", " : "", ci->elenco[k].nome);
-    if (elenco[0]) {
-      char l[300];
-      snprintf(l, sizeof l, "%s: %s", i18n("Elenco"), elenco);
-      txt_desenhar(txt_linha_corta(TXT_MINI, l, 168, 174, 186, 255, p.w), x, y);
-    } }
+    sinopse_bloco_corta(TXT_DET_SIN, ci->sinopse, 243, 242, 239,
+                        x, y, p.w, 36.0f, 0.95f, 2);
 }
 
 static void pintarCartao(const CartaoFoco *k, float raio) {
@@ -7989,6 +7976,14 @@ static void home_desenhar_(Uint32 agora) {
   }
 
   gfx_opacidade_grupo=1;
+  // Hero A hides outgoing copy above its heading without a blur or offscreen pass.
+  if (!focoHero && foco.fileira >= 0 && foco.fileira < nFileiras &&
+      (fileiras[foco.fileira].tipo == FILEIRA_HEROI ||
+       fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO)) {
+    gfx_sem_recorte();
+    gfx_rect((GfxRect){0, 0, NV_TELA_W, 96.0f}, 0, GFX_VEU_CSS, 0, 1, 1, 0,
+             NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1);
+  }
   // DEVOLVE O REBORDO ao sair: a variavel e global e o detalhe, a busca e a
   // biblioteca desenham GFX_CARD tambem. O ajuste e "na Home", entao ele nao
   // pode vazar para as outras telas — mesma disciplina de gfx_opacidade_grupo
