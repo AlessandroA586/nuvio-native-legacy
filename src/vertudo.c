@@ -2580,7 +2580,8 @@ static void abaPilula(GfxRect p, const char *s, int f, int sel, float fa, float 
   if (sel) {
     float sr, sg, sb; corFocoFonte(&sr, &sg, &sb);
     gfx_cor(p, NV_RAIO_PILL, sr, sg, sb, a * (0.62f + 0.38f * fa));
-  } else gfx_cor(p, NV_RAIO_PILL, 1, 1, 1, .04f * a * (1 - fa));
+  } else if (ajustes_vidro()) gfx_vidro_folha(p, NV_RAIO_PILL, a * (1 - fa));
+  else gfx_cor(p, NV_RAIO_PILL, 1, 1, 1, .04f * a * (1 - fa));
   if (fa > .001f) focoAbaFonte(p, fa, a);
   int cor = f ? ajustes_tinta_foco() : sel ? ajustes_tinta_foco2() : 176;
   TxtLinha t = txt_linha_corta(TXT_HERO_META, s, cor, cor, cor, 255, tw);
@@ -2922,7 +2923,8 @@ static void themeHeader(float a,float x0) {
         if(selecionada&&!f)gfx_cor((GfxRect){x+PAD,pill.y+H-4,fminf(t.w,32.0f),3},.5f,1,1,1,ah);
         continue;
       }
-      gfx_cor(pill,NV_RAIO_PILL,1,1,1,.04f*ah*(1-fa));
+      if(ajustes_vidro())gfx_vidro_folha(pill,NV_RAIO_PILL,ah*(1-fa));
+      else gfx_cor(pill,NV_RAIO_PILL,1,1,1,.04f*ah*(1-fa));
       int cor=f?ajustes_tinta_foco():selecionada?255:176;
       TxtLinha t=txt_linha_corta(TXT_HERO_META,rot[i],cor,cor,cor,255,textoW);
       txt_desenhar_alpha(t,x+PAD,pill.y+(H-t.h)*.5f,ah);
