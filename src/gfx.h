@@ -267,9 +267,9 @@ typedef enum {
   //   uPar     = ellipse centre (fraction of the rect)
   //   uRaio    = ellipse x radius, uFoco = y radius (fractions of the HEIGHT)
   //   uCor.a   = veil alpha outside the light
-  //   uCor.r   = beam strength (0 = no beam; also off with light effects)
-  //   uCor.g   = beam x (fraction of width), uCor.b = beam half-width at the
-  //              poster (fraction of the height)
+  //   uCor.r   = poster floor y (fraction of height)
+  //   uCor.g   = beam x (fraction of width), uCor.b = floor pool radius
+  //              (fraction of height). uAcento = current app accent.
   GFX_HOLOFOTE = 45,
   GFX_NMODOS = 46
 } GfxModo;
