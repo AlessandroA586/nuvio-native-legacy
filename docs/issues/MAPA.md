@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `335bd2abc` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-17T02:50:00-03:00. 479 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `abb9e49b9` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-17T04:55:00-03:00. 481 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -120,7 +120,7 @@ Plano de refatoração: `docs/plans/refatoracao-geral.md` (branch `agente/refato
 | 2.0.3 | 0 |  |
 | 2.0.4 | 0 |  |
 | 2.0.5 | 2 | #495, #512 |
-| 2.0.6 | 42 | #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #479, #492, #494, #496, #500, #501, #503, #505, #506, #507, #508, #530, #539, #545, #548, #549, #551, #553, #555, #557, #558, #562, #564, #565, #566, #570, #577 |
+| 2.0.6 | 43 | #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #479, #492, #494, #496, #500, #501, #503, #505, #506, #507, #508, #530, #539, #545, #548, #549, #551, #553, #555, #557, #558, #564, #565, #566, #570, #577, #578, #579 |
 | 2.1 | 3 | #420, #457, #458 |
 | 2.2 | 0 |  |
 | futuro | 8 | #437, #438, #450, #509, #510, #514, #521, #542 |
@@ -181,7 +181,7 @@ Por status:
 |---|---|
 | lancada | 304 |
 | integrada | 68 |
-| aberta | 47 |
+| aberta | 49 |
 | respondida | 22 |
 | por-desenho | 15 |
 | fechada-sem-resposta | 7 |
@@ -195,15 +195,15 @@ Por release (grupo de planejamento):
 | Grupo | Qtd |
 |---|---|
 | lançadas em tag v* (qualquer versão) | 304 |
-| sem release | 145 |
+| sem release | 147 |
 | 2.0.5 (integração, sem release do conserto) | 23 |
 | futuro (2.1/2.2) | 5 |
 | 2.0.3 lançada, com pendência | 2 |
 
 Lançadas por versão: 1.0.7: 10, 1.0.8: 1, 1.0.10: 3, 1.0.11: 3, 1.0.15: 1, 1.0.22: 1, 1.0.24: 1, 1.0.29: 1, 1.0.30: 2, 1.0.31: 2, 1.0.32: 2, 1.0.34: 1, 1.0.35: 1, 1.0.37: 1, 1.0.38: 2, 1.0.39: 1, 1.0.42: 1, 1.0.43: 4, 1.0.44: 4, 1.0.45: 1, 1.0.51: 3, 1.0.52: 1, 1.0.53: 1, 1.0.55: 3, 1.2.1: 4, 1.3.0: 1, 1.3.2: 5, 1.3.4: 5, 1.3.5: 2, 1.3.8: 1, 1.3.9: 1, 1.3.10: 1, 1.3.11: 1, 1.3.12: 5, 1.4: 7, 1.4.1: 2, 1.4.2: 9, 1.4.3: 9, 1.4.4: 3, 1.4.5: 1, 1.4.6: 7, 1.4.7: 1, 1.5.0: 2, 1.5.1: 4, 1.5.2: 9, 1.5.3: 2, 1.5.4: 9, 1.6.0: 8, 1.6.1: 4, 1.6.2: 3, 1.6.3: 2, 1.6.4: 2, 1.6.5: 4, 1.7.0: 10, 1.7.1: 4, 1.7.2: 5, 1.7.4: 5, 2.0.0: 22, 2.0.1: 12, 2.0.2: 20, 2.0.3: 29, 2.0.4: 9, 2.0.5: 23.
 
-Abertas no GitHub: 67. Fechadas: 412.
-Abertas sem nenhum comentário nosso: 53.
+Abertas no GitHub: 68. Fechadas: 413.
+Abertas sem nenhum comentário nosso: 54.
 
 ## 2.0.3 lançada com pendência (precisa-log, respondida ou conserto parcial)
 
@@ -305,7 +305,7 @@ Notas:
 
 ## Próximo patch proposto (2.0.6)
 
-35 issues.
+36 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -334,16 +334,17 @@ Notas:
 | [#548](https://github.com/iqui27/nuvio-native-legacy/issues/548) | Mark as watched not working | ? | bug | integrada | - | 2.0.6 | merged, 66a608ef7/8330673a8/2d04fbecc/da2c69701/f87c41ed7/9bc31cc9d/b074d9fd5/5b37cecd8, 91da5935e | sem comentários | build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7 |
 | [#549](https://github.com/iqui27/nuvio-native-legacy/issues/549) | Needs the See All tile for every row in showcase layout | ? | enhancement | integrada | - | 2.0.6 | 4baf783fa | sem comentários | build+install no HEAD 335bd2abc e resposta na issue |
 | [#551](https://github.com/iqui27/nuvio-native-legacy/issues/551) | Catalog Not Loading 2.0.6 | LG webOS 25/26 | bug | integrada | 2.0.6 | 2.0.6 | 1c9043ed0/a2e9daf91, merged, e680776ed | sem comentários | build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7 |
-| [#553](https://github.com/iqui27/nuvio-native-legacy/issues/553) | queda de desempenho | ? | bug | integrada | - | 2.0.6 | - | sem comentários | merged (perf glass + detail); build+install no HEAD e medir na TV antes de responder |
+| [#553](https://github.com/iqui27/nuvio-native-legacy/issues/553) | queda de desempenho | ? | bug | integrada | - | 2.0.6 | 6a64c2e13, a691e96fb, abb9e49b9 | sem comentários | merged (perf glass + detail); build+install no HEAD e medir na TV antes de responder |
 | [#555](https://github.com/iqui27/nuvio-native-legacy/issues/555) | Search does not work as expected | ? | ? | integrada | - | 2.0.6 | merged, 438423097 | sem comentários | build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7 |
 | [#557](https://github.com/iqui27/nuvio-native-legacy/issues/557) | Playback cannot be skipped to a particular time stamp | ? | ? | aberta | - | 2.0.6 | - | sem comentários | triar: seek para timestamp especifico; criar job |
 | [#558](https://github.com/iqui27/nuvio-native-legacy/issues/558) | Black screen on launch | ? | bug | integrada | - | 2.0.6 | cc49341e6, merged, a1888d007 | sem comentários | build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7 |
-| [#562](https://github.com/iqui27/nuvio-native-legacy/issues/562) | Reload button in player | ? | bug | integrada | - | 2.0.6 | 2c7c85860, 6a6d5b71b, 075fec9a4 | sem comentários | merged 2c7c85860; build+install no novo HEAD, testar no player e responder na issue |
 | [#564](https://github.com/iqui27/nuvio-native-legacy/issues/564) | Request to Add Playback Speed Controls | ? | feature | aberta | - | 2.0.6 | - | sem comentários | triar: controle de velocidade de reproducao; criar job |
 | [#565](https://github.com/iqui27/nuvio-native-legacy/issues/565) | PenguPlay add on doesn't work | ? | bug | integrada | - | 2.0.6 | d25a3e513, 68cf2c63b/c32a87bbf, 5aad21874 | sem comentários | merged 5aad21874; review OK j-rev-i565pengu (tests/pengu.sh 27/27 com P2P off); falta test |
 | [#566](https://github.com/iqui27/nuvio-native-legacy/issues/566) | Some issues | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar "Some issues": esperar detalhes do usuario antes de criar job |
 | [#570](https://github.com/iqui27/nuvio-native-legacy/issues/570) | [Samsung Tizen 9] Changing episode source shows previous mov | Samsung Tizen 9 | bug | aberta | - | 2.0.6 | - | sem comentários | triar: trocar de fonte mostra o filme anterior e perde a retomada (Tizen 9) |
 | [#577](https://github.com/iqui27/nuvio-native-legacy/issues/577) | Low fps on tyzen65 after 2.0.6 update | Samsung Tizen 6.5 | bug | aberta | - | 2.0.6 | - | sem comentários | triar: baixo FPS no Tizen 6.5 depois da 2.0.6; pedir log/modelo e criar job |
+| [#578](https://github.com/iqui27/nuvio-native-legacy/issues/578) | Converted audio slightly delayed / out of lip sync on Samsun | Samsung .tpk | ? | aberta | - | 2.0.6 | - | sem comentários | triar: audio convertido com atraso/fora de sincronia no Tizen 10 (TV 2026); pedir amostra  |
+| [#579](https://github.com/iqui27/nuvio-native-legacy/issues/579) | V2.06 scrolling catalogue display glitch | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: glitch de rolagem do catalogo na 2.0.6; pedir video e criar job |
 
 Notas:
 
@@ -357,7 +358,7 @@ Notas:
 - **#459**: LG 2.0.4, Simkl conectado diretamente: pede enviar progresso parcial ao pausar/sair para retomar em outros apps. src/simkl.c:simkl_ler_playback e simkl_continuar leem pausados; simkl_episodios_marcar/simkl_titulo_marcar enviam histórico de visto. src/player.c chama trakt_scrobble ao tocar/pausar; não há envio Simkl equivalente neste caminho. Leitura de playback e histórico existem, envio incremental Simkl não comprovado. Limite demonstrado do cliente, sem afirmar capacidade atual da API Simkl offline. Escrivão 14/10 14:47: integrada via simkl-scrobble.
 - **#461**: Pede opção de toolbar no topo; mantenedor responde que hoje há menu lateral e relaciona #407. src/menu.c:desenhaBarra/geoEm implementam rail/painel lateral; src/detail.c roteia CIMA para área social e ESQUERDA para menu. Não há opção top toolbar comprovada; barra social no topo não é substituto da navegação principal. Sem bug ou causa a diagnosticar. Escrivão 14/10 14:47: integrada via menutopo.
 - **#462**: Job i462sync done 20:07: 84095af auto sync rejection translated tracks; tests autosync.sh/legsync.sh rc 0. [sync 2026-10-15: agente/205-i18n462 integrada] [sync 2026-10-15: agente/205-i462sync integrada] Escrivao 10-15 22:49: merged via agente/205-i462sync (da9e686a7).
-- **#468**: [sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato. Sync 2026-10-16 22:51: merged 08c98b017 no HEAD 335bd2abc; review OK j-rev-homerefresh (22:21). [sync 2026-10-17 00:05] HEAD b280cd6; sai na 2.0.7. TV segue 496 merges atras (cb7ece972).
+- **#468**: [sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato. Sync 2026-10-16 22:51: merged 08c98b017 no HEAD 335bd2abc; review OK j-rev-homerefresh (22:21). [sync 2026-10-17 00:05] HEAD b280cd6; sai na 2.0.7. TV segue 496 merges atras (cb7ece972). Sync 2026-10-17 04:55: a Home tambem segue reordenar/desativar e novas fontes depois do merge f41a4e154 (hero dividido, sem review dedicado).
 - **#494**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#496**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#500**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels bug. Sem triagem local. [sync 2026-10-15: agente/205-i500q integrada] Escrivao 10-15 22:49: merged via agente/205-i500q (bf9edb493). Escrivao 10-16 00:28: merge agente/205-herotrailer (85221cec4 ajustes/hero trailer veto row); review j-revg-herotrailer OK. Escrivao 10-16 01:50: merge agente/205-perffinal 4359b10f5; review j-revg-perffinal OK. | [sync 2026-10-16 21:00] trailer expandido merged ad3b042cb; review OK j-rev-trailerexp.
@@ -368,20 +369,21 @@ Notas:
 - **#508**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. Escrivão 14/10 14:47: branch agente/205-i508fundo: review OK, merge pendente. | Escrivão 2026-10-14 16:11: i508fundo mergeada (d57b79e9); review j-revg-i508fundo OK. | Escrivao 2026-10-15 11:48: prompt p-205-i508fundo em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i508fundo integrada]
 - **#530**: Escrivao 10/15 13:48: novo no GitHub 2026-10-15 (Subtitle issues), sem prompt de job. [sync 2026-10-15: agente/205-i530q integrada] Escrivao 10-15 22:49: merged via agente/205-i530q (cbd542148). Escrivao 10-16 00:06: merge agente/205-legatraso (05c24b89c/ad03fedc5/8d14dd55e, migracao do valor salvo). BLOQUEIA (j-revg-legatraso: audsync) -> OK (j-revg2-legatraso). Escrivao 10-16 01:50: HEAD 335bd2abc; ainda nao instalado na TV.
 - **#539**: Escrivao 2026-10-15 20:48: novo no GitHub 2026-10-15, sem job. | [sync 2026-10-16 21:00] conserto entrou em integracao/2.0.5 (a4f220cd7): nuvio-legacy://, stremio:// e imdb.com abrem titulo/play/busca. | [sync 2026-10-16 22:55] merged a4f220cd7 no HEAD 335bd2abc | Escrivão 2026-10-16 22:1x: merged a4f220cd7 nesta janela (HEAD 335bd2abc); review j-rev-deeplink-r4; deep links; BLOQUEIA r1-r3 antes do fix; entra na 2.0.7
-- **#545**: Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot. Escrivao 10-16 12:48: job home545 done (26b9c635b), 1 ahead de HEAD; review j-rev2-home545 BLOQUEIA. Distinto de #551 (descoberta nao reinicia apos PIN). | Escrivao 10-16 14:58: merged 9e2138f9d; review OK j-rev-home545-r4 depois dos fixes de cota/selecao explicita. | [sync 2026-10-16 21:00] merged 9e2138f9d; review OK j-rev-home545-r4 apos fixes de cota/selecao explicita; pos-merge BLOQUEIA j-revg-home545-posmerge 17:51 com fix j-fix-home545-posmerge | [sync 2026-10-16 22:55] agente/205-pfhome545 2 ahead (975638744/53b050753); VEREDITO BLOQUEIA j-revg-pfhome545 (18:47), fix 53b050753 sem review | [sync 2026-10-16 21:10] follow-up pfhome545 merged b03502f84; VEREDITO OK j-revg-pfhome545 (20:57) | Escrivão 2026-10-16 22:1x: merged b03502f84 (follow-up: fileira fora da cota atualiza ao adicionar); review OK j-revg-pfhome545
+- **#545**: Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot. Escrivao 10-16 12:48: job home545 done (26b9c635b), 1 ahead de HEAD; review j-rev2-home545 BLOQUEIA. Distinto de #551 (descoberta nao reinicia apos PIN). | Escrivao 10-16 14:58: merged 9e2138f9d; review OK j-rev-home545-r4 depois dos fixes de cota/selecao explicita. | [sync 2026-10-16 21:00] merged 9e2138f9d; review OK j-rev-home545-r4 apos fixes de cota/selecao explicita; pos-merge BLOQUEIA j-revg-home545-posmerge 17:51 com fix j-fix-home545-posmerge | [sync 2026-10-16 22:55] agente/205-pfhome545 2 ahead (975638744/53b050753); VEREDITO BLOQUEIA j-revg-pfhome545 (18:47), fix 53b050753 sem review | [sync 2026-10-16 21:10] follow-up pfhome545 merged b03502f84; VEREDITO OK j-revg-pfhome545 (20:57) | Escrivão 2026-10-16 22:1x: merged b03502f84 (follow-up: fileira fora da cota atualiza ao adicionar); review OK j-revg-pfhome545 Sync 2026-10-17 04:55: 6a64c2e13 (pisca do fundo Dinamico antes do frost) entrou sem review dedicado; nada pendente de codigo.
 - **#548**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivao 10-16 14:58: job vistos548 rodando (branch agente/205-vistos548 = HEAD, 0 ahead); log vivo; sem fix ainda. | [sync 2026-10-16 21:00] branch agente/205-vistos548 6 ahead; fixes 8330673a8 e 5b37cecd8 (weak defaults para fixtures isoladas) depois do ultimo review BLOQUEIA r4; review r5 rodando. | [sync 2026-10-16 22:55] branch agente/205-vistos548 8 ahead (tip b074d9fd5); VEREDITO BLOQUEIA j-rev-vistos548-r7 (19:48) | [sync 2026-10-16 21:10] merged 91da5935e em integracao/2.0.5; VEREDITO OK j-rev-vistos548-r9, nenhum commit depois; sai na 2.0.7 | Escrivão 2026-10-16 22:1x: merged 91da5935e (agente/205-vistos548, 12 commits); reviews OK j-rev-vistos548-r8/r9; entra na 2.0.7
 - **#549**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivão 2026-10-16 22:1x: corrigido por agente/205-prs207 (4baf783fa Ver tudo em grade nas colecoes); merged 72ba10761; review OK j-rev-prs207
 - **#551**: Escrivao 10-16 12:48: job catal551 done; review BLOQUEIA j-rev-catal551 -> fix 1c9043ed0 -> OK j-rev2-catal551; merged e680776ed. Causa: sessao de perfil velha nao reiniciava a descoberta. | [sync 2026-10-16 21:00] merged e680776ed; review OK j-rev2-catal551 apos fix 1c9043ed0/a2e9daf91 | [sync 2026-10-16 22:55] merged e680776ed no HEAD 335bd2abc | Escrivão 2026-10-16 22:1x: merged e680776ed nesta janela (HEAD 335bd2abc); review j-rev2-catal551; sessao de perfil velha antes de tentar de novo; entra na 2.0.7
-- **#553**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | [sync 2026-10-16 21:00] perf glass merged (e9c809475 fosco-nova + 0c77460c1/5536ee8da/d7ec89975 fosco-perf) e 5ed6ddfaa (detail): 1 captura/quadro, 4->2 camadas cheias.
+- **#553**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | [sync 2026-10-16 21:00] perf glass merged (e9c809475 fosco-nova + 0c77460c1/5536ee8da/d7ec89975 fosco-perf) e 5ed6ddfaa (detail): 1 captura/quadro, 4->2 camadas cheias. Sync 2026-10-17 04:55: os tres merges de vidro/abertura desta janela entram aqui; ainda sem medicao de FPS na TV.
 - **#555**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | [sync 2026-10-16 21:00] merged 438423097 (eps555) + d5ae66d9e (busca555); reviews OK j-rev-eps555/j-rev-busca555 | [sync 2026-10-16 22:55] merged 438423097 + d5ae66d9e no HEAD 335bd2abc | Escrivão 2026-10-16 22:1x: merged 438423097 nesta janela (HEAD 335bd2abc); review j-rev-eps555/j-rev-busca555; busca555 (titulo exato) + eps555 (episodios pelo catalogo); entra na 2.0.7
 - **#557**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#558**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova, tela preta no lancamento num Q50A Tizen 6 2.0.6. Job j-tpk558 done (cc49341e6, tools/tpk.sh rc 0); sem review. | Escrivao 10-16 14:58: merged a1888d007 (adiar IME da Samsung e expor falha no boot); review OK j-rev-tpk558; spec docs/issues/558-tpk-startup.md. | [sync 2026-10-16 21:00] merged a1888d007; review OK j-rev-tpk558 | [sync 2026-10-16 22:55] merged a1888d007 no HEAD 335bd2abc | Escrivão 2026-10-16 22:1x: merged a1888d007 nesta janela (HEAD 335bd2abc); review j-rev-tpk558; tela preta no lancamento .tpk; confirmar na TV do reporter; entra na 2.0.7
-- **#562**: [sync 2026-10-17 02:50] PR #574 merged (2c7c85860): "Recarregar" sai da barra do player e entra na folha de fontes; a barra ganha "Assistir do começo" (seek 0:00). review OK rev-pr574. entra na 2.0.7 Nova em 2026-10-16 (issues.json, labels [bug]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova no snapshot 10-16 21:00 | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#564**: Nova em 2026-10-16 (issues.json, labels [enhancement]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova no snapshot 10-16 21:00 | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#565**: [sync 2026-10-16 22:40] Jobs j-i565pengu (tests, 17:46) e j-rev-i565pengu (VEREDITO OK). merged 5aad21874. Os dois commits sao so fixtures/testes; o fix de produto (d25a3e513) ja estava integrado. Nova em 2026-10-16 (issues.json, labels [bug]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures provam que a politica notWebReady esconde 27/27 streams https publicos; falta o fix de produto. | [sync 2026-10-16 22:55] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures merged, produto segue aberto
 - **#566**: Nova em 2026-10-16 21:13 (issues.json, labels [bug]). Sem job no snapshot. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova em 2026-10-16 21:13 (issues.json, labels [bug]) | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#570**: Nova em 2026-10-16 23:34 (issues.json, Tizen 9; trocar de fonte do episodio mostra o filme anterior e reseta a retomada). | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
-- **#577**: [sync 2026-10-17 02:50] Nova em 2026-10-17 05:40 (issues.json). Regressao de desempenho relatada depois da 2.0.6; sem job, branch ou prompt no snapshot 10-17 02:46.
+- **#577**: [sync 2026-10-17 02:50] Nova em 2026-10-17 05:40 (issues.json). Regressao de desempenho relatada depois da 2.0.6; sem job, branch ou prompt no snapshot 10-17 02:46. Sync 2026-10-17 04:55: segue sem job.
+- **#578**: Sync 2026-10-17 04:55: issue nova (17/10 06:05), sem job.
+- **#579**: Sync 2026-10-17 04:55: issue nova (17/10 07:46), rotulo bug, sem job.
 
 ## Futuro (2.1, 2.2, depois)
 
@@ -469,9 +471,9 @@ Notas:
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
-| [#1](https://github.com/iqui27/nuvio-native-legacy/issues/1) | poster dont load on tiles | Samsung (tpk/wgt?) | ? | lancada | 1.0.7 | - | 04c37f87 | nós 09-08 | sem ação; conserto publicado |
-| [#2](https://github.com/iqui27/nuvio-native-legacy/issues/2) | Main Nuvio icon not showing in apps list | LG | bug | lancada | 1.0.7 | - | 04c37f87 | nós 09-07 | sem ação; conserto publicado |
-| [#3](https://github.com/iqui27/nuvio-native-legacy/issues/3) | Language still showing spanish | ? | ? | lancada | 1.0.7 | - | 04c37f87 | nós 09-07 | sem ação; conserto publicado |
+| [#1](https://github.com/iqui27/nuvio-native-legacy/issues/1) | poster dont load on tiles | Samsung (tpk/wgt?) | ? | lancada | 1.0.7 | - | 04c37f87, 90b0f9cd7 | nós 09-08 | sem review e sem merge; worktree ativo, sem job na fila |
+| [#2](https://github.com/iqui27/nuvio-native-legacy/issues/2) | Main Nuvio icon not showing in apps list | LG | bug | lancada | 1.0.7 | - | 04c37f87, 9ebdc9a3b, e047eecee | nós 09-07 | sem review e sem merge; worktree ativo, sem job na fila |
+| [#3](https://github.com/iqui27/nuvio-native-legacy/issues/3) | Language still showing spanish | ? | ? | lancada | 1.0.7 | - | 04c37f87, e4fb8c085, ac1ba9725 | nós 09-07 | review OK j-rev-pr487-v2 mas o branch andou depois (ac1ba9725); precisa re-review + merge |
 | [#4](https://github.com/iqui27/nuvio-native-legacy/issues/4) | Nuvio Keyboard Help | ? | ? | lancada | 1.0.7 | - | 04c37f87 | autor 09-07 | sem ação; conserto publicado |
 | [#5](https://github.com/iqui27/nuvio-native-legacy/issues/5) | Nuvio Sync Issue | ? | bug | lancada | 1.0.7 | - | 04c37f87 | nós 09-07 | sem ação; conserto publicado |
 | [#6](https://github.com/iqui27/nuvio-native-legacy/issues/6) | Video Black Screen Issue | ? | bug | lancada | 1.0.7 | - | 04c37f87 | autor 09-22 | sem ação; conserto publicado |
@@ -480,7 +482,7 @@ Notas:
 | [#9](https://github.com/iqui27/nuvio-native-legacy/issues/9) | Missing Subtitle Languages Bug | ? | bug | lancada | 1.0.7 | - | 04c37f87 | autor 09-07 | sem ação; conserto publicado |
 | [#10](https://github.com/iqui27/nuvio-native-legacy/issues/10) | Bug: Collection is completely empty on Tizen | Samsung (tpk/wgt?) | bug | lancada | 1.0.7 | - | 04c37f87 | autor 09-07 | sem ação; conserto publicado |
 | [#11](https://github.com/iqui27/nuvio-native-legacy/issues/11) | Feedback for v1.0.7: Profile Management Bug, Syncing & Setti | ? | bug | lancada | 1.0.8 | - | 90743102 | nós 09-07 | sem ação; conserto publicado |
-| [#12](https://github.com/iqui27/nuvio-native-legacy/issues/12) | Bug: Some UI text is not translated to English on Tizen | Samsung (tpk/wgt?) | bug | lancada | 1.0.10 | - | 7716f148 | autor 09-08 | sem ação; conserto publicado |
+| [#12](https://github.com/iqui27/nuvio-native-legacy/issues/12) | Bug: Some UI text is not translated to English on Tizen | Samsung (tpk/wgt?) | bug | lancada | 1.0.10 | - | 7716f148, 71fbc7453 | autor 09-08 | 12 commits fora; ultimo VEREDITO BLOQUEIA (j-revg-pr493), sem fix novo na fila |
 | [#13](https://github.com/iqui27/nuvio-native-legacy/issues/13) | Collections Installed from Nuvio Account Do Not Appear on Ti | Samsung (tpk/wgt?) | bug | lancada | 1.0.10 | - | 7716f148 | nós 09-09 | sem ação; conserto publicado |
 | [#14](https://github.com/iqui27/nuvio-native-legacy/issues/14) | Bug: Next Episode Does Not Play After Confirming “Play Next” | ? | bug | lancada | 1.0.10 | - | 7716f148 | autor 09-08 | sem ação; conserto publicado |
 | [#16](https://github.com/iqui27/nuvio-native-legacy/issues/16) | Bug: Detail Page Flickers and Randomly Opens a Different Tit | ? | bug | lancada | 1.0.11 | - | b28db878 | autor 09-08 | sem ação; conserto publicado |
@@ -758,9 +760,9 @@ Notas:
 
 Notas:
 
-- **#1**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
-- **#2**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
-- **#3**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
+- **#1**: Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: ilhas de frost desenhadas sobre o vidro da barra lateral da Home; 1 commits fora do HEAD.
+- **#2**: Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: mais menu do detalhe no vidro/frost compartilhado; 2 commits fora do HEAD. Sync 2026-10-17 04:55: fundo Cinza/Cor fixo no layout Dinamico (29 idiomas); 2 commits fora do HEAD. Sync 2026-10-17 04:55: frost da barra lateral e pilula de acento em vidro; 2 commits fora do HEAD.
+- **#3**: Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: idiomas de audio/legenda declarados pelo add-on (PR #487); 3 commits fora do HEAD.
 - **#4**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
 - **#5**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
 - **#6**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
@@ -769,7 +771,7 @@ Notas:
 - **#9**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
 - **#10**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
 - **#11**: Triagem 2026-10-12: 90743102 em v1.0.8.
-- **#12**: Triagem 2026-10-12: 7716f148 em v1.0.10.
+- **#12**: Triagem 2026-10-12: 7716f148 em v1.0.10. Sync 2026-10-17 04:55: perfil e sessao (PR #493 v2/v3); 12 commits fora do HEAD.
 - **#13**: Triagem 2026-10-12: 7716f148 em v1.0.10.
 - **#14**: Triagem 2026-10-12: 7716f148 em v1.0.10.
 - **#16**: Triagem 2026-10-12: b28db878 em v1.0.11.
@@ -1047,7 +1049,7 @@ Notas:
 
 ## Fechado sem conserto (por-desenho, fora-do-escopo, duplicada, respondida, sem resposta)
 
-99 issues.
+100 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -1150,6 +1152,7 @@ Notas:
 | [#529](https://github.com/iqui27/nuvio-native-legacy/issues/529) | Dubbing filter bug | ? | ? | integrada |  | - | f8fbd3bd3, f8fbd3bd3 | sem comentários | build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7 |
 | [#552](https://github.com/iqui27/nuvio-native-legacy/issues/552) | The add-on sources aren't appearing | ? | bug | integrada | 2.0.6 | - | cbcf467f5/6d524f947/27988615e, merged, 0d7821a01 | sem comentários | build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7 |
 | [#556](https://github.com/iqui27/nuvio-native-legacy/issues/556) | Special / out-of-order seasons recognised by Trakt are not s | ? | ? | integrada | - | - | 054ccef24 | sem comentários | build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7 |
+| [#562](https://github.com/iqui27/nuvio-native-legacy/issues/562) | Reload button in player | ? | bug | integrada | - | - | 2c7c85860, 6a6d5b71b | sem comentários | build+install no HEAD abb9e49b9, testar Recarregar na folha de fontes e Assistir do comeco |
 
 Notas:
 
@@ -1252,6 +1255,7 @@ Notas:
 - **#529**: Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job. [sync 2026-10-15: agente/205-i529q em_revisao] [sync 2026-10-15 19:50: agente/205-i529q merged em integracao/2.0.5 (f8fbd3bd3)] Escrivao 10-15 22:49: merged via agente/205-i529q (f8fbd3bd3). | Escrivão 2026-10-16 22:1x: merged f8fbd3bd3 nesta janela (HEAD 335bd2abc); review j-revg-i529q-r; preferencia de audio na fonte; entra na 2.0.7
 - **#552**: Escrivao 10-16 12:48: job fonte552 done; review BLOQUEIA j-rev-fonte552 -> fix cbcf467f5 -> OK j-rev2-fonte552; merged 0d7821a01. Hostnames de stream passam a ser lidos antes de exigir P2P. | Escrivao 10-16 14:58: follow-up do reporter (addons de legenda nao aparecem): fix 27988615e em agente/205-legenda552, sem review. | [sync 2026-10-16 21:00] merged 0d7821a01 (fonte552) + b897be584 (legenda552) + d25a3e513/6d524f947 (#505/#552 PR #559); reviews OK j-rev2-fonte552/j-rev-legenda552/j-rev-pr559 | [sync 2026-10-16 22:55] merged 0d7821a01/b897be584 no HEAD 335bd2abc | Escrivão 2026-10-16 22:1x: merged 0d7821a01 nesta janela (HEAD 335bd2abc); review j-rev2-fonte552/j-rev-legenda552; fonte552 + legenda552 + PR #559 (URL http sem P2P); entra na 2.0.7
 - **#556**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: merged 054ccef24 (port PR #569 de @ghbarker + fix 4a443422b); review OK j-rev-port569-r2; entra na 2.0.7
+- **#562**: Sync 2026-10-17 04:55: #562 fechada no GitHub depois do merge do PR #574. Conserto em integracao/2.0.5, sai na 2.0.7.
 
 ## Auditoria de validações
 
@@ -1259,6 +1263,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 | Data | Quem | O que | Issues | Ref | Resultado | Evidência |
 |---|---|---|---|---|---|---|
+| 2026-10-17 04:55 | job de agente (log do proprio job, sem revisao independente) | Merge de agente/205-homepisca: pisca do fundo Dinamico resolvido antes da copia do frost | - | 6a64c2e13 (agente/205-homepisca) | inconclusivo | sem review dedicado; testes do job + build nao conferidos por revisor (ver docs/issues/MAPA.md e /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md) |
+| 2026-10-17 04:55 | job de agente (log do proprio job, sem revisao independente) | Merge de agente/205-fichatam: fileira de cartazes grandes em Pequeno/Medio/Grande | - | cbf6fb021 (agente/205-fichatam) | inconclusivo | sem review dedicado; testes do job + build nao conferidos por revisor (ver docs/issues/MAPA.md e /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md) |
+| 2026-10-17 04:55 | job de agente (log do proprio job, sem revisao independente) | Merge de agente/205-herodiv: hero dividido nao repete o titulo focado na lista | - | f41a4e154 (agente/205-herodiv) | inconclusivo | sem review dedicado; testes do job + build nao conferidos por revisor (ver docs/issues/MAPA.md e /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md) |
+| 2026-10-17 04:55 | job de agente (log do proprio job, sem revisao independente) | Merge de agente/205-titulofil: estilos de titulo da fileira (Classico/Ilha/Editorial/Acento) | - | 4898972d7 (agente/205-titulofil) | inconclusivo | sem review dedicado; testes do job + build nao conferidos por revisor (ver docs/issues/MAPA.md e /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md) |
+| 2026-10-17 04:55 | job de agente (log do proprio job, sem revisao independente) | Merge de agente/205-foscoleve4: vidro defumado no player + nivel de qualidade do vidro | - | a691e96fb (agente/205-foscoleve4) | inconclusivo | sem review dedicado; testes do job + build nao conferidos por revisor (ver docs/issues/MAPA.md e /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md) |
+| 2026-10-17 04:55 | job de agente (log do proprio job, sem revisao independente) | Merge de agente/205-dvabertura: abertura do Dolby Vision no estilo novo | - | abb9e49b9 (agente/205-dvabertura) | inconclusivo | sem review dedicado; testes do job + build nao conferidos por revisor (ver docs/issues/MAPA.md e /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md) |
 | 2026-10-17 01:56 | job-claude (rev-traktcoment) | Review dos Comentários do Trakt com vidro/frost, série de volta e cache de wrap: VEREDITO OK (2 P2) | - | a363d821c/1165245fc/5195cd14f -> merge 335bd2abc | passou | /Volumes/ExternalSSD/tmp/rev/rev-traktcoment.log |
 | 2026-10-17 01:54 | job-claude (rev-ctxgrande) | Review do menu contextual com frost + ajuste "Menu do cartaz": VEREDITO OK (P1 de rebase, fora do commit) | - | a2ea074c7 -> merge dc040ef2d | passou | /Volumes/ExternalSSD/tmp/rev/rev-ctxgrande.log |
 | 2026-10-17 01:53 | job-claude (rev-pr574) | Review do PR #574 (Recarregar na folha de fontes + Assistir do começo): VEREDITO OK, UI small | #562 | 075fec9a4/6a6d5b71b -> merge 2c7c85860 | passou | /Volumes/ExternalSSD/tmp/rev/rev-pr574.log |
@@ -4474,3 +4484,75 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Conserto: a2ea074c7 (fix(ctxmenu): frost the title menu over its art, add Poster menu setting); dc040ef2d (Merge agente/205-ctxgrande, integracao/2.0.5)
 - Próximo passo: merged dc040ef2d; review OK rev-ctxgrande (01:54, P1 de rebase resolvido pelo merge); confirmar na TV
 - Notas: [sync 2026-10-17 02:50] Dono: "O menu contextual grande nao ta nem com o glass e nem com o frost tb. E vamos colocar nos ajustes a possibilidade de deixar igual tava antes". j-ctxgrande-pi done 01:42 -> rev-ctxgrande 01:54 VEREDITO OK (P1: branch sem o tip de integracao — resolvido no proprio merge). Merge feito pelo dono em dc040ef2d (02:46).
+
+### Vidro no menu "mais" da pagina do titulo
+
+- Plataforma: todas
+- Status: em-revisao
+- Release: -
+- Conserto: 9ebdc9a3b; e047eecee (agente/205-detalheglass)
+- Próximo passo: revisar e mesclar agente/205-detalheglass (2 commits fora)
+- Notas: Pedido do dono. O menu "mais" do detalhe passa a usar o mesmo vidro/frost dos outros paineis. Branch aberta, sem review nem merge.
+
+### Frost da barra lateral e pilula de acento em vidro
+
+- Plataforma: todas
+- Status: em-revisao
+- Release: -
+- Conserto: 7bf4caac9; e3eb56d39 (agente/205-vidromenu); 90b0f9cd7 (agente/205-vidroilhas)
+- Próximo passo: revisar e mesclar agente/205-vidromenu e agente/205-vidroilhas
+- Notas: Pedido do dono. A barra lateral desfoca sobre as telas com vidro e a pilula de acento vira vidro tingido no modo vidro; ilhas de frost sobre o vidro da Home. Duas branches abertas, sem review nem merge.
+
+### Fundo Cinza/Cor fixo no layout Dinamico
+
+- Plataforma: todas
+- Status: em-revisao
+- Release: -
+- Conserto: 6da1fc418; e91329dd2 (agente/205-dinfundo)
+- Próximo passo: revisar e mesclar agente/205-dinfundo (2 commits fora)
+- Notas: Pedido do dono. O layout Dinamico ganha fundo fixo Cinza ou Cor em vez de so arte, com as traducoes dos ajustes em 29 idiomas. Branch aberta, sem review nem merge.
+
+### Estilos de titulo da fileira (Classico/Ilha/Editorial/Acento)
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7 (integracao/2.0.5)
+- Conserto: 331746034 (agente/205-titulofil, merge 4898972d7)
+- Próximo passo: build+install no HEAD e conferir os 4 estilos na TV
+- Notas: Pedido do dono. Cada fileira escolhe o estilo do titulo: Classico, Ilha, Editorial ou Acento. Merged em integracao/2.0.5 sem review dedicado.
+
+### Fileira de cartazes grandes em Pequeno/Medio/Grande
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7 (integracao/2.0.5)
+- Conserto: e50a38ef6 (agente/205-fichatam, merge cbf6fb021)
+- Próximo passo: build+install no HEAD e conferir os 3 tamanhos na TV
+- Notas: Pedido do dono. Novo estilo de fileira com cartaz grande em tres alturas. Merged em integracao/2.0.5 sem review dedicado; testes home/i18n/vertfileira OK.
+
+### Hero dividido sem repetir o titulo focado
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7 (integracao/2.0.5)
+- Conserto: 4428dea18 (agente/205-herodiv, merge f41a4e154)
+- Próximo passo: build+install no HEAD e conferir o hero dividido na TV
+- Notas: Pedido do dono. No hero dividido a lista de cartazes deixa de repetir o titulo que ja esta em foco. Merged em integracao/2.0.5 sem review dedicado.
+
+### Vidro defumado no player e nivel de qualidade do vidro
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7 (integracao/2.0.5)
+- Conserto: 6f1c61cb8; 30a932909 (agente/205-foscoleve4, merge a691e96fb)
+- Próximo passo: medir FPS na TV e conferir o governador automatico
+- Notas: Pedido do dono. Sobre o video ao vivo o painel deixa de desblurfar e vira vidro defumado, com nivel Desempenho/Alta/Maximo e queda automatica depois de quadros travados. Merged em integracao/2.0.5 sem review dedicado.
+
+### Abertura do Dolby Vision no estilo novo
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7 (integracao/2.0.5)
+- Conserto: d89784e82 + 4 fixes (agente/205-dvabertura, merge abb9e49b9)
+- Próximo passo: build+install no HEAD e conferir a abertura DV na TV
+- Notas: Pedido do dono. A tela de Cinema do Dolby Vision segue o estilo e os ajustes das telas de carregamento novas. Merged em integracao/2.0.5 sem review dedicado.

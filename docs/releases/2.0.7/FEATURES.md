@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-17 02:50, HEAD `335bd2abc`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-17 04:55, HEAD `abb9e49b9`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -76,6 +76,25 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Novidades
 
+- **Estilo do título das fileiras**: *Ajustes › Home › Títulos das fileiras* escolhe entre
+  Classico, Ilha (título numa pílula de vidro com o ícone e a contagem), Editorial (linha pequena em
+  caixa alta acima do título) e Acento (ponto que vira barra na fileira em foco, com "Ver tudo" no fim).
+  Todas as plataformas. Refs pedido do dono, `331746034`, `4898972d7`.
+- **Cartaz grande em três tamanhos**: a fileira de cartaz com informação ganha Pequeno, Médio e Grande
+  (*Ajustes › Aparência da Home › Estilo de linha*, esquerda/direita como Paisagem e 4:3) — Pequeno com
+  1 linha de sinopse, Grande com 3 e a altura que sobra virando largura. O Médio continua idêntico.
+  Todas as plataformas. Refs pedido do dono, `e50a38ef6`, `cbf6fb021`.
+- **Vidro defumado sobre o vídeo**: no player e nos painéis sobre a imagem ao vivo o vidro deixa de
+  desfocar e passa a ser tinta escura translúcida, sem captura de tela. Todas as plataformas.
+  Refs pedido do dono, `6f1c61cb8`, `a691e96fb`.
+- **Qualidade do vidro automática**: *Ajustes › Qualidade do vidro* (Automática, Desempenho, Alta) — no
+  Desempenho o app usa só o vidro defumado, sem captura nem desfoque; na Automática ele cai sozinho para
+  o defumado quando a TV trava 4 janelas seguidas de 150 quadros. Todas as plataformas.
+  Refs pedido do dono, `30a932909`, `a691e96fb`.
+- **Abertura do Dolby Vision no estilo novo**: a tela de Cinema do Dolby Vision passa a usar a mesma
+  abertura das outras telas, com Estilo (Centro/Canto), Fundo (Desligado/Arte/Borrada), linha do add-on,
+  card detalhado e animações reduzidas valendo igual. Todas as plataformas.
+  Refs pedido do dono, `d89784e82`, `8f788b25b`, `b59987511`, `ef33525a8`, `4542aeffe`, `abb9e49b9`.
 - **Frost no player e nos menus**: os botões, a barra de controle, os painéis de fonte/legenda/áudio, o
   painel de Estatísticas ao vivo e os menus rápido e de guia parental agora usam o mesmo vidro fosco do
   resto da interface, em vez de painel chapado. Todas as plataformas (onde o vídeo dá para ler pelo GL).
@@ -162,6 +181,11 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Correções
 
+- **Fundo Dinâmico sem piscar**: com o vidro fosco ligado no layout Dinâmica, o fundo atrasado é
+  resolvido antes da cópia do frost — a Home para de alternar entre a arte certa e faixas coloridas no
+  Android. Android. Refs pedido do dono, `5528dc0ad`, `6a64c2e13`.
+- **Hero dividido sem título repetido**: no hero dividido a lista de cartazes deixa de repetir o título que
+  já está em foco. Todas as plataformas. Refs pedido do dono, `4428dea18`, `f41a4e154`.
 - **Frost em tudo que parece vidro**: o menu rápido e o painel de guia parental passam pelo material
   compartilhado, e o frost volta a usar a arte do título pré-desfocada em vez de sumir no meio do
   crossfade do destaque. Todas as plataformas. `46e0bd5bd`, `3982ef84b`.
@@ -211,6 +235,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Desempenho
 
+- **Frost só nos retângulos que os painéis leem**: com o fundo Dinâmico adiado, a cópia do backdrop
+  passou a ser resolvida uma vez por mudança de hash em vez de por quadro. Todas as plataformas.
+  `5528dc0ad`.
 - **Home e vidro muito mais leves no Android (TCL) e no .tpk**: uma captura de fundo por quadro em vez de
   4 cópias e 20 passes de desfoque (antes 4.00 capturas / 20 passes, agora 1.15 / 5.75).
   Android, Samsung .tpk. `0c77460c1`, `d98d72026`, `5536ee8da`, `d7ec89975`.
@@ -263,6 +290,13 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Interno
 
+- Testes novos: `tests/dvabertura_shot.sh` (FAIL antes, PASS depois) para a abertura DV; fileiras com
+  os 3 tamanhos numa linha, enum acrescentado no fim e ajuda no catálogo e na coleção; geometria monotônica
+  do cartaz grande nos dois layouts; PNGs dos três tamanhos no `pgtam_shot` (`e50a38ef6`, `331746034`).
+- Teste novo do pisca do fundo Dinâmico (`tests/dina_pisca_shot.sh`) e do hero dividido (últimos itens da
+  fileira, sem quebra) (`5528dc0ad`, `4428dea18`).
+- Vidro defumado: o teste passa a exigir zero capturas e zero passes de desfoque e a contar os vidros
+  defumados; a fonte de desfoque pré-assada do player foi removida (`6f1c61cb8`).
 - Testes cobrindo Continuar assistindo independente, inicialização de catálogos, remoção de add-on,
   retratos de metadados, modo automático Android, limites do player, relógio e propriedade de registro
   (`8c99638f7`, `bd6e61119`, `a06447082`, `8979ef16c`, `d570cb3c1`, `85562a66b`, `5f0ad732e`, `5ae92423e`,
@@ -307,19 +341,22 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 - **PR #493 v2 / v3** (perfil e sessão) — `agente/205-pr493`, 12 commits fora. VEREDITO **BLOQUEIA**
   `j-revg-pr493` (mais novo); `j-revpr493-v3` OK foi antes. Precisa de fix novo + review.
   Android, LG webOS.
+- **Menu "mais" do detalhe no vidro** — `agente/205-detalheglass`, 2 commits fora (`e047eecee`, `9ebdc9a3b`):
+  elenco, recomendações, trailers e o menu "mais" da página do título passam a usar o vidro/frost
+  compartilhado. Sem review e sem job na fila. Todas as plataformas.
+- **Frost da barra lateral e pílula de acento em vidro** — `agente/205-vidromenu` (2 commits fora,
+  `7bf4caac9`, `e3eb56d39`) e `agente/205-vidroilhas` (1 fora, `90b0f9cd7`): a barra lateral desfoca sobre
+  as telas com vidro, a pílula de acento vira vidro tingido no modo vidro e as ilhas de frost deixam de ser
+  desenhadas por baixo do vidro da Home. Sem review e sem job na fila. Todas as plataformas.
+- **Fundo Cinza/Cor fixo no layout Dinâmico** — `agente/205-dinfundo`, 2 commits fora (`6da1fc418`,
+  `e91329dd2`): fundo fixo Cinza ou Cor em vez de só arte, com os ajustes traduzidos em 29 idiomas. Sem
+  review e sem job na fila. Todas as plataformas.
 - **Frost barato igual ao aprovado na LG C9** — `agente/205-foscovelho` foi **merged** (`76bc9d0c3`) e
   depois **revertido** (`f40a93dc3`): na TCL o dono achou o fosco anterior (captura de tela + desfoque) mais
   bonito e mais leve. A fonte de arte pré-desfocada (`ab02d4aaa`, `d0789c13a`, `50a1ac232`, `35f5f4fc3`)
   **não** está na 2.0.7; o review r4 deu OK (`j-rev-foscovelho-r4`, 22:08) já depois do merge. O caminho que
   ficou — a captura de tela, só que barata — entrou por `4c82273d7` e está em Destaques/Desempenho.
   Todas as plataformas.
-- **Vidro defumado no player + nível de qualidade do vidro** — `agente/205-foscoleve4`, 2 commits fora
-  (`6f1c61cb8`, `30a932909`): sobre o vídeo ao vivo o painel deixa de desfocar a imagem e passa a ser vidro
-  defumado (tinta escura translúcida), com nível Desempenho/Alta/Máximo e um governador que cai sozinho para
-  Desempenho depois de quadros travados. Ainda sem review. Todas as plataformas.
-- **Tela de abertura do Dolby Vision no novo estilo** — `agente/205-dvabertura`, 5 commits fora
-  (`d89784e82` + 4 fixes): a tela de Cinema do Dolby Vision segue o estilo e os ajustes das telas de
-  carregamento novas e não quebra ao trocar de variante. Ainda sem review. Todas as plataformas.
 - **Comentários do Trakt com vidro, menu contextual com frost e #562/PR #574** entraram nesta janela
   (`335bd2abc`, `dc040ef2d`, `2c7c85860`, todos com review OK: `rev-traktcoment`, `rev-ctxgrande`,
   `rev-pr574`) e já estão em Novidades/Correções/Desempenho. Falta medir o FPS dos 8 painéis de vidro em TV.
@@ -399,6 +436,25 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 
 ### New
 
+- **Row title styles**: *Settings › Home › Row titles* picks Classic, Island (title in a glass pill with
+  the row icon and item count), Editorial (small uppercase kicker above the spaced title) or Accent (a dot
+  that grows into a bar on the focused row, with a "See all" tail). All platforms.
+  Refs owner request, `331746034`, `4898972d7`.
+- **Big poster row in three sizes**: the info-on-poster row gains Small, Medium and Large
+  (*Settings › Home appearance › Row style*, left/right like Landscape and 4:3) — Small with one synopsis
+  line, Large with three and the spare height turned into width. Medium is unchanged.
+  All platforms. Refs owner request, `e50a38ef6`, `cbf6fb021`.
+- **Smoked glass over the video**: in the player and the panels drawn over live video the glass stops
+  blurring and becomes tinted translucent ink, with no screen capture. All platforms.
+  Refs owner request, `6f1c61cb8`, `a691e96fb`.
+- **Automatic glass quality**: *Settings › Glass quality* (Automatic, Performance, High) — Performance uses
+  only the smoked glass, with no capture or blur; Automatic drops to smoked by itself after 4 consecutive
+  150-frame windows over the target frame time. All platforms.
+  Refs owner request, `30a932909`, `a691e96fb`.
+- **Dolby Vision opening in the new style**: the Dolby Vision Cinema screen now uses the same opening as the
+  other loading screens, with Style (Centre/Corner), Background (Off/Art/Blurred), the add-on line, the
+  detailed card and reduced animations all applying the same way. All platforms.
+  Refs owner request, `d89784e82`, `8f788b25b`, `b59987511`, `ef33525a8`, `4542aeffe`, `abb9e49b9`.
 - **Frost in the player and its menus**: the buttons, the control bar, the source/subtitle/audio panels,
   the live Statistics panel and the quick menu / parental guide now use the same frosted glass as the rest
   of the interface instead of a flat panel. All platforms (where the video can be read by GL).
@@ -467,6 +523,11 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 
 ### Fixes
 
+- **Dynamic background no longer flickers**: with frosted glass on in the Dinâmica layout the deferred
+  background is resolved before the frost backdrop copy, so Home stops alternating between the right art
+  and colour bands on Android. Android. Refs owner request, `5528dc0ad`, `6a64c2e13`.
+- **Split hero without a repeated title**: in the split hero the poster list no longer repeats the title
+  that is already in focus. All platforms. Refs owner request, `4428dea18`, `f41a4e154`.
 - **Frost on everything that looks like glass**: the quick menu and the parental guide panel now go
   through the shared frosted material, and the frost source survives the hero crossfade (baked title art)
   instead of dropping to the opaque fallback. All platforms. `46e0bd5bd`, `3982ef84b`.
@@ -508,6 +569,8 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 
 ### Performance
 
+- **Frost only on the rects the panels read**: with the Dynamic background deferred, the backdrop copy is
+  resolved once per hash change instead of per frame. All platforms. `5528dc0ad`.
 - **Much lighter Home and glass on Android (TCL) and .tpk**: one backdrop capture per frame instead of
   4 copies and 20 blur passes (4.00 captures / 20 passes before, 1.15 / 5.75 now). Android, Samsung .tpk.
   `0c77460c1`, `d98d72026`, `5536ee8da`, `d7ec89975`.
@@ -551,6 +614,14 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 
 ### Internal
 
+- New tests: `tests/dvabertura_shot.sh` (FAIL before, PASS after) for the DV opening; rows with the three
+  sizes on one line, the enum appended at the end and help text in both catalog and collection; monotonic
+  geometry of the big poster in both layouts; PNGs of the three sizes in `pgtam_shot` (`e50a38ef6`,
+  `331746034`).
+- New tests for the Dynamic background flicker (`tests/dina_pisca_shot.sh`) and the split hero (last items
+  of the row, no wrap) (`5528dc0ad`, `4428dea18`).
+- Smoked glass: the test now requires zero captures and zero blur passes and counts the smoked glasses; the
+  baked stand-in blur source in the player was dropped (`6f1c61cb8`).
 - Tests covering independent Continue Watching, catalog startup, add-on removal, metadata portraits,
   automatic Android mode, player limits, the clock, and registry ownership (`8c99638f7`, `bd6e61119`,
   `a06447082`, `8979ef16c`, `d570cb3c1`, `85562a66b`, `5f0ad732e`, `5ae92423e`, `bbb74484e`).
@@ -599,13 +670,16 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
   `50a1ac232`, `35f5f4fc3`) is **not** in 2.0.7; its round-4 review was OK (`j-rev-foscovelho-r4`, 22:08),
   already after the merge. The path that shipped — the screen capture, just cheaper — landed as `4c82273d7`
   and is under Highlights/Performance. All platforms.
-- **Smoked glass in the player + glass quality level** — `agente/205-foscoleve4`, 2 commits out (`6f1c61cb8`,
-  `30a932909`): over live video the panel stops blurring the picture and becomes smoked glass (dark translucent
-  tint), with a Performance/Enhanced/Maximum level and a governor that drops to Performance on its own after
-  janky frames. No review yet. All platforms.
-- **Dolby Vision opening in the new style** — `agente/205-dvabertura`, 5 commits out (`d89784e82` plus 4
-  fixes): the Dolby Vision Cinema opening follows the style and settings of the new loading screens and does
-  not break when switching variants. No review yet. All platforms.
+- **Detail "more" menu on glass** — `agente/205-detalheglass`, 2 commits out (`e047eecee`, `9ebdc9a3b`):
+  cast, recommendations, trailers and the title page "more" menu move to the shared glass/frost. No review
+  and no queued job. All platforms.
+- **Sidebar frost and glass accent pill** — `agente/205-vidromenu` (2 commits out, `7bf4caac9`, `e3eb56d39`)
+  and `agente/205-vidroilhas` (1 out, `90b0f9cd7`): the sidebar frosts over screens that carry glass, the
+  accent pill becomes tinted glass in glass mode, and the frost islands are no longer drawn under the Home
+  sidebar glass. No review and no queued job. All platforms.
+- **Fixed Gray/Colour background in the Dynamic layout** — `agente/205-dinfundo`, 2 commits out
+  (`6da1fc418`, `e91329dd2`): a fixed Gray or Colour backdrop instead of art only, with the settings
+  translated in 29 languages. No review and no queued job. All platforms.
 - **Trakt comments with glass, frosted context menu and #562/PR #574** landed in this window
   (`335bd2abc`, `dc040ef2d`, `2c7c85860`, all review OK: `rev-traktcoment`, `rev-ctxgrande`, `rev-pr574`) and
   are already in New/Fixes/Performance. Still to measure on a device: the FPS of the 8 glass panels.
