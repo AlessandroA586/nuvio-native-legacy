@@ -186,7 +186,7 @@ static const Item TELA[] = {
   // Cartazes e arte + Trailers numa categoria so (mockup v3, tela 01).
   SEC("Cartazes e trailers", "Cartaz em foco, de onde vem a arte e trailers", "aj_clapperboard"),
     ROT("Cartaz em foco"),
-      OPC(AJ_EXPANDIR), OPC(AJ_EXPANDIR_ATRASO), OPC(AJ_BORDA_FOCO),
+      OPC(AJ_EXPANDIR), OPC(AJ_EXPANDIR_ATRASO), OPC(AJ_BORDA_FOCO), OPC(AJ_MENU_CARTAZ),
     ROT("Forma"),
       OPC(AJ_LARGURA_DP), OPC(AJ_RAIO_DP), OPC(AJ_PROF),
     ROT("De onde vem a arte"),

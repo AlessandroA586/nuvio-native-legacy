@@ -494,6 +494,7 @@ int   ajustes_abertura_addon(void);
 int   ajustes_abertura_fundo(void);
 int   ajustes_abertura_estilo(void);   // 0 Centro (A3), 1 Canto (B3)
 // #205: tamanho dos cards de episodio (Moderna): 0 pequeno, 1 medio (padrao), 2 grande.
+int   ajustes_menu_cartaz_simples(void); // 0 Full (default), 1 Simple; this TV only.
 int   ajustes_mural_titulos(void);      // #521: 1 = nome dentro do ladrilho do Mural
 int   ajustes_ep_tamanho(void);
 // #338: tamanho de abertura das Estatisticas ao vivo (EV_TAM_*); -1 = o ultimo usado.

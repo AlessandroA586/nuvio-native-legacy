@@ -14,6 +14,7 @@
 //
 //   bash tests/ctxinfo_shot.sh [pasta]
 #include "ajustes.h"
+#include "addons.h"
 #include "nvtmp.h"
 #include "amigostitulo.h"
 #include "agenda.h"
@@ -42,6 +43,7 @@
 static SDL_Window *janela;
 static const char *dirDados;
 static int falhas;
+static double panelVariance;
 static void confere(const char *o_que, int ok) {
   printf("  %-70s %s\n", o_que, ok ? "ok" : "FALHOU");
   if (!ok) falhas++;
@@ -53,6 +55,19 @@ static void gravar(const char *png) {
   int y;
   assert(pix && s);
   glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, pix);
+  // Measure the same buffer as the PNG, before SDL swaps it.
+  { GfxRect menu;
+    double sum = 0, sum2 = 0;
+    int n = 0;
+    panelVariance = 0;
+    if (ctx_info_caixa(NULL, &menu, NULL))
+      for (y = (int)menu.y + 130; y < (int)(menu.y + menu.h) - 40; y++) {
+        const unsigned char *p = pix + ((1079 - y) * 1920 + (int)menu.x + 18) * 4;
+        double luma = (p[0] + p[1] + p[2]) / 3.0;
+        sum += luma; sum2 += luma * luma; n++;
+      }
+    if (n) panelVariance = sum2 / n - (sum / n) * (sum / n);
+  }
   for (y = 0; y < 1080; y++)
     memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
   assert(IMG_SavePNG(s, png) == 0);
@@ -179,10 +194,12 @@ static void ajustes(int vidro) {
   a = fopen(cam, "w");
   assert(a);
   fprintf(a, "idioma 0\ntrailerHero 0\nhomeLayoutLocal 0\nvidroLocal %d\n"
-             "modernLandscapePostersEnabled 1\n", vidro);
+             "vidroFoscoLocal 1\nmodernLandscapePostersEnabled 1\n", vidro);
   if (fonte) fprintf(a, "fonteInterface %d\n", atoi(fonte));
   fclose(a);
   ajustes_dir(dirDados);
+  ajustes_definir_vidro(1); // First-run appearance migration defaults to solid.
+  assert(ajustes_vidro() && ajustes_vidro_fosco());
 }
 
 // Confere o menu aberto: extensao desenhada, do lado pedido, sem sobrepor.
@@ -204,6 +221,13 @@ static void conferir(const char *rotulo, int ladoEsperado, const char *deve) {
                ri.x >= 0.0f && ri.x + ri.w <= 1920.5f && ri.y >= 0.0f && ri.y + ri.h <= 1080.5f);
   snprintf(msg, sizeof msg, "%s: mostra \"%s\"", rotulo, deve);
   confere(msg, strstr(t, deve) != NULL);
+}
+
+// Read only the quiet panel gutter: no labels, icons, focus pill or rim.
+static void frost(const char *label) {
+  confere("frost: enriched menu geometry available", ctx_info_caixa(NULL, NULL, NULL));
+  printf("  %s: panel variance %.3f\n", label, panelVariance);
+  confere(label, ajustes_vidro() ? panelVariance > 2.0 : panelVariance < 1.0);
 }
 
 static const char *NOMES[] = {
@@ -251,6 +275,13 @@ int main(int argc, char **argv) {
   gfx_icones_dir("deploy/app/art");
   extras_carregar("deploy/app/art");
   ajustes(0);
+  { int op = ajustes_rapido_op("menuCartazLocal");
+    confere("poster menu setting is visible", op >= 0);
+    confere("Full is the default", !ajustes_menu_cartaz_simples() &&
+            !strcmp(ajustes_rapido_valor(op), "Completo")); }
+  // The empty-Home gate requires a configured addon even with a seeded catalog.
+  { AddonRemoto addon = { "Shot", "https://addon.invalid/x/manifest.json", 1 };
+    assert(addons_definir_lista(&addon, 1)); }
   assert(home_iniciar("deploy/app/art"));
 
   // Duas fileiras: Continuar assistindo (series em andamento) e Em alta.
@@ -320,6 +351,12 @@ int main(int argc, char **argv) {
   quadros(40, NULL);
   snprintf(png, sizeof png, "%s/home-menu-extensao.png", saida);
   quadros(1, png);
+  frost("small menu: frosted art exceeds solid-fill variance");
+  ajustes_definir_vidro(0);
+  snprintf(png, sizeof png, "%s/small-glass-off.png", saida);
+  quadros(2, png);
+  frost("small menu: glass off stays solid");
+  ajustes_definir_vidro(1);
   conferir("continuar", 1, "T2E5");
   { char t[1400];
     ctxinfo_texto(ctx_titulo(), NULL, t, sizeof t);
@@ -354,7 +391,42 @@ int main(int argc, char **argv) {
   quadros(60, NULL);
   snprintf(png, sizeof png, "%s/home-menu-destaque43.png", saida);
   quadros(1, png);
+  frost("big menu: frosted art exceeds solid-fill variance");
+  ajustes_definir_vidro(0);
+  snprintf(png, sizeof png, "%s/big-glass-off.png", saida);
+  quadros(2, png);
+  frost("big menu: glass off stays solid");
+  ajustes_definir_vidro(1);
   fechar();
+
+  { int op = ajustes_rapido_op("menuCartazLocal");
+    char *merged = NULL;
+    confere("switch to Simple through the Settings setter", ajustes_rapido_passo(op, 1));
+    confere("Simple selected", ajustes_menu_cartaz_simples() &&
+            !strcmp(ajustes_rapido_valor(op), "Simples"));
+    ajustes_dir(dirDados);
+    confere("Simple persists on this TV", ajustes_menu_cartaz_simples());
+    ajustes_aplicar_blob("{\"menuCartazLocal\":0}");
+    confere("account cannot overwrite this TV's menu", ajustes_menu_cartaz_simples());
+    ajustes_mesclar_blob("{\"menuCartazLocal\":0}", &merged);
+    confere("TV's menu is not uploaded", !merged || !strstr(merged, "\"menuCartazLocal\":1"));
+    free(merged);
+    for (i = 0; i < 2; i++) {
+      HomeItem before, after;
+      fil_definir_tipo("pop_movie", i ? FIL_TIPO_CARTAZ : FIL_TIPO_DESTAQUE_QUADRADO);
+      quadros(60, NULL);
+      confere("Simple: focused poster exists", home_item_focado(&before));
+      segurar(); quadros(60, NULL);
+      confere("Simple: long press opens the context menu", ctx_aberto());
+      confere("Simple: no ctxinfo enrichment", !ctx_info_caixa(NULL, NULL, NULL));
+      confere("Simple: focused poster keeps its size", home_item_focado(&after) &&
+              before.rect.w == after.rect.w && before.rect.h == after.rect.h);
+      snprintf(png, sizeof png, "%s/simple-%s.png", saida, i ? "small" : "big");
+      quadros(1, png);
+      fechar();
+    }
+    confere("switch back to Full", ajustes_rapido_passo(op, 1) && !ajustes_menu_cartaz_simples());
+  }
 
   (void)gl;
   printf("\n%s\n", falhas ? "FALHOU" : "PASSOU");
