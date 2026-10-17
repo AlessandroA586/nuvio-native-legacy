@@ -1943,9 +1943,8 @@ static void dvTelaAtualizar(float dt, Uint32 agora) {
   DvtelaSinais s;
   int saiu;
   if (!dvtela_visivel()) return;
-  { const CatItem *c = item();
-    dvtela_apresentacao(ajustes_abertura_detalhada(), c ? artehero_logo_sessao(c) : "",
-                        c ? c->titulo : "", linhaEp); }
+  // The key that turned the normal opening into the card (abrecine_tecla) holds for the DV screen.
+  dvtela_apresentacao(ajustes_abertura_detalhada() || (cine.viva && cine.detalhada));
   memset(&s, 0, sizeof s);
   if (dvtela_ativa()) {
     video_dv_fase(&f);
@@ -5393,7 +5392,7 @@ void player_morph_de(GfxRect logo, GfxRect play) {
 static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
   float v = cine.veu, f = cine.foco, t = (float)(agora - cine.desde) / 1000.0f;
-  float entra, cx = NV_TELA_W * 0.5f, tm, k, base, y, tx;
+  float entra, cx = NV_TELA_W * 0.5f, tm, k, base, y, tx, topo;
   int reduz = ajustes_animacoes_reduzidas();
   // #508: preserve the saved Off / Art / Blurred art choice. Reuse the
   // title page's own artwork without starting a second metadata request.
@@ -5460,12 +5459,16 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
       r.x = l0.x + (r.x - l0.x) * k; r.y = l0.y + (r.y - l0.y) * k;
       r.w = l0.w + (r.w - l0.w) * k; r.h = l0.h + (r.h - l0.h) * k;
     }
+    topo = r.y;
     gfx_rect(r, lg, tex_marca_escura(marca) ? GFX_MARCA : GFX_TEXTO, 0, 0, 0, 0, .96f, .96f, .97f,
              v * entra);
   } else {
     TxtLinha l = txt_linha_corta(TXT_TITULO2, c ? c->titulo : "", 255, 255, 255, 255, 1400.0f);
-    txt_desenhar_alpha(l, canto ? lx : cx - l.w * 0.5f, anel.y - gap - l.h, v * entra);
+    topo = anel.y - gap - l.h;
+    txt_desenhar_alpha(l, canto ? lx : cx - l.w * 0.5f, topo, v * entra);
   }
+  // Dolby Vision slot 1: the mark above the logo (dvtelaui.c); the rest is this same drawing.
+  dvtela_abertura_marca(canto, canto ? lx : cx, topo, v * entra);
 
   // O PLAY VIRA O ANEL: a pilula encolhe ate o circulo (raio = h/2), o branco
   // some nos primeiros 45% e a borda vira o trilho; o arco acende nos ultimos 40%.
@@ -5499,6 +5502,8 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
     txt_desenhar_alpha(l, canto ? tx : cx - l.w * 0.5f, y, v * entra);
     y += 34.0f;
   }
+  // Dolby Vision slot 2: its one step line, last in the stack so nothing above it moves.
+  y += dvtela_abertura_linha(canto, canto ? tx : cx, y, v * entra);
   if (ajustes_abertura_addon()) {
     const Stream *st = stream_item(stream_atual());
     char det[260];
@@ -5621,7 +5626,8 @@ void player_desenhar(Uint32 agora) {
 #endif
     if (!player_com_video()) imagem = 1;
     cineUlt = agora;
-    abrecine_passo(&cine, player_carregando() && !ehCanal(), imagem, ajustes_abertura_detalhada(),
+    // The DV screen keeps the opening alive: it only falls with the real frame, DV or not.
+    abrecine_passo(&cine, (player_carregando() || dvtela_ativa()) && !ehCanal(), imagem, ajustes_abertura_detalhada(),
                    agora, dtc, ajustes_animacoes_reduzidas());
     if (erroFonte || saindo || ehCanal()) cine.veu = 0.0f; }
 #ifdef NV_ANDROID
@@ -5742,7 +5748,7 @@ void player_desenhar(Uint32 agora) {
       else if (player_com_video() && !erroFonte && !saindo && !ehCanal())
         gfx_cor(tela, 0.0f, 0.0f, 0.0f, 0.0f, abrindoFundo);
     }
-    if (!quadroMorno && abrecine_cinema(&cine) && !dvtela_visivel()) desenharCinema(agora, c, furar); }
+    if (!quadroMorno && abrecine_cinema(&cine) && !(dvtela_visivel() && dvtela_variante() == DVT_VAR_DETALHADA)) desenharCinema(agora, c, furar); }
   // Uma abertura NOVA (a anterior acabou, ou o player reabriu): volta ao compacto
   // e zera o relogio. Ao acabar, o estado fica como esta para o cartao sair com o
   // mesmo conteudo (a saida e a da ilha, plrilha.c).
