@@ -756,7 +756,9 @@ static int slotLivre(void) {
       itens[i].lum = -1; itens[i].corR = -1;
       return i;
     }
-  return despejar(1);
+  // The picker keeps GLuints from update until draw. A new request must
+  // wait for a cold slot rather than invalidate artwork still in use.
+  return despejar(0);
 }
 
 // VITIMA LRU ENTRE OS PRONTOS, FRIOS PRIMEIRO. Devolve o slot ja limpo, ou -1.
@@ -767,9 +769,9 @@ static int slotLivre(void) {
 // (log de 16/09): texturas=152 a 95.9 MB de 96 em quase toda amostra de 3 s —
 // o cache VIVE no teto, e cada arte que entra despeja uma que esta la.
 //
-// `forcar` e so do slotLivre: sem vaga nenhuma, despejar um quente e menos
-// ruim que nunca carregar o card novo. podar() nunca forca — estourar o
-// orcamento por um quadro custa nada; despejar a tela custa o pisca.
+// Both slotLivre() and podar() preserve hot artwork. Requests retry when
+// a slot becomes cold; evicting a hot texture can invalidate a GLuint
+// already returned to the picker for the current draw.
 //
 // HEROIS FRIOS ALEM DESTES SAEM ANTES DE QUALQUER CARTAZ.
 //
