@@ -637,7 +637,12 @@ static int pedidoObsoleto(const Item *it) {
 static void podar(void);
 static void soltarCpu(int falhas);
 static int pressaoAtiva(void);
+static int pressaoSevera(void);
 static volatile int pressaoPlay = 100;   // tex_pressao_reproducao (abaixo)
+// webOS/.tpk: faixa do piso de reproducao, alimentada pelo relatorio de 3 s
+// (tex_memoria_livre). 100 = memoria de sobra, sem piso. O Android nao a usa:
+// la o piso e fixo por MemTotal (tex_pressao_play_pct).
+static volatile int pressaoPlayMin = 100;
 static long orcMemTotal;                 // RAM medida (definida perto de orcamentoMB)
 
 void tex_novo_quadro(void) {
@@ -663,7 +668,11 @@ void tex_novo_quadro(void) {
   }
   // PRESSAO DE MEMORIA (tex_pressao_memoria): o aviso chega de outro fio, que
   // nao tem contexto GL e nao pode despejar textura. Quem despeja e este quadro.
-  if (pressaoAtiva()) soltarCpu(0);
+  // soltarCpu so no patamar DURO (<=25%%, <150 MB livres): na faixa de 50%%
+  // (150-300 MB, onde a G4 fica por minutos) matar todo DECODIFICADO por
+  // quadro punha a arte do OSD/posplay num laco decode->mata->decode pela
+  // janela inteira — a poda a 50%% ja basta ali (rev #415).
+  if (pressaoSevera()) soltarCpu(0);
   // O piso de reproducao (pressaoPlay) so despeja via poda: soltarCpu aqui
   // mataria todo DECODIFICADO que a bomba ainda nao pegou — arte do OSD/posplay
   // entraria em decode->mata->decode durante TODA a sessao (rev #415).
@@ -865,6 +874,7 @@ static int pressaoAtiva(void) {
   }
   return 1;
 }
+static int pressaoSevera(void) { return pressaoAtiva() && pressaoPct <= 25; }
 static long limiteBytes(void) {
   long lim = pressaoAtiva() ? orcamento / 100 * pressaoPct : orcamento;
   if (pressaoPlay < 100 && orcamento / 100 * pressaoPlay < lim)
@@ -882,11 +892,11 @@ int tex_pressao_play_pct(void) {
   if (orcMemTotal < 3000) return 40;
   return 75;
 #else
-  // webOS/.tpk: o video cobre a tela, mas TVs com RAM de sobra (C9, 4 GB)
-  // podem manter mais arte quente para OSD/posplay sem risco; a G4 (2 GB)
-  // fica no piso de 20%% medido no #415.
-  if (orcMemTotal >= 3500) return 35;
-  return 20;
+  // webOS/.tpk: o piso NAO e incondicional — a regra e "caps menores so com
+  // memoria baixa". A faixa vem do relatorio de 3 s (pressaoPlayMin, em
+  // tex_memoria_livre): TV com folga (C9 com GBs livres) fica com o cache
+  // inteiro durante a reproducao; a G4 apertada cai no piso medido no #415.
+  return pressaoPlayMin;
 #endif
 }
 void tex_pressao_reproducao(int ligada) {
@@ -967,16 +977,19 @@ static void podar(void) {
 // MemAvailable. #415 (LG G4, webOS 9, MemTotal 1965 MB): 127 MB de arte
 // residente com o video 4K em tela cheia (tela=0), e o webOS fechou o app com
 // 92 MB livres. Abaixo de 150 MB o teto vai a 25%; abaixo de 300, a 50%. O
-// piso de reproducao NAO sai daqui: ele liga quando a casca do player abre
-// (avisarCascaAberto -> tex_pressao_reproducao), porque o pico de alocacao do
-// pipeline acontece ANTES de a memoria cair — esperar os 512 MB do relatorio
-// era deixar o cache inteiro vivo durante o arranque. A home redecodifica do
-// disco ao voltar; com memoria sobrando (a C9) nada muda.
-void tex_memoria_livre(long livreMb, int player) {
-  int nivel = livreMb < 150 ? 80 : livreMb < 300 ? 20 : 0;
+// MESMO relatorio arma a faixa do piso de reproducao (pressaoPlayMin): abrir
+// video com a TV apertada ja comeca com o cache no piso — o pico de alocacao
+// do pipeline acontece ANTES de a memoria cair de vez, e esperar era deixar
+// o cache inteiro vivo durante o arranque. A faixa tambem aperta um piso ja
+// ligado; afrouxar so no fechar (video aberto nao recupera arte sob pressao
+// intermitente). A home redecodifica do disco ao voltar.
+void tex_memoria_livre(long livreMb) {
+  int nivel;
   if (livreMb < 0) return;
+  nivel = livreMb < 150 ? 80 : livreMb < 300 ? 20 : 0;
+  pressaoPlayMin = livreMb < 150 ? 20 : livreMb < 300 ? (orcMemTotal >= 3500 ? 35 : 20) : 100;
+  if (pressaoPlayMin < pressaoPlay) pressaoPlay = pressaoPlayMin;
   if (nivel && !(pressaoAtiva() && pressaoPct <= tex_pressao_pct(nivel))) tex_pressao_memoria(nivel);
-  (void)player;
 }
 void tex_aliviar(void) {
   tex_pressao_memoria(80);

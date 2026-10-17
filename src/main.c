@@ -2200,7 +2200,7 @@ int main(int argc, char **argv) {
       // webOS has no Android trim callback: use the existing /proc threshold.
       if (player_retido() && memlog_pouca_memoria()) player_ciclo_evento(SDL_APP_LOWMEMORY);
 #ifndef NV_ANDROID
-      tex_memoria_livre(memlog_livre_mb(), player_aberto());   // #415; Android usa o trim
+      tex_memoria_livre(memlog_livre_mb());   // #415; Android usa o trim
 #endif
       NvCacheArteStats cacheArteStats;
       tex_estatisticas(&itens, &pend, &bytes, &quentes, &bytesQ);

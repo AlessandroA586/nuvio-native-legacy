@@ -1031,18 +1031,17 @@ void assrender_limpar_fontes(void) {
   pthread_mutex_unlock(&assFilaTrava);
 }
 
-// #415: no aviso de memoria, esvazia o cache de glifos/bitmaps do libass —
-// o loop "Glyph not found -> selecting one more font" encheu ~190 MB na G4
-// sem que gpu-cache ou texturas mostrassem. Limites zerados despejam os
-// bitmaps ja rasterizados; a faixa e as fontes seguem carregadas e o cache se
-// refaz na proxima legenda. Restaura o teto de 32 MB do arranque em seguida,
-// para a pressao seguinte ainda ter o que cortar.
+// #415: no aviso de memoria, esvazia os caches do libass — o loop
+// "Glyph not found -> selecting one more font" encheu ~190 MB na G4 sem
+// que gpu-cache ou texturas mostrassem. ass_set_cache_limits NAO serve:
+// 0 vira o default e o corte so acontece preguiçosamente no proximo
+// ass_render_frame. O que despeja na hora e o ass_reconfigure dentro de
+// ass_set_fonts (bitmap/composite/outline/font/metrics + fontselect
+// refeito, o que tambem encerra o loop de fallback). Custa uma releitura
+// da pasta de fontes; aceitavel porque so roda no aviso.
 void assrender_aliviar(void) {
   pthread_mutex_lock(&assTrava);
-  if (assRenderer) {
-    ass_set_cache_limits(assRenderer, 0, 0);
-    ass_set_cache_limits(assRenderer, 0, 32);
-  }
+  if (assRenderer) ass_aplicar_fontes_locked();
   pthread_mutex_unlock(&assTrava);
 }
 

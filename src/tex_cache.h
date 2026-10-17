@@ -255,7 +255,7 @@ void tex_pressao_reproducao(int ligada);
 int  tex_pressao_play_pct(void);
 // webOS/.tpk, a cada 3 s: MemAvailable em MiB (< 0 = desconhecido); `player`
 // e legado (o piso de reproducao liga em avisarCascaAberto, nao aqui).
-void tex_memoria_livre(long livreMb, int player);
+void tex_memoria_livre(long livreMb);
 // Teto a 25% e despejo agora, no fio de desenho (sem esperar o quadro), e de
 // tudo que o podar nao ve: superficie decodificada nao publicada, bytes
 // baixados em fila e slots FALHOU. Antes de reabrir o pipeline com a TV sem
