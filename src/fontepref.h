@@ -64,6 +64,13 @@
 //      foi substituida: ela virou a rede embaixo.
 //   3. -1, e stream_automatico() assume, como sempre.
 //
+// ATUALIZACAO (dono, 15/10/2026): antes de tudo isso vem o LANCAMENTO (mesmo
+// addon + mesma impressao de release, fontepref_lancamento), e as camadas
+// viraram pontos numa passada so — a tabela esta junto de
+// fontepref_lancamento, abaixo. Motivo: com um bingeGroup largo ("aio|1080p")
+// varios lancamentos empatavam e ganhava o primeiro da lista do addon, nao o
+// que a pessoa escolheu. Nada casou continua sendo -1.
+//
 // A camada 1 NAO EXIGE provedor: o bingeGroup e a declaracao do addon sobre
 // identidade de fonte, e e assim que o app web o usa (um `find` por
 // bingeGroup, sem olhar mais nada). A camada 2 continua exigindo as duas
@@ -115,6 +122,13 @@
 // same way still matches, which is the discipline of the other two keys.
 #define FONTEPREF_ARQUIVO 256
 
+// THE RELEASE FINGERPRINT (fontepref_lancamento): what the release name says
+// AFTER the episode marker, where the release itself is named:
+// "grupo|resolucao|origem|codec|hdr" ("ntb|1080|webdl|avc|"). fileKey keeps
+// only the part BEFORE the marker (the name of the show), which is the same
+// for every release of that show; this is what tells two releases apart.
+#define FONTEPREF_LANC 96
+
 // VALIDADE DA PREFERENCIA — 180 dias.
 //
 // O app web tambem expira a dele, e a comparacao importa porque os dois
@@ -152,6 +166,7 @@ typedef struct {
   char bingeGroup[FONTEPREF_BINGE]; // o que o addon declarou; vazio e comum
   char rotulo[192];                 // desempate e log
   char arquivo[FONTEPREF_ARQUIVO];  // fileKey(): release name, no episode marker
+  char lancamento[FONTEPREF_LANC];  // fontepref_lancamento(): the release itself
   int  altura;
   long long quandoS;                // time(NULL) da escolha
 } FontePref;
@@ -183,6 +198,19 @@ int fontepref_auto_guardar(const char *id, const Stream *s);
 // como escolha nem tocar sozinha.
 int fontepref_escolher_manual(const char *id);
 
+// OS AJUSTES DE REPRODUCAO (Reusar a ultima fonte, Lembrar a fonte por,
+// Preferir o grupo da fonte, Reusar o grupo entre sessoes). Os valores de
+// fabrica sao o comportamento de antes deles: 1, FONTEPREF_VALIDADE_S, 1, 1.
+//   reusar=0         fontepref_do_titulo/_tem/_escolher_manual nao veem a
+//                    escolha manual (ela continua gravada e gravando).
+//   validadeS        prazo da escolha manual (venceu()); <= 0 = o de fabrica.
+//   preferirGrupo=0  o bingeGroup nao decide nada: nem a camada 1 da manual
+//                    (sobra provedor + trilha) nem a memoria do automatico.
+//   grupoEntreSessoes=0  a memoria do automatico so vale para o que ESTE
+//                    processo gravou; o arquivo continua sendo escrito.
+// app.c chama a cada quadro; sao so atribuicoes.
+void fontepref_configurar(int reusar, long long validadeS, int preferirGrupo, int grupoEntreSessoes);
+
 // Le o arquivo do perfil corrente. Chamar no arranque, depois de
 // dados_iniciar. Sem pasta de dados e no-op silencioso (dados.c ja explicou no
 // log por que nao ha pasta) e a tabela comeca vazia.
@@ -208,6 +236,25 @@ void fontepref_id_base(const char *id, char *dst, unsigned tam);
 // declaracao nenhuma casam entre si, que e o certo: sem dado para distinguir,
 // "mesmo provedor" e a melhor resposta possivel.
 void fontepref_trilha(const Stream *s, char *dst, unsigned tam);
+
+// THE RELEASE FINGERPRINT of a source: "grupo|resolucao|origem|codec|hdr",
+// read from behaviorHints.filename (the descricao when there is no file name,
+// without the group: a description is not a release name). Empty when nothing
+// in it names the release. Starts with '|' when there is no release group:
+// such a fingerprint still narrows the match, but counts less (see casar()).
+//
+// THE MATCHING ORDER, for the remembered pick (manual) and for the automatic
+// memory alike, by points over the whole list (the highest wins; nothing
+// scores = -1, and the automatic pick takes over as always):
+//   1000  same addon AND same fingerprint with a release group: the release
+//         you picked, in this episode;
+//    500  same bingeGroup (the addon's own "same source" label);
+//    300  same addon AND same fingerprint without a group;
+//    200  same addon AND same audio tags (provedor + trilha, strict);
+//    100  same addon, today's tags contain the remembered ones.
+// Points add up, so a source that is the same release AND the same bingeGroup
+// beats one that is only either; nota() breaks ties.
+void fontepref_lancamento(const Stream *s, char *dst, unsigned tam);
 
 // Guarda a escolha e GRAVA. `id` pode vir com episodio; e cortado aqui.
 // Devolve 1 quando a tabela mudou. Fonte sem provedor nao entra.
