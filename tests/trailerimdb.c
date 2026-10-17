@@ -8,6 +8,7 @@
 char *dados_caminho(char *dst, unsigned tam, const char *nome) { (void)dst; (void)tam; (void)nome; return NULL; }
 void dados_marcar_sujo(int leve) { (void)leve; }
 const char *dados_dir(void) { return NULL; }
+void tex_orcamento_info(int *mb, long *memTotal, int *fixo, int *slots) { (void)mb; (void)fixo; (void)slots; if (memTotal) *memTotal = 0; }
 int qualidade = 0;
 int ajustes_trailer_qualidade(void) { return qualidade; }
 void rede_preparar(void);

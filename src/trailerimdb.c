@@ -3,6 +3,8 @@
 #include "js.h"
 #include "dados.h"
 #include "ajustes.h"
+#include "perfiltv.h"
+#include "tex_cache.h"
 #include <SDL2/SDL.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -214,9 +216,11 @@ const char *trailerimdb_url(const char *imdb, const char **nome) {
   e = achar(imdb);
   if (e && valido(e) && e->n) {
     // O teto dos Ajustes: a maior definicao que nao passa dele; sem nenhuma
-    // abaixo do teto, a menor que ha.
-    int teto = ajustes_trailer_qualidade(), i, k = e->n - 1;
-    for (i = 0; i < e->n; i++) if (!teto || e->alt[i] <= teto) { k = i; break; }
+    // abaixo do teto, a menor que ha. Automatico: ver ptv_trailer_indice.
+    long mem = 0;
+    int k;
+    tex_orcamento_info(NULL, &mem, NULL, NULL);
+    k = ptv_trailer_indice(ptv_plataforma(), mem, ajustes_trailer_qualidade(), e->alt, e->n);
     r = e->url[k];
     if (nome) *nome = e->nome;
   }
