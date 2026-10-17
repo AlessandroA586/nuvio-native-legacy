@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-16 22:55, HEAD `f0f4f4928`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-16 21:10, HEAD `b03502f84`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 > O cartao dentro do app (`src/novidades/207.inc`) tem uma lista menor, escrita em conjunto com o dono;
@@ -31,6 +31,23 @@ that landed in the same window. Last tracking sync: 2026-10-16 22:55, HEAD `f0f4
 - **Simkl com anime** (pedidos do dono): o terceiro tipo do Simkl (anime) entra nas listas de séries, no
   Continuar assistindo e no Planejo assistir, sem itens repetidos. Todas as plataformas. Refs `f5dab2f8a`,
   `d6244a1f1`.
+- **Especiais (temporada 0) aparecem e tocam** (#556, PR #569): animes com temporada especial ou fora de
+  ordem, que o Trakt reconhece, deixam de ser ignorados; a numeração do provedor continua valendo na fonte, na
+  retomada, no próximo episódio e no Trakt/Simkl/Plex, e a temporada fake que o add-on cria ("The Blacklist:
+  Season 20+") não aparece mais. Todas as plataformas. Refs #556, PR #569, `8dff0e2a9`, `4a443422b`,
+  `94d16f7de`, `288e531ee`, `054ccef24`.
+- **Marcar como visto funciona** (#548): marcar a série inteira ou um episódio continua valendo depois que
+  outro processo antigo responde, e os gestos confirmados sobrevivem a reiniciar o app e a um Trakl que puxa
+  estado velho. Todas as plataformas. Refs #548, `66a608ef7`, `8330673a8`, `2d04fbecc`, `b074d9fd5`,
+  `91da5935e`.
+- **Tela de abertura do player** (pedido do dono): a logo desliza para o centro e o botão Play vira um anel
+  fino de progresso embaixo dela, sobre a arte nítida com um véu escuro subindo até a metade; "Arte" é o novo
+  padrão, com "Arte borrada" e "Desligado" ainda disponíveis. Todas as plataformas. Refs pedido do dono,
+  `718e61abb`, `ace1fd53a`.
+- **Ficha de fontes pelo relógio**: a folha de fontes agora nasce da ilha do relógio, com a mesma mola e o
+  mesmo material do resto da interface. Todas as plataformas. `fbe06f5e7`, `ae39b748a`.
+- **Catálogo fora da cota atualiza na hora** (follow-up de #545): a fileira que você acabou de adicionar
+  renova sozinha, sem depender de outra ação. Todas as plataformas. `975638744`, `53b050753`, `b03502f84`.
 - **Busca e episódios voltam a funcionar** (#555): séries de título exato como "Bigg Boss" não ficam mais fora
   do limite de resultados, e séries que vêm de um add-on sem episódios preenchem a lista pelo catálogo.
   Todas as plataformas. Refs #555, `2e5b2ffde`, `d479a8463`.
@@ -152,6 +169,7 @@ that landed in the same window. Last tracking sync: 2026-10-16 22:55, HEAD `f0f4
 - **Tirar linhas de add-on desinstalado** — @ghbarker, PR #543 (`11e6e8535`, `0d44804f0`).
 - **Backdrop completo e qualidade da arte respeitada** — @ghbarker, PR #546 (`946ad1819`, `66299e5f0`).
 - **Relógio e ilha de retomada com Up** — @ghbarker, PR #547 (`a7d8b1f58`, `960ec872a`).
+- **Temporada 0 (especiais) mantida e tocável** — @ghbarker, PR #569 (`8dff0e2a9`, `054ccef24`).
 - **Lembrar a faixa de áudio escolhida** — @Tolu-Walop-E, PR #550 (`0c2a1ba2c`, `2cec223fd`).
 - **URL direta toca sem P2P** — @mark-major, PR #559 (`d25a3e513`, `06724b3ed`).
 
@@ -182,9 +200,6 @@ that landed in the same window. Last tracking sync: 2026-10-16 22:55, HEAD `f0f4
 
 Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 
-- **Perfil de visualizações (#548)** — `agente/205-vistos548`, 8 commits fora (tip `b074d9fd5`).
-  VEREDITO **BLOQUEIA** `j-rev-vistos548-r7` (19:48): corrida de ordenação entre "marcar série inteira" e o
-  override de um episódio; o fix `b074d9fd5` é mais novo que o review. **Needs review.** Android, LG webOS.
 - **PR #487 v2** (idiomas de áudio e legenda informados pelo add-on) — `agente/205-pr487v2`, 3 commits fora,
   VEREDITO OK `j-rev-pr487-v2`, sem commit depois. **Needs final re-review.** Android, LG webOS.
 - **PR #493 v2 / v3** (perfil e sessão) — `agente/205-pr493`, 12 commits fora. VEREDITO **BLOQUEIA**
@@ -193,12 +208,8 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 - **Vidro fosco: deixar como estava** — `agente/205-foscovelho`, 1 commit fora (`ab02d4aaa`); o job
   `j-fix-foscovelho-r2` (rodada 2 dos achados do review) está com log vazio = QUEUED/RUNNING. Dono relata
   que o frost piorou. Todas as plataformas. **Needs review.**
-- **Temporadas e episódios fantasmas** — `agente/205-temporadas`, 1 commit fora (`94d16f7de`):
-  ignora `videos[]` de add-on que criam uma temporada fake por episódio. VEREDITO **BLOQUEIA**
-  `j-rev-temporadas` (19:48). **Needs review.** Todas as plataformas.
-- **Catálogo fora da cota** (follow-up de #545) — `agente/205-pfhome545`, 2 commits fora
-  (`975638744`, `53b050753`); VEREDITO **BLOQUEIA** `j-revg-pfhome545` (18:47) e o fix `53b050753`
-  é mais novo que o review. **Needs review.** Todas as plataformas.
+- **Vistos, temporadas fantasmas, catálogo fora da cota (#548 #556 #545) e tela de abertura A3** entraram
+  nesta janela (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`) e já estão em Destaques.
 - **Vidaa** — `agente/205-vidaa` foi **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
   depois de uma sequência de BLOQUEIA. Sai na 2.0.7; não está em pendência.
 - **Cabeçalho de coleção diferente** (pedido do dono) — `agente/205-colhdr` foi **merged** (`fec2dc0ac`),
@@ -234,6 +245,22 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   corners. LG webOS, Samsung .tpk. Refs `6a76a46aa`, `d0f6f5986`, `f29e252c2`.
 - **Simkl with anime** (owner requests): Simkl's third type (anime) joins the series lists, Continue Watching
   and Plan to Watch, deduplicated. All platforms. Refs `f5dab2f8a`, `d6244a1f1`.
+- **Specials (season 0) are shown and playable** (#556, PR #569): anime with a special or out-of-order season
+  that Trakt recognises are no longer dropped; the provider's episode numbering survives through the source,
+  resume, next episode and Trakt/Simkl/Plex, and the fake per-episode season tab an add-on creates ("The
+  Blacklist: Season 20+") is gone. All platforms. Refs #556, PR #569, `8dff0e2a9`, `4a443422b`, `94d16f7de`,
+  `288e531ee`, `054ccef24`.
+- **Mark as watched works** (#548): marking a whole series or one episode sticks after an older whole-series
+  job or retry answers later, and confirmed marks survive a restart and a stale Trakt pull. All platforms.
+  Refs #548, `66a608ef7`, `8330673a8`, `2d04fbecc`, `b074d9fd5`, `91da5935e`.
+- **Player opening screen** (owner request): the logo slides to the centre and the Play pill morphs into a thin
+  progress ring below it, over sharp artwork with a dark veil rising to half the screen; "Arte" is the new
+  default, with "Arte borrada" and "Desligado" kept. All platforms. Refs owner request, `718e61abb`,
+  `ace1fd53a`.
+- **Sources sheet grows from the clock**: the sources sheet now opens out of the clock island, with the same
+  spring and material as the rest of the interface. All platforms. `fbe06f5e7`, `ae39b748a`.
+- **Catalog outside the quota refreshes right away** (#545 follow-up): a row you just added renews on its own,
+  without needing another action. All platforms. `975638744`, `53b050753`, `b03502f84`.
 - **Search and episodes work again** (#555): exact-title series like "Bigg Boss" are no longer cut by the
   result cap, and series that come from an add-on with no episodes get their list filled from the catalog.
   All platforms. Refs #555, `2e5b2ffde`, `d479a8463`.
@@ -349,6 +376,7 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 - **Remove uninstalled add-on rows** — @ghbarker, PR #543 (`11e6e8535`, `0d44804f0`).
 - **Full recommendation backdrop and artwork quality** — @ghbarker, PR #546 (`946ad1819`, `66299e5f0`).
 - **Reach the clock and resume island with Up** — @ghbarker, PR #547 (`a7d8b1f58`, `960ec872a`).
+- **Season 0 Specials kept and playable** — @ghbarker, PR #569 (`8dff0e2a9`, `054ccef24`).
 - **Remember the hand-picked audio track** — @Tolu-Walop-E, PR #550 (`0c2a1ba2c`, `2cec223fd`).
 - **A direct URL plays without P2P** — @mark-major, PR #559 (`d25a3e513`, `06724b3ed`).
 
@@ -377,9 +405,6 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
-- **Watch profile (#548)** — `agente/205-vistos548`, 8 commits out (tip `b074d9fd5`). VEREDITO
-  **BLOQUEIA** `j-rev-vistos548-r7` (19:48): whole-series mark vs single-episode override ordering race;
-  the fix `b074d9fd5` is newer than the review. **Needs review.** Android, LG webOS.
 - **PR #487 v2** (add-on reported audio and subtitle languages) — `agente/205-pr487v2`, 3 commits out,
   VEREDITO OK `j-rev-pr487-v2`, no commit after. **Needs final re-review.** Android, LG webOS.
 - **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out. VEREDITO **BLOQUEIA**
@@ -388,12 +413,8 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 - **Frosted glass: put it back as it was** — `agente/205-foscovelho`, 1 commit out (`ab02d4aaa`); the
   round-2 fix job `j-fix-foscovelho-r2` has an empty log = QUEUED/RUNNING. Owner reports frosted glass got
   worse. All platforms. **Needs review.**
-- **Ghost seasons and episodes** — `agente/205-temporadas`, 1 commit out (`94d16f7de`): ignores add-on
-  `videos[]` that create one fake season per episode. VEREDITO **BLOQUEIA** `j-rev-temporadas` (19:48).
-  **Needs review.** All platforms.
-- **Catalog outside the quota** (#545 follow-up) — `agente/205-pfhome545`, 2 commits out
-  (`975638744`, `53b050753`); VEREDITO **BLOQUEIA** `j-revg-pfhome545` (18:47) and the fix `53b050753`
-  is newer than the review. **Needs review.** All platforms.
+- **Watch, ghost seasons, catalog outside the quota (#548 #556 #545) and the A3 loading screen** landed in
+  this window (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`) and are already in Highlights.
 - **Vidaa** — `agente/205-vidaa` was **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
   after a run of BLOQUEIAS. It ships in 2.0.7; no longer pending.
 - **Different collection header** (owner request) — `agente/205-colhdr` was **merged** (`fec2dc0ac`),

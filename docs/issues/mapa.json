@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-16T22:55:00-03:00",
- "base": "f0f4f4928",
- "nota": "Sync 2026-10-16T22:55, HEAD integracao/2.0.5 f0f4f4928. Instalado na TV cb7ece972 (Android rc=0, C9 rc=1), 449 commits atras (139 merges depois do build). Merged nesta janela: topvidro, p2pusbtela, colhdr, imgres, detfps, fosco-nova, novidades207, simklanime, shuffledica, posterurl, i565pengu, legcontorno, deeplink, playerext, trailerexp, androidusb, fosco-perf, usbmodal, cw12, eps555 (#555), pr431c, vidrodetalhe, trailerleg, usbtizen, pr543b, uxinteracao, pr540c, pr538b, busca555 (#555), cwtestlink, usbpreparo, extplayer (#501), pr547, legenda552 (#552), buscafila, trailerlingua, pr543, pr550, pr540b, pr546, pr559, foscoplayer, foscotudo, prs207, pfcolordem, pfcoverflow2, pfdvabre. Rodando/QUEUED (log vazio): j-fix-foscovelho-r2, j-semfosco, j-fontesrelogio, j-loadmock2, j-fix-pfhome545(job novo). Aguardando review/merge: agente/205-vistos548 (8 ahead, BLOQUEIA r7), agente/205-temporadas (1 ahead, BLOQUEIA), agente/205-foscovelho (1 ahead, BLOQUEIA), agente/205-pfhome545 (2 ahead, fix sem review), agente/205-pr493 (12 ahead, BLOQUEIA), pr487v2 (3 ahead, OK).",
+ "atualizado_em": "2026-10-16T21:10:00-03:00",
+ "base": "b03502f84",
+ "nota": "Sync 2026-10-16T21:10, HEAD integracao/2.0.5 b03502f84 (merge agente/205-pfhome545). Instalado na TV: build 21:01 do HEAD b03502f84 (Android rc=0 apk 63M, .tpk 4 variações rc=0, C9 webOS rc=255 = TV 192.168.1.32 sem SSH); HEAD anterior ainda instalado nos aparelhos: cb7ece972 (10-15 20:12). Merged nesta janela: vistos548 (#548), temporadas, pfhome545 (follow-up #545), epsdupstub, fontesrelogio, loadtela, port569 (#556/#569). Rodando (log vazio): j-fix-foscovelho-r4. Aguardando review/merge: agente/205-foscovelho (3 ahead), agente/205-pr493 (12 ahead, BLOQUEIA), agente/205-pr487v2 (3 ahead, OK).",
  "itens": [
   {
    "numero": 1,
@@ -8052,9 +8052,9 @@
    "plataforma": "Samsung .tpk",
    "tipo": "bug",
    "status": "integrada",
-   "release": "-",
+   "release": "2.0.5",
    "conserto": [
-    "219d3bf4 (merge em integracao/2.0.5)"
+    "merged c0dc799a3 (94d16f7de + 288e531ee); review OK j-rev-temporadas-r2 (20:04)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -8062,8 +8062,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "lancar com 2.0.5 (testar no TCL antes do release)",
-   "notas": "QN55Q60RAG, 2.0.3: só primeira temporada e episódios incompletos; log Z4HDY2 já fornecido. src/descoberta.c:parsearEpisodios, episodiosDoCatalogo e temporadasDosEps leem videos[], deduplicam (temporada, episódio), escolhem a lista de metadados e derivam as abas da lista publicada. A seleção descarta temporadas <= 0 e pode preferir outra lista quando a base parece lista de arquivos. SUSPEITA: cobertura/numeração ou escolha da lista de metadados; não prova duplicata de #372 nem resolução de #391. Há tratamento implementado, mas nenhum conserto estável especificamente comprovado para este relato. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]",
+   "proximo_passo": "build+install no HEAD; sai na 2.0.7",
+   "notas": "QN55Q60RAG, 2.0.3: só primeira temporada e episódios incompletos; log Z4HDY2 já fornecido. src/descoberta.c:parsearEpisodios, episodiosDoCatalogo e temporadasDosEps leem videos[], deduplicam (temporada, episódio), escolhem a lista de metadados e derivam as abas da lista publicada. A seleção descarta temporadas <= 0 e pode preferir outra lista quando a base parece lista de arquivos. SUSPEITA: cobertura/numeração ou escolha da lista de metadados; não prova duplicata de #372 nem resolução de #391. Há tratamento implementado, mas nenhum conserto estável especificamente comprovado para este relato. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15] | [sync 2026-10-16 21:10] merged c0dc799a3; fix 288e531ee (catálogos esparsos) + review OK j-rev-temporadas-r2",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/391"
   },
   {
@@ -10290,9 +10290,9 @@
    "release": "-",
    "alvo": "2.0.6",
    "conserto": [
-    "26b9c635b/67985ea5d/21d1783b6/9e2138f9d (agente/205-home545)",
-    "merged 9e2138f9d (HEAD); review OK j-rev-home545-r4",
-    "975638744/53b050753 (agente/205-pfhome545, 2 ahead, NAO integrado)"
+    "26b9c635b/21d1783b6/67985ea5d (#545)",
+    "merged b03502f84 (agente/205-pfhome545)",
+    "review OK j-revg-pfhome545 (20:57)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10300,8 +10300,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "merged no HEAD; pfhome545 2 ahead com fix pos-merge sem review; build+install e resposta na issue",
-   "notas": "Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot. Escrivao 10-16 12:48: job home545 done (26b9c635b), 1 ahead de HEAD; review j-rev2-home545 BLOQUEIA. Distinto de #551 (descoberta nao reinicia apos PIN). | Escrivao 10-16 14:58: merged 9e2138f9d; review OK j-rev-home545-r4 depois dos fixes de cota/selecao explicita. | [sync 2026-10-16 21:00] merged 9e2138f9d; review OK j-rev-home545-r4 apos fixes de cota/selecao explicita; pos-merge BLOQUEIA j-revg-home545-posmerge 17:51 com fix j-fix-home545-posmerge | [sync 2026-10-16 22:55] agente/205-pfhome545 2 ahead (975638744/53b050753); VEREDITO BLOQUEIA j-revg-pfhome545 (18:47), fix 53b050753 sem review",
+   "proximo_passo": "build+install no HEAD e resposta na issue",
+   "notas": "Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot. Escrivao 10-16 12:48: job home545 done (26b9c635b), 1 ahead de HEAD; review j-rev2-home545 BLOQUEIA. Distinto de #551 (descoberta nao reinicia apos PIN). | Escrivao 10-16 14:58: merged 9e2138f9d; review OK j-rev-home545-r4 depois dos fixes de cota/selecao explicita. | [sync 2026-10-16 21:00] merged 9e2138f9d; review OK j-rev-home545-r4 apos fixes de cota/selecao explicita; pos-merge BLOQUEIA j-revg-home545-posmerge 17:51 com fix j-fix-home545-posmerge | [sync 2026-10-16 22:55] agente/205-pfhome545 2 ahead (975638744/53b050753); VEREDITO BLOQUEIA j-revg-pfhome545 (18:47), fix 53b050753 sem review | [sync 2026-10-16 21:10] follow-up pfhome545 merged b03502f84; VEREDITO OK j-revg-pfhome545 (20:57)",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/545",
    "criada_em": "2026-10-16"
   },
@@ -10311,10 +10311,11 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "-",
    "conserto": [
-    "66a608ef7/f87c41ed7/da2c69701/2d04fbecc/8330673a8/9bc31cc9d/5b37cecd8/b074d9fd5 (agente/205-vistos548, 8 ahead)"
+    "merged 91da5935e (agente/205-vistos548, 12 commits); reviews OK j-rev-vistos548-r8/r9 (20:01/20:11)",
+    "66a608ef7/8330673a8/2d04fbecc/da2c69701/f87c41ed7/9bc31cc9d/b074d9fd5/5b37cecd8"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10322,8 +10323,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "needs review: agente/205-vistos548 8 ahead, ultimo VEREDITO BLOQUEIA j-rev-vistos548-r7 (19:48): corrida de ordenacao serie/episodio; fix b074d9fd5 mais novo sem review",
-   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivao 10-16 14:58: job vistos548 rodando (branch agente/205-vistos548 = HEAD, 0 ahead); log vivo; sem fix ainda. | [sync 2026-10-16 21:00] branch agente/205-vistos548 6 ahead; fixes 8330673a8 e 5b37cecd8 (weak defaults para fixtures isoladas) depois do ultimo review BLOQUEIA r4; review r5 rodando. | [sync 2026-10-16 22:55] branch agente/205-vistos548 8 ahead (tip b074d9fd5); VEREDITO BLOQUEIA j-rev-vistos548-r7 (19:48)",
+   "proximo_passo": "build+install no HEAD e resposta na issue",
+   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivao 10-16 14:58: job vistos548 rodando (branch agente/205-vistos548 = HEAD, 0 ahead); log vivo; sem fix ainda. | [sync 2026-10-16 21:00] branch agente/205-vistos548 6 ahead; fixes 8330673a8 e 5b37cecd8 (weak defaults para fixtures isoladas) depois do ultimo review BLOQUEIA r4; review r5 rodando. | [sync 2026-10-16 22:55] branch agente/205-vistos548 8 ahead (tip b074d9fd5); VEREDITO BLOQUEIA j-rev-vistos548-r7 (19:48) | [sync 2026-10-16 21:10] merged 91da5935e em integracao/2.0.5; VEREDITO OK j-rev-vistos548-r9, nenhum commit depois; sai na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/548",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6"
@@ -10591,6 +10592,27 @@
    "proximo_passo": "issue nova no snapshot 10-16 21:31; sem job nem branch: triar e criar job",
    "notas": "Nova em 2026-10-16 21:13 (issues.json, labels [bug]). Sem job no snapshot. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova em 2026-10-16 21:13 (issues.json, labels [bug])",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/566",
+   "criada_em": "2026-10-16",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 570,
+   "titulo": "[Samsung Tizen 9] Changing episode source shows previous movie and resets resume position",
+   "estado_github": "aberta",
+   "plataforma": "Samsung Tizen 9",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": null,
+    "ultimo_comentario_por": null,
+    "ultima_nossa": null
+   },
+   "proximo_passo": "issue nova no snapshot 10-16 23:34; sem job nem branch: triar e criar job",
+   "notas": "Nova em 2026-10-16 23:34 (issues.json, Tizen 9; trocar de fonte do episodio mostra o filme anterior e reseta a retomada).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/570",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6"
   }
@@ -12950,7 +12972,7 @@
     "146f73e1"
    ],
    "proximo_passo": "lancar com 2.0.5",
-   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). branch NAO integrada; 1 assert pre-existente em corviva.sh. Escrivão 14/10 14:47: integrada."
+   "notas": "Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). branch NAO integrada; 1 assert pre-existente em corviva.sh. Escrivão 14/10 14:47: integrada. | [sync 2026-10-16 21:10] ficha de fontes agora nasce da ilha do relogio (fbe06f5e7) merged ae39b748a; review OK j-rev-fontesrelogio (20:12)"
   },
   {
    "id": "dono-205-plxpgs",
@@ -14443,8 +14465,8 @@
    "conserto": [
     "053607be"
    ],
-   "proximo_passo": "lancar com 2.0.5",
-   "notas": "Escrivão 14/10 14:47: integrada.",
+   "proximo_passo": "merged ace1fd53a (718e61abb); review OK j-rev-loadtela (20:33); confirmar na TV",
+   "notas": "Escrivão 14/10 14:47: integrada. | [sync 2026-10-16 21:10] tela de abertura A3 do player (718e61abb) merged ace1fd53a em agente/205-loadtela; review OK j-rev-loadtela (20:33)",
    "url": null
   },
   {
@@ -16407,19 +16429,19 @@
     "ab02d4aaa (perf(glass): frost reads the backdrop art pre-blurred once, no screen capture — agente/205-foscovelho, 1 ahead)"
    ],
    "proximo_passo": "agente/205-foscovelho 1 ahead; VEREDITO BLOQUEIA j-rev-foscovelho + r2; job j-fix-foscovelho-r2 com log vazio = QUEUED/RUNNING",
-   "notas": "[sync 2026-10-16 22:55] Dono aprovou o visual atual do frost (\"o frost glass na c9 ta bem bom\") e pediu barato: voltar a fonte antiga (arte pre-blurred, zero captura). Jobs j-foscovelho, j-rev-foscovelho (BLOQUEIA), j-fix-foscovelho-r2 (RUNNING)."
+   "notas": "[sync 2026-10-16 22:55] Dono aprovou o visual atual do frost (\"o frost glass na c9 ta bem bom\") e pediu barato: voltar a fonte antiga (arte pre-blurred, zero captura). Jobs j-foscovelho, j-rev-foscovelho (BLOQUEIA), j-fix-foscovelho-r2 (RUNNING). | [sync 2026-10-16 21:10] job j-fix-foscovelho-r4 RUNNING (log vazio 20:36); r3 BLOQUEIA (vignette do detalhe)"
   },
   {
    "id": "dono-205-temporadas",
    "titulo": "Temporadas/episodios fantasmas vindo do add-on",
    "plataforma": "Todas",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.7",
    "conserto": [
     "94d16f7de (fix(episodes): ignore addon videos[] with one fake season per episode — agente/205-temporadas, 1 ahead)"
    ],
-   "proximo_passo": "agente/205-temporadas 1 ahead; VEREDITO BLOQUEIA j-rev-temporadas (19:48); precisa fix + review",
-   "notas": "[sync 2026-10-16 22:55] Relato de usuario: \"seasons appear that dont actually exist\" (The Blacklist 2013 com Season 20+). Jobs j-temporadas + review j-rev-temporadas."
+   "proximo_passo": "merged c0dc799a3 (94d16f7de + 288e531ee); review OK j-rev-temporadas-r2 (20:04); sai na 2.0.7",
+   "notas": "[sync 2026-10-16 22:55] Relato de usuario: \"seasons appear that dont actually exist\" (The Blacklist 2013 com Season 20+). Jobs j-temporadas + review j-rev-temporadas. | [sync 2026-10-16 21:10] merged c0dc799a3; review OK apos fix 288e531ee"
   },
   {
    "id": "dono-205-prs207",
@@ -16441,26 +16463,26 @@
    "id": "dono-205-pfhome545",
    "titulo": "Catalogo fora da cota nao atualiza depois de adicionar",
    "plataforma": "Todas",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.7",
    "conserto": [
     "975638744 (fix(fileiras): refresh quota-excluded catalog right after explicit Add — agente/205-pfhome545)",
     "53b050753 (fix(fileiras): scan all rows for eligible catalog refresh)"
    ],
-   "proximo_passo": "agente/205-pfhome545 2 ahead; VEREDITO BLOQUEIA j-revg-pfhome545 (18:47) e fix 53b050753 sem review",
-   "notas": "[sync 2026-10-16 22:55] Follow-up de #545. Jobs j-fix-pfhome545 (53b050753, 19:46) e j-revg-pfhome545 (BLOQUEIA)."
+   "proximo_passo": "merged b03502f84 (975638744/53b050753); review OK j-revg-pfhome545 (20:57); sai na 2.0.7",
+   "notas": "[sync 2026-10-16 22:55] Follow-up de #545. Jobs j-fix-pfhome545 (53b050753, 19:46) e j-revg-pfhome545 (BLOQUEIA). | [sync 2026-10-16 21:10] merged b03502f84; VEREDITO OK j-revg-pfhome545"
   },
   {
    "id": "dono-205-vistos548",
    "titulo": "Perfil de visualizacoes (#548): marcar serie inteira",
    "plataforma": "Android, LG webOS",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.7",
    "conserto": [
     "66a608ef7..b074d9fd5 (agente/205-vistos548, 8 commits ahead, nao integrados)"
    ],
-   "proximo_passo": "agente/205-vistos548 8 ahead; VEREDITO BLOQUEIA j-rev-vistos548-r7 (19:48): corrida whole-series vs override de episodio; precisa fix novo + review",
-   "notas": "[sync 2026-10-16 22:55] Fix mais novo b074d9fd5 (j-fix-vistos548-r6) depois do review r7."
+   "proximo_passo": "merged 91da5935e; reviews OK j-rev-vistos548-r8/r9; sai na 2.0.7",
+   "notas": "[sync 2026-10-16 22:55] Fix mais novo b074d9fd5 (j-fix-vistos548-r6) depois do review r7. | [sync 2026-10-16 21:10] merged 91da5935e (12 commits); review OK r9"
   }
  ],
  "fechar_203": [],
