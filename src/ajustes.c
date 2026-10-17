@@ -3332,8 +3332,10 @@ float ajustes_rail_largura_fixa(void) {
   if (ajustes_rail_recolhida() || ajustes_menu_topo()) return 0.0f;
   borda = ajustes_home_layout() == HOME_LAYOUT_PADRAO ? NV_MENU_RAIL_BORDA_PADRAO
                                                       : NV_MENU_RAIL_BORDA_MODERNA;
-  // The menu grows with the text scale; a layer that already carries it (every
-  // layer when it is on) keeps the constants in its own units.
+  // The menu grows with the text scale (menuEscala, menu.c): real-space callers
+  // (diagnostico, social) get that real width; a layer that already carries
+  // the text scale (every layer when it is on) keeps the constants in its own
+  // units.
   return borda * (gfx_escala() != 1.0f ? 1.0f : gfx_escala_txt()) + NV_MENU_RAIL_VAO - NV_CONTENT_PAD;
 }
 void ajustes_area_conteudo(float padEsq, float padDir, float *x, float *w) {
