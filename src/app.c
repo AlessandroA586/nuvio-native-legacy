@@ -52,6 +52,7 @@
 #include "text.h"
 #include "tex_cache.h"
 #include "memlog.h"
+#include "mkvass.h"
 #include "artehero.h"
 #include "arteescolha.h"
 #include "vertudo.h"
@@ -2700,7 +2701,15 @@ static void recarregarFonteVOD(void) {
   if (fonteVODAutomatica) fonteVODDesde = agora;
   else fonteManualDesde = agora;
 }
-static void aliviarMemoria(void) { tex_aliviar(); memlog_devolver(); }
+// #415: ao lado das texturas saem tambem os buffers que tex_aliviar nao ve —
+// colheita/legenda do mkvass (parar grava o sidecar parcial e nao bloqueia) e
+// a grade de linhas rasterizadas. O texto se refaz sob demanda no quadro.
+static void aliviarMemoria(void) {
+  tex_aliviar();
+  mkvass_parar();
+  txt_aliviar();
+  memlog_devolver();
+}
 static void tentarProximaFonteVOD(void) {
   Uint32 desde;
   int atual, motivo = 0;

@@ -234,6 +234,9 @@ extern const char *const TXT_FAMILIAS_PT[TXT_FAMILIA_N];
 // que o chamador escolheu para a legenda.
 void txt_definir_fonte_interface(TxtFamilia familia);
 TxtFamilia txt_fonte_interface(void);
+// Aviso de memoria: esvazia a grade de linhas rasterizadas (texturas de texto),
+// que voltam a existir sob demanda. So o fio de desenho chama.
+void txt_aliviar(void);
 // CORPO E PESO de um estilo, para teste e diagnostico (o desenho nao usa).
 void txt_estilo_medidas(TxtEstilo estilo, int *corpo, int *peso);
 // Que fonte desenharia a linha `s` no estilo dado, em texto ("principal",

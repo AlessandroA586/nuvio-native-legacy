@@ -635,6 +635,7 @@ static int pedidoObsoleto(const Item *it) {
 }
 
 static void podar(void);
+static void soltarCpu(int falhas);
 static int pressaoAtiva(void);
 static volatile int pressaoPlay = 100;   // tex_pressao_reproducao (abaixo)
 static long orcMemTotal;                 // RAM medida (definida perto de orcamentoMB)
@@ -662,7 +663,7 @@ void tex_novo_quadro(void) {
   }
   // PRESSAO DE MEMORIA (tex_pressao_memoria): o aviso chega de outro fio, que
   // nao tem contexto GL e nao pode despejar textura. Quem despeja e este quadro.
-  if (pressaoAtiva() || pressaoPlay < 100) podar();
+  if (pressaoAtiva() || pressaoPlay < 100) { soltarCpu(0); podar(); }
   SDL_UnlockMutex(mtx);
 }
 
@@ -919,6 +920,35 @@ Java_space_nuvio_nativelegacy_NuvioActivity_nativeTrimMemoria(JNIEnv *env, jobje
 }
 #endif
 
+// SOB PRESSAO: a memoria de CPU que podar() nao alcanca. A superficie ja
+// decodificada (`sup`) e os bytes baixados (`bruto`) ficam fora de
+// bytesUsados; sem este passe um aviso no meio do decode derruba so a GPU e os
+// buffers vivos seguem segurando o heap — e malloc_trim nao solta o que esta
+// alocado. O pedido morre junto (desistir): com a TV no piso, guardar decode
+// pronto para "talvez desenhar" e o que encheu a G4 no #415.
+// `falhas` = tambem limpa os slots FALHOU (tex_aliviar, antes de reabrir o
+// pipeline); na varredura do quadro o slot falho fica, guardando o recuo.
+static void soltarCpu(int falhas) {
+  for (int i = 0; i < nMax; i++) {
+    if (itens[i].estado == DECODIFICADO && itens[i].sup) {
+      if (uplSup == itens[i].sup) uplSup = NULL;   // envio em curso revalida pelo idx
+      liberarSup(itens[i].sup);
+      itens[i].sup = NULL;
+      desistir(i);
+    } else if ((itens[i].estado == PENDENTE && !itens[i].naFilaDec &&
+                !itens[i].filaRedeEm) ||
+               (falhas && itens[i].estado == FALHOU)) {
+      // O idx de um PENDENTE JA NUMA FILA (rede ou decode) nao pode virar
+      // VAZIO aqui: a fila e um anel de indices e devolveria o numero para o
+      // proximo slot a ocupa-lo. Ele desiste sozinho ao ser tirado; o `bruto`
+      // sai mesmo assim.
+      desistir(i);
+    } else if (itens[i].estado == FALHOU || itens[i].bruto) {
+      soltarBruto(&itens[i]);
+    }
+  }
+}
+
 static void podar(void) {
   long lim = limiteBytes();
   while (bytesUsados > lim)
@@ -928,20 +958,23 @@ static void podar(void) {
 // webOS/.tpk nao tem onTrimMemory: o relatorio de 3 s (main.c) passa o
 // MemAvailable. #415 (LG G4, webOS 9, MemTotal 1965 MB): 127 MB de arte
 // residente com o video 4K em tela cheia (tela=0), e o webOS fechou o app com
-// 92 MB livres. Abaixo de 150 MB o teto vai a 25%; abaixo de 300, a 50%. Com
-// o player aberto e menos de 512 MB livres o teto desce ao piso de reproducao
-// ate o video fechar; a home redecodifica do disco ao voltar. Com memoria
-// sobrando (a C9) nada muda.
+// 92 MB livres. Abaixo de 150 MB o teto vai a 25%; abaixo de 300, a 50%. O
+// piso de reproducao NAO sai daqui: ele liga quando a casca do player abre
+// (avisarCascaAberto -> tex_pressao_reproducao), porque o pico de alocacao do
+// pipeline acontece ANTES de a memoria cair — esperar os 512 MB do relatorio
+// era deixar o cache inteiro vivo durante o arranque. A home redecodifica do
+// disco ao voltar; com memoria sobrando (a C9) nada muda.
 void tex_memoria_livre(long livreMb, int player) {
   int nivel = livreMb < 150 ? 80 : livreMb < 300 ? 20 : 0;
   if (livreMb < 0) return;
   if (nivel && !(pressaoAtiva() && pressaoPct <= tex_pressao_pct(nivel))) tex_pressao_memoria(nivel);
-  tex_pressao_reproducao(player && (livreMb < 512 || pressaoPlay < 100));
+  (void)player;
 }
 void tex_aliviar(void) {
   tex_pressao_memoria(80);
   if (!mtx) return;
   SDL_LockMutex(mtx);
+  soltarCpu(1);
   podar();
   SDL_UnlockMutex(mtx);
 }

@@ -62,12 +62,18 @@
 // dado nas TRES transicoes de `aberto`, e so nelas: nada por quadro.
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
-static void avisarCascaAberto(int v) { EM_ASM({ window.nvPlayerAberto = $0; }, v); }
+// #415: o piso de reproducao do cache de arte vale do abrir ao fechar, com
+// qualquer memoria livre — o relatorio de 3 s do webOS esperava o MemAvailable
+// ja em queda, e o pico de alocacao do pipeline acontece antes dele. No
+// Android a mesma chamada ja sai de video_android.c ao abrir a sessao; repetir
+// aqui e idempotente (tex_pressao_reproducao sai cedo se o pct nao mudou).
+// A miniatura (PiP) tambem liga: ela significa video no ar, nao cache grande.
+static void avisarCascaAberto(int v) { EM_ASM({ window.nvPlayerAberto = $0; }, v); tex_pressao_reproducao(v); }
 #elif defined(NV_ANDROID) && defined(NV_TOUCH_UI)
 #include "android.h"
-static void avisarCascaAberto(int v) { android_player_tela_cheia(v); }
+static void avisarCascaAberto(int v) { android_player_tela_cheia(v); tex_pressao_reproducao(v); }
 #else
-static void avisarCascaAberto(int v) { (void)v; }
+static void avisarCascaAberto(int v) { (void)v; tex_pressao_reproducao(v); }
 #endif
 #include "trakt.h"
 #include "simkl.h"

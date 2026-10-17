@@ -162,6 +162,12 @@ void txt_definir_fonte_interface(TxtFamilia familia) {
 
 TxtFamilia txt_fonte_interface(void) { return fonteInterface; }
 
+// #415: sob aviso de memoria (tex_aliviar/app.c) a grade de linhas rasterizadas
+// inteira sai — sao texturas de texto residentes que o cache de arte nao ve.
+// Cada linha se rasteriza de novo sob demanda; o custo e um quadro a mais de
+// texto depois do susto, nunca tela cinza.
+void txt_aliviar(void) { limparCacheTexto(); }
+
 // Quantas linhas NOVAS podem ser rasterizadas por quadro.
 //
 // Medido no aparelho: entrar na pagina de detalhe rasteriza 12 linhas de uma

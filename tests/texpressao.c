@@ -122,28 +122,45 @@ int main(void) {
   puts("ok  reproducao aperta o teto e devolve ao fechar");
 
 #ifndef NV_ANDROID
-  // 9. #415: MemAvailable alto (a C9) nao muda nada, nem com o player aberto.
+  // 9. #415: o piso de reproducao vem do ABERTO do player (avisarCascaAberto
+  //    chama tex_pressao_reproducao), nao do MemAvailable. 900 MB livres e o
+  //    cache mesmo assim cai ao piso; fechar devolve o teto.
   limpar();
   orcamento = um * 10;
   for (i = 0; i < 8; i++) pronto(i, (unsigned long)i + 1, 50);
-  tex_memoria_livre(900, 1);
-  tex_memoria_livre(-1, 1);                 // sem /proc: nada
+  tex_pressao_reproducao(1);                 // player abriu, memoria sobrando
+  assert(pressaoPlay == 20);
   tex_novo_quadro();
-  assert(pressaoPlay == 100 && pressaoPct == 100 && tex_despejos == 0);
-  puts("ok  memoria sobrando nao mexe no teto");
+  assert(bytesUsados <= um * 2 && tex_despejos == 6);
+  tex_memoria_livre(900, 1);
+  tex_memoria_livre(-1, 1);                  // sem /proc: nada muda
+  assert(pressaoPlay == 20 && pressaoPct == 100);
+  tex_pressao_reproducao(0);                 // fechou: teto inteiro de volta
+  assert(pressaoPlay == 100 && limiteBytes() == orcamento);
+  puts("ok  reproducao aperta o teto com memoria sobrando");
 
-  // 10. Player aberto com a G4 a 250 MB livres: piso de reproducao (20%%) no
-  //     quadro seguinte; fica no piso enquanto o video durar, volta ao fechar.
+  // 9b. Piso e de quem chamou (avisarCascaAberto): o relatorio de 3 s com o
+  //     player aberto NAO liga mais nada — nem a 600 MB (acima do limiar velho
+  //     de 512). O piso caiu antes, na abertura.
+  limpar();
+  orcamento = um * 10;
+  tex_memoria_livre(600, 1);
+  assert(pressaoPlay == 100);
+  puts("ok  relatorio com player aberto nao decide o piso");
+
+  // 10. Player aberto (piso ja ligado na abertura) com a G4 a 250 MB livres:
+  //     o aviso desce junto; fica no piso enquanto o video durar, volta ao fechar.
   limpar();
   orcamento = um * 10;
   for (i = 0; i < 8; i++) pronto(i, (unsigned long)i + 1, 50);
+  tex_pressao_reproducao(1);                 // avisarCascaAberto(1)
   tex_memoria_livre(250, 1);
   assert(pressaoPlay == 20 && pressaoPct == 50);
   tex_novo_quadro();
   assert(bytesUsados <= um * 2 && tex_despejos == 6);
   tex_memoria_livre(600, 1);
   assert(pressaoPlay == 20);
-  tex_memoria_livre(600, 0);
+  tex_pressao_reproducao(0);                 // player fechou
   assert(pressaoPlay == 100);
   puts("ok  player com pouca memoria desce o cache ao piso e solta ao fechar");
 
@@ -157,13 +174,48 @@ int main(void) {
   assert(bytesUsados <= um * 2 + um / 2 && tex_despejos == 6);
   puts("ok  aviso de memoria despeja arte fria");
 
-  // 12. tex_aliviar despeja na hora, sem esperar o quadro.
+  // 12. tex_aliviar despeja na hora, sem esperar o quadro — e tambem os
+  //     buffers de CPU: superficie DECODIFICADA nunca desenhada, `bruto` de
+  //     pedido em fila e slot FALHOU viram vaga. Sem isto o malloc_trim do
+  //     chamador devolvia so as bordas do heap.
   limpar();
   orcamento = um * 10;
   for (i = 0; i < 8; i++) pronto(i, (unsigned long)i + 1, 50);
+  // Item 0 vira um decode pronto nunca desenhado (sem tex: sup pura).
+  itens[0].estado = DECODIFICADO;
+  itens[0].sup = SDL_CreateRGBSurfaceWithFormat(0, 64, 64, 32, SDL_PIXELFORMAT_ABGR8888);
+  itens[0].tex = 0;
+  bytesUsados -= bytesTextura(&itens[0]);    // sup nao conta no orcamento
+  assert(itens[0].sup);
+  // Item 1 falhou com bytes baixados pendentes.
+  itens[1].estado = FALHOU;
+  itens[1].falhas = 3;
+  itens[1].bruto = malloc(4096); itens[1].nBruto = 4096;
+  itens[1].tex = 0;
+  bytesUsados -= bytesTextura(&itens[1]);
   tex_aliviar();
-  assert(pressaoPct == 25 && bytesUsados <= um * 2 + um / 2);
-  puts("ok  aliviar despeja agora");
+  assert(pressaoPct == 25);
+  assert(itens[0].sup == NULL && itens[0].estado == VAZIO);
+  assert(itens[1].bruto == NULL && itens[1].estado == VAZIO);
+  assert(bytesUsados <= um * 2 + um / 2);
+  puts("ok  aliviar despeja arte pronta, bytes em fila e falhas");
+
+  // 12b. PENDENTE com `bruto` sai tambem; PRONTO frio segue a regra da poda.
+  limpar();
+  orcamento = um * 10;
+  for (i = 0; i < 4; i++) pronto(i, (unsigned long)i + 1, 50);
+  itens[4].estado = PENDENTE;
+  snprintf(itens[4].caminho, sizeof itens[4].caminho, "pend");
+  itens[4].bruto = malloc(2048); itens[4].nBruto = 2048;
+  // Item 5 pendente JA ENFILEIRADO: o slot nao pode virar VAZIO (a fila e um
+  // anel de indices), mas os bytes baixados saem.
+  itens[5].estado = PENDENTE; itens[5].naFilaDec = 1;
+  snprintf(itens[5].caminho, sizeof itens[5].caminho, "pend2");
+  itens[5].bruto = malloc(2048); itens[5].nBruto = 2048;
+  tex_aliviar();
+  assert(itens[4].bruto == NULL && itens[4].estado == VAZIO);
+  assert(itens[5].bruto == NULL && itens[5].estado == PENDENTE);
+  puts("ok  aliviar solta bruto de pedido pendente");
 #endif
 
   // 13. Reabrir o pipeline depois de um erro: abaixo do piso alivia e le de
