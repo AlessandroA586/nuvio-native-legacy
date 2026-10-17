@@ -52,6 +52,8 @@ static int lista(Stream *v, int ep, const int *ordem) {
   }
   return 4;
 }
+// semPerda for the Next tests: only a bingeGroup match ("forte") may play.
+static int soForte(int i, int forte, void *ctx) { (void)i; (void)ctx; return forte; }
 static int posDe(const Stream *v, int n, const char *grupo) {
   int i;
   for (i = 0; i < n; i++) if (strstr(v[i].arquivo, grupo)) return i;
@@ -249,6 +251,42 @@ int main(void) {
   stream_definir_lista(v, 2);
   k = fontepref_escolher("kitsu:41370:7");
   CONFERE(k == 1, "kitsu depois do arranque frio: SubsPlease no ep 7 (%d)", k);
+
+  // ---- 8. Next: the bingeGroup of the source PLAYING NOW comes first
+  fontepref_definir_perfil(6);
+  fontepref_configurar(1, 0, 1, 1);
+  fonte(&v[0], "AIOStreams", "aio|NTb", "The.Show.S01E01.1080p.WEB-DL.DDP5.1.H.264-NTb.mkv", 1080);
+  fonte(&v[1], "AIOStreams", "aio|FLUX", "The.Show.S01E01.1080p.WEB-DL.DDP5.1.H.265-FLUX.mkv", 1080);
+  fonte(&v[2], "Torrentio", "tio|SPARKS", "The.Show.S01E01.1080p.BluRay.x264-SPARKS.mkv", 1080);
+  stream_definir_lista(v, 3);
+  CONFERE(fontepref_guardar("tt4000009:1:1", &v[1]) == 1, "next: FLUX picked by hand on E1");
+  fontepref_tocando("tt4000009:1:1", &v[2]);   // a fallback played SPARKS instead
+  fonte(&v[0], "AIOStreams", "aio|FLUX", "The.Show.S01E02.1080p.WEB-DL.DDP5.1.H.265-FLUX.mkv", 1080);
+  fonte(&v[1], "Torrentio", "tio|SPARKS", "The.Show.S01E02.1080p.BluRay.x264-SPARKS.mkv", 1080);
+  fonte(&v[2], "Torrentio", "tio|SPARKS", "The.Show.S01E02.720p.BluRay.x264-SPARKS.mkv", 720);
+  CONFERE(fontepref_escolher_lista("tt4000009:1:2", v, 3, NULL, NULL) == 0, "next: title memory alone = FLUX");
+  k = fontepref_escolher_lista_next("tt4000009:1:2", v, 3, NULL, NULL);
+  CONFERE(k == 1, "next: the playing source's bingeGroup wins, first in addon order (%d)", k);
+  k = fontepref_escolher_lista_next("tt4000009:1:2", v, 3, soForte, NULL);
+  CONFERE(k == 1, "next: a bingeGroup match is passed as forte to semPerda (%d)", k);
+  stream_definir_lista(v, 3);
+  CONFERE(fontepref_binge_tocando("tt4000009:1:2") == 1, "next: same on the installed list");
+  CONFERE(fontepref_binge_tocando("tt4000010:1:2") == -1, "next: another title never follows it");
+  fontepref_configurar(1, 0, 0, 1);
+  k = fontepref_escolher_lista_next("tt4000009:1:2", v, 3, NULL, NULL);
+  CONFERE(k != 1, "next: Prefer binge group off ignores the playing source (%d)", k);
+  fontepref_configurar(1, 0, 1, 1);
+  v[1].bingeGroup[0] = 0; v[2].bingeGroup[0] = 0;
+  k = fontepref_escolher_lista_next("tt4000009:1:2", v, 3, NULL, NULL);
+  CONFERE(k == 0, "next: no source with that bingeGroup falls back to the title memory (%d)", k);
+  // the automatic memory: a bingeGroup match ignores the evidence rule (forte)
+  fontepref_definir_perfil(7);
+  fonte(&v[0], "AIOStreams", "aio|NTb", "The.Show.S01E01.1080p.WEB-DL.DDP5.1.H.264-NTb.mkv", 1080);
+  fonte(&v[1], "AIOStreams", "aio|FLUX", "The.Show.S01E01.1080p.WEB-DL.DDP5.1.H.265-FLUX.mkv", 1080);
+  stream_definir_lista(v, 2);
+  CONFERE(fontepref_auto_guardar("tt4000011:1:1", &v[1]) == 1, "auto: FLUX played on E1");
+  k = fontepref_escolher_lista("tt4000011:1:2", v, 2, soForte, NULL);
+  CONFERE(k == 1, "auto memory: the bingeGroup match reaches semPerda as forte (%d)", k);
 
   printf(falhas ? "fontepref_lancamento: %d falha(s)\n" : "fontepref_lancamento: tudo ok\n", falhas);
   return falhas ? 1 : 0;

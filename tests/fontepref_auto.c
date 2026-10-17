@@ -179,7 +179,7 @@ int main(void) {
       CONFERE(!strcmp(linha, "# nuvio fontes v1\n"), "cabecalho v1 intacto");
       fgets(linha, sizeof linha, f);
       for (p = linha; *p; p++) if (*p == '\t') campos++;
-      CONFERE(campos == 8, "nine fields, release fingerprint last (%d tabs)", campos);
+      CONFERE(campos == 9, "ten fields, tier (SeaDex/Remux T1) last (%d tabs)", campos);
       fclose(f); } }
 
   // ---- sair da conta apaga tambem a automatica

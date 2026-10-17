@@ -129,6 +129,16 @@
 // for every release of that show; this is what tells two releases apart.
 #define FONTEPREF_LANC 96
 
+// THE TIER of a source (fontepref_nivel): SeaDex best/alternative, or the
+// release tier an AIOStreams formatter writes ("Remux T1", "BD T2", "Web T1",
+// "Tier 01"...), as one label: "seadex-best", "seadex-alt", "remux-t1",
+// "uhd-bluray-t2", "web-scene". Read from the name and the description (file
+// names never carry it), after folding styled Unicode (math bold, small caps,
+// sub/superscript digits, fullwidth, enclosed letters) back to ASCII. A tier
+// only counts right after a source word, so "Terminator 2" or "S01" never do;
+// a bare "SeaDex" never counts either ("SeaDex Muxers" is a tier name).
+#define FONTEPREF_NIVEL 32
+
 // VALIDADE DA PREFERENCIA — 180 dias.
 //
 // O app web tambem expira a dele, e a comparacao importa porque os dois
@@ -167,6 +177,7 @@ typedef struct {
   char rotulo[192];                 // desempate e log
   char arquivo[FONTEPREF_ARQUIVO];  // fileKey(): release name, no episode marker
   char lancamento[FONTEPREF_LANC];  // fontepref_lancamento(): the release itself
+  char nivel[FONTEPREF_NIVEL];      // fontepref_nivel(): SeaDex / tier label
   int  altura;
   long long quandoS;                // time(NULL) da escolha
 } FontePref;
@@ -186,8 +197,9 @@ typedef struct {
 //   - fontepref_tem / fontepref_do_titulo / fontepref_escolher_manual sao SO
 //     da mao: a folha nao marca a automatica como "Sua escolha anterior" e
 //     "escolher a fonte ao reproduzir" continua abrindo a folha.
-// Qualidade nao entra (uma "4K" de IA nao tira a fonte que ja provou que
-// toca); so o que nao pode tocar aqui e recusado (stream_grupo_sem_perda).
+// A resolucao nao entra (uma "4K" de IA nao tira a fonte que ja provou que
+// toca); o que nao pode tocar aqui e recusado, e na mesma resolucao uma release
+// com evidencia claramente maior ainda vence (stream_grupo_sem_perda).
 // Nada casou: -1 e o automatico de sempre. Outra fonte que TOCOU substitui
 // (e a que de fato esta disponivel); vale o prazo da mao (FONTEPREF_VALIDADE_S).
 // 1 = guardou/atualizou; 0 = nada (sem provedor, mao em vigor, a mesma de novo).
@@ -212,6 +224,11 @@ int fontepref_escolher_manual(const char *id);
 //                    arquivos continuam sendo escritos.
 // app.c chama a cada quadro; sao so atribuicoes.
 void fontepref_configurar(int reusar, long long validadeS, int preferirGrupo, int grupoEntreSessoes);
+
+// A memoria em vigor deste titulo: a escolha a mao, senao a fonte que o
+// automatico tocou (se os ajustes a deixam valer). NULL = nenhuma. Para app.c
+// esperar pelo add-on dela antes de decidir (autoParcialPronto).
+const FontePref *fontepref_memoria(const char *id);
 
 // Le o arquivo do perfil corrente. Chamar no arranque, depois de
 // dados_iniciar. Sem pasta de dados e no-op silencioso (dados.c ja explicou no
@@ -248,15 +265,21 @@ void fontepref_trilha(const Stream *s, char *dst, unsigned tam);
 // THE MATCHING ORDER, for the remembered pick (manual) and for the automatic
 // memory alike, by points over the whole list (the highest wins; nothing
 // scores = -1, and the automatic pick takes over as always):
+//   5000  same bingeGroup (the addon's own "same source" label) — FIRST, as
+//         in Nuvio (owner, 16/10): it beats everything below combined, and
+//         for the automatic memory the release-evidence rule does not drop it;
 //   1000  same addon AND same fingerprint with a release group: the release
 //         you picked, in this episode;
-//    500  same bingeGroup (the addon's own "same source" label);
+//    400  same addon, same resolution AND same tier (SeaDex best/alt, Remux
+//         T1...): the release is missing, an equally ranked one is here;
 //    300  same addon AND same fingerprint without a group;
 //    200  same addon AND same audio tags (provedor + trilha, strict);
 //    100  same addon, today's tags contain the remembered ones.
 // Points add up, so a source that is the same release AND the same bingeGroup
-// beats one that is only either; nota() breaks ties.
+// beats one that is only either; nota() breaks ties. On Next, the bingeGroup
+// of the source PLAYING NOW comes before all of this (fontepref_binge_tocando).
 void fontepref_lancamento(const Stream *s, char *dst, unsigned tam);
+void fontepref_nivel(const Stream *s, char *dst, unsigned tam);
 
 // Guarda a escolha e GRAVA. `id` pode vir com episodio; e cortado aqui.
 // Devolve 1 quando a tabela mudou. Fonte sem provedor nao entra.
@@ -280,6 +303,22 @@ unsigned fontepref_revisao(void);
 // A mesma memoria para uma lista propria do proximo episodio. O callback
 // compara a qualidade nessa lista, sem ler/instalar a lista em reproducao.
 int fontepref_escolher_lista(const char *id, const Stream *fontes, int n,
-                             int (*semPerda)(int indice, void *ctx), void *ctx);
+                             int (*semPerda)(int indice, int forte, void *ctx), void *ctx);
+
+// --- NEXT: A FONTE QUE ESTA TOCANDO (dono, 16/10, como o Nuvio) -----------
+// No Next, a PRIMEIRA prioridade e uma fonte com o bingeGroup EXATO da fonte
+// que esta tocando agora (mesmo que ela tenha vindo de um recuo do automatico);
+// so sem ela entram as regras acima (escolha a mao / memoria do automatico).
+// So na RAM. fontepref_tocando: chamado quando uma fonte de episodio tocou de
+// verdade. _tocando_de: 1 se ha uma, com bingeGroup, para este titulo.
+// _binge_tocando: indice na lista atual (stream_item) ou -1.
+// _escolher_lista_next: o mesmo numa lista propria, e sem casar cai em
+// fontepref_escolher_lista. `forte` em semPerda = casou pelo bingeGroup: so
+// precisa poder tocar (a regra de evidencia nao vale).
+void fontepref_tocando(const char *id, const Stream *s);
+int  fontepref_tocando_de(const char *id, char *provedor, unsigned tamProv, char *binge, unsigned tamBinge);
+int  fontepref_binge_tocando(const char *id);
+int  fontepref_escolher_lista_next(const char *id, const Stream *fontes, int total,
+                                   int (*semPerda)(int indice, int forte, void *ctx), void *ctx);
 
 #endif

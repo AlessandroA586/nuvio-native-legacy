@@ -1411,6 +1411,13 @@ static int pendenteRankCb(const char *nome, int plugin, void *u) {
   return fonteregra_ordem_rank(nome);
 }
 int  stream_cabe_no_teto(const Stream *s) { return s ? cabeNoTeto(s) : 1; }
+// O add-on `nome` pode dar fonte ao automatico ("Fontes do auto-play")? Para
+// app.c so esperar pela fonte lembrada quando ela poderia ser escolhida.
+int  stream_addon_no_escopo(const char *nome) {
+  FonteRegraCfg rc = regraCfg();
+  if (!nome || !nome[0]) return 0;
+  return fonteregra_grupo_pendente(&rc, nome, 0) >= 0 || fonteregra_grupo_pendente(&rc, nome, 1) >= 0;
+}
 
 // Endereco de aviso e nao de conteudo. Estes dois foram MEDIDOS no aparelho:
 // o AIOStreams manda para slate.m3u8/slate.mp4 ("This playback link couldn't be
@@ -2188,15 +2195,16 @@ typedef struct {
   const unsigned char *excl;
   int n, melhor, lg;
 } PreparoQualidade;
-static int preparoGrupoSemPerda(int i, void *u) {
+static int preparoGrupoSemPerda(int i, int forte, void *u) {
   const PreparoQualidade *p = u;
   int q;
   for (q = 0; q < p->n && p->ordem[q] != i; q++) {}
   if (q == p->n || p->excl[q] || p->grupo[q] < 0) return 0;
   if (p->melhor < 0 || p->melhor == i) return 1;
-  // Como stream_grupo_sem_perda: so a compatibilidade e a margem na mesma resolucao.
+  // Como stream_grupo_sem_perda: resolucao nao conta; na mesma resolucao vale
+  // a regra de evidencia (Code Geass), menos para o mesmo bingeGroup (forte).
   const Stream *s = &p->fontes[i], *melhor = &p->fontes[p->melhor];
-  if (!ajustes_fonte_primeira() && ajustes_fonte_prioridade() != 2 && s->altura == melhor->altura &&
+  if (!forte && !ajustes_fonte_primeira() && ajustes_fonte_prioridade() != 2 && s->altura == melhor->altura &&
       notaComparavel(s) + STREAM_MEMORIA_MARGEM < notaComparavel(melhor)) return 0;
   return !(p->lg && s->altura == melhor->altura && stream_e_mp4(melhor) && !stream_e_mp4(s));
 }
@@ -2261,7 +2269,9 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
   if (preferidaNext < 0 && alvo && alvo[0]) {
     PreparoQualidade qualidade = {fontes, ordem, grupo, excl, total,
                                  nc > 0 ? ordem[fila[0]] : -1, lgMp4Primeiro()};
-    int lembrada = fontepref_escolher_lista(alvo, fontes, total, preparoGrupoSemPerda, &qualidade);
+    // O preparo e sempre do PROXIMO episodio: primeiro o bingeGroup da fonte
+    // que esta tocando (fontepref.h, Next), depois a memoria do titulo.
+    int lembrada = fontepref_escolher_lista_next(alvo, fontes, total, preparoGrupoSemPerda, &qualidade);
     if (lembrada >= 0 && fonteregra_no_escopo(&escopo, ehPlugin(&fontes[lembrada]))) {
       for (int q = 0; q < total; q++) if (ordem[q] == lembrada) { pref = q; break; }
       // A politica de providers tambem recebe a preferida da lista propria.
@@ -2622,11 +2632,17 @@ int stream_auto_pode_decidir(int preferida, int prefPendente, int prazoPassou, i
   pthread_mutex_unlock(&verTrava);
   p.modo = ajustes_fonte_primeira() ? FONTEAUTO_PRIMEIRA : FONTEAUTO_MELHOR;
   p.total = total; p.preferida = posPref; p.prefPendente = prefPendente;
-  p.prazoPassou = prazoPassou; p.algumPendente = addons_faltam_decisivos() > 0;
+  p.prazoPassou = prazoPassou;
   p.pontos = pts; p.acimaTeto = acima; p.excluida = excl; p.boa = boa;
   p.addon = ad; p.pendenteAntes = pendenteAntesCb;
   p.grupo = grp; p.instantaneo = instantaneo;
   p.pendenteGrupoMin = addons_pendente_grupo_min(pendenteGrupoCb, &rc);
+  // SO OS ADD-ONS QUE O AUTOMATICO PODE USAR seguram a decisao (dono, 16/10):
+  // um add-on fora de "Fontes do auto-play" ainda respondendo nao faz "Todos os
+  // add-ons" esperar — as fontes dele nunca seriam escolhidas. Sem regras de
+  // escopo, todo add-on conta, como antes. pendenteGrupoMin ja e o menor grupo
+  // entre os pendentes PERMITIDOS (99 = nenhum).
+  p.algumPendente = p.pendenteGrupoMin < 99;
   p.rank = rk; p.ordemUso = ajustes_fonte_ordem_uso();
   p.pendenteRankMin = p.ordemUso == FR_ORDEM_ESTRITA ? addons_pendente_grupo_min(pendenteRankCb, &rc) : 99;
   p.esperaTodos = ajustes_fonte_prazo_ms() < 0;
@@ -2988,11 +3004,12 @@ int stream_verificar_proxima_vod(int atualIdx, int tentativas, int *conferidas) 
 }
 
 // A FONTE QUE O AUTOMATICO JA TOCOU pode ser seguida aqui? (fontepref.c, a
-// memoria do automatico). Ja nao compara qualidade (dono, 16/10: o que provou
-// que toca manda, e uma "4K" de IA nao a tira): so recusa o que o automatico
-// nao pode tocar (excluida, aviso do addon, barrada pelas regras do dono) e a
-// regra do MP4 da LG na mesma resolucao, que e compatibilidade, nao gosto.
-int stream_grupo_sem_perda(int i) {
+// memoria do automatico). A resolucao ja nao conta (dono, 16/10: o que provou
+// que toca manda, e uma "4K" de IA nao a tira). Recusa o que o automatico nao
+// pode tocar (excluida, aviso do addon, barrada pelas regras do dono), a regra
+// do MP4 da LG na mesma resolucao e, na MESMA resolucao, uma release com
+// evidencia claramente menor (a regra do Code Geass, abaixo).
+int stream_grupo_sem_perda(int i, int forte) {
   int a, gi;
   if (i < 0 || i >= n || automaticaExcluida(i) || ehInformativa(&lista[i])) return 0;
   gi = grupoDe(i);
@@ -3001,6 +3018,9 @@ int stream_grupo_sem_perda(int i) {
   if (a < 0 || a == i) return 1;
   if (lgMp4Primeiro() && lista[i].altura == lista[a].altura &&
       stream_e_mp4(&lista[a]) && !stream_e_mp4(&lista[i])) return 0;
+  // O mesmo bingeGroup vem primeiro (dono, 16/10): a regra de evidencia nao o
+  // tira; a do MP4 da LG (compatibilidade) sim.
+  if (forte) return 1;
   // A MEMORIA DO AUTOMATICO NAO PRENDE UMA RELEASE PIOR (Code Geass, 14/10): o
   // WEB-DL de 2 Mbps escolhido num episodio voltava pelo bingeGroup no
   // seguinte, mesmo com um REMUX na lista, porque so resolucao e DV contavam

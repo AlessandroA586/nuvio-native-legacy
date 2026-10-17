@@ -6,6 +6,7 @@
 #include "idbase.h"
 #include "dados.h"
 #include <ctype.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -177,12 +178,17 @@ static void normalizar(const char *src, char *dst, size_t tam) {
 // Token isolado, a mesma disciplina de stream_parse.c: "dub" nao pode casar
 // dentro de "Dubai", e "leg" nao pode casar dentro de "legacy". A fronteira e
 // alfanumerica ASCII.
+// Jumps between occurrences of the first letter (strchr) instead of comparing
+// at every byte: the same answer, many times fewer calls — this runs for ~45
+// terms over each source's text whenever a remembered source is matched.
 static int tokenEm(const char *s, const char *t) {
   size_t n = strlen(t);
-  const char *p;
-  for (p = s; *p; p++)
+  const char *p = s;
+  while ((p = strchr(p, t[0])) != NULL) {
     if ((p == s || !isalnum((unsigned char)p[-1])) &&
         !strncmp(p, t, n) && !isalnum((unsigned char)p[n])) return 1;
+    p++;
+  }
   return 0;
 }
 
@@ -378,6 +384,144 @@ static void grupoDoNome(const char *low, char *dst, size_t tam) {
   memcpy(dst, a, n); dst[n] = 0;
 }
 
+// THE RELEASE GROUP FROM THE DESCRIPTION: AIOStreams formatters write it
+// after a 🏷️ (U+1F3F7) — "🏷️ FraMeSToR". Used only when the file name gave
+// no group.
+static void grupoEtiqueta(const char *d, char *dst, size_t tam) {
+  const char *p = d ? strstr(d, "\xF0\x9F\x8F\xB7") : NULL;
+  size_t n = 0;
+  dst[0] = 0;
+  if (!p) return;
+  p += 4;
+  if ((unsigned char)p[0] == 0xEF && (unsigned char)p[1] == 0xB8 && (unsigned char)p[2] == 0x8F) p += 3;
+  while (*p == ' ') p++;
+  while (p[n] && (isalnum((unsigned char)p[n]) || p[n] == '-' || p[n] == '_' || p[n] == '.') && n + 1 < tam && n < 30) n++;
+  if (n < 2 || (p[n] && !isspace((unsigned char)p[n]))) return;
+  for (size_t i = 0; i < n; i++) dst[i] = (char)tolower((unsigned char)p[i]);
+  dst[n] = 0;
+}
+
+// --- styled Unicode back to ASCII (fontepref_nivel) -------------------------
+// One pass: lowercase ASCII letters/digits and '+' stay; math alphanumerics,
+// small caps, sub/superscript digits, fullwidth and enclosed letters become
+// their ASCII letter/digit; label markers (🎚 🏆 » ▸ ( [) become '#'; anything
+// else becomes a space. Runs of spaces collapse.
+static int capsPequena(unsigned cp) {
+  switch (cp) {
+    case 0x1D00: return 'a'; case 0x0299: return 'b'; case 0x1D04: return 'c'; case 0x1D05: return 'd';
+    case 0x1D07: return 'e'; case 0xA730: return 'f'; case 0x0262: return 'g'; case 0x029C: return 'h';
+    case 0x026A: return 'i'; case 0x1D0A: return 'j'; case 0x1D0B: return 'k'; case 0x029F: return 'l';
+    case 0x1D0D: return 'm'; case 0x0274: return 'n'; case 0x1D0F: return 'o'; case 0x1D18: return 'p';
+    case 0xA7AF: return 'q'; case 0x0280: return 'r'; case 0xA731: return 's'; case 0x1D1B: return 't';
+    case 0x1D1C: return 'u'; case 0x1D20: return 'v'; case 0x1D21: return 'w'; case 0x028F: return 'y';
+    case 0x1D22: return 'z';
+    case 0x0493: return 'f'; case 0x0445: return 'x'; case 0x03D9: return 'q';   // Tamtaro lookalikes
+    case 0x00B9: return '1'; case 0x00B2: return '2'; case 0x00B3: return '3'; case 0x2070: return '0';
+    default: return 0;
+  }
+}
+static int dobrarCp(unsigned cp) {
+  int c;
+  if (cp < 0x80) {
+    if (isalnum((int)cp)) return tolower((int)cp);
+    if (cp == '+') return '+';
+    if (cp == '(' || cp == '[') return '#';
+    return ' ';
+  }
+  if ((c = capsPequena(cp)) != 0) return c;
+  if (cp >= 0x1D400 && cp <= 0x1D6A3) { unsigned k = (cp - 0x1D400) % 52; return k < 26 ? 'a' + (int)k : 'a' + (int)k - 26; }
+  if (cp >= 0x1D7CE && cp <= 0x1D7FF) return '0' + (int)((cp - 0x1D7CE) % 10);
+  if (cp >= 0x2080 && cp <= 0x2089) return '0' + (int)(cp - 0x2080);
+  if (cp >= 0x2074 && cp <= 0x2079) return '0' + (int)(cp - 0x2070);
+  if (cp >= 0xFF01 && cp <= 0xFF5E) return dobrarCp(cp - 0xFEE0);
+  if (cp >= 0x2460 && cp <= 0x2468) return '1' + (int)(cp - 0x2460);
+  if (cp >= 0x24B6 && cp <= 0x24CF) return 'a' + (int)(cp - 0x24B6);
+  if (cp >= 0x24D0 && cp <= 0x24E9) return 'a' + (int)(cp - 0x24D0);
+  if (cp >= 0x1F130 && cp <= 0x1F149) return 'a' + (int)(cp - 0x1F130);
+  if (cp >= 0x1F150 && cp <= 0x1F169) return 'a' + (int)(cp - 0x1F150);
+  if (cp >= 0x1F170 && cp <= 0x1F189) return 'a' + (int)(cp - 0x1F170);
+  if (cp == 0x1F39A || cp == 0x1F3C6 || cp == 0x00BB || cp == 0x25B8) return '#';
+  return ' ';
+}
+static size_t dobrar(const char *in, char *out, size_t cap, size_t k) {
+  const unsigned char *p = (const unsigned char *)(in ? in : "");
+  while (*p && k + 2 < cap) {
+    unsigned cp = *p; int n = 1, c;
+    if (cp >= 0xF0 && p[1] && p[2] && p[3]) { cp = ((cp & 7u) << 18) | ((p[1] & 63u) << 12) | ((p[2] & 63u) << 6) | (p[3] & 63u); n = 4; }
+    else if (cp >= 0xE0 && p[1] && p[2]) { cp = ((cp & 15u) << 12) | ((p[1] & 63u) << 6) | (p[2] & 63u); n = 3; }
+    else if (cp >= 0xC0 && p[1]) { cp = ((cp & 31u) << 6) | (p[1] & 63u); n = 2; }
+    p += n;
+    if (cp == 0xFE0F || cp == 0x200B || cp == 0x200C || cp == 0x200D || cp == 0x2060) continue;
+    c = dobrarCp(cp);
+    if (c == ' ' && (k == 0 || out[k - 1] == ' ')) continue;
+    out[k++] = (char)c;
+  }
+  out[k] = 0;
+  return k;
+}
+
+void fontepref_nivel(const Stream *s, char *dst, unsigned tam) {
+  char txt[3200], *tok[400];
+  int nt = 0, i, best = 0, alt = 0;
+  size_t k;
+  if (!dst || !tam) return;
+  dst[0] = 0;
+  if (!s) return;
+  k = dobrar(s->rotulo, txt, sizeof txt, 0);
+  if (k + 2 < sizeof txt) { txt[k++] = ' '; txt[k] = 0; }
+  dobrar(s->descricao, txt, sizeof txt, k);
+  // Tokens: words, and '#' (a label marker) as a token of its own.
+  for (char *p = txt; *p && nt < (int)(sizeof tok / sizeof *tok);) {
+    while (*p == ' ') p++;
+    if (!*p) break;
+    if (*p == '#') { *p++ = 0; tok[nt++] = (char *)"#"; continue; }
+    tok[nt++] = p;
+    while (*p && *p != ' ' && *p != '#') p++;
+    if (*p == ' ') *p++ = 0;
+    else if (*p == '#' && nt < (int)(sizeof tok / sizeof *tok)) { *p++ = 0; tok[nt++] = (char *)"#"; }   // word glued to a marker
+  }
+  // SEADEX, alt before best. "best release" / "seadex alt" / "alternative" /
+  // "alt best release" anywhere; a bare "best" or "alt" only within 3 tokens
+  // after a label marker. A bare "seadex" never.
+  for (i = 0; i < nt; i++) {
+    const char *t = tok[i], *n1 = i + 1 < nt ? tok[i + 1] : "", *n2 = i + 2 < nt ? tok[i + 2] : "";
+    int marca = 0;
+    for (int j = i - 1; j >= 0 && j >= i - 3; j--) if (!strcmp(tok[j], "#")) { marca = 1; break; }
+    if ((!strcmp(t, "seadex") && !strcmp(n1, "alt")) || !strcmp(t, "alternative") ||
+        (!strcmp(t, "alt") && !strcmp(n1, "best") && !strcmp(n2, "release")) || (!strcmp(t, "alt") && marca)) alt = 1;
+    else if ((!strcmp(t, "best") && !strcmp(n1, "release")) || (!strcmp(t, "best") && marca)) best = 1;
+  }
+  if (alt || best) { snprintf(dst, tam, "%s", alt ? "seadex-alt" : "seadex-best"); return; }
+  // TIER: a source word, then t1..t8 / "tier" + 1..8 / "01".."08". The first
+  // one wins (the formatters' own ::first).
+  for (i = 0; i < nt; i++) {
+    const char *t = tok[i], *src = NULL;
+    int adv = 1, d = 0;
+    char pre[4] = "";
+    if ((!strcmp(t, "de") || !strcmp(t, "fr")) && i + 1 < nt) { snprintf(pre, sizeof pre, "%s", t); i++; t = tok[i]; }
+    if (!strcmp(t, "anime") && i + 1 < nt) { i++; t = tok[i]; }
+    if (!strcmp(t, "remux")) src = "remux";
+    else if ((!strcmp(t, "uhd") || !strcmp(t, "hd")) && i + 1 < nt && !strcmp(tok[i + 1], "bluray")) { src = t[0] == 'u' ? "uhd-bluray" : "hd-bluray"; adv = 2; }
+    else if ((!strcmp(t, "uhd") || !strcmp(t, "hd")) && i + 2 < nt && !strcmp(tok[i + 1], "blu") && !strcmp(tok[i + 2], "ray")) { src = t[0] == 'u' ? "uhd-bluray" : "hd-bluray"; adv = 3; }
+    else if (!strcmp(t, "bluray")) src = "bluray";
+    else if (!strcmp(t, "blu") && i + 1 < nt && !strcmp(tok[i + 1], "ray")) { src = "bluray"; adv = 2; }
+    else if (!strcmp(t, "bd")) src = "bd";
+    else if (!strcmp(t, "web")) {
+      src = "web";
+      if (i + 1 < nt && !strcmp(tok[i + 1], "scene")) { snprintf(dst, tam, "%s%sweb-scene", pre, pre[0] ? "-" : ""); return; }
+    }
+    if (!src || i + adv >= nt) continue;
+    t = tok[i + adv];
+    if (t[0] == 't' && t[1] >= '1' && t[1] <= '8' && !t[2]) d = t[1] - '0';
+    else if (!strcmp(t, "tier") && i + adv + 1 < nt) {
+      const char *n = tok[i + adv + 1];
+      if (n[0] == '0' && n[1] >= '1' && n[1] <= '8' && !n[2]) d = n[1] - '0';
+      else if (n[0] >= '1' && n[0] <= '8' && !n[1]) d = n[0] - '0';
+    }
+    if (d) { snprintf(dst, tam, "%s%s%s-t%d", pre, pre[0] ? "-" : "", src, d); return; }
+  }
+}
+
 void fontepref_lancamento(const Stream *s, char *dst, unsigned tam) {
   char low[1100], grupo[32] = "", tok[32], ant[32] = "";
   const char *res = "", *fonte = "", *cod = "", *hdr = "", *src, *p;
@@ -402,6 +546,7 @@ void fontepref_lancamento(const Stream *s, char *dst, unsigned tam) {
     }
     grupoDoNome(low, grupo, sizeof grupo);
   }
+  if (!grupo[0]) grupoEtiqueta(s->descricao, grupo, sizeof grupo);
   if (strstr(low, "hdr10+") || strstr(low, "hdr10plus")) hdrMais = 1;
   // Only what comes after the episode marker names the release; before it is
   // the show (which could hold "web" or "4k" in its own title).
@@ -488,17 +633,18 @@ unsigned fontepref_revisao(void) { return revisao; }
 
 static void gravar(void) {
   revisao++;
-  size_t cap = (size_t)FONTEPREF_MAX * 950u + 64u;
+  size_t cap = (size_t)FONTEPREF_MAX * 1000u + 64u;
   char *buf = (char *)malloc(cap);
   size_t k = 0;
   int i;
   if (!buf) return;
   k += (size_t)snprintf(buf + k, cap - k, "# nuvio fontes v1\n");
   for (i = 0; i < nTab && k + 1 < cap; i++)
-    k += (size_t)snprintf(buf + k, cap - k, "%s\t%lld\t%d\t%s\t%s\t%s\t%s\t%s\t%s\n",
+    k += (size_t)snprintf(buf + k, cap - k, "%s\t%lld\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
                           tabela[i].id, tabela[i].quandoS, tabela[i].altura,
                           tabela[i].trilha, tabela[i].provedor, tabela[i].rotulo,
-                          tabela[i].bingeGroup, tabela[i].arquivo, tabela[i].lancamento);
+                          tabela[i].bingeGroup, tabela[i].arquivo, tabela[i].lancamento,
+                          tabela[i].nivel);
   dados_gravar(arquivoDoPerfil(), buf);
   free(buf);
 }
@@ -513,6 +659,7 @@ static void montar(const char *base, const Stream *s, FontePref *novo) {
   snprintf(novo->bingeGroup, sizeof novo->bingeGroup, "%s", s->bingeGroup);
   fileKey(s->arquivo, novo->arquivo, sizeof novo->arquivo);
   fontepref_lancamento(s, novo->lancamento, sizeof novo->lancamento);
+  fontepref_nivel(s, novo->nivel, sizeof novo->nivel);
   fontepref_trilha(s, novo->trilha, sizeof novo->trilha);
   novo->altura = s->altura;
   novo->quandoS = (long long)time(NULL);
@@ -526,12 +673,13 @@ static int mesmoRegistro(const FontePref *a, const FontePref *b) {
   return !strcmp(a->provedor, b->provedor) && !strcmp(a->trilha, b->trilha) &&
          !strcmp(a->bingeGroup, b->bingeGroup) && !strcmp(a->rotulo, b->rotulo) &&
          !strcmp(a->arquivo, b->arquivo) && !strcmp(a->lancamento, b->lancamento) &&
+         !strcmp(a->nivel, b->nivel) &&
          a->altura == b->altura;
 }
 static size_t linhaGravar(char *buf, size_t cap, const FontePref *f) {
-  return (size_t)snprintf(buf, cap, "%s\t%lld\t%d\t%s\t%s\t%s\t%s\t%s\t%s\n",
+  return (size_t)snprintf(buf, cap, "%s\t%lld\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
                           f->id, f->quandoS, f->altura, f->trilha, f->provedor, f->rotulo,
-                          f->bingeGroup, f->arquivo, f->lancamento);
+                          f->bingeGroup, f->arquivo, f->lancamento, f->nivel);
 }
 
 static void autoCarregar(void) {
@@ -563,6 +711,7 @@ static void autoCarregar(void) {
       snprintf(a->p.bingeGroup, sizeof a->p.bingeGroup, "%s", campo(&p));
       snprintf(a->p.arquivo, sizeof a->p.arquivo, "%s", campo(&p));
       snprintf(a->p.lancamento, sizeof a->p.lancamento, "%s", campo(&p));
+      snprintf(a->p.nivel, sizeof a->p.nivel, "%s", campo(&p));   // 10th field, may be absent
       if (!a->p.provedor[0]) continue;
     } else {
       // v1: id, quando, bingeGroup (e, por algumas horas de 15/10, provedor e
@@ -580,7 +729,7 @@ static void autoCarregar(void) {
 
 static void autoGravar(void) {
   revisao++;
-  size_t cap = (size_t)FONTEPREF_MAX * 950u + 64u, k = 0;
+  size_t cap = (size_t)FONTEPREF_MAX * 1000u + 64u, k = 0;
   char *buf = (char *)malloc(cap);
   int i;
   if (!buf) return;
@@ -611,7 +760,7 @@ void fontepref_iniciar(void) {
   b = dados_ler(arquivoDoPerfil());
   if (!b) return;
   for (linha = b; linha && *linha && nTab < FONTEPREF_MAX; linha = prox) {
-    char *p, *id, *quando, *altura, *trilha, *provedor, *rotulo, *binge, *file, *lanc;
+    char *p, *id, *quando, *altura, *trilha, *provedor, *rotulo, *binge, *file, *lanc, *nivel;
     char *fim = strchr(linha, '\n');
     prox = fim ? fim + 1 : NULL;
     if (fim) *fim = 0;
@@ -639,6 +788,8 @@ void fontepref_iniciar(void) {
     // as the two before it: an older line reads it as empty and matches as it
     // always did.
     lanc  = campo(&p);
+    // The tier (SeaDex / Remux T1...) is the TENTH, appended the same way.
+    nivel = campo(&p);
     // Any title id, not only IMDb: an anime opened by its kitsu/mal id used to
     // be remembered for the session and dropped here at the next start.
     if (!id[0]) continue;
@@ -652,6 +803,7 @@ void fontepref_iniciar(void) {
       snprintf(f->bingeGroup, sizeof f->bingeGroup, "%s", binge);
       snprintf(f->arquivo, sizeof f->arquivo, "%s", file);
       snprintf(f->lancamento, sizeof f->lancamento, "%s", lanc);
+      snprintf(f->nivel, sizeof f->nivel, "%s", nivel);
       f->quandoS = atoll(quando);
       f->altura = atoi(altura); }
   }
@@ -778,10 +930,11 @@ int fontepref_guardar(const char *id, const Stream *s) {
   tabela[k] = novo;
   sessaoMarcar(base);
   gravar();
-  printf("[fonte] preferencia de %s: %s / %s / binge=%s / lancamento=%s\n", base, novo.provedor,
+  printf("[fonte] preferencia de %s: %s / %s / binge=%s / lancamento=%s / nivel=%s\n", base, novo.provedor,
          novo.trilha[0] ? novo.trilha : "(sem marca de idioma)",
          novo.bingeGroup[0] ? novo.bingeGroup : "(o addon nao declarou)",
-         novo.lancamento[0] ? novo.lancamento : "(sem nome de lancamento)");
+         novo.lancamento[0] ? novo.lancamento : "(sem nome de lancamento)",
+         novo.nivel[0] ? novo.nivel : "-");
   fflush(stdout);
   return 1;
 }
@@ -919,9 +1072,9 @@ int fontepref_auto_guardar(const char *id, const Stream *s) {
   tabAuto[k].sessao = 1;
   sessaoMarcar(base);
   autoGravar();
-  printf("[fonte] fonte que o automatico tocou lembrada para %s: %s / binge=%s / lancamento=%s\n", base,
+  printf("[fonte] fonte que o automatico tocou lembrada para %s: %s / binge=%s / lancamento=%s / nivel=%s\n", base,
          novo.provedor, novo.bingeGroup[0] ? novo.bingeGroup : "-",
-         novo.lancamento[0] ? novo.lancamento : "-");
+         novo.lancamento[0] ? novo.lancamento : "-", novo.nivel[0] ? novo.nivel : "-");
   fflush(stdout);
   return 1;
 }
@@ -939,6 +1092,12 @@ static int pontosLanc(const char *provedor, const char *lanc, const Stream *s) {
   if (!l[0] || strcmp(l, lanc)) return 0;
   return lanc[0] != '|' ? 1000 : 300;
 }
+
+// O MESMO bingeGroup VEM PRIMEIRO (dono, 16/10, como o Nuvio): o addon pos a
+// mesma etiqueta na mesma release/pacote, entao ela vale mais que tudo o resto
+// somado. As outras regras (lancamento, nivel, provedor) so desempatam ou
+// assumem quando nenhuma fonte de hoje tem a etiqueta.
+#define PTS_BINGE 5000
 
 // A pontuacao de uma fonte contra a escolha manual (fontepref.h tem a tabela).
 // -1 = nao casa por nada; *como = o criterio de maior peso, para o log.
@@ -958,11 +1117,20 @@ static int casar(const FontePref *p, const Stream *s, const char **como) {
     pts += lp; best = lp; c = lp >= 1000 ? "lancamento" : "lancamento sem grupo";
   }
   if (cfgBinge && p->bingeGroup[0] && s->bingeGroup[0] && !strcmp(s->bingeGroup, p->bingeGroup)) {
-    pts += 500; if (500 > best) { best = 500; c = "bingeGroup"; }
+    pts += PTS_BINGE; best = PTS_BINGE; c = "bingeGroup";
   }
   if (s->provedor[0] && !strcasecmp(s->provedor, p->provedor)) {
     char t[FONTEPREF_TRILHA];
     fontepref_trilha(s, t, sizeof t);
+    // THE TIER: read only for a source of the same addon at the same
+    // resolution as the remembered one, and only when the remembered one had
+    // a tier — the scan costs nothing for everything else. Same audio guard as
+    // the release.
+    if (p->nivel[0] && s->altura == p->altura && contemMarcas(t, p->trilha)) {
+      char nv[FONTEPREF_NIVEL];
+      fontepref_nivel(s, nv, sizeof nv);
+      if (nv[0] && !strcmp(nv, p->nivel)) { pts += 400; if (400 > best) { best = 400; c = "nivel (SeaDex/tier)"; } }
+    }
     if (!strcmp(t, p->trilha)) { pts += 200; if (200 > best) { best = 200; c = "provedor e audio"; } }
     else if (contemMarcas(t, p->trilha)) { pts += 100; if (100 > best) { best = 100; c = "provedor e audio aproximado"; } }
   }
@@ -986,23 +1154,27 @@ static int melhorManual(const FontePref *p, int total, const Stream *(*item)(int
 
 // A memoria do automatico contra uma lista: a MESMA pontuacao da escolha a mao
 // (casar), so entre as fontes que podem tocar aqui (semPerda: nao excluida, nao
-// barrada pelas regras do dono, a regra do MP4 da LG). Qualidade NAO entra (o
-// dono, 16/10: uma "4K" de IA nao tira a fonte que ja provou que toca).
+// barrada pelas regras do dono, a regra do MP4 da LG, e na mesma resolucao a
+// evidencia de release). Resolucao NAO entra (o dono, 16/10: uma "4K" de IA
+// nao tira a fonte que ja provou que toca).
 static int melhorAuto(const AutoPref *a, int total, const Stream *(*item)(int, void *),
-                      void *ctx, int (*semPerda)(int, void *), void *ctxPerda, const char **como) {
+                      void *ctx, int (*semPerda)(int, int, void *), void *ctxPerda, const char **como) {
   int i, melhor = -1, melhorPts = -1;
   const char *c = "", *ci;
   for (i = 0; i < total; i++) {
     int pts = casar(&a->p, item(i, ctx), &ci);
     if (pts <= melhorPts) continue;
-    if (semPerda && !semPerda(i, ctxPerda)) continue;
+    // O mesmo bingeGroup so precisa poder tocar: a regra de evidencia nao o tira.
+    // Sem ele o resto soma no maximo 1600, entao >= PTS_BINGE e casou por ele
+    // (sem estado global: o preparo do proximo episodio roda em outro fio).
+    if (semPerda && !semPerda(i, pts >= PTS_BINGE, ctxPerda)) continue;
     melhorPts = pts; melhor = i; c = ci;
   }
   if (como) *como = c;
   return melhor;
 }
 
-static int semPerdaGlobal(int i, void *ctx) { (void)ctx; return stream_grupo_sem_perda(i); }
+static int semPerdaGlobal(int i, int forte, void *ctx) { (void)ctx; return stream_grupo_sem_perda(i, forte); }
 
 // Lado de leitura: ver melhorAuto.
 static int escolherAuto(const char *id) {
@@ -1025,6 +1197,17 @@ static int escolherAuto(const char *id) {
   return melhor;
 }
 
+const FontePref *fontepref_memoria(const char *id) {
+  const FontePref *p = fontepref_do_titulo(id);
+  char base[24];
+  int k;
+  if (p) return p;
+  if (!carregado) fontepref_iniciar();
+  fontepref_id_base(id, base, sizeof base);
+  k = autoAchar(base);
+  return autoUsavel(k) ? &tabAuto[k].p : NULL;
+}
+
 int fontepref_escolher_manual(const char *id) {
   const FontePref *p = fontepref_do_titulo(id);
   return p ? escolherManual(p) : -1;
@@ -1036,7 +1219,7 @@ int fontepref_escolher(const char *id) {
 }
 
 int fontepref_escolher_lista(const char *id, const Stream *fontes, int total,
-                             int (*semPerda)(int, void *), void *ctx) {
+                             int (*semPerda)(int, int, void *), void *ctx) {
   if (!fontes || total < 1) return -1;
   const FontePref *p = fontepref_do_titulo(id);
   if (p) return melhorManual(p, total, itemVetor, (void *)fontes, NULL);
@@ -1044,6 +1227,65 @@ int fontepref_escolher_lista(const char *id, const Stream *fontes, int total,
   int k = autoAchar(base);
   if (!autoUsavel(k)) return -1;
   return melhorAuto(&tabAuto[k], total, itemVetor, (void *)fontes, semPerda, ctx, NULL);
+}
+
+// --- NEXT: A FONTE QUE ESTA TOCANDO (dono, 16/10, como o Nuvio) -----------
+// So na RAM: o bingeGroup e o add-on da fonte que tocou de verdade agora.
+// Lido tambem pelo worker do proximo episodio, dai a trava.
+static pthread_mutex_t travaTocando = PTHREAD_MUTEX_INITIALIZER;
+static char tocandoBase[24], tocandoProv[96], tocandoBinge[FONTEPREF_BINGE];
+
+void fontepref_tocando(const char *id, const Stream *s) {
+  char base[24];
+  if (!id || !s) return;
+  fontepref_id_base(id, base, sizeof base);
+  pthread_mutex_lock(&travaTocando);
+  snprintf(tocandoBase, sizeof tocandoBase, "%s", base);
+  snprintf(tocandoProv, sizeof tocandoProv, "%s", s->provedor);
+  snprintf(tocandoBinge, sizeof tocandoBinge, "%s", s->bingeGroup);
+  pthread_mutex_unlock(&travaTocando);
+}
+
+int fontepref_tocando_de(const char *id, char *provedor, unsigned tamProv, char *binge, unsigned tamBinge) {
+  char base[24];
+  int ok;
+  if (!id || !cfgBinge) return 0;
+  fontepref_id_base(id, base, sizeof base);
+  pthread_mutex_lock(&travaTocando);
+  ok = base[0] && tocandoBinge[0] && !strcmp(base, tocandoBase);
+  if (ok && provedor) snprintf(provedor, tamProv, "%s", tocandoProv);
+  if (ok && binge) snprintf(binge, tamBinge, "%s", tocandoBinge);
+  pthread_mutex_unlock(&travaTocando);
+  return ok;
+}
+
+static int bingeTocando(const char *id, int total, const Stream *(*item)(int, void *), void *ctx,
+                        int (*podeTocar)(int, int, void *), void *ctxPode) {
+  char binge[FONTEPREF_BINGE];
+  int i;
+  if (!fontepref_tocando_de(id, NULL, 0, binge, sizeof binge)) return -1;
+  // A PRIMEIRA da lista com a etiqueta exata, como o Nuvio: a ordem e a do addon.
+  for (i = 0; i < total; i++) {
+    const Stream *s = item(i, ctx);
+    if (s && s->bingeGroup[0] && !strcmp(s->bingeGroup, binge) && (!podeTocar || podeTocar(i, 1, ctxPode)))
+      return i;
+  }
+  return -1;
+}
+
+int fontepref_binge_tocando(const char *id) {
+  int i = bingeTocando(id, stream_n(), itemGlobal, NULL, semPerdaGlobal, NULL);
+  if (i >= 0) { printf("[fonte] next: mesmo bingeGroup da fonte que tocava, posicao %d\n", i); fflush(stdout); }
+  return i;
+}
+
+int fontepref_escolher_lista_next(const char *id, const Stream *fontes, int total,
+                                  int (*semPerda)(int, int, void *), void *ctx) {
+  int i;
+  if (!fontes || total < 1) return -1;
+  i = bingeTocando(id, total, itemVetor, (void *)fontes, semPerda, ctx);
+  if (i >= 0) { printf("[fonte] next (preparado): mesmo bingeGroup da fonte que tocava, posicao %d\n", i); fflush(stdout); return i; }
+  return fontepref_escolher_lista(id, fontes, total, semPerda, ctx);
 }
 
 static int escolherManual(const FontePref *p) {
