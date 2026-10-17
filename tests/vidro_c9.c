@@ -161,13 +161,11 @@ int main(int argc, char **argv) {
   shot(argv[2], "modal");
   for (int i = 0; i < 5; i++) frame(380 + i, 0, 1);
   shot(argv[2], "trailer");
-  // A fade changes the backdrop every frame: it recaptures every other frame
-  // (a late texture upload may force one more), and once it settles the
-  // glass shows exactly what a fresh capture shows.
+  // A changing backdrop must never reuse the previous frame's source.
   fade = .02f; captures = 0;
   for (int i = 0; i < 10; i++) { frame(221 + i, 1, 0); captures += gfx_vidro_capturas; }
   printf("fade: captures=%d over ten frames\n", captures);
-  check(captures <= 7, "fade recaptures every other frame");
+  check(captures == 10, "fade recaptures each changed frame");
   {
     size_t bytes = (size_t)width * height * 4;
     unsigned char *late = malloc(bytes), *fresh = malloc(bytes);

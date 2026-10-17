@@ -79,7 +79,7 @@ static void neutro(const char *nome, double m[3]) {
 int main(int argc, char **argv) {
   const char *dir = argc > 1 ? argv[1] : NULL;
   GfxRect painel = { 1240, 140, 560, 760 }, folha = { 160, 140, 560, 760 };
-  double m[3];
+  double m[3], gray[3] = {0};
   int k;
   SDL_SetHint("SDL_MAC_BACKGROUND_APP", "1");
   assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
@@ -106,6 +106,8 @@ int main(int argc, char **argv) {
     gfx_vidro_folha(folha, 36.0f / folha.h, 1.0f);
     snprintf(n, sizeof n, "painel/%s/q%d", nf, k & 1);
     media((int)painel.x + 40, (int)painel.y + 40, (int)painel.w - 80, (int)painel.h - 80, m); neutro(n, m);
+    if (k == 1) memcpy(gray, m, sizeof gray);
+    if (k == 2) confere(m[1] > gray[1] + 20.0, "hard cut updates the frost on the same frame");
     snprintf(n, sizeof n, "folha/%s/q%d", nf, k & 1);
     media((int)folha.x + 40, (int)folha.y + 40, (int)folha.w - 80, (int)folha.h - 80, m); neutro(n, m);
     if (k == 0) salvar(dir, "vidro-cinza.bmp");
