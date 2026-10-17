@@ -300,7 +300,7 @@ static void cartaoCentro(Uint32 agora) {
     if (raio > h * 0.5f) raio = h * 0.5f;
     if (raio > w * 0.5f) raio = w * 0.5f;
     if (c->video) plrui_material_video(R, raio, cenA);
-    else plrui_material(R, raio, c->modal, cenA);
+    else plrui_material_s(R, raio, c->modal, cenA, c->semSombra);
     gfx_recorte(R.x, R.y, R.w, R.h);
     // O corpo fica no tamanho final e o recorte da forma o corta (centrado, ou
     // preso ao topo da forma com `ancoraTopo`).
@@ -389,7 +389,7 @@ static void plrilha_desenharCorpo_(Uint32 agora) {
     if (p->ponteiroOk && !corpo && A > 0.99f && fabsf(W - alvoW) < 1.0f && fabsf(H - alvoH) < 1.0f)
       ponteiro_alvo(R.x, R.y, R.w, R.h, p->ponteiroOk, NULL, 0, 0);
     if (temUlt && ult.video) plrui_material_video(R, raioPx, A);
-    else plrui_material(R, raioPx, (temUlt ? ult.modal : 0), A);
+    else plrui_material_s(R, raioPx, (temUlt ? ult.modal : 0), A, temUlt ? ult.semSombra : 0);
     central_segurar_desenhar(R, raioPx / (R.h > 1.0f ? R.h : 1.0f), A, agora);
     gfx_recorte(R.x, R.y, R.w, R.h);
     { float cabH = h < CAB_H ? h : CAB_H;

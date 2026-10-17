@@ -1783,6 +1783,9 @@ double gfx_fill_vis = 0.0;
 double gfx_fill_gpu = 0.0, gfx_fill_gpu_mist = 0.0;
 double gfx_fill_gpu_ult = 0.0, gfx_fill_gpu_mist_ult = 0.0;
 unsigned long long gfx_modos_desligados = 0;
+#ifdef NV_SHOT_HOOKS
+unsigned gfx_shot_sombras = 0;  // sheet-sized GFX_SOMBRA draws, for tests
+#endif
 int    gfx_n_cheio = 0;   // desenhos que cobrem >= 50% da tela
 // So na medida (tests/fluidez_perf.c, -DNV_FLUIDEZ_PERF): quantos desses foram
 // desenhados COM mistura, que e a leitura da tela que a Mali paga a mais.
@@ -2305,6 +2308,9 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
       (modo == GFX_BRILHO_TOPO && cr + cg + cb > 1.5f))) return;
   // Efeitos minimos: sombra e halo tambem saem (o anel continua marcando o foco).
   if (efeitosMinimos && (modo == GFX_SOMBRA || modo == GFX_HOLOFOTE)) return;
+#ifdef NV_SHOT_HOOKS
+  if (modo == GFX_SOMBRA && r.w > 600.0f && r.h > 600.0f) gfx_shot_sombras++;
+#endif
   if (gfx_modos_desligados && ((gfx_modos_desligados >> (unsigned)modo) & 1ull)) return;
   // O FUNDO DA DINAMICA ADIADO (gfx_fundo_din_desenhar) E O DESTAQUE POR CIMA
   // DELE NUMA PASSADA SO. O destaque (GFX_VITRINE) de largura inteira, a partir
