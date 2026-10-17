@@ -747,12 +747,12 @@ static int heroCompactoTelefone(void) {
 #endif
 }
 static float alturaTextoHeroDin(void) {
-  if (homeRetratoTelefone()) return 600.0f;
-  return NV_DIN_HERO_H * (heroCompactoTelefone() ? 0.75f : 1.0f);
+  if (homeRetratoTelefone()) return ANC(600.0f);
+  return ANC(NV_DIN_HERO_H) * (heroCompactoTelefone() ? 0.75f : 1.0f);
 }
 static float repousoFileirasDin(void) {
-  if (homeRetratoTelefone()) return 620.0f;
-  return NV_DIN_REPOUSO_FIL * (heroCompactoTelefone() ? 0.75f : 1.0f);
+  if (homeRetratoTelefone()) return ANC(620.0f);
+  return ANC(NV_DIN_REPOUSO_FIL) * (heroCompactoTelefone() ? 0.75f : 1.0f);
 }
 static float empurraHeroModerna(void) {
   if (homeRetratoTelefone()) return 620.0f - ANC(NV_SHELF_TOP);
@@ -779,11 +779,11 @@ static float heroVisivelToque(void) {
 // esvanecer das de cima (o `fade` de home_desenhar).
 static float topoFileiras(void) {
   int heroOn = ajustes_hero_ligado();
-  if (homeRetratoTelefone() && !heroOn) return NV_DIN_TOPO_FIL;
+  if (homeRetratoTelefone() && !heroOn) return ANC(NV_DIN_TOPO_FIL);
   switch (layoutHome()) {
     case HOME_LAYOUT_PADRAO:
-      return heroOn ? NV_PAD_TOPO_FIL : NV_DIN_TOPO_FIL - 10.0f;
-    case HOME_LAYOUT_DINAMICA: return NV_DIN_TOPO_FIL;
+      return ANC(heroOn ? NV_PAD_TOPO_FIL : NV_DIN_TOPO_FIL - 10.0f);
+    case HOME_LAYOUT_DINAMICA: return ANC(NV_DIN_TOPO_FIL);
     default:                   return ANC(NV_SHELF_TOP);
   }
 }
@@ -797,16 +797,16 @@ static float corteFileiras(void) {
   if (heroCompactoTelefone() && toqueLivreY) {
     if (!ajustes_hero_ligado()) return 132.0f;
     if (layoutHome() == HOME_LAYOUT_PADRAO)
-      return fmaxf(132.0f, NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f - scrollY);
+      return fmaxf(132.0f, ANC(NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f) - scrollY);
     if (layoutHome() == HOME_LAYOUT_DINAMICA) return 132.0f;
     return 132.0f + (ANC(NV_SHELF_TOP) - 132.0f) * heroVisivelToque();
   }
 #endif
   switch (layoutHome()) {
     case HOME_LAYOUT_PADRAO:
-      return ajustes_hero_ligado() ? NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f : 0.0f;
+      return ajustes_hero_ligado() ? ANC(NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f) : 0.0f;
     case HOME_LAYOUT_DINAMICA: return 0.0f;
-    default:                   return ANC(NV_SHELF_TOP) - (heroCompactoTelefone() ? 0.0f : 96.0f);
+    default:                   return ANC(NV_SHELF_TOP - (heroCompactoTelefone() ? 0.0f : 96.0f));
   }
 }
 // Quanto as fileiras DESCEM com o foco no destaque (a rolagem vale menos isto).
@@ -818,7 +818,7 @@ static float empurraHero(void) {
   if (homeRetratoTelefone() && !heroOn) return 0.0f;
   switch (layoutHome()) {
     case HOME_LAYOUT_PADRAO:   return 0.0f;
-    case HOME_LAYOUT_DINAMICA: return heroOn ? repousoFileirasDin() - NV_DIN_TOPO_FIL : 0.0f;
+    case HOME_LAYOUT_DINAMICA: return heroOn ? repousoFileirasDin() - ANC(NV_DIN_TOPO_FIL) : 0.0f;
     default:                   return empurraHeroModerna();
   }
 }
@@ -829,11 +829,11 @@ static float dinHeroY(void) {
   return y > 0.0f ? 0.0f : y;
 }
 static GfxRect padBannerRect(void) {
-  float y = NV_PAD_BANNER_Y;
+  float y = ANC(NV_PAD_BANNER_Y);
 #ifdef NV_TOUCH_UI
   if (heroCompactoTelefone() && toqueLivreY) y -= scrollY;
 #endif
-  return (GfxRect){ 0.0f, y, NV_TELA_W, NV_PAD_BANNER_H };
+  return (GfxRect){ 0.0f, y, NV_TELA_W, ANC(NV_PAD_BANNER_H) };
 }
 // O numeral do Top 10 mora ANTES do cartaz: a fileira comeca deslocada por esta
 // faixa (e o passo dela ja a inclui, em gapDe).
@@ -1799,9 +1799,9 @@ static float dinRolagemCentrada(int r, float off) {
   if (r < 0 || r >= nFileiras) return off;
   for (i = 0; i < nFileiras; i++)
     total += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(i) + (i ? fileiraGap() : 0.0f);
-  s = NV_DIN_TOPO_FIL + off + 0.5f * (NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r))
-    - NV_DIN_CENTRO_FIL;
-  sMax = NV_DIN_TOPO_FIL + total - (NV_TELA_H - NV_DIN_FOLGA_BASE);
+  s = ANC(NV_DIN_TOPO_FIL) + off + 0.5f * (NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r))
+    - ANC(NV_DIN_CENTRO_FIL);
+  sMax = ANC(NV_DIN_TOPO_FIL) + total - (NV_TELA_H - ANC(NV_DIN_FOLGA_BASE));
   if (s > sMax) s = sMax;
   if (s < 0.0f) s = 0.0f;
   return s;
@@ -4471,9 +4471,9 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
   // space when every real information line exists, including a caption.
   float minTop = 24.0f;
   if (lay == HOME_LAYOUT_PADRAO)
-    minTop = base - (NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE) + 24.0f;
+    minTop = base - ANC(NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE) + 24.0f;
   else if (lay == HOME_LAYOUT_DINAMICA)
-    minTop = base - (NV_DIN_HERO_H - NV_DIN_TEXTO_BASE) + 54.0f;
+    minTop = base - ANC(NV_DIN_HERO_H - NV_DIN_TEXTO_BASE) + 54.0f;
   AmigosTitulo amigos;
   int temAmigos = ci && ci->imdb[0] && amigostitulo_obter(ci->imdb, &amigos);
   float friendsH = temAmigos ? NV_AMIGOS_HERO_H : 0.0f;
@@ -4507,9 +4507,9 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
     }
     minTop = 132.0f;
     if (lay == HOME_LAYOUT_PADRAO)
-      minTop += base - (NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE);
+      minTop += base - ANC(NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE);
     else if (lay == HOME_LAYOUT_DINAMICA)
-      minTop += base - (alturaTextoHeroDin() - NV_DIN_TEXTO_BASE);
+      minTop += base - (alturaTextoHeroDin() - ANC(NV_DIN_TEXTO_BASE));
     copy = heroCopyTelefone(base, &hSin, metaLinha[0] != 0, temSec, &captionH,
                             logoH * 0.75f, btnH, btnGap, minTop, slot, &friendsH, minLogo);
     sinLinhas = hSin > 0.0f ? (int)ceilf(hSin / heroSinEntrelinha()) : 0;
@@ -4678,8 +4678,8 @@ static GfxRect heroArtworkOverlayRect(GfxRect r, GfxRect hero) {
 }
 
 static float heroBaseCopia(int lay, GfxRect r, float empurra, float descida) {
-  if (lay == HOME_LAYOUT_PADRAO) return r.y + r.h - NV_PAD_TEXTO_BASE + descida;
-  if (lay == HOME_LAYOUT_DINAMICA) return r.y + alturaTextoHeroDin() - NV_DIN_TEXTO_BASE + descida;
+  if (lay == HOME_LAYOUT_PADRAO) return r.y + r.h - ANC(NV_PAD_TEXTO_BASE) + descida;
+  if (lay == HOME_LAYOUT_DINAMICA) return r.y + alturaTextoHeroDin() - ANC(NV_DIN_TEXTO_BASE) + descida;
   return ANC(NV_SHELF_TOP - NV_HERO_COPY_GAP - 24.0f) + empurra + descida;
 }
 static GfxRect heroEditorialRect(int editorial, float aspect) {
@@ -6739,7 +6739,7 @@ int home_vitrine_arte(const CatItem *ci, float alfa) {
   GfxRect r = { 0, 0, NV_TELA_W, NV_HERO_CHEIO_H };
   if (!a || !a[0] || alfa <= 0.004f) return 0;
   if (lay == HOME_LAYOUT_MODERNA) return desenhaArteHero(r, GFX_HERO_CHEIO, ci, a, alfa, 0.0f);
-  if (lay == HOME_LAYOUT_PADRAO) r = (GfxRect){ 0, NV_PAD_BANNER_Y, NV_TELA_W, NV_PAD_BANNER_H };
+  if (lay == HOME_LAYOUT_PADRAO) r = (GfxRect){ 0, ANC(NV_PAD_BANNER_Y), NV_TELA_W, ANC(NV_PAD_BANNER_H) };
   else r.h = NV_DIN_ARTE_H;
   heroVeuLayout(lay, r.h);
   return desenhaArteHero(r, GFX_VITRINE, ci, a, alfa, 0.0f);

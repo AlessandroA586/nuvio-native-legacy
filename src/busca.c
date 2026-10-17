@@ -101,8 +101,8 @@ static float buResY(void);
 // A coluna da esquerda desce quando a pilula da Dinamica ocupa o canto.
 static float buTopoEsq(void) {
   float px, py, pw, ph;
-  if (menu_pilula_rect(&px, &py, &pw, &ph) && py + ph + 20.0f > 64.0f) return py + ph + 20.0f;
-  return 64.0f;
+  if (menu_pilula_rect(&px, &py, &pw, &ph)) return ANC(fmaxf(64.0f, py + ph + 20.0f));
+  return ANC(64.0f);
 }
 
 // --- Teclado -----------------------------------------------------------------
@@ -278,7 +278,7 @@ static int  kbTemLayout;                   // a tecla de layout aparece?
 static int  KB_COLUNAS[BU_KB_MAX_FIL + 1] = { 6, 6, 6, 6, 6, 6, 3 };
 static float buResY(void) {
   if (buTecladoNativo()) return buTopoEsq() + BU_CAMPO_H + 44.0f;
-  if (!buRetrato()) return 64.0f;
+  if (!buRetrato()) return ANC(64.0f);
   return BU_KB_Y + 2.0f * BU_KB_PAD + (kbFil + 1) * BU_TECLA_W
        + kbFil * BU_TECLA_GAP + 92.0f;
 }

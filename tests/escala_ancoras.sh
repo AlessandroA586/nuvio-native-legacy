@@ -1,13 +1,13 @@
 #!/bin/bash
-# Text scale keeps the Home anchors in place (#205). Hard 48 s budget.
+# Text scale keeps Home and Search anchors in place (#205). Hard 48 s budget.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 w=$(mktemp -d "${TMPDIR:-/tmp}/nv-ancoras.XXXXXX")
 trap 'rm -rf "$w"' EXIT
 flags=(-O0 -w -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2)
 srcs=()
-for s in src/*.c src/dts/*.c tests/escala_ancoras.c; do
-  case "$s" in src/main.c|src/home.c) continue;; esac
+for s in src/*.c src/dts/*.c tests/escala_ancoras.c tests/escala_ancoras_search.c; do
+  case "$s" in src/main.c|src/home.c|src/busca.c) continue;; esac
   srcs+=("$s")
 done
 printf '%s\n' "${srcs[@]}" | timeout 40 xargs -P 12 -I{} sh -c \
