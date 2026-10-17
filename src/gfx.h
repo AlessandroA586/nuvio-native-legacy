@@ -739,6 +739,9 @@ void gfx_vidro_cartao(GfxRect r, float raio, float foco, float a);
 // FOCO de botao de acao e item de menu: a pilula vira BRANCA cheia (a mola
 // interpola a opacidade), e o texto passa a escuro em foco >= 0,5 — quem chama
 // escolhe a tinta com gfx_vidro_tinta.
+// Com vidro e realce colorido ela e vidro tingido: realce a GFX_VIDRO_ACENTO_ALFA
+// (cor viva), aro claro e brilho de topo como as pilulas de vidro em repouso.
+#define GFX_VIDRO_ACENTO_ALFA 0.92f
 void gfx_vidro_pilula_cheia(GfxRect r, float raio, float foco, float a);
 // Tinta do texto sobre a superficie de vidro: escura sobre a pilula branca do
 // foco, clara (235) no resto.
