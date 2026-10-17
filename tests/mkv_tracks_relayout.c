@@ -49,8 +49,8 @@ static void montar(int voidKb, int padKb, int comSeek) {
   long segIniL, lenPos, trAbs;
   static const unsigned char TR[4] = { 0x16, 0x54, 0xAE, 0x6B };
   char *priv;
-  priv = malloc(512 + (size_t)padKb * 1024); assert(priv);
-  snprintf(priv, 512,
+  priv = malloc(1024 + (size_t)padKb * 1024); assert(priv);
+  snprintf(priv, 1024,
            "[Script Info]\r\nScriptType: v4.00+\r\nPlayResX: 1280\r\nPlayResY: 720\r\n"
            "[V4+ Styles]\r\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\r\n"
            "Style: Default,Arial,48,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,0,2,10,10,10,1\r\n"
