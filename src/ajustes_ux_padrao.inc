@@ -315,3 +315,5 @@
   0, /* Dynamic layout background (#205): Gray */
   12, /* Dynamic layout background colour (#205): Ocean */
   2, /* text and component scale: 100% */
+  0, 0, /* prefer binge group (the hand pick for the whole show + the auto memory) Ligado, across sessions Ligado */
+  0, 5, /* reuse last link: Ligado (owner, 16/10), 24 h */

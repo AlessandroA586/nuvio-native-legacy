@@ -22,6 +22,7 @@ void servidores_esquecer_todos(void);   // servidores.c: wipe every profile's to
 #include "mapa.h"
 #include "recomenda.h"
 #include "fontepref.h"
+#include "fontevolta.h"
 #include "legmemoria.h"
 #include "audiomemoria.h"
 #include "buscasrec.h"
@@ -2163,6 +2164,9 @@ void sync_esquecer_usuario(void) {
   // sobreviveria ao logout em disco e passaria a mandar na reproducao da
   // proxima pessoa.
   fontepref_esquecer();
+  // E OS LINKS GUARDADOS ("Reusar o ultimo link", fontevolta.h): no disco, e
+  // um link de debrid e credencial na pratica.
+  fontevolta_esquecer_tudo();
   // E A LEGENDA ESCOLHIDA A MAO (2.0.3): o idioma e os titulos de quem saiu.
   legmem_esquecer();
   // E A FAIXA DE AUDIO ESCOLHIDA A MAO (audiomemoria.h), pela mesma razao.

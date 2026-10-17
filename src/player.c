@@ -2262,14 +2262,18 @@ static void lembrarFonte(void) {
   double cred;
   char alvo[64];
   if (ehCanal() || !comVideo) return;
-  if (erroFonte || video_falhou()) { fontevolta_esquecer("sessao falhou"); return; }
+  alvoStream(alvo, sizeof alvo);
+  if (erroFonte || video_falhou()) {
+    fontevolta_esquecer_alvo(alvo, sessao_usuario(), perfis_ativo(), "sessao falhou"); return;
+  }
   if (!video_pronto() || duracaoSeg < 120.0f) return;
   cred = credEfetivo();
-  if (concluiuAgora(cred)) { fontevolta_esquecer("titulo concluido"); return; }
+  if (concluiuAgora(cred)) {
+    fontevolta_esquecer_alvo(alvo, sessao_usuario(), perfis_ativo(), "titulo concluido"); return;
+  }
   // A lista pode ter sido trocada por baixo (a busca de fundo do Retomar que
   // abriu pela fonte guardada): quem toca e a entrada que ja existe.
   if (!s || strcmp(s->url, url)) return;
-  alvoStream(alvo, sizeof alvo);
   fontevolta_guardar(alvo, sessao_usuario(), perfis_ativo(), s, stream_idade_ms(), SDL_GetTicks());
 }
 

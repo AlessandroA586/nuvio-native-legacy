@@ -144,6 +144,10 @@ static const char *ajVisualIcone(int op) {
     case AJ_AMIGOS_ESTILO: return "aj_users";
     case AJ_TITULO_FIL: return "aj_type";
     case AJ_MURAL_TITULOS: return "aj_images";
+    case AJ_FONTE_GRUPO: return "aj_layers";
+    case AJ_FONTE_GRUPO_SESSOES: return "aj_rotate-ccw-clock";
+    case AJ_LINK_REUSAR: return "aj_link";
+    case AJ_LINK_PRAZO: return "aj_clock";
     case AJ_FONTE_CONFERIR_VARIAS: return "aj_layers";
     case AJ_FONTE_AQUECER: return "aj_wifi";
     case AJ_FONTE_TOCAR_CONFERINDO: return "aj_zap";

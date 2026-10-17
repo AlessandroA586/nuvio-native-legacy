@@ -21,11 +21,10 @@ static int perfil;
 // `sessao` so existe em RAM (o arquivo nao tem a coluna): 1 = gravada por este
 // processo. E o que "Reusar o grupo entre sessoes" desligado olha — por marca e
 // nao por relogio, porque esta TV arranca com a hora errada (ver venceu()).
-typedef struct {
-  char id[24]; char bingeGroup[FONTEPREF_BINGE];
-  char provedor[96]; char lancamento[FONTEPREF_LANC];   // fontepref_lancamento
-  long long quandoS; int sessao;
-} AutoPref;
+// A fonte que o AUTOMATICO tocou com sucesso guarda o MESMO registro de uma
+// escolha a mao (dono, 16/10: "testada e segura pelo automatico" vale como
+// preferencia quando nao ha escolha a mao em vigor).
+typedef struct { FontePref p; int sessao; } AutoPref;
 static AutoPref tabAuto[FONTEPREF_MAX];
 static int nAuto;
 
@@ -69,7 +68,7 @@ static int autoUsavel(int k) {
   long long agora = (long long)time(NULL), q;
   if (!cfgBinge || k < 0 || k >= nAuto) return 0;
   if (!cfgBingeSessoes && !tabAuto[k].sessao) return 0;
-  q = tabAuto[k].quandoS;
+  q = tabAuto[k].p.quandoS;
   return !(q > 0 && agora > q && agora - q > FONTEPREF_VALIDADE_S);
 }
 
@@ -504,31 +503,76 @@ static void gravar(void) {
   free(buf);
 }
 
+// O registro de uma fonte, igual para a escolha a mao e para a que o
+// automatico tocou.
+static void montar(const char *base, const Stream *s, FontePref *novo) {
+  memset(novo, 0, sizeof *novo);
+  snprintf(novo->id, sizeof novo->id, "%s", base);
+  snprintf(novo->provedor, sizeof novo->provedor, "%s", s->provedor);
+  snprintf(novo->rotulo, sizeof novo->rotulo, "%s", s->rotulo);
+  snprintf(novo->bingeGroup, sizeof novo->bingeGroup, "%s", s->bingeGroup);
+  fileKey(s->arquivo, novo->arquivo, sizeof novo->arquivo);
+  fontepref_lancamento(s, novo->lancamento, sizeof novo->lancamento);
+  fontepref_trilha(s, novo->trilha, sizeof novo->trilha);
+  novo->altura = s->altura;
+  novo->quandoS = (long long)time(NULL);
+  limpar(novo->provedor);
+  limpar(novo->rotulo);
+  limpar(novo->trilha);
+  limpar(novo->bingeGroup);
+  limpar(novo->arquivo);
+}
+static int mesmoRegistro(const FontePref *a, const FontePref *b) {
+  return !strcmp(a->provedor, b->provedor) && !strcmp(a->trilha, b->trilha) &&
+         !strcmp(a->bingeGroup, b->bingeGroup) && !strcmp(a->rotulo, b->rotulo) &&
+         !strcmp(a->arquivo, b->arquivo) && !strcmp(a->lancamento, b->lancamento) &&
+         a->altura == b->altura;
+}
+static size_t linhaGravar(char *buf, size_t cap, const FontePref *f) {
+  return (size_t)snprintf(buf, cap, "%s\t%lld\t%d\t%s\t%s\t%s\t%s\t%s\t%s\n",
+                          f->id, f->quandoS, f->altura, f->trilha, f->provedor, f->rotulo,
+                          f->bingeGroup, f->arquivo, f->lancamento);
+}
+
 static void autoCarregar(void) {
   char *b, *linha, *prox;
+  int v2 = 0;
   nAuto = 0;
   b = dados_ler(arquivoAuto());
   if (!b) return;
   for (linha = b; linha && *linha && nAuto < FONTEPREF_MAX; linha = prox) {
-    char *p, *id, *quando, *binge;
+    char *p, *id, *quando;
     char *fim = strchr(linha, '\n');
+    AutoPref *a = &tabAuto[nAuto];
     prox = fim ? fim + 1 : NULL;
     if (fim) *fim = 0;
+    if (!strcmp(linha, "# nuvio fontes auto v2")) { v2 = 1; continue; }
     if (linha[0] == '#' || !linha[0]) continue;
     p = linha;
-    // id, quando, bingeGroup, then (since the release fingerprint) provedor
-    // and lancamento. limpar() keeps TABs out of every field, so an old line
-    // (bingeGroup as the rest of the line) reads the same here.
-    { char *prov, *lanc;
-      id = campo(&p); quando = campo(&p); binge = campo(&p); prov = campo(&p); lanc = campo(&p);
-      if (!id[0] || (!binge[0] && !lanc[0])) continue;
-      memset(&tabAuto[nAuto], 0, sizeof tabAuto[nAuto]);
-      snprintf(tabAuto[nAuto].provedor, sizeof tabAuto[nAuto].provedor, "%s", prov);
-      snprintf(tabAuto[nAuto].lancamento, sizeof tabAuto[nAuto].lancamento, "%s", lanc); }
-    snprintf(tabAuto[nAuto].id, sizeof tabAuto[nAuto].id, "%s", id);
-    snprintf(tabAuto[nAuto].bingeGroup, sizeof tabAuto[nAuto].bingeGroup, "%s", binge);
-    tabAuto[nAuto].quandoS = atoll(quando);
-    tabAuto[nAuto].sessao = sessaoTem(id);   // do disco: so e "desta sessao" se este processo gravou
+    memset(a, 0, sizeof *a);
+    id = campo(&p); quando = campo(&p);
+    if (!id[0]) continue;
+    snprintf(a->p.id, sizeof a->p.id, "%s", id);
+    a->p.quandoS = atoll(quando);
+    if (v2) {
+      // Os mesmos campos da escolha a mao, na mesma ordem (linhaGravar).
+      a->p.altura = atoi(campo(&p));
+      snprintf(a->p.trilha, sizeof a->p.trilha, "%s", campo(&p));
+      snprintf(a->p.provedor, sizeof a->p.provedor, "%s", campo(&p));
+      snprintf(a->p.rotulo, sizeof a->p.rotulo, "%s", campo(&p));
+      snprintf(a->p.bingeGroup, sizeof a->p.bingeGroup, "%s", campo(&p));
+      snprintf(a->p.arquivo, sizeof a->p.arquivo, "%s", campo(&p));
+      snprintf(a->p.lancamento, sizeof a->p.lancamento, "%s", campo(&p));
+      if (!a->p.provedor[0]) continue;
+    } else {
+      // v1: id, quando, bingeGroup (e, por algumas horas de 15/10, provedor e
+      // lancamento). So o grupo: casa pela camada do bingeGroup, como antes.
+      snprintf(a->p.bingeGroup, sizeof a->p.bingeGroup, "%s", campo(&p));
+      snprintf(a->p.provedor, sizeof a->p.provedor, "%s", campo(&p));
+      snprintf(a->p.lancamento, sizeof a->p.lancamento, "%s", campo(&p));
+      if (!a->p.bingeGroup[0] && !a->p.lancamento[0]) continue;
+    }
+    a->sessao = sessaoTem(id);   // do disco: so e "desta sessao" se este processo gravou
     nAuto++;
   }
   free(b);
@@ -536,22 +580,19 @@ static void autoCarregar(void) {
 
 static void autoGravar(void) {
   revisao++;
-  size_t cap = (size_t)FONTEPREF_MAX * 400u + 64u, k = 0;
+  size_t cap = (size_t)FONTEPREF_MAX * 950u + 64u, k = 0;
   char *buf = (char *)malloc(cap);
   int i;
   if (!buf) return;
-  k += (size_t)snprintf(buf + k, cap - k, "# nuvio fontes auto v1\n");
-  for (i = 0; i < nAuto && k + 1 < cap; i++)
-    k += (size_t)snprintf(buf + k, cap - k, "%s\t%lld\t%s\t%s\t%s\n", tabAuto[i].id,
-                          tabAuto[i].quandoS, tabAuto[i].bingeGroup,
-                          tabAuto[i].provedor, tabAuto[i].lancamento);
+  k += (size_t)snprintf(buf + k, cap - k, "# nuvio fontes auto v2\n");
+  for (i = 0; i < nAuto && k + 1 < cap; i++) k += linhaGravar(buf + k, cap - k, &tabAuto[i].p);
   dados_gravar(arquivoAuto(), buf);
   free(buf);
 }
 
 static int autoAchar(const char *base) {
   int i;
-  for (i = 0; i < nAuto; i++) if (!strcmp(tabAuto[i].id, base)) return i;
+  for (i = 0; i < nAuto; i++) if (!strcmp(tabAuto[i].p.id, base)) return i;
   return -1;
 }
 
@@ -677,6 +718,9 @@ const FontePref *fontepref_do_titulo(const char *id) {
   fontepref_id_base(id, base, sizeof base);
   k = achar(base);
   if (k < 0) return NULL;
+  // "Reusar o grupo entre sessoes" desligado vale tambem para a escolha a
+  // mao: so a feita (ou confirmada) por este processo conta.
+  if (!cfgBingeSessoes && !sessaoTem(base)) return NULL;
   if (venceu(&tabela[k])) {
     // Nao apaga e nao grava: ver a nota em fontepref.h. A linha morre sozinha
     // na proxima escolha (reescrita) ou quando a tabela encher (a mais antiga
@@ -703,21 +747,7 @@ int fontepref_guardar(const char *id, const Stream *s) {
   fontepref_id_base(id, base, sizeof base);
   if (!base[0]) return 0;
 
-  memset(&novo, 0, sizeof novo);
-  snprintf(novo.id, sizeof novo.id, "%s", base);
-  snprintf(novo.provedor, sizeof novo.provedor, "%s", s->provedor);
-  snprintf(novo.rotulo, sizeof novo.rotulo, "%s", s->rotulo);
-  snprintf(novo.bingeGroup, sizeof novo.bingeGroup, "%s", s->bingeGroup);
-  fileKey(s->arquivo, novo.arquivo, sizeof novo.arquivo);
-  fontepref_lancamento(s, novo.lancamento, sizeof novo.lancamento);
-  fontepref_trilha(s, novo.trilha, sizeof novo.trilha);
-  novo.altura = s->altura;
-  novo.quandoS = (long long)time(NULL);
-  limpar(novo.provedor);
-  limpar(novo.rotulo);
-  limpar(novo.trilha);
-  limpar(novo.bingeGroup);
-  limpar(novo.arquivo);
+  montar(base, s, &novo);
 
   // A manual SUBSTITUI a automatica do titulo: com a escolha da pessoa gravada
   // a automatica nao tem mais papel (e ressurgiria se a manual sumisse).
@@ -735,23 +765,18 @@ int fontepref_guardar(const char *id, const Stream *s) {
     } else {
       k = nTab++;
     }
-  } else if (!strcmp(tabela[k].provedor, novo.provedor) &&
-             !strcmp(tabela[k].trilha, novo.trilha) &&
-             !strcmp(tabela[k].bingeGroup, novo.bingeGroup) &&
-             !strcmp(tabela[k].rotulo, novo.rotulo) &&
-             !strcmp(tabela[k].arquivo, novo.arquivo) &&
-             !strcmp(tabela[k].lancamento, novo.lancamento) &&
-             tabela[k].altura == novo.altura &&
-             !venceu(&tabela[k])) {
+  } else if (mesmoRegistro(&tabela[k], &novo) && !venceu(&tabela[k])) {
     // Mesma escolha de novo: nao reescrever o arquivo por um carimbo de tempo.
     // MENOS quando ela venceu — ai o carimbo E a novidade, e sem reescrever a
     // pessoa reescolheria a mesma fonte a cada abertura ate o fim dos tempos.
     // The file name enters the comparison because it was the missing field:
     // two sources equal in everything but that were "the same choice", and the
     // person's re-pick was dropped in silence (the Scandal bug).
+    sessaoMarcar(base);
     return 0;
   }
   tabela[k] = novo;
+  sessaoMarcar(base);
   gravar();
   printf("[fonte] preferencia de %s: %s / %s / binge=%s / lancamento=%s\n", base, novo.provedor,
          novo.trilha[0] ? novo.trilha : "(sem marca de idioma)",
@@ -866,50 +891,41 @@ static int escolherManual(const FontePref *p);
 // so se tiver mais de um dia, para nao reescrever o arquivo a cada episodio).
 // Grupo diferente que tocou: substitui — e a release que de fato existe hoje.
 int fontepref_auto_guardar(const char *id, const Stream *s) {
-  char base[24], lanc[FONTEPREF_LANC], prov[96];
+  char base[24];
   int k;
+  FontePref novo;
   long long agora = (long long)time(NULL);
-  if (!s) return 0;
-  fontepref_lancamento(s, lanc, sizeof lanc);
-  // Something has to name the source again next time: the addon's bingeGroup,
-  // or a release fingerprint WITH a group (a bare "1080p webdl" is not enough
-  // to call it the same source without a deliberate pick).
-  if (!s->bingeGroup[0] && (!lanc[0] || lanc[0] == '|')) return 0;
+  if (!s || !s->provedor[0]) return 0;
   if (!carregado) fontepref_iniciar();
   fontepref_id_base(id, base, sizeof base);
+  // A ESCOLHA A MAO MANDA: com uma em vigor (gravada, nao vencida, visivel
+  // pelos ajustes) a que o automatico tocou nao e guardada.
   if (!base[0] || fontepref_do_titulo(base)) return 0;
-  snprintf(prov, sizeof prov, "%s", s->provedor);
-  limpar(prov);
+  montar(base, s, &novo);
   k = autoAchar(base);
-  if (k >= 0 && !strcmp(tabAuto[k].bingeGroup, s->bingeGroup) &&
-      !strcmp(tabAuto[k].lancamento, lanc) && !strcmp(tabAuto[k].provedor, prov) &&
-      agora - tabAuto[k].quandoS < 24LL * 3600LL) { tabAuto[k].sessao = 1; sessaoMarcar(base); return 0; }
+  // A mesma de novo: so renova o carimbo, e so passado um dia (nao reescrever
+  // o arquivo a cada episodio).
+  if (k >= 0 && mesmoRegistro(&tabAuto[k].p, &novo) && agora - tabAuto[k].p.quandoS < 24LL * 3600LL) {
+    tabAuto[k].sessao = 1; sessaoMarcar(base); return 0;
+  }
   if (k < 0) {
     if (nAuto >= FONTEPREF_MAX) {
       int i, velho = 0;
-      for (i = 1; i < nAuto; i++) if (tabAuto[i].quandoS < tabAuto[velho].quandoS) velho = i;
+      for (i = 1; i < nAuto; i++) if (tabAuto[i].p.quandoS < tabAuto[velho].p.quandoS) velho = i;
       k = velho;
     } else k = nAuto++;
   }
-  memset(&tabAuto[k], 0, sizeof tabAuto[k]);
-  snprintf(tabAuto[k].id, sizeof tabAuto[k].id, "%s", base);
-  snprintf(tabAuto[k].bingeGroup, sizeof tabAuto[k].bingeGroup, "%s", s->bingeGroup);
-  limpar(tabAuto[k].bingeGroup);
-  snprintf(tabAuto[k].provedor, sizeof tabAuto[k].provedor, "%s", prov);
-  snprintf(tabAuto[k].lancamento, sizeof tabAuto[k].lancamento, "%s", lanc);
-  tabAuto[k].quandoS = agora;
+  tabAuto[k].p = novo;
   tabAuto[k].sessao = 1;
   sessaoMarcar(base);
   autoGravar();
-  printf("[fonte] fonte do automatico lembrada para %s: binge=%s / lancamento=%s\n", base,
-         tabAuto[k].bingeGroup[0] ? tabAuto[k].bingeGroup : "-",
-         tabAuto[k].lancamento[0] ? tabAuto[k].lancamento : "-");
+  printf("[fonte] fonte que o automatico tocou lembrada para %s: %s / binge=%s / lancamento=%s\n", base,
+         novo.provedor, novo.bingeGroup[0] ? novo.bingeGroup : "-",
+         novo.lancamento[0] ? novo.lancamento : "-");
   fflush(stdout);
   return 1;
 }
 
-// Lado de leitura: o primeiro stream do grupo que passa em stream_grupo_sem_perda
-// (a maior resolucao entre os que passam; empate fica o primeiro da lista).
 static const Stream *itemGlobal(int i, void *ctx) { (void)ctx; return stream_item(i); }
 static const Stream *itemVetor(int i, void *ctx) { return &((const Stream *)ctx)[i]; }
 
@@ -968,25 +984,21 @@ static int melhorManual(const FontePref *p, int total, const Stream *(*item)(int
   return melhor;
 }
 
-// A memoria do automatico contra uma lista: so fontes que nao rebaixam o que
-// o automatico escolheria hoje (semPerda); entre elas, a de mais pontos
-// (lancamento com grupo 1000 / bingeGroup 500 / lancamento sem grupo 300),
-// e em empate a de maior resolucao, depois a primeira.
+// A memoria do automatico contra uma lista: a MESMA pontuacao da escolha a mao
+// (casar), so entre as fontes que podem tocar aqui (semPerda: nao excluida, nao
+// barrada pelas regras do dono, a regra do MP4 da LG). Qualidade NAO entra (o
+// dono, 16/10: uma "4K" de IA nao tira a fonte que ja provou que toca).
 static int melhorAuto(const AutoPref *a, int total, const Stream *(*item)(int, void *),
-                      void *ctx, int (*semPerda)(int, void *), void *ctxPerda) {
-  int i, melhor = -1, melhorPts = 0;
+                      void *ctx, int (*semPerda)(int, void *), void *ctxPerda, const char **como) {
+  int i, melhor = -1, melhorPts = -1;
+  const char *c = "", *ci;
   for (i = 0; i < total; i++) {
-    const Stream *s = item(i, ctx);
-    int pts = 0;
-    if (!s) continue;
-    if (a->bingeGroup[0] && s->bingeGroup[0] && !strcmp(s->bingeGroup, a->bingeGroup)) pts += 500;
-    pts += pontosLanc(a->provedor, a->lancamento, s);
-    if (!pts) continue;
-    if (melhor >= 0 && (pts < melhorPts ||
-        (pts == melhorPts && s->altura <= item(melhor, ctx)->altura))) continue;
+    int pts = casar(&a->p, item(i, ctx), &ci);
+    if (pts <= melhorPts) continue;
     if (semPerda && !semPerda(i, ctxPerda)) continue;
-    melhor = i; melhorPts = pts;
+    melhorPts = pts; melhor = i; c = ci;
   }
+  if (como) *como = c;
   return melhor;
 }
 
@@ -995,18 +1007,18 @@ static int semPerdaGlobal(int i, void *ctx) { (void)ctx; return stream_grupo_sem
 // Lado de leitura: ver melhorAuto.
 static int escolherAuto(const char *id) {
   char base[24];
+  const char *como = "";
   int k, melhor;
   if (!carregado) fontepref_iniciar();
   fontepref_id_base(id, base, sizeof base);
   k = autoAchar(base);
   if (!autoUsavel(k)) return -1;
-  melhor = melhorAuto(&tabAuto[k], stream_n(), itemGlobal, NULL, semPerdaGlobal, NULL);
+  melhor = melhorAuto(&tabAuto[k], stream_n(), itemGlobal, NULL, semPerdaGlobal, NULL, &como);
   // Logged when the answer changes, not on every repeat of the same pick.
   { static char ultBase[24]; static int ultMelhor = -2;
     if (melhor >= 0 && (melhor != ultMelhor || strcmp(ultBase, base))) {
-      printf("[fonte] preferida de %s na posicao %d pela fonte do automatico (binge=%s / lancamento=%s)\n",
-             base, melhor, tabAuto[k].bingeGroup[0] ? tabAuto[k].bingeGroup : "-",
-             tabAuto[k].lancamento[0] ? tabAuto[k].lancamento : "-");
+      printf("[fonte] preferida de %s na posicao %d pela fonte que o automatico tocou, por %s (lancamento=%s)\n",
+             base, melhor, como, tabAuto[k].p.lancamento[0] ? tabAuto[k].p.lancamento : "-");
       fflush(stdout);
     }
     ultMelhor = melhor; snprintf(ultBase, sizeof ultBase, "%s", base); }
@@ -1031,7 +1043,7 @@ int fontepref_escolher_lista(const char *id, const Stream *fontes, int total,
   char base[24]; fontepref_id_base(id, base, sizeof base);
   int k = autoAchar(base);
   if (!autoUsavel(k)) return -1;
-  return melhorAuto(&tabAuto[k], total, itemVetor, (void *)fontes, semPerda, ctx);
+  return melhorAuto(&tabAuto[k], total, itemVetor, (void *)fontes, semPerda, ctx, NULL);
 }
 
 static int escolherManual(const FontePref *p) {

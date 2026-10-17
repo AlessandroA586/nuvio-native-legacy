@@ -33,6 +33,7 @@
 #include "fontevolta.h"
 #include "cacheboost.h"
 #include "retomamorna.h"
+#include "dados.h"
 #include "fonteescolha.h"
 #include "fontesonda.h"
 #include "fonteantecipa.h"
@@ -1204,6 +1205,10 @@ static int tocarFonteGuardada(void) {
     return 0;
   if (!stream_filtro_permite(&s)) return 0;
   if (fontesmortas_idade(&s) >= 0) { fontevolta_esquecer("fonte falhou antes"); return 0; }
+  if (fontesmortas_idade(&s) >= 0) {
+    fontevolta_esquecer_alvo(alvo, sessao_usuario(), perfis_ativo(), "fonte falhou antes");
+    return 0;
+  }
   marco("abrir: fonte guardada, sem busca");
   stream_definir_atual(-1);
   voltaFonte = s;
@@ -1264,7 +1269,8 @@ static void vigiarFonteGuardada(void) {
         fontevolta_pegar(alvo, sessao_usuario(), perfis_ativo(), SDL_GetTicks(), &s))
       fontesmortas_marcar(&s);
   }
-  fontevolta_esquecer(motivo);
+  { char alvo[64]; alvoPlayer(alvo, sizeof alvo);
+    fontevolta_esquecer_alvo(alvo, sessao_usuario(), perfis_ativo(), motivo); }
   player_voltar_a_esperar();
   limparFonteVOD();
   renovarListaDoPlayer();
@@ -2298,7 +2304,8 @@ static void abrirProximoEpisodio(int t, int e, int apontar) {
   } else {
     nv_perfil_sessao_destravar();
     marco("proximo episodio: buscando fontes");
-    buscarParaPlayer(); aguardandoFonte = 1;
+    buscarParaPlayer();
+    if (!(ajustes_link_reusar() && tocarFonteGuardada())) aguardandoFonte = 1;
   }
 }
 static void proximoPreparoPasso(void) {
@@ -2650,10 +2657,11 @@ static void atualizarMotivoInicio(void) {
     if (txt[0]) { printf("[fonte] ilha: %s (%u ms)\n", txt, (unsigned)sn.desdeMs); fflush(stdout); }
   }
 }
-// A FONTE DO AUTOMATICO TOCOU: guarda o bingeGroup dela (fontepref.h). So
-// depois de o video estar pronto e andando — uma fonte que foi escolhida e
-// falhou na conferencia, ou que o player nao abriu, nunca chega aqui. Serie
-// apenas (filme nao tem episodio seguinte). Uma vez por fonte/lista.
+// A FONTE DO AUTOMATICO TOCOU: vira a preferencia do titulo quando nao ha
+// escolha a mao em vigor (fontepref.h, a memoria do automatico). So depois de
+// o video estar pronto e andando — uma fonte que foi escolhida e falhou na
+// conferencia, ou que o player nao abriu, nunca chega aqui. Serie apenas
+// (filme: "Reusar o ultimo link"). Uma vez por fonte/lista.
 static void lembrarAutomatica(void) {
   static int ultAtual = -1;
   static unsigned ultGer;
@@ -3089,6 +3097,8 @@ int app_iniciar(const char *dirArte) {
   ondever_iniciar();
   arranque_etapa("app_iniciar/fontepref_iniciar");
   fontepref_iniciar();
+  // "Reusar o ultimo link" ligado guarda os links no disco (fontevolta.h).
+  fontevolta_definir_arquivo(dados_ler, dados_gravar, dados_apagar);
   fontesmortas_iniciar();
   arranque_etapa("app_iniciar/addonstats_ler");
   addonstats_ler();   // #202: latencia de cada add-on NESTA TV (addonstats.h)
@@ -4114,6 +4124,12 @@ void app_atualizar(float dt, Uint32 agora) {
   // Animacoes reduzidas valem para TODA mola e rampa do app (anim.h), nao so
   // para as telas que lembravam de perguntar. Uma leitura por quadro.
   anim_politica_reduzida = ajustes_animacoes_reduzidas();
+  // Os quatro ajustes da memoria de fonte (Reproducao > Escolha da fonte),
+  // tambem uma leitura por quadro: fontepref.h.
+  // "Preferir o mesmo grupo de fonte" governa as duas memorias: a escolha a
+  // mao (o titulo inteiro, 180 dias) e a do automatico.
+  fontepref_configurar(ajustes_fonte_grupo(), 0, ajustes_fonte_grupo(), ajustes_fonte_grupo_sessoes());
+  fontevolta_configurar(ajustes_link_reusar(), ajustes_link_prazo_s());
   // Pausa entre quadros medida uma vez, antes de qualquer tela perguntar se o
   // OK segurado venceu (segurar.h, #387).
   segurar_quadro(agora);
@@ -5880,7 +5896,10 @@ void app_atualizar(float dt, Uint32 agora) {
       diagnostico_cancelar_vazao();
       player_encerrar(); player_abrir(titulo,NULL);
       player_definir_episodio(t,e);
-      marco("buscando fontes"); buscarParaPlayer(); aguardandoFonte=1;
+      marco("buscando fontes"); buscarParaPlayer();
+      // "Reusar o ultimo link": o episodio ja tocou com um link que vale? Abre
+      // nele; a busca acima segue em segundo plano para o recuo e a folha.
+      if (!(ajustes_link_reusar() && tocarFonteGuardada())) aguardandoFonte=1;
     }
   }
   { int t,e;

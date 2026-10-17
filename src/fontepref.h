@@ -171,43 +171,45 @@ typedef struct {
   long long quandoS;                // time(NULL) da escolha
 } FontePref;
 
-// --- A MEMORIA DO AUTOMATICO (2.0.4, #310) ---------------------------------
+// --- A MEMORIA DO AUTOMATICO (2.0.4, #310; dono, 16/10/2026) -------------
 //
-// Quem nunca abre a folha de fontes nunca teve preferencia gravada, e o
-// episodio seguinte caia na pontuacao, que pode trocar de release. Agora o
-// bingeGroup da fonte que o AUTOMATICO escolheu e que TOCOU (app.c, so depois
-// de o video andar) tambem e guardado — mas SEPARADO da escolha da pessoa:
-// outra tabela, outro arquivo (fontepref-auto-p<N>.txt, que o app antigo nem
-// le, entao o formato da manual nao muda). Por isso fontepref_tem e
-// fontepref_do_titulo continuam respondendo SO pela manual: e delas que
-// dependem a folha abrir em "escolher ao reproduzir", o "Sua escolha anterior"
-// e o Retomar. A manual sempre vence: com ela gravada a automatica nem entra, e
-// gravar uma manual apaga a automatica do titulo.
-//
-// Guarda so o bingeGroup (sem grupo nao guarda nada: a heuristica de
-// provedor+audio foi feita para uma escolha deliberada). Ao ler, so segue o
-// grupo se isso nao rebaixar o que o automatico escolheria hoje
-// (stream_grupo_sem_perda: regras do dono, faixa, DV, MP4 da LG). Grupo ausente
-// na lista: cai calado na pontuacao e NAO apaga a memoria. Outro grupo que
-// TOCOU em automatico substitui (e a release que de fato esta disponivel);
-// vence o prazo da manual (FONTEPREF_VALIDADE_S).
-// 1 = guardou/atualizou; 0 = nada (sem grupo, manual existente, episodio nao).
+// A fonte que o AUTOMATICO escolheu e que TOCOU (app.c, so depois de o video
+// estar pronto e andar 3 s; serie apenas) vira preferencia do titulo quando
+// nao ha escolha a mao em vigor: o MESMO registro de uma escolha a mao
+// (provedor, trilha, bingeGroup, lancamento...), casado do MESMO jeito
+// (casar: lancamento, depois bingeGroup, depois provedor + audio). Ela mora
+// noutra tabela e noutro arquivo (fontepref-auto-p<N>.txt) porque a escolha a
+// mao MANDA:
+//   - com uma escolha a mao gravada e nao vencida, nada e guardado aqui, e a
+//     leitura usa a mao (fontepref_escolher);
+//   - escolher a mao apaga a automatica do titulo;
+//   - fontepref_tem / fontepref_do_titulo / fontepref_escolher_manual sao SO
+//     da mao: a folha nao marca a automatica como "Sua escolha anterior" e
+//     "escolher a fonte ao reproduzir" continua abrindo a folha.
+// Qualidade nao entra (uma "4K" de IA nao tira a fonte que ja provou que
+// toca); so o que nao pode tocar aqui e recusado (stream_grupo_sem_perda).
+// Nada casou: -1 e o automatico de sempre. Outra fonte que TOCOU substitui
+// (e a que de fato esta disponivel); vale o prazo da mao (FONTEPREF_VALIDADE_S).
+// 1 = guardou/atualizou; 0 = nada (sem provedor, mao em vigor, a mesma de novo).
 int fontepref_auto_guardar(const char *id, const Stream *s);
 // Como fontepref_escolher, mas SO a escolha da pessoa: para a folha de fontes e
 // para "escolher a fonte ao reproduzir", onde a automatica nao pode aparecer
 // como escolha nem tocar sozinha.
 int fontepref_escolher_manual(const char *id);
 
-// OS AJUSTES DE REPRODUCAO (Reusar a ultima fonte, Lembrar a fonte por,
-// Preferir o grupo da fonte, Reusar o grupo entre sessoes). Os valores de
-// fabrica sao o comportamento de antes deles: 1, FONTEPREF_VALIDADE_S, 1, 1.
+// OS AJUSTES DE REPRODUCAO. app.c passa "Preferir o mesmo grupo de fonte" em
+// `reusar` E em `preferirGrupo` (o dono, 16/10: lembrar a escolha a mao para o
+// titulo inteiro faz parte dele), 0 em `validadeS`, e "Reusar o grupo entre
+// sessoes" em `grupoEntreSessoes`. Os valores de fabrica sao o comportamento de
+// antes: 1, FONTEPREF_VALIDADE_S, 1, 1.
 //   reusar=0         fontepref_do_titulo/_tem/_escolher_manual nao veem a
 //                    escolha manual (ela continua gravada e gravando).
 //   validadeS        prazo da escolha manual (venceu()); <= 0 = o de fabrica.
 //   preferirGrupo=0  o bingeGroup nao decide nada: nem a camada 1 da manual
 //                    (sobra provedor + trilha) nem a memoria do automatico.
-//   grupoEntreSessoes=0  a memoria do automatico so vale para o que ESTE
-//                    processo gravou; o arquivo continua sendo escrito.
+//   grupoEntreSessoes=0  a escolha manual e a memoria do automatico so valem
+//                    para o titulo que ESTE processo gravou ou confirmou; os
+//                    arquivos continuam sendo escritos.
 // app.c chama a cada quadro; sao so atribuicoes.
 void fontepref_configurar(int reusar, long long validadeS, int preferirGrupo, int grupoEntreSessoes);
 

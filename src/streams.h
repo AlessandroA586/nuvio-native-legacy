@@ -266,11 +266,10 @@ FonteFalhaSessao *stream_preparo_tomar_politica(StreamPreparo *preparo);
 const Stream *stream_preparo_lista(const StreamPreparo *preparo, int *n);
 Stream *stream_preparo_tomar_lista(StreamPreparo *preparo, int *n);
 void stream_preparo_liberar(StreamPreparo *preparo);
-// A fonte `i` pode ser seguida por um grupo lembrado SEM rebaixar o que o
-// automatico escolheria hoje: nao excluida pelas regras do dono, grupo de
-// regras igual ou melhor, resolucao e Dolby Vision iguais ou maiores e, na LG,
-// nunca um nao-MP4 no lugar do MP4 da mesma faixa. Usada so pela memoria do
-// AUTOMATICO (fontepref); a manual nao passa por aqui, e escolha da pessoa.
+// A fonte `i` pode ser seguida pela memoria do AUTOMATICO (fontepref): nao
+// excluida, nao aviso do addon, nao barrada pelas regras do dono e, na LG,
+// nunca um nao-MP4 no lugar do MP4 da mesma resolucao. Qualidade nao conta
+// (dono, 16/10): a fonte que ja tocou manda. A manual nao passa por aqui.
 int  stream_grupo_sem_perda(int i);
 // O mesmo sem as regras de auto-play (#202): canal ao vivo.
 int  stream_automatico_canal(void);

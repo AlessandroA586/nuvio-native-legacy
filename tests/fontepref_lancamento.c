@@ -148,61 +148,94 @@ int main(void) {
   CONFERE(k >= 0 && strstr(v[k].arquivo, "-SPARKS"), "E6: SPARKS de novo (%d)", k);
   CONFERE(fontepref_escolher_lista("tt4000003:1:6", v, n, NULL, NULL) == k,
           "a lista propria do proximo episodio concorda (%d)", k);
+  // It survives a cold start (auto file v2, full record) ...
+  nTab = 0; nAuto = 0; carregado = 0;
+  k = fontepref_escolher("tt4000003:1:6");
+  CONFERE(k >= 0 && strstr(v[k].arquivo, "-SPARKS"), "auto depois do arranque frio: SPARKS (%d)", k);
+  // ... and is not a hand pick: no "Sua escolha anterior", no direct play in
+  // "escolher a fonte ao reproduzir".
+  CONFERE(!fontepref_tem("tt4000003") && fontepref_escolher_manual("tt4000003:1:6") == -1,
+          "a do automatico nao conta como escolha a mao");
+  // The hand pick is in charge: with one in force, what auto-play played is
+  // not stored; once it has expired, it is.
+  fontepref_definir_perfil(6);
+  n = lista(v, 1, ORDENS[0]);
+  stream_definir_lista(v, n);
+  CONFERE(fontepref_guardar("tt4000006:1:1", &v[posDe(v, n, "NTb")]) == 1, "NTb a mao");
+  CONFERE(fontepref_auto_guardar("tt4000006:1:2", &v[posDe(v, n, "GRP")]) == 0,
+          "com a mao em vigor, o GRP que o automatico tocou nao e guardado");
+  n = lista(v, 3, ORDENS[1]);
+  stream_definir_lista(v, n);
+  k = fontepref_escolher("tt4000006:1:3");
+  CONFERE(k >= 0 && strstr(v[k].arquivo, "-NTb"), "E3: a escolha a mao (NTb) (%d)", k);
+  tabela[achar("tt4000006")].quandoS = (long long)time(NULL) - 200LL * 24 * 3600;
+  CONFERE(fontepref_auto_guardar("tt4000006:1:3", &v[posDe(v, n, "GRP")]) == 1,
+          "a mao venceu: agora o GRP que tocou e guardado");
+  n = lista(v, 4, ORDENS[2]);
+  stream_definir_lista(v, n);
+  k = fontepref_escolher("tt4000006:1:4");
+  CONFERE(k >= 0 && strstr(v[k].arquivo, "-GRP"), "E4: o GRP (%d)", k);
+  CONFERE(fontepref_guardar("tt4000006:1:4", &v[posDe(v, n, "FLUX")]) == 1, "nova escolha a mao: FLUX");
+  k = fontepref_escolher("tt4000006:1:4");
+  CONFERE(k >= 0 && strstr(v[k].arquivo, "-FLUX"), "e ela manda de novo (%d)", k);
+  // A fake 4K does not pull the remembered release off.
+  fontepref_definir_perfil(7);
+  n = lista(v, 1, ORDENS[0]);
+  stream_definir_lista(v, n);
+  CONFERE(fontepref_auto_guardar("tt4000007:1:1", &v[posDe(v, n, "SPARKS")]) == 1, "SPARKS 1080p tocou");
+  n = lista(v, 2, ORDENS[3]);
+  fonte(&v[4], "AIOStreams", "aio|2160p", "The.Show.S01E02.2160p.AI.Upscale.HEVC-FAKE.mkv", 2160);
+  stream_definir_lista(v, 5);
+  k = fontepref_escolher("tt4000007:1:2");
+  CONFERE(k >= 0 && strstr(v[k].arquivo, "-SPARKS"), "uma 4K a mais nao tira o SPARKS (%d)", k);
 
-  // ---- 6. the settings
+  // ---- 6. the settings, as app.c passes them: "Prefer binge group" = g
+  // (the hand pick for the whole show AND the automatic memory), "across
+  // sessions" = e: fontepref_configurar(g, 0, g, e).
   fontepref_definir_perfil(1);
   n = lista(v, 4, ORDENS[1]);
   stream_definir_lista(v, n);
-  fontepref_configurar(0, 0, 1, 1);
+  fontepref_configurar(0, 0, 0, 1);
   CONFERE(fontepref_escolher("tt4000001:1:4") == -1 && !fontepref_tem("tt4000001"),
-          "Reusar a ultima fonte desligado: a escolha manual nao conta");
-  fontepref_configurar(1, 0, 1, 1);
-  k = fontepref_escolher("tt4000001:1:4");
-  CONFERE(k >= 0 && strstr(v[k].arquivo, "-FLUX"), "religado: volta (nada foi apagado) (%d)", k);
-  tabela[achar("tt4000001")].quandoS = (long long)time(NULL) - 3LL * 24 * 3600;
-  fontepref_configurar(1, 24LL * 3600, 1, 1);
-  CONFERE(fontepref_escolher("tt4000001:1:4") == -1, "Lembrar por 1 dia: escolha de 3 dias venceu");
-  fontepref_configurar(1, 0, 1, 1);
-  CONFERE(fontepref_escolher("tt4000001:1:4") >= 0, "180 dias: vale de novo");
-  // Prefer binge group off: the release still counts, the group alone not.
-  fontepref_configurar(1, 0, 0, 1);
-  k = fontepref_escolher("tt4000001:1:4");
-  CONFERE(k >= 0 && strstr(v[k].arquivo, "-FLUX"), "sem o grupo: o lancamento ainda casa (%d)", k);
-  { static const int SEM_FLUX[4] = { 3, 2, 0, 0 };
-    n = lista(v, 12, SEM_FLUX);
-    stream_definir_lista(v, n);
-    CONFERE(fontepref_escolher("tt4000001:1:12") == 0, "sem o grupo e sem o FLUX: mesmo addon e audio, a primeira"); }
-  // ... and the automatic memory is off with it.
+          "Preferir o grupo desligado: a escolha a mao nao conta");
   fontepref_definir_perfil(3);
   n = lista(v, 6, ORDENS[2]);
   for (k = 0; k < n; k++) v[k].bingeGroup[0] = 0;
   stream_definir_lista(v, n);
-  CONFERE(fontepref_escolher("tt4000003:1:6") == -1, "Preferir o grupo desligado: memoria do automatico parada");
-  // Reuse between sessions off: what this process saved counts, a cold start not.
+  CONFERE(fontepref_escolher("tt4000003:1:6") == -1, "e a memoria do automatico parada");
+  fontepref_configurar(1, 0, 1, 1);
+  k = fontepref_escolher("tt4000003:1:6");
+  CONFERE(k >= 0 && strstr(v[k].arquivo, "-SPARKS"), "religado: o automatico volta (%d)", k);
+  fontepref_definir_perfil(1);
+  n = lista(v, 4, ORDENS[1]);
+  stream_definir_lista(v, n);
+  k = fontepref_escolher("tt4000001:1:4");
+  CONFERE(k >= 0 && strstr(v[k].arquivo, "-FLUX"), "religado: a escolha a mao volta (nada foi apagado) (%d)", k);
+  tabela[achar("tt4000001")].quandoS = (long long)time(NULL) - 200LL * 24 * 3600;
+  CONFERE(fontepref_escolher("tt4000001:1:4") == -1, "escolha de 200 dias venceu (prazo de fabrica, 180)");
+  tabela[achar("tt4000001")].quandoS = (long long)time(NULL);
+  // Across sessions off: what this process picked or played counts, a cold
+  // start does not, for the hand pick and for the automatic memory.
   fontepref_configurar(1, 0, 1, 0);
-  k = fontepref_escolher("tt4000003:1:6");
-  CONFERE(k >= 0 && strstr(v[k].arquivo, "-SPARKS"), "entre sessoes desligado: o desta sessao vale (%d)", k);
-  fontepref_definir_perfil(9); fontepref_definir_perfil(3);   // a profile switch rereads the file
-  k = fontepref_escolher("tt4000003:1:6");
-  CONFERE(k >= 0 && strstr(v[k].arquivo, "-SPARKS"), "trocar de perfil nao tira a marca desta sessao (%d)", k);
-  nSessao = 0; fontepref_definir_perfil(9); fontepref_definir_perfil(3);   // = a new app start
-  CONFERE(fontepref_escolher("tt4000003:1:6") == -1, "e o lido do disco (sessao anterior) nao");
+  k = fontepref_escolher("tt4000001:1:4");
+  CONFERE(k >= 0 && strstr(v[k].arquivo, "-FLUX"), "entre sessoes desligado: a escolha desta sessao vale (%d)", k);
+  fontepref_definir_perfil(9); fontepref_definir_perfil(1);   // a profile switch rereads the file
+  stream_definir_lista(v, n);
+  k = fontepref_escolher("tt4000001:1:4");
+  CONFERE(k >= 0 && strstr(v[k].arquivo, "-FLUX"), "trocar de perfil nao tira a marca desta sessao (%d)", k);
+  nSessao = 0; fontepref_definir_perfil(9); fontepref_definir_perfil(1);   // = a new app start
+  CONFERE(fontepref_escolher("tt4000001:1:4") == -1, "a escolha a mao lida do disco (sessao anterior) nao");
+  CONFERE(fontepref_guardar("tt4000001:1:4", &v[posDe(v, n, "FLUX")]) == 0, "escolher de novo a mesma...");
+  k = fontepref_escolher("tt4000001:1:5");
+  CONFERE(k >= 0 && strstr(v[k].arquivo, "-FLUX"), "...a confirma nesta sessao (%d)", k);
+  fontepref_definir_perfil(3);
+  n = lista(v, 6, ORDENS[2]);
+  for (k = 0; k < n; k++) v[k].bingeGroup[0] = 0;
+  stream_definir_lista(v, n);
+  CONFERE(fontepref_escolher("tt4000003:1:6") == -1, "e a do automatico lida do disco tambem nao");
   fontepref_configurar(1, 0, 1, 1);
   k = fontepref_escolher("tt4000003:1:6");
   CONFERE(k >= 0 && strstr(v[k].arquivo, "-SPARKS"), "religado: volta (%d)", k);
-  // With the manual memory off, a hand-picked source feeds the automatic one.
-  fontepref_definir_perfil(4);
-  n = lista(v, 1, ORDENS[0]);
-  stream_definir_lista(v, n);
-  CONFERE(fontepref_guardar("tt4000004:1:1", &v[posDe(v, n, "GRP")]) == 1, "GRP a mao");
-  fontepref_configurar(0, 0, 1, 1);
-  CONFERE(fontepref_auto_guardar("tt4000004:1:1", &v[posDe(v, n, "GRP")]) == 1,
-          "com a manual desligada, a que tocou entra na memoria do automatico");
-  n = lista(v, 2, ORDENS[3]);
-  stream_definir_lista(v, n);
-  k = fontepref_escolher("tt4000004:1:2");
-  CONFERE(k >= 0 && strstr(v[k].arquivo, "-GRP"), "e o E2 vai no GRP (%d)", k);
-  fontepref_configurar(1, 0, 1, 1);
 
   // ---- 7. anime by kitsu id survives a cold start
   fontepref_definir_perfil(5);
