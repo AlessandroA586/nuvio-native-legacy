@@ -351,7 +351,7 @@ static int   esperandoFonte = 0;   // aberto sem URL, esperando o addon responde
 #ifdef NV_ANDROID
 static struct {
   unsigned token;
-  int legenda, nativo, adotado, buffer, cacheMb, proximo;
+  int legenda, nativo, adotado, buffer, cacheMb, proximo, kbps;
   MkvassPreparo *mkv;
   Uint32 desde;
   double segundos, pct;
@@ -1817,7 +1817,7 @@ void player_precarregar_cancelar(unsigned token) {
 static int preTituloComecarVideo(void) {
   preTitulo.nativo = (preTitulo.proximo ? video_precarregar_proximo : video_precarregar)(
       preTitulo.url, preTitulo.cab, preTitulo.segundos, preTitulo.pct,
-      preTitulo.buffer, preTitulo.cacheMb, preTitulo.token, preTitulo.audio);
+      preTitulo.buffer, preTitulo.cacheMb, preTitulo.token, preTitulo.audio, preTitulo.kbps);
   return preTitulo.nativo;
 }
 unsigned player_precarregar_novo_token(void) {
@@ -1837,7 +1837,7 @@ static int preTituloCriar(int indiceCatalogo, int t, int e, const Stream *s, uns
   if (!proximo) ling_definir_original(extras_idioma_original());
   pref = ling_legenda();
   player_precarregar_cancelar(0);
-  preTitulo.token = token; preTitulo.proximo = proximo;
+  preTitulo.token = token; preTitulo.proximo = proximo; preTitulo.kbps = stream_kbps(s);
   snprintf(preTitulo.url, sizeof preTitulo.url, "%s", s->url);
   snprintf(preTitulo.cab, sizeof preTitulo.cab, "%s", s->cabecalhos);
   snprintf(preTitulo.idioma, sizeof preTitulo.idioma, "%s", pref ? pref : "");

@@ -172,11 +172,16 @@ static void ordemETotal(void) {
   int idx, serv; char url[4096];
   const int esperado[] = {1, 0, 1, 0};
   for (int i = 0; i < 4; i++) {
+    assert(stream_falha_tem_proxima(s, ger));
+    assert(stream_falha_tem_proxima(s, ger));
+    assert(fontefalha_tentativas(s) == i && nPedidos == i);
     assert(verificar(s, ger, &idx, &serv, url) == FONTEFALHA_PROXIMA);
     assert(idx == esperado[i] && serv == i / 2);
     fontefalha_marcar_aberta(s);
   }
   assert(verificar(s, ger, &idx, &serv, url) == FONTEFALHA_FIM);
+  assert(!stream_falha_tem_proxima(s, ger));
+  assert(!stream_falha_tem_proxima(s, ger + 1));
   assert(nPedidos == 4 && fontefalha_tentativas(s) == 4);
   assert(pedidos[0].servico == 0 && pedidos[1].servico == 0 && pedidos[2].servico == 1);
   assert(!strcmp(pedidos[0].hash, "hash-a") && !strcmp(pedidos[1].hash, "hash-b"));
