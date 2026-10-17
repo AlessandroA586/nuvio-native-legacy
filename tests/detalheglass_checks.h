@@ -37,7 +37,7 @@ static int card_checks(void) {
     if (row == 3) {
       assert(tex_obter_larg(extras_colecao_fundo(), COL_CARD_W));
       desenhaColecao(100, 100, 1, 1);
-      // Empty artwork strip above the title/posters must survive the material.
+      // Artwork stays dominant but the frost must show through it (not opaque).
       unsigned char actual[32 * 4], expected[32 * 4];
       glReadPixels(400, 1080 - 120, 32, 1, GL_RGBA, GL_UNSIGNED_BYTE, actual);
       gfx_tex_aspect_atual = tex_aspecto(extras_colecao_fundo());
@@ -46,10 +46,15 @@ static int card_checks(void) {
                1, .5f, 0, COL_CARD_RAIO / COL_CARD_H, .30f, 0, 0, 1);
       gfx_tex_aspect_atual = 0;
       glReadPixels(400, 1080 - 120, 32, 1, GL_RGBA, GL_UNSIGNED_BYTE, expected);
-      int mismatch = 0;
-      for (int i = 0; i < 32 * 4; i++) mismatch += abs(actual[i] - expected[i]) > 1;
-      printf("%s: collection artwork pixels mismatch=%d\n", mismatch ? "FAIL" : "PASS", mismatch);
-      failures += mismatch != 0;
+      int diff = 0, maxd = 0;
+      for (int i = 0; i < 32 * 4; i += 4) for (int c = 0; c < 3; c++) {
+        int d = abs(actual[i + c] - expected[i + c]);
+        diff += d > 1; if (d > maxd) maxd = d;
+      }
+      // Glass: frost visible (differs from opaque art) yet art dominant (<= 90). Solid: identical.
+      int bad = ajustes_vidro() ? diff == 0 || maxd > 90 : diff != 0;
+      printf("%s: collection artwork vs frost diff=%d max=%d\n", bad ? "FAIL" : "PASS", diff, maxd);
+      failures += bad;
     }
     int ok = ajustes_vidro() ? cardMaterial == 1 && cardFrost == 1
              : row >= 2 || captionSolid == 1;
@@ -69,6 +74,8 @@ static int rows_checks(void) {
   // Pixel/card checks use the canonical 1080p frost setup separately.
   int failures = getenv("NUVIO_DETAIL_CONFIG") ? 0 : card_checks();
   int frost = ajustes_vidro_fosco() && !gfx_efeitos_minimos();
+  // NUVIO_DETAIL_FRAMES: shorter measured window for the quick check.
+  int frames = getenv("NUVIO_DETAIL_FRAMES") ? atoi(getenv("NUVIO_DETAIL_FRAMES")) : 180;
   for (int serie = 0; serie < 2; serie++)
     for (int l = 0; l < 4; l++) {
       int capt = 0, pass = 0, src = 0, up = 0, cols;
@@ -78,13 +85,13 @@ static int rows_checks(void) {
       for (int frame = 0; frame < 60; frame++) { foco.coluna = frame % cols; rows_frame(&capt, &pass, &src, &up); }
       capt = pass = src = up = 0;
       rowRects = 0; rowFill = rowBlur = 0;
-      for (int frame = 0; frame < 180; frame++) {
+      for (int frame = 0; frame < frames; frame++) {
         foco.coluna = (frame / 6) % cols;
         scrollSec[linhas[l].sec] = (float)(frame % 60) * 6;
         rows_frame(&capt, &pass, &src, &up);
       }
-      printf("%s %s: cols=%d frames=180 max-captures=%d max-passes=%d max-frost-panels=%d text-uploads=%d\n",
-             serie ? "series" : "movie", linhas[l].nome, cols, capt, pass, src, up);
+      printf("%s %s: cols=%d frames=%d max-captures=%d max-passes=%d max-frost-panels=%d text-uploads=%d\n",
+             serie ? "series" : "movie", linhas[l].nome, cols, frames, capt, pass, src, up);
       printf("%s %s budget: rects=%d fill=%.3f blur-fill=%.3f\n",
              serie ? "series" : "movie", linhas[l].nome, rowRects, rowFill, rowBlur);
       if (capt > 1 || pass > 5 || (frost ? src == 0 : src != 0 || capt != 0 || pass != 0) || up != 0 || rowRects > 260 || rowFill > 5.4 || rowBlur > .75) {

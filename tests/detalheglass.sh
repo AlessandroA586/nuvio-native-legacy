@@ -1,6 +1,7 @@
 #!/bin/bash
 # Cast / recommendations / trailers / collection on the shared glass card.
 #   bash tests/detalheglass.sh [check]   per-row frost budget (rc=0 passes)
+#   bash tests/detalheglass.sh quick   same budget, 60-frame window, < 50 s warm cache (rc=0 passes)
 #   bash tests/detalheglass.sh before|after [glass...]   PNGs, glass 0 and/or 1
 # before = detail.c at a363d821c (the Trakt comments commit this builds on).
 set -eu
@@ -11,7 +12,8 @@ export OBJ="$OUT/obj"
 mkdir -p "$OUT" "$TMPDIR" "$OBJ"
 mode=${1:-check}
 export NUVIO_SHOT_VIDRO=1 NUVIO_SHOT_VIDRO_FOSCO=1
-if [ "$mode" = check ]; then
+if [ "$mode" = check ] || [ "$mode" = quick ]; then
+  [ "$mode" = quick ] && export NUVIO_DETAIL_FRAMES=60
   NUVIO_DETAIL_CHECK=rows bash tests/detalhe_glass_shot.sh "$OUT" rows | grep -E '^(movie|series|PASS|FAIL|SKIP)'
   exit "${PIPESTATUS[0]}"
 fi

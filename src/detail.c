@@ -6351,11 +6351,13 @@ static void desenhaColecao(float x, float y, float f, float a) {
   // Anel so com "Foco no cartaz" ligado (focoprof.h); vidro usa o cartao de
   // vidro como anel, por cima da arte, logo abaixo.
   if (!ajustes_vidro()) foco_anel(r, raio, f, a);
-  // The shared frost reads the page backdrop; keep collection art above it.
+  // The shared frost reads the page backdrop; the art sits over it, translucent.
   else gfx_vidro_material(r, raio, GFX_VIDRO_DENS, a);
   if (t) {
     gfx_tex_aspect_atual = tex_aspecto(fundo);
-    gfx_rect(r, t, GFX_VITRINE, 1.0f, 0.5f, 0.0f, raio, 0.30f, 0, 0, a);
+    // Glass: art at 0.8 so the frost underneath shows through it.
+    gfx_rect(r, t, GFX_VITRINE, 1.0f, 0.5f, 0.0f, raio, 0.30f, 0, 0,
+             ajustes_vidro() ? a * 0.8f : a);
     gfx_tex_aspect_atual = 0.0f;
   } else {
     if (!ajustes_vidro()) moldura(r, COL_CARD_RAIO, a);
