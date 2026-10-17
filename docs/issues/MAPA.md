@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `b280cd6` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-17T00:05:00-03:00. 478 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `7e4b2605b` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-17T00:08:00-03:00. 478 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -1257,6 +1257,10 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 | Data | Quem | O que | Issues | Ref | Resultado | Evidência |
 |---|---|---|---|---|---|---|
+| 2026-10-17 00:08 | keeper (mapa) | Merge agente/205-loadtelab (9c3ecdf85) em integracao/2.0.5: ajuste de tela de abertura B3 integrado | - | 9c3ecdf85 | passou | git log integracao/2.0.5 |
+| 2026-10-16 23:53 | job-pi (j-rev-amigospolish) | Review de agente/205-amigospolish (fileira Amigos polida, sem Ver todos/+Adicionar): VEREDITO BLOQUEIA — P2 no scroll de toque do estilo 5; captura rc=124 = timeout do harness, nao achado | - | 8806e6aff/d95bd32e1 (agente/205-amigospolish) | falhou | /Volumes/ExternalSSD/tmp/rev/j-rev-amigospolish.log |
+| 2026-10-16 22:49 | job-pi (j-rev-loadtelab) | Segunda review do mesmo diff de agente/205-loadtelab: VEREDITO OK (prompt aponta agente/205-loadtela, branch ja merged; vale a j-revg-loadtelab) | - | 922500ef4 (agente/205-loadtelab) | passou | /Volumes/ExternalSSD/tmp/rev/j-rev-loadtelab.log |
+| 2026-10-16 22:47 | job-pi (j-revg-loadtelab) | Review de agente/205-loadtelab (ajuste "Estilo da tela de abertura" Centro A3 / Canto B3): VEREDITO OK | - | 922500ef4 (agente/205-loadtelab) | passou | /Volumes/ExternalSSD/tmp/rev/j-revg-loadtelab.log |
 | 2026-10-16 22:27 | dono (integracao) | Revert do merge agente/205-foscovelho (f40a93dc3): dono achou o fosco anterior (captura de tela) mais bonito e mais leve; otimizar esse caminho | - | f40a93dc3 | passou | log.txt + j-foscoleve3.prompt (pedido literal do dono) |
 | 2026-10-16 22:21 | job-claude (j-rev-homerefresh) | Review final de agente/205-homerefresh (#468, views Jellyfin + refresh da Home): VEREDITO OK | #468 | b0e429762/c47a40788 (agente/205-homerefresh) | passou | /Volumes/ExternalSSD/tmp/rev/j-rev-homerefresh.log |
 | 2026-10-16 22:12 | job-claude (j-rev-semepanterior) | Review final de agente/205-semepanterior (remocao do botao "episodio anterior"): VEREDITO OK | - | 4e6b592d8 (agente/205-semepanterior) | passou | /Volumes/ExternalSSD/tmp/rev/j-rev-semepanterior.log |
@@ -4388,3 +4392,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Conserto: 922500ef4 (feat(player): opening screen style setting, Center (A3) or Corner (B3)); 9c3ecdf85 (Merge agente/205-loadtelab em integracao/2.0.5)
 - Próximo passo: sai na 2.0.7; conferir o visual B3 na TV antes do tag
 - Notas: [sync 2026-10-17 00:05] Pedido do dono, branch agente/205-loadtelab. Job j-loadtelab done 22:33 (922500ef4); review OK j-revg-loadtelab (22:47, tests/player_loading rc 0); j-rev-loadtelab tambem OK. merged 9c3ecdf85 no HEAD b280cd6. Ajustes > Tela: "Estilo da tela de abertura" com Centro (A3, padrao) e Canto (B3, logo embaixo a esquerda + anel fino).
+
+### Fileira Amigos polida em todos os estilos, sem "Ver todos"/"+ Adicionar" (pedido do dono)
+
+- Plataforma: all
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: 8806e6aff (fix(friends): polish every friends row style with the Home focus, drop See all and Add pills); d95bd32e1 (fix(friends): drop the add column from classic style 5, last avatar stops RIGHT)
+- Próximo passo: fix do P2 do j-rev-amigospolish (23:53, BLOQUEIA): incluir o painel expandido do ultimo amigo na extensao do scroll de toque do estilo 5 (src/amigosfil.c:122); re-review; depois merge e teste na TV
+- Notas: [sync 2026-10-17 00:08] Dono na TCL (p-amigospolish.txt): "a fileira de amigos ta com contorno estranho ao inves do padrao de foco, ta feio, todas as versoes nao estao polidas, e tira aqueles dois botoes see all + add". Jobs j-amigospolish (23:25) e j-fix-amigospolish-r2 (23:46); 2 commits fora, sem merge. Review j-rev-amigospolish 23:53 VEREDITO BLOQUEIA (P2); tests/amigos_polish.sh rc=124 = timeout do harness de captura, nao achado; tests/recamigos.sh falha igual no HEAD limpo (pre-existente).

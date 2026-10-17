@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-17T00:05:00-03:00",
- "base": "b280cd6",
- "nota": "Sync 2026-10-17 00:05, HEAD integracao/2.0.5 b280cd6. Merge nesta janela: agente/205-loadtelab (922500ef4, pedido do dono dono-205-loadtelab; review OK j-revg-loadtelab 22:47). issues.json 10-17 01:55: nenhuma issue nova, nenhuma mudanca de estado (0); 478 issues mapeadas. Jobs vivos no snapshot: j-fix-amigospolish-r2 (agente/205-amigospolish, 2 commits fora, sem review), j-foscoleve3 (agente/205-foscoleve3, 5 commits fora, sem review = needs review), j-detalhe21b (2.1, mockups, sem commits); j-foscoleve2/j-amigospolish/j-detalhe21/j-rev-loadtelab/j-escrivao-2346 tem log vazio (RUNNING/ENOSPC), nenhum perdido. TV segue em cb7ece972 (496 merges atras); tag v2.0.6, proximo release 2.0.7.",
+ "atualizado_em": "2026-10-17T00:08:00-03:00",
+ "base": "7e4b2605b",
+ "nota": "Sync 2026-10-17 00:08, HEAD integracao/2.0.5 7e4b2605b (b280cd6 + sync anterior). Janela: merge agente/205-loadtelab (922500ef4/9c3ecdf85, pedido do dono dono-205-loadtelab, review OK j-revg-loadtelab 22:47 + j-rev-loadtelab) -> dono-205-loadtelab integrada, sai na 2.0.7. Review pos-snapshot: j-rev-amigospolish 23:53 BLOQUEIA (P2 scroll de toque no estilo 5); pedido do dono dono-205-amigospolish criado em fora_do_github (em_revisao, 2 commits fora). agente/205-foscoleve3 com 5 commits fora e sem review = needs review (nao perdido). issues.json 10-16 23:46: 80 issues, nenhuma nova, nenhuma mudanca de estado (478 mapeadas). TV segue em cb7ece972 (496 merges atras); tag v2.0.6, proximo release 2.0.7.",
  "itens": [
   {
    "numero": 1,
@@ -12149,6 +12149,42 @@
    "ref": "f40a93dc3",
    "resultado": "passou",
    "evidencia": "log.txt + j-foscoleve3.prompt (pedido literal do dono)"
+  },
+  {
+   "data": "2026-10-16 22:47",
+   "quem": "job-pi (j-revg-loadtelab)",
+   "o_que": "Review de agente/205-loadtelab (ajuste \"Estilo da tela de abertura\" Centro A3 / Canto B3): VEREDITO OK",
+   "issues": [],
+   "ref": "922500ef4 (agente/205-loadtelab)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-revg-loadtelab.log"
+  },
+  {
+   "data": "2026-10-16 22:49",
+   "quem": "job-pi (j-rev-loadtelab)",
+   "o_que": "Segunda review do mesmo diff de agente/205-loadtelab: VEREDITO OK (prompt aponta agente/205-loadtela, branch ja merged; vale a j-revg-loadtelab)",
+   "issues": [],
+   "ref": "922500ef4 (agente/205-loadtelab)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-rev-loadtelab.log"
+  },
+  {
+   "data": "2026-10-17 00:08",
+   "quem": "keeper (mapa)",
+   "o_que": "Merge agente/205-loadtelab (9c3ecdf85) em integracao/2.0.5: ajuste de tela de abertura B3 integrado",
+   "issues": [],
+   "ref": "9c3ecdf85",
+   "resultado": "passou",
+   "evidencia": "git log integracao/2.0.5"
+  },
+  {
+   "data": "2026-10-16 23:53",
+   "quem": "job-pi (j-rev-amigospolish)",
+   "o_que": "Review de agente/205-amigospolish (fileira Amigos polida, sem Ver todos/+Adicionar): VEREDITO BLOQUEIA — P2 no scroll de toque do estilo 5; captura rc=124 = timeout do harness, nao achado",
+   "issues": [],
+   "ref": "8806e6aff/d95bd32e1 (agente/205-amigospolish)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-rev-amigospolish.log"
   }
  ],
  "decisoes": [
@@ -16647,6 +16683,20 @@
    ],
    "proximo_passo": "sai na 2.0.7; conferir o visual B3 na TV antes do tag",
    "notas": "[sync 2026-10-17 00:05] Pedido do dono, branch agente/205-loadtelab. Job j-loadtelab done 22:33 (922500ef4); review OK j-revg-loadtelab (22:47, tests/player_loading rc 0); j-rev-loadtelab tambem OK. merged 9c3ecdf85 no HEAD b280cd6. Ajustes > Tela: \"Estilo da tela de abertura\" com Centro (A3, padrao) e Canto (B3, logo embaixo a esquerda + anel fino)."
+  },
+  {
+   "id": "dono-205-amigospolish",
+   "url": null,
+   "titulo": "Fileira Amigos polida em todos os estilos, sem \"Ver todos\"/\"+ Adicionar\" (pedido do dono)",
+   "plataforma": "all",
+   "status": "em_revisao",
+   "release": "2.0.7",
+   "conserto": [
+    "8806e6aff (fix(friends): polish every friends row style with the Home focus, drop See all and Add pills)",
+    "d95bd32e1 (fix(friends): drop the add column from classic style 5, last avatar stops RIGHT)"
+   ],
+   "proximo_passo": "fix do P2 do j-rev-amigospolish (23:53, BLOQUEIA): incluir o painel expandido do ultimo amigo na extensao do scroll de toque do estilo 5 (src/amigosfil.c:122); re-review; depois merge e teste na TV",
+   "notas": "[sync 2026-10-17 00:08] Dono na TCL (p-amigospolish.txt): \"a fileira de amigos ta com contorno estranho ao inves do padrao de foco, ta feio, todas as versoes nao estao polidas, e tira aqueles dois botoes see all + add\". Jobs j-amigospolish (23:25) e j-fix-amigospolish-r2 (23:46); 2 commits fora, sem merge. Review j-rev-amigospolish 23:53 VEREDITO BLOQUEIA (P2); tests/amigos_polish.sh rc=124 = timeout do harness de captura, nao achado; tests/recamigos.sh falha igual no HEAD limpo (pre-existente)."
   }
  ],
  "fechar_203": [],

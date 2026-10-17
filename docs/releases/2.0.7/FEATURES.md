@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-17 00:05, HEAD `b280cd6`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-17 00:08, HEAD `7e4b2605b`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -247,6 +247,12 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   depois do merge. Quem fica pendente é **otimizar o caminho atual**: `agente/205-foscoleve3` está com
   5 commits fora (`93b3d69ec`..`240bc60a0`, job `j-foscoleve3` ativo 23:43) e ainda sem review.
   Todas as plataformas.
+- **Fileira Amigos polida, sem "Ver todos"/"+ Adicionar"** (pedido do dono) — `agente/205-amigospolish`, 2
+  commits fora (`8806e6aff`, `d95bd32e1`): foco igual ao das outras fileiras da Home em todos os estilos,
+  cartaz em paisagem, avatar com a inicial quando não tem foto, e os dois botões da fileira saem. Review
+  `j-rev-amigospolish` **BLOQUEIA** (P2: o scroll de toque do estilo 5 não inclui o painel expandido do
+  último amigo); a captura do teste deu timeout (rc=124), não é achado. Falta o fix e a re-review antes do
+  merge. Todas as plataformas.
 - **Vistos, temporadas fantasmas, catálogo fora da cota (#548 #556 #545) e a tela de abertura** entraram
   nesta janela (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`, `922500ef4`) e já estão em Destaques:
 - **Vidaa** — `agente/205-vidaa` foi **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
@@ -486,6 +492,12 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
   **not** in 2.0.7; its round-4 review was OK (`j-rev-foscovelho-r4`, 22:08), already after the merge. What
   stays pending is **making the current path cheaper**: `agente/205-foscoleve3` now has 5 commits out
   (`93b3d69ec`..`240bc60a0`, job `j-foscoleve3` active 23:43) and no review yet. All platforms.
+- **Polished friends row, no "See all"/"+ Add"** (owner request) — `agente/205-amigospolish`, 2 commits out
+  (`8806e6aff`, `d95bd32e1`): the same focus treatment as every other Home row on every style, landscape
+  poster, initial-letter avatar when there is no photo, and the two row buttons gone. Review
+  `j-rev-amigospolish` **BLOQUEIA** (P2: style-5 touch scroll leaves out the last friend's expanded panel);
+  the screenshot test timed out (rc=124), which is not a finding. Fix and re-review before the merge.
+  All platforms.
 - **Watch tracking, ghost seasons, quota-excluded catalog (#548 #556 #545) and the opening screen** landed
   in this window (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`, `922500ef4`) and are already under Highlights:
 - **Vidaa** — `agente/205-vidaa` was **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
