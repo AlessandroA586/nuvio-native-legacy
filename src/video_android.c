@@ -34,11 +34,9 @@
 #include "video_reconexao.h"
 #include "idioma.h"
 #include "linguas.h"
-#include "audioescolha.h"
 #include "streamfitpassiva.h"
 #include "audsync.h"
 #include "cacheboost.h"
-#include "tex_cache.h"
 #include "velocidade.h"
 #include <SDL2/SDL.h>
 #include <jni.h>
@@ -64,8 +62,6 @@ static unsigned preparoAdotar;
 // F07 (optional, like abrirPosicao): cache(mb) and ganho(pct). A shell without
 // them simply has no seek cache and no boost.
 static jmethodID mCache, mGanho, mBuffer;
-// Warm resume (#492, optional too): titulo(id) and descartarGuardado().
-static jmethodID mTitulo, mDescartar, mMorno, mQuadro;
 // #202 (opcional, como os de cima): velocidade(centesimos). Casca sem ele =
 // sem a linha da velocidade.
 static jmethodID mVelocidade;
@@ -87,14 +83,6 @@ static int resolverMetodos(JNIEnv *env) {
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mAbrirRetomada = NULL; }
   mCache = (*env)->GetStaticMethodID(env, gCls, "cache", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mCache = NULL; }
-  mTitulo = (*env)->GetStaticMethodID(env, gCls, "cacheTitle", "(Ljava/lang/String;)V");
-  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mTitulo = NULL; }
-  mDescartar = (*env)->GetStaticMethodID(env, gCls, "descartarGuardado", "()V");
-  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mDescartar = NULL; }
-  mMorno = (*env)->GetStaticMethodID(env, gCls, "morno", "(I)V");
-  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mMorno = NULL; }
-  mQuadro = (*env)->GetStaticMethodID(env, gCls, "quadro", "(I)I");
-  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mQuadro = NULL; }
   mBuffer = (*env)->GetStaticMethodID(env, gCls, "buffer", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mBuffer = NULL; }
   mGanho = (*env)->GetStaticMethodID(env, gCls, "ganho", "(I)V");
@@ -343,7 +331,7 @@ static volatile int conflito, semDecoderAudio;
 // DEPOIS dele. O evento chega do fio principal ~3 ms depois (medido na TCL,
 // 02/10); um evento 2 (tocando) no meio desfaz a confirmacao.
 static volatile int pausaPedida, pausaVista;
-static volatile int durMs, bufferando, posMs, posNativoMs;
+static volatile int durMs, bufferando, posMs;
 // VELOCIDADE (#202, video.h): o ExoPlayer novo de cada abertura nasce em 1x
 // (velEnviada = 100 no abrirSessao) e o video_bombear reaplica o pedido assim
 // que ele esta pronto. setPlaybackSpeed aceita qualquer valor positivo; com o
@@ -359,9 +347,6 @@ static unsigned sessao;
 // at 100%. `cacheSessao` survives the reconnection reopens of that video.
 static int bufferPreset, bufferEnviado;
 static int cacheArmado = -1, cacheSessao, cacheEnviado, playerSessao;
-// Warm resume (#492): id of the title the player armed for the next open, the
-// one of this open (empty for trailers/channels) and the one Kotlin has.
-static char tituloArmado[96], tituloSessao[96], tituloEnviado[96];
 static int ganhoEnviado = CB_VOL_NORMAL;
 static int retomadaInicialEstado = -1;
 static pthread_mutex_t travaRetomada = PTHREAD_MUTEX_INITIALIZER;
@@ -375,8 +360,6 @@ static volatile int reconErroPend, reconErroCod, reconErroVideo;
 static int reconAudio = -1, reconLeg = -1;
 static volatile int reconFaixasPend;
 static int reconBuscarMs = -1;
-static int reconPausado;
-static int recarregarPausa = -1, recarregarPosMs;
 static char erroTxt[64];
 
 // Codigos do PlaybackException (Media3) que sao de REDE: IO_UNSPECIFIED 2000,
@@ -387,24 +370,20 @@ static int erroDeRede(int cod) { return cod >= 2000 && cod <= 2002; }
 
 void video_escolher_audio(int i);
 
-// A ORDEM DO AUDIO (audioescolha.h), como no video_tpk.c; sem regra que
-// decida, fica a do arquivo.
+// Mesma regra do video_tpk.c: sem preferencia ou sem faixa que case, fica a do
+// arquivo.
 static void escolherAudioPreferido(void) {
-  AudioCand c[MAX_FAIXAS];
-  int i, o, k;
-  if (nAudio < 2) return;
+  const char *pref = ling_audio();
+  int i;
+  if (!pref[0] || nAudio < 2) return;
+  if (audioAtual >= 0 && audioAtual < nAudio && faixaAudio[audioAtual].idioma[0] &&
+      ling_casa(faixaAudio[audioAtual].idioma, pref)) return;
   for (i = 0; i < nAudio; i++) {
-    c[i].idioma = faixaAudio[i].idioma; c[i].codec = faixaAudio[i].codec; c[i].rotulo = faixaAudio[i].rotulo;
-    c[i].canais = faixaAudio[i].canais;
-    // O FFmpeg do player decodifica DTS/TrueHD: aqui nao ha o limite da LG e
-    // da Samsung, entao DTS/TrueHD concorre igual (dts = 0): no idioma vale a
-    // primeira faixa do arquivo, seja qual for o codec (dono, 15/10).
-    c[i].dts = 0; c[i].pode = 1;
+    if (!faixaAudio[i].idioma[0] || !ling_casa(faixaAudio[i].idioma, pref)) continue;
+    printf("[video] audio preferido: %s (faixa %d de %d)\n", ling_nome(faixaAudio[i].idioma), i + 1, nAudio);
+    video_escolher_audio(i);
+    return;
   }
-  k = audioesc_escolher(c, nAudio, &o);
-  if (k < 0 || k == audioAtual) return;
-  printf("[video] audio pela ordem (%s): %s (faixa %d de %d)\n", audioesc_origem_nome(o), faixaAudio[k].rotulo, k + 1, nAudio);
-  video_escolher_audio(k);
 }
 
 // --- natives (Kotlin -> C) ----------------------------------------------------
@@ -477,10 +456,10 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeFaixasFim(JN
   fflush(stdout);
   // Recarregar de reconexao: devolve as faixas que a pessoa tinha.
   if (reconFaixasPend) {
-    if (!releitura && reconLeg >= -1 && reconLeg < nLeg) video_escolher_legenda(reconLeg);
+    if (!releitura && reconLeg >= 0 && reconLeg < nLeg) video_escolher_legenda(reconLeg);
     if (nAudio > 0) {
       reconFaixasPend = 0;
-      if (reconAudio >= 0 && reconAudio < nAudio) video_escolher_audio(reconAudio);
+      if (reconAudio > 0 && reconAudio < nAudio) video_escolher_audio(reconAudio);
     }
     printf("[video] reconexao: faixas devolvidas (audio %d, legenda %d)\n", reconAudio, reconLeg);
     fflush(stdout);
@@ -504,7 +483,7 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeLegenda(JNIE
 
 JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativePos(JNIEnv *env, jclass cls, jint ms) {
   (void)env; (void)cls;
-  posMs = posNativoMs = ms;
+  posMs = ms;
 }
 
 // ESTATISTICAS AO VIVO (video.h, VideoStats): o Kotlin manda 1x/s, do fio
@@ -602,15 +581,6 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeErroTexto(JN
   fflush(stdout);
 }
 
-// #345: keep audio diagnostics in the uploaded app log, not only logcat.
-JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeAudioLog(JNIEnv *env, jclass cls, jstring texto) {
-  char t[512];
-  (void)cls;
-  deJString(env, texto, t, sizeof t);
-  printf("[video] android audio: %s\n", t);
-  fflush(stdout);
-}
-
 JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeHdr(JNIEnv *env, jclass cls, jstring hdr, jint dv, jint atmos) {
   char h[24];
   (void)cls;
@@ -684,7 +654,7 @@ static int abrirSessao(int inicioMs, int fracao) {
   JNIEnv *env;
   ativo = 1; superficieEstavel = 0; prontoLoad = primeiroQuadro = falhou = terminou = tocando = 0;
   velEnviada = 100;
-  largura = altura = durMs = posMs = posNativoMs = 0; bufferando = 1; bufferDesde = SDL_GetTicks();
+  largura = altura = durMs = posMs = 0; bufferando = 1; bufferDesde = SDL_GetTicks();
   tocandoDesde = 0; semDecoderAudio = 0; erroTxt[0] = 0; reconErroVideo = 0;
   pausaPedida = pausaVista = 0;
   hdrAtual = "none"; dvAtual = atmosAtual = 0;
@@ -709,15 +679,6 @@ static int abrirSessao(int inicioMs, int fracao) {
     (*env)->CallStaticVoidMethod(env, gCls, mCache, (jint)cacheSessao);
     fimChamada(env);
     cacheEnviado = cacheSessao;
-  }
-  if (mTitulo && strcmp(tituloSessao, tituloEnviado)) {
-    jstring t = paraJString(env, tituloSessao);
-    if (t) {
-      (*env)->CallStaticVoidMethod(env, gCls, mTitulo, t);
-      (*env)->DeleteLocalRef(env, t);
-      fimChamada(env);
-      snprintf(tituloEnviado, sizeof tituloEnviado, "%s", tituloSessao);
-    }
   }
   {
     jstring u = paraJString(env, urlAtual);
@@ -775,17 +736,10 @@ static int abrirSessao(int inicioMs, int fracao) {
     (*env)->DeleteLocalRef(env, u);
     (*env)->DeleteLocalRef(env, c);
   }
-  int chamadaFalhou = (*env)->ExceptionCheck(env);
   fimChamada(env);
-  if (chamadaFalhou) { falhou = 1; return 0; }
   // Every Kotlin open starts at 100%: a player session re-applies its volume
   // (source change, reconnection) after the open in the same queue.
   ganhoEnviado = CB_VOL_NORMAL;
-  // Numero medido na TV TCL de 2,4 GB: 217 MB de textura + 96 MB de buffer +
-  // paralelo/preparo levaram o app a ~575 MB de PSS e o lmkd matou. So o
-  // player em tela cheia esconde a arte da home; trailers (home/detalhe) nao.
-  // Ligado so depois de abrir: falha no meio nao deixa o teto preso.
-  tex_pressao_reproducao(playerSessao);
   if (playerSessao && cacheboost_volume() != CB_VOL_NORMAL) cacheboost_backend_ganho(cacheboost_volume());
   return 1;
 }
@@ -801,27 +755,16 @@ int video_tocar_retomada(const char *u, double segundos, double pct) {
   nv_recon_zerar(&recon);
   reconPermitida = reconProxima; reconProxima = 0;
   reconIniciou = 0; reconErroPend = 0;
-  reconAudio = reconLeg = -1; reconFaixasPend = 0; reconBuscarMs = -1; reconPausado = 0;
-  recarregarPausa = -1;
+  reconAudio = reconLeg = -1; reconFaixasPend = 0; reconBuscarMs = -1;
   playerSessao = cacheArmado >= 0;
   cacheSessao = cacheArmado > 0 ? cacheArmado : 0;
   cacheArmado = -1;
-  snprintf(tituloSessao, sizeof tituloSessao, "%s", playerSessao ? tituloArmado : "");
-  tituloArmado[0] = 0;
   return abrirSessao(inicioMs, fracao);
 }
 int video_tocar_posicao(const char *u, double segundos) { return video_tocar_retomada(u, segundos, 0.0); }
 
 void cacheboost_backend_buffer(int p) { bufferPreset = p >= 0 && p <= 3 ? p : 0; }
 void cacheboost_backend_cache(int mb) { cacheArmado = mb > 0 ? mb : 0; }
-void cacheboost_backend_titulo(const char *id) { snprintf(tituloArmado, sizeof tituloArmado, "%s", id ? id : ""); }
-void cacheboost_backend_descartar(void) { if (mDescartar) kSemArg(mDescartar); }
-void cacheboost_backend_morno(int ligado) { if (mMorno) kInt(mMorno, ligado); }
-int cacheboost_backend_quadro(int acao) {
-  JNIEnv *env = ambiente(); int r = 0;
-  if (env && mQuadro) { r = (*env)->CallStaticIntMethod(env, gCls, mQuadro, acao); fimChamada(env); }
-  return r;
-}
 void cacheboost_backend_ganho(int pct) {
   if (pct < CB_VOL_MIN) pct = CB_VOL_MIN;
   if (pct > CB_VOL_MAX) pct = CB_VOL_MAX;
@@ -832,39 +775,12 @@ void cacheboost_backend_ganho(int pct) {
 int video_tocar(const char *u) { return video_tocar_posicao(u, 0.0); }
 
 void video_definir_reconexao(int sim) { reconProxima = sim ? 1 : 0; }
-int video_recarregar(void) {
-  int alvo = posNativoMs, pausado = pausaPedida;
-  if (!ativo || !prontoLoad || !urlAtual[0] || falhou || terminou ||
-      reconErroPend || video_reconectando() || recarregarPausa >= 0 ||
-      alvo < 0 || !ambiente()) return 0;
-  reconAudio = audioAtual; reconLeg = legAtual; reconFaixasPend = 1;
-  reconBuscarMs = -1;
-  recarregarPosMs = alvo;
-  if (!abrirSessao(alvo, 0)) { recarregarPausa = -1; return 0; }
-  recarregarPausa = pausado;
-  // As duas chamadas entram na mesma fila do Kotlin: a pausa pertence ao
-  // player novo, antes do prepare completar, sem alterar o audio preferido.
-  if (pausado) video_pausar(1);
-  return 1;
-}
 int  video_reconectando(void) {
   return nv_recon_ativa(&recon) && (recon.pendente || !prontoLoad) ? recon.tentativa : 0;
 }
 
 void video_bombear(void) {
   double pos = video_pos();
-  int eraRecarga = recarregarPausa >= 0;
-  if (recarregarPausa >= 0) {
-    if (falhou || terminou || !ativo) recarregarPausa = -1;
-    else if (prontoLoad && !reconErroPend && !recon.pendente) {
-      // Cascas antigas podem recusar a posicao de abertura. Nesse caso a
-      // mesma sessao recebe o seek, inclusive se a pessoa estava pausada.
-      if (recarregarPosMs > 0 && video_retomada_inicial_estado() < 0)
-        kInt(mBuscar, recarregarPosMs);
-      if (recarregarPausa) video_pausar(1);
-      recarregarPausa = -1;
-    }
-  }
   if (mVelocidade && ativo && prontoLoad && velEnviada != velPedida) {
     velEnviada = velPedida;
     kInt(mVelocidade, velEnviada);
@@ -875,7 +791,7 @@ void video_bombear(void) {
   if (prontoLoad && pos > 0.5) reconIniciou = 1;
   if (prontoLoad && reconBuscarMs < 0) nv_recon_progresso(&recon, pos);
   // O seek do recarregar sai com o player ja tocando.
-  if (reconBuscarMs >= 0 && prontoLoad && (tocando || reconPausado)) {
+  if (reconBuscarMs >= 0 && prontoLoad && tocando) {
     kInt(mBuscar, reconBuscarMs);
     printf("[video] reconexao: retomado em %ds\n", reconBuscarMs / 1000);
     fflush(stdout);
@@ -886,12 +802,8 @@ void video_bombear(void) {
     int rede = erroDeRede(reconErroCod);
     reconErroPend = 0;
     if (reconPermitida && urlAtual[0] && (reconIniciou || recon.tentativa) &&
-        nv_recon_erro(&recon, rede, SDL_GetTicks(),
-                      eraRecarga ? recarregarPosMs / 1000.0 : pos)) {
-      if (!antes && !eraRecarga) {
-        reconAudio = audioAtual; reconLeg = legAtual;
-        reconPausado = pausaPedida;
-      }
+        nv_recon_erro(&recon, rede, SDL_GetTicks(), pos)) {
+      if (!antes) { reconAudio = audioAtual; reconLeg = legAtual; }
       if (recon.tentativa != antes) {
         printf("[video] conexao caiu (%d): tentativa %d/%d, espera %us\n",
                reconErroCod, recon.tentativa, NV_RECON_MAX,
@@ -904,30 +816,19 @@ void video_bombear(void) {
       falhou = 1;
     }
   }
-  if (falhou) recarregarPausa = -1;
   if (nv_recon_vencida(&recon, SDL_GetTicks())) {
     printf("[video] reconectando: alvo %.0fs, tentativa %d\n", recon.alvo, recon.tentativa);
     fflush(stdout);
     reconFaixasPend = 1;
-    reconBuscarMs = recarregarPausa < 0 && recon.alvo > 1.0 ? (int)(recon.alvo * 1000.0) : -1;
-    if (!abrirSessao(recarregarPausa >= 0 ? recarregarPosMs : 0, 0))
-      { reconErroCod = -1; reconErroPend = 1; }
-    else if (recarregarPausa > 0) video_pausar(1);
-    else if (recarregarPausa < 0 && reconPausado) {
-      // abrirSessao nasce tocando. Enfileirar pause logo depois da abertura
-      // conserva o estado de um seek feito pausado; o seek de retomada acima
-      // aceita prontoLoad mesmo sem EV_TOCANDO.
-      pausaPedida = 1; pausaVista = 0;
-      kInt(mPausar, 1);
-    }
+    reconBuscarMs = recon.alvo > 1.0 ? (int)(recon.alvo * 1000.0) : -1;
+    if (!abrirSessao(0, 0)) { reconErroCod = -1; reconErroPend = 1; }
   }
 }
 void video_parar(void) {
   novaRetomada(-1);
   capmkv_zerar();   // fio de capitulos em voo nao alimenta o proximo titulo
   nv_recon_zerar(&recon);
-  reconErroPend = 0; reconErroVideo = 0; reconFaixasPend = 0; reconBuscarMs = -1; reconPausado = 0;
-  recarregarPausa = -1;
+  reconErroPend = 0; reconErroVideo = 0; reconFaixasPend = 0; reconBuscarMs = -1;
   if (ativo) {
     // Troca de episodio: o consumidor ja destacou o proximo buffer. Soltar
     // o decoder atual nao pode cancelar esse preparo nem o token da abertura.
@@ -938,14 +839,8 @@ void video_parar(void) {
   }
   ativo = prontoLoad = primeiroQuadro = tocando = 0; superficieEstavel = 0;
   pausaPedida = pausaVista = 0;
-  tex_pressao_reproducao(0);
 }
-void video_pausar(int p) {
-  pausaVista = 0; pausaPedida = p ? 1 : 0;
-  if (nv_recon_ativa(&recon)) reconPausado = pausaPedida;
-  if (recarregarPausa >= 0) recarregarPausa = pausaPedida;
-  kInt(mPausar, pausaPedida);
-}
+void video_pausar(int p) { pausaVista = 0; pausaPedida = p ? 1 : 0; kInt(mPausar, p ? 1 : 0); }
 int video_pausa_confirmada(void) {
   return pausaPedida && pausaVista && !tocando && ativo && prontoLoad && primeiroQuadro &&
          !falhou && !terminou && !video_reconectando();
@@ -1023,9 +918,13 @@ const char *video_url_atual(void) { return urlAtual; }
 double video_pos(void) { return prontoLoad ? posMs / 1000.0 : 0; }
 double video_duracao(void) { return durMs / 1000.0; }
 // Capitulos do MKV lidos por um fio lateral (capmkv.c, 203-capitulos).
-double video_creditos(void) { return capmkv_creditos(video_duracao()); }
-double video_buffer_fim(void) { return 0; }
-unsigned video_bufferando_ms(void) {
+double video_buffer_fim(void) {
+  double b = 0.0;
+  pthread_mutex_lock(&travaStats);
+  if (statsValido && ativo && statsAndroid.bufferSeg > 0.0) b = statsAndroid.bufferSeg;
+  pthread_mutex_unlock(&travaStats);
+  return b;
+}
   // Esperando para reconectar: o watchdog (app.c) nao troca de fonte.
   if (nv_recon_ativa(&recon)) return 0;
   return bufferando ? SDL_GetTicks() - bufferDesde : 0;

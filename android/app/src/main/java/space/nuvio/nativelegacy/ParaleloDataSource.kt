@@ -86,25 +86,70 @@ class ParaleloDataSource(
         override fun createDataSource(): DataSource = Seletor(ua ?: DEFAULT_USER_AGENT, props, unica.createDataSource(), medidor, token)
     }
 
-    // Escolhe por pedido: paralelo para arquivo progressivo, unica para o resto.
-    // Os ouvintes de transferencia (medidor de banda do ExoPlayer) vao para os dois.
+    // Escolhe por pedido: tenta paralelo para arquivo progressivo, com recuo automatico e
+    // transparente para conexao unica direta (DefaultHttpDataSource) caso ocorra qualquer erro ou recusa.
     private class Seletor(private val ua: String?, private val props: Map<String, String>,
                           private val unica: DataSource,
                           private val medidor: PassivoMedidor?, private val token: Long) : DataSource {
         private var atual: DataSource? = null
+        private var usandoParalelo = false
+        private var ultimoSpec: DataSpec? = null
+        private var bytesLidos = 0L
         private val ouvintes = ArrayList<androidx.media3.datasource.TransferListener>()
+
         override fun open(dataSpec: DataSpec): Long {
-            val d = if (serve(dataSpec.uri)) ParaleloDataSource(ua, props, medidor = medidor, token = token).also { p ->
-                for (o in ouvintes) p.addTransferListener(o)
-            } else unica
-            atual = d
-            return d.open(dataSpec)
+            ultimoSpec = dataSpec
+            bytesLidos = 0L
+            if (serve(dataSpec.uri)) {
+                try {
+                    val p = ParaleloDataSource(ua, props, medidor = medidor, token = token)
+                    for (o in ouvintes) p.addTransferListener(o)
+                    val len = p.open(dataSpec)
+                    atual = p
+                    usandoParalelo = true
+                    return len
+                } catch (e: Exception) {
+                    Log.w(TAG, "ParaleloDataSource open falhou (${e.message}), recuando para DefaultHttpDataSource direto")
+                    try { atual?.close() } catch (_: Exception) {}
+                }
+            }
+            atual = unica
+            usandoParalelo = false
+            return unica.open(dataSpec)
         }
-        override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
-            atual?.read(buffer, offset, length) ?: C.RESULT_END_OF_INPUT
-        override fun getUri(): Uri? = atual?.uri
-        override fun getResponseHeaders(): Map<String, List<String>> = atual?.responseHeaders ?: emptyMap()
-        override fun close() { try { atual?.close() } finally { atual = null } }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            if (usandoParalelo) {
+                try {
+                    val n = atual?.read(buffer, offset, length) ?: C.RESULT_END_OF_INPUT
+                    if (n > 0) bytesLidos += n
+                    return n
+                } catch (e: Exception) {
+                    Log.w(TAG, "ParaleloDataSource read falhou (${e.message}), recuando para DefaultHttpDataSource")
+                    try { atual?.close() } catch (_: Exception) {}
+                    usandoParalelo = false
+                    atual = unica
+                    val s = ultimoSpec ?: throw e
+                    val restante = s.subrange(bytesLidos)
+                    unica.open(restante)
+                    val n = unica.read(buffer, offset, length)
+                    if (n > 0) bytesLidos += n
+                    return n
+                }
+            }
+            val n = atual?.read(buffer, offset, length) ?: C.RESULT_END_OF_INPUT
+            if (n > 0) bytesLidos += n
+            return n
+        }
+
+        override fun getUri(): Uri? = atual?.uri ?: unica.uri
+        override fun getResponseHeaders(): Map<String, List<String>> = atual?.responseHeaders ?: unica.responseHeaders
+        override fun close() {
+            try { atual?.close() } finally {
+                atual = null
+                usandoParalelo = false
+            }
+        }
         override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) {
             ouvintes.add(transferListener)
             unica.addTransferListener(transferListener)
@@ -129,8 +174,8 @@ class ParaleloDataSource(
 
     private fun conectar1(u: URL, ini: Long, ultimo: Long): HttpURLConnection {
         val c = u.openConnection() as HttpURLConnection
-        c.connectTimeout = 15000
-        c.readTimeout = 20000
+        c.connectTimeout = 8000
+        c.readTimeout = 12000
         // Redirecionamento seguido A MAO (conectar): o HttpURLConnection nao
         // segue troca de protocolo (https -> http), e o AIOStreams/ElfHosted faz
         // exatamente isso — a fonte ficava em "Opening source" com um 302.
@@ -212,7 +257,7 @@ class ParaleloDataSource(
         }
         urlFinal = c.url
         fim = if (dataSpec.length != C.LENGTH_UNSET.toLong()) minOf(total, pos + dataSpec.length) else total
-        val primeiro = lerTudo(c)
+        val primeiro = lerTudo(c, PRIMEIRO.toLong())
         c.disconnect()
         bufIni = pos
         buf = primeiro
@@ -225,14 +270,19 @@ class ParaleloDataSource(
         return fim - pos
     }
 
-    private fun lerTudo(c: HttpURLConnection): ByteArray {
-        val esperado = c.contentLengthLong
-        val out = java.io.ByteArrayOutputStream(if (esperado > 0) esperado.toInt() else pedaco)
+    private fun lerTudo(c: HttpURLConnection, limiteMax: Long = -1L): ByteArray {
+        val esperadoHeader = c.contentLengthLong
+        val esperado = if (limiteMax > 0) limiteMax else esperadoHeader
+        val cap = if (esperado in 1..Int.MAX_VALUE) esperado.toInt() else pedaco
+        val out = java.io.ByteArrayOutputStream(cap)
         val origem = PassivoMedidor.origemDe(c.url)
         c.inputStream.use { inp ->
             val tmp = ByteArray(64 * 1024)
             while (true) {
-                val n = inp.read(tmp); if (n < 0) break
+                if (esperado > 0 && out.size() >= esperado) break
+                val maxLeitura = if (esperado > 0) minOf(tmp.size.toLong(), esperado - out.size()).toInt() else tmp.size
+                val n = inp.read(tmp, 0, maxLeitura)
+                if (n < 0) break
                 out.write(tmp, 0, n)
                 medidor?.bytes(token, origem, n)
                 Estat.bytes.addAndGet(n.toLong())
@@ -255,6 +305,7 @@ class ParaleloDataSource(
 
     private fun baixar(u: URL, ini: Long, ult: Long): ByteArray {
         var ultimoErro: IOException? = null
+        val tamanhoPedaco = ult - ini + 1
         repeat(TENTATIVAS) {
             if (Thread.currentThread().isInterrupted) throw IOException("cancelado")
             // Uma conexao paralela ativa, do connect ao ultimo byte. As outras
@@ -264,8 +315,8 @@ class ParaleloDataSource(
             val c = try { conectar(u, ini, ult) } catch (e: IOException) { Estat.conexoes.decrementAndGet(); medidor?.fim(token); throw e }
             try {
                 if (c.responseCode != 206) throw IOException("HTTP ${c.responseCode} no pedaco $ini-$ult")
-                val d = lerTudo(c)
-                if (d.size.toLong() != ult - ini + 1) throw IOException("pedaco curto: ${d.size} de ${ult - ini + 1}")
+                val d = lerTudo(c, tamanhoPedaco)
+                if (d.size.toLong() != tamanhoPedaco) throw IOException("pedaco curto: ${d.size} de $tamanhoPedaco")
                 return d
             } catch (e: IOException) {
                 ultimoErro = e

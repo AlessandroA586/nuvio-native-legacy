@@ -170,42 +170,42 @@ jobs:
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.6.2
-          name: Nuvio Legacy 2.0.6.2 - Juansher v1.2.3
+          tag_name: v2.0.6.3
+          name: Nuvio Legacy 2.0.6.3 - Juansher v1.2.4
           draft: false
           prerelease: false
           files: |
             dist/*
           body: |
-            ## Nuvio Legacy 2.0.6.2 - Juansher v1.2.3
+            ## Nuvio Legacy 2.0.6.3 - Juansher v1.2.4
 
-            Actualización de mantenimiento crítico enfocada en la compatibilidad de red, resolución de fuentes de streaming y eliminación de bloqueos HTTP 403/416 ante proveedores CDN y servicios Debrid.
+            Actualización crítica que soluciona los cuelgues durante la carga de películas y el error "A fonte não respondeu a tempo" (La fuente no respondió a tiempo) en fuentes Debrid y CDN.
 
             ### Información de Versión y Plataformas
             - **Versión base oficial:** `2.0.6`
-            - **Compilación técnica:** `2.0.6.2`
-            - **Edición personalizada:** `Juansher v1.2.3`
+            - **Compilación técnica:** `2.0.6.3`
+            - **Edición personalizada:** `Juansher v1.2.4`
             - **Plataformas soportadas:** Android TV, Google TV y Samsung Smart TV (Tizen).
 
-            ### Novedades en Juansher v1.2.3
-            - **User-Agent estándar en Android TV:** Se reemplazó el User-Agent heredado que causaba bloqueos HTTP 403 Forbidden por parte de Cloudflare, Real-Debrid y CDNs de streaming.
-            - **Resolución resiliente de fuentes:** Los sondeos con códigos HTTP 401/403/405/416 ya no descartan la fuente, sino que la delegan directamente a ExoPlayer para su reproducción exitosa.
-            - **Soporte de listas HLS (.m3u8) y DASH (.mpd):** Se omiten solicitudes de Range 0-63 en manifiestos adaptativos para evitar rechazos HTTP 400 y 416.
-            - **Control de concurrencia en descargas paralelas:** Conexiones balanceadas en ParaleloDataSource para prevenir bloqueos de tasa (HTTP 429) en proveedores de Debrid.
-            - **Incremento de versión técnica y versionCode:** `200602` para asegurar actualización directa sin conflictos.
+            ### Novedades en Juansher v1.2.4
+            - **Solución a lecturas bloqueantes en ParaleloDataSource:** Se acotó la lectura de streams HTTP keep-alive evitando bloqueos de hasta 20 segundos que agotaban el watchdog del reproductor.
+            - **Recuo transparente a DefaultHttpDataSource:** Si la descarga paralela por fragmentos experimenta rechazo, límite de conexiones o demora del proveedor CDN/Debrid, el reproductor conmuta de manera inmediata y transparente a la conexión directa de ExoPlayer sin interrumpir la reproducción.
+            - **Watchdog de apertura adaptado a 4K y Dolby Vision:** Se amplió el plazo de apertura manual a 45s (y 60s en contenidos pesados 4K/DV), evitando falsos positivos cuando el primer cuadro ya ha sido dibujado o el buffer continúa recibiendo datos.
+            - **Reporte continuo de buffer en Android:** `video_buffer_fim()` ahora informa en tiempo real los segundos en buffer de ExoPlayer al núcleo nativo en C.
+            - **Incremento de versión técnica y versionCode:** `200603` para actualización limpia y directa.
 
             | Platform | File |
             | :--- | :--- |
-            | Samsung Tizen 4 / 5 / 5.5 | `Nuvio-2.0.6.2-NuvioTpk40.tpk` |
-            | Samsung Tizen 6 | `Nuvio-2.0.6.2-NuvioTpk60.tpk` |
-            | Samsung Tizen 6.5 / 7 | `Nuvio-2.0.6.2-NuvioTpk65.tpk` |
-            | Samsung Tizen 8 / 9 | `Nuvio-2.0.6.2-NuvioTpk.tpk` |
-            | Android TV / Google TV, Android 7+ | `Nuvio-2.0.6.2-android.apk` |
+            | Samsung Tizen 4 / 5 / 5.5 | `Nuvio-2.0.6.3-NuvioTpk40.tpk` |
+            | Samsung Tizen 6 | `Nuvio-2.0.6.3-NuvioTpk60.tpk` |
+            | Samsung Tizen 6.5 / 7 | `Nuvio-2.0.6.3-NuvioTpk65.tpk` |
+            | Samsung Tizen 8 / 9 | `Nuvio-2.0.6.3-NuvioTpk.tpk` |
+            | Android TV / Google TV, Android 7+ | `Nuvio-2.0.6.3-android.apk` |
 
             ### Bibliotecas de Autoactualización en Segundo Plano
 
-            - `libnuvio-2.0.6.2-tpk-arm.so` (Samsung Tizen 6.0 o superior / 2021+)
-            - `libnuvio-2.0.6.2-tpk40-arm.so` (Samsung Tizen 4.0 a 5.5 / 2018-2020)
+            - `libnuvio-2.0.6.3-tpk-arm.so` (Samsung Tizen 6.0 o superior / 2021+)
+            - `libnuvio-2.0.6.3-tpk40-arm.so` (Samsung Tizen 4.0 a 5.5 / 2018-2020)
             - `SHA256SUMS.txt` (Sumas de comprobación SHA-256 de todos los archivos)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

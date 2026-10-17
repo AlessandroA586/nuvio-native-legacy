@@ -48,13 +48,6 @@ void fontevolta_guardar(const char *alvo, const char *conta, int perfil,
 int  fontevolta_pegar(const char *alvo, const char *conta, int perfil,
                       Uint32 agora, Stream *saida);
 
-// 1 when the saved URL may start before the source sheet. escolherManual is
-// "Escolher a fonte ao reproduzir": the sheet picks, so a live URL from the
-// last session must not start underneath it. The other three are the old
-// guards of tocarFonteGuardada (app.c).
-int  fontevolta_toca_guardada(int escolherManual, int falhaAtiva,
-                              int canal, int playerAberto);
-
 // Ha entrada (qualquer alvo) com esta URL? player.c usa para nao apagar a
 // entrada que esta tocando quando a lista de fontes foi trocada por baixo.
 int  fontevolta_tem_url(const char *url);
@@ -105,7 +98,7 @@ int fontevolta_decidir(const FontevoltaSinais *g, const char **motivo);
 // fonte para a qual recuar: ao vencer, o player mostra o erro, com as saidas
 // de sempre (Abrir Fontes, Voltar). So conta ate o primeiro quadro: depois
 // de pronto, buffering lento nao entra aqui.
-#define FONTE_MANUAL_PRAZO_MS 25000u
+#define FONTE_MANUAL_PRAZO_MS 45000u
 // 1 quando a abertura vencida deve virar erro: carregando, sem "pronto", sem
 // erro ja mostrado, e passou do prazo. Usa os mesmos sinais do vigia acima.
 int fontevolta_abertura_vencida(const FontevoltaSinais *g, unsigned prazoMs);
