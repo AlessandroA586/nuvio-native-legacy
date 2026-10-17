@@ -3999,15 +3999,14 @@ void gfx_vidro_pilula_cheia(GfxRect r, float raio, float foco, float a) {
   float f = foco < 0.0f ? 0.0f : (foco > 1.0f ? 1.0f : foco), cr, cg, cb;
   if (f <= 0.01f || a <= 0.001f) return;
   ajustes_acento(&cr, &cg, &cb);
-  // Glass on: a coloured accent is TINTED GLASS, not a flat fill. The glass the
-  // caller drew under it (frost, rim) stays 8 % visible, and the pill gets the
-  // same rim and top specular as the unselected glass pills. 0.92 keeps the
-  // accent >= 90 % of its solid chroma. A white/grey accent has no vividness to
-  // keep, so it stays the solid white pill of the reference.
+  // Coloured accents supply their own frost, including Library tabs/chips
+  // without a glass backing. 0.92 preserves >= 90 % of solid accent chroma.
+  // White/grey keeps the solid pill of the reference.
   if (ajustes_vidro() && !efeitosMinimos) {
     float mx = cr > cg ? (cr > cb ? cr : cb) : (cg > cb ? cg : cb);
     float mn = cr < cg ? (cr < cb ? cr : cb) : (cg < cb ? cg : cb);
     if (mx - mn > 0.1f) {
+      gfx_vidro_painel(r, raio, 0.55f, f * a);
       gfx_cor(r, raio, cr, cg, cb, GFX_VIDRO_ACENTO_ALFA * f * a);
       gfx_vidro_aro(r, raio, 1.0f, 1, 1, 1, 0.30f * f * a);
       gfx_brilho_topo(r, raio, 0.45f, 1.0f, 1.0f, 1.0f, 0.16f * f * a);

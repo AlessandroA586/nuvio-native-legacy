@@ -9,6 +9,7 @@
 #include "text.h"
 #include "tex_cache.h"
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -47,7 +48,7 @@ static void salvar(const char *dir, const char *nome) {
     memcpy(p + (LH - 1 - y) * s->pitch, t, (size_t)s->pitch);
   }
   free(t); snprintf(cam, sizeof cam, "%s/%s", dir, nome);
-  assert(SDL_SaveBMP(s, cam) == 0); SDL_FreeSurface(s); printf("captura: %s\n", cam);
+  assert(IMG_SavePNG(s, cam) == 0); SDL_FreeSurface(s); printf("captura: %s\n", cam);
 }
 // O quadro do Frost com "Vidro fosco": a luz da paleta do titulo (verde)
 // preparada como antes era assada para o fosco, a forca devolvida a 0, e o
@@ -106,7 +107,7 @@ int main(int argc, char **argv) {
     media((int)pill.x + 60, (int)pill.y + 30, 200, 36, solido);
     snprintf(n, sizeof n, "%s glass off: solid accent (%.0f,%.0f,%.0f)", T[t].nome, solido[0], solido[1], solido[2]);
     confere(fabs(solido[0] - ar * 255) <= 2 && fabs(solido[1] - ag * 255) <= 2 && fabs(solido[2] - ab * 255) <= 2, n);
-    snprintf(n, sizeof n, "%s-solido.bmp", T[t].nome); salvar(dir, n);
+    snprintf(n, sizeof n, "%s-solido.png", T[t].nome); salvar(dir, n);
     // Glass ON, over the glass pill the callers draw under it.
     ajustes_teste_tema(T[t].tema, 1);
     assert(ajustes_vidro() && ajustes_vidro_fosco());
@@ -125,7 +126,25 @@ int main(int argc, char **argv) {
     confere(luma(topo) > luma(meio) + 4.0, n);
     snprintf(n, sizeof n, "%s glass on: rim (edge luma %.1f > middle %.1f)", T[t].nome, luma(aro), luma(meio));
     confere(luma(aro) > luma(meio) + 8.0, n);
-    snprintf(n, sizeof n, "%s-vidro.bmp", T[t].nome); salvar(dir, n);
+    snprintf(n, sizeof n, "%s-vidro.png", T[t].nome); salvar(dir, n);
+  }
+  // Library tabs/chips have no glass underneath. A hard backdrop edge must
+  // become a ramp inside the standalone accent, while retaining response.
+  {
+    double v[4][3];
+    const int x[] = { 944, 956, 964, 976 };
+    for (int q = 0; q < 2; q++) {
+      quadro(0);
+      gfx_recorte(960, 0, 960, LH);
+      gfx_cor((GfxRect){0, 0, LW, LH}, 0, 1, 1, 1, 1);
+      gfx_sem_recorte();
+      gfx_vidro_pilula_cheia(pill, .5f, 1, 1);
+    }
+    for (int i = 0; i < 4; i++) pixel(x[i], 460, v[i]);
+    printf("standalone ramp: %.2f %.2f %.2f %.2f\n", luma(v[0]), luma(v[1]), luma(v[2]), luma(v[3]));
+    confere(luma(v[1]) > luma(v[0]) + .3 && luma(v[3]) > luma(v[2]) + .3,
+            "standalone accent frosts both sides of backdrop edge");
+    salvar(dir, "violeta-standalone.png");
   }
   printf("vidro_acento: %s\n", falhas ? "FALHA" : "ok");
   return falhas ? 1 : 0;
