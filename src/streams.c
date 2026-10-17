@@ -1574,6 +1574,8 @@ static int resolverUrl(const char *url, const char *cabecalhos, int segundos,
   return 0;
 }
 
+void (*stream_cdn_lembrar)(const char *orig, const char *final);
+
 static int verificarUma(int i, Conferencia *c) {
   char fim[4096], url[4096], cab[512], mime[96], addon[sizeof lista->provedor];
   int fileIdx, ok = 0;
@@ -1655,7 +1657,10 @@ static int verificarUma(int i, Conferencia *c) {
     } else if (!nv_perfil_sessao_atual(c->sessao)) { c->abortou = 1;
     } else if (playlistVazia(fim, cab)) {
       printf("[fonte] %d tem playlist vazia (canal fora do ar)\n", i);
-    } else ok = 1;
+    } else {
+      ok = 1;
+      if (stream_cdn_lembrar) stream_cdn_lembrar(url, fim);
+    }
   }
   return ok;
 }
@@ -1672,6 +1677,7 @@ int stream_url_serve(const char *url, const char *cabecalhos) {
   if (naovideo_mime(mime, fim, corpo)) return 0;
   if (enderecoDeAviso(fim)) return 0;
   if (playlistVazia(fim, cabecalhos)) return 0;
+  if (stream_cdn_lembrar) stream_cdn_lembrar(url, fim);
   return 1;
 }
 

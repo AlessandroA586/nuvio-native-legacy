@@ -34,6 +34,7 @@
 #include "ajustes.h"
 #include "proxyts.h"
 #include "dts/dts_hls_tpk.h"
+#include "cdnlink.h"
 #include <SDL2/SDL.h>
 #include <math.h>
 #include <pthread.h>
@@ -456,6 +457,127 @@ int  video_iniciar(void) {
 int  video_iniciar_auto(void) { return hAbrir != NULL; }
 int  video_registro_negado(void) { return 0; }
 
+// LINK DO CDN (cdnlink.h). O player recebe o endereco final no CDN em vez do
+// link do addon (o MediaFusion leva 2-4 s no primeiro pedido e o player desiste
+// em ~3 s). urlAtual segue sendo o link do addon: conversor, legendas, sonda do
+// MKV e o resto leem dele. Sem ganchos (testes) nada disto roda.
+static CdnlinkGanchos cdnG;
+static struct {
+  int pend;          // resolvendo num fio: o hAbrir espera (cdnBombear)
+  unsigned ger;      // pedido em curso
+  Uint32 pediuEm;
+  int usado;         // o player desta sessao recebeu o link do CDN
+  Uint32 em;         // quando esse link foi resolvido (relogio SDL)
+  int avisouVelho;
+} cdn;
+static atomic_uint cdnGer, cdnFeitoGer;
+static pthread_mutex_t cdnTrava = PTHREAD_MUTEX_INITIALIZER;
+static char cdnFinal[4096];
+static int cdnOk;
+typedef struct { char orig[4096]; char cab[2048]; unsigned ger; } CdnPedido;
+
+__attribute__((visibility("default")))
+void video_tpk_cdn_ganchos(const CdnlinkGanchos *g) {
+  if (g) cdnG = *g; else memset(&cdnG, 0, sizeof cdnG);
+}
+
+static void *fioCdn(void *arg) {
+  CdnPedido *p = arg;
+  char fim[sizeof cdnFinal];
+  int ok = cdnG.resolver(p->orig, p->cab, CDNLINK_PRAZO_S, fim, sizeof fim, NULL);
+  pthread_mutex_lock(&cdnTrava);
+  if (atomic_load(&cdnGer) == p->ger) {
+    cdnOk = ok;
+    if (ok) memcpy(cdnFinal, fim, strlen(fim) + 1); else cdnFinal[0] = 0;
+    atomic_store(&cdnFeitoGer, p->ger);
+  }
+  pthread_mutex_unlock(&cdnTrava);
+  free(p);
+  return NULL;
+}
+
+// Idade do link do CDN em uso, em ms (0 sem link do CDN).
+static Uint32 cdnIdade(void) { return cdn.usado ? SDL_GetTicks() - cdn.em : 0; }
+// O link do CDN do player ja passou da validade (cdnlink_validade_ms): toda
+// conexao nova dele (seek, retomar) arrisca o link vencido.
+static int cdnVelho(void) {
+  return cdn.usado && !cv.ativo && cdnG.validade_ms && cdnIdade() > cdnG.validade_ms();
+}
+
+// Abre urlAtual pelo CDN. 1 = cuidou da abertura (ja abriu com o link da
+// verificacao, ou o fio esta resolvendo e cdnBombear abre); 0 = abrir o link
+// do addon como sempre.
+static int cdnAbrir(void) {
+  char fim[sizeof cdnFinal];
+  unsigned idade = 0;
+  CdnPedido *p;
+  pthread_t t;
+  cdn.pend = 0; cdn.usado = 0; cdn.avisouVelho = 0;
+  atomic_fetch_add(&cdnGer, 1);
+  // So filme/episodio (reconPermitida = !canal) e so link http(s) de fora.
+  if (!cdnG.resolver || !cdnG.origem_ok || !reconPermitida || !cdnG.origem_ok(urlAtual)) return 0;
+  if (cdnG.recente && cdnG.recente(urlAtual, CDNLINK_REUSO_MS, fim, sizeof fim, &idade)) {
+    cdn.usado = 1; cdn.em = SDL_GetTicks() - idade;
+    printf("[fonte-cdn] the player gets the CDN link the check resolved %u s ago\n", idade / 1000u);
+    fflush(stdout);
+    hAbrir(fim, cabecalhos);
+    return 1;
+  }
+  p = calloc(1, sizeof *p);
+  if (!p) return 0;
+  snprintf(p->orig, sizeof p->orig, "%s", urlAtual);
+  snprintf(p->cab, sizeof p->cab, "%s", cabecalhos);
+  p->ger = atomic_load(&cdnGer);
+  cdn.ger = p->ger; cdn.pend = 1; cdn.pediuEm = SDL_GetTicks();
+  if (pthread_create(&t, NULL, fioCdn, p) != 0) { free(p); cdn.pend = 0; return 0; }
+  pthread_detach(t);
+  // O player anterior (seek com link velho, reconexao, outra fonte) nao segue
+  // tocando enquanto o link novo e resolvido.
+  if (hParar) hParar();
+  return 1;
+}
+
+// Por quadro: a resolucao terminou (ou passou do prazo) -> abre.
+static void cdnBombear(void) {
+  char fim[sizeof cdnFinal];
+  int ok;
+  if (!cdn.pend) return;
+  if (atomic_load(&cdnFeitoGer) == cdn.ger) {
+    pthread_mutex_lock(&cdnTrava);
+    ok = cdnOk;
+    memcpy(fim, cdnFinal, sizeof fim);
+    pthread_mutex_unlock(&cdnTrava);
+    cdn.pend = 0;
+    if (!ativo || parado || !hAbrir) return;
+    if (ok) {
+      cdn.usado = 1; cdn.em = SDL_GetTicks();
+      hAbrir(fim, cabecalhos);
+    } else hAbrir(urlAtual, cabecalhos);
+    return;
+  }
+  if (SDL_GetTicks() - cdn.pediuEm > (CDNLINK_PRAZO_S + 3) * 1000u) {
+    printf("[fonte-cdn] no answer in %d s: the player gets the add-on link\n", CDNLINK_PRAZO_S + 3);
+    fflush(stdout);
+    cdn.pend = 0;
+    atomic_fetch_add(&cdnGer, 1);   // o fio atrasado descarta o que achar
+    if (ativo && !parado && hAbrir) hAbrir(urlAtual, cabecalhos);
+  }
+}
+
+static int abrirSessao(void);
+// Reabre a fonte original em `alvo` com um link novo do CDN (o velho pode ter
+// vencido). Para o app e um seek: video_pronto segue 1, a posicao fica no alvo
+// e as faixas escolhidas voltam (o mesmo caminho do recarregar da reconexao).
+static void cdnRenovar(double alvo, const char *porque) {
+  printf("[fonte-cdn] CDN link is %u min old (limit %u min): %s at %.1f s reopens with a fresh link\n",
+         (unsigned)(cdnIdade() / 60000u), cdnG.validade_ms ? cdnG.validade_ms() / 60000u : 0u, porque, alvo);
+  fflush(stdout);
+  reconAudio = audioAtual; reconLeg = legAtual; reconFaixasPend = 1;
+  reconBuscarMs = alvo > 1.0 ? (int)(alvo * 1000.0) : -1;
+  cv.reabrindo = 1; cv.posMantida = alvo; cv.reabriuEm = SDL_GetTicks(); cv.reabTocandoEm = 0;
+  abrirSessao();
+}
+
 static int emTrailer = 0;   // ver video_tpk_trailer_marcar
 static int emCartao = 0;    // ver video_tpk_cartao_marcar
 // #471: o cover do cartao caiu no encaixe nesta sessao (plano maior que o
@@ -503,7 +625,7 @@ static int abrirSessao(void) {
     { char pre[48] = ""; int ms = dts_tpk_prebuffer_ms();
       if (ms > 0) snprintf(pre, sizeof pre, "X-Nuvio-Prebuffer: %d", ms);
       hAbrir(cv.url, pre); }
-  } else {
+  } else if (!cdnAbrir()) {
     hAbrir(urlAtual, cabecalhos);
   }
   // Depois do hAbrir: o host troca de sessao nele, e um aviso da sessao velha
@@ -1232,17 +1354,18 @@ static void reabrindoVigiar(void) {
   }
   if (!pronto || !tocando || cv.buscarMs >= 0 || reconBuscarMs >= 0 || recon.pendente ||
       (cv.ativo && cv.prog && !cv.deslocOk)) { cv.reabTocandoEm = 0; return; }
-  if (!cv.reabTocandoEm) cv.reabTocandoEm = agora | 1u;
+  if (!cv.reabTocandoEm) cv.reabTocandoEm = agora ? agora : 1u;   // "| 1" passava agora (par) e virava 4 G ms
   p = posReal();
   if (p < 0.3 && agora - cv.reabTocandoEm < 10000u) return;
   if (fabs(p - cv.posMantida) > 20.0 && agora - cv.reabTocandoEm < 10000u) return;
-  printf("[dts-tpk] reaberto em %u ms: posicao %.2f s (alvo %.1f s)\n",
+  printf("%s reaberto em %u ms: posicao %.2f s (alvo %.1f s)\n", cv.ativo ? "[dts-tpk]" : "[fonte-cdn]",
          (unsigned)(agora - cv.reabriuEm), p, cv.posMantida);
   fflush(stdout);
   cv.reabrindo = 0;
 }
 
 void video_bombear(void) {
+  cdnBombear();
   convBombear();
   reabrindoVigiar();
   escolhasPendentes();
@@ -1291,6 +1414,14 @@ void video_bombear(void) {
   if (reconErroPend) {
     int antes = recon.tentativa;
     int rede = nv_recon_rede_tpk(reconErroCod, NULL) || reconLinhaRede;
+    // Link do CDN e a fonte ja tocou: qualquer erro pode ser o link vencido. A
+    // reconexao abre de novo pelo link do addon, que da um link novo do CDN.
+    if (!rede && cdn.usado && !cv.ativo && reconIniciou && !recon.tentativa) {
+      rede = 1;
+      printf("[fonte-cdn] player error 0x%x after playing with a CDN link (%u min old): reconnecting with a fresh link\n",
+             (unsigned)reconErroCod, (unsigned)(cdnIdade() / 60000u));
+      fflush(stdout);
+    }
     reconErroPend = 0; reconLinhaRede = 0;
     int alvoMs = reconAlvoMs;
     reconAlvoMs = -1;
@@ -1334,6 +1465,8 @@ void video_bombear(void) {
 }
 void video_parar(void) {
   parado = 1;
+  cdn.pend = 0; cdn.usado = 0;
+  atomic_fetch_add(&cdnGer, 1);
   if (cv.ativo || cv.sondando) dts_tpk_fechar();
   memset(&cv, 0, sizeof cv); cv.buscarMs = -1; naoSupPend = 0;
   emTrailer = emCartao = 0;
@@ -1350,7 +1483,13 @@ void video_parar(void) {
   if (ativo && hParar) hParar();
   ativo = pronto = tocando = 0;
 }
-void video_pausar(int p) { pausaPedida = p != 0; vigiaAtiva = 0; if (nv_recon_ativa(&recon) && (recon.pendente || reconErroPend || !pronto || reconBuscarMs >= 0)) reconPausa = pausaPedida; else if (hPausar) hPausar(p); }
+void video_pausar(int p) {
+  int estavaPausado = pausaPedida;
+  pausaPedida = p != 0; vigiaAtiva = 0;
+  // Retomar com o link do CDN vencido: abre de novo na posicao com link novo
+  // (o player abre tocando). A pausa longa e o caso classico do link que morre.
+  if (!p && estavaPausado && pronto && cdnVelho()) { cdnRenovar(posReal(), "resume"); return; }
+  if (nv_recon_ativa(&recon) && (recon.pendente || reconErroPend || !pronto || reconBuscarMs >= 0)) reconPausa = pausaPedida; else if (hPausar) hPausar(p); }
 int video_pausa_confirmada(void) { return 0; } // host nao fornece ack por sessao
 void video_volume(int pct) { if (hVolume) hVolume(pct); }
 void video_buscar(double s) {
@@ -1378,6 +1517,8 @@ void video_buscar(double s) {
     terminou = 0;
     return;
   }
+  // Seek com o link do CDN vencido: o seek abriria uma conexao nova com ele.
+  if (pronto && cdnVelho()) { cdnRenovar(s, "seek"); terminou = 0; return; }
   if (hBuscar) hBuscar((int)(s * 1000.0));
   terminou = 0;
 }
