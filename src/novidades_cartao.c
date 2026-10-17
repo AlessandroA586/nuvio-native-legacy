@@ -85,7 +85,7 @@ typedef struct {
 } NovCena;
 
 typedef struct {
-  const char *versao;     // "2.0.6" (o titulo e "Novidades da %s")
+  const char *versao;     // "2.0.7" (o titulo e "Novidades da %s")
   const char *arquivo;    // a marca de "ja visto" (dados_*)
   const char *subtitulo;  // uma frase embaixo do titulo
   const NovItem *itens;
