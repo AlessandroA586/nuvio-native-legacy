@@ -682,7 +682,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
     by = ilha.y + (ilha.h - 60.0f) * 0.5f;
     gfx_rect((GfxRect){ 0.0f, NV_TELA_H - 400.0f, NV_TELA_W, 400.0f }, 0, GFX_VEU_BAIXO,
              0, 0, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.62f * a);
-    plrui_material(ilha, 36.0f, 0, a);
+    plrui_material_video(ilha, 36.0f, a);
     bw = plrui_botao_video(ilha.x + 28.0f, by, "Cena pós-créditos — continuar assistindo", "pl_play-f", 1.0f, a);
     if (visivel && a > 0.99f && a < 1.01f)
       ponteiro_alvo(ilha.x + 28.0f, by, bw, 60.0f, ponteiroComecar, NULL, 0, 0);
@@ -710,7 +710,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
     // garante a leitura sobre qualquer cena, sem escurecer o video todo.
     gfx_rect((GfxRect){ 0.0f, NV_TELA_H - 560.0f, NV_TELA_W, 560.0f }, 0, GFX_VEU_BAIXO,
              0, 0, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.62f * a);
-    plrui_material(ilha, 36.0f, 0, a);
+    plrui_material_video(ilha, 36.0f, a);
     tr = (GfxRect){ ilha.x + 28.0f, ilha.y + 28.0f, 448.0f, 252.0f };
     { const char *arte = (px && px->thumb[0]) ? px->thumb : (ci ? ci->backdrop : "");
       GLuint t = arte[0] ? tex_obter_larg(arte, tr.w) : 0;
@@ -775,7 +775,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
     GfxRect ilha = { x, NV_TELA_H - 444.0f - extra + sobe, NV_TELA_W - 2.0f * x, 444.0f + extra - 40.0f };
     float y = ilha.y + 26.0f, cx;
     if (n > PP_MAX) n = PP_MAX;
-    plrui_material(ilha, 36.0f, 0, a);
+    plrui_material_video(ilha, 36.0f, a);
     { float kx = ilha.x + 34.0f, yc = y + 15.0f;
       float kickerW = plrui_kicker("Mais como este", kx, yc - 9.0f, 243, 242, 239, a * 0.45f);
       if (telefoneui_ativo()) yc += 34;

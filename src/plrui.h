@@ -26,6 +26,11 @@ void plrui_linha_foco(GfxRect r, float raioPx, float a);
 // FOCO DE BOTAO: pilula cheia no acento com a luz colorida por baixo (o
 // box-shadow 0 8 28 acento 35% do mockup), nos dois materiais.
 void plrui_pilula_foco(GfxRect r, float a);
+// Video variant: live frame keeps shining through the focused accent pill.
+void plrui_pilula_foco_video(GfxRect r, float a);
+// Island over live video (post-play / error cards): the shared material where
+// glass exists; glass off keeps the opacity-adjustable tint, never #15161A.
+void plrui_material_video(GfxRect r, float raioPx, float a);
 // Botao em repouso dentro de uma ilha: branco 8% (solido #24262C).
 void plrui_botao_repouso(GfxRect r, float a);
 // Video variant: glass off keeps the live frame visible through the fill.

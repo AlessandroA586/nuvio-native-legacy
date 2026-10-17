@@ -5432,7 +5432,7 @@ static void corpoErro(GfxRect r, float a, void *u) {
       GfxRect b = {x + i * (w + 12) * .5f, y, (w - 12) * .5f, 76};
       int foco = erroBotao == i, tinta = foco ? plrui_tinta() : 225;
       const char *rot = i18n(i ? "Voltar" : "Abrir Fontes");
-      if (foco) plrui_pilula_foco(b, a); else plrui_botao_repouso_video(b, a);
+      if (foco) plrui_pilula_foco_video(b, a); else plrui_botao_repouso_video(b, a);
       float th = txt_bloco_corta(TXT_G21B, rot, tinta, tinta, tinta, 0, 0, b.w - 32, 28, 0, 2);
       txt_bloco_corta(TXT_G21B, rot, tinta, tinta, tinta, b.x + 16, b.y + (b.h - th) * .5f, b.w - 32, 28, a, 2);
       if (pont) ponteiro_alvo(b.x, b.y, b.w, b.h, NULL, erroToqueAcao, i, 0);
@@ -5950,7 +5950,7 @@ void player_desenhar(Uint32 agora) {
     pd.icone = "aj_triangle-alert"; pd.corIcone = 1;
     pd.texto = i18n("Fonte");
     pd.w = erroLargura(); pd.h = alturaErro();
-    pd.corpo = corpoErro; pd.modal = 1;
+    pd.corpo = corpoErro; pd.modal = 1; pd.video = 1;
     plrilha_pedir(&pd);
   }
 
@@ -5971,7 +5971,7 @@ void player_desenhar(Uint32 agora) {
       pd.icone = toastIcone[0] ? toastIcone : "aj_info";
       pd.corIcone = toastCor;
       if (durFonteAcaoAte == toastAte) {
-        pd.w = 1000; pd.h = 88; pd.corpo = corpoDurFonte;
+        pd.w = 1000; pd.h = 88; pd.corpo = corpoDurFonte; pd.video = 1;
       }
     } else {
       int m, n = 0, k = 0;

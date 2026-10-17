@@ -52,13 +52,22 @@ void plrui_linha_foco(GfxRect r, float raioPx, float a) {
   gfx_brilho_topo(r, raio, 2.0f / (r.h > 2.0f ? r.h : 2.0f), 1, 1, 1, 0.06f * a);
 }
 
+static void pilulaFoco(GfxRect r, float a, int video);
 void plrui_pilula_foco(GfxRect r, float a) {
+  pilulaFoco(r, a, 0);
+}
+void plrui_pilula_foco_video(GfxRect r, float a) {
+  pilulaFoco(r, a, 1);
+}
+static void pilulaFoco(GfxRect r, float a, int video) {
   float ar, ag, ab;
   if (a <= 0.002f) return;
   ajustes_acento(&ar, &ag, &ab);
   gfx_rect((GfxRect){ r.x - 22.0f, r.y - 4.0f, r.w + 44.0f, r.h + 40.0f }, 0, GFX_SOMBRA,
            1.0f, 0, 0, 0.5f, ar, ag, ab, 0.42f * a);
-  gfx_cor(r, 0.5f, ar, ag, ab, a);
+  if (video && !ajustes_vidro())
+    gfx_cor(r, 0.5f, ar, ag, ab, (0.30f + 0.45f * ajustes_vidro_opacidade()) * a);
+  else gfx_cor(r, 0.5f, ar, ag, ab, a);
 }
 
 void plrui_botao_repouso(GfxRect r, float a) {
@@ -69,6 +78,18 @@ void plrui_botao_repouso(GfxRect r, float a) {
 void plrui_botao_repouso_video(GfxRect r, float a) {
   if (ajustes_vidro()) plrui_botao_repouso(r, a);
   else plrui_disco_osd(r, a);
+}
+
+// Post-play / error islands: live video behind the GL plane (same reasoning
+// as plrui_disco_osd). Glass off = the same see-through tint, not the opaque
+// island material, so an idle button in it has no opaque parent.
+void plrui_material_video(GfxRect r, float raioPx, float a) {
+  float raio = raioDe(r, raioPx);
+  if (ajustes_vidro()) { plrui_material(r, raioPx, 0, a); return; }
+  if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.002f) return;
+  gfx_sombra_sob((GfxRect){ r.x - 16.0f, r.y - 4.0f, r.w + 32.0f, r.h + 30.0f }, 1.0f, 0, 0.5f,
+                 0, 0, 0, 0.45f * a, r, raio * r.h, a);
+  gfx_cor(r, raio, 0.082f, 0.086f, 0.102f, (0.30f + 0.45f * ajustes_vidro_opacidade()) * a);
 }
 
 // The OSD discs float over the live video (hardware plane under an alpha-0
@@ -104,7 +125,10 @@ static float botao(float x, float y, const char *rotulo, const char *icone, floa
   // reacao.c) e os que ainda passam 0/1 cravado simplesmente param nos extremos.
   // Repouso esvai enquanto a pilula do acento cresce; o TEXTO rasterizado nao
   // pode trocar de cor a cada passo (cache), entao a tinta troca no ponto medio.
-  if (f > 0.005f) plrui_pilula_foco(r, a * f);
+  if (f > 0.005f) {
+    if (video) plrui_pilula_foco_video(r, a * f);
+    else plrui_pilula_foco(r, a * f);
+  }
   if (f < 0.995f) {
     if (video) plrui_botao_repouso_video(r, a * (1.0f - f));
     else plrui_botao_repouso(r, a * (1.0f - f));
