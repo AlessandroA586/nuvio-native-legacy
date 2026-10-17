@@ -148,12 +148,21 @@ void gfx_tamanho_tela(int *w, int *h) { *w = telaRealW; *h = telaRealH; }
 // e uAlt sai da altura JA ampliada — a rampa de borda segue com 1 px do alvo.
 // As passadas internas de tela cheia (luz assada, snapshot, desfoques) desligam
 // o fator: elas falam em tela real, nao em layout de camada.
-static float escUi = 1.0f, escAtiva = 1.0f, miniEscAnt = 1.0f;
+static float escUi = 1.0f, escTxt = 1.0f, escAtiva = 1.0f, miniEscAnt = 1.0f;
 static int escUiFixa;   // NUVIO_TAMANHO_UI (capturas): Ajustes nao sobrescreve
+// ESCALA DE TEXTO E COMPONENTES (gfx.h): multiplica o que o "Tamanho da
+// interface" nao cobre. As camadas ampliadas usam o produto (gfx_escala_ui);
+// home, detalhe e biblioteca ligam so ela (gfx_escala_txt_entrar).
 void gfx_escala_ui_definir(float s) { if (!escUiFixa) escUi = (s >= 0.8f && s <= 2.0f) ? s : 1.0f; }
-float gfx_escala_ui(void) { return escUi; }
+void gfx_escala_txt_definir(float s) { escTxt = (s >= 0.8f && s <= 1.5f) ? s : 1.0f; }
+float gfx_escala_ui(void) { return escUi * escTxt; }
+float gfx_escala_ui_base(void) { return escUi; }
+float gfx_escala_txt(void) { return escTxt; }
+float gfx_poster_k(void) { return escAtiva != 1.0f ? 1.0f / escTxt : 1.0f; }
 float gfx_escala(void) { return escAtiva; }
-float gfx_escala_entrar(void) { float a = escAtiva; escAtiva = escUi; return a; }
+float gfx_escala_entrar(void) { float a = escAtiva; escAtiva = escUi * escTxt; return a; }
+float gfx_escala_tela_txt(void) { return (escTxt != 1.0f && escAtiva == escTxt) ? escTxt : 1.0f; }
+float gfx_escala_txt_entrar(void) { float a = escAtiva; escAtiva = escTxt; return a; }
 void gfx_escala_sair(float anterior) { escAtiva = anterior; }
 // TRANSFORMACAO DE GRUPO (gfx_transformar): escala em torno de (ox, oy) e
 // deslocamento, em coordenadas de layout, ANTES do fator da camada. As

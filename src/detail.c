@@ -20,6 +20,8 @@
 //      conferido medindo o scrollTop nos quatro grupos.
 //   4. Ao rolar, a arte de fundo NAO desfoca: ela vai a 15% de opacidade em
 //      0.8s. O desfoque gaussiano era do app da Apple TV.
+#define NV_TXT_TELA   // NV_TELA_W/H = tela virtual da escala de texto (escala.h)
+#include "escala.h"
 #include "detail.h"
 #include "focoprof.h"
 #include "posterprov.h"
@@ -133,8 +135,8 @@ static GfxRect heroAcaoRect(float *x, float *cy, float w, float h) {
 // os desenham, la embaixo; subiram porque larguraItem e xItem, no topo,
 // precisam deles para posicionar as SECOES novas.
 // Glass UI (mockup "Detalhe", "Mais como este"): cartaz 218x327, vao 24.
-#define REL_CARD_W   212.0f
-#define REL_CARD_H   318.0f
+#define REL_CARD_W   (212.0f * gfx_poster_k())
+#define REL_CARD_H   (318.0f * gfx_poster_k())
 #define REL_CARD_GAP  32.0f
 
 // MINI CARD DA COLECAO (#194, 2a volta). Um cartao UNICO deitado, e nao uma
@@ -147,17 +149,17 @@ static GfxRect heroAcaoRect(float *x, float *cy, float w, float h) {
 #define COL_CARD_PAD  36.0f
 // Cartazes em escada no lado direito do card: o da frente e o primeiro da
 // saga, os de tras menores e deslocados para a esquerda.
-#define COL_CAPA_H   228.0f
-#define COL_CAPA_W   152.0f
-#define COL_CAPA_DX   72.0f
+#define COL_CAPA_H   (228.0f * gfx_poster_k())
+#define COL_CAPA_W   (152.0f * gfx_poster_k())
+#define COL_CAPA_DX   (72.0f * gfx_poster_k())
 // Tela de lista: coluna da colecao a esquerda, partes a direita.
 #define COLL_TOPO    120.0f
 #define COLL_ESQ_W   420.0f
 #define COLL_X       620.0f
 #define COLL_LIN_H   236.0f
 #define COLL_LIN_GAP  18.0f
-#define COLL_PO_W    140.0f
-#define COLL_PO_H    210.0f
+#define COLL_PO_W    (140.0f * gfx_poster_k())
+#define COLL_PO_H    (210.0f * gfx_poster_k())
 
 static float colecaoTopo(void) { return detalheRetrato() ? 480.0f : COLL_TOPO; }
 static GfxRect colecaoListaRect(void) {
@@ -262,11 +264,11 @@ static int  ratTemp;
 // 1 depois que ratTemp foi conciliado com a temporada da PAGINA usando a lista
 // do Trakt ja carregada. Zero enquanto a lista nao chegou — ver detail_atualizar.
 static int  ratSinc;
-#define PES_FOTO_W   280.0f
-#define PES_FOTO_H   420.0f
+#define PES_FOTO_W   (280.0f * gfx_poster_k())
+#define PES_FOTO_H   (420.0f * gfx_poster_k())
 #define PES_COL_X    (NV_DETP_X + PES_FOTO_W + 56.0f)
-#define PES_CARD_W   212.0f
-#define PES_CARD_H   318.0f
+#define PES_CARD_W   (212.0f * gfx_poster_k())
+#define PES_CARD_H   (318.0f * gfx_poster_k())
 #define PES_CARD_GAP  32.0f
 #define PES_POR_LINHA  6
 static int pessoaColunas(void) {
@@ -2093,9 +2095,9 @@ static float epEscala(void) {
   return epModerna() ? S[ajustes_ep_tamanho()] : 1.0f;
 }
 static float epThumbH(void) {
-  return epApple() ? 236.0f : epModerna() ? NV_DETP_EPM_THUMB_H * epEscala() : NV_DETP_EP_THUMB_H;
+  return (epApple() ? 236.0f : epModerna() ? NV_DETP_EPM_THUMB_H * epEscala() : NV_DETP_EP_THUMB_H) * gfx_poster_k();
 }
-static float epCardW(void) { return epApple() ? 420.0f : NV_DETP_EP_W * epEscala(); }
+static float epCardW(void) { return (epApple() ? 420.0f : NV_DETP_EP_W * epEscala()) * gfx_poster_k(); }
 static float epCardH(void) {
   if (epApple()) return 500.0f;
   if (!epModerna()) return NV_DETP_EP_H;
@@ -2105,7 +2107,7 @@ static float epCardH(void) {
   return epThumbH() + NV_DETP_EPM_SIN_DY +
          (float)NV_DETP_EPM_SIN_LINHAS * NV_DETP_EP_LD_SIN + 10.0f;
 }
-static float epCardPasso(void) { return epApple() ? 420.0f + NV_DETP_EP_GAP : NV_DETP_EP_PASSO * epEscala(); }
+static float epCardPasso(void) { return epCardW() + (epApple() ? NV_DETP_EP_GAP : (NV_DETP_EP_PASSO - NV_DETP_EP_W) * epEscala()); }
 // A placa de foco estilo Apple TV (#205): alpha da mola `f` vezes o teto
 // NV_DETP_EP_PLACA_A. Sem foco (f=0) nao ha placa; o teste le daqui.
 // Moderna: a placa tem a largura da miniatura JA com o zoom do foco (mesmas
@@ -2734,7 +2736,7 @@ static void executarMais(int dm) {
   }
 }
 
-void detail_evento(const SDL_Event *e) {
+static void detail_evento_(const SDL_Event *e) {
   pediuRelogio = 0;
   if (sinopse_aberta()) { sinopse_evento(e); return; }
 #ifdef NV_TOUCH_UI
@@ -3547,7 +3549,7 @@ static void toquePessoaFocar(int i, int b) { (void)b; pessoaFoco = i; }
 
 static float blocoAnt[3] = { -1.0f, -1.0f, -1.0f };   // Notas / Numeros / Progresso no quadro anterior
 
-void detail_atualizar(float dt, Uint32 agora) {
+static void detail_atualizar_(float dt, Uint32 agora) {
 #ifdef NV_TOUCH_UI
   toqueDetalheSincronizarModo();
 #endif
@@ -5665,7 +5667,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   // Meta: relogio + duracao + data, 20/400 rgb(179,179,179), com 38 de folga
   // entre os dois blocos. Na Moderna e ancorado na BASE da miniatura
   // (NV_DETP_EPM_META_DY), para acompanhar os tres tamanhos do card.
-  { float x = tx, y = r.y + (moderna ? epThumbH() - NV_DETP_EPM_META_DY : NV_DETP_EP_META_Y);
+  { float x = tx, y = r.y + (epThumbH() - (moderna ? NV_DETP_EPM_META_DY : NV_DETP_EP_THUMB_H - NV_DETP_EP_META_Y));
     // Relogio de 28x28. O glifo do web e um disco CHEIO em rgb(179,179,179) com
     // os ponteiros VAZADOS — o `path` do SVG recorta o L do ponteiro do disco.
     // Aqui o vazado sai pintando os ponteiros de preto por cima: naquele ponto
@@ -5728,7 +5730,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     if (ci && ci->progresso > 0 && ep && ci->temporada == ep->temporada &&
         ci->episodio == ep->episodio) prog = ci->progresso;
     if (prog > 2 && prog < 98) {
-      GfxRect tr = { tx, r.y + (moderna ? epThumbH() - NV_DETP_EPM_BARRA_DY : NV_DETP_EP_BARRA_Y), epTextoW(),
+      GfxRect tr = { tx, r.y + (epThumbH() - (moderna ? NV_DETP_EPM_BARRA_DY : NV_DETP_EP_THUMB_H - NV_DETP_EP_BARRA_Y)), epTextoW(),
                      NV_DETP_EP_BARRA_H };
       // Anda do valor que esta tela mostrava ate o novo (revela.h): na volta
       // do player a barra do episodio cresce ate onde a pessoa parou.
@@ -6482,7 +6484,7 @@ static void desenhaListaColecao(float a) {
 
   // --- coluna da colecao --------------------------------------------------
   { const char *capa = extras_colecao_capa();
-    GfxRect rc = { NV_DETP_X, COLL_TOPO, 240.0f, 360.0f };
+    GfxRect rc = { NV_DETP_X, COLL_TOPO, 240.0f * gfx_poster_k(), 360.0f * gfx_poster_k() };
     float y, tx = NV_DETP_X, tw = COLL_ESQ_W;
     if (detalheRetrato()) {
       rc.w = COLL_PO_W; rc.h = COLL_PO_H;
@@ -7046,8 +7048,8 @@ static int moverFileira(int dy) {
 // episodio ou da aba da temporada em foco. O menu se ancora nela e, depois que
 // ele pinta o veu (episodio) ou a superficie do painel (temporada), a pagina
 // redesenha a peca por cima com a MESMA funcao da fileira — o card ao lado da
-// ilha, a aba de cabecalho do painel. Em pixels reais; o menu mede pela tela
-// virtual (escala.h) e a conversao e uma divisao.
+// ilha, a aba de cabecalho do painel. Detail uses the active text layer;
+// convert its coordinates by source scale / destination menu scale.
 static GfxRect menuOrigem;
 static int     menuOrigemCol;
 static float   menuOrigemF, menuOrigemA;
@@ -7055,8 +7057,8 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora);
 static void menuDeVisto(Uint32 agora) {
   if (!episodios_menu_visivel()) { episodios_menu_desenhar(); return; }
   if (menuOrigem.w > 8.0f && (foco.fileira == SEC_EPISODIOS || foco.fileira == SEC_TEMPORADAS)) {
-    float e = gfx_escala_ui();
-    episodios_menu_ancora((GfxRect){ menuOrigem.x / e, menuOrigem.y / e, menuOrigem.w / e, menuOrigem.h / e });
+    float e = gfx_escala() / gfx_escala_ui();
+    episodios_menu_ancora((GfxRect){ menuOrigem.x * e, menuOrigem.y * e, menuOrigem.w * e, menuOrigem.h * e });
   }
   episodios_menu_desenhar();
   if (menuOrigem.w <= 8.0f) return;
@@ -7653,7 +7655,7 @@ static void maisDesenhar(void) {
   detmais_desenhar(maisAncora, 1.0f - trocaarte_visivel());
 }
 
-void detail_desenhar(Uint32 agora) {
+static void detail_desenhar_(Uint32 agora) {
 #ifdef NV_TOUCH_UI
   toqueDetalheSincronizarModo();
 #endif
@@ -7843,3 +7845,9 @@ void detail_sob_menu(int sim) {
   }
 }
 int detail_sob_menu_ativo(void) { return sobMenu; }
+
+// ESCALA DE TEXTO E COMPONENTES (escala.h): as entradas publicas ligam a camada
+// de texto; o corpo mede NV_TELA_W/H na tela virtual dela.
+void detail_evento(const SDL_Event *e) { TXT_INI(); detail_evento_(e); TXT_FIM(); }
+void detail_atualizar(float dt, Uint32 agora) { TXT_INI(); detail_atualizar_(dt, agora); TXT_FIM(); }
+void detail_desenhar(Uint32 agora) { TXT_INI(); detail_desenhar_(agora); TXT_FIM(); }

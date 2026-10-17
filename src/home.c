@@ -36,6 +36,8 @@ static void heroTempoInicio(int indice) {
   const CatItem *c = cat_item(indice);
   if (c && strcmp(heroTempo.id, c->imdb)) titulo_tempo_inicio(&heroTempo, "hero", c);
 }
+#define NV_TXT_TELA   // NV_TELA_W/H = tela virtual da escala de texto (escala.h)
+#include "escala.h"
 #include "gfx.h"
 #include "text.h"
 #include "sinopse.h"
@@ -731,7 +733,7 @@ static float homeTextoLargura(float largura) {
        : largura;
 }
 static float escalaPosterTelefone(void) {
-  return homeRetratoTelefone() ? homeLarguraUtil() * 0.28f / NV_CARD_W : 1.0f;
+  return homeRetratoTelefone() ? homeLarguraUtil() * 0.28f / (NV_CARD_W * gfx_poster_k()) : 1.0f;
 }
 
 // A tela larga de um telefone precisa deixar uma fileira ao alcance sem
@@ -866,10 +868,12 @@ static int cartazPadrao(void) {
   return layoutHome() == HOME_LAYOUT_PADRAO && !ajustes_posteres_deitados();
 }
 static float escalaCartazPadrao(void) {
-  float teto = (NV_TELA_H - topoFileiras() - NV_LEGACY_ROW_HEAD_H - NV_PAD_CARTAZ_FOLGA)
+  // Em px reais: a escala de texto engorda o topo (hero, titulos) mas nao o
+  // cartaz; o teto nunca fica abaixo do que seria com a escala em 100%.
+  float teto = (NV_TELA_H / gfx_poster_k() - topoFileiras() - NV_LEGACY_ROW_HEAD_H - NV_PAD_CARTAZ_FOLGA)
              / NV_PAD_CARTAZ_H;
   float e = escalaDoAjuste();
-  if (homeRetratoTelefone()) e *= homeLarguraUtil() * 0.28f / NV_PAD_CARTAZ_W;
+  if (homeRetratoTelefone()) e *= homeLarguraUtil() * 0.28f / (NV_PAD_CARTAZ_W * gfx_poster_k());
   return e < teto ? e : teto;
 }
 
@@ -880,10 +884,10 @@ static float escalaCartazPadrao(void) {
 // catalogo. Cartaz sempre 2:3, mesmo com "posteres deitados": a pasta pediu
 // pôster.
 static void medidaColecao(int forma, float *w, float *h) {
-  float pw = cartazPadrao() ? escalaCartazPadrao() * NV_PAD_CARTAZ_W
-                            : escalaDoAjuste() * escalaPosterTelefone() * NV_CARD_W;
-  float ph = cartazPadrao() ? escalaCartazPadrao() * NV_PAD_CARTAZ_H
-                            : escalaDoAjuste() * escalaPosterTelefone() * NV_CARD_H;
+  float pw = cartazPadrao() ? escalaCartazPadrao() * (NV_PAD_CARTAZ_W * gfx_poster_k())
+                            : escalaDoAjuste() * escalaPosterTelefone() * (NV_CARD_W * gfx_poster_k());
+  float ph = cartazPadrao() ? escalaCartazPadrao() * (NV_PAD_CARTAZ_H * gfx_poster_k())
+                            : escalaDoAjuste() * escalaPosterTelefone() * (NV_CARD_H * gfx_poster_k());
   switch (forma) {
     case COL_FORMA_QUADRADO: *w = ph;  *h = ph;  break;
     case COL_FORMA_POSTER:   *w = pw;  *h = ph;  break;
@@ -893,41 +897,41 @@ static void medidaColecao(int forma, float *w, float *h) {
       // maior. A preferencia da fileira e o teto de retrato seguem abaixo.
       if (telefoneui_ativo()) {
         float e = escalaDoAjuste() * escalaPosterTelefone();
-        *w = e * NV_CARD_LAND_W;
-        *h = e * NV_CARD_LAND_H;
-      } else { *w = 360.0f; *h = 203.0f; }
+        *w = e * (NV_CARD_LAND_W * gfx_poster_k());
+        *h = e * (NV_CARD_LAND_H * gfx_poster_k());
+      } else { *w = 360.0f * gfx_poster_k(); *h = 203.0f * gfx_poster_k(); }
       break;
   }
 }
 
 static float larguraDe(TipoFileira t) {
   switch (t) {
-    case FILEIRA_CONTINUE: return NV_DESTAQUE_W;
+    case FILEIRA_CONTINUE: return NV_DESTAQUE_W * gfx_poster_k();
     // Opção editorial já existente: card panorâmico 16:9.
     case FILEIRA_DESTAQUE: return layoutHome() == HOME_LAYOUT_DINAMICA
-                                ? NV_DIN_DEST_W : NV_DESTAQUE_EDITORIAL_W;
-    case FILEIRA_TOP10_NUM: return NV_CARD_W * escalaPosterTelefone();
-    case FILEIRA_LINHA_TEMPO: return NV_CARD_W;
-    case FILEIRA_FICHA:    return NV_FICHA_W;
-    case FILEIRA_PALCO:    return NV_CARD_W * NV_PALCO_ESC;
-    case FILEIRA_POSTER_GRANDE: return NV_POSTER_G_W;
+                                ? NV_DIN_DEST_W * gfx_poster_k() : NV_DESTAQUE_EDITORIAL_W * gfx_poster_k();
+    case FILEIRA_TOP10_NUM: return (NV_CARD_W * gfx_poster_k()) * escalaPosterTelefone();
+    case FILEIRA_LINHA_TEMPO: return (NV_CARD_W * gfx_poster_k());
+    case FILEIRA_FICHA:    return NV_FICHA_W * gfx_poster_k();
+    case FILEIRA_PALCO:    return (NV_CARD_W * gfx_poster_k()) * NV_PALCO_ESC;
+    case FILEIRA_POSTER_GRANDE: return (NV_POSTER_G_W * gfx_poster_k());
     case FILEIRA_HEROI_DIVIDIDO: return divArteH() * 2.0f / 3.0f;
-    case FILEIRA_REDONDA:  return NV_REDONDA_D;
+    case FILEIRA_REDONDA:  return (NV_REDONDA_D * gfx_poster_k());
     case FILEIRA_HEROI:    return homeLarguraUtil();   // o cartão É a fileira
-    case FILEIRA_LARGA:    return NV_DIN_LARGA_W;
+    case FILEIRA_LARGA:    return NV_DIN_LARGA_W * gfx_poster_k();
     // Opção adicional da referência: maior e quase quadrada, em 4:3.
-    case FILEIRA_DESTAQUE_QUADRADO: return NV_DESTAQUE_QUADRADO_W;
-    case FILEIRA_COLECAO: return 480.0f;
-    case FILEIRA_SERVICO: return 360.0f;
-    case FILEIRA_SOCIAL: return 540.0f;
-    case FILEIRA_TOP10: return 212.0f;
-    case FILEIRA_RETORNO: return 680.0f;
-    case FILEIRA_CATALOGOS: return 360.0f;
+    case FILEIRA_DESTAQUE_QUADRADO: return NV_DESTAQUE_QUADRADO_W * gfx_poster_k();
+    case FILEIRA_COLECAO: return 480.0f * gfx_poster_k();
+    case FILEIRA_SERVICO: return 360.0f * gfx_poster_k();
+    case FILEIRA_SOCIAL: return 540.0f * gfx_poster_k();
+    case FILEIRA_TOP10: return 212.0f * gfx_poster_k();
+    case FILEIRA_RETORNO: return 680.0f * gfx_poster_k();
+    case FILEIRA_CATALOGOS: return 360.0f * gfx_poster_k();
     default:               if (cartazPadrao())
-                             return escalaCartazPadrao() * NV_PAD_CARTAZ_W;
+                             return escalaCartazPadrao() * (NV_PAD_CARTAZ_W * gfx_poster_k());
                            return escalaDoAjuste() * escalaPosterTelefone() *
-                             (ajustes_posteres_deitados() ? NV_CARD_LAND_W
-                                                          : NV_CARD_W);
+                             (ajustes_posteres_deitados() ? (NV_CARD_LAND_W * gfx_poster_k())
+                                                          : (NV_CARD_W * gfx_poster_k()));
   }
 }
 // Quantos titulos o hero percorre. Vem do catalogo quando existe.
@@ -1410,39 +1414,39 @@ static int foco_pode_pressao_longa(void) {
 
 static float alturaDe(TipoFileira t) {
   switch (t) {
-    case FILEIRA_CONTINUE: return NV_DESTAQUE_H;
+    case FILEIRA_CONTINUE: return NV_DESTAQUE_H * gfx_poster_k();
     case FILEIRA_DESTAQUE: return layoutHome() == HOME_LAYOUT_DINAMICA
-                                ? NV_DIN_DEST_H : NV_DESTAQUE_EDITORIAL_H;
-    case FILEIRA_TOP10_NUM: return NV_CARD_H * escalaPosterTelefone();
+                                ? NV_DIN_DEST_H * gfx_poster_k() : NV_DESTAQUE_EDITORIAL_H * gfx_poster_k();
+    case FILEIRA_TOP10_NUM: return (NV_CARD_H * gfx_poster_k()) * escalaPosterTelefone();
     case FILEIRA_LINHA_TEMPO:
-    case FILEIRA_FICHA:    return NV_CARD_H;
-    case FILEIRA_PALCO:    return NV_CARD_H * NV_PALCO_ESC;
-    case FILEIRA_POSTER_GRANDE: return NV_POSTER_G_H;
+    case FILEIRA_FICHA:    return (NV_CARD_H * gfx_poster_k());
+    case FILEIRA_PALCO:    return (NV_CARD_H * gfx_poster_k()) * NV_PALCO_ESC;
+    case FILEIRA_POSTER_GRANDE: return (NV_POSTER_G_H * gfx_poster_k());
     case FILEIRA_HEROI_DIVIDIDO: return divArteH();
-    case FILEIRA_REDONDA:  return NV_REDONDA_D;
+    case FILEIRA_REDONDA:  return (NV_REDONDA_D * gfx_poster_k());
     case FILEIRA_HEROI:    return homeLarguraUtil() * NV_HEROI_ASPECT;
-    case FILEIRA_LARGA:    return NV_DIN_LARGA_H;
-    case FILEIRA_DESTAQUE_QUADRADO: return NV_DESTAQUE_QUADRADO_H;
-    case FILEIRA_COLECAO: return 270.0f;
-    case FILEIRA_SERVICO: return 203.0f;
+    case FILEIRA_LARGA:    return NV_DIN_LARGA_H * gfx_poster_k();
+    case FILEIRA_DESTAQUE_QUADRADO: return NV_DESTAQUE_QUADRADO_H * gfx_poster_k();
+    case FILEIRA_COLECAO: return 270.0f * gfx_poster_k();
+    case FILEIRA_SERVICO: return 203.0f * gfx_poster_k();
     case FILEIRA_SOCIAL:
-      if (ajustes_amigos_estilo() != 5 && amigosfil_convite()) return NV_DESTAQUE_H + 76.0f;
+      if (ajustes_amigos_estilo() != 5 && amigosfil_convite()) return (NV_DESTAQUE_H + 76.0f) * gfx_poster_k();
       switch (ajustes_amigos_estilo()) {
-        case 0: return NV_DESTAQUE_H + 76.0f;
-        case 1: return 320.0f;
-        case 2: return 410.0f;
-        case 3: return 112.0f;
-        case 4: return 376.0f;
-        default: return 240.0f;
+        case 0: return (NV_DESTAQUE_H + 76.0f) * gfx_poster_k();
+        case 1: return 320.0f * gfx_poster_k();
+        case 2: return 410.0f * gfx_poster_k();
+        case 3: return 112.0f * gfx_poster_k();
+        case 4: return 376.0f * gfx_poster_k();
+        default: return 240.0f * gfx_poster_k();
       }
-    case FILEIRA_RETORNO: return 178.0f;
-    case FILEIRA_TOP10: return 320.0f;
-    case FILEIRA_CATALOGOS: return 203.0f;
+    case FILEIRA_RETORNO: return 178.0f * gfx_poster_k();
+    case FILEIRA_TOP10: return 320.0f * gfx_poster_k();
+    case FILEIRA_CATALOGOS: return 203.0f * gfx_poster_k();
     default:               if (cartazPadrao())
-                             return escalaCartazPadrao() * NV_PAD_CARTAZ_H;
+                             return escalaCartazPadrao() * (NV_PAD_CARTAZ_H * gfx_poster_k());
                            return escalaDoAjuste() * escalaPosterTelefone() *
-                             (ajustes_posteres_deitados() ? NV_CARD_LAND_H
-                                                          : NV_CARD_H);
+                             (ajustes_posteres_deitados() ? (NV_CARD_LAND_H * gfx_poster_k())
+                                                          : (NV_CARD_H * gfx_poster_k()));
   }
 }
 static int temRotulo(TipoFileira t) {
@@ -1654,7 +1658,7 @@ static float limita43(float fator, float e) {
   // O foco cresce para BAIXO no 4:3 (cardY), e o anel fica por fora.
   hMax = hMax / (1.0f + escalaDe(FILEIRA_DESTAQUE_QUADRADO))
        - (ajustes_borda_foco() ? NV_ANEL_FOCO : 0.0f);
-  eMax = hMax / NV_DESTAQUE_QUADRADO_H;
+  eMax = hMax / (NV_DESTAQUE_QUADRADO_H * gfx_poster_k());
   if (eMax < 1.0f) eMax = 1.0f;
   teto = fator >= fil_tipo_fator(FIL_TIPO_DESTAQUE_QUADRADO_G)
        ? eMax : 1.0f + (eMax - 1.0f) * 0.5f;
@@ -1679,7 +1683,7 @@ static float limitaPosterG(float e) {
   hMax = NV_TELA_H - (topoFileiras() + NV_LEGACY_ROW_HEAD_H) - NV_43_FOLGA_BASE;
   hMax = hMax / (1.0f + escalaDe(FILEIRA_POSTER_GRANDE))
        - (ajustes_borda_foco() ? NV_ANEL_FOCO : 0.0f);
-  return e * NV_POSTER_G_H > hMax ? hMax / NV_POSTER_G_H : e;
+  return e * (NV_POSTER_G_H * gfx_poster_k()) > hMax ? hMax / (NV_POSTER_G_H * gfx_poster_k()) : e;
 }
 // A fileira do Pôster grande, ou a pasta vestida dele. A pasta so entra nos
 // tamanhos novos (fator > 1): o M de sempre nao muda de medida.
@@ -2416,7 +2420,7 @@ static int focoVertical(int dy) {
   return 1;
 }
 
-void home_evento(const SDL_Event *e) {
+static void home_evento_(const SDL_Event *e) {
   pedidoRelogio = 0;
   if (e->type == SDL_QUIT) { sair = 1; return; }
   if (homevazio_ativo(nFileiras)) {
@@ -3563,7 +3567,7 @@ static void heroAquecerVizinhos(Uint32 agora) {
   }
 }
 
-void home_atualizar(float dt, Uint32 agora) {
+static void home_atualizar_(float dt, Uint32 agora) {
   curadoria_passo();   // a curadoria da fileira Herói, no seu tempo (curadoria.h)
 #ifdef NV_TOUCH_UI
   if (!telefoneui_ativo()) { toqueHomeLimpar(); toqueHeroCancelar(); }
@@ -4679,7 +4683,7 @@ static float heroBaseCopia(int lay, GfxRect r, float empurra, float descida) {
   return NV_SHELF_TOP - NV_HERO_COPY_GAP - 24.0f + empurra + descida;
 }
 static GfxRect heroEditorialRect(int editorial, float aspect) {
-  float largura = homeRetratoTelefone() ? NV_TELA_W : 1920.0f;
+  float largura = NV_TELA_W;
   GfxRect r = {0, 0, largura, homeRetratoTelefone() ? largura * (500.0f / 1920.0f) : 500.0f};
   if (editorial == 2 && aspect > 0.0f) {
     r.w = fminf(largura, 500.0f * aspect);
@@ -6397,6 +6401,7 @@ static void desenhaPilha(const Fileira *f, int coluna, int stackN, float px, flo
   // The preview already supplies its scale; default/large rows retain it.
   if (telefoneui_ativo()) s = fminf(s, h / alturaDe(FILEIRA_TOP10));
   // Sem placa de fundo: os cartazes empilhados ja formam o card.
+  s *= gfx_poster_k();   // a pilha e arte: mantem o tamanho real na escala de texto
   int count=stackN<6?stackN:6;
   for(int k=0;k<count;k++) {
     const CatItem *it=cat_item_exato(fileiraItemIndice(f, coluna + k));if(!it)continue;
@@ -7151,7 +7156,7 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
 // Chamado pelo menu do cartaz, DEPOIS do veu: repinta o cartao focado inteiro
 // (anel, arte, veus, rotulo, logo) onde a home o pintou neste quadro. 0 se o
 // cartao focado nao foi pintado (destaque, pasta, pilha).
-int home_cartao_foco_por_cima(int indice) {
+static int home_cartao_foco_por_cima_(int indice) {
   float og;
   if (!temCartaoFoco || !temItemFoco || itemFoco.indice != indice) return 0;
   og = gfx_opacidade_grupo;
@@ -7275,7 +7280,7 @@ static float desenhaTituloFil(int r, float y, const char *rot, int cr, int cg, i
   return x0 + tl->w;
 }
 
-void home_desenhar(Uint32 agora) {
+static void home_desenhar_(Uint32 agora) {
   // Nao conservar ponteiros para o catalogo de outro quadro/perfil quando
   // nenhuma tela de titulo publica um item (pasta, social ou estado vazio).
   temItemFoco = 0;
@@ -8004,13 +8009,13 @@ void home_retomar_esquecer(void) {
 }
 int home_quer_sair(void) { return sair; }
 
-int home_ancora_foco(GfxRect *out) {
+static int home_ancora_foco_(GfxRect *out) {
   if (!temAncoraFoco || !out) return 0;
   *out = ancoraFoco;
   return 1;
 }
 
-int home_item_focado(HomeItem *out) {
+static int home_item_focado_(HomeItem *out) {
   if (!out || !temItemFoco || !perfis_sessao_atual(itemFocoSessao) ||
       itemFocoCatalogo != cat_revisao()) return 0;
   *out = itemFoco;
@@ -8159,3 +8164,29 @@ void home_abrir_sessao(void) {
   dinQueda = dinQuedaAlvo = 1.0f;
 }
 
+
+// ESCALA DE TEXTO E COMPONENTES (escala.h): a home mede e desenha na tela
+// virtual real / texto; so os cartazes voltam ao tamanho real (gfx_poster_k).
+// As entradas publicas ligam a camada. Os retangulos de foco sao sempre em
+// pixels da tela real (home.h), inclusive durante o desenho de outra camada.
+static float homeUnidade(void) { return gfx_escala_txt(); }
+void home_evento(const SDL_Event *e) { TXT_INI(); home_evento_(e); TXT_FIM(); }
+void home_atualizar(float dt, Uint32 agora) { TXT_INI(); home_atualizar_(dt, agora); TXT_FIM(); }
+void home_desenhar(Uint32 agora) { TXT_INI(); home_desenhar_(agora); TXT_FIM(); }
+int home_cartao_foco_por_cima(int indice) {
+  int r;
+  TXT_INI(); r = home_cartao_foco_por_cima_(indice); TXT_FIM();
+  return r;
+}
+int home_ancora_foco(GfxRect *out) {
+  float u = homeUnidade();
+  if (!home_ancora_foco_(out)) return 0;
+  out->x *= u; out->y *= u; out->w *= u; out->h *= u;
+  return 1;
+}
+int home_item_focado(HomeItem *out) {
+  float u = homeUnidade();
+  if (!home_item_focado_(out)) return 0;
+  out->rect.x *= u; out->rect.y *= u; out->rect.w *= u; out->rect.h *= u;
+  return 1;
+}

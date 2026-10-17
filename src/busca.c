@@ -38,6 +38,8 @@
 #include "anim.h"
 #include "revela.h"
 #include "layout.h"
+#define NV_TXT_TELA
+#include "escala.h"
 #include "segurar.h"
 #include "ajustes.h"
 #include "catalogo.h"
@@ -129,9 +131,9 @@ static float buTopoEsq(void) {
 // Rotulo em caixa alta (15/700) 18 acima do conteudo; melhor resultado 226 de
 // altura (capa 330x186 + padding 20); cartaz 180x270, nome 17 a 10 abaixo.
 #define BU_KICK_H       34.0f
-#define BU_MELHOR_H    226.0f
-#define BU_CARTAZ_W    180.0f
-#define BU_CARTAZ_H    270.0f
+#define BU_MELHOR_H    fmaxf(226.0f, 186.0f * gfx_poster_k() + 40.0f)
+#define BU_CARTAZ_W    (180.0f * gfx_poster_k())
+#define BU_CARTAZ_H    (270.0f * gfx_poster_k())
 #define BU_NOME_ALT     (buTecladoNativo() ? 50.0f : 30.0f)
 #define BU_SECAO_GAP    34.0f
 
@@ -1039,7 +1041,7 @@ static int menuNoResultado(void) {
   return ctxlista_abrir(itemFoco.indice, itemFoco.rect, arte);
 }
 
-void busca_evento(const SDL_Event *e) {
+static void busca_evento_(const SDL_Event *e) {
   pediuRelogio = 0;
   buInterfaceAtualizar();
   if (e->type == SDL_QUIT) { sair = 1; return; }
@@ -1255,8 +1257,7 @@ void busca_evento(const SDL_Event *e) {
 }
 
 // --- Geometria das entradas da direita ---------------------------------------
-// Passo e largura do cartaz: 5 colunas iguais com vao 22 na largura da coluna
-// (o grid de 5 do mockup); mais estreita (rail fixa), o cartaz encolhe 2:3.
+// Five columns at 100%; scaled text keeps enough stride for preserved artwork.
 static float buPasso(void) {
   float larg = BU_DIR - BU_RES_X;
   if (buTelefone()) {
@@ -1271,10 +1272,20 @@ static float buPasso(void) {
     if (cols > 5) cols = 5;
     return (fmaxf(1.0f, larg) - (cols - 1) * 22.0f) / cols + 22.0f;
   } else {
-    return (larg - 4.0f * 22.0f) / 5.0f + 22.0f;
+    float passo = (larg - 4.0f * 22.0f) / 5.0f + 22.0f;
+    return gfx_escala_txt() != 1.0f ? fmaxf(passo, BU_CARTAZ_W + 22.0f) : passo;
   }
 }
 static float buCartazW(void) {
+  if (gfx_escala_txt() != 1.0f) {
+    if (!buTelefone()) return BU_CARTAZ_W;
+    float old = gfx_escala();
+    gfx_escala_sair(1.0f);
+    float w = buPasso() - 22.0f;
+    if (!buTecladoNativo() && w > BU_CARTAZ_W) w = BU_CARTAZ_W;
+    gfx_escala_sair(old);
+    return w * gfx_poster_k();
+  }
   float w = buPasso() - 22.0f;
   return buTecladoNativo() || w < BU_CARTAZ_W ? w : BU_CARTAZ_W;
 }
@@ -1373,7 +1384,7 @@ static void toqueBuscaRetomarFoco(void) {
 }
 #endif
 
-void busca_atualizar(float dt, Uint32 agora) {
+static void busca_atualizar_(float dt, Uint32 agora) {
   buInterfaceAtualizar();
   // TECLADO/VOZ DO SISTEMA (sistexto.h): o texto vem inteiro e substitui o campo.
   { char t[BU_MAX_CONSULTA * 2];
@@ -1894,7 +1905,7 @@ static void desenhaResultados(Uint32 agora) {
         gfx_opacidade_grupo = grupo * entra;
       }
       { const char *url = ci->backdrop[0] ? ci->backdrop : ci->poster;
-        GfxRect art = { t.x + 20.0f, t.y + 20.0f, 330.0f, t.h - 40.0f };
+        GfxRect art = { t.x + 20.0f, t.y + 20.0f, 330.0f * gfx_poster_k(), 186.0f * gfx_poster_k() };
         float tx, ty, bloco;
         if (!ci->backdrop[0]) art.w = art.h * 2.0f / 3.0f;
         if (buTelefone()) art.w = fminf(art.w, fmaxf(1.0f, (t.w - 68.0f) * 0.45f));
@@ -1993,7 +2004,7 @@ static void desenhaResultados(Uint32 agora) {
   gfx_sem_recorte();
 }
 
-void busca_desenhar(Uint32 agora) {
+static void busca_desenhar_(Uint32 agora) {
   buInterfaceAtualizar();
 #ifdef NV_TOUCH_UI
   if (buTelefone()) ponteiro_rolagem(toqueBuscaRolar);
@@ -2008,6 +2019,10 @@ void busca_desenhar(Uint32 agora) {
   desenhaTeclado();
   desenhaResultados(agora);
 }
+
+void busca_evento(const SDL_Event *e) { TXT_INI(); busca_evento_(e); TXT_FIM(); }
+void busca_atualizar(float dt, Uint32 agora) { TXT_INI(); busca_atualizar_(dt, agora); TXT_FIM(); }
+void busca_desenhar(Uint32 agora) { TXT_INI(); busca_desenhar_(agora); TXT_FIM(); }
 
 #ifdef NV_BUSCA_TESTE
 // Gancho de teste (tests/busca_debounce.sh): soma dos itens das fileiras de titulos.

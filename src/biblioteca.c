@@ -86,6 +86,7 @@
 #include "ajustes.h"
 #include "nlanc.h"
 #include "ctxmenu.h"
+#define NV_TXT_TELA   // NV_TELA_W/H = tela virtual da escala de texto (escala.h)
 #include "escala.h"
 #include "telefoneui.h"
 #include "ponteiro.h"
@@ -165,8 +166,8 @@ static int bibTinta2(void) { return 205; }
 #define BIB_LIN_H       168.0f
 #define BIB_LIN_GAP      12.0f
 #define BIB_LIN_PASSO   (BIB_LIN_H + BIB_LIN_GAP)
-#define BIB_LIN_MINI_W   96.0f
-#define BIB_LIN_MINI_H  144.0f
+#define BIB_LIN_MINI_W  (96.0f * gfx_poster_k())
+#define BIB_LIN_MINI_H  (144.0f * gfx_poster_k())
 #define BIB_LIN_PAD      12.0f
 #define BIB_LIN_TX_GAP   24.0f    // do cartaz ao texto
 // A linha de uma LISTA (modo Listas em exibicao de lista) nao tem cartaz nem
@@ -256,11 +257,13 @@ static int bibTinta2(void) { return 205; }
 #define BIB_FAIXA_GAP     16.0f   // entre seletor, fio e chips
 #define BIB_GRADE_Y      284.0f   // faixa + 36
 #define BIB_COLUNAS_MAX      7
-#define BIB_CARD_W       220.0f
-#define BIB_POSTER_H     330.0f
+// Cartazes mantem o tamanho real (Escala de texto nao os muda): k compensa a tela
+// virtual da camada de texto (gfx_poster_k, 1 em 100%).
+#define BIB_CARD_W       (220.0f * gfx_poster_k())
+#define BIB_POSTER_H     (330.0f * gfx_poster_k())
 #define BIB_CARD_GAP      26.0f
 #define BIB_TIT_GAP       10.0f
-#define BIB_LINHA_PASSO  422.0f   // 284 -> 706 no mockup
+#define BIB_LINHA_PASSO  (BIB_POSTER_H * (1.0f + BIB_FOCO_ESCALA * 0.5f) + BIB_TIT_GAP + 14.0f + 52.0f + 2.8f)
 #define BIB_FOCO_ESCALA    0.08f
 // Onde a grade comeca em cada estado: o mesmo y, com ou sem lista aberta — as
 // acoes da lista ocupam a faixa dos filtros.
@@ -445,9 +448,11 @@ static int bibRetrato(void) {
 #endif
 }
 static float bibHS(void) { return escala_min(BIB_TOPO_ESCALA_MIN); }
-static float hdrX(void) { return bibX() / bibHS(); }
-static float hdrW(void) { return bibW() / bibHS(); }
-static float hdrDir(void) { return bibDireita() / bibHS(); }
+// Escala do topo em unidades da camada de texto (grade e topo ficam lado a lado).
+static float bibRel(void) { return bibHS() / gfx_escala_txt(); }
+static float hdrX(void) { return bibX() / bibRel(); }
+static float hdrW(void) { return bibW() / bibRel(); }
+static float hdrDir(void) { return bibDireita() / bibRel(); }
 static float bibControleMax(void) { return (hdrW() - BIB_FAIXA_GAP * 2.0f) / 3.0f; }
 static float pickerY(void) {
   return BIB_FAIXA_Y + (BIB_SEG_H - BIB_CHIP_H) * 0.5f
@@ -506,7 +511,7 @@ static float passoLinha(void) {
 static float gradeY(void) {
   float y = estado() == EST_ITENS ? BIB_GRADE_Y_ABERTA : BIB_GRADE_Y_TITULOS;
   if (bibRetrato() && estado() != EST_ITENS) y += BIB_SEG_H + BIB_FAIXA_GAP;
-  return y * bibHS();
+  return y * bibRel();
 }
 static int nLinhas(void) { return (nCelulas + colunas() - 1) / colunas(); }
 
@@ -959,7 +964,7 @@ static int colunaSobFaixa(void) {
     cx = pickerX(foco.coluna) + pickerLargura(foco.coluna) * 0.5f;
   }
   if (passo < 1.0f) return 0;
-  return (int)((cx * bibHS() - bibX()) / passo);  // cx e virtual do topo
+  return (int)((cx * bibRel() - bibX()) / passo);  // cx e virtual do topo
 }
 
 static void descerDaFaixa(void) {
@@ -1070,7 +1075,7 @@ static void eventoAberta(SDL_Keycode k) {
   }
 }
 
-void biblioteca_evento(const SDL_Event *e) {
+static void biblioteca_evento_(const SDL_Event *e) {
   pediuRelogio = 0;
   // O TECLADO DA BUSCA E MODAL: enquanto ele esta na tela, ele fica com TODAS
   // as teclas. Deixar a grade responder por baixo foi o defeito que a busca de
@@ -1192,7 +1197,7 @@ void biblioteca_evento(const SDL_Event *e) {
 
 // ---------------------------------------------------------------- atualizar
 
-void biblioteca_atualizar(float dt, Uint32 agora) {
+static void biblioteca_atualizar_(float dt, Uint32 agora) {
   int linhas, r, c, ini = gradeIni();
 #ifdef NV_TOUCH_UI
   if (!layout_modo_mobile()) toqueLivre = 0;
@@ -1757,7 +1762,7 @@ static void desenhaCartaz(const CatItem *ci, GfxRect base, float f, float a,
   if (arte && !arte[0]) arte = NULL;
   // O teto de decodificacao sai da largura pedida: a do cartaz EM FOCO (238),
   // para a arte nao amolecer quando ele sobe.
-  GLuint tex = arte ? tex_obter_larg(arte, BIB_CARD_W * (1.0f + BIB_FOCO_ESCALA)) : 0;
+  GLuint tex = arte ? tex_obter_larg(arte, BIB_CARD_W * gfx_escala_txt() * (1.0f + BIB_FOCO_ESCALA)) : 0;
   // Arte chegando esvanece sobre o esqueleto (revela.h), como na home.
   float aArte = rv ? revela_arte(rv, tex != 0, agora) : 1.0f;
   if (f > 0.01f)
@@ -2360,7 +2365,7 @@ static void barraHold(GfxRect r, float a) {
       txt_desenhar_alpha(dica, bx, trilho.y - 8.0f - (float)dica.h, 0.92f * a); } }
 }
 
-void biblioteca_desenhar(Uint32 agora) {
+static void biblioteca_desenhar_(Uint32 agora) {
   int linhas, r, c, nc = colunas();
   float passoC, passoL, gy, gcy;
 #ifdef NV_TOUCH_UI
@@ -2401,7 +2406,7 @@ void biblioteca_desenhar(Uint32 agora) {
   // The renderer maps this layout clip to the drawable (including Retina).
   // The boundary sits just under the tab pills (faixa ends at y 248), not at
   // the grid origin (284): art scrolls up close to the buttons, no black band.
-  gcy = gy - BIB_CLIP_SOBE * bibHS();
+  gcy = gy - BIB_CLIP_SOBE * bibRel();
   gfx_recorte(0.0f, gcy, NV_TELA_W, BIB_GRADE_BASE - gcy);
   { int lin0 = passoL > 0.0f ? (int)(scrollY / passoL) : 0;
 
@@ -2518,7 +2523,7 @@ void biblioteca_desenhar(Uint32 agora) {
           ? (lst_item(i, &tmp) ? &tmp : NULL) : itemFiltro(filtro[i], &tmp);
         const char *cam = ci ? posterprov_card_addon(ci->origem, ci->imdb,
                           ci->tmdb, ci->tipo, ci->poster) : NULL;
-        pediu = tex_lookahead_pedir(cam, exibicao == VIS_LISTA ? 96 : BIB_CARD_W);
+        pediu = tex_lookahead_pedir(cam, exibicao == VIS_LISTA ? 96 : (int)(BIB_CARD_W * gfx_escala_txt()));
       }
     }
   } else if (!ondaEm && !teclado_aberto() && estado() != EST_LISTAS) {
@@ -2538,10 +2543,16 @@ void biblioteca_desenhar(Uint32 agora) {
             ? (lst_item(i, &tmp) ? &tmp : NULL) : itemFiltro(filtro[i], &tmp);
           const char *cam = ci ? posterprov_card_addon(ci->origem, ci->imdb,
                             ci->tmdb, ci->tipo, ci->poster) : NULL;
-          if (tex_lookahead_pedir(cam, exibicao == VIS_LISTA ? 96 : BIB_CARD_W))
+          if (tex_lookahead_pedir(cam, exibicao == VIS_LISTA ? 96 : (int)(BIB_CARD_W * gfx_escala_txt())))
             break;
         }
       }
     }
   }
 }
+
+// ESCALA DE TEXTO E COMPONENTES (escala.h): as entradas publicas ligam a camada
+// de texto; o corpo mede NV_TELA_W/H na tela virtual dela.
+void biblioteca_evento(const SDL_Event *e) { TXT_INI(); biblioteca_evento_(e); TXT_FIM(); }
+void biblioteca_atualizar(float dt, Uint32 agora) { TXT_INI(); biblioteca_atualizar_(dt, agora); TXT_FIM(); }
+void biblioteca_desenhar(Uint32 agora) { TXT_INI(); biblioteca_desenhar_(agora); TXT_FIM(); }

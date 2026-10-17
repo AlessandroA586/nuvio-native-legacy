@@ -383,7 +383,14 @@ int main(int argc, char **argv) {
     snprintf(e[k].pessoaId, 96, "nuvio:leo"); snprintf(e[k].pessoaNome, 64, "Leo"); e[k++].acao = SV_FIM;
     socialvis_definir_feed(e, 6);
   }
+#if defined(NV_REV4)
   quadros(60, NULL);
+  if (getenv("NV_REV4_HOME")) {
+    extern int rev4_home(void);
+    tecla(SDLK_DOWN); quadros(110, NULL);
+    return rev4_home();
+  }
+#endif
   // NV_VISTOS=1 (#212): o selo de visto pelo HISTORICO, sem progresso. Dois
   // filmes de "Popular" pelo leitor de /sync/watched/movies (o corpo do Trakt)
   // e uma serie de "Em alta" pelo historico de titulo — nenhum deles tem

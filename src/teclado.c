@@ -1,5 +1,6 @@
 // Ver teclado.h para por que esta modal existe e o que ela NAO tenta ser.
 #include "teclado.h"
+#define NV_TXT_TELA
 #include "escala.h"
 #include "gfx.h"
 #include "text.h"
@@ -205,7 +206,7 @@ static float teEsqW0(void) {
   float w = 1340.0f - 2 * TE_ILHA_PX - TE_COL_GAP - gradeW();
   float teto = NV_TELA_W - 80.0f - 2 * TE_ILHA_PX - TE_COL_GAP - gradeW();
   if (w > teto) w = teto;
-  if (w < 420.0f) w = 420.0f;
+  if (w < fminf(420.0f, teto)) w = fminf(420.0f, teto);
   return w;
 }
 
@@ -780,7 +781,7 @@ static void aplicar(void) {
   fechar(TECLADO_PRONTO);
 }
 
-void teclado_evento(const SDL_Event *e) {
+static void teclado_evento_(const SDL_Event *e) {
   SDL_Keycode k;
   if (aberto && st_evento(e)) return;   // teclado da TV: valor inteiro por sistexto
   if (!aberto || e->type != SDL_KEYDOWN) return;
@@ -856,7 +857,7 @@ void teclado_evento(const SDL_Event *e) {
   }
 }
 
-void teclado_atualizar(float dt, Uint32 agora) {
+static void teclado_atualizar_(float dt, Uint32 agora) {
   int f, c;
   (void)agora;
   if (aberto) {
@@ -1318,9 +1319,11 @@ static void tePhoneDesenhar(Uint32 agora) {
 }
 #endif
 
+void teclado_evento(const SDL_Event *e) { TXT_INI(); teclado_evento_(e); TXT_FIM(); }
+void teclado_atualizar(float dt, Uint32 agora) { TXT_INI(); teclado_atualizar_(dt, agora); TXT_FIM(); }
+
 static void teDesenhar(Uint32 agora);
-// O teclado fica em 1080p em qualquer "Tamanho da interface": em 100% ele ja
-// ocupa a largura da tela (ver a conta no alto), e ampliado nao caberia.
+// TV follows text scale; the virtual viewport keeps the modal centered.
 void teclado_desenhar(Uint32 agora) {
 #ifdef NV_TOUCH_UI
   if (teTelefoneIme()) {
@@ -1330,9 +1333,9 @@ void teclado_desenhar(Uint32 agora) {
     return;
   }
 #endif
-  ESCALA_REAL_INI();
+  TXT_INI();
   teDesenhar(agora);
-  ESCALA_REAL_FIM();
+  TXT_FIM();
 }
 static void teDesenhar(Uint32 agora) {
   float a = anim_suave(anim), dy, x, y, ew;

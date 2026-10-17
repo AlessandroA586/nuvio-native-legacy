@@ -73,6 +73,15 @@ static int testeLayout = HOME_LAYOUT_MODERNA, testeHero = 1;
 int teste_home_layout(void) { return testeLayout; }
 int teste_hero_ligado(void) { return testeHero; }
 void teste_txt_desenhar(TxtLinha l, float x, float y) { (void)l; (void)x; (void)y; nTxtDesenhado++; }
+// Escala de texto e componentes (gfx.c): a mesma conta, sem GL. testeTxt e o
+// fator da camada; o padrao 1 deixa tudo como era.
+static float testeTxt = 1.0f, testeAtiva = 1.0f;
+float gfx_escala(void) { return testeAtiva; }
+float gfx_escala_txt(void) { return testeTxt; }
+float gfx_escala_tela_txt(void) { return (testeTxt != 1.0f && testeAtiva == testeTxt) ? testeTxt : 1.0f; }
+float gfx_poster_k(void) { return testeAtiva != 1.0f ? 1.0f / testeTxt : 1.0f; }
+float gfx_escala_txt_entrar(void) { float a = testeAtiva; testeAtiva = testeTxt; return a; }
+void gfx_escala_sair(float a) { testeAtiva = a; }
 // Duble do desenho do card editorial: sem GL, so o que o teste do genero conta.
 float gfx_tex_aspect_atual;
 void gfx_veu_base(GfxRect c, float r, float f, float a) { (void)c; (void)r; (void)f; (void)a; }

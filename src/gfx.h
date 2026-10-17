@@ -453,6 +453,24 @@ float gfx_escala_ui(void);
 float gfx_escala(void);
 float gfx_escala_entrar(void);
 void  gfx_escala_sair(float anterior);
+// ESCALA DE TEXTO E COMPONENTES (Ajustes > Aparencia). Cobre o que o Tamanho
+// da interface nao cobre: home, detalhe, biblioteca. Os posters mantem os
+// controles proprios (fileiras, FIL_ESTILO_TAMS): gfx_poster_k() e o fator
+// que as constantes de poster do layout.h multiplicam para voltar ao px de
+// antes dentro de uma camada de texto.
+//   gfx_escala_ui       agora devolve o PRODUTO (interface x texto): as
+//                       camadas ampliadas ja existentes seguem as duas
+//   gfx_escala_ui_base  so o Tamanho da interface
+//   gfx_escala_txt      so a escala de texto (1 = de sempre)
+//   gfx_escala_txt_entrar liga so a escala de texto; sair e o mesmo
+void  gfx_escala_txt_definir(float s);
+float gfx_escala_ui_base(void);
+float gfx_escala_txt(void);
+float gfx_escala_txt_entrar(void);
+// O fator da tela virtual de uma camada de texto: a escala de texto quando a
+// camada ativa e exatamente ela, senao 1 (a tela de sempre).
+float gfx_escala_tela_txt(void);
+float gfx_poster_k(void);
 int  gfx_iniciar(void);
 void gfx_tex_aquecer(GLuint tex); // amostra offscreen antes de publicar arte nova
 void gfx_encerrar(void);
