@@ -174,6 +174,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 - **IMDb score no longer shown as %** (#590): MDBList sometimes sends the IMDb rating on a 0-100 scale
   and the app displayed "80%"/"80.0"; now only the IMDb value is divided by 10 (8.0), leaving Trakt and
   Rotten Tomatoes untouched. Platforms: Samsung .tpk, Android. Refs `03a144294`, `0d998e33a`, `eea9aac9d`.
+- **CNCVerse live channels play again**: long add-on ids (cnc:…, 72+ bytes) were dropped or cut, so
+  /stream/ went out truncated and returned 0 sources; ids now travel whole via a short stable alias.
+  All platforms. Refs `630292d7e`, `47ad499ad`.
 - **Smoother Home trailer transitions**: the trailer cutout fades as Frost returns, avoiding an abrupt backdrop change. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `524de66ac`, `240bc60a0`.
 - **Cleaner shuffle focus**: the detail-page shuffle button no longer displays an unnecessary focus tooltip. Platforms: webOS, Android, Samsung .tpk, WASM. Ref `c9c2d3f15`.
 - **Cast identities stay distinct**: valid cast entries survive metadata filtering and different Unicode names retain separate identities. Platforms: webOS, Android, Samsung .tpk, WASM. Ref `8bd065a36`.
@@ -275,6 +278,14 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   destination, and a remembered destination that serves another file is no longer trusted — the stream
   starts sooner without a wrong probe. Android. Refs PR #572, `cc61bfdd8`, `809bd7c96`, `8876c13c6`,
   `f6618db6b`, `22f3d22bb`.
+- **Trakt comment cards cost zero glass-shader pixels**: up to 8 detail cards of 600x340 each took their own
+  frosted read (~0.80M glass-shader px/frame); they now use the flat chip material with a top highlight —
+  0 glass-shader px, rim and highlight still visible. All platforms. Refs `bb9f2abc9`, `d4317aaa4`,
+  `24047051b`.
+- **No full-screen blur when glass is off**: the zero-region fallback copied and blurred the whole screen
+  on every backdrop change even with the glass interface disabled; the fallback is now gated on
+  `ajustes_vidro()`, and when a frame has no glass the screen is blurred only once. All platforms.
+  Refs `033c3fa70`, `0723edb59`, `3f95a9241`.
 
 ### Community
 
@@ -336,8 +347,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   (`21696fd8c`, `796a3441f`).
 - The `tests/homerefresh.sh` fixture repaired again at merge time: duplicate home stubs and missing add-on
   lock stubs (`c47a40788`).
-- Open regression in the glass merge window: `tests/vidro_qualidade.sh` FAILS at `0940ae7bf`
-  ("Alta ignores the governor (frost)") — fix job finished on open branch `agente/205-vidroqual` (`0723edb59`); review and merge remain pending.
+- Glass merge-window regression closed: `tests/vidro_qualidade.sh` failed at `0940ae7bf`
+  ("Alta ignores the governor (frost)"); the fix (`0723edb59`, whole-screen blur once when no glass last
+  frame, plus the `ajustes_vidro()` gate `033c3fa70`) is merged via `agente/205-vidroqual` (`3f95a9241`).
 - New tests for Naskh Bold (`tests/arabe_negrito_padrao.sh`, FAIL without the `text.c` change) and for the
   Home backdrop copy cost (`tests/homelerdo.sh`, 5 checks, FAIL on the baseline) (`458828591`, `e70adbf7a`).
 - New Trakt-comment tests (`tests/traktcoment.sh`, series/episode fixtures, a 180-frame per-frame counter and
