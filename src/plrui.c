@@ -66,9 +66,13 @@ void plrui_botao_repouso(GfxRect r, float a) {
   else gfx_cor(r, 0.5f, 0.141f, 0.149f, 0.173f, a);
 }
 
+// The OSD discs float over the live video (hardware plane under an alpha-0
+// hole): nothing to sample, so glass off is the same see-through tint glass on
+// uses there (gfx_vidro: 0.30 + 0.45 t), never the opaque #15161A, plus a rim.
 void plrui_disco_osd(GfxRect r, float a) {
-  if (ajustes_vidro()) gfx_vidro_material(r, 0.5f, 0.52f, a);
-  else gfx_cor(r, 0.5f, 0.082f, 0.086f, 0.102f, a);
+  if (ajustes_vidro()) { gfx_vidro_material(r, 0.5f, 0.52f, a); return; }
+  gfx_cor(r, 0.5f, 0.082f, 0.086f, 0.102f, (0.30f + 0.45f * ajustes_vidro_opacidade()) * a);
+  gfx_anel(r, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.14f * a);
 }
 
 int plrui_tinta(void) { return ajustes_tinta_foco(); }
