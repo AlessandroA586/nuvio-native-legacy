@@ -22,10 +22,16 @@ objs=()
 pids=()
 for s in src/*.c src/dts/*.c; do
   case "$s" in src/main.c|src/detail.c) continue;; esac
+  extra=""
   o="$OBJ/$(basename "$s" .c).o"
+  # Count the shared wrapping helper too, without production instrumentation.
+  if [ "$s" = src/agendaui.c ] && [ -n "${NUVIO_TRAKT_CHECK:-}" ]; then
+    o="$OBJ/agendaui-trakt.o"
+    extra="-Dtxt_largura=trakt_largura -Dtxt_token_tam=trakt_token_tam"
+  fi
   objs+=("$o")
   if [ ! -f "$o" ] || [ "$s" -nt "$o" ] || [ -n "$(find src -name '*.h' -newer "$o" -print -quit)" ]; then
-    cc $FL -c "$s" -o "$o" & pids+=($!)
+    cc $FL $extra -c "$s" -o "$o" & pids+=($!)
     if [ ${#pids[@]} -ge 8 ]; then wait "${pids[0]}"; pids=("${pids[@]:1}"); fi
   fi
 done

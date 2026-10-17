@@ -6828,10 +6828,13 @@ static void desenhaComentarios(float x, float y, float a) {
 
     // O texto para ANTES do rodape: sem o teto de linhas ele passava por cima
     // das curtidas. 6 linhas de 30 terminam em 246; o rodape comeca em 288.
-    txt_bloco(TXT_DET_META2, daSerie ? extras_comentario_texto(i)
-                                     : extras_comentario_ep_texto(i),
-              focCor ? (tintaEsc ? 45 : 235) : 190, focCor ? (tintaEsc ? 47 : 236) : 195, focCor ? (tintaEsc ? 52 : 240) : 205,
-              px, y + COM_PAD + 42.0f, larg, 30.0f, a * 0.95f, 6);
+    // Reuse Agenda's cached wrapping; focus colors do not change line breaks.
+    agendaui_sinopse(TXT_DET_META2, daSerie ? extras_comentario_texto(i)
+                                         : extras_comentario_ep_texto(i),
+                     px, y + COM_PAD + 42.0f, larg, 30.0f, 6,
+                     focCor ? (tintaEsc ? 45 : 235) : 190,
+                     focCor ? (tintaEsc ? 47 : 236) : 195,
+                     focCor ? (tintaEsc ? 52 : 240) : 205, a * 0.95f);
 
     { int nota = daSerie ? extras_comentario_nota(i)
                          : extras_comentario_ep_nota(i);
