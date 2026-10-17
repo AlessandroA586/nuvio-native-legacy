@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-17 01:52, HEAD `86d194462`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-17 02:50, HEAD `335bd2abc`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -87,6 +87,14 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   em Ajustes e adicionar um servidor Jellyfin/add-on novo atualiza a Home na hora, e um servidor com muitas
   bibliotecas deixa de mostrar só quatro catálogos — o teto subiu de 6 para 16 visões, com boxsets e visões
   sem tipo aceitas. Todas as plataformas. Refs #468, `b0e429762`, `c47a40788`, `08c98b017`.
+- **"Assistir do começo" e Recarregar no lugar certo** (#562, PR #574): o botão da barra do player passa a
+  voltar para 0:00 sem perder URL, pausa nem faixas, e o "Recarregar" da fonte sai da barra e entra na folha
+  de fontes, confirmado só quando você solta o botão. Todas as plataformas.
+  Refs #562, PR #574, `6a6d5b71b`, `075fec9a4`, `2c7c85860`.
+- **"Play from beginning" and Reload in the right place** (#562, PR #574): the player toolbar button now
+  seeks back to 0:00 without losing the URL, pause state or tracks, and the source "Reload" leaves the toolbar
+  and moves into the Sources sheet, committed only on key-up. All platforms.
+  Refs #562, PR #574, `6a6d5b71b`, `075fec9a4`, `2c7c85860`.
 - **Um botão a menos no player** (pedido do dono): o botão de voltar episódio sai da barra de ações das
   séries; o de avançar e todos os outros ficam, com a ordem de foco e o espaçamento intactos. Todas as
   plataformas. Refs pedido do dono, `4e6b592d8`, `d51d4e46c`.
@@ -134,6 +142,14 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 - **Ajustes em 100% por padrao** (pedido do dono): a escala dos Ajustes vem de fabrica em 100% em vez de 80%;
   quem nunca escolheu um tamanho na mao passa para 100% e a escolha explicita de cada um fica como estava.
   Todas as plataformas. `3f8d304b7`, `f22761e28`.
+- **Menu contextual com vidro e frost de verdade** (pedido do dono): o menu contextual grande e o pequeno
+  passam a desfocar a arte que está atrás do painel, em vez de mostrar uma chapa cinza; *Ajustes › Menu do
+  cartaz* escolhe entre **Completo** (oPainel enriquecido, novo padrão) e **Simples** (o comportamento antigo,
+  só o menu ao lado do cartaz). Todas as plataformas. Refs pedido do dono, `a2ea074c7`, `dc040ef2d`.
+- **Context menu with real glass and frost** (owner request): the big and the small context menu now blur
+  the artwork behind the panel instead of showing a flat gray slab; *Settings › Poster menu* picks
+  **Full** (the enriched panel, new default) or **Simple** (the old behaviour, just the menu beside the
+  poster). All platforms. Refs owner request, `a2ea074c7`, `dc040ef2d`.
 - **Arte em alta qualidade que sobe de tamanho** (pedidos do dono): com a qualidade Alta, pôsteres w342 e
   backdrops w780 guardados pelo catálogo passam a ser buscados no tamanho que a tela precisa, e o backdrop
   pequeno de 480px não é mais servido para cartões de até 640px. Todas as plataformas. `ff1cd6dcd`,
@@ -183,6 +199,13 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 - **Ajustes explicam o P2P desligado**: antes de falar de cache USB, os Ajustes dizem por que o P2P está
   desligado, e porque Cache do P2P e Limite de espaço estão cinza. Todas as plataformas. `2e480806c`,
   `f170d77ba`, `6d537cb92`.
+- **Comentários do Trakt voltam a aparecer nas séries** (pedido do dono): abrir uma série depois de ver um
+  episódio não deixava mais a lista de comentários presa no modo episódio, e a leitura da resposta do add-on
+  não quebrava em array vazio ou com espaço. Todas as plataformas. Refs pedido do dono, `5195cd14f`,
+  `335bd2abc`.
+- **Trakt comments show on series again** (owner request): opening a series after watching an episode no
+  longer leaves the comment list stuck in episode mode, and the add-on response parser no longer breaks on an
+  empty or space-prefixed array. All platforms. Refs owner request, `5195cd14f`, `335bd2abc`.
 - **Log enviado com o começo**: o cabeçalho de inicialização (16 KB) volta a entrar no log enviado, que é o
   que serve para diagnosticar. Todas as plataformas. `84c1a90b6`, `3b12a5d2f`.
 
@@ -211,6 +234,14 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 - **Home reage a reordenar/ativar fileiras sem recarregar tudo**: a atualização da rede depois de fechar
   Ajustes roda uma vez, e as linhas de servidor acima do teto da Home são cortadas em vez de descartadas.
   Todas as plataformas. `b0e429762`.
+- **Fileira de comentários do Trakt não derruba mais o FPS** (pedido do dono): a quebra de linha do texto de
+  cada cartão era recalculada palavra por palavra em todos os quadros (702 chamadas de layout por quadro
+  rolando a fileira); agora usa o cache de quebra de linha compartilhado — 0 layouts e 0 uploads de textura
+  por quadro, com a mesma aparência. Todas as plataformas. `1165245fc`, `a363d821c`, `335bd2abc`.
+- **The Trakt comments row no longer costs FPS** (owner request): per-card text wrapping was recomputed
+  word by word every frame (702 layout calls per frame while scrolling the row); it now uses the shared wrap
+  cache — 0 layout calls and 0 texture uploads per frame, same look. All platforms. `1165245fc`, `a363d821c`,
+  `335bd2abc`.
 - **Detalhe: menos camadas de tela cheia**: furo e véu do cartão de trailer passam a ser um único desenho, e
   um cartão vizinho quase fora da tela deixa de contar como cheio — 4 → 2 camadas, preenchimento 1,81 → 0,99
   no harness, PNGs idênticos. Todas as plataformas. `5ed6ddfaa`.
@@ -263,6 +294,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   (`21696fd8c`, `796a3441f`).
 - Fixture do `tests/homerefresh.sh` consertada outra vez no merge: stubs duplicados de home e stubs de
   trava de add-on que faltavam (`c47a40788`).
+- Testes novos dos comentários do Trakt (`tests/traktcoment.sh`, dados de série/episódio, contador de 180
+  quadros e FAIL->PASS da regressão de série), do cache de quebra de linha da fileira e do token de geração
+  da folha de fontes / "Assistir do começo" (`5195cd14f`, `1165245fc`, `075fec9a4`, `6a6d5b71b`).
 
 ### Pendente (ainda não integrado)
 
@@ -286,13 +320,9 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 - **Tela de abertura do Dolby Vision no novo estilo** — `agente/205-dvabertura`, 5 commits fora
   (`d89784e82` + 4 fixes): a tela de Cinema do Dolby Vision segue o estilo e os ajustes das telas de
   carregamento novas e não quebra ao trocar de variante. Ainda sem review. Todas as plataformas.
-- **Comentários do Trakt com vidro** — `agente/205-traktcoment`, 3 commits fora (`a363d821c`, `1165245fc`,
-  `5195cd14f`): a seção de Comentários/Avaliações do Trakt na página do título ganha o vidro compartilhado,
-  volta a aparecer nas séries e reusa o cache de quebra de linha (era a única fileira que derrubava FPS).
-  Ainda sem review; falta medir o FPS dos 8 painéis em TV. Todas as plataformas.
-- **Menu contextual grande com frost** — `agente/205-ctxgrande`, 1 commit fora (`a2ea074c7`): o menu
-  contextual grande e o pequeno passam a ter vidro+frost sobre a arte, com um ajuste para voltar ao menu
-  simples. Ainda sem review. Todas as plataformas.
+- **Comentários do Trakt com vidro, menu contextual com frost e #562/PR #574** entraram nesta janela
+  (`335bd2abc`, `dc040ef2d`, `2c7c85860`, todos com review OK: `rev-traktcoment`, `rev-ctxgrande`,
+  `rev-pr574`) e já estão em Novidades/Correções/Desempenho. Falta medir o FPS dos 8 painéis de vidro em TV.
 - **Frost otimizado, fileira de amigos polida, PR #561 (#524), abas com frost e Ajustes em 100%** entraram
   nesta janela (`4c82273d7`, `f21d993b2`, `86d194462`, `a096e5eb8`, `f22761e28`) e já estão em
   Destaques/Novidades:
@@ -550,6 +580,9 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   (`21696fd8c`, `796a3441f`).
 - The `tests/homerefresh.sh` fixture repaired again at merge time: duplicate home stubs and missing add-on
   lock stubs (`c47a40788`).
+- New Trakt-comment tests (`tests/traktcoment.sh`, series/episode fixtures, a 180-frame per-frame counter and
+  the FAIL->PASS for the series regression), the shared wrap cache for that row and the sources-sheet
+  generation token / "Play from beginning" (`5195cd14f`, `1165245fc`, `075fec9a4`, `6a6d5b71b`).
 
 ### Pending (not integrated yet)
 
@@ -573,13 +606,9 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 - **Dolby Vision opening in the new style** — `agente/205-dvabertura`, 5 commits out (`d89784e82` plus 4
   fixes): the Dolby Vision Cinema opening follows the style and settings of the new loading screens and does
   not break when switching variants. No review yet. All platforms.
-- **Trakt comments with glass** — `agente/205-traktcoment`, 3 commits out (`a363d821c`, `1165245fc`,
-  `5195cd14f`): the Trakt Comments/Ratings section on the title page gets the shared glass, shows up on series
-  again and reuses the wrap cache (it was the only row that dropped FPS). No review yet; the FPS of the eight
-  panels still has to be measured on a TV. All platforms.
-- **Big context menu with frost** — `agente/205-ctxgrande`, 1 commit out (`a2ea074c7`): the big and the small
-  context menu panels become real glass+frost over the art, with a setting to go back to the plain menu.
-  No review yet. All platforms.
+- **Trakt comments with glass, frosted context menu and #562/PR #574** landed in this window
+  (`335bd2abc`, `dc040ef2d`, `2c7c85860`, all review OK: `rev-traktcoment`, `rev-ctxgrande`, `rev-pr574`) and
+  are already in New/Fixes/Performance. Still to measure on a device: the FPS of the 8 glass panels.
 - **Cheaper frost, polished friends row, PR #561 (#524), glass tabs and Settings at 100%** landed in this
   window (`4c82273d7`, `f21d993b2`, `86d194462`, `a096e5eb8`, `f22761e28`) and are already under
   Highlights/New:
@@ -613,7 +642,9 @@ Landing in 2.0.7, already in the sections above:
   **opening-screen style setting A3/B3** (`922500ef4`, `9c3ecdf85`), the
   **revert of the cached-art frost** (`f40a93dc3`, undoing `76bc9d0c3`), the
   **cheaper screen-capture frost** (`4c82273d7`), the **polished friends row** (`f21d993b2`), **PR #561**
-  (`86d194462`), **glass tabs** (`a096e5eb8`) and **Settings at 100%** (`f22761e28`).
+  (`86d194462`), **glass tabs** (`a096e5eb8`), **Settings at 100%** (`f22761e28`), the **Trakt comments row**
+  (`335bd2abc`), the **frosted context menu + Poster menu setting** (`dc040ef2d`) and **PR #574**
+  (`2c7c85860`).
 
 ### Frost performance (to fill before tagging)
 
@@ -649,7 +680,9 @@ Landing in 2.0.7, already in the sections above:
   **opening-screen style setting A3/B3** (`922500ef4`, `9c3ecdf85`), the
   **revert of the cached-art frost** (`f40a93dc3`, undoing `76bc9d0c3`), the
   **cheaper screen-capture frost** (`4c82273d7`), the **polished friends row** (`f21d993b2`), **PR #561**
-  (`86d194462`), **glass tabs** (`a096e5eb8`) and **Settings at 100%** (`f22761e28`).
+  (`86d194462`), **glass tabs** (`a096e5eb8`), **Settings at 100%** (`f22761e28`), the **Trakt comments row**
+  (`335bd2abc`), the **frosted context menu + Poster menu setting** (`dc040ef2d`) and **PR #574**
+  (`2c7c85860`).
 
 ### Frost performance (to fill before tagging)
 
