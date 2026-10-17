@@ -8,6 +8,8 @@
 #include "tex_cache.h"
 #include "textogate.h"
 #include "focoprof.h"
+#define NV_TXT_TELA
+#include "escala.h"
 #include <SDL2/SDL.h>
 #include <math.h>
 #include <stdio.h>

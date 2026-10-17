@@ -6413,11 +6413,11 @@ static void desenhaColecao(float x, float y, float f, float a) {
   // Anel so com "Foco no cartaz" ligado (focoprof.h); vidro usa o cartao de
   // vidro como anel, por cima da arte, logo abaixo.
   if (!ajustes_vidro()) foco_anel(r, raio, f, a);
-  // The shared frost reads the page backdrop; the art sits over it, translucent.
-  else gfx_vidro_material(r, raio, GFX_VIDRO_DENS, a);
+  // Match the other B2 cards: tint, rim and top light over the shared backdrop.
+  else cartaoVidro(r, 0, a);
   if (t) {
     gfx_tex_aspect_atual = tex_aspecto(fundo);
-    // Glass: art at 0.8 so the frost underneath shows through it.
+    // Glass: art at 0.8 so the shared backdrop shows through it.
     gfx_rect(r, t, GFX_VITRINE, 1.0f, 0.5f, 0.0f, raio, 0.30f, 0, 0,
              ajustes_vidro() ? a * 0.8f : a);
     gfx_tex_aspect_atual = 0.0f;
@@ -6833,17 +6833,13 @@ static float cabecalhoComentarios(float x, float y, float a) {
   return yy;
 }
 
-// Keep the existing comment material for both focused and resting cards.
+// Match the B2 tint for both focused and resting comment cards.
 static void cartaoComentario(GfxRect card, float raio, float a) {
   if (!ajustes_vidro()) {
     gfx_cor(card, raio, 0.082f, 0.094f, 0.118f, 0.92f * a);
     return;
   }
-  // O MESMO VIDRO FOSCO dos demais cartoes da pagina (gfx_vidro_material): a
-  // captura do backdrop e a unica compartilhada do quadro (gfx_vidro_so_fundo),
-  // entao os ate 8 cartoes leem a mesma copia desfocada — o custo por cartao e
-  // o shader, nao uma captura propria.
-  gfx_vidro_material(card, raio, GFX_VIDRO_DENS, a);
+  cartaoVidro(card, 0, a);
 }
 
 static void desenhaComentarios(float x, float y, float a) {

@@ -30,6 +30,7 @@ void b2_tint(GfxRect r, float radius, float x, float y, float size,
 static int b2_checks(void) {
   int fail = 0;
   float season[3], episode[3], gap[3];
+  int baseTextHeight = 0;
   abrir(0, 1, SEC_EPISODIOS, 0);
   for (int p = 0; p < 6; p++) {
     char path[600];
@@ -38,15 +39,33 @@ static int b2_checks(void) {
     fprintf(f, "detEspacoLocal %d\nescalaTextoLocal %d\n", p % 3, p / 3 ? 5 : 2);
     fclose(f); ajustes_dir(dados_dir()); ajustes_definir_vidro(1);
     gfx_escala_txt_definir(ajustes_escala_texto());
+    float previousScale = gfx_escala_txt_entrar();
+    int scaleBad = fabsf(gfx_escala() - ajustes_escala_texto()) > .001f;
+    printf("%s: active text scale %.2f matches configured %.2f\n",
+           scaleBad ? "FAIL" : "PASS", gfx_escala(), ajustes_escala_texto());
+    fail += scaleBad;
+    notasui_reiniciar();
     NotasSecao s = {0};
     for (int i = 0; i < 8; i++) s.cru[i] = 80;
-    txt_novo_quadro(); tex_novo_quadro(); gfx_novo_quadro();
-    b2Panels = b2Tiles = cardMaterial = 0;
-    b2Summary = (GfxRect){0}; b2TextBottom = 0;
-    notasui_fontes_desenhar(&s, NV_DETP_X, 100, 1, NULL);
+    Uint32 start = SDL_GetTicks();
+    do {
+      txt_novo_quadro(); tex_novo_quadro(); gfx_novo_quadro();
+      b2Panels = b2Tiles = cardMaterial = 0;
+      b2Summary = (GfxRect){0}; b2TextBottom = 0;
+      notasui_fontes_desenhar(&s, NV_DETP_X, 100, 1, NULL);
+      SDL_Delay(10);
+    } while (SDL_GetTicks() - start < NV_TXTGATE_TIMEOUT_MS + NV_TXTGATE_FADE_MS + 20);
+    TxtLinha sample = txt_linha(TXT_G30B, "80", 245, 245, 245, 255);
+    int pixelHeight = sample.ph ? sample.ph : sample.h;
+    if (p == 0) baseTextHeight = pixelHeight;
+    int heightBad = pixelHeight <= 0 || (p >= 3 && pixelHeight <= baseTextHeight);
+    printf("%s: text pixel height %d at scale %.2f (100%% height %d)\n",
+           heightBad ? "FAIL" : "PASS", pixelHeight, gfx_escala(), baseTextHeight);
+    fail += heightBad;
     epPlacaDesenha((GfxRect){100, 100, 640, 414}, 1, 1);
     desenhaEstudio(100, 100, 0, 0, 1);
-    int bad = b2TextBottom > b2Summary.y + b2Summary.h - 20.0f;
+    int bad = b2Summary.w == 0 || b2TextBottom == 0 ||
+              b2TextBottom > b2Summary.y + b2Summary.h - 20.0f;
     printf("%s: summary text bottom %.1f within tile %.1f (scale %d)\n",
            bad ? "FAIL" : "PASS", b2TextBottom, b2Summary.y + b2Summary.h, p / 3);
     fail += bad;
@@ -63,10 +82,21 @@ static int b2_checks(void) {
     printf("%s: B2 420 summary, eight sources in four columns\n", bad ? "FAIL" : "PASS");
     fail += bad;
     bad = b2Tiles != 8 || fabsf(b2Rects[3].x + b2Rects[3].w - (NV_TELA_W - NV_DETP_X)) > .01f;
-    printf("%s: spacing %d ratings right margin\n", bad ? "FAIL" : "PASS", p);
+    printf("%s: spacing %d ratings right margin %.2f expected %.2f\n", bad ? "FAIL" : "PASS", p,
+           b2Rects[3].x + b2Rects[3].w, NV_TELA_W - NV_DETP_X);
     fail += bad;
     if (p >= 3) { season[p-3] = epTempY(); episode[p-3] = epRowY(); gap[p-3] = progTopoSerie() - epRowY() - epCardH(); }
+    gfx_escala_sair(previousScale);
   }
+  cardMaterial = 0;
+  desenhaColecao(NV_DETP_X, 100, 0, 1);
+  desenhaColecao(NV_DETP_X, 100, 1, 1);
+  for (int i = 0; i < fx_n_comentarios(); i++)
+    cartaoComentario((GfxRect){NV_DETP_X + i * (COM_CARD_W + COM_CARD_GAP),
+                             100, COM_CARD_W, COM_CARD_H}, 20.0f / COM_CARD_H, 1);
+  printf("%s: B2 tint-only collection/comments materials=%d\n",
+         cardMaterial ? "FAIL" : "PASS", cardMaterial);
+  fail += cardMaterial != 0;
   int bad = !(season[0] < season[1] && season[1] < season[2] &&
               episode[0] < episode[1] && episode[1] < episode[2] &&
               gap[0] < gap[1] && gap[1] < gap[2]);
