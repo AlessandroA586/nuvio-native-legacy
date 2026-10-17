@@ -5775,7 +5775,7 @@ static void shotTrailerPasso(int topo, float dt, Uint32 agora, int heroSetting, 
 }
 #endif
 
-void home_trailer_passo(int topo, float dt, Uint32 agora) {
+static void home_trailer_passo_(int topo, float dt, Uint32 agora) {
   const CatItem *ci = NULL;
   int pronto;
   Uint32 decorrido;
@@ -8172,6 +8172,8 @@ void home_abrir_sessao(void) {
 static float homeUnidade(void) { return gfx_escala_txt(); }
 void home_evento(const SDL_Event *e) { TXT_INI(); home_evento_(e); TXT_FIM(); }
 void home_atualizar(float dt, Uint32 agora) { TXT_INI(); home_atualizar_(dt, agora); TXT_FIM(); }
+// heroArteRect is layer px: the trailer step runs in the same layer (#205).
+void home_trailer_passo(int topo, float dt, Uint32 agora) { TXT_INI(); home_trailer_passo_(topo, dt, agora); TXT_FIM(); }
 void home_desenhar(Uint32 agora) { TXT_INI(); home_desenhar_(agora); TXT_FIM(); }
 int home_cartao_foco_por_cima(int indice) {
   int r;
