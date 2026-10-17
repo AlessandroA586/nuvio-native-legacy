@@ -328,6 +328,9 @@ int main(void) {
     CatFileira row = {.ini = 0, .n = 1};
     snprintf(item.titulo, sizeof item.titulo, "Teenage Sex and Death at Camp Miasma");
     snprintf(item.genero, sizeof item.genero, "Movie · Comedy · Horror");
+    snprintf(item.meta, sizeof item.meta, "2026 · 112 min");
+    snprintf(item.sinopse, sizeof item.sinopse, "A director revives a faded slasher franchise.");
+    testeImdb = 65;
     cat_definir_tudo(&item, 1, &row, 1);
     fileiras[0] = (Fileira){.tipo = FILEIRA_PALCO, .ini = 0, .n = 1, .escala = 1};
     foco.fileira = foco.coluna = focoHero = 0;
@@ -393,6 +396,7 @@ int main(void) {
       anim_politica_reduzida = 0;
     }
 #endif
+    testeImdb = 0;
   }
   // A composicao abaixo e a da home SEM o destaque no topo: e nela que a
   // primeira fileira de catalogo vira a vitrine (vitrineNaPrimeira). O #201
