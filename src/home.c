@@ -7000,8 +7000,8 @@ static int divididoItem(int r) { return fileiraItemIndice(&fileiras[r], colunaDa
 // O cartaz `c` (centro cx, largura w) entra na fila a direita do painel? O que
 // ja passou fica atras do painel (pintado depois).
 static int divididoCartazVisivel(int r, float cx, float w) {
-  return cx - w * 0.5f >= homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO - 0.5f &&
-         cx + w * 0.5f <= homeConteudoDireita() + 0.5f;
+  return cx + w * 0.5f > homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO + 0.5f &&
+         cx - w * 0.5f < homeConteudoDireita() - 0.5f;
 }
 static GfxRect divididoPainel(int r, float cardY) {
   return (GfxRect){ homeConteudoX() + bordaX(r), cardY, divPainelW(), divArteH() };
@@ -7616,6 +7616,11 @@ static void home_desenhar_(Uint32 agora) {
       // A direcao, em cards por quadro, alimenta o nivel 3 (lado que entra)
       // e o tex_lookahead_mover da fileira.
       tex_grade_velocidade(velX[r] / passo);
+      // Keep partial posters moving inside the strip, with the row's vertical clip.
+      if (tipo == FILEIRA_HEROI_DIVIDIDO) {
+        float left = homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO;
+        gfx_recorte(left, corte, homeConteudoDireita() - left, NV_TELA_H - corte);
+      }
       for (int passe = 1; passe < 2; passe++) {
         for (int c = 0; c < fileiras[r].n; c++) {
           float f = animFoco[r][c];
@@ -7909,6 +7914,8 @@ static void home_desenhar_(Uint32 agora) {
           }
         }
       }
+      if (tipo == FILEIRA_HEROI_DIVIDIDO)
+        gfx_recorte(0.0f, corte, NV_TELA_W, NV_TELA_H - corte);
       tex_pedido_fora(0);
       // EM MOVIMENTO: pede a arte do proximo card que vai entrar na borda,
       // antes de a rolagem chegar nele. Parado, o lookahead de repouso cobre.

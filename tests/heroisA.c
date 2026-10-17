@@ -117,6 +117,26 @@ int main(int argc,char **argv) {
         assert(divididoCartazVisivel(0,x+sw*0.5f,sw)==(c<=col+3));
       }
     }
+    // Both edge posters must remain drawable throughout Right and Left motion.
+    for(int col=0;col<4;col++) {
+      float from=alvoScrollFil(0,col,0,0),to=alvoScrollFil(0,col+1,0,0);
+      foco.coluna=col+1;
+      for(int frame=1;frame<4;frame++) {
+        scrollX[0]=from+(to-from)*frame/4.0f;
+        for(int c=col+1;c<=col+4;c++) {
+          float x=homeFileiraX(0,c)+xOffTipo(FILEIRA_HEROI_DIVIDIDO);
+          assert(divididoCartazVisivel(0,x+sw*0.5f,sw));
+        }
+      }
+      foco.coluna=col;
+      for(int frame=1;frame<4;frame++) {
+        scrollX[0]=to+(from-to)*frame/4.0f;
+        for(int c=col+1;c<=col+4;c++) {
+          float x=homeFileiraX(0,c)+xOffTipo(FILEIRA_HEROI_DIVIDIDO);
+          assert(divididoCartazVisivel(0,x+sw*0.5f,sw));
+        }
+      }
+    }
     assert(fabsf(sw/sh-2.0f/3)<0.001f);
     TxtLinha mark=txt_linha(TXT_MINI,"IMDb",10,10,10,255),score=txt_linha(TXT_CAPTION2,"6.8",235,235,235,255);
     assert(badge_imdb_largura(68)>=mark.w+14+BADGE_IMDB_GAP+score.w);
