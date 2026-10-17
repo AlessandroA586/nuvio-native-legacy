@@ -3219,6 +3219,9 @@ static GLuint vidGrab, vidH2, vidH2Fbo, vidQa, vidQaFbo, vidQb, vidQbFbo, vidRui
 static GLuint vidSlot[VID_NSLOTS], vidSlotFbo[VID_NSLOTS], vidFundo, vidFundoFbo;
 static GLint vidLocR, vidLocT, vidLocO;
 static int vidW, vidH, vidFalhou;
+// Blur budget: the half-res target never exceeds 960x540 (the 1080p chain), so
+// a 4K screen pays the 1080p fill and blurs the same in layout units.
+static int vidBw, vidBh;
 void gfx_vidro_fosco_bloquear(void) { foscoBloq = 1; }
 int gfx_vidro_com_fonte;
 // No TV lets GL read the video plane; the player hands a stand-in (its title
@@ -3339,9 +3342,10 @@ static int vidPreparar(void) {
   // A copia da tela e sempre GL_RGB: glCopyTexSubImage2D aceita destino com
   // menos canais que o alvo lido, de RGB565 a RGBA8.
   vidGrab = vidTex(telaW, telaH, GL_RGB);
-  ok = vidAlvo(&vidH2, &vidH2Fbo, telaW / 2, telaH / 2) &&
-       vidAlvo(&vidQa, &vidQaFbo, telaW / 4, telaH / 4) &&
-       vidAlvo(&vidQb, &vidQbFbo, telaW / 4, telaH / 4);
+  vidBw = telaW / 2 < 960 ? telaW / 2 : 960; vidBh = telaH / 2 < 540 ? telaH / 2 : 540;
+  ok = vidAlvo(&vidH2, &vidH2Fbo, vidBw, vidBh) &&
+       vidAlvo(&vidQa, &vidQaFbo, vidBw / 2, vidBh / 2) &&
+       vidAlvo(&vidQb, &vidQbFbo, vidBw / 2, vidBh / 2);
   glBindTexture(GL_TEXTURE_2D, 0);
   glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)ant);
   gfx_tex_esquecer(0);
@@ -3359,10 +3363,8 @@ static void vidPassada(GLuint src, GLuint fbo, int w, int h, const float uv[4], 
   glBindTexture(GL_TEXTURE_2D, src);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   gfx_vidro_passadas++;
-#ifdef NV_WEBOS
   gfx_vidro_fill += (double)w * h * (uv[2] - uv[0]) * (uv[3] - uv[1]) /
                     ((double)telaRealW * telaRealH);
-#endif
   if (perftv_enabled) perftv_blur++;
 }
 // Captura e desfoca a regiao `reg` (layout de tela) da tela atual em `dst`
@@ -3392,7 +3394,7 @@ static int vidCapturar(const float reg[4], GLuint dst, GLuint dstFbo) {
   glUniform1i(vidLocT, 0);
   // A regiao com a folga de 4 texels de 1/4: cada passada le ate 1,25 texel
   // alem do que escreve, e o que esta fora dela e de outra captura.
-  qw = telaW / 4; qh = telaH / 4;
+  qw = vidBw / 2; qh = vidBh / 2;
   fq = 4.0f;
   uv[0] = (float)x0 / telaW - fq / qw; uv[1] = (float)y0 / telaH - fq / qh;
   uv[2] = (float)x1 / telaW + fq / qw; uv[3] = (float)y1 / telaH + fq / qh;
@@ -3400,12 +3402,20 @@ static int vidCapturar(const float reg[4], GLuint dst, GLuint dstFbo) {
   if (uv[1] < 0.0f) uv[1] = 0.0f;
   if (uv[2] > 1.0f) uv[2] = 1.0f;
   if (uv[3] > 1.0f) uv[3] = 1.0f;
-  vidPassada(vidGrab, dstFbo, telaW / 2, telaH / 2, uv, 0.0f, 0.0f);     // 1/2 (caixa 2x2)
-  vidPassada(dst, vidQaFbo, qw, qh, uv, 0.0f, 0.0f);                      // 1/4
+  // Down to 1/4 of the 1080p chain as box filters: four bilinear taps at +-o
+  // texels average a 2o+2 square. Uncapped, the old 2x2 to 1/2 then 2x2 to
+  // 1/4 is one 4x4 box (one pass); capped (4K) a 4x4 box to 960x540 first.
+  if (telaW > 2 * vidBw) {
+    float o = (float)telaW / vidBw * 0.5f - 1.0f;
+    vidPassada(vidGrab, vidH2Fbo, vidBw, vidBh, uv, o / telaW, o / telaH);
+    vidPassada(vidH2, vidQaFbo, qw, qh, uv, 0.0f, 0.0f);
+  } else {
+    float o = (float)telaW / qw * 0.5f - 1.0f;
+    vidPassada(vidGrab, vidQaFbo, qw, qh, uv, o / telaW, o / telaH);
+  }
   vidPassada(vidQa, vidQbFbo, qw, qh, uv, 0.35f / qw, 0.35f / qh);         // Kawase
   vidPassada(vidQb, vidQaFbo, qw, qh, uv, 0.75f / qw, 0.75f / qh);
-  vidPassada(vidQa, dstFbo, telaW / 2, telaH / 2, uv,                     // de volta a 1/2
-             1.25f / (telaW / 2), 1.25f / (telaH / 2));
+  vidPassada(vidQa, dstFbo, vidBw, vidBh, uv, 1.25f / vidBw, 1.25f / vidBh);   // de volta a 1/2
   glBindTexture(GL_TEXTURE_2D, 0);
   glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)fboAnt);
   glViewport(vp[0], vp[1], vp[2], vp[3]);
@@ -3413,9 +3423,7 @@ static int vidCapturar(const float reg[4], GLuint dst, GLuint dstFbo) {
   if (blendLigado) glEnable(GL_BLEND);
   progAtual = -1; texAtual = 0;
   gfx_vidro_capturas++;
-#ifdef NV_WEBOS
   gfx_vidro_copia += (double)(x1 - x0) * (y1 - y0) / ((double)telaRealW * telaRealH);
-#endif
   GFX_OUTRO_FIM();
   return 1;
 }
@@ -3431,7 +3439,7 @@ static void vidroFundoFechar(void) {
     if (!vidPreparar()) return;
     if (!vidFundo) {
       GLint ant = fboLigado();
-      int ok = vidAlvo(&vidFundo, &vidFundoFbo, telaW / 2, telaH / 2);
+      int ok = vidAlvo(&vidFundo, &vidFundoFbo, vidBw, vidBh);
       glBindTexture(GL_TEXTURE_2D, 0);
       glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)ant);
       gfx_tex_esquecer(0);
@@ -3474,7 +3482,7 @@ static GLuint vidroFonte(GfxRect r) {
   tex = sl ? &vidSlot[sl] : &vidH2; fbo = sl ? &vidSlotFbo[sl] : &vidH2Fbo;
   if (!*tex) {
     GLint ant = fboLigado();
-    if (!vidAlvo(tex, fbo, telaW / 2, telaH / 2)) { sl = 0; tex = &vidH2; fbo = &vidH2Fbo; }
+    if (!vidAlvo(tex, fbo, vidBw, vidBh)) { sl = 0; tex = &vidH2; fbo = &vidH2Fbo; }
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)ant);
     gfx_tex_esquecer(0);
