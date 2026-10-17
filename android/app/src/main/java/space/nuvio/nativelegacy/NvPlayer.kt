@@ -1249,8 +1249,9 @@ object NvPlayer {
             try { r.p.audioSessionId = androidx.media3.common.util.Util.generateAudioSessionIdV21(act) }
             catch (e: Exception) { Log.w(TAG, "sessao de audio nova: $e") }
         }
+        // Sem foco de audio: o volume da soundbar/HDMI nao pode pausar (#581).
         r.p.setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
-            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), r.adotado)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), false)
         r.p.trackSelectionParameters = r.p.trackSelectionParameters.buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
     }
@@ -1326,7 +1327,7 @@ object NvPlayer {
             if (preparada != null) {
                 decoderDv = preparada.decoderDv
                 p.setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), false)
                 try { nativeAudioEstado(r.audioFormato) } catch (_: UnsatisfiedLinkError) {}
             }
             aplicarGanho()
