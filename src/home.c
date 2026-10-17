@@ -898,7 +898,7 @@ static void medidaColecao(int forma, float *w, float *h) {
         float e = escalaDoAjuste() * escalaPosterTelefone();
         *w = e * (NV_CARD_LAND_W * gfx_poster_k());
         *h = e * (NV_CARD_LAND_H * gfx_poster_k());
-      } else { *w = 360.0f; *h = 203.0f; }
+      } else { *w = 360.0f * gfx_poster_k(); *h = 203.0f * gfx_poster_k(); }
       break;
   }
 }

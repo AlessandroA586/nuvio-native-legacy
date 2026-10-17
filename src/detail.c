@@ -2094,9 +2094,9 @@ static float epEscala(void) {
   return epModerna() ? S[ajustes_ep_tamanho()] : 1.0f;
 }
 static float epThumbH(void) {
-  return epApple() ? 236.0f : epModerna() ? NV_DETP_EPM_THUMB_H * epEscala() : NV_DETP_EP_THUMB_H;
+  return (epApple() ? 236.0f : epModerna() ? NV_DETP_EPM_THUMB_H * epEscala() : NV_DETP_EP_THUMB_H) * gfx_poster_k();
 }
-static float epCardW(void) { return epApple() ? 420.0f : NV_DETP_EP_W * epEscala(); }
+static float epCardW(void) { return (epApple() ? 420.0f : NV_DETP_EP_W * epEscala()) * gfx_poster_k(); }
 static float epCardH(void) {
   if (epApple()) return 500.0f;
   if (!epModerna()) return NV_DETP_EP_H;
@@ -2106,7 +2106,7 @@ static float epCardH(void) {
   return epThumbH() + NV_DETP_EPM_SIN_DY +
          (float)NV_DETP_EPM_SIN_LINHAS * NV_DETP_EP_LD_SIN + 10.0f;
 }
-static float epCardPasso(void) { return epApple() ? 420.0f + NV_DETP_EP_GAP : NV_DETP_EP_PASSO * epEscala(); }
+static float epCardPasso(void) { return epCardW() + (epApple() ? NV_DETP_EP_GAP : (NV_DETP_EP_PASSO - NV_DETP_EP_W) * epEscala()); }
 // A placa de foco estilo Apple TV (#205): alpha da mola `f` vezes o teto
 // NV_DETP_EP_PLACA_A. Sem foco (f=0) nao ha placa; o teste le daqui.
 // A placa cobre so o texto e e MAIS ESTREITA que a miniatura (dono: "o contorno
