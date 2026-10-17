@@ -3248,7 +3248,7 @@ static float vidroTom(float cinza);
 // dela, pelo alfa 0 do furo): o player avisa por quadro e o vidro sai chapado.
 #define VID_ALCANCE 68.0f   // BLUR_REACH: ate onde a lente e o desfoque leem fora do vidro
 #define VID_RUIDO_N 256
-static GLuint vidBackdrop, vidGrab, vidH2, vidH2Fbo, vidQa, vidQaFbo, vidQb, vidQbFbo, vidRuido, vidProg;
+static GLuint vidGrab, vidH2, vidH2Fbo, vidQa, vidQaFbo, vidQb, vidQbFbo, vidRuido, vidProg;
 static GLuint vidSlot[VID_NSLOTS], vidSlotFbo[VID_NSLOTS], vidFundo, vidFundoFbo;
 static float vidroSlotReg[VID_NSLOTS][4];
 static GLint vidLocR, vidLocT, vidLocO;
@@ -3312,7 +3312,6 @@ static void vidLiberar(void) {
   memset(vidroSlotValido, 0, sizeof vidroSlotValido);
   glDeleteTextures(1, &vidFundo); glDeleteFramebuffers(1, &vidFundoFbo);
   vidFundo = vidFundoFbo = 0; fundoValido = 0;
-  glDeleteTextures(1, &vidBackdrop); vidBackdrop = 0;
   gfx_tex_esquecer(0);
 }
 static GLuint vidTex(int w, int h, GLenum fmt) {
@@ -3499,9 +3498,8 @@ static int vidCapturar(const float reg[][4], int n, GLuint dst, GLuint dstFbo, G
   return 1;
 }
 
-// Save the full backdrop before foreground draws. Blur only last frame's
-// regions; a new region can then blur the same saved source on its miss frame.
-// Every changed backdrop captures immediately, including cuts during fades.
+// Blur last frame's regions from the backdrop before foreground draws. Every
+// changed backdrop captures immediately, including cuts during fades.
 static float fundoReg[VID_NREG][4];
 static int fundoNReg;
 static void vidroFundoFechar(void) {
@@ -3511,26 +3509,16 @@ static void vidroFundoFechar(void) {
   if (foscoBloq || !ajustes_vidro_fosco() || efeitosMinimos) return;
   if (!vidPreparar()) return;
   // A copia le a TELA: o fundo da Dinamica adiado tem de sair nela antes
-  // (dinAdiado), senao o vidBackdrop fica com o framebuffer transparente do
+  // (dinAdiado), senao a copia fica com o framebuffer transparente do
   // clear e o vidro le preto/lixo ate a proxima mudanca de hash — a faixa
   // que pisca no "Apple TV + frost". Os outros pontos de leitura da tela
   // (furo, mini, alvo) ja resolvem o fundo; aqui faltava.
   dinDescarregar();
-  if (!vidBackdrop) vidBackdrop = vidTex(telaW, telaH, GL_RGB);
   for (i = 0; i < vidroNRegAnt; i++) fora |= !vidroRegContem(fundoReg, fundoNReg, vidroRegAnt[i]);
   if (!fundoValido || fundoHash != vidroHash || fora) {
-    if (!fundoValido || fundoHash != vidroHash) {
 #ifdef NV_SHOT_HOOKS
-      gfx_vidro_copia_com_din_adiado += dinAdiado;
+    if (!fundoValido || fundoHash != vidroHash) gfx_vidro_copia_com_din_adiado += dinAdiado;
 #endif
-      GFX_OUTRO_INI();
-      glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, vidBackdrop);
-      glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, telaW, telaH);
-      glBindTexture(GL_TEXTURE_2D, 0); gfx_tex_esquecer(0);
-      gfx_vidro_copia += (double)telaW * telaH / ((double)telaRealW * telaRealH);
-      GFX_OUTRO_FIM();
-    }
     fundoValido = 0;
     if (!vidFundo) {
       GLint ant = fboLigado();
@@ -3540,7 +3528,9 @@ static void vidroFundoFechar(void) {
       gfx_tex_esquecer(0);
       if (!ok) return;
     }
-    if (n && !vidCapturar(reg, n, vidFundo, vidFundoFbo, vidBackdrop)) return;
+    // Copy only the regions it blurs: a full-screen copy on every changed
+    // frame (each Home hero crossfade frame) cost a screen of bandwidth.
+    if (n && !vidCapturar(reg, n, vidFundo, vidFundoFbo, 0)) return;
     memcpy(fundoReg, reg, n * sizeof fundoReg[0]); fundoNReg = n;
     for (i = 0; i < n; i++) {   // past a screen edge there is nothing to read
       float *f = fundoReg[i];
@@ -3577,14 +3567,8 @@ static GLuint vidroFonte(GfxRect r) {
   // full-screen draw after the backdrop (modal veil) or without a copy.
   if (gfx_vidro_so_fundo) {
     if (!fundoFim) vidroFundoFechar();
-    if (fundoFim == 1 && !fundoDepois) {
-      if (vidroRegContem(fundoReg, fundoNReg, lido)) return vidFundo;
-      const float full[1][4] = { { 0, 0, NV_TELA_W, NV_TELA_H } };
-      if (!vidCapturar(full, 1, vidFundo, vidFundoFbo, vidBackdrop)) return 0;
-      fundoReg[0][0] = fundoReg[0][1] = -1e9f;
-      fundoReg[0][2] = fundoReg[0][3] = 1e9f; fundoNReg = 1;
-      return vidFundo;
-    }
+    // A new region misses for one frame and takes the slot path below.
+    if (fundoFim == 1 && !fundoDepois && vidroRegContem(fundoReg, fundoNReg, lido)) return vidFundo;
   }
   if (!vidH2 || vidW != telaW || vidH != telaH) { if (!vidPreparar()) return 0; }
   else if (vidroSlot >= 0 && vidroContem(vidroSlotReg[vidroSlot], lido) && !vidroCruza(vidroDesde, lido))
