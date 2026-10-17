@@ -7955,10 +7955,9 @@ void home_abrir_sessao(void) {
 
 // ESCALA DE TEXTO E COMPONENTES (escala.h): a home mede e desenha na tela
 // virtual real / texto; so os cartazes voltam ao tamanho real (gfx_poster_k).
-// As entradas publicas ligam a camada, e quem pergunta onde o foco esta recebe
-// o retangulo na unidade da camada dele (1920 reais, ou a virtual dentro de uma
-// camada de texto), por isso a conversao e txt / tela ativa.
-static float homeUnidade(void) { return gfx_escala_txt() / gfx_escala_tela_txt(); }
+// As entradas publicas ligam a camada. Os retangulos de foco sao sempre em
+// pixels da tela real (home.h), inclusive durante o desenho de outra camada.
+static float homeUnidade(void) { return gfx_escala_txt(); }
 void home_evento(const SDL_Event *e) { TXT_INI(); home_evento_(e); TXT_FIM(); }
 void home_atualizar(float dt, Uint32 agora) { TXT_INI(); home_atualizar_(dt, agora); TXT_FIM(); }
 void home_desenhar(Uint32 agora) { TXT_INI(); home_desenhar_(agora); TXT_FIM(); }
