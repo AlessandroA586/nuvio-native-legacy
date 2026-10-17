@@ -635,7 +635,7 @@ typedef enum {
   AJ_TRAILER_AUDIO,    // idioma do audio do trailer (local, append-only)
   AJ_PLAYER_ANIME,     // #205: Player so para anime (0 = Igual ao Player; local)
   AJ_ABERTURA_ESTILO,  // #205: tela de abertura, 0 = Centro (A3), 1 = Canto (B3); local, append-only
-  AJ_MENU_CARTAZ,      // Device-local, append-only: 0 Full, 1 Simple.
+  AJ_MENU_CARTAZ,      // Device-local, append-only: 0 On (default, enriched card), 1 Off (side list only).
   AJ_TITULO_FIL,       // #205: titulo das fileiras da Home, 0 Classico, 1 Ilha, 2 Editorial, 3 Acento; local, append-only
   AJ_VIDRO_QUALIDADE,  // glass quality: 0 Automatica (frost + governor), 1 Desempenho (smoked, no blur), 2 Alta (frost); local, append-only
   AJ_FUNDO_DIN,        // #205: fundo da Dinamica, 0 = Cinza (padrao), 1 = Cor, 2 = Imersivo; local, append-only
@@ -665,7 +665,6 @@ static const char *V_FONTE_ORDEM_ADDON[] = { "Por qualidade", "Do addon" };
 static const char *V_TELA_ABERTURA[] = { "Cinema", "Detalhada" };
 static const char *V_ABERTURA_FUNDO[] = { "Desligado", "Arte", "Arte borrada" };
 static const char *V_ABERTURA_ESTILO[] = { "Centro", "Canto" };
-static const char *V_MENU_CARTAZ[] = { "Completo", "Simples" };
 static const char *V_TITULO_FIL[] = { "Clássico", "Ilha", "Editorial", "Acento" };
 static const char *V_VIDRO_QUALIDADE[] = { "Automática", "Desempenho", "Alta" };
 static const char *V_FUNDO_DIN[] = { "Cinza", "Cor", "Imersivo" };
@@ -1671,7 +1670,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Áudio do trailer", V_TRAUD, 2),   // n real em nValores
   ESC("Player para anime", V_PLAYER_EXTERNO, 3),        // n real em nValores; local: playerExternoAnimeLocal
   ESC("Estilo da tela de abertura", V_ABERTURA_ESTILO, 2),   // local: aberturaEstiloLocal
-  ESC("Menu do cartaz", V_MENU_CARTAZ, 2),              // local: menuCartazLocal
+  ESC("Menu de contexto enriquecido", V_LIGA, 2),              // local: menuCartazLocal
   ESC("Título das fileiras", V_TITULO_FIL, 4),   // local: rowTitleStyleLocal
   ESC("Qualidade do vidro", V_VIDRO_QUALIDADE, 3),   // local: vidroQualidadeLocal
   ESC("Fundo da Dinâmica", V_FUNDO_DIN, 3),                  // local: fundoDinamicaLocal
@@ -6989,7 +6988,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_FUNDO_DIN: return "O fundo do layout Dinâmica. Cinza (padrão): o cinza escuro da Apple TV, sempre o mesmo. Cor: uma cor sua, fixa. Imersivo: acompanha a arte do título, em tons suaves e com troca lenta. Vale só nesta TV.";
     case AJ_FUNDO_DIN_COR: return "A cor do fundo da Dinâmica, escurecida para o texto continuar legível. Vale só nesta TV.";
     case AJ_ABERTURA_ESTILO: return "Como a tela de abertura se organiza. Centro (padrão): o logo no meio e o anel de progresso embaixo dele. Canto: o logo no canto inferior esquerdo, com o anel pequeno embaixo dele. Vale só nesta TV.";
-    case AJ_MENU_CARTAZ: return "Completo (padrão): amplia o cartaz com logo, notas e sinopse. Simples: mantém o cartaz e só abre o menu ao lado. Vale só nesta TV.";
+    case AJ_MENU_CARTAZ: return "Ligado (padrão): o menu de contexto traz o cartaz ampliado com logo, notas e sinopse, e a Home continua atrás. Desligado: só a lista de ações ao lado do cartaz, sem ampliar. Vale só nesta TV.";
     case AJ_ABERTURA_FUNDO: return "O fundo da tela Cinema da abertura. Desligado: preto. Arte (padrão): o backdrop do título, nítido, com véu escuro. Arte borrada: o mesmo backdrop, desfocado e escurecido, como sempre. Vale só nesta TV.";
     case AJ_PLR_CLASSIF: return "Ligado (padrão): no começo do filme, a ilha mostra a classificação indicativa e os avisos do guia parental (violência, nudez, palavrões). Desligado: o player não mostra nada disso.";
     case AJ_RELOGIO_12H: return "Como a hora aparece no relógio, na tela de descanso, no fim do filme e no guia de TV: 18:30 ou 6:30 PM.";
