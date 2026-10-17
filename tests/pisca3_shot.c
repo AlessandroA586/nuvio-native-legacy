@@ -26,9 +26,11 @@
 #include <SDL2/SDL_image.h>
 #include <EGL/egl.h>
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #define W 1920
 #define H 1080
@@ -42,6 +44,8 @@ static int failures;
 static unsigned char *q1, *q2;   // the two frames before this one
 static int nquadro, flashes, sujas, saltos;   // sujas: textures given garbage
 static const char *cena = "settle";   // last window started (transitions follow it)
+
+Uint32 pisca3_ticks(void) { return relogio; }   // tests/pisca3_gles.h
 
 // Mean |diff| over every 7th pixel (RGBA).
 static double dif(const unsigned char *a, const unsigned char *b) {
@@ -137,16 +141,17 @@ static unsigned hash(int y0, int y1) {
   return h;
 }
 
-static void png(const char *nome) {
+static void pngDe(const unsigned char *b, const char *nome) {
   char path[1024];
   SDL_Surface *s = SDL_CreateRGBSurfaceWithFormat(0, W, H, 32, SDL_PIXELFORMAT_RGBA32);
   int y;
   assert(s);
-  for (y = 0; y < H; y++) memcpy((char *)s->pixels + y * s->pitch, px + (size_t)(H - 1 - y) * W * 4, W * 4);
+  for (y = 0; y < H; y++) memcpy((char *)s->pixels + y * s->pitch, b + (size_t)(H - 1 - y) * W * 4, W * 4);
   snprintf(path, sizeof path, "%s/%s.png", out, nome);
   assert(IMG_SavePNG(s, path) == 0);
   SDL_FreeSurface(s);
 }
+static void png(const char *nome) { pngDe(px, nome); }
 
 // `n` frames that should all be identical: count frames whose hero or whole
 // frame hash differs from the previous one, and A-B-A alternations.
@@ -213,6 +218,175 @@ static void rampa(const char *nome, int n) {
     dAnt = d;
     memcpy(ant, px, (size_t)W * H * 4);
   }
+}
+
+// HOME ARTWORK (owner, C9, no trailer): "pisca ao trocar de titulo, nas
+// artwork, e quando abre a sidebar". The screen is cut in TW x TH tiles; a
+// tile BLINKS when its hash, settled for two frames, comes back 2..4 frames
+// later after a visibly different frame in between. The glass counters of each frame (frosted, flat) blink the same
+// way when a glass goes flat for a frame or two and frosts back. PNG
+// sequences of every blink go to argv[1]/home-arte/.
+#define TW 96
+#define TH 72
+#define NTX (W / TW)
+#define NTY (H / TH)
+#define NHIST 6
+static unsigned char *hist[NHIST];
+static unsigned th[NHIST][NTX * NTY];
+static int vg[NHIST][2], nh, piscas, vpiscas, seqs;
+static unsigned tileHash(const unsigned char *b, int tx, int ty) {
+  unsigned h = 2166136261u;
+  int x, y;
+  for (y = ty * TH; y < (ty + 1) * TH; y++)
+    for (x = tx * TW; x < (tx + 1) * TW; x += 2) {
+      const unsigned char *q = b + ((size_t)y * W + x) * 4;
+      h = (h ^ q[0] ^ q[1] << 8 ^ q[2] << 16 ^ (unsigned)q[3] << 24) * 16777619u;
+    }
+  return h;
+}
+static int tileDif(const unsigned char *a, const unsigned char *b, int tx, int ty) {
+  int x, y, m = 0;
+  for (y = ty * TH; y < (ty + 1) * TH; y++)
+    for (x = tx * TW; x < (tx + 1) * TW; x++) {
+      size_t p = ((size_t)y * W + x) * 4;
+      int d = abs(a[p] - b[p]) + abs(a[p + 1] - b[p + 1]) + abs(a[p + 2] - b[p + 2]);
+      if (d > m) m = d;
+    }
+  return m;
+}
+static void seq(const char *nome, int k) {
+  char nm[256];
+  int j;
+  if (seqs >= 6) return;
+  seqs++;
+  for (j = k; j >= 0; j--) {
+    snprintf(nm, sizeof nm, "home-arte/%s-f%03d-%d", nome, nh - 1 - j, k - j);
+    pngDe(hist[(nh - 1 - j) % NHIST], nm);
+  }
+}
+static void arteQuadro(const char *nome) {
+  int c = nh % NHIST, t, k, j, achou = 0;
+  frame();
+  memcpy(hist[c], px, (size_t)W * H * 4);
+  vg[c][0] = gfx_vidro_com_fonte; vg[c][1] = gfx_vidro_chapados;
+  for (t = 0; t < NTX * NTY; t++) th[c][t] = tileHash(px, t % NTX, NTY - 1 - t / NTX);
+  nh++;
+  for (k = 2; k < NHIST - 1 && k + 1 < nh; k++) {
+    int a = (nh - 1 - k) % NHIST, a0 = (nh - 2 - k) % NHIST;
+    for (t = 0; t < NTX * NTY && !achou; t++) {
+      int tx = t % NTX, ty = NTY - 1 - t / NTX, mid = 0;
+      // Settled before (A A), something else, then A again: a slide or a
+      // fade never comes back.
+      if (th[c][t] != th[a][t] || th[a0][t] != th[a][t]) continue;
+      for (j = 1; j < k; j++) {
+        int m = (nh - 1 - j) % NHIST;
+        if (th[m][t] != th[c][t] && tileDif(hist[m], hist[c], tx, ty) > 24) mid = 1;
+      }
+      if (!mid) continue;
+      achou = 1; piscas++;
+      printf("[pisca3] BLINK %s f%03d tile x %d..%d y %d..%d back after %d frames\n", nome, nh - 1,
+             tx * TW, tx * TW + TW - 1, (NTY - 1 - ty) * TH, (NTY - ty) * TH - 1, k);
+      seq(nome, k);
+    }
+    if (vg[c][0] == vg[a][0] && vg[c][1] == vg[a][1] && vg[a0][0] == vg[a][0] && vg[a0][1] == vg[a][1] && !achou) {
+      int mid = 0;
+      for (j = 1; j < k; j++) {
+        int m = (nh - 1 - j) % NHIST;
+        mid |= vg[m][0] != vg[c][0] || vg[m][1] != vg[c][1];
+      }
+      if (mid) {
+        achou = 1; vpiscas++;
+        printf("[pisca3] GLASS-BLINK %s f%03d frosted=%d flat=%d back after %d frames\n", nome, nh - 1,
+               vg[c][0], vg[c][1], k);
+        seq(nome, k);
+      }
+    }
+  }
+  if (achou) for (j = 0; j < NHIST; j++) memcpy(th[j], th[c], sizeof th[c]);   // one report per blink
+}
+static void arte(const char *nome, SDL_Keycode k, int n) {
+  int i;
+  char nm[256];
+  for (i = 0; i < n; i++) {
+    SDL_Event e;
+    memset(&e, 0, sizeof e);
+    e.key.keysym.sym = k;
+    if (k && i < 2) { e.type = i ? SDL_KEYUP : SDL_KEYDOWN; home_evento(&e); }   // as tecla()
+    arteQuadro(nome);
+    if (i < 12 && !(i & 3)) { snprintf(nm, sizeof nm, "home-arte/%s-%03d", nome, i); png(nm); }
+  }
+  printf("[pisca3] %-14s frosted=%d flat=%d caps=%d blinks=%d glass-blinks=%d\n", nome,
+         gfx_vidro_com_fonte, gfx_vidro_chapados, gfx_vidro_capturas, piscas, vpiscas);
+}
+// PROMOTION (C9 log: "[tex-trace] dedup role=hero estado=promocao", then
+// "upload-total ... mip=0"): the hero asks a card's art at hero size, the
+// shared texture is decoded again larger. A card resting on screen must look
+// the same before and after.
+// Edge energy of `b` (sum of |dx| + |dy| on green) inside the box where the
+// frame changed. Without its pyramid a 1280 texture drawn at 317 aliases:
+// same picture, much more edge energy. A different mip level of the same
+// pyramid moves it under 10% (ANGLE: x1.32 without, x0.92 with).
+static int bx0, by0, bx1, by1;
+static void caixaMudou(void) {
+  int x, y;
+  bx0 = W; by0 = H; bx1 = by1 = -1;
+  for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
+    size_t p = ((size_t)y * W + x) * 4;
+    if (memcmp(px + p, ant + p, 3)) {
+      if (x < bx0) bx0 = x;
+      if (x > bx1) bx1 = x;
+      if (y < by0) by0 = y;
+      if (y > by1) by1 = y;
+    }
+  }
+}
+static double bordas(const unsigned char *b) {
+  long soma = 0;
+  int x, y;
+  for (y = by0; y < by1; y++) for (x = bx0; x < bx1; x++) {
+    size_t p = ((size_t)y * W + x) * 4 + 1;
+    soma += abs(b[p] - b[p + 4]) + abs(b[p] - b[p + (size_t)W * 4]);
+  }
+  return soma;
+}
+
+static void promo(const char *arte) {
+  int i;
+  double pior = 1;
+  for (i = 0; i < 90; i++) frame();
+  memcpy(ant, px, (size_t)W * H * 4);
+  png("home-arte/arte-promo-before");
+  for (i = 0; i < 60; i++) {
+    double r;
+    (void)tex_obter_hero(arte);
+    frame();
+    caixaMudou();
+    if (bx1 < 0) continue;
+    r = bordas(px) / (bordas(ant) + 1);
+    if (fabs(r - 1) > fabs(pior - 1)) { pior = r; (void)caixa("arte-promo", i, 1); png("home-arte/arte-promo-after"); }
+  }
+  printf("[pisca3] arte-promo edge energy x%.3f\n%s: a resting card keeps its look when its art is promoted\n",
+         pior, fabs(pior - 1) > 0.15 ? "FAIL" : "PASS");
+  failures += fabs(pior - 1) > 0.15;
+}
+
+static void homeArte(const char *promoArte) {
+  char nm[64];
+  int i;
+  for (i = 0; i < NHIST; i++) { hist[i] = malloc((size_t)W * H * 4); assert(hist[i]); }
+  snprintf(nm, sizeof nm, "%s/home-arte", out); mkdir(nm, 0755);
+  tecla(SDLK_DOWN); promo(promoArte); tecla(SDLK_UP);   // a row card the hero never showed
+  for (i = 0; i < 120; i++) frame();
+  for (i = 0; i < 4; i++) { snprintf(nm, sizeof nm, "arte-right%d", i); arte(nm, SDLK_RIGHT, 90); }
+  arte("arte-down", SDLK_DOWN, 120);
+  for (i = 0; i < 4; i++) { snprintf(nm, sizeof nm, "arte-row%d", i); arte(nm, SDLK_RIGHT, 90); }
+  menu_abrir();  arte("arte-sidebar", 0, 90);
+  menu_fechar(); arte("arte-sidebar-off", 0, 90);
+  for (i = 0; i < 4; i++) { snprintf(nm, sizeof nm, "arte-back%d", i); arte(nm, SDLK_LEFT, 60); }
+  arte("arte-up", SDLK_UP, 120);
+  printf("[pisca3] blinks=%d glass-blinks=%d\n%s: home artwork does not blink\n", piscas, vpiscas,
+         piscas || vpiscas ? "FAIL" : "PASS");
+  failures += piscas || vpiscas;
 }
 
 // Fake native trailer: plays, settles, then the webOS pipeline stalls
@@ -302,6 +476,7 @@ int main(int argc, char **argv) {
 
   for (i = 0; i < 240; i++) frame();          // settle: art loads, springs rest
   parado("home-idle", 90);
+  homeArte(items[3].backdrop);
   trailerCiclo("home", TRAILER_DONO_HOME);
   for (i = 0; i < 120; i++) frame();
   tecla(SDLK_DOWN);
