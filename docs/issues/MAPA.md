@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `eea9aac9d` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-17T13:48:33-03:00. 491 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `eea9aac9d` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-17T15:30:00-03:00. 491 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -120,7 +120,7 @@ Plano de refatoração: `docs/plans/refatoracao-geral.md` (branch `agente/refato
 | 2.0.3 | 0 |  |
 | 2.0.4 | 0 |  |
 | 2.0.5 | 2 | #495, #512 |
-| 2.0.6 | 48 | #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #479, #492, #494, #496, #500, #501, #503, #505, #506, #507, #508, #530, #539, #545, #549, #551, #553, #555, #557, #558, #564, #565, #566, #570, #577, #578, #579, #580, #581, #582, #584, #585, #588 |
+| 2.0.6 | 47 | #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #479, #492, #494, #496, #500, #501, #503, #505, #506, #507, #508, #530, #539, #545, #549, #551, #553, #555, #557, #558, #564, #565, #566, #570, #577, #578, #579, #581, #582, #584, #585, #588 |
 | 2.1 | 7 | #420, #457, #458, #589, #590, #591, #592 |
 | 2.2 | 0 |  |
 | futuro | 8 | #437, #438, #450, #509, #510, #514, #521, #542 |
@@ -181,11 +181,11 @@ Por status:
 |---|---|
 | lancada | 304 |
 | integrada | 69 |
-| aberta | 58 |
+| aberta | 56 |
 | respondida | 21 |
 | por-desenho | 15 |
-| fechada-sem-resposta | 7 |
-| precisa-log | 7 |
+| fechada-sem-resposta | 8 |
+| precisa-log | 8 |
 | fora-do-escopo | 4 |
 | em_revisao | 3 |
 | duplicada | 2 |
@@ -203,8 +203,8 @@ Por release (grupo de planejamento):
 
 Lançadas por versão: 1.0.7: 7, 1.0.8: 1, 1.0.10: 2, 1.0.11: 3, 1.0.15: 1, 1.0.22: 1, 1.0.24: 1, 1.0.29: 1, 1.0.30: 2, 1.0.31: 2, 1.0.32: 2, 1.0.34: 1, 1.0.35: 1, 1.0.37: 1, 1.0.38: 2, 1.0.39: 1, 1.0.42: 1, 1.0.43: 4, 1.0.44: 4, 1.0.45: 1, 1.0.51: 3, 1.0.52: 1, 1.0.53: 1, 1.0.55: 3, 1.2.1: 4, 1.3.0: 1, 1.3.2: 5, 1.3.4: 5, 1.3.5: 2, 1.3.8: 1, 1.3.9: 1, 1.3.10: 1, 1.3.11: 1, 1.3.12: 5, 1.4: 7, 1.4.1: 2, 1.4.2: 9, 1.4.3: 9, 1.4.4: 3, 1.4.5: 1, 1.4.6: 7, 1.4.7: 1, 1.5.0: 2, 1.5.1: 4, 1.5.2: 9, 1.5.3: 2, 1.5.4: 9, 1.6.0: 8, 1.6.1: 4, 1.6.2: 3, 1.6.3: 2, 1.6.4: 2, 1.6.5: 4, 1.7.0: 9, 1.7.1: 4, 1.7.2: 5, 1.7.4: 5, 2.0.0: 22, 2.0.1: 12, 2.0.2: 20, 2.0.3: 29, 2.0.4: 8, 2.0.5: 20, 2.0.7: 9.
 
-Abertas no GitHub: 76. Fechadas: 415.
-Abertas sem nenhum comentário nosso: 62.
+Abertas no GitHub: 75. Fechadas: 416.
+Abertas sem nenhum comentário nosso: 61.
 
 ## 2.0.3 lançada com pendência (precisa-log, respondida ou conserto parcial)
 
@@ -266,7 +266,7 @@ Notas:
 
 ## Próximo patch proposto (2.0.6)
 
-47 issues.
+46 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -274,7 +274,7 @@ Notas:
 | [#412](https://github.com/iqui27/nuvio-native-legacy/issues/412) | Playback makes UI extremely laggy | Samsung .tpk | bug | integrada | 2.0.7 | 2.0.6 | 224063f2, 224063f22, agente/205-tpk412b | nós 10-11 | Verify merged result; build/install and check device. |
 | [#413](https://github.com/iqui27/nuvio-native-legacy/issues/413) | [Samsung Tizen 4 / v2.0.3] Finished movie plays again when s | Samsung .tpk | bug | integrada | - | 2.0.6 | d8cc7fa2 | autor 10-10 | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#414](https://github.com/iqui27/nuvio-native-legacy/issues/414) | https://nuvio.tvflix.co.uk | Samsung .tpk | bug | integrada | 2.0.7 | 2.0.6 | 168be34d9, agente/205-col414 | sem comentários | Verify merged result; build/install and check device. |
-| [#415](https://github.com/iqui27/nuvio-native-legacy/issues/415) | constant crashing, no matter if I play or not | LG | bug | em_job | 2.0.7 | 2.0.6 | 5c6b8093d, 5c266499, f77eeeef7 | nós 10-10 | Wait for job; review latest commit. |
+| [#415](https://github.com/iqui27/nuvio-native-legacy/issues/415) | constant crashing, no matter if I play or not | LG | bug | em_job | 2.0.7 | 2.0.6 | 5c6b8093d, 5c266499, f77eeeef7 | nós 10-10 | Review and merge agente/205-memg4 (job done 13:42, fix job running 14:45 for remaining mem |
 | [#418](https://github.com/iqui27/nuvio-native-legacy/issues/418) | App fails to connect: "The Nuvio account server didn't respo | Samsung .tpk | bug | integrada | 2.0.7 | 2.0.6 | deb68c4b9, agente/205-login418 | sem comentários | Verify merged result; build/install and check device. |
 | [#423](https://github.com/iqui27/nuvio-native-legacy/issues/423) | Not update LG | LG | bug | aberta | - | 2.0.6 | - | autor 10-11 | triar/reproduzir; falta conserto comprovado |
 | [#424](https://github.com/iqui27/nuvio-native-legacy/issues/424) | Live tv not loading categories | Android | bug | aberta | - | 2.0.6 | - | sem comentários | triar/reproduzir; falta conserto comprovado |
@@ -300,7 +300,7 @@ Notas:
 | [#545](https://github.com/iqui27/nuvio-native-legacy/issues/545) | Catalog Now Showing | ? | bug | integrada | 2.0.7 | 2.0.6 | 26b9c635b/21d1783b6/67985ea5d, merged, review | sem comentários | Verify merged result; build/install and check device. |
 | [#549](https://github.com/iqui27/nuvio-native-legacy/issues/549) | Needs the See All tile for every row in showcase layout | ? | enhancement | integrada | - | 2.0.6 | 4baf783fa | sem comentários | build+install no HEAD ab0e9a597 e resposta na issue |
 | [#551](https://github.com/iqui27/nuvio-native-legacy/issues/551) | Catalog Not Loading 2.0.6 | LG webOS 25/26 | bug | integrada | 2.0.7 | 2.0.6 | 1c9043ed0/a2e9daf91, merged, e680776ed | sem comentários | Verify merged result; build/install and check device. |
-| [#553](https://github.com/iqui27/nuvio-native-legacy/issues/553) | queda de desempenho | ? | bug | integrada | 2.0.7 | 2.0.6 | 6a64c2e13, a691e96fb, abb9e49b9 | sem comentários | Verify merged result; build/install and check device. |
+| [#553](https://github.com/iqui27/nuvio-native-legacy/issues/553) | queda de desempenho | ? | bug | integrada | 2.0.7 | 2.0.6 | 6a64c2e13, a691e96fb, abb9e49b9 | sem comentários | On-TV perf check on the TCL of merged traktvidro glass-card fix (bb9f2abc9/d4317aaa4); the |
 | [#555](https://github.com/iqui27/nuvio-native-legacy/issues/555) | Search does not work as expected | ? | ? | integrada | 2.0.7 | 2.0.6 | merged, 438423097, agente/205-busca555 | sem comentários | Verify merged result; build/install and check device. |
 | [#557](https://github.com/iqui27/nuvio-native-legacy/issues/557) | Playback cannot be skipped to a particular time stamp | ? | ? | aberta | - | 2.0.6 | - | sem comentários | triar: seek para timestamp especifico; criar job |
 | [#558](https://github.com/iqui27/nuvio-native-legacy/issues/558) | Black screen on launch | ? | bug | integrada | 2.0.7 | 2.0.6 | cc49341e6, merged, a1888d007 | sem comentários | Verify merged result; build/install and check device. |
@@ -311,7 +311,6 @@ Notas:
 | [#577](https://github.com/iqui27/nuvio-native-legacy/issues/577) | Low fps on tyzen65 after 2.0.6 update | Samsung Tizen 6.5 | bug | aberta | - | 2.0.6 | - | sem comentários | triar: baixo FPS no Tizen 6.5 depois da 2.0.6; pedir log/modelo e criar job |
 | [#578](https://github.com/iqui27/nuvio-native-legacy/issues/578) | Converted audio slightly delayed / out of lip sync on Samsun | Samsung .tpk | ? | aberta | - | 2.0.6 | - | sem comentários | triar: audio atrasado no Tizen 10; pedir amostra e criar job |
 | [#579](https://github.com/iqui27/nuvio-native-legacy/issues/579) | V2.06 scrolling catalogue display glitch | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: glitch de rolagem do catalogo na 2.0.6; pedir video e criar job |
-| [#580](https://github.com/iqui27/nuvio-native-legacy/issues/580) | Addons catalogues not showing | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: catalogos de add-on nao aparecem; mesmo eixo de #545/#551; sem job |
 | [#582](https://github.com/iqui27/nuvio-native-legacy/issues/582) | Frequent Stuttering and Freezing on LG TVs, Even with Reduce | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: travamento/congelamento em LG TV mesmo com desempenho reduzido; mesmo eixo de #553/ |
 | [#581](https://github.com/iqui27/nuvio-native-legacy/issues/581) | Changing Volume pauses the playback | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: mexer no volume pausa a reproducao; provavel no caminho do indicador de volume (mao |
 | [#584](https://github.com/iqui27/nuvio-native-legacy/issues/584) | IMDb trailers start in low resolution and take too long to i | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: trailer do IMDb comeca em resolucao baixa e demora a subir; pedir log e ver o camin |
@@ -420,7 +419,7 @@ Snapshot 2026-10-17T12:48:52-03:00: agente/205-foscoleve4: merged; No mapped rev
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-homepisca: merged; No mapped review verdict.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-dvabertura: merged; No mapped review verdict. 
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-foscoleve4: merged; No mapped review verdict. 
-Snapshot 2026-10-17T13:48:33-03:00: agente/205-homepisca: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-homepisca: merged; No mapped review verdict.  Sync 2026-10-17 15:30: traktvidro merged 24047051b; comment cards flat glass, no per-card backdrop pass.
 - **#555**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | [sync 2026-10-16 21:00] merged 438423097 (eps555) + d5ae66d9e (busca555); reviews OK j-rev-eps555/j-rev-busca555 | [sync 2026-10-16 22:55] merged 438423097 + d5ae66d9e no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged 438423097 nesta janela (HEAD ab0e9a597); review j-rev-eps555/j-rev-busca555; busca555 (titulo exato) + eps555 (episodios pelo catalogo); entra na 2.0.7
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-busca555: merged; j-rev-busca555.log: OK.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-eps555: merged; j-rev-eps555.log: OK.
@@ -439,7 +438,6 @@ Snapshot 2026-10-17T13:48:33-03:00: agente/205-i565pengu: merged; j-rev-i565peng
 - **#577**: [sync 2026-10-17 02:50] Nova em 2026-10-17 05:40 (issues.json). Regressao de desempenho relatada depois da 2.0.6; sem job, branch ou prompt no snapshot 10-17 02:46. Sync 2026-10-17 04:55: segue sem job. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 - **#578**: Sync 2026-10-17 04:55: issue nova (17/10 06:05), sem job. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 - **#579**: Sync 2026-10-17 04:55: issue nova (17/10 07:46), rotulo bug, sem job. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
-- **#580**: Sync 2026-10-17 07:05: issue nova (17/10 09:01), rotulo bug, sem job. Mesma familia de #545/#551. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 - **#582**: Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:26:52Z).
 - **#581**: Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:15:16Z).
 - **#584**: [sync 2026-10-17 09:25] issue nova (createdAt 2026-10-17T11:47:33Z, label bug). Sem job nem branch.
@@ -466,9 +464,9 @@ Snapshot 2026-10-17T13:48:33-03:00: agente/205-i565pengu: merged; j-rev-i565peng
 | [#521](https://github.com/iqui27/nuvio-native-legacy/issues/521) | Layout | ? | bug | integrada | 2.0.7 | futuro | 5184d0a1b, agente/205-i521q | sem comentários | Verify merged result; build/install and check device. |
 | [#542](https://github.com/iqui27/nuvio-native-legacy/issues/542) | Torbox cloud library | ? | feature | aberta | - | futuro | - | sem comentários | triar; sem job |
 | [#589](https://github.com/iqui27/nuvio-native-legacy/issues/589) | Not all GIFs are animated | ? | bug | aberta | - | 2.1 | - | sem comentários | triar: GIFs animados travam no primeiro quadro; sem job nem branch |
-| [#590](https://github.com/iqui27/nuvio-native-legacy/issues/590) | Imdb score displayed in % on title page | ? | bug | integrada | 2.0.7 | 2.1 | 03a144294, 0d998e33a, agente/205-imdbnota | sem comentários | Verify merged result; build/install and check device. |
-| [#592](https://github.com/iqui27/nuvio-native-legacy/issues/592) | MP4 Playback Issue on LG webOS 26 | ? | ? | aberta | - | 2.1 | - | sem comentários | Triage; assign a job. |
-| [#591](https://github.com/iqui27/nuvio-native-legacy/issues/591) | The audio language of the trailer would match the audio lang | ? | ? | aberta | - | 2.1 | - | sem comentários | Triage; assign a job. |
+| [#590](https://github.com/iqui27/nuvio-native-legacy/issues/590) | Imdb score displayed in % on title page | ? | bug | integrada | 2.0.7 | 2.1 | 03a144294, 0d998e33a, agente/205-imdbnota | sem comentários | Close after 2.0.7 release; reply in issue. |
+| [#592](https://github.com/iqui27/nuvio-native-legacy/issues/592) | MP4 Playback Issue on LG webOS 26 | ? | ? | precisa-log | - | 2.1 | - | sem comentários | Ask for log + example source (MP4 on webOS 26). |
+| [#591](https://github.com/iqui27/nuvio-native-legacy/issues/591) | The audio language of the trailer would match the audio lang | ? | ? | aberta | - | 2.1 | - | sem comentários | Deferred to 2.1 by triage3 (trailer audio language match). |
 
 Notas:
 
@@ -496,9 +494,9 @@ Snapshot 2026-10-17T13:48:33-03:00: agente/205-i521q: merged; j-revg-i521q-3.log
 - **#589**: [sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:19:12Z, label bug), sem job.
 - **#590**: [sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:37:44Z, label bug); j-imdbnota done 11:50 (03a144294 normaliza IMDb 0-100 -> 0-10, testes/notasfontes.sh + imdbnota.sh rc=0), branch 1 ahead, sem merge e sem review.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-imdbnota: done-awaiting-review; No mapped review verdict.
-Snapshot 2026-10-17T13:48:33-03:00: agente/205-imdbnota: merged; No mapped review verdict. 
-- **#592**: Imported from local issues snapshot.
-- **#591**: Imported from local issues snapshot.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-imdbnota: merged; No mapped review verdict.  Sync 2026-10-17 15:30: imdbnota merged eea9aac9d; IMDb normalized 0-100->0-10 at ingestion.
+- **#592**: Imported from local issues snapshot. Sync 2026-10-17 15:30: j-triagem3 needs-info.
+- **#591**: Imported from local issues snapshot. Sync 2026-10-17 15:30: j-triagem3 defer 2.1.
 
 ## Outras pendências
 
@@ -1166,7 +1164,7 @@ Snapshot 2026-10-17T13:48:33-03:00: agente/205-texteto: merged; j-rev2-texteto.l
 
 ## Fechado sem conserto (por-desenho, fora-do-escopo, duplicada, respondida, sem resposta)
 
-114 issues.
+115 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -1265,12 +1263,12 @@ Snapshot 2026-10-17T13:48:33-03:00: agente/205-texteto: merged; j-rev2-texteto.l
 | [#476](https://github.com/iqui27/nuvio-native-legacy/issues/476) | No internet | ? | bug | aberta | - | - | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
 | [#477](https://github.com/iqui27/nuvio-native-legacy/issues/477) | Bigger synopsis font | Samsung .tpk | melhoria | integrada | 2.0.7 | - | 1366561a, 6a260e9b, 6a260e9b0 | autor 10-13 | Verify merged result; build/install and check device. |
 | [#480](https://github.com/iqui27/nuvio-native-legacy/issues/480) | Remember Preferred Audio Language Across Sources | ? | feature | aberta | - | - | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
-| [#481](https://github.com/iqui27/nuvio-native-legacy/issues/481) | Show audio and subtitle metadata in the stream source list | ? | feature | em_revisao | 2.0.7 | - | e4fb8c08/c9932635, agente/205-pr487, agente/205-pr487v2 | sem comentários | Merge reviewed branch. |
-| [#482](https://github.com/iqui27/nuvio-native-legacy/issues/482) | Continue Watching content leaks between profiles | ? | bug | em_revisao | - | - | - | sem comentários | fix novo + re-review (ultimo VEREDITO BLOQUEIA); depois merge e resposta na issue |
+| [#481](https://github.com/iqui27/nuvio-native-legacy/issues/481) | Show audio and subtitle metadata in the stream source list | ? | feature | em_revisao | 2.0.7 | - | e4fb8c08/c9932635, agente/205-pr487, agente/205-pr487v2 | sem comentários | Merge reviewed branch (review OK; PR fix branches still open in fila). |
+| [#482](https://github.com/iqui27/nuvio-native-legacy/issues/482) | Continue Watching content leaks between profiles | ? | bug | em_revisao | - | - | - | sem comentários | New fix + re-review (last VEREDITO BLOQUEIA); then merge and answer. |
 | [#483](https://github.com/iqui27/nuvio-native-legacy/issues/483) | Anime subtitles not rendering | ? | bug | integrada | 2.0.7 | - | 251632be, 251632beb, 251632be | sem comentários | Verify merged result; build/install and check device. |
 | [#484](https://github.com/iqui27/nuvio-native-legacy/issues/484) | External subtitles disappear after a few minutes without inp | Samsung .tpk | bug | integrada | 2.0.7 | - | 027fd3c7, 027fd3c7c, agente/205-leg484 | autor 10-13 | Verify merged result; build/install and check device. |
 | [#486](https://github.com/iqui27/nuvio-native-legacy/issues/486) | Sometimes wont load P2P addons | ? | bug | integrada | 2.0.7 | - | edff609f/c670c37e/20bb2f3a, 16351755c, cdb45cb92 | sem comentários | Verify merged result; build/install and check device. |
-| [#488](https://github.com/iqui27/nuvio-native-legacy/issues/488) | Profiles switching | ? | bug | em_revisao | 2.0.7 | - | 067c0c35, f51aa3d76, 71fbc7453 | sem comentários | Merge reviewed branch. |
+| [#488](https://github.com/iqui27/nuvio-native-legacy/issues/488) | Profiles switching | ? | bug | em_revisao | 2.0.7 | - | 067c0c35, f51aa3d76, 71fbc7453 | sem comentários | Merge reviewed branch (review OK; PR fix branches still open in fila). |
 | [#497](https://github.com/iqui27/nuvio-native-legacy/issues/497) | Prioritize continue watch sync on startup | ? | feature | aberta | - | - | - | sem comentários | triar e criar job |
 | [#499](https://github.com/iqui27/nuvio-native-legacy/issues/499) | Cached / not cached indicator on Debrid sources (torbox, rea | ? | feature | integrada | 2.0.7 | - | aab8e18d, 57aee24fd, agente/205-499cache | sem comentários | Verify merged result; build/install and check device. |
 | [#502](https://github.com/iqui27/nuvio-native-legacy/issues/502) | Detail page keeps the low-res thumbnail instead of loading f | ? | bug | integrada | 2.0.7 | - | d3fc8e5e, 20f1104f, 20f1104fc | sem comentários | Verify merged result; build/install and check device. |
@@ -1284,6 +1282,7 @@ Snapshot 2026-10-17T13:48:33-03:00: agente/205-texteto: merged; j-rev2-texteto.l
 | [#552](https://github.com/iqui27/nuvio-native-legacy/issues/552) | The add-on sources aren't appearing | ? | bug | integrada | 2.0.7 | - | cbcf467f5/6d524f947/27988615e, merged, 0d7821a01 | sem comentários | Verify merged result; build/install and check device. |
 | [#556](https://github.com/iqui27/nuvio-native-legacy/issues/556) | Special / out-of-order seasons recognised by Trakt are not s | ? | ? | integrada | 2.0.7 | - | 054ccef24, agente/205-port569 | sem comentários | Verify merged result; build/install and check device. |
 | [#562](https://github.com/iqui27/nuvio-native-legacy/issues/562) | Reload button in player | ? | bug | integrada | - | - | 2c7c85860, 6a6d5b71b | sem comentários | build+install no HEAD ab0e9a597, testar Recarregar na folha de fontes e Assistir do comeco |
+| [#580](https://github.com/iqui27/nuvio-native-legacy/issues/580) | Addons catalogues not showing | ? | bug | fechada-sem-resposta | - | - | - | sem comentários | Issue closed by reporter/triagem (catalogs of add-ons not showing; same axis as #545/#551) |
 
 Notas:
 
@@ -1472,6 +1471,7 @@ Snapshot 2026-10-17T13:48:33-03:00: agente/205-fonte552: merged; j-rev2-fonte552
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-port569: merged; j-rev-port569-r2.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-port569: merged; j-rev-port569-r2.log: OK. 
 - **#562**: Sync 2026-10-17 04:55: #562 fechada no GitHub depois do merge do PR #574. Conserto em integracao/2.0.5, sai na 2.0.7.
+- **#580**: Sync 2026-10-17 07:05: issue nova (17/10 09:01), rotulo bug, sem job. Mesma familia de #545/#551. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00. Sync 2026-10-17 15:30: estado_github corrigido para fechada (gh #580 CLOSED).
 
 ## Auditoria de validações
 

@@ -418,7 +418,7 @@ Landing in 2.0.7, already in the sections above:
   (`2c7c85860`), the **Dynamic Gray/Colour background** (`e3fdbe717`), the **Home frost islands**
   (`f087f4b59`), the **sidebar frost / glass accent pill** (`ab0e9a597`), **PR #572** (`22f3d22bb`), the
   **player glass / episode plate / hero mipmap** fixes (`04375ab4f`, `3b39999e5`, `fc6d35d69`), the
-  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`) and the **IMDb 0-100 fix** (`eea9aac9d`).
+  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`) and the **IMDb 0-100 fix** (`eea9aac9d`), the **flat-glass Trakt cards** (`24047051b`), the **governor/glass-off fixes** (`3f95a9241`) and **CNCVerse long ids** (`47ad499ad`).
 
 ### Frost performance (to fill before tagging)
 
@@ -459,7 +459,7 @@ Landing in 2.0.7, already in the sections above:
   (`2c7c85860`), the **Dynamic Gray/Colour background** (`e3fdbe717`), the **Home frost islands**
   (`f087f4b59`), the **sidebar frost / glass accent pill** (`ab0e9a597`), **PR #572** (`22f3d22bb`), the
   **player glass / episode plate / hero mipmap** fixes (`04375ab4f`, `3b39999e5`, `fc6d35d69`), the
-  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`) and the **IMDb 0-100 fix** (`eea9aac9d`).
+  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`) and the **IMDb 0-100 fix** (`eea9aac9d`), the **flat-glass Trakt cards** (`24047051b`), the **governor/glass-off fixes** (`3f95a9241`) and **CNCVerse long ids** (`47ad499ad`).
 
 ### Frost performance (to fill before tagging)
 

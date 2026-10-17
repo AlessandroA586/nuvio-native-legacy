@@ -1,5 +1,5 @@
 {
- "atualizado_em": "2026-10-17T13:48:33-03:00",
+ "atualizado_em": "2026-10-17T15:30:00-03:00",
  "base": "eea9aac9d",
  "nota": "Local snapshot sync 2026-10-17T13:48:33-03:00, HEAD eea9aac9d. Added 0 issues. Device validation remains pending; see external estado.md. Previous history retained in item notes.",
  "itens": [
@@ -8577,7 +8577,7 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-10"
    },
-   "proximo_passo": "Wait for job; review latest commit.",
+   "proximo_passo": "Review and merge agente/205-memg4 (job done 13:42, fix job running 14:45 for remaining memory issues); test on TV after merge.",
    "notas": "[sync 2026-10-17 12:15] Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5c6b8093d); status -> integrada\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-memg4: done-awaiting-review; No mapped review verdict.\nSnapshot 2026-10-17T13:48:33-03:00: agente/205-memg4: running; No mapped review verdict. ",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/415",
    "criada_em": "2026-10-10",
@@ -9570,7 +9570,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Merge reviewed branch.",
+   "proximo_passo": "Merge reviewed branch (review OK; PR fix branches still open in fila).",
    "notas": "Snapshot 2026-10-14 10:15: \"Sources: show declared audio and subtitle languages\" (e4fb8c08) e o merge c9932635 \"Merge PR #487 v2\" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15: agente/205-pr487v2 (ac1ba9725) review OK j-rev-pr487-v2; nao mergeado; dono decide 2.0.6. | Escrivao 2026-10-15 11:48: GH fechada; branch 3 ahead, review OK, nao mergeado | Escrivão 10/15 12:48: GH #481 fechada; branch pr/487-v2 e agente/205-pr487v2 nao integrados | [sync 2026-10-16 22:55] agente/205-pr487v2 3 ahead (tip ac1ba9725); VEREDITO OK j-rev-pr487-v2, nenhum commit depois\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK.\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.\nSnapshot 2026-10-17T13:48:33-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK. \nSnapshot 2026-10-17T13:48:33-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK. ",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/481",
    "criada_em": "2026-10-13"
@@ -9590,7 +9590,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "fix novo + re-review (ultimo VEREDITO BLOQUEIA); depois merge e resposta na issue",
+   "proximo_passo": "New fix + re-review (last VEREDITO BLOQUEIA); then merge and answer.",
    "notas": "Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 22:49: merged via agente/205-i488perfil (f51aa3d76). | [sync 2026-10-16 22:55] snapshot 10-16: CLOSED no issues.json | Escrivão 2026-10-16 22:1x: agente/205-pr493 12 ahead; VEREDITO BLOQUEIA j-revg-pr493 depois dos OKs de 10-15; branch fora de integracao/2.0.5",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/482",
    "criada_em": "2026-10-13"
@@ -9696,7 +9696,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Merge reviewed branch.",
+   "proximo_passo": "Merge reviewed branch (review OK; PR fix branches still open in fila).",
    "notas": "pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR. | Escrivao 10-15 08:50: pr/493-v3 (3 ahead, review OK 06:50, nao mergeado) substitui o pr/493 velho; #488 segue nele. | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15 10:50: reaberta no GH; pr/493-v3 review OK sem merge. | Escrivao 2026-10-15 11:48: prompt p-205-perfil488 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i488perfil integrada] [sync 2026-10-15: agente/205-perfil488 integrada] Escrivao 10-15 22:49: merged via agente/205-i488perfil (f51aa3d76). | [sync 2026-10-16 21:00] agente/205-pr493 continua 12 ahead com VEREDITO BLOQUEIA j-revg-pr493; pr/493-v3 review OK 06:50 mas commits 5694694cc/65613c562 ja estao em HEAD. | [sync 2026-10-16 22:55] agente/205-pr493 12 ahead (tip 71fbc7453); VEREDITO BLOQUEIA j-revg-pr493 mais novo que OK j-revpr493-v3 | Escrivão 2026-10-16 22:1x: agente/205-pr493 12 ahead; VEREDITO BLOQUEIA j-revg-pr493 depois dos OKs de 10-15; branch fora de integracao/2.0.5\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-i488perfil: merged; j-revg-i488perfil-z.log: OK.\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-perfil488: merged; No mapped review verdict.\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK.\nSnapshot 2026-10-17T13:48:33-03:00: agente/205-i488perfil: merged; j-revg-i488perfil-z.log: OK. \nSnapshot 2026-10-17T13:48:33-03:00: agente/205-perfil488: merged; No mapped review verdict. \nSnapshot 2026-10-17T13:48:33-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK. ",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/488",
    "criada_em": "2026-10-13"
@@ -10548,8 +10548,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Verify merged result; build/install and check device.",
-   "notas": "[sync 2026-10-17 09:25] tres jobs novos apontam para o mesmo eixo: dono diz que a tela AINDA pisca na C9 com frost (j-pisca3 RUNNING, branch agente/205-pisca3), que o player perdeu o vidro depois de 6f1c61cb8 (j-playervidro done 08:35, ce33fe44a) e que o Trakt continua igual e sem ganho de FPS (j-traktvidro RUNNING). Nada disso esta no HEAD. Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | [sync 2026-10-16 21:00] perf glass merged (e9c809475 fosco-nova + 0c77460c1/5536ee8da/d7ec89975 fosco-perf) e 5ed6ddfaa (detail): 1 captura/quadro, 4->2 camadas cheias. Sync 2026-10-17 04:55: os tres merges de vidro/abertura desta janela entram aqui; ainda sem medicao de FPS na TV.\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-dvabertura: merged; No mapped review verdict.\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-foscoleve4: merged; No mapped review verdict.\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-homepisca: merged; No mapped review verdict.\nSnapshot 2026-10-17T13:48:33-03:00: agente/205-dvabertura: merged; No mapped review verdict. \nSnapshot 2026-10-17T13:48:33-03:00: agente/205-foscoleve4: merged; No mapped review verdict. \nSnapshot 2026-10-17T13:48:33-03:00: agente/205-homepisca: merged; No mapped review verdict. ",
+   "proximo_passo": "On-TV perf check on the TCL of merged traktvidro glass-card fix (bb9f2abc9/d4317aaa4); then answer issue.",
+   "notas": "[sync 2026-10-17 09:25] tres jobs novos apontam para o mesmo eixo: dono diz que a tela AINDA pisca na C9 com frost (j-pisca3 RUNNING, branch agente/205-pisca3), que o player perdeu o vidro depois de 6f1c61cb8 (j-playervidro done 08:35, ce33fe44a) e que o Trakt continua igual e sem ganho de FPS (j-traktvidro RUNNING). Nada disso esta no HEAD. Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | [sync 2026-10-16 21:00] perf glass merged (e9c809475 fosco-nova + 0c77460c1/5536ee8da/d7ec89975 fosco-perf) e 5ed6ddfaa (detail): 1 captura/quadro, 4->2 camadas cheias. Sync 2026-10-17 04:55: os tres merges de vidro/abertura desta janela entram aqui; ainda sem medicao de FPS na TV.\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-dvabertura: merged; No mapped review verdict.\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-foscoleve4: merged; No mapped review verdict.\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-homepisca: merged; No mapped review verdict.\nSnapshot 2026-10-17T13:48:33-03:00: agente/205-dvabertura: merged; No mapped review verdict. \nSnapshot 2026-10-17T13:48:33-03:00: agente/205-foscoleve4: merged; No mapped review verdict. \nSnapshot 2026-10-17T13:48:33-03:00: agente/205-homepisca: merged; No mapped review verdict.  Sync 2026-10-17 15:30: traktvidro merged 24047051b; comment cards flat glass, no per-card backdrop pass.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/553",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6"
@@ -10838,10 +10838,10 @@
   {
    "numero": 580,
    "titulo": "Addons catalogues not showing",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "fechada-sem-resposta",
    "release": "-",
    "conserto": [],
    "ultima_resposta": {
@@ -10850,11 +10850,10 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "triar: catalogos de add-on nao aparecem; mesmo eixo de #545/#551; sem job",
-   "notas": "Sync 2026-10-17 07:05: issue nova (17/10 09:01), rotulo bug, sem job. Mesma familia de #545/#551. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.",
+   "proximo_passo": "Issue closed by reporter/triagem (catalogs of add-ons not showing; same axis as #545/#551).",
+   "notas": "Sync 2026-10-17 07:05: issue nova (17/10 09:01), rotulo bug, sem job. Mesma familia de #545/#551. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00. Sync 2026-10-17 15:30: estado_github corrigido para fechada (gh #580 CLOSED).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/580",
-   "criada_em": "2026-10-17",
-   "alvo": "2.0.6"
+   "criada_em": "2026-10-17"
   },
   {
    "numero": 582,
@@ -11002,8 +11001,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Verify merged result; build/install and check device.",
-   "notas": "[sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:37:44Z, label bug); j-imdbnota done 11:50 (03a144294 normaliza IMDb 0-100 -> 0-10, testes/notasfontes.sh + imdbnota.sh rc=0), branch 1 ahead, sem merge e sem review.\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-imdbnota: done-awaiting-review; No mapped review verdict.\nSnapshot 2026-10-17T13:48:33-03:00: agente/205-imdbnota: merged; No mapped review verdict. ",
+   "proximo_passo": "Close after 2.0.7 release; reply in issue.",
+   "notas": "[sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:37:44Z, label bug); j-imdbnota done 11:50 (03a144294 normaliza IMDb 0-100 -> 0-10, testes/notasfontes.sh + imdbnota.sh rc=0), branch 1 ahead, sem merge e sem review.\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-imdbnota: done-awaiting-review; No mapped review verdict.\nSnapshot 2026-10-17T13:48:33-03:00: agente/205-imdbnota: merged; No mapped review verdict.  Sync 2026-10-17 15:30: imdbnota merged eea9aac9d; IMDb normalized 0-100->0-10 at ingestion.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/590",
    "criada_em": "2026-10-17",
    "alvo": "2.1"
@@ -11014,7 +11013,7 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "?",
-   "status": "aberta",
+   "status": "precisa-log",
    "release": "-",
    "conserto": [],
    "ultima_resposta": {
@@ -11023,8 +11022,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Triage; assign a job.",
-   "notas": "Imported from local issues snapshot.",
+   "proximo_passo": "Ask for log + example source (MP4 on webOS 26).",
+   "notas": "Imported from local issues snapshot. Sync 2026-10-17 15:30: j-triagem3 needs-info.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/592",
    "criada_em": "2026-10-17",
    "alvo": "2.1"
@@ -11044,8 +11043,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Triage; assign a job.",
-   "notas": "Imported from local issues snapshot.",
+   "proximo_passo": "Deferred to 2.1 by triage3 (trailer audio language match).",
+   "notas": "Imported from local issues snapshot. Sync 2026-10-17 15:30: j-triagem3 defer 2.1.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/591",
    "criada_em": "2026-10-17",
    "alvo": "2.1"
