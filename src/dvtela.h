@@ -127,6 +127,7 @@ float dvtela_previa_altura(void);
 
 #ifdef NV_SHOT_HOOKS
 void dvtela_abertura_zonas(float marca[4], float linha[4]);  /* x y w h */   // capturas: onde o DV desenhou
+void dvtela_abertura_zona_linha(float y, float w);
 void dvtela_shot_relogio(Uint32 ms);   // capturas: o brilho do passo parado num instante
 #endif
 

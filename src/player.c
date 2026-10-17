@@ -5140,7 +5140,6 @@ static void corpoCarregando(GfxRect r, float a, void *u) {
     txt_desenhar_alpha(l, x + 6.0f + 10.0f + 16.0f, y + 16.0f - (float)l.h * 0.5f, a); }
   if (dvtela_visivel() && dvtela_variante() == DVT_VAR_DETALHADA) {
     dvtela_abertura_marca(1, x + w - 260.0f, r.y + 62.0f, a);
-    dvtela_abertura_linha(1, x + 32.0f, r.y + CAR_LOGO_H - 10.0f, a);
   }
   // A dica de tecla na ponta direita da linha do estado: no compacto leva aos
   // detalhes, no expandido volta. Discreta (o apoio cinza das outras dicas).
@@ -5533,6 +5532,9 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   }
   // Append DV information without moving existing loading content.
   dvtela_abertura_linha(canto, canto ? tx : cx, y, v * entra);
+#ifdef NV_SHOT_HOOKS
+  dvtela_abertura_zona_linha(y, NV_TELA_W);
+#endif
 }
 
 #ifdef NV_TPK

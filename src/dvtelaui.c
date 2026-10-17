@@ -330,12 +330,15 @@ static void cartao(const DvtelaEstado *e, const Molas *m, Uint32 agora, float a,
 // ambas nascem e somem com a mola da tela, entao a troca entre a abertura normal
 // e a do DV nunca mexe no resto.
 #ifdef NV_SHOT_HOOKS
-static GfxRect zonaMarca, zonaLinha;
+static GfxRect zonaMarca, zonaLinha, zonaMarcaAnt, zonaLinhaAnt;
 void dvtela_abertura_zonas(float marca[4], float linha[4]) {
   marca[0] = zonaMarca.x; marca[1] = zonaMarca.y; marca[2] = zonaMarca.w; marca[3] = zonaMarca.h;
   linha[0] = zonaLinha.x; linha[1] = zonaLinha.y; linha[2] = zonaLinha.w; linha[3] = zonaLinha.h;
+  // On a fade-out frame nothing draws; compare against the last active zone.
+  if (marca[2] <= 0) memcpy(marca, &zonaMarcaAnt, sizeof zonaMarcaAnt);
+  if (linha[2] <= 0) memcpy(linha, &zonaLinhaAnt, sizeof zonaLinhaAnt);
 }
-#define ZONA(z, r) ((z) = (r))
+#define ZONA(z, r) do { (z) = (r); if ((r).w > 0) (z##Ant) = (r); } while (0)
 #else
 #define ZONA(z, r) ((void)0)
 #endif
@@ -351,13 +354,13 @@ void dvtela_abertura_marca(int canto, float x, float topo, float a) {
   ajustes_acento(&r, &g, &b);
   { TxtLinha l = txt_linha(TXT_V3_SELO, "DOLBY VISION", 243, 242, 239, 255);
     float mx = canto ? x : x - l.w * 0.5f, my = topo - 52.0f, aw = (0.62f + 0.38f * luz) * a;
+    ZONA(zonaMarca, ((GfxRect){ mx - 76.0f, my - 22.0f, l.w + 152.0f, l.h + 44.0f }));
     if (luz > 0.01f)
       gfx_rect((GfxRect){ mx - 60.0f, my - 22.0f, l.w + 120.0f, l.h + 44.0f }, 0, GFX_SOMBRA,
                1.0f, 0, 0, 0.5f, r, g, b, 0.22f * luz * a);
     txt_desenhar_alpha(l, mx, my, aw);
     gfx_cor((GfxRect){ mx + l.w + 20.0f, my + l.h * 0.5f, 56.0f, 1.0f }, 0.5f, 1, 1, 1, 0.35f * aw);
-    if (!canto) gfx_cor((GfxRect){ mx - 76.0f, my + l.h * 0.5f, 56.0f, 1.0f }, 0.5f, 1, 1, 1, 0.35f * aw);
-    ZONA(zonaMarca, ((GfxRect){ mx - 76.0f, my - 22.0f, l.w + 152.0f, l.h + 44.0f })); }
+    if (!canto) gfx_cor((GfxRect){ mx - 76.0f, my + l.h * 0.5f, 56.0f, 1.0f }, 0.5f, 1, 1, 1, 0.35f * aw); }
 }
 
 // UMA linha de passo, so com o sinal real, na pilha de linhas sob/ao lado do anel
@@ -383,6 +386,17 @@ float dvtela_abertura_linha(int canto, float x, float y, float a) {
     ZONA(zonaLinha, ((GfxRect){ lx, y, (float)l.w, (float)l.h })); }
   return 34.0f * k;
 }
+
+// When the DV status sits below existing loading lines, its exclusion band
+// still covers the same region so switching cannot report false movement.
+void dvtela_abertura_zona_linha(float y, float w) {
+#ifdef NV_SHOT_HOOKS
+  zonaLinha = (GfxRect){ 0, y, w > 0 ? w : NV_TELA_W, 34.0f };
+#else
+  (void)y; (void)w;
+#endif
+}
+
 
 void dvtela_desenhar(Uint32 agora) {
   const DvtelaEstado *e = dvtela_estado();

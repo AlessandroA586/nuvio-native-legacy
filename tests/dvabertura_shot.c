@@ -16,6 +16,7 @@
 #include "player.h"
 #include "plrilha.h"
 #include "dvtela.h"
+#include "anim.h"
 #include "ajustes.h"
 #include "faixas.h"
 #include "gfx.h"
@@ -121,6 +122,7 @@ static void ajustar(int estilo, int fundo, int reduzidas) {
   assert(ajustes_shot_valor("aberturaEstiloLocal", estilo));
   assert(ajustes_shot_valor("aberturaFundoLocal", fundo));
   assert(ajustes_shot_valor("animacoes", reduzidas));
+  anim_politica_reduzida = ajustes_animacoes_reduzidas();
 }
 
 int main(int argc, char **argv) {
@@ -202,12 +204,12 @@ int main(int argc, char **argv) {
       int base, fN, fD, em, margem = k ? 0 : 40;
       ajustar(e, 1, k);
       abrir(0); quadros(K); capturar(quadro_[4], NULL);
-      trocar(0); quadros(1); capturar(quadro_[5], NULL);
+      trocar(0); quadros(120); capturar(quadro_[5], NULL);
       comparar(quadro_[4], quadro_[5], &base, &em);   // a linha de base: normal -> normal
       printf("%s anim=%s: troca normal->normal muda %d px\n", ESTILO[e], k ? "reduzidas" : "ligadas", base);
 
       abrir(0); quadros(K); capturar(quadro_[2], NULL);
-      trocar(1); quadros(1); capturar(quadro_[3], NULL);
+      trocar(1); quadros(120); capturar(quadro_[3], NULL);
       assert(dvtela_ativa());
       comparar(quadro_[2], quadro_[3], &fN, &em);
       printf("%s anim=%s: normal->DV muda %d px fora das zonas\n", ESTILO[e], k ? "reduzidas" : "ligadas", fN);
@@ -215,11 +217,19 @@ int main(int argc, char **argv) {
       confere(fN <= base + margem, msg);
 
       abrir(1); quadros(K); capturar(quadro_[2], NULL);
-      trocar(0); quadros(1); capturar(quadro_[3], NULL);
+      trocar(0); quadros(120); capturar(quadro_[3], NULL);
       assert(!dvtela_ativa());
       comparar(quadro_[2], quadro_[3], &fD, &em);
       printf("%s anim=%s: DV->normal muda %d px fora das zonas\n", ESTILO[e], k ? "reduzidas" : "ligadas", fD);
       snprintf(msg, sizeof msg, "%s anim=%s: DV -> normal sem salto", ESTILO[e], k ? "reduzidas" : "ligadas");
+      confere(fD <= base + margem, msg);
+      snprintf(msg, sizeof msg, "%s anim=%s: DV entry settles", ESTILO[e], k ? "reduzidas" : "ligadas");
+      abrir(0); quadros(K); trocar(1); quadros(120); capturar(quadro_[2], NULL);
+      quadros(60); capturar(quadro_[3], NULL); comparar(quadro_[2], quadro_[3], &fN, &em);
+      confere(fN <= base + margem, msg);
+      abrir(1); quadros(K); trocar(0); quadros(120); capturar(quadro_[2], NULL);
+      quadros(60); capturar(quadro_[3], NULL); comparar(quadro_[2], quadro_[3], &fD, &em);
+      snprintf(msg, sizeof msg, "%s anim=%s: DV exit settles", ESTILO[e], k ? "reduzidas" : "ligadas");
       confere(fD <= base + margem, msg);
     }
 
