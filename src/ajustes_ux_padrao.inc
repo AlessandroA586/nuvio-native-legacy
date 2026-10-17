@@ -309,3 +309,5 @@
   0, /* trailer audio: Automatic */
   0, /* anime player (#205): Same as Player */
   0, /* opening screen style (#205): Center (A3) */
+  0, /* Dynamic layout background (#205): Gray */
+  12, /* Dynamic layout background colour (#205): Ocean */

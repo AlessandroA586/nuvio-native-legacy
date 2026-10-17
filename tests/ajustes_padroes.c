@@ -173,7 +173,9 @@ int main(void) {
   AJ_TRAILER_AUDIO == AJ_PLAYER_EXTERNO + 1 &&      // idioma do audio do trailer
   AJ_PLAYER_ANIME == AJ_TRAILER_AUDIO + 1 &&        // #205: player so para anime
   AJ_ABERTURA_ESTILO == AJ_PLAYER_ANIME + 1 &&      // #205: estilo da abertura (B3)
-  AJ_N == AJ_ABERTURA_ESTILO + 1);   // 2.0.6: master's #535 views appended after
+  AJ_FUNDO_DIN == AJ_ABERTURA_ESTILO + 1 &&         // #205: fundo da Dinamica
+  AJ_FUNDO_DIN_COR == AJ_FUNDO_DIN + 1 &&
+  AJ_N == AJ_FUNDO_DIN_COR + 1);   // 2.0.6: master's #535 views appended after
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));
@@ -222,6 +224,23 @@ int main(void) {
   assert(OPCOES[AJ_ABERTURA_ESTILO].n == 2 && !strcmp(OPCOES[AJ_ABERTURA_ESTILO].valores[0], "Centro") &&
          !strcmp(OPCOES[AJ_ABERTURA_ESTILO].valores[1], "Canto"));
   assert(!strcmp(i18n(OPCOES[AJ_ABERTURA_ESTILO].rotulo), "Opening screen style"));
+  // #205: fundo da Dinamica: Cinza por padrao, depois Cor e Imersivo; a cor e local.
+  assert(valor[AJ_FUNDO_DIN] == 0 && ajustes_fundo_din() == 0);
+  assert(!strcmp(CHAVE[AJ_FUNDO_DIN], "fundoDinamicaLocal") && somenteDesteAparelho(AJ_FUNDO_DIN) && !dePerfil(AJ_FUNDO_DIN));
+  assert(!strcmp(CHAVE[AJ_FUNDO_DIN_COR], "fundoDinamicaCorLocal") && somenteDesteAparelho(AJ_FUNDO_DIN_COR) && !dePerfil(AJ_FUNDO_DIN_COR));
+  valor[AJ_FUNDO_DIN] = 2; assert(ajustes_fundo_din() == 2);
+  valor[AJ_FUNDO_DIN] = 9; assert(ajustes_fundo_din() == 0);   // arquivo de outra versao
+  valor[AJ_FUNDO_DIN] = 0;
+  assert(OPCOES[AJ_FUNDO_DIN].n == 3 && !strcmp(OPCOES[AJ_FUNDO_DIN].valores[0], "Cinza") &&
+         !strcmp(OPCOES[AJ_FUNDO_DIN].valores[1], "Cor") && !strcmp(OPCOES[AJ_FUNDO_DIN].valores[2], "Imersivo"));
+  assert(!strcmp(i18n(OPCOES[AJ_FUNDO_DIN].rotulo), "Dynamic layout background"));
+  assert(!strcmp(i18n(OPCOES[AJ_FUNDO_DIN].valores[0]), "Gray") && !strcmp(i18n(OPCOES[AJ_FUNDO_DIN].valores[2]), "Immersive"));
+  assert(OPCOES[AJ_FUNDO_DIN_COR].n == 17 && !strcmp(OPCOES[AJ_FUNDO_DIN_COR].valores[valor[AJ_FUNDO_DIN_COR]], "Oceano"));
+  { float a[3], b[3];   // a cor segue a paleta do acento e o padrao e Oceano (#1276CE)
+    ajustes_fundo_din_cor(a);
+    assert(fabsf(a[0] - 0x12 / 255.0f) < 1e-3f && fabsf(a[2] - 0xce / 255.0f) < 1e-3f);
+    valor[AJ_FUNDO_DIN_COR] = 99; ajustes_fundo_din_cor(b);   // fora da lista: volta ao padrao
+    assert(!memcmp(a, b, sizeof a)); valor[AJ_FUNDO_DIN_COR] = 12; }
   // #205: o tamanho dos cards de episodio da Moderna — Medio de fabrica, local,
   // na secao da pagina do titulo, com tres valores.
   assert(!strcmp(CHAVE[AJ_EP_TAMANHO], "epTamanhoLocal"));

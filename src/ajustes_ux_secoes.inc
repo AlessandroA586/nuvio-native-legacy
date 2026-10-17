@@ -175,7 +175,7 @@ static int ajCenaSecao(int op) {
   if (ajLegendaPrincipal(op) || op == AJ_LEG1_RESTAURAR) return AJC_IDI_FAIXAS;
   if (ajLegendaSecundaria(op)) return AJC_IDI_LEGENDA2;
   switch (op) {
-    case AJ_LANDSCAPE: case AJ_HERO: case AJ_HERO_CHEIO: case AJ_HERO_CATALOGOS: case AJ_HERO_TRANSICAO: case AJ_HERO_GENERO:
+    case AJ_LANDSCAPE: case AJ_HERO: case AJ_HERO_CHEIO: case AJ_FUNDO_DIN: case AJ_FUNDO_DIN_COR: case AJ_HERO_CATALOGOS: case AJ_HERO_TRANSICAO: case AJ_HERO_GENERO:
     case AJ_HERO_SINOPSE: case AJ_HERO_NOTAS: case AJ_HERO_ANO: case AJ_HERO_DURACAO:
     case AJ_HERO_SINOPSE_TAM:
       return AJC_HOME_ESTILO;
