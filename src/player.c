@@ -86,6 +86,7 @@ static void avisarCascaAberto(int v) { (void)v; tex_pressao_reproducao(v); }
 #include "plrguia.h"
 #include "episodios.h"
 #include "streams.h"
+#include "duracaook.h"
 #include "badges.h"
 #include "legenda.h"
 #include "imgsub.h"
@@ -840,6 +841,12 @@ static int durFonteEsperadaOk;
 static double durFonteEsperadaCache;
 static unsigned durFonteEsperadaVer, durFonteEsperadaRev;
 static Uint32 durFonteAcaoAte;
+// O PULO DO AUTOMATICO ESPERA (duracaook.h): o aviso mostra "Manter esta fonte
+// (OK)" e a contagem; vencida, pula. durFonteManter = o OK do aviso mantem
+// (em vez de "Tentar proxima fonte").
+#define DUR_CONTAGEM_MS 8000u
+static Uint32 durFonteSkipEm;
+static int durFonteManter;
 // ABRINDO A FONTE, COMPACTO POR PADRAO (dono, 05/10): o cartao nasce enxuto —
 // o ponto, o estado e as marcas da fonte — e o BAIXO expande os detalhes.
 // abrindoExp e o pedido (BAIXO liga, CIMA desliga); abrindoT (0..1) e a mola
@@ -1691,7 +1698,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   tocando = 1; pausaPessoa = 0; retomandoSalto = 0; visivel = 1; anim = 0.0f; entrada = 0.0f; soBarra = 0; cheio = 1.0f; fileira = 1.0f;
   pedFontes = erroFonte = pedFaixas = pedProxT = pedProxE = trocaEpisodio = 0; inicioImagem = 0;
   durFonteAvisada = durFontePulou = pedProximaFonte = 0;
-  durFonteAcaoAte = 0;
+  durFonteAcaoAte = 0; durFonteSkipEm = 0; durFonteManter = 0;
   abrindoExp = 0; abrindoT = 0.0f; abrindoDesde = 0;
   memset(&cine, 0, sizeof cine);
   cine.calado = 1;
@@ -2054,6 +2061,7 @@ void player_definir_fonte(const char *url) {
   // A primeira fonte ainda pode aproveitar a legenda antecipada na espera.
   if (comVideo) legenda_pre_descartar(i18n("troca de fonte"));
   durFonteAvisada = pedProximaFonte = 0;
+  durFonteSkipEm = 0; durFonteManter = 0;
   // Fonte nova: a duracao esperada conhecida nao vale mais (mesmo titulo,
   // episodio outro, catalogo pode ter andado).
   durFonteEsperadaOk = 0;
@@ -3147,11 +3155,37 @@ static double duracaoFonteEsperada(void) {
 int player_pediu_proxima_fonte(void) {
   int p = pedProximaFonte; pedProximaFonte = 0; return p;
 }
+// O titulo do aviso de duracao: o filme, ou a serie inteira (todas as partes
+// de um filme cortado em episodios, e os episodios seguintes).
+static const char *durFonteTitulo(void) {
+  const CatItem *c = item();
+  return c ? (c->imdb[0] ? c->imdb : c->titulo) : "";
+}
 static void durFonteTentar(int a, int b) {
   (void)a; (void)b;
   if (!aberto || saindo || !durFonteAcaoAte || durFonteAcaoAte != toastAte ||
       SDL_GetTicks() >= durFonteAcaoAte) return;
+  if (durFonteManter) {
+    // MANTER: o pulo do automatico nao acontece, e este titulo nao pula mais.
+    durFonteSkipEm = 0; durFonteManter = 0; durFonteAcaoAte = 0;
+    duracaook_guardar(sessao_usuario(), perfis_ativo(), durFonteTitulo());
+    printf("[fonte] duration: kept this source (OK); this title no longer skips sources of another length\n");
+    fflush(stdout);
+    player_toast_ex(i18n("Fonte mantida neste título"), 3000, "aj_check", 0);
+    return;
+  }
   pedProximaFonte = 1; durFonteAcaoAte = toastAte = 0;
+}
+// Por quadro: a contagem do pulo do automatico venceu.
+static void durFonteContagem(Uint32 agora) {
+  if (!durFonteSkipEm || (int)(agora - durFonteSkipEm) < 0) return;
+  durFonteSkipEm = 0; durFonteManter = 0;
+  if (durFonteAcaoAte == toastAte) toastAte = 0;
+  durFonteAcaoAte = 0;
+  if (!aberto || saindo) return;
+  pedProximaFonte = 2;
+  printf("[fonte] duracao: pulando para a proxima uma vez no inicio\n");
+  fflush(stdout);
 }
 static void durFonteAtualizar(double real, Uint32 agora) {
   double esperada;
@@ -3166,6 +3200,12 @@ static void durFonteAtualizar(double real, Uint32 agora) {
   if (esperada <= 0 || fabs(real - esperada) <= 600 ||
       !(real > esperada * 2 || real < esperada * .5)) return;
   durFonteAvisada = 1;
+  if (duracaook_tem(sessao_usuario(), perfis_ativo(), durFonteTitulo())) {
+    printf("[fonte] duracao incompatível: real=%.0fs esperada=%.0fs; kept: this title keeps sources of another length (OK earlier)\n",
+           real, esperada);
+    fflush(stdout);
+    return;
+  }
   rm = (int)(real / 60); em = (int)(esperada / 60);
   if (rm < 60) snprintf(r, sizeof r, i18n("%d min"), rm);
   else snprintf(r, sizeof r, i18n("%dh %dmin"), rm / 60, rm % 60);
@@ -3177,8 +3217,12 @@ static void durFonteAtualizar(double real, Uint32 agora) {
   printf("[fonte] duracao incompatível: real=%.0fs esperada=%.0fs automatico=%d\n",
          real, esperada, tentativaN > 0);
   if (tentativaN > 0 && !durFontePulou && agora - loadEm <= 10000u) {
-    durFontePulou = 1; pedProximaFonte = 2;
-    printf("[fonte] duracao: pulando para a proxima uma vez no inicio\n");
+    // O automatico ainda pula, mas so depois da contagem: o aviso mostra
+    // "Manter esta fonte (OK)" ate la.
+    durFontePulou = 1; durFonteManter = 1;
+    durFonteSkipEm = agora + DUR_CONTAGEM_MS;
+    durFonteAcaoAte = toastAte = agora + DUR_CONTAGEM_MS;
+    printf("[fonte] duration: auto-play tries another source in %u s unless OK keeps this one\n", DUR_CONTAGEM_MS / 1000u);
   }
 }
 
@@ -4140,6 +4184,7 @@ void player_atualizar(float dt, Uint32 agora) {
       duracaoSeg = (float)d; duracaoReal = 1;
       durFonteAtualizar(d, agora);
     }
+    durFonteContagem(agora);
     // MINIATURAS DO SEEKR: so com a duracao REAL (o servico escolhe a versao
     // da folha por ela) e uma vez por titulo — seekr_pedir ignora o repetido.
     if (d > 60.0 && video_pronto() && !ehCanal() && ajustes_seekr_ligado()) {
@@ -5456,8 +5501,16 @@ static void corpoErro(GfxRect r, float a, void *u) {
 
 static void corpoDurFonte(GfxRect r, float a, void *u) {
   float x = r.x + 28, y = r.y + 12;
-  float w = plrui_botao(x, y, "Tentar próxima fonte (OK)", "pl_layers", 1, a);
+  float w = plrui_botao(x, y, durFonteManter ? "Manter esta fonte (OK)" : "Tentar próxima fonte (OK)",
+                        durFonteManter ? "aj_check" : "pl_layers", 1, a);
   (void)u;
+  if (durFonteManter && durFonteSkipEm) {
+    // A contagem do pulo, ao lado do botao.
+    char t[64];
+    int falta = (int)(durFonteSkipEm - SDL_GetTicks());
+    snprintf(t, sizeof t, i18n("Outra fonte em %d s"), falta > 0 ? (falta + 999) / 1000 : 0);
+    txt_bloco_corta(TXT_ILHA_TEXTO, t, 158, 157, 155, x + w + 20, y + 16, r.w - (x - r.x) - w - 48, 30.0f, a, 1);
+  }
   if (a > .9f && durFonteAcaoAte && durFonteAcaoAte == toastAte)
     ponteiro_alvo(x, y, w, 60, NULL, durFonteTentar, 0, 0);
 }
