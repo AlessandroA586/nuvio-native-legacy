@@ -39,6 +39,7 @@
 #include "posplay.h"
 #include "extras.h"
 #include "video.h"
+#include "seekprobe.h"
 #include "faixas.h"
 #include "gfx.h"
 #include "text.h"
@@ -3561,6 +3562,8 @@ static void recuarAutomatico(double de, double para) {
 
 // Busca do dono: se substitui uma busca de creditosAuto ainda armada, desarma.
 static void buscarUsuario(double alvo) {
+  if (comVideo && !ehCanal() && !strstr(video_url_atual(), "://127.0.0.1") && !strstr(video_url_atual(), "://localhost"))
+    seekprobe_iniciar(video_url_atual(), video_cabecalhos());   // #557: own proxies handle Range
   creditosauto_destino(&creditosAuto, alvo);
   video_buscar(alvo);
 }
@@ -3971,7 +3974,7 @@ void player_atualizar(float dt, Uint32 agora) {
   // onde esta; um aviso por sessao em vez de pular o link.
   { static int seekAvisado;
     if (!comVideo) seekAvisado = 0;
-    else if (!seekAvisado && video_seek_desistiu()) {
+    else if (!seekAvisado && (video_seek_desistiu() || seekprobe_resultado(video_url_atual()) == 1)) {
       seekAvisado = 1;
       player_toast_ex(i18n("Não foi possível pular para esse ponto. Seguindo daqui."), 5000, "aj_triangle-alert", 1);
     }
