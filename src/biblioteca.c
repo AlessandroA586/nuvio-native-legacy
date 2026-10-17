@@ -1362,7 +1362,7 @@ static int pilula(GfxRect r, float raio, float f, int escolhida) {
   float ar, ag, ab, v = anim_clamp(f, 0.0f, 1.0f);
   ajustes_acento(&ar, &ag, &ab);
   if (escolhida) gfx_cor(r, raio, ar, ag, ab, .22f * (1.0f - v));
-  else if (ajustes_vidro()) gfx_cor(r, raio, 1, 1, 1, .06f * (1.0f - v));
+  else if (ajustes_vidro()) gfx_vidro_folha(r, raio, 1.0f - v);
   else gfx_cor(r, raio, .082f, .086f, .102f, 1.0f - v);
   if (v > 0.01f) {
     if (ajustes_vidro()) gfx_vidro_pilula_cheia(r, raio, v, 1.0f);
@@ -1518,7 +1518,7 @@ static void desenhaModos(void) {
   GfxRect c = { hdrX(), BIB_FAIXA_Y, larguraSeletor(), BIB_SEG_H };
   float x = c.x + BIB_SEG_PAD, ar, ag, ab;
   ajustes_acento(&ar, &ag, &ab);
-  if (ajustes_vidro()) gfx_cor(c, 0.5f, 1, 1, 1, .06f);
+  if (ajustes_vidro()) gfx_vidro_folha(c, 0.5f, 1.0f);
   else gfx_cor(c, 0.5f, .113f, .118f, .137f, 1.0f);          // #1d1e23
   for (int a = 0; a < BIB_N_MODOS; a++) {
     float w = larguraModo(a), v = anim_clamp(animModo[a], 0.0f, 1.0f);
@@ -1599,9 +1599,9 @@ static void desenhaPicker(int p, float f) {
   GfxRect r = { pickerX(p), pickerY(), w, BIB_CHIP_H };
   float v = anim_clamp(f, 0.0f, 1.0f);
   ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroPicker, NULL, p, 0);
-  // Repouso: o vidro dos filtros (branco a 6%) ou, no solido, o #15161a do
-  // .vid; foco: a pilula cheia no acento, como todo botao do app.
-  if (ajustes_vidro()) gfx_cor(r, 0.5f, 1, 1, 1, .06f * (1.0f - v));
+  // Rest uses the shared frosted sheet; solid mode keeps #15161a.
+  // Focus keeps the full accent fill, like every app button.
+  if (ajustes_vidro()) gfx_vidro_folha(r, 0.5f, 1.0f - v);
   else gfx_cor(r, 0.5f, .082f, .086f, .102f, 1.0f - v);
   if (v > 0.01f) {
     float ar, ag, ab;

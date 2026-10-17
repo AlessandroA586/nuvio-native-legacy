@@ -1685,7 +1685,7 @@ static float segC1(float xDir, float yc, int desenhar) {
   total = pad * 2.0f + w[0] + gap + w[1];
   if (!desenhar) return total;
   { GfxRect tr = { xDir - total, yc - h * 0.5f - pad, total, h + pad * 2.0f };
-    if (ajustes_vidro()) gfx_cor(tr, 0.5f, 1, 1, 1, 0.07f);
+    if (ajustes_vidro()) gfx_vidro_folha(tr, 0.5f, 1.0f);
     else gfx_cor(tr, 0.5f, .141f, .149f, .173f, 1.0f);
     x = tr.x + pad; }
   for (k = 0; k < 2; k++) {

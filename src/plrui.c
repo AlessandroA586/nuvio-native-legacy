@@ -177,7 +177,7 @@ float plrui_seg(const char *const *rotulos, const int *contagem, int n, float se
   }
   if (x < 0.0f) return tot;
   { GfxRect tr = { x, y, tot, SEG_IH + SEG_PAD * 2.0f };
-    if (vid) gfx_cor(tr, 0.5f, 1, 1, 1, 0.06f * a);
+    if (vid) gfx_vidro_folha(tr, 0.5f, a);
     else gfx_cor(tr, 0.5f, 0.114f, 0.118f, 0.137f, a); }
   xx = x + SEG_PAD;
   for (i = 0; i < n; i++) {

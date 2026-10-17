@@ -3706,7 +3706,7 @@ static float desenharTopo(float a) {
 #ifdef NV_TOUCH_UI
     if (gRetrato()) tr.y = gTopoRects[G_TOPO_CARTOES].y;
 #endif
-    if (ajustes_vidro()) gfx_cor(tr, 0.5f, 1, 1, 1, 0.06f * a);
+    if (ajustes_vidro()) gfx_vidro_folha(tr, 0.5f, a);
     else gfx_cor(tr, 0.5f, 0.114f, 0.118f, 0.137f, a); }
 
   for (i = 0; i < G_TOPO_N; i++) {

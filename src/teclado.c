@@ -1440,7 +1440,9 @@ static void teDesenhar(Uint32 agora) {
         int fim = ini;
         float sx = x, py = y + (float)fila * (h + TE_FILA_GAP);
         while (fim < k && segFila[fim] == fila) fim++;
-        teNeutro((GfxRect){ sx, py, teChipsLarg(segEst, segPad, rot, ini, fim), h }, h * 0.5f, 0.06f, 0.114f, 0.118f, 0.137f, a);
+        GfxRect track = { sx, py, teChipsLarg(segEst, segPad, rot, ini, fim), h };
+        if (ajustes_vidro()) gfx_vidro_folha(track, 0.5f, a);
+        else teNeutro(track, h * 0.5f, 0.06f, 0.114f, 0.118f, 0.137f, a);
         sx += 5.0f;
         for (i = ini; i < fim; i++) {
           int foco = aberto && fileira < 0 && coluna == col[i];
