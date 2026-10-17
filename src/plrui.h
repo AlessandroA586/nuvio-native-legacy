@@ -17,6 +17,9 @@
 // `raioPx` em pixels; `modal` = 1 deixa o miolo um degrau mais denso (.86),
 // como a ilha que vira modal.
 void plrui_material(GfxRect r, float raioPx, int modal, float a);
+// The title-page card material (shared glass, GFX_VIDRO_DENS): what the
+// "..." more menu draws, so it matches cast / trailers / comments cards.
+void plrui_cartao(GfxRect r, float raioPx, float a);
 // Superficie de FOCO de uma linha/celula: vidro branco 12%, solido #2B2D34
 // (com o filete claro de cima e a sombra do mockup).
 void plrui_linha_foco(GfxRect r, float raioPx, float a);

@@ -12,6 +12,10 @@ TMPDIR="${TMPDIR%/}"
 # recompilam quando o .c muda; detail.c entra pelo include do teste.
 set -eu
 cd "$(dirname "$0")/.."
+if [ -n "${NUVIO_DETAIL_TIER:-}" ]; then
+  echo 'device tiers require a device GLES runner; use NUVIO_DETAIL_CONFIG for host checks' >&2
+  exit 2
+fi
 OBJ=${OBJ:-${TMPDIR:-/tmp}/nuvio-detglass-obj}
 mkdir -p "$OBJ" "$1"
 NUVIO_DADOS=$(mktemp -d ${TMPDIR:-/tmp}/nuvio-detglass-dados.XXXXXX)
@@ -28,6 +32,15 @@ for s in src/*.c src/dts/*.c; do
   if [ "$s" = src/agendaui.c ] && [ -n "${NUVIO_TRAKT_CHECK:-}" ]; then
     o="$OBJ/agendaui-trakt.o"
     extra="-Dtxt_largura=trakt_largura -Dtxt_token_tam=trakt_token_tam"
+  fi
+  # NUVIO_DETAIL_CHECK=mais: spy on the glass density plrui hands to gfx.
+  if [ "$s" = src/plrui.c ] && [ "${NUVIO_DETAIL_CHECK:-}" = mais ]; then
+    o="$OBJ/plrui-spy.o"
+    extra="-Dgfx_vidro_material=spy_vidro_material"
+  fi
+  if [ "$s" = src/detmais.c ] && [ -n "${NUVIO_DETMAIS_SOURCE:-}" ]; then
+    s="$NUVIO_DETMAIS_SOURCE"
+    o="$OBJ/detmais-before.o"
   fi
   objs+=("$o")
   if [ ! -f "$o" ] || [ "$s" -nt "$o" ] || [ -n "$(find src -name '*.h' -newer "$o" -print -quit)" ]; then
