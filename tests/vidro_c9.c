@@ -1,6 +1,7 @@
 // Offline home render: real home, A27 chrome, clock, moving focus and backdrop.
-// Budget: the frost reads the hero art pre-blurred once (docs/fosco-nova.md):
-// zero screen captures and zero blur passes on every frame, animated or static.
+// Budget: at most two five-pass captures per animated frame on webOS and .tpk
+// (intervening backdrop draws invalidate sharing), zero while static. Same kernel
+// and resolution preserve the look.
 #include "gfx.h"
 #include "ajustes.h"
 #include "addons.h"
@@ -116,9 +117,15 @@ int main(int argc, char **argv) {
   }
   printf("tier=%s drawable=%dx%d animated/focus: captures/frame=%.2f passes/frame=%.2f blur-fill/frame=%.6f copy/frame=%.6f blur-pixels/frame=%.0f max-captures=%d\n",
          strrchr(argv[2], '/') ? strrchr(argv[2], '/') + 1 : argv[2], width, height, captures / 20.0, passes / 20.0, fill / 20, copy / 20, fill / 20 * width * height, maximum);
-  (void)webos;
-  check(captures == 0 && passes == 0 && fill == 0 && copy == 0, "animated frost: no capture, no blur pass");
+  check(captures > 0 && maximum <= 2, "capture budget across all chrome regions");
+  check(captures <= 40, "animated capture budget");
+  check(passes == captures * 5, "unchanged five-pass blur kernel");
+  check(fill / 20 <= (webos ? 1.4 : 1.0), "blur fill budget with intervening backdrop invalidation");
   shot(argv[2], "focus");
+  // Upload invalidation must override temporal reuse; sample age must not be
+  // renewed by reuse, or animation would freeze indefinitely.
+  gfx_vidro_sujar(); frame(172, 1, 0);
+  check(gfx_vidro_capturas >= 1, "texture upload invalidates capture immediately");
   menu_fechar();
   for (int i = 0; i < 150; i++) frame(220, 0, 0);
   captures = passes = 0;
@@ -128,18 +135,20 @@ int main(int argc, char **argv) {
   printf("static: captures=%d passes=%d over five frames\n", captures, passes);
   check(captures == 0 && passes == 0,
         "static backdrop reuse budget");
-  // The consent modal over Home: no capture, and a stable frame while open.
+  // Home captures first; the consent veil must enter the later modal capture,
+  // including on subsequent frames while the modal remains open: those may
+  // reuse that capture (its own slot), so they must match the first frame.
   entrada = 1.0f;
   size_t bytes = (size_t)width * height * 4;
   unsigned char *first = malloc(bytes), *again = malloc(bytes);
   assert(first && again);
   for (int i = 0; i < 3; i++) {
     frame(220, 0, 0);
-    int diff = 0;
+    int before = gfx_vidro_capturas, diff = 0;
     consent_draw(13520);
     glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, i ? again : first);
     for (size_t p = 0; i && p < bytes; p++) diff |= first[p] != again[p];
-    check(!diff && gfx_vidro_capturas == 0, "consent modal frost: no capture, stable");
+    check(i ? !diff : gfx_vidro_capturas > before, "consent veil invalidates Home backdrop before modal glass");
   }
   free(first); free(again);
   shot(argv[2], "modal");

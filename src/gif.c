@@ -1012,6 +1012,7 @@ static void subir(const GifFaixa *f) {
   if (f->y1 > f->y0) {
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, f->y0, fioW, f->y1 - f->y0,
                     GL_RGBA, GL_UNSIGNED_BYTE, f->px);
+    gfx_vidro_sujar();   // mesmo nome, outra imagem: o hash do vidro nao ve
   }
 }
 

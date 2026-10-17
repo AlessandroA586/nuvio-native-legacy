@@ -41,35 +41,38 @@ backdrop layer, captured the frame it changes, so every screen (Home hero,
 detail art, Settings Frost/Arte borrada, Explore sky, social background)
 works with no per-screen code and no colour or ramp mismatch.
 
-## What runs now (16/10, option (a))
+## What runs now
 
-Owner, 16/10: "antes na c9 o frozen era mais rapido que o glass" — until
-c84afbf04 the frost never captured the screen. Back to that source:
+- The backdrop layer = draws before the frame's first content draw: hero,
+  detail, vitrine, fundo, snap/ambient light, sky, veils, edge light, and any
+  full-screen draw (`vidroFundoModo`).
+- The first content draw (or the first glass) closes the layer; if its hash
+  changed it is captured into `vidFundo` (half res, same 5-pass kernel, same
+  shader: no colour change). Only when the last frame had glass.
+- Every backdrop draw enters its hash wherever it lands, so the copy is valid
+  for a glass anywhere (the Explore focus glass moving).
+- Glasses sample `vidFundo`. Fallbacks to the old capture: first glass frame,
+  a full-screen draw after the layer (modal veil).
+- (c) stays the fallback it already was: video under the glass
+  (`gfx_vidro_fosco_bloquear`), "Vidro fosco" off, minimal effects -> flat
+  tinted scrim.
 
-- The frame's backdrop art (the first full-screen-ish art draw of the backdrop
-  layer at alpha >= 0.5: hero, detail, vitrine, arte) is blurred ONCE into
-  96x54 by `gfx_desfocado` (cached per texture); the "Arte borrada"/"Frost"
-  bakes are blurred already and are used as is (`vidroCanal`).
-- `GFX_VIDRO` samples it through `uMapa` (screen UV -> art UV, centred
-  cover). No `glCopyTexSubImage2D`, no blur pass, on any frame
-  (`gfx_vidro_capturas`/`gfx_vidro_passadas` stay 0).
-- The green cast (14/10) came from the title palette light (320x180, +35%
-  saturation) used as the frost source. The palette never enters the frost;
-  only the art, blurred (tests/vidro_neutro.sh: green palette, gray art,
-  neutral glass).
-- No art behind (flat colour screens), video under the glass, "Vidro fosco"
-  off, minimal effects -> the flat `chapado` scrim, as before.
+## A/B switch
 
-Known differences vs the 15/10 screen capture (PNGs in
-/Volumes/ExternalSSD/tmp/foscovelho/cmp): the hero ramps and veils drawn
-after the art are not in the source, so glass over the dark left ramp (avatar
-chip) and the consent modal over its veil read a little lighter; during a hero
-crossfade the frost switches art at the midpoint.
+`NV_VIDRO_SO_FUNDO` in src/gfx.c (default 1). Build with
+`-DNV_VIDRO_SO_FUNDO=0` (or set `gfx_vidro_so_fundo = 0`) for the old path.
+"Vidro fosco" in Settings still turns all blur off.
 
 ## Measured (Mac, offline harnesses)
 
-- tests/vidro_orcamento.sh (hero scroll, hero crossfade, detail scroll):
-  HEAD 1 capture + 5 passes/frame on crossfade and detail; now 0 and 0.
-- tests/vidro_c9.sh (Home, menu focus moving, backdrop changing): 0.35
-  captures + 1.75 passes/frame -> 0 and 0, all tiers, 1080p and 4K.
-- tests/vidro_telas.sh: Explore 0.04 -> 0 captures/frame; others 0.
+- tests/vidro_orcamento.sh, rows scrolling over a static backdrop:
+  old 1 capture + 5 passes/frame, 0.38 ms/frame; new 0 captures, 0.18 ms/frame.
+- tests/vidro_c9.sh, Home with menu focus moving and the backdrop changing
+  every frame (all tiers, 1080p/4K): 1.15 -> 0.35 captures/frame, 5.75 ->
+  1.75 passes/frame, max 2 -> 1; webOS 1080p blur pixels/frame 1.64 M ->
+  0.50 M (4K 6.56 M -> 2.00 M).
+- tests/vidro_telas.sh, moving: detail comments 0.20 -> 0, Explore 0.54 ->
+  0.04 captures/frame; detail sources, Search, Settings already 0, still 0.
+- Before/after PNGs (home, detail, settings, explore, search) in
+  /Volumes/ExternalSSD/tmp/fosco-nova/{antes,depois}; stacked in cmp/.
+  Home and Settings unchanged; under the glass only the backdrop now.

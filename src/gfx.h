@@ -605,9 +605,11 @@ void gfx_vidro_material(GfxRect r, float raio, float dens, float a);
 // O mesmo com "Interface de vidro" desligada: a cor lisa (sr,sg,sb) a `sa`.
 void gfx_vidro_ou_solido(GfxRect r, float raio, float dens, float a,
                          float sr, float sg, float sb, float sa);
+// Conteudo mudou sem passar por gfx_rect (textura reenviada no lugar): o
+// proximo quadro recaptura.
+void gfx_vidro_sujar(void);
 // Capturas e passadas de desfoque do quadro corrente (zeradas em gfx_novo_quadro).
-// gfx_vidro_chapados: glasses that wanted frost but had no source (flat scrim).
-extern int gfx_vidro_capturas, gfx_vidro_passadas, gfx_vidro_chapados;
+extern int gfx_vidro_capturas, gfx_vidro_passadas;
 // Blur writes and framebuffer copy area, in drawable screens per frame.
 extern double gfx_vidro_fill, gfx_vidro_copia;
 // O quadro tem video vivo (furo) por baixo: o vidro sai chapado ate o proximo
