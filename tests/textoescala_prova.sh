@@ -60,6 +60,7 @@ build() {
     if [ "$s" = detail_secoes ]; then set -- $(ls "$out"/o/*.o | grep -v 'src_detail\.c\.o'); fi
     if [ "$s" = vertudo ]; then set -- $(ls "$out"/o/*.o | grep -v 'src_vertudo\.c\.o'); fi
     if [ "$s" = ajustes ] || [ "$s" = teclado ]; then set -- "$out"/oa/*.o; ex=(-DAJUSTES_TESTE); fi
+    if [ "$s" = teclado ]; then set -- "$@" "$TESTS/textoescala_relogio.c"; fi
     shot="$TESTS/${s}_shot.c"
     if [ "$s" = detail_secoes ] || [ "$s" = vertudo ]; then   # shots include the production source
       mkdir -p "$out/t"; ln -sfn "$(cd "$root" && pwd)/src" "$out/src"

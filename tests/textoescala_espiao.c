@@ -25,11 +25,13 @@ void nvreal_ajustes_dir(const char *dir);
 
 static FILE *log_, *frameLog_;
 static unsigned frame_;
+unsigned nvspy_quadros;   // cleared frames, for tests/textoescala_relogio.c
 
 // Compare captured frames only; animation warm-up has variable draw counts.
 void nvspy_glClear(GLbitfield mask) {
   if (frameLog_) fclose(frameLog_);
   frameLog_ = getenv("NV_TXT_LOG") ? tmpfile() : NULL;
+  nvspy_quadros++;
   glClear(mask);
 }
 void nvspy_glReadPixels(GLint x, GLint y, GLsizei w, GLsizei h,
