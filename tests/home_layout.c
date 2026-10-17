@@ -85,7 +85,9 @@ void gfx_escala_sair(float a) { testeAtiva = a; }
 // Duble do desenho do card editorial: sem GL, so o que o teste do genero conta.
 float gfx_tex_aspect_atual;
 void gfx_veu_base(GfxRect c, float r, float f, float a) { (void)c; (void)r; (void)f; (void)a; }
+static int nHolofote;
 void gfx_rect(GfxRect r, GLuint t, GfxModo m, float f, float a, float b, float c, float d, float e, float g, float h) {
+  if (m == GFX_HOLOFOTE) nHolofote++;
   (void)r; (void)t; (void)m; (void)f; (void)a; (void)b; (void)c; (void)d; (void)e; (void)g; (void)h; }
 GLuint tex_obter_logo_larg(const char *c, float l) { (void)c; (void)l; return 0; }
 int  tex_marca_escura(const char *c) { (void)c; return 0; }
@@ -96,6 +98,9 @@ float badge_imdb(float x, float y, int n, int e, float a) { nBadge++; (void)x; (
 float badge_imdb_largura(int n) { (void)n; return 0; }
 int  imdbnota_obter(const char *i, int c, int s) { (void)i; (void)c; (void)s; return testeImdb; }
 const char *i18n(const char *s) { return s; }
+void txt_desenhar_alpha(TxtLinha l, float x, float y, float a) { (void)l; (void)x; (void)y; (void)a; }
+float sinopse_bloco(TxtEstilo o, const char *t, int r, int g, int b, float x, float y, float l, float d, float a, int m) {
+  (void)o; (void)t; (void)r; (void)g; (void)b; (void)x; (void)y; (void)l; (void)d; (void)a; (void)m; return 90.0f; }
 static void homeCom(int layout, int heroLigado) { testeLayout = layout; testeHero = heroLigado; }
 
 int main(void) {
@@ -193,7 +198,8 @@ int main(void) {
       { float vizX2, vizS2, gap = gapDe(FILEIRA_PALCO);
         palcoGeo(1, c + 2, lw, &vizX2, &vizS2);
         assert(fabsf((vizX2 - vizX) - (lw * vizS + gap)) < 2.0f);
-        assert(fabsf((vizX - cx) - (lw * (1.0f + NV_PALCO_VIZ) * 0.5f + gap)) < 2.0f); }
+        assert(fabsf((vizX - cx) - (lw * (1.0f + NV_PALCO_VIZ) * 0.5f + gap
+                                    + NV_PALCO_INFO_VAO + NV_PALCO_INFO_W)) < 2.0f); }
       anterior = cx;
     }
     focoHero = 1;
@@ -231,6 +237,56 @@ int main(void) {
         assert(palcoColunaEm(1, cx - homeFileiraX(1, 0)) == k);
       }
       palcoPos[1] = 0.0f;
+    }
+    // PALCO, 17/10: a ficha a direita do foco cabe na tela em TODO foco, na
+    // escala de texto 80/100/130%, e o vizinho da direita fica depois dela.
+    {
+      const float escalas[] = {0.8f, 1.0f, 1.3f};
+      for (int e = 0; e < 3; e++) {
+        int cols[] = {12, 12};
+        testeTxt = testeAtiva = escalas[e];
+        fileiras[0] = (Fileira){.tipo = FILEIRA_NORMAL, .n = 12, .escala = 1.0f};
+        fileiras[1] = (Fileira){.tipo = FILEIRA_PALCO, .n = 12, .escala = 1.0f};
+        focoHero = 0;
+        focus_iniciar(&foco, 2, cols);
+        assert(focus_mover(&foco, 0, 1) && foco.fileira == 1);
+        memset(scrollX, 0, sizeof scrollX);
+        float lw = larguraFil(1), artH = alturaFil(1);
+        for (int c = 0; c < 12; c++) {
+          if (c) assert(focus_mover(&foco, 1, 0));
+          palcoPos[1] = (float)c;
+          scrollX[1] = alvoScrollFil(1, c, scrollX[1], 0.0f);
+          GfxRect info = palcoInfoRect(1, 100.0f, lw, artH);
+          float cx, s, vx, vs;
+          palcoGeo(1, c, lw, &cx, &s);
+          assert(cx - lw * 0.5f >= 0.0f);
+          assert(info.x >= cx + lw * 0.5f && info.x + info.w <= NV_TELA_W);
+          assert(info.y == 100.0f && info.h == artH);
+          palcoGeo(1, c + 1, lw, &vx, &vs);
+          assert(c == 11 || vx - lw * vs * 0.5f > info.x + info.w);
+        }
+      }
+      testeTxt = testeAtiva = 1.0f;
+    }
+    // HOLOFOTE: um quad so com o foco NA fileira Palco; nada fora dela.
+    {
+      int cols[] = {12, 12};
+      float lw = larguraFil(1), artH = alturaFil(1);
+      anim_politica_reduzida = 1;
+      focoHero = 0;
+      focus_iniciar(&foco, 2, cols);
+      assert(focus_mover(&foco, 0, 1) && foco.fileira == 1);
+      nHolofote = 0; palcoFicha(1, 100.0f, lw, artH); holofote(1000);
+      assert(nHolofote == 1);
+      assert(focus_mover(&foco, 0, -1) && foco.fileira == 0);
+      nHolofote = 0; palcoFicha(1, 100.0f, lw, artH); holofote(1016);
+      assert(nHolofote == 0);
+      assert(focus_mover(&foco, 0, 1) && foco.fileira == 1);
+      focoHero = 1;
+      nHolofote = 0; palcoFicha(1, 100.0f, lw, artH); holofote(1032);
+      assert(nHolofote == 0);
+      anim_politica_reduzida = 0;
+      focoHero = 1;
     }
   }
   // A composicao abaixo e a da home SEM o destaque no topo: e nela que a

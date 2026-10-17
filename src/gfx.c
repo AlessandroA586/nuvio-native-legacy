@@ -1553,6 +1553,24 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  vec3 o = mix(bg, c, a);\n"
   "  gl_FragColor = (uLeve > 0.5 && a > 0.5) ? vec4(o, 1.0) : nv_dither(o, 1.0);\n"
   "}\n",
+
+  // GFX_HOLOFOTE — see gfx.h. Distances in units of the height (x * uAspect).
+  "void main(){\n"
+  "  vec2 p = (vUv - uPar) * vec2(uAspect, 1.0);\n"
+  "  float e = length(p / vec2(max(uRaio, 0.001), max(uFoco, 0.001)));\n"
+  "  float luz = 1.0 - smoothstep(0.72, 1.28, e);\n"
+  "  float k = clamp(vUv.y / max(uPar.y, 0.001), 0.0, 1.0);\n"
+  "  float meia = mix(0.035, max(uCor.b, 0.04), k);\n"
+  "  float dx = abs(vUv.x - uCor.g) * uAspect;\n"
+  "  float feixe = (1.0 - smoothstep(meia * 0.55, meia, dx)) * sqrt(k)\n"
+  "              * (1.0 - smoothstep(0.80, 1.0, k)) * (uLeve > 0.5 ? 0.0 : uCor.r);\n"
+  "  float d = uCor.a * (1.0 - luz) * (1.0 - 0.8 * feixe);\n"
+  "  float l = 0.14 * feixe;\n"
+  "  float a = d + l * (1.0 - d);\n"
+  "  vec3 c = vec3(1.0, 0.95, 0.86) * l * (1.0 - d) / max(a, 0.001)\n"
+  "         + vec3(0.012, 0.014, 0.022) * d / max(a, 0.001);\n"
+  "  gl_FragColor = nv_dither(c, a);\n"
+  "}\n",
 };
 
 // Cada corpo declara o que usa; montar so o necessario mantem o shader enxuto.
@@ -1590,7 +1608,8 @@ static const struct { int sdf, cover; } PRECISA[GFX_NMODOS] = {
   {1,0},   /* GFX_MINI — SDF dos cantos; a textura e um FBO */
   {1,0},   /* GFX_TEXTURA — SDF dos cantos; o recorte vem pronto em uJan */
   {1,0},   /* GFX_VIDRO — SDF proprio em pixels; o {1,..} so liga a margem de 1 px do quad */
-  {1,0}    /* GFX_VITRINE_DIN — o do GFX_VITRINE */
+  {1,0},   /* GFX_VITRINE_DIN — o do GFX_VITRINE */
+  {0,0}    /* GFX_HOLOFOTE — procedural, tela cheia */
 };
 
 static GLuint compila(GLenum tipo, const char *src) {
@@ -2285,7 +2304,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
   if (efeitosLeves && ((modo == GFX_LUZ && !assandoCanal) ||
       (modo == GFX_BRILHO_TOPO && cr + cg + cb > 1.5f))) return;
   // Efeitos minimos: sombra e halo tambem saem (o anel continua marcando o foco).
-  if (efeitosMinimos && modo == GFX_SOMBRA) return;
+  if (efeitosMinimos && (modo == GFX_SOMBRA || modo == GFX_HOLOFOTE)) return;
   if (gfx_modos_desligados && ((gfx_modos_desligados >> (unsigned)modo) & 1ull)) return;
   // O FUNDO DA DINAMICA ADIADO (gfx_fundo_din_desenhar) E O DESTAQUE POR CIMA
   // DELE NUMA PASSADA SO. O destaque (GFX_VITRINE) de largura inteira, a partir
