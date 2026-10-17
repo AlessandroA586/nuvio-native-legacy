@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-17T04:55:00-03:00",
- "base": "abb9e49b9",
- "nota": "Sync 2026-10-17 04:55, HEAD integracao/2.0.5 abb9e49b9 (base anterior 335bd2abc). Merges nesta janela: agente/205-homepisca (6a64c2e13), agente/205-fichatam (cbf6fb021), agente/205-herodiv (f41a4e154), agente/205-titulofil (4898972d7), agente/205-foscoleve4 (a691e96fb) e agente/205-dvabertura (abb9e49b9) - os seis sem review dedicado. issues.json 10-17 07:46: 80 issues, 2 novas no mapa (#578 audio atrasado no Tizen 10, #579 glitch de rolagem do catalogo na 2.0.6, ambas sem job) e 1 mudanca de estado GitHub (#562 fechada). Branches abertas com job feito e sem review: detalheglass, dinfundo, vidromenu, vidroilhas, pr487v2, pr538, pr493 (BLOQUEIA). TV segue em cb7ece972 (166 merges atras); tag v2.0.6, proximo release 2.0.7.",
+ "atualizado_em": "2026-10-17T07:05:00-03:00",
+ "base": "dad0421d3",
+ "nota": "Sync 2026-10-17 07:05, HEAD integracao/2.0.5 dad0421d3 (base anterior abb9e49b9). Sem merge novo desde 04:55. Reviews da madrugada: rev2-vidroilhas OK (06:48), rev2-dinfundo OK (06:48), rev2-vidromenu OK (06:49), rev-textoescala BLOQUEIA (06:50) e rev2-detalheglass BLOQUEIA (06:51) — os tres OK ainda NAO estao mesclados. issues.json 10-17 09:01: 80 issues, 1 nova (#580 catalogos de add-on nao aparecem, sem job) e 1 mudanca de estado GitHub (#548 fechada). TV segue em cb7ece972; tag v2.0.6, proximo release 2.0.7.",
  "itens": [
   {
    "numero": 1,
@@ -13,7 +13,8 @@
    "release": "1.0.7",
    "conserto": [
     "04c37f87 (v1.0.7)",
-    "90b0f9cd7 (agente/205-vidroilhas, 1 commits fora do HEAD)"
+    "90b0f9cd7 (agente/205-vidroilhas, 1 commits fora do HEAD)",
+    "90b0f9cd7 (agente/205-vidroilhas, 3 commits fora do HEAD)"
    ],
    "ultima_resposta": {
     "nos": true,
@@ -21,8 +22,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-09-08"
    },
-   "proximo_passo": "sem review e sem merge; worktree ativo, sem job na fila",
-   "notas": "Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: ilhas de frost desenhadas sobre o vidro da barra lateral da Home; 1 commits fora do HEAD.",
+   "proximo_passo": "falta review+merge: rev2-vidroilhas OK 06:48; ainda nao integrada",
+   "notas": "Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: ilhas de frost desenhadas sobre o vidro da barra lateral da Home; 1 commits fora do HEAD. Sync 2026-10-17 07:05: rev2-vidroilhas OK 06:48 (fix da captura limitada a regiao de amostragem); branch ainda fora do HEAD.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/1",
    "criada_em": "2026-09-06"
   },
@@ -49,8 +50,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-09-07"
    },
-   "proximo_passo": "sem review e sem merge; worktree ativo, sem job na fila",
-   "notas": "Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: mais menu do detalhe no vidro/frost compartilhado; 2 commits fora do HEAD. Sync 2026-10-17 04:55: fundo Cinza/Cor fixo no layout Dinamico (29 idiomas); 2 commits fora do HEAD. Sync 2026-10-17 04:55: frost da barra lateral e pilula de acento em vidro; 2 commits fora do HEAD.",
+   "proximo_passo": "branches de vidro/fundo com fix novo: rev2 BLOQUEIA (detalheglass) e OK (vidromenu/dinfundo/vidroilhas); falta merge",
+   "notas": "Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: mais menu do detalhe no vidro/frost compartilhado; 2 commits fora do HEAD. Sync 2026-10-17 04:55: fundo Cinza/Cor fixo no layout Dinamico (29 idiomas); 2 commits fora do HEAD. Sync 2026-10-17 04:55: frost da barra lateral e pilula de acento em vidro; 2 commits fora do HEAD. Sync 2026-10-17 07:05: vidromenu rev2 OK 06:49, dinfundo rev2 OK 06:48; detalheglass rev2 BLOQUEIA 06:51 (vidro esconde arte da colecao).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/2",
    "criada_em": "2026-09-06"
   },
@@ -10337,7 +10338,7 @@
   {
    "numero": 548,
    "titulo": "Mark as watched not working",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "integrada",
@@ -10357,7 +10358,6 @@
    "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivao 10-16 14:58: job vistos548 rodando (branch agente/205-vistos548 = HEAD, 0 ahead); log vivo; sem fix ainda. | [sync 2026-10-16 21:00] branch agente/205-vistos548 6 ahead; fixes 8330673a8 e 5b37cecd8 (weak defaults para fixtures isoladas) depois do ultimo review BLOQUEIA r4; review r5 rodando. | [sync 2026-10-16 22:55] branch agente/205-vistos548 8 ahead (tip b074d9fd5); VEREDITO BLOQUEIA j-rev-vistos548-r7 (19:48) | [sync 2026-10-16 21:10] merged 91da5935e em integracao/2.0.5; VEREDITO OK j-rev-vistos548-r9, nenhum commit depois; sai na 2.0.7 | Escrivão 2026-10-16 22:1x: merged 91da5935e (agente/205-vistos548, 12 commits); reviews OK j-rev-vistos548-r8/r9; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/548",
    "criada_em": "2026-10-16",
-   "alvo": "2.0.6",
    "data": "",
    "ultimo_comentario_por": "",
    "ultima_nossa": ""
@@ -10536,7 +10536,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "triar: seek para timestamp especifico; criar job",
-   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34",
+   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/557",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6"
@@ -10609,7 +10609,7 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar: controle de velocidade de reproducao; criar job",
-   "notas": "Nova em 2026-10-16 (issues.json, labels [enhancement]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova no snapshot 10-16 21:00 | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34",
+   "notas": "Nova em 2026-10-16 (issues.json, labels [enhancement]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova no snapshot 10-16 21:00 | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/564",
    "criada_em": "2026-10-16"
   },
@@ -10655,7 +10655,7 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar \"Some issues\": esperar detalhes do usuario antes de criar job",
-   "notas": "Nova em 2026-10-16 21:13 (issues.json, labels [bug]). Sem job no snapshot. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova em 2026-10-16 21:13 (issues.json, labels [bug]) | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34",
+   "notas": "Nova em 2026-10-16 21:13 (issues.json, labels [bug]). Sem job no snapshot. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova em 2026-10-16 21:13 (issues.json, labels [bug]) | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/566",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6"
@@ -10676,7 +10676,7 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar: trocar de fonte mostra o filme anterior e perde a retomada (Tizen 9)",
-   "notas": "Nova em 2026-10-16 23:34 (issues.json, Tizen 9; trocar de fonte do episodio mostra o filme anterior e reseta a retomada). | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34",
+   "notas": "Nova em 2026-10-16 23:34 (issues.json, Tizen 9; trocar de fonte do episodio mostra o filme anterior e reseta a retomada). | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/570",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6"
@@ -10697,7 +10697,7 @@
     "ultima_nossa": null
    },
    "proximo_passo": "triar: baixo FPS no Tizen 6.5 depois da 2.0.6; pedir log/modelo e criar job",
-   "notas": "[sync 2026-10-17 02:50] Nova em 2026-10-17 05:40 (issues.json). Regressao de desempenho relatada depois da 2.0.6; sem job, branch ou prompt no snapshot 10-17 02:46. Sync 2026-10-17 04:55: segue sem job.",
+   "notas": "[sync 2026-10-17 02:50] Nova em 2026-10-17 05:40 (issues.json). Regressao de desempenho relatada depois da 2.0.6; sem job, branch ou prompt no snapshot 10-17 02:46. Sync 2026-10-17 04:55: segue sem job. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/577",
    "criada_em": "2026-10-17",
    "alvo": "2.0.6"
@@ -10717,8 +10717,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "triar: audio convertido com atraso/fora de sincronia no Tizen 10 (TV 2026); pedir amostra e criar job",
-   "notas": "Sync 2026-10-17 04:55: issue nova (17/10 06:05), sem job.",
+   "proximo_passo": "triar: audio atrasado no Tizen 10; pedir amostra e criar job",
+   "notas": "Sync 2026-10-17 04:55: issue nova (17/10 06:05), sem job. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/578",
    "criada_em": "2026-10-17",
    "alvo": "2.0.6"
@@ -10739,8 +10739,29 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "triar: glitch de rolagem do catalogo na 2.0.6; pedir video e criar job",
-   "notas": "Sync 2026-10-17 04:55: issue nova (17/10 07:46), rotulo bug, sem job.",
+   "notas": "Sync 2026-10-17 04:55: issue nova (17/10 07:46), rotulo bug, sem job. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/579",
+   "criada_em": "2026-10-17",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 580,
+   "titulo": "Addons catalogues not showing",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "triar: catalogos de add-on nao aparecem; mesmo eixo de #545/#551; sem job",
+   "notas": "Sync 2026-10-17 07:05: issue nova (17/10 09:01), rotulo bug, sem job. Mesma familia de #545/#551. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/580",
    "criada_em": "2026-10-17",
    "alvo": "2.0.6"
   }
@@ -17053,11 +17074,13 @@
    "status": "em-revisao",
    "release": "-",
    "conserto": [
-    "9ebdc9a3b",
-    "e047eecee (agente/205-detalheglass)"
+    "e047eecee feat(detail): draw cast, recommendations and trailers on the shared glass card",
+    "9ebdc9a3b feat(detail): draw the more menu on the shared card glass and frost",
+    "0b52916d0 fix(detail): frost loaded collections and restore solid captions",
+    "d04f21ba4 test(detail): isolate glass cards (rev2 BLOQUEIA 06:51 - P1)"
    ],
-   "proximo_passo": "revisar e mesclar agente/205-detalheglass (2 commits fora)",
-   "notas": "Pedido do dono. O menu \"mais\" do detalhe passa a usar o mesmo vidro/frost dos outros paineis. Branch aberta, sem review nem merge."
+   "proximo_passo": "rev2 BLOQUEIA 06:51 (P1: vidro esconde a arte da colecao); precisa fix novo + review",
+   "notas": "Pedido do dono. O menu \"mais\" do detalhe passa a usar o mesmo vidro/frost dos outros paineis. Branch aberta, sem review nem merge. Sync 2026-10-17 07:05: 4 commits fora do HEAD, ainda sem merge."
   },
   {
    "id": "vidro-barra-lateral",
@@ -17066,12 +17089,13 @@
    "status": "em-revisao",
    "release": "-",
    "conserto": [
-    "7bf4caac9",
-    "e3eb56d39 (agente/205-vidromenu)",
-    "90b0f9cd7 (agente/205-vidroilhas)"
+    "7bf4caac9 fix(menu): frost the sidebar over screens that carry glass",
+    "e3eb56d39 feat(gfx): selected accent pill is tinted glass in glass mode",
+    "37687dce0 fix(gfx): supply frost for standalone accent pills",
+    "90c8d380d test(menu): require backdrop response as well as edge suppression (rev2 OK 06:49)"
    ],
-   "proximo_passo": "revisar e mesclar agente/205-vidromenu e agente/205-vidroilhas",
-   "notas": "Pedido do dono. A barra lateral desfoca sobre as telas com vidro e a pilula de acento vira vidro tingido no modo vidro; ilhas de frost sobre o vidro da Home. Duas branches abertas, sem review nem merge."
+   "proximo_passo": "review OK j-rev2-vidromenu (06:49) apos os fixes; falta merge + build",
+   "notas": "Pedido do dono. A barra lateral desfoca sobre as telas com vidro e a pilula de acento vira vidro tingido no modo vidro; ilhas de frost sobre o vidro da Home. Duas branches abertas, sem review nem merge. Sync 2026-10-17 07:05: 4 commits fora do HEAD, ainda sem merge."
   },
   {
    "id": "fundo-dinamico-cinza-cor",
@@ -17080,11 +17104,12 @@
    "status": "em-revisao",
    "release": "-",
    "conserto": [
-    "6da1fc418",
-    "e91329dd2 (agente/205-dinfundo)"
+    "6da1fc418 feat(home): fixed Gray/Color background for the Dynamic layout",
+    "e91329dd2 i18n: translate the Dynamic layout background settings in 29 languages",
+    "0cf805980 fix: reuse accent palette for dynamic background color (rev2 OK 06:48)"
    ],
-   "proximo_passo": "revisar e mesclar agente/205-dinfundo (2 commits fora)",
-   "notas": "Pedido do dono. O layout Dinamico ganha fundo fixo Cinza ou Cor em vez de so arte, com as traducoes dos ajustes em 29 idiomas. Branch aberta, sem review nem merge."
+   "proximo_passo": "review OK j-rev2-dinfundo (06:48) apos o fix da paleta; falta merge + build",
+   "notas": "Pedido do dono. O layout Dinamico ganha fundo fixo Cinza ou Cor em vez de so arte, com as traducoes dos ajustes em 29 idiomas. Branch aberta, sem review nem merge. Sync 2026-10-17 07:05: 3 commits fora do HEAD, ainda sem merge."
   },
   {
    "id": "fileira-titulo-estilos",
@@ -17107,8 +17132,8 @@
    "conserto": [
     "e50a38ef6 (agente/205-fichatam, merge cbf6fb021)"
    ],
-   "proximo_passo": "build+install no HEAD e conferir os 3 tamanhos na TV",
-   "notas": "Pedido do dono. Novo estilo de fileira com cartaz grande em tres alturas. Merged em integracao/2.0.5 sem review dedicado; testes home/i18n/vertfileira OK."
+   "proximo_passo": "build+install no HEAD dad0421d3 e conferir na TV; sai na 2.0.7",
+   "notas": "Pedido do dono. Novo estilo de fileira com cartaz grande em tres alturas. Merged em integracao/2.0.5 sem review dedicado; testes home/i18n/vertfileira OK. Sync 2026-10-17 07:05: integrada em 6a64c2e13; sem review dedicado. Sync 2026-10-17 07:05: integrada em cbf6fb021; sem review dedicado."
   },
   {
    "id": "hero-divisao",
@@ -17146,6 +17171,36 @@
    ],
    "proximo_passo": "build+install no HEAD e conferir a abertura DV na TV",
    "notas": "Pedido do dono. A tela de Cinema do Dolby Vision segue o estilo e os ajustes das telas de carregamento novas. Merged em integracao/2.0.5 sem review dedicado."
+  },
+  {
+   "id": "vidro-ilhas-home",
+   "titulo": "Ilhas de frost sobre o vidro da barra lateral da Home",
+   "plataforma": "todas",
+   "status": "em-revisao",
+   "release": "-",
+   "conserto": [
+    "90b0f9cd7 fix(gfx): frost islands drawn over Home sidebar glass",
+    "61764f975 fix(gfx): limit modal frost captures to sampling regions",
+    "fb4af3ee5 test(gfx): reject opaque frost and cover Saved modal (rev2 OK 06:48)"
+   ],
+   "proximo_passo": "review OK j-rev2-vidroilhas (06:48) apos os fixes; falta merge em integracao/2.0.5 + build",
+   "notas": "Sync 2026-10-17 07:05: 3 commits fora do HEAD, ainda sem merge."
+  },
+  {
+   "id": "texto-escala-componentes",
+   "titulo": "Escala de texto e componentes (85-130%) - pedido do dono",
+   "plataforma": "todas",
+   "status": "em-revisao",
+   "release": "-",
+   "conserto": [
+    "e7fa6d67c feat(ui): add text and component scale to gfx layer",
+    "406359d3a feat(settings): add text and component scale option (85-130%)",
+    "bab9c56e3 feat(ui): apply text scale to home, title page, library and player",
+    "86fed77d7 i18n: add text and component scale strings",
+    "4bfafc814 test: add text scale proof (rev-textoescala BLOQUEIA 06:50)"
+   ],
+   "proximo_passo": "review BLOQUEIA 06:50 (P1: opcao nao aparece em Ajustes > Aparencia; P2 cards redimensionam); fix novo",
+   "notas": "Sync 2026-10-17 07:05: 5 commits fora do HEAD, ainda sem merge."
   }
  ],
  "fechar_203": [],

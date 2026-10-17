@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-17 04:55, HEAD `abb9e49b9`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-17 07:05, HEAD `dad0421d3`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -343,14 +343,25 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   Android, LG webOS.
 - **Menu "mais" do detalhe no vidro** — `agente/205-detalheglass`, 2 commits fora (`e047eecee`, `9ebdc9a3b`):
   elenco, recomendações, trailers e o menu "mais" da página do título passam a usar o vidro/frost
-  compartilhado. Sem review e sem job na fila. Todas as plataformas.
-- **Frost da barra lateral e pílula de acento em vidro** — `agente/205-vidromenu` (2 commits fora,
-  `7bf4caac9`, `e3eb56d39`) e `agente/205-vidroilhas` (1 fora, `90b0f9cd7`): a barra lateral desfoca sobre
-  as telas com vidro, a pílula de acento vira vidro tingido no modo vidro e as ilhas de frost deixam de ser
-  desenhadas por baixo do vidro da Home. Sem review e sem job na fila. Todas as plataformas.
-- **Fundo Cinza/Cor fixo no layout Dinâmico** — `agente/205-dinfundo`, 2 commits fora (`6da1fc418`,
-  `e91329dd2`): fundo fixo Cinza ou Cor em vez de só arte, com os ajustes traduzidos em 29 idiomas. Sem
-  review e sem job na fila. Todas as plataformas.
+  compartilhado. Fix novo (`0b52916d0`, `d04f21ba4`, 06:01) e **review rev2 BLOQUEIA (06:51)**: o vidro
+  ainda esconde a arte da coleção carregada (P1) e o teste do menu continua aceitando a implementação
+  antiga (P2). Precisa de fix novo + review antes de entrar na 2.0.7. Todas as plataformas.
+- **Frost da barra lateral e pílula de acento em vidro** — `agente/205-vidromenu` (4 commits fora,
+  `7bf4caac9`, `e3eb56d39`, `37687dce0`, `90c8d380d`) e `agente/205-vidroilhas` (3 fora,
+  `90b0f9cd7`, `61764f975`, `fb4af3ee5`): a barra lateral desfoca sobre as telas com vidro, a pílula de
+  acento vira vidro tingido no modo vidro e as ilhas de frost deixam de ser desenhadas por baixo do vidro
+  da Home. **Reviews rev2 OK (06:48 e 06:49)** depois dos fixes; falta mesclar e buildar. Todas as
+  plataformas.
+- **Fundo Cinza/Cor fixo no layout Dinâmico** — `agente/205-dinfundo`, 3 commits fora (`6da1fc418`,
+  `e91329dd2`, `0cf805980`): fundo fixo Cinza ou Cor em vez de só arte, com os ajustes traduzidos em 29
+  idiomas e a paleta de acento reusada. **Review rev2 OK (06:48)**; falta mesclar e buildar. Todas as
+  plataformas.
+- **Escala de texto e componentes** — `agente/205-textoescala`, 5 commits fora (`e7fa6d67c`,
+  `406359d3a`, `bab9c56e3`, `86fed77d7`, `4bfafc814`): ajuste novo "escala de texto e componentes"
+  (85–130%) que multiplica texto, botões e componentes sem mexer no tamanho dos cartazes. **Review
+  BLOQUEIA (06:50)**: a opção não aparece em Ajustes › Aparência (P1), os cartazes continuam
+  redimensionando (P2) e as linhas da Biblioteca se sobrepõem a 85% (P2). Pedido do dono. Todas as
+  plataformas.
 - **Frost barato igual ao aprovado na LG C9** — `agente/205-foscovelho` foi **merged** (`76bc9d0c3`) e
   depois **revertido** (`f40a93dc3`): na TCL o dono achou o fosco anterior (captura de tela + desfoque) mais
   bonito e mais leve. A fonte de arte pré-desfocada (`ab02d4aaa`, `d0789c13a`, `50a1ac232`, `35f5f4fc3`)
@@ -671,15 +682,24 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
   already after the merge. The path that shipped — the screen capture, just cheaper — landed as `4c82273d7`
   and is under Highlights/Performance. All platforms.
 - **Detail "more" menu on glass** — `agente/205-detalheglass`, 2 commits out (`e047eecee`, `9ebdc9a3b`):
-  cast, recommendations, trailers and the title page "more" menu move to the shared glass/frost. No review
-  and no queued job. All platforms.
-- **Sidebar frost and glass accent pill** — `agente/205-vidromenu` (2 commits out, `7bf4caac9`, `e3eb56d39`)
-  and `agente/205-vidroilhas` (1 out, `90b0f9cd7`): the sidebar frosts over screens that carry glass, the
-  accent pill becomes tinted glass in glass mode, and the frost islands are no longer drawn under the Home
-  sidebar glass. No review and no queued job. All platforms.
-- **Fixed Gray/Colour background in the Dynamic layout** — `agente/205-dinfundo`, 2 commits out
-  (`6da1fc418`, `e91329dd2`): a fixed Gray or Colour backdrop instead of art only, with the settings
-  translated in 29 languages. No review and no queued job. All platforms.
+  cast, recommendations, trailers and the title page "more" menu move to the shared glass/frost. New fix
+  (`0b52916d0`, `d04f21ba4`, 06:01) and **rev2 review BLOQUEIA (06:51)**: the glass still hides loaded
+  collection artwork (P1) and the menu test still accepts the old implementation (P2). Needs a new fix +
+  review before 2.0.7. All platforms.
+- **Sidebar frost and glass accent pill** — `agente/205-vidromenu` (4 commits out, `7bf4caac9`,
+  `e3eb56d39`, `37687dce0`, `90c8d380d`) and `agente/205-vidroilhas` (3 out, `90b0f9cd7`, `61764f975`,
+  `fb4af3ee5`): the sidebar frosts over screens that carry glass, the accent pill becomes tinted glass in
+  glass mode, and the frost islands are no longer drawn under the Home sidebar glass. **rev2 reviews OK
+  (06:48 and 06:49)** after the fixes; still needs the merge and a build. All platforms.
+- **Fixed Gray/Colour background in the Dynamic layout** — `agente/205-dinfundo`, 3 commits out
+  (`6da1fc418`, `e91329dd2`, `0cf805980`): a fixed Gray or Colour backdrop instead of art only, with the
+  settings translated in 29 languages and the accent palette reused. **rev2 review OK (06:48)**; still needs
+  the merge and a build. All platforms.
+- **Text and component scale** — `agente/205-textoescala`, 5 commits out (`e7fa6d67c`, `406359d3a`,
+  `bab9c56e3`, `86fed77d7`, `4bfafc814`): a new "text and component scale" setting (85–130%) that scales
+  text, buttons and components while leaving poster/card sizes alone. **Review BLOQUEIA (06:50)**: the
+  option never shows up in Settings › Appearance (P1), cards still resize (P2) and Library rows overlap at
+  85% (P2). Owner request. All platforms.
 - **Trakt comments with glass, frosted context menu and #562/PR #574** landed in this window
   (`335bd2abc`, `dc040ef2d`, `2c7c85860`, all review OK: `rev-traktcoment`, `rev-ctxgrande`, `rev-pr574`) and
   are already in New/Fixes/Performance. Still to measure on a device: the FPS of the 8 glass panels.
