@@ -151,7 +151,7 @@ static const Item TELA[] = {
     OPC(AJ_TECLADO_ANDROID),
 #endif
     ROT("Cores e vidro"),
-      OPC(AJ_TEMA), OPC(AJ_FUNDO), OPC(AJ_COR_LOGO), OPC(AJ_VIDRO), OPC(AJ_VIDRO_CONTORNO),
+      OPC(AJ_TEMA), OPC(AJ_FUNDO), OPC(AJ_COR_LOGO), OPC(AJ_VIDRO), OPC(AJ_VIDRO_CONTORNO), OPC(AJ_FOCO_ACENTO),
     ROT("Logo e abertura"),
       OPC(AJ_LOGO_APP), OPC(AJ_ABERTURA), OPC(AJ_ICONE_APP),
     ROT("Texto e tamanho"),

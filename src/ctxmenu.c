@@ -1364,7 +1364,7 @@ static void linhaCtxTinta(GfxRect r, const char *rot, const char *icone, float f
     lum = .80f + .20f * k;
     if (k > 0.01f) gfx_cor(r, 0.5f, tinta, tinta, tinta, .12f * k * a);
   } else if (k > 0.01f) {
-    if (ajustes_vidro()) gfx_cor(r, 0.5f, 1, 1, 1, .14f * k * a);
+    if (ajustes_vidro()) { if (!gfx_foco_placa(r, 0.5f, k, a)) gfx_cor(r, 0.5f, 1, 1, 1, .14f * k * a); }
     else gfx_cor(r, 0.5f, .19f, .195f, .215f, k * a);
   }
   if (icone && icone[0])

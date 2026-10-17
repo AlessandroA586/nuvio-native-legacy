@@ -4100,6 +4100,7 @@ void gfx_vidro_superficie(GfxRect r, float raio, float a) {
 void gfx_vidro_foco(GfxRect r, float raio, float foco, float a) {
   float f = foco < 0.0f ? 0.0f : (foco > 1.0f ? 1.0f : foco), cr, cg, cb;
   if (f <= 0.01f || a <= 0.001f) return;
+  if (gfx_foco_placa(r, raio, f, a)) return;
   ajustes_acento(&cr, &cg, &cb);
   // "Contorno do vidro" DESLIGADO (pedido do dono, 30/09: "o contorno que eu
   // queria desligar e esse quando ta em foco, mais minimalista"): sem anel,
@@ -4113,6 +4114,27 @@ void gfx_vidro_foco(GfxRect r, float raio, float foco, float a) {
   }
   gfx_cor(r, raio, cr, cg, cb, 0.09f * f * a);
   gfx_anel(r, raio, 2.0f, cr, cg, cb, 0.96f * f * a);
+}
+// "Foco na cor de destaque": the focus plate becomes tinted glass. The accent
+// stays at <= 0.30 alpha over the glass the row already sits on (so light text
+// keeps >= 4.5:1 even on yellow/white), a faint white lift keeps the glass feel,
+// and a soft top light + accent rim carry the colour. Returns 0 (nothing drawn)
+// when the setting is off, so the caller keeps its own gray plate untouched.
+float gfx_foco_placa_alfa(float cr, float cg, float cb) {
+  // Light accents (yellow, white) get less tint so the light text keeps contrast.
+  float l = 0.2126f * cr * cr + 0.7152f * cg * cg + 0.0722f * cb * cb;
+  return 0.30f - 0.16f * l;
+}
+int gfx_foco_placa(GfxRect r, float raio, float foco, float a) {
+  float f = foco < 0.0f ? 0.0f : (foco > 1.0f ? 1.0f : foco), cr, cg, cb;
+  if (!ajustes_foco_acento()) return 0;
+  if (f <= 0.01f || a <= 0.001f) return 1;
+  ajustes_acento(&cr, &cg, &cb);
+  gfx_cor(r, raio, 1, 1, 1, 0.05f * f * a);
+  gfx_cor(r, raio, cr, cg, cb, gfx_foco_placa_alfa(cr, cg, cb) * f * a);
+  if (!efeitosMinimos) gfx_brilho_topo(r, raio, 0.45f, 1.0f, 1.0f, 1.0f, 0.07f * f * a);
+  gfx_anel(r, raio, ajustes_vidro_contorno() ? 2.0f : 1.5f, cr, cg, cb, (ajustes_vidro_contorno() ? 0.90f : 0.62f) * f * a);
+  return 1;
 }
 void gfx_vidro_cartao(GfxRect r, float raio, float foco, float a) {
   float f = foco < 0.0f ? 0.0f : (foco > 1.0f ? 1.0f : foco), cr, cg, cb;
