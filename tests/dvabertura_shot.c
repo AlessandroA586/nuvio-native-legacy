@@ -84,6 +84,7 @@ static void abrir(int dv) {
   video_simular(&V);
   relogio = 100000;
   player_abrir(0, NULL);
+  player_definir_tentativa(1, 1);
   quadros(4);
   player_definir_fonte("https://fonte.invalid/arquivo?id=1");
 }
@@ -182,6 +183,18 @@ int main(int argc, char **argv) {
       snprintf(msg, sizeof msg, "%s/%s: a marca e a linha do DV existem", ESTILO[e], FUNDO[f]);
       confere(em > 200, msg);
     }
+
+  // Provider and long-wait content must stay put when DV joins the stack.
+  assert(ajustes_shot_valor("aberturaAddonLocal", 1));
+  for (e = 0; e < 2; e++) {
+    int fora, em;
+    ajustar(e, 1, 0);
+    abrir(0); player_definir_tentativa(2, 3); quadros(570); capturar(quadro_[0], NULL);
+    abrir(1); player_definir_tentativa(2, 3); quadros(570); capturar(quadro_[1], NULL);
+    comparar(quadro_[0], quadro_[1], &fora, &em);
+    confere(fora == 0, "Provider and eight-second wait retain their positions");
+  }
+  assert(ajustes_shot_valor("aberturaAddonLocal", 0));
 
   // ---- 3. a troca no meio da abertura, nos dois sentidos -------------------
   for (e = 0; e < 2; e++)

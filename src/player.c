@@ -5502,8 +5502,6 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
     txt_desenhar_alpha(l, canto ? tx : cx - l.w * 0.5f, y, v * entra);
     y += 34.0f;
   }
-  // Dolby Vision slot 2: its one step line, last in the stack so nothing above it moves.
-  y += dvtela_abertura_linha(canto, canto ? tx : cx, y, v * entra);
   if (ajustes_abertura_addon()) {
     const Stream *st = stream_item(stream_atual());
     char det[260];
@@ -5526,7 +5524,10 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
     float d = (float)(agora - cine.desde - ABRECINE_DEMORA_MS) / 600.0f;
     TxtLinha l = txt_linha(TXT_G19M, i18n("Só mais um instante…"), 243, 242, 239, 255);
     txt_desenhar_alpha(l, canto ? tx : cx - l.w * 0.5f, y, 0.62f * v * (reduz || d > 1.0f ? 1.0f : d));
+    y += 34.0f;
   }
+  // Append DV information without moving existing loading content.
+  dvtela_abertura_linha(canto, canto ? tx : cx, y, v * entra);
 }
 
 #ifdef NV_TPK
