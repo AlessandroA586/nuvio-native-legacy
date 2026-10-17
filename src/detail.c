@@ -310,6 +310,7 @@ static int  pedAssistido = 0;
 static int  pedDoInicio = 0;         // botao "Reproduzir desde o inicio"
 static Uint32 okDesceEm = 0;
 static float pg = 0.0f;              // 0..1: hero -> pagina rolada
+static float pgAlvo = 0.0f;          // para onde pg vai (detail_transicao, vidro)
 static Foco foco;
 static float animFoco[N_SECOES][N_ITENS];
 static float scrollSec[N_SECOES];    // rolagem HORIZONTAL de cada fileira
@@ -1804,6 +1805,11 @@ static int carDesenhaFundo(void) {
 }
 
 int detail_aberto(void) { return aberto; }
+// [quadro] do main: a pagina rolando para o heroi (sobe) ou para as fileiras.
+const char *detail_transicao(void) {
+  if (!aberto || (fabsf(pg - pgAlvo) <= 0.02f && fabsf(velY) < 5.0f)) return "-";
+  return pgAlvo < pg || velY < 0.0f ? "sobe" : "desce";
+}
 int detail_relogio_oculto(void) { return aberto && carro && !carCheia && nivel == 0; }
 // #407: detail_pediu_social saiu (CIMA no topo nao abre mais o painel); a
 // accessor fica para o linkage e diz 0, para o caminho de app.c nao crescer
@@ -3845,6 +3851,7 @@ static void detail_atualizar_(float dt, Uint32 agora) {
 #ifdef NV_TOUCH_UI
     if (toquerol_livre(&toqueDetalhe)) alvoPg = scrollY > 1.0f ? 1.0f : 0.0f;
 #endif
+    pgAlvo = alvoPg;
     pg = anim_mola(pg, alvoPg, dt, alvoPg < pg ? NV_MOLA_PAGINA * 2.0f : NV_MOLA_PAGINA); }
   if (carro) {
     int k;
@@ -7688,6 +7695,12 @@ static void detail_desenhar_(Uint32 agora) {
                    0, docFim - NV_TELA_H, 1, &scrollY);
   if (t > .99f && !saindo) ponteiro_rolagem(toqueDetalheRolar);
 #endif
+  // TITULO <-> EPISODIOS NO FROST (#205, C9/TCL lentas nos dois sentidos): a
+  // arte apaga e o veu sobe por baixo do vidro que rola, e cada quadro
+  // recapturava e redesfocava o fundo. Um quarto de pg por captura, e uma so
+  // para a cauda da mola (a 2% do fim); a exata volta com pg parado.
+  { float d = fabsf(pg - pgAlvo);
+    if (d > 0.002f) gfx_vidro_fundo_passo(d > 0.02f ? (int)(pg * 4.0f) : 4); }
   detalheFundo(s);
   // O veu de leitura do heroi: fora do fundo, para valer sobre qualquer fundo
   // (arte nitida, borrada ou frost). Sai com a rolagem, com o modo cinema do

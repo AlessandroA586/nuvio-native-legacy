@@ -1958,6 +1958,13 @@ int gfx_vidro_so_fundo = NV_VIDRO_SO_FUNDO;
 // after the layer, so the glasses need the old path to see it.
 static int fundoFim, fundoDepois, fundoValido;
 static unsigned fundoHash;
+// A backdrop crossfading under moving glass (detail page title <-> episodes,
+// #205): every frame changed the hash and recaptured + reblurred it, a copy
+// that flushes the tiles on Mali (C9/TCL lag both ways). While the caller sets
+// a step key, one full-screen capture serves every frame of the same step; the
+// exact hash path resumes once the key is cleared (-1, every frame).
+static int fundoPasso = -1, fundoPassoCap = -1;
+void gfx_vidro_fundo_passo(int passo) { fundoPasso = passo; }
 static void vidroFundoFechar(void);
 static int vidroFundoModo(GfxRect r, GfxModo m) {
   static const unsigned long long FUNDO =
@@ -2105,7 +2112,7 @@ void gfx_novo_quadro(void) {
   memcpy(vidroLeAnt, vidroLeCur, sizeof vidroLeAnt); memset(vidroLeCur, 0, sizeof vidroLeCur);
   memcpy(vidroRegAnt, vidroRegCur, sizeof vidroRegAnt); vidroNRegAnt = vidroNRegCur; vidroNRegCur = 0;
   vidroSlot = -1; vidroRecapturou = 0;
-  fundoFim = fundoDepois = 0;
+  fundoFim = fundoDepois = 0; fundoPasso = -1;
   gfx_vidro_capturas = 0; gfx_vidro_passadas = 0; gfx_vidro_com_fonte = 0; gfx_vidro_chapados = 0; gfx_vidro_area = 0;
   gfx_vidro_fill = gfx_vidro_copia = 0.0;
   ambFonte = 0; dinPendente = 0; dinAdiado = 0; dinNOp = 0;
@@ -3571,8 +3578,10 @@ static void vidroFundoFechar(void) {
   // que pisca no "Apple TV + frost". Os outros pontos de leitura da tela
   // (furo, mini, alvo) ja resolvem o fundo; aqui faltava.
   dinDescarregar();
+  if (fundoPasso < 0) fundoPassoCap = -1;   // a later crossfade starts with a fresh capture
+  if (fundoPasso >= 0) { reg[0][0] = reg[0][1] = 0; reg[0][2] = NV_TELA_W; reg[0][3] = NV_TELA_H; n = 1; }
   for (i = 0; i < vidroNRegAnt; i++) fora |= !vidroRegContem(fundoReg, fundoNReg, vidroRegAnt[i]);
-  if (!fundoValido || fundoHash != vidroHash || fora) {
+  if (!fundoValido || fora || (fundoPasso >= 0 ? fundoPasso != fundoPassoCap : fundoHash != vidroHash)) {
 #ifdef NV_SHOT_HOOKS
     if (!fundoValido || fundoHash != vidroHash) gfx_vidro_copia_com_din_adiado += dinAdiado;
 #endif
@@ -3596,7 +3605,7 @@ static void vidroFundoFechar(void) {
       if (f[2] >= NV_TELA_W) f[2] = 1e9f;
       if (f[3] >= NV_TELA_H) f[3] = 1e9f;
     }
-    fundoHash = vidroHash; fundoValido = 1;
+    fundoHash = vidroHash; fundoPassoCap = fundoPasso; fundoValido = 1;
   }
   fundoFim = 1;
 }

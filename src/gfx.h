@@ -629,6 +629,9 @@ void gfx_vidro_ou_solido(GfxRect r, float raio, float dens, float a,
 // Conteudo mudou sem passar por gfx_rect (textura reenviada no lugar): o
 // proximo quadro recaptura.
 void gfx_vidro_sujar(void);
+// Detail title <-> episodes (#205): this frame's glass backdrop may reuse the
+// capture of the same crossfade step (>= 0); -1 (reset every frame) = exact.
+void gfx_vidro_fundo_passo(int passo);
 // Capturas e passadas de desfoque do quadro corrente (zeradas em gfx_novo_quadro).
 extern int gfx_vidro_capturas, gfx_vidro_passadas;
 // Blur writes and framebuffer copy area, in drawable screens per frame.

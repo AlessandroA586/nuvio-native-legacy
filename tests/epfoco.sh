@@ -1,6 +1,7 @@
 #!/bin/bash
 # Focused episode plate (zoomed-thumbnail width, padded text, glass) and the
-# title -> season tabs -> episodes frame budget, Moderna + Frost (#205).
+# title <-> season tabs <-> episodes frame budget both ways, Moderna + Frost (#205).
+#   NUVIO_EPS_FRAMES=1 traces each frame (fill, glass copy/blur, fill by mode).
 #   bash tests/epfoco.sh        rc=0 passes; < 50 s with a warm object cache
 set -eu
 cd "$(dirname "$0")/.."

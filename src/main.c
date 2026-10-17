@@ -1690,6 +1690,7 @@ int main(int argc, char **argv) {
   double pPrep=0, pGlClr=0;
   // Dentro de `des`: quanto e travessia de GL e quanto e busca no cache.
   double fFill=0, pFill=0; int fNCheio=0, pNCheio=0;
+  const char *fTela = "?", *pTela = "?", *fTrans = "-", *pTrans = "-";   // tela/transicao do quadro
   double fGfxMs=0, fTexMs=0, fOutMs=0; int fNRect=0, fNProg=0, fNBind=0, fNBusca=0, fNOut=0;
   double pGfxMs=0, pTexMs=0, pOutMs=0; int pNRect=0, pNProg=0, pNBind=0, pNBusca=0, pNOut=0;
 #define NV_T0() (SDL_GetPerformanceCounter())
@@ -1976,7 +1977,7 @@ int main(int argc, char **argv) {
                          pEv=fEv; pBomb=fBomb; pUpd=fUpd; pDes=fDes; pSwap=fSwap; pAux=fAux; pClr=fClr; pPrep=fPrep; pGlClr=fGlClr;
                          pUplN=fUplN; pUplB=fUplB;
                          pGfxMs=fGfxMs; pTexMs=fTexMs; pNRect=fNRect; pNProg=fNProg;
-                         pNBind=fNBind; pNBusca=fNBusca; pOutMs=fOutMs; pNOut=fNOut; pFill=fFill; pNCheio=fNCheio; }
+                         pNBind=fNBind; pNBusca=fNBusca; pOutMs=fOutMs; pNOut=fNOut; pFill=fFill; pNCheio=fNCheio; pTela=fTela; pTrans=fTrans; }
       if (dtms > swapint_limite_jank(&swapInt)) janks++;
     }
     gfx_vidro_governar(dtms, swapint_periodo(&swapInt));
@@ -2134,6 +2135,7 @@ int main(int argc, char **argv) {
     fNRect = gfx_n_rect; fNProg = gfx_n_prog; fNBind = gfx_n_bind; fNBusca = tex_n_busca;
     fOutMs = gfx_ms_outros; fNOut = gfx_n_outros;
     fFill = gfx_fill; fNCheio = gfx_n_cheio;
+    fTela = app_tela_nome(); fTrans = detail_transicao();
     // Media e pico do preenchimento real na janela de 3 s ([gpu-modos] fill).
     gpuFillSoma += gfx_fill_gpu; gpuFillN++;
     if (gfx_fill_gpu > gpuFillPico) gpuFillPico = gfx_fill_gpu;
@@ -2364,9 +2366,9 @@ int main(int argc, char **argv) {
         } }
       if (pior > 33.0) {
         printf("[quadro] pior=%.1fms | ev=%.1f bomb=%.1f(%d tex, %.1fMB)"
-               " upd=%.1f clr=%.1f des=%.1f aux=%.1f swap=%.1f\n",
+               " upd=%.1f clr=%.1f des=%.1f aux=%.1f swap=%.1f tela=%s trans=%s\n",
                pior, pEv, pBomb, pUplN, pUplB / 1048576.0,
-               pUpd, pClr, pDes, pAux, pSwap);
+               pUpd, pClr, pDes, pAux, pSwap, pTela, pTrans);
         // 2.0.1: `clr` de 6 e 14 s no Android ao abrir video (Expressluck, TCL
         // A14) e o numero junta seis passos. Aberto em partes so quando pesa:
         // prep = luz ambiente + vidro fosco, gl = o glClear (primeira chamada
@@ -2381,8 +2383,8 @@ int main(int argc, char **argv) {
         // ou preenchimento. Mesma condicao do [quadro]: so com jank.
         // (os relogios de gfx_rect e da busca de textura so existem com
         // -DNV_PERF_FINO; as contagens e o `out` existem sempre)
-        printf("[quadro-des] rects=%d(p%d,b%d) out=%.1fms/%d fill=%.2fx cheias=%d texto=%.1fms/%d\n",
-               pNRect, pNProg, pNBind, pOutMs, pNOut, pFill, pNCheio, piorTxtMs, piorTxtN);
+        printf("[quadro-des] rects=%d(p%d,b%d) out=%.1fms/%d fill=%.2fx cheias=%d texto=%.1fms/%d tela=%s trans=%s\n",
+               pNRect, pNProg, pNBind, pOutMs, pNOut, pFill, pNCheio, piorTxtMs, piorTxtN, pTela, pTrans);
       }
       // Instrumento de campo (gfx.h, gfx_modos_desligados): a lista em
       // /tmp/nuvio-gfx-off desliga modos de desenho; e o preenchimento do
