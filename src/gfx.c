@@ -606,7 +606,9 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  if (m <= 0.001) discard;\n"
   "  float gb = smoothstep(0.34, 1.0, vUv.y);\n"
   "  float ge = smoothstep(0.62, 0.0, vUv.x) * 0.78;\n"
-  "  gl_FragColor = nv_dither(vec3(0.0), clamp(gb+ge-gb*ge,0.0,1.0)*uCor.a*m);\n"
+  // Hero A uses a tinted horizontal veil; other callers keep the original ramp.
+  "  float a = uPar.x > 0.5 ? 1.0-smoothstep(0.30,0.66,vUv.x) : clamp(gb+ge-gb*ge,0.0,1.0);\n"
+  "  gl_FragColor = nv_dither(uPar.x > 0.5 ? uCor.rgb : vec3(0.0), a*uCor.a*m);\n"
   "}\n",
 
   // GFX_TEXTO — a forma da letra vem do ALPHA da textura, nunca do RGB

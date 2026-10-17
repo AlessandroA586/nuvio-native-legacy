@@ -6774,7 +6774,7 @@ static void desenhaEditorialCard(const CatItem *cItem, TipoFileira tipo, float p
 
 // --- FORWARDS DO CARTAO HEROI E DA REDONDA ----------------------------------
 
-static void desenhaHeroiCard(const CatItem *ci, const char *selo, const char *texto,
+static void desenhaHeroiCard(const CatItem *ci, int completo, const char *texto,
                              const char *caminho, GLuint t, float aArte,
                              float px, float py, float w, float h, float raio,
                              float f, float varre);   // o cartão da fileira Herói (#205)
@@ -6915,64 +6915,78 @@ static void desenhaRedonda(const CatItem *ci, GLuint t, const char *caminho,
   }
 }
 
-// O CARTÃO DA FILEIRA HERÓI (#205): um cartão só do tamanho da fileira, com
-// a arte de fundo em cover, o selo no alto à esquerda, o título (logo quando
-// o título tem) e duas linhas de texto na base — sobre o véu escuro→claro.
-// Como o banner entre fileiras da Apple TV (foto do dono,
-// fotos1014/appletv-hero-card.jpg). O anel é o mesmo dos outros cards; a arte
-// é a de desenhaArteCard (esqueleto, arte ausente, varredura do foco).
-static void desenhaHeroiCard(const CatItem *ci, const char *selo, const char *texto,
+// One metadata baseline for both Hero A rows; reserve the measured badge first.
+static float heroiMeta(const CatItem *ci, float x, float y, float w) {
+  char linha[256];
+  if (!ci) return BADGE_H;
+  int nota = imdbnota_obter(ci->imdb, ci->nota, !strcmp(ci->tipo, "series"));
+  float bw = badge_imdb_largura(nota);
+  snprintf(linha, sizeof linha, "%s%s%s%s", ci->meta,
+           ci->meta[0] && ci->genero[0] ? " · " : "", ci->genero,
+           nota > 0 && (ci->meta[0] || ci->genero[0]) ? " · " : "");
+  TxtLinha m = txt_linha_corta(TXT_CW_META, linha, 218, 222, 232, 255,
+                               fmaxf(0.0f, w - bw - 8.0f));
+  float h = fmaxf(34.0f, fmaxf(m.h, BADGE_H));
+  if (linha[0]) txt_desenhar(m, x, y + (h - m.h) * 0.5f);
+  if (nota > 0 && bw <= w)
+    badge_imdb(x + (linha[0] ? m.w + 8.0f : 0.0f), y + (h - BADGE_H) * 0.5f, nota, 0, 1);
+  return h;
+}
+
+// Hero A: ring only, tinted reading veil, logo, metadata and two synopsis lines.
+static void desenhaHeroiCard(const CatItem *ci, int completo, const char *texto,
                              const char *caminho, GLuint t, float aArte,
                              float px, float py, float w, float h, float raio,
                              float f, float varre) {
-  const float pad = NV_HEROI_PAD;
+  const float pad = completo ? NV_HEROI_PAD : 32.0f;
   GfxRect card = { px, py, w, h };
   if (f > 0.01f && ajustes_borda_foco()) {
-    GfxRect borda = { px - NV_ANEL_FOCO, py - NV_ANEL_FOCO,
-                      w + NV_ANEL_FOCO * 2, h + NV_ANEL_FOCO * 2 };
     float ar, ag, ab; ajustes_acento(&ar, &ag, &ab);
-    { float menor = w < h ? w : h;
-      if (ajustes_vidro()) gfx_vidro_cartao((GfxRect){px, py, w, h}, raio, f, 1.0f);
-      else
-      gfx_cor(borda, (raio * menor + NV_ANEL_FOCO) / (menor + 2 * NV_ANEL_FOCO),
-              ar, ag, ab, f); }
+    gfx_cor((GfxRect){px - NV_ANEL_FOCO, py - NV_ANEL_FOCO,
+                     w + 2 * NV_ANEL_FOCO, h + 2 * NV_ANEL_FOCO},
+            (raio * h + NV_ANEL_FOCO) / (h + 2 * NV_ANEL_FOCO), ar, ag, ab, f);
   }
   desenhaArteCard(card, FILEIRA_HEROI, caminho, t, ci, f, raio, aArte, varre);
-  // O VÉU DO TEXTO: escuro na base, clareando para cima (o mesmo desenho da
-  // legenda do cartaz deitado e do destaque — só a fração é daqui).
-  gfx_veu_base(card, raio, NV_HEROI_VEU_F, NV_HEROI_VEU_A);
-  // O SELO no alto à esquerda, como o "APPLE MUSIC LIVE" da foto.
-  if (selo && selo[0]) badge_desenhar(px + pad, py + pad, selo, BADGE_NEUTRO, 1.0f);
-  // AS DUAS LINHAS, medidas primeiro: o título senta em cima delas, e sem
-  // medir o bloco não há como saber onde a base do título fica.
-  { float tw = w - pad * 2.0f;
-    float bloco = (texto && texto[0])
-      ? txt_bloco_corta(TXT_HERO_SIN, texto, 226, 228, 233,
-                        px + pad, py + h - pad, tw, 28.0f, 0.0f, 2)
-      : 0.0f;
-    float base = py + h - pad - bloco;
-    if (texto && texto[0])
-      (void)txt_bloco_corta(TXT_HERO_SIN, texto, 226, 228, 233,
-                            px + pad, py + h - pad - bloco, tw, 28.0f, 1.0f, 2);
-    // O TÍTULO: o logo quando o título tem (a tipografia própria, a mesma
-    // regra do destaque), o nome em Bold quando não tem.
-    { const char *urlL = ci ? artehero_logo_sessao_larg(ci, w * NV_HEROI_LOGO_W) : NULL;
-      GLuint tl = urlL ? tex_obter_logo_larg(urlL, w * NV_HEROI_LOGO_W) : 0;
-      if (tl) {
-        float ap = tex_aspecto(urlL);
-        if (ap > 0.0f) {
-          float hL = h * 0.20f, wL = hL * ap;
-          if (wL > w * NV_HEROI_LOGO_W) { wL = w * NV_HEROI_LOGO_W; hL = wL / ap; }
-          { GfxRect rl = { px + pad, base - 10.0f - hL, wL, hL };
-            GfxModo m = tex_marca_escura(urlL) ? GFX_MARCA : GFX_TEXTO;
-            gfx_tex_aspect_atual = 0.0f;
-            gfx_rect(rl, tl, m, 0, 0, 0, 0.0f, 1, 1, 1, 1.0f); }
-        }
-      } else if (ci && ci->titulo[0]) {
-        TxtLinha tn = txt_linha_corta(TXT_TITULO3, ci->titulo, 245, 246, 249, 255, tw);
-        txt_desenhar(tn, px + pad, base - 10.0f - tn.h);
-      }
+  if (completo) {
+    CorvivaPaleta p;
+    float cr = 0.02f, cg = 0.07f, cb = 0.09f;
+    if (caminho) tex_publicar_paleta(caminho);
+    if (caminho && corviva_paleta(caminho, &p) && p.ok) {
+      cr = p.base[0] * 0.45f; cg = p.base[1] * 0.45f; cb = p.base[2] * 0.45f;
     }
+    gfx_rect(card, 0, GFX_VEU, 0, 1, 0, raio, cr, cg, cb, 0.95f);
+  }
+  gfx_veu_base(card, raio, completo ? NV_HEROI_VEU_F : 0.52f,
+               completo ? NV_HEROI_VEU_A : 0.80f);
+  float tw = fminf(760.0f, w - pad * 2.0f);
+  float base = py + h - (completo ? 44.0f : 30.0f);
+  if (completo) {
+    float bloco = texto && texto[0]
+      ? sinopse_bloco_corta(TXT_DET_SIN, texto, 243, 242, 239,
+                            px + pad, 0, tw, 36.0f, 0, 2) : 0;
+    if (bloco > 0) {
+      base -= bloco;
+      sinopse_bloco_corta(TXT_DET_SIN, texto, 243, 242, 239,
+                          px + pad, base, tw, 36.0f, 1, 2);
+      base -= 12.0f;
+    }
+    float mh = fmaxf(34.0f, txt_linha(TXT_CW_META, "2025", 218,222,232,255).h);
+    base -= mh;
+    heroiMeta(ci, px + pad, base, tw);
+    base -= 20.0f;
+  }
+  const char *urlL = ci ? artehero_logo_sessao_larg(ci, w * NV_HEROI_LOGO_W) : NULL;
+  GLuint tl = urlL ? tex_obter_logo_larg(urlL, w * NV_HEROI_LOGO_W) : 0;
+  if (tl && tex_aspecto(urlL) > 0) {
+    float ap = tex_aspecto(urlL), hL = fminf(96.0f, h * 0.24f), wL = hL * ap;
+    float maxW = completo ? tw : w - pad * 2;
+    if (wL > maxW) { wL = maxW; hL = wL / ap; }
+    gfx_tex_aspect_atual = 0;
+    gfx_rect((GfxRect){px + pad, base - hL, wL, hL}, tl,
+             tex_marca_escura(urlL) ? GFX_MARCA : GFX_TEXTO, 0,0,0,0,1,1,1,1);
+  } else if (ci && ci->titulo[0]) {
+    TxtLinha tn = txt_linha_corta(TXT_TITULO3, ci->titulo, 245,246,249,255,tw);
+    txt_desenhar(tn, px + pad, base - tn.h);
   }
 }
 
@@ -7003,7 +7017,7 @@ static void desenhaDividido(int r, float cardY) {
       if (v) (void)tex_lookahead_pedir(v, p.w);
     }
   }
-  desenhaHeroiCard(ci, NULL, NULL, caminho, t, 1.0f, p.x, p.y, p.w, p.h,
+  desenhaHeroiCard(ci, 0, NULL, caminho, t, 1.0f, p.x, p.y, p.w, p.h,
                    raioDe(p.w, p.h), 0.0f, 0.0f);
   // O foco mora no painel: o poster dele nao e mais desenhado na fila.
   if (foco.fileira == r && !focoHero) {
@@ -7043,22 +7057,14 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
   const float abre = k->abre, esc = k->esc, f = k->f, px = k->px, py = k->py, w = k->w, h = k->h;
   const float varreFoco = k->varre;
   if (tipo == FILEIRA_REDONDA) { desenhaRedonda(cItem, t, caminho, px, py, w, f); return; }
-  // A FILEIRA HERÓI: o selo e as duas linhas dizem DE ONDE veio o título —
-  // "Curadoria" quando veio do Nuvio Legacy, o nome da própria fileira
-  // quando o cartão é o primeiro título dela. O texto é o da curadoria ou a
-  // sinopse do título. O OK abre o título: o card é um card de catálogo
-  // como outro qualquer, só maior.
+  // Hero A keeps the curated copy or synopsis; the row heading names its source.
   if (tipo == FILEIRA_HEROI) {
-    const char *selo = NULL, *texto = NULL;
+    const char *texto = NULL;
     if (curadoria_ativa() && cItem && heroiCuradoriaIndice() >= 0 &&
-        fileiraItemIndice(&fileiras[r], c) == heroiCuradoriaIndice()) {
-      selo = i18n("Curadoria");
+        fileiraItemIndice(&fileiras[r], c) == heroiCuradoriaIndice())
       texto = curadoria_texto();
-    } else if (fileiras[r].titulo[0]) {
-      selo = fileiras[r].titulo;
-    }
     if (!texto || !texto[0]) texto = cItem ? cItem->sinopse : NULL;
-    desenhaHeroiCard(cItem, selo, texto, caminho, t, aArte, px, py, w, h, raio,
+    desenhaHeroiCard(cItem, 1, texto, caminho, t, aArte, px, py, w, h, raio,
                      f, varreFoco);
     return;
   }
@@ -7535,7 +7541,8 @@ static void home_desenhar_(Uint32 agora) {
         TxtLinha ai=txt_linha(TXT_HERO_META,"AI-powered",183,192,219,255);
         txt_desenhar(ai,fimTit+22,y+(tl.h-ai.h)*.5f);
       }
-      if (foco.fileira == r && !focoHero && tipo != FILEIRA_SOCIAL) {
+      if (foco.fileira == r && !focoHero && tipo != FILEIRA_SOCIAL &&
+          tipo != FILEIRA_HEROI && tipo != FILEIRA_HEROI_DIVIDIDO) {
         char pos[32];
         if (foco.coluna < fileiras[r].n)
           snprintf(pos, sizeof pos, "%d / %d", foco.coluna + 1, fileiras[r].n);

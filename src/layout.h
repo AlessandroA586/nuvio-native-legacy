@@ -330,16 +330,12 @@ int layout_modo_mobile(void);
 #define NV_DIN_LARGA_VEU  0.62f    // altura do veu da legenda na faixa deitada
 #define NV_DIN_LARGA_PAD  20.0f    // recuo da legenda dentro da faixa
 #define NV_DIN_PAINEL_RAIO 36.0f   // canto do painel de vidro de cada fileira
-// Fileira "Herói" (#205): um cartão só do tamanho da fileira — o banner
-// largo entre fileiras que a Apple TV usa. A altura sai da largura, porque a
-// largura é a fileira inteira (homeLarguraUtil): 0,24 é a proporção medida
-// na foto do dono (fotos1014/appletv-hero-card.jpg) com folga para o selo, o
-// título e as duas linhas.
-#define NV_HEROI_ASPECT  0.24f
-#define NV_HEROI_PAD     28.0f    // recuo do selo, do título e do texto
-#define NV_HEROI_VEU_F   0.82f     // escuro→claro de baixo para cima, para o texto
-#define NV_HEROI_VEU_A   0.72f
-#define NV_HEROI_LOGO_W  0.42f     // o título nunca passa desta fração da largura
+// Hero A: 372px at the reference width, two lines below logo and metadata.
+#define NV_HEROI_ASPECT  (372.0f / 1744.0f)
+#define NV_HEROI_PAD     56.0f
+#define NV_HEROI_VEU_F   0.46f
+#define NV_HEROI_VEU_A   0.70f
+#define NV_HEROI_LOGO_W  0.44f
 
 // Faixa do numeral do Top 10: o numeral mora no vao a esquerda do cartaz e o
 // cartaz cobre a ponta direita dele (a Apple faz assim), entao o passo da
