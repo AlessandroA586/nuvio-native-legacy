@@ -23,6 +23,13 @@ void player_abrir(int indiceCatalogo, const char *url);
 void player_morph_de(GfxRect logo, GfxRect play);
 void player_definir_episodio(int temporada, int episodio);
 void player_do_inicio(void);
+// 1 depois de player_do_inicio nesta abertura ("Do inicio"): sem ponto salvo.
+int  player_sem_retomada(void);
+// O arquivo tocando e bem mais curto que o titulo (o aviso de duracao viu):
+// pode ser uma parte de um filme em partes (partes.h).
+int  player_parece_parte(void);
+// O aviso de duracao com a acao "Manter esta fonte (OK)" ainda esta no ar.
+int  player_aviso_duracao_ativo(void);
 // Posicao confiavel para preparar o Android: registro com duracao conhecida,
 // coerente com o percentual escolhido. Zero mantem a retomada normal depois
 // da duracao real; metadados/reservas nao servem para converter percentual.

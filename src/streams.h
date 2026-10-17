@@ -131,6 +131,11 @@ typedef struct Stream {
   unsigned short selosPacote[16];
   unsigned char  nSelosPacote;
   unsigned       selosPacoteVer;
+  // O HASH DO TORRENT de uma fonte que JA VEM COM url (AIOStreams/MediaFusion
+  // com debrid): `infoHash` acima fica vazio nelas de proposito (ele e o que
+  // manda resolver no debrid local). So a lista de arquivos da fonte
+  // (partes.h) le este: e um dos tres jeitos de achar o item no TorBox.
+  char hashTorrent[48];
 } Stream;
 
 // Parser sem rede: o chamador libera *saida. Retorna -1 se a alocacao falhar.

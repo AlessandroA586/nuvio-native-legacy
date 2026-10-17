@@ -50,6 +50,8 @@
 #include "rolagemtoque.h"
 #include "player.h"
 #include "plrilha.h"
+#include "partes.h"
+#include "ctxlista.h"
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
 #include "escala.h"
 
@@ -4198,6 +4200,101 @@ static int detalheEvento(const SDL_Event *e) {
   return 1;
 }
 static void ponteiroDetalhe(int a, int b) { (void)a; (void)b; detAberto = 0; }
+
+// ARQUIVOS DESTA FONTE (partes.h, dono 16/10/2026): SEGURAR OK numa fonte abre
+// a lista dos videos do item dela no TorBox; o toque curto continua tocando a
+// fonte (no KEYUP, como em toda lista com menu de segurar — ctxlista.h). A
+// modal fica por cima da folha, como a de detalhes. Escolher um arquivo fecha
+// as duas e deixa o pedido para app.c (stream_partes_escolheu).
+static CtxHold folhaHold;
+static int   ptAberto, ptFonte = -1, ptFoco, ptFocoPosto;
+static float ptAnim, ptRol, ptRolAlvo;
+static PartesLista ptL;
+static char  ptProv[96];
+static int   ptEscolhaFonte = -1, ptEscolhaK = -1;
+static unsigned ptEscolhaGeracao;
+static PartesLista ptEscolhaL;
+#define PT_LINHA_H 84.0f
+#define PT_JAN_H   440.0f
+
+static int linhaAceitaPartes(int i) {
+  return partes_disponivel() && !canalFolha && i >= 0 && i < n &&
+         (!strncmp(lista[i].url, "http", 4) || lista[i].infoHash[0]);
+}
+static void partesAbrirPainel(int i) {
+  ptAberto = 1; ptFonte = i; ptFoco = 0; ptFocoPosto = 0; ptRol = ptRolAlvo = 0;
+  memset(&ptL, 0, sizeof ptL);
+  ptL.estado = PARTES_BUSCANDO; ptL.atual = -1;
+  nv_limpar_texto(lista[i].provedor, ptProv, sizeof ptProv, NV_LIMPA_UMA_LINHA);
+  printf("[partes] hold OK on source #%d (%s): asking TorBox for its files\n", i,
+         lista[i].provedor[0] ? lista[i].provedor : "-");
+  fflush(stdout);
+  partes_pedir(&lista[i]);
+}
+// O arquivo que esta tocando AGORA nesta lista (sessao de partes do mesmo
+// item, ou o da fonte quando ela e a que toca); -1 se nenhum.
+static int ptTocando(void) {
+  const PartesLista *sl = partes_sessao_lista();
+  if (ptL.estado != PARTES_PRONTO) return -1;
+  if (sl && sl->item == ptL.item && sl->usenet == ptL.usenet && player_aberto()) {
+    int k = partes_sessao_indice();
+    if (k >= 0 && k < sl->n)
+      for (int i = 0; i < ptL.n; i++) if (ptL.arq[i].id == sl->arq[k].id) return i;
+  }
+  return ptFonte == atual && player_aberto() ? ptL.atual : -1;
+}
+static int partesEvento(const SDL_Event *e) {
+  SDL_Keycode k;
+  if (!ptAberto) return 0;
+  if (e->type != SDL_KEYDOWN) return 1;
+  k = e->key.keysym.sym;
+  if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE || k == SDLK_DELETE) {
+    ptAberto = 0; partes_cancelar(); return 1;
+  }
+  // O OK segurado que abriu a modal continua repetindo: nao e escolha.
+  if (e->key.repeat && (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE)) return 1;
+  if (ptL.estado != PARTES_PRONTO || ptL.n <= 0) {
+    if (k == SDLK_RETURN || k == SDLK_KP_ENTER) ptAberto = 0;
+    return 1;
+  }
+  if (k == SDLK_UP && ptFoco > 0) ptFoco--;
+  else if (k == SDLK_DOWN && ptFoco < ptL.n - 1) ptFoco++;
+  else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
+    ptEscolhaFonte = ptFonte; ptEscolhaK = ptFoco; ptEscolhaL = ptL;
+    ptEscolhaGeracao = listaGeracao;
+    printf("[partes] file %d of %d picked in the files list (%s)\n", ptFoco + 1, ptL.n,
+           ptL.arq[ptFoco].extra ? "extra" : "part");
+    fflush(stdout);
+    ptAberto = 0; aberta = 0;
+  }
+  return 1;
+}
+static void ponteiroPartesLinha(int row, int b) { (void)b; ptFoco = row; }
+static void ponteiroPartesFora(int a, int b) { (void)a; (void)b; ptAberto = 0; }
+int stream_partes_escolheu(int *fonte, PartesLista *l, int *k) {
+  if (ptEscolhaFonte < 0) return 0;
+  if (ptEscolhaGeracao != listaGeracao || ptEscolhaFonte >= n) {
+    ptEscolhaFonte = -1;
+    printf("[partes] the list changed under the pick; nothing to play\n");
+    fflush(stdout);
+    return 0;
+  }
+  if (fonte) *fonte = ptEscolhaFonte;
+  if (l) *l = ptEscolhaL;
+  if (k) *k = ptEscolhaK;
+  ptEscolhaFonte = -1;
+  return 1;
+}
+// O toque curto (ou o OK de sempre) numa linha da lista: a mesma acao de antes.
+static void okNaLinha(void) {
+  int i = filtrado(foco);
+  if (i >= 0) { escolha=i; escolhaGeracao=listaGeracao; aberta=0; }
+  else if (i <= -2) {
+    OndeVer o;
+    if (ondever_item(alvoPedido,-i-2,&o) && ondever_abrir(o.nome)!=ONDE_INFO) aberta=0;
+  }
+}
+
 void stream_folha_evento(const SDL_Event *e) {
   if (e->type == SDL_WINDOWEVENT && (e->window.event == SDL_WINDOWEVENT_FOCUS_LOST ||
       e->window.event == SDL_WINDOWEVENT_HIDDEN)) recarregarFonteConfirmacao = 0;
@@ -4211,6 +4308,18 @@ void stream_folha_evento(const SDL_Event *e) {
     return;
   }
   if(aberta && detalheEvento(e)) return;
+  if(aberta && partesEvento(e)) return;
+  // SEGURAR OK NUMA FONTE (so onde partes_disponivel): o OK arma no KEYDOWN e
+  // so age no KEYUP. Linha que nao aceita (canal, "Onde ver", cabecalho) segue
+  // o caminho de antes, com o OK no KEYDOWN.
+  if (aberta && grupo == 1 && (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP)) {
+    switch (ctxhold_evento(&folhaHold, e, linhaAceitaPartes(filtrado(foco)))) {
+      case CTXH_CONSUMIDO: return;
+      case CTXH_TOQUE: okNaLinha(); return;
+      case CTXH_LONGO: { int i = filtrado(foco); if (linhaAceitaPartes(i)) partesAbrirPainel(i); } return;
+      default: break;
+    }
+  }
 #ifdef NV_TOUCH_UI
   if (toquerol_navegacao(e)) { toquerol_limpar(&toqueFontes); toquerol_limpar(&toqueFontesAbas); }
 #endif
@@ -4276,23 +4385,37 @@ void stream_folha_evento(const SDL_Event *e) {
       }
     }
     else if(grupo==0) {grupo=1;foco=0;}
-    else {
-      int i = filtrado(foco);
-      if (i >= 0) { escolha=i; escolhaGeracao=listaGeracao; aberta=0; }
-      else if (i <= -2) {
-        OndeVer o;
-        if (ondever_item(alvoPedido,-i-2,&o) && ondever_abrir(o.nome)!=ONDE_INFO) aberta=0;
-      }
-    }
+    else okNaLinha();
   }
 }
 void stream_folha_atualizar(float dt, Uint32 agora) {
   int nf;
   medirCabecalho();
   folhaGeometria();
-  (void)agora;
   anim=anim_mola(anim,aberta?1:0,dt,NV_MOLA_TELA);
-  if(!aberta) detAberto=0;
+  if(!aberta) { detAberto=0; if (ptAberto) partes_cancelar(); ptAberto=0; ctxhold_cancelar(&folhaHold); }
+  ptAnim=anim_mola(ptAnim,ptAberto?1:0,dt,NV_MOLA_TELA);
+  if (ptAberto) {
+    if (partes_resultado(&ptL) == PARTES_PRONTO && !ptFocoPosto) {
+      int t = ptTocando();
+      ptFoco = t >= 0 ? t : ptL.atual >= 0 ? ptL.atual : 0;
+      ptFocoPosto = 1;
+    }
+    if (ptFoco >= ptL.n) ptFoco = ptL.n > 0 ? ptL.n - 1 : 0;
+    { float alvo = ptRolAlvo, topo = ptFoco * PT_LINHA_H, jan = PT_JAN_H - 60.0f;
+      if (topo < alvo) alvo = topo;
+      if (topo + PT_LINHA_H > alvo + jan) alvo = topo + PT_LINHA_H - jan;
+      if (alvo < 0) alvo = 0;
+      ptRolAlvo = alvo;
+      float d = ptRolAlvo - ptRol;
+      ptRol = fabsf(d) < .5f ? ptRolAlvo : ptRol + d * (dt * 16 > 1 ? 1 : dt * 16); }
+  }
+  // O dedo ainda segura OK numa fonte: no limiar abre a lista de arquivos.
+  if (aberta && !ptAberto && grupo == 1 && ctxhold_passo(&folhaHold, agora, 1)) {
+    int i = filtrado(foco);
+    if (linhaAceitaPartes(i)) partesAbrirPainel(i);
+    ctxhold_cancelar(&folhaHold);
+  }
   detAnim=anim_mola(detAnim,detAberto?1:0,dt,NV_MOLA_TELA);
   { float max=detAlt>0?detAlt:0; if(detRolAlvo>max) detRolAlvo=max;
     float d=detRolAlvo-detRol; detRol = fabsf(d)<.5f ? detRolAlvo : detRol+d*(dt*16>1?1:dt*16); }
@@ -4694,6 +4817,91 @@ static void desenhaDetalhe(float x, float w, int ptr) {
   { const char *dica=detAlt>0?"↑ ↓ rola · OK ou Voltar fecha":"OK ou Voltar fecha";
     txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM,dica,120,120,118,255,iw),ix,cy+ch-pad-8,a); }
 }
+// A MODAL "ARQUIVOS DESTA FONTE": o mesmo cartao da de detalhes. Cada linha:
+// "PARTE 2" (ou "EXTRA") e a marca no acento em cima, o nome do arquivo
+// embaixo, o tamanho na coluna da direita.
+static const char *ptMensagem(void) {
+  switch (ptL.estado) {
+    case PARTES_BUSCANDO:  return "Procurando os arquivos no TorBox…";
+    case PARTES_SEM_CHAVE: return "Para ver os arquivos, adicione sua chave do TorBox em Ajustes > Integrações > Debrid";
+    case PARTES_SEM_PLANO: return "Sua conta TorBox não permite uso pela API";
+    case PARTES_NAO_ACHOU: return "Esta fonte não foi achada na sua conta TorBox";
+    case PARTES_PRONTO:    return ptL.n > 0 ? NULL : "Esta fonte não foi achada na sua conta TorBox";
+    default:               return "O TorBox não respondeu. Tente de novo.";
+  }
+}
+static void desenhaPartes(float x, float w, int ptr, Uint32 agora) {
+  float a = ptAnim;
+  const char *msg;
+  if (a < .01f) return;
+  float ar, ag, ab; ajustes_acento(&ar, &ag, &ab);
+  int ai = (int)(ar * 255.0f + .5f);
+  float cw = w - 96.0f, ch = PT_JAN_H + 150.0f;
+  float cx = x + (w - cw) * .5f, cy = (NV_TELA_H - ch) * .5f + (1.0f - a) * 16.0f;
+  float pad = 40.0f, ix = cx + pad, iw = cw - 2 * pad;
+  gfx_cor((GfxRect){x, 0, w, NV_TELA_H}, 0, 0, 0, 0, .55f * a);
+  ajustes_ui_ilha((GfxRect){cx, cy, cw, ch}, FOLHA_RAIO_IL * .8f, 1);
+  if (ptr) {
+    ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ponteiroPartesFora, 0, 0);
+    ponteiro_alvo(cx, cy, cw, ch, NULL, NULL, 0, 0);
+  }
+  float y = cy + 34.0f;
+  plrui_kicker("Arquivos desta fonte", ix, y, 243, 242, 239, a * .45f);
+  y += 34.0f;
+  if (ptProv[0])
+    txt_desenhar_alpha(txt_linha_corta(TXT_PAINEL_ITEM, ptProv, ai, (int)(ag * 255), (int)(ab * 255), 255, iw), ix, y, a);
+  y += 48.0f;
+  float jy = y, jh = PT_JAN_H - 60.0f;
+  msg = ptMensagem();
+  if (msg) {
+    txt_bloco(TXT_PG_FIM, msg, 200, 200, 198, ix, jy, iw, DET_LD, a, 0);
+  } else {
+    int tocando = ptTocando();
+    gfx_recorte(ix - 16, jy, iw + 32, jh);
+    for (int r = 0; r < ptL.n; r++) {
+      const ParteArq *f = &ptL.arq[r];
+      float ry = jy + r * PT_LINHA_H - ptRol;
+      int sel = r == ptFoco, num = partes_numero(&ptL, r);
+      char gb[24], tag[48];
+      if (ry + PT_LINHA_H < jy || ry > jy + jh) continue;
+      GfxRect rr = {ix - 14, ry, iw + 28, PT_LINHA_H - 6};
+      if (sel) {
+        if (ajustes_vidro()) gfx_cor(rr, FOLHA_RAIO / rr.h, 1, 1, 1, .12f * a);
+        else gfx_cor(rr, FOLHA_RAIO / rr.h, .17f, .176f, .204f, a);
+      }
+      if (ptr) {
+        float t = ry < jy ? jy : ry, b = ry + rr.h > jy + jh ? jy + jh : ry + rr.h;
+        if (b > t) ponteiro_alvo(rr.x, t, rr.w, b - t, ponteiroPartesLinha, NULL, r, 0);
+      }
+      // Tamanho a direita, como na folha.
+      { TxtLinha lg, lu;
+        int cg = sel ? 250 : 218;
+        snprintf(gb, sizeof gb, f->bytes >= (uint64_t)100 << 30 ? "%.0f" : "%.1f", (double)f->bytes / 1073741824.0);
+        plrui_decimal(gb);
+        lg = txt_linha(TXT_CW_TITULO, gb, cg, cg, cg - 2, 255);
+        lu = txt_linha(TXT_PG_FIM, "GB", 120, 120, 118, 255);
+        txt_desenhar_alpha(lu, ix + iw - lu.w, ry + 14 + (lg.h - lu.h) - 3, a);
+        txt_desenhar_alpha(lg, ix + iw - lu.w - 6 - lg.w, ry + 14, a); }
+      { float mx = ix;
+        if (num > 0) snprintf(tag, sizeof tag, i18n("Parte %d"), num);
+        else snprintf(tag, sizeof tag, "%s", i18n("Extra"));
+        mx += caixaAlta(tag, num > 0 ? ai : 150, num > 0 ? (int)(ag * 255) : 150, num > 0 ? (int)(ab * 255) : 148,
+                        ix, ry + 12, a) + 18;
+        if (r == tocando) {
+          float w2 = caixaAlta("Reproduzindo agora", ai, (int)(ag * 255), (int)(ab * 255), mx, ry + 12, a);
+          desenharAudioBars(mx + w2 + 12, ry + 13, 14, a, agora);
+        } else if (r == ptL.atual) {
+          gfx_cor((GfxRect){mx, ry + 17, 7, 7}, .5f, ar, ag, ab, a);
+          caixaAlta("Arquivo do addon", 150, 150, 148, mx + 16, ry + 12, a);
+        } }
+      txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM, f->nome, sel ? 250 : 205, sel ? 250 : 205, sel ? 248 : 203, 255,
+                                         iw - 140), ix, ry + 44, a);
+    }
+    gfx_sem_recorte();
+  }
+  { const char *dica = msg ? "OK ou Voltar fecha" : "OK toca · Voltar fecha";
+    txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM, dica, 120, 120, 118, 255, iw), ix, cy + ch - pad - 8, a); }
+}
 // Camada ampliada (escala.h): o corpo desenha na tela virtual.
 void stream_folha_desenhar(Uint32 agora) {
   ESCALA_INI();
@@ -4811,6 +5019,10 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     if (n > 0 && addons_ocupado() && rw-360-cw > 80) {
       if (cw > 0) gfx_cor((GfxRect){tx+cw-13.5f,oy+74+ch*.5f-2.5f,5,5},.5f,.5f,.5f,.49f,anim);
       txt_desenhar_alpha(txt_linha_corta(TXT_HERO_META,"Buscando mais fontes…",ai,(int)(ag*255),(int)(ab*255),255,rw-360-cw),tx+cw,oy+72,anim);
+    } else if (grupo == 1 && linhaAceitaPartes(filtrado(foco)) && rw-360-cw > 80) {
+      // O GESTO NAO SE ADIVINHA: a dica fica no lugar do "Buscando mais fontes".
+      if (cw > 0) gfx_cor((GfxRect){tx+cw-13.5f,oy+74+ch*.5f-2.5f,5,5},.5f,.5f,.5f,.49f,anim);
+      txt_desenhar_alpha(txt_linha_corta(TXT_HERO_META,"Segure OK: todos os arquivos",130,130,128,255,rw-360-cw),tx+cw,oy+72,anim);
     } }
   medirCabecalho();
   txt_desenhar_alpha(txt_linha_corta(TXT_ILHA_TITULO,"Fontes",243,242,239,255,titMaxCab),tx,oy+94,anim);
@@ -5229,6 +5441,10 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
   else gfx_sem_recorte();
   if (detAnim > .01f) {
     desenhaDetalhe(x,w,ptr);
+    if (ilha) gfx_recorte(ilhaR.x,ilhaR.y,ilhaR.w,ilhaR.h);
+  }
+  if (ptAnim > .01f) {
+    desenhaPartes(x,w,ptr && ptAberto,agora);
     if (ilha) gfx_recorte(ilhaR.x,ilhaR.y,ilhaR.w,ilhaR.h);
   }
 }

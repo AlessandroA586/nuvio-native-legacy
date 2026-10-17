@@ -87,6 +87,7 @@ static void avisarCascaAberto(int v) { (void)v; tex_pressao_reproducao(v); }
 #include "episodios.h"
 #include "streams.h"
 #include "duracaook.h"
+#include "partes.h"
 #include "badges.h"
 #include "legenda.h"
 #include "imgsub.h"
@@ -832,6 +833,9 @@ static int modalToquePode(void) { return !modalToqueGuarda || modalToqueGuarda()
 // "Fonte 2 de 3": a tentativa do automatico VOD (app.c, tentarProximaFonteVOD).
 static int tentativaN, tentativaM;
 static int durFonteAvisada, durFontePulou, pedProximaFonte;
+// O arquivo e bem MAIS CURTO que o titulo (metade ou menos): pode ser uma
+// parte de um filme em partes (partes.h). app.c procura as outras.
+static int durFonteCurta;
 // Cache da duracao esperada da fonte corrente (achado 4 do review #205):
 // duracaoFonteEsperada varre os episodios do titulo, e durFonteAtualizar roda
 // por quadro. Recalcula so quando o conteudo dos episodios muda (a primeira
@@ -937,6 +941,7 @@ void player_do_inicio(void) {
   retomarSeg = 0.0;
 #endif
 }
+int player_sem_retomada(void) { return semRetomada; }
 void player_definir_episodio(int t, int e) {
   if (t >= 0 && e > 0) { epPedidoT = t; epPedidoE = e; }
   atualizarTipoItem();
@@ -1697,7 +1702,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
     if (canalSessao) { guia_carregar(); epg_iniciar(); } }
   tocando = 1; pausaPessoa = 0; retomandoSalto = 0; visivel = 1; anim = 0.0f; entrada = 0.0f; soBarra = 0; cheio = 1.0f; fileira = 1.0f;
   pedFontes = erroFonte = pedFaixas = pedProxT = pedProxE = trocaEpisodio = 0; inicioImagem = 0;
-  durFonteAvisada = durFontePulou = pedProximaFonte = 0;
+  durFonteAvisada = durFontePulou = pedProximaFonte = durFonteCurta = 0;
   durFonteAcaoAte = 0; durFonteSkipEm = 0; durFonteManter = 0;
   abrindoExp = 0; abrindoT = 0.0f; abrindoDesde = 0;
   memset(&cine, 0, sizeof cine);
@@ -2060,7 +2065,7 @@ void player_definir_fonte(const char *url) {
   fonteAcaoInvalidar();
   // A primeira fonte ainda pode aproveitar a legenda antecipada na espera.
   if (comVideo) legenda_pre_descartar(i18n("troca de fonte"));
-  durFonteAvisada = pedProximaFonte = 0;
+  durFonteAvisada = pedProximaFonte = durFonteCurta = 0;
   durFonteSkipEm = 0; durFonteManter = 0;
   // Fonte nova: a duracao esperada conhecida nao vale mais (mesmo titulo,
   // episodio outro, catalogo pode ter andado).
@@ -2231,6 +2236,24 @@ static void alvoStream(char *dst, unsigned tam) {
   else snprintf(dst, tam, "%s", c->imdb);
 }
 
+// O FILME EM PARTES (partes.h): com a sessao de partes deste alvo, o que vai
+// ao Continuar assistindo, ao Trakt e a conta e a posicao do FILME INTEIRO,
+// estimada pelo tamanho das partes — o arquivo tocando e so um pedaco dele.
+static int partesVirt(double *vp, double *vd, int *ultima) {
+  char alvo[64];
+  if (ehCanal() || !comVideo) return 0;
+  alvoStream(alvo, sizeof alvo);
+  return partes_virtual(alvo, posSeg, duracaoSeg, duracaoCatalogo(), vp, vd, ultima);
+}
+static int partesAtiva(void) {
+  char alvo[64];
+  if (ehCanal()) return 0;
+  alvoStream(alvo, sizeof alvo);
+  return partes_sessao_de(alvo);
+}
+// Uma parte que NAO e a ultima: o fim dela nao e o fim do filme.
+static int partesMeio(void) { double a, b; int u = 1; return partesVirt(&a, &b, &u) && !u; }
+
 // ONDE OS CREDITOS COMECAM, pelas fontes de credfonte.h (capitulo, TheIntroDB,
 // episodio vizinho, o que o dono ensinou). 0 = nenhuma: vale a estimativa.
 // `credFonteAtual` e a que mandou da ultima vez, para o log (uma linha por
@@ -2345,7 +2368,7 @@ static void fecharSessao(int manter) {
   // segura a gravacao.)
   double catDur = identidadeValida() ? duracaoCatalogo() : 0.0;
   int duracaoErrada = !jaRetido && comVideo && video_pronto() && duracaoSeg >= 120.0f &&
-                      !ehCanal() && player_duracao_suspeita((double)duracaoSeg, catDur);
+                      !ehCanal() && !partesAtiva() && player_duracao_suspeita((double)duracaoSeg, catDur);
   if (duracaoErrada) {
     printf("[player] duracao %.0fs contra %.0fs no catalogo: trailer ou fonte "
            "que nao e este titulo — progresso e visto NAO gravados\n",
@@ -2380,6 +2403,29 @@ static void fecharSessao(int manter) {
   int fimLegacy = player_regra_visto(base, assistidoSeg, posSeg, concluiuAgora(cred), &chegou);
   // A known later ending disproves completion by the reported percentage.
   int assistiu = !duracaoContradita && scrobble_concluiu(posSeg, duracaoSeg, fimLegacy);
+  // FILME EM PARTES: so a ULTIMA parte conclui, pela regra do proprio
+  // arquivo (a minutagem do catalogo e a do filme inteiro). O ponto da parte
+  // fica guardado para o Retomar; concluido, sai.
+  double durG = duracaoSeg, posG = posSeg;
+  { double vp, vd; int ult = 0;
+    if (!jaRetido && partesVirt(&vp, &vd, &ult)) {
+      char alvoP[64];
+      const PartesLista *sl = partes_sessao_lista();
+      int k = partes_sessao_indice();
+      assistiu = ult && !duracaoContradita &&
+                 (player_regra_concluiu(posSeg, duracaoSeg, cred) || scrobble_concluiu(posSeg, duracaoSeg, 0));
+      durG = vd; posG = vp;
+      chegou = chegou && assistiu;
+      alvoStream(alvoP, sizeof alvoP);
+      if (assistiu) partes_ponto_esquecer(alvoP, sessao_usuario(), perfis_ativo());
+      else if (sl && k >= 0 && video_pronto() && posSeg > 1.0f) {
+        PartesPonto pt = { sl->usenet, sl->item, sl->arq[k].id, posSeg };
+        partes_ponto_guardar(alvoP, sessao_usuario(), perfis_ativo(), &pt);
+      }
+      printf("[partes] closing on part %d of %d at %.0f s: movie position %.0f of %.0f s%s\n",
+             partes_numero(sl, k), partes_principais(sl), (double)posSeg, vp, vd, assistiu ? " (finished)" : "");
+      fflush(stdout);
+    } }
   // Concluido e concluido: o registro leva o "alcancado tocando" que o selo
   // de visto do catalogo (cat_visto) le, como o markAsCompleted do oficial.
   if (assistiu) chegou = 1;
@@ -2404,14 +2450,14 @@ static void fecharSessao(int manter) {
     // Agora ha um numero so, e e o do cartao (player_regra_concluiu). As duas
     // fontes de marcador sao lidas na mesma ordem de ofertaProximo: o capitulo
     // do Matroska descreve ESTA copia, o TheIntroDB descreve o lancamento.
-    float pos = assistiu ? duracaoSeg : posSeg;
+    float pos = assistiu ? durG : posG;
     // Pelo indice CORRENTE do titulo, nao pelo guardado: depois de uma
     // republicacao o guardado grava o progresso no titulo errado.
     const CatItem *ci = item();
     int ia = ci ? cat_indice_por_imdb_tipo(ci->imdb, ci->tipo) : -1;
     if (ia >= 0) {
-      home_registrar_retorno(ia, pos, duracaoSeg);
-      ilhacart_player_saiu(ia, pos, duracaoSeg, epT, epE);
+      home_registrar_retorno(ia, pos, durG);
+      ilhacart_player_saiu(ia, pos, durG, epT, epE);
     } else {
       printf("[player] progresso local ignorado: sem copia do tipo %s para %s\n",
              ci ? ci->tipo : "", ci ? ci->imdb : "");
@@ -2419,12 +2465,12 @@ static void fecharSessao(int manter) {
     }
     if (assistiu) {
       printf("[visto] marcado por player pos=%.3f dur=%.3f assistido=%.3fs id=%s T%dE%d\n",
-             (double)pos, (double)duracaoSeg, assistidoSeg, ci ? ci->imdb : "", epT, epE);
+             (double)pos, durG, assistidoSeg, ci ? ci->imdb : "", epT, epE);
       fflush(stdout);
     }
     // A posicao gravada e sempre a REAL (ponto de retomada), com o como ela
     // foi alcancada: cat_visto e a proxima base leem `tocou`.
-    if (ia >= 0) cat_salvar_progresso_ep(ia, pos, duracaoSeg, epT, epE, chegou);
+    if (ia >= 0) cat_salvar_progresso_ep(ia, pos, durG, epT, epE, chegou);
     // E tambem para o Trakt, que e de onde o "continue assistindo" vem: gravar
     // so aqui deixaria este app discordando dos outros aparelhos do dono.
     // Personal-server items stay private: no Trakt, friends feed or social
@@ -2434,16 +2480,16 @@ static void fecharSessao(int manter) {
       int simklScr;
       idTrakt(ci, id, sizeof id);
       // Trakt also completes by percentage, so an invalid duration cannot be sent.
-      if (!duracaoContradita) trakt_marcar(id, pos, duracaoSeg, assistidoSeg, assistiu);
+      if (!duracaoContradita) trakt_marcar(id, pos, durG, assistidoSeg, assistiu);
       // Simkl (#459): mesmo scrobble, independente de o Trakt estar ligado.
       // Sem vinculo, id fora do IMDb ou guarda recusando: SCR_NADA.
-      simklScr = simkl_scrobble(SCR_EV_SAIU, id, pos, duracaoSeg, assistidoSeg, assistiu);
+      simklScr = simkl_scrobble(SCR_EV_SAIU, id, pos, durG, assistidoSeg, assistiu);
       // "ASSISTIU" para os amigos, so quando CONCLUIU e so se ela ligou a
       // atividade (ou os "vistos recentemente" do perfil). Largar aos 8% nao
       // assistiu nada — e nao chega a lugar nenhum.
       recomenda_atividade_fim(ci, assistiu);
       // A PARADA para o Social: fim, abandono (< 20%) ou progresso.
-      atividade_player_saiu(pos, duracaoSeg, assistiu);
+      atividade_player_saiu(pos, durG, assistiu);
       // O CHECK NA LISTA, LOCALMENTE E AGORA — a outra metade do #100.
       //
       // O relato e preciso: "mostra a barra de progresso mas nao fica com o
@@ -2609,7 +2655,7 @@ static void gravarProgressoParcial(int conta, const char *porque) {
       !video_pronto() || esperandoFonte || erroFonte || video_falhou() || ehCanal() || scrubbing ||
       !isfinite(posSeg) || !isfinite(duracaoSeg) || duracaoSeg < 120.0f || posSeg < 1.0f ||
       assistidoSeg < PLR_PROVA_MIN_S ||
-      player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo()))
+      (!partesAtiva() && player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo())))
     return;
   if (parcialPos >= 0.0 && fabs(posSeg - parcialPos) < PLR_PARCIAL_LIMIAR_S) return;
   ia = cat_indice_por_imdb_tipo(ci->imdb, ci->tipo);
@@ -2623,7 +2669,9 @@ static void gravarProgressoParcial(int conta, const char *porque) {
   // Contradictory credits also invalidate the catalogue's watched proof.
   double cred = credEfetivo();
   if (cred > 1.0 && cred - duracaoSeg > intro_creditos_janela(duracaoSeg)) chegou = 0;
-  cat_salvar_progresso_ep(ia, posSeg, duracaoSeg, epT, epE, chegou);
+  { double vp = posSeg, vd = duracaoSeg;
+    if (partesVirt(&vp, &vd, NULL)) chegou = 0;   // o visto e so da saida da ultima parte
+    cat_salvar_progresso_ep(ia, vp, vd, epT, epE, chegou); }
   if (conta) sync_sujar_progresso();
   parcialPos = posSeg;
   printf("[visto] ponto gravado (%s) pos=%.1f dur=%.1f (%.0f%%)\n", porque, (double)posSeg,
@@ -3152,6 +3200,10 @@ static double duracaoFonteEsperada(void) {
            ? (antes + depois) / 2 : 0;
 }
 
+int player_parece_parte(void) { return durFonteCurta && !ehCanal(); }
+int player_aviso_duracao_ativo(void) {
+  return durFonteAcaoAte && (int)(SDL_GetTicks() - durFonteAcaoAte) < 0;
+}
 int player_pediu_proxima_fonte(void) {
   int p = pedProximaFonte; pedProximaFonte = 0; return p;
 }
@@ -3192,6 +3244,8 @@ static void durFonteAtualizar(double real, Uint32 agora) {
   char r[32], e[32], aviso[320];
   int rm, em;
   if (durFonteAvisada || ehCanal() || !isfinite(real) || real <= 1) return;
+  // Uma parte de um filme em partes e curta de proposito (partes.h).
+  if (partesAtiva()) return;
   { unsigned ver = cat_versao_episodios(), rev = cat_revisao();
     if (!durFonteEsperadaOk || durFonteEsperadaVer != ver || durFonteEsperadaRev != rev) {
       durFonteEsperadaOk = 1; durFonteEsperadaVer = ver; durFonteEsperadaRev = rev;
@@ -3200,6 +3254,7 @@ static void durFonteAtualizar(double real, Uint32 agora) {
   if (esperada <= 0 || fabs(real - esperada) <= 600 ||
       !(real > esperada * 2 || real < esperada * .5)) return;
   durFonteAvisada = 1;
+  durFonteCurta = real < esperada * .5;
   if (duracaook_tem(sessao_usuario(), perfis_ativo(), durFonteTitulo())) {
     printf("[fonte] duracao incompatível: real=%.0fs esperada=%.0fs; kept: this title keeps sources of another length (OK earlier)\n",
            real, esperada);
@@ -4337,8 +4392,10 @@ void player_atualizar(float dt, Uint32 agora) {
       else snprintf(id, sizeof id, "%s", cs->imdb);
       tocouS += dt;
       if (tocouS >= PLR_SCR_TOCOU_S) {
-        trakt_scrobble(SCR_EV_TOCANDO, id, posSeg, duracaoSeg, assistidoSeg, 0);
-        simkl_scrobble(SCR_EV_TOCANDO, id, posSeg, duracaoSeg, assistidoSeg, 0);
+        { double sp = posSeg, sd = duracaoSeg;
+          partesVirt(&sp, &sd, NULL);
+          trakt_scrobble(SCR_EV_TOCANDO, id, sp, sd, assistidoSeg, 0);
+          simkl_scrobble(SCR_EV_TOCANDO, id, sp, sd, assistidoSeg, 0); }
         wsTocando();
       }
       parcialRelogio += dt;
@@ -4354,8 +4411,10 @@ void player_atualizar(float dt, Uint32 agora) {
         char id[64];
         if (epT >= 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
         else snprintf(id, sizeof id, "%s", cs->imdb);
-        trakt_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg, 0);
-        simkl_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg, 0);
+        { double sp = posSeg, sd = duracaoSeg;
+          partesVirt(&sp, &sd, NULL);
+          trakt_scrobble(SCR_EV_PAUSOU, id, sp, sd, assistidoSeg, 0);
+          simkl_scrobble(SCR_EV_PAUSOU, id, sp, sd, assistidoSeg, 0); }
         if (!saindo) wsPausou();
         parcialPausa = 1;
       }
@@ -4414,7 +4473,7 @@ void player_atualizar(float dt, Uint32 agora) {
   if (comVideo) creditosauto_fonte(&creditosAuto, video_url_atual());
   // PULAR SOZINHO (#329/#331): abertura/resumo/creditos com marcador e ajuste ligado. Uma vez por
   // trecho (voltar de proposito para dentro dele nao pula de novo), so tocando de verdade.
-  if (!ehCanal() && comVideo && tocando && video_ativo() && video_pronto() &&
+  if (!ehCanal() && comVideo && tocando && video_ativo() && video_pronto() && !partesAtiva() &&
       retomadaAplicada && !scrubbing && !retomandoSalto && duracaoReal &&
       !saindo && !erroFonte && !esperandoFonte && !pedFontes && !pedFaixas &&
       !stream_folha_aberta() && !faixas_aberta() && !episodios_aberto() &&
@@ -4445,7 +4504,11 @@ void player_atualizar(float dt, Uint32 agora) {
     // Canal ao vivo nao tem "fim": sem a guarda, o relogio reserva cruzaria os
     // 90% em ~1h42 de exibicao e abriria o painel de relacionados no meio da
     // programacao.
-    if (!ehCanal()) {
+    // O fim de uma parte do meio nao e o fim do filme: sem relacionados nem
+    // "o que achou"; a parte seguinte entra sozinha (app.c, vigiarPartes).
+    int meio = partesMeio();
+    if (meio && posplay_visivel()) posplay_fechar();
+    if (!ehCanal() && !meio) {
       posplay_atualizar(dt, agora, posSeg, duracaoSeg, eSerie, idxAtual(),
                         eSerie && player_janela_proximo(0));
     }
@@ -4457,7 +4520,7 @@ void player_atualizar(float dt, Uint32 agora) {
     // a lista pode chegar tarde ou nao chegar).
     int listaConhecida = !eSerie ||
       (cat_n_episodios(idxAtual()) > 0 && !desc_episodios_carregando(idxAtual()));
-    if (!ehCanal() && ci && comVideo && video_pronto() && duracaoSeg >= 120.0f &&
+    if (!ehCanal() && !meio && ci && comVideo && video_pronto() && duracaoSeg >= 120.0f &&
         listaConhecida) {
       const CatEp *px = eSerie ? player_proximo_episodio() : NULL;
       double cr = credEfetivo();
