@@ -24,5 +24,5 @@ echo "$out"
 [ "$(echo "$out" | wc -l)" -eq 3 ] || { echo "FAIL: missing scenes"; exit 1; }
 echo "$out" | grep -q 'fonte=[1-9]' && { echo "FAIL: player glass over video reads a blur source"; exit 1; }
 echo "$out" | grep -qv 'cap=0 pas=0$' && { echo "FAIL: player glass over video captures or blurs per frame"; exit 1; }
-echo "$out" | awk '{ split($4, b, "="); if (b[2] < 3000) bad = 1 } END { exit !bad }' && { echo "FAIL: glass is not translucent (alpha 1 hides the video plane)"; exit 1; }
+echo "$out" | awk '{ split($3, b, "="); if (b[2] < 3000) bad = 1 } END { exit !bad }' && { echo "FAIL: glass is not translucent (alpha 1 hides the video plane)"; exit 1; }
 echo PASS

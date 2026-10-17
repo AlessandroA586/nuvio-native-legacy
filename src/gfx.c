@@ -3273,7 +3273,7 @@ int gfx_vidro_com_fonte, gfx_vidro_chapados;
 // many glasses, how much glass area). A window whose frames mix signatures says
 // nothing; consecutive janky windows must share one signature; a trial window must
 // match the baseline's. A trial that was interrupted by a scene change is dropped
-// (frost back, no verdict, the governor stays armed): at most one VERDICT.
+// (frost back, no verdict): at most one trial, so the governor stops too.
 #define GOV_JANELA 150
 #define GOV_SEGUIDAS 4
 int gfx_vidro_area;   // glass area (px^2) drawn this frame
@@ -3298,8 +3298,8 @@ void gfx_vidro_governar(double ms, double alvo_ms) {
     double m = govSoma / govN;
     govProva = 0;
     if (!comparavel || govSig != govSigBase) {
-      vidroDegradou = 0; govSeguidas = 0;
-      printf("[vidro] governador: prova interrompida (carga mudou), frost de volta\n");
+      vidroDegradou = 0; govSeguidas = 0; govFim = 1;
+      printf("[vidro] governador: prova interrompida (carga mudou), frost de volta, sem nova prova\n");
     } else {
       govFim = 1; vidroDegradou = m < govBase * 0.8;
       printf("[vidro] governador: prova %.1f ms (frost %.1f ms) -> %s\n", m, govBase, vidroDegradou ? "desempenho" : "frost mantido");
@@ -3691,9 +3691,9 @@ static void vidroAplicar(Programa *P, GfxRect r) {
 // dark enough to keep the labels readable over a bright frame. "Opacidade do
 // vidro" still scales it (k = 1 at the default 78 %).
 static float vidroVideoAlfa(void) {
-  float d = 0.38f * gfx_vidro_opacidade();
-  return d < 0.30f ? 0.30f : d > 0.50f ? 0.50f : d;
-}
+  float t = ajustes_vidro_opacidade();
+  float d = 0.30f + t * 0.45f;   // 65 % at the default 78 %
+  return d;}
 static int vidroSobreVideo(const float tela[4]) {
   int i, video = foscoBloq;
   for (i = 0; !video && i < vidroNFuros; i++) video = vidroCruza(vidroFuros[i], tela);
@@ -3718,8 +3718,10 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   video = vidroSobreVideo(tela);
   // Flat glass: over live video (the video is a hardware plane behind the GL
   // surface: no blur is possible, but the glass is translucent, alpha < 1 over
-  // the alpha-0 hole, so the video shows through), with quality = Desempenho, or
-  // once the governor dropped the tier.
+  // the alpha-0 hole, so the video shows through) — translucent by design
+  // (Nuvio Arc): the real glass look is the tint plus the in-shader rim/top
+  // highlight, never an art stand-in or a flat opaque box. With quality =
+  // Desempenho, or once the governor dropped the tier.
   fumaca = video || ajustes_vidro_qualidade() == 1 || (vidroDegradou && ajustes_vidro_qualidade() == 0);
   if (fumaca) chapado = 1;
   if (vidroNVidros < VID_N) memcpy(vidroVidros[vidroNVidros++], tela, sizeof tela);
@@ -3767,8 +3769,8 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   vidPend.dens[0] = 0.125f; vidPend.dens[1] = 0.72f; vidPend.dens[2] = 0.82f; vidPend.dens[3] = 1.0f;
   // A27 chrome: the same solve, scaled by "Opacidade do vidro" (gfx_chrome_dens).
   if (tipo == GFX_VIDRO_BARRA) gfx_chrome_dens(vidPend.dens);
-  vidPend.aro = contorno ? 0.14f : 0.0f;
-  vidPend.aroLuz = contorno ? 0.28f : 0.0f;
+  vidPend.aro = 0.14f + (contorno ? 0.0f : video ? 0.04f : 0.0f);
+  vidPend.aroLuz = 0.28f;
   gfx_vidro_com_fonte += vidPend.fonte != 0;
   gfx_vidro_chapados += vidPend.fonte == 0;
   gfx_vidro_area += (int)(r.w * r.h);

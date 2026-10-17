@@ -176,17 +176,15 @@ int main(void) {
   janela(25.0);
   confere(!gfx_vidro_degradado(), "governor: trial on a cheaper scene is dropped, no permanent Desempenho");
   cena(6, 3000000, 0);
-  for (i = 0; i < 4; i++) janela(40.0);
-  confere(gfx_vidro_degradado(), "governor: still armed after the interrupted trial");
+  for (i = 0; i < 6; i++) janela(40.0);
+  confere(!gfx_vidro_degradado(), "governor: at most one trial, the interrupted one ends it");
   // (c) the reverse: trial window on a costlier scene must not end the governor.
   cena(9, 5000000, 1);
   janela(60.0);
   confere(!gfx_vidro_degradado(), "governor: trial on a costlier scene is dropped");
   cena(6, 3000000, 0);
-  for (i = 0; i < 4; i++) janela(40.0);
-  cena(6, 3000000, 1);
-  janela(10.0);
-  confere(gfx_vidro_degradado(), "governor: a comparable trial still gets its verdict (improved: stays)");
+  for (i = 0; i < 6; i++) janela(40.0);
+  confere(!gfx_vidro_degradado(), "governor: the second interrupted trial stays ended");
   // (d) a window that mixes scenes proves nothing: 4 of them never start a trial.
   gfx_vidro_governar_zerar();
   for (i = 0; i < 6; i++) janela_mista(40.0, 6, 2);
