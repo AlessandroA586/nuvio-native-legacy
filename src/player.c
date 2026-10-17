@@ -5723,8 +5723,8 @@ void player_desenhar(Uint32 agora) {
     abrecine_passo(&cine, (player_carregando() || dvtela_ativa()) && !ehCanal(), imagem, ajustes_abertura_detalhada(),
                    agora, dtc, ajustes_animacoes_reduzidas());
     if (erroFonte || saindo || ehCanal()) cine.veu = 0.0f; }
-  // SMOKED GLASS (owner, 17/10): nothing still to frost under live video, so
-  // every glass of the frame is flat tinted glass: no capture, no blur.
+  // Live video below (hardware plane): the glass of the frame is translucent
+  // flat glass, no capture, no blur; the video shows through the hole.
   if (furar) gfx_vidro_fosco_bloquear();
   if (furar) {
     // O furo acompanha o MESMO retangulo que foi ao plano de hardware, cortado

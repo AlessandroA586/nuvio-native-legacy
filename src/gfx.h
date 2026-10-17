@@ -625,7 +625,9 @@ void gfx_vidro_cobrir(void);
 extern int gfx_vidro_com_fonte;
 // Smoked (flat tinted) glasses drawn this frame: no capture, no blur (zeroed in gfx_novo_quadro).
 extern int gfx_vidro_chapados;
+extern int gfx_vidro_area;                                // glass area (px^2) drawn this frame (governor workload signature)
 int  gfx_vidro_degradado(void);                           // governor dropped the glass to smoked glass (sticky)
+void gfx_vidro_governar_zerar(void);                      // tests: forget the governor state
 void gfx_vidro_governar(double ms, double alvo_ms);       // once per frame, after the swap
 // CANAIS DE FUNDO DA LUZ ASSADA (fundo.c, "Arte borrada" e "Frost" de tela
 // cheia): o quadro pequeno (320x180, GL_RGB) do `canal` (0..1), pintado por
