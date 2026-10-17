@@ -646,7 +646,7 @@ object NvPlayer {
 
     private class Preparo(val token: Int, val pedido: Int, val url: String, val cab: String,
                           val inicioMs: Int, val fracao: Int, val buffer: Int, val cacheMb: Int, val proximo: Boolean = false,
-                          val idiomaAudio: String = "") {
+                          val idiomaAudio: String = "", val kbps: Int = 0) {
         var recursos: RecursosPlayer? = null
         var ouvinte: Player.Listener? = null
         var analitico: AnalyticsListener? = null
@@ -700,17 +700,17 @@ object NvPlayer {
     }
 
     @JvmOverloads @JvmStatic fun preparar(url: String, cabecalhos: String, inicioMs: Int, fracao: Int,
-                           token: Int, buffer: Int, cacheMb: Int, idiomaAudio: String = "") {
-        enfileirarPreparo(url, cabecalhos, inicioMs, fracao, token, buffer, cacheMb, false, idiomaAudio)
+                           token: Int, buffer: Int, cacheMb: Int, idiomaAudio: String = "", kbps: Int = 0) {
+        enfileirarPreparo(url, cabecalhos, inicioMs, fracao, token, buffer, cacheMb, false, idiomaAudio, kbps)
     }
 
     @JvmOverloads @JvmStatic fun prepararProximo(url: String, cabecalhos: String, inicioMs: Int, fracao: Int,
-                                  token: Int, buffer: Int, cacheMb: Int, idiomaAudio: String = "") {
-        enfileirarPreparo(url, cabecalhos, inicioMs, fracao, token, buffer, cacheMb, true, idiomaAudio)
+                                  token: Int, buffer: Int, cacheMb: Int, idiomaAudio: String = "", kbps: Int = 0) {
+        enfileirarPreparo(url, cabecalhos, inicioMs, fracao, token, buffer, cacheMb, true, idiomaAudio, kbps)
     }
 
     private fun enfileirarPreparo(url: String, cabecalhos: String, inicioMs: Int, fracao: Int,
-                                 token: Int, buffer: Int, cacheMb: Int, proximo: Boolean, idiomaAudio: String) {
+                                 token: Int, buffer: Int, cacheMb: Int, proximo: Boolean, idiomaAudio: String, kbps: Int) {
         if (token <= 0 || url.isEmpty()) return
         val pedido = synchronized(travaPreparo) {
             val n = pedidosPreparo.incrementAndGet()
@@ -721,7 +721,7 @@ object NvPlayer {
             if (pedido != pedidosPreparo.get()) return@post
             soltarPreparo()
             val s = Preparo(token, pedido, url, cabecalhos, inicioMs.coerceAtLeast(0),
-                if (inicioMs > 0) 0 else fracao.coerceIn(0, 9999), buffer.coerceIn(0, 256), cacheMb.coerceIn(0, 1024), proximo, idiomaAudio)
+                if (inicioMs > 0) 0 else fracao.coerceIn(0, 9999), buffer.coerceIn(0, 256), cacheMb.coerceIn(0, 1024), proximo, idiomaAudio, kbps.coerceIn(0, 400_000))
             preparo = s
             prepararMain(s, SystemClock.elapsedRealtime())
         }
@@ -739,7 +739,7 @@ object NvPlayer {
             return
         }
         try {
-            val r = criarPlayer(act, s.url, s.cab, s.buffer, s.cacheMb, true, 0, !s.proximo, s.idiomaAudio)
+            val r = criarPlayer(act, s.url, s.cab, s.buffer, s.cacheMb, true, 0, !s.proximo, s.idiomaAudio, kbps = s.kbps)
             s.recursos = r
             if (s.proximo) {
                 prepararFonteProxima(act, s, r)
@@ -1152,7 +1152,7 @@ object NvPlayer {
     // factory stay dormant until this same player becomes the active session.
     private fun criarPlayer(act: Activity, url: String, cabecalhos: String, preset: Int,
                             pedidoCache: Int, preparando: Boolean, geracao: Int, construir: Boolean = true,
-                            idiomaAudio: String = "", titulo: String = ""): RecursosPlayer {
+                            idiomaAudio: String = "", titulo: String = "", kbps: Int = kbpsDeclarado): RecursosPlayer {
         // Em aparelho de pouca RAM (ActivityManager: isLowRamDevice,
         // memoryClass <= 128 MB ou totalMem <= 3 GiB; a TCL de 2,4 GB tem
         // memoryClass 192 e so cai pelo totalMem)
@@ -1170,7 +1170,7 @@ object NvPlayer {
         // Auto with a high declared bitrate: 48 MB is ~7 s of a 52.8 Mbps remux
         // (TCL rebuffered every 12-30 s). Aim at 30 s of it, never past heap/5
         // and 80 MB on low RAM (the 575 MB PSS kill), heap/3 and 192 MB otherwise.
-        val porBitrate = kbpsDeclarado.toLong() * 1000 / 8 * 30
+        val porBitrate = kbps.toLong() * 1000 / 8 * 30
         val tetoAlto = if (poucaRam) minOf(heap / 5, 80L shl 20) else minOf(heap / 3, 192L shl 20)
         val autoBytes = porBitrate.coerceAtMost(tetoAlto).coerceAtLeast(tetoBuffer.toLong()).toInt()
         val (minMs, maxMs, bytes) = if (preset > 0)

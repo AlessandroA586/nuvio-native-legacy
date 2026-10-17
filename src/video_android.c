@@ -104,9 +104,9 @@ static int resolverMetodos(JNIEnv *env) {
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mGanho = NULL; }
   mVelocidade = (*env)->GetStaticMethodID(env, gCls, "velocidade", "(I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mVelocidade = NULL; }
-  mPreparar = (*env)->GetStaticMethodID(env, gCls, "preparar", "(Ljava/lang/String;Ljava/lang/String;IIIIILjava/lang/String;)V");
+  mPreparar = (*env)->GetStaticMethodID(env, gCls, "preparar", "(Ljava/lang/String;Ljava/lang/String;IIIIILjava/lang/String;I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mPreparar = NULL; }
-  mPrepararProximo = (*env)->GetStaticMethodID(env, gCls, "prepararProximo", "(Ljava/lang/String;Ljava/lang/String;IIIIILjava/lang/String;)V");
+  mPrepararProximo = (*env)->GetStaticMethodID(env, gCls, "prepararProximo", "(Ljava/lang/String;Ljava/lang/String;IIIIILjava/lang/String;I)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mPrepararProximo = NULL; }
   mPrepararEstado = (*env)->GetStaticMethodID(env, gCls, "prepararEstado", "(I)I");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mPrepararEstado = NULL; }
@@ -260,7 +260,7 @@ static void kInt(jmethodID m, int v) {
 
 static int precarregarVideo(const char *url, const char *cab, double segundos,
                             double pct, int buffer, int cacheMb, unsigned token,
-                            const char *idiomaAudio, int proximo) {
+                            const char *idiomaAudio, int kbps, int proximo) {
   JNIEnv *env;
   jmethodID metodo;
   jstring u, c, a;
@@ -283,7 +283,7 @@ static int precarregarVideo(const char *url, const char *cab, double segundos,
     fimChamada(env); return 0;
   }
   (*env)->CallStaticVoidMethod(env, gCls, metodo, u, c, (jint)inicioMs,
-      (jint)fracao, (jint)token, (jint)buffer, (jint)cacheMb, a);
+      (jint)fracao, (jint)token, (jint)buffer, (jint)cacheMb, a, (jint)kbps);
   ok = !(*env)->ExceptionCheck(env);
   (*env)->DeleteLocalRef(env, u); (*env)->DeleteLocalRef(env, c);
   (*env)->DeleteLocalRef(env, a);
@@ -291,12 +291,12 @@ static int precarregarVideo(const char *url, const char *cab, double segundos,
   return ok;
 }
 int video_precarregar(const char *url, const char *cab, double segundos,
-                     double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio) {
-  return precarregarVideo(url, cab, segundos, pct, buffer, cacheMb, token, idiomaAudio, 0);
+                     double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio, int kbps) {
+  return precarregarVideo(url, cab, segundos, pct, buffer, cacheMb, token, idiomaAudio, kbps, 0);
 }
 int video_precarregar_proximo(const char *url, const char *cab, double segundos,
-                             double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio) {
-  return precarregarVideo(url, cab, segundos, pct, buffer, cacheMb, token, idiomaAudio, 1);
+                             double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio, int kbps) {
+  return precarregarVideo(url, cab, segundos, pct, buffer, cacheMb, token, idiomaAudio, kbps, 1);
 }
 int video_precarregar_estado(unsigned token) {
   JNIEnv *env = ambiente();
@@ -522,7 +522,8 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativePos(JNIEnv *
 static pthread_mutex_t travaStats = PTHREAD_MUTEX_INITIALIZER;
 static VideoStats statsAndroid;
 static RedeFit redeFit;
-static int statsValido;
+static int statsValido, redeMinMs = -1, redeMaxMs = -1, redeMaxMb = -1;
+static double redeMbps = -1;
 JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeStats(JNIEnv *env, jclass cls,
     jlong bytes, jint bufferMs, jint alvoMs, jint conexoes, jint primeiroByteMs,
     jlong perdidos, jlong quadros, jstring host, jint minMs, jint alvoMb, jint carregando) {
@@ -543,11 +544,14 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeStats(JNIEnv
   snprintf(statsAndroid.host, sizeof statsAndroid.host, "%s", h);
   statsValido = 1;
   sinal = redeFit.sinal;
-  if (redefit_segundo(&redeFit, bytes, carregando, redeKbps, &mbps))
+  redeMinMs = minMs; redeMaxMs = alvoMs; redeMaxMb = alvoMb;
+  if (redefit_segundo(&redeFit, bytes, carregando, redeKbps, &mbps)) {
+    redeMbps = mbps;
     /* English, numbers only: never URL, host or token. */
     printf("[rede] mbps=%.1f loading_s=%d/%d buffer_ms=%d declared_kbps=%d min_ms=%d max_ms=%d max_mb=%d rebuffers=%d short=%d\n",
            mbps, redeFit.cargaUlt, REDEFIT_JANELA_S, (int)bufferMs, redeKbps, (int)minMs, (int)alvoMs,
            (int)alvoMb, redeFit.rebufs, redeFit.baixas);
+  }
   if (redeFit.sinal && !sinal)
     printf("[stream_fit] playback flagged reason=throughput mbps=%.1f declared_kbps=%d\n", mbps, redeKbps);
   pthread_mutex_unlock(&travaStats);
@@ -682,20 +686,23 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(JNIEn
                      printf("[video] android: erro do player %d (%d)\n", a, b); break;
     case EV_TAMANHO: largura = a; altura = b; break;
     case EV_BUFFER:
+      if (a < 100) {
+        pthread_mutex_lock(&travaStats);
+        int antes = redeFit.sinal;
+        if (!bufferando && prontoLoad && tocandoDesde && SDL_GetTicks() - acaoMs > 3000u)
+          redefit_rebuffer(&redeFit, SDL_GetTicks());
+        printf("[rede] buffering mbps=%.1f loading_s=%d/%d buffer_ms=%d declared_kbps=%d min_ms=%d max_ms=%d max_mb=%d rebuffers=%d\n",
+               redeMbps, redeFit.cargaUlt, REDEFIT_JANELA_S,
+               statsValido ? (int)(statsAndroid.bufferSeg * 1000.0) : -1,
+               redeKbps, redeMinMs, redeMaxMs, redeMaxMb, redeFit.rebufs);
+        if (redeFit.sinal && !antes)
+          printf("[stream_fit] playback flagged reason=rebuffer rebuffers=%d declared_kbps=%d\n",
+                 redeFit.rebufs, redeKbps);
+        pthread_mutex_unlock(&travaStats);
+        fflush(stdout);
+      }
       if (a < 100 && !bufferando) {
         bufferando = 1; bufferDesde = SDL_GetTicks();
-        if (prontoLoad && tocandoDesde && bufferDesde - acaoMs > 3000u) {
-          pthread_mutex_lock(&travaStats);
-          int antes = redeFit.sinal;
-          redefit_rebuffer(&redeFit, bufferDesde);
-          printf("[rede] rebuffer n=%d buffer_ms=%d declared_kbps=%d\n", redeFit.rebufs,
-                 statsValido ? (int)(statsAndroid.bufferSeg * 1000.0) : -1, redeKbps);
-          if (redeFit.sinal && !antes)
-            printf("[stream_fit] playback flagged reason=rebuffer rebuffers=%d declared_kbps=%d\n",
-                   redeFit.rebufs, redeKbps);
-          pthread_mutex_unlock(&travaStats);
-          fflush(stdout);
-        }
       }
       else if (a >= 100) bufferando = 0;
       break;
@@ -729,6 +736,7 @@ static int abrirSessao(int inicioMs, int fracao) {
   pausaPedida = pausaVista = 0;
   hdrAtual = "none"; dvAtual = atmosAtual = 0;
   pthread_mutex_lock(&travaStats); statsValido = 0;
+  redeMbps = -1; redeMinMs = redeMaxMs = redeMaxMb = -1;
   memset(&redeFit, 0, sizeof redeFit); redeKbps = playerSessao ? stream_kbps_atual() : 0;
   pthread_mutex_unlock(&travaStats);
   nAudio = nLeg = 0; audioAtual = 0; legAtual = -1; legAte = 0;

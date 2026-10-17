@@ -47,9 +47,9 @@ int  video_retomada_inicial_estado(void);
 // Fonte preparada na pagina do titulo: player pausado, sem imagem, audio ou
 // eventos da sessao de reproducao. Token identifica o dono; zero cancela todos.
 int  video_precarregar(const char *url, const char *cabecalhos, double segundos,
-                      double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio);
+                      double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio, int kbps);
 int  video_precarregar_proximo(const char *url, const char *cabecalhos, double segundos,
-                              double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio);
+                              double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio, int kbps);
 // 0 ausente, 1 preparando, 2 pronto, -1 falhou. Nao muda video_pronto().
 int  video_precarregar_estado(unsigned token);
 void video_precarregar_cancelar(unsigned token);

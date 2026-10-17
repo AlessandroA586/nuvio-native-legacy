@@ -1143,13 +1143,13 @@ static void notaDe(const Stream *s, FonteNota *nt) {
   *nt = notaCache[i];
   pthread_mutex_unlock(&notaTrava);
 }
-int stream_kbps_atual(void) {
-  const Stream *s = stream_item(stream_atual());
+int stream_kbps(const Stream *s) {
   FonteNota nt;
   if (!s) return 0;
   notaDe(s, &nt);
   return nt.kbps;
 }
+int stream_kbps_atual(void) { return stream_kbps(stream_item(stream_atual())); }
 // Evidencia + idioma de uma fonte, para comparar duas da mesma resolucao
 // (memoria do automatico, stream_grupo_sem_perda).
 // Evidence gap allowed before automatic memory yields to the current winner.
@@ -2041,6 +2041,19 @@ static int falhaCancelada(unsigned geracao, int (*cancelado)(void *), void *ctx)
   mudou = geracao != listaGeracao;
   pthread_mutex_unlock(&verTrava);
   return mudou;
+}
+// Preview the same policy without consuming a route or interrupting playback.
+int stream_falha_tem_proxima(const FonteFalhaSessao *sessao, unsigned geracao) {
+  FonteFalhaSessao *copia = fontefalha_sessao_clonar(sessao);
+  FonteFalhaCandidata *c = NULL;
+  Stream *fontes = NULL;
+  FonteFalhaRota rota;
+  int nc = 0, tem = 0;
+  if (copia && falhaCandidatas(geracao, -1, 0, &c, &fontes, &nc))
+    tem = fontefalha_proxima(copia, c, nc, 1, &rota) == FONTEFALHA_PROXIMA;
+  for (int i = 0; i < nc; i++) free((void *)c[i].identidade);
+  free(c); free(fontes); fontefalha_sessao_liberar(copia);
+  return tem;
 }
 int stream_falha_verificar(FonteFalhaSessao *sessao, unsigned geracao, int escolhida,
                            int (*cancelado)(void *), void *ctx,
