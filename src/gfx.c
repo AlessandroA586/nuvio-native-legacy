@@ -1994,6 +1994,12 @@ static int vidroRegContem(const float r[][4], int n, const float b[4]) {
   for (i = 0; i < n; i++) if (vidroContem(r[i], b)) return 1;
   return 0;
 }
+#ifdef NV_SHOT_HOOKS
+// tests/dina_pisca_shot.c: a copia do backdrop tem de acontecer com o fundo
+// da Dinamica adiado JA resolvido na tela (dinAdiado = 0). 1 = leu o
+// framebuffer transparente do clear — a faixa que piscava no Apple TV+frost.
+int gfx_vidro_copia_com_din_adiado;
+#endif
 static int vidroDentro(GfxRect r) {
   float b[4] = { r.x, r.y, r.x + r.w, r.y + r.h };
   int i;
@@ -3485,10 +3491,19 @@ static void vidroFundoFechar(void) {
   fundoFim = 2;
   if (foscoBloq || !ajustes_vidro_fosco() || efeitosMinimos) return;
   if (!vidPreparar()) return;
+  // A copia le a TELA: o fundo da Dinamica adiado tem de sair nela antes
+  // (dinAdiado), senao o vidBackdrop fica com o framebuffer transparente do
+  // clear e o vidro le preto/lixo ate a proxima mudanca de hash — a faixa
+  // que pisca no "Apple TV + frost". Os outros pontos de leitura da tela
+  // (furo, mini, alvo) ja resolvem o fundo; aqui faltava.
+  dinDescarregar();
   if (!vidBackdrop) vidBackdrop = vidTex(telaW, telaH, GL_RGB);
   for (i = 0; i < vidroNRegAnt; i++) fora |= !vidroRegContem(fundoReg, fundoNReg, vidroRegAnt[i]);
   if (!fundoValido || fundoHash != vidroHash || fora) {
     if (!fundoValido || fundoHash != vidroHash) {
+#ifdef NV_SHOT_HOOKS
+      gfx_vidro_copia_com_din_adiado += dinAdiado;
+#endif
       GFX_OUTRO_INI();
       glActiveTexture(GL_TEXTURE0);
       glBindTexture(GL_TEXTURE_2D, vidBackdrop);
