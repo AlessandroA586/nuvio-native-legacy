@@ -73,8 +73,13 @@ void ajustes_dir(const char *dir) {
   nvreal_ajustes_dir(dir);
 }
 
+// Settings scenes animate on the wall clock (ajc_onda); the AJUSTES_TESTE
+// build has the real hook, the others link this no-op.
+__attribute__((weak)) void ajustes_teste_cena_t(float t) { (void)t; }
+
 // Some shots never call ajustes_dir; load the seeded file for them too.
 int ajustes_iniciar(void) {
   if (getenv("NV_TXT_IDX") && getenv("NUVIO_DADOS")) ajustes_dir(getenv("NUVIO_DADOS"));
+  ajustes_teste_cena_t(1.0f);   // scenes at a fixed instant: stable captures
   return nvreal_ajustes_iniciar();
 }
