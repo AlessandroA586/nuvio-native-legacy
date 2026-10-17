@@ -141,6 +141,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_FILTROS_FONTES: return "aj_funnel";
     case AJ_PROVEDORES_ESCOPO: return "aj_key-round";
     case AJ_AMIGOS_ESTILO: return "aj_users";
+    case AJ_TITULO_FIL: return "aj_type";
     case AJ_MURAL_TITULOS: return "aj_images";
     case AJ_FONTE_CONFERIR_VARIAS: return "aj_layers";
     case AJ_FONTE_AQUECER: return "aj_wifi";

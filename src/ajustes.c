@@ -636,6 +636,7 @@ typedef enum {
   AJ_PLAYER_ANIME,     // #205: Player so para anime (0 = Igual ao Player; local)
   AJ_ABERTURA_ESTILO,  // #205: tela de abertura, 0 = Centro (A3), 1 = Canto (B3); local, append-only
   AJ_MENU_CARTAZ,      // Device-local, append-only: 0 Full, 1 Simple.
+  AJ_TITULO_FIL,       // #205: titulo das fileiras da Home, 0 Classico, 1 Ilha, 2 Editorial, 3 Acento; local, append-only
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -661,6 +662,7 @@ static const char *V_TELA_ABERTURA[] = { "Cinema", "Detalhada" };
 static const char *V_ABERTURA_FUNDO[] = { "Desligado", "Arte", "Arte borrada" };
 static const char *V_ABERTURA_ESTILO[] = { "Centro", "Canto" };
 static const char *V_MENU_CARTAZ[] = { "Completo", "Simples" };
+static const char *V_TITULO_FIL[] = { "Clássico", "Ilha", "Editorial", "Acento" };
 static const char *V_QUALIDADE[] = { "Automática", "4K", "1080p", "720p" };
 static const char *V_LIGA[]      = { "Ligado", "Desligado" };
 // TRAILER DO CARTAZ EM FOCO EM TRES MODOS (dono, 07/10/2026). O indice e o
@@ -1649,6 +1651,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Player para anime", V_PLAYER_EXTERNO, 3),        // n real em nValores; local: playerExternoAnimeLocal
   ESC("Estilo da tela de abertura", V_ABERTURA_ESTILO, 2),   // local: aberturaEstiloLocal
   ESC("Menu do cartaz", V_MENU_CARTAZ, 2),              // local: menuCartazLocal
+  ESC("Título das fileiras", V_TITULO_FIL, 4),   // local: rowTitleStyleLocal
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1940,6 +1943,7 @@ static const char *CHAVE[] = {
   "playerExternoAnimeLocal",
   "aberturaEstiloLocal",
   "menuCartazLocal",
+  "rowTitleStyleLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2786,6 +2790,7 @@ int ajustes_abertura_detalhada(void) { return valor[AJ_TELA_ABERTURA] == 1; }
 int ajustes_abertura_addon(void) { return lig(AJ_ABERTURA_ADDON); }
 int ajustes_abertura_fundo(void) {   // #508: 0 = off, 1 = sharp, 2 = blurred
   int v = valor[AJ_ABERTURA_FUNDO]; return v >= 0 && v <= 2 ? v : 1; }
+int ajustes_titulo_fil(void) { int v = valor[AJ_TITULO_FIL]; return v >= 0 && v <= 3 ? v : 0; }
 int ajustes_abertura_estilo(void) { return valor[AJ_ABERTURA_ESTILO] == 1; }   // 0 Centro (A3), 1 Canto (B3)
 int ajustes_menu_cartaz_simples(void) { return valor[AJ_MENU_CARTAZ] == 1; }
 int ajustes_mural_titulos(void) { return lig(AJ_MURAL_TITULOS); }
@@ -5345,6 +5350,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_MENU_CARTAZ:    /* title menu presentation belongs to this TV */
     case AJ_EP_TAMANHO:    /* idem */
     case AJ_AMIGOS_ESTILO: /* local friends row presentation */
+    case AJ_TITULO_FIL:    /* local row title presentation */
     case AJ_MURAL_TITULOS: /* #521: idem */
     case AJ_MIC_BUSCA:     /* o microfone e o controle sao desta TV */
     case AJ_TECLADO_ANDROID: /* o web nao tem; o teclado e deste aparelho */
@@ -6921,6 +6927,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_EP_TAMANHO: return "Pequeno, Médio (padrão) ou Grande. Só vale no layout Moderno, na página de séries. Vale só nesta TV.";
     case AJ_ABERTURA_ADDON: return "Desligado (padrão): a tela Cinema mostra só a arte, o logo e a barra. Ligado: o nome do add-on aparece sob a barra. Vale só nesta TV.";
     case AJ_TELA_ABERTURA: return "Cinema (padrão): a arte e o logo do título ficam na tela até o vídeo entrar. Detalhada: a fonte, o add-on e cada passo da abertura. Na Cinema, Para cima ou Para baixo mostra os detalhes. Vale só nesta TV.";
+    case AJ_TITULO_FIL: return "Como o título de cada fileira da Home aparece. Clássico (padrão): só o texto. Ilha: numa pílula de vidro. Editorial: com uma linha de categoria acima. Acento: com um ponto de destaque. Vale só nesta TV.";
     case AJ_ABERTURA_ESTILO: return "Como a tela de abertura se organiza. Centro (padrão): o logo no meio e o anel de progresso embaixo dele. Canto: o logo no canto inferior esquerdo, com o anel pequeno embaixo dele. Vale só nesta TV.";
     case AJ_MENU_CARTAZ: return "Completo (padrão): amplia o cartaz com logo, notas e sinopse. Simples: mantém o cartaz e só abre o menu ao lado. Vale só nesta TV.";
     case AJ_ABERTURA_FUNDO: return "O fundo da tela Cinema da abertura. Desligado: preto. Arte (padrão): o backdrop do título, nítido, com véu escuro. Arte borrada: o mesmo backdrop, desfocado e escurecido, como sempre. Vale só nesta TV.";
@@ -9394,7 +9401,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_HERO_SINOPSE: case AJ_HERO_NOTAS: case AJ_HERO_ANO: case AJ_HERO_DURACAO:
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: case AJ_DESCOBRIR: case AJ_ROTULOS:
     case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_OCULTAR_NLANC: case AJ_MURAL_TITULOS:
-    case AJ_NOTAS_HOME: case AJ_GRAD_CLASSICO: case AJ_SELO_VISTO: case AJ_OCULTAR_FILMES_VISTOS:
+    case AJ_NOTAS_HOME: case AJ_GRAD_CLASSICO: case AJ_SELO_VISTO: case AJ_OCULTAR_FILMES_VISTOS: case AJ_TITULO_FIL:
       return AJPV_HOME;
     case AJ_CW_LIGADO: case AJ_CW_OK: case AJ_CW_FONTE:
     case AJ_CW_ESTILO: case AJ_CW_THUMB: case AJ_CW_BLUR_PROX:

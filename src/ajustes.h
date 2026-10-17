@@ -492,6 +492,7 @@ int   ajustes_abertura_addon(void);
 // #508: fundo da tela Cinema da abertura: 0 = Desligado, 1 = Arte (nitida com
 // veu escuro), 2 = Arte borrada (padrao).
 int   ajustes_abertura_fundo(void);
+int   ajustes_titulo_fil(void);        // 0 Classico, 1 Ilha, 2 Editorial, 3 Acento
 int   ajustes_abertura_estilo(void);   // 0 Centro (A3), 1 Canto (B3)
 // #205: tamanho dos cards de episodio (Moderna): 0 pequeno, 1 medio (padrao), 2 grande.
 int   ajustes_menu_cartaz_simples(void); // 0 Full (default), 1 Simple; this TV only.
