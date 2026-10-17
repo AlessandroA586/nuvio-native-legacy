@@ -208,7 +208,7 @@ static void avisarCascaAberto(int v) { (void)v; }
 // IDs estaveis: a ordem visual e de navegacao vem de transporteAcoes.
 // Na serie, Anterior/Proximo ficam ao lado do Play; o restante conserva a ordem.
 enum { PLR_PLAY, PLR_CC, PLR_AUDIO, PLR_ASPECTO,
-       PLR_FONTES, PLR_EPISODIOS, PLR_PROXIMO, PLR_RECARREGAR, PLR_NBTNS };
+       PLR_FONTES, PLR_EPISODIOS, PLR_PROXIMO, PLR_REINICIAR, PLR_NBTNS };
 
 // Avanco em curso: enquanto vale, posSeg e do DONO e nao do pipeline.
 static int    scrubbing, scrubPassos, scrubTocava, scrubDir, scrubToque;
@@ -226,6 +226,9 @@ static int    posVisSolto;   // 1 = ainda deslizando ate o alvo
 
 static int   aberto = 0, saindo = 0, pediuSair = 0;
 static int   idx = 0;
+// UI-thread ownership of this exact player source/session.
+static unsigned fonteAcaoGeracao;
+static void fonteAcaoInvalidar(void) { if (!++fonteAcaoGeracao) ++fonteAcaoGeracao; }
 #define PLR_SCR_TOCOU_S 5.0f   // #179: reproducao continua antes do /scrobble/start
 // Reproducao real minima para a SAIDA gravar o ponto (ver `prova`). Nao e o
 // limiar do start: um seek logo depois de abrir nao pode custar o ponto.
@@ -1636,6 +1639,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   // Serie aberta pela ilha ou pelo player sem passar pelo detalhe: sem a lista
   // nao ha cards de episodios nem "Up next". Idempotente com o roteador de app.c.
   desc_episodios_garantir(idx);
+  fonteAcaoInvalidar();
   aberto = 1; saindo = 0; pediuSair = 0; barraFoco = 0;
   // Titulo novo: um avanco em curso do anterior mandaria a posicao velha ao
   // pipeline novo assim que o silencio vencesse.
@@ -2035,6 +2039,7 @@ void player_definir_retomada_fonte(double segundos) {
 }
 void player_definir_fonte(const char *url) {
   if ((!aberto && !mini) || !url || !*url) return;
+  fonteAcaoInvalidar();
   // A primeira fonte ainda pode aproveitar a legenda antecipada na espera.
   if (comVideo) legenda_pre_descartar(i18n("troca de fonte"));
   durFonteAvisada = pedProximaFonte = 0;
@@ -2063,6 +2068,7 @@ void player_definir_fonte(const char *url) {
 
 void player_voltar_a_esperar(void) {
   if (!aberto) return;
+  fonteAcaoInvalidar();
   legenda_pre_descartar(i18n("fonte descartada"));
   // A fonte foi descartada: a tela do DV sai e o cartao de sempre conta a
   // troca ("Fonte falhou, tentando a proxima"); a proxima, se for DV, a traz.
@@ -2922,6 +2928,23 @@ static int temUltimoBotao(void) {
   return epE > 0 || extras_n_relacionados() > 0;
 }
 
+// Sources captures this token, never a mutable catalogue/list index.
+unsigned player_recarregar_contexto(void) {
+  return aberto && !saindo && !mini && !retido && !ehCanal() &&
+      !trocaEpisodio && !pedRecarregar && !player_carregando() && !erroFonte &&
+      fontePrincipal() && !video_falhou() && !video_reconectando()
+      ? fonteAcaoGeracao : 0;
+}
+int player_recarregar_fonte(unsigned contexto) {
+  Uint32 agora = SDL_GetTicks();
+  if (!contexto || contexto != player_recarregar_contexto() ||
+      (recarregarPedidoMarcado && agora - recarregarPedidoEm < 400u)) return 0;
+  pedRecarregar = recarregarPedidoMarcado = 1;
+  recarregarPedidoEm = agora;
+  posplay_troca_manual();
+  return 1;
+}
+
 typedef struct { int id, habilitada; } PlrAcao;
 static int transporteSerie(void) { return !ehCanal() && epT >= 0 && epE > 0; }
 static int transporteAcoes(PlrAcao a[PLR_NBTNS]) {
@@ -2929,9 +2952,8 @@ static int transporteAcoes(PlrAcao a[PLR_NBTNS]) {
   int pronto = serie && !trocaEpisodio && !pedRecarregar && !player_carregando() && !erroFonte && !saindo;
   a[n++] = (PlrAcao){PLR_PLAY, 1};
   if (serie) a[n++] = (PlrAcao){PLR_PROXIMO, pronto && player_proximo_episodio() != NULL};
-  if (!ehCanal()) a[n++] = (PlrAcao){PLR_RECARREGAR,
-      !trocaEpisodio && !pedRecarregar && comVideo && !player_carregando() &&
-      !erroFonte && !saindo && !video_reconectando() && video_url_atual()[0]};
+  if (!ehCanal()) a[n++] = (PlrAcao){PLR_REINICIAR,
+      player_recarregar_contexto() != 0 && video_duracao() > 0.5};
   a[n++] = (PlrAcao){PLR_CC, 1};
   a[n++] = (PlrAcao){PLR_AUDIO, 1};
   a[n++] = (PlrAcao){PLR_ASPECTO, 1};
@@ -3619,12 +3641,25 @@ static int ativarBotao(int i, int repetiu) {
       posplay_troca_manual();
       return 1;
     }
-    case PLR_RECARREGAR: {
-      Uint32 agora = SDL_GetTicks();
-      if (repetiu || (recarregarPedidoMarcado && agora - recarregarPedidoEm < 400u)) return 0;
-      pedRecarregar = recarregarPedidoMarcado = confirmacaoTransporteRetida = 1;
-      recarregarPedidoEm = agora;
-      posplay_troca_manual();
+    case PLR_REINICIAR: {
+      // A held OK (including firmware repeat=0) restarts only once. This is
+      // a user seek: preserve pause, tracks, opening policy and current URL.
+      double de = video_pos();
+      int retomar = scrubbing && scrubTocava;
+      if (repetiu || confirmacaoTransporteRetida) return 0;
+      if (!isfinite(de)) de = posSeg;
+      posplay_busca_usuario();
+      recuarAutomatico(de, 0.0);
+      scrubbing = scrubToque = scrubTocava = 0; scrubInicio = 0.0;
+      if (retomar) retomandoSalto = 1;
+      pausao_fechar(); seekr_ocioso();
+      posSeg = posVis = posVisV = 0.0f; posVisSolto = 0;
+      retomarPct = 0; retomarFonteSeg = -1.0; retomadaAplicada = 1;
+      relogio_zerar(&relLeg); velmed_zerar(&velMed);
+      assistidoAmostra = 0; eofDesde = -1.0;
+      buscarUsuario(0.0);
+      if (retomar) { video_pausar(0); tocando = 1; }
+      confirmacaoTransporteRetida = 1;
       return 1;
     }
     case PLR_PLAY: alternarTocando(); break;
@@ -3815,7 +3850,8 @@ void player_evento(const SDL_Event *e) {
   // OK no meio de um avanco CONFIRMA o avanco, em vez de alternar play/pausa.
   // Quem aperta o centro com a barra correndo quer parar ali, e alternar o
   // estado deixaria o filme pausado no ponto novo — meio comando executado.
-  if (scrubbing && (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE)) {
+  if (scrubbing && (barraFoco || skipFoco || botao != PLR_REINICIAR) &&
+      (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE)) {
     terminarSalto();
     acordar();
     return;
@@ -4624,7 +4660,7 @@ static const char *iconeBotao(int i) {
     case PLR_ASPECTO:   return "pl_ratio";
     case PLR_FONTES:    return "pl_layers";
     case PLR_PROXIMO:   return "pl_chevron-right";
-    case PLR_RECARREGAR:return "pl_rotate-ccw";
+    case PLR_REINICIAR: return "pl_rotate-ccw";
     default:            return epE > 0 ? "pl_list-video" : "pl_film";
   }
 }
@@ -4636,7 +4672,7 @@ static const char *rotuloBotao(int i) {
     case PLR_ASPECTO:   return "Propor\xc3\xa7\xc3\xa3o";
     case PLR_FONTES:    return "Fontes";
     case PLR_PROXIMO:   return "Próximo episódio";
-    case PLR_RECARREGAR:return "Recarregar";
+    case PLR_REINICIAR: return "Assistir do começo";
     default:            return ehCanal() ? "Guia" : epE > 0 ? "Epis\xc3\xb3""dios" : "Relacionados";
   }
 }

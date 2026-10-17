@@ -145,6 +145,14 @@ static unsigned listaGeracao;
 static void cancelarConferenciasSemTrava(void);
 static int atual = -1, recarregar;
 static int canalFolha;
+static unsigned recarregarFonteContexto;
+static NvPerfilSessao recarregarFontePerfil;
+static SDL_Keycode recarregarFonteConfirmacao;
+static int recarregarFontePode(void) {
+  return !canalFolha && recarregarFonteContexto &&
+      nv_perfil_sessao_atual(recarregarFontePerfil) &&
+      recarregarFonteContexto == player_recarregar_contexto();
+}
 static char contexto[320];
 // O ALVO DA LISTA — issue #101. Ver a nota longa em streams.h: `alvoPedido` e
 // o carimbo do proximo pedido e `alvoLista` o da lista que esta em memoria.
@@ -3052,7 +3060,8 @@ static int grupo, filtro, soMp4, soCache, soDub;
 // picotaria a lista em grupos de 1 ou 2 fontes. Em cache = o debrid ja tem o
 // arquivo (Stream.foraCache e 0), toca agora; Audio = idioma escolhido, ou o
 // idioma da interface (que em Automatico acompanha conta/aparelho).
-enum { BT_RECARREGAR, BT_SEM_HDR, BT_SO_MP4, BT_CACHE, BT_DUB, BT_FECHAR };
+enum { BT_RECARREGAR, BT_SEM_HDR, BT_SO_MP4, BT_CACHE, BT_DUB, BT_FECHAR,
+       BT_RECARREGAR_FONTE, BT_N };
 static int botaoDe(int i) {
   if (!video_pode_forcar_sdr()) i++;
   if (i == 0) return BT_SEM_HDR;
@@ -3060,9 +3069,12 @@ static int botaoDe(int i) {
   if (i == 2) return BT_CACHE;
   if (i == 3) return BT_DUB;
   if (i == 4) return BT_RECARREGAR;
+  if (i == 5 && recarregarFonteContexto) return BT_RECARREGAR_FONTE;
   return BT_FECHAR;
 }
-static int nBotoes(void) { return video_pode_forcar_sdr() ? 6 : 5; }
+static int nBotoes(void) {
+  return (video_pode_forcar_sdr() ? 6 : 5) + (recarregarFonteContexto != 0);
+}
 static const char *idiomaFiltroAudio(void) {
   return ling_audio_fonte(idioma_iso(ajustes_idioma()));
 }
@@ -3082,7 +3094,8 @@ static int botaoLigado(int b) {
   return (b == BT_SO_MP4 && soMp4) || (b == BT_CACHE && soCache) || (b == BT_DUB && soDub);
 }
 static const char *iconeBotao(int b) {
-  return b == BT_RECARREGAR ? "aj_rotate-cw" : b == BT_FECHAR ? "aj_x" : NULL;
+  return b == BT_RECARREGAR ? "aj_rotate-cw" : b == BT_RECARREGAR_FONTE
+      ? "pl_rotate-ccw" : b == BT_FECHAR ? "aj_x" : NULL;
 }
 static char provedores[13][96];
 static int nProvedores;
@@ -4016,6 +4029,9 @@ void stream_folha_abrir(void) {
   aberta=1; escolha=-1; grupo=1; filtro=0; soMp4=0; soCache=0; soDub=0; recarregar=0;
   { float ix, iy, iw, ih;
     folhaRelogio = !player_aberto() && ajustes_relogio_ligado() && ilha_rect(&ix, &iy, &iw, &ih); }
+  recarregarFonteConfirmacao = 0;
+  recarregarFontePerfil = nv_perfil_sessao_ler();
+  recarregarFonteContexto = canalFolha ? 0 : player_recarregar_contexto();
   folhaGeometria();
   atualizarProvedores();
   ondever_apps_atualizar();
@@ -4155,12 +4171,25 @@ static int detalheEvento(const SDL_Event *e) {
 }
 static void ponteiroDetalhe(int a, int b) { (void)a; (void)b; detAberto = 0; }
 void stream_folha_evento(const SDL_Event *e) {
+  if (e->type == SDL_WINDOWEVENT && (e->window.event == SDL_WINDOWEVENT_FOCUS_LOST ||
+      e->window.event == SDL_WINDOWEVENT_HIDDEN)) recarregarFonteConfirmacao = 0;
+  if (aberta && recarregarFonteConfirmacao && e->type == SDL_KEYUP) {
+    if (e->key.keysym.sym != recarregarFonteConfirmacao) return;
+    recarregarFonteConfirmacao = 0;
+    if (grupo == -1 && botaoDe(foco) == BT_RECARREGAR_FONTE && recarregarFontePode() &&
+        player_recarregar_fonte(recarregarFonteContexto)) {
+      escolha = -1; recarregar = 0; aberta = 0;
+    }
+    return;
+  }
   if(aberta && detalheEvento(e)) return;
 #ifdef NV_TOUCH_UI
   if (toquerol_navegacao(e)) { toquerol_limpar(&toqueFontes); toquerol_limpar(&toqueFontesAbas); }
 #endif
   if(!aberta || e->type!=SDL_KEYDOWN) return;
   SDL_Keycode k=e->key.keysym.sym;
+  if (recarregarFonteConfirmacao && k != recarregarFonteConfirmacao)
+    recarregarFonteConfirmacao = 0;
   if(k==SDLK_ESCAPE || k==SDLK_AC_BACK || k==SDLK_BACKSPACE || k==SDLK_DELETE) {aberta=0;return;}
   if(k==SDLK_r) {recarregar=1;return;}
   montar(automaticaDaFolha());
@@ -4205,6 +4234,10 @@ void stream_folha_evento(const SDL_Event *e) {
     if(grupo==-1) {
       switch(botaoDe(foco)) {
         case BT_RECARREGAR: recarregar=1; break;
+        case BT_RECARREGAR_FONTE:
+          if (!e->key.repeat && !recarregarFonteConfirmacao && recarregarFontePode())
+            recarregarFonteConfirmacao = k;
+          break;
         // Fecha a folha junto: a imagem volta (ou nao) na propria tela do
         // player, e deixar a folha aberta em cima esconderia o resultado.
         case BT_SEM_HDR:    video_forcar_sdr(); aberta=0; break;
@@ -4515,8 +4548,8 @@ static void chipFolha(GfxRect r, const char *rot, float rotW, const char *icone,
 //      kicker explica o que ele faz em qualquer caso.
 // No degrau 2 o filtro ligado continua no acento, entao "qual esta ativo" se
 // le sem foco. Se nem os discos couberem (titulo enorme), o titulo e cortado.
-static float bwCab[6], rotWCab[6], titMaxCab, gapCab;
-static const char *rotCab[6], *icoCab[6];
+static float bwCab[BT_N], rotWCab[BT_N], titMaxCab, gapCab;
+static const char *rotCab[BT_N], *icoCab[BT_N];
 static int nivelCab;
 static const char *iconeFiltro(int b) {
   return b == BT_SEM_HDR ? "aj_sun-dim" : b == BT_SO_MP4 ? "aj_film"
@@ -4548,13 +4581,25 @@ static void medirCabecalho(void) {
     if (soma <= livre) break;
   }
   if (nivelCab == 3) nivelCab = 2, gapCab = 8.0f;
+  // The playback-only seventh action must also fit beside the minimum
+  // title on narrow phones. Preserve chip height/touch area; trim only
+  // horizontal padding and gaps after all labels have become icons.
+  if (nivelCab == 2 && soma > rw - FOLHA_TXT - 24.0f - 80.0f) {
+    float disco;
+    gapCab = 4.0f;
+    disco = fminf(FOLHA_CHIP_H,
+        (rw - FOLHA_TXT - 24.0f - 80.0f - (nbt - 1) * gapCab) / nbt);
+    if (disco < 1.0f) disco = 1.0f;
+    soma = (nbt - 1) * gapCab;
+    for (int i = 0; i < nbt; i++) { bwCab[i] = disco; soma += disco; }
+  }
   // Degrau 2: o filtro em foco abre o rotulo no espaco que sobrou.
   if (nivelCab == 2 && grupo == -1 && foco >= 0 && foco < nbt && !iconeBotao(botaoDe(foco))) {
-    float g = FOLHA_CHIP_H * .42f, w;
+    float g = FOLHA_CHIP_H * .42f, w, antes = bwCab[foco];
     rotCab[foco] = rotuloBotao(botaoDe(foco));
     w = (float)txt_linha(TXT_HERO_META, rotCab[foco], 255, 255, 255, 255).w + 1.0f;
-    if (soma - FOLHA_CHIP_H + 16.0f + g + 10.0f + w + 18.0f > livre) rotCab[foco] = NULL;
-    else { rotWCab[foco] = w; bwCab[foco] = 16.0f + g + 10.0f + w + 18.0f; soma += bwCab[foco] - FOLHA_CHIP_H; }
+    if (soma - antes + 16.0f + g + 10.0f + w + 18.0f > livre) rotCab[foco] = NULL;
+    else { rotWCab[foco] = w; bwCab[foco] = 16.0f + g + 10.0f + w + 18.0f; soma += bwCab[foco] - antes; }
   }
   titMaxCab = rw - FOLHA_TXT - 24.0f - soma;
   if (titMaxCab < tit) titMaxCab = titMaxCab < 80.0f ? 80.0f : titMaxCab;
@@ -4709,8 +4754,12 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
   if (grupo==-1) {
     if(botaoDe(foco)==BT_SEM_HDR)
       ajuda="Imagem preta com o áudio tocando? Recarrega esta fonte sem HDR nem Dolby Vision.";
-    else if(botaoDe(foco)==BT_RECARREGAR)
-      ajuda="Pergunta as fontes de novo a todos os addons.";
+    else if(botaoDe(foco)==BT_RECARREGAR || botaoDe(foco)==BT_RECARREGAR_FONTE) {
+      static char acao[160];
+      snprintf(acao, sizeof acao, "%s · %s", i18n(botaoDe(foco)==BT_RECARREGAR ? "Atualizar" : "Recarregar"),
+               i18n(botaoDe(foco)==BT_RECARREGAR ? "Fontes" : "Reproduzindo agora"));
+      ajuda=acao;
+    }
     else if(botaoDe(foco)==BT_CACHE)
       ajuda=soCache
         ? "Mostrando só fontes que o debrid já tem: tocam na hora. OK tira o filtro."
@@ -4744,8 +4793,10 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     for(int i=0;i<nbt;i++){
       int b=botaoDe(i);
       GfxRect r={bx,oy+FOLHA_CAB_Y,bwCab[i],FOLHA_CHIP_H};
-      if (ptr) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroFolhaBotao, NULL, i, 0);
-      chipFolha(r,rotCab[i],rotWCab[i],icoCab[i],grupo==-1&&foco==i,botaoLigado(b),anim);
+      int habilitado = b != BT_RECARREGAR_FONTE || recarregarFontePode();
+      if (ptr) ponteiro_alvo(r.x, r.y, r.w, r.h, habilitado ? ponteiroFolhaBotao : NULL, NULL, i, 0);
+      chipFolha(r,rotCab[i],rotWCab[i],icoCab[i],grupo==-1&&foco==i,botaoLigado(b),
+                habilitado ? anim : anim * .35f);
       bx+=bwCab[i]+gapCab;
     } }
   // SELETOR DE ADDON, segmentado: o selecionado em superficie clara, o foco

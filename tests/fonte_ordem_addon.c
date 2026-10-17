@@ -1,6 +1,7 @@
 // #400: duas respostas fora de ordem; exercita a montagem real da folha.
 #include <assert.h>
 #include "../src/streams.c"
+#include "stub_player_source_actions.h"
 
 static int modo;
 static int negativa, consultas;

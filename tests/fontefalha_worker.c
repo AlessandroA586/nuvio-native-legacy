@@ -2,6 +2,7 @@
 #define _POSIX_C_SOURCE 200809L
 #define SDL_MAIN_HANDLED
 #include "../src/streams.c"
+#include "stub_player_source_actions.h"
 #include <assert.h>
 
 typedef struct { int servico, arquivo; char hash[48]; } Pedido;
