@@ -173,7 +173,8 @@ int main(void) {
   AJ_TRAILER_AUDIO == AJ_PLAYER_EXTERNO + 1 &&      // idioma do audio do trailer
   AJ_PLAYER_ANIME == AJ_TRAILER_AUDIO + 1 &&        // #205: player so para anime
   AJ_ABERTURA_ESTILO == AJ_PLAYER_ANIME + 1 &&      // #205: estilo da abertura (B3)
-  AJ_N == AJ_ABERTURA_ESTILO + 1);   // 2.0.6: master's #535 views appended after
+  AJ_TITULO_FIL == AJ_ABERTURA_ESTILO + 1 &&        // #205: titulo das fileiras
+  AJ_N == AJ_TITULO_FIL + 1);   // 2.0.6: master's #535 views appended after
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));
@@ -222,6 +223,16 @@ int main(void) {
   assert(OPCOES[AJ_ABERTURA_ESTILO].n == 2 && !strcmp(OPCOES[AJ_ABERTURA_ESTILO].valores[0], "Centro") &&
          !strcmp(OPCOES[AJ_ABERTURA_ESTILO].valores[1], "Canto"));
   assert(!strcmp(i18n(OPCOES[AJ_ABERTURA_ESTILO].rotulo), "Opening screen style"));
+  // #205: titulo das fileiras: Classico por padrao (nada muda ate escolher), local, 4 valores.
+  assert(valor[AJ_TITULO_FIL] == 0 && ajustes_titulo_fil() == 0);
+  assert(!strcmp(CHAVE[AJ_TITULO_FIL], "rowTitleStyleLocal") && somenteDesteAparelho(AJ_TITULO_FIL) && !dePerfil(AJ_TITULO_FIL));
+  valor[AJ_TITULO_FIL] = 3; assert(ajustes_titulo_fil() == 3);
+  valor[AJ_TITULO_FIL] = 9; assert(ajustes_titulo_fil() == 0);   // arquivo torto volta ao Classico
+  valor[AJ_TITULO_FIL] = 0;
+  assert(OPCOES[AJ_TITULO_FIL].n == 4 && !strcmp(OPCOES[AJ_TITULO_FIL].valores[0], "Clássico") &&
+         !strcmp(OPCOES[AJ_TITULO_FIL].valores[1], "Ilha") && !strcmp(OPCOES[AJ_TITULO_FIL].valores[2], "Editorial") &&
+         !strcmp(OPCOES[AJ_TITULO_FIL].valores[3], "Acento"));
+  assert(!strcmp(i18n(OPCOES[AJ_TITULO_FIL].rotulo), "Row titles"));
   // #205: o tamanho dos cards de episodio da Moderna — Medio de fabrica, local,
   // na secao da pagina do titulo, com tres valores.
   assert(!strcmp(CHAVE[AJ_EP_TAMANHO], "epTamanhoLocal"));

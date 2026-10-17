@@ -19,6 +19,7 @@
 #include "trakt.h"
 #include "simkl.h"
 #include "idioma.h"
+#include "idiomacod.h"
 #include "catordem.h"
 #include "homeestado.h"
 #include "homevazio.h"
@@ -7064,6 +7065,112 @@ void home_fileiras_vistas(Uint32 agora) {
   if (fileirasVistasEm) fileirasVistasEm = agora ? agora : 1u;
 }
 
+// TITULO DA FILEIRA (Ajustes > Titulo das fileiras): 0 Classico (o de sempre,
+// texto puro), 1 Ilha (pilula de vidro com icone e contagem), 2 Editorial
+// (kicker em caixa alta na cor de destaque + titulo espacado), 3 Acento (ponto
+// que vira traco na fileira em foco, com "Ver tudo >"). Todas desenham a partir
+// de `y` e do mesmo tl.h do Classico: a altura do cabecalho nao muda.
+static void tfAcento(float *r, float *g, float *b) {
+  ajustes_acento(r, g, b);
+  // Acento escuro (ou da cor do fundo) some sem caixa: sobe ate luz 0,5.
+  float l = 0.2126f * *r + 0.7152f * *g + 0.0722f * *b;
+  if (l < 0.5f) { float t = (0.5f - l) / (1.0f - l); *r += (1 - *r) * t; *g += (1 - *g) * t; *b += (1 - *b) * t; }
+}
+static const char *tfIcone(const Fileira *f) {
+  switch (f->tipo) {
+    case FILEIRA_CONTINUE: case FILEIRA_RETORNO: return "aj_circle-play";
+    case FILEIRA_TOP10: case FILEIRA_TOP10_NUM: return "aj_star";
+    case FILEIRA_SOCIAL: return "aj_users";
+    case FILEIRA_COLECAO: case FILEIRA_CATALOGOS: return "aj_layout-list";
+    case FILEIRA_SERVICO: return "aj_tv-minimal-play";
+    default: break;
+  }
+  return !strcmp(f->catTipo, "series") ? "aj_tv-minimal-play" : !strcmp(f->catTipo, "movie") ? "aj_film" : "aj_sparkles";
+}
+static const char *tfKicker(const Fileira *f) {
+  if (strstr(f->chave, "watchlist") || strstr(f->catId, "watchlist")) return "Sua lista";
+  if (strstr(f->chave, "trakt") || strstr(f->catId, "trakt")) return "Trakt";
+  if (strstr(f->chave, "simkl") || strstr(f->catId, "simkl")) return "Simkl";
+  switch (f->tipo) {
+    case FILEIRA_CONTINUE: case FILEIRA_RETORNO: return "Retomar";
+    case FILEIRA_TOP10: case FILEIRA_TOP10_NUM: return "Ranking";
+    case FILEIRA_SOCIAL: return "Amigos";
+    case FILEIRA_COLECAO: return "Coleção";
+    case FILEIRA_CATALOGOS: return "Catálogos";
+    case FILEIRA_DESTAQUE: case FILEIRA_DESTAQUE_QUADRADO: return "Destaque";
+    default: break;
+  }
+  return !strcmp(f->catTipo, "series") ? "Séries" : !strcmp(f->catTipo, "movie") ? "Filmes" : "Catálogo";
+}
+// Devolve o x onde o titulo (e o que vem junto) termina; `tl` sai com o texto
+// do titulo (w/h) para quem mede o resto do cabecalho.
+static float desenhaTituloFil(int r, float y, const char *rot, int cr, int cg, int cb,
+                              float k, float maxW, int desenhar, TxtLinha *tl) {
+  const Fileira *f = &fileiras[r];
+  const float x0 = homeConteudoX();
+  const int est = desenhar ? ajustes_titulo_fil() : 0;
+  float ar, ag, ab;
+  tfAcento(&ar, &ag, &ab);
+  if (est == 1) {   // ILHA
+    char nb[16] = "";
+    if (f->n > 0) snprintf(nb, sizeof nb, "%d", f->n);
+    TxtLinha tn = txt_linha(TXT_HERO_META, nb[0] ? nb : " ", 168, 173, 181, 255);
+    *tl = txt_linha_corta(TXT_ROW_TITULO, rot, cr, cg, cb, 255, maxW - 120.0f);
+    const float isz = tl->h * 0.56f, ph = tl->h + 4.0f;
+    const float w = 22.0f + isz + 12.0f + tl->w + (nb[0] ? 18.0f + tn.w : 0.0f) + 22.0f;
+    GfxRect p = { x0, y - 2.0f, w, ph };
+    if (ajustes_vidro()) gfx_vidro_chip(p, 0.5f, 0.8f, 1.0f);
+    else gfx_cor(p, 0.5f, 0.09f, 0.10f, 0.12f, 0.84f);
+    if (k > 0.01f) gfx_cor(p, 0.5f, ar, ag, ab, 0.16f * k);
+    gfx_anel(p, 0.5f, 1.5f, 1, 1, 1, 0.10f);
+    if (k > 0.01f) gfx_anel(p, 0.5f, 1.5f, ar, ag, ab, 0.60f * k);
+    gfx_icone((GfxRect){ x0 + 22.0f, y - 2.0f + (ph - isz) * 0.5f, isz, isz }, tfIcone(f),
+              0.66f + (ar - 0.66f) * k, 0.68f + (ag - 0.68f) * k, 0.71f + (ab - 0.71f) * k, 1.0f);
+    float tx = x0 + 22.0f + isz + 12.0f;
+    txt_desenhar(*tl, tx, y);
+    if (nb[0]) {
+      float dx = tx + tl->w + 9.0f;
+      gfx_cor((GfxRect){ dx, y - 2.0f + ph * 0.3f, 1.5f, ph * 0.4f }, 0.0f, 1, 1, 1, 0.20f);
+      txt_desenhar(tn, dx + 9.0f, y + (tl->h - tn.h) * 0.5f);
+    }
+    return x0 + w;
+  }
+  if (est == 2) {   // EDITORIAL
+    char up[96];
+    idioma_maiusc_em(ajustes_idioma(), up, sizeof up, i18n(tfKicker(f)));
+    const float trk = 1.0f;
+    float tw = txt_tracking(TXT_ROW_TITULO, rot, cr, cg, cb, -1, 0, 1, trk);
+    *tl = txt_linha_corta(TXT_ROW_TITULO, rot, cr, cg, cb, 255, maxW);
+    if (tw > 0 && tw <= maxW) {
+      const float ky = y - 12.0f, ty = y + 14.0f;
+      txt_tracking(TXT_HERO_META, up, (int)(ar * 255), (int)(ag * 255), (int)(ab * 255),
+                   x0, ky, 0.78f + 0.22f * k, 3.0f);
+      txt_tracking(TXT_ROW_TITULO, rot, cr, cg, cb, x0, ty, 1, trk);
+      tl->w = (int)tw;
+      return x0 + tw;
+    }
+    txt_desenhar(*tl, x0, y);
+    return x0 + tl->w;
+  }
+  *tl = txt_linha_corta(TXT_ROW_TITULO, rot, cr, cg, cb, 255, maxW);
+  if (desenhar) txt_desenhar(*tl, x0, y);
+  if (est == 3) {   // ACENTO
+    const float bw = 10.0f + 44.0f * k, bh = 10.0f - 3.0f * k;
+    const float bx = x0 + tl->w + 16.0f, cy = y + tl->h * 0.52f;
+    GfxRect b = { bx, cy - bh * 0.5f, bw, bh };
+    gfx_cor((GfxRect){ b.x - 2, b.y - 2, b.w + 4, b.h + 4 }, 0.5f, 0, 0, 0, 0.45f);
+    gfx_cor(b, 0.5f, ar, ag, ab, 1.0f);
+    if (k > 0.02f && f->verTudo) {
+      TxtLinha lv = txt_linha(TXT_HERO_META, "Ver tudo", (int)(ar * 255), (int)(ag * 255), (int)(ab * 255), 255);
+      float vx = bx + bw + 16.0f - (1.0f - k) * 10.0f, vy = cy - lv.h * 0.5f;
+      txt_desenhar_alpha(lv, vx, vy, k);
+      gfx_icone((GfxRect){ vx + lv.w + 4.0f, cy - 11.0f, 22, 22 }, "aj_chevron-right", ar, ag, ab, k);
+    }
+    return bx + 54.0f;
+  }
+  return x0 + tl->w;
+}
+
 void home_desenhar(Uint32 agora) {
   // Nao conservar ponteiros para o catalogo de outro quadro/perfil quando
   // nenhuma tela de titulo publica um item (pasta, social ou estado vazio).
@@ -7220,20 +7327,20 @@ void home_desenhar(Uint32 agora) {
       // outras (o #A8ADB5 do titulo do Centro de Controle), esmaecendo pela
       // mola animFocoFil quando o foco muda de fileira.
       TxtLinha tl;
+      float fimTit;
       { float k = animFocoFil[r];
         int cr = 168 + (int)((245 - 168) * k + 0.5f);
         int cg = 173 + (int)((246 - 173) * k + 0.5f);
         int cb = 181 + (int)((249 - 181) * k + 0.5f);
-        tl = txt_linha_corta(TXT_ROW_TITULO, rotFil, cr, cg, cb, 255,
-                             homeRetratoTelefone() ? homeLarguraUtil() - 76.0f : NV_TELA_W - homeConteudoX() - 180.0f);
-        if (tipo != FILEIRA_SOCIAL || ajustes_amigos_estilo() != 3 || amigosfil_convite())
-          txt_desenhar(tl, homeConteudoX(), y); }
+        const float maxW = homeRetratoTelefone() ? homeLarguraUtil() - 76.0f : NV_TELA_W - homeConteudoX() - 180.0f;
+        const int mudo = tipo == FILEIRA_SOCIAL && ajustes_amigos_estilo() == 3 && !amigosfil_convite();
+        fimTit = desenhaTituloFil(r, y, rotFil, cr, cg, cb, k, maxW, !mudo, &tl); }
       // A FONTE (Trakt, Simkl...) NAO APARECE NA FILEIRA DE AMIGOS: a pessoa
       // quer saber quem viu e o que achou, nao de onde veio o dado. Ela fica
       // so no perfil do amigo (amigoperfil.c). Era a marca do Trakt aqui.
       if(!strncmp(fileiras[r].catId,"ai_",3)) {
         TxtLinha ai=txt_linha(TXT_HERO_META,"AI-powered",183,192,219,255);
-        txt_desenhar(ai,homeConteudoX()+tl.w+22,y+(tl.h-ai.h)*.5f);
+        txt_desenhar(ai,fimTit+22,y+(tl.h-ai.h)*.5f);
       }
       if (foco.fileira == r && !focoHero && tipo != FILEIRA_SOCIAL) {
         char pos[32];
