@@ -1943,6 +1943,7 @@
   T("Estatísticas", "統計"),
   T("Estatísticas ao vivo", "ライブ統計"),
   T("Este aparelho", "このデバイス"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "このファイルはこのテレビでは早送り・巻き戻しできません"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "このファイルには Dolby Vision がありません。HDR10 で再生します。"),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "この項目は別のサービス用です。「カスタムポスター」でサービスを選んでください。"),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "このメールはまだ確認されていません。Nuvio から届いたリンクを開いてもう一度お試しください。"),

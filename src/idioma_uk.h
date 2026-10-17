@@ -1942,6 +1942,7 @@
   T("Estatísticas", "Статистика"),
   T("Estatísticas ao vivo", "Статистика наживо"),
   T("Este aparelho", "Цей пристрій"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "У цьому файлі не можна перемотувати на цьому телевізорі"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "У файлі немає Dolby Vision. Відтворюємо в HDR10."),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "Це поле належить іншому сервісу. Оберіть сервіс у «Власні постери»."),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "Цю ел. пошту ще не підтверджено. Відкрийте посилання від Nuvio і спробуйте ще раз."),

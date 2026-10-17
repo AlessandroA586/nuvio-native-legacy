@@ -1943,6 +1943,7 @@
   T("Estatísticas", "Statistik"),
   T("Estatísticas ao vivo", "Statistik langsung"),
   T("Este aparelho", "Perangkat ini"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "File ini tidak bisa dimajukan atau dimundurkan di TV ini"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "File ini tidak punya Dolby Vision. Memutar dalam HDR10."),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "Kolom ini milik layanan lain. Pilih layanan di Poster kustom."),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "Email ini belum dikonfirmasi. Buka tautan yang dikirim Nuvio lalu coba lagi."),

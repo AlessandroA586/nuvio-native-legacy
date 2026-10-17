@@ -1942,6 +1942,7 @@
   { "Estatísticas", "Statistics" },
   { "Estatísticas ao vivo", "Live statistics" },
   { "Este aparelho", "This device" },
+  { "Este arquivo não deixa avançar ou voltar nesta TV", "This file can't be skipped through on this TV" },
   { "Este arquivo não tem Dolby Vision. Tocando em HDR10.", "This file has no Dolby Vision. Playing in HDR10." },
   { "Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "This field belongs to another service. Choose the service in Custom posters." },
   { "Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "This email has not been confirmed yet. Open the link Nuvio sent you and try again." },

@@ -1943,6 +1943,7 @@
   T("Estatísticas", "Thống kê"),
   T("Estatísticas ao vivo", "Thống kê trực tiếp"),
   T("Este aparelho", "Thiết bị này"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "Không thể tua tới hoặc lùi trong tệp này trên TV này"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "Tệp này không có Dolby Vision. Đang phát ở HDR10."),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "Trường này thuộc dịch vụ khác. Hãy chọn dịch vụ trong Áp phích tùy chỉnh."),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "Email này chưa được xác nhận. Hãy mở liên kết Nuvio đã gửi rồi thử lại."),

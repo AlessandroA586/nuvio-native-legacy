@@ -1943,6 +1943,7 @@
   T("Estatísticas", "İstatistikler"),
   T("Estatísticas ao vivo", "Canlı istatistikler"),
   T("Este aparelho", "Bu cihaz"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "Bu dosyada bu TV'de ileri veya geri sarılamıyor"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "Bu dosyada Dolby Vision yok. HDR10 oynatılıyor."),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "Bu alan başka bir hizmete ait. Hizmeti Özel afişler bölümünden seçin."),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "Bu e-posta henüz onaylanmadı. Nuvio'nun gönderdiği bağlantıyı açıp tekrar dene."),

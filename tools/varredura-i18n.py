@@ -560,6 +560,9 @@ IGNORAR = {
     "escolha manual: a folha abre com o que chegou", "fonte boa o bastante",
     "fonte lembrada deste titulo", "prazo de espera pelos add-ons",
     "outra fonte foi a escolhida",
+    # Log-only (autoMotivo, the converter probe reason, mkvfix state).
+    "todos os add-ons responderam", "cabecalho do MKV nao lido; a TV acusou NotSupportedAudioCodec",
+    "not a Matroska file: nothing to do",
     "interface em 1080p: mede de novo", "sem-acesso", "sem-dv", "nao-mkv", "temporada",
     # Nomes de arquivo e de pasta (addonstats.c, assrender.c): nunca tela.
     "fonte-latencia.txt", "%s/fontes",

@@ -1943,6 +1943,7 @@
   T("Estatísticas", "统计"),
   T("Estatísticas ao vivo", "实时统计"),
   T("Este aparelho", "此设备"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "此文件在这台电视上无法快进或快退"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "此文件没有杜比视界。以 HDR10 播放。"),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "此项属于其他服务。请在“自定义海报”中选择服务。"),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "此邮箱尚未验证。请打开 Nuvio 发送的链接后重试。"),

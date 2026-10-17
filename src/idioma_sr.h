@@ -1943,6 +1943,7 @@
   T("Estatísticas", "Statistika"),
   T("Estatísticas ao vivo", "Statistika uživo"),
   T("Este aparelho", "Ovaj uređaj"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "U ovoj datoteci se na ovom TV-u ne može premotavati"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "Ova datoteka nema Dolby Vision. Reprodukcija u HDR10."),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "Ovo polje pripada drugoj usluzi. Izaberite uslugu u „Sopstveni plakati”."),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "Ova e-pošta još nije potvrđena. Otvorite link koji je poslao Nuvio i pokušajte ponovo."),

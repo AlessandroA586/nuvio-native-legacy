@@ -1943,6 +1943,7 @@
   T("Estatísticas", "Στατιστικά"),
   T("Estatísticas ao vivo", "Ζωντανά στατιστικά"),
   T("Este aparelho", "Αυτή η συσκευή"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "Σε αυτό το αρχείο δεν γίνεται μετακίνηση μπρος-πίσω σε αυτήν την τηλεόραση"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "Αυτό το αρχείο δεν έχει Dolby Vision. Αναπαραγωγή σε HDR10."),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "Αυτό το πεδίο ανήκει σε άλλη υπηρεσία. Επιλέξτε υπηρεσία στο «Προσαρμοσμένες αφίσες»."),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "Αυτό το email δεν έχει επιβεβαιωθεί ακόμη. Άνοιξε τον σύνδεσμο που έστειλε το Nuvio και δοκίμασε ξανά."),

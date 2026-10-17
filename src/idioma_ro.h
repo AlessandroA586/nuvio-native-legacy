@@ -1942,6 +1942,7 @@
   T("Estatísticas", "Statistici"),
   T("Estatísticas ao vivo", "Statistici live"),
   T("Este aparelho", "Acest dispozitiv"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "Acest fișier nu poate fi derulat pe acest televizor"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "Fișierul nu are Dolby Vision. Redăm în HDR10."),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "Acest câmp aparține altui serviciu. Alege serviciul în Afișe personalizate."),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "Acest e-mail nu a fost încă confirmat. Deschide linkul trimis de Nuvio și încearcă din nou."),

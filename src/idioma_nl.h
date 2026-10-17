@@ -1943,6 +1943,7 @@
   T("Estatísticas", "Statistieken"),
   T("Estatísticas ao vivo", "Live-statistieken"),
   T("Este aparelho", "Dit apparaat"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "In dit bestand kun je op deze tv niet vooruit- of terugspoelen"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "Dit bestand heeft geen Dolby Vision. Afspelen in HDR10."),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "Dit veld hoort bij een andere dienst. Kies de dienst bij Eigen posters."),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "Dit e-mailadres is nog niet bevestigd. Open de link die Nuvio stuurde en probeer opnieuw."),

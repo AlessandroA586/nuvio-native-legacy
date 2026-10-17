@@ -1943,6 +1943,7 @@
   T("Estatísticas", "Statistika"),
   T("Estatísticas ao vivo", "Tiesioginė statistika"),
   T("Este aparelho", "Šis įrenginys"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "Šiame faile šiuo televizoriumi negalima prasukti"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "Šiame faile nėra Dolby Vision. Rodoma HDR10."),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "Šis laukas priklauso kitai paslaugai. Paslaugą pasirinkite skiltyje „Pasirinkti plakatai“."),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "Šis el. paštas dar nepatvirtintas. Atidarykite Nuvio atsiųstą nuorodą ir bandykite dar kartą."),

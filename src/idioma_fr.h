@@ -1942,6 +1942,7 @@
   T("Estatísticas", "Statistiques"),
   T("Estatísticas ao vivo", "Statistiques en direct"),
   T("Este aparelho", "Cet appareil"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "Ce fichier ne permet pas d’avancer ou de reculer sur ce téléviseur"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "Ce fichier n'a pas de Dolby Vision. Lecture en HDR10."),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "Ce champ concerne un autre service. Choisissez le service dans Affiches personnalisées."),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "Cet e-mail n'a pas encore été confirmé. Ouvrez le lien envoyé par Nuvio et réessayez."),

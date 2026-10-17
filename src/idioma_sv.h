@@ -1943,6 +1943,7 @@
   T("Estatísticas", "Statistik"),
   T("Estatísticas ao vivo", "Live-statistik"),
   T("Este aparelho", "Den här enheten"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "Den här filen går inte att spola i på den här tv:n"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "Filen har ingen Dolby Vision. Spelar i HDR10."),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "Fältet hör till en annan tjänst. Välj tjänst under Egna affischer."),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "Den här e-postadressen är inte bekräftad än. Öppna länken som Nuvio skickade och försök igen."),

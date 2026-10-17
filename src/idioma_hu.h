@@ -1943,6 +1943,7 @@
   T("Estatísticas", "Statisztika"),
   T("Estatísticas ao vivo", "Élő statisztika"),
   T("Este aparelho", "Ez az eszköz"),
+  T("Este arquivo não deixa avançar ou voltar nesta TV", "Ebben a fájlban ezen a tévén nem lehet tekerni"),
   T("Este arquivo não tem Dolby Vision. Tocando em HDR10.", "Ebben a fájlban nincs Dolby Vision. Lejátszás HDR10-ben."),
   T("Este campo vale para outro serviço. Escolha o serviço em Pôsteres personalizados.", "Ez a mező egy másik szolgáltatásé. Válaszd ki a szolgáltatást itt: „Egyéni plakátok”."),
   T("Este e-mail ainda não foi confirmado. Abra o link que a Nuvio mandou e tente de novo.", "Ez az e-mail még nincs megerősítve. Nyisd meg a Nuvio által küldött linket, és próbáld újra."),

@@ -866,6 +866,7 @@ static void erroEscolher(int i) {
 void player_definir_tentativa(int n, int max) { tentativaN = n; tentativaM = max; }
 #ifdef NV_TPK
 int video_tpk_convertendo(void);   // video_tpk.c
+int video_tpk_aviso_busca(void);   // video_tpk.c (mkvfix.h)
 #endif
 void player_erro_fonte(void) {
 #ifdef NV_TPK
@@ -3963,6 +3964,11 @@ void player_atualizar(float dt, Uint32 agora) {
 #endif
   if (retido) { player_validar_retido(agora); return; }
   if (aberto || mini) atualizarIdentidade();
+#ifdef NV_TPK
+  // A TV recusou um seek e o arquivo nao tem indice nenhum (mkvfix.h): diz,
+  // em vez de o video seguir como se a tecla nao tivesse feito nada.
+  if (video_tpk_aviso_busca() && comVideo) player_toast(i18n("Este arquivo não deixa avançar ou voltar nesta TV"), 5000u);
+#endif
   // DV EM MKV NASCE NO PONTO SALVO: enquanto a retomada nao foi pedida ao
   // player da TV, a troca para o caminho do DV espera (video.c, iniciarDts le o
   // seek pendente). Sem ponto salvo nao ha o que esperar.
