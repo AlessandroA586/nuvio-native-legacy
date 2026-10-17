@@ -1944,7 +1944,8 @@ static void dvTelaAtualizar(float dt, Uint32 agora) {
   int saiu;
   if (!dvtela_visivel()) return;
   // The key that turned the normal opening into the card (abrecine_tecla) holds for the DV screen.
-  dvtela_apresentacao(ajustes_abertura_detalhada() || (cine.viva && cine.detalhada));
+  if (dvtela_ativa())
+    dvtela_apresentacao(ajustes_abertura_detalhada() || cine.detalhada);
   memset(&s, 0, sizeof s);
   if (dvtela_ativa()) {
     video_dv_fase(&f);

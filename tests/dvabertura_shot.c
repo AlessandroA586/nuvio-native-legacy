@@ -242,6 +242,28 @@ int main(int argc, char **argv) {
   }
   confere(dvtela_variante() == DVT_VAR_DETALHADA, "Detalhada: o DV mostra o cartao");
 
+  // Keyboard-selected details must survive every frame of confirmed-playback exit.
+  assert(ajustes_shot_valor("telaAberturaLocal", 0));
+  ajustar(0, 1, 0);
+  abrir(0); quadros(K);
+  { SDL_Event ev = {0};
+    ev.type = SDL_KEYDOWN; ev.key.keysym.sym = SDLK_DOWN;
+    player_evento(&ev);
+  }
+  trocar(1); quadros(K);
+  assert(dvtela_variante() == DVT_VAR_DETALHADA);
+  V.pronto = V.tocando = 1; V.pos = 1;
+  V.dvFase.caminho = V.dvFase.dvConfirmado = V.dvFase.tocando = 1;
+  quadros(1);
+  { int stable = 1, frames = 0;
+    while (dvtela_visivel() && frames++ < K) {
+      quadros(1);
+      if (dvtela_visivel() && dvtela_variante() != DVT_VAR_DETALHADA) stable = 0;
+    }
+    confere(stable && frames > 2 && !dvtela_visivel(),
+            "Keyboard-selected details retain their variant through the complete exit fade");
+  }
+
   printf("dvabertura_shot: %s\n", falhas ? "FALHOU" : "ok");
   return falhas ? 1 : 0;
 }
