@@ -156,6 +156,9 @@
 #include "audiomemoria.h"
 #include "fontesmortas.h"
 #include "video.h"
+#ifdef NV_TPK
+void video_tpk_cdn_arquivo(const char *url, int usenet, int item, int file);
+#endif
 #include "addons.h"
 #include "legauto.h"
 #include "idioma.h"
@@ -2600,6 +2603,10 @@ static void parteTocar(const char *url, double pos) {
   if (pos > 1.0) player_definir_retomada_fonte(pos);
   snprintf(parteUrl, sizeof parteUrl, "%s", url);
   video_definir_cabecalhos("");
+#ifdef NV_TPK
+  video_tpk_cdn_arquivo(url, parteArqLista.usenet, parteArqLista.item,
+                        parteArqK >= 0 && parteArqK < parteArqLista.n ? parteArqLista.arq[parteArqK].id : -1);
+#endif
   video_definir_mp4(parteMp4);
   definirFonteVOD(url);
   parteFase = PF_ABRINDO; parteDesde = SDL_GetTicks(); parteGuardouEm = 0;
@@ -2613,18 +2620,28 @@ static void parteTocar(const char *url, double pos) {
 }
 static void abrirParte(int fonte, const PartesLista *l, int k) {
   const Stream *s = stream_item(fonte);
+  Stream escolhida;
   char alvo[64];
-  int titulo, t = 0, e = 0;
+  int titulo, t = 0, e = 0, serie;
   PartesPonto pt;
   if (!s || !l || k < 0 || k >= l->n) return;
+  escolhida = *s; s = &escolhida;
   aguardandoFonte = 0;
   limparFonteVOD();
   titulo = player_aberto() ? player_indice() : detail_indice();
+  { const CatItem *ci = cat_item(titulo); serie = ci && !strcmp(ci->tipo, "series"); }
   // Fecha ANTES de zerar: a saida grava o ponto do arquivo que tocava.
   if (player_aberto()) { player_episodio_atual(&t, &e); player_encerrar(); }
   else detail_ep_foco(&t, &e);
   parteZerar();
   consumirFolhaTocar(&t, &e);
+  if (serie) {
+    const ParteArq *a = &l->arq[k];
+    if (a->episodio > 0 && a->tipo != PARTE_EXTRA) {
+      if (a->temporada > 0 || a->tipo == PARTE_ESPECIAL) t = a->temporada;
+      e = a->episodio;
+    } else if (k != l->atual || a->tipo != PARTE_EP) t = e = -1;
+  }
   diagnostico_cancelar_vazao();
   player_abrir(titulo, NULL);
   player_definir_episodio(t, e);
@@ -2641,7 +2658,7 @@ static void abrirParte(int fonte, const PartesLista *l, int k) {
   // SERIE: o pacote da temporada tem os episodios como "partes", mas episodio
   // seguinte e o Next de sempre. Num episodio o arquivo escolhido (um OVA, um
   // especial) toca sozinho, sem sessao de partes.
-  if (t > 0 && e > 0) partes_sessao_parar("series episode: the file plays alone");
+  if (serie) partes_sessao_parar("series episode: the file plays alone");
   else partes_sessao_iniciar(alvo, l, k);
   // Outro arquivo que o do ponto guardado: o ponto antigo nao vale mais.
   if (partePos < 0) partes_ponto_esquecer(alvo, sessao_usuario(), perfis_ativo());

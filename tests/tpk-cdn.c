@@ -192,7 +192,16 @@ static int fResolver(const char *o, const char *c, int s, char *d, unsigned t, u
   snprintf(d, t, "https://cdn.test/fresh%d", nResolve);
   return 1;
 }
+static int fileRequests;
+int debrid_tb_link(int usenet, int item, int file, char *dst, unsigned n) {
+  ok(usenet == 1 && item == 42 && file == 7, "direct refresh keeps item/file identity");
+  fileRequests++;
+  SDL_Delay(20);
+  snprintf(dst, n, "https://nexus.tb-cdn.st/fresh%d", fileRequests);
+  return 1;
+}
 static unsigned fValidade(void) { return (unsigned)validadeMs; }
+void video_tpk_cdn_arquivo(const char *url, int usenet, int item, int file);
 static void esperarAbrir(int n) { Uint32 t0 = SDL_GetTicks(); while (nAbriu < n && SDL_GetTicks() - t0 < 3000) bombear(1); }
 
 int main(void) {
@@ -208,6 +217,30 @@ int main(void) {
   video_parar();
 
   video_tpk_cdn_ganchos(&g);
+
+  // A direct TorBox URL skips redirect resolution, but still expires.
+  nAbriu = nBuscas = fileRequests = 0;
+  video_definir_reconexao(1);
+  video_tocar("https://nexus.tb-cdn.st/direct");
+#ifdef NV_TEST_DIRECT_CDN
+  video_tpk_cdn_arquivo("https://nexus.tb-cdn.st/direct", 1, 42, 7);
+#endif
+  posMs = 60000; playerPronto(); bombear(3);
+  validadeMs = 0; SDL_Delay(2);
+  nBuscas = 0;
+  video_buscar(600);
+  ok(nBuscas == 0, "expired direct file: no raw seek");
+  bombear(2);
+  esperarAbrir(2);
+  ok(fileRequests == 1 && !strcmp(ultUrl, "https://nexus.tb-cdn.st/fresh1"), "expired direct file: requestdl before seek");
+  validadeMs = 150 * 60 * 1000;
+  playerPronto(); bombear(3); posMs = 600000; bombear(3);
+  video_pausar(1); bombear(2);
+  validadeMs = 0; SDL_Delay(2); retomadas = 0;
+  video_pausar(0); esperarAbrir(3);
+  ok(retomadas == 0 && fileRequests == 2, "expired direct file: requestdl before resume");
+  video_parar();
+  validadeMs = 150 * 60 * 1000;
 
   // RESOLVED IN A THREAD: nothing opens until the CDN link is known.
   nAbriu = 0; nResolve = 0;

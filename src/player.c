@@ -993,6 +993,12 @@ void player_definir_episodio(int t, int e) {
     }
     return;
   }
+  // An unnumbered file must not inherit the catalog episode.
+  if (t < 0 && e < 0) {
+    epPedidoT = epPedidoE = -1;
+    intro_desligar();
+    return;
+  }
   // 0/0 e sem episodio; 0/E e um especial escolhido, nunca T1E.
   if (epT < 0 || (epT == 0 && epE < 1))
     epT = c->temporada > 0 || (c->temporada == 0 && c->episodio > 0) ? c->temporada : 1;
@@ -4389,7 +4395,7 @@ void player_atualizar(float dt, Uint32 agora) {
   { int ok = fontePrincipal() && video_pronto() && video_ativo() && tocando && !scrubbing &&
              !saindo && !erroFonte && !esperandoFonte && !ehCanal() &&
              duracaoSeg >= 120.0f &&
-             !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo());   // PRONTO do trailer (129 s) nao e deste titulo
+             (partesAtiva() || !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo()));   // PRONTO do trailer (129 s) nao e deste titulo
     static float tocouS, parcialRelogio, parcialSeek;
     static int scrubAnterior;
     const CatItem *cs = item();
@@ -4415,7 +4421,7 @@ void player_atualizar(float dt, Uint32 agora) {
       // Pausou (ou o video parou de andar): so fala se ha um start em pe.
       if (tocouS > 0.0f && cs && cs->imdb[0] && fontePrincipal() && video_pronto() && !ehCanal() &&
           duracaoSeg >= 120.0f && !scrubbing &&
-          !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo())) {
+          (partesAtiva() || !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo()))) {
         char id[64];
         if (epT >= 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
         else snprintf(id, sizeof id, "%s", cs->imdb);

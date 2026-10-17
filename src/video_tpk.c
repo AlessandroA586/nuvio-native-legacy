@@ -35,6 +35,7 @@
 #include "proxyts.h"
 #include "dts/dts_hls_tpk.h"
 #include "cdnlink.h"
+#include "debrid.h"
 #include "mkvfix.h"
 #include <SDL2/SDL.h>
 #include <math.h>
@@ -510,12 +511,19 @@ static struct {
   int usado;         // o player desta sessao recebeu o link do CDN
   Uint32 em;         // quando esse link foi resolvido (relogio SDL)
   int avisouVelho;
+  int arquivo, usenet, item, file;
 } cdn;
 static atomic_uint cdnGer, cdnFeitoGer;
 static pthread_mutex_t cdnTrava = PTHREAD_MUTEX_INITIALIZER;
 static char cdnFinal[4096];
 static int cdnOk;
-typedef struct { char orig[4096]; char cab[2048]; unsigned ger; } CdnPedido;
+typedef struct { char orig[4096]; char cab[2048]; unsigned ger; int arquivo, usenet, item, file; } CdnPedido;
+
+void video_tpk_cdn_arquivo(const char *url, int usenet, int item, int file) {
+  if (!ativo || !url || strcmp(url, urlAtual) || item <= 0 || file < 0) return;
+  cdn.arquivo = 1; cdn.usenet = usenet; cdn.item = item; cdn.file = file;
+  cdn.usado = 1; cdn.em = SDL_GetTicks();
+}
 
 __attribute__((visibility("default")))
 void video_tpk_cdn_ganchos(const CdnlinkGanchos *g) {
@@ -525,7 +533,8 @@ void video_tpk_cdn_ganchos(const CdnlinkGanchos *g) {
 static void *fioCdn(void *arg) {
   CdnPedido *p = arg;
   char fim[sizeof cdnFinal];
-  int ok = cdnG.resolver(p->orig, p->cab, CDNLINK_PRAZO_S, fim, sizeof fim, NULL);
+  int ok = p->arquivo ? debrid_tb_link(p->usenet, p->item, p->file, fim, sizeof fim) :
+                       cdnG.resolver(p->orig, p->cab, CDNLINK_PRAZO_S, fim, sizeof fim, NULL);
   pthread_mutex_lock(&cdnTrava);
   if (atomic_load(&cdnGer) == p->ger) {
     cdnOk = ok;
@@ -556,8 +565,9 @@ static int cdnAbrir(void) {
   cdn.pend = 0; cdn.usado = 0; cdn.avisouVelho = 0;
   atomic_fetch_add(&cdnGer, 1);
   // So filme/episodio (reconPermitida = !canal) e so link http(s) de fora.
-  if (!cdnG.resolver || !cdnG.origem_ok || !reconPermitida || !cdnG.origem_ok(urlAtual)) return 0;
-  if (cdnG.recente && cdnG.recente(urlAtual, CDNLINK_REUSO_MS, fim, sizeof fim, &idade)) {
+  if (!reconPermitida || (!cdn.arquivo &&
+      (!cdnG.resolver || !cdnG.origem_ok || !cdnG.origem_ok(urlAtual)))) return 0;
+  if (!cdn.arquivo && cdnG.recente && cdnG.recente(urlAtual, CDNLINK_REUSO_MS, fim, sizeof fim, &idade)) {
     cdn.usado = 1; cdn.em = SDL_GetTicks() - idade;
     printf("[fonte-cdn] the player gets the CDN link the check resolved %u s ago\n", idade / 1000u);
     fflush(stdout);
@@ -569,6 +579,7 @@ static int cdnAbrir(void) {
   snprintf(p->orig, sizeof p->orig, "%s", urlAtual);
   snprintf(p->cab, sizeof p->cab, "%s", cabecalhos);
   p->ger = atomic_load(&cdnGer);
+  p->arquivo = cdn.arquivo; p->usenet = cdn.usenet; p->item = cdn.item; p->file = cdn.file;
   cdn.ger = p->ger; cdn.pend = 1; cdn.pediuEm = SDL_GetTicks();
   if (pthread_create(&t, NULL, fioCdn, p) != 0) { free(p); cdn.pend = 0; return 0; }
   pthread_detach(t);
@@ -605,7 +616,7 @@ static void cdnBombear(void) {
   }
 }
 
-static int abrirSessao(void);
+static void abrirSessao(void);
 // Reabre a fonte original em `alvo` com um link novo do CDN (o velho pode ter
 // vencido). Para o app e um seek: video_pronto segue 1, a posicao fica no alvo
 // e as faixas escolhidas voltam (o mesmo caminho do recarregar da reconexao).
@@ -671,7 +682,7 @@ __attribute__((visibility("default")))
 int video_tpk_aviso_busca(void) { return atomic_exchange(&mfAviso, 0); }
 
 // Abre urlAtual no host. Serve a fonte nova e ao recarregar da reconexao.
-static int abrirSessao(void) {
+static void abrirSessao(void) {
   // video_iniciar() NAO e chamada no .tpk (so video.c, o ramo da LG, a chama;
   // aqui o trailer usa video_iniciar_auto, que nao a chama), entao a flag do
   // texto simples ficava em 0 e toda faixa S_TEXT/UTF8 saia do mkvass como
@@ -702,7 +713,7 @@ static int abrirSessao(void) {
   temRoi = 0;
   sessao++;
   velEnviada = 100;   // Player novo no host: nasce em 1x
-  if (!hAbrir) { falhou = 1; printf("[video] tpk: host sem player\n"); return 0; }
+  if (!hAbrir) { falhou = 1; printf("[video] tpk: host sem player\n"); return; }
   if (cv.ativo) {
     // O player le do servidor local; os cabecalhos do addon sao da fonte (o
     // servidor ja os usa), nao do 127.0.0.1.
@@ -727,7 +738,7 @@ static int abrirSessao(void) {
   // Depois do hAbrir: o host troca de sessao nele, e um aviso da sessao velha
   // emitido antes disso nao pode sobrar para matar a nova.
   atomic_store(&playerPreso, -2); atomic_store(&consultaLentaEm, 0);
-  return 1;
+  return;
 }
 
 static void guardarMkv(const MkvFaixa *fx, int n);
@@ -736,6 +747,7 @@ static int trilhaPelaOrdem(void);
 static int videoConvertivel(void);
 
 int video_tocar(const char *u) {
+  cdn.arquivo = 0;
   parado = 0; resgateAte = 0;
   if (cv.ativo || cv.sondando) dts_tpk_fechar();
   memset(&cv, 0, sizeof cv); cv.buscarMs = -1; naoSupPend = 0;
@@ -773,7 +785,8 @@ int video_tocar(const char *u) {
         if (t > 0 && convIniciar(t, 0.0, "cabecalho lido antes de abrir: a ordem do audio escolhe uma faixa DTS/TrueHD")) return 1; }
     }
   }
-  return abrirSessao();
+  abrirSessao();
+  return 1;
 }
 
 void video_definir_reconexao(int sim) { reconProxima = sim ? 1 : 0; }
@@ -1614,12 +1627,13 @@ void video_bombear(void) {
         }
       }
     }
-    if (!abrirSessao()) { reconErroCod = -1; reconErroPend = 1; }
+      reconErroCod = -1; reconErroPend = 1;
+      abrirSessao();
   }
 }
 void video_parar(void) {
   parado = 1; resgateAte = 0;
-  cdn.pend = 0; cdn.usado = 0;
+  cdn.pend = 0; cdn.usado = 0; cdn.arquivo = 0;
   atomic_fetch_add(&cdnGer, 1);
   if (cv.ativo || cv.sondando) dts_tpk_fechar();
   memset(&cv, 0, sizeof cv); cv.buscarMs = -1; naoSupPend = 0;
