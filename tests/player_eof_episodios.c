@@ -99,13 +99,15 @@ int main(void) {
       player_evento(&ev); ev.type = SDL_KEYUP; player_evento(&ev);
       ev.type = SDL_KEYDOWN; ev.key.keysym.sym = SDLK_RETURN; player_evento(&ev);
       ultimoPedido = SDL_GetTicks();
+      // Series have no Previous button: Left+OK never requests an episode.
+      if (anterior) { assert(!player_transporte_pedido_pendente() && !player_pediu_proximo(NULL, NULL)); ev.type = SDL_KEYUP; player_evento(&ev); player_encerrar(); continue; }
       assert(player_transporte_pedido_pendente());
-      assert(player_pediu_proximo(&t, &e) && t == 0 && e == (anterior ? 1 : 2));
+      assert(player_pediu_proximo(&t, &e) && t == 0 && e == 2);
       assert(!player_transporte_pedido_pendente() && !player_pediu_proximo(NULL, NULL));
       ev.type = SDL_KEYUP; player_evento(&ev);
       player_encerrar();
     }
-    puts("PASS season zero remote Next and Previous deliver once");
+    puts("PASS season zero remote Next delivers once, no Previous");
   }
   SDL_Quit();
   return falhas ? 1 : 0;

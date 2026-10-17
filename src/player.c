@@ -207,7 +207,7 @@ static void avisarCascaAberto(int v) { (void)v; }
 // IDs estaveis: a ordem visual e de navegacao vem de transporteAcoes.
 // Na serie, Anterior/Proximo ficam ao lado do Play; o restante conserva a ordem.
 enum { PLR_PLAY, PLR_CC, PLR_AUDIO, PLR_ASPECTO,
-       PLR_FONTES, PLR_EPISODIOS, PLR_ANTERIOR, PLR_PROXIMO, PLR_RECARREGAR, PLR_NBTNS };
+       PLR_FONTES, PLR_EPISODIOS, PLR_PROXIMO, PLR_RECARREGAR, PLR_NBTNS };
 
 // Avanco em curso: enquanto vale, posSeg e do DONO e nao do pipeline.
 static int    scrubbing, scrubPassos, scrubTocava, scrubDir, scrubToque;
@@ -740,12 +740,6 @@ int player_transporte_pedido_pendente(void) {
 }
 void player_episodio_pedido_liberar(void) {
   if (!pedProxT && !pedProxE) trocaEpisodio = 0;
-}
-const CatEp *player_anterior_episodio(void) {
-  int ix = idxAtual(), n = cat_n_episodios(ix);
-  const CatEp *base = n > 0 ? cat_episodio(ix, 0) : NULL;
-  int i = prox_indice_anterior(base, n, epT, epE);
-  return i >= 0 ? cat_episodio(ix, i) : NULL;
 }
 // A regra mora em prox_indice_seguinte (proximo.h), a mesma do cartao.
 const CatEp *player_proximo_episodio(void) {
@@ -2859,7 +2853,6 @@ static int transporteSerie(void) { return !ehCanal() && epT >= 0 && epE > 0; }
 static int transporteAcoes(PlrAcao a[PLR_NBTNS]) {
   int n = 0, serie = transporteSerie();
   int pronto = serie && !trocaEpisodio && !pedRecarregar && !player_carregando() && !erroFonte && !saindo;
-  if (serie) a[n++] = (PlrAcao){PLR_ANTERIOR, pronto && player_anterior_episodio() != NULL};
   a[n++] = (PlrAcao){PLR_PLAY, 1};
   if (serie) a[n++] = (PlrAcao){PLR_PROXIMO, pronto && player_proximo_episodio() != NULL};
   if (!ehCanal()) a[n++] = (PlrAcao){PLR_RECARREGAR,
@@ -3535,13 +3528,13 @@ static int ativarBotao(int i, int repetiu) {
   // So uma confirmacao nova pode aciona-lo depois de trocar de episodio.
   if (repetiu && confirmacaoTransporteRetida) return 0;
   switch (i) {
-    case PLR_ANTERIOR: case PLR_PROXIMO: {
+    case PLR_PROXIMO: {
       Uint32 agora = SDL_GetTicks();
       const CatEp *ep;
       char alvo[64];
       if (repetiu || trocaEpisodio ||
           (episodioPedidoMarcado && agora - episodioPedidoEm < 400u)) return 0;
-      ep = i == PLR_ANTERIOR ? player_anterior_episodio() : player_proximo_episodio();
+      ep = player_proximo_episodio();
       if (!ep || ep->temporada < 0 || ep->episodio <= 0 ||
           !cat_id_stream(idxAtual(), ep->temporada, ep->episodio, alvo, sizeof alvo) || !alvo[0]) return 0;
       // Copiar os numeros agora: a lista do catalogo pode ser republicada.
@@ -4555,7 +4548,6 @@ static const char *iconeBotao(int i) {
     case PLR_AUDIO:     return "pl_audio-lines";
     case PLR_ASPECTO:   return "pl_ratio";
     case PLR_FONTES:    return "pl_layers";
-    case PLR_ANTERIOR:  return "pl_chevron-left";
     case PLR_PROXIMO:   return "pl_chevron-right";
     case PLR_RECARREGAR:return "pl_rotate-ccw";
     default:            return epE > 0 ? "pl_list-video" : "pl_film";
@@ -4568,7 +4560,6 @@ static const char *rotuloBotao(int i) {
     case PLR_AUDIO:     return "\xc3\x81udio";
     case PLR_ASPECTO:   return "Propor\xc3\xa7\xc3\xa3o";
     case PLR_FONTES:    return "Fontes";
-    case PLR_ANTERIOR:  return "Episódio anterior";
     case PLR_PROXIMO:   return "Próximo episódio";
     case PLR_RECARREGAR:return "Recarregar";
     default:            return ehCanal() ? "Guia" : epE > 0 ? "Epis\xc3\xb3""dios" : "Relacionados";

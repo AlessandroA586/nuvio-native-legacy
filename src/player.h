@@ -57,7 +57,6 @@ int player_pediu_proximo(int *temporada, int *episodio);
 int player_transporte_pedido_pendente(void);
 // Libera somente uma troca ja consumida que o roteador cancelou; preserva a fila.
 void player_episodio_pedido_liberar(void);
-const CatEp *player_anterior_episodio(void);
 const CatEp *player_proximo_episodio(void);
 // A REGRA DO CARTAO DE PROXIMO EPISODIO, isolada do estado do player para
 // poder ser exercitada por teste. `cred` e o segundo em que os creditos
