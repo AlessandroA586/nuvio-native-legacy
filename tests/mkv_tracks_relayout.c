@@ -55,7 +55,8 @@ static void montar(int voidKb, int padKb, int comSeek) {
            "[V4+ Styles]\r\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\r\n"
            "Style: Default,Arial,48,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,0,2,10,10,10,1\r\n"
            "[Events]\r\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\r\n");
-  // Typesetting de fansub: CodecPrivate de ~100 KB leva o Tracks a passar da janela (#308).
+  // Typesetting de fansub: CodecPrivate de ~100 KB (#308) leva o Tracks a passar da janela;
+  // o #483 so cobria o caso de 0 faixas, nao o Tracks cortado.
   { size_t base = strlen(priv);
     memset(priv + base, '\n', (size_t)padKb * 1024); priv[base + (size_t)padKb * 1024] = 0; }
 

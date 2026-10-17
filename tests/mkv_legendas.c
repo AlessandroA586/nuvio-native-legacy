@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
     ok(mkv_casar_legendas(g, 6, tv, 2, ix) == MKV_CASA_NADA, "ordinal repetido sem imagem: nao casa");
     tv[0] = 0; tv[1] = 5;
     ok(mkv_casar_legendas(g, 6, tv, 2, ix) == MKV_CASA_NADA, "ordinal fora do arquivo: nao casa");
-    tv[0] = 0; tv[1] = 2;           // 2 aponta uma PGS no arquivo inteiro e passa de 2 no texto
+    tv[0] = 1; tv[1] = 2;           // 1 e ASS, mas 2 aponta uma PGS no arquivo inteiro e passa de 2 no texto
     ok(mkv_casar_legendas(g, 6, tv, 2, ix) == MKV_CASA_NADA, "ordinal que cairia numa PGS: nao casa"); }
 
   printf("\n[3] mkvass colhe a faixa do ORDINAL pedido\n");
