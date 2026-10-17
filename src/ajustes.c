@@ -393,7 +393,7 @@ typedef enum {
   AJ_VIDRO_OPAC, AJ_VIDRO_FOSCO,
   AJ_ICONE_APP, // append-only: keeps Glass option indices
   AJ_DISCORD,
-  AJ_TAMANHO_AJUSTES, // local, append-only; 80/90/100%, default 80%
+  AJ_TAMANHO_AJUSTES, // local, append-only; 80/90/100%, default 100%
   AJ_LOGO_TRAILER,    // local, append-only; hide the corner title logo while a trailer plays (OLED)
   // Idioma da legenda SECUNDARIA (F04, 1.8): a mesma lista e a mesma regra da
   // principal ("Da conta" segue subtitle_secondary_language do perfil). No fim
@@ -2646,7 +2646,7 @@ float ajustes_tamanho_ajustes(void) {
 #ifdef AJUSTES_TESTE
   if (ajEscalaTestePct) return ajEscalaTestePct / 100.0f;
 #endif
-  float s = v >= 0 && v < 3 ? F[v] : 0.8f;
+  float s = v >= 0 && v < 3 ? F[v] : 1.0f;
   if (gfx_escala_ui() < 1) s *= gfx_escala_ui();
   return ajRetrato() ? s * 1.25f : s;
 }
@@ -4364,6 +4364,19 @@ void ajustes_dir(const char *dir) {
         printf("[ajustes] tamanho dos ajustes 90%% -> 80%% (migracao unica da 2.0.3)\n");
       }
       dados_gravar("ajustesescala-203.txt", "1\n");
+      gravar();
+    } }
+  // 2.0.5: move the old factory 80% to 100% once. The 2.0.3 marker above
+  // preserves later 90% choices; this marker preserves every later choice.
+  // Old files cannot distinguish an explicit 80% from the factory default.
+  { char *m = dados_ler("ajustesescala-205.txt");
+    if (m) free(m);
+    else {
+      if (valor[AJ_TAMANHO_AJUSTES] == 0) {
+        valor[AJ_TAMANHO_AJUSTES] = 2;
+        printf("[ajustes] tamanho dos ajustes 80%% -> 100%% (migracao unica da 2.0.5)\n");
+      }
+      dados_gravar("ajustesescala-205.txt", "1\n");
       gravar();
     } }
   // MIGRACAO UNICA (2.0): o fundo da escolha de perfil volta a Filmes (0, a
@@ -6807,7 +6820,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_HERO_SINOPSE_TAM: return "Aumenta apenas as sinopses. Na página do título, abra Mais opções › Ler sinopse para ler o texto completo.";
     case AJ_TAMANHO_UI: return "Aumenta os controles do player, os painéis e os avisos. Os Ajustes têm um tamanho próprio.";
     case AJ_INTERFACE_MODO: return "Automático usa TV em aparelhos Android TV e Mobile nos demais aparelhos. TV mantém a interface do controle remoto; Mobile usa toque em retrato ou paisagem. A escolha fica salva só neste aparelho.";
-    case AJ_TAMANHO_AJUSTES: return i18n("Muda só o tamanho dos Ajustes nesta TV. O padrão é 80%.");
+    case AJ_TAMANHO_AJUSTES: return i18n("Muda só o tamanho dos Ajustes nesta TV. O padrão é 100%.");
     case AJ_LAYOUT_AJUSTES: return "Painel mostra uma prévia ao lado das opções. Lista põe as categorias e as opções uma embaixo da outra, com a explicação logo abaixo da linha em foco.";
     case AJ_TEMA: return "Cor do botão em foco e das marcas de estado. Os claros levam texto escuro, os profundos texto branco — sempre a 4,5:1 ou mais.";
     case AJ_VIDRO_OPAC: return "Teste: quanto os painéis de vidro deixam a arte aparecer. O valor do meio é o de hoje; menos é mais transparente, mais é mais escuro e fácil de ler.";
