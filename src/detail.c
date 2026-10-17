@@ -20,6 +20,8 @@
 //      conferido medindo o scrollTop nos quatro grupos.
 //   4. Ao rolar, a arte de fundo NAO desfoca: ela vai a 15% de opacidade em
 //      0.8s. O desfoque gaussiano era do app da Apple TV.
+#define NV_TXT_TELA   // NV_TELA_W/H = tela virtual da escala de texto (escala.h)
+#include "escala.h"
 #include "detail.h"
 #include "focoprof.h"
 #include "posterprov.h"
@@ -133,8 +135,8 @@ static GfxRect heroAcaoRect(float *x, float *cy, float w, float h) {
 // os desenham, la embaixo; subiram porque larguraItem e xItem, no topo,
 // precisam deles para posicionar as SECOES novas.
 // Glass UI (mockup "Detalhe", "Mais como este"): cartaz 218x327, vao 24.
-#define REL_CARD_W   212.0f
-#define REL_CARD_H   318.0f
+#define REL_CARD_W   (212.0f * gfx_poster_k())
+#define REL_CARD_H   (318.0f * gfx_poster_k())
 #define REL_CARD_GAP  32.0f
 
 // MINI CARD DA COLECAO (#194, 2a volta). Um cartao UNICO deitado, e nao uma
@@ -147,17 +149,17 @@ static GfxRect heroAcaoRect(float *x, float *cy, float w, float h) {
 #define COL_CARD_PAD  36.0f
 // Cartazes em escada no lado direito do card: o da frente e o primeiro da
 // saga, os de tras menores e deslocados para a esquerda.
-#define COL_CAPA_H   228.0f
-#define COL_CAPA_W   152.0f
-#define COL_CAPA_DX   72.0f
+#define COL_CAPA_H   (228.0f * gfx_poster_k())
+#define COL_CAPA_W   (152.0f * gfx_poster_k())
+#define COL_CAPA_DX   (72.0f * gfx_poster_k())
 // Tela de lista: coluna da colecao a esquerda, partes a direita.
 #define COLL_TOPO    120.0f
 #define COLL_ESQ_W   420.0f
 #define COLL_X       620.0f
 #define COLL_LIN_H   236.0f
 #define COLL_LIN_GAP  18.0f
-#define COLL_PO_W    140.0f
-#define COLL_PO_H    210.0f
+#define COLL_PO_W    (140.0f * gfx_poster_k())
+#define COLL_PO_H    (210.0f * gfx_poster_k())
 
 static float colecaoTopo(void) { return detalheRetrato() ? 480.0f : COLL_TOPO; }
 static GfxRect colecaoListaRect(void) {
@@ -262,11 +264,11 @@ static int  ratTemp;
 // 1 depois que ratTemp foi conciliado com a temporada da PAGINA usando a lista
 // do Trakt ja carregada. Zero enquanto a lista nao chegou — ver detail_atualizar.
 static int  ratSinc;
-#define PES_FOTO_W   280.0f
-#define PES_FOTO_H   420.0f
+#define PES_FOTO_W   (280.0f * gfx_poster_k())
+#define PES_FOTO_H   (420.0f * gfx_poster_k())
 #define PES_COL_X    (NV_DETP_X + PES_FOTO_W + 56.0f)
-#define PES_CARD_W   212.0f
-#define PES_CARD_H   318.0f
+#define PES_CARD_W   (212.0f * gfx_poster_k())
+#define PES_CARD_H   (318.0f * gfx_poster_k())
 #define PES_CARD_GAP  32.0f
 #define PES_POR_LINHA  6
 static int pessoaColunas(void) {
@@ -2721,7 +2723,7 @@ static void executarMais(int dm) {
   }
 }
 
-void detail_evento(const SDL_Event *e) {
+static void detail_evento_(const SDL_Event *e) {
   pediuRelogio = 0;
   if (sinopse_aberta()) { sinopse_evento(e); return; }
 #ifdef NV_TOUCH_UI
@@ -3534,7 +3536,7 @@ static void toquePessoaFocar(int i, int b) { (void)b; pessoaFoco = i; }
 
 static float blocoAnt[3] = { -1.0f, -1.0f, -1.0f };   // Notas / Numeros / Progresso no quadro anterior
 
-void detail_atualizar(float dt, Uint32 agora) {
+static void detail_atualizar_(float dt, Uint32 agora) {
 #ifdef NV_TOUCH_UI
   toqueDetalheSincronizarModo();
 #endif
@@ -6451,7 +6453,7 @@ static void desenhaListaColecao(float a) {
 
   // --- coluna da colecao --------------------------------------------------
   { const char *capa = extras_colecao_capa();
-    GfxRect rc = { NV_DETP_X, COLL_TOPO, 240.0f, 360.0f };
+    GfxRect rc = { NV_DETP_X, COLL_TOPO, 240.0f * gfx_poster_k(), 360.0f * gfx_poster_k() };
     float y, tx = NV_DETP_X, tw = COLL_ESQ_W;
     if (detalheRetrato()) {
       rc.w = COLL_PO_W; rc.h = COLL_PO_H;
@@ -7603,7 +7605,7 @@ static void maisDesenhar(void) {
   detmais_desenhar(maisAncora, 1.0f - trocaarte_visivel());
 }
 
-void detail_desenhar(Uint32 agora) {
+static void detail_desenhar_(Uint32 agora) {
 #ifdef NV_TOUCH_UI
   toqueDetalheSincronizarModo();
 #endif
@@ -7793,3 +7795,9 @@ void detail_sob_menu(int sim) {
   }
 }
 int detail_sob_menu_ativo(void) { return sobMenu; }
+
+// ESCALA DE TEXTO E COMPONENTES (escala.h): as entradas publicas ligam a camada
+// de texto; o corpo mede NV_TELA_W/H na tela virtual dela.
+void detail_evento(const SDL_Event *e) { TXT_INI(); detail_evento_(e); TXT_FIM(); }
+void detail_atualizar(float dt, Uint32 agora) { TXT_INI(); detail_atualizar_(dt, agora); TXT_FIM(); }
+void detail_desenhar(Uint32 agora) { TXT_INI(); detail_desenhar_(agora); TXT_FIM(); }

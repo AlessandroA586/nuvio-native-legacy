@@ -43,7 +43,7 @@
 // aqui dividida pelo fator (MK), e o que o usuario ve e o px do CSS.
 #define NV_MENU_ESCALA_BASE 0.9f
 static float menuEscala(void) {
-  return NV_MENU_ESCALA_BASE * (ajustes_home_layout() == HOME_LAYOUT_MODERNA ? NV_MENU_MODERNA_AUMENTO : 1.0f) * fminf(gfx_escala_ui(), 1.0f);
+  return NV_MENU_ESCALA_BASE * (ajustes_home_layout() == HOME_LAYOUT_MODERNA ? NV_MENU_MODERNA_AUMENTO : 1.0f) * fminf(gfx_escala_ui_base(), 1.0f) * gfx_escala_txt();
 }
 #define NV_MENU_ESCALA (menuEscala())
 #define MK(v) ((v) / NV_MENU_ESCALA_BASE)
