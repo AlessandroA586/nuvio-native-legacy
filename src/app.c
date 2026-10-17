@@ -251,6 +251,7 @@ static int autoParcialPronto(void) {
       autoMotivo = lembrada >= 0 && !prefPendente ? "fonte lembrada deste titulo"
                  : passou ? "prazo de espera pelos add-ons"
                  : prazo == 0 ? "instantaneo"
+                 : prazo < 0 ? "todos os add-ons responderam"
                  : addons_faltam(NULL, 0) > addons_faltam_decisivos()
                      ? "so faltam add-ons mudos ou lentos nesta TV"
                      : "fonte boa o bastante";
@@ -2166,7 +2167,12 @@ static void prepararAoAbrir(void) {
     preparoUltimo.tem = 1; preparoUltimo.lista = g; preparoUltimo.quando = SDL_GetTicks();
     preparoUltimo.contexto = contexto;
     snprintf(preparoUltimo.alvo, sizeof preparoUltimo.alvo, "%s", alvo);
-    stream_definir_alvo(alvo); addons_buscar_renovar(alvo, ci->tipo);
+    // LISTA VELHA NAO E MOTIVO PARA PERGUNTAR A TODOS OS ADDONS DE NOVO SOZINHO
+    // (PR #567): esta funcao roda a cada quadro com a pagina do titulo aberta
+    // e a folha de Fontes esvaziava e enchia de novo no meio da escolha. O
+    // Play renova a lista velha; "perguntar de novo" segue manual.
+    printf("[fonte] preparo: lista com %u s, nao renova sozinho (o Play renova)\n",
+           (unsigned)(stream_idade_ms() / 1000u));
     return;
   }
   stream_preferir(lembrada); preparoLembradaRod = lembrada;
@@ -5023,8 +5029,21 @@ void app_atualizar(float dt, Uint32 agora) {
       int i = detail_indice();
       const CatItem *ci = cat_item(i);
       char alvo[64];
+      int esperaFoco = 0;
       idDoAlvo(ci, alvo, sizeof alvo);
-      if (!player_aberto() && aguardandoFonte != 2 && ci && ci->imdb[0] &&
+      // ANDAR PELOS EPISODIOS NAO E PEDIR FONTES (PR #567): trocar so o
+      // episodio do mesmo titulo espera o foco parar 1,2 s nele; titulo novo,
+      // folha de Fontes aberta ou lista de addons mudada buscam na hora.
+      { static char pendAlvo[64];
+        static Uint32 pendDesde;
+        char b1[24], b2[24];
+        fontepref_id_base(alvo, b1, sizeof b1);
+        fontepref_id_base(ultimoAlvo, b2, sizeof b2);
+        if (ultimoAlvo[0] && strcmp(alvo, ultimoAlvo) && !strcmp(b1, b2) && !stream_folha_aberta()) {
+          if (strcmp(pendAlvo, alvo)) { snprintf(pendAlvo, sizeof pendAlvo, "%s", alvo); pendDesde = SDL_GetTicks(); }
+          esperaFoco = SDL_GetTicks() - pendDesde < 1200u;
+        } }
+      if (!player_aberto() && aguardandoFonte != 2 && ci && ci->imdb[0] && !esperaFoco &&
           (strcmp(alvo, ultimoAlvo) || (detail_aberto() && ultimaVersao != addons_versao()))) {
         if (!strcmp(alvo, ultimoAlvo)) printf("[addons] lista mudou: refazendo a busca de fontes de %s\n", alvo);
         snprintf(ultimoAlvo, sizeof ultimoAlvo, "%s", alvo);

@@ -2624,6 +2624,7 @@ int stream_auto_pode_decidir(int preferida, int prefPendente, int prazoPassou, i
   p.pendenteGrupoMin = addons_pendente_grupo_min(pendenteGrupoCb, &rc);
   p.rank = rk; p.ordemUso = ajustes_fonte_ordem_uso();
   p.pendenteRankMin = p.ordemUso == FR_ORDEM_ESTRITA ? addons_pendente_grupo_min(pendenteRankCb, &rc) : 99;
+  p.esperaTodos = ajustes_fonte_prazo_ms() < 0;
   r = fonteauto_pode_decidir(&p);
   free(pts); free(acima); free(excl); free(boa); free(ad); free(grp); free(rk);
   return r;
