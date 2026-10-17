@@ -51,6 +51,9 @@
 #include "listas.h"
 #include "text.h"
 #include "tex_cache.h"
+#include "memlog.h"
+#include "mkvass.h"
+#include "assrender.h"
 #include "artehero.h"
 #include "arteescolha.h"
 #include "vertudo.h"
@@ -2699,6 +2702,16 @@ static void recarregarFonteVOD(void) {
   if (fonteVODAutomatica) fonteVODDesde = agora;
   else fonteManualDesde = agora;
 }
+// #415: ao lado das texturas saem tambem os buffers que tex_aliviar nao ve —
+// colheita/legenda do mkvass (parar grava o sidecar parcial e nao bloqueia) e
+// a grade de linhas rasterizadas. O texto se refaz sob demanda no quadro.
+static void aliviarMemoria(void) {
+  tex_aliviar();
+  mkvass_parar();
+  txt_aliviar();
+  assrender_aliviar();
+  memlog_devolver();
+}
 static void tentarProximaFonteVOD(void) {
   Uint32 desde;
   int atual, motivo = 0;
@@ -2727,6 +2740,16 @@ static void tentarProximaFonteVOD(void) {
     motivo = 3;
   }
   if (!motivo) return;
+  // #415 (LG G4, webOS 9): erro 600 com 4K tocando, 92 MB livres, e o app
+  // reabria a fonte no mesmo instante — o webOS o fechou por memoria. Antes de
+  // outro pipeline, solta o que der; ainda abaixo do piso, mostra o erro.
+  if (motivo == 1 && !memlog_pode_reabrir(memlog_livre_mb, aliviarMemoria)) {
+    printf("[mem] fonte falhou com %ld MB livres: sem nova tentativa\n", memlog_livre_mb());
+    fflush(stdout);
+    fonteVODAutomatica = 0;
+    player_erro_fonte();
+    return;
+  }
 
   atual = stream_atual();
   if (fonteFalha) {
@@ -2988,6 +3011,9 @@ static void perfilAbrirSessao(int antes) {
 }
 
 int app_iniciar(const char *dirArte) {
+  // #415: MemAvailable abaixo do piso -> despeja texturas, mkvass, texto,
+  // libass e heap; sem isto o aviso so rodava malloc_trim.
+  memlog_quando_aviso(aliviarMemoria);
   legenda2_vincular_atraso(ajustes_leg2_atraso(), ajustes_leg2_definir_atraso);
   // A faixa de audio escolhida a mao fica gravada por perfil (audiomemoria.h).
   audioesc_definir_memoria(audiomem_ler, audiomem_gravar);

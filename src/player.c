@@ -63,12 +63,18 @@
 // dado nas TRES transicoes de `aberto`, e so nelas: nada por quadro.
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
-static void avisarCascaAberto(int v) { EM_ASM({ window.nvPlayerAberto = $0; }, v); }
+// #415: o piso de reproducao do cache de arte vale do abrir ao fechar. No
+// Android a mesma chamada ja sai de video_android.c ao abrir a sessao; repetir
+// aqui e idempotente (tex_pressao_reproducao sai cedo se o pct nao mudou).
+// No webOS/.tpk o piso efetivo vem da faixa armada pelo MemAvailable
+// (pressaoPlayMin em tex_memoria_livre): TV com memoria de sobra nao perde
+// cache. A miniatura (PiP) tambem liga: ela significa video no ar.
+static void avisarCascaAberto(int v) { EM_ASM({ window.nvPlayerAberto = $0; }, v); tex_pressao_reproducao(v); }
 #elif defined(NV_ANDROID) && defined(NV_TOUCH_UI)
 #include "android.h"
-static void avisarCascaAberto(int v) { android_player_tela_cheia(v); }
+static void avisarCascaAberto(int v) { android_player_tela_cheia(v); tex_pressao_reproducao(v); }
 #else
-static void avisarCascaAberto(int v) { (void)v; }
+static void avisarCascaAberto(int v) { (void)v; tex_pressao_reproducao(v); }
 #endif
 #include "trakt.h"
 #include "simkl.h"
@@ -1673,7 +1679,10 @@ void player_abrir(int indiceCatalogo, const char *url) {
     else if (mini || ficaMini) { mini = 0; miniGuia = 0; video_parar(); }
     else miniGuia = 0;
     janAtiva = 0;
-    avisarCascaAberto(aberto);
+    // O piso de arte conta o PiP: video no ar (mini/comVideo) com a UI toda
+    // interativa e o pior caso do #415 — o comentario antigo prometia e o
+    // `aberto=0` da miniatura desligava (rev #415).
+    avisarCascaAberto(aberto || mini || comVideo);
     if (ci && ci->imdb[0] && !canalSessao && ajustes_classif_player()) parental_pedir(ci->imdb);
     // A grade EPG comeca a baixar ja: o banner "agora/a seguir" do OSD e o
     // overlay do guia dependem dela. Idempotente.
@@ -2506,7 +2515,7 @@ static void fecharSessao(int manter) {
     // do anterior. mkvass_parar grava o sidecar parcial com o que ja veio.
     mkvass_parar();
     mkvass_video_aberto(0);
-    if (!manter) legenda_desligar();
+    if (!manter) { legenda_desligar(); memlog_devolver(); }
     printf("[player] saida: video %s %u ms, resto %u ms\n", manter ? "retido" : "parar",
            (unsigned)(tv - t0), (unsigned)(SDL_GetTicks() - tv));
     fflush(stdout); }

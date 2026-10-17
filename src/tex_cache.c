@@ -635,8 +635,14 @@ static int pedidoObsoleto(const Item *it) {
 }
 
 static void podar(void);
+static void soltarCpu(int falhas);
 static int pressaoAtiva(void);
+static int pressaoSevera(void);
 static volatile int pressaoPlay = 100;   // tex_pressao_reproducao (abaixo)
+// webOS/.tpk: faixa do piso de reproducao, alimentada pelo relatorio de 3 s
+// (tex_memoria_livre). 100 = memoria de sobra, sem piso. O Android nao a usa:
+// la o piso e fixo por MemTotal (tex_pressao_play_pct).
+static volatile int pressaoPlayMin = 100;
 static long orcMemTotal;                 // RAM medida (definida perto de orcamentoMB)
 
 void tex_novo_quadro(void) {
@@ -662,6 +668,14 @@ void tex_novo_quadro(void) {
   }
   // PRESSAO DE MEMORIA (tex_pressao_memoria): o aviso chega de outro fio, que
   // nao tem contexto GL e nao pode despejar textura. Quem despeja e este quadro.
+  // soltarCpu so no patamar DURO (<=25%%, <150 MB livres): na faixa de 50%%
+  // (150-300 MB, onde a G4 fica por minutos) matar todo DECODIFICADO por
+  // quadro punha a arte do OSD/posplay num laco decode->mata->decode pela
+  // janela inteira — a poda a 50%% ja basta ali (rev #415).
+  if (pressaoSevera()) soltarCpu(0);
+  // O piso de reproducao (pressaoPlay) so despeja via poda: soltarCpu aqui
+  // mataria todo DECODIFICADO que a bomba ainda nao pegou — arte do OSD/posplay
+  // entraria em decode->mata->decode durante TODA a sessao (rev #415).
   if (pressaoAtiva() || pressaoPlay < 100) podar();
   SDL_UnlockMutex(mtx);
 }
@@ -847,8 +861,8 @@ static volatile Uint32 pressaoAte;
 // o tempo todo. Com um teto persistente de tela-cheia, gpu-cache + player
 // buffer + pedacos paralelos + preload do proximo titulo estouraram uma TV
 // de 2,4 GB (PSS ~575 MB, lmkd matou o app). Durante a reproducao o teto
-// efetivo fica nesta fracao, ate a sessao de video fechar. So o Android
-// acorda isto; webOS/Tizen nunca chamam tex_pressao_reproducao.
+// efetivo fica nesta fracao, ate a sessao de video fechar. No Android liga
+// com o video; no webOS/.tpk so com a TV sem memoria (tex_memoria_livre).
 // `pressaoPlay` foi declarado junto das forward declarations (a poda a le).
 static int pressaoAtiva(void) {
   if (pressaoPct >= 100) return 0;
@@ -860,6 +874,7 @@ static int pressaoAtiva(void) {
   }
   return 1;
 }
+static int pressaoSevera(void) { return pressaoAtiva() && pressaoPct <= 25; }
 static long limiteBytes(void) {
   long lim = pressaoAtiva() ? orcamento / 100 * pressaoPct : orcamento;
   if (pressaoPlay < 100 && orcamento / 100 * pressaoPlay < lim)
@@ -877,7 +892,11 @@ int tex_pressao_play_pct(void) {
   if (orcMemTotal < 3000) return 40;
   return 75;
 #else
-  return 100;
+  // webOS/.tpk: o piso NAO e incondicional — a regra e "caps menores so com
+  // memoria baixa". A faixa vem do relatorio de 3 s (pressaoPlayMin, em
+  // tex_memoria_livre): TV com folga (C9 com GBs livres) fica com o cache
+  // inteiro durante a reproducao; a G4 apertada cai no piso medido no #415.
+  return pressaoPlayMin;
 #endif
 }
 void tex_pressao_reproducao(int ligada) {
@@ -919,10 +938,66 @@ Java_space_nuvio_nativelegacy_NuvioActivity_nativeTrimMemoria(JNIEnv *env, jobje
 }
 #endif
 
+// SOB PRESSAO: a memoria de CPU que podar() nao alcanca. A superficie ja
+// decodificada (`sup`) e os bytes baixados (`bruto`) ficam fora de
+// bytesUsados; sem este passe um aviso no meio do decode derruba so a GPU e os
+// buffers vivos seguem segurando o heap — e malloc_trim nao solta o que esta
+// alocado. O pedido morre junto (desistir): com a TV no piso, guardar decode
+// pronto para "talvez desenhar" e o que encheu a G4 no #415.
+// `falhas` = tambem limpa os slots FALHOU (tex_aliviar, antes de reabrir o
+// pipeline); na varredura do quadro o slot falho fica, guardando o recuo.
+static void soltarCpu(int falhas) {
+  for (int i = 0; i < nMax; i++) {
+    if (itens[i].estado == DECODIFICADO && itens[i].sup) {
+      if (uplSup == itens[i].sup) uplSup = NULL;   // envio em curso revalida pelo idx
+      liberarSup(itens[i].sup);
+      itens[i].sup = NULL;
+      desistir(i);
+    } else if ((itens[i].estado == PENDENTE && !itens[i].naFilaDec &&
+                !itens[i].filaRedeEm) ||
+               (falhas && itens[i].estado == FALHOU)) {
+      // O idx de um PENDENTE JA NUMA FILA (rede ou decode) nao pode virar
+      // VAZIO aqui: a fila e um anel de indices e devolveria o numero para o
+      // proximo slot a ocupa-lo. Ele desiste sozinho ao ser tirado; o `bruto`
+      // sai mesmo assim.
+      desistir(i);
+    } else if (itens[i].estado == FALHOU || itens[i].bruto) {
+      soltarBruto(&itens[i]);
+    }
+  }
+}
+
 static void podar(void) {
   long lim = limiteBytes();
   while (bytesUsados > lim)
     if (despejar(0) < 0) break;
+}
+
+// webOS/.tpk nao tem onTrimMemory: o relatorio de 3 s (main.c) passa o
+// MemAvailable. #415 (LG G4, webOS 9, MemTotal 1965 MB): 127 MB de arte
+// residente com o video 4K em tela cheia (tela=0), e o webOS fechou o app com
+// 92 MB livres. Abaixo de 150 MB o teto vai a 25%; abaixo de 300, a 50%. O
+// MESMO relatorio arma a faixa do piso de reproducao (pressaoPlayMin): abrir
+// video com a TV apertada ja comeca com o cache no piso — o pico de alocacao
+// do pipeline acontece ANTES de a memoria cair de vez, e esperar era deixar
+// o cache inteiro vivo durante o arranque. A faixa tambem aperta um piso ja
+// ligado; afrouxar so no fechar (video aberto nao recupera arte sob pressao
+// intermitente). A home redecodifica do disco ao voltar.
+void tex_memoria_livre(long livreMb) {
+  int nivel;
+  if (livreMb < 0) return;
+  nivel = livreMb < 150 ? 80 : livreMb < 300 ? 20 : 0;
+  pressaoPlayMin = livreMb < 150 ? 20 : livreMb < 300 ? (orcMemTotal >= 3500 ? 35 : 20) : 100;
+  if (pressaoPlayMin < pressaoPlay) pressaoPlay = pressaoPlayMin;
+  if (nivel && !(pressaoAtiva() && pressaoPct <= tex_pressao_pct(nivel))) tex_pressao_memoria(nivel);
+}
+void tex_aliviar(void) {
+  tex_pressao_memoria(80);
+  if (!mtx) return;
+  SDL_LockMutex(mtx);
+  soltarCpu(1);
+  podar();
+  SDL_UnlockMutex(mtx);
 }
 
 // Diretorio onde as imagens baixadas ficam. Uma vez baixada, a imagem vale
