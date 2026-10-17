@@ -16,7 +16,8 @@
 // Ids: filme-topo filme-explorar ("..." em foco) filme-mais serie-mais
 //      filme-trailers filme-elenco filme-notas filme-comentarios
 //      filme-relacionados filme-colecao filme-fim serie-topo serie-ep
-//      serie-temp serie-baixo
+//      serie-temp serie-baixo filme-comentarios-foco serie-comentarios
+//      serie-comentarios-pilula
 #include <SDL2/SDL.h>
 #include "nvtmp.h"
 #include <SDL2/SDL_image.h>
@@ -78,7 +79,35 @@
 #define extras_ficha_paises       fx_ficha_paises
 #define extras_ficha_classificacao fx_ficha_classificacao
 
-#include "../src/detail.c"
+#include "text.h"
+static int traktLayoutCalls;
+float trakt_bloco(TxtEstilo, const char *, int, int, int, float, float, float, float, float, int);
+int trakt_largura(TxtEstilo, const char *);
+size_t trakt_token_tam(const char *);
+#define txt_bloco trakt_bloco
+#define txt_largura trakt_largura
+#define txt_token_tam trakt_token_tam
+#ifndef NV_DETAIL_SOURCE
+#define NV_DETAIL_SOURCE "../src/detail.c"
+#endif
+#include NV_DETAIL_SOURCE
+#undef txt_bloco
+#undef txt_largura
+#undef txt_token_tam
+
+float trakt_bloco(TxtEstilo e, const char *s, int r, int g, int b,
+                   float x, float y, float w, float lead, float a, int max) {
+  traktLayoutCalls++;
+  return txt_bloco(e, s, r, g, b, x, y, w, lead, a, max);
+}
+int trakt_largura(TxtEstilo e, const char *s) {
+  traktLayoutCalls++;
+  return txt_largura(e, s);
+}
+size_t trakt_token_tam(const char *s) {
+  traktLayoutCalls++;
+  return txt_token_tam(s);
+}
 
 #include "dados.h"
 #include "ilha.h"
@@ -105,12 +134,20 @@ static const char *const COM_TXT[] = {
   "as cenas em que aparece.",
   "Perfeito para uma tarde de chuva." };
 static const int COM_NOTA[] = { 8, 6, 7 }, COM_CUR[] = { 6, 3, 1 };
-int fx_n_comentarios(void)    { return ehSerieDeEnsaio() ? 0 : 3; }
+int fx_n_comentarios(void)    { return getenv("NUVIO_TRAKT_CHECK") && !strcmp(getenv("NUVIO_TRAKT_CHECK"), "perf") ? 8 : 3; }
 int fx_n_comentarios_ep(void) { return 0; }
-const char *fx_com_usuario(int i)  { return COM_USU[i]; }
-const char *fx_com_texto(int i)    { return COM_TXT[i]; }
-int fx_com_curtidas(int i)         { return COM_CUR[i]; }
-int fx_com_nota(int i)             { return COM_NOTA[i]; }
+const char *fx_com_usuario(int i)  { return COM_USU[i % 3]; }
+const char *fx_com_texto(int i)    {
+  static const char *more[] = {
+    "Fourth review. A different story, worth watching with friends.",
+    "Fifth review. The score carries every scene and the ending works.",
+    "Sixth review. Great actors and a beautiful setting throughout.",
+    "Seventh review. A quiet story that rewards attention to detail.",
+    "Eighth review. My favorite of the year, especially the final act." };
+  return i < 3 ? COM_TXT[i] : more[i - 3];
+}
+int fx_com_curtidas(int i)         { return COM_CUR[i % 3]; }
+int fx_com_nota(int i)             { return COM_NOTA[i % 3]; }
 const char *fx_com_lingua(int i)   { (void)i; return ""; }
 
 const char *fx_ficha_status(void)        { return "Released"; }
@@ -298,6 +335,11 @@ static void gravar(const char *id) {
   // A rolagem do documento, para montar a pagina inteira (lado a lado com o
   // quadro alto do mockup, 1920x4230).
   printf("rolagem %s %.0f\n", id, scrollY);
+  if (getenv("NUVIO_TRAKT_SHOT")) {
+    printf("Trakt material: glass=%d frost=%d sampled-panels=%d\n",
+           ajustes_vidro(), ajustes_vidro_fosco(), gfx_vidro_com_fonte);
+    if (ajustes_vidro() && ajustes_vidro_fosco()) assert(gfx_vidro_com_fonte > 0);
+  }
 }
 
 static void quadros(int n) {
@@ -349,6 +391,8 @@ static void abrir(int i, int nv, int sec, int col) {
   quadros(4);
 }
 
+#include "traktcoment_checks.h"
+
 static int quer(int argc, char **argv, const char *id) {
   if (argc <= 2) return 1;
   for (int i = 2; i < argc; i++) if (!strcmp(argv[i], id)) return 1;
@@ -398,11 +442,18 @@ int main(int argc, char **argv) {
     if (getenv("NUVIO_SHOT_FUNDO")) fprintf(f, "fundoLocal %d\n", atoi(getenv("NUVIO_SHOT_FUNDO")));
     fclose(f);
     ajustes_dir(dd); }
+  // First-run appearance migration overrides the file; apply shot settings after it.
+  if (getenv("NUVIO_TRAKT_SHOT") || getenv("NUVIO_TRAKT_CHECK")) {
+    ajustes_teste_vidro_env();
+    ajustes_definir_vidro(getenv("NUVIO_SHOT_VIDRO") && atoi(getenv("NUVIO_SHOT_VIDRO")));
+    assert(ajustes_vidro() == (getenv("NUVIO_SHOT_VIDRO") && atoi(getenv("NUVIO_SHOT_VIDRO"))));
+  }
   if (vt_ligado()) vt_vidro();
   // As marcas das notas (IMDb, Rotten Tomatoes, Trakt) vem da pasta de arte.
   { char ar[1024]; if (realpath("deploy/app/art", ar)) extras_carregar(ar); }
   montarCatalogo();
   cacheFrases();
+  if (getenv("NUVIO_TRAKT_CHECK")) return trakt_checks();
   // NUVIO_SHOT_AMIGOS=1: amigos falsos (feed externo) no filme e na serie —
   // o que a ilha e a lista "O que os amigos acharam" mostram (06/10/2026):
   // quem recomendou, reacao, nota de tracker, progresso, "parou" e "terminou".
@@ -516,6 +567,20 @@ int main(int argc, char **argv) {
   if (quer(argc, argv, "filme-elenco")) { abrir(1, 1, SEC_ELENCO, 0); gravar("filme-elenco"); }
   if (quer(argc, argv, "filme-notas")) { abrir(1, 1, SEC_NOTAS, 0); gravar("filme-notas"); }
   if (quer(argc, argv, "filme-comentarios")) { abrir(1, 1, SEC_COMENTARIOS, 0); gravar("filme-comentarios"); }
+  // Trakt comments row, movie and series (series: pills first, cards from col 2).
+  if (quer(argc, argv, "filme-comentarios-foco")) { abrir(1, 1, SEC_COMENTARIOS, 1); gravar("filme-comentarios-foco"); }
+  if (quer(argc, argv, "serie-comentarios")) { abrir(0, 1, SEC_COMENTARIOS, 2); gravar("serie-comentarios"); }
+  if (quer(argc, argv, "serie-comentarios-pilula")) { abrir(0, 1, SEC_COMENTARIOS, 0); gravar("serie-comentarios-pilula"); }
+  for (int series = 0; series < 2; series++) {
+    const char *id = series ? "serie-comentarios-sem-foco" : "filme-comentarios-sem-foco";
+    if (!quer(argc, argv, id)) continue;
+    abrir(series ? 0 : 1, 1, SEC_COMENTARIOS, series ? 2 : 0);
+    // Keep the same viewport while removing row focus, without a scroll update.
+    nivel = 0; memset(animFoco, 0, sizeof animFoco);
+    txt_novo_quadro(); gfx_novo_quadro();
+    glClear(GL_COLOR_BUFFER_BIT); detail_desenhar(SDL_GetTicks());
+    gravar(id);
+  }
   if (quer(argc, argv, "filme-relacionados")) { abrir(1, 1, SEC_RELACIONADOS, 0); gravar("filme-relacionados"); }
   if (quer(argc, argv, "filme-colecao")) { abrir(1, 1, SEC_COLECAO, 0); gravar("filme-colecao"); }
   if (quer(argc, argv, "filme-fim")) { abrir(1, 1, SEC_DETALHES, 0); gravar("filme-fim"); }
