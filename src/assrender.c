@@ -329,6 +329,7 @@ static void ass_carregar_pasta_locked(void) {
   if (assPastaExtra[0]) assrender_ler_pasta_fontes(assPastaExtra, ass_fonte_da_pasta, NULL, NULL);
   if (!assVistoNaskh && assNaskhFalhou) ass_subset_naskh_locked();
 #endif
+  plainass_arabic_bold = assNaskhBold;
   fprintf(stderr, "[libass] pasta %s: %d fonte(s); %d arquivo(s) que nao sao fonte ignorado(s)\n",
           assPastaFontes, lidas, ignorados);
 }
