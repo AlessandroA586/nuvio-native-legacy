@@ -765,7 +765,7 @@ typedef struct {
   char casa[400];     // a chave da copia lembrada (sem URL)
   char texto[1400];   // arquivo + rotulo + descricao: os atributos da fonte
   uint64_t bytes;
-  unsigned geracao;
+  unsigned geracao, conta;
   int cedo;   // partes_pedir_cedo: so a pagina 1 da memoria, sem rede
   int item;   // partes_pedir_item: abre este item (Escolher outra copia)
   int nCopias;
@@ -774,7 +774,7 @@ typedef struct {
 
 static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
 static PartesLista ultima;          // resultado da ultima busca
-static unsigned geracaoLista;
+static unsigned geracaoLista, ultimaConta;
 static char chaveUltima[160];       // de que fonte e `ultima`
 
 // A FONTE, sem URL na memoria: o rotulo e o nome do arquivo bastam para
@@ -788,19 +788,20 @@ static void chaveFonte(const Stream *s, char *dst, size_t n) {
 // AS ULTIMAS LISTAS ACHADAS, por fonte: segurar de novo a mesma fonte (ou
 // segurar depois do pedido cedo do OK) responde na hora.
 #define PARTES_MEMO 16
-static struct { char chave[160]; PartesLista l; } memo[PARTES_MEMO];
+static struct { char chave[160]; unsigned conta; PartesLista l; } memo[PARTES_MEMO];
 static int memoProx;
 static int memoPegarSemTrava(const char *ch, PartesLista *l) {
   for (int i = 0; i < PARTES_MEMO; i++)
-    if (memo[i].chave[0] && !strcmp(memo[i].chave, ch)) { if (l) *l = memo[i].l; return 1; }
+    if (memo[i].conta == debrid_tb_geracao() && memo[i].chave[0] && !strcmp(memo[i].chave, ch)) { if (l) *l = memo[i].l; return 1; }
   return 0;
 }
-static void memoGuardarSemTrava(const char *ch, const PartesLista *l) {
+static void memoGuardarSemTrava(const char *ch, const PartesLista *l, unsigned conta) {
   int i;
   for (i = 0; i < PARTES_MEMO; i++) if (!strcmp(memo[i].chave, ch)) break;
   if (i == PARTES_MEMO) { i = memoProx; memoProx = (memoProx + 1) % PARTES_MEMO; }
   snprintf(memo[i].chave, sizeof memo[i].chave, "%s", ch);
   memo[i].l = *l;
+  memo[i].conta = conta;
 }
 
 static void memoTirarItem(int item) {
@@ -876,8 +877,10 @@ static void casaGuardar(const char *ch, const char *hash, const char *porque) {
 
 static void publicar(const PedidoLista *pd, const PartesLista *l) {
   pthread_mutex_lock(&trava);
-  if (l->estado == PARTES_PRONTO) memoGuardarSemTrava(pd->chave, l);
-  if (!pd->cedo && pd->geracao == geracaoLista) ultima = *l;
+  if (pd->conta == debrid_tb_geracao()) {
+    if (l->estado == PARTES_PRONTO) memoGuardarSemTrava(pd->chave, l, pd->conta);
+    if (!pd->cedo && pd->geracao == geracaoLista) { ultima = *l; ultimaConta = pd->conta; }
+  }
   pthread_mutex_unlock(&trava);
 }
 
@@ -894,7 +897,7 @@ static void publicar(const PedidoLista *pd, const PartesLista *l) {
 // Uma leitura de rede por vez: quem chega durante uma leitura espera e usa o
 // que ela trouxe.
 #define LISTA_VALIDADE_MS 120000u
-typedef struct { char *corpo; int st; unsigned em; int fresco; } ListaCache;
+typedef struct { char *corpo; int st; unsigned em, conta; int fresco; } ListaCache;
 static ListaCache lcache[2];
 static pthread_mutex_t lcTrava = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t lcRede = PTHREAD_MUTEX_INITIALIZER;
@@ -908,7 +911,7 @@ static unsigned msAgora(void) {
 // vazia lida logo depois de esvaziar a conta respondia "nao achou em 0 ms").
 #define LISTA_FRESCA_MS 10000u
 static char *copiaCache(ListaCache *c, int fresco, int *st) {
-  if (!c->corpo || msAgora() - c->em >= LISTA_VALIDADE_MS || (fresco && (!c->fresco || msAgora() - c->em >= LISTA_FRESCA_MS)))
+  if (c->conta != debrid_tb_geracao() || !c->corpo || msAgora() - c->em >= LISTA_VALIDADE_MS || (fresco && (!c->fresco || msAgora() - c->em >= LISTA_FRESCA_MS)))
     return NULL;
   if (st) *st = c->st;
   return strdup(c->corpo);
@@ -927,7 +930,9 @@ static char *listaConta(int usenet, int pagina, int fresco, int *st, int *origem
   pthread_mutex_unlock(&lcTrava);
   if (r) { pthread_mutex_unlock(&lcRede); return r; }
   if (origem) *origem = 0;
+  unsigned conta = debrid_tb_geracao();
   r = debrid_tb_mylist(usenet, 0, pagina, fresco, &s);
+  if (conta != debrid_tb_geracao()) { free(r); r = NULL; s = 0; }
   if (st) *st = s;
   printf("[partes] TorBox %s list page %d (%s): HTTP %d, %u KB in %u ms\n", usenet ? "usenet" : "torrent",
          pagina + 1, fresco ? "fresh" : "TorBox cache", s, r ? (unsigned)(strlen(r) / 1024) : 0u, msAgora() - t0);
@@ -939,6 +944,7 @@ static char *listaConta(int usenet, int pagina, int fresco, int *st, int *origem
       free(lcache[usenet].corpo);
       lcache[usenet].corpo = c; lcache[usenet].st = s;
       lcache[usenet].em = msAgora(); lcache[usenet].fresco = fresco;
+      lcache[usenet].conta = conta;
     }
     pthread_mutex_unlock(&lcTrava);
   }
@@ -962,7 +968,7 @@ void partes_aquecer(void) {
   int tem;
   if (!partes_disponivel() || debrid_tb_disponivel() <= 0) return;
   pthread_mutex_lock(&lcTrava);
-  tem = lcache[0].corpo && msAgora() - lcache[0].em < LISTA_VALIDADE_MS / 2;
+  tem = lcache[0].conta == debrid_tb_geracao() && lcache[0].corpo && msAgora() - lcache[0].em < LISTA_VALIDADE_MS / 2;
   pthread_mutex_unlock(&lcTrava);
   if (tem) return;
   if (pthread_create(&t, NULL, fioAquecer, NULL) == 0) pthread_detach(t);
@@ -1031,6 +1037,7 @@ static void *fioLista(void *u) {
   pthread_mutex_lock(&fioTrava);
   memset(&l, 0, sizeof l);
   l.atual = -1;
+  if (pd->conta != debrid_tb_geracao()) goto fim;
   disp = debrid_tb_disponivel();
   if (disp <= 0) {
     l.estado = disp < 0 ? PARTES_SEM_PLANO : PARTES_SEM_CHAVE;
@@ -1230,6 +1237,7 @@ static PedidoLista *novoPedido(const Stream *s, const char *titulo, const char *
   snprintf(pd->titulo, sizeof pd->titulo, "%s", titulo ? titulo : "");
   snprintf(pd->chave, sizeof pd->chave, "%s", ch);
   pd->bytes = s->tamanhoBytes;
+  pd->conta = debrid_tb_geracao();
   return pd;
 }
 
@@ -1243,6 +1251,7 @@ void partes_pedir(const Stream *s, const char *titulo) {
   if (memoPegarSemTrava(ch, &ultima)) {
     // a mesma fonte, ja achada (por este segurar, um anterior ou o pedido cedo)
     geracaoLista++;
+    ultimaConta = debrid_tb_geracao();
     snprintf(chaveUltima, sizeof chaveUltima, "%s", ch);
     pthread_mutex_unlock(&trava);
     printf("[partes] files of the source: from memory (%s, by %s): %d video file(s)\n",
@@ -1252,6 +1261,7 @@ void partes_pedir(const Stream *s, const char *titulo) {
   }
   geracaoLista++;
   memset(&ultima, 0, sizeof ultima);
+  ultimaConta = debrid_tb_geracao();
   ultima.estado = PARTES_BUSCANDO;
   ultima.atual = -1;
   snprintf(chaveUltima, sizeof chaveUltima, "%s", ch);
@@ -1279,7 +1289,7 @@ void partes_pedir_cedo(const Stream *s, const char *titulo) {
   ja = memoPegarSemTrava(ch, NULL);
   pthread_mutex_unlock(&trava);
   pthread_mutex_lock(&lcTrava);
-  temLista = lcache[0].corpo && msAgora() - lcache[0].em < LISTA_VALIDADE_MS;
+  temLista = lcache[0].conta == debrid_tb_geracao() && lcache[0].corpo && msAgora() - lcache[0].em < LISTA_VALIDADE_MS;
   pthread_mutex_unlock(&lcTrava);
   if (ja || !temLista) return;
   pd = novoPedido(s, titulo, ch);
@@ -1304,6 +1314,7 @@ void partes_pedir_item(const Stream *s, int item) {
   geracaoLista++;
   pd->geracao = geracaoLista;
   memset(&ultima, 0, sizeof ultima);
+  ultimaConta = pd->conta;
   ultima.estado = PARTES_BUSCANDO;
   ultima.atual = -1;
   ultima.nCopias = pd->nCopias;
@@ -1328,7 +1339,7 @@ int partes_resultado_de(const Stream *s, PartesLista *l) {
   if (!s) return PARTES_VAZIO;
   chaveFonte(s, ch, sizeof ch);
   pthread_mutex_lock(&trava);
-  e = strcmp(ch, chaveUltima) ? PARTES_VAZIO : ultima.estado;
+  e = ultimaConta != debrid_tb_geracao() || strcmp(ch, chaveUltima) ? PARTES_VAZIO : ultima.estado;
   if (e != PARTES_VAZIO && l) *l = ultima;
   pthread_mutex_unlock(&trava);
   return e;
@@ -1337,8 +1348,8 @@ int partes_resultado_de(const Stream *s, PartesLista *l) {
 int partes_resultado(PartesLista *l) {
   int e;
   pthread_mutex_lock(&trava);
-  if (l) *l = ultima;
-  e = ultima.estado;
+  e = ultimaConta == debrid_tb_geracao() ? ultima.estado : PARTES_VAZIO;
+  if (l && e != PARTES_VAZIO) *l = ultima;
   pthread_mutex_unlock(&trava);
   return e;
 }
@@ -1355,8 +1366,8 @@ void partes_cancelar(void) {
 
 // ---------------------------------------------------------------- link
 
-typedef struct { int usenet, item, arquivo, comLista; unsigned geracao; } PedidoLink;
-static unsigned geracaoLink;
+typedef struct { int usenet, item, arquivo, comLista; unsigned geracao, conta; } PedidoLink;
+static unsigned geracaoLink, linkConta;
 static int linkEstado = -2;            // ver partes_link_estado
 static char linkUrl[4096];
 static PartesLista linkLista;
@@ -1371,7 +1382,7 @@ static void *fioLink(void *u) {
   memset(&l, 0, sizeof l);
   l.atual = -1;
   url[0] = 0;
-  if (pd->comLista) {
+  if (pd->comLista && pd->conta == debrid_tb_geracao()) {
     char *r = debrid_tb_mylist(pd->usenet, pd->item, 0, 1, &st);
     const char *d = r ? strstr(r, "\"data\"") : NULL;
     ok = 0;
@@ -1386,12 +1397,13 @@ static void *fioLink(void *u) {
     else logEstadoItem(itemDoCorpo(r), "saved part");
     free(r);
   }
+  if (pd->conta != debrid_tb_geracao()) ok = 0;
   if (ok) ok = debrid_tb_link(pd->usenet, pd->item, pd->arquivo, url, sizeof url);
   // Falhou: a lista na memoria e a do item podem estar velhas (o item sumiu
   // da conta); o proximo segurar le de novo.
   if (!ok) { listaEsquecer(); memoTirarItem(pd->item); }
   pthread_mutex_lock(&trava);
-  if (pd->geracao == geracaoLink) {
+  if (pd->geracao == geracaoLink && pd->conta == debrid_tb_geracao()) {
     linkEstado = ok ? 1 : -1;
     snprintf(linkUrl, sizeof linkUrl, "%s", ok ? url : "");
     linkLista = l;
@@ -1411,8 +1423,9 @@ void partes_link_pedir(int usenet, int item, int arquivo, int comLista) {
   pthread_mutex_lock(&trava);
   geracaoLink++;
   linkEstado = 0;
+  linkConta = debrid_tb_geracao();
   linkUrl[0] = 0;
-  if (pd) { pd->usenet = usenet; pd->item = item; pd->arquivo = arquivo; pd->comLista = comLista; pd->geracao = geracaoLink; }
+  if (pd) { pd->usenet = usenet; pd->item = item; pd->arquivo = arquivo; pd->comLista = comLista; pd->geracao = geracaoLink; pd->conta = linkConta; }
   pthread_mutex_unlock(&trava);
   if (!pd || pthread_create(&t, NULL, fioLink, pd) != 0) {
     free(pd);
@@ -1427,7 +1440,7 @@ void partes_link_pedir(int usenet, int item, int arquivo, int comLista) {
 int partes_link_estado(char *url, unsigned n, PartesLista *l) {
   int e;
   pthread_mutex_lock(&trava);
-  e = linkEstado;
+  e = linkConta == debrid_tb_geracao() ? linkEstado : -2;
   if (e == 1) {
     if (url && n) snprintf(url, n, "%s", linkUrl);
     if (l) *l = linkLista;

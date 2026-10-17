@@ -50,6 +50,8 @@ static char chaveLocal[SN][200];
 static int  alvoT, alvoE;
 static pthread_mutex_t chaveTrava = PTHREAD_MUTEX_INITIALIZER;
 static uint64_t sessaoAtual;
+static atomic_uint tbGeracao;
+unsigned debrid_tb_geracao(void) { return atomic_load(&tbGeracao); }
 
 // RECUSA DE CONTA POR BUSCA. recusado[q] guarda o status HTTP da recusa (0 =
 // nenhuma); `geracao` sobe a cada debrid_nova_busca. Atomicos porque
@@ -190,6 +192,7 @@ static void efetiva(int q) {
   const char *k = chaveLocal[q][0] ? chaveLocal[q] : chaveConta[q];
   pthread_mutex_lock(&contaMutex);
   if (strcmp(chave[q], k)) {
+    if (q == STB) atomic_fetch_add(&tbGeracao, 1u);
     atomic_fetch_add(&geracao, 1u);
     atomic_store(&recusado[q], 0);
     atomic_store(&semPlano[q], 0); atomic_store(&avisado[q], 0);
@@ -230,6 +233,7 @@ void debrid_abrir_sessao(uint64_t sessao) {
   int q;
   pthread_mutex_lock(&chaveTrava);
   sessaoAtual = sessao;
+  atomic_fetch_add(&tbGeracao, 1u);
   atomic_fetch_add(&geracao, 1u);
   memset(chaveConta, 0, sizeof chaveConta); alvoT = alvoE = 0;
   atomic_store(&foraCache, 0);
@@ -318,6 +322,7 @@ int debrid_ativo(void) {
 void debrid_esquecer(void) {
   int q;
   pthread_mutex_lock(&chaveTrava);
+  atomic_fetch_add(&tbGeracao, 1u);
   atomic_fetch_add(&geracao, 1u);
   // Logout: a chave DA CONTA sai; a digitada nesta TV fica (ver chaveLocal).
   memset(chaveConta, 0, sizeof chaveConta); alvoT = alvoE = 0;

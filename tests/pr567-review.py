@@ -5,6 +5,9 @@ import tempfile
 
 app = Path('src/app.c').read_text()
 player = Path('src/player.c').read_text()
+# Registration must follow the synchronous player open, which clears CDN identity.
+selected_play = app.split('static void parteTocar(', 1)[1].split('static void abrirParte(', 1)[0]
+assert selected_play.index('definirFonteVOD(url)') < selected_play.index('video_tpk_cdn_arquivo('), 'selected-file CDN identity registered before player open'
 selection = app.split('static void abrirParte(', 1)[1].split('  stream_definir_atual(fonte);', 1)[0]
 start = player.split('{ int ok = fontePrincipal()', 1)[1].split(';   // PRONTO', 1)[0]
 pause = player.split('if (tocouS > 0.0f && cs', 1)[1].split(' {', 1)[0]

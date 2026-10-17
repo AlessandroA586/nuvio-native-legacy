@@ -2602,12 +2602,12 @@ static void parteTocar(const char *url, double pos) {
   if (pos > 1.0) player_definir_retomada_fonte(pos);
   snprintf(parteUrl, sizeof parteUrl, "%s", url);
   video_definir_cabecalhos("");
+  video_definir_mp4(parteMp4);
+  definirFonteVOD(url);
 #ifdef NV_TPK
   video_tpk_cdn_arquivo(url, parteArqLista.usenet, parteArqLista.item,
                         parteArqK >= 0 && parteArqK < parteArqLista.n ? parteArqLista.arq[parteArqK].id : -1);
 #endif
-  video_definir_mp4(parteMp4);
-  definirFonteVOD(url);
   parteFase = PF_ABRINDO; parteDesde = SDL_GetTicks(); parteGuardouEm = 0;
   parteProx = -1; parteProxFase = 0; parteProxUrl[0] = 0;
   // O arquivo que toca: a saida do player guarda o ponto dele (partes.h).

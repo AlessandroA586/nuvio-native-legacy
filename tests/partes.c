@@ -9,6 +9,7 @@
 // Rede, disco e TorBox ficam fora deste teste.
 int dados_gravar(const char *n, const char *c) { (void)n; (void)c; return 0; }
 char *dados_ler(const char *n) { (void)n; return NULL; }
+unsigned debrid_tb_geracao(void) { return 1; }
 int debrid_tb_disponivel(void) { return 0; }
 char *debrid_tb_mylist(int u, int id, int p, int f, int *st) { (void)u; (void)id; (void)p; (void)f; if (st) *st = 0; return NULL; }
 int debrid_tb_link(int u, int id, int a, char *url, unsigned n) { (void)u; (void)id; (void)a; (void)url; (void)n; return 0; }

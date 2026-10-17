@@ -169,6 +169,8 @@ const char *debrid_sem_plano_nome(int mascara);
 //                         link do CDN.
 //   debrid_tb_adicionar:  BLOQUEIA. Poe o torrent na conta SO se ja estiver em
 //                         cache; devolve o id ou -1.
+// Changes only with account session or effective TorBox key, never a search.
+unsigned debrid_tb_geracao(void);
 int   debrid_tb_disponivel(void);
 // Uma pagina de DEBRID_TB_PAGINA itens (o teto do TorBox): conta com mais
 // itens que isso precisa de mais paginas (`pagina` 0, 1, ...).
