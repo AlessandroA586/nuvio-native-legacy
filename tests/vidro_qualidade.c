@@ -55,6 +55,17 @@ static void roda(int n, Uint32 *t) {
 // One window of the governor: GOV_JANELA frames, each `ms` long, target 16.7.
 static void janela(double ms) { int i; for (i = 0; i < 150; i++) gfx_vidro_governar(ms, 16.7); }
 
+// The workload the next governor windows see: n glasses of `area` px^2; in a
+// trial the glass is flat, in the baseline it is frosted.
+static void cena(int n, int area, int prova) {
+  gfx_vidro_com_fonte = prova ? 0 : n; gfx_vidro_chapados = prova ? n : 0; gfx_vidro_area = area;
+}
+// One window that alternates two scenes (every frame differs from the last).
+static void janela_mista(double ms, int n1, int n2) {
+  int i;
+  for (i = 0; i < 150; i++) { cena(i & 1 ? n1 : n2, 900000, 0); gfx_vidro_governar(ms, 16.7); }
+}
+
 int main(void) {
   static char dir[] = "/tmp/nuvio-vidro-qual-XXXXXX";
   char cam[700];
@@ -148,6 +159,38 @@ int main(void) {
   confere(cap == 1 && fonte > 0, "governor: frost drawn again after the failed trial");
   for (i = 0; i < 10; i++) janela(40.0);
   confere(!gfx_vidro_degradado(), "governor: never trips again after the trial");
+
+  // Workload changes (review P1). The governor only judges EQUIVALENT workloads.
+  // (a) baseline: 3 janky windows on a busy screen, then a 4th on another screen
+  //     does not start a trial.
+  gfx_vidro_governar_zerar();
+  cena(6, 3000000, 0);
+  for (i = 0; i < 3; i++) janela(40.0);
+  cena(2, 400000, 0);
+  janela(40.0);
+  confere(!gfx_vidro_degradado(), "governor: 3 janky windows + 1 on another screen: no trial");
+  janela(40.0); janela(40.0); janela(40.0);
+  confere(gfx_vidro_degradado(), "governor: 4 janky windows on the same screen start the trial");
+  // (b) trial interrupted by a cheaper scene: 40 -> 25 ms is not the glass.
+  cena(1, 100000, 1);
+  janela(25.0);
+  confere(!gfx_vidro_degradado(), "governor: trial on a cheaper scene is dropped, no permanent Desempenho");
+  cena(6, 3000000, 0);
+  for (i = 0; i < 4; i++) janela(40.0);
+  confere(gfx_vidro_degradado(), "governor: still armed after the interrupted trial");
+  // (c) the reverse: trial window on a costlier scene must not end the governor.
+  cena(9, 5000000, 1);
+  janela(60.0);
+  confere(!gfx_vidro_degradado(), "governor: trial on a costlier scene is dropped");
+  cena(6, 3000000, 0);
+  for (i = 0; i < 4; i++) janela(40.0);
+  cena(6, 3000000, 1);
+  janela(10.0);
+  confere(gfx_vidro_degradado(), "governor: a comparable trial still gets its verdict (improved: stays)");
+  // (d) a window that mixes scenes proves nothing: 4 of them never start a trial.
+  gfx_vidro_governar_zerar();
+  for (i = 0; i < 6; i++) janela_mista(40.0, 6, 2);
+  confere(!gfx_vidro_degradado(), "governor: windows mixing scenes never start a trial");
 
   unlink(cam);
   { char tt[700]; snprintf(tt, sizeof tt, "%s/ajustes.tmp", dir); unlink(tt); }

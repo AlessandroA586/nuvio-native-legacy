@@ -2097,7 +2097,7 @@ void gfx_novo_quadro(void) {
   memcpy(vidroRegAnt, vidroRegCur, sizeof vidroRegAnt); vidroNRegAnt = vidroNRegCur; vidroNRegCur = 0;
   vidroSlot = -1; vidroRecapturou = 0;
   fundoFim = fundoDepois = 0;
-  gfx_vidro_capturas = 0; gfx_vidro_passadas = 0; gfx_vidro_com_fonte = 0; gfx_vidro_chapados = 0;
+  gfx_vidro_capturas = 0; gfx_vidro_passadas = 0; gfx_vidro_com_fonte = 0; gfx_vidro_chapados = 0; gfx_vidro_area = 0;
   gfx_vidro_fill = gfx_vidro_copia = 0.0;
   ambFonte = 0; dinPendente = 0; dinAdiado = 0; dinNOp = 0;
   gfx_n_assados = 0;
@@ -3269,28 +3269,51 @@ int gfx_vidro_com_fonte, gfx_vidro_chapados;
 // If the mean frame time improves (< 80% of the janky one) the drop stays until
 // the app restarts; if not, the glass was not the cost (a slow TV is slow with or
 // without it): the frost comes back and the governor stops for the session.
-// Never flip-flops: at most one trial.
+// Only equivalent workloads are compared: every frame carries a signature (how
+// many glasses, how much glass area). A window whose frames mix signatures says
+// nothing; consecutive janky windows must share one signature; a trial window must
+// match the baseline's. A trial that was interrupted by a scene change is dropped
+// (frost back, no verdict, the governor stays armed): at most one VERDICT.
 #define GOV_JANELA 150
 #define GOV_SEGUIDAS 4
-static int govN, govLentos, govSeguidas, vidroDegradou, govProva, govFim;
+int gfx_vidro_area;   // glass area (px^2) drawn this frame
+static int govN, govLentos, govSeguidas, vidroDegradou, govProva, govFim, govSig, govSigBase, govDifere;
 static double govSoma, govBase;
 int gfx_vidro_degradado(void) { return vidroDegradou; }
-void gfx_vidro_governar_zerar(void) { govN = govLentos = govSeguidas = vidroDegradou = govProva = govFim = 0; govSoma = govBase = 0.0; }   // tests
+void gfx_vidro_governar_zerar(void) { govN = govLentos = govSeguidas = vidroDegradou = govProva = govFim = govSig = govSigBase = govDifere = 0; govSoma = govBase = 0.0; }   // tests
+static int govAssinatura(void) {
+  int a = gfx_vidro_area / 250000;
+  return (gfx_vidro_com_fonte + gfx_vidro_chapados) * 64 + (a > 63 ? 63 : a);
+}
 void gfx_vidro_governar(double ms, double alvo_ms) {
+  int sig, comparavel;
   if (govFim || ajustes_vidro_qualidade() != 0) return;
   if (govProva ? gfx_vidro_chapados <= 0 : (vidroDegradou || gfx_vidro_com_fonte <= 0)) return;
+  sig = govAssinatura();
+  if (govN == 0) govSig = sig; else govDifere += sig != govSig;
   govN++; govSoma += ms; govLentos += ms > alvo_ms * 1.5;
   if (govN < GOV_JANELA) return;
+  comparavel = govDifere <= GOV_JANELA / 10;
   if (govProva) {
     double m = govSoma / govN;
-    govFim = 1; govProva = 0; vidroDegradou = m < govBase * 0.8;
-    printf("[vidro] governador: prova %.1f ms (frost %.1f ms) -> %s\n", m, govBase, vidroDegradou ? "desempenho" : "frost mantido");
+    govProva = 0;
+    if (!comparavel || govSig != govSigBase) {
+      vidroDegradou = 0; govSeguidas = 0;
+      printf("[vidro] governador: prova interrompida (carga mudou), frost de volta\n");
+    } else {
+      govFim = 1; vidroDegradou = m < govBase * 0.8;
+      printf("[vidro] governador: prova %.1f ms (frost %.1f ms) -> %s\n", m, govBase, vidroDegradou ? "desempenho" : "frost mantido");
+    }
+  } else if (!comparavel) {
+    govSeguidas = 0;
   } else {
+    if (govSig != govSigBase) govSeguidas = 0;
+    govSigBase = govSig;
     govSeguidas = govLentos * 5 >= govN ? govSeguidas + 1 : 0;
     govBase = govSoma / govN;
     if (govSeguidas >= GOV_SEGUIDAS) { vidroDegradou = govProva = 1; printf("[vidro] governador: prova do desempenho\n"); }
   }
-  govN = govLentos = 0; govSoma = 0.0;
+  govN = govLentos = govDifere = 0; govSoma = 0.0;
 }
 
 static const char *VID_VS =
@@ -3748,6 +3771,7 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   vidPend.aroLuz = contorno ? 0.28f : 0.0f;
   gfx_vidro_com_fonte += vidPend.fonte != 0;
   gfx_vidro_chapados += vidPend.fonte == 0;
+  gfx_vidro_area += (int)(r.w * r.h);
   gfx_rect(r, vidPend.fonte, GFX_VIDRO, 0, 0, 0, raio, 1, 1, 1, a);
   gfx_vidro_matiz(r, raio, a);
   if (tipo == GFX_VIDRO_PAINEL) gfx_vidro_luz(r, raio, a);
