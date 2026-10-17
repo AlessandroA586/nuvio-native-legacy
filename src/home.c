@@ -5154,10 +5154,12 @@ static void desenhaHero(Uint32 agora, float saida) {
   // trailer: ver home_trailer_passo).
   float aTrailer = (heroTrailerFade > 0.005f && heroTrailerItem == heroAtual &&
                     !heroTrailerNoCartao) ? heroTrailerFade : 0.0f;
-  if (aTrailer > 0.0f) {
-    GfxRect furo = r;
-    if (furo.y + furo.h > NV_TELA_H) furo.h = NV_TELA_H - furo.y;
-    if (furo.y < 0.0f) { furo.h += furo.y; furo.y = 0.0f; }
+  GfxRect furo = r;
+  if (furo.y + furo.h > NV_TELA_H) furo.h = NV_TELA_H - furo.y;
+  if (furo.y < 0.0f) { furo.h += furo.y; furo.y = 0.0f; }
+  // Video pleno: o furo antes e a arte nao sai. No meio do fade a arte sai
+  // inteira e o furo parcial vem depois dela (gfx_furo_alfa).
+  if (aTrailer >= 0.995f) {
     gfx_furo(furo);
     aArte *= (1.0f - aTrailer);
   }
@@ -5242,6 +5244,7 @@ static void desenhaHero(Uint32 agora, float saida) {
   // Alfa = heroTrailerFade: entra enquanto a arte sai, entao a soma das duas
   // rampas fica constante no crossfade. Desenhado DEPOIS do furo, com alfa:
   // no .tpk/LG/Android o plano de video aparece com 1 - alfa sob a rampa.
+  if (aTrailer > 0.0f && aTrailer < 0.995f) gfx_furo_alfa(furo, aTrailer);
   if (aTrailer > 0.0f && (modoHero == GFX_HERO || modoHero == GFX_HERO_CHEIO))
     gfx_rect(r, 0, modoHero, 0, 1.0f, 0, 0.0f, 0, 0, 0, aTrailer);
   gfx_tex_aspect_atual = 0.0f;
