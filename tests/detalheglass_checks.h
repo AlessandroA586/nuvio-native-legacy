@@ -69,6 +69,37 @@ static int card_checks(void) {
   return failures ? 1 : 0;
 }
 
+// Exercise the production row dispatcher beyond column zero's culling range.
+static int comments_checks(void) {
+  int failures = 0;
+  for (int serie = 0; serie < 2; serie++) {
+    abrir(serie ? 0 : 1, 1, SEC_COMENTARIOS, nPilulasCom());
+    for (int step = 0; step < 3; step++) {
+      float scroll = step * 3 * (COM_CARD_W + COM_CARD_GAP);
+      foco.coluna = nPilulasCom() + step * 3;
+      scrollSec[SEC_COMENTARIOS] = scroll;
+      scrollY = conteudoSec[SEC_COMENTARIOS] - 150;
+      txt_novo_quadro(); tex_novo_quadro(); gfx_novo_quadro();
+      glClear(GL_COLOR_BUFFER_BIT);
+      commentMaterial = 0;
+      // Independent material regression: includes unfocused cards.
+      if (!step) desenhaComentarios(NV_DETP_X, 150, 1);
+      else desenhaSecao(SEC_COMENTARIOS, 1, SDL_GetTicks());
+      int visible = 0;
+      for (int i = 0; i < extras_n_comentarios(); i++) {
+        float x = NV_DETP_X + i * (COM_CARD_W + COM_CARD_GAP) - scroll;
+        visible += x <= NV_TELA_W && x + COM_CARD_W >= 0;
+      }
+      int ok = visible > 1 && commentMaterial == visible && gfx_vidro_com_fonte >= visible;
+      printf("%s: %s comments scroll=%.0f visible=%d material=%d sampled=%d\n",
+             ok ? "PASS" : "FAIL", serie ? "series" : "movie", scroll,
+             visible, commentMaterial, gfx_vidro_com_fonte);
+      failures += !ok;
+    }
+  }
+  return failures ? 1 : 0;
+}
+
 static int rows_checks(void) {
   static const struct { const char *nome; int sec; int max; } linhas[] = {
     { "cast", SEC_ELENCO, 6 }, { "recommendations", SEC_RELACIONADOS, 7 },

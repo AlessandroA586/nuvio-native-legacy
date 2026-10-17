@@ -88,11 +88,12 @@ size_t trakt_token_tam(const char *);
 #define txt_largura trakt_largura
 #define txt_token_tam trakt_token_tam
 #include "gfx.h"
-static int cardMaterial, cardFrost, captionSolid;
+static int cardMaterial, cardFrost, captionSolid, commentMaterial;
 static void card_material(GfxRect r, float radius, float density, float alpha) {
   int before = gfx_vidro_com_fonte;
   gfx_vidro_material(r, radius, density, alpha);
   cardMaterial++;
+  if (r.w == 600.0f && r.h == 340.0f) commentMaterial++;
   cardFrost += gfx_vidro_com_fonte > before;
 }
 static void card_color(GfxRect r, float radius, float cr, float cg, float cb, float a) {
@@ -150,7 +151,7 @@ static const char *const COM_TXT[] = {
   "as cenas em que aparece.",
   "Perfeito para uma tarde de chuva." };
 static const int COM_NOTA[] = { 8, 6, 7 }, COM_CUR[] = { 6, 3, 1 };
-int fx_n_comentarios(void)    { return getenv("NUVIO_TRAKT_CHECK") && !strcmp(getenv("NUVIO_TRAKT_CHECK"), "perf") ? 8 : 3; }
+int fx_n_comentarios(void)    { return (getenv("NUVIO_DETAIL_CHECK") && !strcmp(getenv("NUVIO_DETAIL_CHECK"), "comments")) || (getenv("NUVIO_TRAKT_CHECK") && !strcmp(getenv("NUVIO_TRAKT_CHECK"), "perf")) ? 8 : 3; }
 int fx_n_comentarios_ep(void) { return 0; }
 const char *fx_com_usuario(int i)  { return COM_USU[i % 3]; }
 const char *fx_com_texto(int i)    {
@@ -491,6 +492,7 @@ int main(int argc, char **argv) {
   if (getenv("NUVIO_TRAKT_CHECK")) return trakt_checks();
   if (getenv("NUVIO_DETAIL_CHECK")) {
     const char *m = getenv("NUVIO_DETAIL_CHECK");
+    if (!strcmp(m, "comments")) return comments_checks();
     if (!strcmp(m, "cards")) return card_checks();
     return strcmp(m, "mais") == 0 ? mais_checks() : rows_checks();
   }
