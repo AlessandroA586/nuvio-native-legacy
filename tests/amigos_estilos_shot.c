@@ -398,6 +398,14 @@ int main(int argc, char **argv) {
     snprintf(bmp, sizeof bmp, "%s-%s-sem.bmp", saida, style == 5 ? "classic" : (char[]){'9', (char)('A' + style), 0});
     quadros(1, bmp);
     irFileira(); quadros(40, NULL);
+#ifdef NV_AMIGOS_POLISH
+    if (style == 5) {   // no "+ Add" column: one column per friend, RIGHT at the last avatar stops
+      int nf = socialvis_n_amigos(), c = 0, k;
+      assert(amigosfil_n_colunas() == nf);
+      for (k = 0; k < 64 && amigosfil_tecla(SDLK_RIGHT, &c); k++) {}
+      assert(k < 64 && c == nf - 1);
+    }
+#endif
     if (style < 5 && !getenv("NV_SHOT_NOWALK")) {   // NOWALK: captures of an older tree, no navigation asserts
       int nc = amigosfil_n_colunas();
       char title[24], pessoa[96];
