@@ -114,6 +114,7 @@ void spy_vidro_material(GfxRect r, float raio, float dens, float a) {
 static int menu_pixels(int serie) {
   GfxRect r = detmais_caixa(maisAncora);
   unsigned char pixels[2][32 * 4];
+  int clearMismatch = 0;
   for (int frost = 0; frost < 2; frost++) {
     setenv("NUVIO_SHOT_VIDRO_FOSCO", frost ? "1" : "0", 1);
     ajustes_teste_vidro_env();
@@ -122,10 +123,20 @@ static int menu_pixels(int serie) {
       gfx_cor((GfxRect){ x, 0, 8, 1080 }, 0, (x / 8) % 2 ? 1.0f : .6f, .9f, .8f, 1);
     gfx_vidro_sujar();
     detmais_desenhar(maisAncora, 1);
-    glReadPixels((int)r.x + 8, 1080 - (int)r.y - 56, 1, 32, GL_RGBA, GL_UNSIGNED_BYTE, pixels[frost]);
+    glReadPixels((int)r.x + 28, 1080 - (int)r.y - 156, 1, 32, GL_RGBA, GL_UNSIGNED_BYTE, pixels[frost]);
     char id[80];
     snprintf(id, sizeof id, "%s-menu-frost-%d", serie ? "series" : "movie", frost);
     gravar(id);
+    if (!frost) {
+      unsigned char clearExpected[32 * 4];
+      gfx_novo_quadro(); glClear(GL_COLOR_BUFFER_BIT);
+      for (int x = 0; x < 1920; x += 8)
+        gfx_cor((GfxRect){ x, 0, 8, 1080 }, 0, (x / 8) % 2 ? 1.0f : .6f, .9f, .8f, 1);
+      gfx_vidro_sujar();
+      plrui_cartao(r, 32, 1);
+      glReadPixels((int)r.x + 28, 1080 - (int)r.y - 156, 1, 32, GL_RGBA, GL_UNSIGNED_BYTE, clearExpected);
+      for (int i = 0; i < 32 * 4; i++) clearMismatch += abs(clearExpected[i] - pixels[0][i]) > 1;
+    }
   }
   int changed = 0, mismatch = 0;
   unsigned char expected[32 * 4];
@@ -134,14 +145,14 @@ static int menu_pixels(int serie) {
     gfx_cor((GfxRect){ x, 0, 8, 1080 }, 0, (x / 8) % 2 ? 1.0f : .6f, .9f, .8f, 1);
   gfx_vidro_sujar();
   plrui_cartao(r, 32, 1);
-  glReadPixels((int)r.x + 8, 1080 - (int)r.y - 56, 1, 32, GL_RGBA, GL_UNSIGNED_BYTE, expected);
+  glReadPixels((int)r.x + 28, 1080 - (int)r.y - 156, 1, 32, GL_RGBA, GL_UNSIGNED_BYTE, expected);
   for (int i = 0; i < 32 * 4; i++) {
     changed += abs(pixels[0][i] - pixels[1][i]) > 2;
     mismatch += abs(expected[i] - pixels[1][i]) > 1;
   }
-  printf("%s: menu interior frost pixels changed=%d card-mismatch=%d\n",
-         changed > 16 && mismatch == 0 ? "PASS" : "FAIL", changed, mismatch);
-  return changed > 16 && mismatch == 0 ? 0 : 1;
+  printf("%s: menu interior frost pixels changed=%d card-mismatch=%d clear-mismatch=%d\n",
+         changed > 16 && mismatch == 0 && clearMismatch == 0 ? "PASS" : "FAIL", changed, mismatch, clearMismatch);
+  return changed > 16 && mismatch == 0 && clearMismatch == 0 ? 0 : 1;
 }
 
 static int mais_checks(void) {

@@ -2,7 +2,7 @@
 # Regression proof + tier budgets + focused before/after PNGs. No installs.
 set -eu
 cd "$(dirname "$0")/.."
-out=/Volumes/ExternalSSD/tmp/detalheglass/fix
+out=/Volumes/ExternalSSD/tmp/detalheglass/fix2
 mkdir -p "$out/tmp"
 export TMPDIR="$out/tmp" OBJ=/Volumes/ExternalSSD/tmp/detalheglass/obj
 export NUVIO_SHOT_VIDRO=1 NUVIO_SHOT_VIDRO_FOSCO=1 NUVIO_DETAIL_SHOT=1
@@ -38,7 +38,7 @@ if run menu-before env NUVIO_DETMAIS_SOURCE="$out/detmais-before.c" bash tests/d
   echo 'FAIL: previous menu went undetected'; exit 1
 fi
 grep -q 'dens=0.86' "$out/menu-before.log"
-grep -q 'PASS: menu interior frost pixels changed=' "$out/menu-before.log"
+grep -q 'FAIL: menu interior frost pixels changed=.*clear-mismatch=96' "$out/menu-before.log"
 mkdir -p "$out/menu-pixels-before"
 mv "$out/"*-menu-frost-*.bmp "$out/menu-pixels-before/"
 run menu-after bash tests/detmaisglass.sh check
