@@ -1,4 +1,4 @@
-#include "fontevolta.h"
+﻿#include "fontevolta.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
