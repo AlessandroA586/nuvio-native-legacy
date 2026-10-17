@@ -1680,6 +1680,23 @@ static float limitaPosterG(float e) {
        - (ajustes_borda_foco() ? NV_ANEL_FOCO : 0.0f);
   return e * NV_POSTER_G_H > hMax ? hMax / NV_POSTER_G_H : e;
 }
+// A fileira do Pôster grande, ou a pasta vestida dele. A pasta so entra nos
+// tamanhos novos (fator > 1): o M de sempre nao muda de medida.
+static int fileiraPosterG(int r) {
+  return r >= 0 && r < MAX_FIL && (fileiras[r].tipo == FILEIRA_POSTER_GRANDE ||
+         (fileiras[r].tipo == FILEIRA_CATALOGOS && fileiras[r].fator > 1.0f &&
+          fileiras[r].estiloCol == FILEIRA_POSTER_GRANDE));
+}
+// O maior nao cabe mais ALTO que o M na Moderna/Padrao (o teto acima: o M ja
+// encosta na base), entao o que o teto tira da altura volta na LARGURA, ate
+// 30%. Sem teto (Dinamica) o fator e 1 e o cartao segue 3:4.
+static float alargaPosterG(int r) {
+  float e0, k;
+  if (!fileiraPosterG(r) || fileiras[r].fator <= 1.0f || homeRetratoTelefone()) return 1.0f;
+  e0 = fileiras[r].escala > 0.05f ? fileiras[r].escala : 1.0f;
+  k = e0 / limitaPosterG(e0);
+  return k > 1.3f ? 1.3f : k;
+}
 static float escalaFil(int r) {
   float e = (r >= 0 && r < MAX_FIL) ? fileiras[r].escala : 0.0f;
   e = e > 0.05f ? e : 1.0f;
@@ -1690,8 +1707,7 @@ static float escalaFil(int r) {
        (fileiras[r].tipo == FILEIRA_CATALOGOS &&
         fileiras[r].estiloCol == FILEIRA_DESTAQUE_QUADRADO)))
     e = limita43(fileiras[r].fator, e);
-  if (r >= 0 && r < MAX_FIL && fileiras[r].tipo == FILEIRA_POSTER_GRANDE)
-    e = limitaPosterG(e);
+  if (fileiraPosterG(r)) e = limitaPosterG(e);
   if (homeRetratoTelefone() && r >= 0 && r < MAX_FIL) {
     float w = fileiras[r].stackN ? 680.0f : larguraDe(fileiras[r].tipo);
     if (fileiras[r].tipo == FILEIRA_CATALOGOS) { float h; medidaCol(&fileiras[r], &w, &h); }
@@ -1710,7 +1726,7 @@ static float larguraFil(int r) {
   // O Tamanho (Compacto/Grande) nao entra no Herói: o cartão é a fileira
   // inteira, e 1,2 x a largura da tela não é um tamanho, é um corte.
   if (fileiras[r].tipo == FILEIRA_HEROI || fileiras[r].tipo == FILEIRA_HEROI_DIVIDIDO) return w;
-  return w * escalaFil(r);
+  return w * escalaFil(r) * alargaPosterG(r);
 }
 static float alturaFil(int r) {
   float h = alturaDe(fileiras[r].tipo);
@@ -2107,7 +2123,10 @@ static TipoFileira tipoDaEscolha(int t) {
     case FIL_TIPO_PALCO:    return FILEIRA_PALCO;
     case FIL_TIPO_REDONDA:  return FILEIRA_REDONDA;
     case FIL_TIPO_HEROI:    return FILEIRA_HEROI;
-    case FIL_TIPO_POSTER_GRANDE: return FILEIRA_POSTER_GRANDE;
+    // Os tres tamanhos sao a MESMA forma; o fator vem por fil_escala.
+    case FIL_TIPO_POSTER_GRANDE:
+    case FIL_TIPO_POSTER_GRANDE_P:
+    case FIL_TIPO_POSTER_GRANDE_G: return FILEIRA_POSTER_GRANDE;
     case FIL_TIPO_HEROI_DIVIDIDO: return FILEIRA_HEROI_DIVIDIDO;
     default:                return FILEIRA_TOP10;
   }
@@ -6164,14 +6183,26 @@ static void desenhaFicha(const CatItem *it, float px, float py, float w, float h
 // viva: branca quando o branco contrasta mais com o preenchimento que a tinta
 // escura (corviva_tokens). Sem paleta (arte ausente, cinza ou a caminho) o veu
 // cai no preto do card aberto e o texto fica branco — o overlay da Apple TV.
+//
+// TRES TAMANHOS (dono: "esse estilo de fileira pode ter 3 tamanhos tb"): `fator`
+// e o da fileira (fil_tipo_fator). Menor: 1 linha de sinopse e recuo menor; o de
+// sempre (fator 1, intocado): 2; maior: 3. Fora do medio o veu cresce o que as
+// linhas pedem, para a logo ter ao menos NV_POSTER_G_LOGO_MIN px de caixa (abaixo
+// de 40 ela nem o titulo em texto desenha).
+#define NV_POSTER_G_LOGO_MIN 70.0f
 static void desenhaPosterGrande(const CatItem *ci, const char *caminho,
                                 float px, float py, float w, float h,
-                                float raio, float a) {
+                                float raio, float a, float fator) {
   CorvivaPaleta p;
   CorvivaTokens tk;
-  int tem, tr, tg, tb, sr, sg, sb;
-  float cr, cg, cb, pad = 34.0f, veuTopo, y, logoMaxH;
+  int tem, tr, tg, tb, sr, sg, sb, linhas = fator < 0.9f ? 1 : fator > 1.1f ? 3 : 2;
+  float cr, cg, cb, pad = fator < 0.9f ? 26.0f : 34.0f, veuTopo, veuF, y, logoMaxH;
   if (!ci) return;
+  veuF = NV_POSTER_G_VEU_F;
+  if (linhas != 2) {
+    float pede = (pad + 30.0f * (float)linhas + 46.0f + 18.0f + 24.0f + NV_POSTER_G_LOGO_MIN) / h;
+    if (pede > veuF) veuF = pede < 0.85f ? pede : 0.85f;
+  }
   if (caminho && caminho[0]) tex_publicar_paleta(caminho);
   tem = caminho && caminho[0] && corviva_paleta(caminho, &p) && p.ok;
   if (tem) { cr = p.acento[0]; cg = p.acento[1]; cb = p.acento[2];
@@ -6182,24 +6213,30 @@ static void desenhaPosterGrande(const CatItem *ci, const char *caminho,
   // O veu: a MESMA rampa do gfx_veu_base (cheia ate 42% da faixa, smoothstep ao
   // quadrado, cantos do card), na cor predominante — GFX_BRILHO_TOPO com
   // uPar.y > 0 e a rampa de baixo para cima em uCor.rgb.
-  veuTopo = py + h * (1.0f - NV_POSTER_G_VEU_F);
-  { GfxRect v = { px, veuTopo, w, h * NV_POSTER_G_VEU_F };
+  veuTopo = py + h * (1.0f - veuF);
+  { GfxRect v = { px, veuTopo, w, h * veuF };
     gfx_rect(v, 0, GFX_BRILHO_TOPO, 0, 1.0f, 0.42f,
-             raio / NV_POSTER_G_VEU_F, cr, cg, cb, NV_POSTER_G_VEU_A * a); }
-  // Sinopse: duas linhas ancoradas na base do card.
-  y = py + h - pad - 60.0f;
+             raio / veuF, cr, cg, cb, NV_POSTER_G_VEU_A * a); }
+  // Sinopse: 1, 2 ou 3 linhas ancoradas na base do card.
+  y = py + h - pad - 30.0f * (float)linhas;
   if (ci->sinopse[0])
     txt_bloco_corta(TXT_HERO_SIN, ci->sinopse, sr, sg, sb,
-                    px + pad, y, w - pad * 2.0f, 30.0f, 0.95f * a, 2);
+                    px + pad, y, w - pad * 2.0f, 30.0f, 0.95f * a, linhas);
   // Linha de meta: o genero ("Filme · Terror · Suspense") e, ao lado, o selo da
   // classificacao — o mesmo chip do card aberto (desenhaFaixaAberta), na tinta.
   y -= 46.0f;
   if (ci->genero[0]) {
-    TxtLinha gm = txt_linha_corta(TXT_CW_META, ci->genero, tr, tg, tb, 255,
-                                  w - pad * 2.0f);
+    // O selo mora a direita do genero, DENTRO do card: o genero cede a largura
+    // dele (e ganha reticencias), em vez de empurrar o selo para fora.
+    TxtLinha cl = { 0 };
+    float gmMax = w - pad * 2.0f;
+    if (ci->classificacao[0]) {
+      cl = txt_linha(TXT_MINI, ci->classificacao, tr, tg, tb, 255);
+      gmMax -= cl.w + 22.0f + 12.0f;
+    }
+    TxtLinha gm = txt_linha_corta(TXT_CW_META, ci->genero, tr, tg, tb, 255, gmMax);
     txt_desenhar_alpha(gm, px + pad, y, a);
     if (ci->classificacao[0]) {
-      TxtLinha cl = txt_linha(TXT_MINI, ci->classificacao, tr, tg, tb, 255);
       float bw = cl.w + 22.0f, ch = 34.0f, cx = px + pad + gm.w + 12.0f;
       float cy = y + (gm.h - ch) * 0.5f;
       float fr = tk.tintaBranca ? 1.0f : 0.0f;
@@ -6966,7 +7003,7 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
 
           // PÔSTER GRANDE: a ficha na base, sobre o veu da cor predominante.
           if (tipo == FILEIRA_POSTER_GRANDE && cItem)
-            desenhaPosterGrande(cItem, caminho, px, py, w, h, raio, 1.0f);
+            desenhaPosterGrande(cItem, caminho, px, py, w, h, raio, 1.0f, fileiras[r].fator);
 
           if(tipo==FILEIRA_TOP10) desenhaRankPequeno(c+1, px, py, h);
 

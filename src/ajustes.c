@@ -9307,6 +9307,8 @@ static const struct { float w, h; } AJ_FIL_FORMA[FIL_TIPO_N] = {
   { 1440.0f, 1440.0f * NV_HEROI_ASPECT }, // HEROI — o cartao unico da fileira
   { NV_POSTER_G_W, NV_POSTER_G_H },      // PÔSTER GRANDE — 3:4 com a ficha na base
   { 864.0f, 486.0f },                    // HERÓI DIVIDIDO — o painel deitado do foco
+  { NV_POSTER_G_W * 0.8f,  NV_POSTER_G_H * 0.8f },  // PÔSTER GRANDE menor (fil_tipo_fator)
+  { NV_POSTER_G_W * 1.25f, NV_POSTER_G_H * 1.25f }, // PÔSTER GRANDE maior
 };
 
 // Uma frase por forma. Diz o que a forma E e para que serve, nao como se chama.
@@ -9328,6 +9330,8 @@ static const char *aj_fil_forma_ajuda(int t) {
     case FIL_TIPO_LINHA_TEMPO: return i18n("Cartazes em ordem de lançamento sobre uma linha com os anos, que se desenha conforme você anda.");
     case FIL_TIPO_FICHA:    return i18n("Cartaz com a ficha ao lado: ano, gênero, nota e o começo da sinopse.");
     case FIL_TIPO_PALCO:    return i18n("O título em foco fica grande no centro e os vizinhos diminuem dos dois lados.");
+    case FIL_TIPO_POSTER_GRANDE_P: return i18n("Pôster 3:4 menor, com logo, gênero e uma linha de sinopse: cabem mais cartazes por tela.");
+    case FIL_TIPO_POSTER_GRANDE_G: return i18n("Pôster 3:4 maior, com logo, gênero e três linhas de sinopse sobre o véu na cor da arte.");
     case FIL_TIPO_REDONDA:  return i18n("Foto circular com o nome embaixo, para fileiras de pessoas.");
     case FIL_TIPO_HEROI:    return i18n("Um cartão único do tamanho da fileira, com fundo, selo, título e duas linhas — o banner entre fileiras do Apple TV.");
     case FIL_TIPO_HEROI_DIVIDIDO: return i18n("O título em foco aparece grande à esquerda, com arte, nota, sinopse e elenco; os cartazes da fileira correm à direita.");
