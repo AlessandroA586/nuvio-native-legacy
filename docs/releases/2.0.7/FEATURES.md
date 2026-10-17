@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-17T19:50:28-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-17T20:50:10-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -17,7 +17,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Highlights
 
-- **Stage rows show details beside the poster**: Focused Stage posters reveal genres, ratings, synopsis and cast beside the artwork, with an optional spotlight that follows focus. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `a7d5ccb51`, `2dc2e5dc2`.
+- **Stage rows show details beside the poster**: Focused Stage posters reveal genres, ratings, synopsis and cast beside the artwork, with an optional spotlight that follows focus. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `a7d5ccb51`, `2dc2e5dc2`, `0749d883e`, `f59c70b50`, `96457c78a`. Stage now includes anchored headlines, timed focus motion and editorial lighting; touch scrolling and viewport bounds remain aligned.
 
 - **Deep links** (#539): `nuvio-legacy://`, `stremio://` and IMDb links open the app straight to a title,
   to search, or already playing, with the newest link kept queued while discovery runs. All platforms.
@@ -259,6 +259,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Performance
 
+- **Glass stays smooth when text caches change**: Retiring unrelated textures no longer rebuilds an unchanged glass backdrop, preserving the existing frost appearance. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `3e8becc0e`, `59efaef75`.
+
 - **Playback buffers adapt to demanding streams**: Android sizes buffers to bitrate within memory limits and can try another available source after sustained throughput problems, with corrected policy handoff and prepared buffers. Platforms: Android. Refs `0d3e01a5f`, `c91106066`.
 - **Stronger low-memory relief (#415)**: Playback cache limits follow available memory, release decoded buffers under pressure and gate retries after pipeline errors. Platforms: webOS. Refs `87977f537`, `370769c09`, `bcdd3eb04`, `f77eeeef7`.
 
@@ -333,6 +335,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   `f6618db6b`, `22f3d22bb`).
 
 ### Internal
+
+- **C9 rendering and subtitle timing checks**: Regression checks cover glass-cache budgets and unchanged frost images, plus production readiness and the complete initial 12-second ASS window. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `b12b8e11f`, `9e778e588`.
 
 - **Broader visual regression coverage**: Sources shadows, profile-cache pressure and deterministic text-scale fixtures cover more UI states. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `45aef45f9`, `915e360a4`, `d6b0c2363`, `cff9c7e1b`, `15903519f`, `0c0c80d58`, `0d5d0d735`, `04ed0d150`, `207e0a283`.
 - **Tracking and release documentation**: Release notes, issue tracking and fixed-width caller documentation stay synchronized. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `733bc65e0`, `442021716`, `0eee6cbc3`, `71a57d7b4`.
