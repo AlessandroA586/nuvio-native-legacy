@@ -62,8 +62,11 @@ void plrui_pilula_foco(GfxRect r, float a) {
 }
 
 void plrui_botao_repouso(GfxRect r, float a) {
-  if (ajustes_vidro()) gfx_vidro_painel(r, 0.5f, 0.55f, a);
-  else gfx_cor(r, 0.5f, 0.141f, 0.149f, 0.173f, a);
+  if (ajustes_vidro()) { gfx_vidro_painel(r, 0.5f, 0.55f, a); return; }
+  // Pilulas tambem flutuam sobre o video: vidro desligado usa o mesmo tom
+  // translucido do disco OSD, nunca o #24262C opaco.
+  gfx_cor(r, 0.5f, 0.082f, 0.086f, 0.102f, (0.30f + 0.45f * ajustes_vidro_opacidade()) * a);
+  gfx_anel(r, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.14f * a);
 }
 
 // The OSD discs float over the live video (hardware plane under an alpha-0
@@ -134,7 +137,8 @@ float plrui_dicas(const char *const *teclas, const char *const *rotulos, int n,
       if (pass == 1) {
         GfxRect kr = { xx, yc - KBD_H * 0.5f, kw, KBD_H };
         if (ajustes_vidro()) gfx_cor(kr, 0.5f, 1, 1, 1, 0.09f * a);
-        else gfx_cor(kr, 0.5f, 0.141f, 0.149f, 0.173f, a);
+        else gfx_cor(kr, 0.5f, 0.082f, 0.086f, 0.102f,
+                     (0.30f + 0.45f * ajustes_vidro_opacidade()) * a);
         txt_desenhar_alpha(k, xx + (kw - (float)k.w) * 0.5f, yc - (float)k.h * 0.5f, a);
         txt_desenhar_alpha(l, xx + kw + 9.0f, yc - (float)l.h * 0.5f, a);
       }

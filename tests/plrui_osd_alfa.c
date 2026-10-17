@@ -23,11 +23,20 @@ static float amostra(float opac) {
   return px[1];
 }
 
+static float amostra_pilula(float opac) {
+  op = opac; px[0] = .62f; px[1] = .66f; px[2] = .74f;
+  plrui_botao_repouso((GfxRect){ 100, 100, 120, 60 }, 1.0f);
+  return px[1];
+}
+
 int main(void) {
   float lo = amostra(0.60f), mid = amostra(0.78f), hi = amostra(0.92f);
   printf("pixel G over bright: 60%%=%.3f 78%%=%.3f 92%%=%.3f alfa=%.2f\n", lo, mid, hi, alfa);
   if (mid < 0.20f) { puts("FAIL: disc opaque over bright frame"); return 1; }
   if (!(lo > mid && mid > hi)) { puts("FAIL: does not follow glass opacity"); return 1; }
+  float pb = amostra_pilula(0.78f);
+  printf("pill pixel G over bright: 78%%=%.3f\n", pb);
+  if (pb < 0.20f) { puts("FAIL: pill opaque over bright frame"); return 1; }
   puts("plrui_osd_alfa: PASS");
   return 0;
 }
