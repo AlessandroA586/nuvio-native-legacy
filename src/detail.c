@@ -6788,6 +6788,10 @@ static void cartaoComentario(GfxRect card, float raio, float a) {
     gfx_cor(card, raio, 0.082f, 0.094f, 0.118f, 0.92f * a);
     return;
   }
+  // O MESMO VIDRO FOSCO dos demais cartoes da pagina (gfx_vidro_material): a
+  // captura do backdrop e a unica compartilhada do quadro (gfx_vidro_so_fundo),
+  // entao os ate 8 cartoes leem a mesma copia desfocada — o custo por cartao e
+  // o shader, nao uma captura propria.
   gfx_vidro_material(card, raio, GFX_VIDRO_DENS, a);
 }
 
