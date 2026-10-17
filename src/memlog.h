@@ -7,4 +7,11 @@ void memlog_amostra(char *sufixo, size_t tamanho);
 void memlog_evento(const char *evento);
 int memlog_pouca_memoria(void);
 long memlog_livre_mb(void);   // MemAvailable em MiB; -1 = desconhecido
+// Abaixo disto o webOS fecha o app ("liberar memoria"); e o limiar do aviso.
+#define MEMLOG_PISO_MB 150
+void memlog_devolver(void);    // malloc_trim: heap livre de volta ao sistema
+// #415: reabrir o pipeline depois de um erro com a TV abaixo do piso e o OOM
+// que fecha o app. Abaixo do piso chama `aliviar` e le de novo. 1 = pode abrir
+// (memoria desconhecida conta como pode).
+int memlog_pode_reabrir(long (*livre)(void), void (*aliviar)(void));
 #endif

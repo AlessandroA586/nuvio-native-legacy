@@ -51,6 +51,7 @@
 #include "listas.h"
 #include "text.h"
 #include "tex_cache.h"
+#include "memlog.h"
 #include "artehero.h"
 #include "arteescolha.h"
 #include "vertudo.h"
@@ -2699,6 +2700,7 @@ static void recarregarFonteVOD(void) {
   if (fonteVODAutomatica) fonteVODDesde = agora;
   else fonteManualDesde = agora;
 }
+static void aliviarMemoria(void) { tex_aliviar(); memlog_devolver(); }
 static void tentarProximaFonteVOD(void) {
   Uint32 desde;
   int atual, motivo = 0;
@@ -2727,6 +2729,16 @@ static void tentarProximaFonteVOD(void) {
     motivo = 3;
   }
   if (!motivo) return;
+  // #415 (LG G4, webOS 9): erro 600 com 4K tocando, 92 MB livres, e o app
+  // reabria a fonte no mesmo instante — o webOS o fechou por memoria. Antes de
+  // outro pipeline, solta o que der; ainda abaixo do piso, mostra o erro.
+  if (motivo == 1 && !memlog_pode_reabrir(memlog_livre_mb, aliviarMemoria)) {
+    printf("[mem] fonte falhou com %ld MB livres: sem nova tentativa\n", memlog_livre_mb());
+    fflush(stdout);
+    fonteVODAutomatica = 0;
+    player_erro_fonte();
+    return;
+  }
 
   atual = stream_atual();
   if (fonteFalha) {

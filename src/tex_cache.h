@@ -253,6 +253,12 @@ int  tex_pressao_pct(int nivel);
 // que a sessao durar (trim do sistema expira em 30 s; o video nao). 0 fecha.
 void tex_pressao_reproducao(int ligada);
 int  tex_pressao_play_pct(void);
+// webOS/.tpk, a cada 3 s: MemAvailable em MiB (< 0 = desconhecido) e se o
+// player esta aberto. Baixa o teto pela memoria livre (ver tex_cache.c).
+void tex_memoria_livre(long livreMb, int player);
+// Teto a 25% e despejo de arte fria agora, no fio de desenho (sem esperar o
+// quadro): antes de reabrir o pipeline com a TV sem memoria.
+void tex_aliviar(void);
 // O valor que "Automatico" significa: o perfil aprovado pelo diagnostico, ou
 // o padrao do aparelho com 0. Travado pelo teto da RAM; nao passa por cima de
 // Ajustes, de NV_TEX_MB_FIXO nem de NUVIO_TEX_MB.

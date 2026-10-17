@@ -847,8 +847,8 @@ static volatile Uint32 pressaoAte;
 // o tempo todo. Com um teto persistente de tela-cheia, gpu-cache + player
 // buffer + pedacos paralelos + preload do proximo titulo estouraram uma TV
 // de 2,4 GB (PSS ~575 MB, lmkd matou o app). Durante a reproducao o teto
-// efetivo fica nesta fracao, ate a sessao de video fechar. So o Android
-// acorda isto; webOS/Tizen nunca chamam tex_pressao_reproducao.
+// efetivo fica nesta fracao, ate a sessao de video fechar. No Android liga
+// com o video; no webOS/.tpk so com a TV sem memoria (tex_memoria_livre).
 // `pressaoPlay` foi declarado junto das forward declarations (a poda a le).
 static int pressaoAtiva(void) {
   if (pressaoPct >= 100) return 0;
@@ -877,7 +877,7 @@ int tex_pressao_play_pct(void) {
   if (orcMemTotal < 3000) return 40;
   return 75;
 #else
-  return 100;
+  return 20;   // piso: com o video em tela cheia a home nao desenha nada
 #endif
 }
 void tex_pressao_reproducao(int ligada) {
@@ -923,6 +923,27 @@ static void podar(void) {
   long lim = limiteBytes();
   while (bytesUsados > lim)
     if (despejar(0) < 0) break;
+}
+
+// webOS/.tpk nao tem onTrimMemory: o relatorio de 3 s (main.c) passa o
+// MemAvailable. #415 (LG G4, webOS 9, MemTotal 1965 MB): 127 MB de arte
+// residente com o video 4K em tela cheia (tela=0), e o webOS fechou o app com
+// 92 MB livres. Abaixo de 150 MB o teto vai a 25%; abaixo de 300, a 50%. Com
+// o player aberto e menos de 512 MB livres o teto desce ao piso de reproducao
+// ate o video fechar; a home redecodifica do disco ao voltar. Com memoria
+// sobrando (a C9) nada muda.
+void tex_memoria_livre(long livreMb, int player) {
+  int nivel = livreMb < 150 ? 80 : livreMb < 300 ? 20 : 0;
+  if (livreMb < 0) return;
+  if (nivel && !(pressaoAtiva() && pressaoPct <= tex_pressao_pct(nivel))) tex_pressao_memoria(nivel);
+  tex_pressao_reproducao(player && (livreMb < 512 || pressaoPlay < 100));
+}
+void tex_aliviar(void) {
+  tex_pressao_memoria(80);
+  if (!mtx) return;
+  SDL_LockMutex(mtx);
+  podar();
+  SDL_UnlockMutex(mtx);
 }
 
 // Diretorio onde as imagens baixadas ficam. Uma vez baixada, a imagem vale

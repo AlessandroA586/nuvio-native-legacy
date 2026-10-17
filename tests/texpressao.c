@@ -23,6 +23,12 @@ static void pronto(int i, unsigned long uso, unsigned long quadro) {
   bytesUsados += bytesTextura(&itens[i]);
 }
 
+#include "../src/memlog.h"
+static long livres[2];
+static int nLivre, aliviou;
+static long livreFalso(void) { return livres[nLivre++ & 1]; }
+static void aliviarFalso(void) { aliviou++; }
+
 int main(void) {
   long um = bytesTexturaMip(1024, 10, 0);
   int i;
@@ -107,12 +113,71 @@ int main(void) {
   tex_pressao_reproducao(0);                // fechou o video: teto volta
   assert(pressaoPlay == 100 && limiteBytes() == orcamento);
 #else
-  assert(tex_pressao_play_pct() == 100);    // fora do Android nunca aperta
+  assert(tex_pressao_play_pct() == 20);     // webOS/.tpk: piso, ligado so sem memoria
   tex_pressao_reproducao(1);
+  assert(pressaoPlay == 20);
+  tex_pressao_reproducao(0);
   assert(pressaoPlay == 100 && limiteBytes() == orcamento);
 #endif
-  puts("ok  reproducao aperta o teto no Android e devolve ao fechar");
+  puts("ok  reproducao aperta o teto e devolve ao fechar");
 
+#ifndef NV_ANDROID
+  // 9. #415: MemAvailable alto (a C9) nao muda nada, nem com o player aberto.
+  limpar();
+  orcamento = um * 10;
+  for (i = 0; i < 8; i++) pronto(i, (unsigned long)i + 1, 50);
+  tex_memoria_livre(900, 1);
+  tex_memoria_livre(-1, 1);                 // sem /proc: nada
+  tex_novo_quadro();
+  assert(pressaoPlay == 100 && pressaoPct == 100 && tex_despejos == 0);
+  puts("ok  memoria sobrando nao mexe no teto");
+
+  // 10. Player aberto com a G4 a 250 MB livres: piso de reproducao (20%%) no
+  //     quadro seguinte; fica no piso enquanto o video durar, volta ao fechar.
+  limpar();
+  orcamento = um * 10;
+  for (i = 0; i < 8; i++) pronto(i, (unsigned long)i + 1, 50);
+  tex_memoria_livre(250, 1);
+  assert(pressaoPlay == 20 && pressaoPct == 50);
+  tex_novo_quadro();
+  assert(bytesUsados <= um * 2 && tex_despejos == 6);
+  tex_memoria_livre(600, 1);
+  assert(pressaoPlay == 20);
+  tex_memoria_livre(600, 0);
+  assert(pressaoPlay == 100);
+  puts("ok  player com pouca memoria desce o cache ao piso e solta ao fechar");
+
+  // 11. O aviso (< 150 MB) sem player: teto a 25%% e despejo no quadro seguinte.
+  limpar();
+  orcamento = um * 10;
+  for (i = 0; i < 8; i++) pronto(i, (unsigned long)i + 1, 50);
+  tex_memoria_livre(92, 0);
+  assert(pressaoPct == 25 && pressaoPlay == 100);
+  tex_novo_quadro();
+  assert(bytesUsados <= um * 2 + um / 2 && tex_despejos == 6);
+  puts("ok  aviso de memoria despeja arte fria");
+
+  // 12. tex_aliviar despeja na hora, sem esperar o quadro.
+  limpar();
+  orcamento = um * 10;
+  for (i = 0; i < 8; i++) pronto(i, (unsigned long)i + 1, 50);
+  tex_aliviar();
+  assert(pressaoPct == 25 && bytesUsados <= um * 2 + um / 2);
+  puts("ok  aliviar despeja agora");
+#endif
+
+  // 13. Reabrir o pipeline depois de um erro: abaixo do piso alivia e le de
+  //     novo; ainda abaixo, nao reabre.
+  livres[0] = 92; livres[1] = 92; nLivre = 0; aliviou = 0;
+  assert(!memlog_pode_reabrir(livreFalso, aliviarFalso) && aliviou == 1);
+  livres[0] = 92; livres[1] = 200; nLivre = 0; aliviou = 0;
+  assert(memlog_pode_reabrir(livreFalso, aliviarFalso) && aliviou == 1);
+  livres[0] = 400; nLivre = 0; aliviou = 0;
+  assert(memlog_pode_reabrir(livreFalso, aliviarFalso) && aliviou == 0);
+  livres[0] = -1; nLivre = 0; aliviou = 0;
+  assert(memlog_pode_reabrir(livreFalso, aliviarFalso) && aliviou == 0);
+  puts("ok  reabrir apos erro so com memoria acima do piso");
   puts("PASS: texpressao");
+
   return 0;
 }

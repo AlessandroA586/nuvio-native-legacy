@@ -1,6 +1,9 @@
 #include "memlog.h"
 #include <stdio.h>
 #include <string.h>
+#ifdef __GLIBC__
+#include <malloc.h>
+#endif
 
 #if defined(__linux__) && !defined(__EMSCRIPTEN__)
 static int abaixo; // Compartilhado por FPS e player, ambos no fio principal.
@@ -30,18 +33,19 @@ void memlog_amostra(char *sufixo, size_t tamanho) {
   long disponivel = lerKB("/proc/meminfo", "MemAvailable:");
   if (rss < 0 || disponivel < 0) return;
   snprintf(sufixo, tamanho, " | mem=%.1f/%.1fMB", rss / 1024.0, disponivel / 1024.0);
-  if (disponivel < 150 * 1024 && !abaixo) {
+  if (disponivel < MEMLOG_PISO_MB * 1024 && !abaixo) {
     printf("[mem] aviso MemAvailable<150MB mem=%.1f/%.1fMB\n", rss / 1024.0, disponivel / 1024.0);
     fflush(stdout);
+    memlog_devolver();
   }
-  abaixo = disponivel < 150 * 1024;
+  abaixo = disponivel < MEMLOG_PISO_MB * 1024;
 #endif
 }
 
 int memlog_pouca_memoria(void) {
 #if defined(__linux__) && !defined(__EMSCRIPTEN__)
   long kb = lerKB("/proc/meminfo", "MemAvailable:");
-  return kb >= 0 && kb < 150 * 1024;
+  return kb >= 0 && kb < MEMLOG_PISO_MB * 1024;
 #else
   return 0;
 #endif
@@ -63,4 +67,21 @@ void memlog_evento(const char *evento) {
     printf("[mem] %s%s\n", evento, sufixo + 2);
     fflush(stdout);
   }
+}
+
+// #415 (LG G4, webOS 9): a sessao de video deixava o rss em 524 MB com o player
+// fechado e o gpu-cache parado — heap livre que o glibc segura. Devolve ao
+// sistema no aviso e ao fechar o player. Sem glibc (Android, WASM), nada.
+void memlog_devolver(void) {
+#ifdef __GLIBC__
+  malloc_trim(0);
+#endif
+}
+
+int memlog_pode_reabrir(long (*livre)(void), void (*aliviar)(void)) {
+  long mb = livre();
+  if (mb < 0 || mb >= MEMLOG_PISO_MB) return 1;
+  aliviar();
+  mb = livre();
+  return mb < 0 || mb >= MEMLOG_PISO_MB;
 }
