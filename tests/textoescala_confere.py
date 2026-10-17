@@ -41,7 +41,14 @@ def compare(name, base, target, factor):
     assert len(f0) == len(f1), f'captured frame count changed: {len(f0)} -> {len(f1)}'
     assert any(f['T'] for f in f0), 'no text drawn'
     same = lambda p, q: all(abs(x - y) <= 2 for x, y in zip(p[1:3], q[1:3]))
-    seen = lambda c: c[3] + c[1] > 0 and c[4] + c[2] > 0 and c[3] < 1920 and c[4] < 1080
+    same = lambda p, q: all(abs(x - y) <= 2 for x, y in zip(p[1:3], q[1:3]))
+    def seen(c):
+        # On screen = at least 15% of the card inside the 1920x1080 frame; a
+        # sliver that reflow pushes fully out (a 7 px tail of a 144 px card)
+        # may vanish without counting as lost artwork.
+        w = min(c[3] + c[1], 1920) - max(c[3], 0)
+        h = min(c[4] + c[2], 1080) - max(c[4], 0)
+        return w > 0 and h > 0 and w * h >= 0.15 * c[1] * c[2]
     cards = 0
     for i, (a, b) in enumerate(zip(f0, f1)):
         scaled('text', i, [t[0] for t in a['T'] if t[0] < 150], [t[0] for t in b['T'] if t[0] < 150], factor, .08)

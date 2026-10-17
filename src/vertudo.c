@@ -64,7 +64,7 @@ static float vtCardAltura(void);
 #define VT_CARD_W   vtCardLargura()
 #define VT_CARD_H   vtCardAltura()
 // .seeall-grid tinha 16; na TV o dono pediu mais ar entre os cartazes (13/10).
-#define VT_GAP_X    (vtTelefone() ? 16.0f : 28.0f)
+#define VT_GAP_X    (vtTelefone() ? 16.0f : 28.0f / gfx_escala_txt())
 #define VT_GAP_Y    (20.0f + 40.0f)       // gap + a linha de titulo sob o cartaz
 // GRADE na TV: sem o nome sob o cartaz (o painel ja diz tudo), so o vao.
 #define VT_GRADE_GAP_Y (vtTelefone() ? VT_GAP_Y : 44.0f)
@@ -149,7 +149,9 @@ static int vtColunas(void) {
     int n = (int)((vtFim() - vtInicio() + VT_GAP_X) / (VT_CARD_BASE_W + VT_GAP_X));
     return n < 1 ? 1 : n;
   }
-  float livre = VT_PAN_X - VT_PAN_VAO - ajustes_conteudo_x() + VT_GAP_X;
+  // #521/#205: contam as colunas que cabem em px REAIS (o cartaz sai da escala
+  // de texto); contar na camada ampliada perderia uma coluna por quadro.
+  float livre = (NV_LAYOUT_REAL_W - NV_CHROME_EDGE - VT_PAN_W - VT_PAN_VAO) / gfx_escala_txt() - ajustes_conteudo_x() + VT_GAP_X;
   int n = (int)(livre / (VT_CARD_BASE_W + VT_GAP_X) + 0.001f);
   return n < 1 ? 1 : n > VT_COLS_MAX ? VT_COLS_MAX : n;
 }
