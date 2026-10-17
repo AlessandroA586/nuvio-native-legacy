@@ -4178,6 +4178,26 @@ void gfx_furo_raio_veu(GfxRect r, float raio, float veu, float rolada, float exp
   glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 }
 
+// FURO PARCIAL: multiplica cor e alfa do retangulo por 1 - a (a = 1 e o
+// gfx_furo). O trailer do destaque entrando e saindo: o furo inteiro com a arte
+// a (1 - a) por cima deixava as rampas da arte (alfa < 1 no "vazar" sobre o
+// Frost) abertas para o plano de video ate a = 0,005, e ai o Frost voltava de
+// uma vez (tests/pisca3_shot.c, home-stall: salto de 35 contra 0,9).
+void gfx_furo_alfa(GfxRect r, float a) {
+  GfxRect t = r;
+  if (a >= 0.995f) { gfx_furo(r); return; }
+  if (a <= 0.0f) return;
+  if (dinPendente) dinDescarregar();
+  if (ambPendente) gfx_ambiente_descarregar();
+  ambIntacta = 0;
+  GFX_TR_RECT(t.x, t.y, t.w, t.h);
+  if (escAtiva != 1.0f) { t.x *= escAtiva; t.y *= escAtiva; t.w *= escAtiva; t.h *= escAtiva; }
+  vidroFuro(t);
+  glBlendFuncSeparate(GL_ZERO, GL_SRC_ALPHA, GL_ZERO, GL_SRC_ALPHA);
+  gfx_rect(r, 0, GFX_COR, 0, 0, 0, 0.0f, 0, 0, 0, 1.0f - a);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+}
+
 // Multiplica TUDO o que ja foi desenhado neste quadro (cor e alfa, que e
 // pre-multiplicado na superficie) por `a`: onde havia home opaca passa a
 // haver home * a sobre o plano de video * (1 - a). Um quad de tela cheia.
