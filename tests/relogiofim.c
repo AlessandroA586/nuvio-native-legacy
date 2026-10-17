@@ -7,8 +7,10 @@
 #include <string.h>
 
 static int lg = IDIOMA_EN;
+static int r12h = 0;
 int ajustes_idioma(void) { return lg; }
 int ajustes_idioma_ingles(void) { return lg == IDIOMA_EN; }
+int ajustes_relogio_12h(void) { return r12h; }
 
 static int falhas;
 #define CONFERE(c, ...) do { if (!(c)) { printf("FALHOU: " __VA_ARGS__); printf("\n"); falhas++; } } while (0)
@@ -26,6 +28,10 @@ int main(void) {
   lg = IDIOMA_EN;
   relogio_fim(fim, sizeof fim, agora, 3 * 3600 + 35 * 60);
   CONFERE(!strcmp(fim, "Ends at 13:45"), "en: \"%s\"", fim);
+  r12h = 1;
+  relogio_fim(fim, sizeof fim, agora, 3 * 3600 + 35 * 60);
+  CONFERE(!strcmp(fim, "Ends at 1:45 PM"), "en 12h: \"%s\"", fim);
+  r12h = 0;
   relogio_fim(fim, sizeof fim, agora, -5);
   CONFERE(!strcmp(fim, "Ends at 10:10"), "en, falta negativa: \"%s\"", fim);
 

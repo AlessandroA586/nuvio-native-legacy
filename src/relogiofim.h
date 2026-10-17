@@ -14,6 +14,7 @@
 // corte, nao o formato. RELOGIO_FIM_MAX cabe tambem uma hora de 12 h
 // ("11:59 PM") na traducao mais longa, se algum dia o formato mudar.
 #include "idioma.h"
+#include "horafmt.h"
 #include <stdio.h>
 #include <time.h>
 
@@ -25,20 +26,20 @@ static inline void relogio_fim(char *fim, size_t tam, time_t agora, double falta
   struct tm lf;
   char h2[16];
   localtime_r(&t2, &lf);
-  strftime(h2, sizeof h2, "%H:%M", &lf);
+  hora_tela(h2, sizeof h2, &lf);
   // i18n NO FORMATO: frase montada nao casa com chave (issue #12). O "a" com
   // crase vai escrito como \xc3\xa0, com o literal partido em dois.
   snprintf(fim, tam, i18n("Termina \xc3\xa0" "s %s"), h2);
 }
 
-// A MESMA FRASE NA PILULA DA ILHA DO PLAYER (plrilha.c): "termina as 22:41",
-// em minuscula depois da hora, como no mockup do Glass UI. Mesmo buffer.
+// A MESMA FRASE NA PILULA DA ILHA DO PLAYER (plrilha.c): "termina as 22:41" ou
+// "termina as 10:41 PM", em minuscula depois da hora, no formato dos Ajustes.
 static inline void relogio_fim_ilha(char *fim, size_t tam, time_t agora, double falta) {
   time_t t2 = agora + (time_t)(falta > 0.0 ? falta : 0.0);
   struct tm lf;
   char h2[16];
   localtime_r(&t2, &lf);
-  strftime(h2, sizeof h2, "%H:%M", &lf);
+  hora_tela(h2, sizeof h2, &lf);
   snprintf(fim, tam, i18n("termina \xc3\xa0" "s %s"), h2);
 }
 
