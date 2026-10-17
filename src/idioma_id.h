@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "Subtitel ASS: aplikasi menggambarnya lagi"),
   T("Legenda aplicada · %s", "Subjudul diterapkan · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Subtitle diterapkan · %s · tidak disinkronkan"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Subtitle diterapkan · %s · tidak disinkronkan (tidak ada subtitle tertanam untuk dibandingkan)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Subtitle diterapkan · %s · tidak disinkronkan (waktu tidak cocok di seluruh film)"),
   T("Legenda automática corrigida", "Subtitel otomatis diperbaiki"),
   T("Legenda completa", "Lengkap"),

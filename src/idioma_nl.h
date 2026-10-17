@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "ASS-ondertitels: de app tekent ze weer"),
   T("Legenda aplicada · %s", "Ondertiteling toegepast · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Ondertiteling toegepast · %s · niet gesynchroniseerd"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Ondertiteling toegepast · %s · niet gesynchroniseerd (geen ingesloten ondertiteling om te vergelijken)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Ondertiteling toegepast · %s · niet gesynchroniseerd (timing klopt niet in de hele film)"),
   T("Legenda automática corrigida", "Automatische ondertitel gecorrigeerd"),
   T("Legenda completa", "Volledig"),

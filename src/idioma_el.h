@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "Υπότιτλοι ASS: η εφαρμογή τους σχεδιάζει ξανά"),
   T("Legenda aplicada · %s", "Οι υπότιτλοι εφαρμόστηκαν · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Οι υπότιτλοι εφαρμόστηκαν · %s · χωρίς συγχρονισμό"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Οι υπότιτλοι εφαρμόστηκαν · %s · χωρίς συγχρονισμό (δεν υπάρχουν ενσωματωμένοι υπότιτλοι για σύγκριση)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Οι υπότιτλοι εφαρμόστηκαν · %s · χωρίς συγχρονισμό (ο χρονισμός δεν ταιριάζει σε όλη την ταινία)"),
   T("Legenda automática corrigida", "Διορθώθηκαν οι αυτόματοι υπότιτλοι"),
   T("Legenda completa", "Πλήρεις"),

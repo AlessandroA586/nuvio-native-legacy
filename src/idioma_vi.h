@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "Phụ đề ASS: ứng dụng đang vẽ lại"),
   T("Legenda aplicada · %s", "Đã áp dụng phụ đề · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Đã áp dụng phụ đề · %s · chưa đồng bộ"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Đã áp dụng phụ đề · %s · chưa đồng bộ (không có phụ đề nhúng để so sánh)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Đã áp dụng phụ đề · %s · chưa đồng bộ (thời gian không khớp trong toàn bộ phim)"),
   T("Legenda automática corrigida", "Đã sửa phụ đề tự động"),
   T("Legenda completa", "Đầy đủ"),

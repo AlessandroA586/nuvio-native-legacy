@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "Titulky ASS: aplikace je opět vykresluje"),
   T("Legenda aplicada · %s", "Titulky použity · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Titulky použity · %s · nesynchronizováno"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Titulky použity · %s · nesynchronizováno (žádné vložené titulky pro porovnání)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Titulky použity · %s · nesynchronizováno (časy nesedí v celém filmu)"),
   T("Legenda automática corrigida", "Opraveny automatické titulky"),
   T("Legenda completa", "Úplné"),

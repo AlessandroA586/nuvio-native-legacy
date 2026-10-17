@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "Sottotitoli ASS: l'app li sta disegnando di nuovo"),
   T("Legenda aplicada · %s", "Sottotitoli applicati · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Sottotitoli applicati · %s · non sincronizzati"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Sottotitoli applicati · %s · non sincronizzati (nessun sottotitolo incorporato da confrontare)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Sottotitoli applicati · %s · non sincronizzati (i tempi non corrispondono in tutto il film)"),
   T("Legenda automática corrigida", "Sottotitolo automatico corretto"),
   T("Legenda completa", "Completi"),

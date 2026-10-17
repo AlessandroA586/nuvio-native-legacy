@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "ASS-feliratok: az app újra maga rajzolja"),
   T("Legenda aplicada · %s", "Felirat alkalmazva · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Felirat alkalmazva · %s · nincs szinkronizálva"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Felirat alkalmazva · %s · nincs szinkronizálva (nincs beágyazott felirat az összehasonlításhoz)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Felirat alkalmazva · %s · nincs szinkronizálva (az időzítés nem stimmel az egész filmben)"),
   T("Legenda automática corrigida", "Javított automatikus felirat"),
   T("Legenda completa", "Teljes"),

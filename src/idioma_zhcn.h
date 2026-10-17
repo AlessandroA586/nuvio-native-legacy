@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "ASS 字幕：应用已重新接手绘制"),
   T("Legenda aplicada · %s", "已应用字幕 · %s"),
   T("Legenda aplicada · %s · não sincronizada", "已应用字幕 · %s · 未同步"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "已应用字幕 · %s · 未同步（没有内嵌字幕可供比较）"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "已应用字幕 · %s · 未同步（整部影片时间轴不匹配）"),
   T("Legenda automática corrigida", "已修复自动字幕"),
   T("Legenda completa", "完整"),

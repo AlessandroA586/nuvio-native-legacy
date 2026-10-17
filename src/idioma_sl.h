@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "Podnapisi ASS: aplikacija jih spet izrisuje"),
   T("Legenda aplicada · %s", "Podnapisi uporabljeni · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Podnapisi uporabljeni · %s · niso sinhronizirani"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Podnapisi uporabljeni · %s · niso sinhronizirani (ni vdelanih podnapisov za primerjavo)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Podnapisi uporabljeni · %s · niso sinhronizirani (časi se ne ujemajo v celotnem filmu)"),
   T("Legenda automática corrigida", "Popravljeni samodejni podnapisi"),
   T("Legenda completa", "Polni"),

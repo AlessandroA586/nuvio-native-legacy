@@ -2480,6 +2480,7 @@
   { "Legenda ASS: o app voltou a desenhar", "ASS subtitles: the app is drawing them again" },
   { "Legenda aplicada · %s", "Subtitles applied · %s" },
   { "Legenda aplicada · %s · não sincronizada", "Subtitles applied · %s · not synced" },
+  { "Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Subtitles applied · %s · not synced (no embedded subtitle to compare)" },
   { "Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Subtitles applied · %s · not synced (timing does not match across the whole film)" },
   { "Legenda automática corrigida", "Automatic subtitle fixed" },
   { "Legenda completa", "Full" },

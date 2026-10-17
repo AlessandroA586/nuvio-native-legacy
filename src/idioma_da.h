@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "ASS-undertekster: appen tegner dem igen"),
   T("Legenda aplicada · %s", "Undertekster anvendt · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Undertekster anvendt · %s · ikke synkroniseret"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Undertekster anvendt · %s · ikke synkroniseret (ingen indlejrede undertekster at sammenligne med)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Undertekster anvendt · %s · ikke synkroniseret (tiderne stemmer ikke i hele filmen)"),
   T("Legenda automática corrigida", "Automatisk undertekst rettet"),
   T("Legenda completa", "Fuld"),

@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "ASS altyazıları: uygulama yeniden çiziyor"),
   T("Legenda aplicada · %s", "Altyazı uygulandı · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Altyazı uygulandı · %s · senkronize edilmedi"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Altyazı uygulandı · %s · senkronize edilmedi (karşılaştırılacak gömülü altyazı yok)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Altyazı uygulandı · %s · senkronize edilmedi (zamanlamalar filmin tamamında uyuşmuyor)"),
   T("Legenda automática corrigida", "Otomatik altyazı düzeltildi"),
   T("Legenda completa", "Tam"),

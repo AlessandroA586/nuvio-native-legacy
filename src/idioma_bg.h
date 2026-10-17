@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "ASS субтитрите отново се изобразяват от приложението"),
   T("Legenda aplicada · %s", "Субтитрите са приложени · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Субтитрите са приложени · %s · не са синхронизирани"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Субтитрите са приложени · %s · не са синхронизирани (няма вградени субтитри за сравнение)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Субтитрите са приложени · %s · не са синхронизирани (времената не съвпадат в целия филм)"),
   T("Legenda automática corrigida", "Коригирани автоматични субтитри"),
   T("Legenda completa", "Пълни"),
