@@ -4062,6 +4062,8 @@ void stream_folha_abrir(void) {
   recarregarFonteConfirmacao = 0;
   recarregarFontePerfil = nv_perfil_sessao_ler();
   recarregarFonteContexto = canalFolha ? 0 : player_recarregar_contexto();
+  // Segurar OK numa fonte le a lista da conta TorBox: ela ja sai agora.
+  if (!canalFolha) partes_aquecer();
   folhaGeometria();
   atualizarProvedores();
   ondever_apps_atualizar();
@@ -4208,6 +4210,7 @@ static void ponteiroDetalhe(int a, int b) { (void)a; (void)b; detAberto = 0; }
 // as duas e deixa o pedido para app.c (stream_partes_escolheu).
 static CtxHold folhaHold;
 static int   ptAberto, ptFonte = -1, ptFoco, ptFocoPosto;
+static Uint32 ptDesde;
 static float ptAnim, ptRol, ptRolAlvo;
 static PartesLista ptL;
 static char  ptProv[96];
@@ -4222,7 +4225,7 @@ static int linhaAceitaPartes(int i) {
          (!strncmp(lista[i].url, "http", 4) || lista[i].infoHash[0]);
 }
 static void partesAbrirPainel(int i) {
-  ptAberto = 1; ptFonte = i; ptFoco = 0; ptFocoPosto = 0; ptRol = ptRolAlvo = 0;
+  ptAberto = 1; ptFonte = i; ptFoco = 0; ptFocoPosto = 0; ptRol = ptRolAlvo = 0; ptDesde = SDL_GetTicks();
   memset(&ptL, 0, sizeof ptL);
   ptL.estado = PARTES_BUSCANDO; ptL.atual = -1;
   nv_limpar_texto(lista[i].provedor, ptProv, sizeof ptProv, NV_LIMPA_UMA_LINHA);
@@ -4822,7 +4825,8 @@ static void desenhaDetalhe(float x, float w, int ptr) {
 // embaixo, o tamanho na coluna da direita.
 static const char *ptMensagem(void) {
   switch (ptL.estado) {
-    case PARTES_BUSCANDO:  return "Procurando os arquivos no TorBox…";
+    case PARTES_BUSCANDO:  // a busca segue no fundo; a modal nao espera para sempre
+      return SDL_GetTicks() - ptDesde > 45000u ? "O TorBox não respondeu. Tente de novo." : "Procurando os arquivos no TorBox…";
     case PARTES_SEM_CHAVE: return "Para ver os arquivos, adicione sua chave do TorBox em Ajustes > Integrações > Debrid";
     case PARTES_SEM_PLANO: return "Sua conta TorBox não permite uso pela API";
     case PARTES_NAO_ACHOU: return "Esta fonte não foi achada na sua conta TorBox";
@@ -4856,7 +4860,10 @@ static void desenhaPartes(float x, float w, int ptr, Uint32 agora) {
   if (msg) {
     txt_bloco(TXT_PG_FIM, msg, 200, 200, 198, ix, jy, iw, DET_LD, a, 0);
   } else {
-    int tocando = ptTocando();
+    int tocando = ptTocando(), dois = 0;
+    // EPISODIO (id com temporada e episodio): o pacote tem episodios, nao
+    // partes de um filme — sem "PARTE N" nas linhas.
+    for (const char *c = alvoPedido; *c; c++) dois += *c == ':';
     gfx_recorte(ix - 16, jy, iw + 32, jh);
     for (int r = 0; r < ptL.n; r++) {
       const ParteArq *f = &ptL.arq[r];
@@ -4883,10 +4890,12 @@ static void desenhaPartes(float x, float w, int ptr, Uint32 agora) {
         txt_desenhar_alpha(lu, ix + iw - lu.w, ry + 14 + (lg.h - lu.h) - 3, a);
         txt_desenhar_alpha(lg, ix + iw - lu.w - 6 - lg.w, ry + 14, a); }
       { float mx = ix;
-        if (num > 0) snprintf(tag, sizeof tag, i18n("Parte %d"), num);
+        if (num > 0 && dois < 2) snprintf(tag, sizeof tag, i18n("Parte %d"), num);
+        else if (num > 0) tag[0] = 0;
         else snprintf(tag, sizeof tag, "%s", i18n("Extra"));
-        mx += caixaAlta(tag, num > 0 ? ai : 150, num > 0 ? (int)(ag * 255) : 150, num > 0 ? (int)(ab * 255) : 148,
-                        ix, ry + 12, a) + 18;
+        if (tag[0])
+          mx += caixaAlta(tag, num > 0 ? ai : 150, num > 0 ? (int)(ag * 255) : 150, num > 0 ? (int)(ab * 255) : 148,
+                          ix, ry + 12, a) + 18;
         if (r == tocando) {
           float w2 = caixaAlta("Reproduzindo agora", ai, (int)(ag * 255), (int)(ab * 255), mx, ry + 12, a);
           desenharAudioBars(mx + w2 + 12, ry + 13, 14, a, agora);

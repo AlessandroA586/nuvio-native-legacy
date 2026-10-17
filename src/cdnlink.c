@@ -75,6 +75,10 @@ int cdnlink_origem_ok(const char *orig) {
   cdnlink_host(orig, h, sizeof h);
   if (!h[0] || !strcasecmp(h, "localhost") || !strncmp(h, "127.", 4) || !strcmp(h, "[::1]")) return 0;
   if (caminhoTermina(orig, ".m3u8") || caminhoTermina(orig, ".m3u") || caminhoTermina(orig, ".mpd")) return 0;
+  // JA E O LINK DO CDN do TorBox (o requestdl da lista de arquivos, partes.h):
+  // seguir o redirecionamento so atrasava a abertura.
+  { size_t L = strlen(h);
+    if (L >= 10 && !strcasecmp(h + L - 10, ".tb-cdn.st")) return 0; }
   return 1;
 }
 

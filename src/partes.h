@@ -94,6 +94,9 @@ int  partes_resultado(PartesLista *l);
 // O mesmo, so se a ultima busca for DESTA fonte (PARTES_VAZIO se nao for).
 int  partes_resultado_de(const Stream *fonte, PartesLista *l);
 void partes_cancelar(void);
+// A folha de Fontes abriu: le a lista de torrents da conta em segundo plano,
+// para o segurar responder da memoria (nada sem chave do TorBox).
+void partes_aquecer(void);
 
 // ---- link de um arquivo (fio proprio) -------------------------------------
 // Pede o link do CDN de um arquivo. Com `comLista`, le tambem o item (para o

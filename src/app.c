@@ -2630,7 +2630,11 @@ static void abrirParte(int fonte, const PartesLista *l, int k) {
   if (partes_ponto_pegar(alvo, sessao_usuario(), perfis_ativo(), &pt) &&
       pt.item == l->item && pt.usenet == l->usenet && pt.arquivo == l->arq[k].id)
     partePos = pt.pos;
-  partes_sessao_iniciar(alvo, l, k);
+  // SERIE: o pacote da temporada tem os episodios como "partes", mas episodio
+  // seguinte e o Next de sempre. Num episodio o arquivo escolhido (um OVA, um
+  // especial) toca sozinho, sem sessao de partes.
+  if (t > 0 && e > 0) partes_sessao_parar("series episode: the file plays alone");
+  else partes_sessao_iniciar(alvo, l, k);
   if (!partes_sessao_de(alvo)) partes_ponto_esquecer(alvo, sessao_usuario(), perfis_ativo());
   parteArqLista = *l; parteArqK = k;
   parteMp4 = nomeMp4(l->arq[k].nome);
@@ -2704,7 +2708,9 @@ static void vigiarPartes(void) {
       return;
     }
     { const Stream *fs = stream_atual() >= 0 ? stream_item(stream_atual()) : NULL;
-      if (!parteAutoEsperando && fs && player_parece_parte() && video_pronto() && !video_falhou() &&
+      int et = 0, ee = 0;
+      player_episodio_atual(&et, &ee);
+      if (!parteAutoEsperando && fs && !(et > 0 && ee > 0) && player_parece_parte() && video_pronto() && !video_falhou() &&
           video_duracao() >= 600.0 &&
           video_url_atual()[0] && strcmp(parteAutoUrl, video_url_atual()) &&
           (!strncmp(fs->url, "http", 4) || fs->infoHash[0]) && debrid_tb_disponivel() > 0) {

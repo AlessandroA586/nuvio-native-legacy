@@ -353,12 +353,94 @@ static void publicar(unsigned g, const PartesLista *l) {
   pthread_mutex_unlock(&trava);
 }
 
+// A LISTA DA CONTA, com memoria. MEDIDO na TV (16/10): pedir torrents/mylist
+// com bypass_cache a cada segurar levava segundos num filme achado de cara, e
+// numa serie que nao achou (torrents + usenet, os dois sem cache) passou de um
+// minuto sem resposta. Agora:
+//   - a primeira leitura usa a copia em cache do proprio TorBox (rapida);
+//     so quando ela nao acha o item vem uma leitura fresca (o torrent pode ter
+//     entrado na conta agora, pelo addon);
+//   - o corpo fica aqui por LISTA_VALIDADE_MS: o segundo segurar na mesma
+//     folha responde da memoria;
+//   - a folha de Fontes, ao abrir, ja pede a lista (partes_aquecer).
+// Uma leitura de rede por vez: quem chega durante uma leitura espera e usa o
+// que ela trouxe.
+#define LISTA_VALIDADE_MS 120000u
+typedef struct { char *corpo; int st; unsigned em; int fresco; } ListaCache;
+static ListaCache lcache[2];
+static pthread_mutex_t lcTrava = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t lcRede = PTHREAD_MUTEX_INITIALIZER;
+
+static unsigned msAgora(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (unsigned)((unsigned long long)ts.tv_sec * 1000ULL + (unsigned long long)ts.tv_nsec / 1000000ULL);
+}
+static char *copiaCache(ListaCache *c, int fresco, int *st) {
+  if (!c->corpo || msAgora() - c->em >= LISTA_VALIDADE_MS || (fresco && !c->fresco)) return NULL;
+  if (st) *st = c->st;
+  return strdup(c->corpo);
+}
+// *origem: 1 = da memoria, 0 = da rede.
+static char *listaConta(int usenet, int fresco, int *st, int *origem) {
+  char *r;
+  int s = 0;
+  unsigned t0 = msAgora();
+  if (origem) *origem = 1;
+  pthread_mutex_lock(&lcRede);
+  pthread_mutex_lock(&lcTrava);
+  r = copiaCache(&lcache[usenet], fresco, st);
+  pthread_mutex_unlock(&lcTrava);
+  if (r) { pthread_mutex_unlock(&lcRede); return r; }
+  if (origem) *origem = 0;
+  r = debrid_tb_mylist(usenet, 0, fresco, &s);
+  if (st) *st = s;
+  printf("[partes] TorBox %s list (%s): HTTP %d, %u KB in %u ms\n", usenet ? "usenet" : "torrent",
+         fresco ? "fresh" : "TorBox cache", s, r ? (unsigned)(strlen(r) / 1024) : 0u, msAgora() - t0);
+  fflush(stdout);
+  if (r && s >= 200 && s < 300) {
+    char *c = strdup(r);
+    pthread_mutex_lock(&lcTrava);
+    if (c) {
+      free(lcache[usenet].corpo);
+      lcache[usenet].corpo = c; lcache[usenet].st = s;
+      lcache[usenet].em = msAgora(); lcache[usenet].fresco = fresco;
+    }
+    pthread_mutex_unlock(&lcTrava);
+  }
+  pthread_mutex_unlock(&lcRede);
+  return r;
+}
+static void listaEsquecer(void) {
+  pthread_mutex_lock(&lcTrava);
+  for (int i = 0; i < 2; i++) { free(lcache[i].corpo); memset(&lcache[i], 0, sizeof lcache[i]); }
+  pthread_mutex_unlock(&lcTrava);
+}
+
+static void *fioAquecer(void *u) {
+  int st = 0;
+  (void)u;
+  free(listaConta(0, 0, &st, NULL));
+  return NULL;
+}
+void partes_aquecer(void) {
+  pthread_t t;
+  int tem;
+  if (!partes_disponivel() || debrid_tb_disponivel() <= 0) return;
+  pthread_mutex_lock(&lcTrava);
+  tem = lcache[0].corpo && msAgora() - lcache[0].em < LISTA_VALIDADE_MS / 2;
+  pthread_mutex_unlock(&lcTrava);
+  if (tem) return;
+  if (pthread_create(&t, NULL, fioAquecer, NULL) == 0) pthread_detach(t);
+}
+
 static void *fioLista(void *u) {
   PedidoLista *pd = u;
   static PartesLista l;   // grande demais para a pilha dos fios do Tizen
   static pthread_mutex_t fioTrava = PTHREAD_MUTEX_INITIALIZER;
   char hashes[9][41];
   int nh = 0, confiavel = 0, disp;
+  unsigned t0 = msAgora();
   pthread_mutex_lock(&fioTrava);
   memset(&l, 0, sizeof l);
   l.atual = -1;
@@ -378,17 +460,33 @@ static void *fioLista(void *u) {
   }
   nh += partes_hashes_texto(pd->url, hashes + nh, 9 - nh);
   {
-    int achou = 0, st = 0, st2 = 0;
-    for (int usenet = 0; usenet < 2 && !achou; usenet++) {
-      char *r = debrid_tb_mylist(usenet, 0, usenet ? &st2 : &st);
-      if (r) achou = partes_achar(r, usenet, hashes, nh, confiavel, pd->arquivo, pd->bytes, &l);
+    int achou = 0, st = 0, st2 = 0, mem = 0, fresco0 = 0;
+    char *r;
+    // 1) a lista de torrents (copia do TorBox ou a da memoria)
+    r = listaConta(0, 0, &st, &mem);
+    if (r) achou = partes_achar(r, 0, hashes, nh, confiavel, pd->arquivo, pd->bytes, &l);
+    free(r);
+    // 2) a de usenet
+    if (!achou) {
+      r = listaConta(1, 0, &st2, NULL);
+      if (r) achou = partes_achar(r, 1, hashes, nh, confiavel, pd->arquivo, pd->bytes, &l);
       free(r);
     }
-    if (!achou && confiavel) {
+    // 3) a de torrents FRESCA: o addon pode ter posto o torrent na conta agora
+    if (!achou) {
+      fresco0 = 1;
+      r = listaConta(0, 1, &st, NULL);
+      if (r) achou = partes_achar(r, 0, hashes, nh, confiavel, pd->arquivo, pd->bytes, &l);
+      free(r);
+    }
+    // 4) fora da conta: com um hash (do addon, ou o do link, que o NMR poe no
+    //    caminho), o TorBox poe o torrent na conta SO se ele ja estiver em cache.
+    if (!achou && nh > 0) {
       int id = debrid_tb_adicionar(hashes[0]);
       if (id > 0) {
-        char *r = debrid_tb_mylist(0, id, &st);
-        if (r && partes_achar(r, 0, hashes, 1, 1, pd->arquivo, pd->bytes, &l)) {
+        listaEsquecer();
+        r = debrid_tb_mylist(0, id, 1, &st);
+        if (r && partes_achar(r, 0, hashes, 1, confiavel, pd->arquivo, pd->bytes, &l)) {
           achou = 1;
           snprintf(l.como, sizeof l.como, "added");
         }
@@ -397,15 +495,15 @@ static void *fioLista(void *u) {
     }
     if (achou) {
       l.estado = PARTES_PRONTO;
-      printf("[partes] files of the source: found in TorBox (%s, by %s): %d video file(s), %d part(s); "
-             "the source plays file %d\n", l.usenet ? "usenet" : "torrent", l.como, l.n,
-             partes_principais(&l), l.atual + 1);
+      printf("[partes] files of the source: found in TorBox in %u ms (%s, by %s%s): %d video file(s), %d part(s); "
+             "the source plays file %d\n", msAgora() - t0, l.usenet ? "usenet" : "torrent", l.como,
+             mem ? ", list from memory" : "", l.n, partes_principais(&l), l.atual + 1);
     } else {
       // A lista de torrents nem veio (rede, 4xx/5xx): e erro, nao "nao achou".
       l.estado = st >= 200 && st < 300 ? PARTES_NAO_ACHOU : PARTES_ERRO;
-      printf("[partes] files of the source: not found in TorBox (torrents HTTP %d, usenet HTTP %d; "
-             "hash from add-on %s, %d hash(es) in the link, filename %s)\n", st, st2,
-             confiavel ? "yes" : "no", nh - confiavel, pd->arquivo[0] ? "yes" : "no");
+      printf("[partes] files of the source: not found in TorBox after %u ms (torrents HTTP %d%s, usenet HTTP %d; "
+             "hash from add-on %s, %d hash(es) in the link, filename %s)\n", msAgora() - t0, st,
+             fresco0 ? " fresh" : "", st2, confiavel ? "yes" : "no", nh - confiavel, pd->arquivo[0] ? "yes" : "no");
     }
     fflush(stdout);
     publicar(pd->geracao, &l);
@@ -501,7 +599,7 @@ static void *fioLink(void *u) {
   l.atual = -1;
   url[0] = 0;
   if (pd->comLista) {
-    char *r = debrid_tb_mylist(pd->usenet, pd->item, &st);
+    char *r = debrid_tb_mylist(pd->usenet, pd->item, 1, &st);
     const char *d = r ? strstr(r, "\"data\"") : NULL;
     ok = 0;
     if (d) { d = strchr(d + 6, ':'); if (d) { d++; while (isspace((unsigned char)*d)) d++; } }
