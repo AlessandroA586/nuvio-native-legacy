@@ -6788,7 +6788,11 @@ static void cartaoComentario(GfxRect card, float raio, float a) {
     gfx_cor(card, raio, 0.082f, 0.094f, 0.118f, 0.92f * a);
     return;
   }
-  gfx_vidro_material(card, raio, GFX_VIDRO_DENS, a);
+  // Flat glass, no per-card backdrop pass: up to 8 cards of 600x340 each took
+  // their own frosted read and the row was the only one that dropped FPS. The
+  // lighter miolo + rim + top highlight is what makes the card read as glass.
+  gfx_vidro_chip(card, raio, 0.55f, a);
+  gfx_brilho_topo(card, raio, 0.50f, 1.0f, 1.0f, 1.0f, 0.18f * a);
 }
 
 static void desenhaComentarios(float x, float y, float a) {
