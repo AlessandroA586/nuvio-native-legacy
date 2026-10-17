@@ -3473,9 +3473,12 @@ static int vidCapturar(const float reg[][4], int n, GLuint dst, GLuint dstFbo) {
 // changed, only when last frame had glass (screens without glass pay nothing).
 // Only what last frame's glasses read is copied and blurred (fundoReg); a glass
 // reading outside it takes the old path that frame and the next captures take
-// the full screen until glasses stay put (fundoCheio frames).
+// the full screen until glasses stay put (fundoCheio frames). While the layer
+// changes every frame (a fade), every other frame keeps last frame's capture,
+// one frame late; new regions and gfx_vidro_sujar still capture at once.
 static float fundoReg[VID_NREG][4];
 static int fundoNReg, fundoCheio;
+static unsigned fundoQuadro;
 static void vidroFundoFechar(void) {
   float full[1][4] = { { 0, 0, NV_TELA_W, NV_TELA_H } };
   const float (*reg)[4] = fundoCheio ? (const float (*)[4])full : (const float (*)[4])vidroRegAnt;
@@ -3484,8 +3487,9 @@ static void vidroFundoFechar(void) {
   if (fundoCheio) fundoCheio--;
   if (vidroLeAnt[2] <= vidroLeAnt[0] || foscoBloq || !ajustes_vidro_fosco() || efeitosMinimos) return;
   for (i = 0; i < vidroNRegAnt; i++) fora |= !vidroRegContem(fundoReg, fundoNReg, vidroRegAnt[i]);
-  if (!fundoValido || fundoHash != vidroHash || fora) {
-    fundoValido = 0;
+  if ((!fundoValido || fundoHash != vidroHash || fora) &&
+      !(fundoValido && !fora && fundoQuadro + 1 == gfx_quadro_n)) {
+    fundoValido = 0; fundoQuadro = gfx_quadro_n;
     if (!vidPreparar()) return;
     if (!vidFundo) {
       GLint ant = fboLigado();

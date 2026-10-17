@@ -28,6 +28,7 @@
 #include <string.h>
 
 static int width, height, failures;
+static float fade = .001f;   // backdrop alpha step per frame while in motion
 static void check(int ok, const char *label) {
   printf("%s: %s\n", ok ? "PASS" : "FAIL", label);
   failures += !ok;
@@ -40,7 +41,7 @@ static void frame(int n, int motion, int trailer) {
   home_shot_trailer(trailer);
   // Change the backdrop hash before the first glass, including hero buttons.
   // Native trailer holes are checked separately below.
-  if (motion) gfx_cor((GfxRect){0, 0, 1920, 1080}, 0, .12f, .18f, .3f, .02f + .001f * (n % 20));
+  if (motion) gfx_cor((GfxRect){0, 0, 1920, 1080}, 0, .12f, .18f, .3f, .02f + fade * (n % 20));
   home_desenhar(now);
   menu_pilula_mostrar(1);
   menu_atualizar(1.0f / 60, now); menu_desenhar(now);
@@ -160,6 +161,24 @@ int main(int argc, char **argv) {
   shot(argv[2], "modal");
   for (int i = 0; i < 5; i++) frame(380 + i, 0, 1);
   shot(argv[2], "trailer");
+  // A fade changes the backdrop every frame: it recaptures every other frame
+  // (a late texture upload may force one more), and once it settles the
+  // glass shows exactly what a fresh capture shows.
+  fade = .02f; captures = 0;
+  for (int i = 0; i < 10; i++) { frame(221 + i, 1, 0); captures += gfx_vidro_capturas; }
+  printf("fade: captures=%d over ten frames\n", captures);
+  check(captures <= 7, "fade recaptures every other frame");
+  {
+    size_t bytes = (size_t)width * height * 4;
+    unsigned char *late = malloc(bytes), *fresh = malloc(bytes);
+    assert(late && fresh);
+    frame(230, 1, 0); frame(230, 1, 0);
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, late);
+    gfx_vidro_sujar(); frame(230, 1, 0);
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, fresh);
+    check(!memcmp(late, fresh, bytes), "the frame after a fade catches up");
+    free(late); free(fresh);
+  }
   check(glGetError() == GL_NO_ERROR, "GL state after trailer and chrome");
   tex_encerrar(); SDL_Quit();
   return failures ? 1 : 0;
