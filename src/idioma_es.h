@@ -2480,6 +2480,7 @@
   T("Legenda ASS: o app voltou a desenhar", "Subtítulos ASS: la app volvió a dibujarlos"),
   T("Legenda aplicada · %s", "Subtítulos aplicados · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Subtítulos aplicados · %s · sin sincronizar"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Subtítulos aplicados · %s · sin sincronizar (sin subtítulos integrados para comparar)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Subtítulos aplicados · %s · sin sincronizar (los tiempos no coinciden en toda la película)"),
   T("Legenda automática corrigida", "Subtítulo automático corregido"),
   T("Legenda completa", "Completos"),

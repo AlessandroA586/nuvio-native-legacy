@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "ASS titlove ponovo crta aplikacija"),
   T("Legenda aplicada · %s", "Titl primijenjen · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Titl primijenjen · %s · nije sinhronizovan"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Titl primijenjen · %s · nije sinhronizovan (nema ugrađenog titla za poređenje)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Titl primijenjen · %s · nije sinhronizovan (vremena se ne poklapaju u cijelom filmu)"),
   T("Legenda automática corrigida", "Ispravljeni automatski titlovi"),
   T("Legenda completa", "Puni"),

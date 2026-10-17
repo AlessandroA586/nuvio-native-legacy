@@ -158,6 +158,8 @@ int legsync_pilula_final(const LegSyncVisao *v, const char *provedor, char *dst,
   }
   if (v && v->motivo == LEGSYNC_M_REGION_DISAGREEMENT)
     snprintf(dst, tam, i18n("Legenda aplicada \xc2\xb7 %s \xc2\xb7 n\xc3\xa3o sincronizada (tempos n\xc3\xa3o batem em todo o filme)"), p);
+  else if (v && (v->motivo == LEGSYNC_M_SEM_REFERENCIA || v->motivo == LEGSYNC_M_SEM_TEXTO))
+    snprintf(dst, tam, i18n("Legenda aplicada \xc2\xb7 %s \xc2\xb7 n\xc3\xa3o sincronizada (sem legenda embutida para comparar)"), p);
   else snprintf(dst, tam, i18n("Legenda aplicada \xc2\xb7 %s \xc2\xb7 n\xc3\xa3o sincronizada"), p);
   return 0;
 }

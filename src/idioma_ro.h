@@ -2480,6 +2480,7 @@
   T("Legenda ASS: o app voltou a desenhar", "Subtitrări ASS: aplicația le desenează din nou"),
   T("Legenda aplicada · %s", "Subtitrare aplicată · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Subtitrare aplicată · %s · nesincronizată"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Subtitrare aplicată · %s · nesincronizată (fără subtitrare încorporată pentru comparație)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Subtitrare aplicată · %s · nesincronizată (timpul nu se potrivește în tot filmul)"),
   T("Legenda automática corrigida", "Subtitrarea automată a fost corectată"),
   T("Legenda completa", "Completă"),

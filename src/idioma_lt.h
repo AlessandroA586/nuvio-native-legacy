@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "ASS subtitrus vėl piešia programa"),
   T("Legenda aplicada · %s", "Subtitrai pritaikyti · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Subtitrai pritaikyti · %s · nesinchronizuoti"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Subtitrai pritaikyti · %s · nesinchronizuoti (nėra įterptų subtitrų palyginimui)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Subtitrai pritaikyti · %s · nesinchronizuoti (laikai nesutampa visame filme)"),
   T("Legenda automática corrigida", "Ištaisyti automatiniai subtitrai"),
   T("Legenda completa", "Pilni"),

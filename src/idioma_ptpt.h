@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "Legendas ASS: a app voltou a desenhá-las"),
   T("Legenda aplicada · %s", "Legenda aplicada · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Legenda aplicada · %s · não sincronizada"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Legenda aplicada · %s · não sincronizada (os tempos não batem em todo o filme)"),
   T("Legenda automática corrigida", "Legenda automática corrigida"),
   T("Legenda completa", "Legenda completa"),

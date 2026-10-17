@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "Napisy ASS: aplikacja znów je rysuje"),
   T("Legenda aplicada · %s", "Napisy zastosowane · %s"),
   T("Legenda aplicada · %s · não sincronizada", "Napisy zastosowane · %s · niezsynchronizowane"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "Napisy zastosowane · %s · niezsynchronizowane (brak osadzonych napisów do porównania)"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "Napisy zastosowane · %s · niezsynchronizowane (czasy nie zgadzają się w całym filmie)"),
   T("Legenda automática corrigida", "Poprawiono automatyczne napisy"),
   T("Legenda completa", "Pełne"),

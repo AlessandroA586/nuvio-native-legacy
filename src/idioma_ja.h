@@ -2481,6 +2481,7 @@
   T("Legenda ASS: o app voltou a desenhar", "ASS 字幕: アプリが再び描画しています"),
   T("Legenda aplicada · %s", "字幕を適用しました · %s"),
   T("Legenda aplicada · %s · não sincronizada", "字幕を適用しました · %s · 同期されていません"),
+  T("Legenda aplicada · %s · não sincronizada (sem legenda embutida para comparar)", "字幕を適用しました · %s · 同期されていません（比較する埋め込み字幕がありません）"),
   T("Legenda aplicada · %s · não sincronizada (tempos não batem em todo o filme)", "字幕を適用しました · %s · 同期されていません（映画全体でタイミングが一致しません）"),
   T("Legenda automática corrigida", "自動字幕を修正"),
   T("Legenda completa", "フル"),
