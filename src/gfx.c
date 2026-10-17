@@ -3247,6 +3247,7 @@ static float vidroTom(float cinza);
 // COM VIDEO VIVO POR BAIXO a tela nao e o fundo (o plano de video fica atras
 // dela, pelo alfa 0 do furo): o player avisa por quadro e o vidro sai chapado.
 #define VID_ALCANCE 68.0f   // BLUR_REACH: ate onde a lente e o desfoque leem fora do vidro
+#define VID_FOLGA 64.0f     // slack around last frame's glass regions (scroll per frame)
 #define VID_RUIDO_N 256
 static GLuint vidBackdrop, vidGrab, vidH2, vidH2Fbo, vidQa, vidQaFbo, vidQb, vidQbFbo, vidRuido, vidProg;
 static GLuint vidSlot[VID_NSLOTS], vidSlotFbo[VID_NSLOTS], vidFundo, vidFundoFbo;
@@ -3541,8 +3542,15 @@ static int vidCapturar(const float reg[][4], int n, GLuint dst, GLuint dstFbo, G
 static float fundoReg[VID_NREG][4];
 static int fundoNReg;
 static void vidroFundoFechar(void) {
-  const float (*reg)[4] = (const float (*)[4])vidroRegAnt;
+  // Last frame's read regions plus VID_FOLGA: a glass that scrolled a few px
+  // (detail page, title -> season tabs) stays inside them instead of forcing a
+  // second, full-screen capture every frame of the scroll.
+  float reg[VID_NREG][4];
   int n = vidroNRegAnt, i, fora = 0;
+  for (i = 0; i < n; i++) {
+    reg[i][0] = vidroRegAnt[i][0] - VID_FOLGA; reg[i][1] = vidroRegAnt[i][1] - VID_FOLGA;
+    reg[i][2] = vidroRegAnt[i][2] + VID_FOLGA; reg[i][3] = vidroRegAnt[i][3] + VID_FOLGA;
+  }
   fundoFim = 2;
   if (foscoBloq || !ajustes_vidro_fosco() || efeitosMinimos) return;
   if (!vidPreparar()) return;
@@ -3576,7 +3584,7 @@ static void vidroFundoFechar(void) {
       gfx_tex_esquecer(0);
       if (!ok) return;
     }
-    if (n && !vidCapturar(reg, n, vidFundo, vidFundoFbo, vidBackdrop)) return;
+    if (n && !vidCapturar((const float (*)[4])reg, n, vidFundo, vidFundoFbo, vidBackdrop)) return;
     memcpy(fundoReg, reg, n * sizeof fundoReg[0]); fundoNReg = n;
     for (i = 0; i < n; i++) {   // past a screen edge there is nothing to read
       float *f = fundoReg[i];

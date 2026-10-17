@@ -232,3 +232,87 @@ static int mais_checks(void) {
          failures ? "FAIL" : "PASS");
   return failures ? 1 : 0;
 }
+
+// NUVIO_DETAIL_CHECK=eps (tests/epfoco.sh): Moderna series page, Frost on.
+// 1. The focused episode's text plate spans the zoomed thumbnail, pads the
+//    text, and is drawn as glass (frost sampled) when glass is on.
+// 2. Title -> season tabs -> episodes: the per-frame budget of the scroll.
+static int epsPlate;
+// The detail page asks for the remembered automatic source every frame
+// (app.c prepararAoAbrir): 60 asks of the same list log one line, and reads
+// leave fontepref_revisao (the caller's cache key) alone.
+static int fontepref_frames(void) {
+  Stream v[2];
+  char path[700], line[300];
+  int logs = 0, saved;
+  memset(v, 0, sizeof v);
+  for (int i = 0; i < 2; i++) {
+    snprintf(v[i].provedor, sizeof v[i].provedor, "Addon%d", i);
+    snprintf(v[i].url, sizeof v[i].url, "https://x.invalid/%d.mp4", i);
+    v[i].altura = 1080; v[i].mp4 = 1;
+    snprintf(v[i].bingeGroup, sizeof v[i].bingeGroup, "addon|g%d", i);
+  }
+  stream_definir_lista(v, 2);
+  fontepref_auto_guardar("tt3000001:1:1", &v[1]);
+  unsigned rev = fontepref_revisao();
+  snprintf(path, sizeof path, "%s/frames.log", dados_dir());
+  fflush(stdout); saved = dup(1);
+  FILE *f = fopen(path, "w");
+  dup2(fileno(f), 1);
+  for (int q = 0; q < 60; q++) fontepref_escolher("tt3000001:1:2");
+  fflush(stdout); dup2(saved, 1); close(saved); fclose(f);
+  f = fopen(path, "r");
+  while (f && fgets(line, sizeof line, f)) logs += strstr(line, "por bingeGroup do automatico") != NULL;
+  if (f) fclose(f);
+  int ok = logs == 1 && fontepref_revisao() == rev && rev != 0;
+  printf("%s: 60 frames of the same automatic pick: %d log line(s), revision %u -> %u\n",
+         ok ? "PASS" : "FAIL", logs, rev, fontepref_revisao());
+  return !ok;
+}
+
+static int eps_checks(void) {
+  int failures = fontepref_frames(), frost = ajustes_vidro_fosco() && !gfx_efeitos_minimos();
+  abrir(0, 1, SEC_EPISODIOS, 0);
+  { GfxRect r = { 200, 300, epCardW(), epThumbH() + 140 };
+    GfxRect z = foco_zoom((GfxRect){ r.x, r.y, r.w, epThumbH() }, 1.0f);
+    GfxRect p = epPlacaRect(r, epThumbH(), 1.0f);
+    float inset = r.x + NV_DETP_EPM_TEXTO_X - p.x;
+    int src0;
+    txt_novo_quadro(); tex_novo_quadro(); gfx_novo_quadro();
+    glClear(GL_COLOR_BUFFER_BIT);
+    src0 = gfx_vidro_com_fonte;
+    epPlacaDesenha(p, 1.0f, 1.0f);
+    epsPlate = gfx_vidro_com_fonte - src0;
+    int ok = p.x <= z.x + .5f && p.x + p.w >= z.x + z.w - .5f && p.y + p.h > r.y + r.h &&
+             inset >= 16.0f && r.x + NV_DETP_EPM_TEXTO_X + epTextoW() <= p.x + p.w - 16.0f &&
+             (frost ? epsPlate == 1 : 1);
+    printf("%s: episode plate x=%.0f..%.0f thumb=%.0f..%.0f text-inset=%.0f glass=%d\n",
+           ok ? "PASS" : "FAIL", p.x, p.x + p.w, z.x, z.x + z.w, inset, epsPlate);
+    failures += !ok; }
+  // Title (button row) -> DOWN -> season tabs -> DOWN -> episodes.
+  abrir(0, 0, 0, 0);
+  for (int k = 0; k < 10; k++) { int c = 0, pa = 0, s = 0, u = 0; rows_frame(&c, &pa, &s, &u); }
+  int capt = 0, pass = 0, src = 0, up = 0, binds = 0, dobradas = 0;
+  double gpu = 0;
+  rowRects = 0; rowFill = rowBlur = rowCopy = 0;
+  for (int step = 0; step < 2; step++) {
+    SDL_Event e; memset(&e, 0, sizeof e);
+    e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_DOWN; detail_evento(&e);
+    for (int k = 0; k < 40; k++) {
+      rows_frame(&capt, &pass, &src, &up);
+      // A second backdrop capture is a full-screen copy + blur: only frames where
+      // a new glass enters may pay it, not every frame of the scroll.
+      dobradas += gfx_vidro_capturas > 1;
+      if (gfx_n_bind > binds) binds = gfx_n_bind;
+      if (gfx_fill_gpu > gpu) gpu = gfx_fill_gpu;
+      SDL_Delay(8);
+    }
+  }
+  printf("title->seasons->episodes: fileira=%d frost-panels=%d double-capture-frames=%d/80 passes=%d rects=%d binds=%d gpu-fill=%.3f\n",
+         foco.fileira, src, dobradas, pass, rowRects, binds, gpu);
+  int ok = foco.fileira == SEC_EPISODIOS && dobradas <= 6 && src <= 16 && rowRects <= 260 && gpu <= 4.0;
+  printf("%s: episodes transition budget (<=6 double-capture frames, <=16 frost panels, <=260 rects, gpu fill<=4)\n",
+         ok ? "PASS" : "FAIL");
+  failures += !ok;
+  return failures ? 1 : 0;
+}

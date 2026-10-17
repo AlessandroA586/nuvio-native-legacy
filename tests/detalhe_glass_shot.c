@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #define extras_pedir            fx_pedir
 #define extras_carregando       fx_carregando
@@ -127,6 +128,8 @@ size_t trakt_token_tam(const char *s) {
 }
 
 #include "dados.h"
+#include "fontepref.h"
+#include "streams.h"
 #include "ilha.h"
 #include "menu.h"
 #include "salvospainel.h"
@@ -485,6 +488,8 @@ int main(int argc, char **argv) {
     // NUVIO_SHOT_FONTE=3: Montserrat, the interface font of the owner's TV.
     if (getenv("NUVIO_SHOT_FONTE")) fprintf(f, "fonteInterface %d\n", atoi(getenv("NUVIO_SHOT_FONTE")));
     if (getenv("NUVIO_SHOT_FUNDO")) fprintf(f, "fundoLocal %d\n", atoi(getenv("NUVIO_SHOT_FUNDO")));
+    // NUVIO_SHOT_BORDA=1: "Borda no cartaz em foco" off (focus grows instead of a ring).
+    if (getenv("NUVIO_SHOT_BORDA")) fprintf(f, "bordaFocoCartaz %d\n", atoi(getenv("NUVIO_SHOT_BORDA")));
     fclose(f);
     ajustes_dir(dd); }
   ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_FOSCO / _OPAC
@@ -513,6 +518,7 @@ int main(int argc, char **argv) {
     const char *m = getenv("NUVIO_DETAIL_CHECK");
     if (!strcmp(m, "comments")) return comments_checks();
     if (!strcmp(m, "cards")) return card_checks();
+    if (!strcmp(m, "eps")) return eps_checks();
     return strcmp(m, "mais") == 0 ? mais_checks() : rows_checks();
   }
   // NUVIO_SHOT_AMIGOS=1: amigos falsos (feed externo) no filme e na serie —
