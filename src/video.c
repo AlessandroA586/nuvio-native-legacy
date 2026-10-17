@@ -2170,7 +2170,8 @@ static void *lerMkv(void *arg) {
       // escondendo (ou o trecho de 320 KB cortando) faixas — e nesse caso
       // NENHUMA faixa ASS vai ao overlay do app, todas ficam com a TV.
       printf("[mkv] legendas da TV x arquivo: modo=%s (tv=%d, arquivo=%d, lista da TV %s)\n",
-             modo == MKV_CASA_ORDINAL ? "ordinal" : modo == MKV_CASA_NUMERO ? "trackNumber" : "nenhum",
+             modo == MKV_CASA_ORDINAL ? "ordinal" : modo == MKV_CASA_NUMERO ? "trackNumber" :
+             modo == MKV_CASA_SEM_IMAGEM ? "ordinal (sem legendas de imagem)" : "nenhum",
              nt, nArq, nLeg > NV_FAIXA_MAX ? "CORTADA em NV_FAIXA_MAX" : "inteira");
       if (modo == MKV_CASA_NADA && nt > 0) {
         char m[96];

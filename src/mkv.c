@@ -883,6 +883,14 @@ int mkv_faixas_e_caps(const char *url, MkvFaixa *saida, int max,
   achou = acharTracks((const unsigned char *)buf, n, saida, max,
                       caps, maxCaps, nCaps);
   diagTrecho((const unsigned char *)buf, n, saida, achou);
+  // Tracks cortado pela janela: uma lista PELA METADE faria o casamento das
+  // legendas dar "nenhum" e deixaria TODA faixa ASS com a TV (#483 so cobria o
+  // caso de 0 faixas). O SeekHead diz onde o elemento inteiro mora; sem ele, a
+  // lista incompleta nao serve (mesma regra do mkv_faixas_do_trecho).
+  if (tracksCortado) {
+    int alem = mkv_tracks_alem(url, saida, max, NULL);
+    achou = alem > 0 ? alem : 0;
+  }
   if (caps && nCaps && !*nCaps && posChapters >= 0)
     *nCaps = capsPorPosicao(url, posChapters, caps, maxCaps, NULL);
   free(buf);
@@ -906,6 +914,11 @@ int mkv_faixas_do_trecho(const unsigned char *buf, long n, MkvFaixa *saida, int 
 
 int mkv_faixas(const char *url, MkvFaixa *saida, int max) {
   return mkv_faixas_e_caps(url, saida, max, NULL, 0, NULL);
+}
+
+// Legenda de imagem (BD: PGS; DVD: VobSub). O mesmo criterio de faixasmkv.c.
+static int legendaImagemMkv(const MkvFaixa *f) {
+  return !strncmp(f->codec, "S_HDMV", 6) || !strncmp(f->codec, "S_VOBSUB", 8);
 }
 
 // Ver a nota em mkv.h. Puro: sem rede, sem estado — e o que o teste
@@ -934,6 +947,36 @@ int mkv_casar_legendas(const MkvFaixa *fx, int n, const int *tvNum, int nTv,
     for (i = 0; i < nTv; i++) idxFx[i] = leg[tvNum[i]];
     return MKV_CASA_ORDINAL;
   }
+  // A TV pode esconder as legendas de IMAGEM (PGS/VobSub) — e todo BD/remux de
+  // anime as traz ao lado das ASS. Com elas fora do arquivo as contagens
+  // batem. Primeiro o ordinal no arquivo inteiro (a TV so omitiu a lista, e o
+  // trackNum seguiu a numeracao do arquivo); depois renumerado 0..k-1 entre as
+  // de texto. Os dois so valem quando TODAS caem em faixa de texto, para o
+  // ordinal nunca apontar uma imagem.
+  { int txt[MKV_MAX_FAIXAS], nTxt = 0;
+    for (j = 0; j < nLeg; j++) if (!legendaImagemMkv(&fx[leg[j]])) txt[nTxt++] = leg[j];
+    if (nTxt != nLeg && nTxt == nTv) {
+      unsigned char visto[MKV_MAX_FAIXAS] = {0};
+      ok = 1;
+      for (i = 0; ok && i < nTv; i++) {
+        if (tvNum[i] < 0 || tvNum[i] >= nLeg || visto[tvNum[i]] || legendaImagemMkv(&fx[leg[tvNum[i]]])) ok = 0;
+        else visto[tvNum[i]] = 1;
+      }
+      if (ok) {
+        for (i = 0; i < nTv; i++) idxFx[i] = leg[tvNum[i]];
+        return MKV_CASA_SEM_IMAGEM;
+      }
+      memset(visto, 0, sizeof visto);
+      ok = 1;
+      for (i = 0; ok && i < nTv; i++) {
+        if (tvNum[i] < 0 || tvNum[i] >= nTxt || visto[tvNum[i]]) ok = 0;
+        else visto[tvNum[i]] = 1;
+      }
+      if (ok) {
+        for (i = 0; i < nTv; i++) idxFx[i] = txt[tvNum[i]];
+        return MKV_CASA_SEM_IMAGEM;
+      }
+    } }
 
   ok = 1;
   for (i = 0; ok && i < nTv; i++) {
