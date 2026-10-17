@@ -61,6 +61,7 @@ int  nf_norm100(int fonte, int cru);
 // obvio (letterboxd, ebert) — o heatmap usa, a linha do titulo nao. `virgula`
 // troca o separador decimal (portugues). Metacritic e a nota do MDBList saem
 // como inteiro puro, sem "%" nem "/100": e assim que o site escreve.
+int nf_cru(int fonte, double v);
 void nf_texto(int fonte, int cru, int virgula, int longo, char *dst, size_t cap);
 
 // --- cores (0..1) ------------------------------------------------------------
