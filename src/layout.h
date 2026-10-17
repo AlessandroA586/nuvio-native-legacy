@@ -357,6 +357,13 @@ int layout_modo_mobile(void);
 // Fileira redonda (pessoas): diametro do disco. O nome vai abaixo, no bloco do rotulo.
 #define NV_REDONDA_D       200.0f
 #define NV_PALCO_VIZ       0.66f
+// Palco, 17/10 (dono: "mais informacoes do filme a direita do poster, tipo a
+// splitview"): a ficha mora no vao a direita do foco e empurra os vizinhos da
+// direita por NV_PALCO_INFO_W + NV_PALCO_INFO_VAO. Holofote: o veu da tela
+// inteira com a fileira em foco e a luz no titulo (GFX_HOLOFOTE).
+#define NV_PALCO_INFO_W    480.0f
+#define NV_PALCO_INFO_VAO  40.0f
+#define NV_HOLOFOTE_VEU    0.62f
 // FILEIRA "PÔSTER GRANDE" (home.c): o card 3:4 grande do pedido de 14/10
 // ("o pôster só que do tamanho do grande tipo o 3:4 grande"). A base do card
 // leva logo, gênero, classificação e duas linhas de sinopse sobre um véu na

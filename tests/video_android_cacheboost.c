@@ -253,7 +253,7 @@ int main(void) {
   assert(abrirSessao(0, 0));
   assert(strstr(registro, "B0"));
   { VideoStats st;
-    Java_space_nuvio_nativelegacy_NvPlayer_nativeStats(&env, NULL, 1000, 25000, 150000, 2, 12, 3, 100, NULL);
+    Java_space_nuvio_nativelegacy_NvPlayer_nativeStats(&env, NULL, 1000, 25000, 150000, 2, 12, 3, 100, NULL, 50000, 80, 1);
     video_estatisticas(&st);
     assert(st.bytes == 1000 && st.bufferSeg == 25 && st.bufferAlvoSeg == 150 && st.quadrosPerdidos == 3);
     assert(abrirSessao(0, 0));

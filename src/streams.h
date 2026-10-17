@@ -142,6 +142,8 @@ int stream_filtro_permite(const Stream *fonte);
 int stream_filtro_bloqueou(void);
 void stream_definir_atual(int indice);
 int stream_atual(void);
+int stream_kbps(const Stream *s);
+int stream_kbps_atual(void);   // declared kbps of stream_atual() (0 = unknown)
 void stream_folha_contexto(const char *texto);
 // O nome do conteudo da lista (titulo do filme ou da serie), para o titulo de
 // cada linha no modo "Do Nuvio" ("Silo  Temporada 2 Episodio 5"). Chamar antes
@@ -230,6 +232,7 @@ int  stream_proxima_vod(int atual);
 int  stream_verificar_proxima_vod(int atual, int tentativas, int *conferidas);
 // Politica por reproducao; so o worker altera a sua copia da sessao. Nunca
 // grava URL/exclusoes na lista antes de o consumidor validar as geracoes.
+int stream_falha_tem_proxima(const FonteFalhaSessao *sessao, unsigned lista);
 int stream_falha_verificar(FonteFalhaSessao *sessao, unsigned lista, int escolhida,
                            int (*cancelado)(void *), void *ctx,
                            int *indice, int *servico, char *url, unsigned tam);

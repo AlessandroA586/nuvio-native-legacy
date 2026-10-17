@@ -1854,6 +1854,8 @@ static float alvoScrollFil(int r, int col, float atual, float abre) {
   float esq   = (float)col * passo;
   float dir   = esq + larguraFil(r) + xOffTipo(fileiras[r].tipo);
   float util  = homeLarguraUtil();
+  // PALCO: a ficha a direita do foco entra na tela junto com ele.
+  if (fileiras[r].tipo == FILEIRA_PALCO) dir += NV_PALCO_INFO_VAO + NV_PALCO_INFO_W;
   float folga = sobraDireitaFoco(r, abre);
   float alvo  = atual;
   // HERÓI DIVIDIDO: o card em foco É o painel; a fila ao lado dele começa no
@@ -6151,8 +6153,11 @@ static int colunaDaFileira(int r) {
 // ou a direita (clamp de d em -1..1): mover o foco nao arrasta a fileira
 // inteira (dono, 14/10: "as fileiras mexendo junto ao inves de ficar parada").
 // Quem anda, anda pela mola unica de palcoPos, sem misturar com a rolagem.
+// Os da direita tambem abrem o vao da ficha (palcoFicha), como na Split.
 static float palcoDesloca(float lw, float d) {
-  return (d < -1.0f ? -1.0f : d > 1.0f ? 1.0f : d) * (lw - lw * NV_PALCO_VIZ) * 0.5f;
+  float k = d < -1.0f ? -1.0f : d > 1.0f ? 1.0f : d;
+  return k * (lw - lw * NV_PALCO_VIZ) * 0.5f
+       + (k > 0.0f ? k * (NV_PALCO_INFO_W + NV_PALCO_INFO_VAO) : 0.0f);
 }
 static void palcoGeo(int r, int c, float lw, float *cx, float *s) {
   float d = (float)c - palcoPos[r], ad = fabsf(d);
@@ -6199,6 +6204,85 @@ static void palcoLegenda(int r, float base, float lw) {
     txt_desenhar_alpha(t, cx - t.w * 0.5f, base + 14.0f, perto);
     txt_desenhar_alpha(m, cx - m.w * 0.5f, base + 14.0f + t.h + 2.0f, perto * 0.9f); }
 }
+// PALCO, 17/10: a ficha no vao a direita do foco (palcoDesloca abre o vao).
+// Nome, ano e duracao ja estao na legenda embaixo do cartaz; aqui entra o
+// resto da Split: genero, selos, sinopse e elenco, alinhados pelo topo dos
+// vizinhos. Na fileira em foco ela tambem marca o alvo do holofote.
+static GfxRect holoPoster;   // o cartaz em foco do Palco, no quadro corrente
+static int     holoTem;
+static GfxRect palcoInfoRect(int r, float cardY, float lw, float artH) {
+  float cx, s;
+  palcoGeo(r, (int)(palcoPos[r] + 0.5f), lw, &cx, &s);
+  return (GfxRect){ cx + lw * s * 0.5f + NV_PALCO_INFO_VAO, cardY, NV_PALCO_INFO_W, artH };
+}
+static void palcoFicha(int r, float cardY, float lw, float artH) {
+  int c = (int)(palcoPos[r] + 0.5f);
+  float perto = 1.0f - 2.0f * fabsf(palcoPos[r] - (float)c);
+  const CatItem *it = cat_item_exato(fileiraItemIndice(&fileiras[r], c));
+  GfxRect p = palcoInfoRect(r, cardY, lw, artH);
+  float x = p.x, y = cardY + artH * (1.0f - NV_PALCO_VIZ) * 0.5f;
+  if (r == foco.fileira && !focoHero) {
+    float cx, s;
+    palcoGeo(r, colunaDaFileira(r), lw, &cx, &s);
+    holoPoster = (GfxRect){ cx - lw * s * 0.5f, cardY + artH * (1.0f - s) * 0.5f, lw * s, artH * s };
+    holoTem = 1;
+  }
+  if (!it || perto < 0.02f) return;
+  if (it->genero[0]) {
+    TxtLinha g = txt_linha_corta(TXT_CW_META, it->genero, 218, 222, 232, 255, p.w);
+    txt_desenhar_alpha(g, x, y, perto); y += g.h + 12.0f;
+  }
+  { float bx = x;
+    int nota = imdbnota_obter(it->imdb, it->nota, !strcmp(it->tipo, "series"));
+    if (it->classificacao[0]) bx += badge_desenhar(bx, y, it->classificacao, BADGE_NEUTRO, perto) + BADGE_IMDB_GAP;
+    if (nota > 0) bx += badge_imdb(bx, y, nota, 0, perto);
+    if (bx > x) y += BADGE_H + 16.0f; }
+  if (it->sinopse[0])
+    y += sinopse_bloco(TXT_HERO_SIN, it->sinopse, 214, 218, 228, x, y, p.w, 30.0f, 0.95f * perto, 3) + 10.0f;
+  { char elenco[240]; size_t n = 0; int k;
+    elenco[0] = 0;
+    for (k = 0; k < CAT_ELENCO_MAX && k < 3 && it->elenco[k].nome[0]; k++)
+      n += (size_t)snprintf(elenco + n, sizeof elenco - n, "%s%s", k ? ", " : "", it->elenco[k].nome);
+    if (elenco[0] && y + 24.0f < p.y + p.h) {
+      char l[300];
+      snprintf(l, sizeof l, "%s: %s", i18n("Elenco"), elenco);
+      txt_desenhar_alpha(txt_linha_corta(TXT_MINI, l, 168, 174, 186, 255, p.w), x, y, perto);
+    } }
+}
+// O holofote so acende com o foco NA fileira Palco (nem no destaque, nem em
+// outra fileira): fora dela o veu apaga e nada e desenhado.
+static int holofoteAlvo(void) {
+  return !focoHero && foco.fileira >= 0 && foco.fileira < nFileiras &&
+         fileiras[foco.fileira].tipo == FILEIRA_PALCO;
+}
+// HOLOFOTE (dono, 17/10: "o dimming da tela toda quando tiver no stage, como
+// se o foco de luz estivesse no filme"): UM quad de tela cheia (GFX_HOLOFOTE)
+// por cima da home e da barra, depois de tudo. A elipse cobre cartaz + ficha
+// e anda com a mola do palcoPos; enquanto o foco anda ela ABRE e, ao chegar,
+// fecha no titulo (o operador "focando" a luz). O feixe desce do alto no
+// cartaz; sai com o vidro desligado e nos efeitos leves (gfx), e o quad
+// inteiro sai nos efeitos minimos. Custo: uma tela de preenchimento por quadro.
+static float  holoA;
+static Uint32 holoUlt;
+static void holofote(Uint32 agora) {
+  float alvo = holofoteAlvo() && holoTem ? 1.0f : 0.0f, H = NV_TELA_H, W = NV_TELA_W;
+  holoA = anim_mola(holoA, alvo, dtFil(&holoUlt, agora), 12.0f);
+  if (alvo == 0.0f && holoA < 0.01f) { holoA = 0.0f; holoTem = 0; return; }
+  { GfxRect p = holoPoster;
+    int r = foco.fileira;
+    float mexe = alvo > 0.0f ? fminf(1.0f, fabsf(palcoPos[r] - (float)colunaDaFileira(r))) : 0.0f;
+    float abre = 1.6f * (1.0f + 0.35f * mexe);
+    float bw = p.w + NV_PALCO_INFO_VAO + NV_PALCO_INFO_W;
+    // O feixe nao e vidro (vidro sai desligado de fabrica desde a 2.0): so os
+    // efeitos leves/minimos o tiram, no shader (uLeve) e em gfx_rect.
+    gfx_rect((GfxRect){ 0, 0, W, H }, 0, GFX_HOLOFOTE,
+             p.h * 0.5f * abre / H, (p.x + bw * 0.5f) / W, (p.y + p.h * 0.5f) / H,
+             bw * 0.5f * abre / H,
+             1.0f, (p.x + p.w * 0.5f) / W, p.w * 0.55f / H,
+             NV_HOLOFOTE_VEU * holoA); }
+  holoTem = 0;
+}
+void home_holofote_desenhar(Uint32 agora) { TXT_INI(); holofote(agora); TXT_FIM(); }
 // CARTAZ COM FICHA: a placa inteira atras, o texto a direita do cartaz. O
 // cartaz e desenhado depois, pelo caminho comum (pintarCartao), na largura 2:3.
 static void desenhaFicha(const CatItem *it, float px, float py, float w, float h, float f) {
@@ -7852,7 +7936,7 @@ static void home_desenhar_(Uint32 agora) {
       }
       gfx_opacidade_grupo = grupoFil;
       if (tipo == FILEIRA_LINHA_TEMPO) desenhaLinhaTempo(r, y, cardY + artH, passo, lw, agora);
-      if (tipo == FILEIRA_PALCO) palcoLegenda(r, cardY + artH, lw);
+      if (tipo == FILEIRA_PALCO) { palcoLegenda(r, cardY + artH, lw); palcoFicha(r, cardY, lw, artH); }
       if (tipo == FILEIRA_HEROI_DIVIDIDO) desenhaDividido(r, cardY);
     } else if (tipo == FILEIRA_LINHA_TEMPO) tempoEntraEm[r] = 0;   // fora: redesenha ao voltar
     y += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r) + fileiraGap();

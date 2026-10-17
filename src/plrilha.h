@@ -38,6 +38,7 @@ typedef struct {
   void *u;
   int aberta;               // 1 = pilula aberta de 64 (aviso), 0 = 56
   int modal;                // 1 = miolo do modal (.86)
+  int video;                // 1 = video vivo atras (botao/isla translucidos, nunca opacos)
   int ancoraTopo;           // 1 = (centro) o corpo acompanha o TOPO da forma enquanto ela cresce ou encolhe, em vez de ficar centrado no tamanho final
   int centro;               // 1 = cartao SOZINHO no meio da tela (sem relogio nem medidor); so o corpo
   int baixa;                // 1 = prioridade baixa: cede a qualquer outro pedido do quadro (a guia parental)

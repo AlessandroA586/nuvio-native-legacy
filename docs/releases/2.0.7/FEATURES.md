@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-17T13:48:29-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-17T17:50:50-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -16,6 +16,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 ## Release features (English)
 
 ### Highlights
+
+- **Stage rows show details beside the poster**: Focused Stage posters reveal genres, ratings, synopsis and cast beside the artwork, with an optional spotlight that follows focus. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `a7d5ccb51`, `2dc2e5dc2`.
 
 - **Deep links** (#539): `nuvio-legacy://`, `stremio://` and IMDb links open the app straight to a title,
   to search, or already playing, with the newest link kept queued while discovery runs. All platforms.
@@ -80,6 +82,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   is slow. All platforms. Refs #545 #551 #552 #504, `26b9c635b`, `1c9043ed0`, `455135df2`, `cbcf467f5`, `27988615e`.
 
 ### New
+
+- **Context menu keeps Home visible**: Home stays behind the context menu, and the enriched poster card is configurable. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `d8e4be39c`, `4759f46fd`.
 
 - **Row title styles**: *Settings › Home › Row titles* picks Classic, Island (title in a glass pill with
   the row icon and item count), Editorial (small uppercase kicker above the spaced title) or Accent (a dot
@@ -171,6 +175,12 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Fixes
 
+- **Cleaner player panel headings**: Subtitle, audio and episode panels start at their headings without a duplicate small title line. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `0a3eacf26`, `6660e72a8`.
+
+- **Friends rows respect screen edges (#205)**: Friends rows clip to the real screen width when text scaling is enabled. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `ae8d8486d`, `1a3e722bd`.
+
+- **Search keyboard spacing and symbols**: Search gains corrected menu spacing, a restyled keyboard and a dedicated ?!# special-character page. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `f1b3b5e67`, `bc76ee8bc`.
+
 - **IMDb score no longer shown as %** (#590): MDBList sometimes sends the IMDb rating on a 0-100 scale
   and the app displayed "80%"/"80.0"; now only the IMDb value is divided by 10 (8.0), leaving Trakt and
   Rotten Tomatoes untouched. Platforms: Samsung .tpk, Android. Refs `03a144294`, `0d998e33a`, `eea9aac9d`.
@@ -237,6 +247,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   the next episode. All platforms. `4a443422b`.
 
 ### Performance
+
+- **Smoother title-to-episode transition**: Detail frost no longer re-blurs its backdrop every frame while moving between title and episodes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `fcd6c995b`, `f420d6d0e`.
+
+- **Memory relief on 2 GB webOS TVs (#415)**: Memory pressure flushes subtitle caches, reduces PiP memory floors and caps playback allocations using available memory. Platforms: webOS. Refs `8feec1a91`, `549e2273c`.
 
 - **Frost only on the rects the panels read**: with the Dynamic background deferred, the backdrop copy is
   resolved once per hash change instead of per frame. All platforms. `5528dc0ad`.
@@ -360,8 +374,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
-- **App closed for low memory on 2 GB webOS** (#415) — `agente/205-memg4` (`f77eeeef7`): texture cap derived
-  from available memory and the retry after pipeline error 600 gated by memory; implementation job finished; review and merge remain pending. LG webOS.
+
 - **PR #487 v2** (add-on reported audio and subtitle languages) — `agente/205-pr487v2`, 3 commits out,
   VEREDITO OK `j-rev-pr487-v2`, no commit after. **Needs final re-review.** Android, LG webOS.
 - **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out. VEREDITO **BLOQUEIA**

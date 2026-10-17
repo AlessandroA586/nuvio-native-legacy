@@ -488,6 +488,41 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  // NV_CORTE=1 (#205): text scale 80% (factor 0.85) with the friends row on. Walks
+  // down the rows; each one must draw cards past x=1700 (the clip used to stop at
+  // 1920*0.85). Exits 1 when a row band stays flat there.
+  if (getenv("NV_CORTE")) {
+    int r, mal = 0;
+    setenv("NV_AJ", "escalaTextoLocal 0", 1);
+    ajusta(0, 1);
+    gfx_escala_txt_definir(ajustes_escala_texto());
+    assert(gfx_escala_txt() == 0.85f);
+    for (r = 0; r < 14; r++) tecla(SDLK_UP);
+    quadros(60, NULL);
+    for (r = 0; r < 4; r++) {
+      unsigned char *pix = malloc(1920 * 1080 * 4);
+      int x, y, n = 0;
+      tecla(SDLK_DOWN); quadros(70, NULL);
+      glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, pix);
+      for (y = 300; y < 1000; y += 4) {
+        const unsigned char *ref = pix + ((size_t)y * 1920 + 1915) * 4;
+        for (x = 1700; x < 1900; x += 4) {
+          const unsigned char *p = pix + ((size_t)y * 1920 + x) * 4;
+          if (abs(p[0] - ref[0]) + abs(p[1] - ref[1]) + abs(p[2] - ref[2]) > 60) n++;
+        }
+      }
+      printf("[corte] fileira %d: %d px alem de x=1700 | %s\n", r + 1, n, home_rastro_foco());
+      if (n < 300) mal++;
+      if (getenv("NV_CORTE_PNG")) {
+        snprintf(bmp, sizeof bmp, "%s-corte-%d.bmp", saida, r + 1);
+        quadros(1, bmp);
+      }
+      free(pix);
+    }
+    SDL_Quit();
+    return mal ? 1 : 0;
+  }
+
   // NV_SO_CTX=1: pula a volta pelos layouts e vai direto ao menu do cartaz
   // (NV_CTX), no layout do primeiro digito de `camadas`.
   if (!getenv("NV_SO_CTX")) { const char *L;
