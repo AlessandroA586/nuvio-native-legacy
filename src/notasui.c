@@ -495,6 +495,18 @@ static void desenhaBloco(const NotasSecao *s, int fonte, int norm, const NfResum
   // bloco cresce. A superficie clareia um degrau, como o .f.on do mockup.
   if (!ajustes_vidro()) foco_anel(r0, raio, f, a);
   painel(rz, TILE_RAIO, a);
+  // B2: each source tile carries its brand colour, a glow from the top-left
+  // corner (the mockup's 150deg tint), one quad, no blur.
+  if (ajustes_vidro()) {
+    static const unsigned char C[EX_NFONTES][3] = {
+      [EX_TRAKT] = {237, 28, 36}, [EX_IMDB] = {245, 197, 24}, [EX_TMDB] = {1, 210, 119},
+      [EX_TOMATOES] = {236, 72, 48}, [EX_AUDIENCE] = {236, 72, 48},
+      [EX_METACRITIC] = {255, 204, 52}, [EX_METAUSER] = {255, 204, 52},
+      [EX_LETTERBOXD] = {64, 188, 244}, [EX_MAL] = {46, 81, 162},
+      [EX_EBERT] = {243, 242, 239}, [EX_MDBSCORE] = {243, 242, 239} };
+    gfx_luz_canto(rz, raio, 0.0f, 0.0f, rz.w * 0.95f,
+                  C[fonte][0] / 255.0f, C[fonte][1] / 255.0f, C[fonte][2] / 255.0f, 0.24f * a);
+  }
   if (f > 0.01f) gfx_cor(rz, raio, 1, 1, 1, 0.07f * f * a);
   if (ajustes_vidro()) foco_anel(r0, raio, f, a);
   marcaCaixa(fonte, s->cru[fonte], x + TILE_PAD, y + TILE_H * 0.5f, TILE_LOGO_W, a);

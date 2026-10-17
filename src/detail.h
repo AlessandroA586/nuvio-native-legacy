@@ -99,7 +99,13 @@ int  detail_pediu_do_inicio(void);
 // mostra 1080. O hero ocupa 0..1080 e ROLA junto — nao ha cabecalho fixo, nem
 // logo centralizado no topo (isso era do app da Apple TV). As secoes ficam em
 // coordenadas ABSOLUTAS de documento, e rolar e so subtrair scrollY.
-#define NV_DETP_X             96.0f   // gutter das fileiras (--tv-safe-gutter-wide)
+// Ajustes > Aparencia > Espacamento das fileiras (ajustes_det_espaco, mockup
+// margem.html): Compacto 80 / Normal 96 (o de sempre) / Confortavel 120 de
+// margem lateral; os vaos entre fileiras (+-16), entre cartoes (+-8) e do
+// titulo ate a fileira (+-6) andam junto. Tamanhos de card nao mudam.
+int ajustes_det_espaco(void);
+#define NV_DETP_ESP  ((float)(ajustes_det_espaco() - 1))   // -1, 0, +1
+#define NV_DETP_X    (ajustes_det_espaco() == 0 ? 80.0f : ajustes_det_espaco() == 2 ? 120.0f : 96.0f)
 // Fim do documento rolavel. NAO e onde o elenco termina (2024): e o que o web
 // tem de altura rolavel, porque abaixo do elenco ele ainda monta as secoes de
 // comentarios e de produtoras, que este port nao tem.
@@ -159,7 +165,7 @@ int  detail_pediu_do_inicio(void);
 // listas de episodios"): o passo e o card MAIS este vao. Entrar no passo e nao
 // no card mantem a caixa medida intacta e faz o vao acompanhar a escala dos
 // tres tamanhos da Moderna (e vale tambem para o layout Apple, de card fixo).
-#define NV_DETP_EP_GAP       48.0f
+#define NV_DETP_EP_GAP       (48.0f + 8.0f * NV_DETP_ESP)
 #define NV_DETP_EP_PASSO     (NV_DETP_EP_W + NV_DETP_EP_GAP)
 // PRATO DE FOCO estilo Apple TV (#205): placa cinza-claro translucida atras
 // do card inteiro, que nasce com a mola do foco (alpha ate ~14% de branco) e
@@ -241,7 +247,7 @@ int  detail_pediu_do_inicio(void);
 // 21/400 rgb(128,128,128) abaixo.
 #define NV_DETP_EL_Y        1817.0f
 #define NV_DETP_EL_W         220.0f
-#define NV_DETP_EL_PASSO     270.0f
+#define NV_DETP_EL_PASSO     (270.0f + 8.0f * NV_DETP_ESP)
 #define NV_DETP_EL_AVATAR    140.0f
 #define NV_DETP_EL_NOME_DY    10.0f   // base do avatar -> topo do nome
 #define NV_DETP_EL_PAPEL_DY   43.0f   // topo do nome -> topo do papel
@@ -396,8 +402,8 @@ int  detail_pediu_do_inicio(void);
 // entao nao ha uma constante unica para ler no bytecode.
 #define NV_DETF_HERO_FIM     1080.0f   // o hero ocupa 0..1080, igual a serie
 #define NV_DETF_CAB_H          46.0f   // linha do cabecalho (TXT_HEADLINE, 38)
-#define NV_DETF_CAB_GAP        20.0f   // cabecalho -> conteudo
-#define NV_DETF_SEC_GAP        64.0f   // fim de uma secao -> cabecalho da proxima
+#define NV_DETF_CAB_GAP        (20.0f + 6.0f * NV_DETP_ESP)  // cabecalho -> conteudo
+#define NV_DETF_SEC_GAP        (64.0f + 16.0f * NV_DETP_ESP)  // fim de uma secao -> cabecalho da proxima
 #define NV_DETF_PAD_FIM       130.0f   // padding-bottom do scroller (clamp(116,12vh,168))
 
 // ELENCO. Card 220x193, passo 270, avatar 140 alinhado a ESQUERDA do card.
@@ -426,7 +432,7 @@ int  detail_pediu_do_inicio(void);
 // TRAILERS. Card520 de largura, miniatura520x292 raio24, passo582.
 // O selo de play e um circulo de 96 a rgba(0,0,0,.48) com o triangulo de 44.
 #define NV_DETF_TR_W          520.0f
-#define NV_DETF_TR_PASSO      582.0f
+#define NV_DETF_TR_PASSO      (582.0f + 8.0f * NV_DETP_ESP)
 #define NV_DETF_TR_VIDEO_H    292.0f
 #define NV_DETF_TR_RAIO        24.0f
 #define NV_DETF_TR_NOME_DY    302.0f   // topo do card -> nome (28/500 branco)

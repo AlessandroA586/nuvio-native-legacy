@@ -432,6 +432,7 @@ static void abrir(int i, int nv, int sec, int col) {
 
 #include "traktcoment_checks.h"
 #include "detalheglass_checks.h"
+#include "detalhe_espaco_checks.h"
 
 static int quer(int argc, char **argv, const char *id) {
   if (argc <= 2) return 1;
@@ -519,6 +520,7 @@ int main(int argc, char **argv) {
     if (!strcmp(m, "comments")) return comments_checks();
     if (!strcmp(m, "cards")) return card_checks();
     if (!strcmp(m, "eps")) return eps_checks();
+    if (!strcmp(m, "espaco")) return espaco_checks();
     return strcmp(m, "mais") == 0 ? mais_checks() : rows_checks();
   }
   // NUVIO_SHOT_AMIGOS=1: amigos falsos (feed externo) no filme e na serie —
