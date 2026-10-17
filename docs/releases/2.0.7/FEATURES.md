@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-17 00:08, HEAD `7e4b2605b`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-17 01:52, HEAD `86d194462`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -41,6 +41,15 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   retomada, no próximo episódio e no Trakt/Simkl/Plex, e a temporada fake que o add-on cria ("The Blacklist:
   Season 20+") não aparece mais. Todas as plataformas. Refs #556, PR #569, `8dff0e2a9`, `4a443422b`,
   `94d16f7de`, `288e531ee`, `054ccef24`.
+- **Vidro fosco mais rápido com o mesmo visual** (pedido do dono): o desfoque do vidro passou a trabalhar
+  só nos retângulos que os paineis leem e no máximo em 960x540, com 3 passos em vez de 5 e sem recaptura
+  atrasada depois de um corte de cena. No Home da C9 a 1080p o desfoque caiu de 498.960 para 24.289 pixels
+  por quadro e as 12 imagens de referência não passam de 4 de diferença. Todas as plataformas.
+  Refs pedido do dono, `4c82273d7`, `93b3d69ec`, `3dc70083c`, `013e1341f`, `fe6a04804`, `4dba47b60`.
+- **Fileira de amigos polida, sem "Ver todos"/"+ Adicionar"** (pedido do dono): todos os 6 estilos da fileira
+  ganham o foco padrão da Home (sem o contorno vermelho), cartaz em paisagem com o texto no lugar certo,
+  avatar com a inicial quando não tem foto, cartaz de reserva quando não tem arte e os dois botões da fileira
+  saem. Todas as plataformas. Refs pedido do dono, `8806e6aff`, `d95bd32e1`, `e27514693`, `f21d993b2`.
 - **Marcar como visto funciona** (#548): marcar a série inteira ou um episódio continua valendo depois que
   outro processo antigo responde, e os gestos confirmados sobrevivem a reiniciar o app e a um Trakl que puxa
   estado velho. Todas as plataformas. Refs #548, `66a608ef7`, `8330673a8`, `2d04fbecc`, `b074d9fd5`,
@@ -87,8 +96,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   os itens da coleção. Todas as plataformas. `4baf783fa`.
 - **Episódio certo no scrobble**: o progresso enviado para o Trakt usa a identidade exata do episódio.
   Todas as plataformas. Refs PR #560, `ff1f1aa25`.
-- **Identidade da série preservada** (PR #561): a série continua a mesma ao ser buscada e ao tocar, em vez de
-  virar outro título. Todas as plataformas. Refs PR #561, `61d73a5bf`.
+- **Identidade da série preservada** (#524, PR #561): a série continua a mesma ao ser buscada e ao tocar, em
+  vez de virar outro título, e o episódio pedido é o que toca — vale também para o Continuar assistindo e os
+  cartões de retomada. Todas as plataformas. Refs #524, PR #561, `cdf5bdd88`, `2537db6a0`, `86d194462`.
 - **Continuar assistindo com até 40 itens** (PR #538): o limite nativo subiu de 12 para 40 e fileiras futuras
   são publicadas até o teto. Todas as plataformas. Refs PR #538, `4cbf5ad5c`, `696a3a6ee`, `cee137de7`.
 - **Tamanho do buffer** (*Ajustes › Tamanho do buffer*): Automático, 64, 128 ou 256 MiB, sempre limitado pela
@@ -117,6 +127,13 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 - **Log dos amigos em inglês**: o motivo da fileira de amigos não suja mais a varredura de tradução.
   Todas as plataformas. `171e49772`.
 
+- **Abas da Biblioteca e do catalogo com vidro de verdade** (pedido do dono): as tiras de aba
+  (Salvos/Colecao/Listas, Filmes/Series, a pilula do titulo e os segmentados restantes) passam a usar o mesmo
+  vidro fosco do resto do app, com a aba escolhida mantendo a cor de destaque. Todas as plataformas.
+  Refs pedido do dono, `21696fd8c`, `796a3441f`, `a096e5eb8`.
+- **Ajustes em 100% por padrao** (pedido do dono): a escala dos Ajustes vem de fabrica em 100% em vez de 80%;
+  quem nunca escolheu um tamanho na mao passa para 100% e a escolha explicita de cada um fica como estava.
+  Todas as plataformas. `3f8d304b7`, `f22761e28`.
 - **Arte em alta qualidade que sobe de tamanho** (pedidos do dono): com a qualidade Alta, pôsteres w342 e
   backdrops w780 guardados pelo catálogo passam a ser buscados no tamanho que a tela precisa, e o backdrop
   pequeno de 480px não é mais servido para cartões de até 640px. Todas as plataformas. `ff1cd6dcd`,
@@ -178,11 +195,19 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   Todas as plataformas. PR #538, `cee137de7`, `cfc15aeab`, `8c99638f7`.
 - **Buffer preso na memória ativa**: a faixa DTS em uso reserva seu 4 MiB antes de medir a fila.
   Todas as plataformas. `62421bfdc`.
-- **Vidro fosco: uma captura por mudança de cena** — *revertido nesta janela*: o desfoque do vidro
-  passou a ler uma cópia em meia resolução só da camada de fundo (1,15 → 0,35 capturas por quadro, 0,54 → 0,04
-  na Exploração, 1 → 0 ao rolar fileiras), mas o dono achou o resultado anterior mais bonito e mais leve na
-  TCL e o merge foi desfeito (`f40a93dc3`); o caminho atual está sendo otimizado (`j-foscoleve3`).
-  Todas as plataformas. `e9c809475` (medidas do caminho que saiu).
+- **Vidro fosco: desfoque regional e 3 passos em vez de 5**: so os retangulos que os paineis leem sao
+  desfocados, o alvo para em 960x540 (480x270 em um passo) e cada alvo e limpo antes do passe; o corte de cena
+  recaptura no mesmo quadro em vez de esperar. Home animada/foco da C9 a 1080p: 498.960 → 24.289 pixels de
+  desfoque por quadro; a 4K 1.995.840 → 56.621. Custo extra: uma textura RGB cheia guardada por camada
+  (5,93 MiB a 1080p). Todas as plataformas. `93b3d69ec`, `3dc70083c`, `a0f765d7f`, `17717812d`, `013e1341f`,
+  `fe6a04804`, `4ae3e7211`.
+- **Interior do vidro sem conta de borda**: a maior parte de um painel grande voltava depois de calcular a
+  normal da borda e os pesos do aro que nunca usa; o caminho fosco resolve a densidade e sai antes. Mesma
+  imagem. Todas as plataformas. `4dba47b60`.
+- **Vidro fosco com arte pre-desfocada** — *revertido nesta janela*: o desfoque do vidro passou a ler uma copia
+  em meia resolucao so da camada de fundo (1,15 → 0,35 capturas por quadro), mas o dono achou o resultado
+  anterior mais bonito e mais leve na TCL e o merge foi desfeito (`f40a93dc3`); no lugar entrou a otimizacao
+  do caminho atual (`4c82273d7`). Todas as plataformas. `e9c809475`, `ab02d4aaa` (caminho que saiu).
 - **Home reage a reordenar/ativar fileiras sem recarregar tudo**: a atualização da rede depois de fechar
   Ajustes roda uma vez, e as linhas de servidor acima do teto da Home são cortadas em vez de descartadas.
   Todas as plataformas. `b0e429762`.
@@ -193,6 +218,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 ### Comunidade
 
 - **Modo TV e Celular automático no Android** — @community, PR #431 (`c305e6f7e`, `875d7f18f`).
+- **Identidade da série na busca e na reprodução** — PR #561 (`cdf5bdd88`, `2537db6a0`, `86d194462`).
 - **Idiomas de áudio e legenda informados pelo add-on** — @ghbarker, PR #487 (`e4fb8c08`; revisado, ainda não
   integrado — ver *Pendente*).
 - **Continuar assistindo sem travar os catálogos** — @ghbarker, PR #538 (`cfc15aeab`, `a748ebf32`).
@@ -228,6 +254,13 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   (`e0ddeca5f`, `4baf783fa`, `ff1f1aa25`, `61d73a5bf`).
 - Teste novo `tests/homerefresh.sh`: a Home segue reordenar/desativar fileiras e novas fontes sem reiniciar;
   fixtures de home/coleção consertadas depois do merge (`c47a40788`, `0bfe5ce71`).
+- Limite de diferenca de pixel do frost a 1080p fixado em teste: os 12 PNGs da C9 contra o caminho antigo,
+  mascarando so os digitos do relogio (`4ae3e7211`); testes de identidade de serie titulada e de toque tardio
+  (`2537db6a0`); assert de que o estilo 5 da fileira de amigos nao tem coluna de "+ Adicionar"
+  (`d95bd32e1`) e de que o scroll de toque inclui o painel do ultimo amigo (`e27514693`).
+- Migracao da escala dos Ajustes para 100% de fabrica so para quem nunca escolheu na mao
+  (`3f8d304b7`) e prova de pixel de que as abas da Biblioteca/catalogo tem frost regional
+  (`21696fd8c`, `796a3441f`).
 - Fixture do `tests/homerefresh.sh` consertada outra vez no merge: stubs duplicados de home e stubs de
   trava de add-on que faltavam (`c47a40788`).
 
@@ -240,21 +273,29 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 - **PR #493 v2 / v3** (perfil e sessão) — `agente/205-pr493`, 12 commits fora. VEREDITO **BLOQUEIA**
   `j-revg-pr493` (mais novo); `j-revpr493-v3` OK foi antes. Precisa de fix novo + review.
   Android, LG webOS.
-- **Vidro fosco: deixar como estava** — `agente/205-foscovelho` foi **merged** (`76bc9d0c3`) e depois
-  **revertido** (`f40a93dc3`, agora no HEAD `1b5c9d39a`): na TCL o dono achou o fosco anterior (captura de
-  tela + desfoque) mais bonito e mais leve. A fonte de arte pré-desfocada (`ab02d4aaa`, `d0789c13a`,
-  `50a1ac232`, `35f5f4fc3`) **não** está na 2.0.7; o review r4 deu OK (`j-rev-foscovelho-r4`, 22:08) já
-  depois do merge. Quem fica pendente é **otimizar o caminho atual**: `agente/205-foscoleve3` está com
-  5 commits fora (`93b3d69ec`..`240bc60a0`, job `j-foscoleve3` ativo 23:43) e ainda sem review.
+- **Frost barato igual ao aprovado na LG C9** — `agente/205-foscovelho` foi **merged** (`76bc9d0c3`) e
+  depois **revertido** (`f40a93dc3`): na TCL o dono achou o fosco anterior (captura de tela + desfoque) mais
+  bonito e mais leve. A fonte de arte pré-desfocada (`ab02d4aaa`, `d0789c13a`, `50a1ac232`, `35f5f4fc3`)
+  **não** está na 2.0.7; o review r4 deu OK (`j-rev-foscovelho-r4`, 22:08) já depois do merge. O caminho que
+  ficou — a captura de tela, só que barata — entrou por `4c82273d7` e está em Destaques/Desempenho.
   Todas as plataformas.
-- **Fileira Amigos polida, sem "Ver todos"/"+ Adicionar"** (pedido do dono) — `agente/205-amigospolish`, 2
-  commits fora (`8806e6aff`, `d95bd32e1`): foco igual ao das outras fileiras da Home em todos os estilos,
-  cartaz em paisagem, avatar com a inicial quando não tem foto, e os dois botões da fileira saem. Review
-  `j-rev-amigospolish` **BLOQUEIA** (P2: o scroll de toque do estilo 5 não inclui o painel expandido do
-  último amigo); a captura do teste deu timeout (rc=124), não é achado. Falta o fix e a re-review antes do
-  merge. Todas as plataformas.
-- **Vistos, temporadas fantasmas, catálogo fora da cota (#548 #556 #545) e a tela de abertura** entraram
-  nesta janela (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`, `922500ef4`) e já estão em Destaques:
+- **Vidro defumado no player + nível de qualidade do vidro** — `agente/205-foscoleve4`, 2 commits fora
+  (`6f1c61cb8`, `30a932909`): sobre o vídeo ao vivo o painel deixa de desfocar a imagem e passa a ser vidro
+  defumado (tinta escura translúcida), com nível Desempenho/Alta/Máximo e um governador que cai sozinho para
+  Desempenho depois de quadros travados. Ainda sem review. Todas as plataformas.
+- **Tela de abertura do Dolby Vision no novo estilo** — `agente/205-dvabertura`, 5 commits fora
+  (`d89784e82` + 4 fixes): a tela de Cinema do Dolby Vision segue o estilo e os ajustes das telas de
+  carregamento novas e não quebra ao trocar de variante. Ainda sem review. Todas as plataformas.
+- **Comentários do Trakt com vidro** — `agente/205-traktcoment`, 3 commits fora (`a363d821c`, `1165245fc`,
+  `5195cd14f`): a seção de Comentários/Avaliações do Trakt na página do título ganha o vidro compartilhado,
+  volta a aparecer nas séries e reusa o cache de quebra de linha (era a única fileira que derrubava FPS).
+  Ainda sem review; falta medir o FPS dos 8 painéis em TV. Todas as plataformas.
+- **Menu contextual grande com frost** — `agente/205-ctxgrande`, 1 commit fora (`a2ea074c7`): o menu
+  contextual grande e o pequeno passam a ter vidro+frost sobre a arte, com um ajuste para voltar ao menu
+  simples. Ainda sem review. Todas as plataformas.
+- **Frost otimizado, fileira de amigos polida, PR #561 (#524), abas com frost e Ajustes em 100%** entraram
+  nesta janela (`4c82273d7`, `f21d993b2`, `86d194462`, `a096e5eb8`, `f22761e28`) e já estão em
+  Destaques/Novidades:
 - **Vidaa** — `agente/205-vidaa` foi **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
   depois de uma sequência de BLOQUEIA. Sai na 2.0.7; não está em pendência.
 - **Cabeçalho de coleção diferente** (pedido do dono) — `agente/205-colhdr` foi **merged** (`fec2dc0ac`),
@@ -295,6 +336,15 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   resume, next episode and Trakt/Simkl/Plex, and the fake per-episode season tab an add-on creates ("The
   Blacklist: Season 20+") is gone. All platforms. Refs #556, PR #569, `8dff0e2a9`, `4a443422b`, `94d16f7de`,
   `288e531ee`, `054ccef24`.
+- **Frosted glass is cheaper and looks the same** (owner request): the glass blur now works only on the
+  rects the panels read and at most at 960x540, with 3 passes instead of 5 and no stale recapture after a hard
+  cut. On the C9 Home at 1080p the blur went from 498,960 to 24,289 pixels per frame and all twelve reference
+  shots stay within 4 levels. All platforms. Refs owner request, `4c82273d7`, `93b3d69ec`, `3dc70083c`,
+  `013e1341f`, `fe6a04804`, `4dba47b60`.
+- **Polished friends row, no "See all"/"+ Add"** (owner request): all six friends row styles now use the
+  standard Home focus (no red outline), landscape posters with text in the right place, an initial-letter
+  avatar when there is no photo, a fallback poster when there is no art, and the two row buttons are gone.
+  All platforms. Refs owner request, `8806e6aff`, `d95bd32e1`, `e27514693`, `f21d993b2`.
 - **Mark as watched works** (#548): marking a whole series or one episode sticks after an older whole-series
   job or retry answers later, and confirmed marks survive a restart and a stale Trakt pull. All platforms.
   Refs #548, `66a608ef7`, `8330673a8`, `2d04fbecc`, `b074d9fd5`, `91da5935e`.
@@ -338,8 +388,10 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   All platforms. `4baf783fa`.
 - **Exact episode identity in scrobbles**: progress sent to Trakt uses the exact episode identity.
   All platforms. Refs PR #560, `ff1f1aa25`.
-- **Series identity kept through lookup and playback** (PR #561): a series stays the same series while it is
-  looked up and played, instead of turning into a different title. All platforms. Refs PR #561, `61d73a5bf`.
+- **Series identity kept through lookup and playback** (#524, PR #561): a series stays the same series while it
+  is looked up and played, instead of turning into a different title, and the requested episode is the one that
+  plays — this covers Continue Watching and the resume cards too. All platforms. Refs #524, PR #561,
+  `cdf5bdd88`, `2537db6a0`, `86d194462`.
 - **Continue Watching up to 40 items** (PR #538): the native cap went from 12 to 40 and future rows are
   published up to it. All platforms. Refs PR #538, `4cbf5ad5c`, `696a3a6ee`, `cee137de7`.
 - **Buffer size** (*Settings › Buffer size*): Automatic, 64, 128 or 256 MiB, always clamped to free RAM.
@@ -367,6 +419,13 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 - **English friends log**: the friends row reason no longer dirties the translation scan. All platforms.
   `171e49772`.
 
+- **Library and catalog tabs are real glass** (owner request): the tab strips (Saved/Collection/Lists,
+  Movies/Series, the title pill and the remaining segmented controls) now use the same frosted glass as the
+  rest of the app, with the selected tab keeping its accent fill. All platforms. Refs owner request,
+  `21696fd8c`, `796a3441f`, `a096e5eb8`.
+- **Settings at 100% by default** (owner request): the Settings scale ships at 100% instead of 80%; anyone who
+  never picked a size by hand moves to 100% and an explicit choice stays as it was. All platforms.
+  `3f8d304b7`, `f22761e28`.
 - **High-quality artwork is fetched at the size it needs** (owner requests): at High quality, w342 posters and
   w780 backdrops stored by the catalog are fetched at the size the draw needs, and the 480px small backdrop
   is no longer served for cards up to 640px. All platforms. `ff1cd6dcd`, `44bf4884a`.
@@ -426,11 +485,18 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   PR #538, `cee137de7`, `cfc15aeab`, `8c99638f7`.
 - **Buffer clamp accounts for active DTS**: the in-use range reserves its 4 MiB before queue capacity is
   chosen. All platforms. `62421bfdc`.
-- **Frosted glass: one capture per backdrop change** — *reverted in this window*: the glass blur started
-  reading a half-res copy of the backdrop layer alone (1.15 → 0.35 captures per frame, 0.54 → 0.04 on Explore,
-  1 → 0 while rows scroll), but on the TCL the owner found the previous look prettier and lighter and the merge
-  was undone (`f40a93dc3`); the current path is being made cheaper (`j-foscoleve3`). All platforms.
-  `e9c809475` (numbers from the path that left).
+- **Frosted glass: regional blur and 3 passes instead of 5**: only the rects the panels read are blurred, the
+  target stops at 960x540 (480x270 in one pass) and each target is cleared before its pass; a hard cut recaptures
+  on the same frame instead of waiting. Animated/focused C9 Home at 1080p: 498,960 → 24,289 blurred pixels per
+  frame; at 4K 1,995,840 → 56,621. Extra cost: one full RGB texture saved per layer (5.93 MiB at 1080p).
+  All platforms. `93b3d69ec`, `3dc70083c`, `a0f765d7f`, `17717812d`, `013e1341f`, `fe6a04804`, `4ae3e7211`.
+- **Glass interior skips the rim math**: most of a big panel used to return after computing the edge normal and
+  rim weights it never uses; the frosted path solves density and returns first. Same output. All platforms.
+  `4dba47b60`.
+- **Frosted glass from pre-blurred art** — *reverted in this window*: the glass blur started reading a half-res
+  copy of the backdrop layer alone (1.15 → 0.35 captures per frame), but on the TCL the owner found the previous
+  look prettier and lighter and the merge was undone (`f40a93dc3`); the optimization of the current path landed
+  instead (`4c82273d7`). All platforms. `e9c809475`, `ab02d4aaa` (the path that left).
 - **Home reacts to reordering/enabling rows without reloading everything**: the network refresh that follows
   closing Settings runs once, and server rows over the Home cap are clamped instead of dropped. All platforms.
   `b0e429762`.
@@ -441,6 +507,7 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 ### Community
 
 - **Automatic TV and Mobile mode on Android** — @community, PR #431 (`c305e6f7e`, `875d7f18f`).
+- **Series identity during lookup and playback** — PR #561 (`cdf5bdd88`, `2537db6a0`, `86d194462`).
 - **Add-on reported audio and subtitle languages** — @ghbarker, PR #487 (`e4fb8c08`; reviewed, not merged —
   see *Pending*).
 - **Continue Watching without blocking catalogs** — @ghbarker, PR #538 (`cfc15aeab`, `a748ebf32`).
@@ -474,6 +541,13 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   (`e0ddeca5f`, `4baf783fa`, `ff1f1aa25`, `61d73a5bf`).
 - New `tests/homerefresh.sh`: Home follows row reorder/disable and new sources without a restart; home and
   collection fixtures repaired after a merge (`c47a40788`, `0bfe5ce71`).
+- 1080p frost pixel-difference limit pinned in a test: all twelve C9 PNGs against the old path, masking only
+  the live clock digits (`4ae3e7211`); typed-title and late-playback identity tests (`2537db6a0`); an assert
+  that friends row style 5 has no "+ Add" column (`d95bd32e1`) and that its touch scroll covers the last
+  friend's expanded panel (`e27514693`).
+- Settings scale migration to a 100% factory default, only for anyone who never chose by hand
+  (`3f8d304b7`), and a pixel proof that the Library/catalog tabs carry regional frost
+  (`21696fd8c`, `796a3441f`).
 - The `tests/homerefresh.sh` fixture repaired again at merge time: duplicate home stubs and missing add-on
   lock stubs (`c47a40788`).
 
@@ -486,20 +560,29 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 - **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out. VEREDITO **BLOQUEIA**
   `j-revg-pr493` (newer); the OK `j-revpr493-v3` came before. Needs a new fix + review.
   Android, LG webOS.
-- **Frosted glass: put it back as it was** — `agente/205-foscovelho` was **merged** (`76bc9d0c3`) and then
-  **reverted** (`f40a93dc3`): on the TCL the owner found the previous frosted glass (screen capture + blur)
-  prettier and lighter. The pre-blurred art source (`ab02d4aaa`, `d0789c13a`, `50a1ac232`, `35f5f4fc3`) is
-  **not** in 2.0.7; its round-4 review was OK (`j-rev-foscovelho-r4`, 22:08), already after the merge. What
-  stays pending is **making the current path cheaper**: `agente/205-foscoleve3` now has 5 commits out
-  (`93b3d69ec`..`240bc60a0`, job `j-foscoleve3` active 23:43) and no review yet. All platforms.
-- **Polished friends row, no "See all"/"+ Add"** (owner request) — `agente/205-amigospolish`, 2 commits out
-  (`8806e6aff`, `d95bd32e1`): the same focus treatment as every other Home row on every style, landscape
-  poster, initial-letter avatar when there is no photo, and the two row buttons gone. Review
-  `j-rev-amigospolish` **BLOQUEIA** (P2: style-5 touch scroll leaves out the last friend's expanded panel);
-  the screenshot test timed out (rc=124), which is not a finding. Fix and re-review before the merge.
-  All platforms.
-- **Watch tracking, ghost seasons, quota-excluded catalog (#548 #556 #545) and the opening screen** landed
-  in this window (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`, `922500ef4`) and are already under Highlights:
+- **Cheap frost identical to the one approved on the LG C9** — `agente/205-foscovelho` was **merged**
+  (`76bc9d0c3`) and then **reverted** (`f40a93dc3`): on the TCL the owner found the previous frosted glass
+  (screen capture + blur) prettier and lighter. The pre-blurred art source (`ab02d4aaa`, `d0789c13a`,
+  `50a1ac232`, `35f5f4fc3`) is **not** in 2.0.7; its round-4 review was OK (`j-rev-foscovelho-r4`, 22:08),
+  already after the merge. The path that shipped — the screen capture, just cheaper — landed as `4c82273d7`
+  and is under Highlights/Performance. All platforms.
+- **Smoked glass in the player + glass quality level** — `agente/205-foscoleve4`, 2 commits out (`6f1c61cb8`,
+  `30a932909`): over live video the panel stops blurring the picture and becomes smoked glass (dark translucent
+  tint), with a Performance/Enhanced/Maximum level and a governor that drops to Performance on its own after
+  janky frames. No review yet. All platforms.
+- **Dolby Vision opening in the new style** — `agente/205-dvabertura`, 5 commits out (`d89784e82` plus 4
+  fixes): the Dolby Vision Cinema opening follows the style and settings of the new loading screens and does
+  not break when switching variants. No review yet. All platforms.
+- **Trakt comments with glass** — `agente/205-traktcoment`, 3 commits out (`a363d821c`, `1165245fc`,
+  `5195cd14f`): the Trakt Comments/Ratings section on the title page gets the shared glass, shows up on series
+  again and reuses the wrap cache (it was the only row that dropped FPS). No review yet; the FPS of the eight
+  panels still has to be measured on a TV. All platforms.
+- **Big context menu with frost** — `agente/205-ctxgrande`, 1 commit out (`a2ea074c7`): the big and the small
+  context menu panels become real glass+frost over the art, with a setting to go back to the plain menu.
+  No review yet. All platforms.
+- **Cheaper frost, polished friends row, PR #561 (#524), glass tabs and Settings at 100%** landed in this
+  window (`4c82273d7`, `f21d993b2`, `86d194462`, `a096e5eb8`, `f22761e28`) and are already under
+  Highlights/New:
 - **Vidaa** — `agente/205-vidaa` was **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
   after a run of BLOQUEIAS. It ships in 2.0.7; no longer pending.
 - **Different collection header** (owner request) — `agente/205-colhdr` was **merged** (`fec2dc0ac`),
@@ -527,8 +610,10 @@ Landing in 2.0.7, already in the sections above:
   **glass/frost work** (`46e0bd5bd`, `b5007ae85`, `e9c809475`, `0c77460c1`, `d98d72026`),
   **release 2.0.7 bump and notes** (`b72189c5d`, `e275de18a`),
   **#468 Home/Jellyfin views** (`08c98b017`), **previous-episode button removed** (`d51d4e46c`), the
-  **opening-screen style setting A3/B3** (`922500ef4`, `9c3ecdf85`) and the
-  **revert of the cached-art frost** (`f40a93dc3`, undoing `76bc9d0c3`).
+  **opening-screen style setting A3/B3** (`922500ef4`, `9c3ecdf85`), the
+  **revert of the cached-art frost** (`f40a93dc3`, undoing `76bc9d0c3`), the
+  **cheaper screen-capture frost** (`4c82273d7`), the **polished friends row** (`f21d993b2`), **PR #561**
+  (`86d194462`), **glass tabs** (`a096e5eb8`) and **Settings at 100%** (`f22761e28`).
 
 ### Frost performance (to fill before tagging)
 
@@ -536,11 +621,15 @@ Placeholder carried from `j-release207`: the measured numbers belong here once t
 device. Points to report: one backdrop capture per frame on Android/.tpk (`0c77460c1`, `d98d72026`, `5536ee8da`)
 and one capture per backdrop change everywhere (`e9c809475`).
 
-**Update 22:40:** the owner reverted the cached-art source (`f40a93dc3`), so the *shipping* path is the screen
-capture + blur again. Job `j-foscoleve3` (RUNNING) is measuring that path per screen (Home top bar, side menu,
-Settings, detail, player overlay) with `src/gputempo.c` / `desempenho.c` / `fpscena.c`; its before/after PNGs
-land in `/Volumes/ExternalSSD/tmp/foscoleve3/{antes,depois}/` with max pixel diff. Fill this section from
-`medidas.md` when it finishes.
+**Measured (`4c82273d7`, `/Volumes/ExternalSSD/tmp/foscoleve3/medidas.md`):** blur pixels per frame on the
+animated/focused C9 Home at 1080p went from **498,960 to 24,289** (native/webOS and Android), at 4K from
+**1,995,840 to 56,621**; passes per capture 5 → 3 (4 at 4K); Explore 47,520/59,400 → 11,394/14,243; Settings,
+detail and search keep **0 captures** when static and unchanged. Captures per frame and the copied screen
+fraction stay the same as the old path (0.35). All twelve C9 1080p reference shots pass with a maximum
+8-bit channel difference of **4** against the old path (limit 5), masking only live clock digits. The
+every-other-frame throttle was dropped: a changed draw hash always refreshes that frame. Extra cost: one full
+RGB backdrop texture per layer — **5.93 MiB at 1080p, 23.73 MiB at 4K** — and a region miss may blur the
+saved backdrop on that frame. No TV GPU timing yet; these are Mac-side counters.
 
 ### Merged in this window (not pending any more)
 
@@ -557,8 +646,10 @@ Landing in 2.0.7, already in the sections above:
   **glass/frost work** (`46e0bd5bd`, `b5007ae85`, `e9c809475`, `0c77460c1`, `d98d72026`),
   **release 2.0.7 bump and notes** (`b72189c5d`, `e275de18a`),
   **#468 Home/Jellyfin views** (`08c98b017`), **previous-episode button removed** (`d51d4e46c`), the
-  **opening-screen style setting A3/B3** (`922500ef4`, `9c3ecdf85`) and the
-  **revert of the cached-art frost** (`f40a93dc3`, undoing `76bc9d0c3`).
+  **opening-screen style setting A3/B3** (`922500ef4`, `9c3ecdf85`), the
+  **revert of the cached-art frost** (`f40a93dc3`, undoing `76bc9d0c3`), the
+  **cheaper screen-capture frost** (`4c82273d7`), the **polished friends row** (`f21d993b2`), **PR #561**
+  (`86d194462`), **glass tabs** (`a096e5eb8`) and **Settings at 100%** (`f22761e28`).
 
 ### Frost performance (to fill before tagging)
 
@@ -566,8 +657,12 @@ Placeholder carried from `j-release207`: the measured numbers belong here once t
 device. Points to report: one backdrop capture per frame on Android/.tpk (`0c77460c1`, `d98d72026`,
 `5536ee8da`) and one capture per backdrop change everywhere (`e9c809475`).
 
-**Update 22:40:** the owner reverted the cached-art source (`f40a93dc3`), so the *shipping* path is the screen
-capture + blur again. Job `j-foscoleve3` (RUNNING) is measuring that path per screen (Home top bar, side menu,
-Settings, detail, player overlay) with `src/gputempo.c` / `desempenho.c` / `fpscena.c`; its before/after PNGs
-land in `/Volumes/ExternalSSD/tmp/foscoleve3/{antes,depois}/` with max pixel diff. Fill this section from
-`medidas.md` when it finishes.
+**Measured (`4c82273d7`, `/Volumes/ExternalSSD/tmp/foscoleve3/medidas.md`):** blur pixels per frame on the
+animated/focused C9 Home at 1080p went from **498,960 to 24,289** (native/webOS and Android), at 4K from
+**1,995,840 to 56,621**; passes per capture 5 → 3 (4 at 4K); Explore 47,520/59,400 → 11,394/14,243; Settings,
+detail and search keep **0 captures** when static and unchanged. Captures per frame and the copied screen
+fraction stay the same as the old path (0.35). All twelve C9 1080p reference shots pass with a maximum
+8-bit channel difference of **4** against the old path (limit 5), masking only live clock digits. The
+every-other-frame throttle was dropped: a changed draw hash always refreshes that frame. Extra cost: one full
+RGB backdrop texture per layer — **5.93 MiB at 1080p, 23.73 MiB at 4K** — and a region miss may blur the
+saved backdrop on that frame. No TV GPU timing yet; these are Mac-side counters.
