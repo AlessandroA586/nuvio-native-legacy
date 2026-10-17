@@ -861,7 +861,7 @@ static void montar(int n) {
     case VT_LAY_RANKING: {
       // Quatro por linha: o numeral mora no vao a ESQUERDA do cartaz, como o
       // Top 10 da Dinamica, e o cartaz cobre a ponta direita dele.
-      const float faixa = 100.0f, w = 218.0f, h = w * 1.5f;
+      const float faixa = 100.0f, w = 218.0f / gfx_escala_txt(), h = w * 1.5f;
       int cols = 4;
       float passo = VT_CW / 4.0f + 4.0f;
       if (vtTelefone()) {
@@ -876,7 +876,7 @@ static void montar(int n) {
       break; }
     case VT_LAY_SAGA: {
       // Tres capitulos deitados por linha, com a trilha de progresso por cima.
-      float w = 424.0f, h = 238.0f;
+      float w = 424.0f / gfx_escala_txt(), h = 238.0f / gfx_escala_txt();
       int cols = 3;
       if (vtTelefone()) {
         float livre = vtFim() - vtInicio();
