@@ -261,7 +261,17 @@ typedef enum {
   // quando o fundo da Dinamica esta pendente e o destaque cobre o topo da tela
   // (ver gfx_fundo_din_desenhar). uDin = cor do topo e queda.
   GFX_VITRINE_DIN = 44,
-  GFX_NMODOS = 45
+  // GFX_HOLOFOTE — the Stage row spotlight in ONE full-screen pass: a tinted
+  // dark veil everywhere except a soft ellipse, plus a faint beam from the top
+  // edge down to the lit poster. No texture, no blur.
+  //   uPar     = ellipse centre (fraction of the rect)
+  //   uRaio    = ellipse x radius, uFoco = y radius (fractions of the HEIGHT)
+  //   uCor.a   = veil alpha outside the light
+  //   uCor.r   = beam strength (0 = no beam; also off with light effects)
+  //   uCor.g   = beam x (fraction of width), uCor.b = beam half-width at the
+  //              poster (fraction of the height)
+  GFX_HOLOFOTE = 45,
+  GFX_NMODOS = 46
 } GfxModo;
 
 typedef struct {

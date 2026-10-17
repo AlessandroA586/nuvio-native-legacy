@@ -6206,6 +6206,9 @@ static void desenharAtrasDoPainel(void *ctx) {
     CAMADA_SE(menu_aberto());
     menu_desenhar(agora);
   }
+  // Palco: o holofote escurece a home e a barra, nunca um menu ou a pagina.
+  if (tela == TELA_HOME && !detail_aberto() && !vertudo_aberta() && !ctx_aberto() && !menu_aberto())
+    home_holofote_desenhar(agora);
 }
 
 static void desenharTelas(Uint32 agora) {
