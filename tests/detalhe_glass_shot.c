@@ -392,6 +392,7 @@ static void abrir(int i, int nv, int sec, int col) {
 }
 
 #include "traktcoment_checks.h"
+#include "detalheglass_checks.h"
 
 static int quer(int argc, char **argv, const char *id) {
   if (argc <= 2) return 1;
@@ -443,7 +444,7 @@ int main(int argc, char **argv) {
     fclose(f);
     ajustes_dir(dd); }
   // First-run appearance migration overrides the file; apply shot settings after it.
-  if (getenv("NUVIO_TRAKT_SHOT") || getenv("NUVIO_TRAKT_CHECK")) {
+  if (getenv("NUVIO_TRAKT_SHOT") || getenv("NUVIO_TRAKT_CHECK") || getenv("NUVIO_DETAIL_CHECK") || getenv("NUVIO_DETAIL_SHOT")) {
     ajustes_teste_vidro_env();
     ajustes_definir_vidro(getenv("NUVIO_SHOT_VIDRO") && atoi(getenv("NUVIO_SHOT_VIDRO")));
     assert(ajustes_vidro() == (getenv("NUVIO_SHOT_VIDRO") && atoi(getenv("NUVIO_SHOT_VIDRO"))));
@@ -454,6 +455,7 @@ int main(int argc, char **argv) {
   montarCatalogo();
   cacheFrases();
   if (getenv("NUVIO_TRAKT_CHECK")) return trakt_checks();
+  if (getenv("NUVIO_DETAIL_CHECK")) return rows_checks();
   // NUVIO_SHOT_AMIGOS=1: amigos falsos (feed externo) no filme e na serie —
   // o que a ilha e a lista "O que os amigos acharam" mostram (06/10/2026):
   // quem recomendou, reacao, nota de tracker, progresso, "parou" e "terminou".
@@ -581,6 +583,26 @@ int main(int argc, char **argv) {
     glClear(GL_COLOR_BUFFER_BIT); detail_desenhar(SDL_GetTicks());
     gravar(id);
   }
+  // Cast / recommendations / trailers / collection on the shared glass card,
+  // movie and series, focused (col 0) and without row focus.
+  { static const struct { const char *nome; int sec; } fl[] = {
+      { "elenco", SEC_ELENCO }, { "relacionados", SEC_RELACIONADOS },
+      { "trailers", SEC_TRAILERS }, { "colecao", SEC_COLECAO } };
+    for (int series = 0; series < 2; series++)
+      for (int l = 0; l < 4; l++) {
+        char id[64];
+        snprintf(id, sizeof id, "%s-%s", series ? "serie" : "filme", fl[l].nome);
+        // The movie focused ids already have their own handlers above.
+        if (series && argc > 2 && quer(argc, argv, id)) { abrir(0, 1, fl[l].sec, 0); gravar(id); }
+        snprintf(id, sizeof id, "%s-%s-sem-foco", series ? "serie" : "filme", fl[l].nome);
+        if (argc > 2 && quer(argc, argv, id)) {
+          abrir(series ? 0 : 1, 1, fl[l].sec, 0);
+          nivel = 0; memset(animFoco, 0, sizeof animFoco);
+          txt_novo_quadro(); gfx_novo_quadro();
+          glClear(GL_COLOR_BUFFER_BIT); detail_desenhar(SDL_GetTicks());
+          gravar(id);
+        }
+      } }
   if (quer(argc, argv, "filme-relacionados")) { abrir(1, 1, SEC_RELACIONADOS, 0); gravar("filme-relacionados"); }
   if (quer(argc, argv, "filme-colecao")) { abrir(1, 1, SEC_COLECAO, 0); gravar("filme-colecao"); }
   if (quer(argc, argv, "filme-fim")) { abrir(1, 1, SEC_DETALHES, 0); gravar("filme-fim"); }

@@ -5753,6 +5753,7 @@ static void desenhaAbaInfo(float x, float y, int i, float f, float a) {
   txt_peso(l, x, y + (NV_DETP_ABA_H - l.h) * 0.5f, a, 0.5f + f * 0.6f);
 }
 
+static void cartaoVidro(GfxRect r, float f, float a);
 // Elenco: avatar redondo de 140 ALINHADO A ESQUERDA do card de 220 (nao
 // centralizado, que era o desenho anterior), nome 26/500 rgb(179,179,179) e
 // papel 21/400 rgb(128,128,128) abaixo dele.
@@ -5777,6 +5778,7 @@ static void desenhaTrailer(float x, float y, int c, float f, float a) {
 
   // Foco da Home (focoprof.h): anel so com o ajuste ligado, senao a miniatura
   // cresce; brilho/profundidade seguem os Ajustes (Trailers).
+  cartaoVidro((GfxRect){ x - 10.0f, y - 10.0f, NV_DETF_TR_W + 20.0f, NV_DETF_TR_ALT + 20.0f }, f, a);
   foco_anel(v, raio, f, a);
   v = foco_zoom(v, f);
 
@@ -5854,12 +5856,9 @@ static void desenhaElenco(float x, float y, int c, float f, float a) {
   // pula fileira vazia). Este `return` e a segunda tranca.
   if (!nome || !nome[0]) return;
 
-  if (epApple() && f > .005f) {
-    float top = y + NV_DETP_EL_AVATAR + NV_DETP_EL_NOME_DY - 8;
-    GfxRect info = {x-12,top,NV_DETP_EL_W+24,76};
-    if (ajustes_vidro()) gfx_vidro_chip(info,18.0f/info.h,.6f,f*a);
-    else gfx_cor(info,18.0f/info.h,.19f,.21f,.23f,.6f*f*a);
-  }
+  cartaoVidro((GfxRect){ x - 10.0f, y - 10.0f, NV_DETP_EL_W + 20.0f,
+                         NV_DETP_EL_AVATAR + NV_DETP_EL_NOME_DY + NV_DETP_EL_PAPEL_DY + 45.0f },
+              f, a);
   GfxRect av = { x + (NV_DETP_EL_W-NV_DETP_EL_AVATAR)*.5f, y, NV_DETP_EL_AVATAR, NV_DETP_EL_AVATAR };
   // Foco da Home (focoprof.h): anel so com o ajuste ligado, senao o avatar
   // cresce; a profundidade segue o ajuste de Elenco.
@@ -5961,6 +5960,15 @@ static void moldura(GfxRect r, float raio, float a) {
   // ("tirar esse contorno daqui tb"), e ele estava contra a regra: nesta tela
   // contorno so aparece onde preencher e impossivel, e aqui o preenchimento
   // #151820 ja separa o cartao do fundo sozinho.
+}
+
+// Shared glass plate behind a cast/recommendation/trailer item: the same
+// material and focus surface as the Trakt comments cards. Glass off draws
+// nothing, so the old bare look stays. Sizes and the focus scale are untouched.
+static void cartaoVidro(GfxRect r, float f, float a) {
+  if (!ajustes_vidro()) return;
+  gfx_vidro_material(r, 20.0f / r.h, GFX_VIDRO_DENS, a);
+  if (f > 0.005f) plrui_linha_foco(r, 20.0f, f * a);
 }
 
 // Disco com a inicial (o .av do mockup), na cor que o nome sorteia.
@@ -6158,15 +6166,12 @@ static void desenhaRelacionados(float x, float y, float a, int primeiro, int lim
     // painel da legenda. O cartao de vidro/accent que envolvia arte e legenda
     // era um contorno de 8 px que ignorava "Foco no cartaz".
     if (aceso && epApple()) {
-      float alturaLegenda = 12.0f + 22.0f + (ano[0] ? 6.0f + 18.0f : 0.0f) + 8.0f;
-      GfxRect legend = {cx-10,y+REL_CARD_H+4,REL_CARD_W+20,alturaLegenda+8};
-      if (ajustes_vidro()) gfx_vidro_chip(legend,16.0f/legend.h,.64f,a);
-      else gfx_cor(legend,16.0f/legend.h,.19f,.21f,.23f,.64f*a);
       if (ajustes_borda_foco()) gfx_anel(r,raio,1.5f,1,1,1,.18f*a);
     }
     // Foco da Home no cartaz (focoprof.h): anel so com o ajuste ligado, senao
     // ele cresce; brilho e profundidade seguem os Ajustes.
     float fRel = (aceso && i < N_ITENS) ? animFoco[SEC_RELACIONADOS][i] : 0.0f;
+    cartaoVidro((GfxRect){ cx - 10.0f, y - 10.0f, REL_CARD_W + 20.0f, REL_CARD_H + 88.0f }, fRel, a);
     if (!epApple()) foco_anel(r, raio, fRel, a);
     r = foco_zoom(r, fRel);
     { float aArte = revela_arte(&revRel[i], t != 0, SDL_GetTicks());
@@ -6341,7 +6346,8 @@ static void desenhaColecao(float x, float y, float f, float a) {
     gfx_rect(r, t, GFX_VITRINE, 1.0f, 0.5f, 0.0f, raio, 0.30f, 0, 0, a);
     gfx_tex_aspect_atual = 0.0f;
   } else {
-    moldura(r, COL_CARD_RAIO, a);
+    if (ajustes_vidro()) gfx_vidro_material(r, raio, GFX_VIDRO_DENS, a);
+    else moldura(r, COL_CARD_RAIO, a);
     if (fundo[0] && !tex_falhou(fundo)) gfx_esqueleto(r, raio, 0.12f, 0.12f, 0.13f, a * 0.6f);
   }
   if (ajustes_vidro()) foco_anel(r, raio, f, a);
