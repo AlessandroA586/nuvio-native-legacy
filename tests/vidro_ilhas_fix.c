@@ -91,8 +91,12 @@ int main(void) {
   }
   if (getenv("NUVIO_FIX_MATERIAL")) {
     gfx_novo_quadro(); glClearColor(.1f, .1f, .1f, 1); glClear(GL_COLOR_BUFFER_BIT);
-    // A solid panel must fail the same acceptance predicate as the real shots.
+    // Even a stale/nonzero source counter cannot make a solid surface pass.
+    gfx_vidro_com_fonte = 2;
     if (ilhaConfere("opaque negative control", 800, 440, 20, 200)) failures++;
+    ilhaCena();
+    gfx_vidro_com_fonte = 2;
+    if (ilhaConfere("sharp negative control", 800, 440, 120, 200)) failures++;
   }
   snprintf(path, sizeof path, "%s/%s-result.txt", out, phase);
   FILE *f = fopen(path, "w"); assert(f); fprintf(f, "failures=%d\n", failures); fclose(f);

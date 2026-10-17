@@ -20,9 +20,10 @@ static void ilhaCena(void) {
   for (i = 0; i < 160; i++) gfx_cor((GfxRect){ i * 12.0f, 150, 6, 780 }, 0, 1, 1, 1, .95f);
   if (getenv("NUVIO_ILHA_BARRA")) gfx_vidro_folha((GfxRect){ 40, 100, 600, 880 }, 28.0f / 880, 1);
 }
+static double ilhaVariancia;
 static double ilhaGrad(int x, int y, int w, int h) {
   unsigned char *p = malloc((size_t)w * h * 4);
-  double s = 0;
+  double s = 0, sum = 0, sum2 = 0;
   int i, j;
   if (!p) exit(2);
   glFinish();
@@ -32,6 +33,11 @@ static double ilhaGrad(int x, int y, int w, int h) {
       unsigned char *a = p + ((size_t)j * w + i - 1) * 4, *b = a + 4;
       s += fabs((b[0] + b[1] + b[2]) / 3.0 - (a[0] + a[1] + a[2]) / 3.0);
     }
+  for (i = 0; i < w * h; i++) {
+    double luma = (p[i * 4] + p[i * 4 + 1] + p[i * 4 + 2]) / 3.0;
+    sum += luma; sum2 += luma * luma;
+  }
+  ilhaVariancia = sum2 / (w * h) - pow(sum / (w * h), 2);
   free(p);
   return s / ((double)(w - 1) * h);
 }
@@ -51,8 +57,10 @@ static void ilhaPng(const char *dir, const char *nome) {
 // Open stripes read ~26; a frosted panel blurs them to < 2.
 static int ilhaConfere(const char *nome, int x, int y, int w, int h) {
   double g = ilhaGrad(x, y, w, h);
-  int ok = g < 2.0;
-  printf("%s: %s under-panel dx=%.2f (stripes alone ~26)\n", ok ? "PASS" : "FAIL", nome, g);
+  // Require backdrop variation as well as softened edges and an actual source.
+  int ok = g < 2.0 && ilhaVariancia > 0.25 && gfx_vidro_com_fonte > 0;
+  printf("%s: %s under-panel dx=%.2f variance=%.2f source=%d (stripes alone ~26)\n",
+         ok ? "PASS" : "FAIL", nome, g, ilhaVariancia, gfx_vidro_com_fonte);
   return ok;
 }
 #endif
