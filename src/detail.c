@@ -6716,8 +6716,9 @@ static float cabecalhoComentarios(float x, float y, float a) {
         float lum = 0.176f;                     // #2D2D2D
         foco_anel(rc, NV_RAIO_PILL, f, a);      // so com "Foco no cartaz" ligado
         if (ajustes_vidro()) {
-          if (sel) gfx_vidro_painel_acento(rc, NV_RAIO_PILL, 0.5f, a);
-          else gfx_vidro_painel(rc, NV_RAIO_PILL, 0.4f, a);
+          gfx_vidro_material(rc, NV_RAIO_PILL, GFX_VIDRO_DENS, a);
+          if (sel) { float ar, ag, ab; ajustes_acento(&ar, &ag, &ab);
+            gfx_cor(rc, NV_RAIO_PILL, ar, ag, ab, 0.20f * a); }
           gfx_vidro_pilula_cheia(rc, NV_RAIO_PILL, f, a);
         } else {
         gfx_cor(rc, NV_RAIO_PILL, lum, lum, lum, a);
@@ -6789,13 +6790,13 @@ static void desenhaComentarios(float x, float y, float a) {
     // A troca e em DEGRAU e nao interpolada: `txt_linha` guarda a linha ja
     // rasterizada na cor pedida, entao uma cor que varia por quadro seria uma
     // entrada nova de cache por quadro.
-    moldura(card, 20.0f, a);
+    gfx_vidro_ou_solido(card, 20.0f / COM_CARD_H, GFX_VIDRO_DENS, a,
+                        0.082f, 0.094f, 0.118f, 0.92f);
     int tintaEsc = 1;   // tinta escura sobre o foco (realce claro); 0 = clara
-    // Vidro: o cartao em foco segue translucido (contorno no realce), entao o
-    // texto NAO inverte; `focCor` e o "foco cheio" das cores abaixo.
+    // Shared translucent focus surface; glass text stays light.
     const int focCor = foc && !ajustes_vidro();
     if (foc && ajustes_vidro())
-      gfx_vidro_foco(card, 20.0f / (COM_CARD_W < COM_CARD_H ? COM_CARD_W : COM_CARD_H), 1.0f, a);
+      plrui_linha_foco(card, 20.0f, a);
     else if (foc) { float fr, fg, fb; tintaEsc = ajustes_acento_tinta(&fr, &fg, &fb) < 0.5f;
       gfx_cor(card, 20.0f / (COM_CARD_W < COM_CARD_H ? COM_CARD_W
                                                      : COM_CARD_H),
@@ -6814,8 +6815,8 @@ static void desenhaComentarios(float x, float y, float a) {
         tag[q] = (char)((lingCom[q] >= 'a' && lingCom[q] <= 'z') ? lingCom[q] - 32 : lingCom[q]);
       tag[q] = 0;
       { TxtLinha lt = txt_linha(TXT_CAPTION2, tag,
-                                foc ? (tintaEsc ? 88 : 215) : 132, foc ? (tintaEsc ? 90 : 216) : 138,
-                                foc ? (tintaEsc ? 96 : 222) : 150, 255);
+                                focCor ? (tintaEsc ? 88 : 215) : 132, focCor ? (tintaEsc ? 90 : 216) : 138,
+                                focCor ? (tintaEsc ? 96 : 222) : 150, 255);
         txt_desenhar_alpha(lt, px + larg - lt.w, y + COM_PAD + 6.0f, a * 0.9f);
         larguraTag = lt.w + 14.0f; }
     }
@@ -6845,8 +6846,8 @@ static void desenhaComentarios(float x, float y, float a) {
       else
         snprintf(rodape, sizeof rodape, i18n("%d curtidas"), cur);
       { TxtLinha lr = txt_linha(TXT_CAPTION2, rodape,
-                                foc ? (tintaEsc ? 88 : 215) : 132, foc ? (tintaEsc ? 90 : 216) : 138,
-                                foc ? (tintaEsc ? 96 : 222) : 150, 255);
+                                focCor ? (tintaEsc ? 88 : 215) : 132, focCor ? (tintaEsc ? 90 : 216) : 138,
+                                focCor ? (tintaEsc ? 96 : 222) : 150, 255);
         txt_desenhar_alpha(lr, px, y + COM_CARD_H - COM_PAD - lr.h, a * 0.9f); } }
   }
 }

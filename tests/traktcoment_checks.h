@@ -32,24 +32,25 @@ static int trakt_checks(void) {
     abrir(1, 1, SEC_COMENTARIOS, 0);
     // Draw the real row while scrolling, after warming every card and focus color.
     for (int frame = 0; frame < 180; frame++) {
-      scrollSec[SEC_COMENTARIOS] = (float)(frame % 90) * 8;
-      foco.coluna = frame % 3;
+      scrollSec[SEC_COMENTARIOS] = (float)(frame % 90) * 40;
+      foco.coluna = (frame / 10) % 8;
       txt_novo_quadro(); gfx_novo_quadro();
       desenhaComentarios(96, 300, 1);
     }
     traktLayoutCalls = 0;
-    int uploads = 0;
+    int uploads = 0, sampled = 0;
     for (int frame = 0; frame < 180; frame++) {
-      scrollSec[SEC_COMENTARIOS] = (float)(frame % 90) * 8;
-      foco.coluna = frame % 3;
+      scrollSec[SEC_COMENTARIOS] = (float)(frame % 90) * 40;
+      foco.coluna = (frame / 10) % 8;
       txt_novo_quadro(); gfx_novo_quadro();
       int before = txt_rasterizadas;
       desenhaComentarios(96, 300, 1);
       uploads += txt_rasterizadas - before;
+      sampled += gfx_vidro_com_fonte;
     }
-    printf("comments scrolling: frames=180 layout-calls=%d text-uploads=%d\n",
-           traktLayoutCalls, uploads);
-    failures = traktLayoutCalls != 0 || uploads != 0;
+    printf("comments scrolling: frames=180 layout-calls=%d text-uploads=%d frost-sampled-cards=%d\n",
+           traktLayoutCalls, uploads, sampled);
+    failures = traktLayoutCalls != 0 || uploads != 0 || sampled == 0;
     printf("%s: no warmed comment wrapping or text uploads per frame\n", failures ? "FAIL" : "PASS");
   }
   return failures ? 1 : 0;

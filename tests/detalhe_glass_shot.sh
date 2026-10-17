@@ -36,6 +36,10 @@ for s in src/*.c src/dts/*.c; do
   fi
 done
 wait
-cc $FL tests/detalhe_glass_shot.c "${objs[@]}" -o "$OBJ/shot" \
+shot_extra=()
+if [ -n "${NUVIO_DETAIL_SOURCE:-}" ]; then
+  shot_extra+=("-DNV_DETAIL_SOURCE=\"$NUVIO_DETAIL_SOURCE\"")
+fi
+cc $FL "${shot_extra[@]}" tests/detalhe_glass_shot.c "${objs[@]}" -o "$OBJ/shot" \
   -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL
 "$OBJ/shot" "$@"
