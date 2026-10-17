@@ -1,5 +1,6 @@
 #include "addons.h"
 #include "idbase.h"
+#include "idcanal.h"
 #include "idioma.h"
 #include "linguas.h"
 #include "streams.h"
@@ -2407,7 +2408,8 @@ static void *fioFontes(void *u) {
     if (!origem->ativo) continue;   // desligado na conta: nunca consultado
     if (semStreamSondado(c, i)) continue;   // a sonda terminou depois dos baldes
     // Id codificado como o Nuvio web (nv_addon_id): "tt123:1:2" sai igual.
-    if (!nv_addon_id(idUrl, sizeof idUrl, c->id)) idUrl[0] = 0;
+    { char longo[IDCANAL_LONGO_MAX + 1];   // apelido de canal longo (idcanal.h)
+      if (!nv_addon_id(idUrl, sizeof idUrl, idcanal_longo(c->id, longo, sizeof longo))) idUrl[0] = 0; }
     // O NOME QUE O MANIFESTO DECLARA VAI PRIMEIRO (issue #112). Ver
     // tipoCanalDeclarado: o FrostView declara "channel" e o app perguntava
     // "tv" antes, gastando uma viagem inteira por canal aberto so para
@@ -3102,7 +3104,8 @@ static void *fioConsultaCapturada(void *u) {
     const AddonCapturado *a = &c->snapshot->addons[i];
     if (!a->ativo || !a->fonte) { c->baldes[i].respondeu = 1; continue; }
     char url[NV_ADDON_PEDIDO_MAX], idUrl[768];
-    if (!nv_addon_id(idUrl, sizeof idUrl, c->id) ||
+    char longo[IDCANAL_LONGO_MAX + 1];
+    if (!nv_addon_id(idUrl, sizeof idUrl, idcanal_longo(c->id, longo, sizeof longo)) ||
         !nv_addon_url(url, sizeof url, a->base, "/stream/%s/%s.json", c->tipo, idUrl)) continue;
     char *corpo = rede_baixar(url, 12);
     if (!corpo) {
