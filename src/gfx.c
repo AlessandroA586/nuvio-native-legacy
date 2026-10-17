@@ -1917,7 +1917,7 @@ static unsigned vidroHash;
 // Capture slots: a frame whose glasses need several captures (a draw between
 // them reaches the next one's read region, e.g. detail cards under a section
 // title) keeps each in its own half-res target, so a static frame reuses all
-// of them. Slot 0 is vidH2; slot k > 0 is vidSlot[k].
+// of them. Slot k is vidSlot[k], quarter res like vidFundo.
 #define VID_NSLOTS 4
 static unsigned vidroSlotHash[VID_NSLOTS];
 static int vidroSlotValido[VID_NSLOTS], vidroSlot, vidroRecapturou;
@@ -3368,7 +3368,7 @@ static void vidPassada(GLuint src, GLuint fbo, int w, int h, const float uv[4], 
   if (perftv_enabled) perftv_blur++;
 }
 // Captura e desfoca a regiao `reg` (layout de tela) da tela atual em `dst`
-// (vidH2 ou um slot; meia resolucao, tambem o alvo da primeira passada).
+// (vidFundo or a slot, 1/4 of the 1080p chain).
 static int vidCapturar(const float reg[4], GLuint dst, GLuint dstFbo) {
   float ex = (float)telaW / NV_TELA_W, ey = (float)telaH / NV_TELA_H, uv[4], fq;
   int x0, y0, x1, y1, qw, qh, tesoura;
@@ -3414,8 +3414,7 @@ static int vidCapturar(const float reg[4], GLuint dst, GLuint dstFbo) {
     vidPassada(vidGrab, vidQaFbo, qw, qh, uv, o / telaW, o / telaH);
   }
   vidPassada(vidQa, vidQbFbo, qw, qh, uv, 0.35f / qw, 0.35f / qh);         // Kawase
-  vidPassada(vidQb, vidQaFbo, qw, qh, uv, 0.75f / qw, 0.75f / qh);
-  vidPassada(vidQa, dstFbo, vidBw, vidBh, uv, 1.25f / vidBw, 1.25f / vidBh);   // de volta a 1/2
+  vidPassada(vidQb, dstFbo, qw, qh, uv, 0.75f / qw, 0.75f / qh);
   glBindTexture(GL_TEXTURE_2D, 0);
   glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)fboAnt);
   glViewport(vp[0], vp[1], vp[2], vp[3]);
@@ -3439,7 +3438,7 @@ static void vidroFundoFechar(void) {
     if (!vidPreparar()) return;
     if (!vidFundo) {
       GLint ant = fboLigado();
-      int ok = vidAlvo(&vidFundo, &vidFundoFbo, vidBw, vidBh);
+      int ok = vidAlvo(&vidFundo, &vidFundoFbo, vidBw / 2, vidBh / 2);
       glBindTexture(GL_TEXTURE_2D, 0);
       glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)ant);
       gfx_tex_esquecer(0);
@@ -3477,15 +3476,16 @@ static GLuint vidroFonte(GfxRect r) {
   }
   if (!vidH2 || vidW != telaW || vidH != telaH) { if (!vidPreparar()) return 0; }
   else if (vidroSlot >= 0 && !vidroCruza(vidroDesde, lido))
-    return vidroSlot ? vidSlot[vidroSlot] : vidH2;
+    return vidSlot[vidroSlot];
   sl = vidroSlot + 1 < VID_NSLOTS ? vidroSlot + 1 : VID_NSLOTS - 1;
-  tex = sl ? &vidSlot[sl] : &vidH2; fbo = sl ? &vidSlotFbo[sl] : &vidH2Fbo;
+  tex = &vidSlot[sl]; fbo = &vidSlotFbo[sl];
   if (!*tex) {
     GLint ant = fboLigado();
-    if (!vidAlvo(tex, fbo, vidBw, vidBh)) { sl = 0; tex = &vidH2; fbo = &vidH2Fbo; }
+    int ok = vidAlvo(tex, fbo, vidBw / 2, vidBh / 2);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)ant);
     gfx_tex_esquecer(0);
+    if (!ok) return 0;
   }
   memset(vidroDesde, 0, sizeof vidroDesde);
   if (!(!vidroRecapturou && vidroSlotValido[sl] && vidroSlotHash[sl] == vidroHash && vidroContem(vidroLeAnt, lido))) {

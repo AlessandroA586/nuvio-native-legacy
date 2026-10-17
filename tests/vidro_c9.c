@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
   check(captures <= 40, "animated capture budget");
   // Blur budget (gfx.c vidPreparar/vidCapturar): targets capped at the 1080p
   // chain, so 4K pays the 1080p blur pixels; 1080p goes to 1/4 in one pass.
-  check(passes == captures * (width > 1920 ? 5 : 4), "blur passes per capture");
+  check(passes == captures * (width > 1920 ? 4 : 3), "blur passes per capture");
   check(captures && fill * width * height / captures <= 1.5e6, "blur pixels per capture capped at the 1080p chain");
   check(fill / 20 <= (webos ? 1.4 : 1.0), "blur fill budget with intervening backdrop invalidation");
   shot(argv[2], "focus");
