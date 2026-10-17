@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-17T12:49:25-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-17T13:48:29-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -171,6 +171,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Fixes
 
+- **IMDb score no longer shown as %** (#590): MDBList sometimes sends the IMDb rating on a 0-100 scale
+  and the app displayed "80%"/"80.0"; now only the IMDb value is divided by 10 (8.0), leaving Trakt and
+  Rotten Tomatoes untouched. Platforms: Samsung .tpk, Android. Refs `03a144294`, `0d998e33a`, `eea9aac9d`.
 - **Smoother Home trailer transitions**: the trailer cutout fades as Frost returns, avoiding an abrupt backdrop change. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `524de66ac`, `240bc60a0`.
 - **Cleaner shuffle focus**: the detail-page shuffle button no longer displays an unnecessary focus tooltip. Platforms: webOS, Android, Samsung .tpk, WASM. Ref `c9c2d3f15`.
 - **Cast identities stay distinct**: valid cast entries survive metadata filtering and different Unicode names retain separate identities. Platforms: webOS, Android, Samsung .tpk, WASM. Ref `8bd065a36`.
@@ -345,10 +348,6 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
-- **IMDb score shown as %** (#590) — `agente/205-imdbnota`, 1 commit out (`03a144294`): MDBList sometimes
-  sends IMDb on a 0–100 scale and the app showed "80%"/"80.0"; now only IMDb is divided by 10 (8.0), with
-  Trakt and Rotten Tomatoes untouched. `notasfontes.sh` and `imdbnota.sh` pass; **still needs review and
-  merge**. Samsung .tpk, Android.
 - **App closed for low memory on 2 GB webOS** (#415) — `agente/205-memg4` (`f77eeeef7`): texture cap derived
   from available memory and the retry after pipeline error 600 gated by memory; implementation job finished; review and merge remain pending. LG webOS.
 - **PR #487 v2** (add-on reported audio and subtitle languages) — `agente/205-pr487v2`, 3 commits out,
@@ -419,7 +418,7 @@ Landing in 2.0.7, already in the sections above:
   (`2c7c85860`), the **Dynamic Gray/Colour background** (`e3fdbe717`), the **Home frost islands**
   (`f087f4b59`), the **sidebar frost / glass accent pill** (`ab0e9a597`), **PR #572** (`22f3d22bb`), the
   **player glass / episode plate / hero mipmap** fixes (`04375ab4f`, `3b39999e5`, `fc6d35d69`), the
-  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`).
+  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`) and the **IMDb 0-100 fix** (`eea9aac9d`).
 
 ### Frost performance (to fill before tagging)
 
@@ -460,7 +459,7 @@ Landing in 2.0.7, already in the sections above:
   (`2c7c85860`), the **Dynamic Gray/Colour background** (`e3fdbe717`), the **Home frost islands**
   (`f087f4b59`), the **sidebar frost / glass accent pill** (`ab0e9a597`), **PR #572** (`22f3d22bb`), the
   **player glass / episode plate / hero mipmap** fixes (`04375ab4f`, `3b39999e5`, `fc6d35d69`), the
-  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`).
+  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`) and the **IMDb 0-100 fix** (`eea9aac9d`).
 
 ### Frost performance (to fill before tagging)
 
