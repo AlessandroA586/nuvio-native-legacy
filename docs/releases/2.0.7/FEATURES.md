@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-17 08:16, HEAD `ab0e9a597`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-17 12:15, HEAD `0940ae7bf`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -90,6 +90,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   Classico, Ilha (título numa pílula de vidro com o ícone e a contagem), Editorial (linha pequena em
   caixa alta acima do título) e Acento (ponto que vira barra na fileira em foco, com "Ver tudo" no fim).
   Todas as plataformas. Refs pedido do dono, `331746034`, `4898972d7`.
+- **Árabe em Noto Naskh Bold** (pedido da comunidade): a interface em árabe e as legendas simples em árabe
+  passam a usar a Noto Naskh Bold em todos os pesos, no lugar do negrito sintético, com a linha de base
+  alinhada ao texto latino; latim, CJK e tailandês não mudam. Todas as plataformas.
+  Refs pedido da comunidade, `458828591`, `0940ae7bf`.
 - **Cartaz grande em três tamanhos**: a fileira de cartaz com informação ganha Pequeno, Médio e Grande
   (*Ajustes › Aparência da Home › Estilo de linha*, esquerda/direita como Paisagem e 4:3) — Pequeno com
   1 linha de sinopse, Grande com 3 e a altura que sobra virando largura. O Médio continua idêntico.
@@ -293,6 +297,11 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 - **Detalhe: menos camadas de tela cheia**: furo e véu do cartão de trailer passam a ser um único desenho, e
   um cartão vizinho quase fora da tela deixa de contar como cheio — 4 → 2 camadas, preenchimento 1,81 → 0,99
   no harness, PNGs idênticos. Todas as plataformas. `5ed6ddfaa`.
+- **Trocar de fileira na Home copia muito menos** (pedido do dono): enquanto o hero faz crossfade, o vidro
+  copiava a tela inteira para depois desfocar só alguns retângulos; agora copia só esses retângulos — o
+  custo de cópia por captura cai de ~1,0 para ~0,13 tela. Não resolve o repouso a 40 fps nem os picos de
+  4,7x de preenchimento na TCL (precisa de medição de GPU no aparelho). Todas as plataformas.
+  Refs pedido do dono, `e70adbf7a`, `d7522dd17`.
 - **Descer do título para as temporadas não trava mais** (pedido do dono): a transição título → abas de
   temporada, que chegava a 71,8 ms/quadro na TCL com 163 retângulos de blur, agora cresce com vidro barato
   e culling; e a fonte preferida deixa de ser recalculada a cada quadro (o log `[fonte]` sumia em 2.347
@@ -360,6 +369,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   (`21696fd8c`, `796a3441f`).
 - Fixture do `tests/homerefresh.sh` consertada outra vez no merge: stubs duplicados de home e stubs de
   trava de add-on que faltavam (`c47a40788`).
+- Regressão aberta na janela dos merges de vidro: `tests/vidro_qualidade.sh` FALHA em `0940ae7bf`
+  ("Alta ignores the governor (frost)") — `j-vidroqual` investiga (job vivo).
+- Testes novos do Naskh Bold (`tests/arabe_negrito_padrao.sh`, FAIL sem a mudança em `text.c`) e do custo de
+  cópia do backdrop na Home (`tests/homelerdo.sh`, 5 checagens, FAIL no baseline) (`458828591`, `e70adbf7a`).
 - Testes novos dos comentários do Trakt (`tests/traktcoment.sh`, dados de série/episódio, contador de 180
   quadros e FAIL->PASS da regressão de série), do cache de quebra de linha da fileira e do token de geração
   da folha de fontes / "Assistir do começo" (`5195cd14f`, `1165245fc`, `075fec9a4`, `6a6d5b71b`).
@@ -368,24 +381,30 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 
+- **Nota do IMDb em %** (#590) — `agente/205-imdbnota`, 1 commit fora (`03a144294`): o MDBList às vezes
+  manda o IMDb em 0–100 e o app mostrava "80%"/"80.0"; agora só o IMDb é dividido por 10 (8.0), com Trakt e
+  Rotten Tomatoes intactos. Testes `notasfontes.sh` e `imdbnota.sh` passam; **falta review e merge**.
+  Samsung .tpk, Android.
+- **App fechado por falta de memória na webOS de 2 GB** (#415) — `agente/205-memg4` (`f77eeeef7`): teto de
+  textura por memória disponível e retry depois do erro 600 travado por memória; job ainda rodando, sem
+  review nem merge. LG webOS.
 - **PR #487 v2** (idiomas de áudio e legenda informados pelo add-on) — `agente/205-pr487v2`, 3 commits fora,
   VEREDITO OK `j-rev-pr487-v2`, sem commit depois. **Needs final re-review.** Android, LG webOS.
 - **PR #493 v2 / v3** (perfil e sessão) — `agente/205-pr493`, 12 commits fora. VEREDITO **BLOQUEIA**
   `j-revg-pr493` (mais novo); `j-revpr493-v3` OK foi antes. Precisa de fix novo + review.
   Android, LG webOS.
-- **Menu "mais" do detalhe no vidro** — `agente/205-detalheglass`, 2 commits fora (`e047eecee`, `9ebdc9a3b`):
-  elenco, recomendações, trailers e o menu "mais" da página do título passam a usar o vidro/frost
-  compartilhado. Fix novo (`0b52916d0`, `d04f21ba4`, 06:01) e **review rev2 BLOQUEIA (06:51)**: o vidro
-  ainda esconde a arte da coleção carregada (P1) e o teste do menu continua aceitando a implementação
-  antiga (P2). Precisa de fix novo + review antes de entrar na 2.0.7. Todas as plataformas.
+- **Menu "mais" do detalhe no vidro** — `agente/205-detalheglass` foi **merged** (`cc87bec32`, 10:34) depois
+  dos fixes `0b52916d0`, `d04f21ba4`, `531a36f6e`, `937a69475`, `26dbd9a2a`, `3aec9a8c0`, `aef4e3c58`; o
+  review rev4 BLOQUEIA (09:20) foi **antes** do merge. Já está nos Destaques; falta revisar o resultado
+  mesclado. Todas as plataformas.
 - **Frost da barra lateral e pílula de acento em vidro** — `agente/205-vidromenu` foi **merged**
   (`ab0e9a597`, 08:11, conflitos resolvidos pelo merge) e `agente/205-vidroilhas` foi **merged**
   (`f087f4b59`); os dois já estão nos Destaques. O review rev2 OK (`j-rev2-vidromenu`, 06:49) foi **antes**
   do merge, então falta revisar o resultado mesclado. Todas as plataformas.
 - **Fundo Cinza/Cor fixo no layout Dinâmico** — `agente/205-dinfundo` foi **merged** (`e3fdbe717`, 07:49);
   review rev2 OK (06:48) depois do fix da paleta de acento (`0cf805980`). Já está nos Destaques.
-- **Escala de texto e componentes** — `agente/205-textoescala`, 5 commits fora (`e7fa6d67c`,
-  `406359d3a`, `bab9c56e3`, `86fed77d7`, `4bfafc814`): ajuste novo "escala de texto e componentes"
+- **Escala de texto e componentes** — `agente/205-textoescala`, 19 commits fora (`e7fa6d67c`,
+  `406359d3a`, `bab9c56e3`, `86fed77d7`, `4bfafc814`, `342aafc49`, `54242990a` e outros): ajuste novo "escala de texto e componentes"
   (85–130%) que multiplica texto, botões e componentes sem mexer no tamanho dos cartazes. **Review
   BLOQUEIA (06:50)**: a opção não aparece em Ajustes › Aparência (P1), os cartazes continuam
   redimensionando (P2) e as linhas da Biblioteca se sobrepõem a 85% (P2). Pedido do dono. Todas as
@@ -491,6 +510,9 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   the row icon and item count), Editorial (small uppercase kicker above the spaced title) or Accent (a dot
   that grows into a bar on the focused row, with a "See all" tail). All platforms.
   Refs owner request, `331746034`, `4898972d7`.
+- **Arabic in Noto Naskh Bold** (community request): the Arabic UI and plain Arabic subtitles now use Noto
+  Naskh Bold at every weight instead of synthetic bold, with the baseline aligned to Latin text; Latin, CJK
+  and Thai are untouched. All platforms. Refs community request, `458828591`, `0940ae7bf`.
 - **Big poster row in three sizes**: the info-on-poster row gains Small, Medium and Large
   (*Settings › Home appearance › Row style*, left/right like Landscape and 4:3) — Small with one synopsis
   line, Large with three and the spare height turned into width. Medium is unchanged.
@@ -658,6 +680,10 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 - **Detail: fewer full-screen layers**: the trailer card's hole and veil are drawn in one pass, and a
   neighbour card almost off screen no longer counts as full — 4 → 2 layers, fill 1.81 → 0.99 on the harness,
   PNGs byte-identical. All platforms. `5ed6ddfaa`.
+- **Changing Home rows copies far less** (owner request): while the hero crossfades, the glass copied the
+  whole screen just to blur a few rectangles; it now copies only those rectangles — copy cost per capture
+  drops from about 1.0 to 0.13 screens. It does not fix the idle 40 fps or the 4.7x fill spikes on the TCL
+  (that needs on-device GPU timing). All platforms. Refs owner request, `e70adbf7a`, `d7522dd17`.
 - **Title → season tabs no longer stutters** (owner request): the transition that hit 71.8 ms/frame on the
   TCL with 163 blur rects now grows cheap glass and culling; and the preferred source stops being matched
   every frame (the `[fonte]` log alone wrote 2,347 lines in 2 min) — computed once per list, logged once.
@@ -724,6 +750,10 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   (`21696fd8c`, `796a3441f`).
 - The `tests/homerefresh.sh` fixture repaired again at merge time: duplicate home stubs and missing add-on
   lock stubs (`c47a40788`).
+- Open regression in the glass merge window: `tests/vidro_qualidade.sh` FAILS at `0940ae7bf`
+  ("Alta ignores the governor (frost)") — `j-vidroqual` is investigating (live job).
+- New tests for Naskh Bold (`tests/arabe_negrito_padrao.sh`, FAIL without the `text.c` change) and for the
+  Home backdrop copy cost (`tests/homelerdo.sh`, 5 checks, FAIL on the baseline) (`458828591`, `e70adbf7a`).
 - New Trakt-comment tests (`tests/traktcoment.sh`, series/episode fixtures, a 180-frame per-frame counter and
   the FAIL->PASS for the series regression), the shared wrap cache for that row and the sources-sheet
   generation token / "Play from beginning" (`5195cd14f`, `1165245fc`, `075fec9a4`, `6a6d5b71b`).
@@ -732,6 +762,13 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
+- **IMDb score shown as %** (#590) — `agente/205-imdbnota`, 1 commit out (`03a144294`): MDBList sometimes
+  sends IMDb on a 0–100 scale and the app showed "80%"/"80.0"; now only IMDb is divided by 10 (8.0), with
+  Trakt and Rotten Tomatoes untouched. `notasfontes.sh` and `imdbnota.sh` pass; **still needs review and
+  merge**. Samsung .tpk, Android.
+- **App closed for low memory on 2 GB webOS** (#415) — `agente/205-memg4` (`f77eeeef7`): texture cap derived
+  from available memory and the retry after pipeline error 600 gated by memory; job still running, no review
+  and no merge. LG webOS.
 - **PR #487 v2** (add-on reported audio and subtitle languages) — `agente/205-pr487v2`, 3 commits out,
   VEREDITO OK `j-rev-pr487-v2`, no commit after. **Needs final re-review.** Android, LG webOS.
 - **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out. VEREDITO **BLOQUEIA**
@@ -743,11 +780,10 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
   `50a1ac232`, `35f5f4fc3`) is **not** in 2.0.7; its round-4 review was OK (`j-rev-foscovelho-r4`, 22:08),
   already after the merge. The path that shipped — the screen capture, just cheaper — landed as `4c82273d7`
   and is under Highlights/Performance. All platforms.
-- **Detail "more" menu on glass** — `agente/205-detalheglass`, 2 commits out (`e047eecee`, `9ebdc9a3b`):
-  cast, recommendations, trailers and the title page "more" menu move to the shared glass/frost. New fix
-  (`0b52916d0`, `d04f21ba4`, 06:01) and **rev2 review BLOQUEIA (06:51)**: the glass still hides loaded
-  collection artwork (P1) and the menu test still accepts the old implementation (P2). Needs a new fix +
-  review before 2.0.7. All platforms.
+- **Detail "more" menu on glass** — `agente/205-detalheglass` was **merged** (`cc87bec32`, 10:34) after the
+  fixes `0b52916d0`, `d04f21ba4`, `531a36f6e`, `937a69475`, `26dbd9a2a`, `3aec9a8c0`, `aef4e3c58`; the
+  rev4 BLOQUEIA review (09:20) came **before** the merge. It is under Highlights now; the merged result
+  still needs a review. All platforms.
 - **Sidebar frost and glass accent pill** — `agente/205-vidromenu` was **merged** (`ab0e9a597`, 08:11,
   conflicts resolved by the merge) and `agente/205-vidroilhas` was **merged** (`f087f4b59`); both are now
   under Highlights. The rev2 review was OK (`j-rev2-vidromenu`, 06:49) **before** the merge, so the merged
@@ -755,8 +791,8 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 - **Fixed Gray/Colour background in the Dynamic layout** — `agente/205-dinfundo` was **merged**
   (`e3fdbe717`, 07:49); rev2 review OK (06:48) after the accent-palette fix (`0cf805980`). It is now under
   Highlights.
-- **Text and component scale** — `agente/205-textoescala`, 5 commits out (`e7fa6d67c`, `406359d3a`,
-  `bab9c56e3`, `86fed77d7`, `4bfafc814`): a new "text and component scale" setting (85–130%) that scales
+- **Text and component scale** — `agente/205-textoescala`, 19 commits out (`e7fa6d67c`, `406359d3a`,
+  `bab9c56e3`, `86fed77d7`, `4bfafc814`, `342aafc49`, `54242990a` and others): a new "text and component scale" setting (85–130%) that scales
   text, buttons and components while leaving poster/card sizes alone. **Review BLOQUEIA (06:50)**: the
   option never shows up in Settings › Appearance (P1), cards still resize (P2) and Library rows overlap at
   85% (P2). Owner request. All platforms.
@@ -799,7 +835,9 @@ Landing in 2.0.7, already in the sections above:
   (`86d194462`), **glass tabs** (`a096e5eb8`), **Settings at 100%** (`f22761e28`), the **Trakt comments row**
   (`335bd2abc`), the **frosted context menu + Poster menu setting** (`dc040ef2d`), **PR #574**
   (`2c7c85860`), the **Dynamic Gray/Colour background** (`e3fdbe717`), the **Home frost islands**
-  (`f087f4b59`) and the **sidebar frost / glass accent pill** (`ab0e9a597`).
+  (`f087f4b59`), the **sidebar frost / glass accent pill** (`ab0e9a597`), **PR #572** (`22f3d22bb`), the
+  **player glass / episode plate / hero mipmap** fixes (`04375ab4f`, `3b39999e5`, `fc6d35d69`), the
+  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`).
 
 ### Frost performance (to fill before tagging)
 
@@ -838,7 +876,9 @@ Landing in 2.0.7, already in the sections above:
   (`86d194462`), **glass tabs** (`a096e5eb8`), **Settings at 100%** (`f22761e28`), the **Trakt comments row**
   (`335bd2abc`), the **frosted context menu + Poster menu setting** (`dc040ef2d`), **PR #574**
   (`2c7c85860`), the **Dynamic Gray/Colour background** (`e3fdbe717`), the **Home frost islands**
-  (`f087f4b59`) and the **sidebar frost / glass accent pill** (`ab0e9a597`).
+  (`f087f4b59`), the **sidebar frost / glass accent pill** (`ab0e9a597`), **PR #572** (`22f3d22bb`), the
+  **player glass / episode plate / hero mipmap** fixes (`04375ab4f`, `3b39999e5`, `fc6d35d69`), the
+  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`).
 
 ### Frost performance (to fill before tagging)
 

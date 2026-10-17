@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-17T11:55:00-03:00",
- "base": "22f3d22bb",
- "nota": "Sync 2026-10-17 11:00, HEAD integracao/2.0.5 cc87bec32 (base anterior 8df743dff). Unico merge da janela: agente/205-detalheglass (cc87bec32), depois de 4 fixes (0b52916d0, d04f21ba4, 531a36f6e, fff6df801, 453c7a73c, 937a69475, 26dbd9a2a, 3aec9a8c0, aef4e3c58); o review rev4 BLOQUEIA (09:20) foi ANTES do merge, entao falta revisar o resultado mesclado e conferir na TV. issues.json 10-17 13:15: 80 issues, 2 novas no mapa (#585 sem icone de microfone na busca, #588 add-ons de esporte ao vivo), ambas sem job. TV segue em cb7ece972; tag v2.0.6, proximo release 2.0.7.",
+ "atualizado_em": "2026-10-17T12:15:00-03:00",
+ "base": "0940ae7bf",
+ "nota": "Sync 2026-10-17 12:15, HEAD integracao/2.0.5 0940ae7bf (base anterior 45f2397fd). Na janela: 4 merges de 11:37 (pr/572 review OK rev-pr572; epfoco, playervidro e pisca3 sem review dedicado) e 2 merges de 11:56 (homelerdo d7522dd17 e naskhbold 0940ae7bf, reviews OK 11:40/11:41 antes do merge). jobs vivos: j-vidroqual (vidro_qualidade FALHA apos os merges), j-memg4 (#415 webOS 2 GB), j-fix6-textoescala (agente/205-textoescala 19 ahead, rev3 BLOQUEIA 09:20), j-pisca4 (novo cenario do seletor de perfil), j-imdbnota (fix 03a144294, branch 1 ahead, esperando review). issues.json 10-17 14:37: 80 issues, 2 novas no mapa (#589 GIFs, #590 nota IMDb — esta ja com fix pronto) e #486 agora fechada. TV segue em cb7ece972 (601 commits atras); tag v2.0.6, proximo release 2.0.7.",
  "itens": [
   {
    "numero": 1,
@@ -8543,11 +8543,12 @@
    "estado_github": "aberta",
    "plataforma": "LG",
    "tipo": "bug",
-   "status": "integrada",
+   "status": "em-andamento",
    "release": "2.0.5",
    "conserto": [
     "5c6b8093d Log: process and TV memory in the FPS line and around video loads (#415)",
-    "5c266499 (integracao/2.0.5; memlog)"
+    "5c266499 (integracao/2.0.5; memlog)",
+    "f77eeeef7 (agente/205-memg4: teto de textura por MemAvailable + retry travado, 10-17 12:20)"
    ],
    "ultima_resposta": {
     "nos": true,
@@ -8555,8 +8556,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-10"
    },
-   "proximo_passo": "lancar com 2.0.5 se TV ok (testar no TCL/C9)",
-   "notas": "Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5c6b8093d); status -> integrada",
+   "proximo_passo": "j-memg4 RUNNING (10-17 12:0x) na webOS 9 de 2 GB: rebaixar cache de textura no playback, reagir ao aviso de memoria e limitar RSS pela memoria disponivel; revisar + mergear",
+   "notas": "[sync 2026-10-17 12:15] Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5c6b8093d); status -> integrada",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/415",
    "criada_em": "2026-10-10",
    "alvo": "2.0.6"
@@ -9600,7 +9601,7 @@
   {
    "numero": 486,
    "titulo": "Sometimes wont load P2P addons",
-   "estado_github": "aberta",
+   "estado_github": "fechada",
    "plataforma": "?",
    "tipo": "bug",
    "status": "integrada",
@@ -9618,11 +9619,10 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "merged em integracao/2.0.5 (cdb45cb92 via agente/205-p2pusb) + 6d524f947 (URL http sem P2P); build+install e responder #486/#505",
-   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso. | Escrivao 2026-10-15 11:48: prompt p-205-p2p486 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: p2p486 merged, mas p2pusb (#486/#505) segue aberto | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-p2p486 integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92). | [sync 2026-10-16 21:00] agente/205-p2pusb merged; j-rev-p2pusbtela OK (9b4f37efb ainda 1 ahead). d25a3e513/6d524f947 (#552/#505) merged via PR #559 review OK. | [sync 2026-10-16 22:55] merged 21f169226/bf160f720 no HEAD ab0e9a597",
+   "proximo_passo": "fechada no GitHub (2026-10-17T14:02:53Z); #505 segue aberta",
+   "notas": "[sync 2026-10-17 12:15] Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso. | Escrivao 2026-10-15 11:48: prompt p-205-p2p486 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: p2p486 merged, mas p2pusb (#486/#505) segue aberto | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-p2p486 integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92). | [sync 2026-10-16 21:00] agente/205-p2pusb merged; j-rev-p2pusbtela OK (9b4f37efb ainda 1 ahead). d25a3e513/6d524f947 (#552/#505) merged via PR #559 review OK. | [sync 2026-10-16 22:55] merged 21f169226/bf160f720 no HEAD ab0e9a597",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/486",
    "criada_em": "2026-10-13",
-   "alvo": "ja-lancada",
    "ultimo_comentario_por": "",
    "ultima_nossa": ""
   },
@@ -10868,6 +10868,51 @@
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/588",
    "criada_em": "2026-10-17",
    "alvo": "2.0.6"
+  },
+  {
+   "numero": 589,
+   "titulo": "Not all GIFs are animated",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "triar: GIFs animados travam no primeiro quadro; sem job nem branch",
+   "notas": "[sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:19:12Z, label bug), sem job.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/589",
+   "criada_em": "2026-10-17",
+   "alvo": "2.1"
+  },
+  {
+   "numero": 590,
+   "titulo": "Imdb score displayed in % on title page",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "em_revisao",
+   "release": "2.0.7",
+   "conserto": [
+    "03a144294 (agente/205-imdbnota: normaliza IMDb 0-100 -> 0-10)",
+    "0d998e33a (agente/205-imdbnota: teste de nota standalone + prova com payloads)"
+   ],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "fix pronto em agente/205-imdbnota (03a144294, 0d998e33a), 2 ahead: revisar e mergear; depois build+install e responder",
+   "notas": "[sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:37:44Z, label bug); j-imdbnota done 11:50 (03a144294 normaliza IMDb 0-100 -> 0-10, testes/notasfontes.sh + imdbnota.sh rc=0), branch 1 ahead, sem merge e sem review.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/590",
+   "criada_em": "2026-10-17",
+   "alvo": "2.1"
   }
  ],
  "validacoes": [
@@ -12705,6 +12750,78 @@
    "ref": "agente/205-pisca3, agente/205-traktvidro (sem commit)",
    "resultado": "pendente",
    "evidencia": "/Volumes/ExternalSSD/tmp/rev/escrivao/jobs.txt"
+  },
+  {
+   "data": "2026-10-17 11:37",
+   "quem": "dono (merge) / map keeper",
+   "o_que": "Merge de pr/572 com review OK previo (rev-pr572, 10:51)",
+   "issues": [],
+   "ref": "22f3d22bb (Merge pr/572)",
+   "resultado": "passou",
+   "evidencia": "rev-pr572.log VEREDITO OK"
+  },
+  {
+   "data": "2026-10-17 11:37",
+   "quem": "dono (merge) / map keeper",
+   "o_que": "Merge de agente/205-epfoco sem review dedicado antes do merge",
+   "issues": [],
+   "ref": "3b39999e5 (Merge agente/205-epfoco)",
+   "resultado": "pendente",
+   "evidencia": "j-epfoco.log done 11:02, sem VEREDITO"
+  },
+  {
+   "data": "2026-10-17 11:37",
+   "quem": "dono (merge) / map keeper",
+   "o_que": "Merge de agente/205-playervidro sem review dedicado antes do merge",
+   "issues": [],
+   "ref": "04375ab4f (Merge agente/205-playervidro)",
+   "resultado": "pendente",
+   "evidencia": "j-playervidro/j-fix2/j-fix3-playervidro.log sem VEREDITO"
+  },
+  {
+   "data": "2026-10-17 11:37",
+   "quem": "dono (merge) / map keeper",
+   "o_que": "Merge de agente/205-pisca3 sem review dedicado antes do merge",
+   "issues": [],
+   "ref": "fc6d35d69 (Merge agente/205-pisca3)",
+   "resultado": "pendente",
+   "evidencia": "j-pisca3/j-pisca3b/j-pisca3c.log sem VEREDITO"
+  },
+  {
+   "data": "2026-10-17 11:40",
+   "quem": "job-pi (magpie) / review",
+   "o_que": "Revisao do fix de perf do vidro (copia so dos retangulos desfocados)",
+   "issues": [],
+   "ref": "e70adbf7a (agente/205-homelerdo)",
+   "resultado": "passou",
+   "evidencia": "rev-homelerdo.log VEREDITO OK, P2 de um quadro de blur sujo"
+  },
+  {
+   "data": "2026-10-17 11:41",
+   "quem": "job-pi (magpie) / review",
+   "o_que": "Revisao do Naskh Bold na UI e nas legendas simples",
+   "issues": [],
+   "ref": "458828591 (agente/205-naskhbold)",
+   "resultado": "passou",
+   "evidencia": "rev-naskhbold.log VEREDITO OK, P2 sem PNG de prova"
+  },
+  {
+   "data": "2026-10-17 11:56",
+   "quem": "dono (merge) / map keeper",
+   "o_que": "Merge dos trabalhos revisados: homelerdo e naskhbold",
+   "issues": [],
+   "ref": "d7522dd17, 0940ae7bf",
+   "resultado": "pendente",
+   "evidencia": "reviews 11:40/11:41 OK foram ANTES do merge"
+  },
+  {
+   "data": "2026-10-17 12:00",
+   "quem": "map keeper (git)",
+   "o_que": "Teste de regressao apos a janela de merges de vidro",
+   "issues": [],
+   "ref": "0940ae7bf",
+   "resultado": "falhou",
+   "evidencia": "tests/vidro_qualidade.sh: FALHA \"Alta ignores the governor (frost)\"; j-vidroqual investigando (RUNNING 12:15)"
   }
  ],
  "decisoes": [
@@ -18125,6 +18242,7 @@
  "decisoes_ids_retirados": [],
  "notas_extra": [
   "Sync 2026-10-17 11:00: agente/205-pr487v2 ac1ba9725 pronto para merge, review j-rev-pr487-v2.log OK 10-14 10:26.",
-  "Sync 2026-10-17 11:00: agente/205-pr538 bc13aca67 pronto para merge, review j-rev-pr538v2.log OK 10-16 16:11."
+  "Sync 2026-10-17 11:00: agente/205-pr538 bc13aca67 pronto para merge, review j-rev-pr538v2.log OK 10-16 16:11.",
+  "[sync 2026-10-17 12:15] tests/vidro_qualidade.sh FALHA em 0940ae7bf (\"Alta ignores the governor\"): regressao de vidro na janela dos merges, j-vidroqual investigando."
  ]
 }
