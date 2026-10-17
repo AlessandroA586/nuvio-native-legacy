@@ -1,15 +1,18 @@
-// FROST OVER LIVE VIDEO (owner, 16/10): with Glass and frost on, the player
-// glass over the video hole (control bar, track menu, Statistics panel) must
-// read a blur source, not go flat. Prints, per scene, how many glasses had a
-// source in its last frame. See tests/player_fosco.sh.
+// SMOKED GLASS OVER LIVE VIDEO (owner, 17/10): the player glass over the video
+// hole (control bar, track menu, Statistics panel) is flat tinted glass: no blur
+// source, no frame capture, no blur pass. Prints, per scene, over every frame
+// since the scene started: glasses with a source, flat glasses, captures and
+// blur passes. See tests/player_fosco.sh.
 #include "gfx.h"
 #include "tex_cache.h"
 #include <stdio.h>
-static int foscoUlt;
+static int foscoFonte, foscoChapado, foscoCap, foscoPas;
 static void fosco_quadro(void) {
-  foscoUlt = gfx_vidro_com_fonte;
+  foscoFonte += gfx_vidro_com_fonte; foscoChapado += gfx_vidro_chapados;
+  foscoCap += gfx_vidro_capturas; foscoPas += gfx_vidro_passadas;
   gfx_novo_quadro();
 }
 #define tex_novo_quadro() (fosco_quadro(), tex_novo_quadro())
-#define FOSCO_N(id) printf("F %s fonte=%d\n", id, foscoUlt)
+#define FOSCO_ZERA() (foscoFonte = foscoChapado = foscoCap = foscoPas = 0)
+#define FOSCO_N(id) printf("F %s fonte=%d chapado=%d cap=%d pas=%d\n", id, foscoFonte, foscoChapado, foscoCap, foscoPas)
 #include "player_glass_shot.c"

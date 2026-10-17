@@ -174,7 +174,8 @@ int main(void) {
   AJ_PLAYER_ANIME == AJ_TRAILER_AUDIO + 1 &&        // #205: player so para anime
   AJ_ABERTURA_ESTILO == AJ_PLAYER_ANIME + 1 &&      // #205: estilo da abertura (B3)
   AJ_MENU_CARTAZ == AJ_ABERTURA_ESTILO + 1 && AJ_TITULO_FIL == AJ_MENU_CARTAZ + 1 &&        // #205: titulo das fileiras
-  AJ_N == AJ_TITULO_FIL + 1);   // 2.0.6: master's #535 views appended after
+  AJ_VIDRO_QUALIDADE == AJ_TITULO_FIL + 1 &&   // glass quality (local)
+  AJ_N == AJ_VIDRO_QUALIDADE + 1);   // 2.0.6: master's #535 views appended after
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));
@@ -220,6 +221,11 @@ int main(void) {
   assert(!strcmp(CHAVE[AJ_ABERTURA_ESTILO], "aberturaEstiloLocal") && somenteDesteAparelho(AJ_ABERTURA_ESTILO) && !dePerfil(AJ_ABERTURA_ESTILO));
   valor[AJ_ABERTURA_ESTILO] = 1; assert(ajustes_abertura_estilo() == 1);
   valor[AJ_ABERTURA_ESTILO] = 0; assert(ajustes_abertura_estilo() == 0);
+  assert(valor[AJ_VIDRO_QUALIDADE] == 0 && ajustes_vidro_qualidade() == 0 && OPCOES[AJ_VIDRO_QUALIDADE].n == 3);
+  assert(!strcmp(CHAVE[AJ_VIDRO_QUALIDADE], "vidroQualidadeLocal") && somenteDesteAparelho(AJ_VIDRO_QUALIDADE) && !dePerfil(AJ_VIDRO_QUALIDADE));
+  valor[AJ_VIDRO_QUALIDADE] = 1; assert(ajustes_vidro_qualidade() == 1);
+  valor[AJ_VIDRO_QUALIDADE] = 2; assert(ajustes_vidro_qualidade() == 2);
+  valor[AJ_VIDRO_QUALIDADE] = 0;
   assert(OPCOES[AJ_ABERTURA_ESTILO].n == 2 && !strcmp(OPCOES[AJ_ABERTURA_ESTILO].valores[0], "Centro") &&
          !strcmp(OPCOES[AJ_ABERTURA_ESTILO].valores[1], "Canto"));
   assert(!strcmp(i18n(OPCOES[AJ_ABERTURA_ESTILO].rotulo), "Opening screen style"));

@@ -311,3 +311,4 @@
   0, /* opening screen style (#205): Center (A3) */
   0, /* poster menu: Full, device-local */
   0, /* row title style (#205): Classic */
+  0, /* glass quality: Automatica */
