@@ -762,12 +762,13 @@ static void aj2GradeAtualizar(float dt) {
 static float aj2Suave(float t) { return t * t * (3.0f - 2.0f * t); }
 // A superficie de uma peca da grade: o cinza neutro e, em foco, o acento com o
 // halo dele por baixo. Devolve a peca ja crescida.
-static GfxRect aj2GradeSuperficie(GfxRect r, float raio, float k, float cresce, float halo) {
+static GfxRect aj2GradeSuperficie(GfxRect r, float raio, float k, float cresce, float halo, int segmentado) {
   float ar, ag, ab;
   ajustes_acento(&ar, &ag, &ab);
   r = (GfxRect){ r.x - cresce * k, r.y - cresce * k, r.w + 2 * cresce * k, r.h + 2 * cresce * k };
   if (k > 0.01f) gfx_rect((GfxRect){ r.x - 16, r.y - 4, r.w + 32, r.h + 40 }, 0, GFX_SOMBRA, 1.0f, 0, 0, 0.5f, ar, ag, ab, halo * k);
-  ajNeutro(r, raio, 0.075f, 0.125f, 0.129f, 0.141f, 1);
+  if (ajVid() && segmentado) gfx_vidro_folha(r, raio / r.h, 1);
+  else ajNeutro(r, raio, 0.075f, 0.125f, 0.129f, 0.141f, 1);
   if (k > 0.01f) gfx_cor(r, raio / r.h, ar, ag, ab, k);
   return r;
 }
@@ -792,7 +793,7 @@ static const char *aj2LayoutIco(int i) { return i ? "aj_layout-list" : "aj_layou
 static float aj2LayoutSegLado(TxtEstilo e, float ico, int i) { return 22.0f + ico + 10.0f + (float)txt_largura(e, aj2LayoutRot(i)) + 24.0f; }
 static float aj2LayoutSegW(TxtEstilo e, float ico) { return 12.0f + aj2LayoutSegLado(e, ico, 0) + aj2LayoutSegLado(e, ico, 1); }
 static void aj2LayoutSeg(GfxRect r0, TxtEstilo e, float ico, float k) {
-  GfxRect r = aj2GradeSuperficie(r0, r0.h * 0.5f, k, 3.0f, 0.35f);
+  GfxRect r = aj2GradeSuperficie(r0, r0.h * 0.5f, k, 3.0f, 0.35f, 1);
   int lista = valor[AJ_LAYOUT_AJUSTES] == 1, i;
   float x = r.x + 6.0f, w0 = aj2LayoutSegW(e, ico), esc = r.w / (w0 > 1 ? w0 : 1);
   for (i = 0; i < 2; i++) {
@@ -816,7 +817,7 @@ static void aj2GradePilula(int t) {
   char b[160], d[96];
   float x, yc, livre;
   if (t == AJ2_T_LAYOUT) { aj2LayoutSeg(aj2TopoR(t), TXT_V3_CHIP_R, 30.0f, k); return; }
-  r = aj2GradeSuperficie(aj2TopoR(t), AJ2_G_CHIP * 0.5f, k, 3.0f, 0.35f);
+  r = aj2GradeSuperficie(aj2TopoR(t), AJ2_G_CHIP * 0.5f, k, 3.0f, 0.35f, 0);
   x = r.x + 30; yc = r.y + r.h * 0.5f;
   aj2TopoTexto(t, b, sizeof b, d, sizeof d);
   aj2GradeIcone(aj2TopoIcone(t), x, yc - 17, 34, k);
@@ -832,7 +833,7 @@ static void aj2GradePilula(int t) {
 // vermelho de novidades no do guia) e a frase.
 static void aj2GradeDescoberta(int t) {
   float k = aj2Suave(aj2TF[t]);
-  GfxRect r = aj2GradeSuperficie(aj2TopoR(t), 22.0f, k, 6.0f, 0.42f);
+  GfxRect r = aj2GradeSuperficie(aj2TopoR(t), 22.0f, k, 6.0f, 0.42f, 0);
   const char *tit = t == AJ2_T_TOUR ? "O que o Nuvio faz?" : "Resolver um problema";
   const char *sub = t == AJ2_T_TOUR ? "Tour pelas funções, com atalho para ligar cada uma" : "TV lenta, sem som, legenda errada";
   float tile = 65.0f, x = r.x + 25, tw;
@@ -865,7 +866,7 @@ static void aj2GradeCartaoDesenhar(int s, float f) {
   char vb[200];
   const char *nome = aj2MenuTitulo(j);
   TxtEstilo en = TXT_V3_NOME;
-  GfxRect r = aj2GradeSuperficie(aj2GradeCartao(s), 20.0f, k, 7.0f, 0.45f);
+  GfxRect r = aj2GradeSuperficie(aj2GradeCartao(s), 20.0f, k, 7.0f, 0.45f, 0);
   // O ladrilho do icone (60 x 60 no mockup, raio 14).
   tile = r.h - 50.0f > 75.0f ? 75.0f : r.h - 50.0f;
   { GfxRect tr = { r.x + 25.0f, r.y + (r.h - tile) * 0.5f, tile, tile };

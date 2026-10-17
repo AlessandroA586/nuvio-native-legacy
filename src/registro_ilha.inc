@@ -191,7 +191,8 @@ static float rgSeg(int comNumeros, float x, float yc) {
     x -= toqueAreasOffset;
   }
 #endif
-  rgNeutro((GfxRect){ x, yc - h * 0.5f, w, h }, h * 0.5f, 0.06f, 0.114f, 0.118f, 0.137f, 1);
+  if (rgVid()) gfx_vidro_folha((GfxRect){ x, yc - h * 0.5f, w, h }, 0.5f, 1);
+  else rgNeutro((GfxRect){ x, yc - h * 0.5f, w, h }, h * 0.5f, 0.06f, 0.114f, 0.118f, 0.137f, 1);
   x += 5.0f;
   for (i = 0; i < RG_N; i++) {
     int ac = i == area && segEd;

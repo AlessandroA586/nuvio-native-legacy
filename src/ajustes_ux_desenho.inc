@@ -935,7 +935,8 @@ static float ajSeg(const char *const *rot, const char *const *num, int n, int se
                    float x, float yc, float h, float a) {
   float w = ajSegLargura(rot, num, n), ih = h - 10.0f;
   int i;
-  ajNeutro((GfxRect){ x, yc - h * 0.5f, w, h }, h * 0.5f, 0.06f, 0.114f, 0.118f, 0.137f, a);
+  if (ajVid()) gfx_vidro_folha((GfxRect){ x, yc - h * 0.5f, w, h }, 0.5f, a);
+  else ajNeutro((GfxRect){ x, yc - h * 0.5f, w, h }, h * 0.5f, 0.06f, 0.114f, 0.118f, 0.137f, a);
   x += 5.0f;
   for (i = 0; i < n; i++) {
     int ac = i == sel && ed;
@@ -1110,7 +1111,8 @@ static float aj2SegLargura(int op, int n) {
 static float aj2Seg(int op, int n, int sel, int ed, float xDir, float yc, float a) {
   float w = aj2SegLargura(op, n), h = 63.0f, ih = h - 10.0f, x = xDir - w;
   int i;
-  ajNeutro((GfxRect){ x, yc - h * 0.5f, w, h }, h * 0.5f, 0.06f, 0.114f, 0.118f, 0.137f, a);
+  if (ajVid()) gfx_vidro_folha((GfxRect){ x, yc - h * 0.5f, w, h }, 0.5f, a);
+  else ajNeutro((GfxRect){ x, yc - h * 0.5f, w, h }, h * 0.5f, 0.06f, 0.114f, 0.118f, 0.137f, a);
   x += 5.0f;
   { float pos = ajMov(op, sel), left = x, pw = 0, off = 0;
     int lo = (int)floorf(pos), hi;

@@ -4780,7 +4780,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     }
 #endif
     sx=lx-2.0f;
-    if (ajustes_vidro()) gfx_cor((GfxRect){sx,segY,soma-6.0f,FOLHA_ABAS_H},.5f,1,1,1,.05f*anim);
+    if (ajustes_vidro()) gfx_vidro_folha((GfxRect){sx,segY,soma-6.0f,FOLHA_ABAS_H},.5f,anim);
     else gfx_cor((GfxRect){sx,segY,soma-6.0f,FOLHA_ABAS_H},.5f,.113f,.118f,.137f,anim);
     sx+=pin;
 #ifdef NV_TOUCH_UI
