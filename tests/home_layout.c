@@ -1,6 +1,7 @@
 // Sem janela, rede ou TV: valida composição editorial e foco sobre dados reais
 // de catálogo (fixtures), usando a implementação da Home e do catálogo.
 #include <assert.h>
+#include <string.h>
 // Antes do home.c: os dois acessores viram os do teste (ver homeCom).
 #define ajustes_home_layout teste_home_layout
 #define ajustes_hero_ligado teste_hero_ligado
@@ -16,6 +17,13 @@ static int teste_ocultar_vistos(void) { return ocultarVistos; }
 static float espacoTit = 1.0f, espacoFil = 1.0f;
 static float teste_espaco_titulos(void) { return espacoTit; }
 static float teste_espaco_fileiras(void) { return espacoFil; }
+// Fundo da Dinamica (#205): o modo e a cor fixa vem das variaveis abaixo.
+#define ajustes_fundo_din teste_fundo_din
+#define ajustes_fundo_din_cor teste_fundo_din_cor
+static int testeFundoDin = 0;
+static float testeFundoCor[3] = { 0.07f, 0.46f, 0.81f };
+static int teste_fundo_din(void) { return testeFundoDin; }
+static void teste_fundo_din_cor(float rgb[3]) { memcpy(rgb, testeFundoCor, sizeof(float) * 3); }
 #define NV_TESTE_HOME 1
 #include "../src/home.c"
 void desc_sinopse_hero(const int *idx, int n) { (void)idx; (void)n; }
@@ -637,6 +645,102 @@ int main(void) {
       assert(on == off && onB == offB && onB == 1);
     }
     testeGenero = 1; }
+
+  // FUNDO DA DINAMICA (#205): cinza e cor fixa nao mudam com o foco; o
+  // imersivo fica numa faixa estreita de L e nao retinge a cada passo.
+  {
+    struct { const char *url; float rgb[3]; } arte[5] = {
+      { "t://amarelo", { 1.00f, 0.90f, 0.10f } },   // amarelo vivo
+      { "t://escuro",  { 0.05f, 0.05f, 0.12f } },   // capa escura
+      { "t://vermelho",{ 0.90f, 0.08f, 0.10f } },
+      { "t://azul",    { 0.10f, 0.25f, 0.95f } },
+      { "t://branco",  { 0.97f, 0.97f, 0.95f } },   // cartaz branco
+    };
+    float maxD[3] = { 0, 0, 0 };
+    for (int i = 0; i < 5; i++) {
+      CorvivaPaleta pal; memset(&pal, 0, sizeof pal);
+      pal.ok = 1; memcpy(pal.acento, arte[i].rgb, sizeof pal.acento);
+      corviva_anotar(arte[i].url, &pal);
+    }
+    for (int modo = 0; modo < 3; modo++) {
+      float cor[5][3], ls[5], lmin = 9, lmax = -9, spread = 0;
+      testeFundoDin = modo;
+      dinUlt = 0; dinArteVista[0] = dinArteAssentada[0] = 0; dinVistaDesde = 0;
+      memcpy(dinCor, DIN_CINZA, sizeof dinCor); memcpy(dinAlvo, DIN_CINZA, sizeof dinAlvo);
+      dinQueda = dinQuedaAlvo = 1.0f;
+      Uint32 t = 1000;
+      for (int i = 0; i < 5; i++) {
+        for (int f = 0; f < 240; f++) { t += 16; dinPasso(t, arte[i].url); }   // ~3,8 s: assenta
+        memcpy(cor[i], dinCor, sizeof cor[i]);
+        float lab[3]; corviva_srgb_para_oklab(cor[i], lab); ls[i] = lab[0];
+        if (ls[i] < lmin) lmin = ls[i];
+        if (ls[i] > lmax) lmax = ls[i];
+        for (int k = 0; k < 3; k++) {
+          float d = fabsf(cor[i][k] - cor[0][k]);
+          if (d > spread) spread = d;
+        }
+      }
+      printf("fundo din modo %d: dL=%.4f spread_rgb=%.4f\n", modo, lmax - lmin, spread);
+      if (modo != DIN_FUNDO_IMERSIVO) {
+        assert(spread < 1e-4f);            // identico em todos os titulos
+        if (modo == DIN_FUNDO_CINZA)
+          assert(fabsf(cor[0][0] - 28 / 255.0f) < 1e-3f && fabsf(cor[0][2] - 30 / 255.0f) < 1e-3f);
+        assert(dinQueda > 0.999f);          // liso, sem degrade
+      } else {
+        assert(spread > 0.002f);            // acompanha a arte (controle: o teste enxerga cor)
+        assert(lmax - lmin < 0.06f);        // faixa estreita de brilho
+        assert(lmax < 0.30f && lmin > 0.14f);
+        for (int i = 0; i < 5; i++) {       // croma com teto
+          float lab[3]; corviva_srgb_para_oklab(cor[i], lab);
+          assert(sqrtf(lab[1] * lab[1] + lab[2] * lab[2]) < 0.05f);
+        }
+        (void)maxD;
+      }
+    }
+    // ROLAGEM RAPIDA no imersivo: a cada 100 ms outro titulo; ninguem assenta, a cor nao retinge.
+    {
+      testeFundoDin = DIN_FUNDO_IMERSIVO;
+      dinUlt = 0; dinArteVista[0] = dinArteAssentada[0] = 0; dinVistaDesde = 0;
+      Uint32 t = 1000;
+      for (int f = 0; f < 120; f++) { t += 16; dinPasso(t, arte[0].url); }
+      char primeira[512]; snprintf(primeira, sizeof primeira, "%s", dinArteAssentada);
+      assert(!strcmp(primeira, arte[0].url));
+      int retintou = 0;
+      for (int passo = 0; passo < 30; passo++) {          // 3 s, um titulo a cada ~100 ms
+        for (int f = 0; f < 6; f++) { t += 16; dinPasso(t, arte[1 + passo % 4].url); }
+        if (strcmp(dinArteAssentada, primeira)) retintou++;
+      }
+      printf("fundo din rolagem rapida: retingiu %d vezes em 30 passos\n", retintou);
+      assert(retintou == 0);
+      for (int f = 0; f < 40; f++) { t += 16; dinPasso(t, arte[3].url); }   // para: >= 400 ms
+      assert(!strcmp(dinArteAssentada, arte[3].url));
+    }
+    testeFundoDin = 0;
+    // CONTRASTE: texto branco sobre o fundo mais claro dos tres modos fica legivel (>= 7:1).
+    {
+      float pior = 99.0f;
+      for (int modo = 0; modo < 3; modo++) {
+        testeFundoDin = modo; dinUlt = 0;
+        dinArteVista[0] = dinArteAssentada[0] = 0;
+        Uint32 t = 1000;
+        for (int i = 0; i < 5; i++)
+          for (int f = 0; f < 240; f++) {
+            t += 16; dinPasso(t, arte[i].url);
+            float lin[3];
+            for (int k = 0; k < 3; k++) {
+              float c = dinCor[k];
+              lin[k] = c <= 0.04045f ? c / 12.92f : powf((c + 0.055f) / 1.055f, 2.4f);
+            }
+            float y = 0.2126f * lin[0] + 0.7152f * lin[1] + 0.0722f * lin[2];
+            float ct = corviva_contraste_y(1.0f, y);
+            if (ct < pior) pior = ct;
+          }
+      }
+      printf("fundo din pior contraste do texto branco: %.2f:1\n", pior);
+      assert(pior >= 7.0f);
+      testeFundoDin = 0;
+    }
+  }
 
   free(itensTeste);
   puts("home layout: PASS (fallback, colecoes, ordem, ranks, foco, rolagem #103)");

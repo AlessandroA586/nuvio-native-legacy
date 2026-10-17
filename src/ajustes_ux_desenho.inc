@@ -466,7 +466,7 @@ static int ajSegmentada(int op) {
 static int ajEmLinha(int op) {
   if (op < 0 || uxIndice < 2) return 0;
   if (op == AJ_P2P_DESTINO) return 0;   // #205: o editor completo mostra o painel do pendrive
-  return ajTipo(op) == AJL_TOG || ajSegmentada(op) || op == AJ_TEMA || op == AJ_FUNDO;
+  return ajTipo(op) == AJL_TOG || ajSegmentada(op) || ajPaleta(op) || op == AJ_FUNDO;
 }
 static int ajEditandoLinha(int op) {
   return uxEditor == 1 && !uxRestaurar && !uxAvisoRisco && uxOp == op && ajEmLinha(op);
@@ -512,7 +512,16 @@ static int aj2FocoNaLista(int i) { return i == focoItem && !focoIndice && !uxCab
 // A REGUA EM FILEIRAS: a ordem da TELA (ajustes.c, REGUA_*); o valor gravado
 // continua o indice de V_TEMA. ← → anda na fileira, ↑ ↓ troca de fileira na
 // mesma coluna.
-static const int *ajReguaFila(int f, int *n) {
+static const int *ajReguaFila(int op, int f, int *n) {
+  if (op == AJ_FUNDO_DIN_COR) {
+    static int cores[9];
+    const int *temas = f == 0 ? REGUA_CLAROS : REGUA_PROFUNDOS;
+    *n = 0;
+    for (int k = 0; k < 9; k++)
+      for (int v = 0; v < FUNDO_DIN_N_COR; v++)
+        if (FUNDO_DIN_TEMA[v] == temas[k]) cores[(*n)++] = v;
+    return cores;
+  }
   static const int TX[2] = { AJ_TEMA_TEXTURA, AJ_TEMA_TEXTURA_SUTIL };
   switch (f) {
     case 0:  *n = 9; return REGUA_CLAROS;
@@ -521,21 +530,22 @@ static const int *ajReguaFila(int f, int *n) {
     default: *n = 2; return TX;
   }
 }
-static int ajReguaOnde(int v, int *col) {
+static int ajReguaOnde(int op, int v, int *col) {
   int f, k, n;
-  for (f = 0; f < 4; f++) {
-    const int *L = ajReguaFila(f, &n);
+  for (f = 0; f < (op == AJ_FUNDO_DIN_COR ? 2 : 4); f++) {
+    const int *L = ajReguaFila(op, f, &n);
     for (k = 0; k < n; k++) if (L[k] == v) { *col = k; return f; }
   }
   *col = 0; return 0;
 }
-static int ajReguaMover(int v, int dx, int dy) {
-  int col, f = ajReguaOnde(v, &col), n;
+static int ajReguaMover(int op, int v, int dx, int dy) {
+  int col, f = ajReguaOnde(op, v, &col), n;
+  int ultima = op == AJ_FUNDO_DIN_COR ? 1 : 3;
   const int *L;
   f += dy;
   if (f < 0) f = 0;
-  if (f > 3) f = 3;
-  L = ajReguaFila(f, &n);
+  if (f > ultima) f = ultima;
+  L = ajReguaFila(op, f, &n);
   col += dx;
   if (col < 0) col = 0;
   if (col >= n) col = n - 1;
@@ -575,11 +585,11 @@ static void aj2CorDin(int v, const char *url, float c1[3], float c2[3]) {
   memcpy(c1, nv_acento_viva, sizeof nv_acento_viva);
   memcpy(c2, v == AJ_TEMA_GRADIENTE ? nv_grad_viva[2] : nv_acento_viva, sizeof nv_acento_viva);
 }
-static void aj2Regua(GfxRect ln, float y, float a) {
+static void aj2Regua(int op, GfxRect ln, float y, float a) {
   static const char *const KICK[4][2] = {
     { "Claros", "Tinta escura" }, { "Profundos", "Tinta branca" },
     { "Dinâmicas", "Só nesta TV" }, { "Textura", "Do título" } };
-  int sel = valor[AJ_TEMA], alvo = uxPendente, f, k, n;
+  int sel = valor[op], alvo = uxPendente, f, k, n;
   // A coluna dos rotulos cresce ate 176 quando a linha deixa (Montserrat:
   // "ONLY ON THIS TV" pede ~170); as nove bolinhas (9 x 72) cabem do lado.
   float kcol = ln.w - 30.0f - 9 * 72.0f - 8.0f;
@@ -587,8 +597,8 @@ static void aj2Regua(GfxRect ln, float y, float a) {
   if (kcol > 176.0f) kcol = 176.0f;
   if (kcol < 150.0f) kcol = 150.0f;
   bx = kx + kcol;
-  for (f = 0; f < 4; f++) {
-    const int *L = ajReguaFila(f, &n);
+  for (f = 0; f < (op == AJ_FUNDO_DIN_COR ? 2 : 4); f++) {
+    const int *L = ajReguaFila(op, f, &n);
     float cy = y + f * AJ_REGUA_FILA + 32.0f, px = bx;
     // Em ingles/Montserrat "ONLY ON THIS TV" passava dos 150 da coluna e
     // entrava no primeiro chip: o tracking aperta antes (ajCapsC).
@@ -613,9 +623,9 @@ static void aj2Regua(GfxRect ln, float y, float a) {
       int v = L[k];
       if (f < 2) {
 #ifdef NV_TOUCH_UI
-        ajToqueEscolhaAlvo((GfxRect){bx + k * 72.0f, cy - 32.0f, 64, 64}, v, AJ_TEMA, AJ_TOPO, AJ_BASE);
+        ajToqueEscolhaAlvo((GfxRect){bx + k * 72.0f, cy - 32.0f, 64, 64}, v, op, AJ_TOPO, AJ_BASE);
 #endif
-        aj2Bolinha(v, bx + 28.0f + k * 72.0f, cy, v == alvo, v == sel && v != alvo, a); continue;
+        aj2Bolinha(op == AJ_FUNDO_DIN_COR ? FUNDO_DIN_TEMA[v] : v, bx + 28.0f + k * 72.0f, cy, v == alvo, v == sel && v != alvo, a); continue;
       }
       // Pilula da dinamica: disco com o DESENHO do que ela faz, tingido na cor
       // que ela tiraria da arte agora, e o nome. Antes eram a mesma miniatura
@@ -808,7 +818,8 @@ static float ajLinhaH(int i) {
   else if (ajLinhaAviso(i)) return AJ2_LN_LINHA1 - 6.0f + AJ2_LN_BEN + 10.0f;
   // A regua de cores abre NA LINHA, com e sem inspetor: o inspetor mostra a
   // previa viva e as medidas da cor (aj2PreviaCor).
-  if (op == AJ_TEMA && ajEditandoLinha(op) && aj2FocoNaLista(i)) baixo += AJ_REGUA_H;
+  if (ajPaleta(op) && ajEditandoLinha(op) && aj2FocoNaLista(i))
+    baixo += op == AJ_FUNDO_DIN_COR ? 2 * AJ_REGUA_FILA + 4 : AJ_REGUA_H;
   if (op == AJ_FUNDO && aj2FocoNaLista(i)) baixo += AJ2_FUNDO_BAIXO;
   if (baixo > 0) return AJ2_LN_LINHA1 + 20.0f + baixo;
   if (!aj2TemInsp() && aj2FocoNaLista(i) && op != AJ_GUIA) return AJ2_LN_LINHA1 - 6.0f + ajAjudaLinhaH(op) + 18.0f;
@@ -1179,8 +1190,8 @@ static void ajDesenharLinha(int item, float y, float f, float a) {
   GfxRect ln = { fr.x + 18.0f, y, fr.w - 36.0f, h };
   int desligada = inativa(op), emFoco = f > 0.5f, ed = ajEditandoLinha(op);
   int sub = op == AJ_GUIA, aviso = ajLinhaAviso(item), filha = ajLinhaFilha(item);
-  int abre = h > AJ2_LN_SUB + 0.5f && !aviso && !(aj2TemInsp() && aj2FocoNaLista(item) && op != AJ_FUNDO && !(op == AJ_TEMA && ed));
-  int beneficio = !sub && !aviso && aj2TemInsp() && aj2FocoNaLista(item) && op != AJ_FUNDO && !(op == AJ_TEMA && ed) && h > AJ2_LN_H + 0.5f;
+  int abre = h > AJ2_LN_SUB + 0.5f && !aviso && !(aj2TemInsp() && aj2FocoNaLista(item) && op != AJ_FUNDO && !(ajPaleta(op) && ed));
+  int beneficio = !sub && !aviso && aj2TemInsp() && aj2FocoNaLista(item) && op != AJ_FUNDO && !(ajPaleta(op) && ed) && h > AJ2_LN_H + 0.5f;
   float recuo = filha ? 34.0f : 0.0f;
   float aT = a * (desligada ? 0.45f : 1.0f), aTx = a * aj2TextoLista;
   float xDir = ln.x + ln.w - 22.0f, yc = (abre || beneficio || aviso) ? y + AJ2_LN_LINHA1 * 0.5f : y + h * 0.5f;
@@ -1217,7 +1228,7 @@ static void ajDesenharLinha(int item, float y, float f, float a) {
     const char *v = textoValor(op);
     float x = xDir;
     if (op == AJ_FUNDO && ed) { uxValorTexto(op, uxPendente, vb, sizeof vb); v = vb; }
-    if (ajSegmentada(op) && ed) { uxValorTexto(op, uxPendente, vb, sizeof vb); v = vb; }
+    if ((ajSegmentada(op) || op == AJ_FUNDO_DIN_COR) && ed) { uxValorTexto(op, uxPendente, vb, sizeof vb); v = vb; }
     if (!desligada && !ajSegmentada(op)) { aj2Chevron(x, yc, (emFoco ? 0.7f : 0.32f) * aT); x -= 22.0f + 12.0f; }
     // A estrela vazada no valor que e o recomendado (o padrao de fabrica).
     if (!desligada && uxTemPadrao(op) && !uxDiferente(op) && !(ed && uxPendente != uxValorPadrao(op))) {
@@ -1351,11 +1362,11 @@ static void ajDesenharLinha(int item, float y, float f, float a) {
   if (abre) {
     float by = y + AJ2_LN_LINHA1 + 20.0f;
     if (op == AJ_FUNDO && aj2FocoNaLista(item)) aj2CartoesFundo(ln, by, aTx);
-    else if (!aj2TemInsp() && aj2FocoNaLista(item) && !(op == AJ_TEMA && ed))
+    else if (!aj2TemInsp() && aj2FocoNaLista(item) && !(ajPaleta(op) && ed))
       ajAjudaLinhaDesenhar(op, ln.x + 22.0f + recuo, y + AJ2_LN_LINHA1 - 8.0f, aTx);
   }
   // A REGUA DA COR DE DESTAQUE (editando): claros, profundos, dinamicas, Textura.
-  if (op == AJ_TEMA && abre && ed) aj2Regua(ln, y + AJ2_LN_LINHA1 + 20.0f, a);
+  if (ajPaleta(op) && abre && ed) aj2Regua(op, ln, y + AJ2_LN_LINHA1 + 20.0f, a);
 #undef AJ_VMAX
 }
 

@@ -312,3 +312,5 @@
   0, /* poster menu: Full, device-local */
   0, /* row title style (#205): Classic */
   0, /* glass quality: Automatica */
+  0, /* Dynamic layout background (#205): Gray */
+  12, /* Dynamic layout background colour (#205): Ocean */

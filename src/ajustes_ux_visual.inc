@@ -7,6 +7,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_LANDSCAPE: return "aj_layout-dashboard";
     case AJ_HERO: return "aj_layout-dashboard";
     case AJ_HERO_CHEIO: return "aj_layout-dashboard";
+    case AJ_FUNDO_DIN: case AJ_FUNDO_DIN_COR: return "aj_layout-dashboard";
     case AJ_HERO_CATALOGOS: return "aj_layout-dashboard";
     case AJ_HERO_GENERO: return "aj_layout-dashboard";
     case AJ_HERO_SINOPSE: return "aj_layout-dashboard";

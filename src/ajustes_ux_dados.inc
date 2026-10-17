@@ -198,6 +198,7 @@ static const char *uxSinonimos(int op) {
     case AJ_ABERTURA_ADDON: return "addon add-on provedor fonte nome abertura cinema tela carregando tentativa provider name opening source";
     case AJ_TITULO_FIL: return "titulo fileira fileiras estilo classico ilha editorial acento pilula vidro home row title style island accent classic";
     case AJ_VIDRO_QUALIDADE: return "qualidade vidro automatica desempenho alta fumaca esfumacado desfoque fosco glass quality automatic performance high smoked blur";
+    case AJ_FUNDO_DIN: case AJ_FUNDO_DIN_COR: return "fundo dinamica cinza cor imersivo apple tv background dynamic gray color immersive";
     case AJ_ABERTURA_ESTILO: return "estilo tela abertura carregando logo centro canto esquerda anel opening style center corner";
     case AJ_ABERTURA_FUNDO: return "fundo arte backdrop imagem titulo abertura cinema tela carregando desligado nitida borrada desfocada preto opening backdrop blurred sharp off";
     case AJ_TELA_ABERTURA: return "tela abertura abrindo carregando loading cinema detalhada fonte play transicao opening source screen";

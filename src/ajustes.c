@@ -638,6 +638,8 @@ typedef enum {
   AJ_MENU_CARTAZ,      // Device-local, append-only: 0 Full, 1 Simple.
   AJ_TITULO_FIL,       // #205: titulo das fileiras da Home, 0 Classico, 1 Ilha, 2 Editorial, 3 Acento; local, append-only
   AJ_VIDRO_QUALIDADE,  // glass quality: 0 Automatica (frost + governor), 1 Desempenho (smoked, no blur), 2 Alta (frost); local, append-only
+  AJ_FUNDO_DIN,        // #205: fundo da Dinamica, 0 = Cinza (padrao), 1 = Cor, 2 = Imersivo; local, append-only
+  AJ_FUNDO_DIN_COR,    // #205: a cor do fundo "Cor" (indice de FUNDO_DIN_TEMA); local, append-only
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -665,6 +667,20 @@ static const char *V_ABERTURA_ESTILO[] = { "Centro", "Canto" };
 static const char *V_MENU_CARTAZ[] = { "Completo", "Simples" };
 static const char *V_TITULO_FIL[] = { "Clássico", "Ilha", "Editorial", "Acento" };
 static const char *V_VIDRO_QUALIDADE[] = { "Automática", "Desempenho", "Alta" };
+static const char *V_FUNDO_DIN[] = { "Cinza", "Cor", "Imersivo" };
+// A cor do fundo "Cor" sai da paleta do acento (TEMA_ACENTO), em ordem de
+// matiz. Sem o Branco (o fundo e escuro) e sem os dinamicos. Os nomes sao os
+// de V_TEMA, ja traduzidos; o indice gravado e o desta lista (append-only).
+static const char *V_FUNDO_DIN_COR[] = {
+  "Carmesim", "Vinho", "Rosa", "Âmbar", "Dourado", "Champagne", "Ouro rosé",
+  "Esmeralda", "Sálvia", "Jade", "Petróleo", "Azul ártico", "Oceano", "Índigo",
+  "Lavanda", "Violeta", "Grafite"
+};
+static const unsigned char FUNDO_DIN_TEMA[] = { 1, 19, 6, 5, 7, 16, 9, 4, 17, 8, 20, 10, 2, 21, 18, 3, 11 };
+#define FUNDO_DIN_N_COR ((int)(sizeof FUNDO_DIN_TEMA / sizeof *FUNDO_DIN_TEMA))
+#define FUNDO_DIN_COR_PADRAO 12   // Oceano
+_Static_assert(sizeof V_FUNDO_DIN_COR / sizeof *V_FUNDO_DIN_COR == sizeof FUNDO_DIN_TEMA,
+               "V_FUNDO_DIN_COR: um nome por linha de FUNDO_DIN_TEMA");
 static const char *V_QUALIDADE[] = { "Automática", "4K", "1080p", "720p" };
 static const char *V_LIGA[]      = { "Ligado", "Desligado" };
 // TRAILER DO CARTAZ EM FOCO EM TRES MODOS (dono, 07/10/2026). O indice e o
@@ -1655,6 +1671,8 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Menu do cartaz", V_MENU_CARTAZ, 2),              // local: menuCartazLocal
   ESC("Título das fileiras", V_TITULO_FIL, 4),   // local: rowTitleStyleLocal
   ESC("Qualidade do vidro", V_VIDRO_QUALIDADE, 3),   // local: vidroQualidadeLocal
+  ESC("Fundo da Dinâmica", V_FUNDO_DIN, 3),                  // local: fundoDinamicaLocal
+  ESC("Cor do fundo", V_FUNDO_DIN_COR, 17),                  // local: fundoDinamicaCorLocal
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1948,6 +1966,8 @@ static const char *CHAVE[] = {
   "menuCartazLocal",
   "rowTitleStyleLocal",
   "vidroQualidadeLocal",
+  "fundoDinamicaLocal",
+  "fundoDinamicaCorLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2799,6 +2819,12 @@ int ajustes_abertura_fundo(void) {   // #508: 0 = off, 1 = sharp, 2 = blurred
 int ajustes_titulo_fil(void) { int v = valor[AJ_TITULO_FIL]; return v >= 0 && v <= 3 ? v : 0; }
 int ajustes_abertura_estilo(void) { return valor[AJ_ABERTURA_ESTILO] == 1; }   // 0 Centro (A3), 1 Canto (B3)
 int ajustes_menu_cartaz_simples(void) { return valor[AJ_MENU_CARTAZ] == 1; }
+int ajustes_fundo_din(void) { int v = valor[AJ_FUNDO_DIN]; return v >= 0 && v <= 2 ? v : 0; }
+void ajustes_fundo_din_cor(float rgb[3]) {
+  int v = valor[AJ_FUNDO_DIN_COR];
+  if (v < 0 || v >= FUNDO_DIN_N_COR) v = FUNDO_DIN_COR_PADRAO;   // arquivo de outra versao
+  corDeHex(TEMA_ACENTO[FUNDO_DIN_TEMA[v]].fill, &rgb[0], &rgb[1], &rgb[2]);
+}
 int ajustes_mural_titulos(void) { return lig(AJ_MURAL_TITULOS); }
 int ajustes_ep_tamanho(void) { int v = valor[AJ_EP_TAMANHO]; return v >= 0 && v <= 2 ? v : 1; }
 int ajustes_leg2_junto(void) { return valor[AJ_LEG2_POSICAO] == 0 && valor[AJ_LEG2_POS] == 1; }
@@ -5354,6 +5380,8 @@ static int somenteDesteAparelho(int op) {
     case AJ_ABERTURA_FUNDO: /* #508: idem */
     case AJ_ABERTURA_ESTILO: /* idem */
     case AJ_MENU_CARTAZ:    /* title menu presentation belongs to this TV */
+    case AJ_FUNDO_DIN:     /* #205: o fundo da Dinamica e escolha desta TV */
+    case AJ_FUNDO_DIN_COR: /* idem */
     case AJ_EP_TAMANHO:    /* idem */
     case AJ_AMIGOS_ESTILO: /* local friends row presentation */
     case AJ_TITULO_FIL:    /* local row title presentation */
@@ -6485,6 +6513,9 @@ static int visivel(int i) {
   if (TELA[i].tipo == IT_OPC) {
     int op = TELA[i].op;
     if (!ajOpcaoDisponivel(op)) return 0;
+    // #205: o fundo so existe no layout Dinamica; a cor, so com o fundo "Cor".
+    if ((op == AJ_FUNDO_DIN || op == AJ_FUNDO_DIN_COR) && ajustes_home_layout() != HOME_LAYOUT_DINAMICA) return 0;
+    if (op == AJ_FUNDO_DIN_COR && ajustes_fundo_din() != 1) return 0;
     if ((op == AJ_PERFIL_PESQ || op == AJ_PERFIL_EDITAR) && !recomenda_ativo()) return 0;
     if (op == AJ_BUSCA_CINEMETA && valor[op] == 0 && !cinemetaInstalado()) return 0;
     if (uxAvancada(op) && !lig(AJ_AVANCADAS) && !maisAberto[secDoItem[i]]) return 0;
@@ -6936,6 +6967,8 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ABERTURA_ADDON: return "Desligado (padrão): a tela Cinema mostra só a arte, o logo e a barra. Ligado: o nome do add-on aparece sob a barra. Vale só nesta TV.";
     case AJ_TELA_ABERTURA: return "Cinema (padrão): a arte e o logo do título ficam na tela até o vídeo entrar. Detalhada: a fonte, o add-on e cada passo da abertura. Na Cinema, Para cima ou Para baixo mostra os detalhes. Vale só nesta TV.";
     case AJ_TITULO_FIL: return "Como o título de cada fileira da Home aparece. Clássico (padrão): só o texto. Ilha: numa pílula de vidro. Editorial: com uma linha de categoria acima. Acento: com um ponto de destaque. Vale só nesta TV.";
+    case AJ_FUNDO_DIN: return "O fundo do layout Dinâmica. Cinza (padrão): o cinza escuro da Apple TV, sempre o mesmo. Cor: uma cor sua, fixa. Imersivo: acompanha a arte do título, em tons suaves e com troca lenta. Vale só nesta TV.";
+    case AJ_FUNDO_DIN_COR: return "A cor do fundo da Dinâmica, escurecida para o texto continuar legível. Vale só nesta TV.";
     case AJ_ABERTURA_ESTILO: return "Como a tela de abertura se organiza. Centro (padrão): o logo no meio e o anel de progresso embaixo dele. Canto: o logo no canto inferior esquerdo, com o anel pequeno embaixo dele. Vale só nesta TV.";
     case AJ_MENU_CARTAZ: return "Completo (padrão): amplia o cartaz com logo, notas e sinopse. Simples: mantém o cartaz e só abre o menu ao lado. Vale só nesta TV.";
     case AJ_ABERTURA_FUNDO: return "O fundo da tela Cinema da abertura. Desligado: preto. Arte (padrão): o backdrop do título, nítido, com véu escuro. Arte borrada: o mesmo backdrop, desfocado e escurecido, como sempre. Vale só nesta TV.";
@@ -9399,7 +9432,7 @@ static AjPreview familiaPreviaOpcao(int op) {
       return AJPV_REPRO;
     case AJ_HOME_LAYOUT:
     case AJ_HERO_SINOPSE_TAM:
-    case AJ_LANDSCAPE: case AJ_HERO_CHEIO: case AJ_HERO_FUNDO:
+    case AJ_LANDSCAPE: case AJ_HERO_CHEIO: case AJ_FUNDO_DIN: case AJ_FUNDO_DIN_COR: case AJ_HERO_FUNDO:
     case AJ_HERO_ARTE_DIF: case AJ_HERO_TRAILER: case AJ_FIL_LIMITE:
     case AJ_ESPACO_FILEIRAS: case AJ_ESPACO_TITULOS:
     case AJ_HERO_TRAILER_SOM: case AJ_HERO_TRAILER_ESPERA: case AJ_HERO_TRANSICAO: case AJ_LOGO_TRAILER:

@@ -3962,21 +3962,75 @@ void home_atualizar(float dt, Uint32 agora) {
 // destaque desligado a fonte e a arte do primeiro cartao da fileira em foco, e
 // ela so tem cor se ja foi vista como destaque (corviva.txt lembra) — nao se
 // decodifica arte grande so para tingir o fundo.
-#define DIN_TINTA     0.24f   // quanto da cor do titulo entra no topo do fundo
-#define DIN_QUEDA     0.34f   // o que sobra dessa cor na base da tela
-#define DIN_TROCA_TAU 0.11f   // s; ~0,45 s para assentar
+// TRES FUNDOS (ajustes_fundo_din, #205). O dono viu o fundo inteiro piscar de cor a
+// cada titulo ("fica feio"), entao o PADRAO e uma cor so:
+//   Cinza    #1C1C1E, o cinza escuro do tvOS (systemGray6 escuro). Liso, nunca muda.
+//   Cor      a cor escolhida em Ajustes, escurecida para o nivel do fundo (OKLab,
+//            L fixo): "Branco" ou "Dourado" cheios matariam o contraste do texto.
+//   Imersivo a cor do titulo de antes, mas presa: L numa faixa estreita, croma
+//            com teto, troca longa (~1,2 s) e so depois que o foco assenta (400 ms).
+// Cinza e Cor sao lisos (queda 1); so o Imersivo guarda o degrade para a base.
+#define DIN_FUNDO_CINZA    0
+#define DIN_FUNDO_COR      1
+#define DIN_FUNDO_IMERSIVO 2
+#define DIN_QUEDA          0.34f   // Imersivo: o que sobra da cor na base da tela
+#define DIN_TROCA_TAU      0.11f   // s; troca de modo ou de cor fixa: ~0,45 s
+#define DIN_IMERSIVO_TAU   0.30f   // s; ~1,2 s para assentar, sem piscada
+#define DIN_ASSENTA_MS     400u    // foco parado ha isto antes de retingir
+#define DIN_IMERSIVO_L0    0.20f   // faixa de L (OKLab) do Imersivo: 0,05 de largura
+#define DIN_IMERSIVO_L1    0.25f
+static const float DIN_CINZA[3] = { 28 / 255.0f, 28 / 255.0f, 30 / 255.0f };   // #1C1C1E
 static char  dinColArte[512];   // banner de colecao mostrado ("" = nenhum), ver dinArteColecao
 static float dinColAlfa = 0.0f;
-static float dinCor[3] = { 0.051f, 0.051f, 0.051f };
-static float dinAlvo[3] = { 0.051f, 0.051f, 0.051f };
-static Uint32 dinUlt = 0;
+static float dinCor[3]  = { 28 / 255.0f, 28 / 255.0f, 30 / 255.0f };
+static float dinAlvo[3] = { 28 / 255.0f, 28 / 255.0f, 30 / 255.0f };
+static float dinQueda = 1.0f, dinQuedaAlvo = 1.0f;
+static Uint32 dinUlt = 0, dinVistaDesde = 0;
+static char dinArteVista[512], dinArteAssentada[512];
+// `rgb` (sRGB) vira um fundo escuro do mesmo matiz: L entre l0 e l1 (segue a
+// luminosidade de `rgb`), croma * fator com teto `cap`.
+static void dinTinge(const float rgb[3], float l0, float l1, float fator, float cap, float out[3]) {
+  float lab[3], c, k;
+  corviva_srgb_para_oklab(rgb, lab);
+  c = sqrtf(lab[1] * lab[1] + lab[2] * lab[2]);
+  k = c > 1e-5f ? fminf(c * fator, cap) / c : 0.0f;
+  lab[0] = l0 + (l1 - l0) * fminf(fmaxf(lab[0], 0.0f), 1.0f);
+  lab[1] *= k; lab[2] *= k;
+  corviva_oklab_para_srgb(lab, out);
+  for (int i = 0; i < 3; i++) out[i] = fminf(fmaxf(out[i], 0.0f), 1.0f);
+}
 static void dinCorDaArte(const char *arte) {
   CorvivaPaleta p;
-  if (!arte || !arte[0] || !corviva_paleta(arte, &p)) return;   // mantem a cor
-  for (int k = 0; k < 3; k++) {
-    float base = 0.051f;   // #0D0D0D
-    dinAlvo[k] = p.ok ? base + (p.acento[k] - base) * DIN_TINTA : base;
+  if (!arte || !arte[0] || !corviva_paleta(arte, &p) || !p.ok) return;   // mantem a cor
+  dinTinge(p.acento, DIN_IMERSIVO_L0, DIN_IMERSIVO_L1, 0.45f, 0.045f, dinAlvo);
+}
+// Um passo do fundo: escolhe o alvo do modo e cruza dinCor ate ele. Devolve dt.
+static float dinPasso(Uint32 agora, const char *arte) {
+  int modo = ajustes_fundo_din(), primeiro = !dinUlt;
+  float dt = dinUlt ? (float)(agora - dinUlt) / 1000.0f : 0.0f, tau = DIN_TROCA_TAU, e;
+  if (dt > 0.1f) dt = 0.1f;
+  dinUlt = agora ? agora : 1u;
+  if (modo == DIN_FUNDO_CINZA) {
+    memcpy(dinAlvo, DIN_CINZA, sizeof dinAlvo); dinQuedaAlvo = 1.0f;
+  } else if (modo == DIN_FUNDO_COR) {
+    float c[3];
+    ajustes_fundo_din_cor(c);
+    dinTinge(c, 0.27f, 0.27f, 0.5f, 0.07f, dinAlvo); dinQuedaAlvo = 1.0f;
+  } else {
+    dinQuedaAlvo = DIN_QUEDA; tau = DIN_IMERSIVO_TAU;
+    if (arte && arte[0] && strcmp(arte, dinArteVista)) {   // o foco andou: recomeca a espera
+      snprintf(dinArteVista, sizeof dinArteVista, "%s", arte);
+      dinVistaDesde = dinUlt;
+    }
+    if (arte && arte[0] && strcmp(dinArteVista, dinArteAssentada) &&
+        (!dinArteAssentada[0] || dinUlt - dinVistaDesde >= DIN_ASSENTA_MS))
+      snprintf(dinArteAssentada, sizeof dinArteAssentada, "%s", dinArteVista);
+    dinCorDaArte(dinArteAssentada);
   }
+  e = (primeiro || ajustes_animacoes_reduzidas()) ? 1.0f : 1.0f - expf(-dt / tau);
+  for (int k = 0; k < 3; k++) dinCor[k] += (dinAlvo[k] - dinCor[k]) * e;
+  dinQueda += (dinQuedaAlvo - dinQueda) * e;
+  return dt;
 }
 // A arte de onde a cor sai: a do destaque no ar, ou (sem destaque) a do
 // primeiro cartao da fileira em foco — a mesma escolha de antes, sem textura.
@@ -4036,13 +4090,8 @@ static void dinArteColecao(float dt) {
   }
 }
 static void desenhaFundoDin(Uint32 agora) {
-  float dt = dinUlt ? (float)(agora - dinUlt) / 1000.0f : 0.0f;
-  if (dt > 0.1f) dt = 0.1f;
-  dinUlt = agora ? agora : 1u;
-  dinCorDaArte(dinArteDaCor());
-  { float e = ajustes_animacoes_reduzidas() ? 1.0f : 1.0f - expf(-dt / DIN_TROCA_TAU);
-    for (int k = 0; k < 3; k++) dinCor[k] += (dinAlvo[k] - dinCor[k]) * e; }
-  gfx_fundo_din_desenhar(dinCor, DIN_QUEDA);
+  float dt = dinPasso(agora, dinArteDaCor());
+  gfx_fundo_din_desenhar(dinCor, dinQueda);
   dinArteColecao(dt);
 }
 
@@ -8102,6 +8151,8 @@ void home_abrir_sessao(void) {
   heroTrailerTocouN = heroTrailerTocouCap = 0; heroTrailerMemoriaFalhou = 0;
   trailercinema_zerar(&heroCinema);
   dinColArte[0] = 0; dinColAlfa = 0.0f; dinUlt = 0;
-  for (int i = 0; i < 3; i++) dinCor[i] = dinAlvo[i] = 0.051f;
+  dinArteVista[0] = dinArteAssentada[0] = 0; dinVistaDesde = 0;
+  for (int i = 0; i < 3; i++) dinCor[i] = dinAlvo[i] = DIN_CINZA[i];
+  dinQueda = dinQuedaAlvo = 1.0f;
 }
 

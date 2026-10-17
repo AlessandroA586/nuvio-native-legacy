@@ -494,6 +494,8 @@ int   ajustes_abertura_addon(void);
 int   ajustes_abertura_fundo(void);
 int   ajustes_titulo_fil(void);        // 0 Classico, 1 Ilha, 2 Editorial, 3 Acento
 int   ajustes_abertura_estilo(void);   // 0 Centro (A3), 1 Canto (B3)
+int   ajustes_fundo_din(void);         // #205: fundo da Dinamica, 0 Cinza (padrao), 1 Cor, 2 Imersivo
+void  ajustes_fundo_din_cor(float rgb[3]);   // #205: a cor escolhida para o fundo "Cor" (sRGB 0..1)
 // #205: tamanho dos cards de episodio (Moderna): 0 pequeno, 1 medio (padrao), 2 grande.
 int   ajustes_menu_cartaz_simples(void); // 0 Full (default), 1 Simple; this TV only.
 int   ajustes_mural_titulos(void);      // #521: 1 = nome dentro do ladrilho do Mural
