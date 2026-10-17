@@ -190,6 +190,9 @@ int  desc_busca_item(int i, CatItem *dst);
 // registrados, pulando os que ainda nao responderam ou vieram vazios. Assim o
 // primeiro catalogo a responder ja aparece, em vez de a tela esperar o mais
 // lento de dez.
+// Janela por catalogo de busca, compartilhada com Busca e Spotlight. Uma
+// fileira pode rolar: resultados depois dos primeiros 12 tambem abrem titulos.
+#define DESC_BUSCA_POR_ALVO 24
 int  desc_busca_n_alvos(void);
 const char *desc_busca_alvo_titulo(int alvo);   // "Filmes", "Séries"
 int desc_busca_alvo_nuvio(int alvo);             // 1 = catalogo do Nuvio (#311)

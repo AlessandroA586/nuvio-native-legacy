@@ -125,7 +125,7 @@ static float buTopoEsq(void) {
 // 32 fixas, e nao FOCUS_MAX_FILEIRAS: aquele teto subiu para a grade da
 // Biblioteca caber inteira, e a busca nao precisa de mais fileiras por isso.
 #define BU_MAX_FILEIRAS 32
-#define BU_MAX_POR_FIL  12
+#define BU_MAX_POR_FIL  DESC_BUSCA_POR_ALVO
 // Rotulo em caixa alta (15/700) 18 acima do conteudo; melhor resultado 226 de
 // altura (capa 330x186 + padding 20); cartaz 180x270, nome 17 a 10 abaixo.
 #define BU_KICK_H       34.0f
@@ -497,6 +497,9 @@ static void refiltrar(void) {
   // alvo com titulo novo. Fase A monta as fileiras e junta os novos de TODOS os
   // alvos (marcador -(k+2) em itens[]); fase B acrescenta de uma vez e resolve.
   { int alvoIdx, passo, nAlvos = desc_busca_n_alvos();
+    // So os alvos remotos acrescentam itens neste lote. As fileiras locais
+    // usam indices existentes: nao reservar 32 fileiras de CatItem para elas.
+    int capNovos = (nAlvos < BU_MAX_FILEIRAS ? nAlvos : BU_MAX_FILEIRAS) * BU_MAX_POR_FIL;
     int nuvioDepois = ajustes_busca_nuvio() == 1;
     int mostraFonte = ajustes_busca_origem() && desc_busca_n_fontes() > 1;
     int chegou = desc_busca_chegou(consulta);
@@ -521,11 +524,11 @@ static void refiltrar(void) {
           fil[nFil].itens[achou++] = idx;
         } else {
           if (!novos) {
-            novos = malloc(sizeof(CatItem) * (size_t)BU_MAX_FILEIRAS * BU_MAX_POR_FIL);
-            idxNovos = malloc(sizeof(int) * (size_t)BU_MAX_FILEIRAS * BU_MAX_POR_FIL);
+            novos = malloc(sizeof(CatItem) * (size_t)capNovos);
+            idxNovos = malloc(sizeof(int) * (size_t)capNovos);
             if (!novos || !idxNovos) { free(novos); free(idxNovos); novos = NULL; idxNovos = NULL; break; }
           }
-          if (nNovos >= BU_MAX_FILEIRAS * BU_MAX_POR_FIL) break;
+          if (nNovos >= capNovos) break;
           novos[nNovos] = it;
           fil[nFil].itens[achou++] = -(nNovos + 2);
           nNovos++;

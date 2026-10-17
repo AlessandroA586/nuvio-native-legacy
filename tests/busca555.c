@@ -26,6 +26,9 @@ Uint32 SDL_GetTicks(void) { return 0; }
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
+#define NV_TEST_SESSAO_PROPRIA
+#define NV_TEST_ADDONS_PROPRIOS
+#define NV_TEST_SOCIAL_PROPRIO
 #include "jellyfin_stub.inc"
 // Manifest loading is outside this metadata harness.
 void addons_lista_travar(void) {}

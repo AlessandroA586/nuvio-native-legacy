@@ -269,6 +269,25 @@ static void leitores(void) {
   // Anime: numeracao TVDB (2x3), nao a do AniDB (1x40).
   assert(!strcmp(v[2].imdb, "tt2560140:2:3") && ids[2] == 125);
   OK("playback: serie, filme e anime (TVDB) viram itens; AniDB puro e sem imdb ficam fora");
+  {
+    const char *especiais =
+      "[{\"progress\":50,\"episode\":{\"tvdb_season\":0,\"tvdb_number\":1},\"show\":{\"ids\":{\"imdb\":\"tt12409194\"}}},"
+      "{\"progress\":50,\"episode\":{\"season\":0,\"number\":2},\"show\":{\"ids\":{\"imdb\":\"tt12409194\"}}},"
+      "{\"progress\":50,\"episode\":{\"season\":1,\"number\":77,\"tvdb_season\":0,\"tvdb_number\":3},\"anime\":{\"ids\":{\"imdb\":\"tt12409194\"}}},"
+      "{\"progress\":50,\"episode\":{\"season\":1,\"number\":77,\"tvdb_number\":3},\"anime\":{\"ids\":{\"imdb\":\"tt12409194\"}}},"
+      "{\"progress\":50,\"episode\":{\"number\":1},\"show\":{\"ids\":{\"imdb\":\"tt12409194\"}}}]";
+    n = simkl_ler_playback(especiais, v, ids, 12);
+    assert(n == 3);
+    for (int i = 0; i < n; i++) {
+      char id[64]; snprintf(id, sizeof id, "tt12409194:0:%d", i + 1);
+      assert(!strcmp(v[i].imdb, id) && !strcmp(v[i].tipo, "series"));
+      assert(v[i].temporada == 0 && v[i].episodio == i + 1);
+    }
+    assert(simkl_ler_assistindo("{\"shows\":[{\"next_to_watch\":\"S00E06\",\"show\":{\"ids\":{\"imdb\":\"tt12409194\"}}}]}", v, 12) == 1);
+    assert(v[0].temporada == 0 && v[0].episodio == 6 && !strcmp(v[0].imdb, "tt12409194:0:6"));
+  }
+  OK("#556: Simkl preserva S00 explicito, sem inventar mapeamento TVDB ausente");
+
 
   n = simkl_ler_assistindo(WATCHING, v, 12);
   assert(n == 2);   // "em dia" (null) e sem imdb ficam fora

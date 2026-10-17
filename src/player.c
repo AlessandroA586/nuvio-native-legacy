@@ -48,6 +48,7 @@
 #include "telefoneui.h"
 #include "catalogo.h"
 #include "artehero.h"
+#include "detail.h"
 #include "logotitulo.h"
 #include "extplayer.h"
 #include "corviva.h"
@@ -438,6 +439,40 @@ static int     miniGuia;
 // vale; o indice e re-resolvido pelo IMDb quando alguem precisa dele (ver
 // idxAtual).
 static CatItem itemFixo; static int temFixo;
+// A mesma URL que a pagina mostrava ao pedir Play. So a URL e copiada:
+// texturas continuam no cache assincrono e nunca seguram a entrada do video.
+static char cinemaArte[NV_TEX_URL_MAX];
+static int cinemaPoster;
+static void cinemaArteIniciar(const CatItem *c) {
+  cinemaArte[0] = 0; cinemaPoster = 0;
+  if (c) detail_arte_titulo(c, cinemaArte, sizeof cinemaArte, &cinemaPoster);
+}
+static const char *cinemaArteObter(const CatItem *c) {
+  const char *u;
+  if (cinemaArte[0] && !tex_falhou(cinemaArte)) {
+    // O cartaz da semente e temporario (#503). Se a ficha do MESMO titulo
+    // ganhou um fundo enquanto a fonte abria, acompanha a pagina uma vez.
+    // Fundo de verdade fica congelado; o getter so copia estado ja local.
+    if (cinemaPoster) {
+      char atual[sizeof cinemaArte]; int poster;
+      if (detail_arte_titulo(c, atual, sizeof atual, &poster) && !poster) {
+        snprintf(cinemaArte, sizeof cinemaArte, "%s", atual);
+        cinemaPoster = 0;
+      }
+    }
+    return cinemaArte;
+  }
+  cinemaArte[0] = 0; cinemaPoster = 0;
+  // Next e Play direto da Home nao precisam passar pela pagina. Usam a mesma
+  // politica dela, inclusive arte alternativa, escolha manual e fundo por id.
+  u = artehero_url_destaque(c, ajustes_hero_fonte(), ajustes_hero_arte_diferente());
+  if (u && *u && strlen(u) < sizeof cinemaArte) {
+    snprintf(cinemaArte, sizeof cinemaArte, "%s", u);
+    cinemaPoster = c && c->poster[0] && !strcmp(u, c->poster);
+    return cinemaArte;
+  }
+  return NULL;
+}
 static const CatItem *item(void) {
   if (canalSessao) return &itemCanal;
   if (temFixo) return &itemFixo;
@@ -649,11 +684,11 @@ static long tmdbDoTocando(int *tt, int *te) {
   const CatItem *c = item();
   *tt = *te = 0;
   if (!c) return 0;
-  if (epT <= 0) return c->tmdb > 0 ? c->tmdb : 0;
+  if (epE <= 0) return c->tmdb > 0 ? c->tmdb : 0;
   for (int ix = idxAtual(), i = 0; i < cat_n_episodios(ix); i++) {
     const CatEp *ep = cat_episodio(ix, i);
     if (ep && ep->temporada == epT && ep->episodio == epE) {
-      if (ep->tmdbSerie > 0 && ep->tmdbT > 0 && ep->tmdbE > 0) {
+      if (ep->tmdbSerie > 0 && ep->tmdbT >= 0 && ep->tmdbE > 0) {
         *tt = ep->tmdbT; *te = ep->tmdbE; return ep->tmdbSerie;
       }
       return 0;
@@ -680,7 +715,7 @@ void player_episodio_atual(int *t, int *e) { *t = epT; *e = epE; }
 // O dono avancou na mao (Comecar agora): lembra quanto faltava (credaprende.h).
 void player_aprender_creditos(void) {
   const CatItem *c = item();
-  if (c && c->imdb[0] && epT > 0 && comVideo && video_pronto())
+  if (c && c->imdb[0] && epT >= 0 && epE > 0 && comVideo && video_pronto())
     cred_aprender(c->imdb, duracaoSeg, posSeg, credFonteAtual);
 }
 // A EXPLICACAO DA ESPERA NA ILHA (#202, inicio.h). app.c diz por quadro, ja
@@ -697,11 +732,11 @@ int player_pediu_ajustes_fonte(void) { int v = pedAjFonte; pedAjFonte = 0; retur
 Uint32 player_aberto_ha_ms(void) { return aberto && abertoEm ? SDL_GetTicks() - abertoEm : 0; }
 int player_pediu_fontes(void) { int p = pedFontes; pedFontes = 0; return p; }
 int player_pediu_proximo(int *t,int *e) {
-  if(!pedProxT||!pedProxE)return 0;
+  if(pedProxT<0||pedProxE<=0)return 0;
   if(t)*t=pedProxT;if(e)*e=pedProxE;pedProxT=pedProxE=0;return 1;
 }
 int player_transporte_pedido_pendente(void) {
-  return (pedProxT > 0 && pedProxE > 0) || (!ehCanal() && pedRecarregar);
+  return (pedProxT >= 0 && pedProxE > 0) || (!ehCanal() && pedRecarregar);
 }
 void player_episodio_pedido_liberar(void) {
   if (!pedProxT && !pedProxE) trocaEpisodio = 0;
@@ -886,7 +921,9 @@ void player_definir_episodio(int t, int e) {
     }
     return;
   }
-  if (epT < 1) epT = c->temporada > 0 ? c->temporada : 1;
+  // 0/0 e sem episodio; 0/E e um especial escolhido, nunca T1E.
+  if (epT < 0 || (epT == 0 && epE < 1))
+    epT = c->temporada > 0 || (c->temporada == 0 && c->episodio > 0) ? c->temporada : 1;
   if (epE < 1) epE = c->episodio > 0 ? c->episodio : 1;
   // AS FONTES SAO DESTE EPISODIO, E SO DELE — issue #101.
   //
@@ -1563,6 +1600,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
     // A COPIA e feita AQUI, no unico instante em que o indice e sabidamente o
     // do titulo pedido. Ver item().
     if (ci) { itemFixo = *ci; temFixo = 1; } else temFixo = 0;
+    cinemaArteIniciar(temFixo ? &itemFixo : NULL);
     audioTitulo();
     artehero_logo_sessao_iniciar(temFixo ? &itemFixo : NULL);
     canalSessao = ci && (!strcmp(ci->tipo, "channel") || !strcmp(ci->tipo, "tv"));
@@ -2024,7 +2062,7 @@ float player_posicao_seg(void) { return posSeg; }
 static void idTrakt(const CatItem *ci, char *dst, size_t n) {
   const char *base = ci->imdb;
   size_t l = idbase_len(base);   // "tmdb:t123", "kitsu:41370" guardam o ':' do prefixo
-  if (epT > 0 && epE > 0) snprintf(dst, n, "%.*s:%d:%d", (int)l, base, epT, epE);
+  if (epT >= 0 && epE > 0) snprintf(dst, n, "%.*s:%d:%d", (int)l, base, epT, epE);
   else snprintf(dst, n, "%s", base);
 }
 
@@ -2045,11 +2083,11 @@ static int wsIdentidade(WsEvento *e) {
       !isdigit((unsigned char)c->imdb[2])) return 0;
   n = strlen(c->imdb);
   if (n >= sizeof e->imdb || strcspn(c->imdb, ":") != n) return 0;
-  if (!strcmp(c->tipo, "series") && epT > 0 && epE > 0) {
+  if (!strcmp(c->tipo, "series") && epT >= 0 && epE > 0) {
     snprintf(e->tipo, sizeof e->tipo, "series");
     snprintf(e->videoId, sizeof e->videoId, "%s:%d:%d", c->imdb, epT, epE);
     e->season = epT; e->episode = epE;
-  } else if (!strcmp(c->tipo, "movie") && epT <= 0) {
+  } else if (!strcmp(c->tipo, "movie") && epE <= 0) {
     snprintf(e->tipo, sizeof e->tipo, "movie");
     snprintf(e->videoId, sizeof e->videoId, "%s", c->imdb);
     e->season = e->episode = -1;
@@ -2109,7 +2147,7 @@ static void alvoStream(char *dst, unsigned tam) {
   const CatItem *c = item();
   dst[0] = 0;
   if (!c || !c->imdb[0]) return;
-  if (epT > 0 && epE > 0) cat_id_stream(idxAtual(), epT, epE, dst, tam);
+  if (epT >= 0 && epE > 0) cat_id_stream(idxAtual(), epT, epE, dst, tam);
   else snprintf(dst, tam, "%s", c->imdb);
 }
 
@@ -2126,7 +2164,7 @@ static double credEfetivo(void) {
   e.capitulo = video_creditos();
   { double ic = intro_creditos_seg();
     if (intro_creditos_aniskip()) e.aniskip = ic; else e.introdb = ic; }
-  if (c && c->imdb[0] && epT > 0 && epE > 0) {
+  if (c && c->imdb[0] && epT >= 0 && epE > 0) {
     cred_viz_ler(c->imdb, epT, &e.vizInicio, &e.vizDur);
     e.aprendidoResto = cred_aprendido_resto(c->imdb);
   }
@@ -2339,7 +2377,7 @@ static void fecharSessao(int manter) {
         // O stop do scrobble ja fecha o visto no Simkl (e cai no historico
         // sozinho se falhar): mandar o historico de novo seria pedido em dobro.
         if (simklScr == SCR_STOP) dest &= ~VISTO_SIMKL;
-        if (epT > 0 && epE > 0) {
+        if (epT >= 0 && epE > 0) {
           if (vistoep_estado(ci->imdb, epT, epE) != 1) {
             VistoPar par = { (short)epT, (short)epE };
             visto_episodios(ci->imdb, "series", &par, 1, 1, dest);
@@ -2348,7 +2386,7 @@ static void fecharSessao(int manter) {
           visto_titulo(ci->imdb, ci->tipo, NULL, 0, 1, dest);
         }
       }
-      if (assistiu && epT > 0 && epE > 0) vistoep_definir(ci->imdb, epT, epE, 1);
+      if (assistiu && epT >= 0 && epE > 0) vistoep_definir(ci->imdb, epT, epE, 1);
       // E para a CONTA. Trakt e conta sao dois destinos diferentes: nem todo
       // usuario liga o Trakt, e o progresso do app oficial vem da conta.
       sync_sujar_progresso();
@@ -2407,6 +2445,7 @@ static void fecharSessao(int manter) {
   retido = manter; if (!manter) retidoVoo = 0;
   prepararRetencao = 0; saidaIlhaDesde = 0;
   esperandoFonte = 0; aberto = 0; saindo = 0; pediuSair = 0;
+  cinemaArteIniciar(NULL);
   pedProxT = pedProxE = trocaEpisodio = pedRecarregar = 0;
   scrubbing = scrubToque = 0; scrubInicio = 0.0;
   mini = 0; querMini = 0; miniGuia = 0; janAtiva = 0;
@@ -2812,11 +2851,11 @@ void player_mini_desenhar(Uint32 agora) {
 // que tenha o que mostrar. Num filme sem relacionado nenhum ele some, em vez de
 // ficar la sem fazer nada.
 static int temUltimoBotao(void) {
-  return epT > 0 || extras_n_relacionados() > 0;
+  return epE > 0 || extras_n_relacionados() > 0;
 }
 
 typedef struct { int id, habilitada; } PlrAcao;
-static int transporteSerie(void) { return !ehCanal() && epT > 0 && epE > 0; }
+static int transporteSerie(void) { return !ehCanal() && epT >= 0 && epE > 0; }
 static int transporteAcoes(PlrAcao a[PLR_NBTNS]) {
   int n = 0, serie = transporteSerie();
   int pronto = serie && !trocaEpisodio && !pedRecarregar && !player_carregando() && !erroFonte && !saindo;
@@ -2969,7 +3008,7 @@ int player_regra_concluiu(double posSeg, double durSeg, double cred) {
 // filme NENHUM tinha guarda. Foi por ai que o PRONTO atrasado do trailer do
 // IMDb virou a duracao do filme no #205.
 static double duracaoCatalogo(void) {
-  if (epT <= 0) {
+  if (epE <= 0) {
     const CatItem *c = cat_item(idxAtual());
     return c && !strcmp(c->tipo, "movie") ? (double)duracaoDeMeta(c->meta) : 0.0;
   }
@@ -2987,7 +3026,7 @@ static double duracaoFonteEsperada(void) {
   double antes = 0, depois = 0;
   if (!c || ehCanal()) return 0;
   if (!strcmp(c->tipo, "movie")) return duracaoDeMeta(c->meta);
-  if (epT <= 0 || epE <= 0) return 0;
+  if (epT < 0 || epE <= 0) return 0;
   for (int ix = idxAtual(), i = 0; i < cat_n_episodios(ix); i++) {
     const CatEp *ep = cat_episodio(ix, i);
     double d;
@@ -3503,7 +3542,7 @@ static int ativarBotao(int i, int repetiu) {
       if (repetiu || trocaEpisodio ||
           (episodioPedidoMarcado && agora - episodioPedidoEm < 400u)) return 0;
       ep = i == PLR_ANTERIOR ? player_anterior_episodio() : player_proximo_episodio();
-      if (!ep || ep->temporada <= 0 || ep->episodio <= 0 ||
+      if (!ep || ep->temporada < 0 || ep->episodio <= 0 ||
           !cat_id_stream(idxAtual(), ep->temporada, ep->episodio, alvo, sizeof alvo) || !alvo[0]) return 0;
       // Copiar os numeros agora: a lista do catalogo pode ser republicada.
       // Nao aprender creditos nem marcar o episodio atual como terminado.
@@ -3528,7 +3567,7 @@ static int ativarBotao(int i, int repetiu) {
     case PLR_FONTES: pedFontes = 1; break;
     case PLR_EPISODIOS:
       if (ehCanal()) pedGuia = 1;
-      else if (epT > 0) episodios_abrir(idxAtual(), epT, epE);
+      else if (epE > 0) episodios_abrir(idxAtual(), epT, epE);
       else posplay_abrir_relacionados(idxAtual());
       break;
     default: return 0;
@@ -3789,7 +3828,7 @@ static void introTmdbTardio(Uint32 agora) {
       if (tm > 0 && cx) {
         double dA = 0, dP = 0;
         introTmdb = tm;
-        if (epT > 0)
+        if (epE > 0)
           for (int ix = idxAtual(), i = 0; i < cat_n_episodios(ix); i++) {
             const CatEp *ep = cat_episodio(ix, i);
             if (!ep || ep->temporada != epT) continue;
@@ -3797,7 +3836,7 @@ static void introTmdbTardio(Uint32 agora) {
             else if (ep->episodio == epE + 1) dP = duracaoTexto(ep->duracao);
           }
         printf("[intro] tmdb %ld chegou depois: pedindo de novo por tmdb_id\n", tm); fflush(stdout);
-        intro_pedir_ids(cx->imdb, tm, epT > 0 ? tt : 0, epT > 0 ? te : 0, dA, dP);
+        intro_pedir_ids(cx->imdb, tm, epE > 0 ? tt : 0, epE > 0 ? te : 0, dA, dP);
       }
     }
   }
@@ -4123,7 +4162,7 @@ void player_atualizar(float dt, Uint32 agora) {
     if (cs && jfid_e(cs->imdb)) cs = NULL;   // never scrobble personal-server items
     if (ok && cs && cs->imdb[0]) {
       char id[64];
-      if (epT > 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
+      if (epT >= 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
       else snprintf(id, sizeof id, "%s", cs->imdb);
       tocouS += dt;
       if (tocouS >= PLR_SCR_TOCOU_S) {
@@ -4142,7 +4181,7 @@ void player_atualizar(float dt, Uint32 agora) {
           duracaoSeg >= 120.0f && !scrubbing &&
           !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo())) {
         char id[64];
-        if (epT > 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
+        if (epT >= 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(cs->imdb,":"), cs->imdb, epT, epE);
         else snprintf(id, sizeof id, "%s", cs->imdb);
         trakt_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg, 0);
         simkl_scrobble(SCR_EV_PAUSOU, id, posSeg, duracaoSeg, assistidoSeg, 0);
@@ -4186,7 +4225,7 @@ void player_atualizar(float dt, Uint32 agora) {
     const CatItem *ci = item();
     if (epsPedidoRev != cat_revisao() || epsPedidoGer != cat_geracao_episodios()) {
       epsPedidoRev = cat_revisao(); epsPedidoGer = cat_geracao_episodios(); epsPedidoDe[0] = 0; }
-    if (!ehCanal() && epT > 0 && ci && ci->imdb[0] && strcmp(epsPedidoDe, ci->imdb)) {
+    if (!ehCanal() && epE > 0 && ci && ci->imdb[0] && strcmp(epsPedidoDe, ci->imdb)) {
       int ix = idxAtual();
       if (cat_n_episodios(ix) > 0) {
         snprintf(epsPedidoDe, sizeof epsPedidoDe, "%s", ci->imdb);
@@ -4281,7 +4320,7 @@ void player_atualizar(float dt, Uint32 agora) {
     if (mov && (Sint32)(mov - ultimoInput) > 0) ultimoInput = mov; }
   if (visivel && tocando && !player_carregando() && !episodios_aberto() &&
       !stream_folha_aberta() && !faixas_aberta() && agora - ultimoInput > PLR_ESCONDE_MS) visivel = 0;
-  if (epT > 0 && !strstr(linhaEp, " · ")) player_definir_episodio(epT, epE);
+  if (epE > 0 && !strstr(linhaEp, " · ")) player_definir_episodio(epT, epE);
   introTmdbTardio(agora);
 
   // PAINEL DE PAUSA. A condicao e a traducao de canShowPauseOverlay
@@ -4519,7 +4558,7 @@ static const char *iconeBotao(int i) {
     case PLR_ANTERIOR:  return "pl_chevron-left";
     case PLR_PROXIMO:   return "pl_chevron-right";
     case PLR_RECARREGAR:return "pl_rotate-ccw";
-    default:            return epT > 0 ? "pl_list-video" : "pl_film";
+    default:            return epE > 0 ? "pl_list-video" : "pl_film";
   }
 }
 static const char *rotuloBotao(int i) {
@@ -4532,7 +4571,7 @@ static const char *rotuloBotao(int i) {
     case PLR_ANTERIOR:  return "Episódio anterior";
     case PLR_PROXIMO:   return "Próximo episódio";
     case PLR_RECARREGAR:return "Recarregar";
-    default:            return ehCanal() ? "Guia" : epT > 0 ? "Epis\xc3\xb3""dios" : "Relacionados";
+    default:            return ehCanal() ? "Guia" : epE > 0 ? "Epis\xc3\xb3""dios" : "Relacionados";
   }
 }
 
@@ -4957,7 +4996,7 @@ static void desenharAcoesEpisodio(void){
 }
 static void desenharAcoesEpisodioCorpo(void){
   const CatEp *prox=player_proximo_episodio();double fim;int tipo=0;
-  intro_definir_duracao(duracaoReal ? (double)duracaoSeg : 0.0, epT <= 0);
+  intro_definir_duracao(duracaoReal ? (double)duracaoSeg : 0.0, epE <= 0);
   int trecho=intro_botao(posSeg,monoSeg(),visivel,skipFoco&&visivel,&fim,&tipo);
   // A CAIXA DE "Próximo episódio" QUE FICAVA AQUI FOI APAGADA. Era um retangulo
   // de posicao fixa em {420,720} que caia por cima da barra de tempo, sem foco
@@ -5320,112 +5359,173 @@ void player_fundo_fora_do_furo(GfxRect furo, int recuado, const CatItem *c) {
              1.0f, 0, 0, 0.5f, 0, 0, 0, 0.5f); }
 }
 
+// FROST OVER LIVE VIDEO (owner, 16/10: the player glass flat over video). No
+// TV lets GL read the video plane (webOS/Tizen/.tpk/Android: hardware plane
+// behind the UI), so the glass over the hole reads the title art instead: the
+// 96x54 blurred copy (gfx_desfocado), covered to the screen and darkened, baked
+// ONCE per title into 192x108 in screen orientation. Per frame it costs only
+// the glass shader's own texture reads; no capture, no blur pass.
+static GLuint foscoSobreVideo(const CatItem *c) {
+  static GfxMini alvo;
+  static char feita[1024];
+  const char *arte = c && c->backdrop[0] && !player_id_canal()[0] ? artehero_url(c) : NULL;
+  GLuint tb;
+  if (!arte) return 0;
+  if (alvo.tex && !strcmp(feita, arte)) return alvo.tex;
+  tb = tex_obter_larg(arte, 480);
+  if (tb) tb = gfx_desfocado(tb, arte);
+  if (!tb || !gfx_mini_alvo(&alvo, 192, 108)) return 0;
+  gfx_mini_comecar(&alvo, 0.0f, 0.0f, 192.0f / NV_TELA_W);
+  gfx_tex_aspect_atual = tex_aspecto(arte);
+  gfx_rect((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, tb, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, 1.0f);
+  gfx_tex_aspect_atual = 0.0f;
+  gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0, 0.35f);
+  gfx_mini_terminar();
+  snprintf(feita, sizeof feita, "%s", arte);
+  return alvo.tex;
+}
+
+// A3: o logo e o Play do detalhe no ultimo quadro dele (player_morph_de).
+static GfxRect morphLogo, morphPlay;
+static Uint32 morphEm;
+void player_morph_de(GfxRect logo, GfxRect play) {
+  morphLogo = logo; morphPlay = play; morphEm = SDL_GetTicks();
+}
+
 // A TELA CINEMA DA ABERTURA (#205, abrecine.h). Tudo multiplicado pelo veu,
 // que so cai com o quadro real (o crossfade e o veu saindo por cima dele).
-// CUSTO: a arte desfocada e a copia 96x54 de sempre (gfx_desfocado), uma
-// passada; a nitida so enquanto recua (~1 s); o preto so com o furo aberto
-// (sem furo o preto opaco de baixo ja esta la). Logo, trilho e linha sao
+// CUSTO: na Arte (padrao), a textura do detalhe e uma rampa de meia tela, sem
+// copia nem blur. A Arte borrada e a copia 96x54 de sempre (gfx_desfocado),
+// uma passada; a nitida so enquanto recua (~1 s). O preto so com o furo aberto
+// (sem furo o preto opaco de baixo ja esta la). Logo, anel e linha sao
 // retangulos pequenos.
 static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
   float v = cine.veu, f = cine.foco, t = (float)(agora - cine.desde) / 1000.0f;
-  float resp, entra, cy = NV_TELA_H * 0.46f, base;
+  float entra, cx = NV_TELA_W * 0.5f, tm, k, base, y;
   int reduz = ajustes_animacoes_reduzidas();
-  // #508: o fundo da tela e escolha da pessoa. 0 = Desligado (preto), 1 = Arte
-  // (o backdrop do titulo, nitido, com veu escuro), 2 = Arte borrada (o de
-  // sempre). Sem o pedido, nada de arte: o preto de baixo fica.
+  // #508: preserve the saved Off / Art / Blurred art choice. Reuse the
+  // title page's own artwork without starting a second metadata request.
   int nf = ajustes_abertura_fundo();
-  const char *arte = nf && c && c->backdrop[0] ? artehero_url(c) : NULL;
+  const char *arte = nf ? cinemaArteObter(c) : NULL;
   const char *marca = c ? artehero_logo_sessao(c) : NULL;
   GLuint ts = arte ? tex_obter_hero(arte) : 0, tb = nf == 2 && arte ? tex_obter_larg(arte, 480) : 0, lg;
+  // A3 (dono, 16/10): o logo do detalhe vai ao centro e o Play vira um anel
+  // pequeno EMBAIXO dele, 900 ms em ease-out-expo, sem quique. Parte do quadro
+  // do detalhe so se ele estava na tela quando a abertura comecou.
+  static Uint32 morphDe;
+  static int morph;
+  static GfxRect l0, p0;
+  GfxRect anel = { cx - 28.0f, 756.0f, 56.0f, 56.0f }, ra = anel;
   if (v <= 0.0f) return;
+  if (morphDe != cine.desde) {
+    morphDe = cine.desde; l0 = morphLogo; p0 = morphPlay;
+    morph = !reduz && morphEm && p0.w > 0.0f && (Sint32)(cine.desde - morphEm) < 1000;
+  }
+  tm = !morph || t >= 0.9f ? 1.0f : t > 0.0f ? t / 0.9f : 0.0f;
+  k = tm >= 1.0f ? 1.0f : 1.0f - powf(2.0f, -10.0f * tm);
+  entra = morph || reduz ? 1.0f : (t < 0.4f ? t / 0.4f : 1.0f);
   if (furou || !player_carregando()) gfx_cor(tela, 0.0f, 0, 0, 0, v);
   if (tb) tb = gfx_desfocado(tb, arte);
   gfx_tex_aspect_atual = arte ? tex_aspecto(arte) : 0.0f;
-  // #508 ARTE NITIDA: o mesmo backdrop, sem desfoque nem recuo, com o VEU
-  // ESCURO do GFX_SNAP (o mesmo 0,55 da Borrada parada) para o logo, o episodio
-  // e o trilho nao perderem leitura sobre a arte. uPar.x = 1 (so o dither): o
-  // B-spline do 2 e para a copia de 96x54, e esticaria a arte grande em blocos.
+  // ARTE (o padrao): o backdrop NITIDO, sem desfoque nem recuo, e o veu da
+  // rampa do hero da Home (smoothstep^2, preto) da base ate a METADE da tela,
+  // para o logo e o anel lerem. Duas passadas, nenhuma copia, nenhum blur.
   if (nf == 1) {
-    if (ts) gfx_rect(tela, ts, GFX_SNAP, 0.55f, 1.0f, 0.0f, 0.0f, 0, 0, 0, v);
+    GfxRect alvo = tela;
+    // A poster fallback stays in proportion, including on a portrait phone.
+    if (cinemaPoster && gfx_tex_aspect_atual > 0.0f) {
+      float ar = gfx_tex_aspect_atual;
+      if (ar < tela.w / tela.h) { alvo.w = tela.h * ar; alvo.x = (tela.w - alvo.w) * 0.5f; }
+      else { alvo.h = tela.w / ar; alvo.y = (tela.h - alvo.h) * 0.5f; }
+    }
+    if (ts) gfx_rect(alvo, ts, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, v);
+    gfx_tex_aspect_atual = 0.0f;
+    gfx_rect((GfxRect){ 0, NV_TELA_H * 0.5f, NV_TELA_W, NV_TELA_H * 0.5f }, 0, GFX_VEU_BAIXO,
+             0, 0, 0, 0.0f, 0, 0, 0, 0.85f * v * (morph ? k : entra));
   } else {
-  // Recua para 45%: a arte vira luz de fundo, o logo fica sozinho na frente.
-  // Pelo GFX_SNAP com o nv_dither e o B-spline ligados (uPar.x = 2) e o escurecimento na
-  // mesma passada (uFoco), como o fundo da tela DV: o GFX_CARD nao tem ruido,
-  // e a arte desfocada e escura saia em faixas de 8 bits no OLED (dono, 11/10:
-  // "falta o dither no background"). A copia desfocada ja e 16:9 como a tela.
+  // ARTE BORRADA: recua para 45%, a arte vira luz de fundo (a copia 96x54 de
+  // sempre, gfx_desfocado). Pelo GFX_SNAP com o nv_dither e o B-spline ligados
+  // (uPar.x = 2) e o escurecimento na mesma passada (uFoco): sem o ruido, a
+  // arte desfocada e escura saia em faixas de 8 bits no OLED (dono, 11/10).
   if (tb) gfx_rect(tela, tb, GFX_SNAP, 0.55f * f, 2.0f, 0.0f, 0.0f, 0, 0, 0, v);
   { float as = v * (tb ? 1.0f - f : 1.0f - 0.55f * f);
     if (ts && as > 0.01f) gfx_rect(tela, ts, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, as); }
   }
   gfx_tex_aspect_atual = 0.0f;
 
-  // O logo fica PARADO (dono, 11/10: sem aumentar e diminuir); so o trilho anda.
-  resp = 1.0f;
-  entra = reduz ? 1.0f : (t < 0.4f ? t / 0.4f : 1.0f);
+  // O LOGO: a mesma textura do detalhe, so o quad anda e escala ate o centro.
   lg = marca ? tex_obter_larg_qualquer(marca, 640) : 0;
   if (lg) {
-    float ar = tex_aspecto(marca), lw = 640.0f, lh = ar > 0.0f ? lw / ar : 200.0f, k = 1.0f;
-    if (lh > 220.0f) { lh = 220.0f; lw = lh * ar; }
-    gfx_rect((GfxRect){ NV_TELA_W * 0.5f - lw * k * 0.5f, cy - lh * k * 0.5f, lw * k, lh * k }, lg,
-             tex_marca_escura(marca) ? GFX_MARCA : GFX_TEXTO, 0, 0, 0, 0, .96f, .96f, .97f,
-             v * entra * (0.88f + 0.12f * resp));
-    base = cy + lh * 0.5f;
+    float ar = tex_aspecto(marca), lw = 560.0f, lh = ar > 0.0f ? lw / ar : 172.0f;
+    GfxRect r;
+    if (lh > 172.0f) { lh = 172.0f; lw = lh * ar; }
+    r = (GfxRect){ cx - lw * 0.5f, anel.y - 64.0f - lh, lw, lh };
+    if (morph && l0.w > 0.0f) {
+      r.x = l0.x + (r.x - l0.x) * k; r.y = l0.y + (r.y - l0.y) * k;
+      r.w = l0.w + (r.w - l0.w) * k; r.h = l0.h + (r.h - l0.h) * k;
+    }
+    gfx_rect(r, lg, tex_marca_escura(marca) ? GFX_MARCA : GFX_TEXTO, 0, 0, 0, 0, .96f, .96f, .97f,
+             v * entra);
   } else {
     TxtLinha l = txt_linha_corta(TXT_TITULO2, c ? c->titulo : "", 255, 255, 255, 255, 1400.0f);
-    txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, cy - l.h * 0.5f, v * entra * (0.88f + 0.12f * resp));
-    base = cy + l.h * 0.5f;
+    txt_desenhar_alpha(l, cx - l.w * 0.5f, anel.y - 64.0f - l.h, v * entra);
   }
 
-  // O EPISODIO, entre o logo e o trilho (so serie; filme nao tem linha).
-  if (linhaEp[0]) {
-    TxtLinha l = txt_linha_corta(TXT_ILHA_SUB, linhaEp, 243, 242, 239, 170, 1100.0f);
-    txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, base + 14.0f, v * entra);
+  // O PLAY VIRA O ANEL: a pilula encolhe ate o circulo (raio = h/2), o branco
+  // some nos primeiros 45% e a borda vira o trilho; o arco acende nos ultimos 40%.
+  if (morph) {
+    float aw = 1.0f - tm / 0.45f;
+    ra.x = p0.x + (anel.x - p0.x) * k; ra.y = p0.y + (anel.y - p0.y) * k;
+    ra.w = p0.w + (anel.w - p0.w) * k; ra.h = p0.h + (anel.h - p0.h) * k;
+    if (aw > 0.0f) gfx_cor(ra, 0.5f, 1, 1, 1, aw * v);
   }
-  // Como na carga da Home: a barra so enche com progresso medido.
+  gfx_anel(ra, 0.5f, 3.0f, 1, 1, 1, 0.16f * v * entra);
+  // Como na carga da Home: o arco so enche com progresso medido.
   // Samsung informa porcentagem; segundos de buffer dos demais nao sao %.
   { VideoStats stats;
     int pct;
+    float r, g, b, aa = v * entra * (morph ? (tm - 0.6f) / 0.4f : 1.0f);
     video_estatisticas(&stats);
     pct = !esperandoFonte && stats.bufferPct >= 0 && stats.bufferPct <= 100 ? stats.bufferPct : -1;
-    float tw = 200.0f, sw = 64.0f, x0 = NV_TELA_W * 0.5f - tw * 0.5f, y = base + 48.0f, r, g, b;
-    // A barra leva a cor do logo, como a Imersiva (dono, 14/10); sem paleta, o realce.
+    // O arco leva a cor do logo, como a Imersiva (dono, 14/10); sem paleta, o realce.
     if (!corviva_logo_acento(&r, &g, &b)) corFocoPlayer(&r, &g, &b);
-    gfx_cor((GfxRect){ x0, y, tw, 3.0f }, 0.5f, 1, 1, 1, 0.16f * v * entra);
-    if (pct >= 0) {
-      if (pct > 0) gfx_cor((GfxRect){ x0, y, tw * pct / 100.0f, 3.0f }, 0.5f, r, g, b, 0.9f * v * entra);
-    } else if (!reduz) {
-      float p = fmodf(t / 1.6f, 1.0f), e = p * p * (3.0f - 2.0f * p);
-      float a0 = x0 - sw + (tw + sw) * e, a1 = a0 + sw;
-      if (a0 < x0) a0 = x0;
-      if (a1 > x0 + tw) a1 = x0 + tw;
-      if (a1 > a0) gfx_cor((GfxRect){ a0, y, a1 - a0, 3.0f }, 0.5f, r, g, b, 0.9f * v * entra);
-    }
-    // O nome do add-on (e a tentativa), so com o ajuste ligado. A barra ja diz
-    // que esta carregando; nao ha texto de etapa.
-    if (ajustes_abertura_addon()) {
-      const Stream *st = stream_item(stream_atual());
-      char det[260];
-      snprintf(det, sizeof det, "%s", st ? st->provedor : "");
-      // O nome e uma linha, como os rotulos da ilha.
-      for (char *p = det; *p; p++) if ((unsigned char)*p < 32) *p = ' ';
-      if (tentativaN >= 2 && tentativaM >= tentativaN) {
-        size_t n = strlen(det);
-        snprintf(det + n, sizeof det - n, "%s", n ? " \xc2\xb7 " : "");
-        n = strlen(det);
-        snprintf(det + n, sizeof det - n, i18n("Fonte %d de %d"), tentativaN, tentativaM);
-      }
-      if (det[0]) {
-        TxtLinha d = txt_linha_corta(TXT_G19M, det, 243, 242, 239, 140, 1100.0f);
-        txt_desenhar_alpha(d, NV_TELA_W * 0.5f - d.w * 0.5f, y + 22.0f, v * entra);
-      } }
-    // DEMOROU: uma linha so, curta e calma, que entra devagar.
-    if (abrecine_demorando(&cine, agora)) {
-      float d = (float)(agora - cine.desde - ABRECINE_DEMORA_MS) / 600.0f;
-      TxtLinha l = txt_linha(TXT_G19M, i18n("Só mais um instante…"), 243, 242, 239, 255);
-      txt_desenhar_alpha(l, NV_TELA_W * 0.5f - l.w * 0.5f, y + (ajustes_abertura_addon() ? 56.0f : 22.0f),
-                         0.62f * v * (reduz || d > 1.0f ? 1.0f : d));
+    if (aa > 0.0f) {
+      if (pct > 0) gfx_arco(ra, 3.0f, 0.0f, pct / 100.0f, r, g, b, 0.9f * aa);
+      else if (pct < 0 && !reduz) gfx_arco(ra, 3.0f, fmodf(t / 1.2f, 1.0f), 0.25f, r, g, b, 0.9f * aa);
     } }
+
+  // UMA LINHA QUIETA sob o anel: o episodio (so serie). O add-on so com o
+  // ajuste ligado; a de demora so depois de 8 s.
+  base = ra.y + ra.h + 30.0f; y = base;
+  if (linhaEp[0]) {
+    TxtLinha l = txt_linha_corta(TXT_ILHA_SUB, linhaEp, 243, 242, 239, 170, 1100.0f);
+    txt_desenhar_alpha(l, cx - l.w * 0.5f, y, v * entra);
+    y += 34.0f;
+  }
+  if (ajustes_abertura_addon()) {
+    const Stream *st = stream_item(stream_atual());
+    char det[260];
+    snprintf(det, sizeof det, "%s", st ? st->provedor : "");
+    // O nome e uma linha, como os rotulos da ilha.
+    for (char *p = det; *p; p++) if ((unsigned char)*p < 32) *p = ' ';
+    if (tentativaN >= 2 && tentativaM >= tentativaN) {
+      size_t n = strlen(det);
+      snprintf(det + n, sizeof det - n, "%s", n ? " \xc2\xb7 " : "");
+      n = strlen(det);
+      snprintf(det + n, sizeof det - n, i18n("Fonte %d de %d"), tentativaN, tentativaM);
+    }
+    if (det[0]) {
+      TxtLinha d = txt_linha_corta(TXT_G19M, det, 243, 242, 239, 140, 1100.0f);
+      txt_desenhar_alpha(d, cx - d.w * 0.5f, y, v * entra);
+      y += 34.0f;
+    } }
+  // DEMOROU: uma linha so, curta e calma, que entra devagar.
+  if (abrecine_demorando(&cine, agora)) {
+    float d = (float)(agora - cine.desde - ABRECINE_DEMORA_MS) / 600.0f;
+    TxtLinha l = txt_linha(TXT_G19M, i18n("Só mais um instante…"), 243, 242, 239, 255);
+    txt_desenhar_alpha(l, cx - l.w * 0.5f, y, 0.62f * v * (reduz || d > 1.0f ? 1.0f : d));
+  }
 }
 
 #ifdef NV_TPK
@@ -5532,6 +5632,7 @@ void player_desenhar(Uint32 agora) {
   // Video vivo por baixo: o vidro fosco (assado de 320x180) nao desenha ali.
   if (furar) gfx_vidro_fosco_bloquear();
 #endif
+  if (furar && !janAtiva) gfx_vidro_fonte_video(foscoSobreVideo(c));
   if (furar) {
     // O furo acompanha o MESMO retangulo que foi ao plano de hardware, cortado
     // na tela. Furar sempre a tela inteira, como antes, deixava faixa preta nos

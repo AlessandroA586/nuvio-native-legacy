@@ -41,6 +41,7 @@
 #include <time.h>
 
 // Optional imports belong to consumers: public declarations keep producers strong.
+extern int contapend_reenviar(void) NV_PERFIL_OPCIONAL;
 // Isolated legacy fixtures may omit this boundary: missing means DEFER,
 // never a fabricated empty/complete account list. Complete apps link addons.c.
 extern int addons_copiar_identidades(AddonIdentidade *, int, unsigned, int) NV_PERFIL_OPCIONAL;
@@ -871,7 +872,7 @@ static int lerBusca(const char *tipo, const char *termo, CatItem *saida,
 // Antes so o Cinemeta era consultado, e era isso que o dono via como "nao ta
 // procurando em todos os catalogos" — porque de fato nao estava.
 #define BUSCA_ALVOS  16
-#define BUSCA_POR_ALVO 12          // uma fileira por alvo, 12 cabem na tela
+#define BUSCA_POR_ALVO DESC_BUSCA_POR_ALVO
 #define BUSCA_FIOS    3            // quantos alvos em voo ao mesmo tempo
 
 // O PEDIDO A UM ADDON COUBE NO BUFFER? `w` e o retorno do snprintf que o
@@ -1026,18 +1027,27 @@ static int consultarAlvo(const AlvoBusca *a, const char *termo,
 }
 
 static void *fioBusca(void *arg) {
+  // O lote cabe na memoria limitada da busca, sem consumir quase toda a
+  // pilha de 512 KiB de um fio no macOS. Reutilizado ate a fila esvaziar.
+  CatItem *achados = malloc(sizeof(CatItem) * BUSCA_POR_ALVO);
   (void)arg;
+  if (!achados) {
+    pthread_mutex_lock(&buscaTrava);
+    fiosVivos--;
+    pthread_mutex_unlock(&buscaTrava);
+    return NULL;
+  }
   for (;;) {
     AlvoBusca a;
     char termo[96];
     int meu, g;
-    CatItem achados[BUSCA_POR_ALVO];
     int n;
 
     pthread_mutex_lock(&buscaTrava);
     if (proximoAlvo >= nAlvos || !buscaPedido[0]) {
       fiosVivos--;
       pthread_mutex_unlock(&buscaTrava);
+      free(achados);
       return NULL;
     }
     meu = proximoAlvo++;
@@ -2935,7 +2945,7 @@ static int continuarLocal(CatItem *saida, int max) {
       d->temporada = r->temporada;
       d->episodio  = r->episodio;
       snprintf(d->imdb, sizeof d->imdb, "%s:%d:%d", r->contentId,
-               r->temporada ? r->temporada : 1, r->episodio);
+               r->temporada >= 0 ? r->temporada : 1, r->episodio);
       snprintf(d->tipo, sizeof d->tipo, "series");
     } else {
       snprintf(d->imdb, sizeof d->imdb, "%s", r->contentId);
@@ -3192,7 +3202,7 @@ static int filtrarRemoto(CatItem *v, int n, int (*aSeguir)(const char *),
     // passa ao proximo episodio (continuar_desenhar). Remoto que esta ADIANTE
     // na serie nao e episodio antigo e fica como veio. O instante decide, como
     // no resto desta funcao: registro mais VELHO que o paused_at nao manda.
-    if (v[i].temporada > 0 && v[i].episodio > 0) {
+    if (v[i].temporada >= 0 && v[i].episodio > 0) {
       size_t L = idbase_len(v[i].imdb);
       const ProgRegistro *r = NULL;
       int j;
@@ -3210,7 +3220,7 @@ static int filtrarRemoto(CatItem *v, int n, int (*aSeguir)(const char *),
                  "T%dE%d visto aqui (%d%%); fica o daqui\n", r->contentId,
                  v[i].temporada, v[i].episodio, r->temporada, r->episodio, pct);
           snprintf(v[i].imdb, sizeof v[i].imdb, "%s:%d:%d", r->contentId,
-                   r->temporada ? r->temporada : 1, r->episodio);
+                   r->temporada >= 0 ? r->temporada : 1, r->episodio);
           v[i].temporada = r->temporada;
           v[i].episodio = r->episodio;
           v[i].progresso = pct;
@@ -3223,7 +3233,7 @@ static int filtrarRemoto(CatItem *v, int n, int (*aSeguir)(const char *),
     }
     if (!ajustes_cw_proximo() && !emAndamento(v[i].progresso)) { (*fora)++; continue; }
     // "A seguir" que passa da desmarcacao da pessoa recua (ajustarASeguir).
-    if (v[i].progresso == 0 && v[i].temporada > 0 && v[i].episodio > 0 &&
+    if (v[i].progresso == 0 && v[i].temporada >= 0 && v[i].episodio > 0 &&
         aSeguir(v[i].imdb)) ajustarASeguir(&v[i]);
     if (w != i) v[w] = v[i];
     w++;
@@ -3347,7 +3357,10 @@ static int contaASeguir(CatItem *lista, int n, int max, int comOutraFonte) {
   return n;
 }
 
+
 static int montarContinuar(CatItem *saida, int max) {
+  // Discovery also runs for tracker-only users, without Nuvio cloud sync.
+  if (contapend_reenviar) contapend_reenviar();
   // static: dois lotes de 40 CatItem passam de 1,3 MB e montar() roda uma vez,
   // num fio so — a mesma razao do vetor de Decl mais abaixo.
   static CatItem doTrakt[CONT_MAX], daConta[CONT_MAX];
@@ -3548,7 +3561,7 @@ static int montarContinuar(CatItem *saida, int max) {
       // PROXIMO — o "a seguir" e o episodio terminado que o card trocaria pelo
       // seguinte (continuar_desenhar). Fica so o que esta em andamento.
       if (!ajustes_cw_proximo() &&
-          (x.aSeguir || (!strcmp(c->tipo, "series") && c->temporada > 0 && c->episodio > 0 &&
+          (x.aSeguir || (!strcmp(c->tipo, "series") && c->temporada >= 0 && c->episodio > 0 &&
                          c->progresso >= ajustes_cw_concluido()))) {
         proxFora++;
         continue;
@@ -3750,7 +3763,7 @@ int desc_continuar_otimista(int indice) {
   novo = *ci;
   if (novo.progresso < ajustes_cw_minimo() || novo.progresso >= ajustes_cw_concluido()) return 0;
   if (ajustes_cw_fonte() == AJ_CWF_SIMKL && !simkl_ativo()) return 0;
-  if (!strcmp(novo.tipo, "series") && novo.temporada > 0 && novo.episodio > 0) {
+  if (!strcmp(novo.tipo, "series") && novo.temporada >= 0 && novo.episodio > 0) {
     char base[64];
     idbase_copiar(ci->imdb, base, sizeof base);
     snprintf(novo.imdb, sizeof novo.imdb, "%s:%d:%d", base, novo.temporada, novo.episodio);
@@ -7154,19 +7167,21 @@ void desc_meta_chave(char *dst, size_t n, const char *tipo, const char *id) {
 // Temporada de um video. Addon de anime as vezes manda "episode" sem "season"
 // (o entry do Kitsu ja e a temporada); sem o campo o video era descartado e a
 // serie ficava sem episodio nenhum. Ausente com episodio > 0 conta como 1.
-// "season":0 (especiais) continua fora, como sempre foi.
+// Temporada 0 e uma temporada real (especiais), com o seu proprio episodio.
+// Sem numero de episodio, zero nao prova que isto seja uma lista de serie.
 static int videoTemporada(const char *p, const char *f) {
   int t = (int)js_num(p, f, "season", -1);
   if (t < 0 && js_num(p, f, "episode", -1) > 0) t = 1;
+  if (t == 0 && js_num(p, f, "episode", 0) <= 0) return -1;
   return t;
 }
 
-// A resposta do /meta tem ao menos um video com temporada > 0?
+// A resposta do /meta tem ao menos um video de uma temporada, inclusive 0?
 int desc_meta_tem_temporadas(const char *corpo) {
   const char *v = corpo ? js_array(corpo, NULL, "videos") : NULL;
   while (v) {
     const char *f = js_fim(v);
-    if (videoTemporada(v, f) > 0) return 1;
+    if (videoTemporada(v, f) >= 0) return 1;
     v = js_prox(f);
   }
   return 0;
@@ -7193,7 +7208,8 @@ static unsigned epSetCasa(const EpSet *s, unsigned long long k) {
 // vazia (a que encerra a sondagem); so dai em diante o par que nao coube
 // responde "novo" sem ser guardado — o pior caso e o de antes do conjunto.
 static int epSetNovo(EpSet *s, int t, int e) {
-  unsigned long long k = ((unsigned long long)(unsigned)t << 32) | (unsigned)e;
+  // Reserva zero para a casa vazia, inclusive no conjunto de temporadas (0,0).
+  unsigned long long k = ((unsigned long long)((unsigned)t + 1u) << 32) | (unsigned)e;
   unsigned i;
   if (!s->v) {
     s->cap = 1024; s->n = 0;
@@ -7217,18 +7233,25 @@ static int epSetNovo(EpSet *s, int t, int e) {
   return 1;
 }
 
-// Quantos episodios DISTINTOS (temporada > 0) a resposta do /meta traz; em
-// `brutos` (opcional), quantos videos com temporada > 0, repeticoes incluidas.
+// Quantos episodios DISTINTOS (temporada >= 0) a resposta do /meta traz; em
+// `brutos` (opcional), quantos videos com temporada >= 0, repeticoes incluidas.
 // Video sem numero de episodio nao e repeticao de outro (regra do #328): cada
 // um conta.
+//
+// VIDEOS[] COM TEMPORADA FALSA: um addon que numera a temporada pelo indice do
+// episodio ("season":N,"episode":1 em cada video, "released" so com o ano) cria
+// uma aba por episodio (The Blacklist: Season 20+, cada uma com 1 episodio).
+// Reject only the episode-1/year-only pattern shared by all videos[] readers.
+// Sparse catalogs and missing dates alone do not prove malformed numbering.
 static int metaContarEpisodios(const char *corpo, int *brutos) {
   const char *v = corpo ? js_array(corpo, NULL, "videos") : NULL;
   EpSet set = { 0 };
   int n = 0, b = 0;
+  if (js_videos_temporadas_falsas(corpo)) { if (brutos) *brutos = 0; return 0; }
   while (v) {
     const char *f = js_fim(v);
     int t = videoTemporada(v, f);
-    if (t > 0) {
+    if (t >= 0) {
       int e = (int)js_num(v, f, "episode", 0);
       b++;
       if (e <= 0 || epSetNovo(&set, t, e)) n++;
@@ -7265,7 +7288,7 @@ static int metaArquivosCompativeis(const char *arquivos, const char *catalogo) {
     while (v) {
       const char *f = js_fim(v);
       int t = videoTemporada(v, f), e = (int)js_num(v, f, "episode", 0);
-      if (t > 0) {
+      if (t >= 0) {
         unsigned antes = temps[i].n;
         if (epSetNovo(&temps[i], t, 0) && temps[i].n == antes) ok = 0;
         if (e > 0) {
@@ -7291,20 +7314,20 @@ static int metaArquivosCompativeis(const char *arquivos, const char *catalogo) {
 #define VIDEOS_MAX 2400
 
 // videos[] de um /meta -> lista de CatEp ORDENADA por (temporada, episodio).
-// So entram videos com temporada > 0. Devolve quantos.
+// Inclui especiais (temporada 0) sem renumerar o par nem o id do video.
 static int parsearEpisodios(const char *corpo, CatEp *eps, int max) {
   int n = 0;
-  const char *p = js_array(corpo, NULL, "videos");
+  const char *p = metaContarEpisodios(corpo, NULL) ? js_array(corpo, NULL, "videos") : NULL;
   EpSet set = { 0 };
   while (p && n < max) {
     const char *f = js_fim(p);
     int t = videoTemporada(p, f);
-    int ne = t > 0 ? (int)js_num(p, f, "episode", 0) : 0;
+    int ne = t >= 0 ? (int)js_num(p, f, "episode", 0) : 0;
     // Repeticao sai JA AQUI, antes do corte de `max`: descartada so depois de
     // ordenar, as vagas iam para copias dos primeiros episodios e o resto
     // da serie nem era lido. Fica o primeiro da resposta; sem numero de
     // episodio nao e repeticao.
-    if (t > 0 && (ne <= 0 || epSetNovo(&set, t, ne))) {
+    if (t >= 0 && (ne <= 0 || epSetNovo(&set, t, ne))) {
       CatEp *e = &eps[n];
       char d[24] = "";
       memset(e, 0, sizeof *e);
@@ -7463,8 +7486,9 @@ static void temporadasDosEps(const CatEp *eps, int n, TempsPub *tp) {
   tp->n = 0;
   for (i = 0; i < n; i++) {
     int t = eps[i].temporada;
-    if (t <= 0) continue;
-    for (j = 0; j < tp->n && tp->t[j] < t; j++) {}
+    if (t < 0) continue;
+    // Temporadas regulares primeiro; especiais continuam sendo a temporada 0.
+    for (j = 0; j < tp->n && tp->t[j] > 0 && (t == 0 || tp->t[j] < t); j++) {}
     if (j < tp->n && tp->t[j] == t) continue;
     if (tp->n >= CAT_TEMP_MAX) continue;
     for (k = tp->n; k > j; k--) tp->t[k] = tp->t[k - 1];
@@ -8339,12 +8363,12 @@ static void *buscarEps(void *u) {
       edit.nTemporadas = tp.n;
       memcpy(edit.temporadas, tp.t, sizeof(int) * (size_t)tp.n);
     } else
-    { const char *v = js_array(corpo, NULL, "videos");
+    { const char *v = desc_meta_n_episodios(corpo) ? js_array(corpo, NULL, "videos") : NULL;
       edit.nTemporadas = 0;
       while (v) {
         const char *fv = js_fim(v);
         int t2 = videoTemporada(v, fv);
-        if (t2 > 0) {
+        if (t2 >= 0) {
           int j, achou = 0;
           for (j = 0; j < edit.nTemporadas; j++)
             if (edit.temporadas[j] == t2) { achou = 1; break; }
@@ -8355,7 +8379,8 @@ static void *buscarEps(void *u) {
       { int i2, j2, tmp;
         for (i2 = 0; i2 < edit.nTemporadas; i2++)
           for (j2 = i2 + 1; j2 < edit.nTemporadas; j2++)
-            if (edit.temporadas[j2] < edit.temporadas[i2]) {
+            if (edit.temporadas[j2] > 0 &&
+                (edit.temporadas[i2] == 0 || edit.temporadas[j2] < edit.temporadas[i2])) {
               tmp = edit.temporadas[i2];
               edit.temporadas[i2] = edit.temporadas[j2];
               edit.temporadas[j2] = tmp;
@@ -9490,6 +9515,7 @@ void desc_pedir_titulo_semente(const char *imdb, long tmdb, const char *tipo,
   { size_t k = dp ? (size_t)(dp - imdb) : strlen(imdb);
     if (k >= sizeof id) k = sizeof id - 1;
     memcpy(id, imdb, k); id[k] = 0; }
+  sobSessao = nv_perfil_sessao_ler();
   { int j = cat_indice_por_imdb(id);
     if (j >= 0) { sobIndice = j; return; } }
   snprintf(s.imdb, sizeof s.imdb, "%s", id);

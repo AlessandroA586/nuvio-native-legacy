@@ -3323,7 +3323,7 @@
   T("O fio de %s", "%sの系譜"),
   T("O fio entre elas: %s.", "2 つをつなぐもの: %s。"),
   T("O foco ficou mais claro", "フォーカスが見やすくなりました"),
-  T("O fundo da tela Cinema da abertura. Desligado: preto. Arte: o backdrop do título, nítido, com véu escuro. Arte borrada (padrão): o mesmo backdrop, desfocado e escurecido, como sempre. Vale só nesta TV.", "シネマ オープニング画面の背景です。オフ：黒。アート：作品の背景をぼかさず、暗いベールの下に表示します。ぼかしアート（標準）：同じ背景を、いつも通りぼかして暗くします。このテレビのみ。"),
+  T("O fundo da tela Cinema da abertura. Desligado: preto. Arte (padrão): o backdrop do título, nítido, com véu escuro. Arte borrada: o mesmo backdrop, desfocado e escurecido, como sempre. Vale só nesta TV.", "シネマ オープニング画面の背景です。オフ：黒。アート（標準）：作品の背景をぼかさず、暗いベールの下に表示します。ぼかしアート：同じ背景を、いつも通りぼかして暗くします。このテレビのみ。"),
   T("O fundo que você escolhe no Xperience para cada coleção passa a ser o herói dela aqui, em 4K e nas cores da marca. As abas da página de coleção ficaram como o resto do app, e na Samsung a home não engasga mais enquanto uma fileira carrega.", "Xperience でコレクションごとに選んだ背景が、ここではそのコレクションのヒーローになります。4K で、ブランドカラーに合わせて表示されます。コレクションページのタブはアプリの他の部分と同じになり、Samsung では行の読み込み中にホームがカクつかなくなりました。"),
   T("O guia precisa de um addon de canais (como o FrostView TV) instalado na conta.", "ガイドには、アカウントにインストールされたチャンネルアドオン（FrostView TV など）が必要です。"),
   T("O guia se enche por dois caminhos: um addon de canais (como o FrostView TV) instalado na conta, ou um portal IPTV cadastrado em Ajustes › Conta.", "ガイドの内容は 2 通りで埋まります。アカウントにインストールされたチャンネルアドオン（たとえば FrostView TV）か、設定 › アカウントで登録した IPTV ポータルです。"),

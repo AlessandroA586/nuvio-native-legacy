@@ -783,7 +783,6 @@ static void desfazerAssistido(const void *p) {
   int volta = !c->intencao;
   if (volta) { printf("[visto] marcado por desfazer-menu-manual pos=0 dur=0 assistido=0s id=%s\n", c->ci.imdb); fflush(stdout); }
   visto_titulo(c->ci.imdb, c->ci.tipo, c->ci.temporadas, c->ci.nTemporadas, volta, visto_destinos());
-  if (trakt_ativo()) trakt_assistido_tipo(c->ci.imdb, c->ci.tipo, volta);
   cat_historico_definir_id(c->ci.imdb, c->ci.tipo, volta);
   desc_remontar_fileiras();
 }
@@ -895,12 +894,7 @@ static void iniciarAssistido(int atual, const CatItem *ci, int soMarcar) {
       // elas apagaria a serie da biblioteca de la (ver simkl.c).
       visto_titulo(ci->imdb, ci->tipo, ci->temporadas, ci->nTemporadas, intencao,
                    visto_destinos());
-      if (trakt_ativo()) {
-        // O caminho do Trakt NAO MUDOU: mesmo pedido, mesma espera, espelho so
-        // depois do 2xx em ctx_atualizar.
-        if (!trakt_assistido_tipo(ci->imdb, ci->tipo, intencao))
-          estadoOperacao = CTX_FALHA;
-      } else {
+      { // Local intent is durable; failed destinations retry in sync.
         // SEM TRAKT NAO HA RESPOSTA A ESPERAR (o mesmo raciocinio do "+" na
         // Lista do Nuvio, acima): o local e a verdade desta TV, aplicado agora,
         // e a conta o devolve no proximo pull (sync.c aplica os vistos da
@@ -1334,9 +1328,9 @@ static void ilhaCtx(GfxRect p, float raioPx, float a) {
   float raio = raioPx / p.h;
   gfx_sombra_sob((GfxRect){ p.x - 18.0f, p.y - 8.0f, p.w + 36.0f, p.h + 40.0f }, 1.0f, 0, 0.5f,
                  0, 0, 0, .42f * a, p, raioPx, vid ? 0.0f : .98f * a);
-  // O vidro le a textura assada e deixava o texto da fileira aparecer por
-  // tras; uma base quase solida por baixo (a cor do modo sem vidro) fecha.
-  if (vid) { gfx_cor(p, raio, .071f, .075f, .086f, .985f * a); gfx_vidro_folha(p, raio, a); } // vidro-ok: opaque base under the glass sheet
+  // Frost on: the shared glass material alone. The old .985 opaque base under it
+  // hid the blur, so the quick menu read flat.
+  if (vid) gfx_vidro_folha(p, raio, a);
   else gfx_cor(p, raio, .071f, .075f, .086f, .98f * a);
   if (!vid) gfx_luz_canto(p, raio, p.w * .25f, -p.h * .25f, p.w * .9f, 1, 1, 1, .04f * a);
 }

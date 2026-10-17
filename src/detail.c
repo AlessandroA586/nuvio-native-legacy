@@ -850,6 +850,18 @@ static int epAbsoluto(int c) {
   return -1;
 }
 
+// Sem retomada, especiais nao mudam o primeiro episodio regular oferecido.
+// Uma serie apenas de especiais conserva o seu primeiro episodio real.
+static const CatEp *primeiroEpRegular(void) {
+  int n = cat_n_episodios(idx);
+  const CatEp *primeiro = cat_episodio(idx, 0);
+  for (int i = 0; i < n; i++) {
+    const CatEp *ep = cat_episodio(idx, i);
+    if (ep && ep->temporada > 0) return ep;
+  }
+  return primeiro;
+}
+
 static int epVisiveis(void) {
   int alvo = temporadaEm(temporada), n = cat_n_episodios(idx), i, q = 0;
   if (n < 1) return 0;
@@ -1295,6 +1307,7 @@ static const char *sinopseDe(int i) {
 static char arteFixa[NV_TEX_URL_MAX], logoFixo[512], logoCatalogoFixo[512];
 static int  arteFixaPoster;
 
+static GfxRect morphLogo;   // o logo do hero no ultimo quadro (player_morph_de)
 static const char *logoDe(int i) {
   const CatItem *c = cat_item(i);
   if (i == idx && logoFixo[0]) return logoFixo;
@@ -1385,6 +1398,23 @@ static int arteDetalheEhPoster(int i) {
     int r = c && c->poster[0] && u && !strcmp(u, c->poster);
     if (i == idx) arteFixaPoster = r;
     return r; }
+}
+
+int detail_arte_titulo(const CatItem *titulo, char *saida, size_t tam, int *poster) {
+  const CatItem *c;
+  const char *u;
+  if (saida && tam) saida[0] = 0;
+  if (poster) *poster = 0;
+  if (!titulo || !saida || !tam || !aberto || saindo || !idxTemCopia ||
+      !idxImdb[0] || strcmp(titulo->imdb, idxImdb) ||
+      strcmp(titulo->tipo, idxCopia.tipo)) return 0;
+  c = cat_item(idx);
+  if (!c || strcmp(c->imdb, idxImdb) || strcmp(c->tipo, titulo->tipo)) return 0;
+  u = arteDe(idx);
+  if (!u || !*u || strlen(u) >= tam) return 0;
+  snprintf(saida, tam, "%s", u);
+  if (poster) *poster = arteDetalheEhPoster(idx);
+  return 1;
 }
 
 static void desenhaArteDetalhe(GfxRect alvo, GLuint tex, const char *arte,
@@ -1588,10 +1618,10 @@ static void abrirInterno(const HomeItem *it) {
   { const CatItem *ci0 = cat_item(idx);
     int t = 0, e = 0, achou = 0;
     if (ci0 && ci0->progresso > 0 && ci0->progresso < ajustes_cw_concluido() &&
-        ci0->temporada > 0 && ci0->episodio > 0) {
+        ci0->temporada >= 0 && ci0->episodio > 0) {
       t = ci0->temporada; e = ci0->episodio; achou = 1;
     } else {
-      const CatEp *e0 = cat_episodio(idx, 0);
+      const CatEp *e0 = primeiroEpRegular();
       if (e0) { t = e0->temporada; e = e0->episodio; achou = 1; }
     }
     if (achou && ci0) {
@@ -1832,7 +1862,7 @@ static int episodioAlvo(int *temp, int *epis, int *origem) {
     return 1;
   }
   // Em andamento: o item do "Continuar assistindo" traz temporada e episodio.
-  if (ci && ci->progresso > 0 && ci->progresso < ajustes_cw_concluido() && ci->temporada > 0 && ci->episodio > 0 &&
+  if (ci && ci->progresso > 0 && ci->progresso < ajustes_cw_concluido() && ci->temporada >= 0 && ci->episodio > 0 &&
       !extras_ep_visto(ci->temporada, ci->episodio)) {
     if (temp) *temp = ci->temporada;
     if (epis) *epis = ci->episodio;
@@ -1875,7 +1905,7 @@ static int episodioAlvo(int *temp, int *epis, int *origem) {
 // Episodio que os COMENTARIOS seguem: o ultimo pisado pelo foco; antes de o
 // foco passar pela fileira, o mesmo alvo do botao de reproduzir.
 static int episodioDosComentarios(int *temp, int *epis) {
-  if (foco.fileira != SEC_EPISODIOS && comEpT > 0 && comEpE > 0) {
+  if (foco.fileira != SEC_EPISODIOS && comEpT >= 0 && comEpE > 0) {
     *temp = comEpT; *epis = comEpE; return 1;
   }
   return episodioAlvo(temp, epis, NULL);
@@ -1905,7 +1935,7 @@ static void comentariosEscolher(void) {
   if (n <= 0) return;
   // Voltar das temporadas deixa a pagina em outra temporada que a confirmada:
   // reabrir volta para a do episodio de comEpT/comEpE.
-  if (comEpT > 0 && ci && ci->nTemporadas > 0 && temporadaEm(temporada) != comEpT)
+  if (comEpE > 0 && ci && ci->nTemporadas > 0 && temporadaEm(temporada) != comEpT)
     for (k = 0; k < ci->nTemporadas; k++)
       if (ci->temporadas[k] == comEpT) {
         temporada = k;
@@ -3394,7 +3424,7 @@ static void sincronizarColunas(void) {
   // quando voltam, ela e RELOCALIZADA pelo numero do episodio guardado em
   // comEpT/comEpE, que e estavel e sobrevive a troca do bloco do catalogo.
   if (foco.nColunas[SEC_EPISODIOS] < 1) return;
-  if (comEpT > 0 && comEpE > 0) {
+  if (comEpT >= 0 && comEpE > 0) {
     int c, n = foco.nColunas[SEC_EPISODIOS];
     for (c = 0; c < n; c++) {
       const CatEp *e = cat_episodio(idx, epAbsoluto(c));
@@ -3711,7 +3741,7 @@ void detail_atualizar(float dt, Uint32 agora) {
     if (comentEp) {
       const CatItem *ci = cat_item(idx);
       int t = 0, ep = 0;
-      if (ci && episodioDosComentarios(&t, &ep) && t > 0 && ep > 0)
+      if (ci && episodioDosComentarios(&t, &ep) && t >= 0 && ep > 0)
         extras_pedir_comentarios_ep(ci->imdb, t, ep);
     }
   }
@@ -4617,6 +4647,7 @@ static void heroWeb(float a, float desloc) {
     { float f = (float)(SDL_GetTicks() - logoDesde) / 260.0f;
       if (f < 1.0f) aLogo *= f < 0.0f ? 0.0f : f; }
   } else logoVisto[0] = 0;
+  morphLogo.w = 0.0f;
   if (texLogo) {
     float asp = tex_aspecto(arqLogo);
     if (asp <= 0.0f) asp = 2.5f;
@@ -4642,6 +4673,7 @@ static void heroWeb(float a, float desloc) {
     if (w > larguraLogoHero()) { w = larguraLogoHero(); h = w / asp; }
     GfxRect r = { NV_DETW2_X, baseLogo - h, w, h };
     gfx_tex_aspect_atual = 0.0f;   // o logo ja vem na proporcao certa
+    morphLogo = r;
     // LOGO PRETO VIRA BRANCO. O TMDB serve a mesma marca em versao clara e
     // escura e NAO diz qual e qual — nao ha campo para isso, e o ranking do
     // proprio app web ordena so por idioma e nota. Quando cai a escura, ela
@@ -4684,7 +4716,7 @@ static void heroWeb(float a, float desloc) {
   char rot[48];
   int retomando = 0;
   { int t = 0, e = 0, de = 0;
-    if (ehSerie() && episodioAlvo(&t, &e, &de) && t > 0 && e > 0 && de >= 2)
+    if (ehSerie() && episodioAlvo(&t, &e, &de) && t >= 0 && e > 0 && de >= 2)
       // i18n NO FORMATO E NA PALAVRA. A frase montada nunca casa com uma chave
       // (ver idioma.h), entao traduzir so no desenho deixava "Retomar T1E1" em
       // portugues com a interface em ingles — o issue #12. O T/E tambem muda:
@@ -4708,7 +4740,7 @@ static void heroWeb(float a, float desloc) {
       desc_duracao_min(falta > 0 ? falta : 1, tf, sizeof tf);
       if (ehSerie()) {
         int t = 0, e = 0, de = 0;
-        if (episodioAlvo(&t, &e, &de) && t > 0 && e > 0) {
+        if (episodioAlvo(&t, &e, &de) && t >= 0 && e > 0) {
           char ep[16];
           snprintf(ep, sizeof ep, i18n("T%dE%d"), t, e);
           snprintf(rot, sizeof rot, "%s · %s", ep, tf);
@@ -4731,6 +4763,7 @@ static void heroWeb(float a, float desloc) {
     float bx = NV_DETW2_X;
     GfxRect rp = heroAcaoRect(&bx, &cyBtn, larguraPrimario(rot), NV_DETW2_BTN_H);
     desenhaBotao(rp, rot, 0, nivel == 0 && botao == nb, a);
+    player_morph_de(morphLogo, rp);   // A3: o morph da abertura parte daqui
     primarioPct = -1;   // os outros botoes nao tem trilho
     if (a > 0.3f) ponteiro_alvo(rp.x, rp.y, rp.w, rp.h, ponteiroDetalhe, NULL, -1, nb);
     bx += rp.w + NV_DETW2_BTN_GAP; nb++;
@@ -5090,7 +5123,7 @@ static int temporadaEm(int c) {
 }
 static void rotuloTemporada(int c, char *dst, size_t n) {
   int s = temporadaEm(c);
-  if (s == 0) snprintf(dst, n, "Especiais");
+  if (s == 0) snprintf(dst, n, "%s", i18n("Especiais"));
   else snprintf(dst, n, i18n("Temporada %d"), s);
 }
 // Episodios da temporada na posicao `c` (a contagem do segmentado).
@@ -6586,7 +6619,7 @@ static const char *rotuloPilulaCom(int k) {
   static char buf[64];
   int t = 0, ep = 0;
   if (k != 1) return COM_ROT[0];
-  if (episodioDosComentarios(&t, &ep) && t > 0 && ep > 0) {
+  if (episodioDosComentarios(&t, &ep) && t >= 0 && ep > 0) {
     char te[24];
     snprintf(te, sizeof te, i18n("T%dE%d"), t, ep);
     snprintf(buf, sizeof buf, "%s  \xc2\xb7  %s", i18n(COM_ROT[1]), te);

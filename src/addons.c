@@ -1147,11 +1147,18 @@ static void episodioPedido(const char *id, int *temporada, int *episodio) {
   // idbase_episodio, e nao o corte no primeiro ':': "kitsu:41370:5" lia
   // temporada 41370 e filtrava toda fonte fora (idbase.h).
   idbase_episodio(id, temporada, episodio);
+  // Kitsu id:E nao informa temporada; zero ali nao quer dizer especial.
+  // O zero explicito de id:T:E precisa filtrar o especial certo.
+  if (id && !idbase_e_imdb(id)) {
+    const char *p = id + idbase_len(id);
+    int t, e;
+    if (*p == ':' && sscanf(p + 1, "%d:%d", &t, &e) == 1) *temporada = -1;
+  }
 }
 
 static int episodioCorreto(const char *obj, const char *fim, int temporada, int episodio) {
   int t, e;
-  if (temporada <= 0 || episodio <= 0) return 1;
+  if (temporada < 0 || episodio <= 0) return 1;
   t = (int)js_num(obj, fim, "season", -1);
   e = (int)js_num(obj, fim, "episode", -1);
   // Alguns addons antigos nao devolvem os campos. Quando devolvem, eles sao
@@ -1382,7 +1389,7 @@ static void *buscarUmAddon(void *u) {
           snprintf(d->idioma, sizeof d->idioma, "%s", cod);
           snprintf(d->provedor, sizeof d->provedor, "%s", origem->nome);
           snprintf(d->arquivo, sizeof d->arquivo, "%s", nome);
-          if (B->temporada > 0 && B->episodio > 0)
+          if (B->temporada >= 0 && B->episodio > 0)
             snprintf(d->rotulo, sizeof d->rotulo, i18n("T%dE%d  \xc2\xb7  %s%s%.22s"),
                      B->temporada, B->episodio, i18n(ling_nome(cod)), nome[0] ? "  \xc2\xb7  " : "", nome);
           else

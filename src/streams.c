@@ -25,6 +25,7 @@
 #include "text.h"
 #include "anim.h"
 #include "layout.h"
+#include "ilha.h"
 #include "ajustes.h"   /* ajustes_qualidade: o teto de "Qualidade maxima" */
 #include <stdio.h>
 #include <string.h>
@@ -69,13 +70,11 @@
 #define FOLHA_PAD_E     48.0f  // da borda da folha ao cartao da linha
 #define FOLHA_PAD_D     56.0f
 #define FOLHA_TXT       26.0f  // do cartao ao texto
-// NO PLAYER A FOLHA NASCE DA ILHA DO RELOGIO (dono, 03/10: "no player o
-// componente do source tem que sair da ilha do relogio"), como Audio,
-// Legendas e Episodios: plrilha.h cresce a pilula da hora ate o corpo, no
-// canto do relogio, e a folha desenha dentro dele. Fora do player (detalhe)
-// segue a folha da borda direita. `folhaOY` desce o conteudo para baixo do
-// cabecalho da ilha e `folhaBase` e onde a lista termina.
+// Sources grows from the clock island: plrilha in the player, ilha_corpo on
+// browsing pages. Without a visible clock, keep the right-edge sheet.
+// folhaOY places content below the clock header; folhaBase ends the list.
 static float folhaOY, folhaBase;
+static int folhaRelogio; // Latched at opening, retained through closing.
 #define FOLHA_ILHA_Y     48.0f   // plrilha.c: Y_TOPO
 #define FOLHA_ILHA_CAB   64.0f   // plrilha.c: CAB_H (a linha da hora)
 #define FOLHA_ILHA_BASE  48.0f   // margem de baixo = a de cima
@@ -3947,7 +3946,11 @@ static int linhaDe(int indice) {
 static int folhaIlha(void) { return player_aberto(); }
 static float folhaIlhaH(void) { return NV_TELA_H - FOLHA_ILHA_Y - FOLHA_ILHA_CAB - FOLHA_ILHA_BASE; }
 static void folhaGeometria(void) {
-  if (folhaIlha()) {
+  if (folhaRelogio) {
+    // Island body (ilha_corpo): its top strip is the clock, the list starts below.
+    folhaOY = NV_ILHA_Y + NV_ILHA_H + FOLHA_ILHA_PAD - 74.0f;
+    folhaBase = NV_TELA_H - FOLHA_ILHA_BASE - 16.0f;
+  } else if (folhaIlha()) {
     folhaOY = FOLHA_ILHA_Y + FOLHA_ILHA_CAB + FOLHA_ILHA_PAD - 74.0f;
     folhaBase = NV_TELA_H - FOLHA_ILHA_BASE - 16.0f;
   } else {
@@ -4011,6 +4014,8 @@ void stream_folha_abrir(void) {
   int excl, aut, alvo;
   fitAbrir();
   aberta=1; escolha=-1; grupo=1; filtro=0; soMp4=0; soCache=0; soDub=0; recarregar=0;
+  { float ix, iy, iw, ih;
+    folhaRelogio = !player_aberto() && ajustes_relogio_ligado() && ilha_rect(&ix, &iy, &iw, &ih); }
   folhaGeometria();
   atualizarProvedores();
   ondever_apps_atualizar();
@@ -4237,7 +4242,7 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
   // `upd`). Abrir (stream_folha_abrir), as teclas e o desenho montam de novo
   // por conta propria; o foco pedido com a folha fechada era sobrescrito ao
   // abrir, entao sai daqui tambem.
-  if (!aberta && anim < .005f) { focoFixo = -1; return; }
+  if (!aberta && anim < .005f) { focoFixo = -1; folhaRelogio = 0; return; }
   // #205: a carta em foco que um fio de conferencia acabou de achar fora do
   // cache deixa o grupo por um lugar atras dos cached do seu grupo. Prender o
   // foco pelo indice ANTES do montar, com o Y da linha como ela esta agora —
@@ -4627,6 +4632,7 @@ static Uint32 folhaAgora;
 // forma, e a ilha segue chamando o ultimo corpo enquanto encolhe.
 static void corpoIlhaFolha(GfxRect c, float a, void *u) {
   (void)u;
+  if (folhaRelogio && aberta && a > .5f && ponteiro_ativo()) ponteiro_camada();
   corpoFolha(c.x, c.w, a, folhaAgora, 1);
 }
 static void stream_folha_desenharCorpo_(Uint32 agora) {
@@ -4645,6 +4651,10 @@ static void stream_folha_desenharCorpo_(Uint32 agora) {
       p.corpo = corpoIlhaFolha;
       plrilha_pedir(&p); }
     return;
+  }
+  if (folhaRelogio) {
+    if (aberta) ilha_corpo(FOLHA_W, folhaBase + 16.0f - NV_ILHA_Y, corpoIlhaFolha, NULL);
+    return; // ilha_desenhar owns the surface, dim and closing.
   }
   float x=NV_TELA_W-FOLHA_W-FOLHA_MARGEM+(1-anim)*(FOLHA_W+FOLHA_MARGEM);
   // A FOLHA E UMA ILHA (dono, 02/10, mockups "Glass UI — ilha"): flutua a
@@ -4672,7 +4682,8 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
   GfxRect ilhaR={x,0,w,NV_TELA_H};
   ajustes_acento(&ar,&ag,&ab);
   ai=(int)(ar*255.0f+.5f);
-  if (ilha) plrilha_rect(&ilhaR);
+  if (folhaRelogio) ilhaR = (GfxRect){x, NV_ILHA_Y, w, folhaBase + 16.0f - NV_ILHA_Y};
+  else if (ilha) plrilha_rect(&ilhaR);
   int ptr = aberta && anim > .5f && ponteiro_ativo();
 #ifdef NV_TOUCH_UI
   toquerol_vincular(&toqueFontes, (GfxRect){x, FOLHA_TOPO, w, areaLista()},

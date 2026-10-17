@@ -333,7 +333,7 @@ void intro_montar_url(char *url,size_t n,const char *imdb,long tmdb,int t,int e,
   size_t k;
   if(tmdb>0)k=(size_t)snprintf(url,n,"https://api.theintrodb.org/v3/media?tmdb_id=%ld",tmdb);
   else k=(size_t)snprintf(url,n,"https://api.theintrodb.org/v3/media?imdb_id=%s",imdb?imdb:"");
-  if(k<n&&t>0&&e>0)k+=(size_t)snprintf(url+k,n-k,"&season=%d&episode=%d",t,e);
+  if(k<n&&t>=0&&e>0)k+=(size_t)snprintf(url+k,n-k,"&season=%d&episode=%d",t,e);
   if(k<n&&durSeg>1.0)snprintf(url+k,n-k,"&duration_ms=%.0f",durSeg*1000.0);
 }
 
@@ -359,10 +359,10 @@ static void chave404(char *k,size_t n,const Pedido *p){
 static int pedirEp(const Pedido *p,int t,int e,double dur,char **json){
   char url[320],k[32],*j=NULL;int st=0;long agora=(long)time(NULL);
   *json=NULL;chave404(k,sizeof k,p);
-  if(t>0&&e>0&&cred_404_visto(k,t,e,agora))return R_VAZIO;
+  if(t>=0&&e>0&&cred_404_visto(k,t,e,agora))return R_VAZIO;
   intro_montar_url(url,sizeof url,p->id,p->tmdb,t,e,dur);
   buscar(url,&j,&st);
-  if(st==204||st==404){free(j);if(t>0&&e>0)cred_404_marcar(k,t,e,agora);return R_VAZIO;}
+  if(st==204||st==404){free(j);if(t>=0&&e>0)cred_404_marcar(k,t,e,agora);return R_VAZIO;}
   if(st<200||st>299||!j){
     free(j);
     printf("[intro] %s S%02dE%02d: resposta %d, tenta de novo depois\n",k,t,e,st);fflush(stdout);
@@ -388,7 +388,7 @@ static int geracaoVale(unsigned g){int v;pthread_mutex_lock(&trava);v=(g==geraca
 static void tentarVizinhos(const Pedido *p){
   int cand[2],k,nc=0;double durs[2];
   double ini,dv;
-  if(p->t<1||p->e<1||cred_viz_ler(p->id,p->t,&ini,&dv))return;
+  if(p->t<0||p->e<1||cred_viz_ler(p->id,p->t,&ini,&dv))return;
   if(p->e>1){cand[nc]=p->e-1;durs[nc++]=p->durAnt;}
   cand[nc]=p->e+1;durs[nc++]=p->durProx;
   for(k=0;k<nc;k++){
@@ -423,7 +423,7 @@ static int pedirAniskip(const Pedido *p,IntroTrecho *v,int max,int *falha){
   *falha=0;
   if(ep<1)return 0;
   if(!strncmp(p->id,"kitsu:",6)||!strncmp(p->id,"mal:",4)){
-    if(p->t>1)return 0; // id do addon ja e uma temporada MAL
+    if(p->t!=1)return 0; // id do addon ja e uma temporada MAL; especial exige mapa proprio
     mal=malDe(p->id);
   }else{
     if(!p->anime)return 0;
@@ -532,7 +532,7 @@ void intro_pedir_ids(const char *imdb,long tmdb,int t,int e,double durAnt,double
     nId=(int)(c0-imdb)+(int)strcspn(c0,":");if(nId>(int)sizeof b.id-1)nId=(int)sizeof b.id-1;
     memcpy(b.id,imdb,(size_t)nId);}
   b.tmdb=tmdb>0?tmdb:0;
-  b.t=t>0&&e>0?t:0;b.e=t>0&&e>0?e:0;
+  b.t=t>=0&&e>0?t:0;b.e=t>=0&&e>0?e:0;
   b.durAnt=durAnt;b.durProx=durProx;
   disparar(&b,0.0,1);
 }
@@ -653,7 +653,7 @@ double intro_fim_estimado(double dur){
 int intro_resposta_confere(const char *j,int t,int e){
   const char *f;double rt,re;
   if(!j)return 0;
-  if(t<1||e<1)return 1;                       // filme: sem par a conferir
+  if(t<0||e<1)return 1;                       // filme: sem par a conferir
   f=js_fim(j);
   rt=js_num(j,f,"season",-1);re=js_num(j,f,"episode",-1);
   // Sem eco (formato antigo): nao ha como provar o contrario, aceita.

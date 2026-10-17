@@ -101,6 +101,7 @@ int stream_primeira_boa(int n) { (void)n; legadas++; assert(!"VOD policy must by
 int stream_primeira_boa_sessao(int n, uint64_t sessao) {
   (void)sessao; return stream_primeira_boa(n);
 }
+int stream_filtro_permite(const Stream *s) { (void)s; return 1; }
 int stream_verificar_proxima_vod(int i, int n, int *conferidas) {
   (void)i; (void)n; legadas++; *conferidas = 1; return 1;
 }

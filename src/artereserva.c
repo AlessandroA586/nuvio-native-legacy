@@ -129,7 +129,7 @@ int arte_reserva_episodios(const char *imdb, const char *corpo) {
   int n = 0, i, alvo = 0;
   unsigned long menor = (unsigned long)-1;
   char id[16];
-  if (!imdb || strncmp(imdb, "tt", 2) || !corpo) return 0;
+  if (!imdb || strncmp(imdb, "tt", 2) || !corpo || js_videos_temporadas_falsas(corpo)) return 0;
   snprintf(id, sizeof id, "%.*s", (int)strcspn(imdb, ":"), imdb);
   tmp = malloc(sizeof(AepItem) * AEP_MAX);
   if (!tmp) return 0;

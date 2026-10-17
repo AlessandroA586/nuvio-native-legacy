@@ -613,6 +613,12 @@ extern double gfx_vidro_fill, gfx_vidro_copia;
 // O quadro tem video vivo (furo) por baixo: o vidro sai chapado ate o proximo
 // gfx_novo_quadro (a tela ali e o furo, nao o que passa no video).
 void gfx_vidro_fosco_bloquear(void);
+// The live-video stand-in for this frame (until gfx_novo_quadro): a blurred
+// screen-oriented texture (a GfxMini target) that glass over the video hole
+// reads instead of going flat. 0 = flat, as before.
+void gfx_vidro_fonte_video(GLuint tex);
+// Glass drawn with a blur source this frame (zeroed in gfx_novo_quadro).
+extern int gfx_vidro_com_fonte;
 // CANAIS DE FUNDO DA LUZ ASSADA (fundo.c, "Arte borrada" e "Frost" de tela
 // cheia): o quadro pequeno (320x180, GL_RGB) do `canal` (0..1), pintado por
 // `pintar(ctx)` em coordenadas de layout de tela cheia pelo MESMO assado da luz
@@ -673,6 +679,10 @@ void          gfx_mascara_opaca(GfxRect r, float raioPx);
 // de r, entao anel e miolo no mesmo rect dao uma borda so. `raio` e o de r,
 // normalizado pela altura, como em gfx_cor.
 void gfx_anel(GfxRect r, float raio, float esp,
+              float cr, float cg, float cb, float ca);
+// Arco do circulo inscrito em r: `esp` px por dentro, de `ini` (fracao de
+// volta, 0 = topo) por `frac` voltas no sentido horario. Um quad (GFX_ANEL).
+void gfx_arco(GfxRect r, float esp, float ini, float frac,
               float cr, float cg, float cb, float ca);
 // Painel opaco grande de cor com canto arredondado: clear tesourado no miolo,
 // faixa de borda pelo shader (mesmo pixel de gfx_cor; bem mais barato na GPU).
