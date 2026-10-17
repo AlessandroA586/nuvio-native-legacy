@@ -101,6 +101,14 @@ typedef struct {
   // hero era decodificado com metade da resolucao e esticado para 1920 na tela,
   // que e o borrao que o dono viu.
   int limite;
+  // Ja foi pedido abaixo de NV_TEX_MIP_LARG, isto e, desenhado como CARD. A
+  // promocao a heroi refaz a textura a 1280/1920; sem piramide, o card que
+  // divide o arquivo com o heroi trocava de cara ao foco (o "pisca nas artes"
+  // da C9, tests/pisca3_shot.sh arte-promo).
+  int card;
+  // A piramide da textura ATUAL, decidida no envio: a devolucao dos bytes usa
+  // ela, e nao uma decisao refeita depois que `card` mudou.
+  int mip;
   // O teto com que a TEXTURA ATUAL foi de fato decodificada, e a largura da
   // FONTE que a produziu.
   //
@@ -413,8 +421,9 @@ static long bytesTexturaMip(int w, int h, int comPiramide) {
 }
 
 // Mesma decisao que o envio toma, para a conta e a cobranca nao divergirem.
-static int temPiramide(int w, int h) {
-  if (w >= 1024) return 0;
+#define NV_TEX_MIP_LARG 1024
+static int temPiramide(int w, int h, int card) {
+  if (w >= NV_TEX_MIP_LARG && !card) return 0;
 #ifdef __EMSCRIPTEN__
   { int lp = (w > 0) && ((w & (w - 1)) == 0);
     int ap = (h > 0) && ((h & (h - 1)) == 0);
@@ -423,8 +432,8 @@ static int temPiramide(int w, int h) {
   return 1;
 }
 
-static long bytesTextura(int w, int h) {
-  return bytesTexturaMip(w, h, temPiramide(w, h));
+static long bytesTextura(const Item *it) {
+  return bytesTexturaMip(it->w, it->h, it->mip);
 }
 
 // DUAS FILAS, e a separacao e o conserto.
@@ -811,7 +820,7 @@ sai:
   tex_despejos++; tex_despejos_total++;
   if (!frio) { tex_despejos_quentes++; tex_despejos_quentes_total++; }
   if (itens[melhor].tex) { gfx_tex_esquecer(itens[melhor].tex); glDeleteTextures(1, &itens[melhor].tex); }
-  bytesUsados -= bytesTextura(itens[melhor].w, itens[melhor].h);
+  bytesUsados -= bytesTextura(&itens[melhor]);
   if (bytesUsados < 0) bytesUsados = 0;
   soltarBruto(&itens[melhor]);
   memset(&itens[melhor], 0, sizeof(Item));
@@ -2559,7 +2568,7 @@ static int threadDecode(void *arg) {
       continue;
     }
     char caminho[NV_TEX_URL_MAX];
-    int limite;
+    int limite, card;
     Uint32 filaEm = 0, filaWait = 0;
     int localDireto = 0;
     strncpy(caminho, itens[idx].caminho, sizeof caminho - 1);
@@ -2570,6 +2579,7 @@ static int threadDecode(void *arg) {
     // Copiado SOB O MUTEX: o item pode ser promovido a hero enquanto este fio
     // decodifica, e ler o campo depois daria uma leitura sem trava.
     limite = itens[idx].limite > 0 ? itens[idx].limite : NV_TEX_LARG_MAX;
+    card = itens[idx].card;
     // Cor viva (corviva.h) so para a arte de TELA CHEIA: e o que destaque,
     // detalhe e player pedem (tex_obter_hero), e so ela decide a cor. Cartaz
     // de fileira passaria por aqui as centenas e empurraria do anel de 256 as
@@ -2882,7 +2892,7 @@ static int threadDecode(void *arg) {
     // PIRAMIDE NA CPU, aqui e nao no envio: este fio e de prioridade baixa e
     // ja tem os pixels. Mesma decisao (temPiramide) da contabilidade de bytes.
     // Ver tex_piramide_cpu.
-    if (conv && mipCpuAtivo() && temPiramide(conv->w, conv->h))
+    if (conv && mipCpuAtivo() && temPiramide(conv->w, conv->h, card))
       tex_piramide_cpu(conv);
 
     int falhou = 0;
@@ -3276,7 +3286,7 @@ int tex_esquecer(const char *caminho) {
     if (itens[i].tex) {
       gfx_tex_esquecer(itens[i].tex);
       glDeleteTextures(1, &itens[i].tex);
-      bytesUsados -= bytesTextura(itens[i].w, itens[i].h);
+      bytesUsados -= bytesTextura(&itens[i]);
       if (bytesUsados < 0) bytesUsados = 0;
     }
     soltarBruto(&itens[i]);
@@ -3682,6 +3692,7 @@ static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
     // ele, refaz — senao o hero herda para sempre a versao pequena que o card
     // pediu primeiro, e o borrao volta sem explicacao aparente.
     if (limite > itens[i].limite) itens[i].limite = limite;
+    if (limite < NV_TEX_MIP_LARG && !pedidoArquivo) itens[i].card = 1;
     // PROMOCAO PELO TETO REALMENTE USADO, e nao pelo pedido.
     //
     // `w < limite` NAO basta: um poster da Cinemeta tem 250px de origem, e
@@ -3757,6 +3768,7 @@ static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
       strncpy(itens[novo].caminho, caminho, sizeof itens[novo].caminho - 1);
       itens[novo].hash = h;
       itens[novo].limite = limite;
+      itens[novo].card = limite < NV_TEX_MIP_LARG && !pedidoArquivo;
       itens[novo].limiteTamanho = 0;
       itens[novo].limiteArquivo = pedidoArquivo;
       itens[novo].estado = PENDENTE;
@@ -4197,7 +4209,7 @@ static void publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
   // sem piramide a amostragem e indefinida e a textura sai PRETA.
   // temPiramide() e a fonte unica desta decisao: a contabilidade de bytes usa a
   // mesma funcao, entao cobranca e geracao nunca divergem.
-  int comMip = temPiramide(sup->w, sup->h);
+  int comMip = temPiramide(sup->w, sup->h, itens[alvo].card);
 #ifdef __EMSCRIPTEN__
   // WEBGL 1 RECUSA MIPMAP EM TEXTURA NAO-POTENCIA-DE-DOIS, e o preco e o card
   // PRETO. glGenerateMipmap numa NPOT devolve GL_INVALID_OPERATION e nao gera
@@ -4252,14 +4264,15 @@ static void publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
   if (itens[alvo].tex) {
     gfx_tex_esquecer(itens[alvo].tex);
     glDeleteTextures(1, &itens[alvo].tex);
-    bytesUsados -= bytesTextura(itens[alvo].w, itens[alvo].h);
+    bytesUsados -= bytesTextura(&itens[alvo]);
     if (bytesUsados < 0) bytesUsados = 0;
   }
   int logoPedido = itens[alvo].urgente == 2;
   itens[alvo].tex = t; itens[alvo].w = sup->w; itens[alvo].h = sup->h;
+  itens[alvo].mip = comMip;
   itens[alvo].estado = PRONTO;
   itens[alvo].urgente = 0;
-  bytesUsados += bytesTextura(sup->w, sup->h);
+  bytesUsados += bytesTextura(&itens[alvo]);
   podar();
   SDL_UnlockMutex(mtx);
   { long uploadBytes = (long)sup->w * sup->h * 4;
@@ -4428,7 +4441,7 @@ void tex_estatisticas(int *nItens, int *nPend, long *bytes,
   SDL_LockMutex(mtx);
   for (int i = 0; i < nMax; i++) {
     if (itens[i].tex) {
-      long t = bytesTextura(itens[i].w, itens[i].h);
+      long t = bytesTextura(&itens[i]);
       a++; b += t;
       if (quente(&itens[i])) { q++; bq += t; }
     }

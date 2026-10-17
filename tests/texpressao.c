@@ -20,11 +20,11 @@ static void pronto(int i, unsigned long uso, unsigned long quadro) {
   itens[i].estado = PRONTO; itens[i].uso = uso; itens[i].ultimoQuadro = quadro;
   itens[i].w = 1024; itens[i].h = 10;
   snprintf(itens[i].caminho, sizeof itens[i].caminho, "a%d", i);
-  bytesUsados += bytesTextura(1024, 10);
+  bytesUsados += bytesTextura(&itens[i]);
 }
 
 int main(void) {
-  long um = bytesTextura(1024, 10);
+  long um = bytesTexturaMip(1024, 10, 0);
   int i;
   mtx = SDL_CreateMutex();   // tex_novo_quadro sai sem ele (cache nao iniciado)
 
