@@ -983,7 +983,9 @@ int main(int argc, char **argv) {
            mkvass_prebusca_fase());
     ok(ms <= MKVASS_PREBUSCA_MS + 250, "o video sai dentro do teto da pre-busca");
     ok(mkvass_prebusca_fase() == 2, "pre-busca terminou dentro do teto (servidor local)");
-    ok(tot == nEsp && col == nEsp, "cabecalho, Cues e os blocos da janela lidos antes do video");
+    // Desde cd22ce703 a pre-busca colhe so a janela lateral de 12 s (o video
+    // nao espera); o resto vem depois da adocao, com o playhead andando.
+    ok(tot == nEsp && col > 0 && col < nEsp, "cabecalho, Cues e os blocos da janela lidos antes do video");
     ok(!legenda_ligada_em(legenda_geracao()), "sem adocao, nada foi entregue ao overlay");
     { unsigned char *cab = NULL; long cabN = 0; MkvFaixa fx[MKV_MAX_FAIXAS]; int nfx = 0;
       long g0 = contagemServidor();
@@ -998,13 +1000,14 @@ int main(int argc, char **argv) {
       while (!legenda_ligada_em(legenda_geracao()) && agoraMs() - t0 < 3000) usleep(5 * 1000);
       printf("    adocao: overlay com a legenda em %ld ms\n", agoraMs() - t0);
       ok(legenda_ligada_em(legenda_geracao()), "adotada: a legenda chega ao overlay"); }
+    mkvass_estatisticas(&pedDepois, NULL, NULL, NULL);
+    ok(pedDepois == pedAntes, "a adocao nao pediu nada de novo ao servidor");
     rodarAte(4.0, 30000, 0.0);
     e = mkvass_estado();
     mkvass_estatisticas(&pedDepois, NULL, NULL, NULL);
     printf("    estado %d, %ld Ranges antes da adocao, %ld depois, %ld resto(s) recusado(s)\n",
            e, pedAntes, pedDepois, contagemDe("contagemrecusas"));
     ok(e == MKVASS_COMPLETO, "COMPLETO com o video aberto, sem no-go");
-    ok(pedDepois == pedAntes, "a adocao nao pediu nada de novo ao servidor");
     ok(conferirCues(esp, nEsp) == nEsp, "todos os cues batem");
     esperarFio(); videoServidor(0);
 
