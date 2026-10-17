@@ -425,6 +425,9 @@ IGNORAR = {
     # ISO 639-2 do portugues (linguas.c). Virou candidato quando "por" entrou
     # na lista de palavras de portugues; e codigo de idioma, nao rotulo.
     "por",
+    # Keys of the Search "?!#" page (busca.c SIMBOLOS): accented letters and
+    # punctuation typed into the query, never a screen label.
+    "áàâãéêíóôõúçñü.,:;'\"!?-_&()/@#+=*·",
     # Release-language matching terms in fontenota.c; input data, never UI labels.
     "français", "inglês", "japonês", "română", "türkçe",
     # O MESMO CODIGO EM MAIUSCULA (fontepref.c). E o valor da tabela TERMOS,
