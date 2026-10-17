@@ -9361,9 +9361,9 @@ void desc_episodios_pendente(void) {
 // ficavam apagados e nao abriam, o que deixava a filmografia decorativa.
 //
 // O meta vem do Cinemeta, a mesma fonte do resto do catalogo, e o item entra no
-// FIM do vetor (cat_acrescentar). O tipo nao e conhecido de antemao — o TMDB
-// diz "movie"/"tv" no credito, mas o relacionado do Trakt nao —, entao tenta-se
-// filme e, se nao houver, serie. Duas chamadas no pior caso, uma no comum.
+// FIM do vetor (cat_acrescentar). O tipo do TMDB e o sufixo de episodio sao
+// preservados: movie e tv podem compartilhar o numero no TMDB, mas sao obras
+// diferentes. So sem tipo conhecido tenta filme e depois serie.
 static char sobId[24];
 static long sobTmdb;          // quando > 0, o id do IMDb ainda precisa ser resolvido
 static char sobTipo[8];
@@ -9375,6 +9375,24 @@ static pthread_t sobFio;
 // a pagina abre NA HORA, com o layout normal, e o buscarEps preenche o resto.
 static CatItem sobSemente;
 static int  sobTemSemente;
+
+// Um sufixo completo de episodio prova que o pedido e de serie, mesmo depois
+// de cortar o id para buscar a ficha. Sem converter numeros: nao ha overflow.
+static int sobIdTemEpisodio(const char *id) {
+  const char *p = strchr(id, ':'), *inicio;
+  int positivo = 0;
+  if (!p) return 0;
+  inicio = ++p;
+  while (*p >= '0' && *p <= '9') p++;
+  if (p == inicio || *p != ':') return 0;
+  inicio = ++p;
+  while (*p >= '0' && *p <= '9') { if (*p != '0') positivo = 1; p++; }
+  return p > inicio && !*p && positivo;
+}
+
+static int sobIndiceDoTipo(const char *id) {
+  return sobTipo[0] ? cat_indice_por_imdb_tipo(id, sobTipo) : cat_indice_por_imdb(id);
+}
 
 static void *buscarTitulo(void *arg) {
   char url[200], id[24], *corpo;
@@ -9394,14 +9412,14 @@ static void *buscarTitulo(void *arg) {
     id[0] = 0;
     if (chave && chave[0]) {
       snprintf(url, sizeof url, "%s/%s/%ld/external_ids?api_key=%s", TMDB,
-               strcmp(sobTipo, "tv") ? "movie" : "tv", sobTmdb, chave);
+               !strcmp(sobTipo, "series") ? "tv" : "movie", sobTmdb, chave);
       corpo = rede_baixar(url, 15);
       if (corpo) { js_texto(corpo, NULL, "imdb_id", id, sizeof id); free(corpo); }
     }
     // No IMDb mapping: Nuvio still serves the native TMDB id and its videos.
     if (!idbase_e_imdb(id)) snprintf(id, sizeof id, "tmdb:%ld", sobTmdb);
     // Ja temos? Entao e so abrir.
-    { int j = cat_indice_por_imdb(id);
+    { int j = sobIndiceDoTipo(id);
       if (j >= 0) { sobIndice = j; sobFioVivo = 0; return NULL; } }
     // Com a semente, o /meta NAO e esperado aqui: o titulo entra no catalogo
     // so com o que o clique sabia, a pagina abre, e o buscarEps (disparado na
@@ -9418,14 +9436,18 @@ static void *buscarTitulo(void *arg) {
     }
   }
 
-  for (passo = 0; passo < (sobTmdb > 0 ? 1 : 2) && achou < 0; passo++) {
-    const char *tipo = sobTmdb > 0 ? (!strcmp(sobTipo, "tv") ? "series" : "movie")
-                                   : passo ? "series" : "movie";
+  for (passo = 0; passo < (sobTipo[0] ? 1 : 2) && achou < 0; passo++) {
+    const char *tipo = sobTipo[0] ? sobTipo : passo ? "series" : "movie";
     corpo = metaprov_meta(tipo, id, 20, NULL);   // Nuvio, depois Cinemeta
     if (!corpo) continue;
     { const char *m = strstr(corpo, "\"meta\"");
       CatItem it;
-      if (m && deMeta(m, NULL, tipo, &it)) {
+      if (m && deMeta(m, NULL, tipo, &it) &&
+          (!sobTipo[0] || (!strcmp(it.tipo, sobTipo) &&
+                          (!it.imdb[0] || !strcmp(it.imdb, id) ||
+                           (sobTmdb > 0 && !strncmp(id, "tmdb:", 5) &&
+                            idbase_e_imdb(it.imdb) && it.imdb[2] &&
+                            strspn(it.imdb + 2, "0123456789") == strlen(it.imdb + 2)))))) {
         // O id do proprio pedido manda: o Cinemeta as vezes devolve o campo
         // vazio, e sem ele o titulo entraria no catalogo sem chave e nao
         // poderia ser reaberto nem casar com progresso.
@@ -9444,7 +9466,8 @@ static void pedirTmdb(long tmdbId, const char *tipo, int semente) {
   if (tmdbId <= 0 || sobFioVivo) return;
   sobTemSemente = semente;
   sobTmdb = tmdbId;
-  snprintf(sobTipo, sizeof sobTipo, "%s", tipo ? tipo : "movie");
+  snprintf(sobTipo, sizeof sobTipo, "%s", tipo &&
+           (!strcmp(tipo, "tv") || !strcmp(tipo, "series") || !strcmp(tipo, "show")) ? "series" : "movie");
   sobId[0] = 0;
   sobIndice = -1;
   sobFioVivo = 1;
@@ -9464,7 +9487,8 @@ void desc_pedir_titulo(const char *imdb) {
             if (k >= sizeof id) k = sizeof id - 1;
             memcpy(id, imdb, k); id[k] = 0; }
   else snprintf(id, sizeof id, "%s", imdb);
-  if (cat_indice_por_imdb(id) >= 0) return;   // ja temos
+  snprintf(sobTipo, sizeof sobTipo, "%s", sobIdTemEpisodio(imdb) ? "series" : "");
+  if (sobIndiceDoTipo(id) >= 0) return;   // ja temos no tipo pedido
   sobTemSemente = 0;
   snprintf(sobId, sizeof sobId, "%s", id);
   sobTmdb = 0;
@@ -9521,7 +9545,7 @@ void desc_pedir_titulo_semente(const char *imdb, long tmdb, const char *tipo,
     if (k >= sizeof id) k = sizeof id - 1;
     memcpy(id, imdb, k); id[k] = 0; }
   sobSessao = nv_perfil_sessao_ler();
-  { int j = cat_indice_por_imdb(id);
+  { int j = cat_indice_por_imdb_tipo(id, s.tipo);
     if (j >= 0) { sobIndice = j; return; } }
   snprintf(s.imdb, sizeof s.imdb, "%s", id);
   sobIndice = descCatAcrescentar(&s);
