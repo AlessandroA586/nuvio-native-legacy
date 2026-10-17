@@ -1,6 +1,6 @@
 #!/bin/bash
-# Smoked glass over live video: every player scene over a full 16:9 hole draws
-# flat tinted glass: no blur source, no capture, no blur pass. Mac GL window.
+# Frost over live video: every player scene over a full 16:9 hole draws glass
+# reading the baked title art (not flat) with zero captures and zero blur passes. Mac GL window.
 #   bash tests/player_fosco.sh [capture-dir]
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -20,6 +20,6 @@ out=$(NUVIO_SHOT_VIDRO=1 NUVIO_SHOT_VIDRO_FOSCO=1 NUVIO_DADOS="$tmp/dados" NUVIO
   "$tmp/t" "$caps" fosco-osd fosco-audio fosco-stats 2>/dev/null | grep '^F ')
 echo "$out"
 [ "$(echo "$out" | wc -l)" -eq 3 ] || { echo "FAIL: missing scenes"; exit 1; }
-echo "$out" | grep -q 'chapado=0 ' && { echo "FAIL: scene drew no glass"; exit 1; }
-echo "$out" | grep -qv 'fonte=0 chapado=[1-9][0-9]* cap=0 pas=0$' && { echo "FAIL: player glass over video blurs or captures"; exit 1; }
+echo "$out" | grep -q 'fonte=0 ' && { echo "FAIL: player glass over video is flat"; exit 1; }
+echo "$out" | grep -qv 'cap=0 pas=0$' && { echo "FAIL: player glass over video captures or blurs per frame"; exit 1; }
 echo PASS

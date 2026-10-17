@@ -1903,6 +1903,7 @@ static float dinPend[4];
 static void dinDescarregar(void);
 static void dinPintar(float y0);
 static int foscoBloq; // este quadro tem video vivo por baixo (gfx_vidro_fosco_bloquear)
+static GLuint foscoVideo; // gfx_vidro_fonte_video: what glass over live video reads
 unsigned gfx_quadro_n;
 // O BACKDROP DO VIDRO (gfx_vidro): um snapshot desfocado em meia resolucao,
 // dividido pelas superficies do quadro e reaproveitado entre quadros enquanto
@@ -2090,7 +2091,7 @@ void gfx_novo_quadro(void) {
   memcpy(gfx_fill_modo_ult, gfx_fill_modo, sizeof gfx_fill_modo);
   memset(gfx_fill_modo, 0, sizeof gfx_fill_modo);
   desfGeradosQuadro = 0;
-  ambPendente = 0; ambIntacta = 0; foscoBloq = 0;
+  ambPendente = 0; ambIntacta = 0; foscoBloq = 0; foscoVideo = 0;
   memset(vidroDesde, 0, sizeof vidroDesde);
   vidroHash = 2166136261u; vidroNVidros = 0; vidroNFuros = 0;
   memcpy(vidroLeAnt, vidroLeCur, sizeof vidroLeAnt); memset(vidroLeCur, 0, sizeof vidroLeCur);
@@ -3257,6 +3258,9 @@ static int vidW, vidH, vidFalhou;
 // a 4K screen pays the 1080p fill and blurs the same in layout units.
 static int vidBw, vidBh;
 void gfx_vidro_fosco_bloquear(void) { foscoBloq = 1; }
+// No TV lets GL read the video plane; the player hands a stand-in (its title
+// art, blurred and baked once) and glass over the hole reads that instead.
+void gfx_vidro_fonte_video(GLuint tex) { foscoVideo = tex; }
 // A full-screen veil was just drawn over the glasses so far: they are now plain
 // backdrop, so a modal island over them frosts instead of going flat.
 void gfx_vidro_cobrir(void) { vidroNVidros = 0; }
@@ -3265,19 +3269,32 @@ int gfx_vidro_com_fonte, gfx_vidro_chapados;
 // GLASS GOVERNOR ("Qualidade do vidro" = Automatica). Frames are counted in
 // windows of GOV_JANELA frames that drew blurred glass; a window is janky when
 // >= 20% of its frames took over 1.5x the target frame time. GOV_SEGUIDAS janky
-// windows in a row drop the glass to smoked glass until the app restarts: it
-// never goes back (flip-flopping would be a worse stutter than either tier).
+// windows in a row start ONE trial: the glass drops to smoked glass for a window.
+// If the mean frame time improves (< 80% of the janky one) the drop stays until
+// the app restarts; if not, the glass was not the cost (a slow TV is slow with or
+// without it): the frost comes back and the governor stops for the session.
+// Never flip-flops: at most one trial.
 #define GOV_JANELA 150
 #define GOV_SEGUIDAS 4
-static int govN, govLentos, govSeguidas, vidroDegradou;
+static int govN, govLentos, govSeguidas, vidroDegradou, govProva, govFim;
+static double govSoma, govBase;
 int gfx_vidro_degradado(void) { return vidroDegradou; }
+void gfx_vidro_governar_zerar(void) { govN = govLentos = govSeguidas = vidroDegradou = govProva = govFim = 0; govSoma = govBase = 0.0; }   // tests
 void gfx_vidro_governar(double ms, double alvo_ms) {
-  if (vidroDegradou || ajustes_vidro_qualidade() != 0 || gfx_vidro_com_fonte <= 0) return;
-  govN++; govLentos += ms > alvo_ms * 1.5;
+  if (govFim || ajustes_vidro_qualidade() != 0) return;
+  if (govProva ? gfx_vidro_chapados <= 0 : (vidroDegradou || gfx_vidro_com_fonte <= 0)) return;
+  govN++; govSoma += ms; govLentos += ms > alvo_ms * 1.5;
   if (govN < GOV_JANELA) return;
-  govSeguidas = govLentos * 5 >= govN ? govSeguidas + 1 : 0;
-  govN = govLentos = 0;
-  if (govSeguidas >= GOV_SEGUIDAS) { vidroDegradou = 1; printf("[vidro] governador: desempenho\n"); }
+  if (govProva) {
+    double m = govSoma / govN;
+    govFim = 1; govProva = 0; vidroDegradou = m < govBase * 0.8;
+    printf("[vidro] governador: prova %.1f ms (frost %.1f ms) -> %s\n", m, govBase, vidroDegradou ? "desempenho" : "frost mantido");
+  } else {
+    govSeguidas = govLentos * 5 >= govN ? govSeguidas + 1 : 0;
+    govBase = govSoma / govN;
+    if (govSeguidas >= GOV_SEGUIDAS) { vidroDegradou = govProva = 1; printf("[vidro] governador: prova do desempenho\n"); }
+  }
+  govN = govLentos = 0; govSoma = 0.0;
 }
 
 static const char *VID_VS =
@@ -3669,9 +3686,10 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   for (i = 0; !chapado && !gfx_vidro_camada && i < vidroNVidros; i++) chapado = vidroCruza(vidroVidros[i], tela);
   video = foscoBloq;
   for (i = 0; !video && i < vidroNFuros; i++) video = vidroCruza(vidroFuros[i], tela);
-  // Smoked glass: over live video (no TV lets GL read the video plane), with
-  // quality = Desempenho, or once the governor dropped the tier.
-  fumaca = video || ajustes_vidro_qualidade() == 1 || (vidroDegradou && ajustes_vidro_qualidade() == 0);
+  // Smoked glass: over live video with no stand-in (the player's baked title
+  // art, gfx_vidro_fonte_video), with quality = Desempenho, or once the governor
+  // dropped the tier.
+  fumaca = (video && !foscoVideo) || ajustes_vidro_qualidade() == 1 || (vidroDegradou && ajustes_vidro_qualidade() == 0);
   if (fumaca) chapado = 1;
   if (vidroNVidros < VID_N) memcpy(vidroVidros[vidroNVidros++], tela, sizeof tela);
   memset(&vidPend, 0, sizeof vidPend);
@@ -3679,7 +3697,7 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   vidRuidoPreparar();   // o dither vale tambem no chapado
   if (!chapado) {
     gfx_ambiente_descarregar();   // a luz e o fundo pendentes ficam ATRAS do vidro
-    vidPend.fonte = vidroFonte(t);
+    vidPend.fonte = video ? foscoVideo : vidroFonte(t);
   }
   // Scrim CINZA NEUTRO (o verde vinha da fonte, nao daqui; R = G = B): a
   // barra 14/255 como a deles. Sem fonte, o scrim e o vidro inteiro.

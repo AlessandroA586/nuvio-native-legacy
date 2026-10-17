@@ -5464,6 +5464,32 @@ void player_fundo_fora_do_furo(GfxRect furo, int recuado, const CatItem *c) {
              1.0f, 0, 0, 0.5f, 0, 0, 0, 0.5f); }
 }
 
+// FROST OVER LIVE VIDEO (owner, 16/10: the player glass flat over video). No
+// TV lets GL read the video plane (webOS/Tizen/.tpk/Android: hardware plane
+// behind the UI), so the glass over the hole reads the title art instead: the
+// 96x54 blurred copy (gfx_desfocado), covered to the screen and darkened, baked
+// ONCE per title into 192x108 in screen orientation. Per frame it costs only
+// the glass shader's own texture reads; no capture, no blur pass.
+static GLuint foscoSobreVideo(const CatItem *c) {
+  static GfxMini alvo;
+  static char feita[1024];
+  const char *arte = c && c->backdrop[0] && !player_id_canal()[0] ? artehero_url(c) : NULL;
+  GLuint tb;
+  if (!arte) return 0;
+  if (alvo.tex && !strcmp(feita, arte)) return alvo.tex;
+  tb = tex_obter_larg(arte, 480);
+  if (tb) tb = gfx_desfocado(tb, arte);
+  if (!tb || !gfx_mini_alvo(&alvo, 192, 108)) return 0;
+  gfx_mini_comecar(&alvo, 0.0f, 0.0f, 192.0f / NV_TELA_W);
+  gfx_tex_aspect_atual = tex_aspecto(arte);
+  gfx_rect((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, tb, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, 1.0f);
+  gfx_tex_aspect_atual = 0.0f;
+  gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0, 0.35f);
+  gfx_mini_terminar();
+  snprintf(feita, sizeof feita, "%s", arte);
+  return alvo.tex;
+}
+
 // A3: o logo e o Play do detalhe no ultimo quadro dele (player_morph_de).
 static GfxRect morphLogo, morphPlay;
 static Uint32 morphEm;
@@ -5723,9 +5749,12 @@ void player_desenhar(Uint32 agora) {
     abrecine_passo(&cine, (player_carregando() || dvtela_ativa()) && !ehCanal(), imagem, ajustes_abertura_detalhada(),
                    agora, dtc, ajustes_animacoes_reduzidas());
     if (erroFonte || saindo || ehCanal()) cine.veu = 0.0f; }
-  // SMOKED GLASS (owner, 17/10): nothing still to frost under live video, so
-  // every glass of the frame is flat tinted glass: no capture, no blur.
+#ifdef NV_ANDROID
+  // Video vivo por baixo: o vidro fosco (assado de 320x180) nao desenha ali.
   if (furar) gfx_vidro_fosco_bloquear();
+#endif
+  // Frost over live video reads the baked title art; no art (channels): smoked glass.
+  if (furar && !janAtiva) gfx_vidro_fonte_video(foscoSobreVideo(c));
   if (furar) {
     // O furo acompanha o MESMO retangulo que foi ao plano de hardware, cortado
     // na tela. Furar sempre a tela inteira, como antes, deixava faixa preta nos

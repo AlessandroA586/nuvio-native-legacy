@@ -621,11 +621,16 @@ void gfx_vidro_fosco_bloquear(void);
 // Call right after a full-screen veil: glass drawn earlier no longer makes a
 // glass over it go flat (modal islands over the Home sidebar).
 void gfx_vidro_cobrir(void);
+// The live-video stand-in for this frame (until gfx_novo_quadro): a blurred
+// screen-oriented texture (a GfxMini target) that glass over the video hole
+// reads instead of going flat. 0 = smoked glass.
+void gfx_vidro_fonte_video(GLuint tex);
 // Glass drawn with a blur source this frame (zeroed in gfx_novo_quadro).
 extern int gfx_vidro_com_fonte;
 // Smoked (flat tinted) glasses drawn this frame: no capture, no blur (zeroed in gfx_novo_quadro).
 extern int gfx_vidro_chapados;
 int  gfx_vidro_degradado(void);                           // governor dropped the glass to smoked glass (sticky)
+void gfx_vidro_governar_zerar(void);                      // tests: forget the governor state
 void gfx_vidro_governar(double ms, double alvo_ms);       // once per frame, after the swap
 // CANAIS DE FUNDO DA LUZ ASSADA (fundo.c, "Arte borrada" e "Frost" de tela
 // cheia): o quadro pequeno (320x180, GL_RGB) do `canal` (0..1), pintado por

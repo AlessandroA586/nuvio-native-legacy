@@ -1,6 +1,6 @@
-// SMOKED GLASS OVER LIVE VIDEO (owner, 17/10): the player glass over the video
-// hole (control bar, track menu, Statistics panel) is flat tinted glass: no blur
-// source, no frame capture, no blur pass. Prints, per scene, over every frame
+// FROST OVER LIVE VIDEO (owner, 17/10): the player glass over the video hole
+// (control bar, track menu, Statistics panel) reads the baked title-art stand-in:
+// a blur source, but no frame capture and no blur pass. Prints, per scene, over every frame
 // since the scene started: glasses with a source, flat glasses, captures and
 // blur passes. See tests/player_fosco.sh.
 #include "gfx.h"

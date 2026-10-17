@@ -116,10 +116,12 @@ int main(void) {
   janela(20.0);   // 20 ms < 1.5 x 16.7: not janky either
   for (i = 0; i < 3; i++) janela(40.0);
   confere(!gfx_vidro_degradado(), "governor: a window of normal frames resets the count");
-  janela(40.0);   // the 4th janky window in a row
-  confere(gfx_vidro_degradado(), "governor: 4 janky windows in a row drop the tier");
+  janela(40.0);   // the 4th janky window in a row: starts the trial
+  confere(gfx_vidro_degradado(), "governor: 4 janky windows in a row start the smoked trial");
   roda(1, &t);   // the switch frame may still run the capture that was queued before
   roda(20, &t);
+  janela(8.0);   // the trial window is much faster: the drop stays
+  confere(gfx_vidro_degradado(), "governor: trial improved the frame time, the drop stays");
   printf("depois do governador: cap<=%d pas<=%d fonte=%d chapado=%d\n", cap, pas, fonte, chapado);
   confere(cap == 0 && pas == 0 && fonte == 0 && chapado > 0, "after the drop: smoked glass, no capture");
 
@@ -131,6 +133,21 @@ int main(void) {
   setenv("NUVIO_SHOT_VIDRO_QUAL", "2", 1); ajustes_teste_vidro_env();
   roda(20, &t);
   confere(cap == 1 && fonte > 0, "Alta ignores the governor (frost)");
+
+  // Slowness the glass did not cause: the trial window is as slow as before, so
+  // the frost comes back and the governor stops for the session (no second trial).
+  gfx_vidro_governar_zerar();
+  setenv("NUVIO_SHOT_VIDRO_QUAL", "0", 1); ajustes_teste_vidro_env();
+  roda(20, &t);
+  for (i = 0; i < 4; i++) janela(40.0);
+  confere(gfx_vidro_degradado(), "governor: trial started");
+  roda(1, &t); roda(20, &t);
+  janela(40.0);
+  confere(!gfx_vidro_degradado(), "governor: no improvement without glass, the frost is restored");
+  roda(1, &t); roda(20, &t);
+  confere(cap == 1 && fonte > 0, "governor: frost drawn again after the failed trial");
+  for (i = 0; i < 10; i++) janela(40.0);
+  confere(!gfx_vidro_degradado(), "governor: never trips again after the trial");
 
   unlink(cam);
   { char tt[700]; snprintf(tt, sizeof tt, "%s/ajustes.tmp", dir); unlink(tt); }
