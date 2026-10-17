@@ -170,43 +170,42 @@ jobs:
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.6.4
-          name: Nuvio Legacy 2.0.6.4 - Juansher v1.2.5
+          tag_name: v2.0.6.5
+          name: Nuvio Legacy 2.0.6.5 - Juansher v1.2.6
           draft: false
           prerelease: false
           files: |
             dist/*
           body: |
-            ## Nuvio Legacy 2.0.6.4 - Juansher v1.2.5
+            ## Nuvio Legacy 2.0.6.5 - Juansher v1.2.6
 
-            Actualización con mejoras de sincronización de reloj y optimizaciones críticas de streaming HTTP/CDN.
+            Actualización para televisores Samsung Smart TV (Tizen) que elimina los congelamientos en streaming 4K y corrige el rebote de tiempo al adelantar o retroceder.
 
             ### Información de Versión y Plataformas
             - **Versión base oficial:** `2.0.6`
-            - **Compilación técnica:** `2.0.6.4`
-            - **Edición personalizada:** `Juansher v1.2.5`
+            - **Compilación técnica:** `2.0.6.5`
+            - **Edición personalizada:** `Juansher v1.2.6`
             - **Plataformas soportadas:** Android TV, Google TV y Samsung Smart TV (Tizen).
 
-            ### Novedades en Juansher v1.2.5
-            - **Sincronización de hora de finalización en reproductor:** La hora estimada de finalización de película o serie ("Termina a las...") ahora respeta de forma automática el formato configurado en Ajustes > Apariencia > Formato del reloj (12h AM/PM vs 24h).
-            - **Solución a lecturas bloqueantes en ParaleloDataSource:** Se acotó la lectura de streams HTTP keep-alive evitando bloqueos de hasta 20 segundos que agotaban el watchdog del reproductor.
-            - **Recuo transparente a DefaultHttpDataSource:** Si la descarga paralela por fragmentos experimenta rechazo, límite de conexiones o demora del proveedor CDN/Debrid, el reproductor conmuta de manera inmediata y transparente a la conexión directa de ExoPlayer sin interrumpir la reproducción.
-            - **Watchdog de apertura adaptado a 4K y Dolby Vision:** Se amplió el plazo de apertura manual a 45s (y 60s en contenidos pesados 4K/DV), evitando falsos positivos cuando el primer cuadro ya ha sido dibujado o el buffer continúa recibiendo datos.
-            - **Reporte continuo de buffer en Android:** `video_buffer_fim()` ahora informa en tiempo real los segundos en buffer de ExoPlayer al núcleo nativo en C con protección de exclusión mutua.
-            - **Incremento de versión técnica y versionCode:** `200604` para actualización limpia y directa.
+            ### Novedades en Juansher v1.2.6
+            - **Eliminación de congelamientos y reinicios en videos 4K (Tizen):** Se desactivó el watchdog de inactividad de 15 segundos (`vigiarPlayer`) durante la reproducción de contenidos VOD (películas y series). Ahora AVPlay gestiona el llenado del búfer de hardware de forma nativa sin forzar la destrucción del reproductor ni reinicios durante picos de bitrate 4K (restaurando el comportamiento estable de la versión oficial v2.0.1).
+            - **Corrección de rebote al adelantar y retroceder (Tizen):** Se bloqueó la sobreescritura de posición (`posMs`) por parte del temporizador `Tique()` mientras el reproductor ejecuta saltos asíncronos (`SetPlayPositionAsync`), evitando que la barra de tiempo regrese al punto anterior tras soltar el control remoto.
+            - **Encolamiento seguro de saltos concurrentes (Tizen):** Se implementó una cola de saltos en `Buscar()` que procesa de manera limpia comandos repetidos y rápidos de avance/retroceso, eliminando excepciones `InvalidOperationException` y permitiendo adelantar al primer intento.
+            - **Fijación de posición en C durante saltos (`video_tpk.c`):** Se sincronizó la posición de progreso con la posición objetivo solicitada para mantener la interfaz de usuario estable sin saltos hacia atrás.
+            - **Incremento de versión técnica y versionCode:** `200605` para actualización directa sin conflictos.
 
             | Platform | File |
             | :--- | :--- |
-            | Samsung Tizen 4 / 5 / 5.5 | `Nuvio-2.0.6.4-NuvioTpk40.tpk` |
-            | Samsung Tizen 6 | `Nuvio-2.0.6.4-NuvioTpk60.tpk` |
-            | Samsung Tizen 6.5 / 7 | `Nuvio-2.0.6.4-NuvioTpk65.tpk` |
-            | Samsung Tizen 8 / 9 | `Nuvio-2.0.6.4-NuvioTpk.tpk` |
-            | Android TV / Google TV, Android 7+ | `Nuvio-2.0.6.4-android.apk` |
+            | Samsung Tizen 4 / 5 / 5.5 | `Nuvio-2.0.6.5-NuvioTpk40.tpk` |
+            | Samsung Tizen 6 | `Nuvio-2.0.6.5-NuvioTpk60.tpk` |
+            | Samsung Tizen 6.5 / 7 | `Nuvio-2.0.6.5-NuvioTpk65.tpk` |
+            | Samsung Tizen 8 / 9 | `Nuvio-2.0.6.5-NuvioTpk.tpk` |
+            | Android TV / Google TV, Android 7+ | `Nuvio-2.0.6.5-android.apk` |
 
             ### Bibliotecas de Autoactualización en Segundo Plano
 
-            - `libnuvio-2.0.6.4-tpk-arm.so` (Samsung Tizen 6.0 o superior / 2021+)
-            - `libnuvio-2.0.6.4-tpk40-arm.so` (Samsung Tizen 4.0 a 5.5 / 2018-2020)
+            - `libnuvio-2.0.6.5-tpk-arm.so` (Samsung Tizen 6.0 o superior / 2021+)
+            - `libnuvio-2.0.6.5-tpk40-arm.so` (Samsung Tizen 4.0 a 5.5 / 2018-2020)
             - `SHA256SUMS.txt` (Sumas de comprobación SHA-256 de todos los archivos)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

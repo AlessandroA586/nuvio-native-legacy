@@ -132,7 +132,7 @@ jobs:
       - name: Attach TPK and Auto-Update Binaries to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.6.4
+          tag_name: v2.0.6.5
           files: |
             build/tpk/*.tpk
             build/tpk/*.so

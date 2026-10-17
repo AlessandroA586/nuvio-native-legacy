@@ -540,7 +540,7 @@ static void linhaInfo(float x, float yc, float wMax, float a) {
   }
   x += sep(x, yc, a);
   if (x - x0 < wMax - 40.0f) {
-    TxtLinha v = txt_linha_corta(TXT_ILHA_HORA, NV_VERSAO " · Juansher v1.2.5", 243, 242, 239, 255, wMax - (x - x0));
+    TxtLinha v = txt_linha_corta(TXT_ILHA_HORA, NV_VERSAO " · Juansher v1.2.6", 243, 242, 239, 255, wMax - (x - x0));
     txt_desenhar_alpha(v, x, yc - (float)v.h * 0.5f, 0.45f * a);
   }
 }
