@@ -27,6 +27,7 @@
 // Nunca vai para log: link do addon, link do CDN, chave.
 #ifndef NV_PARTES_H
 #define NV_PARTES_H
+#include <stddef.h>
 #include <stdint.h>
 #include "streams.h"
 
@@ -72,6 +73,15 @@ int  partes_ler_item(const char *item, const char *fim, int usenet, PartesLista 
 // sabe) desempata. 1 achou, com `l` preenchida e `atual` no arquivo da fonte.
 int  partes_achar(const char *corpo, int usenet, char hashes[][41], int nHashes,
                   int hashesConfiaveis, const char *arquivo, uint64_t bytes, PartesLista *l);
+// O mesmo, dizendo quantos itens o corpo tinha (pagina cheia = ha outra).
+int  partes_achar_n(const char *corpo, int usenet, char hashes[][41], int nHashes,
+                    int hashesConfiaveis, const char *arquivo, uint64_t bytes, PartesLista *l, int *itens);
+// O mesmo, e se nada casar, pelo nome do TITULO (o da folha) no nome dos itens.
+int  partes_achar_t(const char *corpo, int usenet, char hashes[][41], int nHashes,
+                    int hashesConfiaveis, const char *arquivo, uint64_t bytes, const char *titulo,
+                    PartesLista *l, int *itens);
+// Texto para comparar nomes: " palavra palavra " em minusculas (ver partes.c).
+void partes_normalizar(const char *s, char *d, size_t n);
 // Quantas partes de verdade (nao extras) a lista tem.
 int  partes_principais(const PartesLista *l);
 // A parte de verdade seguinte a `k`, ou -1.
@@ -86,9 +96,13 @@ int  partes_conta_virtual(const PartesLista *l, int k, double pos, double dur, d
                           double *vpos, double *vdur);
 
 // ---- busca da lista (fio proprio) -----------------------------------------
-// Pede a lista de arquivos da fonte. A mesma fonte, ja achada nesta sessao do
-// app, responde na hora pela memoria.
-void partes_pedir(const Stream *fonte);
+// Pede a lista de arquivos da fonte. `titulo` (o da folha) serve ao achado
+// pelo nome quando hash e arquivo nao casam. A mesma fonte, ja achada nesta
+// sessao do app (as ultimas 16), responde na hora pela memoria.
+void partes_pedir(const Stream *fonte, const char *titulo);
+// O OK afundou numa fonte: procura so na pagina 1 ja lida, sem rede e sem
+// mudar o que a modal mostra; achou, o segurar responde da memoria.
+void partes_pedir_cedo(const Stream *fonte, const char *titulo);
 // Copia o estado da ultima busca. Devolve l->estado.
 int  partes_resultado(PartesLista *l);
 // O mesmo, so se a ultima busca for DESTA fonte (PARTES_VAZIO se nao for).
@@ -125,6 +139,13 @@ void partes_ponto_guardar(const char *alvo, const char *conta, int perfil, const
 int  partes_ponto_pegar(const char *alvo, const char *conta, int perfil, PartesPonto *p);
 void partes_ponto_esquecer(const char *alvo, const char *conta, int perfil);
 void partes_ponto_zerar(void);   // testes: o proximo acesso rele o disco
+
+// O arquivo do TorBox que toca agora (fio do desenho): app.c define ao abrir
+// um arquivo da lista, uma parte ou o Retomar; player.c le ao fechar para
+// guardar o ponto dele. Limpo ao trocar de fonte, de link ou de titulo.
+void partes_arquivo_definir(const char *alvo, int usenet, int item, int arquivo);
+int  partes_arquivo_de(const char *alvo, PartesPonto *p);
+void partes_arquivo_limpar(void);
 
 // 1 onde o gesto existe (so o .tpk, por enquanto).
 int  partes_disponivel(void);

@@ -4229,10 +4229,17 @@ static void partesAbrirPainel(int i) {
   memset(&ptL, 0, sizeof ptL);
   ptL.estado = PARTES_BUSCANDO; ptL.atual = -1;
   nv_limpar_texto(lista[i].provedor, ptProv, sizeof ptProv, NV_LIMPA_UMA_LINHA);
-  printf("[partes] hold OK on source #%d (%s): asking TorBox for its files\n", i,
-         lista[i].provedor[0] ? lista[i].provedor : "-");
-  fflush(stdout);
-  partes_pedir(&lista[i]);
+  // O que a busca tem para casar, sem URL: o arquivo da fonte, se o link traz
+  // um hash, e o titulo para o achado pelo nome.
+  { char hs[2][41];
+    const char *b = strrchr(lista[i].arquivo, '/');
+    int nh = partes_hashes_texto(lista[i].url, hs, 2);
+    printf("[partes] hold OK on source #%d (%s): asking TorBox for its files | file=%s | hash: %s | title=%s\n", i,
+           lista[i].provedor[0] ? lista[i].provedor : "-", b ? b + 1 : lista[i].arquivo[0] ? lista[i].arquivo : "-",
+           lista[i].hashTorrent[0] || lista[i].infoHash[0] ? "from the add-on" : nh ? "in the link" : "none",
+           nomeFolha[0] ? nomeFolha : "-");
+    fflush(stdout); }
+  partes_pedir(&lista[i], nomeFolha);
 }
 // O arquivo que esta tocando AGORA nesta lista (sessao de partes do mesmo
 // item, ou o da fonte quando ela e a que toca); -1 se nenhum.
@@ -4317,7 +4324,14 @@ void stream_folha_evento(const SDL_Event *e) {
   // o caminho de antes, com o OK no KEYDOWN.
   if (aberta && grupo == 1 && (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP)) {
     switch (ctxhold_evento(&folhaHold, e, linhaAceitaPartes(filtrado(foco)))) {
-      case CTXH_CONSUMIDO: return;
+      case CTXH_CONSUMIDO:
+        // OK afundou numa fonte: a busca comeca ja, na lista da memoria, para a
+        // modal abrir pronta se o dedo segurar.
+        if (e->type == SDL_KEYDOWN && !e->key.repeat && folhaHold.armado) {
+          int i = filtrado(foco);
+          if (linhaAceitaPartes(i)) partes_pedir_cedo(&lista[i], nomeFolha);
+        }
+        return;
       case CTXH_TOQUE: okNaLinha(); return;
       case CTXH_LONGO: { int i = filtrado(foco); if (linhaAceitaPartes(i)) partesAbrirPainel(i); } return;
       default: break;

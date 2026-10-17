@@ -2591,6 +2591,7 @@ static void parteZerar(void) {
   parteFase = PF_NADA; parteRetomada = 0; partePos = -1; parteRenovou = 0; parteArqK = -1;
   parteUrl[0] = 0; parteProx = -1; parteProxFase = 0; parteProxUrl[0] = 0;
   partes_link_cancelar();
+  partes_arquivo_limpar();
 }
 // Entrega o link ao player: sempre sem o ponto do catalogo (ele e o do FILME
 // inteiro, partes_virtual), com o ponto DENTRO do arquivo quando ha.
@@ -2603,6 +2604,12 @@ static void parteTocar(const char *url, double pos) {
   definirFonteVOD(url);
   parteFase = PF_ABRINDO; parteDesde = SDL_GetTicks(); parteGuardouEm = 0;
   parteProx = -1; parteProxFase = 0; parteProxUrl[0] = 0;
+  // O arquivo que toca: a saida do player guarda o ponto dele (partes.h).
+  if (parteArqK >= 0 && parteArqK < parteArqLista.n) {
+    char a[64];
+    alvoPlayer(a, sizeof a);
+    partes_arquivo_definir(a, parteArqLista.usenet, parteArqLista.item, parteArqLista.arq[parteArqK].id);
+  }
 }
 static void abrirParte(int fonte, const PartesLista *l, int k) {
   const Stream *s = stream_item(fonte);
@@ -2612,10 +2619,11 @@ static void abrirParte(int fonte, const PartesLista *l, int k) {
   if (!s || !l || k < 0 || k >= l->n) return;
   aguardandoFonte = 0;
   limparFonteVOD();
-  parteZerar();
   titulo = player_aberto() ? player_indice() : detail_indice();
+  // Fecha ANTES de zerar: a saida grava o ponto do arquivo que tocava.
   if (player_aberto()) { player_episodio_atual(&t, &e); player_encerrar(); }
   else detail_ep_foco(&t, &e);
+  parteZerar();
   consumirFolhaTocar(&t, &e);
   diagnostico_cancelar_vazao();
   player_abrir(titulo, NULL);
@@ -2635,9 +2643,15 @@ static void abrirParte(int fonte, const PartesLista *l, int k) {
   // especial) toca sozinho, sem sessao de partes.
   if (t > 0 && e > 0) partes_sessao_parar("series episode: the file plays alone");
   else partes_sessao_iniciar(alvo, l, k);
-  if (!partes_sessao_de(alvo)) partes_ponto_esquecer(alvo, sessao_usuario(), perfis_ativo());
+  // Outro arquivo que o do ponto guardado: o ponto antigo nao vale mais.
+  if (partePos < 0) partes_ponto_esquecer(alvo, sessao_usuario(), perfis_ativo());
   parteArqLista = *l; parteArqK = k;
   parteMp4 = nomeMp4(l->arq[k].nome);
+  // O prazo de 30 s do link conta DAQUI. Sem isto ele contava de um relogio
+  // velho e, minutos depois da primeira abertura, toda escolha "vencia" no
+  // primeiro quadro (log da TV, 16/10: "no link from TorBox in 30 s" na hora,
+  // e o link chegando 1 s depois).
+  parteDesde = SDL_GetTicks();
   parteFase = PF_LINK;
   partes_link_pedir(l->usenet, l->item, l->arq[k].id, 0);
   marco("abrir: arquivo da fonte (partes)");
@@ -2718,7 +2732,8 @@ static void vigiarPartes(void) {
         parteAutoEsperando = 1;
         printf("[partes] the playing file is much shorter than the title: asking TorBox for the other parts\n");
         fflush(stdout);
-        partes_pedir(fs);
+        { const CatItem *ci = cat_item(player_indice());
+          partes_pedir(fs, ci ? ci->titulo : ""); }
       }
       if (parteAutoEsperando) {
         int e = partes_resultado_de(fs, &l);
@@ -2730,6 +2745,7 @@ static void vigiarPartes(void) {
         partes_sessao_iniciar(alvo, &l, l.atual);
         if (!partes_sessao_de(alvo)) return;
         parteArqLista = l; parteArqK = l.atual; parteMp4 = nomeMp4(l.arq[l.atual].nome);
+        partes_arquivo_definir(alvo, l.usenet, l.item, l.arq[l.atual].id);
         snprintf(parteUrl, sizeof parteUrl, "%s", video_url_atual());
         parteFase = PF_TOCANDO; parteGuardouEm = 0; parteRenovou = 0;
         parteProx = -1; parteProxFase = 0; parteProxUrl[0] = 0;
@@ -2762,9 +2778,12 @@ static void vigiarPartes(void) {
       return;
     }
     if (parteFase == PF_RETOMAR) {
+      int rt = 0, re = 0;
       alvoPlayer(alvo, sizeof alvo);
       if (l.atual < 0) { parteRecuar("the saved file is gone"); return; }
-      partes_sessao_iniciar(alvo, &l, l.atual);
+      // Episodio: o arquivo toca sozinho, como na escolha (abrirParte).
+      player_episodio_atual(&rt, &re);
+      if (!(rt > 0 && re > 0)) partes_sessao_iniciar(alvo, &l, l.atual);
       parteArqLista = l; parteArqK = l.atual;
       parteMp4 = nomeMp4(l.arq[l.atual].nome);
     }
@@ -2812,20 +2831,23 @@ static void vigiarPartes(void) {
     parteZerar();
     return;
   }
-  // PF_TOCANDO: so com sessao de partes ha o que fazer.
   alvoPlayer(alvo, sizeof alvo);
+  // O ponto para o Retomar, a cada 60 s tocando, de QUALQUER arquivo aberto
+  // pela lista (episodio solto tambem); a saida grava o ultimo.
+  { PartesPonto pt;
+    double pos = video_pos();
+    if (video_pronto() && pos > 1 && SDL_GetTicks() - parteGuardouEm > 60000u &&
+        partes_arquivo_de(alvo, &pt)) {
+      pt.pos = pos;
+      partes_ponto_guardar(alvo, sessao_usuario(), perfis_ativo(), &pt);
+      parteGuardouEm = SDL_GetTicks();
+    } }
+  // Daqui para baixo, so com sessao de partes.
   if (!partes_sessao_de(alvo)) return;
   {
     const PartesLista *sl = partes_sessao_lista();
     int k = partes_sessao_indice(), prox = partes_seguinte(sl, k);
     double d = video_duracao(), pos = video_pos();
-    // O ponto para o Retomar, a cada 60 s tocando (a saida grava o ultimo; o
-    // disco da TV nao precisa de mais que isso).
-    if (video_pronto() && pos > 1 && SDL_GetTicks() - parteGuardouEm > 60000u) {
-      PartesPonto pt = { sl->usenet, sl->item, sl->arq[k].id, pos };
-      partes_ponto_guardar(alvo, sessao_usuario(), perfis_ativo(), &pt);
-      parteGuardouEm = SDL_GetTicks();
-    }
     if (prox < 0) return;   // ultima parte: o fim e o do filme
     if (parteProx != prox) { parteProx = prox; parteProxFase = 0; parteProxUrl[0] = 0; }
     // O link da seguinte sai 60 s antes do fim, para a troca nao esperar rede.

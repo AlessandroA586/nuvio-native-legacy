@@ -170,7 +170,10 @@ const char *debrid_sem_plano_nome(int mascara);
 //   debrid_tb_adicionar:  BLOQUEIA. Poe o torrent na conta SO se ja estiver em
 //                         cache; devolve o id ou -1.
 int   debrid_tb_disponivel(void);
-char *debrid_tb_mylist(int usenet, int id, int fresco, int *st);
+// Uma pagina de DEBRID_TB_PAGINA itens (o teto do TorBox): conta com mais
+// itens que isso precisa de mais paginas (`pagina` 0, 1, ...).
+#define DEBRID_TB_PAGINA 1000
+char *debrid_tb_mylist(int usenet, int id, int pagina, int fresco, int *st);
 int   debrid_tb_link(int usenet, int id, int arquivo, char *url, unsigned n);
 int   debrid_tb_adicionar(const char *hash);
 

@@ -1495,7 +1495,7 @@ int debrid_tb_disponivel(void) {
   return atomic_load(&semPlano[STB]) ? -1 : 1;
 }
 
-char *debrid_tb_mylist(int usenet, int id, int fresco, int *st) {
+char *debrid_tb_mylist(int usenet, int id, int pagina, int fresco, int *st) {
   char url[300], auth[260], k[200];
   const char *cab[2];
   if (st) *st = 0;
@@ -1504,8 +1504,8 @@ char *debrid_tb_mylist(int usenet, int id, int fresco, int *st) {
     snprintf(url, sizeof url, TB "/%s/mylist?id=%d%s", usenet ? "usenet" : "torrents", id,
              fresco ? "&bypass_cache=true" : "");
   else
-    snprintf(url, sizeof url, TB "/%s/mylist?offset=0&limit=1000%s", usenet ? "usenet" : "torrents",
-             fresco ? "&bypass_cache=true" : "");
+    snprintf(url, sizeof url, TB "/%s/mylist?offset=%d&limit=%d%s", usenet ? "usenet" : "torrents",
+             pagina * DEBRID_TB_PAGINA, DEBRID_TB_PAGINA, fresco ? "&bypass_cache=true" : "");
   snprintf(auth, sizeof auth, "Authorization: Bearer %s", k);
   cab[0] = auth; cab[1] = NULL;
   return rede_baixar_st(url, 20, cab, st);

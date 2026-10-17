@@ -2409,22 +2409,26 @@ static void fecharSessao(int manter) {
   double durG = duracaoSeg, posG = posSeg;
   { double vp, vd; int ult = 0;
     if (!jaRetido && partesVirt(&vp, &vd, &ult)) {
-      char alvoP[64];
       const PartesLista *sl = partes_sessao_lista();
       int k = partes_sessao_indice();
       assistiu = ult && !duracaoContradita &&
                  (player_regra_concluiu(posSeg, duracaoSeg, cred) || scrobble_concluiu(posSeg, duracaoSeg, 0));
       durG = vd; posG = vp;
       chegou = chegou && assistiu;
-      alvoStream(alvoP, sizeof alvoP);
-      if (assistiu) partes_ponto_esquecer(alvoP, sessao_usuario(), perfis_ativo());
-      else if (sl && k >= 0 && video_pronto() && posSeg > 1.0f) {
-        PartesPonto pt = { sl->usenet, sl->item, sl->arq[k].id, posSeg };
-        partes_ponto_guardar(alvoP, sessao_usuario(), perfis_ativo(), &pt);
-      }
       printf("[partes] closing on part %d of %d at %.0f s: movie position %.0f of %.0f s%s\n",
              partes_numero(sl, k), partes_principais(sl), (double)posSeg, vp, vd, assistiu ? " (finished)" : "");
       fflush(stdout);
+    } }
+  // O ARQUIVO DO TORBOX ABERTO PELA LISTA (partes.h), filme ou episodio: o
+  // ponto dele para o Retomar voltar no mesmo arquivo; concluido, sai.
+  { PartesPonto pt; char alvoA[64];
+    alvoStream(alvoA, sizeof alvoA);
+    if (!jaRetido && comVideo && !ehCanal() && partes_arquivo_de(alvoA, &pt)) {
+      if (assistiu) partes_ponto_esquecer(alvoA, sessao_usuario(), perfis_ativo());
+      else if (video_pronto() && posSeg > 1.0f) {
+        pt.pos = posSeg;
+        partes_ponto_guardar(alvoA, sessao_usuario(), perfis_ativo(), &pt);
+      }
     } }
   // Concluido e concluido: o registro leva o "alcancado tocando" que o selo
   // de visto do catalogo (cat_visto) le, como o markAsCompleted do oficial.
@@ -3244,8 +3248,12 @@ static void durFonteAtualizar(double real, Uint32 agora) {
   char r[32], e[32], aviso[320];
   int rm, em;
   if (durFonteAvisada || ehCanal() || !isfinite(real) || real <= 1) return;
-  // Uma parte de um filme em partes e curta de proposito (partes.h).
+  // Uma parte de um filme em partes e curta de proposito, e um arquivo aberto
+  // pela lista "Arquivos desta fonte" (um especial, um OVA) foi escolha da
+  // pessoa: nem aviso nem pulo (partes.h).
   if (partesAtiva()) return;
+  { char alvoA[64]; alvoStream(alvoA, sizeof alvoA);
+    if (partes_arquivo_de(alvoA, NULL)) return; }
   { unsigned ver = cat_versao_episodios(), rev = cat_revisao();
     if (!durFonteEsperadaOk || durFonteEsperadaVer != ver || durFonteEsperadaRev != rev) {
       durFonteEsperadaOk = 1; durFonteEsperadaVer = ver; durFonteEsperadaRev = rev;
