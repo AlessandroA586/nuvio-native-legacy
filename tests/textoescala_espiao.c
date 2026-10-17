@@ -1,0 +1,59 @@
+// Spy for tests/textoescala_prova.sh. Linked into the shot programs.
+//
+// gfx.c is built with -Dgfx_rect=nvreal_gfx_rect and ajustes.c with
+// -Dajustes_iniciar=nvreal_ajustes_iniciar -Dajustes_dir=nvreal_ajustes_dir, so every other file reaches the
+// functions below. All text goes through gfx_rect(GFX_TEXTO), so one hook sees
+// every text line, button and poster that a screen draws.
+//
+// NV_TXT_IDX=<n>  seeds "escalaTextoLocal n" in ajustes.txt before the settings
+//                 load (old code ignores the key, which is the point).
+// NV_TXT_LOG=<f>  one line per draw, in REAL pixels (layout size * gfx_escala):
+//                 "T h"      text line height
+//                 "C w h"    GFX_CARD (poster art)
+//                 "R w h"    GFX_COR / GFX_ANEL under 150 px (buttons, pills)
+#include "ajustes.h"
+#include "dados.h"
+#include "gfx.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+void nvreal_gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco, float parx,
+                     float pary, float raio, float cr, float cg, float cb, float ca);
+int nvreal_ajustes_iniciar(void);
+void nvreal_ajustes_dir(const char *dir);
+
+static FILE *log_;
+
+void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco, float parx,
+              float pary, float raio, float cr, float cg, float cb, float ca) {
+  if (!log_ && getenv("NV_TXT_LOG")) log_ = fopen(getenv("NV_TXT_LOG"), "w");
+  if (log_) {
+    const float e = gfx_escala(), w = r.w * e, h = r.h * e;
+    if (modo == GFX_TEXTO) fprintf(log_, "T %.2f\n", h);
+    else if (modo == GFX_CARD) fprintf(log_, "C %.1f %.1f\n", w, h);
+    else if ((modo == GFX_COR || modo == GFX_ANEL) && h >= 8 && h < 150 && w >= 8)
+      fprintf(log_, "R %.1f %.1f\n", w, h);
+  }
+  nvreal_gfx_rect(r, tex, modo, foco, parx, pary, raio, cr, cg, cb, ca);
+}
+
+static void semear(const char *dir) {
+  const char *idx = getenv("NV_TXT_IDX");
+  char caminho[800];
+  FILE *f;
+  if (!idx || !dir) return;
+  snprintf(caminho, sizeof caminho, "%s/ajustes.txt", dir);
+  f = fopen(caminho, "a");
+  if (f) { fprintf(f, "escalaTextoLocal %s\n", idx); fclose(f); }
+}
+
+void ajustes_dir(const char *dir) {
+  semear(dir);
+  nvreal_ajustes_dir(dir);
+}
+
+// Some shots never call ajustes_dir; load the seeded file for them too.
+int ajustes_iniciar(void) {
+  if (getenv("NV_TXT_IDX") && getenv("NUVIO_DADOS")) ajustes_dir(getenv("NUVIO_DADOS"));
+  return nvreal_ajustes_iniciar();
+}
