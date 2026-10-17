@@ -5170,7 +5170,6 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
                                     : txt_linha_corta(TXT_PG_FIM,f2,c,c,c-2,255,tr-tx);
           txt_desenhar_alpha(l2,tx,fy+FOLHA_FIT_H,anim*a); } } } }
   }
-  anim=animLista; lx-=dxLista; tx-=dxLista; tr-=dxLista;
   // O TOPO DA LISTA ESMAECE em vez de cortar seco embaixo do seletor: a linha
   // que sobe some aos poucos, na cor da folha. So com a lista rolada: parada
   // no topo, o esmaecido apagaria o cabecalho "4K" do primeiro grupo.
@@ -5222,6 +5221,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     // Com servicos de streaming na lista, a frase vem DEPOIS deles.
     txt_bloco(TXT_PG_FIM,s,196,199,204,tx,FOLHA_TOPO+20,rw-52,28,anim,3);
   }
+  anim=animLista; lx-=dxLista; tx-=dxLista; tr-=dxLista;
   // Na ilha, de volta ao recorte dela (plrilha corta a forma inteira).
   if (ilha) gfx_recorte(ilhaR.x,ilhaR.y,ilhaR.w,ilhaR.h);
   else gfx_sem_recorte();
