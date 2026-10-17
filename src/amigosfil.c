@@ -119,7 +119,7 @@ static float amigosfilDireita(void) {
 #ifdef NV_TOUCH_UI
 static void amigosfilToqueVincular(float x0, float y, float alt, float corte, int n) {
   float direita = amigosfilDireita();
-  float maxX = fmaxf(0.0f, rostoX(n > 0 ? n - 1 : 0, x0, alt) + scroll + AF_D + 30.0f - direita);
+  float maxX = fmaxf(0.0f, rostoX(n > 0 ? n - 1 : 0, x0, alt) + scroll + AF_D + (n > 0 ? empurra(n - 1, alt) : 0.0f) + 30.0f - direita);
   float topo = fmaxf(y, corte), base = fminf(y + alt, NV_TELA_H);
   toquerol_vincular(&toque, (GfxRect){x0, topo, fmaxf(0.0f, direita - x0), fmaxf(0.0f, base - topo)},
                    gfx_escala(), 0.0f, n > 0 ? maxX : 0.0f, 0, &scroll);
