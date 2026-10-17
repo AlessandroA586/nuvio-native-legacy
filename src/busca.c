@@ -1277,6 +1277,7 @@ static float buPasso(void) {
   }
 }
 static float buCartazW(void) {
+  if (!buTelefone() && gfx_escala_txt() != 1.0f) return BU_CARTAZ_W;
   float w = buPasso() - 22.0f;
   return buTecladoNativo() || w < BU_CARTAZ_W ? w : BU_CARTAZ_W;
 }

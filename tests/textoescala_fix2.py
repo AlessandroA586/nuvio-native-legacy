@@ -122,6 +122,23 @@ def coverage():
     draw = function(keyboard, 'teclado_desenhar')
     assert 'TXT_INI()' in draw and 'ESCALA_REAL_INI()' not in draw, 'TV keyboard ignores scale'
     assert '#define NV_TXT_TELA' in keyboard
+    ccheck('''
+static float scale = 1;
+float gfx_poster_k(void) { return 1 / scale; }
+#define BU_CARTAZ_W (180.0f * gfx_poster_k())
+float gfx_escala_txt(void) { return scale; }
+int buTelefone(void) { return 0; }
+int buTecladoNativo(void) { return 0; }
+float buPasso(void) { return scale == 1 ? 202 : 171; }
+''' + function(search, 'buCartazW') + '''
+int main(void) {
+  float scales[] = {.85f,1,1.2f,1.3f};
+  for (int i = 0; i < 4; i++) {
+    scale = scales[i];
+    assert(fabsf(buCartazW() * scale - 180) < .001f);
+  }
+}
+''')
 
 
 def proof():
