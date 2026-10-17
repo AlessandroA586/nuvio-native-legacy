@@ -154,7 +154,7 @@ static const Item TELA[] = {
     ROT("Logo e abertura"),
       OPC(AJ_LOGO_APP), OPC(AJ_ABERTURA), OPC(AJ_ICONE_APP),
     ROT("Texto e tamanho"),
-      OPC(AJ_FONTE_UI), OPC(AJ_TAMANHO_UI), OPC(AJ_TAMANHO_AJUSTES), OPC(AJ_LAYOUT_AJUSTES),
+      OPC(AJ_FONTE_UI), OPC(AJ_TAMANHO_UI), OPC(AJ_ESCALA_TEXTO), OPC(AJ_TAMANHO_AJUSTES), OPC(AJ_LAYOUT_AJUSTES),
     ROT("Movimento e relógio"),
       OPC(AJ_ANIM), OPC(AJ_RELOGIO), OPC(AJ_RELOGIO_12H),
     ROT("Tela de descanso"),
