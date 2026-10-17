@@ -131,7 +131,7 @@ static float buTopoEsq(void) {
 // Rotulo em caixa alta (15/700) 18 acima do conteudo; melhor resultado 226 de
 // altura (capa 330x186 + padding 20); cartaz 180x270, nome 17 a 10 abaixo.
 #define BU_KICK_H       34.0f
-#define BU_MELHOR_H    226.0f
+#define BU_MELHOR_H    fmaxf(226.0f, 186.0f * gfx_poster_k() + 40.0f)
 #define BU_CARTAZ_W    (180.0f * gfx_poster_k())
 #define BU_CARTAZ_H    (270.0f * gfx_poster_k())
 #define BU_NOME_ALT     (buTecladoNativo() ? 50.0f : 30.0f)
@@ -1257,8 +1257,7 @@ static void busca_evento_(const SDL_Event *e) {
 }
 
 // --- Geometria das entradas da direita ---------------------------------------
-// Passo e largura do cartaz: 5 colunas iguais com vao 22 na largura da coluna
-// (o grid de 5 do mockup); mais estreita (rail fixa), o cartaz encolhe 2:3.
+// Five columns at 100%; scaled text keeps enough stride for preserved artwork.
 static float buPasso(void) {
   float larg = BU_DIR - BU_RES_X;
   if (buTelefone()) {
@@ -1273,7 +1272,8 @@ static float buPasso(void) {
     if (cols > 5) cols = 5;
     return (fmaxf(1.0f, larg) - (cols - 1) * 22.0f) / cols + 22.0f;
   } else {
-    return (larg - 4.0f * 22.0f) / 5.0f + 22.0f;
+    float passo = (larg - 4.0f * 22.0f) / 5.0f + 22.0f;
+    return gfx_escala_txt() != 1.0f ? fmaxf(passo, BU_CARTAZ_W + 22.0f) : passo;
   }
 }
 static float buCartazW(void) {

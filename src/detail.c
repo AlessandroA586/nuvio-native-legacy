@@ -7001,8 +7001,8 @@ static int moverFileira(int dy) {
 // episodio ou da aba da temporada em foco. O menu se ancora nela e, depois que
 // ele pinta o veu (episodio) ou a superficie do painel (temporada), a pagina
 // redesenha a peca por cima com a MESMA funcao da fileira — o card ao lado da
-// ilha, a aba de cabecalho do painel. Em pixels reais; o menu mede pela tela
-// virtual (escala.h) e a conversao e uma divisao.
+// ilha, a aba de cabecalho do painel. Detail uses the active text layer;
+// convert its coordinates by source scale / destination menu scale.
 static GfxRect menuOrigem;
 static int     menuOrigemCol;
 static float   menuOrigemF, menuOrigemA;
@@ -7010,8 +7010,8 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora);
 static void menuDeVisto(Uint32 agora) {
   if (!episodios_menu_visivel()) { episodios_menu_desenhar(); return; }
   if (menuOrigem.w > 8.0f && (foco.fileira == SEC_EPISODIOS || foco.fileira == SEC_TEMPORADAS)) {
-    float e = gfx_escala_ui();
-    episodios_menu_ancora((GfxRect){ menuOrigem.x / e, menuOrigem.y / e, menuOrigem.w / e, menuOrigem.h / e });
+    float e = gfx_escala() / gfx_escala_ui();
+    episodios_menu_ancora((GfxRect){ menuOrigem.x * e, menuOrigem.y * e, menuOrigem.w * e, menuOrigem.h * e });
   }
   episodios_menu_desenhar();
   if (menuOrigem.w <= 8.0f) return;
