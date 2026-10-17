@@ -83,6 +83,7 @@ run() {
   esac
   ( [ "$idx" != - ] && export NV_TXT_IDX="$idx"
     export NV_TXT_LOG="$W/$t/$tag-$s.log" NUVIO_DADOS="$dados" NUVIO_TESTE_DIR="$dados" NUVIO_AJUSTES_UX=1
+    export NV_SHOT_PACOTE="${NV_SHOT_PACOTE:-$PWD/deploy/app/art/03.jpg}"
     "$W/$t/$s" "${args[@]}" > "$W/$t/$tag-$s.out" 2>&1 ) || { echo "  run failed: $t $tag $s"; tail -5 "$W/$t/$tag-$s.out"; rm -rf "$dados"; return 1; }
   rm -rf "$dados"
   ( cd "$saida" && find . \( -name '*.bmp' -o -name '*.png' \) | sort | xargs shasum 2>/dev/null ) > "$W/$t/$tag-$s.sum"
