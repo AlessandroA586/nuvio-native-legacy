@@ -87,10 +87,26 @@ size_t trakt_token_tam(const char *);
 #define txt_bloco trakt_bloco
 #define txt_largura trakt_largura
 #define txt_token_tam trakt_token_tam
+#include "gfx.h"
+static int cardMaterial, cardFrost, captionSolid;
+static void card_material(GfxRect r, float radius, float density, float alpha) {
+  int before = gfx_vidro_com_fonte;
+  gfx_vidro_material(r, radius, density, alpha);
+  cardMaterial++;
+  cardFrost += gfx_vidro_com_fonte > before;
+}
+static void card_color(GfxRect r, float radius, float cr, float cg, float cb, float a) {
+  if (cr == .19f && cg == .21f && cb == .23f && a > .5f) captionSolid++;
+  gfx_cor(r, radius, cr, cg, cb, a);
+}
+#define gfx_vidro_material card_material
+#define gfx_cor card_color
 #ifndef NV_DETAIL_SOURCE
 #define NV_DETAIL_SOURCE "../src/detail.c"
 #endif
 #include NV_DETAIL_SOURCE
+#undef gfx_vidro_material
+#undef gfx_cor
 #undef txt_bloco
 #undef txt_largura
 #undef txt_token_tam
@@ -434,6 +450,7 @@ int main(int argc, char **argv) {
     if (lg && *lg) fprintf(f, "idioma %d\n", atoi(lg));
     // Acento azul do mockup (#5aa2ff/#42a5f5): o tema Oceano.
     fputs("selected_theme 2\n", f);
+    if (getenv("NUVIO_SHOT_LAYOUT")) fprintf(f, "homeLayoutLocal %d\n", atoi(getenv("NUVIO_SHOT_LAYOUT")));
     if (getenv("NUVIO_SHOT_VIDRO") && atoi(getenv("NUVIO_SHOT_VIDRO")))
       fputs("vidroLocal 0\n", f);
     else fputs("vidroLocal 1\n", f);
@@ -457,6 +474,7 @@ int main(int argc, char **argv) {
   if (getenv("NUVIO_TRAKT_CHECK")) return trakt_checks();
   if (getenv("NUVIO_DETAIL_CHECK")) {
     const char *m = getenv("NUVIO_DETAIL_CHECK");
+    if (!strcmp(m, "cards")) return card_checks();
     return strcmp(m, "mais") == 0 ? mais_checks() : rows_checks();
   }
   // NUVIO_SHOT_AMIGOS=1: amigos falsos (feed externo) no filme e na serie —

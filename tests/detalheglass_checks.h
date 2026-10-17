@@ -15,6 +15,32 @@ static int rows_frame(int *capt, int *pass, int *src, int *up) {
   return 0;
 }
 
+// Isolate each real renderer: page chrome cannot satisfy a card assertion.
+static int card_checks(void) {
+  int failures = 0;
+  abrir(1, 1, SEC_COLECAO, 0);
+  for (int row = 0; row < 4; row++) {
+    txt_novo_quadro(); tex_novo_quadro(); gfx_novo_quadro();
+    glClear(GL_COLOR_BUFFER_BIT);
+    cardMaterial = cardFrost = captionSolid = 0;
+    foco.fileira = row == 1 ? SEC_RELACIONADOS : SEC_ELENCO;
+    foco.coluna = 0;
+    if (row == 0) desenhaElenco(100, 100, 0, 1, 1);
+    if (row == 1) desenhaRelacionados(100, 100, 1, 0, 1);
+    if (row == 2) desenhaTrailer(100, 100, 0, 1, 1);
+    if (row == 3) {
+      assert(tex_obter_larg(extras_colecao_fundo(), COL_CARD_W));
+      desenhaColecao(100, 100, 1, 1);
+    }
+    int ok = ajustes_vidro() ? cardMaterial == 1 && cardFrost == 1
+             : row >= 2 || captionSolid == 1;
+    printf("%s: isolated card %d material=%d frost=%d solid=%d\n",
+           ok ? "PASS" : "FAIL", row, cardMaterial, cardFrost, captionSolid);
+    failures += !ok;
+  }
+  return failures ? 1 : 0;
+}
+
 static int rows_checks(void) {
   static const struct { const char *nome; int sec; int max; } linhas[] = {
     { "cast", SEC_ELENCO, 6 }, { "recommendations", SEC_RELACIONADOS, 7 },

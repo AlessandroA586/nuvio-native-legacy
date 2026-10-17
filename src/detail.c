@@ -5856,6 +5856,11 @@ static void desenhaElenco(float x, float y, int c, float f, float a) {
   // pula fileira vazia). Este `return` e a segunda tranca.
   if (!nome || !nome[0]) return;
 
+  if (!ajustes_vidro() && epApple() && f > .005f) {
+    float top = y + NV_DETP_EL_AVATAR + NV_DETP_EL_NOME_DY - 8;
+    GfxRect info = { x - 12, top, NV_DETP_EL_W + 24, 76 };
+    gfx_cor(info, 18.0f / info.h, .19f, .21f, .23f, .6f * f * a);
+  }
   cartaoVidro((GfxRect){ x - 10.0f, y - 10.0f, NV_DETP_EL_W + 20.0f,
                          NV_DETP_EL_AVATAR + NV_DETP_EL_NOME_DY + NV_DETP_EL_PAPEL_DY + 45.0f },
               f, a);
@@ -6166,6 +6171,11 @@ static void desenhaRelacionados(float x, float y, float a, int primeiro, int lim
     // painel da legenda. O cartao de vidro/accent que envolvia arte e legenda
     // era um contorno de 8 px que ignorava "Foco no cartaz".
     if (aceso && epApple()) {
+      if (!ajustes_vidro()) {
+        float h = 12.0f + 22.0f + (ano[0] ? 6.0f + 18.0f : 0.0f) + 16.0f;
+        GfxRect legend = { cx - 10, y + REL_CARD_H + 4, REL_CARD_W + 20, h };
+        gfx_cor(legend, 16.0f / legend.h, .19f, .21f, .23f, .64f * a);
+      }
       if (ajustes_borda_foco()) gfx_anel(r,raio,1.5f,1,1,1,.18f*a);
     }
     // Foco da Home no cartaz (focoprof.h): anel so com o ajuste ligado, senao
@@ -6346,11 +6356,13 @@ static void desenhaColecao(float x, float y, float f, float a) {
     gfx_rect(r, t, GFX_VITRINE, 1.0f, 0.5f, 0.0f, raio, 0.30f, 0, 0, a);
     gfx_tex_aspect_atual = 0.0f;
   } else {
-    if (ajustes_vidro()) gfx_vidro_material(r, raio, GFX_VIDRO_DENS, a);
-    else moldura(r, COL_CARD_RAIO, a);
+    if (!ajustes_vidro()) moldura(r, COL_CARD_RAIO, a);
     if (fundo[0] && !tex_falhou(fundo)) gfx_esqueleto(r, raio, 0.12f, 0.12f, 0.13f, a * 0.6f);
   }
-  if (ajustes_vidro()) foco_anel(r, raio, f, a);
+  if (ajustes_vidro()) {
+    gfx_vidro_material(r, raio, GFX_VIDRO_DENS, a);
+    foco_anel(r, raio, f, a);
+  }
 
   // Escada: de tras para a frente, para a primeira parte ficar por cima.
   nCapas = n < 3 ? n : 3;
