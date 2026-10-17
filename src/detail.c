@@ -1038,7 +1038,7 @@ static void recalcularLayout(void) {
     // As quatro primeiras vem de MEDIDA ABSOLUTA na referencia; nao sao um
     // empilhamento. As de baixo (comentarios) sim: elas ficam depois do elenco,
     // cuja altura e conhecida.
-    static const float G[N_SECOES] = {
+    const float G[N_SECOES] = {
       NV_DETP_G_TEMP, NV_DETP_G_EP, NV_DETP_G_ABAS, NV_DETP_G_ELENCO, 0, 0
     };
     float y;
@@ -2139,11 +2139,11 @@ static GfxRect epPlacaRect(GfxRect r, float thH, float ft) {
   return p;
 }
 static float epPlacaA(float f) { return NV_DETP_EP_PLACA_A * anim_clamp(f, 0.0f, 1.0f); }
-// Vidro com o mesmo material dos cartoes de elenco/Trakt (ajustes_vidro; o
-// governor cai para o esfumacado dentro do gfx_vidro). Sem vidro, o branco de sempre.
+// Glass cards tint the shared page backdrop, without a per-card material pass.
+// Glass off keeps the existing white focus plate.
 static void epPlacaDesenha(GfxRect p, float f, float a) {
   if (ajustes_vidro())
-    gfx_vidro_material(p, 24.0f / p.h, GFX_VIDRO_DENS, anim_clamp(f, 0.0f, 1.0f) * a);
+    gfx_cor(p, 24.0f / p.h, 1, 1, 1, 0.07f * anim_clamp(f, 0.0f, 1.0f) * a);
   else
     gfx_cor(p, 24.0f / p.h, 1, 1, 1, epPlacaA(f) * a);
 }
@@ -2161,9 +2161,9 @@ static float epAppleExtra(void) { return epCardH() - 414.0f; }
 // Topo do cabecalho: fundo dos cartoes de episodio + o vao antes das notas (60,
 // o mesmo de vaoAntes).
 // O GRAFICO DE TEMPORADAS ("Seu progresso") vem antes das Notas e as empurra.
-static float progTopoSerie(void) { return epRowY() + epCardH() + 60.0f; }
+static float progTopoSerie(void) { return epRowY() + epCardH() + 60.0f + 16.0f * NV_DETP_ESP; }
 static float progBloco(void) {
-  return secaoN(SEC_PROGTEMP) > 0 ? alturaSecao(SEC_PROGTEMP) + 60.0f : 0.0f;
+  return secaoN(SEC_PROGTEMP) > 0 ? alturaSecao(SEC_PROGTEMP) + 60.0f + 16.0f * NV_DETP_ESP : 0.0f;
 }
 static float notasTopoSerie(void) { return progTopoSerie() + progBloco(); }
 // Fim das Notas (= topo dos Numeros da temporada, que vem logo depois).
@@ -2183,14 +2183,13 @@ static float notasBloco(void) {
   return fim - NV_DETP_G_ABAS - epAppleExtra();
 }
 static float epExtraAltura(void) { return epAppleExtra() + notasBloco(); }
-static float epTempY(void) { return epApple() ? 1160.0f : NV_DETP_TEMP_Y; }
-static float epRowY(void) { return epApple() ? 1286.0f : NV_DETP_EP_Y; }
-static float epAbasY(void) { return (epApple() ? 1758.0f : NV_DETP_ABA_Y) + epExtraAltura(); }
-static float epElencoY(void) { return (epApple() ? 1817.0f : NV_DETP_EL_Y) + epExtraAltura(); }
+static float epTempY(void) { return NV_DETP_TEMP_Y; }
+static float epRowY(void) { return NV_DETP_EP_Y; }
+static float epAbasY(void) { return NV_DETP_ABA_Y + epExtraAltura(); }
+static float epElencoY(void) { return NV_DETP_EL_Y + epExtraAltura(); }
 static float serieGrupo(int r) {
-  static const float glass[] = { NV_DETP_G_TEMP, NV_DETP_G_EP, NV_DETP_G_ABAS, NV_DETP_G_ELENCO };
-  static const float apple[] = { 1080.0f, 1194.0f, 1680.0f, 1749.0f };
-  return (epApple() ? apple : glass)[r];
+  const float groups[] = { NV_DETP_G_TEMP, NV_DETP_G_EP, NV_DETP_G_ABAS, NV_DETP_G_ELENCO };
+  return groups[r];
 }
 
 static float alturaSecao(int r) {
@@ -6001,7 +6000,7 @@ static void moldura(GfxRect r, float raio, float a) {
   // SUPERFICIE ESCURA TINGIDA, um degrau acima do fundo. O cinza #2D2D2D da
   // primeira versao competia com os graficos e fazia esta aba parecer um modal
   // separado; o navy quase-preto mantem a hierarquia sem virar uma placa.
-  if (ajustes_vidro()) { gfx_vidro_painel(r, raio, 0.5f, a); return; }
+  if (ajustes_vidro()) { gfx_cor(r, raio, 1, 1, 1, 0.07f * a); return; }
   gfx_cor(r, raio, 0.082f, 0.094f, 0.118f, 0.92f * a);
   // SEM FIO DE CONTORNO. Havia aqui um anel branco a 14% que existia para
   // "fechar" o cartao sobre a arte de fundo — o dono mandou tirar em 16/09

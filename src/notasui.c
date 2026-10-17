@@ -1,5 +1,6 @@
 #include "notasui.h"
 #include "ajustes.h"
+#include "detail.h"
 #include "badges.h"
 #include "idioma.h"
 #include "layout.h"
@@ -30,7 +31,7 @@ static void painel(GfxRect r, float raio, float a) {
   float teto = r.h > 0.0f ? 0.5f * r.w / r.h : 0.5f;
   if (rf > 0.5f) rf = 0.5f;
   if (rf > teto) rf = teto;
-  if (ajustes_vidro()) { gfx_vidro_painel(r, rf, 0.5f, a); return; }
+  if (ajustes_vidro()) { gfx_cor(r, rf, 1, 1, 1, 0.07f * a); return; }
   gfx_cor(r, rf, 0.082f, 0.094f, 0.118f, 0.92f * a);
 }
 
@@ -268,7 +269,7 @@ float notasui_marca_cartao(int f, int cru, float xc, float yc, float h, float a)
 // ---------------------------------------------------------------------------
 // A esquerda um CARTAO DE NOTA: a media 0..100 grande, a divisao critica x
 // publico numa barra com os dois numeros, uma frase que explica a diferenca e
-// "Menor · Maior". A direita uma GRADE DE DUAS COLUNAS com um bloco por fonte:
+// "Menor · Maior". A direita, quatro colunas no B2 com vidro, duas sem vidro:
 // marca, nota no formato do site, uma barra fina 0..100 com a marca branca na
 // media e a diferenca para a media. A regua 45..100 e a lista longa sairam.
 //
@@ -277,13 +278,15 @@ float notasui_marca_cartao(int f, int cru, float xc, float yc, float h, float a)
 // (detail.c faz o cima/baixo dentro da grade).
 #include "telefoneui.h"
 static int notasEmpilhadas(void) { return telefoneui_ativo() && NV_TELA_W < 1500; }
-#define SEC_W       (notasEmpilhadas() ? NV_TELA_W - 192.0f : 1728.0f)
-#define SCORE_W     (notasEmpilhadas() ? SEC_W : 520.0f)
+static int notasB2(void) { return ajustes_vidro() && !notasEmpilhadas(); }
+#define TILE_COLS    (notasB2() ? 4 : 2)
+#define SEC_W       (NV_TELA_W - 2.0f * NV_DETP_X)
+#define SCORE_W     (notasEmpilhadas() ? SEC_W : notasB2() ? 420.0f : 520.0f)
 #define SCORE_MIN_H  448.0f
-#define COL_GAP       28.0f
-#define TILE_GAP      14.0f
-#define TILE_H       104.0f
-#define TILE_W     ((SEC_W - (notasEmpilhadas() ? 0 : SCORE_W + COL_GAP) - TILE_GAP) * 0.5f)
+#define COL_GAP      (28.0f + 8.0f * NV_DETP_ESP)
+#define TILE_GAP     (14.0f + 8.0f * NV_DETP_ESP)
+#define TILE_H       (notasB2() ? 217.0f : 104.0f)
+#define TILE_W     ((SEC_W - (notasEmpilhadas() ? 0 : SCORE_W + COL_GAP) - (TILE_COLS - 1) * TILE_GAP) / TILE_COLS)
 #define TILE_PAD      24.0f
 #define TILE_LOGO_W   64.0f
 #define TILE_VAL_W   128.0f
@@ -345,7 +348,7 @@ static void medir(const NotasSecao *s, Medidas *m) {
     m->nFontes++;
   }
   if (m->nFontes) {
-    int linhas = (m->nFontes + 1) / 2;
+    int linhas = (m->nFontes + TILE_COLS - 1) / TILE_COLS;
     float hg = (float)linhas * TILE_H + (float)(linhas - 1) * TILE_GAP;
     // UMA fonte nao enche o cartao de resumo: sem "Menor/Maior" e sem a barra
     // critica x publico (os dois precisam de r.n > 1), um piso de 448 deixava
@@ -486,8 +489,8 @@ static void desenhaBloco(const NotasSecao *s, int fonte, int norm, const NfResum
   GfxRect rz = foco_zoom(r0, f);
   float raio = TILE_RAIO / TILE_H;
   float cr, cg, cb;
-  float bx = x + TILE_PAD + TILE_LOGO_W + 18.0f;
-  float bw = x + TILE_W - TILE_PAD - TILE_VAL_W - 16.0f - bx;
+  float bx = notasB2() ? x + TILE_PAD : x + TILE_PAD + TILE_LOGO_W + 18.0f;
+  float bw = notasB2() ? TILE_W - 2 * TILE_PAD : x + TILE_W - TILE_PAD - TILE_VAL_W - 16.0f - bx;
   float by = y + TILE_H - 30.0f;
   char v[24];
   TxtLinha ln, lv;
@@ -509,13 +512,15 @@ static void desenhaBloco(const NotasSecao *s, int fonte, int norm, const NfResum
   }
   if (f > 0.01f) gfx_cor(rz, raio, 1, 1, 1, 0.07f * f * a);
   if (ajustes_vidro()) foco_anel(r0, raio, f, a);
-  marcaCaixa(fonte, s->cru[fonte], x + TILE_PAD, y + TILE_H * 0.5f, TILE_LOGO_W, a);
+  marcaCaixa(fonte, s->cru[fonte], x + TILE_PAD,
+             y + (notasB2() ? 38.0f : TILE_H * 0.5f), TILE_LOGO_W, a);
   ln = txt_linha_corta(TXT_DET_META2, rotulo(fonte), 190, 194, 202, 255, bw);
-  txt_desenhar_alpha(ln, bx, y + 22.0f, a);
+  txt_desenhar_alpha(ln, bx, y + (notasB2() ? 72.0f : 22.0f), a);
   // Valor no formato do site e a diferenca para a media.
   nf_texto(fonte, s->cru[fonte], virgula(), 1, v, sizeof v);
   lv = texto(TXT_LOG_T34, v, 245);
-  txt_desenhar_alpha(lv, x + TILE_W - TILE_PAD - (float)lv.w, y + 14.0f, a);
+  float valY = y + (notasB2() ? 110.0f : 14.0f);
+  txt_desenhar_alpha(lv, x + TILE_W - TILE_PAD - (float)lv.w, valY, a);
   if (r->n > 1 && nf_grupo(fonte) != NF_AGREGADA) {
     int d = norm - r->media;
     char dl[12];
@@ -524,7 +529,7 @@ static void desenhaBloco(const NotasSecao *s, int fonte, int norm, const NfResum
     if (d > 0)      ld = txt_linha(TXT_G16B, dl, 67, 211, 158, 255);
     else if (d < 0) ld = txt_linha(TXT_G16B, dl, 240, 138, 75, 255);
     else            ld = texto(TXT_G16B, dl, 140);
-    txt_desenhar_alpha(ld, x + TILE_W - TILE_PAD - (float)ld.w, y + 14.0f + (float)lv.h, a);
+    txt_desenhar_alpha(ld, x + TILE_W - TILE_PAD - (float)ld.w, valY + (float)lv.h, a);
   }
   // Barra 0..100 na escala comum, e a marca branca na media.
   gfx_cor((GfxRect){ bx, by, bw, 8.0f }, 0.5f, 1, 1, 1, 0.07f * a);
@@ -560,8 +565,8 @@ float notasui_fontes_desenhar(const NotasSecao *s, float x, float y, float a,
   nf_resumo(m.fontes, m.norm, m.nFontes, &r);
   desenhaCartao(&m, x, y, m.scoreH, foco ? foco[0] : 0.0f, aa);
   for (i = 0; i < m.nFontes; i++) {
-    float tx = gx + (float)(i % 2) * (TILE_W + TILE_GAP);
-    float ty = y + (notasEmpilhadas() ? m.scoreH + COL_GAP : 0) + (float)(i / 2) * (TILE_H + TILE_GAP);
+    float tx = gx + (float)(i % TILE_COLS) * (TILE_W + TILE_GAP);
+    float ty = y + (notasEmpilhadas() ? m.scoreH + COL_GAP : 0) + (float)(i / TILE_COLS) * (TILE_H + TILE_GAP);
     if (ty > NV_TELA_H || ty + TILE_H < 0.0f) continue;
     desenhaBloco(s, m.fontes[i], m.norm[i], &r, tx, ty, 0.0f, aa);
   }
