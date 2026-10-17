@@ -4188,16 +4188,19 @@ static HeroCopyLayout heroCopyLayout(float base, float hSin, int hasMeta,
                                      float slot, float friendsH) {
   HeroCopyLayout p;
   float s = slot < 0.0f ? 0.0f : slot > 1.0f ? 1.0f : slot;
-  float slotH = btnH + btnGap;
-  float gap = NV_HERO_COPY_LINHA;
+  // Keep the information slots in screen pixels; text grows into their gaps.
+  int fixed = !heroCompactoTelefone() && !homeRetratoTelefone();
+  float slotH = fixed ? ANC(btnH + btnGap) : btnH + btnGap;
+  float gap = fixed ? ANC(NV_HERO_COPY_LINHA) : NV_HERO_COPY_LINHA;
+  if (fixed) { btnGap = ANC(btnGap); friendsH = ANC(friendsH); captionH = ANC(captionH); }
   // A larger final synopsis line borrows decorative gaps in the compact
   // phone hero, keeping its logo, metadata and action inside the same area.
   if (heroCompactoTelefone())
     gap = fmaxf(0, gap - (sinopse_entrelinha(TXT_HERO_SIN, NV_LD_HERO_SIN) - NV_LD_HERO_SIN));
   p.synopsis = base - slotH * s - hSin;
   p.action = p.synopsis + hSin + btnGap;
-  p.secondary = p.synopsis - (hasSec ? (hSin > 0 ? gap : 0) + NV_LD_HERO_SEC : 0);
-  p.meta = p.secondary - (hasMeta ? ((hasSec || hSin > 0) ? gap : 0) + NV_LD_HERO_META : 0);
+  p.secondary = p.synopsis - (hasSec ? (hSin > 0 ? gap : 0) + (fixed ? ANC(NV_LD_HERO_SEC) : NV_LD_HERO_SEC) : 0);
+  p.meta = p.secondary - (hasMeta ? ((hasSec || hSin > 0) ? gap : 0) + (fixed ? ANC(NV_LD_HERO_META) : NV_LD_HERO_META) : 0);
   // A linha de AMIGOS (quem gostou / assistiu) fica logo acima da meta.
   p.friends = p.meta - (friendsH > 0 ? gap + friendsH : 0);
   p.caption = p.friends - (captionH > 0 ? gap + captionH : 0);
@@ -4474,6 +4477,14 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
     minTop = base - ANC(NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE) + 24.0f;
   else if (lay == HOME_LAYOUT_DINAMICA)
     minTop = base - ANC(NV_DIN_HERO_H - NV_DIN_TEXTO_BASE) + 54.0f;
+  if (!heroCompactoTelefone() && !homeRetratoTelefone()) {
+    float previous = gfx_escala();
+    gfx_escala_sair(1.0f);
+    hSin = sinopse[0] ? txt_bloco_corta(heroSinEstilo(), sinopse, 255, 255, 255, -1, 0,
+                                      sinW, heroSinEntrelinha(), 0, sinLinhas) : 0;
+    gfx_escala_sair(previous);
+    hSin = ANC(hSin);
+  }
   AmigosTitulo amigos;
   int temAmigos = ci && ci->imdb[0] && amigostitulo_obter(ci->imdb, &amigos);
   float friendsH = temAmigos ? NV_AMIGOS_HERO_H : 0.0f;

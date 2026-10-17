@@ -120,7 +120,7 @@ static float buTopoEsq(void) {
 #define BU_MAX_CONSULTA 48
 
 // --- Coluna da direita --------------------------------------------------------
-#define BU_RES_X       (buUmaColuna() ? buX() : buX() + BU_COL_W + BU_COL_GAP)
+#define BU_RES_X       (buUmaColuna() ? buX() : buX() + ANC(520.0f + BU_COL_GAP))
 #define BU_RES_Y       buResY()
 #define BU_DIR         buDir()
 #define BU_RES_AREA_H  (NV_TELA_H - 48.0f - BU_RES_Y)
@@ -1846,7 +1846,7 @@ static void desenhaResultados(Uint32 agora) {
     gfx_opacidade_grupo = grupo * revela_entra(filEntraEm[r], 0.0f, agora);
 
     // Rotulo da entrada: "Melhor resultado" ou o nome do catalogo (+ origem).
-    buCabecalho(r, ry + 4.0f, larg);
+    buCabecalho(r, ry + ANC(4.0f), larg);
     gfx_opacidade_grupo = grupo;
     float cy = ry + filKickH(r);
 

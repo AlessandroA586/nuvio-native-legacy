@@ -1043,7 +1043,7 @@ static void recalcularLayout(void) {
     };
     float y;
     for (r = 0; r < N_SECOES; r++) {
-      topoSec[r] = conteudoSec[r] = G[r] +
+      topoSec[r] = conteudoSec[r] = ANC(G[r]) +
         (r >= SEC_ABAS_INFO && r <= SEC_ELENCO ? epExtraAltura() : 0);
       // NOTAS na serie: logo abaixo dos episodios, onde antes comecavam as abas
       // (G_ABAS); o bloco inteiro empurra abas e elenco (epExtraAltura).
@@ -1060,7 +1060,7 @@ static void recalcularLayout(void) {
     alvoSec[SEC_NOTAS] = alvoQueCabe(alturaSecao(SEC_NOTAS));
     alvoSec[SEC_NUMEROS] = alvoQueCabe(alturaSecao(SEC_NUMEROS));
     alvoSec[SEC_PROGTEMP] = alvoQueCabe(alturaSecao(SEC_PROGTEMP));
-    docFim = NV_DETP_FIM;
+    docFim = ANC(NV_DETP_FIM);
     // SECAO DO TRAKT NA SERIE: empilhada abaixo do elenco, como na referencia.
     // Era o "falta a secao do trakt na de series" — ela existia so em filme.
     //
@@ -1141,7 +1141,7 @@ static void recalcularLayout(void) {
     }
     return;
   }
-  { float y = NV_DETF_HERO_FIM;
+  { float y = ANC(NV_DETF_HERO_FIM);
     for (int o = 0; o < N_ORDEM; o++) {
       float h;
       r = ORDEM_FILME[o];
@@ -2105,13 +2105,13 @@ static float epThumbH(void) {
 }
 static float epCardW(void) { return (epApple() ? 420.0f : NV_DETP_EP_W * epEscala()) * gfx_poster_k(); }
 static float epCardH(void) {
-  if (epApple()) return 500.0f;
-  if (!epModerna()) return NV_DETP_EP_H;
+  if (epApple()) return ANC(500.0f);
+  if (!epModerna()) return ANC(NV_DETP_EP_H);
   // Miniatura + bloco de texto: titulo (1 linha) + sinopse de 4 linhas (#205),
   // com o mesmo respiro de 10 do card de sempre. As fontes nao escalam, entao
   // o bloco e o mesmo nos tres tamanhos — so a miniatura muda.
-  return epThumbH() + NV_DETP_EPM_SIN_DY +
-         (float)NV_DETP_EPM_SIN_LINHAS * NV_DETP_EP_LD_SIN + 10.0f;
+  return epThumbH() + ANC(NV_DETP_EPM_SIN_DY +
+         (float)NV_DETP_EPM_SIN_LINHAS * NV_DETP_EP_LD_SIN + 10.0f);
 }
 static float epCardPasso(void) { return epCardW() + (epApple() ? NV_DETP_EP_GAP : (NV_DETP_EP_PASSO - NV_DETP_EP_W) * epEscala()); }
 // A placa de foco estilo Apple TV (#205): alpha da mola `f` vezes o teto
@@ -2155,15 +2155,15 @@ static int epSinLinhas(void) { return epModerna() ? NV_DETP_EPM_SIN_LINHAS : 3; 
 // Titulo do episodio: um degrau abaixo na escala de sempre na Moderna (#205) —
 // 28 (TXT_CALLOUT) em vez de 32 (TXT_PLR_CORPO), pedido do dono.
 static TxtEstilo epTituloEstilo(void) { return epModerna() ? TXT_CALLOUT : TXT_PLR_CORPO; }
-static float epAppleExtra(void) { return epCardH() - 414.0f; }
+static float epAppleExtra(void) { return epCardH() - ANC(414.0f); }
 // Bloco das Notas na serie (cabecalho + fileira + vao), que empurra abas e
 // elenco; 0 enquanto as notas nao chegaram.
 // Topo do cabecalho: fundo dos cartoes de episodio + o vao antes das notas (60,
 // o mesmo de vaoAntes).
 // O GRAFICO DE TEMPORADAS ("Seu progresso") vem antes das Notas e as empurra.
-static float progTopoSerie(void) { return epRowY() + epCardH() + 60.0f; }
+static float progTopoSerie(void) { return epRowY() + epCardH() + ANC(60.0f); }
 static float progBloco(void) {
-  return secaoN(SEC_PROGTEMP) > 0 ? alturaSecao(SEC_PROGTEMP) + 60.0f : 0.0f;
+  return secaoN(SEC_PROGTEMP) > 0 ? alturaSecao(SEC_PROGTEMP) + ANC(60.0f) : 0.0f;
 }
 static float notasTopoSerie(void) { return progTopoSerie() + progBloco(); }
 // Fim das Notas (= topo dos Numeros da temporada, que vem logo depois).
@@ -2180,17 +2180,17 @@ static float notasBloco(void) {
                      secaoN(SEC_PROGTEMP) <= 0)) return 0.0f;
   fim = numerosTopoSerie();
   if (secaoN(SEC_NUMEROS) > 0) fim += alturaSecao(SEC_NUMEROS) + NV_DETF_SEC_GAP;
-  return fim - NV_DETP_G_ABAS - epAppleExtra();
+  return fim - ANC(NV_DETP_G_ABAS) - epAppleExtra();
 }
 static float epExtraAltura(void) { return epAppleExtra() + notasBloco(); }
-static float epTempY(void) { return epApple() ? 1160.0f : NV_DETP_TEMP_Y; }
-static float epRowY(void) { return epApple() ? 1286.0f : NV_DETP_EP_Y; }
-static float epAbasY(void) { return (epApple() ? 1758.0f : NV_DETP_ABA_Y) + epExtraAltura(); }
-static float epElencoY(void) { return (epApple() ? 1817.0f : NV_DETP_EL_Y) + epExtraAltura(); }
+static float epTempY(void) { return ANC(epApple() ? 1160.0f : NV_DETP_TEMP_Y); }
+static float epRowY(void) { return ANC(epApple() ? 1286.0f : NV_DETP_EP_Y); }
+static float epAbasY(void) { return ANC(epApple() ? 1758.0f : NV_DETP_ABA_Y) + epExtraAltura(); }
+static float epElencoY(void) { return ANC(epApple() ? 1817.0f : NV_DETP_EL_Y) + epExtraAltura(); }
 static float serieGrupo(int r) {
   static const float glass[] = { NV_DETP_G_TEMP, NV_DETP_G_EP, NV_DETP_G_ABAS, NV_DETP_G_ELENCO };
   static const float apple[] = { 1080.0f, 1194.0f, 1680.0f, 1749.0f };
-  return (epApple() ? apple : glass)[r];
+  return ANC((epApple() ? apple : glass)[r]);
 }
 
 static float alturaSecao(int r) {
@@ -3338,7 +3338,7 @@ static float yItem(int r, int c) { (void)r; (void)c; return 0; }
 // e uma constante como a do episodio.
 static float larguraItem(int r, int c) {
   switch (r) {
-    case SEC_TEMPORADAS:  return ehShuffle(c) ? NV_DETP_TEMP_H : larguraTemporada(posTemp(c));
+    case SEC_TEMPORADAS:  return ehShuffle(c) ? ANC(NV_DETP_TEMP_H) : larguraTemporada(posTemp(c));
     case SEC_EPISODIOS:   return epCardW();
     case SEC_ABAS_INFO:   return larguraAbaInfo(c);
     case SEC_TRAILERS:     return NV_DETF_TR_W;
@@ -3390,7 +3390,7 @@ static float xItem(int r, int c) {
     // Frases idem, com a coluna unica.
     if (EH_AUD(r) || r == SEC_FRASES || r == SEC_NOTAS || r == SEC_NOTAS_EP ||
         r == SEC_PROGTEMP) continue;
-    if (r == SEC_TEMPORADAS) x += larguraItem(r, k) + NV_DETP_TEMP_GAP;
+    if (r == SEC_TEMPORADAS) x += larguraItem(r, k) + ANC(NV_DETP_TEMP_GAP);
     else x += larguraAbaInfo(k) + NV_DETP_ABA_SEP * 2 + 9.0f;  // 9 = largura do "|"
   }
   return x;
@@ -5579,7 +5579,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   float tx = r.x + NV_DETP_EP_PAD;
   const int moderna = epModerna();
   const float textoX = moderna ? r.x + NV_DETP_EPM_TEXTO_X : tx;   // a placa de foco sobra 16 alem do card
-  const float epSeloY = moderna ? NV_DETP_EPM_SELO_Y : NV_DETP_EP_SELO_Y;
+  const float epSeloY = moderna ? NV_DETP_EPM_SELO_Y : ANC(NV_DETP_EP_SELO_Y);
 
   // Ausencia de check nao afirma que o historico ja chegou. Evita um selo
   // "nao assistido" inventado enquanto o Trakt ainda esta consultando.
@@ -5654,7 +5654,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
                                  epTextoW());
     // TITULO EM FOCO (#205): clareia e avanca uns pixels com a mesma mola do
     // prato; em repouso fica meio tom abaixo. So o TEXTO anda — a caixa nao.
-    txt_peso(l, textoX + ft * 6.0f, r.y + (moderna ? epThumbH() + NV_DETP_EPM_TIT_DY : NV_DETP_EP_TIT_Y), a * (0.86f + 0.14f * ft), 1.4f); }
+    txt_peso(l, textoX + ft * 6.0f, r.y + (moderna ? epThumbH() + NV_DETP_EPM_TIT_DY : ANC(NV_DETP_EP_TIT_Y)), a * (0.86f + 0.14f * ft), 1.4f); }
 
   // Sinopse: 4 linhas na Moderna (#205; eram 2), 3 no Padrao, com truncamento
   // do bloco. Sem sinopse o espaco
@@ -5667,9 +5667,11 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   // foco (#205, dono: "o texto com animacao"), na mesma mola do prato.
   if (epSin)
     sinopse_bloco_corta(TXT_CAPTION, epSin, 255, 255, 255, textoX,
-                    r.y + (moderna ? epThumbH() + NV_DETP_EPM_SIN_DY : NV_DETP_EP_SIN_Y),
+                    r.y + (moderna ? epThumbH() + NV_DETP_EPM_SIN_DY : ANC(NV_DETP_EP_SIN_Y)),
                     epTextoW(), NV_DETP_EP_LD_SIN, a * (0.62f + 0.33f * ft),
-                    epSinLinhas());
+                    moderna ? epSinLinhas() : (int)fminf(epSinLinhas(),
+                      floorf((epThumbH() - (NV_DETP_EP_THUMB_H - NV_DETP_EP_META_Y) - 12.0f
+                              - ANC(NV_DETP_EP_SIN_Y)) / NV_DETP_EP_LD_SIN)));
 
   // Meta: relogio + duracao + data, 20/400 rgb(179,179,179), com 38 de folga
   // entre os dois blocos. Na Moderna e ancorado na BASE da miniatura
@@ -7115,8 +7117,8 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
   float y;
   if (!ehSerie()) y = conteudoSec[r];
   else switch (r) {
-    case SEC_TEMPORADAS: y = NV_DETP_TEMP_Y; break;
-    case SEC_EPISODIOS:  y = NV_DETP_EP_Y;   break;
+    case SEC_TEMPORADAS: y = epTempY(); break;
+    case SEC_EPISODIOS:  y = epRowY();  break;
     case SEC_ABAS_INFO:  y = epAbasY();  break;
     // A SECAO DO TRAKT E EMPILHADA, nao medida: ela vem DEPOIS do elenco e a
     // altura do elenco varia (nome comprido quebra em duas linhas). O `default`
@@ -7266,8 +7268,8 @@ static void desenhaEsqueletoEpisodios(float a) {
   float yt, ye;
   if (!ehSerie() || cat_n_episodios(idx) > 0 ||
       !desc_episodios_carregando(idx)) return;
-  yt = NV_DETP_TEMP_Y - scrollY;
-  ye = NV_DETP_EP_Y - scrollY;
+  yt = epTempY() - scrollY;
+  ye = epRowY() - scrollY;
 
   if (yt < NV_TELA_H && yt + NV_DETP_TEMP_H > 0) {
     for (c = 0; c < 3; c++) {
