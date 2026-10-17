@@ -28,25 +28,28 @@ static void quadro(Uint32 agora) {
   int i;
   gfx_novo_quadro();
   glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
+  gfx_vidro_sujar();   // changing art: forces the backdrop hash off last frame's
   gfx_cor((GfxRect){ 0, 0, 1920, 1080 }, 0, fundo, fundo, fundo * 1.2f, 1.0f);
   for (i = 0; i < 12; i++)
     gfx_cor((GfxRect){ 0, i * 90.0f - 80.0f, 1920, 90 }, 0, .1f + .06f * i, .2f, .5f - .03f * i, 1.0f);
   menu_atualizar(0.016f, agora);
   menu_desenhar(agora);
   ilha_desenhar(agora);
-  gfx_vidro_painel((GfxRect){ 1240, 300, 560, 600 }, 36.0f / 600.0f, 0.80f, 1.0f);
+  gfx_vidro_ou_solido((GfxRect){ 1240, 300, 560, 600 }, 36.0f / 600.0f, 0.80f, 1.0f, .12f, .13f, .15f, .95f);
 }
 
 // Frames with a changing backdrop; returns the worst capture/pass counts and
 // totals the frames' frosted / smoked glasses.
 static int cap, pas, fonte, chapado;
+static double copiatot;
 static void roda(int n, Uint32 *t) {
   int k;
-  cap = pas = fonte = chapado = 0;
+  cap = pas = fonte = chapado = 0; copiatot = 0.0;
   for (k = 0; k < n; k++) {
     fundo = 0.05f + 0.01f * ((k % 20) + 1);
     quadro((*t)++ * 16u);
     if (gfx_vidro_capturas > cap) cap = gfx_vidro_capturas;
+    copiatot += gfx_vidro_copia;
     if (gfx_vidro_passadas > pas) pas = gfx_vidro_passadas;
     fonte += gfx_vidro_com_fonte; chapado += gfx_vidro_chapados;
   }
@@ -189,6 +192,20 @@ int main(void) {
   gfx_vidro_governar_zerar();
   for (i = 0; i < 6; i++) janela_mista(40.0, 6, 2);
   confere(!gfx_vidro_degradado(), "governor: windows mixing scenes never start a trial");
+
+  // Interface de vidro OFF with frost kept (Alta): no glass consumes a
+  // backdrop, so the zero-region fallback must not blur the full screen on
+  // every changed frame. Then back ON: frost resumes and captures again.
+  setenv("NUVIO_SHOT_VIDRO_QUAL", "2", 1); ajustes_teste_vidro_env();
+  ajustes_definir_vidro(0);
+  assert(!ajustes_vidro() && ajustes_vidro_fosco() && ajustes_vidro_qualidade() == 2);
+  roda(30, &t);
+  printf("Vidro desligado: cap<=%d pas<=%d copia=%.2f fonte=%d chapado=%d\n", cap, pas, copiatot, fonte, chapado);
+  // <= 1.0 screen: the toggle frame closes last frame's regions once.
+  confere(copiatot <= 1.0 && fonte == 0, "glass off: no full-screen blur on a changing backdrop");
+  ajustes_definir_vidro(1);
+  roda(30, &t);
+  confere(cap == 1 && fonte > 0, "glass back on: frost captures the backdrop again");
 
   unlink(cam);
   { char tt[700]; snprintf(tt, sizeof tt, "%s/ajustes.tmp", dir); unlink(tt); }

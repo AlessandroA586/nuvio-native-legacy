@@ -3555,7 +3555,7 @@ static void vidroFundoFechar(void) {
   // No glass last frame (frost just resumed or appeared): its regions are
   // unknown, so blur the whole screen once, before foreground, instead of one
   // capture per glass. Not for smoked glass or over a video hole: no backdrop read.
-  if (!n && !vidroNFuros && (ajustes_vidro_qualidade() == 2 || (ajustes_vidro_qualidade() == 0 && !vidroDegradou))) { reg[0][0] = reg[0][1] = 0; reg[0][2] = NV_TELA_W; reg[0][3] = NV_TELA_H; n = 1; }
+  if (!n && !vidroNFuros && ajustes_vidro() && (ajustes_vidro_qualidade() == 2 || (ajustes_vidro_qualidade() == 0 && !vidroDegradou))) { reg[0][0] = reg[0][1] = 0; reg[0][2] = NV_TELA_W; reg[0][3] = NV_TELA_H; n = 1; }
   // A copia le a TELA: o fundo da Dinamica adiado tem de sair nela antes
   // (dinAdiado), senao a copia fica com o framebuffer transparente do
   // clear e o vidro le preto/lixo ate a proxima mudanca de hash — a faixa
