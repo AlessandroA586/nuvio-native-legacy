@@ -1248,7 +1248,6 @@ static int tocarFonteGuardada(void) {
   if (!alvo[0] || !fontevolta_pegar(alvo, sessao_usuario(), perfis_ativo(), SDL_GetTicks(), &s))
     return 0;
   if (!stream_filtro_permite(&s)) return 0;
-  if (fontesmortas_idade(&s) >= 0) { fontevolta_esquecer("fonte falhou antes"); return 0; }
   if (fontesmortas_idade(&s) >= 0) {
     fontevolta_esquecer_alvo(alvo, sessao_usuario(), perfis_ativo(), "fonte falhou antes");
     return 0;

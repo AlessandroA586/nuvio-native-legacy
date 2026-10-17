@@ -21,6 +21,12 @@
 #include "dts/dts_hls_tpk.h"
 #include "audioescolha.h"
 
+// These fixtures never resolve a TorBox file link. Fail closed if requested.
+int debrid_tb_link(int usenet, int item, int file, char *dst, unsigned n) {
+  (void)usenet; (void)item; (void)file;
+  if (n) dst[0] = 0;
+  return 0;
+}
 const char *i18n(const char *s) { return s; }
 const char *ling_nome(const char *c) { return c; }
 int ling_casa(const char *c, const char *p) { return c && p && !strcmp(c, p); }

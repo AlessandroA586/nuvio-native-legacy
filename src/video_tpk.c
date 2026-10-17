@@ -1627,8 +1627,7 @@ void video_bombear(void) {
         }
       }
     }
-      reconErroCod = -1; reconErroPend = 1;
-      abrirSessao();
+    abrirSessao();
   }
 }
 void video_parar(void) {
