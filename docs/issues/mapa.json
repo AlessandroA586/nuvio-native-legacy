@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-17T08:16:00-03:00",
- "base": "ab0e9a597",
- "nota": "Sync 2026-10-17 08:16, HEAD integracao/2.0.5 ab0e9a597 (base anterior f087f4b59). Sync anterior (08:10) achou MERGE em andamento de agente/205-vidromenu (MERGE_HEAD 90c8d380d) e pulou o commit; o merge foi cometado em ab0e9a597 (08:11) com os conflitos resolvidos — review rev2 OK 06:49 foi ANTES do merge, entao falta revisar o resultado do merge. Merges na janela: dinfundo (e3fdbe717), vidroilhas (f087f4b59), vidromenu (ab0e9a597) e os 6 merges de 04:46-04:55 (homepisca, fichatam, herodiv, titulofil, foscoleve4, dvabertura), todos sem review dedicado. issues.json 10-17 12:15: 80 issues, 2 novas (#581, #582). TV segue em cb7ece972; tag v2.0.6, proximo release 2.0.7.",
+ "atualizado_em": "2026-10-17T11:55:00-03:00",
+ "base": "22f3d22bb",
+ "nota": "Sync 2026-10-17 11:00, HEAD integracao/2.0.5 cc87bec32 (base anterior 8df743dff). Unico merge da janela: agente/205-detalheglass (cc87bec32), depois de 4 fixes (0b52916d0, d04f21ba4, 531a36f6e, fff6df801, 453c7a73c, 937a69475, 26dbd9a2a, 3aec9a8c0, aef4e3c58); o review rev4 BLOQUEIA (09:20) foi ANTES do merge, entao falta revisar o resultado mesclado e conferir na TV. issues.json 10-17 13:15: 80 issues, 2 novas no mapa (#585 sem icone de microfone na busca, #588 add-ons de esporte ao vivo), ambas sem job. TV segue em cb7ece972; tag v2.0.6, proximo release 2.0.7.",
  "itens": [
   {
    "numero": 1,
@@ -40,7 +40,8 @@
     "9ebdc9a3b/e047eecee (agente/205-detalheglass)",
     "6da1fc418/e91329dd2/0cf805980 (agente/205-dinfundo) -> merge e3fdbe717",
     "90b0f9cd7/61764f975/fb4af3ee5 (agente/205-vidroilhas) -> merge ab0e9a597",
-    "7bf4caac9/e3eb56d39/37687dce0/90c8d380d (agente/205-vidromenu) -> merge ab0e9a597"
+    "7bf4caac9/e3eb56d39/37687dce0/90c8d380d (agente/205-vidromenu) -> merge ab0e9a597",
+    "cc87bec32 (merge agente/205-detalheglass, HEAD cc87bec32)"
    ],
    "ultima_resposta": {
     "nos": true,
@@ -48,8 +49,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-09-07"
    },
-   "proximo_passo": "detalheglass rev2 BLOQUEIA 06:51 (P1); dinfundo, vidroilhas e vidromenu integrados",
-   "notas": "agente/205-vidromenu merged ab0e9a597 (08:11) durante o sync; detalheglass segue BLOQUEIA 06:51 dinfundo merged e3fdbe717 (07:49, review rev2 OK 06:48) e vidroilhas merged ab0e9a597 (07:54, review rev2 OK 06:48); detalheglass e vidromenu seguem abertos Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: mais menu do detalhe no vidro/frost compartilhado; 2 commits fora do HEAD. Sync 2026-10-17 04:55: fundo Cinza/Cor fixo no layout Dinamico (29 idiomas); 2 commits fora do HEAD. Sync 2026-10-17 04:55: frost da barra lateral e pilula de acento em vidro; 2 commits fora do HEAD. Sync 2026-10-17 07:05: vidromenu rev2 OK 06:49, dinfundo rev2 OK 06:48; detalheglass rev2 BLOQUEIA 06:51 (vidro esconde arte da colecao).",
+   "proximo_passo": "detalheglass integrado em cc87bec32; build+install no HEAD e conferir na TV",
+   "notas": "agente/205-vidromenu merged ab0e9a597 (08:11) durante o sync; detalheglass segue BLOQUEIA 06:51 dinfundo merged e3fdbe717 (07:49, review rev2 OK 06:48) e vidroilhas merged ab0e9a597 (07:54, review rev2 OK 06:48); detalheglass e vidromenu seguem abertos Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: mais menu do detalhe no vidro/frost compartilhado; 2 commits fora do HEAD. Sync 2026-10-17 04:55: fundo Cinza/Cor fixo no layout Dinamico (29 idiomas); 2 commits fora do HEAD. Sync 2026-10-17 04:55: frost da barra lateral e pilula de acento em vidro; 2 commits fora do HEAD. Sync 2026-10-17 07:05: vidromenu rev2 OK 06:49, dinfundo rev2 OK 06:48; detalheglass rev2 BLOQUEIA 06:51 (vidro esconde arte da colecao). Sync 2026-10-17 11:00: agente/205-detalheglass MERGED cc87bec32 (elenco/recomendacoes/trailers/menu \"mais\" no vidro compartilhado); review rev4 BLOQUEIA 09:20 foi ANTES do merge, falta revisar o resultado mesclado.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/2",
    "criada_em": "2026-09-06"
   },
@@ -10461,7 +10462,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "merged (perf glass + detail); build+install no HEAD e medir na TV antes de responder",
-   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | [sync 2026-10-16 21:00] perf glass merged (e9c809475 fosco-nova + 0c77460c1/5536ee8da/d7ec89975 fosco-perf) e 5ed6ddfaa (detail): 1 captura/quadro, 4->2 camadas cheias. Sync 2026-10-17 04:55: os tres merges de vidro/abertura desta janela entram aqui; ainda sem medicao de FPS na TV.",
+   "notas": "[sync 2026-10-17 09:25] tres jobs novos apontam para o mesmo eixo: dono diz que a tela AINDA pisca na C9 com frost (j-pisca3 RUNNING, branch agente/205-pisca3), que o player perdeu o vidro depois de 6f1c61cb8 (j-playervidro done 08:35, ce33fe44a) e que o Trakt continua igual e sem ganho de FPS (j-traktvidro RUNNING). Nada disso esta no HEAD. Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | [sync 2026-10-16 21:00] perf glass merged (e9c809475 fosco-nova + 0c77460c1/5536ee8da/d7ec89975 fosco-perf) e 5ed6ddfaa (detail): 1 captura/quadro, 4->2 camadas cheias. Sync 2026-10-17 04:55: os tres merges de vidro/abertura desta janela entram aqui; ainda sem medicao de FPS na TV.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/553",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6"
@@ -10802,6 +10803,69 @@
    "proximo_passo": "triar: mexer no volume pausa a reproducao; provavel no caminho do indicador de volume (mao/pause); sem job",
    "notas": "Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:15:16Z).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/581",
+   "criada_em": "2026-10-17",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 584,
+   "titulo": "IMDb trailers start in low resolution and take too long to improve",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "triar: trailer do IMDb comeca em resolucao baixa e demora a subir; pedir log e ver o caminho do trailer (trailer.c) no Android/.tpk",
+   "notas": "[sync 2026-10-17 09:25] issue nova (createdAt 2026-10-17T11:47:33Z, label bug). Sem job nem branch.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/584",
+   "criada_em": "2026-10-17",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 585,
+   "titulo": "There isn't mic icon in search window",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "triar: icone do microfone nao aparece na janela de busca; pedir print/plataforma e criar job",
+   "notas": "Sync 2026-10-17 11:00: issue nova (createdAt 2026-10-17T11:48:21Z), sem job.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/585",
+   "criada_em": "2026-10-17",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 588,
+   "titulo": "Live Sport Stream addons",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "triar: add-ons de esporte ao vivo nao aparecem/nao carregam; sem job",
+   "notas": "Sync 2026-10-17 11:00: issue nova (createdAt 2026-10-17T13:15:04Z), sem job.",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/588",
    "criada_em": "2026-10-17",
    "alvo": "2.0.6"
   }
@@ -12583,6 +12647,64 @@
    "ref": "ab0e9a597 (Merge agente/205-vidromenu)",
    "resultado": "pendente",
    "evidencia": "git reflog: commit (merge) 08:11"
+  },
+  {
+   "data": "2026-10-17 08:15",
+   "quem": "job-pi revisao",
+   "o_que": "Review rev3 de agente/205-detalheglass: P2 arte da colecao carregada ainda esconde o vidro; P2 \"Trocar arte\" sem vidro; tests/detalheglass.sh check rc=0",
+   "issues": [],
+   "ref": "agente/205-detalheglass (3aec9a8c0)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/rev3-detalheglass.log"
+  },
+  {
+   "data": "2026-10-17 08:47",
+   "quem": "job-pi fix3",
+   "o_que": "Fix3 do detalhe: vidro no \"Trocar arte\" e fileira do Trakt desenhada 1x por quadro; 2 commits novos",
+   "issues": [],
+   "ref": "26dbd9a2a, 3aec9a8c0",
+   "resultado": "pendente",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-fix3-detalheglass.log"
+  },
+  {
+   "data": "2026-10-17 08:32",
+   "quem": "job-pi fix3",
+   "o_que": "Fix3 da escala de texto: espacamento da busca e ancoras do menu de episodio; 1 commit",
+   "issues": [],
+   "ref": "342aafc49",
+   "resultado": "pendente",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-fix3-textoescala.log"
+  },
+  {
+   "data": "2026-10-17 09:20",
+   "quem": "job-pi revisao",
+   "o_que": "Review rev3 de agente/205-textoescala: P2 busca no celular ainda redimensiona o cartaz; P2 prova visual contra 8df743dff incompleta",
+   "issues": [],
+   "ref": "agente/205-textoescala (342aafc49)",
+   "resultado": "falhou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/rev3-textoescala.log"
+  },
+  {
+   "data": "2026-10-17 08:35",
+   "quem": "job-claude",
+   "o_que": "j-playervidro: devolve o frost sobre o video (arte pre-desfocada) e afrouxa o governador; 1 commit",
+   "issues": [
+    553
+   ],
+   "ref": "ce33fe44a",
+   "resultado": "pendente",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-playervidro.log"
+  },
+  {
+   "data": "2026-10-17 08:24",
+   "quem": "coordenacao",
+   "o_que": "j-pisca3 (RUNNING) e j-traktvidro (log vazio) lancados: tela ainda pisca na C9 e fileira do Trakt sem vidro/FPS",
+   "issues": [
+    553
+   ],
+   "ref": "agente/205-pisca3, agente/205-traktvidro (sem commit)",
+   "resultado": "pendente",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/escrivao/jobs.txt"
   }
  ],
  "decisoes": [
@@ -17203,16 +17325,21 @@
    "id": "vidro-detalheglass",
    "titulo": "Vidro no menu \"mais\" da pagina do titulo",
    "plataforma": "todas",
-   "status": "em-revisao",
-   "release": "-",
+   "status": "integrada",
+   "release": "2.0.7 (integracao/2.0.5)",
    "conserto": [
     "e047eecee feat(detail): draw cast, recommendations and trailers on the shared glass card",
     "9ebdc9a3b feat(detail): draw the more menu on the shared card glass and frost",
     "0b52916d0 fix(detail): frost loaded collections and restore solid captions",
-    "d04f21ba4 test(detail): isolate glass cards (rev2 BLOQUEIA 06:51 - P1)"
+    "d04f21ba4 test(detail): isolate glass cards (rev2 BLOQUEIA 06:51 - P1)",
+    "937a69475 fix(detail): let frost show through loaded collection artwork",
+    "531a36f6e fix: preserve collection artwork above shared glass",
+    "26dbd9a2a fix(trocaarte): glass sheet instead of opaque gradient and black floor",
+    "3aec9a8c0 perf(detail): draw Trakt comments row once per frame with cheap glass cards",
+    "cc87bec32 (merge agente/205-detalheglass)"
    ],
-   "proximo_passo": "rev2 BLOQUEIA 06:51 (P1: vidro esconde a arte da colecao); precisa fix novo + review",
-   "notas": "Pedido do dono. O menu \"mais\" do detalhe passa a usar o mesmo vidro/frost dos outros paineis. Branch aberta, sem review nem merge. Sync 2026-10-17 07:05: 4 commits fora do HEAD, ainda sem merge."
+   "proximo_passo": "revisar o resultado do merge cc87bec32 (rev4 BLOQUEIA 09:20 foi antes) e build+install no HEAD",
+   "notas": "Sync 2026-10-17 11:00: branch merged cc87bec32 depois dos fixes 0b52916d0/d04f21ba4/531a36f6e/fff6df801/453c7a73c/937a69475/26dbd9a2a/3aec9a8c0/aef4e3c58. [sync 2026-10-17 09:25] 10 commits fora (tip 3aec9a8c0, 08:44), ainda sem merge. rev2 BLOQUEIA 06:51 -> 4 fixes -> rev3 BLOQUEIA 08:15 -> j-fix3-detalheglass done 08:47 (26dbd9a2a vidro no Trocar arte + 3aec9a8c0 Trakt 1x/quadro). Falta review do fix3. Pedido do dono. O menu \"mais\" do detalhe passa a usar o mesmo vidro/frost dos outros paineis. Branch aberta, sem review nem merge. Sync 2026-10-17 07:05: 4 commits fora do HEAD, ainda sem merge."
   },
   {
    "id": "vidro-barra-lateral",
@@ -17332,10 +17459,81 @@
     "406359d3a feat(settings): add text and component scale option (85-130%)",
     "bab9c56e3 feat(ui): apply text scale to home, title page, library and player",
     "86fed77d7 i18n: add text and component scale strings",
-    "4bfafc814 test: add text scale proof (rev-textoescala BLOQUEIA 06:50)"
+    "4bfafc814 test: add text scale proof (rev-textoescala BLOQUEIA 06:50)",
+    "e24e614a2 fix(keyboard): keep navigation geometry at the configured text scale",
+    "5ff1d7ef3/ebb0b1365 fix(search): preserve poster and landscape artwork size at text scale",
+    "1eb28a937 fix(settings): expose text scale in Appearance navigation",
+    "342aafc49 fix: preserve search spacing and scaled episode menu anchors"
    ],
-   "proximo_passo": "review BLOQUEIA 06:50 (P1: opcao nao aparece em Ajustes > Aparencia; P2 cards redimensionam); fix novo",
-   "notas": "Sync 2026-10-17 07:05: 5 commits fora do HEAD, ainda sem merge."
+   "proximo_passo": "rev3 BLOQUEIA 09:20 (P2 busca no celular ainda redimensiona cartaz; P2 prova visual incompleta) + fix3 08:32 -> precisa review novo; 18 commits fora",
+   "notas": "[sync 2026-10-17 09:25] 18 commits fora (tip 342aafc49, 08:32), ainda sem merge. rev BLOQUEIA 06:50 -> rev2 BLOQUEIA 08:15 -> j-fix3-textoescala done 08:32 -> rev3 BLOQUEIA 09:20. P1 antigo (opcao fora de Ajustes) foi resolvido (1eb28a937). Sync 2026-10-17 07:05: 5 commits fora do HEAD, ainda sem merge."
+  },
+  {
+   "id": "dono-205-playervidro",
+   "titulo": "Player perdeu o vidro: frost sobre o video de volta (pedido do dono)",
+   "plataforma": "Todas (onde o video da para ler)",
+   "status": "integrada",
+   "release": "2.0.7",
+   "conserto": [
+    "ce33fe44a fix(glass): frost over live video via baked title-art stand-in; governor trial (agente/205-playervidro)",
+    "6974f7293 Player glass: real translucent look over live video, denser tint, one-shot governor (agente/205-playervidro)",
+    "04375ab4f (Merge agente/205-playervidro)"
+   ],
+   "proximo_passo": "merged 04375ab4f (11:37); build+install no HEAD e o dono conferir o player na C9",
+   "notas": "[sync 2026-10-17 09:25] Dono: \"O player nao ta mais com o glass, o que aconteceu?\". Causa: 6f1c61cb8 (foscoleve4) tirou o foscoSobreVideo() e o gfx_vidro_fonte_video(), deixando todo vidro sobre o video defumado; o governador ainda derruba o app inteiro para defumado na C9. A branch devolve o frost por arte pre-desfocada e afrouxa o governador. | Escrivao 10-17 11:55: merged 04375ab4f com os 3 rounds de fix (vidro real sobre o video, tinta mais densa, governador one-shot)."
+  },
+  {
+   "id": "dono-205-traktvidro",
+   "titulo": "Fileira do Trakt continua sem vidro e sem ganho de FPS (pedido do dono)",
+   "plataforma": "Todas",
+   "status": "em_job",
+   "release": "2.0.7",
+   "conserto": [],
+   "proximo_passo": "j-traktvidro done 08:24 com log vazio e branch sem commit novo (head=8df743dff, pre-merge): tratar como QUEUED/falhou -> relancar ou investigar",
+   "notas": "[sync 2026-10-17 09:25] Dono, depois de 335bd2abc instalado na C9: \"o trakt ainda ta igual\" e \"a performance que era o importante tb nao mexeu do traktv\". Reabre o trabalho de dono-205-traktcoment. | Escrivao 10-17 11:55: o head da branch e 8df743dff (pre-merge de vidroilhas/vidromenu): o job nao commitou nada, log vazio."
+  },
+  {
+   "id": "dono-205-pisca3",
+   "titulo": "Tela ainda pisca na LG C9 com frost ligado (pedido do dono)",
+   "plataforma": "LG webOS (C9)",
+   "status": "integrada",
+   "release": "2.0.7",
+   "conserto": [
+    "98bc829e1 fix(tex): keep mipmaps on hero-promoted art that rows also draw (agente/205-pisca3)",
+    "fc6d35d69 (Merge agente/205-pisca3)"
+   ],
+   "proximo_passo": "merged fc6d35d69 (11:37); build+install no HEAD e dono conferir se a C9 ainda pisca",
+   "notas": "[sync 2026-10-17 09:25] Dono depois do fix instalado na C9: \"A tela ainda ta piscando\". O fix anterior (5528dc0ad, dinDescarregar antes da copia do backdrop) so foi provado por contador de ordem no desktop GL e nao resolveu na TV. | Escrivao 10-17 11:55: merged fc6d35d69. A causa provada desta vez: mipmaps descartados da arte promovida no hero que as fileiras tambem desenham (tex_cache). Sem teste na TV ainda."
+  },
+  {
+   "id": "dono-205-epfoco",
+   "titulo": "Caixa de texto do episodio focado maior, com margem e em vidro; lentidao titulo->abas de temporada; log do fontepref por quadro (pedido do dono)",
+   "plataforma": "LG webOS / TCL (detalhe de serie)",
+   "status": "integrada",
+   "release": "2.0.7",
+   "conserto": [
+    "df06809f2 fix(detail): glass episode focus plate with padded text; cheap title->episodes scroll (agente/205-epfoco)",
+    "e5eb23eba fix(fontepref): pick the remembered auto source once per list, log once (agente/205-epfoco)",
+    "3b39999e5 (Merge agente/205-epfoco)"
+   ],
+   "proximo_passo": "merged 3b39999e5 (11:37); build+install no HEAD e dono conferir a placa de foco e a transicao titulo->temporadas na TCL/C9",
+   "notas": "[sync 2026-10-17 11:55] Pedido literal do dono: \"o focu do texto do episodio tem que ser um pouco maior e ta sem margem\" + \"e falta o glass\" + \"agora no frost so ta lerdo quando vai do titulo para as tabs\". j-epfoco done 11:02, sem review dedicado antes do merge. Fix: placa em vidro com padding alinhada ao cartao focado; scroll titulo->episodios mais barato; fontepref cacheado por lista (o log por quadro, 2347 linhas em 2 min, some). Pendente: medida de 60 fps real na TV."
+  },
+  {
+   "id": "pr-572",
+   "titulo": "PR #572 (Tolu-Walop-E): ParaleloDataSource Android — indice de fim de arquivo nas conexoes paralelas + destino lembrado do add-on com fallback",
+   "plataforma": "Android",
+   "status": "integrada",
+   "release": "2.0.7",
+   "conserto": [
+    "cc61bfdd8 perf(android): read the end-of-file index over the parallel connections",
+    "809bd7c96 perf(android): open later requests at the add-on link's known destination",
+    "8876c13c6 perf(android): split end-of-file windows above 256 KB too",
+    "f6618db6b fix(android): don't trust a remembered destination that serves another file",
+    "22f3d22bb (Merge pr/572)"
+   ],
+   "proximo_passo": "merged 22f3d22bb (11:37); rodar o teste de unidade Kotlin num CI com JDK compativel (local JDK 25 quebra o toolchain)",
+   "notas": "[sync 2026-10-17 11:55] rev-pr572 VEREDITO OK: abertura de fonte le o indice do fim do arquivo em paralelo e lembra o destino real do add-on (TTL 2h + checagem de tamanho, com fallback). Testes Kotlin nao rodaram local (JDK 25)."
   }
  ],
  "fechar_203": [],
@@ -17924,5 +18122,9 @@
    ]
   }
  ],
- "decisoes_ids_retirados": []
+ "decisoes_ids_retirados": [],
+ "notas_extra": [
+  "Sync 2026-10-17 11:00: agente/205-pr487v2 ac1ba9725 pronto para merge, review j-rev-pr487-v2.log OK 10-14 10:26.",
+  "Sync 2026-10-17 11:00: agente/205-pr538 bc13aca67 pronto para merge, review j-rev-pr538v2.log OK 10-16 16:11."
+ ]
 }

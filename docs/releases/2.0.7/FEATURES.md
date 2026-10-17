@@ -94,8 +94,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   (*Ajustes › Aparência da Home › Estilo de linha*, esquerda/direita como Paisagem e 4:3) — Pequeno com
   1 linha de sinopse, Grande com 3 e a altura que sobra virando largura. O Médio continua idêntico.
   Todas as plataformas. Refs pedido do dono, `e50a38ef6`, `cbf6fb021`.
-- **Vidro defumado sobre o vídeo**: no player e nos painéis sobre a imagem ao vivo o vidro deixa de
-  desfocar e passa a ser tinta escura translúcida, sem captura de tela. Todas as plataformas.
+- **Vidro defumado sobre o vídeo** (*superseded*): esta opção deixou de ser o destino final — ver
+  "Vidro de verdade sobre o vídeo" em Correções. Todas as plataformas.
   Refs pedido do dono, `6f1c61cb8`, `a691e96fb`.
 - **Qualidade do vidro automática**: *Ajustes › Qualidade do vidro* (Automática, Desempenho, Alta) — no
   Desempenho o app usa só o vidro defumado, sem captura nem desfoque; na Automática ele cai sozinho para
@@ -242,6 +242,17 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   empty or space-prefixed array. All platforms. Refs owner request, `5195cd14f`, `335bd2abc`.
 - **Log enviado com o começo**: o cabeçalho de inicialização (16 KB) volta a entrar no log enviado, que é o
   que serve para diagnosticar. Todas as plataformas. `84c1a90b6`, `3b12a5d2f`.
+- **Vidro de verdade sobre o vídeo de volta** (pedido do dono): o player e os painéis sobre a imagem ao
+  vivo voltam a desfocar de verdade — vidro translúcido real em vez de chapa defumada — com a tinta mais
+  densa e um governador que testa uma vez e não derruba o app inteiro. Todas as plataformas.
+  Refs pedido do dono, `ce33fe44a`, `6974f7293`, `0fb1a0b1c`, `04375ab4f`.
+- **Texto do episódio focado em vidro, com margem** (pedido do dono): a caixa de título/sinopse do episódio
+  focado na página da série fica do tamanho do cartão, com padding por dentro e o mesmo vidro dos outros
+  painéis (cai para defumado quando a qualidade degrada). Todas as plataformas.
+  Refs pedido do dono, `df06809f2`, `3b39999e5`.
+- **Tela parou de piscar na C9 com frost** (pedido do dono): a arte promovida do hero perdia os mipmaps que
+  as fileiras também desenham — cada quadro recriava a cadeia no thread principal; agora os mipmaps ficam.
+  LG webOS. Refs pedido do dono, `98bc829e1`, `fc6d35d69`.
 
 ### Desempenho
 
@@ -282,6 +293,15 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 - **Detalhe: menos camadas de tela cheia**: furo e véu do cartão de trailer passam a ser um único desenho, e
   um cartão vizinho quase fora da tela deixa de contar como cheio — 4 → 2 camadas, preenchimento 1,81 → 0,99
   no harness, PNGs idênticos. Todas as plataformas. `5ed6ddfaa`.
+- **Descer do título para as temporadas não trava mais** (pedido do dono): a transição título → abas de
+  temporada, que chegava a 71,8 ms/quadro na TCL com 163 retângulos de blur, agora cresce com vidro barato
+  e culling; e a fonte preferida deixa de ser recalculada a cada quadro (o log `[fonte]` sumia em 2.347
+  linhas em 2 min) — calcula uma vez por lista e loga uma vez. Todas as plataformas.
+  Refs pedido do dono, `df06809f2`, `e5eb23eba`, `3aec9a8c0`, `3b39999e5`.
+- **Abertura de fonte mais rápida no Android** (@Tolu-Walop-E, PR #572): o índice do fim do arquivo é lido
+  pelas conexões paralelas em vez de uma sonda serial, pedidos seguintes já abrem no destino conhecido do
+  add-on e uma URL lembrada que serve outro arquivo deixa de ser confiada — o stream começa antes sem
+  sonda errada. Android. Refs PR #572, `cc61bfdd8`, `809bd7c96`, `8876c13c6`, `f6618db6b`, `22f3d22bb`.
 
 ### Comunidade
 
@@ -297,6 +317,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 - **Temporada 0 (especiais) mantida e tocável** — @ghbarker, PR #569 (`8dff0e2a9`, `054ccef24`).
 - **Lembrar a faixa de áudio escolhida** — @Tolu-Walop-E, PR #550 (`0c2a1ba2c`, `2cec223fd`).
 - **URL direta toca sem P2P** — @mark-major, PR #559 (`d25a3e513`, `06724b3ed`).
+- **Fonte abre mais rápido no Android** — @Tolu-Walop-E, PR #572 (`cc61bfdd8`, `809bd7c96`, `8876c13c6`,
+  `f6618db6b`, `22f3d22bb`).
 
 ### Interno
 
@@ -391,6 +413,9 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 - **Sync manual de legenda** — `agente/205-legajuste`, só especificação. Adiado para 2.1.
 - **PRs abertos sem branch local**: #456/#457/#466/#467/#468/#469/#478/#482 (os de fora de escopo ficam no
   mapa). Triagem, não perdidos.
+- **Vidro de volta sobre o vídeo, placa do episódio focado, mipmap do hero e PR #572** entraram nesta
+  janela (`04375ab4f`, `3b39999e5`, `fc6d35d69`, `22f3d22bb`, 11:37) e já estão em Correções/Desempenho/
+  Comunidade; nenhum tinha review OK dedicado antes do merge (rev-pr572 OK existe para o PR).
 
 ---
 
@@ -470,8 +495,8 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   (*Settings › Home appearance › Row style*, left/right like Landscape and 4:3) — Small with one synopsis
   line, Large with three and the spare height turned into width. Medium is unchanged.
   All platforms. Refs owner request, `e50a38ef6`, `cbf6fb021`.
-- **Smoked glass over the video**: in the player and the panels drawn over live video the glass stops
-  blurring and becomes tinted translucent ink, with no screen capture. All platforms.
+- **Smoked glass over the video** (*superseded*): this is no longer the final look — see "Real glass back
+  over live video" in Fixes. All platforms.
   Refs owner request, `6f1c61cb8`, `a691e96fb`.
 - **Automatic glass quality**: *Settings › Glass quality* (Automatic, Performance, High) — Performance uses
   only the smoked glass, with no capture or blur; Automatic drops to smoked by itself after 4 consecutive
@@ -585,6 +610,17 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   and Space limit are greyed out. All platforms. `2e480806c`, `f170d77ba`, `6d537cb92`.
 - **Uploaded log keeps its start**: the 16 KB startup header is back in the uploaded log, which is the part
   that diagnoses. All platforms. `84c1a90b6`, `3b12a5d2f`.
+- **Real glass back over live video** (owner request): the player and the panels over the picture blur for
+  real again — true translucent glass instead of the smoked slab — with a denser tint and a governor that
+  trials once instead of dropping the whole app. All platforms.
+  Refs owner request, `ce33fe44a`, `6974f7293`, `0fb1a0b1c`, `04375ab4f`.
+- **Focused episode text in a padded glass plate** (owner request): on a series page the focused episode's
+  title/synopsis plate now spans the card, pads its text and uses the same glass as the other panels
+  (dropping to smoked when quality degrades). All platforms.
+  Refs owner request, `df06809f2`, `3b39999e5`.
+- **C9 screen no longer blinks with frost on** (owner request): hero-promoted artwork was losing the mipmaps
+  the rows also draw — every frame rebuilt the chain on the main thread; the mipmaps now stay.
+  LG webOS. Refs owner request, `98bc829e1`, `fc6d35d69`.
 - **Many Jellyfin catalogs show up** (#468): servers like AIOMetadata expose one view per catalog; the app
   stopped at 6 and only accepted movies/tvshows, so about four catalogs appeared. The cap went to 16 views,
   with boxsets, mixed and untyped views accepted, and the item budget is split across rows so memory does
@@ -622,6 +658,15 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 - **Detail: fewer full-screen layers**: the trailer card's hole and veil are drawn in one pass, and a
   neighbour card almost off screen no longer counts as full — 4 → 2 layers, fill 1.81 → 0.99 on the harness,
   PNGs byte-identical. All platforms. `5ed6ddfaa`.
+- **Title → season tabs no longer stutters** (owner request): the transition that hit 71.8 ms/frame on the
+  TCL with 163 blur rects now grows cheap glass and culling; and the preferred source stops being matched
+  every frame (the `[fonte]` log alone wrote 2,347 lines in 2 min) — computed once per list, logged once.
+  All platforms. Refs owner request, `df06809f2`, `e5eb23eba`, `3aec9a8c0`, `3b39999e5`.
+- **Faster source opening on Android** (@Tolu-Walop-E, PR #572): the end-of-file index is read over the
+  parallel connections instead of a serial probe, later requests open straight at the add-on's known
+  destination, and a remembered destination that serves another file is no longer trusted — the stream
+  starts sooner without a wrong probe. Android. Refs PR #572, `cc61bfdd8`, `809bd7c96`, `8876c13c6`,
+  `f6618db6b`, `22f3d22bb`.
 
 ### Community
 
@@ -637,6 +682,8 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 - **Season 0 Specials kept and playable** — @ghbarker, PR #569 (`8dff0e2a9`, `054ccef24`).
 - **Remember the hand-picked audio track** — @Tolu-Walop-E, PR #550 (`0c2a1ba2c`, `2cec223fd`).
 - **A direct URL plays without P2P** — @mark-major, PR #559 (`d25a3e513`, `06724b3ed`).
+- **Faster source opening on Android** — @Tolu-Walop-E, PR #572 (`cc61bfdd8`, `809bd7c96`, `8876c13c6`,
+  `f6618db6b`, `22f3d22bb`).
 
 ### Internal
 

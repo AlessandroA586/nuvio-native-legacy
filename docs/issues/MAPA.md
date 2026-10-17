@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `ab0e9a597` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-17T08:16:00-03:00. 484 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `22f3d22bb` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-17T11:55:00-03:00. 487 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -120,7 +120,7 @@ Plano de refatoração: `docs/plans/refatoracao-geral.md` (branch `agente/refato
 | 2.0.3 | 0 |  |
 | 2.0.4 | 0 |  |
 | 2.0.5 | 2 | #495, #512 |
-| 2.0.6 | 45 | #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #479, #492, #494, #496, #500, #501, #503, #505, #506, #507, #508, #530, #539, #545, #549, #551, #553, #555, #557, #558, #564, #565, #566, #570, #577, #578, #579, #580, #581, #582 |
+| 2.0.6 | 48 | #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #479, #492, #494, #496, #500, #501, #503, #505, #506, #507, #508, #530, #539, #545, #549, #551, #553, #555, #557, #558, #564, #565, #566, #570, #577, #578, #579, #580, #581, #582, #584, #585, #588 |
 | 2.1 | 3 | #420, #457, #458 |
 | 2.2 | 0 |  |
 | futuro | 8 | #437, #438, #450, #509, #510, #514, #521, #542 |
@@ -181,7 +181,7 @@ Por status:
 |---|---|
 | lancada | 304 |
 | integrada | 68 |
-| aberta | 52 |
+| aberta | 55 |
 | respondida | 22 |
 | por-desenho | 15 |
 | fechada-sem-resposta | 7 |
@@ -195,15 +195,15 @@ Por release (grupo de planejamento):
 | Grupo | Qtd |
 |---|---|
 | lançadas em tag v* (qualquer versão) | 304 |
-| sem release | 150 |
+| sem release | 153 |
 | 2.0.5 (integração, sem release do conserto) | 23 |
 | futuro (2.1/2.2) | 5 |
 | 2.0.3 lançada, com pendência | 2 |
 
 Lançadas por versão: 1.0.7: 10, 1.0.8: 1, 1.0.10: 3, 1.0.11: 3, 1.0.15: 1, 1.0.22: 1, 1.0.24: 1, 1.0.29: 1, 1.0.30: 2, 1.0.31: 2, 1.0.32: 2, 1.0.34: 1, 1.0.35: 1, 1.0.37: 1, 1.0.38: 2, 1.0.39: 1, 1.0.42: 1, 1.0.43: 4, 1.0.44: 4, 1.0.45: 1, 1.0.51: 3, 1.0.52: 1, 1.0.53: 1, 1.0.55: 3, 1.2.1: 4, 1.3.0: 1, 1.3.2: 5, 1.3.4: 5, 1.3.5: 2, 1.3.8: 1, 1.3.9: 1, 1.3.10: 1, 1.3.11: 1, 1.3.12: 5, 1.4: 7, 1.4.1: 2, 1.4.2: 9, 1.4.3: 9, 1.4.4: 3, 1.4.5: 1, 1.4.6: 7, 1.4.7: 1, 1.5.0: 2, 1.5.1: 4, 1.5.2: 9, 1.5.3: 2, 1.5.4: 9, 1.6.0: 8, 1.6.1: 4, 1.6.2: 3, 1.6.3: 2, 1.6.4: 2, 1.6.5: 4, 1.7.0: 10, 1.7.1: 4, 1.7.2: 5, 1.7.4: 5, 2.0.0: 22, 2.0.1: 12, 2.0.2: 20, 2.0.3: 29, 2.0.4: 9, 2.0.5: 23.
 
-Abertas no GitHub: 70. Fechadas: 414.
-Abertas sem nenhum comentário nosso: 56.
+Abertas no GitHub: 73. Fechadas: 414.
+Abertas sem nenhum comentário nosso: 59.
 
 ## 2.0.3 lançada com pendência (precisa-log, respondida ou conserto parcial)
 
@@ -305,7 +305,7 @@ Notas:
 
 ## Próximo patch proposto (2.0.6)
 
-38 issues.
+41 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -347,6 +347,9 @@ Notas:
 | [#580](https://github.com/iqui27/nuvio-native-legacy/issues/580) | Addons catalogues not showing | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: catalogos de add-on nao aparecem; mesmo eixo de #545/#551; sem job |
 | [#582](https://github.com/iqui27/nuvio-native-legacy/issues/582) | Frequent Stuttering and Freezing on LG TVs, Even with Reduce | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: travamento/congelamento em LG TV mesmo com desempenho reduzido; mesmo eixo de #553/ |
 | [#581](https://github.com/iqui27/nuvio-native-legacy/issues/581) | Changing Volume pauses the playback | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: mexer no volume pausa a reproducao; provavel no caminho do indicador de volume (mao |
+| [#584](https://github.com/iqui27/nuvio-native-legacy/issues/584) | IMDb trailers start in low resolution and take too long to i | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: trailer do IMDb comeca em resolucao baixa e demora a subir; pedir log e ver o camin |
+| [#585](https://github.com/iqui27/nuvio-native-legacy/issues/585) | There isn't mic icon in search window | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: icone do microfone nao aparece na janela de busca; pedir print/plataforma e criar j |
+| [#588](https://github.com/iqui27/nuvio-native-legacy/issues/588) | Live Sport Stream addons | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: add-ons de esporte ao vivo nao aparecem/nao carregam; sem job |
 
 Notas:
 
@@ -374,7 +377,7 @@ Notas:
 - **#545**: Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot. Escrivao 10-16 12:48: job home545 done (26b9c635b), 1 ahead de HEAD; review j-rev2-home545 BLOQUEIA. Distinto de #551 (descoberta nao reinicia apos PIN). | Escrivao 10-16 14:58: merged 9e2138f9d; review OK j-rev-home545-r4 depois dos fixes de cota/selecao explicita. | [sync 2026-10-16 21:00] merged 9e2138f9d; review OK j-rev-home545-r4 apos fixes de cota/selecao explicita; pos-merge BLOQUEIA j-revg-home545-posmerge 17:51 com fix j-fix-home545-posmerge | [sync 2026-10-16 22:55] agente/205-pfhome545 2 ahead (975638744/53b050753); VEREDITO BLOQUEIA j-revg-pfhome545 (18:47), fix 53b050753 sem review | [sync 2026-10-16 21:10] follow-up pfhome545 merged b03502f84; VEREDITO OK j-revg-pfhome545 (20:57) | Escrivão 2026-10-16 22:1x: merged b03502f84 (follow-up: fileira fora da cota atualiza ao adicionar); review OK j-revg-pfhome545 Sync 2026-10-17 04:55: 6a64c2e13 (pisca do fundo Dinamico antes do frost) entrou sem review dedicado; nada pendente de codigo.
 - **#549**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivão 2026-10-16 22:1x: corrigido por agente/205-prs207 (4baf783fa Ver tudo em grade nas colecoes); merged 72ba10761; review OK j-rev-prs207
 - **#551**: Escrivao 10-16 12:48: job catal551 done; review BLOQUEIA j-rev-catal551 -> fix 1c9043ed0 -> OK j-rev2-catal551; merged e680776ed. Causa: sessao de perfil velha nao reiniciava a descoberta. | [sync 2026-10-16 21:00] merged e680776ed; review OK j-rev2-catal551 apos fix 1c9043ed0/a2e9daf91 | [sync 2026-10-16 22:55] merged e680776ed no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged e680776ed nesta janela (HEAD ab0e9a597); review j-rev2-catal551; sessao de perfil velha antes de tentar de novo; entra na 2.0.7
-- **#553**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | [sync 2026-10-16 21:00] perf glass merged (e9c809475 fosco-nova + 0c77460c1/5536ee8da/d7ec89975 fosco-perf) e 5ed6ddfaa (detail): 1 captura/quadro, 4->2 camadas cheias. Sync 2026-10-17 04:55: os tres merges de vidro/abertura desta janela entram aqui; ainda sem medicao de FPS na TV.
+- **#553**: [sync 2026-10-17 09:25] tres jobs novos apontam para o mesmo eixo: dono diz que a tela AINDA pisca na C9 com frost (j-pisca3 RUNNING, branch agente/205-pisca3), que o player perdeu o vidro depois de 6f1c61cb8 (j-playervidro done 08:35, ce33fe44a) e que o Trakt continua igual e sem ganho de FPS (j-traktvidro RUNNING). Nada disso esta no HEAD. Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | [sync 2026-10-16 21:00] perf glass merged (e9c809475 fosco-nova + 0c77460c1/5536ee8da/d7ec89975 fosco-perf) e 5ed6ddfaa (detail): 1 captura/quadro, 4->2 camadas cheias. Sync 2026-10-17 04:55: os tres merges de vidro/abertura desta janela entram aqui; ainda sem medicao de FPS na TV.
 - **#555**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | [sync 2026-10-16 21:00] merged 438423097 (eps555) + d5ae66d9e (busca555); reviews OK j-rev-eps555/j-rev-busca555 | [sync 2026-10-16 22:55] merged 438423097 + d5ae66d9e no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged 438423097 nesta janela (HEAD ab0e9a597); review j-rev-eps555/j-rev-busca555; busca555 (titulo exato) + eps555 (episodios pelo catalogo); entra na 2.0.7
 - **#557**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 - **#558**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova, tela preta no lancamento num Q50A Tizen 6 2.0.6. Job j-tpk558 done (cc49341e6, tools/tpk.sh rc 0); sem review. | Escrivao 10-16 14:58: merged a1888d007 (adiar IME da Samsung e expor falha no boot); review OK j-rev-tpk558; spec docs/issues/558-tpk-startup.md. | [sync 2026-10-16 21:00] merged a1888d007; review OK j-rev-tpk558 | [sync 2026-10-16 22:55] merged a1888d007 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged a1888d007 nesta janela (HEAD ab0e9a597); review j-rev-tpk558; tela preta no lancamento .tpk; confirmar na TV do reporter; entra na 2.0.7
@@ -388,6 +391,9 @@ Notas:
 - **#580**: Sync 2026-10-17 07:05: issue nova (17/10 09:01), rotulo bug, sem job. Mesma familia de #545/#551. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 - **#582**: Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:26:52Z).
 - **#581**: Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:15:16Z).
+- **#584**: [sync 2026-10-17 09:25] issue nova (createdAt 2026-10-17T11:47:33Z, label bug). Sem job nem branch.
+- **#585**: Sync 2026-10-17 11:00: issue nova (createdAt 2026-10-17T11:48:21Z), sem job.
+- **#588**: Sync 2026-10-17 11:00: issue nova (createdAt 2026-10-17T13:15:04Z), sem job.
 
 ## Futuro (2.1, 2.2, depois)
 
@@ -476,7 +482,7 @@ Notas:
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
 | [#1](https://github.com/iqui27/nuvio-native-legacy/issues/1) | poster dont load on tiles | Samsung (tpk/wgt?) | ? | lancada | 1.0.7 | - | 04c37f87, 90b0f9cd7/61764f975/fb4af3ee5, ab0e9a597 | nós 09-08 | merged ab0e9a597; build+install no HEAD e conferir na TV |
-| [#2](https://github.com/iqui27/nuvio-native-legacy/issues/2) | Main Nuvio icon not showing in apps list | LG | bug | lancada | 1.0.7 | - | 04c37f87, 9ebdc9a3b/e047eecee, 6da1fc418/e91329dd2/0cf805980 | nós 09-07 | detalheglass rev2 BLOQUEIA 06:51 (P1); dinfundo, vidroilhas e vidromenu integrados |
+| [#2](https://github.com/iqui27/nuvio-native-legacy/issues/2) | Main Nuvio icon not showing in apps list | LG | bug | lancada | 1.0.7 | - | 04c37f87, 9ebdc9a3b/e047eecee, 6da1fc418/e91329dd2/0cf805980 | nós 09-07 | detalheglass integrado em cc87bec32; build+install no HEAD e conferir na TV |
 | [#3](https://github.com/iqui27/nuvio-native-legacy/issues/3) | Language still showing spanish | ? | ? | lancada | 1.0.7 | - | 04c37f87, e4fb8c085, ac1ba9725 | nós 09-07 | review OK j-rev-pr487-v2 mas o branch andou depois (ac1ba9725); precisa re-review + merge |
 | [#4](https://github.com/iqui27/nuvio-native-legacy/issues/4) | Nuvio Keyboard Help | ? | ? | lancada | 1.0.7 | - | 04c37f87 | autor 09-07 | sem ação; conserto publicado |
 | [#5](https://github.com/iqui27/nuvio-native-legacy/issues/5) | Nuvio Sync Issue | ? | bug | lancada | 1.0.7 | - | 04c37f87 | nós 09-07 | sem ação; conserto publicado |
@@ -765,7 +771,7 @@ Notas:
 Notas:
 
 - **#1**: agente/205-vidroilhas merged ab0e9a597 (07:54) depois de rev2-vidroilhas OK (06:48); sai na 2.0.7 Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: ilhas de frost desenhadas sobre o vidro da barra lateral da Home; 1 commits fora do HEAD. Sync 2026-10-17 07:05: rev2-vidroilhas OK 06:48 (fix da captura limitada a regiao de amostragem); branch ainda fora do HEAD.
-- **#2**: agente/205-vidromenu merged ab0e9a597 (08:11) durante o sync; detalheglass segue BLOQUEIA 06:51 dinfundo merged e3fdbe717 (07:49, review rev2 OK 06:48) e vidroilhas merged ab0e9a597 (07:54, review rev2 OK 06:48); detalheglass e vidromenu seguem abertos Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: mais menu do detalhe no vidro/frost compartilhado; 2 commits fora do HEAD. Sync 2026-10-17 04:55: fundo Cinza/Cor fixo no layout Dinamico (29 idiomas); 2 commits fora do HEAD. Sync 2026-10-17 04:55: frost da barra lateral e pilula de acento em vidro; 2 commits fora do HEAD. Sync 2026-10-17 07:05: vidromenu rev2 OK 06:49, dinfundo rev2 OK 06:48; detalheglass rev2 BLOQUEIA 06:51 (vidro esconde arte da colecao).
+- **#2**: agente/205-vidromenu merged ab0e9a597 (08:11) durante o sync; detalheglass segue BLOQUEIA 06:51 dinfundo merged e3fdbe717 (07:49, review rev2 OK 06:48) e vidroilhas merged ab0e9a597 (07:54, review rev2 OK 06:48); detalheglass e vidromenu seguem abertos Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: mais menu do detalhe no vidro/frost compartilhado; 2 commits fora do HEAD. Sync 2026-10-17 04:55: fundo Cinza/Cor fixo no layout Dinamico (29 idiomas); 2 commits fora do HEAD. Sync 2026-10-17 04:55: frost da barra lateral e pilula de acento em vidro; 2 commits fora do HEAD. Sync 2026-10-17 07:05: vidromenu rev2 OK 06:49, dinfundo rev2 OK 06:48; detalheglass rev2 BLOQUEIA 06:51 (vidro esconde arte da colecao). Sync 2026-10-17 11:00: agente/205-detalheglass MERGED cc87bec32 (elenco/recomendacoes/trailers/menu "mais" no vidro compartilhado); review rev4 BLOQUEIA 09:20 foi ANTES do merge, falta revisar o resultado mesclado.
 - **#3**: Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: idiomas de audio/legenda declarados pelo add-on (PR #487); 3 commits fora do HEAD.
 - **#4**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
 - **#5**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
@@ -1269,6 +1275,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 | Data | Quem | O que | Issues | Ref | Resultado | Evidência |
 |---|---|---|---|---|---|---|
+| 2026-10-17 09:20 | job-pi revisao | Review rev3 de agente/205-textoescala: P2 busca no celular ainda redimensiona o cartaz; P2 prova visual contra 8df743dff incompleta | - | agente/205-textoescala (342aafc49) | falhou | /Volumes/ExternalSSD/tmp/rev/rev3-textoescala.log |
+| 2026-10-17 08:47 | job-pi fix3 | Fix3 do detalhe: vidro no "Trocar arte" e fileira do Trakt desenhada 1x por quadro; 2 commits novos | - | 26dbd9a2a, 3aec9a8c0 | pendente | /Volumes/ExternalSSD/tmp/rev/j-fix3-detalheglass.log |
+| 2026-10-17 08:35 | job-claude | j-playervidro: devolve o frost sobre o video (arte pre-desfocada) e afrouxa o governador; 1 commit | #553 | ce33fe44a | pendente | /Volumes/ExternalSSD/tmp/rev/j-playervidro.log |
+| 2026-10-17 08:32 | job-pi fix3 | Fix3 da escala de texto: espacamento da busca e ancoras do menu de episodio; 1 commit | - | 342aafc49 | pendente | /Volumes/ExternalSSD/tmp/rev/j-fix3-textoescala.log |
+| 2026-10-17 08:24 | coordenacao | j-pisca3 (RUNNING) e j-traktvidro (log vazio) lancados: tela ainda pisca na C9 e fileira do Trakt sem vidro/FPS | #553 | agente/205-pisca3, agente/205-traktvidro (sem commit) | pendente | /Volumes/ExternalSSD/tmp/rev/escrivao/jobs.txt |
+| 2026-10-17 08:15 | job-pi revisao | Review rev3 de agente/205-detalheglass: P2 arte da colecao carregada ainda esconde o vidro; P2 "Trocar arte" sem vidro; tests/detalheglass.sh check rc=0 | - | agente/205-detalheglass (3aec9a8c0) | falhou | /Volumes/ExternalSSD/tmp/rev/rev3-detalheglass.log |
 | 2026-10-17 08:11 | dono (merge) / map keeper | Merge de agente/205-vidromenu cometado (ab0e9a597) com conflitos resolvidos; review rev2 OK 06:49 foi antes do merge | - | ab0e9a597 (Merge agente/205-vidromenu) | pendente | git reflog: commit (merge) 08:11 |
 | 2026-10-17 07:54 | job-pi (j-fix-vidroilhas) | Merge de agente/205-vidroilhas (ilhas de frost sobre o vidro da barra); review rev2 OK 06:48 + 2 fixes | - | f087f4b59 (Merge agente/205-vidroilhas) | passou | /Volumes/ExternalSSD/tmp/rev/j-fix-vidroilhas.log |
 | 2026-10-17 07:54 | map keeper | MERGE em andamento (MERGE_HEAD 90c8d380d agente/205-vidromenu) durante o sync; commit de docs pulado | - | MERGE_HEAD 90c8d380d | pendente | git status: merge in progress |
@@ -4504,11 +4516,11 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Vidro no menu "mais" da pagina do titulo
 
 - Plataforma: todas
-- Status: em-revisao
-- Release: -
-- Conserto: e047eecee feat(detail): draw cast, recommendations and trailers on the shared glass card; 9ebdc9a3b feat(detail): draw the more menu on the shared card glass and frost; 0b52916d0 fix(detail): frost loaded collections and restore solid captions; d04f21ba4 test(detail): isolate glass cards (rev2 BLOQUEIA 06:51 - P1)
-- Próximo passo: rev2 BLOQUEIA 06:51 (P1: vidro esconde a arte da colecao); precisa fix novo + review
-- Notas: Pedido do dono. O menu "mais" do detalhe passa a usar o mesmo vidro/frost dos outros paineis. Branch aberta, sem review nem merge. Sync 2026-10-17 07:05: 4 commits fora do HEAD, ainda sem merge.
+- Status: integrada
+- Release: 2.0.7 (integracao/2.0.5)
+- Conserto: e047eecee feat(detail): draw cast, recommendations and trailers on the shared glass card; 9ebdc9a3b feat(detail): draw the more menu on the shared card glass and frost; 0b52916d0 fix(detail): frost loaded collections and restore solid captions; d04f21ba4 test(detail): isolate glass cards (rev2 BLOQUEIA 06:51 - P1); 937a69475 fix(detail): let frost show through loaded collection artwork; 531a36f6e fix: preserve collection artwork above shared glass; 26dbd9a2a fix(trocaarte): glass sheet instead of opaque gradient and black floor; 3aec9a8c0 perf(detail): draw Trakt comments row once per frame with cheap glass cards; cc87bec32 (merge agente/205-detalheglass)
+- Próximo passo: revisar o resultado do merge cc87bec32 (rev4 BLOQUEIA 09:20 foi antes) e build+install no HEAD
+- Notas: Sync 2026-10-17 11:00: branch merged cc87bec32 depois dos fixes 0b52916d0/d04f21ba4/531a36f6e/fff6df801/453c7a73c/937a69475/26dbd9a2a/3aec9a8c0/aef4e3c58. [sync 2026-10-17 09:25] 10 commits fora (tip 3aec9a8c0, 08:44), ainda sem merge. rev2 BLOQUEIA 06:51 -> 4 fixes -> rev3 BLOQUEIA 08:15 -> j-fix3-detalheglass done 08:47 (26dbd9a2a vidro no Trocar arte + 3aec9a8c0 Trakt 1x/quadro). Falta review do fix3. Pedido do dono. O menu "mais" do detalhe passa a usar o mesmo vidro/frost dos outros paineis. Branch aberta, sem review nem merge. Sync 2026-10-17 07:05: 4 commits fora do HEAD, ainda sem merge.
 
 ### Frost da barra lateral e pilula de acento em vidro
 
@@ -4587,6 +4599,51 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 - Plataforma: todas
 - Status: em-revisao
 - Release: -
-- Conserto: e7fa6d67c feat(ui): add text and component scale to gfx layer; 406359d3a feat(settings): add text and component scale option (85-130%); bab9c56e3 feat(ui): apply text scale to home, title page, library and player; 86fed77d7 i18n: add text and component scale strings; 4bfafc814 test: add text scale proof (rev-textoescala BLOQUEIA 06:50)
-- Próximo passo: review BLOQUEIA 06:50 (P1: opcao nao aparece em Ajustes > Aparencia; P2 cards redimensionam); fix novo
-- Notas: Sync 2026-10-17 07:05: 5 commits fora do HEAD, ainda sem merge.
+- Conserto: e7fa6d67c feat(ui): add text and component scale to gfx layer; 406359d3a feat(settings): add text and component scale option (85-130%); bab9c56e3 feat(ui): apply text scale to home, title page, library and player; 86fed77d7 i18n: add text and component scale strings; 4bfafc814 test: add text scale proof (rev-textoescala BLOQUEIA 06:50); e24e614a2 fix(keyboard): keep navigation geometry at the configured text scale; 5ff1d7ef3/ebb0b1365 fix(search): preserve poster and landscape artwork size at text scale; 1eb28a937 fix(settings): expose text scale in Appearance navigation; 342aafc49 fix: preserve search spacing and scaled episode menu anchors
+- Próximo passo: rev3 BLOQUEIA 09:20 (P2 busca no celular ainda redimensiona cartaz; P2 prova visual incompleta) + fix3 08:32 -> precisa review novo; 18 commits fora
+- Notas: [sync 2026-10-17 09:25] 18 commits fora (tip 342aafc49, 08:32), ainda sem merge. rev BLOQUEIA 06:50 -> rev2 BLOQUEIA 08:15 -> j-fix3-textoescala done 08:32 -> rev3 BLOQUEIA 09:20. P1 antigo (opcao fora de Ajustes) foi resolvido (1eb28a937). Sync 2026-10-17 07:05: 5 commits fora do HEAD, ainda sem merge.
+
+### Player perdeu o vidro: frost sobre o video de volta (pedido do dono)
+
+- Plataforma: Todas (onde o video da para ler)
+- Status: integrada
+- Release: 2.0.7
+- Conserto: ce33fe44a fix(glass): frost over live video via baked title-art stand-in; governor trial (agente/205-playervidro); 6974f7293 Player glass: real translucent look over live video, denser tint, one-shot governor (agente/205-playervidro); 04375ab4f (Merge agente/205-playervidro)
+- Próximo passo: merged 04375ab4f (11:37); build+install no HEAD e o dono conferir o player na C9
+- Notas: [sync 2026-10-17 09:25] Dono: "O player nao ta mais com o glass, o que aconteceu?". Causa: 6f1c61cb8 (foscoleve4) tirou o foscoSobreVideo() e o gfx_vidro_fonte_video(), deixando todo vidro sobre o video defumado; o governador ainda derruba o app inteiro para defumado na C9. A branch devolve o frost por arte pre-desfocada e afrouxa o governador. | Escrivao 10-17 11:55: merged 04375ab4f com os 3 rounds de fix (vidro real sobre o video, tinta mais densa, governador one-shot).
+
+### Fileira do Trakt continua sem vidro e sem ganho de FPS (pedido do dono)
+
+- Plataforma: Todas
+- Status: em_job
+- Release: 2.0.7
+- Conserto: nenhum encontrado
+- Próximo passo: j-traktvidro done 08:24 com log vazio e branch sem commit novo (head=8df743dff, pre-merge): tratar como QUEUED/falhou -> relancar ou investigar
+- Notas: [sync 2026-10-17 09:25] Dono, depois de 335bd2abc instalado na C9: "o trakt ainda ta igual" e "a performance que era o importante tb nao mexeu do traktv". Reabre o trabalho de dono-205-traktcoment. | Escrivao 10-17 11:55: o head da branch e 8df743dff (pre-merge de vidroilhas/vidromenu): o job nao commitou nada, log vazio.
+
+### Tela ainda pisca na LG C9 com frost ligado (pedido do dono)
+
+- Plataforma: LG webOS (C9)
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 98bc829e1 fix(tex): keep mipmaps on hero-promoted art that rows also draw (agente/205-pisca3); fc6d35d69 (Merge agente/205-pisca3)
+- Próximo passo: merged fc6d35d69 (11:37); build+install no HEAD e dono conferir se a C9 ainda pisca
+- Notas: [sync 2026-10-17 09:25] Dono depois do fix instalado na C9: "A tela ainda ta piscando". O fix anterior (5528dc0ad, dinDescarregar antes da copia do backdrop) so foi provado por contador de ordem no desktop GL e nao resolveu na TV. | Escrivao 10-17 11:55: merged fc6d35d69. A causa provada desta vez: mipmaps descartados da arte promovida no hero que as fileiras tambem desenham (tex_cache). Sem teste na TV ainda.
+
+### Caixa de texto do episodio focado maior, com margem e em vidro; lentidao titulo->abas de temporada; log do fontepref por quadro (pedido do dono)
+
+- Plataforma: LG webOS / TCL (detalhe de serie)
+- Status: integrada
+- Release: 2.0.7
+- Conserto: df06809f2 fix(detail): glass episode focus plate with padded text; cheap title->episodes scroll (agente/205-epfoco); e5eb23eba fix(fontepref): pick the remembered auto source once per list, log once (agente/205-epfoco); 3b39999e5 (Merge agente/205-epfoco)
+- Próximo passo: merged 3b39999e5 (11:37); build+install no HEAD e dono conferir a placa de foco e a transicao titulo->temporadas na TCL/C9
+- Notas: [sync 2026-10-17 11:55] Pedido literal do dono: "o focu do texto do episodio tem que ser um pouco maior e ta sem margem" + "e falta o glass" + "agora no frost so ta lerdo quando vai do titulo para as tabs". j-epfoco done 11:02, sem review dedicado antes do merge. Fix: placa em vidro com padding alinhada ao cartao focado; scroll titulo->episodios mais barato; fontepref cacheado por lista (o log por quadro, 2347 linhas em 2 min, some). Pendente: medida de 60 fps real na TV.
+
+### PR #572 (Tolu-Walop-E): ParaleloDataSource Android — indice de fim de arquivo nas conexoes paralelas + destino lembrado do add-on com fallback
+
+- Plataforma: Android
+- Status: integrada
+- Release: 2.0.7
+- Conserto: cc61bfdd8 perf(android): read the end-of-file index over the parallel connections; 809bd7c96 perf(android): open later requests at the add-on link's known destination; 8876c13c6 perf(android): split end-of-file windows above 256 KB too; f6618db6b fix(android): don't trust a remembered destination that serves another file; 22f3d22bb (Merge pr/572)
+- Próximo passo: merged 22f3d22bb (11:37); rodar o teste de unidade Kotlin num CI com JDK compativel (local JDK 25 quebra o toolchain)
+- Notas: [sync 2026-10-17 11:55] rev-pr572 VEREDITO OK: abertura de fonte le o indice do fim do arquivo em paralelo e lembra o destino real do add-on (TTL 2h + checagem de tamanho, com fallback). Testes Kotlin nao rodaram local (JDK 25).
