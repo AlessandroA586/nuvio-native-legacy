@@ -758,7 +758,7 @@ static int ajCusto(int op) {
   switch (op) {
     case AJ_PROF: case AJ_PROF_BORDA: case AJ_PROF_BRILHO: case AJ_PROF_COBERTURA: case AJ_PROF_POSTERS:
     case AJ_PROF_CW: case AJ_PROF_EPS: case AJ_PROF_ELENCO: case AJ_PROF_TRAILERS:
-    case AJ_VIDRO: case AJ_VIDRO_FOSCO: case AJ_GPU_EFEITOS: case AJ_TEX_MB: case AJ_ITENS_FILEIRA:
+    case AJ_VIDRO: case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE: case AJ_GPU_EFEITOS: case AJ_TEX_MB: case AJ_ITENS_FILEIRA:
     case AJ_QUALIDADE_IMG: case AJ_RESOLUCAO: case AJ_DTS_AC3: case AJ_CACHE_SEEK: case AJ_FOCO_TRAILER:
       return 1;
     case AJ_MANTER_VIDEO: case AJ_HERO_TRAILER: case AJ_FIL_LIMITE: return 1 | 2;

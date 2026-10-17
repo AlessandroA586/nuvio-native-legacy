@@ -160,7 +160,7 @@ static const Item TELA[] = {
     ROT("Tela de descanso"),
       OPC(AJ_ESMAECER), OPC(AJ_DESCANSO_ESTILO), OPC(AJ_DESCANSO_FONTE),
     MAIS(),
-    ROT("Cores e vidro"), OPC(AJ_VIDRO_OPAC), OPC(AJ_VIDRO_FOSCO),
+    ROT("Cores e vidro"), OPC(AJ_VIDRO_OPAC), OPC(AJ_VIDRO_FOSCO), OPC(AJ_VIDRO_QUALIDADE),
 
   // NOTAS (decisao do dono, 07/10): so as onze "Notas no titulo". Os oito
   // AJ_MDB_* (qual nota o MDBList baixa) sairam da tela e continuam no enum e na

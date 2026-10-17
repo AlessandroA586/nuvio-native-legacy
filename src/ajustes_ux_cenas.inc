@@ -900,7 +900,7 @@ static void ajcCenaOpcao(int sec, int op) {
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: ajcCenaPerfis(op); return;
     case AJ_TEMA: case AJ_COR_LOGO: ajcCenaCor(op); return;
     case AJ_FUNDO: ajcCenaFundo(); return;
-    case AJ_VIDRO: case AJ_VIDRO_CONTORNO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: ajcCenaVidro(op); return;
+    case AJ_VIDRO: case AJ_VIDRO_CONTORNO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE: ajcCenaVidro(op); return;
     case AJ_LOGO_APP: case AJ_ABERTURA: case AJ_ICONE_APP: ajcCenaMarca(op); return;
     case AJ_FONTE_UI: case AJ_TAMANHO_UI: case AJ_TAMANHO_AJUSTES: ajcCenaTexto(op); return;
     case AJ_LAYOUT_AJUSTES: ajcCenaLayoutAjustes(op); return;

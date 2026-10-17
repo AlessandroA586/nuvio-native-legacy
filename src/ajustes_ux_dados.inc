@@ -196,6 +196,7 @@ static const char *uxSinonimos(int op) {
     case AJ_MENU_TOPO: return "menu barra topo alto cima lateral esquerda rail posicao navegacao top bar toolbar sidebar left position";
     case AJ_EP_TAMANHO: return "tamanho episodio cards cartao moderno pequeno medio grande serie episode card size small medium large";
     case AJ_ABERTURA_ADDON: return "addon add-on provedor fonte nome abertura cinema tela carregando tentativa provider name opening source";
+    case AJ_VIDRO_QUALIDADE: return "qualidade vidro automatica desempenho alta fumaca esfumacado desfoque fosco glass quality automatic performance high smoked blur";
     case AJ_ABERTURA_ESTILO: return "estilo tela abertura carregando logo centro canto esquerda anel opening style center corner";
     case AJ_ABERTURA_FUNDO: return "fundo arte backdrop imagem titulo abertura cinema tela carregando desligado nitida borrada desfocada preto opening backdrop blurred sharp off";
     case AJ_TELA_ABERTURA: return "tela abertura abrindo carregando loading cinema detalhada fonte play transicao opening source screen";

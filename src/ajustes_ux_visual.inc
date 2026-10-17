@@ -219,7 +219,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_RELOGIO: case AJ_RELOGIO_12H: return "aj_clock";
     case AJ_VIDRO_CONTORNO: return "aj_layers";
     case AJ_VIDRO_OPAC: return "aj_layers";
-    case AJ_VIDRO_FOSCO: return "aj_layers";
+    case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE: return "aj_layers";
     case AJ_XTREAM_SERVIDOR: return "aj_server";
     case AJ_XTREAM_USUARIO: return "aj_server";
     case AJ_XTREAM_SENHA: return "aj_server";

@@ -3251,6 +3251,24 @@ static int vidBw, vidBh;
 void gfx_vidro_fosco_bloquear(void) { foscoBloq = 1; }
 int gfx_vidro_com_fonte, gfx_vidro_chapados;
 
+// GLASS GOVERNOR ("Qualidade do vidro" = Automatica). Frames are counted in
+// windows of GOV_JANELA frames that drew blurred glass; a window is janky when
+// >= 20% of its frames took over 1.5x the target frame time. GOV_SEGUIDAS janky
+// windows in a row drop the glass to smoked glass until the app restarts: it
+// never goes back (flip-flopping would be a worse stutter than either tier).
+#define GOV_JANELA 150
+#define GOV_SEGUIDAS 4
+static int govN, govLentos, govSeguidas, vidroDegradou;
+int gfx_vidro_degradado(void) { return vidroDegradou; }
+void gfx_vidro_governar(double ms, double alvo_ms) {
+  if (vidroDegradou || ajustes_vidro_qualidade() != 0 || gfx_vidro_com_fonte <= 0) return;
+  govN++; govLentos += ms > alvo_ms * 1.5;
+  if (govN < GOV_JANELA) return;
+  govSeguidas = govLentos * 5 >= govN ? govSeguidas + 1 : 0;
+  govN = govLentos = 0;
+  if (govSeguidas >= GOV_SEGUIDAS) { vidroDegradou = 1; printf("[vidro] governador: desempenho\n"); }
+}
+
 static const char *VID_VS =
   NV_GLSL_PREFIXO
   "#define NV_HP highp\n"
@@ -3626,7 +3644,9 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   for (i = 0; !chapado && i < vidroNVidros; i++) chapado = vidroCruza(vidroVidros[i], tela);
   video = foscoBloq;
   for (i = 0; !video && i < vidroNFuros; i++) video = vidroCruza(vidroFuros[i], tela);
-  fumaca = video;   // no TV lets GL read the video plane: smoked glass
+  // Smoked glass: over live video (no TV lets GL read the video plane), with
+  // quality = Desempenho, or once the governor dropped the tier.
+  fumaca = video || ajustes_vidro_qualidade() == 1 || (vidroDegradou && ajustes_vidro_qualidade() == 0);
   if (fumaca) chapado = 1;
   if (vidroNVidros < VID_N) memcpy(vidroVidros[vidroNVidros++], tela, sizeof tela);
   memset(&vidPend, 0, sizeof vidPend);
