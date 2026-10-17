@@ -15,4 +15,10 @@ cc "${sources[@]}" tests/heroisA.c -Isrc -o "$NUVIO_DADOS/test" -O1 -g \
   -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -L/opt/homebrew/lib \
   -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL -Wno-deprecated-declarations \
   >"$NUVIO_DADOS/build.log" 2>&1 || { tail -45 "$NUVIO_DADOS/build.log"; exit 1; }
+set +e
+"$NUVIO_DADOS/test" --fade
+fade_rc=$?
 "$NUVIO_DADOS/test" "$@"
+layout_rc=$?
+printf 'fade rc=%d; layout rc=%d\n' "$fade_rc" "$layout_rc"
+[ "$fade_rc" -eq 0 ] && [ "$layout_rc" -eq 0 ]

@@ -1,5 +1,45 @@
 // Native Mac renderer fixture: actual Home geometry, text metrics and drawing.
+#include <string.h>
+#include "../src/gfx.h"
+#include "../src/text.h"
+static float headingY;
+static GLuint headingTexture;
+static int overlayProbe;
+static const char *heading;
+static TxtLinha recordLine(TxtEstilo style, const char *s, int r, int g, int b, int a, float width) {
+  TxtLinha l = txt_linha_corta(style,s,r,g,b,a,width);
+  if (style == TXT_ROW_TITULO) headingTexture = l.tex;
+  return l;
+}
+static void recordText(TxtLinha l, float x, float y) {
+  if (l.tex == headingTexture && headingY < 0) headingY = y;
+  txt_desenhar(l, x, y);
+}
+static void recordRect(GfxRect r, GLuint tex, GfxModo mode, float focus,
+                       float px, float py, float radius,
+                       float red, float green, float blue, float alpha) {
+  if (overlayProbe == 1 && r.x == 0 && r.y == 0 && r.h <= 96 &&
+      (mode == GFX_VEU_CSS || mode == GFX_COR)) {
+    gfx_cor((GfxRect){0, 0, r.w, 96}, 0, 1, 1, 1, 1);
+    overlayProbe = 2;
+  }
+  gfx_rect(r, tex, mode, focus, px, py, radius, red, green, blue, alpha);
+}
+static void recordColor(GfxRect r, float radius, float red, float green, float blue, float alpha) {
+  if (overlayProbe == 1 && r.x == 0 && r.y == 0 && r.h <= 96) {
+    gfx_cor((GfxRect){0,0,r.w,96},0,1,1,1,1); overlayProbe = 2;
+  }
+  gfx_cor(r,radius,red,green,blue,alpha);
+}
+#define txt_linha_corta recordLine
+#define gfx_cor recordColor
+#define txt_desenhar recordText
+#define gfx_rect recordRect
 #include "../src/home.c"
+#undef txt_linha_corta
+#undef gfx_cor
+#undef txt_desenhar
+#undef gfx_rect
 #include "dados.h"
 #include <SDL2/SDL_image.h>
 #include <assert.h>
@@ -19,39 +59,42 @@ static void setup(int split, int glass) {
   fileiras[0].n = 8; fileiras[1].tipo = FILEIRA_NORMAL;
   snprintf(fileiras[0].titulo, sizeof fileiras[0].titulo, "%s", split ? "Top Rated - Movie" : "Horror - Movie");
   scrollX[0] = alvoScrollFil(0, 0, 0, 0);
+  fileiras[1].n = 8;
+  scrollY = dinRolagemCentrada(0, 0);
+  fileirasVistasEm = 1000;
+  filNAntes[0] = filNAntes[1] = 8;
+  memset(filEntraEm, 0, sizeof filEntraEm);
+}
+static void renderHome(int split, int probe) {
+  heading = fileiras[foco.fileira].titulo; headingTexture = 0;
+  headingY = -1; overlayProbe = probe;
+  home_desenhar(1000);
+  if (probe) {
+    unsigned char pixel[4];
+    glReadPixels(10,1080-35,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
+    assert(overlayProbe == 2);
+    assert(abs(pixel[0]-(int)(NV_COR_FUNDO_R*255)) <= 2);
+    glReadPixels(10,1080-71,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
+    assert(pixel[0] > NV_COR_FUNDO_R*255+20 && pixel[0] < 245);
+    glReadPixels(10,1080-96,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
+    assert(pixel[0] > 245);
+    puts("PASS top overlay: solid through 45%, then fades to 96px");
+  } else {
+    if (fabsf(headingY-(split ? 78 : 98))>=0.01f)
+      fprintf(stderr,"heading=%g split=%d row=%d layout=%d scroll=%g\n",headingY,split,foco.fileira,layoutHome(),scrollY);
+    assert(fabsf(headingY-(split ? 78 : 98))<0.01f);
+    assert(temItemFoco && fabsf(itemFoco.rect.y-(split ? 137 : 160))<0.01f);
+  }
 }
 static void capture(const char *prefix, int split, int glass, float scale) {
   char path[1000];
   setup(split, glass); gfx_escala_txt_definir(scale); TXT_INI();
   scrollX[0] = alvoScrollFil(0, 0, 0, 0);
-  float y = (split ? 137 : 160) / scale;
+
   for (int frame = 0; frame < 50; frame++) {
     SDL_PumpEvents(); tex_bombear(8); tex_novo_quadro(); txt_novo_quadro(); gfx_novo_quadro();
     glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1); glClear(GL_COLOR_BUFFER_BIT);
-    txt_desenhar(txt_linha(TXT_ROW_TITULO, fileiras[0].titulo, 243,242,239,255), 88, y - 62);
-    if (split) {
-      float w = larguraFil(0), h = alturaFil(0);
-      for (int c = 1; c < 5; c++) {
-        float x = homeFileiraX(0,c) + xOffTipo(FILEIRA_HEROI_DIVIDIDO);
-        if (!divididoCartazVisivel(0,x+w*0.5f,w)) continue;
-        CartaoFoco k = {.r=0,.c=c,.tipo=FILEIRA_HEROI_DIVIDIDO,.cItem=&items[c],
-          .caminho=items[c].poster,.t=tex_obter_larg(items[c].poster,w),.aArte=1,
-          .rotuloFora=1,.esc=1,.px=x,.py=y,.w=w,.h=h};
-        pintarCartao(&k, raioDe(w,h));
-      }
-      desenhaDividido(0,y);
-    } else {
-      CartaoFoco k = {.r=0,.tipo=FILEIRA_HEROI,.cItem=&items[0],.caminho=items[0].backdrop,
-        .t=tex_obter_larg(items[0].backdrop,1744),.aArte=1,.esc=1,.f=1,.px=homeConteudoX(),.py=y,
-        .w=larguraFil(0),.h=alturaFil(0)};
-      pintarCartao(&k,raioDe(k.w,k.h));
-    }
-    float next = y + alturaTotalFil(0) + fileiraGap();
-    txt_desenhar(txt_linha(TXT_ROW_TITULO,"Latest Horror - Movie",155,155,158,255),88,next);
-    for(int c=0;c<8;c++) {
-      GfxRect r={88+c*243.0f,next+64,212,318};
-      desenhaArteCard(r,FILEIRA_NORMAL,items[c].poster,tex_obter_larg(items[c].poster,212),&items[c],0,raioDe(r.w,r.h),1,0);
-    }
+    renderHome(split, 0);
     if(frame==49) {
       unsigned char *pixels=malloc(1920*1080*4); assert(pixels);
       SDL_Surface *s=SDL_CreateRGBSurfaceWithFormat(0,1920,1080,32,SDL_PIXELFORMAT_RGBA32); assert(s);
@@ -71,7 +114,10 @@ int main(int argc,char **argv) {
   window=SDL_CreateWindow("Hero A proof",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,1920,1080,SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN); assert(window);
   assert(SDL_GL_CreateContext(window)); SDL_GL_SetSwapInterval(0); glViewport(0,0,1920,1080);
   gfx_tamanho_alvo(1920,1080); assert(gfx_iniciar()); assert(txt_iniciar("deploy/app",1)); tex_iniciar(64);
-  dados_iniciar("deploy/app/art"); ajustes_iniciar(); artehero_definir_falhou(tex_falhou);
+  dados_iniciar("deploy/app/art");
+  AddonRemoto addon = {.nome="Fixture",.url="https://fixture.invalid/manifest.json",.ativo=1};
+  addons_definir_lista(&addon,1); assert(addons_n()==1);
+  ajustes_iniciar(); artehero_definir_falhou(tex_falhou);
   for(int i=0;i<12;i++) {
     snprintf(items[i].imdb,sizeof items[i].imdb,"tt900%04d",i);
     snprintf(items[i].tipo,sizeof items[i].tipo,"movie");
@@ -84,6 +130,20 @@ int main(int argc,char **argv) {
     snprintf(items[i].logo,sizeof items[i].logo,"deploy/app/art/logo/%02d.png",i%10);
   }
   CatFileira cf={.n=12}; cat_definir_tudo(items,12,&cf,1);
+  if(argc>1 && !strcmp(argv[1],"--fade")) {
+    setup(0,0); renderHome(0,1); SDL_Quit(); return 0;
+  }
+  for(int split=0;split<2;split++) {
+    setup(split,0); renderHome(split,0);
+    Fileira hero = fileiras[0];
+    fileiras[0] = fileiras[1]; fileiras[1] = hero;
+    snprintf(fileiras[0].titulo,sizeof fileiras[0].titulo,"Previous row");
+    foco.fileira = 1;
+    scrollX[1] = alvoScrollFil(1,0,0,0);
+    scrollY = dinRolagemCentrada(1,NV_LEGACY_ROW_HEAD_H+alturaTotalFil(0)+fileiraGap());
+    renderHome(split,0);
+  }
+  setup(0,0); renderHome(0,1);
   if(argc>1 && argv[1][0]!='-') {
     for(int split=0;split<(argc>2 ? 1 : 2);split++) for(int glass=0;glass<2;glass++) capture(argv[1],split,glass,1);
     if(argc==2) for(int i=0;i<2;i++) {

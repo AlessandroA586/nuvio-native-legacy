@@ -1801,6 +1801,9 @@ static float dinRolagemCentrada(int r, float off) {
   float total = 0.0f, s, sMax;
   int i;
   if (r < 0 || r >= nFileiras) return off;
+  // Hero A keeps its approved heading anchor, including after changing rows.
+  if (fileiras[r].tipo == FILEIRA_HEROI || fileiras[r].tipo == FILEIRA_HEROI_DIVIDIDO)
+    return off + NV_DIN_TOPO_FIL - (fileiras[r].tipo == FILEIRA_HEROI ? 98.0f : 78.0f);
   for (i = 0; i < nFileiras; i++)
     total += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(i) + (i ? fileiraGap() : 0.0f);
   s = NV_DIN_TOPO_FIL + off + 0.5f * (NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r))
@@ -7482,7 +7485,8 @@ static void home_desenhar_(Uint32 agora) {
     // `y` é o topo do cabeçalho da fileira; os cards começam depois do título.
     // Separar os dois evita que o título da fileira seguinte seja desenhado
     // sobre a arte da anterior quando a fileira tem cards altos.
-    float cardY = y + NV_LEGACY_ROW_HEAD_H;
+    float cardY = y + (tipo == FILEIRA_HEROI ? 62.0f :
+                       tipo == FILEIRA_HEROI_DIVIDIDO ? 59.0f : NV_LEGACY_ROW_HEAD_H);
 
     int deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
                   ((tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO) &&
@@ -7988,7 +7992,9 @@ static void home_desenhar_(Uint32 agora) {
       (fileiras[foco.fileira].tipo == FILEIRA_HEROI ||
        fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO)) {
     gfx_sem_recorte();
-    gfx_rect((GfxRect){0, 0, NV_TELA_W, 96.0f}, 0, GFX_VEU_CSS, 0, 1, 1, 0,
+    gfx_cor((GfxRect){0, 0, NV_TELA_W, 43.2f}, 0,
+            NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1);
+    gfx_rect((GfxRect){0, 43.2f, NV_TELA_W, 52.8f}, 0, GFX_VEU_CSS, 0, 1, 1, 0,
              NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1);
   }
   // DEVOLVE O REBORDO ao sair: a variavel e global e o detalhe, a busca e a
