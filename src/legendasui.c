@@ -643,7 +643,7 @@ int legendasui_evento(const SDL_Event *e) {
 // --- drawing the panel ---------------------------------------------------------------
 #define LU_PAD_X   18.0f
 #define LU_PAD_Y   22.0f
-#define LU_TIT_H   64.0f
+#define LU_TIT_H   42.0f   // heading only: the title already sits in the header by the clock
 #define LU_LN_H    88.0f
 #define LU_LN_VAO   4.0f
 #define LU_PE_H    47.0f
@@ -983,11 +983,6 @@ static void desenharLinha(const LuiLinha *l, int idx, int sel, float x, float y,
     if (sub[0]) txt_desenhar_alpha(ls, tx, ty + (float)ln.h + 5.0f, aL); }
 }
 
-static const char *tituloSessao(void) {
-  const CatItem *c = cat_item(player_indice());
-  return c && c->titulo[0] ? c->titulo : "";
-}
-
 static void ponteiroMenu(int i, int b) { (void)b; if (menu) menuFoco = i; }
 static void ponteiroMenuEscolher(int i, int b) { (void)b; if (menu) { menuFoco = i; menuEscolher(); } }
 static void ponteiroMenuAbrir(int i, int b) { (void)b; if (ponteiroAqui(i)) { focar(i); abrirMenu(); } }
@@ -1046,9 +1041,8 @@ void legendasui_corpo(GfxRect c, float a) {
   int vis = luVis(), fim, i;
   montarLinhas();
   pont = !menu && a > 0.99f && ponteiro_ativo();
-  plrui_kicker(tituloSessao(), x0 + 10.0f, y, 115, 115, 113, a);
   { TxtLinha t = txt_linha(TXT_ILHA_PERGUNTA, ver ? nomeIdioma(verIdioma) : mais ? "Todas as legendas" : "Recomendadas", 243, 242, 239, 255);
-    float ty = y + 22.0f;
+    float ty = y;
     const char *rot[2] = { "Faixas", "Estilo" };
     int cont[2] = { nCand, -1 };
     float sw = plrui_seg(rot, cont, 2, 0, 0, -1.0f, 0, a);
