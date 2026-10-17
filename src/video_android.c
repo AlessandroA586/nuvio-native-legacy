@@ -918,6 +918,7 @@ const char *video_url_atual(void) { return urlAtual; }
 double video_pos(void) { return prontoLoad ? posMs / 1000.0 : 0; }
 double video_duracao(void) { return durMs / 1000.0; }
 // Capitulos do MKV lidos por um fio lateral (capmkv.c, 203-capitulos).
+double video_creditos(void) { return capmkv_creditos(video_duracao()); }
 double video_buffer_fim(void) {
   double b = 0.0;
   pthread_mutex_lock(&travaStats);
@@ -925,6 +926,7 @@ double video_buffer_fim(void) {
   pthread_mutex_unlock(&travaStats);
   return b;
 }
+unsigned video_bufferando_ms(void) {
   // Esperando para reconectar: o watchdog (app.c) nao troca de fonte.
   if (nv_recon_ativa(&recon)) return 0;
   return bufferando ? SDL_GetTicks() - bufferDesde : 0;
