@@ -1835,8 +1835,9 @@ static float alvoScrollFil(int r, int col, float atual, float abre) {
   float util  = homeLarguraUtil();
   float folga = sobraDireitaFoco(r, abre);
   float alvo  = atual;
-  // HERÓI DIVIDIDO: o card em foco é sempre o primeiro da fila, ao lado do painel.
-  if (fileiras[r].tipo == FILEIRA_HEROI_DIVIDIDO) return esq;
+  // HERÓI DIVIDIDO: o card em foco É o painel; a fila ao lado dele começa no
+  // PRÓXIMO título (o do foco sai dela, atrás do painel).
+  if (fileiras[r].tipo == FILEIRA_HEROI_DIVIDIDO) return esq + passo;
   if (dir + folga - alvo > util) alvo = dir + folga - util;
   // A esquerda ganha a MESMA folga: sem ela o card em foco na primeira coluna
   // visivel apoia a caixa em repouso na margem e o que cresce (ou o anel) fica
@@ -2385,6 +2386,7 @@ static int focoVertical(int dy) {
   if (!focus_mover(&foco, 0, dy)) return 0;
   int r = foco.fileira;
   int melhor = foco.coluna;
+  if (fileiras[r].tipo == FILEIRA_HEROI_DIVIDIDO) return 1;   // o painel nao tem x de coluna
   for (int c = 0; c < foco.nColunas[r]; c++) {
     if (fabsf(homeFileiraX(r, c) + larguraFil(r) * 0.5f - cx) <
         fabsf(homeFileiraX(r, melhor) + larguraFil(r) * 0.5f - cx)) melhor = c;
@@ -6800,6 +6802,11 @@ static void desenhaHeroiCard(const CatItem *ci, const char *selo, const char *te
 // gênero, classificação e nota, três linhas de sinopse e o elenco. Os
 // vizinhos do foco já pedem a arte deitada, para o painel trocar sem buraco.
 static int divididoItem(int r) { return fileiraItemIndice(&fileiras[r], colunaDaFileira(r)); }
+// O cartaz `c` (centro cx, largura w) entra na fila a direita do painel? O que
+// ja passou fica atras do painel (pintado depois).
+static int divididoCartazVisivel(int r, float cx, float w) {
+  return cx + w * 0.5f >= homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO;
+}
 static GfxRect divididoPainel(int r, float cardY) {
   return (GfxRect){ homeConteudoX() + bordaX(r), cardY, divPainelW(), divArteH() };
 }
@@ -6819,6 +6826,14 @@ static void desenhaDividido(int r, float cardY) {
   }
   desenhaHeroiCard(ci, NULL, NULL, caminho, t, 1.0f, p.x, p.y, p.w, p.h,
                    raioDe(p.w, p.h), 0.0f, 0.0f);
+  // O foco mora no painel: o poster dele nao e mais desenhado na fila.
+  if (foco.fileira == r && !focoHero) {
+    itemFoco = (HomeItem){ .indice = idx, .rect = p, .arte = caminho,
+      .titulo = ci ? ci->titulo : NULL, .genero = ci ? ci->genero : NULL,
+      .meta = ci ? ci->meta : NULL };
+    publicarItemFoco();
+    ancoraFoco = p; temAncoraFoco = 1;
+  }
   if (!ci) return;
   { char linha[200];
     snprintf(linha, sizeof linha, "%s%s%s", ci->meta, ci->meta[0] && ci->genero[0] ? " · " : "", ci->genero);
@@ -7367,8 +7382,7 @@ void home_desenhar(Uint32 agora) {
           float cy = cardY + artH * 0.5f + (1.0f - entra) * NV_ENTRA_DY;
           if (cx < -lw * 1.5f || cx > NV_TELA_W + lw) continue;
           // HERÓI DIVIDIDO: o que já passou fica atrás do painel (pintado depois).
-          if (tipo == FILEIRA_HEROI_DIVIDIDO &&
-              cx + w * 0.5f < homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO) continue;
+          if (tipo == FILEIRA_HEROI_DIVIDIDO && !divididoCartazVisivel(r, cx, w)) continue;
           // Cartao TOTALMENTE fora da tela (mas dentro da faixa de cull que
           // ainda e desenhada): NIVEL 2, recusa sempre — EXCETO no lado em
           // que a rolagem entra (NIVEL 3): aquele card vira visivel nos

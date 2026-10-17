@@ -93,11 +93,12 @@ int main(void) {
     GfxRect p = divididoPainel(1, 100.0f);
     assert(fabsf(p.w - homeLarguraUtil() * 0.45f) < 0.5f);
     assert(p.x == homeConteudoX() && p.y == 100.0f && p.h > 0.0f && p.h <= p.w * 9.0f / 16.0f + 0.5f);
-    // A fila comeca a direita do painel, e o card em foco e sempre o primeiro dela.
+    // A fila comeca a direita do painel, e o PROXIMO titulo e o primeiro dela:
+    // o card em foco e o proprio painel, nunca repetido na fila.
     for (int c = 0; c < 6; c++) {
       if (c) assert(focus_mover(&foco, 1, 0));
       scrollX[1] = alvoScrollFil(1, c, scrollX[1], 0.0f);
-      float x = homeFileiraX(1, c) + xOffTipo(FILEIRA_HEROI_DIVIDIDO);
+      float x = homeFileiraX(1, c + 1) + xOffTipo(FILEIRA_HEROI_DIVIDIDO);
       assert(x >= p.x + p.w + 20.0f && x < p.x + p.w + 80.0f);
       assert(divididoItem(1) == 40 + c);   // o painel acompanha o foco
     }
@@ -107,6 +108,30 @@ int main(void) {
     // Ano/nota embaixo do poster: o rotulo existe e a altura dele esta reservada.
     assert(temRotulo(FILEIRA_HEROI_DIVIDIDO));
     assert(alturaTotalFil(1) == alturaFil(1) + NV_POSTER_COPY_H + NV_DIV_META_H);
+    memset(scrollX, 0, sizeof scrollX);
+  }
+  // HEROI DIVIDIDO sem repeticao: com 5 itens, em CADA foco o titulo do painel
+  // nao aparece na fila, e a fila e exatamente os itens foco+1.. (inclusive nos
+  // ultimos, onde a fila esvazia).
+  {
+    int cols[] = {5};
+    fileiras[0] = (Fileira){.tipo = FILEIRA_HEROI_DIVIDIDO, .n = 5, .ini = 40, .escala = 1.0f};
+    focus_iniciar(&foco, 1, cols);
+    memset(scrollX, 0, sizeof scrollX);
+    for (int f = 0; f < 5; f++) {
+      int visiveis[5], nv = 0, hero;
+      if (f) assert(focus_mover(&foco, 1, 0));
+      scrollX[0] = alvoScrollFil(0, f, scrollX[0], 0.0f);
+      hero = divididoItem(0);
+      assert(hero == 40 + f);
+      for (int c = 0; c < 5; c++) {
+        float cx = homeFileiraX(0, c) + xOffTipo(FILEIRA_HEROI_DIVIDIDO) + larguraFil(0) * 0.5f;
+        if (divididoCartazVisivel(0, cx, larguraFil(0))) visiveis[nv++] = 40 + c;
+      }
+      for (int k = 0; k < nv; k++) assert(visiveis[k] != hero);
+      assert(nv == 4 - f);
+      for (int k = 0; k < nv; k++) assert(visiveis[k] == 40 + f + 1 + k);
+    }
     memset(scrollX, 0, sizeof scrollX);
   }
   // Palco percorre as mesmas vagas e usa a mesma borda das fileiras comuns.
