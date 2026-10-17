@@ -30,6 +30,8 @@ int ajustes_animacoes_reduzidas(void) { return reduz; }
 int player_carregando(void) { return 1; }
 int ajustes_abertura_addon(void) { return addonLigado; }
 int ajustes_abertura_fundo(void) { return fundoOp; }
+static int estiloOp;   // 0 Centro (A3), 1 Canto (B3)
+int ajustes_abertura_estilo(void) { return estiloOp; }
 static int logoPronto;
 static void corFocoPlayer(float *r, float *g, float *b) { *r = .8f; *g = .5f; *b = .2f; }
 int corviva_logo_acento(float *r, float *g, float *b) {
@@ -180,6 +182,25 @@ int main(void) {
   // An opening with no title page on screen just before it fades in place.
   cine.desde = 40000; brancos = 0; desenharCinema(40000 + 150, &c, 0);
   assert(brancos == 0 && rAnel.x == 932.0f);
+  // B3 CONTRACT (Canto): same sharp art + half veil, but the logo sits at the
+  // BOTTOM LEFT and the small ring is directly BELOW it, left-aligned. No glass
+  // island: the only extra draws are the ring parts and the logo. Same code path.
+  estiloOp = 1; fundoOp = 1; reduz = 0; stats.bufferPct = -1; esperandoFonte = 1;
+  cine.desde = 60000; morphEm = 0;
+  n = blur = arte = veus = aneis = logo = 0; desenharCinema(60000 + 2000, &c, 0);
+  assert(blur == 0 && arte == 1 && arteModo == GFX_CARD && veus == 1 && rVeu.y == 540.0f && rVeu.h == 540.0f);
+  assert(logo == 1 && aneis == 1 && rAnel.w == rAnel.h && rAnel.w == 44.0f && rAnel.x == 96.0f && rAnel.y == 940.0f);
+  assert(rLogo.x == 96.0f && rLogo.x + rLogo.w * .5f < 480.0f && rLogo.y > 540.0f);   // bottom-left quadrant
+  assert(rAnel.y >= rLogo.y + rLogo.h + 32.0f && rAnel.x == rLogo.x);                  // ring under the logo
+  assert(rArco.x == rAnel.x && rArco.y == rAnel.y && rArco.w == rAnel.w);
+  // MORPH lands on the corner targets, from the same title-page rects as A3.
+  morphLogo = (GfxRect){ 96, 368, 500, 200 }; morphPlay = (GfxRect){ 96, 600, 321, 94 };
+  cine.desde = 70000; morphEm = 69950;
+  brancos = 0; desenharCinema(70000 + 150, &c, 0);
+  assert(brancos == 1 && rAnel.w < 321.0f && rAnel.w > 44.0f);   // pill still shrinking
+  brancos = 0; desenharCinema(70000 + 1500, &c, 0);
+  assert(brancos == 0 && rAnel.x == 96.0f && rAnel.y == 940.0f && rAnel.w == 44.0f && rLogo.x == 96.0f);
+  estiloOp = 0;
   fundoOp = 2;
-  puts("PASS: S5 shared renderer: backdrop, logo/title, episode, no stage text, addon line only with toggle, real buffer only, backdrop option off/sharp/blurred, A3 ring below logo + sharp art + half veil + morph");
+  puts("PASS: S5 shared renderer: backdrop, logo/title, episode, no stage text, addon line only with toggle, real buffer only, backdrop option off/sharp/blurred, A3 ring below logo + B3 corner layout + sharp art + half veil + morph");
 }

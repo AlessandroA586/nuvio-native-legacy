@@ -2,6 +2,7 @@
 // fronteiras de textura, desenho e pagina estavel sao locais e tipadas:
 // nenhuma janela, video ou rede e aberta pelo teste.
 #define ajustes_abertura_fundo loading_test_ajustes_abertura_fundo
+#define ajustes_abertura_estilo loading_test_ajustes_abertura_estilo
 #define ajustes_animacoes_reduzidas loading_test_ajustes_animacoes_reduzidas
 #define ajustes_hero_fonte loading_test_ajustes_hero_fonte
 #define ajustes_hero_arte_diferente loading_test_ajustes_hero_arte_diferente
@@ -53,6 +54,7 @@ void fixture_detail_backdrop(const char *);
 void fixture_detail_poster(const char *);
 void fixture_detail_ownership_checks(void (*)(int,const char *));
 int ajustes_abertura_fundo(void) {return fundoStyle;}
+int ajustes_abertura_estilo(void) {return 0;}
 int ajustes_animacoes_reduzidas(void) {return reduced;}
 int ajustes_hero_fonte(void) {return ARTEHERO_CATALOGO;}
 int ajustes_hero_arte_diferente(void) {return 0;}
