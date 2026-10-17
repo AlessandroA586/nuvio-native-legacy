@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-16 22:51, HEAD `1b5c9d39a`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-17 00:05, HEAD `b280cd6`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -47,8 +47,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   `91da5935e`.
 - **Tela de abertura do player** (pedido do dono): a logo desliza para o centro e o botão Play vira um anel
   fino de progresso embaixo dela, sobre a arte nítida com um véu escuro subindo até a metade; "Arte" é o novo
-  padrão, com "Arte borrada" e "Desligado" ainda disponíveis. Todas as plataformas. Refs pedido do dono,
-  `718e61abb`, `ace1fd53a`.
+  padrão, com "Arte borrada" e "Desligado" ainda disponíveis. **Estilo** escolhe entre **Centro (A3)** e
+  **Canto (B3)**, com a logo embaixo à esquerda e o anel fino sob ela. Todas as plataformas.
+  Refs pedido do dono, `718e61abb`, `ace1fd53a`, `922500ef4`, `9c3ecdf85`.
 - **Ficha de fontes pelo relógio**: a folha de fontes agora nasce da ilha do relógio, com a mesma mola e o
   mesmo material do resto da interface. Todas as plataformas. `fbe06f5e7`, `ae39b748a`.
 - **Ver tudo em grade** (PR #568 #563): as fileiras de destaque das coleções e os resultados de busca de cada
@@ -243,15 +244,11 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   **revertido** (`f40a93dc3`, agora no HEAD `1b5c9d39a`): na TCL o dono achou o fosco anterior (captura de
   tela + desfoque) mais bonito e mais leve. A fonte de arte pré-desfocada (`ab02d4aaa`, `d0789c13a`,
   `50a1ac232`, `35f5f4fc3`) **não** está na 2.0.7; o review r4 deu OK (`j-rev-foscovelho-r4`, 22:08) já
-  depois do merge. Quem fica pendente é **otimizar o caminho atual** (job `j-foscoleve3` RUNNING 22:29,
-  log vazio). Todas as plataformas.
-- **Estilo da tela de abertura em Canto (B3)** (pedido do dono) — `agente/205-loadtelab`, 1 commit fora
-  (`922500ef4`): ajuste "Estilo da tela de abertura" com Centro (A3, padrão) e Canto (logo embaixo à
-  esquerda, anel fino sob ela). Job feito (testes, i18n e build rc 0) e **review OK** `j-revg-loadtelab`
-  (22:47); **falta o merge** antes do tag. Ficou pendente o FAIL→PASS de `tests/ajustes_padroes.sh` no HEAD
-  e o visual na TV. Todas as plataformas.
-- **Vistos, temporadas fantasmas, catálogo fora da cota (#548 #556 #545) e tela de abertura A3** entraram
-  nesta janela (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`) e já estão em Destaques.
+  depois do merge. Quem fica pendente é **otimizar o caminho atual**: `agente/205-foscoleve3` está com
+  5 commits fora (`93b3d69ec`..`240bc60a0`, job `j-foscoleve3` ativo 23:43) e ainda sem review.
+  Todas as plataformas.
+- **Vistos, temporadas fantasmas, catálogo fora da cota (#548 #556 #545) e a tela de abertura** entraram
+  nesta janela (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`, `922500ef4`) e já estão em Destaques:
 - **Vidaa** — `agente/205-vidaa` foi **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
   depois de uma sequência de BLOQUEIA. Sai na 2.0.7; não está em pendência.
 - **Cabeçalho de coleção diferente** (pedido do dono) — `agente/205-colhdr` foi **merged** (`fec2dc0ac`),
@@ -297,8 +294,9 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   Refs #548, `66a608ef7`, `8330673a8`, `2d04fbecc`, `b074d9fd5`, `91da5935e`.
 - **Player opening screen** (owner request): the logo slides to the centre and the Play pill morphs into a thin
   progress ring below it, over sharp artwork with a dark veil rising to half the screen; "Arte" is the new
-  default, with "Arte borrada" and "Desligado" kept. All platforms. Refs owner request, `718e61abb`,
-  `ace1fd53a`.
+  default, with "Arte borrada" and "Desligado" kept. The new **Estilo** setting picks **Centro (A3)** or
+  **Canto (B3)**, logo bottom-left with a thin ring under it. All platforms. Refs owner request,
+  `718e61abb`, `ace1fd53a`, `922500ef4`, `9c3ecdf85`.
 - **Sources sheet grows from the clock**: the sources sheet now opens out of the clock island, with the same
   spring and material as the rest of the interface. All platforms. `fbe06f5e7`, `ae39b748a`.
 - **See all grid** (PR #568 #563): showcase rows in collections and the search results of each catalog open
@@ -486,15 +484,10 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
   **reverted** (`f40a93dc3`): on the TCL the owner found the previous frosted glass (screen capture + blur)
   prettier and lighter. The pre-blurred art source (`ab02d4aaa`, `d0789c13a`, `50a1ac232`, `35f5f4fc3`) is
   **not** in 2.0.7; its round-4 review was OK (`j-rev-foscovelho-r4`, 22:08), already after the merge. What
-  stays pending is **making the current path cheaper** (job `j-foscoleve3` RUNNING 22:29, empty log).
-  All platforms.
-- **Opening screen style in the Corner (B3)** (owner request) — `agente/205-loadtelab`, 1 commit out
-  (`922500ef4`): an "Estilo da tela de abertura" setting with Center (A3, default) and Corner (logo
-  bottom-left, thin ring under it). Job done (tests, i18n and build rc 0) and **review OK**
-  `j-revg-loadtelab` (22:47); **the merge is still missing** before tagging. Left pending: the
-  `tests/ajustes_padroes.sh` FAIL→PASS at HEAD and the on-TV look. All platforms.
-- **Watch tracking, ghost seasons, quota-excluded catalog (#548 #556 #545) and the A3 loading screen** landed
-  in this window (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`) and are already under Highlights.
+  stays pending is **making the current path cheaper**: `agente/205-foscoleve3` now has 5 commits out
+  (`93b3d69ec`..`240bc60a0`, job `j-foscoleve3` active 23:43) and no review yet. All platforms.
+- **Watch tracking, ghost seasons, quota-excluded catalog (#548 #556 #545) and the opening screen** landed
+  in this window (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`, `922500ef4`) and are already under Highlights:
 - **Vidaa** — `agente/205-vidaa` was **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
   after a run of BLOQUEIAS. It ships in 2.0.7; no longer pending.
 - **Different collection header** (owner request) — `agente/205-colhdr` was **merged** (`fec2dc0ac`),
@@ -521,7 +514,8 @@ Landing in 2.0.7, already in the sections above:
   **trailer audio + captions** (`b43655122`, `31dcf5275`), **P2P reasons** (`e21441cd2`, `30b57ccf1`),
   **glass/frost work** (`46e0bd5bd`, `b5007ae85`, `e9c809475`, `0c77460c1`, `d98d72026`),
   **release 2.0.7 bump and notes** (`b72189c5d`, `e275de18a`),
-  **#468 Home/Jellyfin views** (`08c98b017`), **previous-episode button removed** (`d51d4e46c`) and the
+  **#468 Home/Jellyfin views** (`08c98b017`), **previous-episode button removed** (`d51d4e46c`), the
+  **opening-screen style setting A3/B3** (`922500ef4`, `9c3ecdf85`) and the
   **revert of the cached-art frost** (`f40a93dc3`, undoing `76bc9d0c3`).
 
 ### Frost performance (to fill before tagging)
@@ -550,7 +544,8 @@ Landing in 2.0.7, already in the sections above:
   **trailer audio + captions** (`b43655122`, `31dcf5275`), **P2P reasons** (`e21441cd2`, `30b57ccf1`),
   **glass/frost work** (`46e0bd5bd`, `b5007ae85`, `e9c809475`, `0c77460c1`, `d98d72026`),
   **release 2.0.7 bump and notes** (`b72189c5d`, `e275de18a`),
-  **#468 Home/Jellyfin views** (`08c98b017`), **previous-episode button removed** (`d51d4e46c`) and the
+  **#468 Home/Jellyfin views** (`08c98b017`), **previous-episode button removed** (`d51d4e46c`), the
+  **opening-screen style setting A3/B3** (`922500ef4`, `9c3ecdf85`) and the
   **revert of the cached-art frost** (`f40a93dc3`, undoing `76bc9d0c3`).
 
 ### Frost performance (to fill before tagging)

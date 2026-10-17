@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-16T22:51:00-03:00",
- "base": "1b5c9d39a",
- "nota": "Sync 2026-10-16 22:51, HEAD integracao/2.0.5 1b5c9d39a. Merges nesta janela: agente/205-homerefresh (08c98b017, #468 + pedido do dono). Revert do frost de arte pre-blurred (f40a93dc3) ja esta no HEAD. issues.json 10-16 23:34: #497, #504, #552, #556 agora CLOSED (alvo removido); nenhuma issue nova. loadtelab (922500ef4) revisado OK (j-revg-loadtelab 22:47), 1 ahead, falta merge. Pedido do dono dono-205-semepanterior criado/integrado (d51d4e46c).",
+ "atualizado_em": "2026-10-17T00:05:00-03:00",
+ "base": "b280cd6",
+ "nota": "Sync 2026-10-17 00:05, HEAD integracao/2.0.5 b280cd6. Merge nesta janela: agente/205-loadtelab (922500ef4, pedido do dono dono-205-loadtelab; review OK j-revg-loadtelab 22:47). issues.json 10-17 01:55: nenhuma issue nova, nenhuma mudanca de estado (0); 478 issues mapeadas. Jobs vivos no snapshot: j-fix-amigospolish-r2 (agente/205-amigospolish, 2 commits fora, sem review), j-foscoleve3 (agente/205-foscoleve3, 5 commits fora, sem review = needs review), j-detalhe21b (2.1, mockups, sem commits); j-foscoleve2/j-amigospolish/j-detalhe21/j-rev-loadtelab/j-escrivao-2346 tem log vazio (RUNNING/ENOSPC), nenhum perdido. TV segue em cb7ece972 (496 merges atras); tag v2.0.6, proximo release 2.0.7.",
  "itens": [
   {
    "numero": 1,
@@ -9275,11 +9275,11 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "merged 08c98b017; review OK j-rev-homerefresh; build+install e confirmar na TV ordem das fileiras apos reiniciar",
-   "notas": "[sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato. Sync 2026-10-16 22:51: merged 08c98b017 no HEAD 1b5c9d39a; review OK j-rev-homerefresh (22:21).",
+   "proximo_passo": "merged 08c98b017; review OK j-rev-homerefresh; build+install e confirmar na TV ordem das fileiras apos reiniciar; sai na 2.0.7",
+   "notas": "[sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato. Sync 2026-10-16 22:51: merged 08c98b017 no HEAD 1b5c9d39a; review OK j-rev-homerefresh (22:21). [sync 2026-10-17 00:05] HEAD b280cd6; sai na 2.0.7. TV segue 496 merges atras (cb7ece972).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/468",
    "alvo": "2.0.6",
-   "n_notas": "[sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato. Sync 2026-10-16 22:51: merged 08c98b017 no HEAD 1b5c9d39a; review OK j-rev-homerefresh (22:21)."
+   "n_notas": "[sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato. Sync 2026-10-16 22:51: merged 08c98b017 no HEAD 1b5c9d39a; review OK j-rev-homerefresh (22:21). [sync 2026-10-17 00:05] HEAD b280cd6; sai na 2.0.7. TV segue 496 merges atras (cb7ece972)."
   },
   {
    "numero": 469,
@@ -16548,8 +16548,8 @@
     "76bc9d0c3 (Merge agente/205-foscovelho) — REVERTIDO por f40a93dc3",
     "35f5f4fc3 (fix r4, review OK j-rev-foscovelho-r4 22:08 — nao entrou)"
    ],
-   "proximo_passo": "fonte de arte pre-blurred revertida (f40a93dc3 esta no HEAD 1b5c9d39a; dono achou o fosco anterior mais bonito e mais leve); otimizar o caminho atual de captura de tela — job j-foscoleve3 RUNNING (log vazio 22:29)",
-   "notas": "[sync 2026-10-16 22:40] Dono no TCL: \"o fosco anterior tava mais bonito e mais leve que esse\" + \"tem que otimizar o antes desse que vai ficar top\". foscovelho entrou em 76bc9d0c3 e saiu em f40a93dc3. j-rev-foscovelho-r4 (OK, 22:08) chegou depois do merge: o r4 nao entrou. j-foscoleve2 done 22:25 (log vazio, ENOSPC); j-foscoleve3 RUNNING 22:29. [sync 2026-10-16 22:55] Dono aprovou o visual atual do frost (\"o frost glass na c9 ta bem bom\") e pediu barato: voltar a fonte antiga (arte pre-blurred, zero captura). Jobs j-foscovelho, j-rev-foscovelho (BLOQUEIA), j-fix-foscovelho-r2 (RUNNING). | [sync 2026-10-16 21:10] job j-fix-foscovelho-r4 RUNNING (log vazio 20:36); r3 BLOQUEIA (vignette do detalhe) | Escrivão 2026-10-16 22:1x: j-fix-foscovelho-r4 done 21:14 (35f5f4fc3, tests/vidro_neutro + build-local rc 0); 4 ahead; BLOQUEIA j-rev-foscovelho-r3 antes do fix = needs review Sync 2026-10-16 22:51: f40a93dc3 (revert) ja esta no HEAD 1b5c9d39a.",
+   "proximo_passo": "fonte de arte pre-blurred revertida (f40a93dc3 no HEAD); otimizar o caminho atual (captura de tela) — job j-foscoleve3 RUNNING (5 commits fora, sem review)",
+   "notas": "[sync 2026-10-16 22:40] Dono no TCL: \"o fosco anterior tava mais bonito e mais leve que esse\" + \"tem que otimizar o antes desse que vai ficar top\". foscovelho entrou em 76bc9d0c3 e saiu em f40a93dc3. j-rev-foscovelho-r4 (OK, 22:08) chegou depois do merge: o r4 nao entrou. j-foscoleve2 done 22:25 (log vazio, ENOSPC); j-foscoleve3 RUNNING 22:29. [sync 2026-10-16 22:55] Dono aprovou o visual atual do frost (\"o frost glass na c9 ta bem bom\") e pediu barato: voltar a fonte antiga (arte pre-blurred, zero captura). Jobs j-foscovelho, j-rev-foscovelho (BLOQUEIA), j-fix-foscovelho-r2 (RUNNING). | [sync 2026-10-16 21:10] job j-fix-foscovelho-r4 RUNNING (log vazio 20:36); r3 BLOQUEIA (vignette do detalhe) | Escrivão 2026-10-16 22:1x: j-fix-foscovelho-r4 done 21:14 (35f5f4fc3, tests/vidro_neutro + build-local rc 0); 4 ahead; BLOQUEIA j-rev-foscovelho-r3 antes do fix = needs review Sync 2026-10-16 22:51: f40a93dc3 (revert) ja esta no HEAD 1b5c9d39a. [sync 2026-10-17 00:05] agente/205-foscoleve3 com 5 commits fora (93b3d69ec..240bc60a0: teto do alvo de blur, 1/2 em um passo, copia/borra so as regioes lidas, limpa alvo antes de cada passo, recaptura a cada 2 frames na fade) e sem review = needs review. j-foscoleve2 (predecessor) com log vazio: nao perdido.",
    "n_notas": "Dono no TCL: \"o fosco anterior tava mais bonito e mais leve que esse\" + \"tem que otimizar o antes desse que vai ficar top\". foscovelho entrou em 76bc9d0c3 e saiu em f40a93dc3. j-rev-foscovelho-r4 (OK, 22:08) chegou depois do merge: o r4 nao entrou. j-foscoleve2 done 22:25 (log vazio, ENOSPC); j-foscoleve3 RUNNING 22:29. [sync 2026-10-16 22:55] Dono aprovou o visual atual do frost (\"o frost glass na c9 ta bem bom\") e pediu barato: voltar a fonte antiga (arte pre-blurred, zero captura). Jobs j-foscovelho, j-rev-foscovelho (BLOQUEIA), j-fix-foscovelho-r2 (RUNNING). | [sync 2026-10-16 21:10] job j-fix-foscovelho-r4 RUNNING (log vazio 20:36); r3 BLOQUEIA (vignette do detalhe) | Escrivão 2026-10-16 22:1x: j-fix-foscovelho-r4 done 21:14 (35f5f4fc3, tests/vidro_neutro + build-local rc 0); 4 ahead; BLOQUEIA j-rev-foscovelho-r3 antes do fix = needs review"
   },
   {
@@ -16634,6 +16634,19 @@
    "proximo_passo": "merged d51d4e46c; review OK j-rev-semepanterior (22:12); sai na 2.0.7; P2: transportePrimeiraLinha() devolve 4 no layout de 2 linhas",
    "notas": "Sync 2026-10-16 22:51: pedido do dono (\"pode tirar do player o botao de voltar episodio\"); merged d51d4e46c; review OK j-rev-semepanterior (tests/player_eof_episodios + player.sh rc 0).",
    "url": ""
+  },
+  {
+   "id": "dono-205-loadtelab",
+   "titulo": "Estilo da tela de abertura: Centro (A3) ou Canto (B3)",
+   "plataforma": "Todas",
+   "status": "integrada",
+   "release": "2.0.7",
+   "conserto": [
+    "922500ef4 (feat(player): opening screen style setting, Center (A3) or Corner (B3))",
+    "9c3ecdf85 (Merge agente/205-loadtelab em integracao/2.0.5)"
+   ],
+   "proximo_passo": "sai na 2.0.7; conferir o visual B3 na TV antes do tag",
+   "notas": "[sync 2026-10-17 00:05] Pedido do dono, branch agente/205-loadtelab. Job j-loadtelab done 22:33 (922500ef4); review OK j-revg-loadtelab (22:47, tests/player_loading rc 0); j-rev-loadtelab tambem OK. merged 9c3ecdf85 no HEAD b280cd6. Ajustes > Tela: \"Estilo da tela de abertura\" com Centro (A3, padrao) e Canto (B3, logo embaixo a esquerda + anel fino)."
   }
  ],
  "fechar_203": [],
