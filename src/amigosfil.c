@@ -70,7 +70,7 @@ int amigosfil_dentro(void) { return dentro; }
 int amigosfil_convite(void) { return socialvis_n_amigos() == 0; }
 int amigosfil_n_colunas(void) {
   int n = socialvis_n_amigos();
-  if (ajustes_amigos_estilo() != 5) return n > 0 ? afNum() + 2 : 1;
+  if (ajustes_amigos_estilo() != 5) return n > 0 ? afNum() : 1;
   return n > 0 ? n + 1 : 1;
 }
 
@@ -198,7 +198,6 @@ void amigosfil_ok(int coluna) {
     const SvAmigo *am = afAmigo(coluna);
     if (ev && ev->imdb[0]) { snprintf(pedTitulo, sizeof pedTitulo, "%s", ev->imdb); temTitulo = 1; }
     else if (am) { snprintf(pedPerfil, sizeof pedPerfil, "%s", am->id); temPerfil = 1; }
-    else if (!recomenda_ativo() || !recenviar_abrir_amigos()) temAjustes = 1;
     return;
   }
   if (amigosfil_convite()) {
