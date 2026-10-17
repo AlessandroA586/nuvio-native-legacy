@@ -22,7 +22,7 @@ set -u
 cd "$(dirname "$0")/.."
 export TMPDIR="${NV_TMP:-/tmp}"; TMPDIR="${TMPDIR%/}"
 SRC="${NV_SRC:-.}"
-BASE_REF="${NV_BASE:-8df743dff}"
+BASE_REF="${NV_BASE:-f22761e28}"   # fork point of agente/205-textoescala
 W="${NV_REUSE:-$(mktemp -d "$TMPDIR/nv-textoescala.XXXXXX")}"
 [ -n "${NV_KEEP:-}" ] && echo "keeping $W" || trap 'rm -rf "$W"' EXIT
 TESTS="$PWD/tests"
@@ -38,21 +38,24 @@ objs() {
     flags=()
     case "$f" in */gfx.c) flags=(-Dgfx_rect=nvreal_gfx_rect);; */ajustes.c) flags=(-Dajustes_iniciar=nvreal_ajustes_iniciar -Dajustes_dir=nvreal_ajustes_dir);; esac
     cc "${CFLAGS[@]}" "$@" ${flags[@]+"${flags[@]}"} -I"$root/src" -c "$f" -o "$o/$(echo "${f#./}" | tr / _).o" || touch "$o/erro" &
-    n=$((n + 1)); [ $((n % 8)) -eq 0 ] && wait
+    n=$((n + 1)); [ $((n % JOBS)) -eq 0 ] && wait
   done
   wait
   [ ! -e "$o/erro" ]
 }
 
-# build <srcroot> <outdir>: one shot binary per screen
+SHOTS="${NV_SHOTS:-homelayouts biblioteca ajustes detail_secoes player_pausa busca vertudo teclado}"
+JOBS=$(sysctl -n hw.ncpu 2>/dev/null || echo 8)
+
+# build <srcroot> <outdir>: one shot binary per selected screen
 build() {
   local root="$1" out="$2" s
   if [ -z "${NV_LINK_ONLY:-}" ]; then
     objs "$root" "$out/o" || return 1
-    objs "$root" "$out/oa" -DAJUSTES_TESTE || return 1
+    case " $SHOTS " in *" ajustes "*|*" teclado "*) objs "$root" "$out/oa" -DAJUSTES_TESTE || return 1;; esac
   fi
   cc "${CFLAGS[@]}" -I"$root/src" -c "$TESTS/textoescala_espiao.c" -o "$out/espiao.o" || return 1
-  for s in homelayouts biblioteca ajustes detail_secoes player_pausa busca vertudo teclado; do
+  for s in $SHOTS; do
     set -- "$out"/o/*.o; ex=()
     if [ "$s" = detail_secoes ]; then set -- $(ls "$out"/o/*.o | grep -v 'src_detail\.c\.o'); fi
     if [ "$s" = vertudo ]; then set -- $(ls "$out"/o/*.o | grep -v 'src_vertudo\.c\.o'); fi
@@ -96,7 +99,6 @@ run() {
   rm -rf "$saida"   # the disk is shared; only the hashes are kept
 }
 
-SHOTS="${NV_SHOTS:-homelayouts biblioteca ajustes detail_secoes player_pausa busca vertudo teclado}"
 rc=0
 if [ -z "${NV_REUSE:-}" ]; then
   echo "build: this tree"; mkdir -p "$W/new"; build "$SRC" "$W/new" || { echo "FAIL: build"; exit 1; }

@@ -7,9 +7,10 @@
 //
 // NV_TXT_IDX=<n>  seeds "escalaTextoLocal n" in ajustes.txt before the settings
 //                 load (old code ignores the key, which is the point).
-// NV_TXT_LOG=<f>  one line per draw, in REAL pixels (layout size * gfx_escala):
+// NV_TXT_LOG=<f>  "F n" opens captured frame n, then one line per draw, in
+//                 REAL pixels (layout size * gfx_escala):
 //                 "T h"      text line height
-//                 "C w h"    GFX_CARD (poster art)
+//                 "C t w h x y" GFX_CARD (poster art): texture, size, origin
 //                 "R w h"    GFX_COR / GFX_ANEL under 150 px (buttons, pills)
 #include "ajustes.h"
 #include "dados.h"
@@ -38,6 +39,7 @@ void nvspy_glReadPixels(GLint x, GLint y, GLsizei w, GLsizei h,
   if (log_ && frameLog_) {
     char line[256];
     rewind(frameLog_);
+    fprintf(log_, "F %u\n", frame_);
     while (fgets(line, sizeof line, frameLog_)) fputs(line, log_);
     fflush(log_);
   }
@@ -49,7 +51,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco, float parx,
   if (frameLog_) {
     const float e = gfx_escala(), w = r.w * e, h = r.h * e;
     if (modo == GFX_TEXTO) fprintf(frameLog_, "T %.2f\n", h);
-    else if (modo == GFX_CARD) fprintf(frameLog_, "C %u %u %.1f %.1f\n", frame_, tex, w, h);
+    else if (modo == GFX_CARD) fprintf(frameLog_, "C %u %.1f %.1f %.1f %.1f\n", tex, w, h, r.x * e, r.y * e);
     else if ((modo == GFX_COR || modo == GFX_ANEL) && h >= 8 && h < 150 && w >= 8)
       fprintf(frameLog_, "R %.1f %.1f\n", w, h);
   }
