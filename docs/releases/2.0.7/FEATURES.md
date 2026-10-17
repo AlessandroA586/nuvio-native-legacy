@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-17 07:05, HEAD `dad0421d3`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-17 08:16, HEAD `ab0e9a597`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -59,6 +59,16 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   padrão, com "Arte borrada" e "Desligado" ainda disponíveis. **Estilo** escolhe entre **Centro (A3)** e
   **Canto (B3)**, com a logo embaixo à esquerda e o anel fino sob ela. Todas as plataformas.
   Refs pedido do dono, `718e61abb`, `ace1fd53a`, `922500ef4`, `9c3ecdf85`.
+- **Fundo Cinza ou Cor no layout Dinâmico** (pedido do dono): o fundo do layout Dinâmico (o estilo
+  "Apple TV") deixa de ser só arte e passa a aceitar Cinza ou Cor, escolhido na paleta de acento que a
+  interface já usava, com o Imersivo mais calmo. Todas as plataformas.
+  Refs pedido do dono, `6da1fc418`, `e91329dd2`, `0cf805980`, `e3fdbe717`.
+- **Frost da barra lateral e das ilhas da Home** (pedido do dono): a barra lateral desfoca sobre as telas
+  que carregam vidro, a pílula de acento vira vidro tingido no modo vidro, as ilhas de frost deixam de ser
+  desenhadas por baixo do vidro e os modais passam a capturar só a região que o painel lê — inclusive o
+  "Salvo". Todas as plataformas.
+  Refs pedido do dono, `90b0f9cd7`, `61764f975`, `fb4af3ee5`, `f087f4b59`, `7bf4caac9`, `e3eb56d39`,
+  `37687dce0`, `90c8d380d`, `ab0e9a597`.
 - **Ficha de fontes pelo relógio**: a folha de fontes agora nasce da ilha do relógio, com a mesma mola e o
   mesmo material do resto da interface. Todas as plataformas. `fbe06f5e7`, `ae39b748a`.
 - **Ver tudo em grade** (PR #568 #563): as fileiras de destaque das coleções e os resultados de busca de cada
@@ -346,16 +356,12 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   compartilhado. Fix novo (`0b52916d0`, `d04f21ba4`, 06:01) e **review rev2 BLOQUEIA (06:51)**: o vidro
   ainda esconde a arte da coleção carregada (P1) e o teste do menu continua aceitando a implementação
   antiga (P2). Precisa de fix novo + review antes de entrar na 2.0.7. Todas as plataformas.
-- **Frost da barra lateral e pílula de acento em vidro** — `agente/205-vidromenu` (4 commits fora,
-  `7bf4caac9`, `e3eb56d39`, `37687dce0`, `90c8d380d`) e `agente/205-vidroilhas` (3 fora,
-  `90b0f9cd7`, `61764f975`, `fb4af3ee5`): a barra lateral desfoca sobre as telas com vidro, a pílula de
-  acento vira vidro tingido no modo vidro e as ilhas de frost deixam de ser desenhadas por baixo do vidro
-  da Home. **Reviews rev2 OK (06:48 e 06:49)** depois dos fixes; falta mesclar e buildar. Todas as
-  plataformas.
-- **Fundo Cinza/Cor fixo no layout Dinâmico** — `agente/205-dinfundo`, 3 commits fora (`6da1fc418`,
-  `e91329dd2`, `0cf805980`): fundo fixo Cinza ou Cor em vez de só arte, com os ajustes traduzidos em 29
-  idiomas e a paleta de acento reusada. **Review rev2 OK (06:48)**; falta mesclar e buildar. Todas as
-  plataformas.
+- **Frost da barra lateral e pílula de acento em vidro** — `agente/205-vidromenu` foi **merged**
+  (`ab0e9a597`, 08:11, conflitos resolvidos pelo merge) e `agente/205-vidroilhas` foi **merged**
+  (`f087f4b59`); os dois já estão nos Destaques. O review rev2 OK (`j-rev2-vidromenu`, 06:49) foi **antes**
+  do merge, então falta revisar o resultado mesclado. Todas as plataformas.
+- **Fundo Cinza/Cor fixo no layout Dinâmico** — `agente/205-dinfundo` foi **merged** (`e3fdbe717`, 07:49);
+  review rev2 OK (06:48) depois do fix da paleta de acento (`0cf805980`). Já está nos Destaques.
 - **Escala de texto e componentes** — `agente/205-textoescala`, 5 commits fora (`e7fa6d67c`,
   `406359d3a`, `bab9c56e3`, `86fed77d7`, `4bfafc814`): ajuste novo "escala de texto e componentes"
   (85–130%) que multiplica texto, botões e componentes sem mexer no tamanho dos cartazes. **Review
@@ -431,6 +437,15 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   default, with "Arte borrada" and "Desligado" kept. The new **Estilo** setting picks **Centro (A3)** or
   **Canto (B3)**, logo bottom-left with a thin ring under it. All platforms. Refs owner request,
   `718e61abb`, `ace1fd53a`, `922500ef4`, `9c3ecdf85`.
+- **Fixed Gray or Colour background in the Dynamic layout** (owner request): the Dynamic ("Apple TV")
+  layout background is no longer art-only — Gray and Colour are now options, picked with the accent palette
+  picker the settings already used, with a calmer Immersive mode. All platforms.
+  Refs owner request, `6da1fc418`, `e91329dd2`, `0cf805980`, `e3fdbe717`.
+- **Sidebar frost and Home frost islands** (owner request): the sidebar frosts over screens that carry
+  glass, the accent pill becomes tinted glass in glass mode, the frost islands are no longer drawn under the
+  Home sidebar glass, and modals only capture the region the panel reads — including the "Saved" modal.
+  All platforms. Refs owner request, `90b0f9cd7`, `61764f975`, `fb4af3ee5`, `f087f4b59`, `7bf4caac9`,
+  `e3eb56d39`, `37687dce0`, `90c8d380d`, `ab0e9a597`.
 - **Sources sheet grows from the clock**: the sources sheet now opens out of the clock island, with the same
   spring and material as the rest of the interface. All platforms. `fbe06f5e7`, `ae39b748a`.
 - **See all grid** (PR #568 #563): showcase rows in collections and the search results of each catalog open
@@ -686,15 +701,13 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
   (`0b52916d0`, `d04f21ba4`, 06:01) and **rev2 review BLOQUEIA (06:51)**: the glass still hides loaded
   collection artwork (P1) and the menu test still accepts the old implementation (P2). Needs a new fix +
   review before 2.0.7. All platforms.
-- **Sidebar frost and glass accent pill** — `agente/205-vidromenu` (4 commits out, `7bf4caac9`,
-  `e3eb56d39`, `37687dce0`, `90c8d380d`) and `agente/205-vidroilhas` (3 out, `90b0f9cd7`, `61764f975`,
-  `fb4af3ee5`): the sidebar frosts over screens that carry glass, the accent pill becomes tinted glass in
-  glass mode, and the frost islands are no longer drawn under the Home sidebar glass. **rev2 reviews OK
-  (06:48 and 06:49)** after the fixes; still needs the merge and a build. All platforms.
-- **Fixed Gray/Colour background in the Dynamic layout** — `agente/205-dinfundo`, 3 commits out
-  (`6da1fc418`, `e91329dd2`, `0cf805980`): a fixed Gray or Colour backdrop instead of art only, with the
-  settings translated in 29 languages and the accent palette reused. **rev2 review OK (06:48)**; still needs
-  the merge and a build. All platforms.
+- **Sidebar frost and glass accent pill** — `agente/205-vidromenu` was **merged** (`ab0e9a597`, 08:11,
+  conflicts resolved by the merge) and `agente/205-vidroilhas` was **merged** (`f087f4b59`); both are now
+  under Highlights. The rev2 review was OK (`j-rev2-vidromenu`, 06:49) **before** the merge, so the merged
+  result still needs a review. All platforms.
+- **Fixed Gray/Colour background in the Dynamic layout** — `agente/205-dinfundo` was **merged**
+  (`e3fdbe717`, 07:49); rev2 review OK (06:48) after the accent-palette fix (`0cf805980`). It is now under
+  Highlights.
 - **Text and component scale** — `agente/205-textoescala`, 5 commits out (`e7fa6d67c`, `406359d3a`,
   `bab9c56e3`, `86fed77d7`, `4bfafc814`): a new "text and component scale" setting (85–130%) that scales
   text, buttons and components while leaving poster/card sizes alone. **Review BLOQUEIA (06:50)**: the
@@ -737,8 +750,9 @@ Landing in 2.0.7, already in the sections above:
   **revert of the cached-art frost** (`f40a93dc3`, undoing `76bc9d0c3`), the
   **cheaper screen-capture frost** (`4c82273d7`), the **polished friends row** (`f21d993b2`), **PR #561**
   (`86d194462`), **glass tabs** (`a096e5eb8`), **Settings at 100%** (`f22761e28`), the **Trakt comments row**
-  (`335bd2abc`), the **frosted context menu + Poster menu setting** (`dc040ef2d`) and **PR #574**
-  (`2c7c85860`).
+  (`335bd2abc`), the **frosted context menu + Poster menu setting** (`dc040ef2d`), **PR #574**
+  (`2c7c85860`), the **Dynamic Gray/Colour background** (`e3fdbe717`), the **Home frost islands**
+  (`f087f4b59`) and the **sidebar frost / glass accent pill** (`ab0e9a597`).
 
 ### Frost performance (to fill before tagging)
 
@@ -775,8 +789,9 @@ Landing in 2.0.7, already in the sections above:
   **revert of the cached-art frost** (`f40a93dc3`, undoing `76bc9d0c3`), the
   **cheaper screen-capture frost** (`4c82273d7`), the **polished friends row** (`f21d993b2`), **PR #561**
   (`86d194462`), **glass tabs** (`a096e5eb8`), **Settings at 100%** (`f22761e28`), the **Trakt comments row**
-  (`335bd2abc`), the **frosted context menu + Poster menu setting** (`dc040ef2d`) and **PR #574**
-  (`2c7c85860`).
+  (`335bd2abc`), the **frosted context menu + Poster menu setting** (`dc040ef2d`), **PR #574**
+  (`2c7c85860`), the **Dynamic Gray/Colour background** (`e3fdbe717`), the **Home frost islands**
+  (`f087f4b59`) and the **sidebar frost / glass accent pill** (`ab0e9a597`).
 
 ### Frost performance (to fill before tagging)
 

@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-17T07:05:00-03:00",
- "base": "dad0421d3",
- "nota": "Sync 2026-10-17 07:05, HEAD integracao/2.0.5 dad0421d3 (base anterior abb9e49b9). Sem merge novo desde 04:55. Reviews da madrugada: rev2-vidroilhas OK (06:48), rev2-dinfundo OK (06:48), rev2-vidromenu OK (06:49), rev-textoescala BLOQUEIA (06:50) e rev2-detalheglass BLOQUEIA (06:51) — os tres OK ainda NAO estao mesclados. issues.json 10-17 09:01: 80 issues, 1 nova (#580 catalogos de add-on nao aparecem, sem job) e 1 mudanca de estado GitHub (#548 fechada). TV segue em cb7ece972; tag v2.0.6, proximo release 2.0.7.",
+ "atualizado_em": "2026-10-17T08:16:00-03:00",
+ "base": "ab0e9a597",
+ "nota": "Sync 2026-10-17 08:16, HEAD integracao/2.0.5 ab0e9a597 (base anterior f087f4b59). Sync anterior (08:10) achou MERGE em andamento de agente/205-vidromenu (MERGE_HEAD 90c8d380d) e pulou o commit; o merge foi cometado em ab0e9a597 (08:11) com os conflitos resolvidos — review rev2 OK 06:49 foi ANTES do merge, entao falta revisar o resultado do merge. Merges na janela: dinfundo (e3fdbe717), vidroilhas (f087f4b59), vidromenu (ab0e9a597) e os 6 merges de 04:46-04:55 (homepisca, fichatam, herodiv, titulofil, foscoleve4, dvabertura), todos sem review dedicado. issues.json 10-17 12:15: 80 issues, 2 novas (#581, #582). TV segue em cb7ece972; tag v2.0.6, proximo release 2.0.7.",
  "itens": [
   {
    "numero": 1,
@@ -13,8 +13,8 @@
    "release": "1.0.7",
    "conserto": [
     "04c37f87 (v1.0.7)",
-    "90b0f9cd7 (agente/205-vidroilhas, 1 commits fora do HEAD)",
-    "90b0f9cd7 (agente/205-vidroilhas, 3 commits fora do HEAD)"
+    "90b0f9cd7/61764f975/fb4af3ee5 (agente/205-vidroilhas)",
+    "ab0e9a597 (Merge agente/205-vidroilhas, HEAD ab0e9a597)"
    ],
    "ultima_resposta": {
     "nos": true,
@@ -22,8 +22,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-09-08"
    },
-   "proximo_passo": "falta review+merge: rev2-vidroilhas OK 06:48; ainda nao integrada",
-   "notas": "Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: ilhas de frost desenhadas sobre o vidro da barra lateral da Home; 1 commits fora do HEAD. Sync 2026-10-17 07:05: rev2-vidroilhas OK 06:48 (fix da captura limitada a regiao de amostragem); branch ainda fora do HEAD.",
+   "proximo_passo": "merged ab0e9a597; build+install no HEAD e conferir na TV",
+   "notas": "agente/205-vidroilhas merged ab0e9a597 (07:54) depois de rev2-vidroilhas OK (06:48); sai na 2.0.7 Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: ilhas de frost desenhadas sobre o vidro da barra lateral da Home; 1 commits fora do HEAD. Sync 2026-10-17 07:05: rev2-vidroilhas OK 06:48 (fix da captura limitada a regiao de amostragem); branch ainda fora do HEAD.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/1",
    "criada_em": "2026-09-06"
   },
@@ -37,12 +37,10 @@
    "release": "1.0.7",
    "conserto": [
     "04c37f87 (v1.0.7)",
-    "9ebdc9a3b (agente/205-detalheglass, 2 commits fora do HEAD)",
-    "e047eecee (agente/205-detalheglass, 2 commits fora do HEAD)",
-    "6da1fc418 (agente/205-dinfundo, 2 commits fora do HEAD)",
-    "e91329dd2 (agente/205-dinfundo, 2 commits fora do HEAD)",
-    "7bf4caac9 (agente/205-vidromenu, 2 commits fora do HEAD)",
-    "e3eb56d39 (agente/205-vidromenu, 2 commits fora do HEAD)"
+    "9ebdc9a3b/e047eecee (agente/205-detalheglass)",
+    "6da1fc418/e91329dd2/0cf805980 (agente/205-dinfundo) -> merge e3fdbe717",
+    "90b0f9cd7/61764f975/fb4af3ee5 (agente/205-vidroilhas) -> merge ab0e9a597",
+    "7bf4caac9/e3eb56d39/37687dce0/90c8d380d (agente/205-vidromenu) -> merge ab0e9a597"
    ],
    "ultima_resposta": {
     "nos": true,
@@ -50,8 +48,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-09-07"
    },
-   "proximo_passo": "branches de vidro/fundo com fix novo: rev2 BLOQUEIA (detalheglass) e OK (vidromenu/dinfundo/vidroilhas); falta merge",
-   "notas": "Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: mais menu do detalhe no vidro/frost compartilhado; 2 commits fora do HEAD. Sync 2026-10-17 04:55: fundo Cinza/Cor fixo no layout Dinamico (29 idiomas); 2 commits fora do HEAD. Sync 2026-10-17 04:55: frost da barra lateral e pilula de acento em vidro; 2 commits fora do HEAD. Sync 2026-10-17 07:05: vidromenu rev2 OK 06:49, dinfundo rev2 OK 06:48; detalheglass rev2 BLOQUEIA 06:51 (vidro esconde arte da colecao).",
+   "proximo_passo": "detalheglass rev2 BLOQUEIA 06:51 (P1); dinfundo, vidroilhas e vidromenu integrados",
+   "notas": "agente/205-vidromenu merged ab0e9a597 (08:11) durante o sync; detalheglass segue BLOQUEIA 06:51 dinfundo merged e3fdbe717 (07:49, review rev2 OK 06:48) e vidroilhas merged ab0e9a597 (07:54, review rev2 OK 06:48); detalheglass e vidromenu seguem abertos Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: mais menu do detalhe no vidro/frost compartilhado; 2 commits fora do HEAD. Sync 2026-10-17 04:55: fundo Cinza/Cor fixo no layout Dinamico (29 idiomas); 2 commits fora do HEAD. Sync 2026-10-17 04:55: frost da barra lateral e pilula de acento em vidro; 2 commits fora do HEAD. Sync 2026-10-17 07:05: vidromenu rev2 OK 06:49, dinfundo rev2 OK 06:48; detalheglass rev2 BLOQUEIA 06:51 (vidro esconde arte da colecao).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/2",
    "criada_em": "2026-09-06"
   },
@@ -9287,10 +9285,10 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "merged 08c98b017; review OK j-rev-homerefresh; build+install e confirmar na TV ordem das fileiras apos reiniciar; sai na 2.0.7",
-   "notas": "[sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato. Sync 2026-10-16 22:51: merged 08c98b017 no HEAD 335bd2abc; review OK j-rev-homerefresh (22:21). [sync 2026-10-17 00:05] HEAD b280cd6; sai na 2.0.7. TV segue 496 merges atras (cb7ece972). Sync 2026-10-17 04:55: a Home tambem segue reordenar/desativar e novas fontes depois do merge f41a4e154 (hero dividido, sem review dedicado).",
+   "notas": "[sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato. Sync 2026-10-16 22:51: merged 08c98b017 no HEAD ab0e9a597; review OK j-rev-homerefresh (22:21). [sync 2026-10-17 00:05] HEAD b280cd6; sai na 2.0.7. TV segue 168 merges atras (cb7ece972). Sync 2026-10-17 04:55: a Home tambem segue reordenar/desativar e novas fontes depois do merge f41a4e154 (hero dividido, sem review dedicado).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/468",
    "alvo": "2.0.6",
-   "n_notas": "[sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato. Sync 2026-10-16 22:51: merged 08c98b017 no HEAD 335bd2abc; review OK j-rev-homerefresh (22:21). [sync 2026-10-17 00:05] HEAD b280cd6; sai na 2.0.7. TV segue 496 merges atras (cb7ece972).",
+   "n_notas": "[sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato. Sync 2026-10-16 22:51: merged 08c98b017 no HEAD ab0e9a597; review OK j-rev-homerefresh (22:21). [sync 2026-10-17 00:05] HEAD b280cd6; sai na 2.0.7. TV segue 168 merges atras (cb7ece972).",
    "data": "",
    "ultimo_comentario_por": "",
    "ultima_nossa": ""
@@ -9561,7 +9559,7 @@
    "conserto": [
     "251632be (merge agente/205-i483remux em integracao/2.0.5)",
     "251632beb (Merge agente/205-i483remux, integracao/2.0.5)",
-    "251632be (merge nesta janela, HEAD 335bd2abc)"
+    "251632be (merge nesta janela, HEAD ab0e9a597)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -9569,8 +9567,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7",
-   "notas": "Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01. | Escrivao 2026-10-15 11:48: prompt p-205-i483remux em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i483remux integrada] Escrivao 10-16 12:48: agente/205-i483remux ja ancestral de HEAD; sem mudanca. | Escrivão 2026-10-16 22:1x: merged 251632be nesta janela (HEAD 335bd2abc); review j-revg-i483remux; fetch Tracks via SeekHead quando a sonda erra o REMUX; entra na 2.0.7 | Escrivão 2026-10-16 22:1x: issues.json 10-16 23:34 marca CLOSED; alvo removido (campo so vale para abertas).",
+   "proximo_passo": "build+install no HEAD ab0e9a597 e resposta na issue; sai na 2.0.7",
+   "notas": "Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01. | Escrivao 2026-10-15 11:48: prompt p-205-i483remux em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i483remux integrada] Escrivao 10-16 12:48: agente/205-i483remux ja ancestral de HEAD; sem mudanca. | Escrivão 2026-10-16 22:1x: merged 251632be nesta janela (HEAD ab0e9a597); review j-revg-i483remux; fetch Tracks via SeekHead quando a sonda erra o REMUX; entra na 2.0.7 | Escrivão 2026-10-16 22:1x: issues.json 10-16 23:34 marca CLOSED; alvo removido (campo so vale para abertas).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/483",
    "criada_em": "2026-10-13",
    "ultimo_comentario_por": "",
@@ -9620,7 +9618,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "merged em integracao/2.0.5 (cdb45cb92 via agente/205-p2pusb) + 6d524f947 (URL http sem P2P); build+install e responder #486/#505",
-   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso. | Escrivao 2026-10-15 11:48: prompt p-205-p2p486 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: p2p486 merged, mas p2pusb (#486/#505) segue aberto | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-p2p486 integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92). | [sync 2026-10-16 21:00] agente/205-p2pusb merged; j-rev-p2pusbtela OK (9b4f37efb ainda 1 ahead). d25a3e513/6d524f947 (#552/#505) merged via PR #559 review OK. | [sync 2026-10-16 22:55] merged 21f169226/bf160f720 no HEAD 335bd2abc",
+   "notas": "Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso. | Escrivao 2026-10-15 11:48: prompt p-205-p2p486 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: p2p486 merged, mas p2pusb (#486/#505) segue aberto | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-p2p486 integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92). | [sync 2026-10-16 21:00] agente/205-p2pusb merged; j-rev-p2pusbtela OK (9b4f37efb ainda 1 ahead). d25a3e513/6d524f947 (#552/#505) merged via PR #559 review OK. | [sync 2026-10-16 22:55] merged 21f169226/bf160f720 no HEAD ab0e9a597",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/486",
    "criada_em": "2026-10-13",
    "alvo": "ja-lancada",
@@ -9821,7 +9819,7 @@
     "161cdebd2 (Merge agente/205-extplayer, integracao/2.0.5)",
     "281b4af37 (Merge agente/205-playerext, HEAD)",
     "059f4d4f3/276207fac/a04f2a820; reviews OK j-rev-extplayer-r2/j-rev-playerext-r2 (BLOQUEIA antes)",
-    "281b4af37 (merge nesta janela, HEAD 335bd2abc)"
+    "281b4af37 (merge nesta janela, HEAD ab0e9a597)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -9829,8 +9827,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7",
-   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. | Escrivao 10-16 14:58: job extplayer done f954a272c (configuracao de player externo); sem review; PNG nao sai no host (sem NV_ANDROID). | [sync 2026-10-16 21:00] extplayer 161cdebd2 + playerext 281b4af37 merged; reviews OK j-rev-extplayer-r2/j-rev-playerext-r2; fix a04f2a820/276207fac | [sync 2026-10-16 22:55] merged 281b4af37 no HEAD 335bd2abc | Escrivão 2026-10-16 22:1x: merged 281b4af37 nesta janela (HEAD 335bd2abc); review j-rev-extplayer-r2/j-rev-playerext-r2; player externo Android; falta a fonte de legenda custom; entra na 2.0.7",
+   "proximo_passo": "build+install no HEAD ab0e9a597 e resposta na issue; sai na 2.0.7",
+   "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. | Escrivao 10-16 14:58: job extplayer done f954a272c (configuracao de player externo); sem review; PNG nao sai no host (sem NV_ANDROID). | [sync 2026-10-16 21:00] extplayer 161cdebd2 + playerext 281b4af37 merged; reviews OK j-rev-extplayer-r2/j-rev-playerext-r2; fix a04f2a820/276207fac | [sync 2026-10-16 22:55] merged 281b4af37 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged 281b4af37 nesta janela (HEAD ab0e9a597); review j-rev-extplayer-r2/j-rev-playerext-r2; player externo Android; falta a fonte de legenda custom; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/501",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6",
@@ -9929,7 +9927,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "merged (fix i505 8f4fb5587 + 6d524f947 PR #559 URL http sem P2P); build+install no .tpk e responder",
-   "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review. | Escrivao 2026-10-15 11:48: prompt p-205-i505* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: escopo em agente/205-p2pusb | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-i505 integrada] [sync 2026-10-15: agente/205-p2pusb integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92). | [sync 2026-10-16 21:00] fix merged em integracao/2.0.5; review j-rev-205-p2p486-2 BLOQUEIA -> fixes -> 6d524f947 OK j-rev-pr559. | [sync 2026-10-16 22:55] merged 0d678eba5 no HEAD 335bd2abc",
+   "notas": "Snapshot 2026-10-14 10:15: 3fc691d4 \"fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)\" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review. | Escrivao 2026-10-15 11:48: prompt p-205-i505* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: escopo em agente/205-p2pusb | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-i505 integrada] [sync 2026-10-15: agente/205-p2pusb integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92). | [sync 2026-10-16 21:00] fix merged em integracao/2.0.5; review j-rev-205-p2p486-2 BLOQUEIA -> fixes -> 6d524f947 OK j-rev-pr559. | [sync 2026-10-16 22:55] merged 0d678eba5 no HEAD ab0e9a597",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/505",
    "criada_em": "2026-10-14",
    "alvo": "2.0.6",
@@ -10175,7 +10173,7 @@
    "status": "integrada",
    "release": "-",
    "conserto": [
-    "86d194462 (Merge PR #561, HEAD 335bd2abc)",
+    "86d194462 (Merge PR #561, HEAD ab0e9a597)",
     "cdf5bdd88 (fix: preserve series identity during on-demand playback)"
    ],
    "ultima_resposta": {
@@ -10222,7 +10220,7 @@
    "release": "",
    "conserto": [
     "f8fbd3bd3 (Merge agente/205-i529q, integracao/2.0.5)",
-    "f8fbd3bd3 (merge nesta janela, HEAD 335bd2abc)"
+    "f8fbd3bd3 (merge nesta janela, HEAD ab0e9a597)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10230,8 +10228,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7",
-   "notas": "Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job. [sync 2026-10-15: agente/205-i529q em_revisao] [sync 2026-10-15 19:50: agente/205-i529q merged em integracao/2.0.5 (f8fbd3bd3)] Escrivao 10-15 22:49: merged via agente/205-i529q (f8fbd3bd3). | Escrivão 2026-10-16 22:1x: merged f8fbd3bd3 nesta janela (HEAD 335bd2abc); review j-revg-i529q-r; preferencia de audio na fonte; entra na 2.0.7",
+   "proximo_passo": "build+install no HEAD ab0e9a597 e resposta na issue; sai na 2.0.7",
+   "notas": "Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job. [sync 2026-10-15: agente/205-i529q em_revisao] [sync 2026-10-15 19:50: agente/205-i529q merged em integracao/2.0.5 (f8fbd3bd3)] Escrivao 10-15 22:49: merged via agente/205-i529q (f8fbd3bd3). | Escrivão 2026-10-16 22:1x: merged f8fbd3bd3 nesta janela (HEAD ab0e9a597); review j-revg-i529q-r; preferencia de audio na fonte; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/529",
    "criada_em": "2026-10-15"
   },
@@ -10255,7 +10253,7 @@
     "ultima_nossa": null
    },
    "proximo_passo": "merged em integracao/2.0.5 (23cb26843, sinal do atraso manual invertido); revisao BLOQUEIA->OK (j-revg2-legatraso OK); falta TV para conferir o sinal",
-   "notas": "Escrivao 10/15 13:48: novo no GitHub 2026-10-15 (Subtitle issues), sem prompt de job. [sync 2026-10-15: agente/205-i530q integrada] Escrivao 10-15 22:49: merged via agente/205-i530q (cbd542148). Escrivao 10-16 00:06: merge agente/205-legatraso (05c24b89c/ad03fedc5/8d14dd55e, migracao do valor salvo). BLOQUEIA (j-revg-legatraso: audsync) -> OK (j-revg2-legatraso). Escrivao 10-16 01:50: HEAD 335bd2abc; ainda nao instalado na TV.",
+   "notas": "Escrivao 10/15 13:48: novo no GitHub 2026-10-15 (Subtitle issues), sem prompt de job. [sync 2026-10-15: agente/205-i530q integrada] Escrivao 10-15 22:49: merged via agente/205-i530q (cbd542148). Escrivao 10-16 00:06: merge agente/205-legatraso (05c24b89c/ad03fedc5/8d14dd55e, migracao do valor salvo). BLOQUEIA (j-revg-legatraso: audsync) -> OK (j-revg2-legatraso). Escrivao 10-16 01:50: HEAD ab0e9a597; ainda nao instalado na TV.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/530",
    "criada_em": "2026-10-15",
    "alvo": "2.0.6"
@@ -10271,7 +10269,7 @@
    "conserto": [
     "a4f220cd7 (Merge agente/205-deeplink, integracao/2.0.5)",
     "8f38bb943/a3eb1e19a/7cf145dca/f44e64863; review OK j-rev-deeplink-r4",
-    "a4f220cd7 (merge nesta janela, HEAD 335bd2abc)"
+    "a4f220cd7 (merge nesta janela, HEAD ab0e9a597)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10279,8 +10277,8 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7",
-   "notas": "Escrivao 2026-10-15 20:48: novo no GitHub 2026-10-15, sem job. | [sync 2026-10-16 21:00] conserto entrou em integracao/2.0.5 (a4f220cd7): nuvio-legacy://, stremio:// e imdb.com abrem titulo/play/busca. | [sync 2026-10-16 22:55] merged a4f220cd7 no HEAD 335bd2abc | Escrivão 2026-10-16 22:1x: merged a4f220cd7 nesta janela (HEAD 335bd2abc); review j-rev-deeplink-r4; deep links; BLOQUEIA r1-r3 antes do fix; entra na 2.0.7",
+   "proximo_passo": "build+install no HEAD ab0e9a597 e resposta na issue; sai na 2.0.7",
+   "notas": "Escrivao 2026-10-15 20:48: novo no GitHub 2026-10-15, sem job. | [sync 2026-10-16 21:00] conserto entrou em integracao/2.0.5 (a4f220cd7): nuvio-legacy://, stremio:// e imdb.com abrem titulo/play/busca. | [sync 2026-10-16 22:55] merged a4f220cd7 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged a4f220cd7 nesta janela (HEAD ab0e9a597); review j-rev-deeplink-r4; deep links; BLOQUEIA r1-r3 antes do fix; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/539",
    "criada_em": "2026-10-15",
    "alvo": "2.0.6"
@@ -10319,7 +10317,7 @@
     "26b9c635b/21d1783b6/67985ea5d (#545)",
     "merged b03502f84 (agente/205-pfhome545)",
     "review OK j-revg-pfhome545 (20:57)",
-    "b03502f84 (merge agente/205-pfhome545, HEAD 335bd2abc)"
+    "b03502f84 (merge agente/205-pfhome545, HEAD ab0e9a597)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10327,7 +10325,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7",
+   "proximo_passo": "build+install no HEAD ab0e9a597 e resposta na issue; sai na 2.0.7",
    "notas": "Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot. Escrivao 10-16 12:48: job home545 done (26b9c635b), 1 ahead de HEAD; review j-rev2-home545 BLOQUEIA. Distinto de #551 (descoberta nao reinicia apos PIN). | Escrivao 10-16 14:58: merged 9e2138f9d; review OK j-rev-home545-r4 depois dos fixes de cota/selecao explicita. | [sync 2026-10-16 21:00] merged 9e2138f9d; review OK j-rev-home545-r4 apos fixes de cota/selecao explicita; pos-merge BLOQUEIA j-revg-home545-posmerge 17:51 com fix j-fix-home545-posmerge | [sync 2026-10-16 22:55] agente/205-pfhome545 2 ahead (975638744/53b050753); VEREDITO BLOQUEIA j-revg-pfhome545 (18:47), fix 53b050753 sem review | [sync 2026-10-16 21:10] follow-up pfhome545 merged b03502f84; VEREDITO OK j-revg-pfhome545 (20:57) | Escrivão 2026-10-16 22:1x: merged b03502f84 (follow-up: fileira fora da cota atualiza ao adicionar); review OK j-revg-pfhome545 Sync 2026-10-17 04:55: 6a64c2e13 (pisca do fundo Dinamico antes do frost) entrou sem review dedicado; nada pendente de codigo.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/545",
    "criada_em": "2026-10-16",
@@ -10346,7 +10344,7 @@
    "conserto": [
     "merged 91da5935e (agente/205-vistos548, 12 commits); reviews OK j-rev-vistos548-r8/r9 (20:01/20:11)",
     "66a608ef7/8330673a8/2d04fbecc/da2c69701/f87c41ed7/9bc31cc9d/b074d9fd5/5b37cecd8",
-    "91da5935e (merge agente/205-vistos548, HEAD 335bd2abc)"
+    "91da5935e (merge agente/205-vistos548, HEAD ab0e9a597)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10354,7 +10352,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7",
+   "proximo_passo": "build+install no HEAD ab0e9a597 e resposta na issue; sai na 2.0.7",
    "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivao 10-16 14:58: job vistos548 rodando (branch agente/205-vistos548 = HEAD, 0 ahead); log vivo; sem fix ainda. | [sync 2026-10-16 21:00] branch agente/205-vistos548 6 ahead; fixes 8330673a8 e 5b37cecd8 (weak defaults para fixtures isoladas) depois do ultimo review BLOQUEIA r4; review r5 rodando. | [sync 2026-10-16 22:55] branch agente/205-vistos548 8 ahead (tip b074d9fd5); VEREDITO BLOQUEIA j-rev-vistos548-r7 (19:48) | [sync 2026-10-16 21:10] merged 91da5935e em integracao/2.0.5; VEREDITO OK j-rev-vistos548-r9, nenhum commit depois; sai na 2.0.7 | Escrivão 2026-10-16 22:1x: merged 91da5935e (agente/205-vistos548, 12 commits); reviews OK j-rev-vistos548-r8/r9; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/548",
    "criada_em": "2026-10-16",
@@ -10371,7 +10369,7 @@
    "status": "integrada",
    "release": "-",
    "conserto": [
-    "4baf783fa (merge 72ba10761, HEAD 335bd2abc)"
+    "4baf783fa (merge 72ba10761, HEAD ab0e9a597)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10379,7 +10377,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD 335bd2abc e resposta na issue",
+   "proximo_passo": "build+install no HEAD ab0e9a597 e resposta na issue",
    "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivão 2026-10-16 22:1x: corrigido por agente/205-prs207 (4baf783fa Ver tudo em grade nas colecoes); merged 72ba10761; review OK j-rev-prs207",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/549",
    "criada_em": "2026-10-16",
@@ -10399,7 +10397,7 @@
    "conserto": [
     "1c9043ed0/a2e9daf91 (agente/205-catal551)",
     "merged e680776ed (HEAD); review OK j-rev2-catal551",
-    "e680776ed (merge nesta janela, HEAD 335bd2abc)"
+    "e680776ed (merge nesta janela, HEAD ab0e9a597)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10407,8 +10405,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7",
-   "notas": "Escrivao 10-16 12:48: job catal551 done; review BLOQUEIA j-rev-catal551 -> fix 1c9043ed0 -> OK j-rev2-catal551; merged e680776ed. Causa: sessao de perfil velha nao reiniciava a descoberta. | [sync 2026-10-16 21:00] merged e680776ed; review OK j-rev2-catal551 apos fix 1c9043ed0/a2e9daf91 | [sync 2026-10-16 22:55] merged e680776ed no HEAD 335bd2abc | Escrivão 2026-10-16 22:1x: merged e680776ed nesta janela (HEAD 335bd2abc); review j-rev2-catal551; sessao de perfil velha antes de tentar de novo; entra na 2.0.7",
+   "proximo_passo": "build+install no HEAD ab0e9a597 e resposta na issue; sai na 2.0.7",
+   "notas": "Escrivao 10-16 12:48: job catal551 done; review BLOQUEIA j-rev-catal551 -> fix 1c9043ed0 -> OK j-rev2-catal551; merged e680776ed. Causa: sessao de perfil velha nao reiniciava a descoberta. | [sync 2026-10-16 21:00] merged e680776ed; review OK j-rev2-catal551 apos fix 1c9043ed0/a2e9daf91 | [sync 2026-10-16 22:55] merged e680776ed no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged e680776ed nesta janela (HEAD ab0e9a597); review j-rev2-catal551; sessao de perfil velha antes de tentar de novo; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/551",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6",
@@ -10427,7 +10425,7 @@
    "conserto": [
     "cbcf467f5/6d524f947/27988615e (agente/205-fonte552 e legenda552)",
     "merged 0d7821a01 (fonte552) + b897be584 (legenda552) + 6d524f947 (notWebReady com URL http)",
-    "0d7821a01 (merge nesta janela, HEAD 335bd2abc)"
+    "0d7821a01 (merge nesta janela, HEAD ab0e9a597)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10435,8 +10433,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7",
-   "notas": "Escrivao 10-16 12:48: job fonte552 done; review BLOQUEIA j-rev-fonte552 -> fix cbcf467f5 -> OK j-rev2-fonte552; merged 0d7821a01. Hostnames de stream passam a ser lidos antes de exigir P2P. | Escrivao 10-16 14:58: follow-up do reporter (addons de legenda nao aparecem): fix 27988615e em agente/205-legenda552, sem review. | [sync 2026-10-16 21:00] merged 0d7821a01 (fonte552) + b897be584 (legenda552) + d25a3e513/6d524f947 (#505/#552 PR #559); reviews OK j-rev2-fonte552/j-rev-legenda552/j-rev-pr559 | [sync 2026-10-16 22:55] merged 0d7821a01/b897be584 no HEAD 335bd2abc | Escrivão 2026-10-16 22:1x: merged 0d7821a01 nesta janela (HEAD 335bd2abc); review j-rev2-fonte552/j-rev-legenda552; fonte552 + legenda552 + PR #559 (URL http sem P2P); entra na 2.0.7",
+   "proximo_passo": "build+install no HEAD ab0e9a597 e resposta na issue; sai na 2.0.7",
+   "notas": "Escrivao 10-16 12:48: job fonte552 done; review BLOQUEIA j-rev-fonte552 -> fix cbcf467f5 -> OK j-rev2-fonte552; merged 0d7821a01. Hostnames de stream passam a ser lidos antes de exigir P2P. | Escrivao 10-16 14:58: follow-up do reporter (addons de legenda nao aparecem): fix 27988615e em agente/205-legenda552, sem review. | [sync 2026-10-16 21:00] merged 0d7821a01 (fonte552) + b897be584 (legenda552) + d25a3e513/6d524f947 (#505/#552 PR #559); reviews OK j-rev2-fonte552/j-rev-legenda552/j-rev-pr559 | [sync 2026-10-16 22:55] merged 0d7821a01/b897be584 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged 0d7821a01 nesta janela (HEAD ab0e9a597); review j-rev2-fonte552/j-rev-legenda552; fonte552 + legenda552 + PR #559 (URL http sem P2P); entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/552",
    "criada_em": "2026-10-16",
    "data": "",
@@ -10478,7 +10476,7 @@
    "release": "-",
    "conserto": [
     "merged 438423097 (eps555, #555 caso B) + d5ae66d9e (busca555, #555 titulo exato) no HEAD; reviews OK j-rev-eps555/j-rev-busca555",
-    "438423097 (merge nesta janela, HEAD 335bd2abc)"
+    "438423097 (merge nesta janela, HEAD ab0e9a597)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10486,8 +10484,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7",
-   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | [sync 2026-10-16 21:00] merged 438423097 (eps555) + d5ae66d9e (busca555); reviews OK j-rev-eps555/j-rev-busca555 | [sync 2026-10-16 22:55] merged 438423097 + d5ae66d9e no HEAD 335bd2abc | Escrivão 2026-10-16 22:1x: merged 438423097 nesta janela (HEAD 335bd2abc); review j-rev-eps555/j-rev-busca555; busca555 (titulo exato) + eps555 (episodios pelo catalogo); entra na 2.0.7",
+   "proximo_passo": "build+install no HEAD ab0e9a597 e resposta na issue; sai na 2.0.7",
+   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | [sync 2026-10-16 21:00] merged 438423097 (eps555) + d5ae66d9e (busca555); reviews OK j-rev-eps555/j-rev-busca555 | [sync 2026-10-16 22:55] merged 438423097 + d5ae66d9e no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged 438423097 nesta janela (HEAD ab0e9a597); review j-rev-eps555/j-rev-busca555; busca555 (titulo exato) + eps555 (episodios pelo catalogo); entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/555",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6",
@@ -10504,7 +10502,7 @@
    "status": "integrada",
    "release": "-",
    "conserto": [
-    "054ccef24 (merge agente/205-port569, HEAD 335bd2abc)"
+    "054ccef24 (merge agente/205-port569, HEAD ab0e9a597)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10512,7 +10510,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7",
+   "proximo_passo": "build+install no HEAD ab0e9a597 e resposta na issue; sai na 2.0.7",
    "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: merged 054ccef24 (port PR #569 de @ghbarker + fix 4a443422b); review OK j-rev-port569-r2; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/556",
    "criada_em": "2026-10-16",
@@ -10552,7 +10550,7 @@
    "conserto": [
     "cc49341e6 (agente/205-tpk558)",
     "merged a1888d007 (HEAD); review OK j-rev-tpk558",
-    "a1888d007 (merge nesta janela, HEAD 335bd2abc)"
+    "a1888d007 (merge nesta janela, HEAD ab0e9a597)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10560,8 +10558,8 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD 335bd2abc e resposta na issue; sai na 2.0.7",
-   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova, tela preta no lancamento num Q50A Tizen 6 2.0.6. Job j-tpk558 done (cc49341e6, tools/tpk.sh rc 0); sem review. | Escrivao 10-16 14:58: merged a1888d007 (adiar IME da Samsung e expor falha no boot); review OK j-rev-tpk558; spec docs/issues/558-tpk-startup.md. | [sync 2026-10-16 21:00] merged a1888d007; review OK j-rev-tpk558 | [sync 2026-10-16 22:55] merged a1888d007 no HEAD 335bd2abc | Escrivão 2026-10-16 22:1x: merged a1888d007 nesta janela (HEAD 335bd2abc); review j-rev-tpk558; tela preta no lancamento .tpk; confirmar na TV do reporter; entra na 2.0.7",
+   "proximo_passo": "build+install no HEAD ab0e9a597 e resposta na issue; sai na 2.0.7",
+   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova, tela preta no lancamento num Q50A Tizen 6 2.0.6. Job j-tpk558 done (cc49341e6, tools/tpk.sh rc 0); sem review. | Escrivao 10-16 14:58: merged a1888d007 (adiar IME da Samsung e expor falha no boot); review OK j-rev-tpk558; spec docs/issues/558-tpk-startup.md. | [sync 2026-10-16 21:00] merged a1888d007; review OK j-rev-tpk558 | [sync 2026-10-16 22:55] merged a1888d007 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged a1888d007 nesta janela (HEAD ab0e9a597); review j-rev-tpk558; tela preta no lancamento .tpk; confirmar na TV do reporter; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/558",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6",
@@ -10578,7 +10576,7 @@
    "status": "integrada",
    "release": "-",
    "conserto": [
-    "2c7c85860 (Merge PR #574, HEAD 335bd2abc)",
+    "2c7c85860 (Merge PR #574, HEAD ab0e9a597)",
     "6a6d5b71b (Player: separate source reload from restart playback)"
    ],
    "ultima_resposta": {
@@ -10587,7 +10585,7 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "build+install no HEAD abb9e49b9, testar Recarregar na folha de fontes e Assistir do comeco, e responder na issue",
+   "proximo_passo": "build+install no HEAD ab0e9a597, testar Recarregar na folha de fontes e Assistir do comeco, e responder na issue",
    "notas": "Sync 2026-10-17 04:55: #562 fechada no GitHub depois do merge do PR #574. Conserto em integracao/2.0.5, sai na 2.0.7.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/562",
    "criada_em": "2026-10-16"
@@ -10762,6 +10760,48 @@
    "proximo_passo": "triar: catalogos de add-on nao aparecem; mesmo eixo de #545/#551; sem job",
    "notas": "Sync 2026-10-17 07:05: issue nova (17/10 09:01), rotulo bug, sem job. Mesma familia de #545/#551. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/580",
+   "criada_em": "2026-10-17",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 582,
+   "titulo": "Frequent Stuttering and Freezing on LG TVs, Even with Reduced Performance Settings",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "triar: travamento/congelamento em LG TV mesmo com desempenho reduzido; mesmo eixo de #553/#556/#558; sem job",
+   "notas": "Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:26:52Z).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/582",
+   "criada_em": "2026-10-17",
+   "alvo": "2.0.6"
+  },
+  {
+   "numero": 581,
+   "titulo": "Changing Volume pauses the playback",
+   "estado_github": "aberta",
+   "plataforma": "?",
+   "tipo": "bug",
+   "status": "aberta",
+   "release": "-",
+   "conserto": [],
+   "ultima_resposta": {
+    "nos": false,
+    "data": "",
+    "ultimo_comentario_por": "",
+    "ultima_nossa": ""
+   },
+   "proximo_passo": "triar: mexer no volume pausa a reproducao; provavel no caminho do indicador de volume (mao/pause); sem job",
+   "notas": "Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:15:16Z).",
+   "url": "https://github.com/iqui27/nuvio-native-legacy/issues/581",
    "criada_em": "2026-10-17",
    "alvo": "2.0.6"
   }
@@ -12451,6 +12491,98 @@
    "ref": "abb9e49b9 (agente/205-dvabertura)",
    "resultado": "inconclusivo",
    "evidencia": "sem review dedicado; testes do job + build nao conferidos por revisor (ver docs/issues/MAPA.md e /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md)"
+  },
+  {
+   "data": "2026-10-17 04:46",
+   "quem": "job-claude (j-homepisca-pi / j-homepisca2)",
+   "o_que": "Merge de agente/205-homepisca: fundo Dinamico resolvido antes da copia do frost (pisca do dono)",
+   "issues": [
+    553
+   ],
+   "ref": "6a64c2e13 (Merge agente/205-homepisca)",
+   "resultado": "inconclusivo",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-homepisca-pi.log"
+  },
+  {
+   "data": "2026-10-17 04:46",
+   "quem": "job-claude (j-fichatam)",
+   "o_que": "Merge de agente/205-fichatam: fileira de cartaz grande em Pequeno/Medio/Grande",
+   "issues": [],
+   "ref": "cbf6fb021 (Merge agente/205-fichatam)",
+   "resultado": "inconclusivo",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-fichatam.log"
+  },
+  {
+   "data": "2026-10-17 04:46",
+   "quem": "job-claude (j-herodiv)",
+   "o_que": "Merge de agente/205-herodiv: hero dividido nao repete o titulo focado na lista",
+   "issues": [],
+   "ref": "f41a4e154 (Merge agente/205-herodiv)",
+   "resultado": "inconclusivo",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-herodiv.log"
+  },
+  {
+   "data": "2026-10-17 04:50",
+   "quem": "job-claude (j-titulofil)",
+   "o_que": "Merge de agente/205-titulofil: estilos de titulo da fileira (Classico/Ilha/Editorial/Acento)",
+   "issues": [],
+   "ref": "4898972d7 (Merge agente/205-titulofil)",
+   "resultado": "inconclusivo",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-titulofil.log"
+  },
+  {
+   "data": "2026-10-17 04:55",
+   "quem": "job-claude (j-foscoleve4)",
+   "o_que": "Merge de agente/205-foscoleve4: vidro defumado no player + nivel de qualidade do vidro",
+   "issues": [],
+   "ref": "a691e96fb (Merge agente/205-foscoleve4)",
+   "resultado": "inconclusivo",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-foscoleve4.log"
+  },
+  {
+   "data": "2026-10-17 04:55",
+   "quem": "job-claude (j-dvabertura / j-fix-dvabertura)",
+   "o_que": "Merge de agente/205-dvabertura: abertura do Dolby Vision no estilo novo + fixes de transicao",
+   "issues": [],
+   "ref": "abb9e49b9 (Merge agente/205-dvabertura)",
+   "resultado": "inconclusivo",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-fix-dvabertura.log"
+  },
+  {
+   "data": "2026-10-17 07:49",
+   "quem": "job-pi (j-dinfundo / j-fix-dinfundo)",
+   "o_que": "Merge de agente/205-dinfundo (fundo Cinza/Cor no layout Dinamico); review rev2 OK 06:48 + fix da paleta 0cf805980",
+   "issues": [],
+   "ref": "e3fdbe717 (Merge agente/205-dinfundo)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-fix-dinfundo.log"
+  },
+  {
+   "data": "2026-10-17 07:54",
+   "quem": "job-pi (j-fix-vidroilhas)",
+   "o_que": "Merge de agente/205-vidroilhas (ilhas de frost sobre o vidro da barra); review rev2 OK 06:48 + 2 fixes",
+   "issues": [],
+   "ref": "f087f4b59 (Merge agente/205-vidroilhas)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-fix-vidroilhas.log"
+  },
+  {
+   "data": "2026-10-17 07:54",
+   "quem": "map keeper",
+   "o_que": "MERGE em andamento (MERGE_HEAD 90c8d380d agente/205-vidromenu) durante o sync; commit de docs pulado",
+   "issues": [],
+   "ref": "MERGE_HEAD 90c8d380d",
+   "resultado": "pendente",
+   "evidencia": "git status: merge in progress"
+  },
+  {
+   "data": "2026-10-17 08:11",
+   "quem": "dono (merge) / map keeper",
+   "o_que": "Merge de agente/205-vidromenu cometado (ab0e9a597) com conflitos resolvidos; review rev2 OK 06:49 foi antes do merge",
+   "issues": [],
+   "ref": "ab0e9a597 (Merge agente/205-vidromenu)",
+   "resultado": "pendente",
+   "evidencia": "git reflog: commit (merge) 08:11"
   }
  ],
  "decisoes": [
@@ -17086,30 +17218,32 @@
    "id": "vidro-barra-lateral",
    "titulo": "Frost da barra lateral e pilula de acento em vidro",
    "plataforma": "todas",
-   "status": "em-revisao",
-   "release": "-",
+   "status": "integrada",
+   "release": "2.0.7",
    "conserto": [
-    "7bf4caac9 fix(menu): frost the sidebar over screens that carry glass",
-    "e3eb56d39 feat(gfx): selected accent pill is tinted glass in glass mode",
-    "37687dce0 fix(gfx): supply frost for standalone accent pills",
-    "90c8d380d test(menu): require backdrop response as well as edge suppression (rev2 OK 06:49)"
+    "7bf4caac9 (agente/205-vidromenu: frost na barra lateral)",
+    "e3eb56d39 (pilula de acento em vidro tingido)",
+    "37687dce0 (agente/205-vidromenu: frost regional da barra)",
+    "90c8d380d (test(gfx): reject opaque frost and cover Saved modal)",
+    "ab0e9a597 (Merge agente/205-vidromenu, integracao/2.0.5)"
    ],
-   "proximo_passo": "review OK j-rev2-vidromenu (06:49) apos os fixes; falta merge + build",
-   "notas": "Pedido do dono. A barra lateral desfoca sobre as telas com vidro e a pilula de acento vira vidro tingido no modo vidro; ilhas de frost sobre o vidro da Home. Duas branches abertas, sem review nem merge. Sync 2026-10-17 07:05: 4 commits fora do HEAD, ainda sem merge."
+   "proximo_passo": "merged ab0e9a597 (08:11), conflitos resolvidos pelo merge; review OK j-rev2-vidromenu (06:49) foi ANTES do merge: revisar o resultado do merge",
+   "notas": "[sync 2026-10-17 08:16] Merge de agente/205-vidromenu cometado em ab0e9a597 (08:11) durante este sync, com conflitos em src/ajustes.c, gfx.c/h, menu.c e 3 testes resolvidos. Pedido do dono. A barra lateral desfoca sobre as telas com vidro e a pilula de acento vira vidro tingido no modo vidro; ilhas de frost sobre o vidro da Home. Duas branches abertas, sem review nem merge. Sync 2026-10-17 07:05: 4 commits fora do HEAD, ainda sem merge."
   },
   {
    "id": "fundo-dinamico-cinza-cor",
    "titulo": "Fundo Cinza/Cor fixo no layout Dinamico",
    "plataforma": "todas",
-   "status": "em-revisao",
-   "release": "-",
+   "status": "integrada",
+   "release": "2.0.7",
    "conserto": [
-    "6da1fc418 feat(home): fixed Gray/Color background for the Dynamic layout",
-    "e91329dd2 i18n: translate the Dynamic layout background settings in 29 languages",
-    "0cf805980 fix: reuse accent palette for dynamic background color (rev2 OK 06:48)"
+    "6da1fc418 (feat(home): fixed Gray/Color background for the Dynamic layout, calmer Immersive)",
+    "e91329dd2 (i18n: translate the Dynamic layout background settings in 29 languages)",
+    "0cf805980 (fix: reuse accent palette for dynamic background color)",
+    "e3fdbe717 (Merge agente/205-dinfundo, integracao/2.0.5)"
    ],
-   "proximo_passo": "review OK j-rev2-dinfundo (06:48) apos o fix da paleta; falta merge + build",
-   "notas": "Pedido do dono. O layout Dinamico ganha fundo fixo Cinza ou Cor em vez de so arte, com as traducoes dos ajustes em 29 idiomas. Branch aberta, sem review nem merge. Sync 2026-10-17 07:05: 3 commits fora do HEAD, ainda sem merge."
+   "proximo_passo": "merged e3fdbe717 (07:49); review OK rev2-dinfundo (06:48) depois do fix da paleta; sai na 2.0.7",
+   "notas": "[sync 2026-10-17 08:10] Fundo fixo Cinza ou Cor no layout Dinamico (paleta de acento reusada, 29 idiomas), Imersivo mais calmo; merged e3fdbe717. Pedido do dono. O layout Dinamico ganha fundo fixo Cinza ou Cor em vez de so arte, com as traducoes dos ajustes em 29 idiomas. Branch aberta, sem review nem merge. Sync 2026-10-17 07:05: 3 commits fora do HEAD, ainda sem merge."
   },
   {
    "id": "fileira-titulo-estilos",
@@ -17176,15 +17310,16 @@
    "id": "vidro-ilhas-home",
    "titulo": "Ilhas de frost sobre o vidro da barra lateral da Home",
    "plataforma": "todas",
-   "status": "em-revisao",
-   "release": "-",
+   "status": "integrada",
+   "release": "2.0.7",
    "conserto": [
-    "90b0f9cd7 fix(gfx): frost islands drawn over Home sidebar glass",
-    "61764f975 fix(gfx): limit modal frost captures to sampling regions",
-    "fb4af3ee5 test(gfx): reject opaque frost and cover Saved modal (rev2 OK 06:48)"
+    "90b0f9cd7 (fix(gfx): frost islands drawn over Home sidebar glass)",
+    "61764f975 (fix(gfx): limit modal frost captures to sampling regions)",
+    "fb4af3ee5 (test(gfx): reject opaque frost and cover Saved modal)",
+    "ab0e9a597 (Merge agente/205-vidroilhas, integracao/2.0.5)"
    ],
-   "proximo_passo": "review OK j-rev2-vidroilhas (06:48) apos os fixes; falta merge em integracao/2.0.5 + build",
-   "notas": "Sync 2026-10-17 07:05: 3 commits fora do HEAD, ainda sem merge."
+   "proximo_passo": "merged ab0e9a597 (07:54); review OK j-rev2-vidroilhas (06:48) apos os fixes; sai na 2.0.7",
+   "notas": "[sync 2026-10-17 08:10] Ilhas de frost desenhadas sobre o vidro da barra lateral da Home + captura de modal limitada a regiao de amostragem; merged ab0e9a597. Sync 2026-10-17 07:05: 3 commits fora do HEAD, ainda sem merge."
   },
   {
    "id": "texto-escala-componentes",
