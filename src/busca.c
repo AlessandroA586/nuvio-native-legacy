@@ -98,16 +98,20 @@ static float buX(void)   { return ajustes_rail_largura_fixa() + buMargem(); }
 static float buDir(void) { return NV_TELA_W - (buRetratoTelefone() ? buX() : buMargem()); }
 static float buColW(void) { return buUmaColuna() ? buDir() - buX() : 520.0f; }
 static float buResY(void);
-// A coluna da esquerda desce quando a pilula da Dinamica ocupa o canto.
+// A coluna da esquerda desce quando a pilula da Dinamica ocupa o canto. A
+// pilula vem em px REAIS e esta tela mede pela virtual (real / escala de
+// texto): sem a conversao o campo colava na pilula com texto menor que 100%.
+#define BU_TOPO_VAO 28.0f
 static float buTopoEsq(void) {
-  float px, py, pw, ph;
-  if (menu_pilula_rect(&px, &py, &pw, &ph) && py + ph + 20.0f > 64.0f) return py + ph + 20.0f;
-  return 64.0f;
+  float px, py, pw, ph, t;
+  if (!menu_pilula_rect(&px, &py, &pw, &ph)) return 64.0f;
+  t = (py + ph) / gfx_escala_txt() + BU_TOPO_VAO;
+  return t > 64.0f ? t : 64.0f;
 }
 
 // --- Teclado -----------------------------------------------------------------
-#define BU_TECLA_W     62.0f
-#define BU_TECLA_GAP   12.0f
+#define BU_TECLA_W     66.0f
+#define BU_TECLA_GAP   10.0f
 #define BU_KB_COLS      6
 // FILEIRAS DE TECLAS DE LETRA, no maximo (o layout latino usa 6; o cirilico, 7)
 // mais a de baixo (espaco/apagar/limpar/layout). O numero vivo e kbFil.
@@ -116,7 +120,7 @@ static float buTopoEsq(void) {
 #define BU_KB_W       (BU_KB_COLS * BU_TECLA_W + (BU_KB_COLS - 1) * BU_TECLA_GAP)
 #define BU_KB_X       buX()
 #define BU_KB_Y       (buTopoEsq() + BU_CAMPO_H + BU_ILHA_GAP)   // topo da ilha do teclado
-#define BU_TECLA_RAIO   18.0f
+#define BU_TECLA_RAIO   20.0f
 #define BU_MAX_CONSULTA 48
 
 // --- Coluna da direita --------------------------------------------------------
@@ -271,10 +275,17 @@ static const char LAYOUT_CIRILICO[] =
   "\xd1\x8c" "\xd1\x8e" "\xd1\x8f" "\xd1\x8b" "\xd1\x8d" "\xd1\x8a"   /* ь ю я ы э ъ */
   "\xd1\x91";                                                              /* ё */
 static int  layoutCir = 0;                 // 0 latino, 1 cirilico
+// Pagina de acentos e sinais (tecla ?!#): os acentos que o catalogo usa em
+// titulos ("Amélie") e a pontuacao de "WALL·E" e "Spider-Man: ...". Digitar
+// o acento entra em UTF-8; buscanorm dobra para a base na hora de casar.
+static const char SIMBOLOS[] =
+  "\xc3\xa1\xc3\xa0\xc3\xa2\xc3\xa3\xc3\xa9\xc3\xaa\xc3\xad\xc3\xb3\xc3\xb4\xc3\xb5\xc3\xba\xc3\xa7\xc3\xb1\xc3\xbc"
+  ".,:;'\"!?-_&()/@#+=*\xc2\xb7";
 static char kbTeclas[BU_KB_MAX_TECLAS][5];
 static int  kbN;                           // teclas de letra do layout ativo
 static int  kbFil = 6;                     // fileiras de letra do layout ativo
 static int  kbTemLayout;                   // a tecla de layout aparece?
+static int  pagSim;                        // 1 = pagina de acentos e sinais (?!#)
 static int  KB_COLUNAS[BU_KB_MAX_FIL + 1] = { 6, 6, 6, 6, 6, 6, 3 };
 static float buResY(void) {
   if (buTecladoNativo()) return buTopoEsq() + BU_CAMPO_H + 44.0f;
@@ -309,11 +320,11 @@ static void kbMontar(void) {
   int r, resto;
   kbTemLayout = idiomaCirilico();
   if (!kbTemLayout) layoutCir = 0;
-  kbCarregar(layoutCir ? LAYOUT_CIRILICO : teclado_alfabeto());
+  kbCarregar(pagSim ? SIMBOLOS : layoutCir ? LAYOUT_CIRILICO : teclado_alfabeto());
   kbFil = (kbN + BU_KB_COLS - 1) / BU_KB_COLS;
   resto = kbN - (kbFil - 1) * BU_KB_COLS;
   for (r = 0; r < kbFil; r++) KB_COLUNAS[r] = (r == kbFil - 1) ? resto : BU_KB_COLS;
-  KB_COLUNAS[kbFil] = kbTemLayout ? 4 : 3;
+  KB_COLUNAS[kbFil] = kbTemLayout && !pagSim ? 5 : 4;
 }
 
 // --- Normalizacao -----------------------------------------------------------
@@ -875,12 +886,13 @@ static void aplicarTecla(void) {
     registrarConsulta();
     nConsulta = 0;
   } else {
-    // Troca o layout e leva o foco a letra de cima da mesma coluna: a tecla de
-    // layout continua no mesmo lugar (ultima da fileira de baixo).
-    layoutCir = !layoutCir;
+    // Troca de pagina (?!#/abc, coluna 3) ou de layout (cirilico, coluna 4):
+    // a tecla de troca continua no mesmo lugar da fileira de baixo.
+    int col = focoKb.coluna;
+    if (col == 3) pagSim = !pagSim; else { layoutCir = !layoutCir; pagSim = 0; }
     kbMontar();
     focus_iniciar(&focoKb, kbFil + 1, KB_COLUNAS);
-    focoKb.fileira = kbFil; focoKb.coluna = 3;
+    focoKb.fileira = kbFil; focoKb.coluna = col == 3 ? 3 : 4;
     memset(animTecla, 0, sizeof animTecla);
     return;
   }
@@ -927,7 +939,7 @@ int busca_iniciar(void) {
 #ifdef NV_TOUCH_UI
   toqueBuscaLimpar();
 #endif
-  layoutCir = 0;
+  layoutCir = pagSim = 0;
   kbMontar();
   focus_iniciar(&focoKb, kbFil + 1, KB_COLUNAS);
   painel = 0; sair = 0; pediuRelogio = 0; pedido = -1; pedidoPessoa = 0;
@@ -1694,11 +1706,13 @@ static void desenhaTeclado(void) {
         snprintf(rotulo, sizeof rotulo, "%s", kbTeclas[f * BU_KB_COLS + c]);
         s = rotulo;
       } else s = (c == 0) ? i18n("espaço") : (c == 1 ? i18n("apagar")
-               : (c == 2 ? i18n("limpar") : (layoutCir ? "ABC" : "\xd0\x90\xd0\x91\xd0\x92")));
+               : (c == 2 ? i18n("limpar") : c == 3 ? (pagSim ? "abc" : "?!#")
+               : (layoutCir ? "ABC" : "\xd0\x90\xd0\x91\xd0\x92")));
       // The tone eases every frame while focus moves: tint the cached white
       // line at draw time instead of rasterizing one line per tone.
       float tom = anim_mistura(243.0f, (float)ajustes_tinta_foco(), k) / 255.0f;
-      TxtLinha l = txt_linha(f < kbFil ? TXT_G26B : TXT_AJ_SEG, s, 255, 255, 255, 255);
+      TxtLinha l = f < kbFil ? txt_linha(TXT_G26B, s, 255, 255, 255, 255)
+                             : txt_linha_corta(TXT_AJ_SEG, s, 255, 255, 255, 255, t.w - 8.0f);
       txt_desenhar_tom(l, t.x + (t.w - l.w) * 0.5f, t.y + (t.h - l.h) * 0.5f, tom, tom, tom, 1.0f);
     }
   }
