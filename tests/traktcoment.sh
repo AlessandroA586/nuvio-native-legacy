@@ -13,7 +13,7 @@ if [ "$mode" = build ]; then
 fi
 if [ "$mode" = data ]; then
   cc -O1 -g -Wall -Wextra -DNV_EXTRAS_TESTE -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
-    src/extras.c src/js.c tests/traktcoment_data.c -lpthread -o "$TMPDIR/traktcoment-data"
+    src/extras.c src/notasfontes.c src/js.c tests/traktcoment_data.c -lpthread -o "$TMPDIR/traktcoment-data"
   "$TMPDIR/traktcoment-data"
   exit
 fi
