@@ -38,6 +38,8 @@
 #include "anim.h"
 #include "revela.h"
 #include "layout.h"
+#define NV_TXT_TELA
+#include "escala.h"
 #include "segurar.h"
 #include "ajustes.h"
 #include "catalogo.h"
@@ -130,8 +132,8 @@ static float buTopoEsq(void) {
 // altura (capa 330x186 + padding 20); cartaz 180x270, nome 17 a 10 abaixo.
 #define BU_KICK_H       34.0f
 #define BU_MELHOR_H    226.0f
-#define BU_CARTAZ_W    180.0f
-#define BU_CARTAZ_H    270.0f
+#define BU_CARTAZ_W    (180.0f * gfx_poster_k())
+#define BU_CARTAZ_H    (270.0f * gfx_poster_k())
 #define BU_NOME_ALT     (buTecladoNativo() ? 50.0f : 30.0f)
 #define BU_SECAO_GAP    34.0f
 
@@ -1994,6 +1996,7 @@ static void desenhaResultados(Uint32 agora) {
 }
 
 void busca_desenhar(Uint32 agora) {
+  TXT_INI();
   buInterfaceAtualizar();
 #ifdef NV_TOUCH_UI
   if (buTelefone()) ponteiro_rolagem(toqueBuscaRolar);
@@ -2007,6 +2010,7 @@ void busca_desenhar(Uint32 agora) {
   desenhaCampo(agora);
   desenhaTeclado();
   desenhaResultados(agora);
+  TXT_FIM();
 }
 
 #ifdef NV_BUSCA_TESTE

@@ -60,7 +60,7 @@ static float vtCardLargura(void);
 static float vtCardAltura(void);
 #define VT_COLS      vtColunas()
 #define VT_COLS_MAX  5
-#define VT_CARD_BASE_W 248.0f
+#define VT_CARD_BASE_W (248.0f / gfx_escala_txt())
 #define VT_CARD_W   vtCardLargura()
 #define VT_CARD_H   vtCardAltura()
 // .seeall-grid tinha 16; na TV o dono pediu mais ar entre os cartazes (13/10).
@@ -88,8 +88,8 @@ static float vtCardAltura(void);
 #define VT_PAN_X   (NV_TELA_W - NV_ILHA_MARGEM_D - VT_PAN_W)
 #define VT_PAN_VAO  24.0f   // vao minimo entre a ultima coluna e o painel
 #define VT_PAN_Y   VT_TOPO
-#define VT_PAN_ART_H 330.0f
-#define VT_PAN_ART_W 220.0f
+#define VT_PAN_ART_H (330.0f / gfx_escala_txt())
+#define VT_PAN_ART_W (220.0f / gfx_escala_txt())
 static int   aberta, foco, pedAbrir = -1;
 static int pedRelogio;
 static float anim, scrollY, velY;
@@ -107,9 +107,8 @@ static float tabRol;
 static int vtTelefone(void) {
   return telefoneui_ativo();
 }
-static float vtEscala(void) { return vtTelefone() ? gfx_escala_ui() : 1.0f; }
-/* Keep measurements valid outside drawing too (focus, gestures and menus).
- * Ordinary TV/tablet pages keep their original unscaled viewport. */
+static float vtEscala(void) { return vtTelefone() ? gfx_escala_ui() : gfx_escala_txt(); }
+/* Keep measurements valid outside drawing too (focus, gestures and menus). */
 #undef NV_TELA_W
 #undef NV_TELA_H
 #define NV_TELA_W (NV_LAYOUT_REAL_W / vtEscala())
@@ -131,7 +130,7 @@ static GfxRect vtTimelineCard(float cy) {
   return (GfxRect){x, cy, w, VT_CARD_H};
 }
 static GfxRect vtTimelineArte(GfxRect card) {
-  float w = vtTelefone() ? fminf(376.0f, card.w * 0.36f) : 376.0f;
+  float w = vtTelefone() ? fminf(376.0f / gfx_escala_txt(), card.w * 0.36f) : 376.0f / gfx_escala_txt();
   return (GfxRect){card.x + 12.0f, card.y + 12.0f, w, w * 212.0f / 376.0f};
 }
 // Colunas que cabem entre o inicio do conteudo (a rail fixa entra por
@@ -264,7 +263,7 @@ static float tlFoco[VT_MAX], tlProg = -1.0f;
 // sobrepostos (profundidade so por escala, recobrimento e veu). A faixa vai de
 // ponta a ponta e a ficha do titulo fica ABAIXO da linha do tempo. `fluxoPos` e
 // o foco em mola (< 0 = posicionar sem animar).
-#define VT_FLX_W (vtTelefone() ? 200.0f : 220.0f)
+#define VT_FLX_W ((vtTelefone() ? 200.0f : 220.0f) / gfx_escala_txt())
 #define VT_FLX_H (VT_FLX_W * 1.5f)
 static float fluxoPos = -1.0f;
 static float fluxoFim(void) { return vtTelefone() ? vtFim() : NV_TELA_W - 48.0f; }
@@ -3565,7 +3564,7 @@ void vertudo_desenhar(Uint32 agora) {
   float corteTopo = VT_TOPO - 12.0f;
   if (a < 0.01f) return;
   float escalaAnterior = gfx_escala();
-  if (vtTelefone()) gfx_escala_sair(vtEscala());
+  gfx_escala_sair(vtEscala());
 #ifdef NV_TOUCH_UI
   toqueAbas.offset = NULL;
   ponteiro_rolagem(toqueVertudoRolar);
@@ -3573,7 +3572,7 @@ void vertudo_desenhar(Uint32 agora) {
   if (n > VT_MAX) n = VT_MAX;
   if (lay == VT_LAY_VITRINE) {
     vitDesenhar(a, x0);
-    if (vtTelefone()) gfx_escala_sair(escalaAnterior);
+    gfx_escala_sair(escalaAnterior);
     return;
   }
   n = atualizarGrade();
@@ -3663,5 +3662,5 @@ void vertudo_desenhar(Uint32 agora) {
   if (collection) botaoExibicao(a, cabCy);
 
   if (n > 0 && !vtTelefone()) { if (lay == VT_LAY_FLUXO) fluxoInfo(a, x0); else painel(a); }
-  if (vtTelefone()) gfx_escala_sair(escalaAnterior);
+  gfx_escala_sair(escalaAnterior);
 }
