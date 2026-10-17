@@ -22,18 +22,36 @@ void nvreal_gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco, float parx
 int nvreal_ajustes_iniciar(void);
 void nvreal_ajustes_dir(const char *dir);
 
-static FILE *log_;
-static unsigned card_; 
+static FILE *log_, *frameLog_;
+static unsigned frame_;
+
+// Compare captured frames only; animation warm-up has variable draw counts.
+void nvspy_glClear(GLbitfield mask) {
+  if (frameLog_) fclose(frameLog_);
+  frameLog_ = getenv("NV_TXT_LOG") ? tmpfile() : NULL;
+  glClear(mask);
+}
+void nvspy_glReadPixels(GLint x, GLint y, GLsizei w, GLsizei h,
+                       GLenum format, GLenum type, void *pixels) {
+  glReadPixels(x, y, w, h, format, type, pixels);
+  if (!log_ && getenv("NV_TXT_LOG")) log_ = fopen(getenv("NV_TXT_LOG"), "w");
+  if (log_ && frameLog_) {
+    char line[256];
+    rewind(frameLog_);
+    while (fgets(line, sizeof line, frameLog_)) fputs(line, log_);
+    fflush(log_);
+  }
+  frame_++;
+}
 
 void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco, float parx,
               float pary, float raio, float cr, float cg, float cb, float ca) {
-  if (!log_ && getenv("NV_TXT_LOG")) log_ = fopen(getenv("NV_TXT_LOG"), "w");
-  if (log_) {
+  if (frameLog_) {
     const float e = gfx_escala(), w = r.w * e, h = r.h * e;
-    if (modo == GFX_TEXTO) fprintf(log_, "T %.2f\n", h);
-    else if (modo == GFX_CARD) fprintf(log_, "C %u %u %.1f %.1f\n", card_++, tex, w, h);
+    if (modo == GFX_TEXTO) fprintf(frameLog_, "T %.2f\n", h);
+    else if (modo == GFX_CARD) fprintf(frameLog_, "C %u %u %.1f %.1f\n", frame_, tex, w, h);
     else if ((modo == GFX_COR || modo == GFX_ANEL) && h >= 8 && h < 150 && w >= 8)
-      fprintf(log_, "R %.1f %.1f\n", w, h);
+      fprintf(frameLog_, "R %.1f %.1f\n", w, h);
   }
   nvreal_gfx_rect(r, tex, modo, foco, parx, pary, raio, cr, cg, cb, ca);
 }

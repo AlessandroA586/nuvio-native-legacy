@@ -47,8 +47,10 @@ objs() {
 # build <srcroot> <outdir>: one shot binary per screen
 build() {
   local root="$1" out="$2" s
-  objs "$root" "$out/o" || return 1
-  objs "$root" "$out/oa" -DAJUSTES_TESTE || return 1
+  if [ -z "${NV_LINK_ONLY:-}" ]; then
+    objs "$root" "$out/o" || return 1
+    objs "$root" "$out/oa" -DAJUSTES_TESTE || return 1
+  fi
   cc "${CFLAGS[@]}" -I"$root/src" -c "$TESTS/textoescala_espiao.c" -o "$out/espiao.o" || return 1
   for s in homelayouts biblioteca ajustes detail_secoes player_pausa busca vertudo teclado; do
     set -- "$out"/o/*.o; ex=()
@@ -60,9 +62,14 @@ build() {
       mkdir -p "$out/t"; ln -sfn "$(cd "$root" && pwd)/src" "$out/src"
       cp "$shot" "$out/t/"; shot="$out/t/${s}_shot.c"
     fi
-    cc "${CFLAGS[@]}" ${ex[@]+"${ex[@]}"} -I"$root/src" -I"$TESTS" "$shot" "$@" "$out/espiao.o" "${LIBS[@]}" -o "$out/$s" || return 1
+    cc "${CFLAGS[@]}" -DglClear=nvspy_glClear -DglReadPixels=nvspy_glReadPixels ${ex[@]+"${ex[@]}"} -I"$root/src" -I"$TESTS" "$shot" "$@" "$out/espiao.o" "${LIBS[@]}" -o "$out/$s" || return 1
   done
 }
+
+if [ -n "${NV_LINK_ONLY:-}" ]; then
+  build "$SRC" "$NV_LINK_ONLY"
+  exit $?
+fi
 
 # run <tree> <shot> <idx|-> <tag>: runs the shot, leaves $W/<tree>/<tag>-<shot>.{log,bmp.sum}
 run() {
