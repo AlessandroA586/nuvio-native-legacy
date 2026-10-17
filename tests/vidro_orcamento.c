@@ -1,10 +1,9 @@
-// Orcamento do vidro por quadro (a ideia de widgets_glass_budget_tests.rs do
-// PlxNative: as superficies de vidro de um quadro convergem numa captura so).
-// A barra do topo (trilha + circulo do perfil), a ilha do relogio e um painel
-// de vidro, com a pagina por baixo MUDANDO a cada quadro (rolagem). The
-// glasses read only the backdrop layer (docs/fosco-nova.md): rows scrolling
-// over a static backdrop cost no capture; a changing backdrop costs ONE
-// capture and its 5 passes per frame. With nothing moving, none.
+// Glass budget per frame with frost on: the top bar (track + avatar), the
+// clock island and a glass panel over a hero / detail art backdrop, with the
+// rows scrolling under them, the hero crossfading to another art and the
+// detail backdrop. The frost reads the art pre-blurred once (gfx_desfocado,
+// docs/fosco-nova.md): zero screen captures and zero blur passes on every
+// frame, while the panel still shows the art's colour through the frost.
 //   bash tests/vidro_orcamento.sh
 #include "gfx.h"
 #include "ajustes.h"
@@ -19,8 +18,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define PASSADAS_POR_CAPTURA 5   // 1/2, 1/4, dois Kawase, de volta a 1/2 (vidCapturar)
-
 static const int LW = 1920, LH = 1080;
 static int falhas;
 
@@ -29,28 +26,77 @@ static void confere(int ok, const char *nome) {
   falhas += !ok;
 }
 
-// Um quadro da home: a pagina (um degrade que desce `rola` px), a barra, a
-// ilha e um painel de vidro por cima da pagina.
-static float fundo = 0.05f;   // the backdrop layer: a full-screen color
+// A saturated horizontal ramp, a -> b: the art behind the glass.
+static GLuint arte(int r0, int b0) {
+  static unsigned char px[36][64][4];
+  GLuint t;
+  int x, y;
+  for (y = 0; y < 36; y++)
+    for (x = 0; x < 64; x++) {
+      px[y][x][0] = (unsigned char)(r0 + (b0 - r0) * x / 63); px[y][x][1] = 60;
+      px[y][x][2] = (unsigned char)(b0 + (r0 - b0) * x / 63); px[y][x][3] = 255;
+    }
+  glGenTextures(1, &t); glBindTexture(GL_TEXTURE_2D, t);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 64, 36, 0, GL_RGBA, GL_UNSIGNED_BYTE, px);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  return t;
+}
+
+// One Home/detail frame: the art backdrop (hero crossfading A -> B by `mix`,
+// or the detail art), the rows scrolled `rola` px, the bar, the island and a
+// glass panel over the rows.
+static GLuint artA, artB;
+static float mix;
+static int detalhe;
+static GfxModo hero = GFX_HERO;
 static void quadro(float rola, Uint32 agora) {
+  GfxRect tela = { 0, 0, 1920, 1080 };
   int i;
   gfx_novo_quadro();
   glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
-  gfx_cor((GfxRect){ 0, 0, 1920, 1080 }, 0, fundo, fundo, fundo * 1.2f, 1.0f);
+  if (detalhe) gfx_rect(tela, artB, GFX_DETALHE, 0.4f, 0, 0, 0.0f, 0, 0, 0, 1.0f);
+  // The crossfade goes through gfx_hero_camadas, as home.c does: the incoming
+  // art is the pass's texture, the outgoing one its layer B.
+  else assert(gfx_hero_camadas(tela, hero, artB, 16.0f / 9.0f, mix, artA, 16.0f / 9.0f, 1.0f - mix));
   for (i = 0; i < 12; i++)
-    gfx_cor((GfxRect){ 0, i * 90.0f - rola, 1920, 90 }, 0, .1f + .06f * i, .2f, .5f - .03f * i, 1.0f);
+    gfx_cor((GfxRect){ 0, 400 + i * 90.0f - rola, 1920, 60 }, 0, .1f + .06f * i, .2f, .5f - .03f * i, 1.0f);
   menu_atualizar(0.016f, agora);
   menu_desenhar(agora);
   ilha_desenhar(agora);
-  gfx_vidro_painel((GfxRect){ 1240, 300, 560, 600 }, 36.0f / 600.0f, 0.80f, 1.0f);
+  gfx_vidro_painel((GfxRect){ 1240, 140, 560, 220 }, 36.0f / 600.0f, 0.80f, 1.0f);
+}
+
+// Worst captures / passes over `n` frames, whether the frost showed the art's
+// colour (flat glass is neutral gray, R = G = B; the two arts are mirrored, so
+// R - B cancels mid-crossfade, R + B - 2G does not) at the panel centre.
+// Count missing sources too: a translucent panel can show unblurred art even
+// when it fell back to the flat scrim.
+static void fase(const char *nome, int n, int k0, float rola0, float drola, float mix0, float dmix) {
+  int k, cap = 0, pas = 0, cor = 99, chap = 0;
+  unsigned char p[4];
+  for (k = 0; k < n; k++) {
+    mix = mix0 + dmix * k;
+    if (mix > 1.0f) mix = 1.0f;
+    quadro(rola0 + drola * k, 16u * (k0 + k));
+    if (gfx_vidro_capturas > cap) cap = gfx_vidro_capturas;
+    if (gfx_vidro_passadas > pas) pas = gfx_vidro_passadas;
+    chap += gfx_vidro_chapados;
+    glReadPixels(1520, LH - 250, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, p);
+    if (abs((int)p[0] + (int)p[2] - 2 * (int)p[1]) < cor) cor = abs((int)p[0] + (int)p[2] - 2 * (int)p[1]);
+  }
+  printf("%s: up to %d captures and %d passes per frame, min |R+B-2G| %d\n", nome, cap, pas, cor);
+  confere(cap == 0 && pas == 0, nome);
+  confere(cor >= 4, "frost shows the art behind the panel");
+  printf("%s: %d glasses fell back to the flat scrim\n", nome, chap);
+  confere(chap == 0, "frost source on every frame");
 }
 
 int main(void) {
   static char dir[] = "/tmp/nuvio-vidro-orc-XXXXXX";
   char cam[700];
   FILE *f;
-  int k, cap, pas;
-  Uint64 t0;
+  int k;
   GLuint fbo, tex;
   SDL_SetHint("SDL_MAC_BACKGROUND_APP", "1");
   assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
@@ -78,45 +124,18 @@ int main(void) {
   menu_pilula_mostrar(1.0f);
   ilha_relogio_visivel(1);
 
-  // Aquece: o primeiro quadro nao sabe onde estarao os vidros seguintes, e as
-  // molas da barra (alfa da capsula) assentam em ~2 s.
+  artA = arte(230, 30); artB = arte(30, 230);
+  // Warm-up: the bar springs settle in ~2 s.
   for (k = 0; k < 150; k++) quadro(0.0f, 16u * k);
-
-  // Rolando: the rows change every frame, the backdrop does not: no capture.
-  // O ms (com glFinish) so informa: a GPU do Mac nao e a da TV.
-  cap = pas = 0;
-  glFinish(); t0 = SDL_GetPerformanceCounter();
-  for (k = 0; k < 20; k++) {
-    quadro(4.0f * (k + 1), 16u * (150 + k));
-    if (gfx_vidro_capturas > cap) cap = gfx_vidro_capturas;
-    if (gfx_vidro_passadas > pas) pas = gfx_vidro_passadas;
-  }
-  glFinish();
-  printf("rolando: ate %d capturas e %d passadas por quadro, %.2f ms/quadro\n", cap, pas,
-         (double)(SDL_GetPerformanceCounter() - t0) * 1000.0 / SDL_GetPerformanceFrequency() / 20.0);
-  confere(cap == 0 && pas == 0, "rows scrolling over a static backdrop: no capture");
-
-  // The backdrop itself changes every frame (hero crossfade): ONE capture.
-  cap = pas = 0;
-  for (k = 0; k < 20; k++) {
-    fundo = 0.05f + 0.01f * (k + 1);
-    quadro(80.0f, 16u * (170 + k));
-    if (gfx_vidro_capturas > cap) cap = gfx_vidro_capturas;
-    if (gfx_vidro_passadas > pas) pas = gfx_vidro_passadas;
-  }
-  printf("fundo mudando: ate %d capturas e %d passadas por quadro\n", cap, pas);
-  confere(cap == 1, "barra, perfil, ilha e painel dividem uma captura por quadro");
-  confere(pas <= PASSADAS_POR_CAPTURA, "no maximo as 5 passadas de uma captura");
-
-  // Parada: nada atras mudou, o backdrop desfocado do quadro anterior serve.
-  quadro(80.0f, 16u * 190);
-  cap = pas = 0;
-  for (k = 0; k < 5; k++) {
-    quadro(80.0f, 16u * 190);
-    cap += gfx_vidro_capturas; pas += gfx_vidro_passadas;
-  }
-  printf("parada: %d capturas, %d passadas em 5 quadros\n", cap, pas);
-  confere(cap == 0 && pas == 0, "pagina parada: zero passadas de desfoque");
+  fase("home rows scrolling over the hero", 20, 150, 4.0f, 4.0f, 0.0f, 0.0f);
+  fase("hero crossfading to another art", 101, 170, 80.0f, 0.0f, 0.0f, 0.01f);
+  fase("hero crossfade first fractional alpha", 1, 271, 80.0f, 0.0f, 0.001f, 0.0f);
+  hero = GFX_HERO_CHEIO;
+  fase("full hero crossfading to another art", 101, 272, 80.0f, 0.0f, 0.0f, 0.01f);
+  fase("full hero crossfade first fractional alpha", 1, 373, 80.0f, 0.0f, 0.001f, 0.0f);
+  fase("still home", 5, 200, 80.0f, 0.0f, 1.0f, 0.0f);
+  detalhe = 1;
+  fase("detail backdrop, page scrolling", 20, 205, 80.0f, 6.0f, 1.0f, 0.0f);
 
   unlink(cam);
   { char t[700]; snprintf(t, sizeof t, "%s/ajustes.tmp", dir); unlink(t); }
