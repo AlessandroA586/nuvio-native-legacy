@@ -263,7 +263,7 @@ static int bibTinta2(void) { return 205; }
 #define BIB_POSTER_H     (330.0f * gfx_poster_k())
 #define BIB_CARD_GAP      26.0f
 #define BIB_TIT_GAP       10.0f
-#define BIB_LINHA_PASSO  422.0f   // 284 -> 706 no mockup
+#define BIB_LINHA_PASSO  (BIB_POSTER_H * (1.0f + BIB_FOCO_ESCALA * 0.5f) + BIB_TIT_GAP + 14.0f + 52.0f + 2.8f)
 #define BIB_FOCO_ESCALA    0.08f
 // Onde a grade comeca em cada estado: o mesmo y, com ou sem lista aberta — as
 // acoes da lista ocupam a faixa dos filtros.
