@@ -53,6 +53,7 @@
 #include "tex_cache.h"
 #include "memlog.h"
 #include "mkvass.h"
+#include "assrender.h"
 #include "artehero.h"
 #include "arteescolha.h"
 #include "vertudo.h"
@@ -2708,6 +2709,7 @@ static void aliviarMemoria(void) {
   tex_aliviar();
   mkvass_parar();
   txt_aliviar();
+  assrender_aliviar();
   memlog_devolver();
 }
 static void tentarProximaFonteVOD(void) {
@@ -3009,6 +3011,9 @@ static void perfilAbrirSessao(int antes) {
 }
 
 int app_iniciar(const char *dirArte) {
+  // #415: MemAvailable abaixo do piso -> despeja texturas, mkvass, texto,
+  // libass e heap; sem isto o aviso so rodava malloc_trim.
+  memlog_quando_aviso(aliviarMemoria);
   legenda2_vincular_atraso(ajustes_leg2_atraso(), ajustes_leg2_definir_atraso);
   // A faixa de audio escolhida a mao fica gravada por perfil (audiomemoria.h).
   audioesc_definir_memoria(audiomem_ler, audiomem_gravar);

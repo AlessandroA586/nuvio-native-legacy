@@ -663,7 +663,11 @@ void tex_novo_quadro(void) {
   }
   // PRESSAO DE MEMORIA (tex_pressao_memoria): o aviso chega de outro fio, que
   // nao tem contexto GL e nao pode despejar textura. Quem despeja e este quadro.
-  if (pressaoAtiva() || pressaoPlay < 100) { soltarCpu(0); podar(); }
+  if (pressaoAtiva()) soltarCpu(0);
+  // O piso de reproducao (pressaoPlay) so despeja via poda: soltarCpu aqui
+  // mataria todo DECODIFICADO que a bomba ainda nao pegou — arte do OSD/posplay
+  // entraria em decode->mata->decode durante TODA a sessao (rev #415).
+  if (pressaoAtiva() || pressaoPlay < 100) podar();
   SDL_UnlockMutex(mtx);
 }
 

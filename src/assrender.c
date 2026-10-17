@@ -1031,6 +1031,21 @@ void assrender_limpar_fontes(void) {
   pthread_mutex_unlock(&assFilaTrava);
 }
 
+// #415: no aviso de memoria, esvazia o cache de glifos/bitmaps do libass —
+// o loop "Glyph not found -> selecting one more font" encheu ~190 MB na G4
+// sem que gpu-cache ou texturas mostrassem. Limites zerados despejam os
+// bitmaps ja rasterizados; a faixa e as fontes seguem carregadas e o cache se
+// refaz na proxima legenda. Restaura o teto de 32 MB do arranque em seguida,
+// para a pressao seguinte ainda ter o que cortar.
+void assrender_aliviar(void) {
+  pthread_mutex_lock(&assTrava);
+  if (assRenderer) {
+    ass_set_cache_limits(assRenderer, 0, 0);
+    ass_set_cache_limits(assRenderer, 0, 32);
+  }
+  pthread_mutex_unlock(&assTrava);
+}
+
 int assrender_adicionar_fonte(const char *nome, const void *dados, size_t tamanho) {
   if (!nome || !*nome || !dados || !tamanho || tamanho > (size_t)INT_MAX) return 0;
   pthread_mutex_lock(&assTrava);
@@ -1325,6 +1340,7 @@ int assrender_carregar(const char *corpo, size_t tamanho, unsigned geracao) { (v
 int assrender_atualizar(const char *corpo, size_t tamanho, unsigned geracao) { (void)corpo; (void)tamanho; (void)geracao; return 0; }
 void assrender_limpar(void) { assGeracao++; }
 void assrender_limpar_fontes(void) {}
+void assrender_aliviar(void) {}
 int assrender_adicionar_fonte(const char *nome, const void *dados, size_t tamanho) {
   (void)nome; (void)dados; (void)tamanho; return 0;
 }

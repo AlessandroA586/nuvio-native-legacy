@@ -14,4 +14,8 @@ void memlog_devolver(void);    // malloc_trim: heap livre de volta ao sistema
 // que fecha o app. Abaixo do piso chama `aliviar` e le de novo. 1 = pode abrir
 // (memoria desconhecida conta como pode).
 int memlog_pode_reabrir(long (*livre)(void), void (*aliviar)(void));
+
+// #415: o aviso de MemAvailable baixo roda `cb` em vez de so malloc_trim —
+// app.c registra aliviarMemoria (texturas + mkvass + texto + libass + heap).
+void memlog_quando_aviso(void (*cb)(void));
 #endif

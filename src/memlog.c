@@ -5,6 +5,8 @@
 #include <malloc.h>
 #endif
 
+static void (*avisoCb)(void);   // memlog_quando_aviso (fio principal)
+
 #if defined(__linux__) && !defined(__EMSCRIPTEN__)
 static int abaixo; // Compartilhado por FPS e player, ambos no fio principal.
 
@@ -34,9 +36,10 @@ void memlog_amostra(char *sufixo, size_t tamanho) {
   if (rss < 0 || disponivel < 0) return;
   snprintf(sufixo, tamanho, " | mem=%.1f/%.1fMB", rss / 1024.0, disponivel / 1024.0);
   if (disponivel < MEMLOG_PISO_MB * 1024 && !abaixo) {
-    printf("[mem] aviso MemAvailable<150MB mem=%.1f/%.1fMB\n", rss / 1024.0, disponivel / 1024.0);
+    printf("[mem] aviso MemAvailable<%dMB mem=%.1f/%.1fMB\n", MEMLOG_PISO_MB, rss / 1024.0, disponivel / 1024.0);
     fflush(stdout);
-    memlog_devolver();
+    if (avisoCb) avisoCb();   // texturas + mkvass + texto + libass + heap
+    else memlog_devolver();
   }
   abaixo = disponivel < MEMLOG_PISO_MB * 1024;
 #endif
@@ -77,6 +80,8 @@ void memlog_devolver(void) {
   malloc_trim(0);
 #endif
 }
+
+void memlog_quando_aviso(void (*cb)(void)) { avisoCb = cb; }
 
 int memlog_pode_reabrir(long (*livre)(void), void (*aliviar)(void)) {
   long mb = livre();

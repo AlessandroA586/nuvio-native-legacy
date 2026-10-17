@@ -139,6 +139,23 @@ int main(void) {
   assert(pressaoPlay == 100 && limiteBytes() == orcamento);
   puts("ok  reproducao aperta o teto com memoria sobrando");
 
+  // 9c. O piso de reproducao NAO mata DECODIFICADO: o sup de um decode que a
+  //     bomba ainda nao pegou sobrevive ao quadro (OSD/posplay pedem arte com
+  //     o player aberto). So a pressao de aviso (tex_pressao_memoria) solta CPU.
+  limpar();
+  orcamento = um * 10;
+  tex_pressao_reproducao(1);
+  itens[0].estado = DECODIFICADO;
+  itens[0].sup = SDL_CreateRGBSurfaceWithFormat(0, 64, 64, 32, SDL_PIXELFORMAT_ABGR8888);
+  assert(itens[0].sup);
+  tex_novo_quadro();
+  assert(itens[0].sup && itens[0].estado == DECODIFICADO);
+  tex_pressao_memoria(80);                   // aviso de verdade
+  tex_novo_quadro();
+  assert(itens[0].sup == NULL && itens[0].estado == VAZIO);
+  tex_pressao_reproducao(0);
+  puts("ok  piso de reproducao nao mata decode pronto");
+
   // 9b. Piso e de quem chamou (avisarCascaAberto): o relatorio de 3 s com o
   //     player aberto NAO liga mais nada — nem a 600 MB (acima do limiar velho
   //     de 512). O piso caiu antes, na abertura.
