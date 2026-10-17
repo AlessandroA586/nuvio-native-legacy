@@ -113,7 +113,10 @@ int main(void) {
   tex_pressao_reproducao(0);                // fechou o video: teto volta
   assert(pressaoPlay == 100 && limiteBytes() == orcamento);
 #else
+  orcMemTotal = 0;
   assert(tex_pressao_play_pct() == 20);     // webOS/.tpk: piso, ligado so sem memoria
+  assert((orcMemTotal = 4096, tex_pressao_play_pct()) == 35);   // C9/4GB: mais arte
+  orcMemTotal = 2400;                       // volta a G4
   tex_pressao_reproducao(1);
   assert(pressaoPlay == 20);
   tex_pressao_reproducao(0);

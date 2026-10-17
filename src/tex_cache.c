@@ -882,7 +882,11 @@ int tex_pressao_play_pct(void) {
   if (orcMemTotal < 3000) return 40;
   return 75;
 #else
-  return 20;   // piso: com o video em tela cheia a home nao desenha nada
+  // webOS/.tpk: o video cobre a tela, mas TVs com RAM de sobra (C9, 4 GB)
+  // podem manter mais arte quente para OSD/posplay sem risco; a G4 (2 GB)
+  // fica no piso de 20%% medido no #415.
+  if (orcMemTotal >= 3500) return 35;
+  return 20;
 #endif
 }
 void tex_pressao_reproducao(int ligada) {
