@@ -5260,7 +5260,12 @@ static void *montar(void *u) {
     jnf = jfItens ? servidores_fileiras_copiar(jfItens, cabe, jfFils, SRV_FIL_MAX, &jn) : 0;
     for (k = 0; k < nFilsLote; k++)
       if (servidores_chave_fileira(filsLote[k].chave)) { jnf = 0; break; }
-    if (jnf > 0 && nFilsLote + jnf <= CAT_FIL_MAX - (nContinuar ? 0 : 1)) {
+    // Over the row cap: keep the first rows that fit instead of dropping all.
+    if (jnf > CAT_FIL_MAX - (nContinuar ? 0 : 1) - nFilsLote) {
+      jnf = CAT_FIL_MAX - (nContinuar ? 0 : 1) - nFilsLote;
+      jn = jnf > 0 ? jfFils[jnf - 1].ini + jfFils[jnf - 1].n : 0;
+    }
+    if (jnf > 0) {
       GARANTE(jn);
       if (jn <= cap - n) {
         memcpy(lote + n, jfItens, sizeof(CatItem) * (size_t)jn);
