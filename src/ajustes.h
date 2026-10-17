@@ -493,8 +493,12 @@ int   ajustes_abertura_addon(void);
 // #508: fundo da tela Cinema da abertura: 0 = Desligado, 1 = Arte (nitida com
 // veu escuro), 2 = Arte borrada (padrao).
 int   ajustes_abertura_fundo(void);
+int   ajustes_titulo_fil(void);        // 0 Classico, 1 Ilha, 2 Editorial, 3 Acento
 int   ajustes_abertura_estilo(void);   // 0 Centro (A3), 1 Canto (B3)
+int   ajustes_fundo_din(void);         // #205: fundo da Dinamica, 0 Cinza (padrao), 1 Cor, 2 Imersivo
+void  ajustes_fundo_din_cor(float rgb[3]);   // #205: a cor escolhida para o fundo "Cor" (sRGB 0..1)
 // #205: tamanho dos cards de episodio (Moderna): 0 pequeno, 1 medio (padrao), 2 grande.
+int   ajustes_menu_cartaz_simples(void); // 0 Full (default), 1 Simple; this TV only.
 int   ajustes_mural_titulos(void);      // #521: 1 = nome dentro do ladrilho do Mural
 int   ajustes_ep_tamanho(void);
 // #338: tamanho de abertura das Estatisticas ao vivo (EV_TAM_*); -1 = o ultimo usado.
@@ -533,6 +537,7 @@ void  ajustes_teste_escala(int percentual); // fixture only; does not persist
 int   ajustes_fundo(void);
 float ajustes_vidro_opacidade(void);   // 0,60..0,92; 0,78 = o vidro de sempre
 int   ajustes_vidro_fosco(void);
+int   ajustes_vidro_qualidade(void);   // 0 Automatica (frost + governor), 1 Desempenho (smoked glass, no blur), 2 Alta (frost)
 void  ajustes_teste_vidro_env(void);   // so capturas        // 1 = arte borrada atras do vidro
 int   ajustes_icone_app(void);
 // 2.0 (N1): 0 = Novo (default), 1 = Classico. Local to this TV.

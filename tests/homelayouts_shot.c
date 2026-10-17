@@ -297,6 +297,8 @@ int main(int argc, char **argv) {
                "Sinopse de enchimento, comprida o bastante para ocupar as linhas "
                "que o destaque reserva para ela, como num titulo de verdade.");
       snprintf(c->backdrop, sizeof c->backdrop, "deploy/app/art/%02d.jpg", a);
+      // NV_BACKDROP_FIXO=<jpg>: todo fundo e esta arte (a prova de um fundo CLARO).
+      if (getenv("NV_BACKDROP_FIXO")) snprintf(c->backdrop, sizeof c->backdrop, "%s", getenv("NV_BACKDROP_FIXO"));
       snprintf(c->backdropCatalogo, sizeof c->backdropCatalogo, "%s", c->backdrop);
       snprintf(c->poster, sizeof c->poster, "deploy/app/art/poster/%02d.jpg", a);
       // NV_SEM_LOGO=1: nenhum titulo com logo (o cabecalho em texto do menu).
@@ -457,6 +459,33 @@ int main(int argc, char **argv) {
       snprintf(bmp, sizeof bmp, "%s-heroi-andou.bmp", saida);
       quadros(1, bmp);
     }
+  }
+
+  // NV_TITULOFIL=1: a prova do "Titulo das fileiras" (#205). Para cada estilo
+  // (0 Classico .. 3 Acento) e fundo (escuro, claro): uma captura com o foco na
+  // 2a fileira ("foco") e outra com o foco no destaque ("sem": todos os
+  // titulos em repouso). O fundo (escuro/claro) e o NV_BACKDROP_FIXO do processo.
+  if (getenv("NV_TITULOFIL")) {
+    static const char *EST[] = { "classico", "ilha", "editorial", "acento" };
+    int e, r;
+    const char *fundo = getenv("NV_BACKDROP_FIXO") ? "claro" : "escuro";
+    for (e = 0; e < 4; e++) {
+      char aj[80];
+      snprintf(aj, sizeof aj, "rowTitleStyleLocal %d", e);
+      setenv("NV_AJ", aj, 1);
+      ajusta(0, getenv("NV_VIDRO") ? atoi(getenv("NV_VIDRO")) : 1);
+      assert(ajustes_titulo_fil() == e);
+      for (r = 0; r < 14; r++) tecla(SDLK_UP);
+      quadros(100, NULL);
+      snprintf(bmp, sizeof bmp, "%s-%s-%s-sem.bmp", saida, EST[e], fundo);
+      quadros(1, bmp);
+      tecla(SDLK_DOWN); tecla(SDLK_DOWN); tecla(SDLK_DOWN);
+      quadros(110, NULL);
+      snprintf(bmp, sizeof bmp, "%s-%s-%s-foco.bmp", saida, EST[e], fundo);
+      quadros(1, bmp);
+    }
+    SDL_Quit();
+    return 0;
   }
 
   // NV_SO_CTX=1: pula a volta pelos layouts e vai direto ao menu do cartaz

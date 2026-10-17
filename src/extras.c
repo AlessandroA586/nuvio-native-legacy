@@ -1,6 +1,7 @@
 #include "intro.h"
 #include "arteurl.h"
 #include "imdbnota.h"
+#include "notasfontes.h"
 #include "extras.h"
 #include "streams.h"
 #include "marco.h"
@@ -601,7 +602,7 @@ static int mdblistPostProvedor(const char *id, int fonte, long tmdbId, int serie
   v = js_num(rp, NULL, "rating", -1.0);
   free(rp);
   if (v < 0.0) return 0;
-  return publicarMdbNota(id, fonte, emDecimos(v), tmdbId, serie);
+  return publicarMdbNota(id, fonte, nf_cru(fonte, v), tmdbId, serie);
 }
 
 static int aplicarMdblist(const char *id, const char *corpo, long tmdbId,
@@ -626,7 +627,7 @@ static int aplicarMdblist(const char *id, const char *corpo, long tmdbId,
       if (v < 0.0) v = js_num(p, fim, "value", -1.0);
       if (v < 0.0) v = js_num(p, fim, "rating", -1.0);
       if (v < 0.0) continue;
-      if (publicarMdbNota(id, f, emDecimos(v), tmdbId, serie)) comNota++;
+      if (publicarMdbNota(id, f, nf_cru(f, v), tmdbId, serie)) comNota++;
     }
     return comNota;
   }
@@ -636,7 +637,7 @@ static int aplicarMdblist(const char *id, const char *corpo, long tmdbId,
     if (pedidas) (*pedidas)++;
     v = js_num(corpo, fim, FONTE[k], -1.0);
     if (v < 0.0) continue;
-    if (publicarMdbNota(id, k, emDecimos(v), tmdbId, serie)) comNota++;
+    if (publicarMdbNota(id, k, nf_cru(k, v), tmdbId, serie)) comNota++;
   }
   return comNota;
 }
@@ -921,12 +922,11 @@ static void *buscar(void *arg) {
   if (corpo) {
     ComentAchado achado[EX_COMENT_MAX];
     int n = 0;
-    // p+1 e nao js_prox: js_prox recebe o FIM do elemento anterior, e aqui
-    // ainda nao ha anterior. Com js_prox o primeiro item era pulado e, em
-    // resposta de tres itens, sobrava lixo — as duas listas vinham vazias.
     const char *p = strchr(corpo, '[');
     p = p ? p + 1 : NULL;
-    while (p && n < EX_COMENT_MAX) {
+    // js_fim expects an object, not array whitespace or the closing bracket.
+    while (p && *p && (unsigned char)*p <= ' ') p++;
+    while (p && *p == '{' && n < EX_COMENT_MAX) {
       const char *f = js_fim(p);
       achado[n].u[0] = achado[n].t[0] = 0;
       js_texto(p, f, "comment", achado[n].t, sizeof achado[n].t);
@@ -1768,11 +1768,10 @@ static void *buscarEpComent(void *arg) {
   if (corpo) {
     ComentAchado achado[EX_COMENT_MAX];
     int n = 0;
-    // p+1 e nao js_prox, pelo mesmo motivo da lista da serie: ainda nao ha
-    // elemento anterior de onde partir.
     const char *p = strchr(corpo, '[');
     p = p ? p + 1 : NULL;
-    while (p && n < EX_COMENT_MAX) {
+    while (p && *p && (unsigned char)*p <= ' ') p++;
+    while (p && *p == '{' && n < EX_COMENT_MAX) {
       const char *f = js_fim(p);
       achado[n].u[0] = achado[n].t[0] = 0;
       js_texto(p, f, "comment", achado[n].t, sizeof achado[n].t);
@@ -2453,7 +2452,7 @@ static void *lacoResumo(void *ignorado) {
             if (v < 0.0) v = js_num(p, fim, "value", -1.0);
             if (v < 0.0) v = js_num(p, fim, "rating", -1.0);
             if (v < 0.0) continue;
-            cru = emDecimos(v);
+            cru = nf_cru(f, v);
             pthread_mutex_lock(&exrTrava);
             if (nv_perfil_sessao_atual(sessao)) { ExrVaga *g = exrVaga(id, 1); g->r.cru[f] = cru; }
             pthread_mutex_unlock(&exrTrava);

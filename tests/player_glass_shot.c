@@ -79,6 +79,9 @@ static void (*extra)(void);
 // Fundo desenhado ANTES do player (o video claro/escuro por tras do anel).
 static void (*fundo)(void);
 static void estatsDesenhar(void) { estatvivo_desenhar(relogio); }
+#ifndef FOSCO_ZERA
+#define FOSCO_ZERA() ((void)0)
+#endif
 #ifndef FOSCO_N
 #define FOSCO_N(id) ((void)0)
 #endif
@@ -411,11 +414,13 @@ int main(int argc, char **argv) {
     player_shot_video(1); player_shot_furo_real();
     quadros(10);
     player_shot_estado(relogio, 4360.0f, 9420.0f, 1, 0, 0, 0);
+    FOSCO_ZERA();
     quadros(60);
     if (quer(argc, argv, "fosco-osd")) { salvar("fosco-osd"); FOSCO_N("fosco-osd"); }
     if (quer(argc, argv, "fosco-audio")) {
       player_shot_esconder();
       faixas_abrir_em(0);
+      FOSCO_ZERA();
       quadros(90);
       salvar("fosco-audio"); FOSCO_N("fosco-audio");
       faixas_evento(&(SDL_Event){ .key = { .type = SDL_KEYDOWN, .keysym = { .sym = SDLK_ESCAPE } } });
@@ -424,6 +429,7 @@ int main(int argc, char **argv) {
     if (quer(argc, argv, "fosco-stats")) {
       player_shot_esconder();
       estatvivo_abrir(); extra = estatsDesenhar;
+      FOSCO_ZERA();
       quadros(60);
       salvar("fosco-stats"); FOSCO_N("fosco-stats");
       extra = NULL; estatvivo_fechar();

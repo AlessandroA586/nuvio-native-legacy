@@ -34,6 +34,7 @@
 #include "listas.h"
 #include "home.h"
 #include "ctxinfo.h"
+#include "fundo.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -369,7 +370,7 @@ static const CatItem *itemAtual(void) {
 // A extensao existe para TITULO: nao para a linha de um amigo (sem IMDb) nem
 // para o menu de lista ou de estilo.
 static int infoPossivel(const CatItem *ci) {
-  return ci && !doLista && !soFileira && ci->imdb[0] && ci->titulo[0] &&
+  return !ajustes_menu_cartaz_simples() && ci && !doLista && !soFileira && ci->imdb[0] && ci->titulo[0] &&
          strcmp(ci->tipo, "channel") && strcmp(ci->tipo, "tv");
 }
 
@@ -699,7 +700,7 @@ static void abrirComum(int indice) {
   // Sem "Ver detalhes", um titulo sem id nenhum nao tem acao: um menu vazio
   // seria pior que nenhum (o toque continua abrindo o titulo).
   if (!doLista && pagina == 0 && nOps == 0) { aberto = 0; return; }
-  if (!doLista && !soFileira) ctxinfo_abrir(itemAtual());
+  if (infoPossivel(itemAtual())) ctxinfo_abrir(itemAtual());
 }
 
 void ctx_abrir_salvo(const CatItem *titulo) {
@@ -1472,7 +1473,8 @@ static void estGlifo(GfxRect q, int tipo, float tinta, float a) {
   switch (tipo) {
     case FIL_TIPO_CARTAZ: case FIL_TIPO_TOP10: case FIL_TIPO_RANKING:
     case FIL_TIPO_LINHA_TEMPO: case FIL_TIPO_FICHA: case FIL_TIPO_PALCO:
-    case FIL_TIPO_POSTER_GRANDE:
+    case FIL_TIPO_POSTER_GRANDE: case FIL_TIPO_POSTER_GRANDE_P:
+    case FIL_TIPO_POSTER_GRANDE_G:
       w = 14.0f; h = 20.0f; break;
     case FIL_TIPO_DESTAQUE_QUADRADO: case FIL_TIPO_DESTAQUE_QUADRADO_M:
     case FIL_TIPO_DESTAQUE_QUADRADO_G: case FIL_TIPO_AUTO:
@@ -2035,10 +2037,14 @@ static void ctx_desenharCorpo_(Uint32 agora) {
       cartazRect = ctxDaHome(hi.rect);
   }
 
-  { GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
-    gfx_cor(tela, 0.0f, 0, 0, 0, 0.94f * a); }
-
   infoOn = infoPossivel(ci);
+  { GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
+    // The enriched art must extend behind the action panel. The former 94%
+    // black veil made both menu sizes capture an almost uniform backdrop.
+    if (infoOn)
+      fundo_desenhar_modo(FUNDO_ARTE, tela, 0, ci->backdrop[0] ? ci->backdrop : cartazArte, a);
+    else gfx_cor(tela, 0.0f, 0, 0, 0, 0.55f * a); }
+
   est.salvo = tituloSalvo(ci);
   est.visto = historicoDe(ci);
   comLogo = !infoOn && logotitulo_url(ci, CTX_LOGO_W) != NULL;

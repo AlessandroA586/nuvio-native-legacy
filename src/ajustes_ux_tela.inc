@@ -114,6 +114,7 @@ static const Item TELA[] = {
   SEC("Tela inicial", "Estilo, fileiras, barra lateral e Continuar assistindo", "aj_layout-dashboard"),
     ROT("Estilo"),
       OPC(AJ_HOME_LAYOUT), OPC(AJ_LANDSCAPE), OPC(AJ_HERO), OPC(AJ_HERO_CHEIO),
+      OPC(AJ_FUNDO_DIN), OPC(AJ_FUNDO_DIN_COR),
       OPC(AJ_HERO_CATALOGOS), OPC(AJ_HERO_GENERO),
       OPC(AJ_HERO_SINOPSE), OPC(AJ_HERO_NOTAS), OPC(AJ_HERO_ANO), OPC(AJ_HERO_DURACAO),
       OPC(AJ_HERO_SINOPSE_TAM),
@@ -121,7 +122,7 @@ static const Item TELA[] = {
       OPC(AJ_FIL_ORDEM), OPC(AJ_FIL_LIMITE), OPC(AJ_ITENS_FILEIRA),
       OPC(AJ_ESPACO_FILEIRAS), OPC(AJ_ESPACO_TITULOS),
       OPC(AJ_OCULTAR_NLANC), OPC(AJ_NOTAS_HOME), OPC(AJ_SELO_VISTO), OPC(AJ_ABAS_ESTILO),
-      OPC(AJ_OCULTAR_FILMES_VISTOS), OPC(AJ_AMIGOS_ESTILO),
+      OPC(AJ_OCULTAR_FILMES_VISTOS), OPC(AJ_AMIGOS_ESTILO), OPC(AJ_TITULO_FIL),
       // A curadoria da fileira Herói (#205): a fonte do cartão único.
       OPC(AJ_CURADORIA_URL),
     ROT("Coleções"), OPC(AJ_COLECAO_EXIBICAO),
@@ -160,7 +161,7 @@ static const Item TELA[] = {
     ROT("Tela de descanso"),
       OPC(AJ_ESMAECER), OPC(AJ_DESCANSO_ESTILO), OPC(AJ_DESCANSO_FONTE),
     MAIS(),
-    ROT("Cores e vidro"), OPC(AJ_VIDRO_OPAC), OPC(AJ_VIDRO_FOSCO),
+    ROT("Cores e vidro"), OPC(AJ_VIDRO_OPAC), OPC(AJ_VIDRO_FOSCO), OPC(AJ_VIDRO_QUALIDADE),
 
   // NOTAS (decisao do dono, 07/10): so as onze "Notas no titulo". Os oito
   // AJ_MDB_* (qual nota o MDBList baixa) sairam da tela e continuam no enum e na
@@ -186,7 +187,7 @@ static const Item TELA[] = {
   // Cartazes e arte + Trailers numa categoria so (mockup v3, tela 01).
   SEC("Cartazes e trailers", "Cartaz em foco, de onde vem a arte e trailers", "aj_clapperboard"),
     ROT("Cartaz em foco"),
-      OPC(AJ_EXPANDIR), OPC(AJ_EXPANDIR_ATRASO), OPC(AJ_BORDA_FOCO),
+      OPC(AJ_EXPANDIR), OPC(AJ_EXPANDIR_ATRASO), OPC(AJ_BORDA_FOCO), OPC(AJ_MENU_CARTAZ),
     ROT("Forma"),
       OPC(AJ_LARGURA_DP), OPC(AJ_RAIO_DP), OPC(AJ_PROF),
     ROT("De onde vem a arte"),

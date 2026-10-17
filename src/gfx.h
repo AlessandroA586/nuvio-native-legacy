@@ -620,6 +620,9 @@ void gfx_chrome_dens(float out[3]);
 #define GFX_VIDRO_DENS       0.80f
 #define GFX_VIDRO_DENS_MODAL 0.86f
 void gfx_vidro_material(GfxRect r, float raio, float dens, float a);
+// 1 while drawing a glass LAYER above the screen (sidebar): earlier glasses it
+// covers no longer force it flat (set/cleared by the caller around the draw).
+extern int gfx_vidro_camada;
 // O mesmo com "Interface de vidro" desligada: a cor lisa (sr,sg,sb) a `sa`.
 void gfx_vidro_ou_solido(GfxRect r, float raio, float dens, float a,
                          float sr, float sg, float sb, float sa);
@@ -633,12 +636,17 @@ extern double gfx_vidro_fill, gfx_vidro_copia;
 // O quadro tem video vivo (furo) por baixo: o vidro sai chapado ate o proximo
 // gfx_novo_quadro (a tela ali e o furo, nao o que passa no video).
 void gfx_vidro_fosco_bloquear(void);
-// The live-video stand-in for this frame (until gfx_novo_quadro): a blurred
-// screen-oriented texture (a GfxMini target) that glass over the video hole
-// reads instead of going flat. 0 = flat, as before.
-void gfx_vidro_fonte_video(GLuint tex);
+// Call right after a full-screen veil: glass drawn earlier no longer makes a
+// glass over it go flat (modal islands over the Home sidebar).
+void gfx_vidro_cobrir(void);
 // Glass drawn with a blur source this frame (zeroed in gfx_novo_quadro).
 extern int gfx_vidro_com_fonte;
+// Smoked (flat tinted) glasses drawn this frame: no capture, no blur (zeroed in gfx_novo_quadro).
+extern int gfx_vidro_chapados;
+extern int gfx_vidro_area;                                // glass area (px^2) drawn this frame (governor workload signature)
+int  gfx_vidro_degradado(void);                           // governor dropped the glass to smoked glass (sticky)
+void gfx_vidro_governar_zerar(void);                      // tests: forget the governor state
+void gfx_vidro_governar(double ms, double alvo_ms);       // once per frame, after the swap
 // CANAIS DE FUNDO DA LUZ ASSADA (fundo.c, "Arte borrada" e "Frost" de tela
 // cheia): o quadro pequeno (320x180, GL_RGB) do `canal` (0..1), pintado por
 // `pintar(ctx)` em coordenadas de layout de tela cheia pelo MESMO assado da luz
@@ -754,6 +762,9 @@ void gfx_vidro_cartao(GfxRect r, float raio, float foco, float a);
 // FOCO de botao de acao e item de menu: a pilula vira BRANCA cheia (a mola
 // interpola a opacidade), e o texto passa a escuro em foco >= 0,5 — quem chama
 // escolhe a tinta com gfx_vidro_tinta.
+// Com vidro e realce colorido ela e vidro tingido: realce a GFX_VIDRO_ACENTO_ALFA
+// (cor viva), aro claro e brilho de topo como as pilulas de vidro em repouso.
+#define GFX_VIDRO_ACENTO_ALFA 0.92f
 void gfx_vidro_pilula_cheia(GfxRect r, float raio, float foco, float a);
 // Tinta do texto sobre a superficie de vidro: escura sobre a pilula branca do
 // foco, clara (235) no resto.
@@ -775,6 +786,8 @@ void gfx_furo(GfxRect r);
 // gfx_cor): o que fica fora do SDF mantem a alpha da superficie e o plano de
 // video so aparece pela area arredondada.
 void gfx_furo_raio(GfxRect r, float raio);
+// Furo parcial: cor e alfa do retangulo vezes 1 - a (a >= 0,995 e o gfx_furo).
+void gfx_furo_alfa(GfxRect r, float a);
 // Furo com cantos + veu so-veu do GFX_JANELA (cor 0) numa passada: ver gfx.c.
 void gfx_furo_raio_veu(GfxRect r, float raio, float veu, float rolada, float exp, float ca);
 void gfx_textura(GfxRect r, GLuint tex);

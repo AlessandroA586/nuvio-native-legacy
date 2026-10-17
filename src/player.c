@@ -208,7 +208,7 @@ static void avisarCascaAberto(int v) { (void)v; }
 // IDs estaveis: a ordem visual e de navegacao vem de transporteAcoes.
 // Na serie, Anterior/Proximo ficam ao lado do Play; o restante conserva a ordem.
 enum { PLR_PLAY, PLR_CC, PLR_AUDIO, PLR_ASPECTO,
-       PLR_FONTES, PLR_EPISODIOS, PLR_PROXIMO, PLR_RECARREGAR, PLR_NBTNS };
+       PLR_FONTES, PLR_EPISODIOS, PLR_PROXIMO, PLR_REINICIAR, PLR_NBTNS };
 
 // Avanco em curso: enquanto vale, posSeg e do DONO e nao do pipeline.
 static int    scrubbing, scrubPassos, scrubTocava, scrubDir, scrubToque;
@@ -226,6 +226,9 @@ static int    posVisSolto;   // 1 = ainda deslizando ate o alvo
 
 static int   aberto = 0, saindo = 0, pediuSair = 0;
 static int   idx = 0;
+// UI-thread ownership of this exact player source/session.
+static unsigned fonteAcaoGeracao;
+static void fonteAcaoInvalidar(void) { if (!++fonteAcaoGeracao) ++fonteAcaoGeracao; }
 #define PLR_SCR_TOCOU_S 5.0f   // #179: reproducao continua antes do /scrobble/start
 // Reproducao real minima para a SAIDA gravar o ponto (ver `prova`). Nao e o
 // limiar do start: um seek logo depois de abrir nao pode custar o ponto.
@@ -1636,6 +1639,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   // Serie aberta pela ilha ou pelo player sem passar pelo detalhe: sem a lista
   // nao ha cards de episodios nem "Up next". Idempotente com o roteador de app.c.
   desc_episodios_garantir(idx);
+  fonteAcaoInvalidar();
   aberto = 1; saindo = 0; pediuSair = 0; barraFoco = 0;
   // Titulo novo: um avanco em curso do anterior mandaria a posicao velha ao
   // pipeline novo assim que o silencio vencesse.
@@ -2004,9 +2008,9 @@ static void dvTelaAtualizar(float dt, Uint32 agora) {
   DvtelaSinais s;
   int saiu;
   if (!dvtela_visivel()) return;
-  { const CatItem *c = item();
-    dvtela_apresentacao(ajustes_abertura_detalhada(), c ? artehero_logo_sessao(c) : "",
-                        c ? c->titulo : "", linhaEp); }
+  // The key that turned the normal opening into the card (abrecine_tecla) holds for the DV screen.
+  if (dvtela_ativa())
+    dvtela_apresentacao(ajustes_abertura_detalhada() || cine.detalhada);
   memset(&s, 0, sizeof s);
   if (dvtela_ativa()) {
     video_dv_fase(&f);
@@ -2035,6 +2039,7 @@ void player_definir_retomada_fonte(double segundos) {
 }
 void player_definir_fonte(const char *url) {
   if ((!aberto && !mini) || !url || !*url) return;
+  fonteAcaoInvalidar();
   // A primeira fonte ainda pode aproveitar a legenda antecipada na espera.
   if (comVideo) legenda_pre_descartar(i18n("troca de fonte"));
   durFonteAvisada = pedProximaFonte = 0;
@@ -2063,6 +2068,7 @@ void player_definir_fonte(const char *url) {
 
 void player_voltar_a_esperar(void) {
   if (!aberto) return;
+  fonteAcaoInvalidar();
   legenda_pre_descartar(i18n("fonte descartada"));
   // A fonte foi descartada: a tela do DV sai e o cartao de sempre conta a
   // troca ("Fonte falhou, tentando a proxima"); a proxima, se for DV, a traz.
@@ -2922,6 +2928,23 @@ static int temUltimoBotao(void) {
   return epE > 0 || extras_n_relacionados() > 0;
 }
 
+// Sources captures this token, never a mutable catalogue/list index.
+unsigned player_recarregar_contexto(void) {
+  return aberto && !saindo && !mini && !retido && !ehCanal() &&
+      !trocaEpisodio && !pedRecarregar && !player_carregando() && !erroFonte &&
+      fontePrincipal() && !video_falhou() && !video_reconectando()
+      ? fonteAcaoGeracao : 0;
+}
+int player_recarregar_fonte(unsigned contexto) {
+  Uint32 agora = SDL_GetTicks();
+  if (!contexto || contexto != player_recarregar_contexto() ||
+      (recarregarPedidoMarcado && agora - recarregarPedidoEm < 400u)) return 0;
+  pedRecarregar = recarregarPedidoMarcado = 1;
+  recarregarPedidoEm = agora;
+  posplay_troca_manual();
+  return 1;
+}
+
 typedef struct { int id, habilitada; } PlrAcao;
 static int transporteSerie(void) { return !ehCanal() && epT >= 0 && epE > 0; }
 static int transporteAcoes(PlrAcao a[PLR_NBTNS]) {
@@ -2929,9 +2952,8 @@ static int transporteAcoes(PlrAcao a[PLR_NBTNS]) {
   int pronto = serie && !trocaEpisodio && !pedRecarregar && !player_carregando() && !erroFonte && !saindo;
   a[n++] = (PlrAcao){PLR_PLAY, 1};
   if (serie) a[n++] = (PlrAcao){PLR_PROXIMO, pronto && player_proximo_episodio() != NULL};
-  if (!ehCanal()) a[n++] = (PlrAcao){PLR_RECARREGAR,
-      !trocaEpisodio && !pedRecarregar && comVideo && !player_carregando() &&
-      !erroFonte && !saindo && !video_reconectando() && video_url_atual()[0]};
+  if (!ehCanal()) a[n++] = (PlrAcao){PLR_REINICIAR,
+      player_recarregar_contexto() != 0 && video_duracao() > 0.5};
   a[n++] = (PlrAcao){PLR_CC, 1};
   a[n++] = (PlrAcao){PLR_AUDIO, 1};
   a[n++] = (PlrAcao){PLR_ASPECTO, 1};
@@ -3619,12 +3641,25 @@ static int ativarBotao(int i, int repetiu) {
       posplay_troca_manual();
       return 1;
     }
-    case PLR_RECARREGAR: {
-      Uint32 agora = SDL_GetTicks();
-      if (repetiu || (recarregarPedidoMarcado && agora - recarregarPedidoEm < 400u)) return 0;
-      pedRecarregar = recarregarPedidoMarcado = confirmacaoTransporteRetida = 1;
-      recarregarPedidoEm = agora;
-      posplay_troca_manual();
+    case PLR_REINICIAR: {
+      // A held OK (including firmware repeat=0) restarts only once. This is
+      // a user seek: preserve pause, tracks, opening policy and current URL.
+      double de = video_pos();
+      int retomar = scrubbing && scrubTocava;
+      if (repetiu || confirmacaoTransporteRetida) return 0;
+      if (!isfinite(de)) de = posSeg;
+      posplay_busca_usuario();
+      recuarAutomatico(de, 0.0);
+      scrubbing = scrubToque = scrubTocava = 0; scrubInicio = 0.0;
+      if (retomar) retomandoSalto = 1;
+      pausao_fechar(); seekr_ocioso();
+      posSeg = posVis = posVisV = 0.0f; posVisSolto = 0;
+      retomarPct = 0; retomarFonteSeg = -1.0; retomadaAplicada = 1;
+      relogio_zerar(&relLeg); velmed_zerar(&velMed);
+      assistidoAmostra = 0; eofDesde = -1.0;
+      buscarUsuario(0.0);
+      if (retomar) { video_pausar(0); tocando = 1; }
+      confirmacaoTransporteRetida = 1;
       return 1;
     }
     case PLR_PLAY: alternarTocando(); break;
@@ -3815,7 +3850,8 @@ void player_evento(const SDL_Event *e) {
   // OK no meio de um avanco CONFIRMA o avanco, em vez de alternar play/pausa.
   // Quem aperta o centro com a barra correndo quer parar ali, e alternar o
   // estado deixaria o filme pausado no ponto novo — meio comando executado.
-  if (scrubbing && (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE)) {
+  if (scrubbing && (barraFoco || skipFoco || botao != PLR_REINICIAR) &&
+      (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE)) {
     terminarSalto();
     acordar();
     return;
@@ -4624,7 +4660,7 @@ static const char *iconeBotao(int i) {
     case PLR_ASPECTO:   return "pl_ratio";
     case PLR_FONTES:    return "pl_layers";
     case PLR_PROXIMO:   return "pl_chevron-right";
-    case PLR_RECARREGAR:return "pl_rotate-ccw";
+    case PLR_REINICIAR: return "pl_rotate-ccw";
     default:            return epE > 0 ? "pl_list-video" : "pl_film";
   }
 }
@@ -4636,7 +4672,7 @@ static const char *rotuloBotao(int i) {
     case PLR_ASPECTO:   return "Propor\xc3\xa7\xc3\xa3o";
     case PLR_FONTES:    return "Fontes";
     case PLR_PROXIMO:   return "Próximo episódio";
-    case PLR_RECARREGAR:return "Recarregar";
+    case PLR_REINICIAR: return "Assistir do começo";
     default:            return ehCanal() ? "Guia" : epE > 0 ? "Epis\xc3\xb3""dios" : "Relacionados";
   }
 }
@@ -5213,6 +5249,9 @@ static void corpoCarregando(GfxRect r, float a, void *u) {
   plrui_respira(x + 6.0f + 5.0f, y + 16.0f, 10.0f, agora, a);
   { TxtLinha l = txt_linha(TXT_G26B, "Abrindo fonte", 243, 242, 239, 255);
     txt_desenhar_alpha(l, x + 6.0f + 10.0f + 16.0f, y + 16.0f - (float)l.h * 0.5f, a); }
+  if (dvtela_visivel() && dvtela_variante() == DVT_VAR_DETALHADA) {
+    dvtela_abertura_marca(1, x + w - 260.0f, r.y + 62.0f, a);
+  }
   // A dica de tecla na ponta direita da linha do estado: no compacto leva aos
   // detalhes, no expandido volta. Discreta (o apoio cinza das outras dicas).
   if (ac > 0.01f) { const char *k[1] = { "Baixo" }, *rt[1] = { "Detalhes" };
@@ -5425,32 +5464,6 @@ void player_fundo_fora_do_furo(GfxRect furo, int recuado, const CatItem *c) {
              1.0f, 0, 0, 0.5f, 0, 0, 0, 0.5f); }
 }
 
-// FROST OVER LIVE VIDEO (owner, 16/10: the player glass flat over video). No
-// TV lets GL read the video plane (webOS/Tizen/.tpk/Android: hardware plane
-// behind the UI), so the glass over the hole reads the title art instead: the
-// 96x54 blurred copy (gfx_desfocado), covered to the screen and darkened, baked
-// ONCE per title into 192x108 in screen orientation. Per frame it costs only
-// the glass shader's own texture reads; no capture, no blur pass.
-static GLuint foscoSobreVideo(const CatItem *c) {
-  static GfxMini alvo;
-  static char feita[1024];
-  const char *arte = c && c->backdrop[0] && !player_id_canal()[0] ? artehero_url(c) : NULL;
-  GLuint tb;
-  if (!arte) return 0;
-  if (alvo.tex && !strcmp(feita, arte)) return alvo.tex;
-  tb = tex_obter_larg(arte, 480);
-  if (tb) tb = gfx_desfocado(tb, arte);
-  if (!tb || !gfx_mini_alvo(&alvo, 192, 108)) return 0;
-  gfx_mini_comecar(&alvo, 0.0f, 0.0f, 192.0f / NV_TELA_W);
-  gfx_tex_aspect_atual = tex_aspecto(arte);
-  gfx_rect((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, tb, GFX_CARD, 0, 0, 0, 0.0f, 0, 0, 0, 1.0f);
-  gfx_tex_aspect_atual = 0.0f;
-  gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0, 0.35f);
-  gfx_mini_terminar();
-  snprintf(feita, sizeof feita, "%s", arte);
-  return alvo.tex;
-}
-
 // A3: o logo e o Play do detalhe no ultimo quadro dele (player_morph_de).
 static GfxRect morphLogo, morphPlay;
 static Uint32 morphEm;
@@ -5468,7 +5481,7 @@ void player_morph_de(GfxRect logo, GfxRect play) {
 static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
   float v = cine.veu, f = cine.foco, t = (float)(agora - cine.desde) / 1000.0f;
-  float entra, cx = NV_TELA_W * 0.5f, tm, k, base, y, tx;
+  float entra, cx = NV_TELA_W * 0.5f, tm, k, base, y, tx, topo;
   int reduz = ajustes_animacoes_reduzidas();
   // #508: preserve the saved Off / Art / Blurred art choice. Reuse the
   // title page's own artwork without starting a second metadata request.
@@ -5535,12 +5548,16 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
       r.x = l0.x + (r.x - l0.x) * k; r.y = l0.y + (r.y - l0.y) * k;
       r.w = l0.w + (r.w - l0.w) * k; r.h = l0.h + (r.h - l0.h) * k;
     }
+    topo = r.y;
     gfx_rect(r, lg, tex_marca_escura(marca) ? GFX_MARCA : GFX_TEXTO, 0, 0, 0, 0, .96f, .96f, .97f,
              v * entra);
   } else {
     TxtLinha l = txt_linha_corta(TXT_TITULO2, c ? c->titulo : "", 255, 255, 255, 255, 1400.0f);
-    txt_desenhar_alpha(l, canto ? lx : cx - l.w * 0.5f, anel.y - gap - l.h, v * entra);
+    topo = anel.y - gap - l.h;
+    txt_desenhar_alpha(l, canto ? lx : cx - l.w * 0.5f, topo, v * entra);
   }
+  // Dolby Vision slot 1: the mark above the logo (dvtelaui.c); the rest is this same drawing.
+  dvtela_abertura_marca(canto, canto ? lx : cx, topo, v * entra);
 
   // O PLAY VIRA O ANEL: a pilula encolhe ate o circulo (raio = h/2), o branco
   // some nos primeiros 45% e a borda vira o trilho; o arco acende nos ultimos 40%.
@@ -5596,7 +5613,13 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
     float d = (float)(agora - cine.desde - ABRECINE_DEMORA_MS) / 600.0f;
     TxtLinha l = txt_linha(TXT_G19M, i18n("Só mais um instante…"), 243, 242, 239, 255);
     txt_desenhar_alpha(l, canto ? tx : cx - l.w * 0.5f, y, 0.62f * v * (reduz || d > 1.0f ? 1.0f : d));
+    y += 34.0f;
   }
+  // Append DV information without moving existing loading content.
+  dvtela_abertura_linha(canto, canto ? tx : cx, y, v * entra);
+#ifdef NV_SHOT_HOOKS
+  dvtela_abertura_zona_linha(y, NV_TELA_W);
+#endif
 }
 
 #ifdef NV_TPK
@@ -5696,14 +5719,13 @@ void player_desenhar(Uint32 agora) {
 #endif
     if (!player_com_video()) imagem = 1;
     cineUlt = agora;
-    abrecine_passo(&cine, player_carregando() && !ehCanal(), imagem, ajustes_abertura_detalhada(),
+    // The DV screen keeps the opening alive: it only falls with the real frame, DV or not.
+    abrecine_passo(&cine, (player_carregando() || dvtela_ativa()) && !ehCanal(), imagem, ajustes_abertura_detalhada(),
                    agora, dtc, ajustes_animacoes_reduzidas());
     if (erroFonte || saindo || ehCanal()) cine.veu = 0.0f; }
-#ifdef NV_ANDROID
-  // Video vivo por baixo: o vidro fosco (assado de 320x180) nao desenha ali.
+  // Live video below (hardware plane): the glass of the frame is translucent
+  // flat glass, no capture, no blur; the video shows through the hole.
   if (furar) gfx_vidro_fosco_bloquear();
-#endif
-  if (furar && !janAtiva) gfx_vidro_fonte_video(foscoSobreVideo(c));
   if (furar) {
     // O furo acompanha o MESMO retangulo que foi ao plano de hardware, cortado
     // na tela. Furar sempre a tela inteira, como antes, deixava faixa preta nos
@@ -5817,7 +5839,7 @@ void player_desenhar(Uint32 agora) {
       else if (player_com_video() && !erroFonte && !saindo && !ehCanal())
         gfx_cor(tela, 0.0f, 0.0f, 0.0f, 0.0f, abrindoFundo);
     }
-    if (!quadroMorno && abrecine_cinema(&cine) && !dvtela_visivel()) desenharCinema(agora, c, furar); }
+    if (!quadroMorno && abrecine_cinema(&cine) && !(dvtela_visivel() && dvtela_variante() == DVT_VAR_DETALHADA)) desenharCinema(agora, c, furar); }
   // Uma abertura NOVA (a anterior acabou, ou o player reabriu): volta ao compacto
   // e zera o relogio. Ao acabar, o estado fica como esta para o cartao sair com o
   // mesmo conteudo (a saida e a da ilha, plrilha.c).
@@ -5868,7 +5890,7 @@ void player_desenhar(Uint32 agora) {
   } else if (player_carregando() && !stream_folha_aberta() && stream_folha_anim() < 0.05f &&
              // A TELA DO DOLBY VISION substitui o cartao: sem ela, o caminho do
              // DV mostrava "Abrindo fonte" DUAS vezes (a TV e depois o demux).
-             !dvtela_visivel() &&
+             (!dvtela_visivel() || dvtela_variante() == DVT_VAR_DETALHADA) &&
              // A CINEMA (#205) esta no lugar do cartao.
              !abrecine_cinema(&cine)) {
     // COM A FOLHA DE FONTES NA TELA o cartao fica de fora: ela e a escolha que

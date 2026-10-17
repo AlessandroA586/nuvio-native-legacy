@@ -58,6 +58,8 @@ static float dsA;
 #ifdef NV_SHOT_HOOKS
 static time_t horaFixa;
 void plrilha_shot_hora(time_t t) { horaFixa = t; }
+static GfxRect shotCentro;
+int plrilha_shot_centro(GfxRect *r) { *r = shotCentro; return r->w > 0; }
 static float shotTxtX, shotFimX;
 static int shotTemFim;
 void plrilha_shot_linha(float *t, float *f, int *tf) { *t = shotTxtX; *f = shotFimX; *tf = shotTemFim; }
@@ -280,11 +282,17 @@ static void cartaoCentro(Uint32 agora) {
     cenCorpoA = anim_mola(cenCorpoA, quer ? 1.0f : 0.0f, dt, quer ? 10.0f : 26.0f);
   }
   temCen = 0;
+#ifdef NV_SHOT_HOOKS
+  shotCentro = (GfxRect){0};
+#endif
   if (cenA < 0.01f) { cenA = cenCorpoA = 0.0f; cenW = cenH = 0.0f; cenVW = cenVH = 0.0f; return; }
   { const PlrIlhaPedido *c = &cenUlt;
     float w = cenW < 8.0f ? 8.0f : cenW, h = cenH < 8.0f ? 8.0f : cenH;
     GfxRect R = { (NV_TELA_W - w) * 0.5f, (NV_TELA_H - h) * 0.5f, w, h };
     GfxRect F = { (NV_TELA_W - c->w) * 0.5f, (NV_TELA_H - c->h) * 0.5f, c->w, c->h };
+#ifdef NV_SHOT_HOOKS
+    shotCentro = R;
+#endif
     if (c->ancoraTopo) F.y = R.y;   // o conteudo desce/sobe com a forma (nao salta para o centro novo)
     // O raio acompanha a forma como na ilha: da pilula (meia altura) ao do corpo.
     float cresce = anim_clamp((h - PIL_H) / 120.0f, 0.0f, 1.0f);

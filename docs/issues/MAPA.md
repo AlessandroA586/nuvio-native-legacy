@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `7e4b2605b` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-17T00:08:00-03:00. 478 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `eea9aac9d` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-17T15:30:00-03:00. 491 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -120,12 +120,12 @@ Plano de refatoração: `docs/plans/refatoracao-geral.md` (branch `agente/refato
 | 2.0.3 | 0 |  |
 | 2.0.4 | 0 |  |
 | 2.0.5 | 2 | #495, #512 |
-| 2.0.6 | 41 | #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #479, #492, #494, #496, #500, #501, #503, #505, #506, #507, #508, #530, #539, #545, #548, #549, #551, #553, #555, #557, #558, #562, #564, #565, #566, #570 |
-| 2.1 | 3 | #420, #457, #458 |
+| 2.0.6 | 47 | #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #479, #492, #494, #496, #500, #501, #503, #505, #506, #507, #508, #530, #539, #545, #549, #551, #553, #555, #557, #558, #564, #565, #566, #570, #577, #578, #579, #581, #582, #584, #585, #588 |
+| 2.1 | 7 | #420, #457, #458, #589, #590, #591, #592 |
 | 2.2 | 0 |  |
-| futuro | 9 | #437, #438, #450, #509, #510, #514, #521, #524, #542 |
+| futuro | 8 | #437, #438, #450, #509, #510, #514, #521, #542 |
 | nao vamos fazer | 0 |  |
-| ja-lancada | 12 | #410, #416, #417, #419, #421, #422, #425, #426, #433, #439, #440, #486 |
+| ja-lancada | 11 | #410, #416, #417, #419, #421, #422, #425, #426, #433, #439, #440 |
 
 ## Fechar com a 2.0.3
 
@@ -180,30 +180,31 @@ Por status:
 | Status | Qtd |
 |---|---|
 | lancada | 304 |
-| integrada | 67 |
-| aberta | 47 |
-| respondida | 22 |
+| integrada | 69 |
+| aberta | 56 |
+| respondida | 21 |
 | por-desenho | 15 |
-| fechada-sem-resposta | 7 |
-| precisa-log | 7 |
+| fechada-sem-resposta | 8 |
+| precisa-log | 8 |
 | fora-do-escopo | 4 |
 | em_revisao | 3 |
 | duplicada | 2 |
+| em_job | 1 |
 
 Por release (grupo de planejamento):
 
 | Grupo | Qtd |
 |---|---|
 | lançadas em tag v* (qualquer versão) | 304 |
-| sem release | 144 |
-| 2.0.5 (integração, sem release do conserto) | 23 |
-| futuro (2.1/2.2) | 5 |
+| sem release | 177 |
+| futuro (2.1/2.2) | 4 |
+| 2.0.5 (integração, sem release do conserto) | 4 |
 | 2.0.3 lançada, com pendência | 2 |
 
-Lançadas por versão: 1.0.7: 10, 1.0.8: 1, 1.0.10: 3, 1.0.11: 3, 1.0.15: 1, 1.0.22: 1, 1.0.24: 1, 1.0.29: 1, 1.0.30: 2, 1.0.31: 2, 1.0.32: 2, 1.0.34: 1, 1.0.35: 1, 1.0.37: 1, 1.0.38: 2, 1.0.39: 1, 1.0.42: 1, 1.0.43: 4, 1.0.44: 4, 1.0.45: 1, 1.0.51: 3, 1.0.52: 1, 1.0.53: 1, 1.0.55: 3, 1.2.1: 4, 1.3.0: 1, 1.3.2: 5, 1.3.4: 5, 1.3.5: 2, 1.3.8: 1, 1.3.9: 1, 1.3.10: 1, 1.3.11: 1, 1.3.12: 5, 1.4: 7, 1.4.1: 2, 1.4.2: 9, 1.4.3: 9, 1.4.4: 3, 1.4.5: 1, 1.4.6: 7, 1.4.7: 1, 1.5.0: 2, 1.5.1: 4, 1.5.2: 9, 1.5.3: 2, 1.5.4: 9, 1.6.0: 8, 1.6.1: 4, 1.6.2: 3, 1.6.3: 2, 1.6.4: 2, 1.6.5: 4, 1.7.0: 10, 1.7.1: 4, 1.7.2: 5, 1.7.4: 5, 2.0.0: 22, 2.0.1: 12, 2.0.2: 20, 2.0.3: 29, 2.0.4: 9, 2.0.5: 23.
+Lançadas por versão: 1.0.7: 7, 1.0.8: 1, 1.0.10: 2, 1.0.11: 3, 1.0.15: 1, 1.0.22: 1, 1.0.24: 1, 1.0.29: 1, 1.0.30: 2, 1.0.31: 2, 1.0.32: 2, 1.0.34: 1, 1.0.35: 1, 1.0.37: 1, 1.0.38: 2, 1.0.39: 1, 1.0.42: 1, 1.0.43: 4, 1.0.44: 4, 1.0.45: 1, 1.0.51: 3, 1.0.52: 1, 1.0.53: 1, 1.0.55: 3, 1.2.1: 4, 1.3.0: 1, 1.3.2: 5, 1.3.4: 5, 1.3.5: 2, 1.3.8: 1, 1.3.9: 1, 1.3.10: 1, 1.3.11: 1, 1.3.12: 5, 1.4: 7, 1.4.1: 2, 1.4.2: 9, 1.4.3: 9, 1.4.4: 3, 1.4.5: 1, 1.4.6: 7, 1.4.7: 1, 1.5.0: 2, 1.5.1: 4, 1.5.2: 9, 1.5.3: 2, 1.5.4: 9, 1.6.0: 8, 1.6.1: 4, 1.6.2: 3, 1.6.3: 2, 1.6.4: 2, 1.6.5: 4, 1.7.0: 9, 1.7.1: 4, 1.7.2: 5, 1.7.4: 5, 2.0.0: 22, 2.0.1: 12, 2.0.2: 20, 2.0.3: 29, 2.0.4: 8, 2.0.5: 20, 2.0.7: 9.
 
-Abertas no GitHub: 67. Fechadas: 411.
-Abertas sem nenhum comentário nosso: 53.
+Abertas no GitHub: 75. Fechadas: 416.
+Abertas sem nenhum comentário nosso: 61.
 
 ## 2.0.3 lançada com pendência (precisa-log, respondida ou conserto parcial)
 
@@ -221,7 +222,7 @@ Notas:
 
 ## 2.0.4 (hotfix publicado)
 
-9 issues.
+8 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -232,7 +233,6 @@ Notas:
 | [#392](https://github.com/iqui27/nuvio-native-legacy/issues/392) | Profile switching still rearrange my home screen | Samsung .tpk | bug | lancada | 2.0.4 | - | 1d4b5e97, 2d3e472e, 9023ebdb | nós 10-11 | dono: avaliar fechamento com v2.0.4 |
 | [#400](https://github.com/iqui27/nuvio-native-legacy/issues/400) | feature-request: allow using default addon sources sort orde | all | feature | lancada | 2.0.4 | - | 3d9db2d8, a46e1a4c, f60a4ba5 | nós 10-10 | sem ação; conserto publicado |
 | [#409](https://github.com/iqui27/nuvio-native-legacy/issues/409) | The source didn't answer in time error even though the serve | Android | bug | lancada | 2.0.4 | - | 2051869e, 5cd60adf, 6d46e336 | nós 10-10 | sem ação; conserto publicado |
-| [#410](https://github.com/iqui27/nuvio-native-legacy/issues/410) | UI appearence issues | Samsung .tpk | bug | lancada | 2.0.4 | ja-lancada | 52dbde71, b32c9410, b8935ecf | autor 10-12 | dono: avaliar fechamento com v2.0.4 |
 | [#411](https://github.com/iqui27/nuvio-native-legacy/issues/411) | [Tizen 4.0 / v2.0.3] Play/Pause works but shows Samsung "Not | Samsung .tpk | bug | lancada | 2.0.4 | - | release | nós 10-10 | sem ação; conserto publicado |
 
 Notas:
@@ -244,170 +244,234 @@ Notas:
 - **#392**: Triagem 2026-10-12: 1d4b5e97 em v2.0.4; 2d3e472e em v2.0.4; 9023ebdb em v2.0.4. [alvo antes: ja-lancada; fechada no GH 10-15]
 - **#400**: Triagem 2026-10-12: 3d9db2d8 em v2.0.4; a46e1a4c em v2.0.4; f60a4ba5 em v2.0.4.
 - **#409**: Triagem 2026-10-12: 2051869e em v2.0.4; 5cd60adf em v2.0.4; 6d46e336 em v2.0.4. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).
-- **#410**: Triagem 2026-10-12: 52dbde71 em v2.0.4; b32c9410 em v2.0.4; b8935ecf em v2.0.4. Parcial: efeitos têm conserto; nitidez/4K precisa confirmação na TV.
 - **#411**: Triagem 2026-10-12: release-notes.md v2.0.4: - **Samsung Tizen 4 / 5: no more "Not Available" toast** on Play/Pause and other media keys (#411).. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).
 
 ## Conserto da integração 2.0.5 ainda sem release
 
-23 issues.
+4 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
-| [#302](https://github.com/iqui27/nuvio-native-legacy/issues/302) | Live TV issue persists with 2.1 tpk65 | Samsung .tpk | bug | integrada | 2.0.5 | - | 5cfc61f10, 6c4d3863, 8fea5018 | autor 10-10 | lancar com 2.0.5 se TV ok (testar no TCL/C9) |
 | [#391](https://github.com/iqui27/nuvio-native-legacy/issues/391) | Episodes and Seasons fail | Samsung .tpk | bug | integrada | 2.0.5 | - | merged | sem comentários | build+install no HEAD; sai na 2.0.7 |
 | [#402](https://github.com/iqui27/nuvio-native-legacy/issues/402) | Wrong sorting in sources | Samsung .tpk | bug | integrada | 2.0.5 | - | ca8f29b4, 219d3bf4 | autor 10-10 | lancar com 2.0.5 (testar no TCL antes do release) |
-| [#412](https://github.com/iqui27/nuvio-native-legacy/issues/412) | Playback makes UI extremely laggy | Samsung .tpk | bug | integrada | 2.0.5 | 2.0.6 | 224063f2, 224063f22 | nós 10-11 | merged em integracao/2.0.5 (7a6126407 Keep TPK recovery seek targets until host confirma) |
-| [#415](https://github.com/iqui27/nuvio-native-legacy/issues/415) | constant crashing, no matter if I play or not | LG | bug | integrada | 2.0.5 | 2.0.6 | 5c6b8093d, 5c266499 | nós 10-10 | lancar com 2.0.5 se TV ok (testar no TCL/C9) |
-| [#419](https://github.com/iqui27/nuvio-native-legacy/issues/419) | [Samsung Tizen 6 / v2.0.4] Clicking a Recommendations card d | Samsung .tpk | bug | integrada | 2.0.5 | ja-lancada | 7f338254, 8b5ed6c0, d6b41e1 | nós 10-11 | merged em integracao/2.0.5 (d6b41e161 test(posplay): cover TMDB recommendation open at e) |
 | [#428](https://github.com/iqui27/nuvio-native-legacy/issues/428) | Constant freezes | LG | bug | precisa-log | 2.0.5 | - | - | nós 10-11 | triar |
-| [#429](https://github.com/iqui27/nuvio-native-legacy/issues/429) | Subtitles auto select | Android | bug | integrada | 2.0.5 | - | e8d9086a4 | nós 10-11 | merged e8d9086a4 (review OK j-revg-i429hbs-y); sai na 2.0.7, dai fechar |
 | [#469](https://github.com/iqui27/nuvio-native-legacy/issues/469) | all movies shows not correct aspect ratio , original, stretc | Samsung .tpk | bug | precisa-log | 2.0.5 | 2.0.6 | - | sem comentários | reaberta no GitHub (OPEN no snapshot de 10-16); sem commit de conserto: triar |
-| [#470](https://github.com/iqui27/nuvio-native-legacy/issues/470) | Next Episode Countdown Only Starts After Credits Finish | Samsung .tpk | bug | integrada | 2.0.5 | - | 7839b119, d1087e75c | sem comentários | merged em integracao/2.0.5 (96a56ae2c fix: start next episode countdown when the card ap) |
-| [#471](https://github.com/iqui27/nuvio-native-legacy/issues/471) | Trailer Playback Does Not Fill the Cards Properly | Samsung .tpk | bug | integrada | 2.0.5 | 2.0.6 | 38369f89, 38369f890 | sem comentários | merged em integracao/2.0.5 (60254073f fix(tpk): confine card trailer holes to the poster) |
-| [#475](https://github.com/iqui27/nuvio-native-legacy/issues/475) | Subtitle outline color setting | Samsung .tpk | melhoria | integrada | 2.0.5 | - | 6a260e9b | autor 10-13 | lancar com 2.0.5 (testar no TCL antes do release) |
-| [#477](https://github.com/iqui27/nuvio-native-legacy/issues/477) | Bigger synopsis font | Samsung .tpk | melhoria | integrada | 2.0.5 | - | 1366561a, 6a260e9b, 6a260e9b0 | autor 10-13 | merged em integracao/2.0.5 (dd56de2e6 Merge integracao/2.0.5 preserving synopsis and epi) |
-| [#479](https://github.com/iqui27/nuvio-native-legacy/issues/479) | Formatter mode source list stutters on webOS | Samsung .tpk | bug | integrada | 2.0.5 | 2.0.6 | b3c38e71e | autor 10-13 | merged em integracao/2.0.5 (2a2356c29 fix: tint cached text RGB at draw time to restore ) |
-| [#481](https://github.com/iqui27/nuvio-native-legacy/issues/481) | Show audio and subtitle metadata in the stream source list | ? | feature | em_revisao | 2.0.5 | - | e4fb8c08/c9932635 | sem comentários | merge agente/205-pr487v2 (3 commits, review OK j-rev-pr487-v2, nenhum commit depois) ou de |
-| [#484](https://github.com/iqui27/nuvio-native-legacy/issues/484) | External subtitles disappear after a few minutes without inp | Samsung .tpk | bug | integrada | 2.0.5 | - | 027fd3c7, 027fd3c7c | autor 10-13 | merged em integracao/2.0.5 (df7db179c test(subtitles): make external-subtitle guards fas) |
-| [#486](https://github.com/iqui27/nuvio-native-legacy/issues/486) | Sometimes wont load P2P addons | ? | bug | integrada | 2.0.5 | ja-lancada | edff609f/c670c37e/20bb2f3a, 16351755c, cdb45cb92 | sem comentários | merged em integracao/2.0.5 (cdb45cb92 via agente/205-p2pusb) + 6d524f947 (URL http sem P2P |
-| [#488](https://github.com/iqui27/nuvio-native-legacy/issues/488) | Profiles switching | ? | bug | em_revisao | 2.0.5 | - | 067c0c35, f51aa3d76, 71fbc7453 | sem comentários | fix novo + re-review (ultimo VEREDITO BLOQUEIA); depois merge e resposta na issue |
-| [#492](https://github.com/iqui27/nuvio-native-legacy/issues/492) | Some Features suggestions | ? | feature | integrada | 2.0.5 | 2.0.6 | c624b273, c624b2739 | sem comentários | merged em integracao/2.0.5 (34a8d4819 Merge branch 'integracao/2.0.5' into agente/205-re) |
-| [#499](https://github.com/iqui27/nuvio-native-legacy/issues/499) | Cached / not cached indicator on Debrid sources (torbox, rea | ? | feature | integrada | 2.0.5 | - | aab8e18d, 57aee24fd | sem comentários | merged em integracao/2.0.5 (aab8e18d9 Mark debrid-cached sources with a lightning icon i) |
-| [#502](https://github.com/iqui27/nuvio-native-legacy/issues/502) | Detail page keeps the low-res thumbnail instead of loading f | ? | bug | integrada | 2.0.5 | - | d3fc8e5e, 20f1104f, 20f1104fc | sem comentários | merged em integracao/2.0.5 (d3fc8e5ee fix(detail): stop seeding list poster into backdro) |
-| [#503](https://github.com/iqui27/nuvio-native-legacy/issues/503) | Low-resolution backdrop when opening a recommended title's d | ? | bug | integrada | 2.0.5 | 2.0.6 | d3fc8e5e, 20f1104f | sem comentários | merged em integracao/2.0.5 (d3fc8e5ee fix(detail): stop seeding list poster into backdro) |
-| [#504](https://github.com/iqui27/nuvio-native-legacy/issues/504) | Catalog rows from removed add-ons remain in the “Not on home | ? | bug | integrada | 2.0.5 | - | be7c0dee, 3c58d0ce, 3c58d0ce6 | sem comentários | merged em integracao/2.0.5 (be7c0deeb fix(fileiras): drop untouched rows of removed add-) |
 
 Notas:
 
-- **#302**: Rascunho de correção: o conserto do live TV NÃO está na 2.0.2 (resposta anterior dizia que sim). 0021b573 (2.0.2) é parcial. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag. Log BKPH09 ainda não foi lido; sem conserto confirmado para este relato. Revisão 2026-10-12: Reconexão publicada, mas autor relata persistência em 2.0.4 em 10/10. [alvo antes: 2.0.6; fechada no GH 10-15] | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5cfc61f10); status -> integrada
 - **#391**: QN55Q60RAG, 2.0.3: só primeira temporada e episódios incompletos; log Z4HDY2 já fornecido. src/descoberta.c:parsearEpisodios, episodiosDoCatalogo e temporadasDosEps leem videos[], deduplicam (temporada, episódio), escolhem a lista de metadados e derivam as abas da lista publicada. A seleção descarta temporadas <= 0 e pode preferir outra lista quando a base parece lista de arquivos. SUSPEITA: cobertura/numeração ou escolha da lista de metadados; não prova duplicata de #372 nem resolução de #391. Há tratamento implementado, mas nenhum conserto estável especificamente comprovado para este relato. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15] | [sync 2026-10-16 21:10] merged c0dc799a3; fix 288e531ee (catálogos esparsos) + review OK j-rev-temporadas-r2
 - **#402**: Namer03, S95C, .tpk 2.0.3. A imagem mostra, na aba NMR, o cabecalho do grupo "Other SDR" com fileiras cujo nome (formatter do addon) diz "FHD | REMUX | SDR" e "FHD | SDR"; so a ultima diz "N/A | SDR" (essa realmente nao declara resolucao). CAUSA (lida no codigo, sem teste ainda): o grupo vem de grupoRes (src/streams.c:2105) que usa s->altura ou os selos r-4k/r-1080/r-720; a altura sai de stream_parse.c:281-283, que so procura os numeros 2160/1440/1080/720/480 e 4k/uhd, e badges_detectar (badges.c:40-42) so tem 1080p/1080i/1080. A palavra FHD sozinha (comum em formatter de AIOStreams) nao casa, entao altura=0 e o grupo e Outras (GRUPO_NOME, streams.c:2072). O app ja conhece FHD para canal ao vivo (nv_res_do_texto, livetv_regras.h:38) mas nao usa no filme/serie. NAO e ordenacao (nivelHdr, MP4 primeiro da LG e perfil 5 nao entram: e a Samsung .tpk e o problema e o grupo, nao a ordem dentro dele). Nao e configuracao (fonteregra.h trata auto-play, nao grupos). Cuidado no conserto: nv_res_do_texto aceita "hd" solto como 720, o que casaria DTS-HD; copiar so fhd/fullhd/full hd. Candidato a 2.0.4 (muda so o parser, 2 linhas + teste), decisao do dono. SUSPEITA: o JSON bruto do autor pode ter a resolucao em outro campo; sem o log/JSON da fonte nao foi provado. Diagnóstico atualizado: torrents sem cache; sem conserto identificado. Revisão 2026-10-12: FHD corrigido parcialmente; autor reabriu com ordenação ainda errada em 2.0.4. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]
-- **#412**: Log QHQRVE (S95C, .tpk): relógio do player congelado, UI com upd=120 ms por quadro, parar retorna 0 ms mas o player nativo segue tocando. Conserto em agente/204-tpkpreso412 (71c7d615): ASS deixa de segurar o quadro, recupera relógio congelado, parada confirmada antes de abrir outro player. Revisão Codex achou P1 (Voltar durante PrepareAsync encerraria o processo numa TV sã): rodada 2 em andamento. Aguarda log; sem conserto confirmado para este relato. Revisão 2026-10-12: Correção 2.0.4 não cobre a persistência após reinstalação; comentário de 11/10 descreve novo fix em progresso. Escrivão 14/10 14:47: integrada via tpk412b. [sync 2026-10-15: agente/205-tpk412b integrada]
-- **#415**: Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5c6b8093d); status -> integrada
-- **#419**: Job i419recs done 20:05: commit d6b41e1 so teste posplay. Sem device Tizen. Ja corrigido em 2.0.5 pelos commits v2.0.5. [sync 2026-10-15: agente/205-i419recs integrada] Escrivao 10-15 22:49: merged via agente/205-i419recs (f9ccde55c).
 - **#428**: Aguarda código/log para diagnóstico. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).
-- **#429**: Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente. | Escrivao 2026-10-15 07:50: sem merge ainda; review OK y, branch nao mergeado | Escrivao 15/10 09:48: review OK ainda sem merge. | Escrivão 10/15 12:48: branch i429hbs ainda nao integrada (2 commits fora) | Escrivao 10-15 13:48: review y OK (j-revg-i429hbs-y 23:11), branch f59554839 ainda NAO mergeado. [sync 2026-10-15: agente/205-i429hbs integrada] Escrivao 10-15 22:49: merged via agente/205-i429hbs (e8d9086a4). | Snapshot 2026-10-16: issues.json diz CLOSED; mapa fechou e tirou o alvo. Confirmar conserto e versao antes de arquivar. | Snapshot 2026-10-16: issues.json diz CLOSED; conserto f59554839 merged em e8d9086a4, sem release ainda. Reabrir ou esperar 2.0.7 para fechar de vez. | [sync 2026-10-16 21:00] merged e8d9086a4 em integracao/2.0.5. | [sync 2026-10-16 22:55] CLOSED no issues.json; conserto merged e8d9086a4
 - **#469**: Q800T (GQ65Q800TGT, 2020, Tizen 5.5), 2.0.5. Nenhum modo de aspecto muda a imagem. 2.0.5 ja tem c4f344e8 (DisplayRoi + fallback 2.0.4, #426/#341) e 81d2152b (tpk 6+). Suspeita: Tizen 5.5 cai no caminho sem DisplayRoi. Pedir codigo do log e foto. | [sync 2026-10-16 22:55] issues.json 10-16: OPEN; segue precisa-log
-- **#470**: rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log B9RJZ8 (registro 73397): [posplay] creditos aceito (sobram 265s, janela 300s); cartao aparece nos creditos mas contagem so comeca no fim. Escrivão 14/10 14:47: integrada via i18nordem, i470. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). [sync 2026-10-15: agente/205-i470 integrada]
-- **#471**: rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log QNHOK2 (registro 73399): "[trailer] tpk: plano visivel (sem recorte)" — trailer no cartao sem crop/fill no tpk. Relacionado a #469 (DisplayRoi/aspecto no tpk). Escrivão 14/10 14:47: integrada via i471. [sync 2026-10-15: agente/205-i471 integrada]
-- **#475**: Pedido: cor do contorno da legenda. Escrivão 14/10 14:47: integrada via sinopse477.
-- **#477**: Snapshot 2026-10-14 10:15: 1366561a "Restore the original hero synopsis size and add a Synopsis size setting" em agente/205-sinopse; j-205-sinopse done e j-revg-sinopse veredito OK. Escrivao 14/10 19:2x: 1366561a ancestral de integracao/2.0.5 (6a260e9b). [sync 2026-10-15: agente/205-sinopse477 integrada]
-- **#479**: LG C5 webOS 26, 2.0.5, log M8C717 (registro 73696): descer na lista de fontes no modo Formatter engasga; modo padrao liso. | Escrivao 10-15 08:50: job formatter479 review OK; ver fora_do_github dono-205-formatter479. [sync 2026-10-15: agente/205-formatter479 integrada]
-- **#481**: Snapshot 2026-10-14 10:15: "Sources: show declared audio and subtitle languages" (e4fb8c08) e o merge c9932635 "Merge PR #487 v2" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15: agente/205-pr487v2 (ac1ba9725) review OK j-rev-pr487-v2; nao mergeado; dono decide 2.0.6. | Escrivao 2026-10-15 11:48: GH fechada; branch 3 ahead, review OK, nao mergeado | Escrivão 10/15 12:48: GH #481 fechada; branch pr/487-v2 e agente/205-pr487v2 nao integrados | [sync 2026-10-16 22:55] agente/205-pr487v2 3 ahead (tip ac1ba9725); VEREDITO OK j-rev-pr487-v2, nenhum commit depois
-- **#484**: LG OLED C1 webOS, 2.0.5: legenda de addon (OpenSubtitlesV3/AIOMetadata) some apos minutos sem tecla; embutida ok. Sem log. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-14). | Escrivão 2026-10-14 16:11: conserto integrado via agente/205-leg484 (merge 027fd3c7); fechada no GitHub. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). [sync 2026-10-15: agente/205-leg484 integrada]
-- **#486**: Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso. | Escrivao 2026-10-15 11:48: prompt p-205-p2p486 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: p2p486 merged, mas p2pusb (#486/#505) segue aberto | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-p2p486 integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92). | [sync 2026-10-16 21:00] agente/205-p2pusb merged; j-rev-p2pusbtela OK (9b4f37efb ainda 1 ahead). d25a3e513/6d524f947 (#552/#505) merged via PR #559 review OK. | [sync 2026-10-16 22:55] merged 21f169226/bf160f720 no HEAD f0f4f4928
-- **#488**: pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR. | Escrivao 10-15 08:50: pr/493-v3 (3 ahead, review OK 06:50, nao mergeado) substitui o pr/493 velho; #488 segue nele. | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15 10:50: reaberta no GH; pr/493-v3 review OK sem merge. | Escrivao 2026-10-15 11:48: prompt p-205-perfil488 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i488perfil integrada] [sync 2026-10-15: agente/205-perfil488 integrada] Escrivao 10-15 22:49: merged via agente/205-i488perfil (f51aa3d76). | [sync 2026-10-16 21:00] agente/205-pr493 continua 12 ahead com VEREDITO BLOQUEIA j-revg-pr493; pr/493-v3 review OK 06:50 mas commits 5694694cc/65613c562 ja estao em HEAD. | [sync 2026-10-16 22:55] agente/205-pr493 12 ahead (tip 71fbc7453); VEREDITO BLOQUEIA j-revg-pr493 mais novo que OK j-revpr493-v3 | Escrivão 2026-10-16 22:1x: agente/205-pr493 12 ahead; VEREDITO BLOQUEIA j-revg-pr493 depois dos OKs de 10-15; branch fora de integracao/2.0.5
-- **#492**: Review j-revg-retomamorna OK 17:06. Merge agente/205-retomamorna em integracao/2.0.5 (c624b273, 18:48); j-merge-205-retomamorna done 18:45. Sem acao remota. Escrivao 14/10 19:1x: merge 18:48. [sync 2026-10-15: agente/205-retomamorna integrada]
-- **#499**: Snapshot 2026-10-14 10:15: aab8e18d "Mark debrid-cached sources with a lightning icon in the source list (#499)" e ancestral de integracao/2.0.5 (merge 57aee24f agente/205-499cache). Nenhum job j-revg-499cache: conserto integrado sem review registrado. OPEN no GitHub. [sync 2026-10-15: agente/205-499cache integrada] | [sync 2026-10-16 21:00] agente/205-debridprem review OK (j-rev-205-debridprem) ainda 1 ahead; nao merged.
-- **#502**: Snapshot 2026-10-14 10:15: d3fc8e5e "fix(detail): stop seeding list poster into backdrop for recommendations" cobre #502 e #503, so em agente/205-i502arte. Job RUNNING, sem validacao. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i502arte. [sync 2026-10-15: agente/205-i502arte integrada] | [sync 2026-10-16 21:00] imgres merged 20d1518ad (ff1cd6dcd w342->w500/w780, 44bf4884a metahub) — upgrade de arte em alta qualidade.
-- **#503**: Snapshot 2026-10-14 10:15: mesmo conserto d3fc8e5e de #502 (agente/205-i502arte, RUNNING). OPEN no GitHub. Escrivão 14/10 14:47: integrada via i502arte. | Escrivão 2026-10-14 16:11: merge 20f1104f consta em log.txt da integracao. | [sync 2026-10-16 21:00] imgres merged 20d1518ad (ff1cd6dcd/44bf4884a).
-- **#504**: Snapshot 2026-10-14 10:15: conserto be7c0dee "fix(fileiras): drop untouched rows of removed add-ons when the sheet opens (#504)" so em agente/205-i504 (nao e ancestral de integracao/2.0.5). Job j-205-i504 RUNNING, sem log de validacao ainda. Issue ainda OPEN no GitHub. Escrivão 14/10 14:47: integrada via i504. | Escrivao 2026-10-15 11:48: prompt p-205-i504 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i504 integrada] | [sync 2026-10-16 21:00] merged via agente/205-i504 + 455135df2 (PR #543).
 
 ## Próximo patch proposto (2.0.6)
 
-34 issues.
+46 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
 | [#407](https://github.com/iqui27/nuvio-native-legacy/issues/407) | Top menu open when scrolling up on the title page | Samsung .tpk | bug | integrada | - | 2.0.6 | 219d3bf4 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
+| [#412](https://github.com/iqui27/nuvio-native-legacy/issues/412) | Playback makes UI extremely laggy | Samsung .tpk | bug | integrada | 2.0.7 | 2.0.6 | 224063f2, 224063f22, agente/205-tpk412b | nós 10-11 | Verify merged result; build/install and check device. |
 | [#413](https://github.com/iqui27/nuvio-native-legacy/issues/413) | [Samsung Tizen 4 / v2.0.3] Finished movie plays again when s | Samsung .tpk | bug | integrada | - | 2.0.6 | d8cc7fa2 | autor 10-10 | lancar com 2.0.5 (testar no TCL antes do release) |
-| [#414](https://github.com/iqui27/nuvio-native-legacy/issues/414) | https://nuvio.tvflix.co.uk | Samsung .tpk | bug | integrada | - | 2.0.6 | 168be34d9 | sem comentários | merged em integracao/2.0.5 (90f09070a fix(collections): keep Menu catalog selector open ) |
-| [#418](https://github.com/iqui27/nuvio-native-legacy/issues/418) | App fails to connect: "The Nuvio account server didn't respo | Samsung .tpk | bug | integrada | - | 2.0.6 | deb68c4b9 | sem comentários | merged em integracao/2.0.5 (01567c6b0 Classify account login failures and retry transien) |
+| [#414](https://github.com/iqui27/nuvio-native-legacy/issues/414) | https://nuvio.tvflix.co.uk | Samsung .tpk | bug | integrada | 2.0.7 | 2.0.6 | 168be34d9, agente/205-col414 | sem comentários | Verify merged result; build/install and check device. |
+| [#415](https://github.com/iqui27/nuvio-native-legacy/issues/415) | constant crashing, no matter if I play or not | LG | bug | em_job | 2.0.7 | 2.0.6 | 5c6b8093d, 5c266499, f77eeeef7 | nós 10-10 | Review and merge agente/205-memg4 (job done 13:42, fix job running 14:45 for remaining mem |
+| [#418](https://github.com/iqui27/nuvio-native-legacy/issues/418) | App fails to connect: "The Nuvio account server didn't respo | Samsung .tpk | bug | integrada | 2.0.7 | 2.0.6 | deb68c4b9, agente/205-login418 | sem comentários | Verify merged result; build/install and check device. |
 | [#423](https://github.com/iqui27/nuvio-native-legacy/issues/423) | Not update LG | LG | bug | aberta | - | 2.0.6 | - | autor 10-11 | triar/reproduzir; falta conserto comprovado |
 | [#424](https://github.com/iqui27/nuvio-native-legacy/issues/424) | Live tv not loading categories | Android | bug | aberta | - | 2.0.6 | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#451](https://github.com/iqui27/nuvio-native-legacy/issues/451) | Continue watching subtitles not syncing | Samsung .tpk | bug | aberta | - | 2.0.6 | - | autor 10-11 | Pedir versão exata, perfil usado nos dois clientes, uma série/episódio ausente e sequência |
-| [#459](https://github.com/iqui27/nuvio-native-legacy/issues/459) | Send partial playback progress to Simkl | LG | feature | integrada | - | 2.0.6 | fe1366e5 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
-| [#461](https://github.com/iqui27/nuvio-native-legacy/issues/461) | Top toolbar | Android | feature | integrada | - | 2.0.6 | f3de11e7 | nós 10-12 | lancar com 2.0.5 (testar no TCL antes do release) |
-| [#462](https://github.com/iqui27/nuvio-native-legacy/issues/462) | Samsung .tpk: test build for automatic subtitle sync (Tizen  | Samsung .tpk | meta | integrada | - | 2.0.6 | 84095af, 3247fcd22, da9e686a7 | autor 10-12 | merged em integracao/2.0.5 (1d946dad0 i18n: fill subtitle-sync entries in all 28 languag) |
-| [#468](https://github.com/iqui27/nuvio-native-legacy/issues/468) | All Jellyfin catalogs do not show in catalogs list | LG | bug | integrada | - | 2.0.6 | b0e429762, c47a40788, 08c98b017 | sem comentários | merged 08c98b017; review OK j-rev-homerefresh; build+install e confirmar na TV ordem das f |
+| [#459](https://github.com/iqui27/nuvio-native-legacy/issues/459) | Send partial playback progress to Simkl | LG | feature | integrada | 2.0.7 | 2.0.6 | fe1366e5, agente/205-pr455, agente/205-simkl-scrobble | sem comentários | Verify merged result; build/install and check device. |
+| [#461](https://github.com/iqui27/nuvio-native-legacy/issues/461) | Top toolbar | Android | feature | integrada | 2.0.7 | 2.0.6 | f3de11e7, agente/205-menutopo | nós 10-12 | Verify merged result; build/install and check device. |
+| [#462](https://github.com/iqui27/nuvio-native-legacy/issues/462) | Samsung .tpk: test build for automatic subtitle sync (Tizen  | Samsung .tpk | meta | integrada | 2.0.7 | 2.0.6 | 84095af, 3247fcd22, da9e686a7 | autor 10-12 | Verify merged result; build/install and check device. |
+| [#468](https://github.com/iqui27/nuvio-native-legacy/issues/468) | All Jellyfin catalogs do not show in catalogs list | LG | bug | integrada | 2.0.7 | 2.0.6 | b0e429762, c47a40788, 08c98b017 | sem comentários | Verify merged result; build/install and check device. |
+| [#471](https://github.com/iqui27/nuvio-native-legacy/issues/471) | Trailer Playback Does Not Fill the Cards Properly | Samsung .tpk | bug | integrada | 2.0.7 | 2.0.6 | 38369f89, 38369f890, agente/205-i471 | sem comentários | Verify merged result; build/install and check device. |
+| [#479](https://github.com/iqui27/nuvio-native-legacy/issues/479) | Formatter mode source list stutters on webOS | Samsung .tpk | bug | integrada | 2.0.7 | 2.0.6 | b3c38e71e, agente/205-formatter479 | autor 10-13 | Verify merged result; build/install and check device. |
+| [#492](https://github.com/iqui27/nuvio-native-legacy/issues/492) | Some Features suggestions | ? | feature | integrada | 2.0.7 | 2.0.6 | c624b273, c624b2739, agente/205-retomamorna | sem comentários | Verify merged result; build/install and check device. |
 | [#494](https://github.com/iqui27/nuvio-native-legacy/issues/494) | Add contribution path for Aniskip and TheIntroDB skip marker | ? | feature | aberta | - | 2.0.6 | - | sem comentários | triar e criar job |
 | [#496](https://github.com/iqui27/nuvio-native-legacy/issues/496) | No next-episode suggestion / no quick next episode shortcut  | ? | feature | aberta | - | 2.0.6 | - | sem comentários | triar e criar job |
-| [#500](https://github.com/iqui27/nuvio-native-legacy/issues/500) | [Samsung Tizen 9 / V2.0.5] Trailers not playing on Hero | ? | bug | integrada | - | 2.0.6 | b07ef570a, bf9edb493, agente/205-herotrailer | sem comentários | merged via agente/205-trailerexp/ad3b042cb + herotrailer; review OK j-rev-trailerexp |
-| [#501](https://github.com/iqui27/nuvio-native-legacy/issues/501) | [Android TV] Add External Player Selection and Custom Subtit | ? | feature | integrada | - | 2.0.6 | 161cdebd2, 281b4af37, 059f4d4f3/276207fac/a04f2a820; | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
-| [#505](https://github.com/iqui27/nuvio-native-legacy/issues/505) | My P2p add on sources don’t load with version2.05 | ? | bug | integrada | - | 2.0.6 | b576c7a9, b576c7a9a, cdb45cb92 | sem comentários | merged (fix i505 8f4fb5587 + 6d524f947 PR #559 URL http sem P2P); build+install no .tpk e  |
-| [#506](https://github.com/iqui27/nuvio-native-legacy/issues/506) | App fails to connect: "The Nuvio account server didn't respo | ? | bug | integrada | - | 2.0.6 | 0e567d1a, agente/205-dicascontrole | sem comentários | merged em integracao/2.0.5 (a5c857c51 Merge integracao/2.0.5 into agente/205-dicascontro) |
+| [#500](https://github.com/iqui27/nuvio-native-legacy/issues/500) | [Samsung Tizen 9 / V2.0.5] Trailers not playing on Hero | ? | bug | integrada | 2.0.7 | 2.0.6 | b07ef570a, bf9edb493, agente/205-herotrailer | sem comentários | Verify merged result; build/install and check device. |
+| [#501](https://github.com/iqui27/nuvio-native-legacy/issues/501) | [Android TV] Add External Player Selection and Custom Subtit | ? | feature | integrada | 2.0.7 | 2.0.6 | 161cdebd2, 281b4af37, 059f4d4f3/276207fac/a04f2a820; | sem comentários | Verify merged result; build/install and check device. |
+| [#503](https://github.com/iqui27/nuvio-native-legacy/issues/503) | Low-resolution backdrop when opening a recommended title's d | ? | bug | integrada | 2.0.7 | 2.0.6 | d3fc8e5e, 20f1104f, agente/205-i502arte | sem comentários | Verify merged result; build/install and check device. |
+| [#505](https://github.com/iqui27/nuvio-native-legacy/issues/505) | My P2p add on sources don’t load with version2.05 | ? | bug | integrada | 2.0.7 | 2.0.6 | b576c7a9, b576c7a9a, cdb45cb92 | sem comentários | Verify merged result; build/install and check device. |
+| [#506](https://github.com/iqui27/nuvio-native-legacy/issues/506) | App fails to connect: "The Nuvio account server didn't respo | ? | bug | integrada | 2.0.7 | 2.0.6 | 0e567d1a, agente/205-dicascontrole, agente/205-i505 | sem comentários | Verify merged result; build/install and check device. |
 | [#507](https://github.com/iqui27/nuvio-native-legacy/issues/507) | Library on home | ? | feature | aberta | - | 2.0.6 | - | sem comentários | triar e criar job |
-| [#508](https://github.com/iqui27/nuvio-native-legacy/issues/508) | Stream loading backdrop | ? | feature | integrada | - | 2.0.6 | d57b79e9, d57b79e9b | sem comentários | merged em integracao/2.0.5 (95d225dc2 Merge branch 'integracao/2.0.5' into agente/205-i5) |
-| [#530](https://github.com/iqui27/nuvio-native-legacy/issues/530) | Subtitle issues | ? | ? | integrada |  | 2.0.6 | cbd542148, 23cb26843, agente/205-legatraso | sem comentários | merged em integracao/2.0.5 (23cb26843, sinal do atraso manual invertido); revisao BLOQUEIA |
-| [#539](https://github.com/iqui27/nuvio-native-legacy/issues/539) | Feature Request: Add Deep Link Support to Open Specific Movi | ? | feature | integrada |  | 2.0.6 | a4f220cd7, 8f38bb943/a3eb1e19a/7cf145dca/f44e64863;, a4f220cd7 | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
-| [#545](https://github.com/iqui27/nuvio-native-legacy/issues/545) | Catalog Now Showing | ? | bug | integrada | - | 2.0.6 | 26b9c635b/21d1783b6/67985ea5d, merged, review | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
-| [#548](https://github.com/iqui27/nuvio-native-legacy/issues/548) | Mark as watched not working | ? | bug | integrada | - | 2.0.6 | merged, 66a608ef7/8330673a8/2d04fbecc/da2c69701/f87c41ed7/9bc31cc9d/b074d9fd5/5b37cecd8, 91da5935e | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
-| [#549](https://github.com/iqui27/nuvio-native-legacy/issues/549) | Needs the See All tile for every row in showcase layout | ? | enhancement | integrada | - | 2.0.6 | 4baf783fa | sem comentários | build+install no HEAD 1b5c9d39a e resposta na issue |
-| [#551](https://github.com/iqui27/nuvio-native-legacy/issues/551) | Catalog Not Loading 2.0.6 | LG webOS 25/26 | bug | integrada | 2.0.6 | 2.0.6 | 1c9043ed0/a2e9daf91, merged, e680776ed | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
-| [#553](https://github.com/iqui27/nuvio-native-legacy/issues/553) | queda de desempenho | ? | bug | integrada | - | 2.0.6 | - | sem comentários | merged (perf glass + detail); build+install no HEAD e medir na TV antes de responder |
-| [#555](https://github.com/iqui27/nuvio-native-legacy/issues/555) | Search does not work as expected | ? | ? | integrada | - | 2.0.6 | merged, 438423097 | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
+| [#508](https://github.com/iqui27/nuvio-native-legacy/issues/508) | Stream loading backdrop | ? | feature | integrada | 2.0.7 | 2.0.6 | d57b79e9, d57b79e9b, agente/205-cineabre | sem comentários | Verify merged result; build/install and check device. |
+| [#530](https://github.com/iqui27/nuvio-native-legacy/issues/530) | Subtitle issues | ? | ? | integrada | 2.0.7 | 2.0.6 | cbd542148, 23cb26843, agente/205-legatraso | sem comentários | Verify merged result; build/install and check device. |
+| [#539](https://github.com/iqui27/nuvio-native-legacy/issues/539) | Feature Request: Add Deep Link Support to Open Specific Movi | ? | feature | integrada | 2.0.7 | 2.0.6 | a4f220cd7, 8f38bb943/a3eb1e19a/7cf145dca/f44e64863;, a4f220cd7 | sem comentários | Verify merged result; build/install and check device. |
+| [#545](https://github.com/iqui27/nuvio-native-legacy/issues/545) | Catalog Now Showing | ? | bug | integrada | 2.0.7 | 2.0.6 | 26b9c635b/21d1783b6/67985ea5d, merged, review | sem comentários | Verify merged result; build/install and check device. |
+| [#549](https://github.com/iqui27/nuvio-native-legacy/issues/549) | Needs the See All tile for every row in showcase layout | ? | enhancement | integrada | - | 2.0.6 | 4baf783fa | sem comentários | build+install no HEAD ab0e9a597 e resposta na issue |
+| [#551](https://github.com/iqui27/nuvio-native-legacy/issues/551) | Catalog Not Loading 2.0.6 | LG webOS 25/26 | bug | integrada | 2.0.7 | 2.0.6 | 1c9043ed0/a2e9daf91, merged, e680776ed | sem comentários | Verify merged result; build/install and check device. |
+| [#553](https://github.com/iqui27/nuvio-native-legacy/issues/553) | queda de desempenho | ? | bug | integrada | 2.0.7 | 2.0.6 | 6a64c2e13, a691e96fb, abb9e49b9 | sem comentários | On-TV perf check on the TCL of merged traktvidro glass-card fix (bb9f2abc9/d4317aaa4); the |
+| [#555](https://github.com/iqui27/nuvio-native-legacy/issues/555) | Search does not work as expected | ? | ? | integrada | 2.0.7 | 2.0.6 | merged, 438423097, agente/205-busca555 | sem comentários | Verify merged result; build/install and check device. |
 | [#557](https://github.com/iqui27/nuvio-native-legacy/issues/557) | Playback cannot be skipped to a particular time stamp | ? | ? | aberta | - | 2.0.6 | - | sem comentários | triar: seek para timestamp especifico; criar job |
-| [#558](https://github.com/iqui27/nuvio-native-legacy/issues/558) | Black screen on launch | ? | bug | integrada | - | 2.0.6 | cc49341e6, merged, a1888d007 | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
-| [#562](https://github.com/iqui27/nuvio-native-legacy/issues/562) | Reload button in player | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: botao de recarregar fonte no player; criar job |
+| [#558](https://github.com/iqui27/nuvio-native-legacy/issues/558) | Black screen on launch | ? | bug | integrada | 2.0.7 | 2.0.6 | cc49341e6, merged, a1888d007 | sem comentários | Verify merged result; build/install and check device. |
 | [#564](https://github.com/iqui27/nuvio-native-legacy/issues/564) | Request to Add Playback Speed Controls | ? | feature | aberta | - | 2.0.6 | - | sem comentários | triar: controle de velocidade de reproducao; criar job |
-| [#565](https://github.com/iqui27/nuvio-native-legacy/issues/565) | PenguPlay add on doesn't work | ? | bug | integrada | - | 2.0.6 | d25a3e513, 68cf2c63b/c32a87bbf, 5aad21874 | sem comentários | merged 5aad21874; review OK j-rev-i565pengu (tests/pengu.sh 27/27 com P2P off); falta test |
+| [#565](https://github.com/iqui27/nuvio-native-legacy/issues/565) | PenguPlay add on doesn't work | ? | bug | integrada | 2.0.7 | 2.0.6 | d25a3e513, 68cf2c63b/c32a87bbf, 5aad21874 | sem comentários | Verify merged result; build/install and check device. |
 | [#566](https://github.com/iqui27/nuvio-native-legacy/issues/566) | Some issues | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar "Some issues": esperar detalhes do usuario antes de criar job |
 | [#570](https://github.com/iqui27/nuvio-native-legacy/issues/570) | [Samsung Tizen 9] Changing episode source shows previous mov | Samsung Tizen 9 | bug | aberta | - | 2.0.6 | - | sem comentários | triar: trocar de fonte mostra o filme anterior e perde a retomada (Tizen 9) |
+| [#577](https://github.com/iqui27/nuvio-native-legacy/issues/577) | Low fps on tyzen65 after 2.0.6 update | Samsung Tizen 6.5 | bug | aberta | - | 2.0.6 | - | sem comentários | triar: baixo FPS no Tizen 6.5 depois da 2.0.6; pedir log/modelo e criar job |
+| [#578](https://github.com/iqui27/nuvio-native-legacy/issues/578) | Converted audio slightly delayed / out of lip sync on Samsun | Samsung .tpk | ? | aberta | - | 2.0.6 | - | sem comentários | triar: audio atrasado no Tizen 10; pedir amostra e criar job |
+| [#579](https://github.com/iqui27/nuvio-native-legacy/issues/579) | V2.06 scrolling catalogue display glitch | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: glitch de rolagem do catalogo na 2.0.6; pedir video e criar job |
+| [#582](https://github.com/iqui27/nuvio-native-legacy/issues/582) | Frequent Stuttering and Freezing on LG TVs, Even with Reduce | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: travamento/congelamento em LG TV mesmo com desempenho reduzido; mesmo eixo de #553/ |
+| [#581](https://github.com/iqui27/nuvio-native-legacy/issues/581) | Changing Volume pauses the playback | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: mexer no volume pausa a reproducao; provavel no caminho do indicador de volume (mao |
+| [#584](https://github.com/iqui27/nuvio-native-legacy/issues/584) | IMDb trailers start in low resolution and take too long to i | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: trailer do IMDb comeca em resolucao baixa e demora a subir; pedir log e ver o camin |
+| [#585](https://github.com/iqui27/nuvio-native-legacy/issues/585) | There isn't mic icon in search window | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: icone do microfone nao aparece na janela de busca; pedir print/plataforma e criar j |
+| [#588](https://github.com/iqui27/nuvio-native-legacy/issues/588) | Live Sport Stream addons | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: add-ons de esporte ao vivo nao aparecem/nao carregam; sem job |
 
 Notas:
 
 - **#407**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui.
+- **#412**: Log QHQRVE (S95C, .tpk): relógio do player congelado, UI com upd=120 ms por quadro, parar retorna 0 ms mas o player nativo segue tocando. Conserto em agente/204-tpkpreso412 (71c7d615): ASS deixa de segurar o quadro, recupera relógio congelado, parada confirmada antes de abrir outro player. Revisão Codex achou P1 (Voltar durante PrepareAsync encerraria o processo numa TV sã): rodada 2 em andamento. Aguarda log; sem conserto confirmado para este relato. Revisão 2026-10-12: Correção 2.0.4 não cobre a persistência após reinstalação; comentário de 11/10 descreve novo fix em progresso. Escrivão 14/10 14:47: integrada via tpk412b. [sync 2026-10-15: agente/205-tpk412b integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-tpk412b: merged; j-rev3-tpk412b.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-tpk412b: merged; j-rev3-tpk412b.log: OK. 
 - **#413**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim.
 - **#414**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [sync 2026-10-15: agente/205-col414 integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-col414: merged; j-rev2-205-col414.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-col414: merged; j-rev2-205-col414.log: OK. 
+- **#415**: [sync 2026-10-17 12:15] Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5c6b8093d); status -> integrada
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-memg4: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-memg4: running; No mapped review verdict. 
 - **#418**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [sync 2026-10-15: agente/205-login418 integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-login418: merged; j-rev-205-login418.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-login418: merged; j-rev-205-login418.log: OK. 
 - **#423**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.
 - **#424**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.
 - **#451**: QN74F Tizen 9, versão apenas Latest: Continue Watching tem uma série contra quatro em outros clientes; autor corrige título e confirma Nuvio sync, sem Trakt/Simkl. src/syncprog.c:syncprog_puxar já importa sync_pull_watch_progress do perfil ativo, normaliza milissegundos e descarta duração inválida; syncprog_aplicar mescla progresso e src/descoberta.c monta a união da conta/local. SUSPEITA: perfil, importação/normalização ou filtros de CW; não ausência geral de sync nem problema de legendas. Sem log nem conserto comprovado deste caso.
 - **#459**: LG 2.0.4, Simkl conectado diretamente: pede enviar progresso parcial ao pausar/sair para retomar em outros apps. src/simkl.c:simkl_ler_playback e simkl_continuar leem pausados; simkl_episodios_marcar/simkl_titulo_marcar enviam histórico de visto. src/player.c chama trakt_scrobble ao tocar/pausar; não há envio Simkl equivalente neste caminho. Leitura de playback e histórico existem, envio incremental Simkl não comprovado. Limite demonstrado do cliente, sem afirmar capacidade atual da API Simkl offline. Escrivão 14/10 14:47: integrada via simkl-scrobble.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr455: merged; j-rev-pr455.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-simkl-scrobble: merged; j-rev4-simkl.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr455: merged; j-rev-pr455.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-simkl-scrobble: merged; j-rev4-simkl.log: OK. 
 - **#461**: Pede opção de toolbar no topo; mantenedor responde que hoje há menu lateral e relaciona #407. src/menu.c:desenhaBarra/geoEm implementam rail/painel lateral; src/detail.c roteia CIMA para área social e ESQUERDA para menu. Não há opção top toolbar comprovada; barra social no topo não é substituto da navegação principal. Sem bug ou causa a diagnosticar. Escrivão 14/10 14:47: integrada via menutopo.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review. 
 - **#462**: Job i462sync done 20:07: 84095af auto sync rejection translated tracks; tests autosync.sh/legsync.sh rc 0. [sync 2026-10-15: agente/205-i18n462 integrada] [sync 2026-10-15: agente/205-i462sync integrada] Escrivao 10-15 22:49: merged via agente/205-i462sync (da9e686a7).
-- **#468**: [sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato. Sync 2026-10-16 22:51: merged 08c98b017 no HEAD 1b5c9d39a; review OK j-rev-homerefresh (22:21). [sync 2026-10-17 00:05] HEAD b280cd6; sai na 2.0.7. TV segue 496 merges atras (cb7ece972).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i18n462: merged; No mapped review verdict.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i462sync: merged; j-revg-i462sync-z.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i18n462: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i462sync: merged; j-revg-i462sync-z.log: OK. 
+- **#468**: [sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato. Sync 2026-10-16 22:51: merged 08c98b017 no HEAD ab0e9a597; review OK j-rev-homerefresh (22:21). [sync 2026-10-17 00:05] HEAD b280cd6; sai na 2.0.7. TV segue 168 merges atras (cb7ece972). Sync 2026-10-17 04:55: a Home tambem segue reordenar/desativar e novas fontes depois do merge f41a4e154 (hero dividido, sem review dedicado).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-homerefresh: merged; j-rev-homerefresh.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-homerefresh: merged; j-rev-homerefresh.log: OK. 
+- **#471**: rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log QNHOK2 (registro 73399): "[trailer] tpk: plano visivel (sem recorte)" — trailer no cartao sem crop/fill no tpk. Relacionado a #469 (DisplayRoi/aspecto no tpk). Escrivão 14/10 14:47: integrada via i471. [sync 2026-10-15: agente/205-i471 integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i471: merged; j-rev7-i471.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i471: merged; j-rev7-i471.log: OK. 
+- **#479**: LG C5 webOS 26, 2.0.5, log M8C717 (registro 73696): descer na lista de fontes no modo Formatter engasga; modo padrao liso. | Escrivao 10-15 08:50: job formatter479 review OK; ver fora_do_github dono-205-formatter479. [sync 2026-10-15: agente/205-formatter479 integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-formatter479: merged; j-rev-205-formatter479.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-formatter479: merged; j-rev-205-formatter479.log: OK. 
+- **#492**: Review j-revg-retomamorna OK 17:06. Merge agente/205-retomamorna em integracao/2.0.5 (c624b273, 18:48); j-merge-205-retomamorna done 18:45. Sem acao remota. Escrivao 14/10 19:1x: merge 18:48. [sync 2026-10-15: agente/205-retomamorna integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-retomamorna: merged; j-revg-retomamorna.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-retomamorna: merged; j-revg-retomamorna.log: OK. Newer fix log requires review. 
 - **#494**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#496**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#500**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels bug. Sem triagem local. [sync 2026-10-15: agente/205-i500q integrada] Escrivao 10-15 22:49: merged via agente/205-i500q (bf9edb493). Escrivao 10-16 00:28: merge agente/205-herotrailer (85221cec4 ajustes/hero trailer veto row); review j-revg-herotrailer OK. Escrivao 10-16 01:50: merge agente/205-perffinal 4359b10f5; review j-revg-perffinal OK. | [sync 2026-10-16 21:00] trailer expandido merged ad3b042cb; review OK j-rev-trailerexp.
-- **#501**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. | Escrivao 10-16 14:58: job extplayer done f954a272c (configuracao de player externo); sem review; PNG nao sai no host (sem NV_ANDROID). | [sync 2026-10-16 21:00] extplayer 161cdebd2 + playerext 281b4af37 merged; reviews OK j-rev-extplayer-r2/j-rev-playerext-r2; fix a04f2a820/276207fac | [sync 2026-10-16 22:55] merged 281b4af37 no HEAD f0f4f4928 | Escrivão 2026-10-16 22:1x: merged 281b4af37 nesta janela (HEAD 1b5c9d39a); review j-rev-extplayer-r2/j-rev-playerext-r2; player externo Android; falta a fonte de legenda custom; entra na 2.0.7
-- **#505**: Snapshot 2026-10-14 10:15: 3fc691d4 "fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review. | Escrivao 2026-10-15 11:48: prompt p-205-i505* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: escopo em agente/205-p2pusb | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-i505 integrada] [sync 2026-10-15: agente/205-p2pusb integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92). | [sync 2026-10-16 21:00] fix merged em integracao/2.0.5; review j-rev-205-p2p486-2 BLOQUEIA -> fixes -> 6d524f947 OK j-rev-pr559. | [sync 2026-10-16 22:55] merged 0d678eba5 no HEAD f0f4f4928
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-herotrailer: merged; j-revg-herotrailer.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i500q: merged; j-revg-i500q.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-herotrailer: merged; j-revg-herotrailer.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i500q: merged; j-revg-i500q.log: OK. 
+- **#501**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. | Escrivao 10-16 14:58: job extplayer done f954a272c (configuracao de player externo); sem review; PNG nao sai no host (sem NV_ANDROID). | [sync 2026-10-16 21:00] extplayer 161cdebd2 + playerext 281b4af37 merged; reviews OK j-rev-extplayer-r2/j-rev-playerext-r2; fix a04f2a820/276207fac | [sync 2026-10-16 22:55] merged 281b4af37 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged 281b4af37 nesta janela (HEAD ab0e9a597); review j-rev-extplayer-r2/j-rev-playerext-r2; player externo Android; falta a fonte de legenda custom; entra na 2.0.7
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-extplayer: merged; j-rev-extplayer-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-playerext: merged; j-rev-playerext-r2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-extplayer: merged; j-rev-extplayer-r2.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-playerext: merged; j-rev-playerext-r2.log: OK. 
+- **#503**: Snapshot 2026-10-14 10:15: mesmo conserto d3fc8e5e de #502 (agente/205-i502arte, RUNNING). OPEN no GitHub. Escrivão 14/10 14:47: integrada via i502arte. | Escrivão 2026-10-14 16:11: merge 20f1104f consta em log.txt da integracao. | [sync 2026-10-16 21:00] imgres merged 20d1518ad (ff1cd6dcd/44bf4884a).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK. 
+- **#505**: Snapshot 2026-10-14 10:15: 3fc691d4 "fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review. | Escrivao 2026-10-15 11:48: prompt p-205-i505* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: escopo em agente/205-p2pusb | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-i505 integrada] [sync 2026-10-15: agente/205-p2pusb integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92). | [sync 2026-10-16 21:00] fix merged em integracao/2.0.5; review j-rev-205-p2p486-2 BLOQUEIA -> fixes -> 6d524f947 OK j-rev-pr559. | [sync 2026-10-16 22:55] merged 0d678eba5 no HEAD ab0e9a597
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i506: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK. 
 - **#506**: Snapshot 2026-10-14 10:15: job j-205-i506 RUNNING (branch agente/205-i506, 0 commits fora de integracao/2.0.5). Suspeita de causa comum com #505. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i506. | Escrivão 2026-10-14 16:11: merge 0e567d1a (ancestral) consta em log.txt da integracao. | Escrivao 2026-10-15 11:48: prompt p-205-i506 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i506 integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i506: merged; No mapped review verdict. 
 - **#507**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#508**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. Escrivão 14/10 14:47: branch agente/205-i508fundo: review OK, merge pendente. | Escrivão 2026-10-14 16:11: i508fundo mergeada (d57b79e9); review j-revg-i508fundo OK. | Escrivao 2026-10-15 11:48: prompt p-205-i508fundo em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i508fundo integrada]
-- **#530**: Escrivao 10/15 13:48: novo no GitHub 2026-10-15 (Subtitle issues), sem prompt de job. [sync 2026-10-15: agente/205-i530q integrada] Escrivao 10-15 22:49: merged via agente/205-i530q (cbd542148). Escrivao 10-16 00:06: merge agente/205-legatraso (05c24b89c/ad03fedc5/8d14dd55e, migracao do valor salvo). BLOQUEIA (j-revg-legatraso: audsync) -> OK (j-revg2-legatraso). Escrivao 10-16 01:50: HEAD 4359b10f5; ainda nao instalado na TV.
-- **#539**: Escrivao 2026-10-15 20:48: novo no GitHub 2026-10-15, sem job. | [sync 2026-10-16 21:00] conserto entrou em integracao/2.0.5 (a4f220cd7): nuvio-legacy://, stremio:// e imdb.com abrem titulo/play/busca. | [sync 2026-10-16 22:55] merged a4f220cd7 no HEAD f0f4f4928 | Escrivão 2026-10-16 22:1x: merged a4f220cd7 nesta janela (HEAD 1b5c9d39a); review j-rev-deeplink-r4; deep links; BLOQUEIA r1-r3 antes do fix; entra na 2.0.7
-- **#545**: Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot. Escrivao 10-16 12:48: job home545 done (26b9c635b), 1 ahead de HEAD; review j-rev2-home545 BLOQUEIA. Distinto de #551 (descoberta nao reinicia apos PIN). | Escrivao 10-16 14:58: merged 9e2138f9d; review OK j-rev-home545-r4 depois dos fixes de cota/selecao explicita. | [sync 2026-10-16 21:00] merged 9e2138f9d; review OK j-rev-home545-r4 apos fixes de cota/selecao explicita; pos-merge BLOQUEIA j-revg-home545-posmerge 17:51 com fix j-fix-home545-posmerge | [sync 2026-10-16 22:55] agente/205-pfhome545 2 ahead (975638744/53b050753); VEREDITO BLOQUEIA j-revg-pfhome545 (18:47), fix 53b050753 sem review | [sync 2026-10-16 21:10] follow-up pfhome545 merged b03502f84; VEREDITO OK j-revg-pfhome545 (20:57) | Escrivão 2026-10-16 22:1x: merged b03502f84 (follow-up: fileira fora da cota atualiza ao adicionar); review OK j-revg-pfhome545
-- **#548**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivao 10-16 14:58: job vistos548 rodando (branch agente/205-vistos548 = HEAD, 0 ahead); log vivo; sem fix ainda. | [sync 2026-10-16 21:00] branch agente/205-vistos548 6 ahead; fixes 8330673a8 e 5b37cecd8 (weak defaults para fixtures isoladas) depois do ultimo review BLOQUEIA r4; review r5 rodando. | [sync 2026-10-16 22:55] branch agente/205-vistos548 8 ahead (tip b074d9fd5); VEREDITO BLOQUEIA j-rev-vistos548-r7 (19:48) | [sync 2026-10-16 21:10] merged 91da5935e em integracao/2.0.5; VEREDITO OK j-rev-vistos548-r9, nenhum commit depois; sai na 2.0.7 | Escrivão 2026-10-16 22:1x: merged 91da5935e (agente/205-vistos548, 12 commits); reviews OK j-rev-vistos548-r8/r9; entra na 2.0.7
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-cineabre: merged; j-revg-cineabre.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i508fundo: merged; j-revg-i508fundo.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-cineabre: merged; j-revg-cineabre.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i508fundo: merged; j-revg-i508fundo.log: OK. Newer fix log requires review. 
+- **#530**: Escrivao 10/15 13:48: novo no GitHub 2026-10-15 (Subtitle issues), sem prompt de job. [sync 2026-10-15: agente/205-i530q integrada] Escrivao 10-15 22:49: merged via agente/205-i530q (cbd542148). Escrivao 10-16 00:06: merge agente/205-legatraso (05c24b89c/ad03fedc5/8d14dd55e, migracao do valor salvo). BLOQUEIA (j-revg-legatraso: audsync) -> OK (j-revg2-legatraso). Escrivao 10-16 01:50: HEAD ab0e9a597; ainda nao instalado na TV.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i530q: merged; j-revg-i530q-2.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-legatraso: merged; j-revg2-legatraso.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i530q: merged; j-revg-i530q-2.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-legatraso: merged; j-revg2-legatraso.log: OK. 
+- **#539**: Escrivao 2026-10-15 20:48: novo no GitHub 2026-10-15, sem job. | [sync 2026-10-16 21:00] conserto entrou em integracao/2.0.5 (a4f220cd7): nuvio-legacy://, stremio:// e imdb.com abrem titulo/play/busca. | [sync 2026-10-16 22:55] merged a4f220cd7 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged a4f220cd7 nesta janela (HEAD ab0e9a597); review j-rev-deeplink-r4; deep links; BLOQUEIA r1-r3 antes do fix; entra na 2.0.7
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-deeplink: merged; j-rev-deeplink-r4.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-deeplink: merged; j-rev-deeplink-r4.log: OK. Newer fix log requires review. 
+- **#545**: Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot. Escrivao 10-16 12:48: job home545 done (26b9c635b), 1 ahead de HEAD; review j-rev2-home545 BLOQUEIA. Distinto de #551 (descoberta nao reinicia apos PIN). | Escrivao 10-16 14:58: merged 9e2138f9d; review OK j-rev-home545-r4 depois dos fixes de cota/selecao explicita. | [sync 2026-10-16 21:00] merged 9e2138f9d; review OK j-rev-home545-r4 apos fixes de cota/selecao explicita; pos-merge BLOQUEIA j-revg-home545-posmerge 17:51 com fix j-fix-home545-posmerge | [sync 2026-10-16 22:55] agente/205-pfhome545 2 ahead (975638744/53b050753); VEREDITO BLOQUEIA j-revg-pfhome545 (18:47), fix 53b050753 sem review | [sync 2026-10-16 21:10] follow-up pfhome545 merged b03502f84; VEREDITO OK j-revg-pfhome545 (20:57) | Escrivão 2026-10-16 22:1x: merged b03502f84 (follow-up: fileira fora da cota atualiza ao adicionar); review OK j-revg-pfhome545 Sync 2026-10-17 04:55: 6a64c2e13 (pisca do fundo Dinamico antes do frost) entrou sem review dedicado; nada pendente de codigo.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-home545: merged; j-revg-home545-posmerge.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pfhome545: merged; j-revg-pfhome545.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-home545: merged; j-revg-home545-posmerge.log: BLOQUEIA. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pfhome545: merged; j-revg-pfhome545.log: OK. 
 - **#549**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivão 2026-10-16 22:1x: corrigido por agente/205-prs207 (4baf783fa Ver tudo em grade nas colecoes); merged 72ba10761; review OK j-rev-prs207
-- **#551**: Escrivao 10-16 12:48: job catal551 done; review BLOQUEIA j-rev-catal551 -> fix 1c9043ed0 -> OK j-rev2-catal551; merged e680776ed. Causa: sessao de perfil velha nao reiniciava a descoberta. | [sync 2026-10-16 21:00] merged e680776ed; review OK j-rev2-catal551 apos fix 1c9043ed0/a2e9daf91 | [sync 2026-10-16 22:55] merged e680776ed no HEAD f0f4f4928 | Escrivão 2026-10-16 22:1x: merged e680776ed nesta janela (HEAD 1b5c9d39a); review j-rev2-catal551; sessao de perfil velha antes de tentar de novo; entra na 2.0.7
-- **#553**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | [sync 2026-10-16 21:00] perf glass merged (e9c809475 fosco-nova + 0c77460c1/5536ee8da/d7ec89975 fosco-perf) e 5ed6ddfaa (detail): 1 captura/quadro, 4->2 camadas cheias.
-- **#555**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | [sync 2026-10-16 21:00] merged 438423097 (eps555) + d5ae66d9e (busca555); reviews OK j-rev-eps555/j-rev-busca555 | [sync 2026-10-16 22:55] merged 438423097 + d5ae66d9e no HEAD f0f4f4928 | Escrivão 2026-10-16 22:1x: merged 438423097 nesta janela (HEAD 1b5c9d39a); review j-rev-eps555/j-rev-busca555; busca555 (titulo exato) + eps555 (episodios pelo catalogo); entra na 2.0.7
-- **#557**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
-- **#558**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova, tela preta no lancamento num Q50A Tizen 6 2.0.6. Job j-tpk558 done (cc49341e6, tools/tpk.sh rc 0); sem review. | Escrivao 10-16 14:58: merged a1888d007 (adiar IME da Samsung e expor falha no boot); review OK j-rev-tpk558; spec docs/issues/558-tpk-startup.md. | [sync 2026-10-16 21:00] merged a1888d007; review OK j-rev-tpk558 | [sync 2026-10-16 22:55] merged a1888d007 no HEAD f0f4f4928 | Escrivão 2026-10-16 22:1x: merged a1888d007 nesta janela (HEAD 1b5c9d39a); review j-rev-tpk558; tela preta no lancamento .tpk; confirmar na TV do reporter; entra na 2.0.7
-- **#562**: Nova em 2026-10-16 (issues.json, labels [bug]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova no snapshot 10-16 21:00 | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
-- **#564**: Nova em 2026-10-16 (issues.json, labels [enhancement]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova no snapshot 10-16 21:00 | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
+- **#551**: Escrivao 10-16 12:48: job catal551 done; review BLOQUEIA j-rev-catal551 -> fix 1c9043ed0 -> OK j-rev2-catal551; merged e680776ed. Causa: sessao de perfil velha nao reiniciava a descoberta. | [sync 2026-10-16 21:00] merged e680776ed; review OK j-rev2-catal551 apos fix 1c9043ed0/a2e9daf91 | [sync 2026-10-16 22:55] merged e680776ed no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged e680776ed nesta janela (HEAD ab0e9a597); review j-rev2-catal551; sessao de perfil velha antes de tentar de novo; entra na 2.0.7
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-catal551: merged; j-rev2-catal551.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-catal551: merged; j-rev2-catal551.log: OK. 
+- **#553**: [sync 2026-10-17 09:25] tres jobs novos apontam para o mesmo eixo: dono diz que a tela AINDA pisca na C9 com frost (j-pisca3 RUNNING, branch agente/205-pisca3), que o player perdeu o vidro depois de 6f1c61cb8 (j-playervidro done 08:35, ce33fe44a) e que o Trakt continua igual e sem ganho de FPS (j-traktvidro RUNNING). Nada disso esta no HEAD. Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | [sync 2026-10-16 21:00] perf glass merged (e9c809475 fosco-nova + 0c77460c1/5536ee8da/d7ec89975 fosco-perf) e 5ed6ddfaa (detail): 1 captura/quadro, 4->2 camadas cheias. Sync 2026-10-17 04:55: os tres merges de vidro/abertura desta janela entram aqui; ainda sem medicao de FPS na TV.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dvabertura: merged; No mapped review verdict.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-foscoleve4: merged; No mapped review verdict.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-homepisca: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dvabertura: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-foscoleve4: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-homepisca: merged; No mapped review verdict.  Sync 2026-10-17 15:30: traktvidro merged 24047051b; comment cards flat glass, no per-card backdrop pass.
+- **#555**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | [sync 2026-10-16 21:00] merged 438423097 (eps555) + d5ae66d9e (busca555); reviews OK j-rev-eps555/j-rev-busca555 | [sync 2026-10-16 22:55] merged 438423097 + d5ae66d9e no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged 438423097 nesta janela (HEAD ab0e9a597); review j-rev-eps555/j-rev-busca555; busca555 (titulo exato) + eps555 (episodios pelo catalogo); entra na 2.0.7
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-busca555: merged; j-rev-busca555.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-eps555: merged; j-rev-eps555.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-busca555: merged; j-rev-busca555.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-eps555: merged; j-rev-eps555.log: OK. 
+- **#557**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
+- **#558**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova, tela preta no lancamento num Q50A Tizen 6 2.0.6. Job j-tpk558 done (cc49341e6, tools/tpk.sh rc 0); sem review. | Escrivao 10-16 14:58: merged a1888d007 (adiar IME da Samsung e expor falha no boot); review OK j-rev-tpk558; spec docs/issues/558-tpk-startup.md. | [sync 2026-10-16 21:00] merged a1888d007; review OK j-rev-tpk558 | [sync 2026-10-16 22:55] merged a1888d007 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged a1888d007 nesta janela (HEAD ab0e9a597); review j-rev-tpk558; tela preta no lancamento .tpk; confirmar na TV do reporter; entra na 2.0.7
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-tpk558: merged; j-rev-tpk558.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-tpk558: merged; j-rev-tpk558.log: OK. 
+- **#564**: Nova em 2026-10-16 (issues.json, labels [enhancement]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova no snapshot 10-16 21:00 | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 - **#565**: [sync 2026-10-16 22:40] Jobs j-i565pengu (tests, 17:46) e j-rev-i565pengu (VEREDITO OK). merged 5aad21874. Os dois commits sao so fixtures/testes; o fix de produto (d25a3e513) ja estava integrado. Nova em 2026-10-16 (issues.json, labels [bug]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures provam que a politica notWebReady esconde 27/27 streams https publicos; falta o fix de produto. | [sync 2026-10-16 22:55] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures merged, produto segue aberto
-- **#566**: Nova em 2026-10-16 21:13 (issues.json, labels [bug]). Sem job no snapshot. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova em 2026-10-16 21:13 (issues.json, labels [bug]) | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
-- **#570**: Nova em 2026-10-16 23:34 (issues.json, Tizen 9; trocar de fonte do episodio mostra o filme anterior e reseta a retomada). | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i565pengu: merged; j-rev-i565pengu.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i565pengu: merged; j-rev-i565pengu.log: OK. 
+- **#566**: Nova em 2026-10-16 21:13 (issues.json, labels [bug]). Sem job no snapshot. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova em 2026-10-16 21:13 (issues.json, labels [bug]) | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
+- **#570**: Nova em 2026-10-16 23:34 (issues.json, Tizen 9; trocar de fonte do episodio mostra o filme anterior e reseta a retomada). | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
+- **#577**: [sync 2026-10-17 02:50] Nova em 2026-10-17 05:40 (issues.json). Regressao de desempenho relatada depois da 2.0.6; sem job, branch ou prompt no snapshot 10-17 02:46. Sync 2026-10-17 04:55: segue sem job. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
+- **#578**: Sync 2026-10-17 04:55: issue nova (17/10 06:05), sem job. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
+- **#579**: Sync 2026-10-17 04:55: issue nova (17/10 07:46), rotulo bug, sem job. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
+- **#582**: Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:26:52Z).
+- **#581**: Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:15:16Z).
+- **#584**: [sync 2026-10-17 09:25] issue nova (createdAt 2026-10-17T11:47:33Z, label bug). Sem job nem branch.
+- **#585**: Sync 2026-10-17 11:00: issue nova (createdAt 2026-10-17T11:48:21Z), sem job.
+- **#588**: Sync 2026-10-17 11:00: issue nova (createdAt 2026-10-17T13:15:04Z), sem job.
 
 ## Futuro (2.1, 2.2, depois)
 
-15 issues.
+17 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
 | [#250](https://github.com/iqui27/nuvio-native-legacy/issues/250) | Add Arabic language support | all | feature | respondida | 2.1 | - | - | nós 10-06 | nada |
 | [#260](https://github.com/iqui27/nuvio-native-legacy/issues/260) | Add an optional layout switch to change UI direction from Ri | all | feature | respondida | futuro | - | - | autor 10-06 | nada |
-| [#343](https://github.com/iqui27/nuvio-native-legacy/issues/343) | [suggestion] anime-skip.com | all | feature | respondida | futuro (anime-skip.com) | - | - | autor 10-12 | nada |
 | [#420](https://github.com/iqui27/nuvio-native-legacy/issues/420) | Feature request: Android TV title deep links (ACTION_VIEW) f | Android | feature | aberta | - | 2.1 | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#437](https://github.com/iqui27/nuvio-native-legacy/issues/437) | Cloudstream Repository Support | all | feature | fora-do-escopo | - | futuro | - | nós 10-11 | Dono postar resposta de fechamento (rascunho em respostas-triagem-2.0.5.md). |
 | [#438](https://github.com/iqui27/nuvio-native-legacy/issues/438) | MdbList | LG | feature | aberta | - | futuro | - | nós 10-11 | triar/reproduzir; falta conserto comprovado |
 | [#450](https://github.com/iqui27/nuvio-native-legacy/issues/450) | PS5 Port | all | feature | aberta | - | futuro | - | autor 10-11 | Avaliar SDK/toolchain, vídeo, entrada e distribuição PS5 antes de qualquer plano; manter p |
 | [#457](https://github.com/iqui27/nuvio-native-legacy/issues/457) | Add an option to show info for preresolved streams in detail | Android | feature | aberta | - | 2.1 | - | sem comentários | Definir quais campos confiáveis do Stream mostrar na ficha e estado sem fonte/sonda penden |
 | [#458](https://github.com/iqui27/nuvio-native-legacy/issues/458) | Check for duplicate sources | all | feature | aberta | - | 2.1 | - | autor 10-12 | Criar caso local com dois provedores retornando mesmo URL/hash+fileIdx; definir identidade |
-| [#509](https://github.com/iqui27/nuvio-native-legacy/issues/509) | Expanded poster trailer | ? | enhancement | integrada | - | futuro | 13e13b92, 13e13b92a | sem comentários | merged em integracao/2.0.5 (707769017 trailer (#509): migrate trailer sound after the sa) |
-| [#510](https://github.com/iqui27/nuvio-native-legacy/issues/510) | Subtitles list not the same as nuvio in phone applications l | ? | bug | integrada |  | futuro | abff3d67b | sem comentários | merged em integracao/2.0.5 (8bd95ed4d fix: preserve subtitle selection after MKV track r) |
+| [#509](https://github.com/iqui27/nuvio-native-legacy/issues/509) | Expanded poster trailer | ? | enhancement | integrada | 2.0.7 | futuro | 13e13b92, 13e13b92a, agente/205-cardexp | sem comentários | Verify merged result; build/install and check device. |
+| [#510](https://github.com/iqui27/nuvio-native-legacy/issues/510) | Subtitles list not the same as nuvio in phone applications l | ? | bug | integrada | 2.0.7 | futuro | abff3d67b, agente/205-i510q | sem comentários | Verify merged result; build/install and check device. |
 | [#514](https://github.com/iqui27/nuvio-native-legacy/issues/514) | Ability to rate a movie or an episode | ? | ? | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
-| [#521](https://github.com/iqui27/nuvio-native-legacy/issues/521) | Layout | ? | bug | integrada |  | futuro | 5184d0a1b | sem comentários | merged em integracao/2.0.5 (c670a5315 fix(i18n): translate the two Mural titles keys in ) |
-| [#524](https://github.com/iqui27/nuvio-native-legacy/issues/524) | Anime series showing up as an altogether different movie | ? | bug | integrada | - | futuro | e2fe84954 | sem comentários | merged em integracao/2.0.5 (ac3d60575 fix: preserve catalog identity when parsing anime ) |
+| [#521](https://github.com/iqui27/nuvio-native-legacy/issues/521) | Layout | ? | bug | integrada | 2.0.7 | futuro | 5184d0a1b, agente/205-i521q | sem comentários | Verify merged result; build/install and check device. |
 | [#542](https://github.com/iqui27/nuvio-native-legacy/issues/542) | Torbox cloud library | ? | feature | aberta | - | futuro | - | sem comentários | triar; sem job |
+| [#589](https://github.com/iqui27/nuvio-native-legacy/issues/589) | Not all GIFs are animated | ? | bug | aberta | - | 2.1 | - | sem comentários | triar: GIFs animados travam no primeiro quadro; sem job nem branch |
+| [#590](https://github.com/iqui27/nuvio-native-legacy/issues/590) | Imdb score displayed in % on title page | ? | bug | integrada | 2.0.7 | 2.1 | 03a144294, 0d998e33a, agente/205-imdbnota | sem comentários | Close after 2.0.7 release; reply in issue. |
+| [#592](https://github.com/iqui27/nuvio-native-legacy/issues/592) | MP4 Playback Issue on LG webOS 26 | ? | ? | precisa-log | - | 2.1 | - | sem comentários | Ask for log + example source (MP4 on webOS 26). |
+| [#591](https://github.com/iqui27/nuvio-native-legacy/issues/591) | The audio language of the trailer would match the audio lang | ? | ? | aberta | - | 2.1 | - | sem comentários | Deferred to 2.1 by triage3 (trailer audio language match). |
 
 Notas:
 
 - **#250**: Metadados em árabe na 2.0.1; menus em árabe planejados para 2.1 (segundo a resposta em #325). Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: 2.1; fechada no GH 10-15]
 - **#260**: Layout RTL "planejado para depois"; sem branch. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: futuro; fechada no GH 10-15]
-- **#343**: AniSkip/TheIntroDB já na 2.0.1 (3a02817d); anime-skip.com "na atualização seguinte". Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#420**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Dono 12/10: esquema nuviolegacy:// (nao nuvio://), mesmas formas do oficial.
 - **#437**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.
 - **#438**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.
@@ -415,52 +479,83 @@ Notas:
 - **#457**: Pede selos DV/HDR10, tamanho, áudio e release group da fonte pré-resolvida na ficha. src/app.c usa stream_antecipada para iniciar a fonte; src/streams.c:montar e src/streams.h já mantêm metadados e exibem fontes/selos na folha. src/detail.c:detail_desenhar desenha ficha do título, não uma opção de resumo de fonte pré-resolvida com todos esses campos. Funcionalidade relacionada existe na folha, não prova entrega do pedido na ficha.
 - **#458**: Relata fontes iguais entre add-ons, repetição no autoplay e aba All; pede deduplicação por prioridade e agregação por qualidade (corpo disponível é trecho). src/streams.c:mesmaFonte inclui provedor, URL, hash, arquivo e rótulo para manter foco entre atualizações, não dedup global; montar já organiza por qualidade ou preserva ordem do add-on. src/fontesmortas.c registra fontes mortas por provedor/identidade. SUSPEITA: tentativas repetidas entre provedores; não reproduzida. Agrupamento existe parcialmente, filtro transversal por prioridade não comprovado.
 - **#509**: Criada 2026-10-14 (snapshot 14:46). Escrivão 14/10 14:47: integrada via i509trailer. | Escrivão 2026-10-14 16:11: conserto 13e13b92 ja em integracao/2.0.5; sem release ainda. | Escrivao 2026-10-15 11:48: prompt p-205-i509trailer* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i509trailer integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-cardexp: merged; j-revg-cardexp.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i509trailer: merged; j-revg-i509trailer-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-cardexp: merged; j-revg-cardexp.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i509trailer: merged; j-revg-i509trailer-r2.log: OK. Newer fix log requires review. 
 - **#510**: Criada 2026-10-14 (snapshot 14:46). [sync 2026-10-15: agente/205-i510q integrada] Escrivao 10-15 22:49: merged via agente/205-i510q (abff3d67b).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i510q: merged; j-revg-i510q-2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i510q: merged; j-revg-i510q-2.log: OK. 
 - **#514**: Issue nova 14/10 20:52 (rating de filme/episodio). Feature, nao 2.0.5.
 - **#521**: Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar. [sync 2026-10-15: agente/205-i521q em_job] [sync 2026-10-15 19:50: agente/205-i521q merged em integracao/2.0.5 (5184d0a1b); fix do BLOQUEIA incluso] Escrivao 10-15 22:49: merged via agente/205-i521q (5184d0a1b).
-- **#524**: Issue nova 2026-10-15 11:33 (issues.json, label bug). Sem triagem local. [sync 2026-10-15: agente/205-i524q integrada] Escrivao 10-15 22:49: merged via agente/205-i524q (e2fe84954).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i521q: merged; j-revg-i521q-3.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i521q: merged; j-revg-i521q-3.log: OK. 
 - **#542**: Entered mapa 2026-10-15 from issues.json; feature request, not in 2.0.5 scope.
+- **#589**: [sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:19:12Z, label bug), sem job.
+- **#590**: [sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:37:44Z, label bug); j-imdbnota done 11:50 (03a144294 normaliza IMDb 0-100 -> 0-10, testes/notasfontes.sh + imdbnota.sh rc=0), branch 1 ahead, sem merge e sem review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-imdbnota: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-imdbnota: merged; No mapped review verdict.  Sync 2026-10-17 15:30: imdbnota merged eea9aac9d; IMDb normalized 0-100->0-10 at ingestion.
+- **#592**: Imported from local issues snapshot. Sync 2026-10-17 15:30: j-triagem3 needs-info.
+- **#591**: Imported from local issues snapshot. Sync 2026-10-17 15:30: j-triagem3 defer 2.1.
 
 ## Outras pendências
 
-2 issues.
+3 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
-| [#495](https://github.com/iqui27/nuvio-native-legacy/issues/495) | How to return to the island card (movie resume) from the hom | ? | feature | integrada | - | 2.0.5 | 9734ecc2b, d590e0f9 | sem comentários | merged em integracao/2.0.5 (d590e0f9e feat(home): Up on the top hero card reaches the is) |
-| [#512](https://github.com/iqui27/nuvio-native-legacy/issues/512) | Tracking and next episode issues with Kaiju no 8 season 2 | ? | bug | integrada |  | 2.0.5 | 1b47d82f8, 8c7adb07, a0e14d7c | sem comentários | merged em integracao/2.0.5 (8c7adb078 fix(trakt): read numeric episode ids and keep them) |
+| [#419](https://github.com/iqui27/nuvio-native-legacy/issues/419) | [Samsung Tizen 6 / v2.0.4] Clicking a Recommendations card d | Samsung .tpk | bug | integrada | 2.0.7 | ja-lancada | 7f338254, 8b5ed6c0, d6b41e1 | nós 10-11 | Verify merged result; build/install and check device. |
+| [#495](https://github.com/iqui27/nuvio-native-legacy/issues/495) | How to return to the island card (movie resume) from the hom | ? | feature | integrada | 2.0.7 | 2.0.5 | 9734ecc2b, d590e0f9, agente/205-i495ilha | sem comentários | Verify merged result; build/install and check device. |
+| [#512](https://github.com/iqui27/nuvio-native-legacy/issues/512) | Tracking and next episode issues with Kaiju no 8 season 2 | ? | bug | integrada | 2.0.7 | 2.0.5 | 1b47d82f8, 8c7adb07, a0e14d7c | sem comentários | Verify merged result; build/install and check device. |
 
 Notas:
 
+- **#419**: Job i419recs done 20:05: commit d6b41e1 so teste posplay. Sem device Tizen. Ja corrigido em 2.0.5 pelos commits v2.0.5. [sync 2026-10-15: agente/205-i419recs integrada] Escrivao 10-15 22:49: merged via agente/205-i419recs (f9ccde55c).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i419recs: merged; j-revg-i419recs-z.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i419recs: merged; j-revg-i419recs-z.log: OK. 
 - **#495**: Review OK j-revg-i495ilha 19:55. Merged 9734ecc2b. Escrivao antigo dizia sem review: errado. [sync 2026-10-15: agente/205-i495ilha integrada] Escrivao 10-15 22:49: merged via agente/205-i495ilha (9734ecc2b).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i495ilha: merged; j-revg-i495ilha.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i495ilha: merged; j-revg-i495ilha.log: OK. 
 - **#512**: Review OK j-revg-i512temporada-r2 19:57. Merged 1b47d82f8. P2 aberto: episodio sem releaseDate nao marca CWO_SEM_DATA (trakt.c:616). | Escrivao 2026-10-15 11:48: prompt p-205-i512temporada* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i512temporada integrada] Escrivao 10-15 22:49: merged via agente/205-i512temporada (1b47d82f8).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i512temporada: merged; j-revg-i512temporada-r2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i512temporada: merged; j-revg-i512temporada-r2.log: OK. 
 
 ## Já lançado
 
-295 issues.
+296 issues.
 
-### Lançadas e ainda abertas no GitHub (9)
+### Lançadas e ainda abertas no GitHub (10)
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
+| [#410](https://github.com/iqui27/nuvio-native-legacy/issues/410) | UI appearence issues | Samsung .tpk | bug | lancada | 2.0.7 | ja-lancada | 52dbde71, b32c9410, b8935ecf | autor 10-12 | Verify merged result; build/install and check device. |
 | [#416](https://github.com/iqui27/nuvio-native-legacy/issues/416) | [Samsung Tizen 6 / v2.0.4] Filmography page empty - every ap | Samsung .tpk | bug | lancada | 2.0.5 | ja-lancada | 4b43829a, 7f338254, 8b5ed6c0 | nós 10-11 | dono: avaliar fechamento com v2.0.5 |
 | [#417](https://github.com/iqui27/nuvio-native-legacy/issues/417) | [Samsung Tizen 6 / v2.0.4] Every card in the Trailers row pl | Samsung .tpk | bug | lancada | 2.0.5 | ja-lancada | e0bb1020, f219bc9d | nós 10-11 | dono: avaliar fechamento com v2.0.5 |
 | [#421](https://github.com/iqui27/nuvio-native-legacy/issues/421) | Bold and style in Arabic subtitles still not working | Samsung .tpk | bug | lancada | 2.0.5 | ja-lancada | aced3443, c8e8d983 | nós 10-11 | dono: avaliar fechamento com v2.0.5 |
 | [#422](https://github.com/iqui27/nuvio-native-legacy/issues/422) | In-app screensaver comes on during an autoplaying trailer if | Android | bug | lancada | 2.0.5 | ja-lancada | 65bb6e2c, a408e51a | nós 10-11 | dono: avaliar fechamento com v2.0.5 |
 | [#425](https://github.com/iqui27/nuvio-native-legacy/issues/425) | Unnable to remove subtitle languages | all | feature | lancada | 2.0.5 | ja-lancada | 2b4119d5, 2c571ab6, 8b7468b0 | sem comentários | dono: avaliar fechamento com v2.0.5 |
-| [#426](https://github.com/iqui27/nuvio-native-legacy/issues/426) | Aspect ratio bug | Samsung .tpk | bug | lancada | 2.0.5 | ja-lancada | 3ba2987a, c4f344e8 | autor 10-12 | dono: avaliar fechamento com v2.0.5 |
+| [#426](https://github.com/iqui27/nuvio-native-legacy/issues/426) | Aspect ratio bug | Samsung .tpk | bug | lancada | 2.0.7 | ja-lancada | 3ba2987a, c4f344e8, agente/205-aspecto40 | autor 10-12 | Verify merged result; build/install and check device. |
 | [#433](https://github.com/iqui27/nuvio-native-legacy/issues/433) | All posters are displayed horizontally, not coming from my a | LG | bug | lancada | 2.0.5 | ja-lancada | 7777e129, ea0c322a | autor 10-12 | dono: avaliar fechamento com v2.0.5 |
 | [#439](https://github.com/iqui27/nuvio-native-legacy/issues/439) | Increase maximum subtitle size from 250 to 300 | all | feature | lancada | 2.0.5 | ja-lancada | 2f1e2de1, 6ad103f3 | nós 10-11 | Dono revisar rascunho de fechamento citando 2.0.5; pedir reabertura se 300% não estiver di |
 | [#440](https://github.com/iqui27/nuvio-native-legacy/issues/440) | Request: Subtitle size decreases when Bold is enabled | all | bug | lancada | 2.0.5 | ja-lancada | 2f1e2de1, 6ad103f3 | nós 10-11 | Dono revisar fechamento com 2.0.5; reabrir com idioma, fonte e exemplo se o tamanho ainda  |
 
 Notas:
 
+- **#410**: Triagem 2026-10-12: 52dbde71 em v2.0.4; b32c9410 em v2.0.4; b8935ecf em v2.0.4. Parcial: efeitos têm conserto; nitidez/4K precisa confirmação na TV.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vidro410: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidro410: merged; No mapped review verdict. 
 - **#416**: Triagem 2026-10-12: 4b43829a em v2.0.5; 7f338254 em v2.0.5; 8b5ed6c0 em v2.0.5.
 - **#417**: Triagem 2026-10-12: e0bb1020 em v2.0.5; f219bc9d em v2.0.5; release-notes.md v2.0.5: - The title page shows one trailer card again (#417), and the screensaver waits while a trailer plays (#422)..
 - **#421**: Triagem 2026-10-12: aced3443 em v2.0.5; c8e8d983 em v2.0.5; release-notes.md v2.0.5: - Embedded text subtitles are drawn by the app on LG and Samsung (#421); on LG their size matches the preview..
 - **#422**: Triagem 2026-10-12: 65bb6e2c em v2.0.5; a408e51a em v2.0.5; release-notes.md v2.0.5: - The title page shows one trailer card again (#417), and the screensaver waits while a trailer plays (#422)..
 - **#425**: Triagem 2026-10-12: 2b4119d5 em v2.0.5; 2c571ab6 em v2.0.5; 8b7468b0 em v2.0.5.
 - **#426**: Triagem 2026-10-12: 3ba2987a em v2.0.5; c4f344e8 em v2.0.5; release-notes.md v2.0.5: - Samsung aspect ratio: the picture stays where it belongs on Tizen 4 (#426, #341), an off-screen crop is refused instead of pushing the image away, and a refused or queued change gives the sound back and stays in its own video.. | 13/10 KeijoMika: zoom ok no Q80R Tizen 5 em 2.0.5, mas pausado so aplica ao retomar. Job agente/205-aspecto426.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-aspecto40: merged; j-rev-aspecto40.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-aspecto426: merged; j-rev-205-aspecto426.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-aspectob: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-aspecto40: merged; j-rev-aspecto40.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-aspecto426: merged; j-rev-205-aspecto426.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-aspectob: merged; No mapped review verdict. 
 - **#433**: Triagem 2026-10-12: 7777e129 em v2.0.5; ea0c322a em v2.0.5; release-notes.md v2.0.5: - Metadata loads again when the main TMDB address is blocked or times out (#416, #419), and posters with very long addresses load again (#433).. Parcial: URL longa tem conserto; conferir formato do poster e Continue Watching.
 - **#439**: Pede limite de legenda de 250% para 300%, sem plataforma indicada. Já lançado: src/ajustes.c:ajustes_leg2_tamanho chega a 300; src/player.c:desenharLegendaPrincipal limita pelo TXT_LEG_PCT_MAX (src/text.h), compartilhado com legenda secundária/preview. 6ad103f3 e merge 2f1e2de1 contidos em v2.0.5; .triagem/release-notes.md explicita #439/#440. Não depende só do comentário de intenção.
 - **#440**: Relata texto menor ao ligar Bold; mantenedor identifica face árabe Noto Naskh Bold. src/text.c:corpoNegrito compara altura do glifo/ascensão, arabeBoldFace ajusta a face Bold à regular e fonteNegritoReal faz ajuste das famílias. Causa e compensação explícitas no código, não mera SUSPEITA. 6ad103f3 e 2f1e2de1 em v2.0.5 e nota de release #440 comprovam lançamento; não há prova física nesta triagem.
@@ -469,9 +564,9 @@ Notas:
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
-| [#1](https://github.com/iqui27/nuvio-native-legacy/issues/1) | poster dont load on tiles | Samsung (tpk/wgt?) | ? | lancada | 1.0.7 | - | 04c37f87 | nós 09-08 | sem ação; conserto publicado |
-| [#2](https://github.com/iqui27/nuvio-native-legacy/issues/2) | Main Nuvio icon not showing in apps list | LG | bug | lancada | 1.0.7 | - | 04c37f87 | nós 09-07 | sem ação; conserto publicado |
-| [#3](https://github.com/iqui27/nuvio-native-legacy/issues/3) | Language still showing spanish | ? | ? | lancada | 1.0.7 | - | 04c37f87 | nós 09-07 | sem ação; conserto publicado |
+| [#1](https://github.com/iqui27/nuvio-native-legacy/issues/1) | poster dont load on tiles | Samsung (tpk/wgt?) | ? | lancada | 2.0.7 | - | 04c37f87, 90b0f9cd7/61764f975/fb4af3ee5, ab0e9a597 | nós 09-08 | Verify merged result; build/install and check device. |
+| [#2](https://github.com/iqui27/nuvio-native-legacy/issues/2) | Main Nuvio icon not showing in apps list | LG | bug | lancada | 2.0.7 | - | 04c37f87, 9ebdc9a3b/e047eecee, 6da1fc418/e91329dd2/0cf805980 | nós 09-07 | Verify merged result; build/install and check device. |
+| [#3](https://github.com/iqui27/nuvio-native-legacy/issues/3) | Language still showing spanish | ? | ? | lancada | 2.0.7 | - | 04c37f87, e4fb8c085, ac1ba9725 | nós 09-07 | Merge reviewed branch. |
 | [#4](https://github.com/iqui27/nuvio-native-legacy/issues/4) | Nuvio Keyboard Help | ? | ? | lancada | 1.0.7 | - | 04c37f87 | autor 09-07 | sem ação; conserto publicado |
 | [#5](https://github.com/iqui27/nuvio-native-legacy/issues/5) | Nuvio Sync Issue | ? | bug | lancada | 1.0.7 | - | 04c37f87 | nós 09-07 | sem ação; conserto publicado |
 | [#6](https://github.com/iqui27/nuvio-native-legacy/issues/6) | Video Black Screen Issue | ? | bug | lancada | 1.0.7 | - | 04c37f87 | autor 09-22 | sem ação; conserto publicado |
@@ -480,7 +575,7 @@ Notas:
 | [#9](https://github.com/iqui27/nuvio-native-legacy/issues/9) | Missing Subtitle Languages Bug | ? | bug | lancada | 1.0.7 | - | 04c37f87 | autor 09-07 | sem ação; conserto publicado |
 | [#10](https://github.com/iqui27/nuvio-native-legacy/issues/10) | Bug: Collection is completely empty on Tizen | Samsung (tpk/wgt?) | bug | lancada | 1.0.7 | - | 04c37f87 | autor 09-07 | sem ação; conserto publicado |
 | [#11](https://github.com/iqui27/nuvio-native-legacy/issues/11) | Feedback for v1.0.7: Profile Management Bug, Syncing & Setti | ? | bug | lancada | 1.0.8 | - | 90743102 | nós 09-07 | sem ação; conserto publicado |
-| [#12](https://github.com/iqui27/nuvio-native-legacy/issues/12) | Bug: Some UI text is not translated to English on Tizen | Samsung (tpk/wgt?) | bug | lancada | 1.0.10 | - | 7716f148 | autor 09-08 | sem ação; conserto publicado |
+| [#12](https://github.com/iqui27/nuvio-native-legacy/issues/12) | Bug: Some UI text is not translated to English on Tizen | Samsung (tpk/wgt?) | bug | lancada | 2.0.7 | - | 7716f148, 71fbc7453, agente/205-pr493 | autor 09-08 | Merge reviewed branch. |
 | [#13](https://github.com/iqui27/nuvio-native-legacy/issues/13) | Collections Installed from Nuvio Account Do Not Appear on Ti | Samsung (tpk/wgt?) | bug | lancada | 1.0.10 | - | 7716f148 | nós 09-09 | sem ação; conserto publicado |
 | [#14](https://github.com/iqui27/nuvio-native-legacy/issues/14) | Bug: Next Episode Does Not Play After Confirming “Play Next” | ? | bug | lancada | 1.0.10 | - | 7716f148 | autor 09-08 | sem ação; conserto publicado |
 | [#16](https://github.com/iqui27/nuvio-native-legacy/issues/16) | Bug: Detail Page Flickers and Randomly Opens a Different Tit | ? | bug | lancada | 1.0.11 | - | b28db878 | autor 09-08 | sem ação; conserto publicado |
@@ -642,7 +737,7 @@ Notas:
 | [#202](https://github.com/iqui27/nuvio-native-legacy/issues/202) | Matching accent colour in settings obscures text | LG | bug | lancada | 1.7.0 | - | c522e1f2 | nós 10-02 | sem ação; conserto publicado |
 | [#203](https://github.com/iqui27/nuvio-native-legacy/issues/203) | Menu bar remain visible during play | Samsung .tpk | bug | lancada | 1.7.0 | - | 29342682 | autor 10-02 | sem ação; conserto publicado |
 | [#204](https://github.com/iqui27/nuvio-native-legacy/issues/204) | Automatic Trailer and LG Smart Magic Not Working | LG | bug | lancada | 1.7.0 | - | 1865cfa2, dcf0d8d7 | nós 10-02 | sem ação; conserto publicado |
-| [#205](https://github.com/iqui27/nuvio-native-legacy/issues/205) | Disappearing "Continue Watching" items and appearing "Resume | Samsung .tpk | bug | lancada | 1.7.0 | - | dc9ca3bf | autor 10-02 | sem ação; conserto publicado |
+| [#205](https://github.com/iqui27/nuvio-native-legacy/issues/205) | Disappearing "Continue Watching" items and appearing "Resume | Samsung .tpk | bug | lancada | 2.0.7 | - | dc9ca3bf, agente/205-vistos2 | autor 10-02 | Verify merged result; build/install and check device. |
 | [#206](https://github.com/iqui27/nuvio-native-legacy/issues/206) | Embedded subtitle and audio language list display during pla | Samsung .tpk | bug | lancada | 1.7.0 | - | 94690ba3 | autor 10-02 | sem ação; conserto publicado |
 | [#208](https://github.com/iqui27/nuvio-native-legacy/issues/208) | Couldn't resume a movie from the tile | Samsung .tpk | bug | lancada | 1.7.0 | - | 39e4c794 | autor 10-02 | sem ação; conserto publicado |
 | [#209](https://github.com/iqui27/nuvio-native-legacy/issues/209) | Series Titles and Descriptions Displayed in English Despite  | LG | bug | lancada | 1.7.0 | - | 0da72c2a | nós 10-02 | sem ação; conserto publicado |
@@ -749,18 +844,32 @@ Notas:
 | [#369](https://github.com/iqui27/nuvio-native-legacy/issues/369) | [Bug] Multiple issues/Missing Features on Android TV version | Android | bug | lancada | 2.0.3 | - | 5f04c36b, 712557ca | nós 10-11 | dono: avaliar fechamento com v2.0.3 |
 | [#370](https://github.com/iqui27/nuvio-native-legacy/issues/370) | Subtitles sync issues | Samsung .wgt | bug | lancada | 2.0.3 | - | 2aee231b, 56c9832e | nós 10-10 | sem ação; conserto publicado |
 | [#371](https://github.com/iqui27/nuvio-native-legacy/issues/371) | [bug] Ui issue viewing "profile & stats" | Samsung .tpk | bug | lancada | 2.0.3 | - | 2fa6e51a, b39f4149 | autor 10-08 | sem ação; conserto publicado |
-| [#383](https://github.com/iqui27/nuvio-native-legacy/issues/383) | [port] subtitle memory same as nuvio | all | feature | lancada | 2.0.5 | - | 3654b88e | autor 10-12 | dono: avaliar fechamento com v2.0.5 |
+| [#383](https://github.com/iqui27/nuvio-native-legacy/issues/383) | [port] subtitle memory same as nuvio | all | feature | lancada | 2.0.7 | - | 3654b88e, agente/205-legmemtpk | autor 10-12 | Verify merged result; build/install and check device. |
 | [#384](https://github.com/iqui27/nuvio-native-legacy/issues/384) | Embedded ASS subtitles stopped rendering after anime intro | LG | bug | lancada | 2.0.3 | - | 3e7bbb62, 4151683c, 9ee093ac | autor 10-09 | sem ação; conserto publicado |
 | [#385](https://github.com/iqui27/nuvio-native-legacy/issues/385) | Internet Connection Drop and Reconnecting Bug to no end | Samsung .wgt | bug | lancada | 2.0.3 | - | 4151683c, 9ee093ac | autor 10-09 | dono: avaliar fechamento com v2.0.3 |
 | [#387](https://github.com/iqui27/nuvio-native-legacy/issues/387) | [bug] instant long press in library | Samsung .wgt | bug | lancada | 2.0.5 | - | 03213598, 0f98379f, c82fa422 | autor 10-12 | dono: avaliar fechamento com v2.0.5 |
-| [#427](https://github.com/iqui27/nuvio-native-legacy/issues/427) | Memory for images capped at 160 MB | LG | bug | lancada | 2.0.5 | - | 92ee6141 | nós 10-12 | conserto 92ee6141 na v2.0.5; fechar no release |
+| [#427](https://github.com/iqui27/nuvio-native-legacy/issues/427) | Memory for images capped at 160 MB | LG | bug | lancada | 2.0.7 | - | 92ee6141, agente/205-texteto | nós 10-12 | Verify merged result; build/install and check device. |
 | [#430](https://github.com/iqui27/nuvio-native-legacy/issues/430) | Multiple intro skip sources and priority order | all | feature | lancada | 2.0.5 | - | 551edb43, a9c97b26 | nós 10-11 | dono: avaliar fechamento com v2.0.5 |
 
 Notas:
 
-- **#1**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
-- **#2**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
-- **#3**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
+- **#1**: agente/205-vidroilhas merged ab0e9a597 (07:54) depois de rev2-vidroilhas OK (06:48); sai na 2.0.7 Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: ilhas de frost desenhadas sobre o vidro da barra lateral da Home; 1 commits fora do HEAD. Sync 2026-10-17 07:05: rev2-vidroilhas OK 06:48 (fix da captura limitada a regiao de amostragem); branch ainda fora do HEAD.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vidroilhas: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidroilhas: merged; No mapped review verdict. 
+- **#2**: agente/205-vidromenu merged ab0e9a597 (08:11) durante o sync; detalheglass segue BLOQUEIA 06:51 dinfundo merged e3fdbe717 (07:49, review rev2 OK 06:48) e vidroilhas merged ab0e9a597 (07:54, review rev2 OK 06:48); detalheglass e vidromenu seguem abertos Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: mais menu do detalhe no vidro/frost compartilhado; 2 commits fora do HEAD. Sync 2026-10-17 04:55: fundo Cinza/Cor fixo no layout Dinamico (29 idiomas); 2 commits fora do HEAD. Sync 2026-10-17 04:55: frost da barra lateral e pilula de acento em vidro; 2 commits fora do HEAD. Sync 2026-10-17 07:05: vidromenu rev2 OK 06:49, dinfundo rev2 OK 06:48; detalheglass rev2 BLOQUEIA 06:51 (vidro esconde arte da colecao). Sync 2026-10-17 11:00: agente/205-detalheglass MERGED cc87bec32 (elenco/recomendacoes/trailers/menu "mais" no vidro compartilhado); review rev4 BLOQUEIA 09:20 foi ANTES do merge, falta revisar o resultado mesclado.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-detalheglass: merged; No mapped review verdict.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dinfundo: merged; No mapped review verdict.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vidroilhas: merged; No mapped review verdict.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vidromenu: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-detalheglass: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dinfundo: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidroilhas: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidromenu: merged; No mapped review verdict. 
+- **#3**: Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: idiomas de audio/legenda declarados pelo add-on (PR #487); 3 commits fora do HEAD.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK. 
 - **#4**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
 - **#5**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
 - **#6**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
@@ -769,7 +878,9 @@ Notas:
 - **#9**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
 - **#10**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
 - **#11**: Triagem 2026-10-12: 90743102 em v1.0.8.
-- **#12**: Triagem 2026-10-12: 7716f148 em v1.0.10.
+- **#12**: Triagem 2026-10-12: 7716f148 em v1.0.10. Sync 2026-10-17 04:55: perfil e sessao (PR #493 v2/v3); 12 commits fora do HEAD.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK. 
 - **#13**: Triagem 2026-10-12: 7716f148 em v1.0.10.
 - **#14**: Triagem 2026-10-12: 7716f148 em v1.0.10.
 - **#16**: Triagem 2026-10-12: b28db878 em v1.0.11.
@@ -781,8 +892,8 @@ Notas:
 - **#23**: Triagem 2026-10-12: 7ef20234 em v1.0.32.
 - **#24**: Triagem 2026-10-12: 8f1f7a97 em v1.0.29.
 - **#25**: Sem commit #25; versão 1.0.30 citada na nossa resposta. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#26**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#27**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#26**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#27**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#28**: Triagem 2026-10-12: 2de0c2ec em v1.0.32.
 - **#29**: Triagem 2026-10-12: f3d40b21 em v1.0.34.
 - **#30**: Triagem 2026-10-12: bbfc4bd1 em v1.0.31.
@@ -874,7 +985,7 @@ Notas:
 - **#129**: Triagem 2026-10-12: 0e6f0da6 em v1.4.4; 725a0cbc em v1.4.4; 94c59a3e em v1.4.4.
 - **#130**: Triagem 2026-10-12: 7f66bfd3 em v1.4.4; 89c77368 em v1.4.4.
 - **#131**: Sem commit #131; versão 1.4.6 citada na nossa resposta. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#132**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#132**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#133**: Triagem 2026-10-12: 91ceeeea em v1.4.6; f5a0017c em v1.4.6.
 - **#134**: Triagem 2026-10-12: release-notes.md v2.0.0: - **Plugins and P2P (experimental, off by default).** Nuvio scraper repositories as an extra source, and a built-in engine for torrents you pick by hand..
 - **#136**: Triagem 2026-10-12: ea872c3b em v1.4.6.
@@ -932,6 +1043,8 @@ Notas:
 - **#203**: Triagem 2026-10-12: 29342682 em v1.7.0.
 - **#204**: Triagem 2026-10-12: 1865cfa2 em v1.7.0; dcf0d8d7 em v1.7.0.
 - **#205**: Triagem 2026-10-12: dc9ca3bf em v1.7.0; release-notes.md v1.7.0: - **Resume from a row tile** (#208) and **disappearing Continue watching items** (#205)..
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK. 
 - **#206**: Triagem 2026-10-12: 94690ba3 em v1.7.0; release-notes.md v1.7.0: - **Smaller fixes**: first row style under the Spotlight (#201), accent text in Settings (#202), MKV track names (#206), custom poster language (#200), LG trailers and pointer (#204), collapsed sidebar name (#210)..
 - **#208**: Triagem 2026-10-12: 39e4c794 em v1.7.0; release-notes.md v1.7.0: - **Resume from a row tile** (#208) and **disappearing Continue watching items** (#205)..
 - **#209**: Triagem 2026-10-12: 0da72c2a em v1.7.0; release-notes.md v1.7.0: - **Series in English with another language set** (#209)..
@@ -1039,15 +1152,19 @@ Notas:
 - **#370**: Triagem 2026-10-12: 2aee231b em v2.0.3; 56c9832e em v2.0.3; release-notes.md v2.0.3: - **Samsung .wgt:** Arabic subtitles use Noto Naskh (#370). Holding OK in the subtitle sheet makes one choice instead of reloading on every repeat (#370)..
 - **#371**: Triagem 2026-10-12: 2fa6e51a em v2.0.3; b39f4149 em v2.0.3; release-notes.md v2.0.3: - **Profile page:** Left at the edge opens the sidebar without closing the page, also on a new profile or one with only friends (#371)..
 - **#383**: Triagem 2026-10-12: 3654b88e em v2.0.5; release-notes.md v2.0.5: - A subtitle you picked by hand survives into the next episode (#383); forced subtitles and unknown types keep their behaviour, and picking the active subtitle from outside the recommendations no longer lands on "Off".. [alvo antes: ja-lancada; fechada no GH 10-15]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-legmemtpk: merged; j-rev3-legmemtpk.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-legmemtpk: merged; j-rev3-legmemtpk.log: OK. 
 - **#384**: Triagem 2026-10-12: 3e7bbb62 em v2.0.3; 4151683c em v2.0.3; 9ee093ac em v2.0.3.
 - **#385**: Triagem 2026-10-12: 4151683c em v2.0.3; 9ee093ac em v2.0.3; release-notes.md v2.0.3: - **Video server refusing connections** (#385). When the server of the video refuses a connection (seen on Samsung .tpk with TorBox links), the embedded subtitle reader, the track probe and the chapter reader stop and wait 10 to 60 s before trying that server again, with one connection at a time, instead of retrying several times while the video opens. It does not make a refused source play: if the server also refuses the TV player, the source still fails.. [alvo antes: ja-lancada; fechada no GH 10-15]
 - **#387**: Triagem 2026-10-12: 03213598 em v2.0.5; 0f98379f em v2.0.5; c82fa422 em v2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]
 - **#427**: Triagem 2026-10-12: 92ee6141 em v2.0.5. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). | [sync 2026-10-16 22:55] CLOSED no issues.json (10-16); 92ee6141 em v2.0.5
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-texteto: merged; j-rev2-texteto.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-texteto: merged; j-rev2-texteto.log: OK. 
 - **#430**: Triagem 2026-10-12: 551edb43 em v2.0.5; a9c97b26 em v2.0.5; release-notes.md v2.0.5: - Auto-skip of credits only fires with a real start and end marker (#329, #331) and rewinding never skips them again; intro markers also cover anime opened from IMDb/TMDB, in any season (#430).. | Escrivão 2026-10-16 22:1x: issues.json 10-16 23:34 marca CLOSED; alvo removido (campo so vale para abertas).
 
 ## Fechado sem conserto (por-desenho, fora-do-escopo, duplicada, respondida, sem resposta)
 
-98 issues.
+115 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -1089,6 +1206,7 @@ Notas:
 | [#279](https://github.com/iqui27/nuvio-native-legacy/issues/279) | Match framerate | Samsung (tpk/wgt?) | feature | fora-do-escopo | - | - | - | autor 10-06 | nada (fechada) |
 | [#288](https://github.com/iqui27/nuvio-native-legacy/issues/288) | Profile selection background is grainy dark video | LG | bug | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#292](https://github.com/iqui27/nuvio-native-legacy/issues/292) | GoogleTV performance UPDATE | Android | question | por-desenho | - | - | - | sem comentários | nada |
+| [#302](https://github.com/iqui27/nuvio-native-legacy/issues/302) | Live TV issue persists with 2.1 tpk65 | Samsung .tpk | bug | integrada | 2.0.7 | - | 5cfc61f10, 6c4d3863, 8fea5018 | autor 10-10 | Verify merged result; build/install and check device. |
 | [#304](https://github.com/iqui27/nuvio-native-legacy/issues/304) | Apple tv dynamic homeacreen | ? | feature | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#306](https://github.com/iqui27/nuvio-native-legacy/issues/306) | Refresh Live TV | LG | feature | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#307](https://github.com/iqui27/nuvio-native-legacy/issues/307) | Request | iOS | feature | fora-do-escopo | - | - | - | autor 10-07 | responder (sem resposta; pedido de .ipa) |
@@ -1102,7 +1220,8 @@ Notas:
 | [#336](https://github.com/iqui27/nuvio-native-legacy/issues/336) | App wont launch | Samsung .tpk | meta | por-desenho | - | - | - | autor 10-08 | nada (relatório automático de logs) |
 | [#337](https://github.com/iqui27/nuvio-native-legacy/issues/337) | Be able to hide the "skip" intro button | ? | feature | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#342](https://github.com/iqui27/nuvio-native-legacy/issues/342) | Add an optional "Skip Scene" floating button for explicit co | all | feature | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
-| [#345](https://github.com/iqui27/nuvio-native-legacy/issues/345) | Audio non-existent on startup | Android | bug | integrada | - | - | c03201c0c | sem comentários | merged em integracao/2.0.5 (fc2a32c76 fix(android): preserve safe numeric fields in fata) |
+| [#343](https://github.com/iqui27/nuvio-native-legacy/issues/343) | [suggestion] anime-skip.com | all | feature | integrada | 2.0.7 | - | agente/205-skip, agente/205-tpk412b | autor 10-12 | Verify merged result; build/install and check device. |
+| [#345](https://github.com/iqui27/nuvio-native-legacy/issues/345) | Audio non-existent on startup | Android | bug | integrada | 2.0.7 | - | c03201c0c, agente/205-audio345 | sem comentários | Verify merged result; build/install and check device. |
 | [#346](https://github.com/iqui27/nuvio-native-legacy/issues/346) | Continue Watching unselectable | Android | bug | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#347](https://github.com/iqui27/nuvio-native-legacy/issues/347) | [suggestion] search by microphone | ? | feature | aberta | - | - | - | autor 10-12 | triar/reproduzir; falta conserto comprovado |
 | [#348](https://github.com/iqui27/nuvio-native-legacy/issues/348) | Dots y imdb | ? | feature | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
@@ -1116,7 +1235,7 @@ Notas:
 | [#373](https://github.com/iqui27/nuvio-native-legacy/issues/373) | [bug] missing info after continue watching | Samsung .tpk | bug | por-desenho | - | - | - | nós 10-11 | nada (fechada; comportamento explicado) |
 | [#374](https://github.com/iqui27/nuvio-native-legacy/issues/374) | [port] sync subtitles by line "auto sync" | ? | feature | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#379](https://github.com/iqui27/nuvio-native-legacy/issues/379) | Movie or TV show at the end never return to homescreen. | Samsung .tpk | bug | integrada | - | - | d8cc7fa2 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
-| [#382](https://github.com/iqui27/nuvio-native-legacy/issues/382) | No internet error despite having internet | LG | bug | integrada | - | - | c0368dd4, c0368dd40, 6e29915c0 | nós 10-11 | merged em integracao/2.0.5 (b7740b8dc Define the POST retry helper in the shared branch ) |
+| [#382](https://github.com/iqui27/nuvio-native-legacy/issues/382) | No internet error despite having internet | LG | bug | integrada | 2.0.7 | - | c0368dd4, c0368dd40, 6e29915c0 | nós 10-11 | Verify merged result; build/install and check device. |
 | [#386](https://github.com/iqui27/nuvio-native-legacy/issues/386) | [bug] glitchy info in playback at the top left when pressing | Samsung .tpk | bug | integrada | - | - | d8cc7fa2 | nós 10-11 | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#388](https://github.com/iqui27/nuvio-native-legacy/issues/388) | Profile picture on side bar is squashed | Samsung .tpk | bug | integrada | - | - | 219d3bf4 | autor 10-12 | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#389](https://github.com/iqui27/nuvio-native-legacy/issues/389) | Card depth effect | Samsung (tpk/wgt?) | feature | aberta | - | - | - | autor 10-09 | triar/reproduzir; falta conserto comprovado |
@@ -1131,65 +1250,83 @@ Notas:
 | [#404](https://github.com/iqui27/nuvio-native-legacy/issues/404) | Continue watching mixes up | Samsung .tpk | bug | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
 | [#405](https://github.com/iqui27/nuvio-native-legacy/issues/405) | Quick search doesn't list all results | Samsung .tpk | bug | integrada | - | - | 219d3bf4 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#406](https://github.com/iqui27/nuvio-native-legacy/issues/406) | Passing through ratings on title page | Samsung .tpk | feature | aberta | - | - | - | sem comentários | triar/reproduzir; falta conserto comprovado |
+| [#429](https://github.com/iqui27/nuvio-native-legacy/issues/429) | Subtitles auto select | Android | bug | integrada | 2.0.7 | - | e8d9086a4, agente/205-i429hbs | nós 10-11 | Verify merged result; build/install and check device. |
 | [#434](https://github.com/iqui27/nuvio-native-legacy/issues/434) | Ability to remove genre tags in title page | all | feature | fechada-sem-resposta | - | - | - | nós 10-11 | fechada no GitHub 2026-10-16; sem comentario nosso |
 | [#436](https://github.com/iqui27/nuvio-native-legacy/issues/436) | Feature request: Option to view submitted logs | all | feature | aberta | - | - | - | nós 10-11 | triar/reproduzir; falta conserto comprovado |
 | [#460](https://github.com/iqui27/nuvio-native-legacy/issues/460) | Playback buttons for reloading stream and next episode | Android | feature | aberta | - | - | - | sem comentários | Conferir #403 e definir botões VOD com episódio disponível; reusar encaminhamento de próxi |
-| [#466](https://github.com/iqui27/nuvio-native-legacy/issues/466) | Incremental watch tracking with watch_state resource | all | feature | integrada | - | - | 90e43bd1 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
+| [#466](https://github.com/iqui27/nuvio-native-legacy/issues/466) | Incremental watch tracking with watch_state resource | all | feature | integrada | 2.0.7 | - | 90e43bd1, agente/205-mercado, agente/205-ws1 | sem comentários | Verify merged result; build/install and check device. |
 | [#467](https://github.com/iqui27/nuvio-native-legacy/issues/467) | Watch tracking with Anilist | all | feature | aberta | - | - | - | sem comentários | Definir autenticação e mapeamento de anime/episódios AniList; comparar implementação diret |
+| [#470](https://github.com/iqui27/nuvio-native-legacy/issues/470) | Next Episode Countdown Only Starts After Credits Finish | Samsung .tpk | bug | integrada | 2.0.7 | - | 7839b119, d1087e75c, agente/205-i470 | sem comentários | Verify merged result; build/install and check device. |
 | [#473](https://github.com/iqui27/nuvio-native-legacy/issues/473) | Sound does not start | ? | bug | aberta | - | - | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
-| [#474](https://github.com/iqui27/nuvio-native-legacy/issues/474) | Top right bar is unreachable | ? | bug | integrada | - | - | agente/205-menutopo | sem comentários | merged em integracao/2.0.5 (dbe8a3b8d Merge integracao/2.0.5 into agente/205-menutopo) |
+| [#474](https://github.com/iqui27/nuvio-native-legacy/issues/474) | Top right bar is unreachable | ? | bug | integrada | 2.0.7 | - | agente/205-menutopo | sem comentários | Verify merged result; build/install and check device. |
+| [#475](https://github.com/iqui27/nuvio-native-legacy/issues/475) | Subtitle outline color setting | Samsung .tpk | melhoria | integrada | 2.0.7 | - | 6a260e9b, agente/205-sinopse477, agente/205-sinopse | autor 10-13 | Verify merged result; build/install and check device. |
 | [#476](https://github.com/iqui27/nuvio-native-legacy/issues/476) | No internet | ? | bug | aberta | - | - | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
+| [#477](https://github.com/iqui27/nuvio-native-legacy/issues/477) | Bigger synopsis font | Samsung .tpk | melhoria | integrada | 2.0.7 | - | 1366561a, 6a260e9b, 6a260e9b0 | autor 10-13 | Verify merged result; build/install and check device. |
 | [#480](https://github.com/iqui27/nuvio-native-legacy/issues/480) | Remember Preferred Audio Language Across Sources | ? | feature | aberta | - | - | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
-| [#482](https://github.com/iqui27/nuvio-native-legacy/issues/482) | Continue Watching content leaks between profiles | ? | bug | em_revisao | - | - | - | sem comentários | fix novo + re-review (ultimo VEREDITO BLOQUEIA); depois merge e resposta na issue |
-| [#483](https://github.com/iqui27/nuvio-native-legacy/issues/483) | Anime subtitles not rendering | ? | bug | integrada | - | - | 251632be, 251632beb, 251632be | sem comentários | build+install no HEAD 1b5c9d39a e resposta na issue; sai na 2.0.7 |
+| [#481](https://github.com/iqui27/nuvio-native-legacy/issues/481) | Show audio and subtitle metadata in the stream source list | ? | feature | em_revisao | 2.0.7 | - | e4fb8c08/c9932635, agente/205-pr487, agente/205-pr487v2 | sem comentários | Merge reviewed branch (review OK; PR fix branches still open in fila). |
+| [#482](https://github.com/iqui27/nuvio-native-legacy/issues/482) | Continue Watching content leaks between profiles | ? | bug | em_revisao | - | - | - | sem comentários | New fix + re-review (last VEREDITO BLOQUEIA); then merge and answer. |
+| [#483](https://github.com/iqui27/nuvio-native-legacy/issues/483) | Anime subtitles not rendering | ? | bug | integrada | 2.0.7 | - | 251632be, 251632beb, 251632be | sem comentários | Verify merged result; build/install and check device. |
+| [#484](https://github.com/iqui27/nuvio-native-legacy/issues/484) | External subtitles disappear after a few minutes without inp | Samsung .tpk | bug | integrada | 2.0.7 | - | 027fd3c7, 027fd3c7c, agente/205-leg484 | autor 10-13 | Verify merged result; build/install and check device. |
+| [#486](https://github.com/iqui27/nuvio-native-legacy/issues/486) | Sometimes wont load P2P addons | ? | bug | integrada | 2.0.7 | - | edff609f/c670c37e/20bb2f3a, 16351755c, cdb45cb92 | sem comentários | Verify merged result; build/install and check device. |
+| [#488](https://github.com/iqui27/nuvio-native-legacy/issues/488) | Profiles switching | ? | bug | em_revisao | 2.0.7 | - | 067c0c35, f51aa3d76, 71fbc7453 | sem comentários | Merge reviewed branch (review OK; PR fix branches still open in fila). |
 | [#497](https://github.com/iqui27/nuvio-native-legacy/issues/497) | Prioritize continue watch sync on startup | ? | feature | aberta | - | - | - | sem comentários | triar e criar job |
-| [#511](https://github.com/iqui27/nuvio-native-legacy/issues/511) | Show subtitle track name instead of only showing language | ? | enhancement | integrada |  | - | f0ab7c91, f0ab7c918 | sem comentários | merged em integracao/2.0.5 (2e05dd94d subtitles: show track name as the row title, langu) |
-| [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | integrada |  | - | 84add4581 | sem comentários | merged em integracao/2.0.5 (adbaf0f9f fix: initialize episode outputs before storing sou) |
-| [#528](https://github.com/iqui27/nuvio-native-legacy/issues/528) | [Bug/FR] Cast Images Fail to Load — Request for Metadata Add | ? | ? | integrada |  | - | f5c785d4f | sem comentários | merged em integracao/2.0.5 (10501d047 fix(metadata): preserve addon cast portraits when ) |
-| [#529](https://github.com/iqui27/nuvio-native-legacy/issues/529) | Dubbing filter bug | ? | ? | integrada |  | - | f8fbd3bd3, f8fbd3bd3 | sem comentários | build+install no HEAD 1b5c9d39a e resposta na issue; sai na 2.0.7 |
-| [#552](https://github.com/iqui27/nuvio-native-legacy/issues/552) | The add-on sources aren't appearing | ? | bug | integrada | 2.0.6 | - | cbcf467f5/6d524f947/27988615e, merged, 0d7821a01 | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
-| [#556](https://github.com/iqui27/nuvio-native-legacy/issues/556) | Special / out-of-order seasons recognised by Trakt are not s | ? | ? | integrada | - | - | 054ccef24 | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
+| [#499](https://github.com/iqui27/nuvio-native-legacy/issues/499) | Cached / not cached indicator on Debrid sources (torbox, rea | ? | feature | integrada | 2.0.7 | - | aab8e18d, 57aee24fd, agente/205-499cache | sem comentários | Verify merged result; build/install and check device. |
+| [#502](https://github.com/iqui27/nuvio-native-legacy/issues/502) | Detail page keeps the low-res thumbnail instead of loading f | ? | bug | integrada | 2.0.7 | - | d3fc8e5e, 20f1104f, 20f1104fc | sem comentários | Verify merged result; build/install and check device. |
+| [#504](https://github.com/iqui27/nuvio-native-legacy/issues/504) | Catalog rows from removed add-ons remain in the “Not on home | ? | bug | integrada | 2.0.7 | - | be7c0dee, 3c58d0ce, 3c58d0ce6 | sem comentários | Verify merged result; build/install and check device. |
+| [#511](https://github.com/iqui27/nuvio-native-legacy/issues/511) | Show subtitle track name instead of only showing language | ? | enhancement | integrada | 2.0.7 | - | f0ab7c91, f0ab7c918, agente/205-i511legnome | sem comentários | Verify merged result; build/install and check device. |
+| [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | integrada | 2.0.7 | - | 84add4581, agente/205-i513autoplay | sem comentários | Verify merged result; build/install and check device. |
+| [#524](https://github.com/iqui27/nuvio-native-legacy/issues/524) | Anime series showing up as an altogether different movie | ? | bug | integrada | 2.0.7 | - | 86d194462, cdf5bdd88, agente/205-i524q | sem comentários | Verify merged result; build/install and check device. |
+| [#528](https://github.com/iqui27/nuvio-native-legacy/issues/528) | [Bug/FR] Cast Images Fail to Load — Request for Metadata Add | ? | ? | integrada | 2.0.7 | - | f5c785d4f, agente/205-i528q | sem comentários | Verify merged result; build/install and check device. |
+| [#529](https://github.com/iqui27/nuvio-native-legacy/issues/529) | Dubbing filter bug | ? | ? | integrada | 2.0.7 | - | f8fbd3bd3, f8fbd3bd3, agente/205-i529q | sem comentários | Verify merged result; build/install and check device. |
+| [#548](https://github.com/iqui27/nuvio-native-legacy/issues/548) | Mark as watched not working | ? | bug | integrada | 2.0.7 | - | merged, 66a608ef7/8330673a8/2d04fbecc/da2c69701/f87c41ed7/9bc31cc9d/b074d9fd5/5b37cecd8, 91da5935e | sem comentários | Verify merged result; build/install and check device. |
+| [#552](https://github.com/iqui27/nuvio-native-legacy/issues/552) | The add-on sources aren't appearing | ? | bug | integrada | 2.0.7 | - | cbcf467f5/6d524f947/27988615e, merged, 0d7821a01 | sem comentários | Verify merged result; build/install and check device. |
+| [#556](https://github.com/iqui27/nuvio-native-legacy/issues/556) | Special / out-of-order seasons recognised by Trakt are not s | ? | ? | integrada | 2.0.7 | - | 054ccef24, agente/205-port569 | sem comentários | Verify merged result; build/install and check device. |
+| [#562](https://github.com/iqui27/nuvio-native-legacy/issues/562) | Reload button in player | ? | bug | integrada | - | - | 2c7c85860, 6a6d5b71b | sem comentários | build+install no HEAD ab0e9a597, testar Recarregar na folha de fontes e Assistir do comeco |
+| [#580](https://github.com/iqui27/nuvio-native-legacy/issues/580) | Addons catalogues not showing | ? | bug | fechada-sem-resposta | - | - | - | sem comentários | Issue closed by reporter/triagem (catalogs of add-ons not showing; same axis as #545/#551) |
 
 Notas:
 
 - **#15**: Resposta: plano de passar o trailer ao app de YouTube da TV; rawldon confirmou depois que toca (com atraso). Sem commit #15. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#20**: "Fixed on master; next release" (08/09); nenhum commit cita #20. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#47**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#53**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#47**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#53**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#58**: Salvos = união da lista Nuvio e Trakt watchlist, de propósito. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#59**: LG manda Referer desde 1.2.1; AVPlay da Samsung não permite header. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#63**: Tizen 5.0 sem WebAssembly threads; depois o .tpk 4/5 (1.6.0) resolveu por outro caminho. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#64**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#75**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#64**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#75**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#81**: v1.3.7 apenas registra o tempo de seek na Samsung (diagnóstico). Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#90**: "Not in 1.4.2 yet — still on the list". Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#91**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#96**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#98**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#107**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#91**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#96**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#98**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#107**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#135**: Porte experimental VIDAA; issue de chamada de testadores. Commits faacf493 (2.0.2) e feat/vidaa. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: futuro; fechada no GH 10-15]
-- **#140**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#148**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#154**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#155**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#161**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#167**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#168**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#183**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#140**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#148**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#154**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#155**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#161**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#167**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#168**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#183**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#189**: "Vou tentar ajustes em breve", sem commit #189. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#192**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#192**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#217**: Contribuidor oferece PRs de build em Linux; resposta aceita. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#240**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#242**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#240**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#242**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#248**: Resposta diz que é comportamento da plataforma Tizen. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#252**: Opção já existe: Ajustes > Idiomas e legendas > Idioma do áudio. Alvo ja-lancada: a opção já existe. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#254**: Resposta: busca atualiza ao mudar add-ons na 2.0; a parte da Home não confirmada. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#257**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#257**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#267**: Resposta: CH+/CH- já atribuídos. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#270**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#270**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#279**: Tizen não tem API pública para trocar a taxa de atualização. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#288**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#292**: Aviso nosso (virou issue a partir da discussão #291): resolução da interface em 4K deixa o Android lento. Alvo nao vamos fazer: é aviso/pergunta, não há mudança de código planejada (ver decisões). Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: nao vamos fazer; fechada no GH 10-15]
+- **#302**: Rascunho de correção: o conserto do live TV NÃO está na 2.0.2 (resposta anterior dizia que sim). 0021b573 (2.0.2) é parcial. LANÇADA na v2.0.3 (09/10): todos os commits do conserto estão contidos na tag. Log BKPH09 ainda não foi lido; sem conserto confirmado para este relato. Revisão 2026-10-12: Reconexão publicada, mas autor relata persistência em 2.0.4 em 10/10. [alvo antes: 2.0.6; fechada no GH 10-15] | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5cfc61f10); status -> integrada
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-livetv: merged; j-rev-livetv.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-livetv: merged; j-rev-livetv.log: OK. Newer fix log requires review. 
 - **#304**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#306**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#307**: SUSPEITA de fora-do-escopo: pedido de .ipa, app é C/SDL para TVs. O dono decide. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: nao vamos fazer; fechada no GH 10-15]
@@ -1200,10 +1337,17 @@ Notas:
 - **#324**: Relatório automático de triagem de logs (comentários nossos); não é bug. Alvo nao vamos fazer: não é bug nem pedido. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: nao vamos fazer; fechada no GH 10-15]
 - **#325**: Duplicata de #250/#260. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#333**: Duplicata de #250 (Arabic). Comentário no commit c824675c (v1.0.1) é falso positivo. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
-- **#336**:  Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+- **#336**: Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#337**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#342**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
+- **#343**: AniSkip/TheIntroDB já na 2.0.1 (3a02817d); anime-skip.com "na atualização seguinte". Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-skip: merged; j-rev3-skip1.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-tpk412b: merged; j-rev3-tpk412b.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-skip: merged; j-rev3-skip1.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-tpk412b: merged; j-rev3-tpk412b.log: OK. 
 - **#345**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. | 13/10 ghbarker: logs 6HMRKA (73567) e Cf4whk (73436), Android. Job agente/205-audio345. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar. [sync 2026-10-15: agente/205-audio345 integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-audio345: merged; j-rev-205-audio345.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-audio345: merged; j-rev-205-audio345.log: BLOQUEIA. Newer fix log requires review. 
 - **#346**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#347**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#348**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
@@ -1218,6 +1362,10 @@ Notas:
 - **#374**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Pedido é sync pela linha clicada e limite maior de atraso; AutoSync existente não atende ao recurso solicitado. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#379**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim. [alvo antes: 2.0.6; fechada no GH 10-15]
 - **#382**: LG 50UT8050PSB, Nuvio 2.0.2 (.ipk). Relato: depois de ligar a TV a frio aparece "sem internet" mesmo com internet, some, volta várias vezes até parar de vez. O campo de log ficou sem código. SUSPEITA, sem prova: o aviso nasce do teste de rede do app (redesaude) logo após o boot, quando a rede da TV ainda sobe; não lido no código nem em log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | 13/10 Mizikashi1: voltou ao abrir serie, log RSM044 (registro 73601). Job agente/205-net382. Escrivão 14/10 14:47: integrada via 382dns. [alvo antes: 2.0.6; fechada no GH 10-15] | Escrivao 2026-10-15 11:48: prompt p-205-382dns em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-382dns integrada] [sync 2026-10-15: agente/205-net382 integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-382dns: merged; j-revg-382dns.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-net382: merged; j-rev-205-net382.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-382dns: merged; j-revg-382dns.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-net382: merged; j-rev-205-net382.log: BLOQUEIA. Newer fix log requires review. 
 - **#386**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim. [alvo antes: 2.0.6; fechada no GH 10-15]
 - **#388**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]
 - **#389**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
@@ -1232,24 +1380,98 @@ Notas:
 - **#404**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#405**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]
 - **#406**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).
+- **#429**: Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente. | Escrivao 2026-10-15 07:50: sem merge ainda; review OK y, branch nao mergeado | Escrivao 15/10 09:48: review OK ainda sem merge. | Escrivão 10/15 12:48: branch i429hbs ainda nao integrada (2 commits fora) | Escrivao 10-15 13:48: review y OK (j-revg-i429hbs-y 23:11), branch f59554839 ainda NAO mergeado. [sync 2026-10-15: agente/205-i429hbs integrada] Escrivao 10-15 22:49: merged via agente/205-i429hbs (e8d9086a4). | Snapshot 2026-10-16: issues.json diz CLOSED; mapa fechou e tirou o alvo. Confirmar conserto e versao antes de arquivar. | Snapshot 2026-10-16: issues.json diz CLOSED; conserto f59554839 merged em e8d9086a4, sem release ainda. Reabrir ou esperar 2.0.7 para fechar de vez. | [sync 2026-10-16 21:00] merged e8d9086a4 em integracao/2.0.5. | [sync 2026-10-16 22:55] CLOSED no issues.json; conserto merged e8d9086a4
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i429hbs: merged; j-revg-i429hbs-y.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i429hbs: merged; j-revg-i429hbs-y.log: OK. 
 - **#434**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivao 10-16 12:48: CLOSED no issues.json (mapa dizia aberta). | [sync 2026-10-16 22:55] CLOSED no issues.json (10-16)
 - **#436**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. | [sync 2026-10-16 22:55] issues.json 10-16: CLOSED (sem mudanca)
 - **#460**: Pede botões recarregar fonte e próximo episódio. src/player.c:player_proximo_episodio e player_janela_proximo já suportam próxima mídia e oferta no fim; player_pediu_recarregar/avAtivar (AV_B_RECARREGAR) atendem Live TV, não provam botão VOD recarregar. Episódios/posplay existem; botões VOD sempre acessíveis são ampliação de UI, relacionada a #403. | [sync 2026-10-16 22:55] issues.json 10-16: CLOSED (sem mudanca)
 - **#466**: Pede resource watch_state para addons receberem eventos incrementais e delegarem tracking a vários provedores. src/addons.c interpreta resources de metadados/fontes/legendas; src/player.c emite eventos Trakt e progresso local/Nuvio via src/syncprog.c, sem despachante watch_state. Referências externas não consultadas (offline). Infraestrutura de tracking existe, contrato/autorização/entrega de eventos ao addon não estão implementados nesse caminho. Escrivão 14/10 14:47: integrada via ws1. | Escrivão 2026-10-16 22:1x: issues.json 10-16 23:34 marca CLOSED; alvo removido (campo so vale para abertas).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-mercado: merged; No mapped review verdict.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-ws1: merged; j-rev7-ws1.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-mercado: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-ws1: merged; j-rev7-ws1.log: OK. 
 - **#467**: Pede tracking AniList, sem plataforma. src/artereserva.c:anilist consulta arte GraphQL e src/descoberta.c reconhece IDs anilist; isso é metadado/arte, não autenticação ou envio de histórico. src/visto.c:visto_titulo/visto_episodios distribuem visto para provedores existentes, sem destino AniList. Tracking não implementado no caminho lido; sem bug a reproduzir. | Escrivão 2026-10-16 22:1x: issues.json 10-16 23:34 marca CLOSED; alvo removido (campo so vale para abertas).
+- **#470**: rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log B9RJZ8 (registro 73397): [posplay] creditos aceito (sobram 265s, janela 300s); cartao aparece nos creditos mas contagem so comeca no fim. Escrivão 14/10 14:47: integrada via i18nordem, i470. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). [sync 2026-10-15: agente/205-i470 integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i470: merged; j-rev-i470.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i470: merged; j-rev-i470.log: OK. 
 - **#473**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta. | [sync 2026-10-16 22:55] issues.json 10-16: CLOSED (sem mudanca)
 - **#474**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; barra do topo, ver tambem #461 (agente/205-menutopo integrado). Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review. 
+- **#475**: Pedido: cor do contorno da legenda. Escrivão 14/10 14:47: integrada via sinopse477.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-sinopse477: merged; j-rev-205-sinopse477.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-sinopse: merged; j-revg-sinopse.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-sinopse477: merged; j-rev-205-sinopse477.log: OK. 
 - **#476**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; #382 tratada por b212cec1 ja em integracao/2.0.5. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta. | [sync 2026-10-16 22:55] issues.json 10-16: CLOSED (sem mudanca)
+- **#477**: Snapshot 2026-10-14 10:15: 1366561a "Restore the original hero synopsis size and add a Synopsis size setting" em agente/205-sinopse; j-205-sinopse done e j-revg-sinopse veredito OK. Escrivao 14/10 19:2x: 1366561a ancestral de integracao/2.0.5 (6a260e9b). [sync 2026-10-15: agente/205-sinopse477 integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-sinopse: merged; j-revg-sinopse.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-sinopse477: merged; j-rev-205-sinopse477.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-sinopse: merged; j-revg-sinopse.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-sinopse477: merged; j-rev-205-sinopse477.log: OK. 
 - **#480**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.
+- **#481**: Snapshot 2026-10-14 10:15: "Sources: show declared audio and subtitle languages" (e4fb8c08) e o merge c9932635 "Merge PR #487 v2" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15: agente/205-pr487v2 (ac1ba9725) review OK j-rev-pr487-v2; nao mergeado; dono decide 2.0.6. | Escrivao 2026-10-15 11:48: GH fechada; branch 3 ahead, review OK, nao mergeado | Escrivão 10/15 12:48: GH #481 fechada; branch pr/487-v2 e agente/205-pr487v2 nao integrados | [sync 2026-10-16 22:55] agente/205-pr487v2 3 ahead (tip ac1ba9725); VEREDITO OK j-rev-pr487-v2, nenhum commit depois
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK. 
 - **#482**: Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 22:49: merged via agente/205-i488perfil (f51aa3d76). | [sync 2026-10-16 22:55] snapshot 10-16: CLOSED no issues.json | Escrivão 2026-10-16 22:1x: agente/205-pr493 12 ahead; VEREDITO BLOQUEIA j-revg-pr493 depois dos OKs de 10-15; branch fora de integracao/2.0.5
-- **#483**: Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01. | Escrivao 2026-10-15 11:48: prompt p-205-i483remux em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i483remux integrada] Escrivao 10-16 12:48: agente/205-i483remux ja ancestral de HEAD; sem mudanca. | Escrivão 2026-10-16 22:1x: merged 251632be nesta janela (HEAD b72189c5d); review j-revg-i483remux; fetch Tracks via SeekHead quando a sonda erra o REMUX; entra na 2.0.7 | Escrivão 2026-10-16 22:1x: issues.json 10-16 23:34 marca CLOSED; alvo removido (campo so vale para abertas).
+- **#483**: Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01. | Escrivao 2026-10-15 11:48: prompt p-205-i483remux em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i483remux integrada] Escrivao 10-16 12:48: agente/205-i483remux ja ancestral de HEAD; sem mudanca. | Escrivão 2026-10-16 22:1x: merged 251632be nesta janela (HEAD ab0e9a597); review j-revg-i483remux; fetch Tracks via SeekHead quando a sonda erra o REMUX; entra na 2.0.7 | Escrivão 2026-10-16 22:1x: issues.json 10-16 23:34 marca CLOSED; alvo removido (campo so vale para abertas).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i483remux: merged; j-revg-i483remux.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i483remux: merged; j-revg-i483remux.log: OK. 
+- **#484**: LG OLED C1 webOS, 2.0.5: legenda de addon (OpenSubtitlesV3/AIOMetadata) some apos minutos sem tecla; embutida ok. Sem log. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-14). | Escrivão 2026-10-14 16:11: conserto integrado via agente/205-leg484 (merge 027fd3c7); fechada no GitHub. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). [sync 2026-10-15: agente/205-leg484 integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-leg484: merged; j-revg-leg484.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-leg484: merged; j-revg-leg484.log: OK. 
+- **#486**: [sync 2026-10-17 12:15] Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso. | Escrivao 2026-10-15 11:48: prompt p-205-p2p486 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: p2p486 merged, mas p2pusb (#486/#505) segue aberto | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-p2p486 integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92). | [sync 2026-10-16 21:00] agente/205-p2pusb merged; j-rev-p2pusbtela OK (9b4f37efb ainda 1 ahead). d25a3e513/6d524f947 (#552/#505) merged via PR #559 review OK. | [sync 2026-10-16 22:55] merged 21f169226/bf160f720 no HEAD ab0e9a597
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-p2p486: merged; j-rev3-205-p2p486.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-p2p486: merged; j-rev3-205-p2p486.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK. 
+- **#488**: pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR. | Escrivao 10-15 08:50: pr/493-v3 (3 ahead, review OK 06:50, nao mergeado) substitui o pr/493 velho; #488 segue nele. | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15 10:50: reaberta no GH; pr/493-v3 review OK sem merge. | Escrivao 2026-10-15 11:48: prompt p-205-perfil488 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i488perfil integrada] [sync 2026-10-15: agente/205-perfil488 integrada] Escrivao 10-15 22:49: merged via agente/205-i488perfil (f51aa3d76). | [sync 2026-10-16 21:00] agente/205-pr493 continua 12 ahead com VEREDITO BLOQUEIA j-revg-pr493; pr/493-v3 review OK 06:50 mas commits 5694694cc/65613c562 ja estao em HEAD. | [sync 2026-10-16 22:55] agente/205-pr493 12 ahead (tip 71fbc7453); VEREDITO BLOQUEIA j-revg-pr493 mais novo que OK j-revpr493-v3 | Escrivão 2026-10-16 22:1x: agente/205-pr493 12 ahead; VEREDITO BLOQUEIA j-revg-pr493 depois dos OKs de 10-15; branch fora de integracao/2.0.5
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i488perfil: merged; j-revg-i488perfil-z.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-perfil488: merged; No mapped review verdict.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i488perfil: merged; j-revg-i488perfil-z.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-perfil488: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK. 
 - **#497**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
+- **#499**: Snapshot 2026-10-14 10:15: aab8e18d "Mark debrid-cached sources with a lightning icon in the source list (#499)" e ancestral de integracao/2.0.5 (merge 57aee24f agente/205-499cache). Nenhum job j-revg-499cache: conserto integrado sem review registrado. OPEN no GitHub. [sync 2026-10-15: agente/205-499cache integrada] | [sync 2026-10-16 21:00] agente/205-debridprem review OK (j-rev-205-debridprem) ainda 1 ahead; nao merged.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-499cache: merged; j-revf-499cache.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-499cache: merged; j-revf-499cache.log: OK. 
+- **#502**: Snapshot 2026-10-14 10:15: d3fc8e5e "fix(detail): stop seeding list poster into backdrop for recommendations" cobre #502 e #503, so em agente/205-i502arte. Job RUNNING, sem validacao. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i502arte. [sync 2026-10-15: agente/205-i502arte integrada] | [sync 2026-10-16 21:00] imgres merged 20d1518ad (ff1cd6dcd w342->w500/w780, 44bf4884a metahub) — upgrade de arte em alta qualidade.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK. 
+- **#504**: Snapshot 2026-10-14 10:15: conserto be7c0dee "fix(fileiras): drop untouched rows of removed add-ons when the sheet opens (#504)" so em agente/205-i504 (nao e ancestral de integracao/2.0.5). Job j-205-i504 RUNNING, sem log de validacao ainda. Issue ainda OPEN no GitHub. Escrivão 14/10 14:47: integrada via i504. | Escrivao 2026-10-15 11:48: prompt p-205-i504 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i504 integrada] | [sync 2026-10-16 21:00] merged via agente/205-i504 + 455135df2 (PR #543).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i504: merged; j-revg-i504.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i504: merged; j-revg-i504.log: OK. 
 - **#511**: Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: Fix 2e05dd94; j-revg-i511legnome-q OK 18:44; merge f0ab7c91 18:45. | Escrivao 2026-10-15 11:48: prompt p-205-i511legnome em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: GitHub closed] [sync 2026-10-15: agente/205-i511legnome integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i511legnome: merged; j-revg-i511legnome-q.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i511legnome: merged; j-revg-i511legnome-q.log: OK. 
 - **#513**: review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead. | Escrivao 2026-10-15 07:50: merge 84add4581 em integracao/2.0.5 | Escrivao 10-15 08:50: BLOQUEIA w/x/y antes; v OK 06:49; merged. | Escrivao 15/10 09:48: Android 84add4581 Success; C9 rc=255 (TV nao confirmado). | Escrivao 2026-10-15 11:48: prompt p-205-i513autoplay* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: agente/205-i513autoplay integrado (84add4581, instalado Android) [sync 2026-10-15: GitHub closed] [sync 2026-10-15: agente/205-i513autoplay integrada] Escrivao 10-15 22:49: merged via agente/205-i513autoplay (84add4581).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i513autoplay: merged; j-revg-i513autoplay-v.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i513autoplay: merged; j-revg-i513autoplay-v.log: OK. 
+- **#524**: [sync 2026-10-17 02:50] GitHub fechada em 2026-10-17 (issues.json 10-17 05:40): PR #561 (86d194462) resolveu o caso do reporter. [sync 2026-10-17 02:50] GitHub fechada em 2026-10-17 (issues.json 10-17 05:40). [sync 2026-10-17 01:52] PR #561 merged (86d194462): busca por tipo preserva a identidade da serie e o episodio pedido; review OK rev-pr561; entra na 2.0.7 Issue nova 2026-10-15 11:33 (issues.json, label bug). Sem triagem local. [sync 2026-10-15: agente/205-i524q integrada] Escrivao 10-15 22:49: merged via agente/205-i524q (e2fe84954).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i524q: merged; j-revg-i524q.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i524q: merged; j-revg-i524q.log: OK. 
 - **#528**: Escrivao 2026-10-15 11:48: item novo (issues.json), alvo 2.0.6 provisório [sync 2026-10-15: agente/205-i528q integrada] Escrivao 10-15 22:49: merged via agente/205-i528q (f5c785d4f).
-- **#529**: Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job. [sync 2026-10-15: agente/205-i529q em_revisao] [sync 2026-10-15 19:50: agente/205-i529q merged em integracao/2.0.5 (f8fbd3bd3)] Escrivao 10-15 22:49: merged via agente/205-i529q (f8fbd3bd3). | Escrivão 2026-10-16 22:1x: merged f8fbd3bd3 nesta janela (HEAD 1b5c9d39a); review j-revg-i529q-r; preferencia de audio na fonte; entra na 2.0.7
-- **#552**: Escrivao 10-16 12:48: job fonte552 done; review BLOQUEIA j-rev-fonte552 -> fix cbcf467f5 -> OK j-rev2-fonte552; merged 0d7821a01. Hostnames de stream passam a ser lidos antes de exigir P2P. | Escrivao 10-16 14:58: follow-up do reporter (addons de legenda nao aparecem): fix 27988615e em agente/205-legenda552, sem review. | [sync 2026-10-16 21:00] merged 0d7821a01 (fonte552) + b897be584 (legenda552) + d25a3e513/6d524f947 (#505/#552 PR #559); reviews OK j-rev2-fonte552/j-rev-legenda552/j-rev-pr559 | [sync 2026-10-16 22:55] merged 0d7821a01/b897be584 no HEAD f0f4f4928 | Escrivão 2026-10-16 22:1x: merged 0d7821a01 nesta janela (HEAD 1b5c9d39a); review j-rev2-fonte552/j-rev-legenda552; fonte552 + legenda552 + PR #559 (URL http sem P2P); entra na 2.0.7
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i528q: merged; j-revg-i528q.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i528q: merged; j-revg-i528q.log: OK. 
+- **#529**: Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job. [sync 2026-10-15: agente/205-i529q em_revisao] [sync 2026-10-15 19:50: agente/205-i529q merged em integracao/2.0.5 (f8fbd3bd3)] Escrivao 10-15 22:49: merged via agente/205-i529q (f8fbd3bd3). | Escrivão 2026-10-16 22:1x: merged f8fbd3bd3 nesta janela (HEAD ab0e9a597); review j-revg-i529q-r; preferencia de audio na fonte; entra na 2.0.7
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i529q: merged; j-revg-i529q-r.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i529q: merged; j-revg-i529q-r.log: OK. 
+- **#548**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivao 10-16 14:58: job vistos548 rodando (branch agente/205-vistos548 = HEAD, 0 ahead); log vivo; sem fix ainda. | [sync 2026-10-16 21:00] branch agente/205-vistos548 6 ahead; fixes 8330673a8 e 5b37cecd8 (weak defaults para fixtures isoladas) depois do ultimo review BLOQUEIA r4; review r5 rodando. | [sync 2026-10-16 22:55] branch agente/205-vistos548 8 ahead (tip b074d9fd5); VEREDITO BLOQUEIA j-rev-vistos548-r7 (19:48) | [sync 2026-10-16 21:10] merged 91da5935e em integracao/2.0.5; VEREDITO OK j-rev-vistos548-r9, nenhum commit depois; sai na 2.0.7 | Escrivão 2026-10-16 22:1x: merged 91da5935e (agente/205-vistos548, 12 commits); reviews OK j-rev-vistos548-r8/r9; entra na 2.0.7
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review. 
+- **#552**: Escrivao 10-16 12:48: job fonte552 done; review BLOQUEIA j-rev-fonte552 -> fix cbcf467f5 -> OK j-rev2-fonte552; merged 0d7821a01. Hostnames de stream passam a ser lidos antes de exigir P2P. | Escrivao 10-16 14:58: follow-up do reporter (addons de legenda nao aparecem): fix 27988615e em agente/205-legenda552, sem review. | [sync 2026-10-16 21:00] merged 0d7821a01 (fonte552) + b897be584 (legenda552) + d25a3e513/6d524f947 (#505/#552 PR #559); reviews OK j-rev2-fonte552/j-rev-legenda552/j-rev-pr559 | [sync 2026-10-16 22:55] merged 0d7821a01/b897be584 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged 0d7821a01 nesta janela (HEAD ab0e9a597); review j-rev2-fonte552/j-rev-legenda552; fonte552 + legenda552 + PR #559 (URL http sem P2P); entra na 2.0.7
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-fonte552: merged; j-rev2-fonte552.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-fonte552: merged; j-rev2-fonte552.log: OK. 
 - **#556**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: merged 054ccef24 (port PR #569 de @ghbarker + fix 4a443422b); review OK j-rev-port569-r2; entra na 2.0.7
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-port569: merged; j-rev-port569-r2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-port569: merged; j-rev-port569-r2.log: OK. 
+- **#562**: Sync 2026-10-17 04:55: #562 fechada no GitHub depois do merge do PR #574. Conserto em integracao/2.0.5, sai na 2.0.7.
+- **#580**: Sync 2026-10-17 07:05: issue nova (17/10 09:01), rotulo bug, sem job. Mesma familia de #545/#551. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00. Sync 2026-10-17 15:30: estado_github corrigido para fechada (gh #580 CLOSED).
 
 ## Auditoria de validações
 
@@ -1257,6 +1479,44 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 | Data | Quem | O que | Issues | Ref | Resultado | Evidência |
 |---|---|---|---|---|---|---|
+| 2026-10-17 12:00 | map keeper (git) | Teste de regressao apos a janela de merges de vidro | - | 0940ae7bf | falhou | tests/vidro_qualidade.sh: FALHA "Alta ignores the governor (frost)"; j-vidroqual investigando (RUNNING 12:15) |
+| 2026-10-17 11:56 | dono (merge) / map keeper | Merge dos trabalhos revisados: homelerdo e naskhbold | - | d7522dd17, 0940ae7bf | pendente | reviews 11:40/11:41 OK foram ANTES do merge |
+| 2026-10-17 11:41 | job-pi (magpie) / review | Revisao do Naskh Bold na UI e nas legendas simples | - | 458828591 (agente/205-naskhbold) | passou | rev-naskhbold.log VEREDITO OK, P2 sem PNG de prova |
+| 2026-10-17 11:40 | job-pi (magpie) / review | Revisao do fix de perf do vidro (copia so dos retangulos desfocados) | - | e70adbf7a (agente/205-homelerdo) | passou | rev-homelerdo.log VEREDITO OK, P2 de um quadro de blur sujo |
+| 2026-10-17 11:37 | dono (merge) / map keeper | Merge de pr/572 com review OK previo (rev-pr572, 10:51) | - | 22f3d22bb (Merge pr/572) | passou | rev-pr572.log VEREDITO OK |
+| 2026-10-17 11:37 | dono (merge) / map keeper | Merge de agente/205-epfoco sem review dedicado antes do merge | - | 3b39999e5 (Merge agente/205-epfoco) | pendente | j-epfoco.log done 11:02, sem VEREDITO |
+| 2026-10-17 11:37 | dono (merge) / map keeper | Merge de agente/205-playervidro sem review dedicado antes do merge | - | 04375ab4f (Merge agente/205-playervidro) | pendente | j-playervidro/j-fix2/j-fix3-playervidro.log sem VEREDITO |
+| 2026-10-17 11:37 | dono (merge) / map keeper | Merge de agente/205-pisca3 sem review dedicado antes do merge | - | fc6d35d69 (Merge agente/205-pisca3) | pendente | j-pisca3/j-pisca3b/j-pisca3c.log sem VEREDITO |
+| 2026-10-17 09:20 | job-pi revisao | Review rev3 de agente/205-textoescala: P2 busca no celular ainda redimensiona o cartaz; P2 prova visual contra 8df743dff incompleta | - | agente/205-textoescala (342aafc49) | falhou | /Volumes/ExternalSSD/tmp/rev/rev3-textoescala.log |
+| 2026-10-17 08:47 | job-pi fix3 | Fix3 do detalhe: vidro no "Trocar arte" e fileira do Trakt desenhada 1x por quadro; 2 commits novos | - | 26dbd9a2a, 3aec9a8c0 | pendente | /Volumes/ExternalSSD/tmp/rev/j-fix3-detalheglass.log |
+| 2026-10-17 08:35 | job-claude | j-playervidro: devolve o frost sobre o video (arte pre-desfocada) e afrouxa o governador; 1 commit | #553 | ce33fe44a | pendente | /Volumes/ExternalSSD/tmp/rev/j-playervidro.log |
+| 2026-10-17 08:32 | job-pi fix3 | Fix3 da escala de texto: espacamento da busca e ancoras do menu de episodio; 1 commit | - | 342aafc49 | pendente | /Volumes/ExternalSSD/tmp/rev/j-fix3-textoescala.log |
+| 2026-10-17 08:24 | coordenacao | j-pisca3 (RUNNING) e j-traktvidro (log vazio) lancados: tela ainda pisca na C9 e fileira do Trakt sem vidro/FPS | #553 | agente/205-pisca3, agente/205-traktvidro (sem commit) | pendente | /Volumes/ExternalSSD/tmp/rev/escrivao/jobs.txt |
+| 2026-10-17 08:15 | job-pi revisao | Review rev3 de agente/205-detalheglass: P2 arte da colecao carregada ainda esconde o vidro; P2 "Trocar arte" sem vidro; tests/detalheglass.sh check rc=0 | - | agente/205-detalheglass (3aec9a8c0) | falhou | /Volumes/ExternalSSD/tmp/rev/rev3-detalheglass.log |
+| 2026-10-17 08:11 | dono (merge) / map keeper | Merge de agente/205-vidromenu cometado (ab0e9a597) com conflitos resolvidos; review rev2 OK 06:49 foi antes do merge | - | ab0e9a597 (Merge agente/205-vidromenu) | pendente | git reflog: commit (merge) 08:11 |
+| 2026-10-17 07:54 | job-pi (j-fix-vidroilhas) | Merge de agente/205-vidroilhas (ilhas de frost sobre o vidro da barra); review rev2 OK 06:48 + 2 fixes | - | f087f4b59 (Merge agente/205-vidroilhas) | passou | /Volumes/ExternalSSD/tmp/rev/j-fix-vidroilhas.log |
+| 2026-10-17 07:54 | map keeper | MERGE em andamento (MERGE_HEAD 90c8d380d agente/205-vidromenu) durante o sync; commit de docs pulado | - | MERGE_HEAD 90c8d380d | pendente | git status: merge in progress |
+| 2026-10-17 07:49 | job-pi (j-dinfundo / j-fix-dinfundo) | Merge de agente/205-dinfundo (fundo Cinza/Cor no layout Dinamico); review rev2 OK 06:48 + fix da paleta 0cf805980 | - | e3fdbe717 (Merge agente/205-dinfundo) | passou | /Volumes/ExternalSSD/tmp/rev/j-fix-dinfundo.log |
+| 2026-10-17 04:55 | job de agente (log do proprio job, sem revisao independente) | Merge de agente/205-homepisca: pisca do fundo Dinamico resolvido antes da copia do frost | - | 6a64c2e13 (agente/205-homepisca) | inconclusivo | sem review dedicado; testes do job + build nao conferidos por revisor (ver docs/issues/MAPA.md e /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md) |
+| 2026-10-17 04:55 | job de agente (log do proprio job, sem revisao independente) | Merge de agente/205-fichatam: fileira de cartazes grandes em Pequeno/Medio/Grande | - | cbf6fb021 (agente/205-fichatam) | inconclusivo | sem review dedicado; testes do job + build nao conferidos por revisor (ver docs/issues/MAPA.md e /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md) |
+| 2026-10-17 04:55 | job de agente (log do proprio job, sem revisao independente) | Merge de agente/205-herodiv: hero dividido nao repete o titulo focado na lista | - | f41a4e154 (agente/205-herodiv) | inconclusivo | sem review dedicado; testes do job + build nao conferidos por revisor (ver docs/issues/MAPA.md e /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md) |
+| 2026-10-17 04:55 | job de agente (log do proprio job, sem revisao independente) | Merge de agente/205-titulofil: estilos de titulo da fileira (Classico/Ilha/Editorial/Acento) | - | 4898972d7 (agente/205-titulofil) | inconclusivo | sem review dedicado; testes do job + build nao conferidos por revisor (ver docs/issues/MAPA.md e /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md) |
+| 2026-10-17 04:55 | job de agente (log do proprio job, sem revisao independente) | Merge de agente/205-foscoleve4: vidro defumado no player + nivel de qualidade do vidro | - | a691e96fb (agente/205-foscoleve4) | inconclusivo | sem review dedicado; testes do job + build nao conferidos por revisor (ver docs/issues/MAPA.md e /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md) |
+| 2026-10-17 04:55 | job de agente (log do proprio job, sem revisao independente) | Merge de agente/205-dvabertura: abertura do Dolby Vision no estilo novo | - | abb9e49b9 (agente/205-dvabertura) | inconclusivo | sem review dedicado; testes do job + build nao conferidos por revisor (ver docs/issues/MAPA.md e /Volumes/ExternalSSD/tmp/rev/escrivao/estado.md) |
+| 2026-10-17 04:55 | job-claude (j-foscoleve4) | Merge de agente/205-foscoleve4: vidro defumado no player + nivel de qualidade do vidro | - | a691e96fb (Merge agente/205-foscoleve4) | inconclusivo | /Volumes/ExternalSSD/tmp/rev/j-foscoleve4.log |
+| 2026-10-17 04:55 | job-claude (j-dvabertura / j-fix-dvabertura) | Merge de agente/205-dvabertura: abertura do Dolby Vision no estilo novo + fixes de transicao | - | abb9e49b9 (Merge agente/205-dvabertura) | inconclusivo | /Volumes/ExternalSSD/tmp/rev/j-fix-dvabertura.log |
+| 2026-10-17 04:50 | job-claude (j-titulofil) | Merge de agente/205-titulofil: estilos de titulo da fileira (Classico/Ilha/Editorial/Acento) | - | 4898972d7 (Merge agente/205-titulofil) | inconclusivo | /Volumes/ExternalSSD/tmp/rev/j-titulofil.log |
+| 2026-10-17 04:46 | job-claude (j-homepisca-pi / j-homepisca2) | Merge de agente/205-homepisca: fundo Dinamico resolvido antes da copia do frost (pisca do dono) | #553 | 6a64c2e13 (Merge agente/205-homepisca) | inconclusivo | /Volumes/ExternalSSD/tmp/rev/j-homepisca-pi.log |
+| 2026-10-17 04:46 | job-claude (j-fichatam) | Merge de agente/205-fichatam: fileira de cartaz grande em Pequeno/Medio/Grande | - | cbf6fb021 (Merge agente/205-fichatam) | inconclusivo | /Volumes/ExternalSSD/tmp/rev/j-fichatam.log |
+| 2026-10-17 04:46 | job-claude (j-herodiv) | Merge de agente/205-herodiv: hero dividido nao repete o titulo focado na lista | - | f41a4e154 (Merge agente/205-herodiv) | inconclusivo | /Volumes/ExternalSSD/tmp/rev/j-herodiv.log |
+| 2026-10-17 01:56 | job-claude (rev-traktcoment) | Review dos Comentários do Trakt com vidro/frost, série de volta e cache de wrap: VEREDITO OK (2 P2) | - | a363d821c/1165245fc/5195cd14f -> merge 335bd2abc | passou | /Volumes/ExternalSSD/tmp/rev/rev-traktcoment.log |
+| 2026-10-17 01:54 | job-claude (rev-ctxgrande) | Review do menu contextual com frost + ajuste "Menu do cartaz": VEREDITO OK (P1 de rebase, fora do commit) | - | a2ea074c7 -> merge dc040ef2d | passou | /Volumes/ExternalSSD/tmp/rev/rev-ctxgrande.log |
+| 2026-10-17 01:53 | job-claude (rev-pr574) | Review do PR #574 (Recarregar na folha de fontes + Assistir do começo): VEREDITO OK, UI small | #562 | 075fec9a4/6a6d5b71b -> merge 2c7c85860 | passou | /Volumes/ExternalSSD/tmp/rev/rev-pr574.log |
+| 2026-10-17 01:36 | job-claude (rev-pr561) | Review do PR #561 da comunidade (identidade da serie): VEREDITO OK, UI small | #524 | cdf5bdd88/2537db6a0 -> merge 86d194462 | passou | /Volumes/ExternalSSD/tmp/rev/rev-pr561.log |
+| 2026-10-17 01:31 | job-pi (j-vidrotabs-pi) | Frost nas abas da Biblioteca e do catalogo (pedido do dono "Nem as tabs"): prova de pixel FAIL->PASS, sem review dedicado | - | 21696fd8c/796a3441f -> merge a096e5eb8 | passou | /Volumes/ExternalSSD/tmp/rev/j-vidrotabs-pi.log |
+| 2026-10-17 00:53 | job-claude (j-rev-foscoleve3-r2) | Re-review do frost otimizado depois do fix r2: VEREDITO OK (12 PNGs C9 1080p, diff max 4/5) | - | fe6a04804/4ae3e7211 (agente/205-foscoleve3) | passou | /Volumes/ExternalSSD/tmp/rev/j-rev-foscoleve3-r2.log |
+| 2026-10-17 00:22 | job-claude (j-rev-foscoleve3) | Review da otimizacao do frost de captura de tela: BLOQUEIA (corte seco reusa o frost anterior; miss de regiao captura depois do foreground) | - | 93b3d69ec (agente/205-foscoleve3) | falhou | /Volumes/ExternalSSD/tmp/rev/j-rev-foscoleve3.log |
+| 2026-10-17 00:14 | job-claude (j-rev-amigospolish-r2) | Re-review de agente/205-amigospolish depois do fix r3 (scroll de toque do estilo 5): VEREDITO OK | - | e27514693 (agente/205-amigospolish) | passou | /Volumes/ExternalSSD/tmp/rev/j-rev-amigospolish-r2.log |
 | 2026-10-17 00:08 | keeper (mapa) | Merge agente/205-loadtelab (9c3ecdf85) em integracao/2.0.5: ajuste de tela de abertura B3 integrado | - | 9c3ecdf85 | passou | git log integracao/2.0.5 |
 | 2026-10-16 23:53 | job-pi (j-rev-amigospolish) | Review de agente/205-amigospolish (fileira Amigos polida, sem Ver todos/+Adicionar): VEREDITO BLOQUEIA — P2 no scroll de toque do estilo 5; captura rc=124 = timeout do harness, nao achado | - | 8806e6aff/d95bd32e1 (agente/205-amigospolish) | falhou | /Volumes/ExternalSSD/tmp/rev/j-rev-amigospolish.log |
 | 2026-10-16 22:49 | job-pi (j-rev-loadtelab) | Segunda review do mesmo diff de agente/205-loadtelab: VEREDITO OK (prompt aponta agente/205-loadtela, branch ja merged; vale a j-revg-loadtelab) | - | 922500ef4 (agente/205-loadtelab) | passou | /Volumes/ExternalSSD/tmp/rev/j-rev-loadtelab.log |
@@ -1390,11 +1650,13 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Samsung: faixa de áudio escondida pela TV (DTS/TrueHD)
 
 - Plataforma: Samsung .tpk (e .wgt na fase 1)
-- Status: consertada-nao-lancada (casar faixa) + planejado (aviso)
-- Release: 2.0.3 (casar faixa); 2.0.5 (aviso, fase 1)
-- Conserto: 4112f3f7 + efd1014b (agente/203-casarfaixa, em integracao/2.0.3): TV com menos faixas que o MKV casa por idioma, codec e canais; 0ef8ddc9 (agente/204-samsung-dts): só o plano docs/plans/samsung-dts.md, sem código; f45ddc14 (2.0.2, #313): aviso só quando TODAS as faixas são recusadas
-- Próximo passo: implementar fase 1 do plano (aviso + faixa cinza na folha de áudio, 1,5-2 dias); fase 2 (ESPlayer) depende de teste de assinatura Partner em TV
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: 4112f3f7 + efd1014b (agente/203-casarfaixa, em integracao/2.0.3): TV com menos faixas que o MKV casa por idioma, codec e canais; 0ef8ddc9 (agente/204-samsung-dts): só o plano docs/plans/samsung-dts.md, sem código; f45ddc14 (2.0.2, #313): aviso só quando TODAS as faixas são recusadas; agente/204-samsung-dts
+- Próximo passo: Review latest fix.
 - Notas: Relato do Reddit: 2 faixas no box, 1 na TV. Relacionado a #313. ESPlayer exige privilégio Partner (no 4/5 isso já quebrou a instalação, 118014).
+Snapshot 2026-10-17T12:48:52-03:00: agente/204-samsung-dts: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/204-samsung-dts: done-awaiting-review; No mapped review verdict. 
 
 ### Samsung: pacote de 80 GB
 
@@ -1408,11 +1670,15 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Home: mais de 40 fileiras e ordem dos catálogos (hboinay item 1)
 
 - Plataforma: Android
-- Status: precisa-log
-- Release: alvo sugerido 2.0.5 (teto) / sem alvo (ordem)
-- Conserto: 8e058817 (agente/204-fileiras-android, não integrado): Android com fileiras ilimitadas, teto 200
-- Próximo passo: teto: integrar agente/204-fileiras-android na 2.0.5 (já no roadmap); ordem: pedir log
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 8e058817 (agente/204-fileiras-android, não integrado): Android com fileiras ilimitadas, teto 200; agente/204-conta-catalogos; agente/204-fileiras-android
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: TETO por desenho: CAT_FIL_MAX 40 (catalogo.h:394) e FIL_LIMITE_MAX 40 (fileiras.h:60); a branch 204-fileiras-android o sobe para 200 só no Android. ORDEM: não há como afirmar sem log; ligação provável com #358 (catálogos que a Home move para "Fora da Home", 29c640b7 em agente/204-conta-catalogos). Pedir o log para ver a ordem da conta contra a da Home. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026.
+Snapshot 2026-10-17T12:48:52-03:00: agente/204-conta-catalogos: merged; No mapped review verdict.
+Snapshot 2026-10-17T12:48:52-03:00: agente/204-fileiras-android: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/204-conta-catalogos: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/204-fileiras-android: merged; No mapped review verdict. 
 
 ### Continuar com fonte Nuvio mostra 5-6 itens e depois 1; a conta tem 30 (hboinay item 3)
 
@@ -1444,11 +1710,13 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Selo de assistido não aparece em séries nos cartazes (só em filmes) (hboinay item 7)
 
 - Plataforma: Android
-- Status: aberta
-- Release: alvo sugerido 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: ler o /sync/watched/shows do Trakt uma vez (como o mapa de filmes vistos em trakt.c:1317) para marcar as séries inteiras
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/204-biblioteca-visto
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: cat_visto (catalogo.c:432) devolve 0 para série sem histórico; o histórico da série só é escrito quando a PÁGINA do título é aberta (extras.c:586-597, contadores de /shows/<id>/progress/watched) ou ao marcar à mão. Cartaz de série em fileira não tem selo antes disso. Vale para todas as plataformas. #352 (agente/204-biblioteca-visto, 402e2438) só leva o selo para a Biblioteca. Origem: Reddit u/hboinay, NVIDIA SHIELD TV Pro 2019, build teste-318.3 (base 2.0.2), 09/10/2026.
+Snapshot 2026-10-17T12:48:52-03:00: agente/204-biblioteca-visto: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/204-biblioteca-visto: merged; No mapped review verdict. 
 
 ### Trailers do destaque e da ficha começam pequenos e depois enchem a tela (hboinay item 8)
 
@@ -1733,10 +2001,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
-- Conserto: d9d8ad6f (merge agente/205-botoes em integracao/2.0.5)
-- Próximo passo: sem ação; lancar com 2.0.5 (testar no TCL antes do release)
+- Release: 2.0.7
+- Conserto: d9d8ad6f (merge agente/205-botoes em integracao/2.0.5); agente/205-botoes
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix3 commitado d2aa0f4e; review anterior BLOQUEIA. | Merge d9d8ad6f em integracao/2.0.5 (escrivao 14/10 16:49).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-botoes: merged; j-revg-botoes-r3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-botoes: merged; j-revg-botoes-r3.log: OK. Newer fix log requires review. 
 
 ### Layout do Ranking de colecao + foco cortado no topo
 
@@ -1795,20 +2065,26 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Gerenciar/adicionar perfil no quick switch + 3 tamanhos (alvo 2.1)
 
 - Plataforma: all
-- Status: aberta
+- Status: em_revisao
 - Release: 2.0.6
-- Conserto: agente/205-perfis21 (tip 7376c250, 1 commits fora)
-- Próximo passo: backlog 2.1; mock/estudo so
+- Conserto: agente/205-perfis21 (tip 7376c250, 1 commits fora); agente/205-perfis21
+- Próximo passo: Deferred to 2.1; retain tracking.
 - Notas: Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). rodando; alvo declarado = 2.1. Escrivão 14/10 14:47: review OK, merge pendente. | Escrivão 2026-10-14 16:11: review j-revg-perfis21 OK (11:16); merge pendente. | Escrivão 14/10 19:48: sem job Escrivao 10-15 07:10: review OK mantido. | Escrivão 2026-10-16 22:1x: 1 ahead; review OK j-revg-perfis21 (10-15)
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-perfis21: review-OK; j-revg-perfis21.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-perfis21: review-OK; j-revg-perfis21.log: OK. 
 
 ### Dicas de controle: tema/chips do rodape
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
-- Conserto: agente/205-dicatoque (tip 0ad55379, 1 commits fora)
-- Próximo passo: merged em integracao/2.0.5; sai na 2.0.7
+- Release: 2.0.7
+- Conserto: agente/205-dicatoque (tip 0ad55379, 1 commits fora); agente/205-dicatoque; agente/205-dicatoque2
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). BLOQUEIA: agente/205-dicatoque2 nao integrado. Escrivão 14/10 14:47: sem job (perdido). | Escrivão 14/10 19:48: sem job | Escrivão 2026-10-16 22:1x: agente/205-dicatoque 0 ahead (merged); review OK j-revg-dicatoque 10-14 23:16
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dicatoque: merged; j-revg-dicatoque.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dicatoque2: merged; j-revg-dicatoque2-r3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dicatoque: merged; j-revg-dicatoque.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dicatoque2: merged; j-revg-dicatoque2-r3.log: OK. Newer fix log requires review. 
 
 ### Painel de estatisticas ao vivo (esquerda/direita)
 
@@ -1840,38 +2116,48 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### PGS/blur do plx
 
 - Plataforma: all
-- Status: em_job
-- Release: 2.0.6
-- Conserto: agente/205-plx-pgs (tip 13dcc6b0, 7 commits fora); db9fca6f
-- Próximo passo: aguardar j-205-plx-pgs-fixd (RUNNING) -> re-review -> merge
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-plx-pgs (tip 13dcc6b0, 7 commits fora); db9fca6f; agente/205-plx; agente/205-plx-pgs
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: 13 commits fora. tests/mkvass.sh rc 1 no timing de servidor lento, mesmo base db9fca6fa: nao causado por esta mudanca. | Escrivão 2026-10-16 22:1x: agente/205-plx-pgs: job j-205-plx-pgs-fixd RUNNING (log vazio = QUEUED/RUNNING no snapshot)
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-plx-pgs: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-plx-pgs: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review. 
 
 ### Opcao "Teclado" (do app/do sistema) tambem na webOS/Tizen
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
-- Conserto: 4b333231 (merge agente/205-tecladolg em integracao/2.0.5)
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 4b333231 (merge agente/205-tecladolg em integracao/2.0.5); agente/205-tecladolg
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: fix 2a0ef328 commitado; review j-revf-tecladolg (07:13) BLOQUEIA antes do fix. | Escrivão 16:49: review lançado; sem veredito ainda. Escrivao 19:0x: merge 4b333231 (18:45); j-revg-tecladolg-r2 OK 18:20.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-tecladolg: merged; j-revg-tecladolg-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-tecladolg: merged; j-revg-tecladolg-r2.log: OK. Newer fix log requires review. 
 
 ### Pesquisa: distribuir pela TizenBrew (Samsung)
 
 - Plataforma: all
-- Status: aberta
+- Status: em_revisao
 - Release: 2.0.6
-- Conserto: agente/205-tizenbrew (tip 25693f33, 1 commits fora)
-- Próximo passo: adiado pelo dono; rascunho na branch
+- Conserto: agente/205-tizenbrew (tip 25693f33, 1 commits fora); agente/205-tizenbrew
+- Próximo passo: Deferred to 2.1; retain tracking.
 - Notas: Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). docs em docs/tizenbrew; sem job recente. Escrivão 14/10 14:47: adiado (pesquisa; sem merge). | Escrivão 2026-10-16 22:1x: 1 ahead de rascunho, sem review nem job novo
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-tizenbrew: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-tizenbrew: done-awaiting-review; No mapped review verdict. 
 
 ### Homebrew Channel webOS / mercado
 
 - Plataforma: all
-- Status: aberta
+- Status: em_revisao
 - Release: 2.0.6
-- Conserto: bcb1cdeaf (agente/205-homebrew); repo.json 2.0.6 (homebrew, HEAD c2e50a932)
-- Próximo passo: adiado pelo dono; rascunho + manifest na branch
+- Conserto: bcb1cdeaf (agente/205-homebrew); repo.json 2.0.6 (homebrew, HEAD c2e50a932); agente/205-homebrew
+- Próximo passo: Deferred to 2.1; retain tracking.
 - Notas: Pedido do dono sem issue. Jobs concluidos (pesquisa, checklist, draft de manifest e PR). Escrivao 10-16 12:48: sem merge; repo.json de 2.0.6 saiu no homebrew c2e50a932. | Escrivão 2026-10-16 22:1x: c2e50a932 (repo.json 2.0.6) merged em 481b2b0e6; 1 ahead de rascunho; sem job novo
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-homebrew: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-homebrew: done-awaiting-review; No mapped review verdict. 
 
 ### OK nos relacionados do player de filme nao fazia nada
 
@@ -1895,46 +2181,58 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
-- Conserto: agente/205-triagem-velhas (tip 3d791e8a, 1 commits fora)
-- Próximo passo: lancar com 2.0.5 (merged em agente/205-triagem-velhas)
+- Release: 2.0.7
+- Conserto: agente/205-triagem-velhas (tip 3d791e8a, 1 commits fora); agente/205-triagem-velhas
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Branch agente/205-triagem-velhas 1 commit fora.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK. 
 
 ### Glass/top bar portados do plx (tambem em dono-205-topotam)
 
 - Plataforma: all
-- Status: 5 commits nao integrados
-- Release: 2.0.6
-- Conserto: agente/205-topotam (356c63b8 2026-10-14 Document the PlxNative glass and tab strip port)
-- Próximo passo: j-205-vidroplx done (ainda nao mergeado; sem job de merge)
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-topotam (356c63b8 2026-10-14 Document the PlxNative glass and tab strip port); agente/205-topotam
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Pedido do dono/Discord sem issue no GitHub (snapshot 2026-10-14 10:15). mesmo branch de dono-205-topotam. Escrivao 10-16: ainda nao mergeado (backlog 2.1).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-topotam: merged; j-revg-topotam.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-topotam: merged; j-revg-topotam.log: OK. Newer fix log requires review. 
 
 ### Merge integracao/2.0.5 into agente/205-205-teclado
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 49a90e54
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 49a90e54; agente/205-205-teclado
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-205-teclado: merged; j-rev-205-teclado3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-205-teclado: merged; j-rev-205-teclado3.log: OK. Newer fix log requires review. 
 
 ### Merge integracao/2.0.5 into agente/205-abas
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 3fc35494
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 3fc35494; agente/205-abas
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-abas: merged; j-rev-205-abas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-abas: merged; j-rev-205-abas2.log: OK. Newer fix log requires review. 
 
 ### Fix streaming collection tab strip: catalog order alignment, sliding focus, smooth brand ba
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: 7242b442; 28da074c
-- Próximo passo: aguardar j-205-abastream-fixc3 (RUNNING) -> re-review -> merge
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 7242b442; 28da074c; agente/205-abas; agente/205-abastream
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: 5-6 commits fora. Nao mergeado. | Escrivão 2026-10-16 22:1x: agente/205-abastream: job j-205-abastream-fixc3 RUNNING (log vazio = QUEUED/RUNNING no snapshot)
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-abas: merged; j-rev-205-abas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-abastream: merged; j-revg-abastream-c3.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-abas: merged; j-rev-205-abas2.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-abastream: merged; j-revg-abastream-c3.log: OK. 
 
 ### fix(gfx): require pixel-aligned opaque panel cores for clear
 
@@ -1967,19 +2265,23 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: d6335ba9
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: d6335ba9; agente/205-cwinicio
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-cwinicio: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-cwinicio: merged; No mapped review verdict. 
 
 ### aovivo: drive the OSD focus springs from the row draw + shot frame sequence
 
 - Plataforma: ?
-- Status: em_revisao
-- Release: 2.0.5
-- Conserto: ac6d84aa; 059af14f
-- Próximo passo: merge agente/205-animacoes (review OK); depois build+install
+- Status: integrada
+- Release: 2.0.7
+- Conserto: ac6d84aa; 059af14f; agente/205-animacoes
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Review OK j-revg-animacoes-d 19:53 (apos fixc3 19:41). 15 commits fora. Merge job 20:04 nao mergeou. | Escrivão 2026-10-16 22:1x: agente/205-animacoes review OK j-revg-animacoes-d; merge pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-animacoes: merged; j-revg-animacoes-d.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-animacoes: merged; j-revg-animacoes-d.log: OK. Newer fix log requires review. 
 
 ### fix(tex): count bytes from the Android reserve path and back off 0-byte art responses
 
@@ -2039,10 +2341,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: de5a9bc6; 560b7752
-- Próximo passo: merged em integracao/2.0.5; testar no TCL
+- Release: 2.0.7
+- Conserto: de5a9bc6; 560b7752; agente/205-bench-mm
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: sem job (perdido). | j-revg-bench-mm: VEREDITO OK. Escrivão 16:49: 1 commit fora, não integrada. | Escrivão 14/10 19:48: agente/205-bench-mm merged (560b7752).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-bench-mm: merged; j-revg-bench-mm.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-bench-mm: merged; j-revg-bench-mm.log: OK. Newer fix log requires review. 
 
 ### detail: expanding "Play from beginning" pill reveals the label by fade, not clip (#205)
 
@@ -2120,19 +2424,23 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 300a4798 (merge em integracao/2.0.5)
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 300a4798 (merge em integracao/2.0.5); agente/205-colestilos
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 2026-10-14 16:11: mergeada 300a4798; review j-revg-colestilos OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-colestilos: merged; j-revg-colestilos.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-colestilos: merged; j-revg-colestilos.log: OK. Newer fix log requires review. 
 
 ### Merge agente/205-dicascontrole
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 0e567d1a
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 0e567d1a; agente/205-dicascontrole
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review. 
 
 ### ctxmenu: keep pending row style past the Order row; pointer click on Order cycles it
 
@@ -2147,10 +2455,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: f34bfe41
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: f34bfe41; agente/205-colstreaming
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-colstreaming: merged; j-rev5-205-colstreaming.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-colstreaming: merged; j-rev5-205-colstreaming.log: OK. Newer fix log requires review. 
 
 ### Polish collection Cover Flow: Home focus ring, flat depth stack, info below timeline
 
@@ -2165,19 +2475,25 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 02f53b6e (merge agente/205-coverflow2 em integracao/2.0.5)
-- Próximo passo: sem ação; lancar com 2.0.5 (testar no TCL antes do release)
+- Release: 2.0.7
+- Conserto: 02f53b6e (merge agente/205-coverflow2 em integracao/2.0.5); agente/205-coverflow; agente/205-coverflow2
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 2026-10-14 16:11: fix3 commitado 3d9cf03d; review anterior BLOQUEIA (j-revg-coverflow2-r2). | Merge 02f53b6e em integracao/2.0.5 (escrivao 14/10 16:49).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-coverflow: merged; j-revg-coverflow2-r3.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-coverflow2: merged; j-revg-coverflow2-r3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-coverflow: merged; j-revg-coverflow2-r3.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-coverflow2: merged; j-revg-coverflow2-r3.log: OK. Newer fix log requires review. 
 
 ### Merge agente/205-ajustesperf
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: b65a4a9c
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: b65a4a9c; agente/205-ajustesperf
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-ajustesperf: merged; j-revg-ajustesperf.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-ajustesperf: merged; j-revg-ajustesperf.log: OK. 
 
 ### test(cwinicio): pass tocou=-1 seed record for local CW baseline (#205)
 
@@ -2219,10 +2535,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 68e56581
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 68e56581; agente/205-destaquegenero
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-destaquegenero: merged; j-revf-destaquegenero.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-destaquegenero: merged; j-revf-destaquegenero.log: OK. Newer fix log requires review. 
 
 ### Comments picker reopens on the confirmed episode's season after browsing others
 
@@ -2237,28 +2555,36 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 0e567d1a
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 0e567d1a; agente/205-dicascontrole
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review. 
 
 ### Merge agente/205-i18nordem
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 7839b119
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 7839b119; agente/205-i18nordem
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review. 
 
 ### Settings: the register-only footer replay must not paint
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 96c87dc7 (merge agente/205-dicatoque2 em integracao/2.0.5)
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 96c87dc7 (merge agente/205-dicatoque2 em integracao/2.0.5); agente/205-dicatoque; agente/205-dicatoque2
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 2026-10-14 16:11: fix2-r commitado 44b4295a; review j-revg-dicatoque2 BLOQUEIA antes. | j-revg-dicatoque2-r3 OK 15:56 (fix2-r 44b4295a). Escrivão 16:49: branch ainda não integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dicatoque: merged; j-revg-dicatoque.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dicatoque2: merged; j-revg-dicatoque2-r3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dicatoque: merged; j-revg-dicatoque.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dicatoque2: merged; j-revg-dicatoque2-r3.log: OK. Newer fix log requires review. 
 
 ### fix(directors): correct watched state, identity merging and portrait tint
 
@@ -2291,19 +2617,23 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: e0add27f
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: e0add27f; agente/205-legsyncprox
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK. 
 
 ### Merge integracao/2.0.5 into agente/205-epcard
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 364f28d2
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 364f28d2; agente/205-epcard
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-epcard: merged; j-revg-epcard.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-epcard: merged; j-revg-epcard.log: OK. Newer fix log requires review. 
 
 ### feat(detail): modern episode cards put title and synopsis below the thumbnail
 
@@ -2318,28 +2648,38 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: a3b07d6d (merge agente/205-epslista em integracao/2.0.5)
-- Próximo passo: sem ação; lancar com 2.0.5 (testar no TCL antes do release)
+- Release: 2.0.7
+- Conserto: a3b07d6d (merge agente/205-epslista em integracao/2.0.5); agente/205-epslista; agente/205-notas0
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-epslista; review j-revg-epslista-r3 OK; branch ainda NAO integrada. | Merge a3b07d6d em integracao/2.0.5 (escrivao 14/10 16:49).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-epslista: merged; j-revg-epslista-r3.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-notas0: merged; j-revg-notas0.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-epslista: merged; j-revg-epslista-r3.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-notas0: merged; j-revg-notas0.log: OK. Newer fix log requires review. 
 
 ### Merge integracao/2.0.5 into agente/205-epsrapido
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 6fb82684
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 6fb82684; agente/205-epsrapido
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-epsrapido: merged; j-rev2-205-epsrapido.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-epsrapido: merged; j-rev2-205-epsrapido.log: OK. Newer fix log requires review. 
 
 ### fix(player): polish statistics margins, keycaps and meta line
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: 60c6db739 (merge agente/205-estatpainel2 em integracao/2.0.5)
-- Próximo passo: aguardar j-merge-205-estatpainel2-r (RUNNING) -> re-review -> merge
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 60c6db739 (merge agente/205-estatpainel2 em integracao/2.0.5); agente/205-estatpainel; agente/205-estatpainel2
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Review OK j-revg-estatpainel2-c 19:20. Merge concluido (60c6db739); branch sem commits fora. Escrivao 10-15 07:10: merge job sem review log (so merge/fix). | Escrivão 2026-10-16 22:1x: agente/205-estatpainel2: job j-merge-205-estatpainel2-r RUNNING (log vazio = QUEUED/RUNNING no snapshot)
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-estatpainel: merged; j-revg-estatpainel2-c.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-estatpainel2: merged; j-revg-estatpainel2-c.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-estatpainel: merged; j-revg-estatpainel2-c.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-estatpainel2: merged; j-revg-estatpainel2-c.log: OK. Newer fix log requires review. 
 
 ### fix(player): keep live statistics open and add animated overlay sizes
 
@@ -2408,28 +2748,36 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 3b66b044 (merge em integracao/2.0.5)
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 3b66b044 (merge em integracao/2.0.5); agente/205-cardexp; agente/205-heroinfo
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-heroinfo; review j-revg-heroinfo-r3 OK; branch ainda NAO integrada. | j-revg-heroinfo-r3 OK 15:56. Escrivão 16:49: branch ainda não integrada. Escrivao 19:0x: merge em integracao/2.0.5.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-cardexp: merged; j-revg-cardexp.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-heroinfo: merged; j-revg-heroinfo-r3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-cardexp: merged; j-revg-cardexp.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-heroinfo: merged; j-revg-heroinfo-r3.log: OK. Newer fix log requires review. 
 
 ### Merge integracao/2.0.5 into agente/205-homeqr
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 4f022aa3
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 4f022aa3; agente/205-homeqr
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-homeqr: merged; j-rev-205-homeqr.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-homeqr: merged; j-rev-205-homeqr.log: OK. Newer fix log requires review. 
 
 ### Merge integracao/2.0.5 into agente/205-i18n491: keep translated i18n entries
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: ce5b60d1
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: ce5b60d1; agente/205-i18n491
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i18n491: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i18n491: merged; No mapped review verdict. 
 
 ### Add missing i18n keys for drawn subtitle/source labels
 
@@ -2444,10 +2792,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 7839b119
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 7839b119; agente/205-i18nordem
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review. 
 
 ### fix: start next episode countdown when the card appears
 
@@ -2489,10 +2839,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 7656a6598 (merge agente/205-triagem-velhas em integracao/2.0.5)
-- Próximo passo: merged em integracao/2.0.5 (7656a6598); build+install para 799d025bd; docs-only
+- Release: 2.0.7
+- Conserto: 7656a6598 (merge agente/205-triagem-velhas em integracao/2.0.5); agente/205-triagem-velhas
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada. Escrivao 10-15 07:10: w OK (04:49) apos fix z (03:49); merge 7656a6598.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK. 
 
 ### test(subtitles): make external-subtitle guards fast and portable
 
@@ -2552,19 +2904,23 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 2e4d2434
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 2e4d2434; agente/205-menuglass
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-menuglass: merged; j-revc-menuglass.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-menuglass: merged; j-revc-menuglass.log: OK. 
 
 ### Merge integracao/2.0.5 into agente/205-menutopo
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: f3de11e7
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: f3de11e7; agente/205-menutopo
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review. 
 
 ### docs: PLANO-MERCADO plan
 
@@ -2578,11 +2934,13 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### design(2.1): friends row mockup with 5 modern styles (#205)
 
 - Plataforma: ?
-- Status: aberta
+- Status: em_revisao
 - Release: 2.0.5
-- Conserto: agente/205-mock21 (tip 9de13e4e, 1 commit fora)
-- Próximo passo: backlog 2.1; mock/estudo so
+- Conserto: agente/205-mock21 (tip 9de13e4e, 1 commit fora); agente/205-mock21
+- Próximo passo: Deferred to 2.1; retain tracking.
 - Notas: Escrivão 2026-10-14 16:11: 3 mockups anteriores (gamification/cinephile/redesign) ja em integracao/2.0.5; friends row 9de13e4e ainda fora. Escrivao 10-15 07:10: sem job. | Escrivão 2026-10-16 22:1x: 1 ahead; sem job nem review
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-mock21: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-mock21: done-awaiting-review; No mapped review verdict. 
 
 ### fix(network): preserve offline detection across retries and allow DNS retransmission
 
@@ -2606,10 +2964,14 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 1602f90c (merge agente/205-notas1 em integracao/2.0.5)
-- Próximo passo: sem ação; lancar com 2.0.5 (testar no TCL antes do release)
+- Release: 2.0.7
+- Conserto: 1602f90c (merge agente/205-notas1 em integracao/2.0.5); agente/205-notas0; agente/205-notas1
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Pedido do dono/Discord sem issue no GitHub. Escrivão 2026-10-14 16:11: impl em agente/205-notas1; review j-revg-notas1-r3 OK; branch ainda NAO integrada. | Merge 1602f90c em integracao/2.0.5 (escrivao 14/10 16:49).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-notas0: merged; j-revg-notas0.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-notas1: merged; j-revg-notas1-r3.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-notas0: merged; j-revg-notas0.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-notas1: merged; j-revg-notas1-r3.log: OK. 
 
 ### fix(tests): debrid parser expects externalUrl-only stream to be dropped
 
@@ -2632,20 +2994,26 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### fix(p2p): USB cache — persist scanned root, race/litter/orphan fixes (#205)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.1
-- Conserto: 0d678eba5 (Merge agente/205-p2pusbtela, HEAD); 9b4f37efb (linha Cache do P2P no Android)
-- Próximo passo: aguardar j-fix-p2pusbx/w/y/z (RUNNING) -> re-review -> merge
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 0d678eba5 (Merge agente/205-p2pusbtela, HEAD); 9b4f37efb (linha Cache do P2P no Android); agente/205-p2pusb; agente/205-p2pusbtela
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: 8 ahead; nao mergeado; sem job rodando Escrivao 10-15 07:10: fix w 05:51; review v 06:49 BLOQUEIA. | Escrivao 2026-10-15 07:50: lost-ish: sem job apos BLOQUEIA v | Escrivao 10-15 08:50: fix 07:52 sem review; nao perdido (fix depois do bloqueio). | [sync 2026-10-16 22:55] merged no HEAD f0f4f4928 (p2pusbtela 0d678eba5) | Escrivão 2026-10-16 22:1x: agente/205-p2pusb: job j-fix-p2pusbx/w/y/z RUNNING (log vazio = QUEUED/RUNNING no snapshot)
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-p2pusbtela: merged; j-rev-p2pusbtela.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-p2pusbtela: merged; j-rev-p2pusbtela.log: OK. 
 
 ### Merge agente/205-legsyncprox
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: e0add27f
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: e0add27f; agente/205-legsyncprox
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK. 
 
 ### painel: English public build, single future group, clean platform names
 
@@ -2677,11 +3045,13 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### android: fix paralelo unit tests after zero-delay open retry
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: agente/205-paraleloloop (tip 1788e8fa, 6 commits fora); 07455c12
-- Próximo passo: aguardar j-205-paraleloloop-fixc3 (RUNNING) -> re-review -> merge
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-paraleloloop (tip 1788e8fa, 6 commits fora); 07455c12; agente/205-paraleloloop
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: 9 commits fora. Nao mergeado. | Escrivão 2026-10-16 22:1x: agente/205-paraleloloop: job j-205-paraleloloop-fixc3 RUNNING (log vazio = QUEUED/RUNNING no snapshot)
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-paraleloloop: merged; j-revg-paraleloloop-c3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-paraleloloop: merged; j-revg-paraleloloop-c3.log: OK. Newer fix log requires review. 
 
 ### tests: plugin runner and Plugins screen / sources sheet captures
 
@@ -2767,29 +3137,37 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Merge integracao/2.0.5 into agente/205-pr489
 
 - Plataforma: ?
-- Status: em_revisao
-- Release: 2.0.5
-- Conserto: 22a34af1
-- Próximo passo: aguardar j-pr489-fix (RUNNING) -> re-review -> merge
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 22a34af1; agente/205-pr489
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada. | Escrivão 2026-10-16 22:1x: pr/489-fix 10 ahead; review OK j-revpr489-fix 03:05; j-pr489-fix RUNNING (log vazio)
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr489: merged; j-rev-205-pr489.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr489: merged; j-rev-205-pr489.log: OK. Newer fix log requires review. 
 
 ### Merge branch 'integracao/2.0.5' into agente/205-pr490
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: 75059d26; 1f8309961 Fix Vitrine resume preservation (fix, sem review)
-- Próximo passo: aguardar j-pr490-fix (RUNNING) -> re-review -> merge; teste na TV
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: 75059d26; 1f8309961 Fix Vitrine resume preservation (fix, sem review); agente/205-pr490; pr/490-fix
+- Próximo passo: Review latest fix.
 - Notas: Escrivão 14/10 14:47: integrada. | Escrivao 10-15 13:48: fix6 OK (j-revpr490-fix6 12:51). | Escrivão 2026-10-16 22:1x: pr/490-fix 10 ahead; j-revpr490-fix6 OK 12:51 e j-revpr490-v3 OK 14:35; j-pr490-fix RUNNING (log vazio)
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr490: merged; j-rev2-205-pr490.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: pr/490-fix: needs review; j-revpr490-fix6.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr490: merged; j-rev2-205-pr490.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: pr/490-fix: needs review; j-revpr490-fix6.log: OK. Newer fix log requires review. 
 
 ### ci: port PR #491 Tizen 6+ package builds and audit all commits
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: 6dd374db
-- Próximo passo: aguardar job RUNNING -> re-review -> merge
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: 6dd374db; pr/491-limpo
+- Próximo passo: Review latest fix.
 - Notas: Escrivão 14/10 14:47: integrada. | Escrivao 10-15 08:50: branch 0 ahead: merged. | Escrivao 10-15 13:48: mesmo item de pr/491-limpo. | Escrivão 2026-10-16 22:1x: pr/491-limpo 8 ahead; j-revpr491-limpo-r3 BLOQUEIA 04:52; j-pr491-limpo e j-revpr491-limpo RUNNING
+Snapshot 2026-10-17T12:48:52-03:00: pr/491-limpo: needs review; j-revpr491-limpo-r3.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: pr/491-limpo: needs review; j-revpr491-limpo-r3.log: BLOQUEIA. Newer fix log requires review. 
 
 ### Streaming: ranking and decades info side without duplicate poster
 
@@ -2867,10 +3245,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 053607be
-- Próximo passo: sai na 2.0.7; confirmar "Arte" como padrao na C9
+- Release: 2.0.7
+- Conserto: 053607be; agente/205-loadtela
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada. | [sync 2026-10-16 21:10] tela de abertura A3 do player (718e61abb) merged ace1fd53a em agente/205-loadtela; review OK j-rev-loadtela (20:33) | Escrivão 2026-10-16 22:1x: merged ace1fd53a (718e61abb tela de abertura A3); review OK j-rev-loadtela (20:33)
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-loadtela: merged; j-rev-foscoleve3-r2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-loadtela: merged; j-rev-foscoleve3-r2.log: OK. 
 
 ### fix: restore test runner repository working directory
 
@@ -2903,19 +3283,25 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 9eba8c16 (merge agente/205-shufflepos em integracao/2.0.5)
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: 9eba8c16 (merge agente/205-shufflepos em integracao/2.0.5); agente/205-shuffle; agente/205-shufflepos
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: impl/merge feito, sem review. | Escrivão 16:49: impl feita; review sem veredito ainda.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-shuffle: merged; j-revg-shuffle.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-shufflepos: merged; j-revg-shufflepos.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-shuffle: merged; j-revg-shuffle.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-shufflepos: merged; j-revg-shufflepos.log: OK. 
 
 ### Merge branch 'integracao/2.0.5' into agente/205-sidebarfonte
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 5c8266ad (merge agente/205-sidebarfonte em integracao/2.0.5)
-- Próximo passo: sem ação; lancar com 2.0.5 (testar no TCL antes do release)
+- Release: 2.0.7
+- Conserto: 5c8266ad (merge agente/205-sidebarfonte em integracao/2.0.5); agente/205-sidebarfonte
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: impl/merge feito, sem review. | Merge 5c8266ad em integracao/2.0.5 (escrivao 14/10 16:49).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-sidebarfonte: merged; j-revg-sidebarfonte.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-sidebarfonte: merged; j-revg-sidebarfonte.log: OK. Newer fix log requires review. 
 
 ### fix(simkl): keep history fallback on original profile
 
@@ -3002,10 +3388,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: e53eb342
-- Próximo passo: lancar com 2.0.5
+- Release: 2.0.7
+- Conserto: e53eb342; agente/205-testestmp
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 14/10 14:47: integrada.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-testestmp: merged; j-revc-testestmp.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-testestmp: merged; j-revc-testestmp.log: OK. Newer fix log requires review. 
 
 ### fix(settings): absorb clicks on unavailable texture limits
 
@@ -3092,28 +3480,34 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: c624b273 (merge agente/205-retomamorna em integracao/2.0.5)
-- Próximo passo: lancar com 2.0.5 (testar no TCL antes do release)
+- Release: 2.0.7
+- Conserto: c624b273 (merge agente/205-retomamorna em integracao/2.0.5); agente/205-retomamorna
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Issue #492. Review j-revg-retomamorna OK 17:06.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-retomamorna: merged; j-revg-retomamorna.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-retomamorna: merged; j-revg-retomamorna.log: OK. Newer fix log requires review. 
 
 ### fix(android): SDLActivity.nativeLowMemory (urgente)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 22924c90e; 5544c3e4c (merge agente/205-androidsdl)
-- Próximo passo: instalado no Android (build 5544c3e4c, rc 0, Success)
+- Release: 2.0.7
+- Conserto: 22924c90e; 5544c3e4c (merge agente/205-androidsdl); agente/205-androidsdl
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Job androidsdl done 20:02.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-androidsdl: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-androidsdl: merged; No mapped review verdict. 
 
 ### Vidro padrao: auditoria de superficies glass (PLX glass port)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: be42293ae (merge agente/205-vidropadrao em integracao/2.0.5)
-- Próximo passo: merged; build+install para o novo HEAD
+- Release: 2.0.7
+- Conserto: be42293ae (merge agente/205-vidropadrao em integracao/2.0.5); agente/205-vidropadrao
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Branch agente/205-vidropadrao 10 commits fora, 2 atras. Job sonnet high. Escrivao 10-15 07:10: merge job sem review log (so merge/fix).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vidropadrao: merged; j-revg-vidropadrao-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidropadrao: merged; j-revg-vidropadrao-z.log: OK. Newer fix log requires review. 
 
 ### M3U misto: canal/catalogo pelo tipo declarado (bug)
 
@@ -3128,10 +3522,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Release: 2.0.7
+- Conserto: agente/205-chdelay
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Branch agente/205-chdelay ja integrada (merged). | Escrivão 2026-10-16 22:1x: merged 8e203bc61; review OK j-revg-chdelay-z; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-chdelay: merged; j-revg-chdelay-z.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-chdelay: merged; j-revg-chdelay-z.log: OK. 
 
 ### Glass mockup: estudo de design (somente mockups)
 
@@ -3146,55 +3542,69 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: Android/TCL?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: agente/205-barra27: 2 commits fora
-- Próximo passo: lancar com 2.0.5 (merged em agente/205-barra27)
+- Release: 2.0.7
+- Conserto: agente/205-barra27: 2 commits fora; agente/205-barra27
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: criado pelo escrivao 22:4x
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-barra27: merged; j-revg-barra27-x.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-barra27: merged; j-revg-barra27-x.log: OK. Newer fix log requires review. 
 
 ### Cabecalho colunas (agente/205-colhdr)
 
 - Plataforma: ?
-- Status: aberta
-- Release: 2.0.5
-- Conserto: agente/205-colhdr: 1 commit fora
-- Próximo passo: descartar: colhdrlinha ja integrado (c44f8afbe); branch so mock
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-colhdr: 1 commit fora; agente/205-colhdr
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: 1 ahead; fix 21:18, sem review depois Escrivao 10-15 07:10: colhdrlinha merged c44f8afbe; colhdr fica como mock 1 ahead.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-colhdr: merged; j-revg-colhdr.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-colhdr: merged; j-revg-colhdr.log: OK. 
 
 ### VIDAA (agente/205-vidaa)
 
 - Plataforma: VIDAA
-- Status: em_job
-- Release: 2.0.5
+- Status: integrada
+- Release: 2.0.7
 - Conserto: 81b418469 (Merge agente/205-vidaa, integracao/2.0.5); d0bf5ba79 (Merge integracao/2.0.5 into agente/205-vidaa); agente/205-vidaa
-- Próximo passo: aguardar j-fix-vidaa-3 (RUNNING) -> re-review; teste em TV VIDAA
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: criado pelo escrivao 22:4x Escrivao 10-15 07:10: sem review depois do fix 22:46. Escrivao 10-16: merged (81b418469). Reviews anteriores BLOQUEIA (probe, sync, tracks) -> fixes -> j-revg-vidaa-6 OK (veredito mais recente do branch). Pendente emcc/tpk com chaves e TV VIDAA fisica. Escrivao 10-16 01:50: merge ainda nao instalado na TV. | Escrivão 2026-10-16 22:1x: merged d0bf5ba79; VEREDITO OK j-revg-vidaa-6 apos sequencia de BLOQUEIA; j-fix-vidaa-3 RUNNING
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vidaa: merged; j-revg-vidaa-6.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidaa: merged; j-revg-vidaa-6.log: OK. Newer fix log requires review. 
 
 ### PR #493 (ghbarker, ligado a #488)
 
 - Plataforma: Android/TCL?
 - Status: em_revisao
-- Release: 2.0.5
-- Conserto: agente/205-pr493: 12 commits fora
-- Próximo passo: LOST: sem job novo desde 10-15; relancar fix (achados do j-revg-pr493) + review; depois merge e teste na TV
+- Release: 2.0.7
+- Conserto: agente/205-pr493: 12 commits fora; agente/205-pr493; pr/493-fix
+- Próximo passo: Review latest fix.
 - Notas: agente/205-pr493 12 ahead; pr/493-fix e o fix | Escrivão 2026-10-16 22:1x: j-revpr493-v3 OK (10-15 06:50) e fix2 OK (04:51) foram antes do BLOQUEIA j-revg-pr493; 12 ahead (71fbc7453); sem job novo na fila
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: pr/493-fix: needs review; j-revpr493-fix2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: pr/493-fix: needs review; j-revpr493-fix2.log: OK. Newer fix log requires review. 
 
 ### PR #498 limpo (pr/498-limpo)
 
 - Plataforma: ?
 - Status: em_revisao
-- Release: 2.0.5
-- Conserto: pr/498-limpo: 12 commits fora (tip 22ed066e2 22:31)
-- Próximo passo: merge pr/498-limpo (12 ahead) ou dono; review OK (j-revpr498-limpo)
+- Release: 2.0.7
+- Conserto: pr/498-limpo: 12 commits fora (tip 22ed066e2 22:31); pr/498-limpo
+- Próximo passo: Merge reviewed branch.
 - Notas: PR #498; 12 ahead; nao mergeado Escrivao 10-15 07:10: 12 ahead, review OK mantido; falta merge. | Escrivao 2026-10-15 07:50: review OK, falta merge | Escrivao 10-15 08:50: ainda nao mergeado. | Escrivao 10-15 13:48: review OK, branch 22ed066e2 nao mergeado.
+Snapshot 2026-10-17T12:48:52-03:00: pr/498-limpo: review-OK; j-revpr498-limpo.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: pr/498-limpo: review-OK; j-revpr498-limpo.log: OK. 
 
 ### PR #491 limpo (pr/491-limpo)
 
 - Plataforma: ?
 - Status: em_revisao
-- Release: 2.0.5
-- Conserto: pr/491-limpo: 52 commits fora (tip f8fe27fad 05:53)
-- Próximo passo: review fix c (f8fe27fad, 05:53); BLOQUEIA r3 04:52 antes; sem job rodando
+- Release: 2.0.7
+- Conserto: pr/491-limpo: 52 commits fora (tip f8fe27fad 05:53); pr/491-limpo
+- Próximo passo: Review latest fix.
 - Notas: PR #491; 51 ahead; nao mergeado Escrivao 10-15 07:10: fix c 05:53 cancela probes DTS; precisa review depois do r3. | Escrivao 2026-10-15 07:50: precisa review do fix c | Escrivao 10-15 08:50: fix c sem review. | Escrivao 10-15 13:48: sem review depois do fix c. LOST se nao revisado.
+Snapshot 2026-10-17T12:48:52-03:00: pr/491-limpo: needs review; j-revpr491-limpo-r3.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: pr/491-limpo: needs review; j-revpr491-limpo-r3.log: BLOQUEIA. Newer fix log requires review. 
 
 ### PR #489 fix (pr/489-fix)
 
@@ -3208,47 +3618,57 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### PR #490 fix (pr/490-fix)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: pr/490-fix: 8 commits fora (tip 3dae8f5c 06:03)
-- Próximo passo: review j-pr490-v3 (13:47, rodando) do tip de pr/490-fix (46e4df866 ou posterior)
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/490-fix: 8 commits fora (tip 3dae8f5c 06:03); pr/490-fix
+- Próximo passo: Review latest fix.
 - Notas: PR #490; 7 ahead; nao mergeado Escrivao 10-15 07:10: fix c 06:03 (3dae8f5c); review fix3 06:50 BLOQUEIA (P2 starvation da fila). | Escrivao 2026-10-15 07:50: lost-ish: BLOQUEIA sem fix depois | Escrivao 10-15 08:50: fix v 07:59 aguarda review. | Escrivao 10-15 13:48: fix6 OK 12:51; v3 job rodando.
+Snapshot 2026-10-17T12:48:52-03:00: pr/490-fix: needs review; j-revpr490-fix6.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: pr/490-fix: needs review; j-revpr490-fix6.log: OK. Newer fix log requires review. 
 
 ### PR #493 fix (pr/493-fix)
 
 - Plataforma: ?
-- Status: integrada
-- Release: 2.0.5
-- Conserto: pr/493-fix: 10 commits fora (tip a0bc2d982 03:52)
-- Próximo passo: nada: PR #493 ja mergeado (e3e21a590); pr/493-fix (9 ahead) antigo, nao mergear
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/493-fix: 10 commits fora (tip a0bc2d982 03:52); pr/493-fix
+- Próximo passo: Review latest fix.
 - Notas: PR #493 (carrega #488); 10 ahead; nao mergeado Escrivao 10-15 07:10: autor publicou head nova; pr/493-v3 porta os fixes e passa review OK 06:50 (j-revpr493-v3). Continuar com pr/493-v3. | Escrivao 10-15 13:48: PR #493 merged e3e21a590; review v3 OK (06:50).
+Snapshot 2026-10-17T12:48:52-03:00: pr/493-fix: needs review; j-revpr493-fix2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: pr/493-fix: needs review; j-revpr493-fix2.log: OK. Newer fix log requires review. 
 
 ### Vidro todo (agente/205-vidrotodo)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: agente/205-vidrotodo: 10 commits fora (tip 9b4fe6776 merge do HEAD); 9d5115556 (merge agente/205-vidrotodo em integracao/2.0.5)
-- Próximo passo: instalado 84add4581 (Android Success, C9 rc=255); teste TV glass/top chrome
+- Release: 2.0.7
+- Conserto: agente/205-vidrotodo: 10 commits fora (tip 9b4fe6776 merge do HEAD); 9d5115556 (merge agente/205-vidrotodo em integracao/2.0.5); agente/205-vidrotodo
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: criado pelo escrivao 2026-10-15 Escrivao 10-15 07:10: antes estava "sem review log"; agora review OK 05:49 e merge da integracao no branch 06:49. Branch ainda 10 ahead. | Escrivao 2026-10-15 07:50: merge 9d5115556 em integracao/2.0.5; review OK 05:49 | Escrivao 10-15 08:50: merged 9d5115556; ainda nao validado na TV.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vidrotodo: merged; j-revg-vidrotodo.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidrotodo: merged; j-revg-vidrotodo.log: OK. Newer fix log requires review. 
 
 ### Aspecto volta (agente/205-aspvolta)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 71c00499e (merge agente/205-aspvolta em integracao/2.0.5; afb08475f)
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Release: 2.0.7
+- Conserto: 71c00499e (merge agente/205-aspvolta em integracao/2.0.5; afb08475f); agente/205-aspvolta
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: criado pelo escrivao 2026-10-15 Escrivao 10-15 07:10: review OK j-revg-aspvolta 03:53; merge 71c00499e; instalado android rc=0. | Escrivão 2026-10-16 22:1x: merged 71c00499e; review OK j-revg-aspvolta; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-aspvolta: merged; j-revg-aspvolta.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-aspvolta: merged; j-revg-aspvolta.log: OK. 
 
 ### Estilo 2 (agente/205-estilo2)
 
 - Plataforma: ?
-- Status: aberta
-- Release: 2.0.5
-- Conserto: agente/205-estilo2: 2 commits fora
-- Próximo passo: backlog 2.1; dono decide A/B/C
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-estilo2: 2 commits fora; agente/205-estilo2
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: criado pelo escrivao 2026-10-15 Escrivao 10-15 07:10: sem review; depende de decisao do dono. | Escrivão 2026-10-16 22:1x: 2 ahead (mock A/B/C), review OK j-revg-estilo4-2; aguardando escolha do dono
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-estilo2: merged; j-revg-estilo4-2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-estilo2: merged; j-revg-estilo4-2.log: OK. 
 
 ### PR #493 v3 (pr/493-v3) — head do autor + fixes portados
 
@@ -3263,10 +3683,12 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: todas
 - Status: integrada
-- Release: 2.0.5
+- Release: 2.0.7
 - Conserto: 249a5f8eb (Merge agente/205-master1015, integracao/2.0.5); agente/205-master1015
-- Próximo passo: sair com 2.0.5
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivao 15/10 09:48: branch agente/205-master1015 (28 ahead) sem item de issue; criado pelo escrivao. Escrivao 10-15 10:50: BLOQUEIA 08:48; fix pronto 09:49.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-master1015: merged; j-revg-master1015b.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-master1015: merged; j-revg-master1015b.log: OK. 
 
 ### 2.1: avaliar filme/episodio apos assistir (pagina do titulo ou popup nos creditos finais)
 
@@ -3290,514 +3712,638 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: d115df435 (Merge agente/205-aniskipmap, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: d115df435 (Merge agente/205-aniskipmap, integracao/2.0.5); agente/205-aniskipmap
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-aniskipmap: merged; j-rev-205-aniskipmap.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-aniskipmap: merged; j-rev-205-aniskipmap.log: OK. 
 
 ### Branch agente/205-apoio (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: ccba355cc (Merge agente/205-apoio, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: ccba355cc (Merge agente/205-apoio, integracao/2.0.5); agente/205-apoio
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-apoio: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-apoio: merged; No mapped review verdict. 
 
 ### Branch agente/205-aspectob (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-aspectob
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-aspectob: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-aspectob: merged; No mapped review verdict. 
 
 ### Branch agente/205-auditoria (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-auditoria
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-auditoria: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-auditoria: merged; No mapped review verdict. 
 
 ### Branch agente/205-autosync-ref (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: c1b1f0679 (Merge agente/205-autosync-ref, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: c1b1f0679 (Merge agente/205-autosync-ref, integracao/2.0.5); agente/205-autosync-ref
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-autosync-ref: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-autosync-ref: merged; No mapped review verdict. 
 
 ### Branch agente/205-cfrestaura (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: d5a2db894 (Merge agente/205-cfrestaura, integracao/2.0.5)
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Release: 2.0.7
+- Conserto: d5a2db894 (Merge agente/205-cfrestaura, integracao/2.0.5); agente/205-cfrestaura
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: merged d5a2db894; review OK j-revg-cfrestaura; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-cfrestaura: merged; j-revg-cfrestaura.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-cfrestaura: merged; j-revg-cfrestaura.log: OK. Newer fix log requires review. 
 
 ### Branch agente/205-colhdrlinha (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: c44f8afbe (Merge agente/205-colhdrlinha, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: c44f8afbe (Merge agente/205-colhdrlinha, integracao/2.0.5); agente/205-colhdr; agente/205-colhdrlinha
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-colhdr: merged; j-revg-colhdr.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-colhdrlinha: merged; j-revg-colhdrlinha.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-colhdr: merged; j-revg-colhdr.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-colhdrlinha: merged; j-revg-colhdrlinha.log: OK. Newer fix log requires review. 
 
 ### Branch agente/205-colposter (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 05b94ae4a (Merge agente/205-colposter, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 05b94ae4a (Merge agente/205-colposter, integracao/2.0.5); agente/205-colposter
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-colposter: merged; j-rev-205-colposter2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-colposter: merged; j-rev-205-colposter2.log: OK. 
 
 ### Branch agente/205-cw-progresso (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 922c6cc0b (Merge agente/205-cw-progresso, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 922c6cc0b (Merge agente/205-cw-progresso, integracao/2.0.5); agente/205-cw-progresso
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-cw-progresso: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-cw-progresso: merged; No mapped review verdict. 
 
 ### Branch agente/205-decisoes (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-decisoes
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-decisoes: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-decisoes: merged; No mapped review verdict. 
 
 ### Branch agente/205-detalhe-meta (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-detalhe-meta
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-detalhe-meta: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-detalhe-meta: merged; No mapped review verdict. 
 
 ### Branch agente/205-dicasabrir (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: aguardar j-fix-dicasabrir-2 (RUNNING) -> re-review -> merge
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-dicasabrir
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: 0 ahead (merged); j-revg-dicasabrir.log vazio (ENOSPC no snapshot) mas j-revg-dicasabrir-3 OK 17:09; j-fix-dicasabrir-2 RUNNING
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dicasabrir: merged; j-revg-dicasabrir-3.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dicasabrir: merged; j-revg-dicasabrir-3.log: OK. 
 
 ### Branch agente/205-diretorpol (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: c285fbf44 (Merge agente/205-diretorpol, integracao/2.0.5)
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Release: 2.0.7
+- Conserto: c285fbf44 (Merge agente/205-diretorpol, integracao/2.0.5); agente/205-diretorpol
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: merged c285fbf44; review OK j-revg-diretorpol-z; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-diretorpol: merged; j-revg-diretorpol-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-diretorpol: merged; j-revg-diretorpol-z.log: OK. Newer fix log requires review. 
 
 ### Branch agente/205-dirfoto (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 624bbb680 (Merge agente/205-dirfoto, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 624bbb680 (Merge agente/205-dirfoto, integracao/2.0.5); agente/205-dirfoto
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dirfoto: merged; j-rev-205-dirfoto.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dirfoto: merged; j-rev-205-dirfoto.log: OK. 
 
 ### Branch agente/205-ecossistema (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 61e1bb029 (Merge agente/205-ecossistema, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 61e1bb029 (Merge agente/205-ecossistema, integracao/2.0.5); agente/205-ecossistema
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-ecossistema: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-ecossistema: merged; No mapped review verdict. 
 
 ### Branch agente/205-espaco (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-espaco
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-espaco: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-espaco: merged; No mapped review verdict. 
 
 ### Branch agente/205-estatdicas (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 780fdc04b (Merge agente/205-estatdicas, integracao/2.0.5)
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Release: 2.0.7
+- Conserto: 780fdc04b (Merge agente/205-estatdicas, integracao/2.0.5); agente/205-estatdicas
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: merged 780fdc04b; review OK j-revg-estatdicas; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-estatdicas: merged; j-revg-estatdicas.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-estatdicas: merged; j-revg-estatdicas.log: OK. Newer fix log requires review. 
 
 ### Branch agente/205-fileiraui (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 9e421e472 (Merge agente/205-fileiraui, integracao/2.0.5)
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Release: 2.0.7
+- Conserto: 9e421e472 (Merge agente/205-fileiraui, integracao/2.0.5); agente/205-fileiraui
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: merged 9e421e472; review OK j-revg-fileiraui-z; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-fileiraui: merged; j-revg-fileiraui-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-fileiraui: merged; j-revg-fileiraui-z.log: OK. Newer fix log requires review. 
 
 ### Branch agente/205-fontesmortas (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: cceeb07e8 (Merge agente/205-fontesmortas, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: cceeb07e8 (Merge agente/205-fontesmortas, integracao/2.0.5); agente/205-fontesmortas
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-fontesmortas: merged; j-rev6k-fontesmortas.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-fontesmortas: merged; j-rev6k-fontesmortas.log: OK. 
 
 ### Branch agente/205-junta-orfas (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: b639873f1 (Merge agente/205-junta-orfas, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: b639873f1 (Merge agente/205-junta-orfas, integracao/2.0.5); agente/205-junta-orfas
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-junta-orfas: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-junta-orfas: merged; No mapped review verdict. 
 
 ### Branch agente/205-junta-sync (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-junta-sync
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-junta-sync: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-junta-sync: merged; No mapped review verdict. 
 
 ### Branch agente/205-legmatch (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 0c015b5f5 (Merge agente/205-legmatch, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 0c015b5f5 (Merge agente/205-legmatch, integracao/2.0.5); agente/205-legmatch
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-legmatch: merged; j-rev2-legmatch.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-legmatch: merged; j-rev2-legmatch.log: OK. 
 
 ### Branch agente/205-legref-tpk (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-legref-tpk
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-legref-tpk: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-legref-tpk: merged; No mapped review verdict. 
 
 ### Branch agente/205-legsync-ep (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 83fab1724 (Merge agente/205-legsync-ep, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 83fab1724 (Merge agente/205-legsync-ep, integracao/2.0.5); agente/205-legsync-ep
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-legsync-ep: merged; j-rev-205-legsync-ep.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-legsync-ep: merged; j-rev-205-legsync-ep.log: OK. 
 
 ### Branch agente/205-legtempo (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-legtempo
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-legtempo: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-legtempo: merged; No mapped review verdict. 
 
 ### Branch agente/205-listaaddon (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-listaaddon
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-listaaddon: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-listaaddon: merged; No mapped review verdict. 
 
 ### Branch agente/205-logorapido (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: c08a210db (Merge agente/205-logorapido, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: c08a210db (Merge agente/205-logorapido, integracao/2.0.5); agente/205-logorapido
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-logorapido: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-logorapido: merged; No mapped review verdict. 
 
 ### Branch agente/205-logos (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 0bdeedc3a (Merge agente/205-logos, integracao/2.0.5)
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Release: 2.0.7
+- Conserto: 0bdeedc3a (Merge agente/205-logos, integracao/2.0.5); agente/205-logos
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: merged 0bdeedc3a; review OK j-revg-logos-z; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-logos: merged; j-revg-logos-z.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-logos: merged; j-revg-logos-z.log: OK. 
 
 ### Branch agente/205-master1015b (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 8cb54305f (Merge agente/205-master1015b, integracao/2.0.5)
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Release: 2.0.7
+- Conserto: 8cb54305f (Merge agente/205-master1015b, integracao/2.0.5); agente/205-master1015; agente/205-master1015b
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: merged 8cb54305f; review OK j-revg-master1015b; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-master1015: merged; j-revg-master1015b.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-master1015b: merged; j-revg-master1015b.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-master1015: merged; j-revg-master1015b.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-master1015b: merged; j-revg-master1015b.log: OK. 
 
 ### Branch agente/205-merge-master (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: dc58ec9ed (Merge agente/205-merge-master, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: dc58ec9ed (Merge agente/205-merge-master, integracao/2.0.5); agente/205-merge-master
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-merge-master: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-merge-master: merged; No mapped review verdict. 
 
 ### Branch agente/205-notas2 (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: bfc0aab6e (Merge agente/205-notas2, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: bfc0aab6e (Merge agente/205-notas2, integracao/2.0.5); agente/205-notas2
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. 
 
 ### Branch agente/205-novidades-colecao (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 410cc7bb9 (Merge agente/205-novidades-colecao, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 410cc7bb9 (Merge agente/205-novidades-colecao, integracao/2.0.5); agente/205-novidades; agente/205-novidades-colecao
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-novidades: merged; j-rev-novidades207-b.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-novidades-colecao: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-novidades: merged; j-rev-novidades207-b.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-novidades-colecao: merged; No mapped review verdict. 
 
 ### Branch agente/205-palco2 (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: f906f4a83 (Merge agente/205-palco2, integracao/2.0.5)
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Release: 2.0.7
+- Conserto: f906f4a83 (Merge agente/205-palco2, integracao/2.0.5); agente/205-palco; agente/205-palco2
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: merged f906f4a83; review OK j-revg-palco2-z; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-palco: merged; j-revg-palco2-z.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-palco2: merged; j-revg-palco2-z.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-palco: merged; j-revg-palco2-z.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-palco2: merged; j-revg-palco2-z.log: OK. 
 
 ### Branch agente/205-palcoveu (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: b095d9cdc (Merge agente/205-palcoveu, integracao/2.0.5)
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Release: 2.0.7
+- Conserto: b095d9cdc (Merge agente/205-palcoveu, integracao/2.0.5); agente/205-palco; agente/205-palcoveu
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: merged b095d9cdc; review OK j-revg-palcoveu; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-palco: merged; j-revg-palco2-z.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-palcoveu: merged; j-revg-palcoveu.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-palco: merged; j-revg-palco2-z.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-palcoveu: merged; j-revg-palcoveu.log: OK. 
 
 ### Branch agente/205-perfmedir (sem issue)
 
 - Plataforma: ?
-- Status: em_revisao
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: merge agente/205-perfmedir (review OK); depois build+install
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-perfmedir
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: agente/205-perfmedir review OK j-revg-perfmedir-2; merge pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-perfmedir: merged; j-revg-perfmedir-2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-perfmedir: merged; j-revg-perfmedir-2.log: OK. 
 
 ### Branch agente/205-poscreditos (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: fc136af0f (Merge agente/205-poscreditos, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: fc136af0f (Merge agente/205-poscreditos, integracao/2.0.5); agente/205-poscreditos
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-poscreditos: merged; j-rev2-poscreditos-magpie.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-poscreditos: merged; j-rev2-poscreditos-magpie.log: OK. 
 
 ### Branch agente/205-pr431 (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: c272ad6b7 (Merge agente/205-pr431, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: c272ad6b7 (Merge agente/205-pr431, integracao/2.0.5); agente/205-pr431
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr431: merged; j-rev5-pr431.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr431: merged; j-rev5-pr431.log: OK. 
 
 ### Branch agente/205-pr452 (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: f9ee80a8b (Merge agente/205-pr452, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: f9ee80a8b (Merge agente/205-pr452, integracao/2.0.5); agente/205-pr452
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr452: merged; j-rev3-pr452.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr452: merged; j-rev3-pr452.log: OK. 
 
 ### Branch agente/205-pr454 (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 4781366a0 (Merge agente/205-pr454, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 4781366a0 (Merge agente/205-pr454, integracao/2.0.5); agente/205-pr454
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr454: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr454: merged; No mapped review verdict. 
 
 ### Branch agente/205-pr455 (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 78f745fe0 (Merge agente/205-pr455, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 78f745fe0 (Merge agente/205-pr455, integracao/2.0.5); agente/205-pr455
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr455: merged; j-rev-pr455.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr455: merged; j-rev-pr455.log: OK. Newer fix log requires review. 
 
 ### Branch agente/205-pr465 (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 45f8b5027 (Merge agente/205-pr465, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 45f8b5027 (Merge agente/205-pr465, integracao/2.0.5); agente/205-pr465
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr465: merged; j-rev3-pr465.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr465: merged; j-rev3-pr465.log: OK. 
 
 ### Branch agente/205-pr491 (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: ba8e97297 (Merge agente/205-pr491, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: ba8e97297 (Merge agente/205-pr491, integracao/2.0.5); agente/205-pr491
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr491: merged; j-rev2-205-pr491.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr491: merged; j-rev2-205-pr491.log: OK. 
 
 ### Branch agente/205-prghbarker (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 6fd6083b6 (Merge agente/205-prghbarker, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 6fd6083b6 (Merge agente/205-prghbarker, integracao/2.0.5); agente/205-prghbarker
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-prghbarker: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-prghbarker: merged; No mapped review verdict. 
 
 ### Branch agente/205-prnovos (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 6ebf3b479 (Merge agente/205-prnovos, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 6ebf3b479 (Merge agente/205-prnovos, integracao/2.0.5); agente/205-prnovos
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-prnovos: merged; j-rev3-prnovos.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-prnovos: merged; j-rev3-prnovos.log: OK. 
 
 ### Branch agente/205-roi6 (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-roi6
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-roi6: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-roi6: merged; No mapped review verdict. 
 
 ### Branch agente/205-seekr-chave-propria (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-seekr-chave-propria
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-seekr-chave-propria: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-seekr-chave-propria: merged; No mapped review verdict. 
 
 ### Branch agente/205-segurar (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 5057bd728 (Merge agente/205-segurar, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 5057bd728 (Merge agente/205-segurar, integracao/2.0.5); agente/205-segurar
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-segurar: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-segurar: merged; No mapped review verdict. 
 
 ### Branch agente/205-semdica (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: f20ce1b0e (Merge agente/205-semdica, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: f20ce1b0e (Merge agente/205-semdica, integracao/2.0.5); agente/205-semdica
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-semdica: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-semdica: merged; No mapped review verdict. 
 
 ### Branch agente/205-sidebarfundo (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: bbe721818 (Merge agente/205-sidebarfundo, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: bbe721818 (Merge agente/205-sidebarfundo, integracao/2.0.5); agente/205-sidebarfundo
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-sidebarfundo: merged; j-rev-205-sidebarfundo2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-sidebarfundo: merged; j-rev-205-sidebarfundo2.log: OK. 
 
 ### Branch agente/205-syncmao (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-syncmao
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-syncmao: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-syncmao: merged; No mapped review verdict. 
 
 ### Branch agente/205-tmdbhost (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-tmdbhost
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-tmdbhost: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-tmdbhost: merged; No mapped review verdict. 
 
 ### Branch agente/205-tpkemu (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: da8d070a6 (Merge agente/205-tpkemu, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: da8d070a6 (Merge agente/205-tpkemu, integracao/2.0.5); agente/205-tpkemu
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-tpkemu: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-tpkemu: merged; No mapped review verdict. 
 
 ### Branch agente/205-urfix (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 86613a07a (Merge agente/205-urfix, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 86613a07a (Merge agente/205-urfix, integracao/2.0.5); agente/205-urfix
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-urfix: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-urfix: merged; No mapped review verdict. 
 
 ### Branch agente/205-ursamsung (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-ursamsung
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-ursamsung: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-ursamsung: merged; No mapped review verdict. 
 
 ### Branch agente/205-vidroperf (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: agente/205-vidroperf
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vidroperf: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidroperf: merged; No mapped review verdict. 
 
 ### Branch agente/205-vistos2 (sem issue)
 
 - Plataforma: ?
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 3b787e0d3 (Merge agente/205-vistos2, integracao/2.0.5)
-- Próximo passo: testar na TV; sai com 2.0.5
+- Release: 2.0.7
+- Conserto: 3b787e0d3 (Merge agente/205-vistos2, integracao/2.0.5); agente/205-vistos2
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK. 
 
 ### Branch agente/205-vitlogo1015 (sem issue)
 
 - Plataforma: ?
-- Status: em_revisao
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: merge agente/205-vitlogo1015 (review OK); depois build+install
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-vitlogo1015
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: agente/205-vitlogo1015 review OK j-revg-vitlogo1015-2; merge pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vitlogo1015: merged; j-revg-vitlogo1015-2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vitlogo1015: merged; j-revg-vitlogo1015-2.log: OK. Newer fix log requires review. 
 
 ### Branch fix/tpk-selo-hdr (sem issue)
 
@@ -3857,10 +4403,14 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 - Plataforma: ?
 - Status: em_revisao
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: needs review (re-review final) e merge; aguardando decisao de merge
+- Release: 2.0.7
+- Conserto: agente/205-pr487; agente/205-pr487v2
+- Próximo passo: Merge reviewed branch.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: pr/487-v2 1 ahead; agente/205-pr487v2 3 ahead com review OK j-rev-pr487-v2 e nenhum commit depois
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK. 
 
 ### Branch pr/489-fix (sem issue)
 
@@ -3874,11 +4424,13 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Branch pr/490-fix (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: sem review: revisar ou descartar
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/490-fix
+- Próximo passo: Review latest fix.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: pr/490-fix: needs review; j-revpr490-fix6.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: pr/490-fix: needs review; j-revpr490-fix6.log: OK. Newer fix log requires review. 
 
 ### Branch pr/490-v3 (sem issue)
 
@@ -3892,11 +4444,13 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Branch pr/491-limpo (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: sem review: revisar ou descartar
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/491-limpo
+- Próximo passo: Review latest fix.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: pr/491-limpo: needs review; j-revpr491-limpo-r3.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: pr/491-limpo: needs review; j-revpr491-limpo-r3.log: BLOQUEIA. Newer fix log requires review. 
 
 ### Branch pr/493-autor-v3 (sem issue)
 
@@ -3910,11 +4464,13 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Branch pr/493-fix (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: sem review: revisar ou descartar
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/493-fix
+- Próximo passo: Review latest fix.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub.
+Snapshot 2026-10-17T12:48:52-03:00: pr/493-fix: needs review; j-revpr493-fix2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: pr/493-fix: needs review; j-revpr493-fix2.log: OK. Newer fix log requires review. 
 
 ### Branch pr/493-v3 (sem issue)
 
@@ -3928,476 +4484,2615 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Branch pr/498-fix2 (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: aguardar jobs RUNNING -> re-review -> merge em lote com os pr/*-fix2
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/498-fix2
+- Próximo passo: Merge reviewed branch.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: pr/498-fix2 4 ahead; ultimo review j-revprf-498-s OK; varios pr/*-fix2 com job de fix/review RUNNING na fila
+Snapshot 2026-10-17T12:48:52-03:00: pr/498-fix2: review-OK; j-revprf-498-s.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: pr/498-fix2: review-OK; j-revprf-498-s.log: OK. 
 
 ### Branch pr/498-limpo (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: aguardar j-pr498-limpo (RUNNING) -> re-review -> merge
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/498-limpo
+- Próximo passo: Merge reviewed branch.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: pr/498-limpo 7 ahead; review OK j-revpr498-limpo 10-14 23:15; j-pr498-limpo RUNNING
+Snapshot 2026-10-17T12:48:52-03:00: pr/498-limpo: review-OK; j-revpr498-limpo.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: pr/498-limpo: review-OK; j-revpr498-limpo.log: OK. 
 
 ### Branch pr/518-fix2 (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: aguardar jobs RUNNING -> re-review -> merge
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/518-fix2
+- Próximo passo: Merge reviewed branch.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: job de fix/review RUNNING no snapshot (fila-lancados.txt)
+Snapshot 2026-10-17T12:48:52-03:00: pr/518-fix2: review-OK; j-revprf-518.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: pr/518-fix2: review-OK; j-revprf-518.log: OK. 
 
 ### Branch pr/519-fix2 (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: aguardar jobs RUNNING -> re-review -> merge
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/519-fix2
+- Próximo passo: Merge reviewed branch.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: job de fix/review RUNNING no snapshot (fila-lancados.txt)
+Snapshot 2026-10-17T12:48:52-03:00: pr/519-fix2: review-OK; j-revprf-519.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: pr/519-fix2: review-OK; j-revprf-519.log: OK. 
 
 ### Branch pr/520-fix2 (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: aguardar jobs RUNNING -> re-review -> merge
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/520-fix2
+- Próximo passo: Merge reviewed branch.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: job de fix/review RUNNING no snapshot (fila-lancados.txt)
+Snapshot 2026-10-17T12:48:52-03:00: pr/520-fix2: review-OK; j-revprf-520-r2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: pr/520-fix2: review-OK; j-revprf-520-r2.log: OK. 
 
 ### Branch pr/522-fix2 (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: aguardar jobs RUNNING -> re-review -> merge
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/522-fix2
+- Próximo passo: Merge reviewed branch.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: job de fix/review RUNNING no snapshot (fila-lancados.txt)
+Snapshot 2026-10-17T12:48:52-03:00: pr/522-fix2: review-OK; j-revprf-522-s.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: pr/522-fix2: review-OK; j-revprf-522-s.log: OK. 
 
 ### Branch pr/523-fix2 (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: aguardar jobs RUNNING -> re-review -> merge
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/523-fix2
+- Próximo passo: Review latest fix.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: job de fix/review RUNNING no snapshot (fila-lancados.txt)
+Snapshot 2026-10-17T12:48:52-03:00: pr/523-fix2: needs review; j-revprf-523-s.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: pr/523-fix2: needs review; j-revprf-523-s.log: OK. Newer fix log requires review. 
 
 ### Branch pr/526-fix2 (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: aguardar jobs RUNNING -> re-review -> merge
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/526-fix2
+- Próximo passo: Merge reviewed branch.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: job de fix/review RUNNING no snapshot (fila-lancados.txt)
+Snapshot 2026-10-17T12:48:52-03:00: pr/526-fix2: review-OK; j-revprf-526-b.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: pr/526-fix2: review-OK; j-revprf-526-b.log: OK. 
 
 ### Branch pr/527-fix2 (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: aguardar jobs RUNNING -> re-review -> merge
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/527-fix2
+- Próximo passo: Merge reviewed branch.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: job de fix/review RUNNING no snapshot (fila-lancados.txt)
+Snapshot 2026-10-17T12:48:52-03:00: pr/527-fix2: review-OK; j-revprf-527-e.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: pr/527-fix2: review-OK; j-revprf-527-e.log: OK. 
 
 ### Branch pr/531-fix2 (sem issue)
 
 - Plataforma: ?
-- Status: em_job
-- Release: 2.0.5
-- Conserto: nenhum encontrado
-- Próximo passo: aguardar jobs RUNNING -> re-review -> merge
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/531-fix2
+- Próximo passo: Fix findings; repeat review.
 - Notas: Criado no sync 2026-10-15 pelo escrivão: sem issue nem pedido no GitHub. | Escrivão 2026-10-16 22:1x: job de fix/review RUNNING no snapshot (fila-lancados.txt)
+Snapshot 2026-10-17T12:48:52-03:00: pr/531-fix2: BLOQUEIA; j-revprn-537.log: BLOQUEIA.
+Snapshot 2026-10-17T13:48:33-03:00: pr/531-fix2: BLOQUEIA; j-revprn-537.log: BLOQUEIA. 
 
 ### TCL Android TV: crash ao tocar filme (memoria/buffer)
 
 - Plataforma: Android (TCL 2.4 GB)
 - Status: integrada
-- Release: 2.0.5
+- Release: 2.0.7
 - Conserto: 844b78f68 (Merge agente/205-tclmem, integracao/2.0.5); agente/205-tclmem
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Pedido do dono (TCL, 2.4 GB): "tocou o filme, travou tudo e fechou o app". Job j-205-tclmem + 2 fixes; review BLOQUEIA (j-revg-tclmem: P2-1/P2-2) -> OK apos fixes (j-revg2-tclmem OK). Escrivao 10-16 01:50: HEAD 4359b10f5, 140 commits a frente do instalado cb7ece972; instalado na TV e anterior. | Escrivão 2026-10-16 22:1x: merged 844b78f68; review OK j-revg2-tclmem; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-tclmem: merged; j-revg2-tclmem.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-tclmem: merged; j-revg2-tclmem.log: OK. 
 
 ### webOS vidro lento em detalhes/busca/explorar/ajustes (C9)
 
 - Plataforma: LG C9 (webOS)
 - Status: integrada
-- Release: 2.0.5
+- Release: 2.0.7
 - Conserto: 20a522eaf (Merge agente/205-vidrotelas, integracao/2.0.5); agente/205-vidrotelas
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Owner: home rapida, mas sidebar de fontes/busca/explorar/ajustes ruins na C9. Fix: hash do backdrop ignora drift sub-1/256, off-screen e sky clock. Review j-revg-vidrotelas OK. Escrivao 10-16 01:50: merge ainda nao instalado na TV. | Escrivão 2026-10-16 22:1x: merged 20a522eaf; review OK j-revg-vidrotelas; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vidrotelas: merged; j-revg-vidrotelas.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidrotelas: merged; j-revg-vidrotelas.log: OK. 
 
 ### Overdraw por tela (fill por frame) no webOS C9
 
 - Plataforma: LG C9 (webOS)
 - Status: integrada
-- Release: 2.0.5
+- Release: 2.0.7
 - Conserto: 3e3a909d5 (Merge agente/205-overdraw, integracao/2.0.5); 11cf6868c perf(gfx): draw corner light only where its radius reaches; 819033833 perf(gfx): large rings draw only their border strips; 1131422c0 test(overdraw): per-screen fill and text-raster budget; 33f478b75 perf(search): tint cached key labels instead of rasterizing each eased tone; 5c0ec1df0 fix(gfx): split ring/corner light keep deferred Dynamic background deferred; agente/205-overdraw
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Job de medicao/harness por tela (detalhe, busca, explorar, ajustes). Itens pendentes: cards de comentario desenhados 3x por coluna (precisa OK do dono), veil/shadow dao ~1.6 telas, ilha de Ajustes 2290x1160; nao testado na C9. Escrivao 10-16 01:50: 4 commits + fix 5c0ec1df0; veredito final OK. Itens ainda fora: skip de redraw ocioso no laco principal, sombra sob vidro nao opaco (~0.35-0.87 tela), caixas de glow grandes (~0.2 tela) — mudam pixels, precisam OK do dono. | Escrivão 2026-10-16 22:1x: merged 3e3a909d5; review OK j-revg2-overdraw; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-overdraw: merged; j-revg2-overdraw.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-overdraw: merged; j-revg2-overdraw.log: OK. 
 
 ### Cartaz do card de amigos em paisagem + shell dos cards de pessoas
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.5
-- Conserto: 498ff29fc (Merge agente/205-amigoscapa, integracao/2.0.5); 8d39118d9 fix(amigos): friends row cards use the home card shell and fill with landscape art; 4dad19c3e fix(amigos): people cards use the home no-art skeleton, feed radius and a large centered avatar; agente/205-amigoscapa
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Release: 2.0.7
+- Conserto: 498ff29fc (Merge agente/205-amigoscapa, integracao/2.0.5); 8d39118d9 fix(amigos): friends row cards use the home card shell and fill with landscape art; 4dad19c3e fix(amigos): people cards use the home no-art skeleton, feed radius and a large centered avatar; agente/205-amigoscapa; agente/205-amigos
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Owner: "so muda o formato do poster" no card paisagem de Amigos assistindo + contorno dos cards de pessoas (+ Adicionar). Criado pelo escrivao 00:20. Escrivao 10-16 01:50: 2 commits; vidro_padrao.sh rc=1 por 3 FAILs pre-existentes (identicos em integracao/2.0.5 limpa). | Escrivão 2026-10-16 22:1x: merged 498ff29fc; review OK j-revg-amigoscapa; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-amigos: merged; j-rev-205-amigos.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-amigoscapa: merged; j-revg-amigoscapa.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-amigos: merged; j-rev-205-amigos.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-amigoscapa: merged; j-revg-amigoscapa.log: OK. 
 
 ### Cartoes ao vivo do painel de estatisticas e dicas de tecla na TV
 
 - Plataforma: TV (saida 3840)
 - Status: integrada
-- Release: 2.0.5
+- Release: 2.0.7
 - Conserto: 3e267063d (Merge agente/205-estatresp, integracao/2.0.5); agente/205-estatresp
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Cards ao vivo cortados + dicas de tecla iluminadas na saida de TV. Review j-revg-estatresp OK (suite GL completa nao rodada, so syntax-only). Escrivao 10-16 01:50: merge ainda nao instalado na TV. | Escrivão 2026-10-16 22:1x: merged 3e267063d; review OK j-revg-estatresp; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-estatresp: merged; j-revg-estatresp.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-estatresp: merged; j-revg-estatresp.log: OK. 
 
 ### vidro/reuso de backdrop no webOS (vidroc9)
 
 - Plataforma: LG C9 (webOS)
 - Status: integrada
-- Release: 2.0.5
+- Release: 2.0.7
 - Conserto: 0b5c0135b (Merge agente/205-vidroc9, integracao/2.0.5); agente/205-vidroc9
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Fix: vidroHash diferente nunca reusa o backdrop do frame anterior; contadores so no webOS. j-revg-vidroc9 BLOQUEIA -> j-fix-vidroc9 -> j-revg-vidroc9-b OK. Escrivao 10-16 01:50: merge ainda nao instalado na TV. | Escrivão 2026-10-16 22:1x: merged 0b5c0135b; review OK j-revg-vidroc9-b; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vidroc9: merged; j-revg-vidroc9-b.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidroc9: merged; j-revg-vidroc9-b.log: OK. 
 
 ### Merge do master 1015 + cards ao vivo (agente/205-mestre1015)
 
 - Plataforma: todas
 - Status: integrada
-- Release: 2.0.5
+- Release: 2.0.7
 - Conserto: 249a5f8eb (Merge agente/205-mestre1015, integracao/2.0.5); c15d7eedb (Merge branch integracao/2.0.5 into agente/205-mestre1015); 0e12b2903 (Merge origin/master into agente/205-mestre1015); agente/205-mestre1015
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: 28 commits do master + recapture de vidro no webOS + retomada Android. BLOQUEIA (recapture/reload) -> fix 4b6340226 -> OK. Escrivao 10-16 01:50: merge ainda nao instalado na TV. | Escrivão 2026-10-16 22:1x: merged 249a5f8eb; review OK j-revg-mestre1015-d; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-mestre1015: merged; j-revg-mestre1015-d.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-mestre1015: merged; j-revg-mestre1015-d.log: OK. Newer fix log requires review. 
 
 ### Ajustes: suites de teste depois do merge do master
 
 - Plataforma: todas
 - Status: integrada
-- Release: 2.0.5
+- Release: 2.0.7
 - Conserto: 84dc18246 (Merge agente/205-ajustestestes, integracao/2.0.5); agente/205-ajustestestes
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Conserta parsing/assercoes das suites de Ajustes depois do merge do master. Review OK. Escrivao 10-16 01:50: merge ainda nao instalado na TV. | Escrivão 2026-10-16 22:1x: merged 84dc18246; review OK j-revg-ajustestestes; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-ajustestestes: merged; j-revg-ajustestestes.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-ajustestestes: merged; j-revg-ajustestestes.log: OK. 
 
 ### Passada final de desempenho antes do lancamento (pedido do dono: "algo esta roubando muito FPS")
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
+- Release: 2.0.7
 - Conserto: 4359b10f5 (Merge agente/205-perffinal, integracao/2.0.5); 8be255b35 perf(perfil): skip the covered black clear under psestilos backgrounds; 0181e0050 fix(home): declare video_registro_negado outside the tpk-only video.h include; agente/205-perffinal
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Owner: "algo esta roubando muito FPS" — passada final antes do release. Perfil 8.72->7.72 (3->2 full-screen draws). Deixado de fora por mudar pixels: skip de redraw ocioso (laco principal redesenha todo frame), sombra sob vidro nao opaco (~0.35-0.87 tela), glow grande + 3 retangulos alpha-0.09 (~0.2 tela). Escrivao 10-16 01:50: merge ainda nao instalado na TV. | Escrivão 2026-10-16 22:1x: merged 4359b10f5; review OK j-revg-perffinal; build+install do HEAD novo pendente
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-perffinal: merged; j-revg-perffinal.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-perffinal: merged; j-revg-perffinal.log: OK. 
 
 ### Bump 2.0.5 -> 2.0.6 (owner aprovou o lancamento da 2.0.6)
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
-- Conserto: 7310f53f4 release: 2.0.6 (version bump, what's-new card in 29 languages, notes); agente/205-bump206 (1 ahead de integracao/2.0.5; nao mergeado)
-- Próximo passo: lancado (v2.0.6); ver release207 para o 2.0.7
+- Release: 2.0.7
+- Conserto: 7310f53f4 release: 2.0.6 (version bump, what's-new card in 29 languages, notes); agente/205-bump206 (1 ahead de integracao/2.0.5; nao mergeado); agente/205-bump206; agente/205-release207
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Owner aprovou o release 2.0.6. Notas 2.0.6 precisam cobrir: sinal do atraso de legenda, crash de memoria na TCL, telas webOS mais suaves (vidro/overdraw), fileira de amigos em paisagem + cards de pessoas, motivo do trailer do hero bloqueado, dicas de controle uma vez por versao. Escrivao 10-16 01:50. Escrivao 10-16 02:00: bump 2.0.6 feito (7310f53f4); versao_206.sh, novidades_cartao.sh e varredura-i18n.py rc=0. repo.json (Homebrew) ainda 2.0.5 (commit separado). Notas em docs/releases/2.0.6/NOVIDADES.md + NOTAS.md; rascunho de Discord em /Volumes/ExternalSSD/tmp/rev/discord-206.md (nao postado). | Escrivão 2026-10-16 22:1x: 7310f53f4 esta contido em v2.0.6; o bump 2.0.7 agora mora em agente/205-release207
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-bump206: merged; j-revg-bump206.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-release207: merged; j-rev-release207.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-bump206: merged; j-revg-bump206.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-release207: merged; j-rev-release207.log: OK. 
 
 ### Buffer do player configuravel (64/128/256 MiB) + clamp por RAM livre
 
 - Plataforma: LG webOS
 - Status: integrada
-- Release: 2.0.6
-- Conserto: 42b3718cf (agente/205-buffer); 4907caa50 (spec DV7->8.1, agente/205-buffer); 62421bfdc (agente/205-buffer); 35a944d9f (agente/205-buffer); 28c77a9b0 (Merge agente/205-buffer)
-- Próximo passo: merged 28c77a9b0; review BLOQUEIA r1/r2 -> OK j-rev-buffer-r3; falta TV (256 MiB / clamp 1 GB) e build Android
+- Release: 2.0.7
+- Conserto: 42b3718cf (agente/205-buffer); 4907caa50 (spec DV7->8.1, agente/205-buffer); 62421bfdc (agente/205-buffer); 35a944d9f (agente/205-buffer); 28c77a9b0 (Merge agente/205-buffer); agente/205-buffer
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Relato do usuario (LG C5): remux 4K trava depois de 15-30 min; 256 MiB estavel. Job j-buffer done 10-16 12:40. Tests buffer_tamanho/ajustes_ux_dados/video_android_cacheboost/i18n/build rc 0. Sem PNG; spec DV7->8.1 nao implementada. | Escrivao 10-16 14:58: merged 28c77a9b0; fixes de clamp de RAM (62421bfdc) e MiB no Android (35a944d9f); review OK r3.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-buffer: merged; j-revg-buffer-posmerge.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-buffer: merged; j-revg-buffer-posmerge.log: OK. 
 
 ### Preparar/formatar pendrive para o cache do P2P
 
 - Plataforma: webOS/Tizen/Android
 - Status: integrada
-- Release: 2.0.6
-- Conserto: 3a0c0e291 (Merge agente/205-usbpreparo); db03a2bc5 (agente/205-usbpreparo: spec docs/specs/pendrive-preparo.md + sonda de fs/ro)
-- Próximo passo: integrada em integracao/2.0.5 (3a0c0e291); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: 3a0c0e291 (Merge agente/205-usbpreparo); db03a2bc5 (agente/205-usbpreparo: spec docs/specs/pendrive-preparo.md + sonda de fs/ro); agente/205-usbpreparo
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Pedido do dono. Job j-usbpreparo done 10-16 12:39 (sondagem, tests/usbsonda.sh rc 0). Falta varredura /storage/<UUID> no Android; FAT32 limita em 4 GiB. | Escrivao 10-16 14:58: review OK j-revg-usbpreparo (db03a2bc5); falta merge. | Escrivao 10-16 15:04: review OK j-revg-usbpreparo (db03a2bc5); falta merge.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-usbpreparo: merged; j-revg-usbpreparo.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-usbpreparo: merged; j-revg-usbpreparo.log: OK. 
 
 ### Dizer porque o cache do P2P em USB e recusado
 
 - Plataforma: webOS/Tizen
 - Status: integrada
-- Release: 2.0.6
-- Conserto: ebb5eb8fe (agente/205-usbmotivo); 30b57ccf1 (Merge agente/205-usbmotivo)
-- Próximo passo: integrada em integracao/2.0.5 (30b57ccf1); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: ebb5eb8fe (agente/205-usbmotivo); 30b57ccf1 (Merge agente/205-usbmotivo); agente/205-p2pmotivo; agente/205-usbmotivo
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Relato Discord: opcao "guardar no pendrive" cinza mesmo com pendrive espetado. Job j-usbmotivo done 10-16 12:37 (tests regressao/p2pusb/diff/build rc 0). Falta TV e integrar o texto da recusa nos Ajustes (com agente/205-p2pmotivo). | Escrivao 10-16 14:58: merged 30b57ccf1 (review OK j-rev-usbmotivo).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmotivo-posmerge.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-usbmotivo: merged; j-rev-usbmotivo.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmotivo-posmerge.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-usbmotivo: merged; j-rev-usbmotivo.log: OK. Newer fix log requires review. 
 
 ### Upload de registro deve manter o cabecalho de boot
 
 - Plataforma: webOS
 - Status: integrada
-- Release: 2.0.6
-- Conserto: 3b12a5d2f (agente/205-logcabeca); 84c1a90b6 (Merge agente/205-logcabeca)
-- Próximo passo: integrada em integracao/2.0.5 (84c1a90b6); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: 3b12a5d2f (agente/205-logcabeca); 84c1a90b6 (Merge agente/205-logcabeca); agente/205-logcabeca
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Log WR9768 (webOS 2.0.6): 90% dos 200 KB eram linhas de perf e cortavam o cabecalho. Job j-logcabeca done 10-16 12:37 (tests registro_cabeca.sh rc 0, build rc 0). | Escrivao 10-16 14:58: merged 84c1a90b6 (review OK j-rev-logcabeca).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-logcabeca: merged; j-rev-logcabeca.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-logcabeca: merged; j-rev-logcabeca.log: OK. 
 
 ### Ajuste manual de legenda estilo Stremio + auto-sync melhor
 
 - Plataforma: todas
-- Status: em-andamento
+- Status: em_revisao
 - Release: 2.0.6
-- Conserto: 18c8312c5 (docs/specs/legenda-ajuste-sync.md, agente/205-legajuste)
-- Próximo passo: backlog 2.1: virar tarefas T1-T10 da spec
+- Conserto: 18c8312c5 (docs/specs/legenda-ajuste-sync.md, agente/205-legajuste); agente/205-legajuste
+- Próximo passo: Deferred to 2.1; retain tracking.
 - Notas: Job j-legajuste done 10-16 12:30: spec com estado atual, modos de falha do auto-sync (657/664 pistas ok e ainda region_disagreement) e 10 tarefas. Sem codigo de produto. Tambem listado em backlog-21.txt como pedido 2.1. | Escrivão 2026-10-16 22:1x: SPEC ONLY (docs/specs/legenda-ajuste-sync.md); 1 ahead; adiado para 2.1 (backlog-21.txt)
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-legajuste: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-legajuste: done-awaiting-review; No mapped review verdict. 
 
 ### Home: destaque grande a esquerda + fileira rolavel a direita (Dynamic Split)
 
 - Plataforma: todas
 - Status: integrada
-- Release: 2.0.6
-- Conserto: 8655956cb (agente/205-herosplit); 669fa7b5c (agente/205-herosplit); f8815746a (agente/205-herosplit); 6375a1520 (agente/205-herosplit); 76c6e8eea (Merge agente/205-herosplit)
-- Próximo passo: integrada em integracao/2.0.5 (76c6e8eea); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: 8655956cb (agente/205-herosplit); 669fa7b5c (agente/205-herosplit); f8815746a (agente/205-herosplit); 6375a1520 (agente/205-herosplit); 76c6e8eea (Merge agente/205-herosplit); agente/205-herosplit
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Pedido do dono (imagem da Home). Novo estilo de fileira opcional, desligado por padrao. | Escrivao 10-16 14:58: merged 76c6e8eea (Split hero + ano/nota + volta do topo); review OK r3.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-herosplit: merged; j-rev-herosplit-r3.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-herosplit: merged; j-rev-herosplit-r3.log: OK. 
 
 ### Trailer na versão dublada / idioma de audio e legenda do trailer
 
 - Plataforma: todas
 - Status: integrada
-- Release: 2.0.6
-- Conserto: b43655122, c831a592f, 1c7455e37, c0ea07466, 1797b5306, 5f4caef1c (agente/205-trailerlingua); 70bc8a630 (Merge agente/205-trailerlingua)
-- Próximo passo: integrada em integracao/2.0.5 (70bc8a630); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: b43655122, c831a592f, 1c7455e37, c0ea07466, 1797b5306, 5f4caef1c (agente/205-trailerlingua); 70bc8a630 (Merge agente/205-trailerlingua); agente/205-trailerlingua
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Pedido PT + dono: por em Ajustes o idioma de audio e de legenda do trailer. | Escrivao 10-16 14:58: 6 ahead; BLOQUEIA r5 (tela cheia sem fallback) -> fix 5f4caef1c, precisa review r6. | Escrivao 10-16 15:04: merged 70bc8a630; fix de fallback em tela cheia (5f4caef1c) aprovado em r6.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-trailerlingua: merged; j-rev-trailerlingua-r6.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-trailerlingua: merged; j-rev-trailerlingua-r6.log: OK. 
 
 ### Player caiu de ~40 fps para ~20 fps (overlay do .tpk)
 
 - Plataforma: Samsung .tpk
 - Status: integrada
-- Release: 2.0.6
-- Conserto: d98d72026 (agente/205-fpsplayer); f8bc42b11 (agente/205-fpsplayer); b45510394 (Merge agente/205-fpsplayer)
-- Próximo passo: integrada em integracao/2.0.5 (b45510394); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: d98d72026 (agente/205-fpsplayer); f8bc42b11 (agente/205-fpsplayer); b45510394 (Merge agente/205-fpsplayer); agente/205-fpsplayer
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Relato S90D Tizen nativo 2.0.6; log 1F3QGX. | Escrivao 10-16 14:58: merged b45510394 (captura unica de backdrop por frame d98d72026 + refazer o backdrop f8bc42b11); review OK r2.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-fpsplayer: merged; j-rev-fpsplayer-r2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-fpsplayer: merged; j-rev-fpsplayer-r2.log: OK. 
 
 ### Animacao de abertura do seletor "Estilo da fileira"
 
 - Plataforma: todas
 - Status: integrada
-- Release: 2.0.6
-- Conserto: 92656f2ae (agente/205-estiloanim); 86c763a2d (agente/205-estiloanim); 84239e65a (agente/205-estiloanim); 40b7d8e15 (agente/205-estiloanim); d2b4e0b12 (Merge agente/205-estiloanim)
-- Próximo passo: integrada em integracao/2.0.5 (d2b4e0b12); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: 92656f2ae (agente/205-estiloanim); 86c763a2d (agente/205-estiloanim); 84239e65a (agente/205-estiloanim); 40b7d8e15 (agente/205-estiloanim); d2b4e0b12 (Merge agente/205-estiloanim); agente/205-estiloanim
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Pedido do dono: "abrir do menu contextual esta muito seco" (src/home.c ~1364). | Escrivao 10-16 14:58: merged d2b4e0b12 (abertura/fechamento do seletor, alvos de toque, OOB); review OK r4.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-estiloanim: merged; j-revg-estiloanim-posmerge.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-estiloanim: merged; j-revg-estiloanim-posmerge.log: OK. 
 
 ### Ajustes: dizer porque "Cache do P2P" fica indisponivel
 
 - Plataforma: todas
 - Status: integrada
-- Release: 2.0.6
-- Conserto: f170d77ba (agente/205-p2pmotivo); 2e480806c (agente/205-p2pmotivo); e21441cd2 (Merge agente/205-p2pmotivo)
-- Próximo passo: integrada em integracao/2.0.5 (e21441cd2); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: f170d77ba (agente/205-p2pmotivo); 2e480806c (agente/205-p2pmotivo); e21441cd2 (Merge agente/205-p2pmotivo); agente/205-p2pmotivo
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Pedido do dono (foto): popup generico "Indisponivel com os ajustes atuais". Job j-p2pmotivo done 10-16 12:26, fix f170d77ba 1 ahead. Razao especifica por causa (motor/externo/USB), todas as linguas. | Escrivao 10-16 14:58: merged e21441cd2 (review OK r2).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmotivo-posmerge.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmotivo-posmerge.log: OK. 
 
 ### Cache do P2P em USB no Android (getExternalFilesDirs + teto FAT32)
 
 - Plataforma: Android TV
 - Status: integrada
-- Release: 2.0.6
-- Conserto: 51daddd84 (agente/205-usbandroid); 3b025a959 (agente/205-usbandroid); 0fe8a7731 (Merge agente/205-usbandroid)
-- Próximo passo: integrada em integracao/2.0.5 (0fe8a7731); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: 51daddd84 (agente/205-usbandroid); 3b025a959 (agente/205-usbandroid); 0fe8a7731 (Merge agente/205-usbandroid); agente/205-usbandroid
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivao 10-16 14:58: merged 0fe8a7731. Acha volumes por getExternalFilesDirs, falha fechado em fs desconhecida, teto FAT32. Review OK r2.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-usbandroid: merged; j-rev-usbandroid-r2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-usbandroid: merged; j-rev-usbandroid-r2.log: OK. 
 
 ### PR #538 (ghbarker): priorizar Continuar assistindo sem travar os catalogos
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
-- Conserto: a748ebf32 / 99158c279 (Merge agente/205-pr538b); cfc15aeab (agente/205-pr538b); 5f0ad732e (agente/205-pr538b); a748ebf32 (Merge agente/205-pr538b)
-- Próximo passo: integrada em integracao/2.0.5 (a748ebf32); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: a748ebf32 / 99158c279 (Merge agente/205-pr538b); cfc15aeab (agente/205-pr538b); 5f0ad732e (agente/205-pr538b); a748ebf32 (Merge agente/205-pr538b); agente/205-pr538; agente/205-pr538b
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivao 10-16 14:58: merged a748ebf32; review OK j-rev-pr538b.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr538: review-OK; j-rev-pr538v2.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr538b: merged; j-rev-pr538b.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr538: review-OK; j-rev-pr538v2.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr538b: merged; j-rev-pr538b.log: OK. Newer fix log requires review. 
 
 ### PR #540 (ghbarker): manter retratos do elenco vindo do addon quando o TMDB falha
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
-- Conserto: a1eca619b (agente/205-pr540b); 8bd065a36 (agente/205-pr540b); 5ae92423e (agente/205-pr540b); 0e727bd31 (merge integracao em agente/205-pr540b); 8cc5d723d (Merge agente/205-pr540b)
-- Próximo passo: integrada em integracao/2.0.5 (8cc5d723d); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: a1eca619b (agente/205-pr540b); 8bd065a36 (agente/205-pr540b); 5ae92423e (agente/205-pr540b); 0e727bd31 (merge integracao em agente/205-pr540b); 8cc5d723d (Merge agente/205-pr540b); agente/205-pr540; agente/205-pr540b
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivao 10-16 14:58: merged 8cc5d723d; review OK j-rev-pr540b.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr540: merged; j-rev-pr540v2.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr540b: merged; j-rev-pr540b.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr540: merged; j-rev-pr540v2.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr540b: merged; j-rev-pr540b.log: OK. 
 
 ### PR #543 (ghbarker): tirar linhas de addon desinstalado e fontes de colecao propria
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
-- Conserto: 11e6e8535 (agente/205-pr543); 85562a66b (agente/205-pr543); 87b5cc866 (merge integracao em agente/205-pr543); 0d44804f0 (Merge agente/205-pr543)
-- Próximo passo: integrada em integracao/2.0.5 (0d44804f0); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: 11e6e8535 (agente/205-pr543); 85562a66b (agente/205-pr543); 87b5cc866 (merge integracao em agente/205-pr543); 0d44804f0 (Merge agente/205-pr543); agente/205-pr543
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivao 10-16 14:58: merged 0d44804f0; review OK j-rev-pr543.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr543: merged; j-rev-pr543v2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr543: merged; j-rev-pr543v2.log: OK. Newer fix log requires review. 
 
 ### PR #546 (ghbarker): backdrop completo do recomendado e respeitar a qualidade Alta
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
-- Conserto: 946ad1819 (agente/205-pr546); bbb74484e (agente/205-pr546); 09a32acfa (merge integracao em agente/205-pr546); 66299e5f0 (Merge agente/205-pr546)
-- Próximo passo: integrada em integracao/2.0.5 (66299e5f0); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: 946ad1819 (agente/205-pr546); bbb74484e (agente/205-pr546); 09a32acfa (merge integracao em agente/205-pr546); 66299e5f0 (Merge agente/205-pr546); agente/205-pr546
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivao 10-16 14:58: merged 66299e5f0; review OK j-rev-pr546.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr546: merged; j-rev-pr546.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr546: merged; j-rev-pr546.log: OK. 
 
 ### PR #547 (ghbarker): chegar no relogio e na ilha de retomada com Up
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
-- Conserto: 960ec872a (Merge agente/205-pr547); a7d8b1f58 (agente/205-pr547); d570cb3c1 (agente/205-pr547, 2 ahead)
-- Próximo passo: integrada em integracao/2.0.5 (960ec872a); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: 960ec872a (Merge agente/205-pr547); a7d8b1f58 (agente/205-pr547); d570cb3c1 (agente/205-pr547, 2 ahead); agente/205-pr547
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivao 10-16 14:58: 2 ahead; job de merge rodando, sem review ainda.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr547: merged; j-rev-pr547.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr547: merged; j-rev-pr547.log: OK. 
 
 ### PR #550 (Tolu-Walop-E): lembrar a faixa de audio escolhida para a serie toda
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
-- Conserto: 0c2a1ba2c (agente/205-pr550); 3486c616b (fix, agente/205-pr550); 2cec223fd (Merge agente/205-pr550)
-- Próximo passo: merged 2cec223fd; review BLOQUEIA j-rev-pr550 (identidade de faixa MKV) -> fix 3486c616b -> OK j-rev-pr550-r2
+- Release: 2.0.7
+- Conserto: 0c2a1ba2c (agente/205-pr550); 3486c616b (fix, agente/205-pr550); 2cec223fd (Merge agente/205-pr550); agente/205-pr550
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivao 10-16 14:58: merged 2cec223fd; review OK j-rev-pr550-r2 depois do fix de identidade MKV.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr550: merged; j-rev-pr550-r2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr550: merged; j-rev-pr550-r2.log: OK. 
 
 ### PR #559 (mark-major): URL direta toca sem P2P; notWebReady nao pode esconder
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
-- Conserto: d25a3e513 (agente/205-pr559); 892f13d54 (merge integracao em agente/205-pr559); 06724b3ed (Merge agente/205-pr559)
-- Próximo passo: integrada em integracao/2.0.5 (06724b3ed); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: d25a3e513 (agente/205-pr559); 892f13d54 (merge integracao em agente/205-pr559); 06724b3ed (Merge agente/205-pr559); agente/205-pr559
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivao 10-16 14:58: merged 06724b3ed; review OK j-rev-pr559.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr559: merged; j-rev-pr559.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr559: merged; j-rev-pr559.log: OK. 
 
 ### Discord 2.0.6: busca abre o titulo anterior / fila travada + busca por voz
 
 - Plataforma: all
 - Status: integrada
-- Release: 2.0.6
-- Conserto: bb0734074 (Merge agente/205-buscafila); a2fd7e41d (agente/205-buscafila); 999b94a2c (merge integracao em agente/205-buscafila, 2 ahead)
-- Próximo passo: integrada em integracao/2.0.5 (bb0734074); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: bb0734074 (Merge agente/205-buscafila); a2fd7e41d (agente/205-buscafila); 999b94a2c (merge integracao em agente/205-buscafila, 2 ahead); agente/205-buscafila
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivao 10-16 14:58: fix a2fd7e41d (abrir o titulo escolhido da busca + motivo da falha da voz); sem review. | Escrivao 10-16 15:04: job done (a2fd7e41d, tests/busca_voice_registro + build + Android rc 0); sem review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-buscafila: merged; j-rev-buscafila.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-buscafila: merged; j-rev-buscafila.log: OK. Newer fix log requires review. 
 
 ### Follow-up #552: addons de legenda instalados nao sao consultados
 
 - Plataforma: Samsung .tpk
 - Status: integrada
-- Release: 2.0.6
-- Conserto: b897be584 (Merge agente/205-legenda552); 27988615e (agente/205-legenda552, 1 ahead)
-- Próximo passo: integrada em integracao/2.0.5 (b897be584); sai na 2.0.7
+- Release: 2.0.7
+- Conserto: b897be584 (Merge agente/205-legenda552); 27988615e (agente/205-legenda552, 1 ahead); agente/205-legenda552
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivao 10-16 14:58: fix 27988615e (assumir legenda ate a sonda do manifesto negar); tests rc 0; sem review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-legenda552: merged; j-rev-legenda552.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-legenda552: merged; j-rev-legenda552.log: OK. 
 
 ### Top menu translucido com vidro ligado e frost desligado (LG C9)
 
 - Plataforma: LG webOS
 - Status: integrada
 - Release: 2.0.7
-- Conserto: 1c3c6d693 (Merge agente/205-topvidro, integracao/2.0.5); b5007ae85 (fix(glass): keep the top chrome translucent with frost off)
-- Próximo passo: sai na 2.0.7; medir translucidez na C9
+- Conserto: 1c3c6d693 (Merge agente/205-topvidro, integracao/2.0.5); b5007ae85 (fix(glass): keep the top chrome translucent with frost off); agente/205-topvidro
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: [sync 2026-10-16 22:55] Pedido do dono: "e o topmenu nao fica transparente so com o glass sem ser frost". Job j-topvidro; branch agente/205-topvidro merged 1c3c6d693 (10-16 19:22) + fix b5007ae85. | Escrivão 2026-10-16 22:1x: merged 1c3c6d693 + fix b5007ae85; review OK j-rev-topvidro; build+install feito (HEAD b03502f84)
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-topvidro: merged; j-rev-topvidro.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-topvidro: merged; j-rev-topvidro.log: OK. 
 
 ### Linha "Cache do P2P" no Android
 
 - Plataforma: Android
 - Status: integrada
 - Release: 2.0.7
-- Conserto: 0d678eba5 (Merge agente/205-p2pusbtela, HEAD); 9b4f37efb (fix(settings): list P2P cache (USB) row on Android too)
-- Próximo passo: merged 0d678eba5; review OK j-rev-p2pusbtela (18:40); sai na 2.0.7
+- Conserto: 0d678eba5 (Merge agente/205-p2pusbtela, HEAD); 9b4f37efb (fix(settings): list P2P cache (USB) row on Android too); agente/205-p2pusb; agente/205-p2pusbtela
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: [sync 2026-10-16 22:55] b090905dc tirou o gate do Android so no foraDestaPlataforma; a lista TELA ainda compilava a linha fora. Jobs j-p2pusbtela + j-fix-p2pusbtela.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-p2pusbtela: merged; j-rev-p2pusbtela.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-p2pusbtela: merged; j-rev-p2pusbtela.log: OK. 
 
 ### Frost nos componentes do player (sobre video legivel)
 
 - Plataforma: Todas (onde o video da para ler)
 - Status: integrada
 - Release: 2.0.7
-- Conserto: 21f169226 (Merge agente/205-foscoplayer, integracao/2.0.5); 46e0bd5bd (feat(glass): frost player glass over live video with baked title art)
-- Próximo passo: sai na 2.0.7; medir 60 FPS e cor em TV real
+- Conserto: 21f169226 (Merge agente/205-foscoplayer, integracao/2.0.5); 46e0bd5bd (feat(glass): frost player glass over live video with baked title art); agente/205-foscoplayer
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: [sync 2026-10-16 22:55] Pedido do dono: "player UI, botoes e todos os componentes do player" + estatistica. Plataformas com plano de video hardware ficam na aproximacao (arte pre-blurred). | Escrivão 2026-10-16 22:1x: merged 21f169226 (46e0bd5bd); review OK j-rev-foscoplayer (19:48); build+install feito
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-foscoplayer: merged; j-rev-foscoplayer.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-foscoplayer: merged; j-rev-foscoplayer.log: OK. 
 
 ### Frost em todas as superficies (menu rapido, guia parental)
 
 - Plataforma: Todas
 - Status: integrada
 - Release: 2.0.7
-- Conserto: bf160f720 (Merge agente/205-foscotudo, integracao/2.0.5); 3982ef84b (fix(glass): quick menu and agenda panel use the shared frosted material)
-- Próximo passo: sai na 2.0.7
+- Conserto: bf160f720 (Merge agente/205-foscotudo, integracao/2.0.5); 3982ef84b (fix(glass): quick menu and agenda panel use the shared frosted material); agente/205-foscotudo
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: [sync 2026-10-16 22:55] Dono: "temos que ter certeza que o frost ta sendo aplicado em tudo... acho que o quickmenu nao ta sendo" + parental guide. Auditoria em /Volumes/ExternalSSD/tmp/foscotudo/auditoria.md. | Escrivão 2026-10-16 22:1x: merged bf160f720 (3982ef84b); review OK j-rev-foscotudo (19:48); build+install feito
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-foscotudo: merged; j-rev-foscotudo.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-foscotudo: merged; j-rev-foscotudo.log: OK. 
 
 ### Frost barato igual ao aprovado na LG C9
 
 - Plataforma: Todas
-- Status: revertida
+- Status: integrada
 - Release: 2.0.7
-- Conserto: ab02d4aaa/d0789c13a/50a1ac232/35f5f4fc3 (agente/205-foscovelho, 4 commits: fonte de arte pre-blurred); 76bc9d0c3 (Merge agente/205-foscovelho) — REVERTIDO por f40a93dc3; 35f5f4fc3 (fix r4, review OK j-rev-foscovelho-r4 22:08 — nao entrou)
-- Próximo passo: fonte de arte pre-blurred revertida (f40a93dc3 no HEAD); otimizar o caminho atual (captura de tela) — job j-foscoleve3 RUNNING (5 commits fora, sem review)
-- Notas: [sync 2026-10-16 22:40] Dono no TCL: "o fosco anterior tava mais bonito e mais leve que esse" + "tem que otimizar o antes desse que vai ficar top". foscovelho entrou em 76bc9d0c3 e saiu em f40a93dc3. j-rev-foscovelho-r4 (OK, 22:08) chegou depois do merge: o r4 nao entrou. j-foscoleve2 done 22:25 (log vazio, ENOSPC); j-foscoleve3 RUNNING 22:29. [sync 2026-10-16 22:55] Dono aprovou o visual atual do frost ("o frost glass na c9 ta bem bom") e pediu barato: voltar a fonte antiga (arte pre-blurred, zero captura). Jobs j-foscovelho, j-rev-foscovelho (BLOQUEIA), j-fix-foscovelho-r2 (RUNNING). | [sync 2026-10-16 21:10] job j-fix-foscovelho-r4 RUNNING (log vazio 20:36); r3 BLOQUEIA (vignette do detalhe) | Escrivão 2026-10-16 22:1x: j-fix-foscovelho-r4 done 21:14 (35f5f4fc3, tests/vidro_neutro + build-local rc 0); 4 ahead; BLOQUEIA j-rev-foscovelho-r3 antes do fix = needs review Sync 2026-10-16 22:51: f40a93dc3 (revert) ja esta no HEAD 1b5c9d39a. [sync 2026-10-17 00:05] agente/205-foscoleve3 com 5 commits fora (93b3d69ec..240bc60a0: teto do alvo de blur, 1/2 em um passo, copia/borra so as regioes lidas, limpa alvo antes de cada passo, recaptura a cada 2 frames na fade) e sem review = needs review. j-foscoleve2 (predecessor) com log vazio: nao perdido.
+- Conserto: 4c82273d7 (Merge agente/205-foscoleve3, integracao/2.0.5 — frost de captura de tela OTIMIZADO, mesmo visual); 93b3d69ec (gfx: cap frost blur targets at the 1080p chain, box to 1/4 in one pass); 3dc70083c (gfx: copy and blur only the regions the glasses read); a0f765d7f (gfx: clear each frost blur target before its pass); 17717812d (gfx: drop the frost blur pass back to 1/2); 240bc60a0/a0f765d7f/013e1341f/fe6a04804 (fixes do review BLOQUEIA j-rev-foscoleve3: refresh imediato + backdrop salvo); 4ae3e7211 (test(gfx): enforce the 1080p frost pixel difference limit); 4dba47b60 (gfx: skip the rim and normal math in the frosted glass interior); agente/205-foscoleve3
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: [sync 2026-10-17 01:52] Dono: "o fosco anterior tava mais bonito e mais leve que esse" + "tem que otimizar o antes desse que vai ficar top". j-foscoleve3 done 00:14 (6 commits) -> j-rev-foscoleve3 00:22 BLOQUEIA (P2 corte seco mostra o frost do quadro anterior; P2 miss de regiao usa captura depois do foreground) -> j-fix-foscoleve3-r2 00:47 (013e1341f + fe6a04804) -> j-rev-foscoleve3-r2 00:53 OK. merged 4c82273d7 (00:58). O caminho que ficou e a captura de tela, so que barata. foscovelho (arte pre-blurred) continua revertido por f40a93dc3. [sync 2026-10-16 22:40] Dono no TCL: "o fosco anterior tava mais bonito e mais leve que esse" + "tem que otimizar o antes desse que vai ficar top". foscovelho entrou em 76bc9d0c3 e saiu em f40a93dc3. j-rev-foscovelho-r4 (OK, 22:08) chegou depois do merge: o r4 nao entrou. j-foscoleve2 done 22:25 (log vazio, ENOSPC); j-foscoleve3 RUNNING 22:29. [sync 2026-10-16 22:55] Dono aprovou o visual atual do frost ("o frost glass na c9 ta bem bom") e pediu barato: voltar a fonte antiga (arte pre-blurred, zero captura). Jobs j-foscovelho, j-rev-foscovelho (BLOQUEIA), j-fix-foscovelho-r2 (RUNNING). | [sync 2026-10-16 21:10] job j-fix-foscovelho-r4 RUNNING (log vazio 20:36); r3 BLOQUEIA (vignette do detalhe) | Escrivão 2026-10-16 22:1x: j-fix-foscovelho-r4 done 21:14 (35f5f4fc3, tests/vidro_neutro + build-local rc 0); 4 ahead; BLOQUEIA j-rev-foscovelho-r3 antes do fix = needs review Sync 2026-10-16 22:51: f40a93dc3 (revert) ja esta no HEAD 1b5c9d39a. [sync 2026-10-17 00:05] agente/205-foscoleve3 com 5 commits fora (93b3d69ec..240bc60a0: teto do alvo de blur, 1/2 em um passo, copia/borra so as regioes lidas, limpa alvo antes de cada passo, recaptura a cada 2 frames na fade) e sem review = needs review. j-foscoleve2 (predecessor) com log vazio: nao perdido.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK. 
 
 ### Temporadas/episodios fantasmas vindo do add-on
 
 - Plataforma: Todas
 - Status: integrada
 - Release: 2.0.7
-- Conserto: 94d16f7de (fix(episodes): ignore addon videos[] with one fake season per episode — agente/205-temporadas, 1 ahead); c0dc799a3 (merge agente/205-temporadas, HEAD b72189c5d)
-- Próximo passo: merged c0dc799a3; sai na 2.0.7; build+install
+- Conserto: 94d16f7de (fix(episodes): ignore addon videos[] with one fake season per episode — agente/205-temporadas, 1 ahead); c0dc799a3 (merge agente/205-temporadas, HEAD b72189c5d); agente/205-temporadas
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: [sync 2026-10-16 22:55] Relato de usuario: "seasons appear that dont actually exist" (The Blacklist 2013 com Season 20+). Jobs j-temporadas + review j-rev-temporadas. | [sync 2026-10-16 21:10] merged c0dc799a3; review OK apos fix 288e531ee | Escrivão 2026-10-16 22:1x: merged c0dc799a3 (94d16f7de + fix 288e531ee); review OK j-rev-temporadas-r2 (20:04) depois do fix
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-temporadas: merged; j-rev-temporadas-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-temporadas: merged; j-rev-temporadas-r2.log: OK. Newer fix log requires review. 
 
 ### Triagem dos PRs abertos + port dos fixes sem branch
 
 - Plataforma: Todas
 - Status: integrada
 - Release: 2.0.7
-- Conserto: 72ba10761 (Merge agente/205-prs207, integracao/2.0.5); 4baf783fa (feat(collections): open Showcase rows in See all grids); e0ddeca5f (fix(search): expand catalog windows while retaining exact-title promotion); ff1f1aa25 (fix(trakt): send exact episode identities in scrobbles); 61d73a5bf (fix(player): reuse selected detail artwork during opening)
-- Próximo passo: merged 72ba10761; review OK j-rev-prs207 (19:50); sai na 2.0.7
+- Conserto: 72ba10761 (Merge agente/205-prs207, integracao/2.0.5); 4baf783fa (feat(collections): open Showcase rows in See all grids); e0ddeca5f (fix(search): expand catalog windows while retaining exact-title promotion); ff1f1aa25 (fix(trakt): send exact episode identities in scrobbles); 61d73a5bf (fix(player): reuse selected detail artwork during opening); agente/205-prs207
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: [sync 2026-10-16 22:55] Triagem so leitura (p-prs207.txt, /Volumes/ExternalSSD/tmp/prs207/triagem.md) + j-prs207port com os ports. PRs 431/538/540/543/546/547/550/559 entraram por branch proprio.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-prs207: merged; j-rev-prs207.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-prs207: merged; j-rev-prs207.log: OK. 
 
 ### Catalogo fora da cota nao atualiza depois de adicionar
 
 - Plataforma: Todas
 - Status: integrada
 - Release: 2.0.7
-- Conserto: 975638744 (fix(fileiras): refresh quota-excluded catalog right after explicit Add — agente/205-pfhome545); 53b050753 (fix(fileiras): scan all rows for eligible catalog refresh); b03502f84 (merge agente/205-pfhome545, HEAD b72189c5d)
-- Próximo passo: merged b03502f84; sai na 2.0.7
+- Conserto: 975638744 (fix(fileiras): refresh quota-excluded catalog right after explicit Add — agente/205-pfhome545); 53b050753 (fix(fileiras): scan all rows for eligible catalog refresh); b03502f84 (merge agente/205-pfhome545, HEAD b72189c5d); agente/205-pfhome545
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: [sync 2026-10-16 22:55] Follow-up de #545. Jobs j-fix-pfhome545 (53b050753, 19:46) e j-revg-pfhome545 (BLOQUEIA). | [sync 2026-10-16 21:10] merged b03502f84; VEREDITO OK j-revg-pfhome545 | Escrivão 2026-10-16 22:1x: merged b03502f84 (975638744/53b050753); review OK j-revg-pfhome545 (20:57)
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pfhome545: merged; j-revg-pfhome545.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pfhome545: merged; j-revg-pfhome545.log: OK. 
 
 ### Perfil de visualizacoes (#548): marcar serie inteira
 
 - Plataforma: Android, LG webOS
 - Status: integrada
 - Release: 2.0.7
-- Conserto: 66a608ef7..b074d9fd5 (agente/205-vistos548, 8 commits ahead, nao integrados); 91da5935e (merge agente/205-vistos548, HEAD b72189c5d)
-- Próximo passo: build+install no HEAD b72189c5d; testar na TV
+- Conserto: 66a608ef7..b074d9fd5 (agente/205-vistos548, 8 commits ahead, nao integrados); 91da5935e (merge agente/205-vistos548, HEAD b72189c5d); agente/205-vistos548
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: [sync 2026-10-16 22:55] Fix mais novo b074d9fd5 (j-fix-vistos548-r6) depois do review r7. | [sync 2026-10-16 21:10] merged 91da5935e (12 commits); review OK r9 | Escrivão 2026-10-16 22:1x: merged 91da5935e (12 commits); reviews OK r8/r9; entra na 2.0.7
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review. 
 
 ### release: bump 2.0.7 + NOTAS.md (release notes completas)
 
 - Plataforma: all
 - Status: integrada
 - Release: 2.0.7
-- Conserto: b72189c5d (merge agente/205-release207, HEAD integracao/2.0.5); e275de18a release: 2.0.7 version bump and full release notes
-- Próximo passo: merged b72189c5d; conferir repo.json 2.0.7 (ipk url/sha256/size) e linhas de desempenho do frost antes do tag
+- Conserto: b72189c5d (merge agente/205-release207, HEAD integracao/2.0.5); e275de18a release: 2.0.7 version bump and full release notes; agente/205-release207
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Escrivão 2026-10-16 22:1x: merged b72189c5d depois do sync das 21:1x (j-release207 done 20:59, versao_207 + build-local rc 0, sem review dedicado). deploy/app/appinfo.json, tools/tizen-config.xml, src/novidades_cartao.c e docs/releases/2.0.7/NOTAS.md.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-release207: merged; j-rev-release207.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-release207: merged; j-rev-release207.log: OK. 
 
 ### Tirar o botao de voltar episodio do player
 
 - Plataforma: todas
 - Status: integrada
 - Release: 2.0.7
-- Conserto: 4e6b592d8 feat(player): remove previous-episode button from series action bar; d51d4e46c (Merge agente/205-semepanterior, integracao/2.0.5)
-- Próximo passo: merged d51d4e46c; review OK j-rev-semepanterior (22:12); sai na 2.0.7; P2: transportePrimeiraLinha() devolve 4 no layout de 2 linhas
+- Conserto: 4e6b592d8 feat(player): remove previous-episode button from series action bar; d51d4e46c (Merge agente/205-semepanterior, integracao/2.0.5); agente/205-semepanterior
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Sync 2026-10-16 22:51: pedido do dono ("pode tirar do player o botao de voltar episodio"); merged d51d4e46c; review OK j-rev-semepanterior (tests/player_eof_episodios + player.sh rc 0).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-semepanterior: merged; j-rev-semepanterior.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-semepanterior: merged; j-rev-semepanterior.log: OK. 
 
 ### Estilo da tela de abertura: Centro (A3) ou Canto (B3)
 
 - Plataforma: Todas
 - Status: integrada
 - Release: 2.0.7
-- Conserto: 922500ef4 (feat(player): opening screen style setting, Center (A3) or Corner (B3)); 9c3ecdf85 (Merge agente/205-loadtelab em integracao/2.0.5)
-- Próximo passo: sai na 2.0.7; conferir o visual B3 na TV antes do tag
+- Conserto: 922500ef4 (feat(player): opening screen style setting, Center (A3) or Corner (B3)); 9c3ecdf85 (Merge agente/205-loadtelab em integracao/2.0.5); agente/205-loadtela; agente/205-loadtelab
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: [sync 2026-10-17 00:05] Pedido do dono, branch agente/205-loadtelab. Job j-loadtelab done 22:33 (922500ef4); review OK j-revg-loadtelab (22:47, tests/player_loading rc 0); j-rev-loadtelab tambem OK. merged 9c3ecdf85 no HEAD b280cd6. Ajustes > Tela: "Estilo da tela de abertura" com Centro (A3, padrao) e Canto (B3, logo embaixo a esquerda + anel fino).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-loadtela: merged; j-rev-foscoleve3-r2.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-loadtelab: merged; j-rev-loadtelab.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-loadtela: merged; j-rev-foscoleve3-r2.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-loadtelab: merged; j-rev-loadtelab.log: OK. 
 
 ### Fileira Amigos polida em todos os estilos, sem "Ver todos"/"+ Adicionar" (pedido do dono)
 
 - Plataforma: all
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 8806e6aff (agente/205-amigospolish, foco padrao da Home em todos os estilos); d95bd32e1 (fix(friends): drop the add column from classic style 5); e27514693 (fix: include last friend panel in touch scroll extent); f21d993b2 (Merge agente/205-amigospolish, integracao/2.0.5); agente/205-amigos; agente/205-amigospolish
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: [sync 2026-10-17 01:52] merged f21d993b2 (00:18) depois de j-fix-amigospolish-r3 (e27514693, P2 do review) e do OK de j-rev-amigospolish-r2 (00:14). A entrada dono-205-amigospolish-upd tem o texto completo. [sync 2026-10-17 00:08] Dono na TCL (p-amigospolish.txt): "a fileira de amigos ta com contorno estranho ao inves do padrao de foco, ta feio, todas as versoes nao estao polidas, e tira aqueles dois botoes see all + add". Jobs j-amigospolish (23:25) e j-fix-amigospolish-r2 (23:46); 2 commits fora, sem merge. Review j-rev-amigospolish 23:53 VEREDITO BLOQUEIA (P2); tests/amigos_polish.sh rc=124 = timeout do harness de captura, nao achado; tests/recamigos.sh falha igual no HEAD limpo (pre-existente).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-amigos: merged; j-rev-205-amigos.log: OK.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-amigospolish: merged; j-rev-amigospolish-r2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-amigos: merged; j-rev-205-amigos.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-amigospolish: merged; j-rev-amigospolish-r2.log: OK. 
+
+### Fosco (frost) de captura de tela mais barato, com o mesmo visual
+
+- Plataforma: Todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 4c82273d7 (Merge agente/205-foscoleve3, integracao/2.0.5); medidas.md: 498.960 -> 24.289 px de blur/quadro a 1080p; 5 -> 3 passos; 4K 1.995.840 -> 56.621; agente/205-foscoleve3
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: [sync 2026-10-17 01:52] Espelho do pedido do dono depois do revert. Numeros em /Volumes/ExternalSSD/tmp/foscoleve3/medidas.md: pixel diff max 4/5 nos 12 PNGs C9 a 1080p; capturas/quadro e fracao de copia iguais ao caminho antigo; uma textura RGB cheia extra (5,93 MiB a 1080p). Falta timing de GPU em TV.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK. 
+
+### Abas da Biblioteca e do catalogo com vidro+frost de verdade
+
+- Plataforma: Todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 21696fd8c (fix(ui): frost library and catalog tab surfaces — agente/205-vidrotabs); 796a3441f (fix(ui): frost remaining segmented control tracks); a096e5eb8 (Merge agente/205-vidrotabs, integracao/2.0.5); agente/205-vidrotabs
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: [sync 2026-10-17 01:52] Dono: "Nem as tabs" — as tiras de aba (Biblioteca e catalogo) eram pilulas solidas; agora usam o frost regional. Prova de pixel no job; sem review dedicado.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vidrotabs: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidrotabs: merged; No mapped review verdict. 
+
+### Escala dos Ajustes com padrao de fabrica 100%
+
+- Plataforma: Todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 3f8d304b7 (fix(settings): default Settings scale to 100% — agente/205-escala100); f22761e28 (Merge agente/205-escala100, integracao/2.0.5); agente/205-escala100
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: [sync 2026-10-17 01:52] Dono: "E pode deixar a escala das settings em 100%". Migracao move so quem nunca escolheu 80% na mao.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-escala100: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-escala100: merged; No mapped review verdict. 
+
+### PR #561 (comunidade): identidade da serie preservada na busca e na reproducao
+
+- Plataforma: Todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: cdf5bdd88 (Metadata: preserve series identity during on-demand playback); 2537db6a0 (Tests: cover typed title lookup and late playback identity); 86d194462 (Merge PR #561: preserve series identity during lookup and playback, integracao/2.0.5)
+- Próximo passo: merged 86d194462; review OK rev-pr561 (title/player/player_guards/detalheanime/farah + i18n + build rc 0); confirmar em #524
+- Notas: [sync 2026-10-17 01:52] Review rev-pr561: VEREDITO OK, sem P0-P2; UI small (metadados do detalhe, rotulos de episodio, Continuar assistindo). Merge feito pelo dono em 86d194462.
+
+### PR #574 (comunidade): Recarregar na folha de fontes e "Assistir do começo"
+
+- Plataforma: Todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 6a6d5b71b (Player: separate source reload from restart playback); 075fec9a4 (test: cover Restart and source Reload with explicit fixture boundaries); 2c7c85860 (Merge PR #574, integracao/2.0.5)
+- Próximo passo: merged 2c7c85860; review OK rev-pr574 (UI small); confirmar em #562
+- Notas: [sync 2026-10-17 02:50] Review rev-pr574 01:53: VEREDITO OK, UI small (um botao da barra muda de "Recarregar" para "Assistir do começo" = seek 0:00; Recarregar entra na folha de fontes). 2 P2 anotados (gate de duracao no botao da barra, seek 0 em !comVideo). Merge feito pelo dono em 2c7c85860 (02:46).
+
+### Comentarios do Trakt com vidro/frost, de volta nas series e sem derrubar FPS
+
+- Plataforma: Todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: a363d821c (feat(detail): draw Trakt comments with shared glass and frost); 1165245fc (perf(detail): reuse cached wrapping for Trakt comments); 5195cd14f (fix(detail): restore show comments when opening series); 335bd2abc (Merge agente/205-traktcoment, integracao/2.0.5); agente/205-traktcoment (merge 335bd2abc); agente/205-traktcoment
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: [sync 2026-10-17 02:50] Dono: "O componente do traktv nao tem com o frost e nem o glass novo... nao ta aparecendo mais nas series so em filme... e a unica fileira que cai fps". j-traktcoment-pi done 01:44 -> rev-traktcoment 01:56 VEREDITO OK (2 P2: contador de perf em isolamento; comentario longo agora termina com "..."). Merge feito pelo dono em 335bd2abc (02:46). Falta aprovacao visual do foco em vidro e medicao de GPU em TV.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-traktcoment: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-traktcoment: merged; No mapped review verdict. 
+
+### Menu contextual grande e pequeno com vidro+frost, ajuste "Menu do cartaz"
+
+- Plataforma: Todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: a2ea074c7 (fix(ctxmenu): frost the title menu over its art, add Poster menu setting); dc040ef2d (Merge agente/205-ctxgrande, integracao/2.0.5); agente/205-ctxgrande (merge dc040ef2d); agente/205-ctxgrande
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: [sync 2026-10-17 02:50] Dono: "O menu contextual grande nao ta nem com o glass e nem com o frost tb. E vamos colocar nos ajustes a possibilidade de deixar igual tava antes". j-ctxgrande-pi done 01:42 -> rev-ctxgrande 01:54 VEREDITO OK (P1: branch sem o tip de integracao — resolvido no proprio merge). Merge feito pelo dono em dc040ef2d (02:46).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-ctxgrande: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-ctxgrande: merged; No mapped review verdict. 
+
+### Vidro no menu "mais" da pagina do titulo
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: e047eecee feat(detail): draw cast, recommendations and trailers on the shared glass card; 9ebdc9a3b feat(detail): draw the more menu on the shared card glass and frost; 0b52916d0 fix(detail): frost loaded collections and restore solid captions; d04f21ba4 test(detail): isolate glass cards (rev2 BLOQUEIA 06:51 - P1); 937a69475 fix(detail): let frost show through loaded collection artwork; 531a36f6e fix: preserve collection artwork above shared glass; 26dbd9a2a fix(trocaarte): glass sheet instead of opaque gradient and black floor; 3aec9a8c0 perf(detail): draw Trakt comments row once per frame with cheap glass cards; cc87bec32 (merge agente/205-detalheglass); agente/205-detalheglass (merge cc87bec32)
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: Sync 2026-10-17 11:00: branch merged cc87bec32 depois dos fixes 0b52916d0/d04f21ba4/531a36f6e/fff6df801/453c7a73c/937a69475/26dbd9a2a/3aec9a8c0/aef4e3c58. [sync 2026-10-17 09:25] 10 commits fora (tip 3aec9a8c0, 08:44), ainda sem merge. rev2 BLOQUEIA 06:51 -> 4 fixes -> rev3 BLOQUEIA 08:15 -> j-fix3-detalheglass done 08:47 (26dbd9a2a vidro no Trocar arte + 3aec9a8c0 Trakt 1x/quadro). Falta review do fix3. Pedido do dono. O menu "mais" do detalhe passa a usar o mesmo vidro/frost dos outros paineis. Branch aberta, sem review nem merge. Sync 2026-10-17 07:05: 4 commits fora do HEAD, ainda sem merge.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-detalheglass: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-detalheglass: merged; No mapped review verdict. 
+
+### Frost da barra lateral e pilula de acento em vidro
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 7bf4caac9 (agente/205-vidromenu: frost na barra lateral); e3eb56d39 (pilula de acento em vidro tingido); 37687dce0 (agente/205-vidromenu: frost regional da barra); 90c8d380d (test(gfx): reject opaque frost and cover Saved modal); ab0e9a597 (Merge agente/205-vidromenu, integracao/2.0.5); agente/205-vidromenu (merge ab0e9a597)
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: [sync 2026-10-17 08:16] Merge de agente/205-vidromenu cometado em ab0e9a597 (08:11) durante este sync, com conflitos em src/ajustes.c, gfx.c/h, menu.c e 3 testes resolvidos. Pedido do dono. A barra lateral desfoca sobre as telas com vidro e a pilula de acento vira vidro tingido no modo vidro; ilhas de frost sobre o vidro da Home. Duas branches abertas, sem review nem merge. Sync 2026-10-17 07:05: 4 commits fora do HEAD, ainda sem merge.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vidromenu: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidromenu: merged; No mapped review verdict. 
+
+### Fundo Cinza/Cor fixo no layout Dinamico
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 6da1fc418 (feat(home): fixed Gray/Color background for the Dynamic layout, calmer Immersive); e91329dd2 (i18n: translate the Dynamic layout background settings in 29 languages); 0cf805980 (fix: reuse accent palette for dynamic background color); e3fdbe717 (Merge agente/205-dinfundo, integracao/2.0.5); agente/205-dinfundo (merge e3fdbe717)
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: [sync 2026-10-17 08:10] Fundo fixo Cinza ou Cor no layout Dinamico (paleta de acento reusada, 29 idiomas), Imersivo mais calmo; merged e3fdbe717. Pedido do dono. O layout Dinamico ganha fundo fixo Cinza ou Cor em vez de so arte, com as traducoes dos ajustes em 29 idiomas. Branch aberta, sem review nem merge. Sync 2026-10-17 07:05: 3 commits fora do HEAD, ainda sem merge.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dinfundo: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dinfundo: merged; No mapped review verdict. 
+
+### Estilos de titulo da fileira (Classico/Ilha/Editorial/Acento)
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 331746034 (agente/205-titulofil, merge 4898972d7); agente/205-titulofil (merge 4898972d7)
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: Pedido do dono. Cada fileira escolhe o estilo do titulo: Classico, Ilha, Editorial ou Acento. Merged em integracao/2.0.5 sem review dedicado.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-titulofil: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-titulofil: merged; No mapped review verdict. 
+
+### Fileira de cartazes grandes em Pequeno/Medio/Grande
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: e50a38ef6 (agente/205-fichatam, merge cbf6fb021); agente/205-fichatam (merge cbf6fb021)
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: Pedido do dono. Novo estilo de fileira com cartaz grande em tres alturas. Merged em integracao/2.0.5 sem review dedicado; testes home/i18n/vertfileira OK. Sync 2026-10-17 07:05: integrada em 6a64c2e13; sem review dedicado. Sync 2026-10-17 07:05: integrada em cbf6fb021; sem review dedicado.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-fichatam: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-fichatam: merged; No mapped review verdict. 
+
+### Hero dividido sem repetir o titulo focado
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 4428dea18 (agente/205-herodiv, merge f41a4e154); agente/205-herodiv (merge f41a4e154)
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: Pedido do dono. No hero dividido a lista de cartazes deixa de repetir o titulo que ja esta em foco. Merged em integracao/2.0.5 sem review dedicado.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-herodiv: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-herodiv: merged; No mapped review verdict. 
+
+### Vidro defumado no player e nivel de qualidade do vidro
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 6f1c61cb8; 30a932909 (agente/205-foscoleve4, merge a691e96fb); agente/205-foscoleve4 (merge a691e96fb)
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: Pedido do dono. Sobre o video ao vivo o painel deixa de desblurfar e vira vidro defumado, com nivel Desempenho/Alta/Maximo e queda automatica depois de quadros travados. Merged em integracao/2.0.5 sem review dedicado.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-foscoleve4: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-foscoleve4: merged; No mapped review verdict. 
+
+### Abertura do Dolby Vision no estilo novo
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: d89784e82 + 4 fixes (agente/205-dvabertura, merge abb9e49b9); agente/205-dvabertura (merge abb9e49b9)
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: Pedido do dono. A tela de Cinema do Dolby Vision segue o estilo e os ajustes das telas de carregamento novas. Merged em integracao/2.0.5 sem review dedicado.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dvabertura: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dvabertura: merged; No mapped review verdict. 
+
+### Ilhas de frost sobre o vidro da barra lateral da Home
+
+- Plataforma: todas
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 90b0f9cd7 (fix(gfx): frost islands drawn over Home sidebar glass); 61764f975 (fix(gfx): limit modal frost captures to sampling regions); fb4af3ee5 (test(gfx): reject opaque frost and cover Saved modal); ab0e9a597 (Merge agente/205-vidroilhas, integracao/2.0.5); agente/205-vidroilhas (merge f087f4b59)
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: [sync 2026-10-17 08:10] Ilhas de frost desenhadas sobre o vidro da barra lateral da Home + captura de modal limitada a regiao de amostragem; merged ab0e9a597. Sync 2026-10-17 07:05: 3 commits fora do HEAD, ainda sem merge.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-vidroilhas: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidroilhas: merged; No mapped review verdict. 
+
+### Escala de texto e componentes (85-130%) - pedido do dono
+
+- Plataforma: todas
+- Status: em-revisao
+- Release: -
+- Conserto: e7fa6d67c feat(ui): add text and component scale to gfx layer; 406359d3a feat(settings): add text and component scale option (85-130%); bab9c56e3 feat(ui): apply text scale to home, title page, library and player; 86fed77d7 i18n: add text and component scale strings; 4bfafc814 test: add text scale proof (rev-textoescala BLOQUEIA 06:50); e24e614a2 fix(keyboard): keep navigation geometry at the configured text scale; 5ff1d7ef3/ebb0b1365 fix(search): preserve poster and landscape artwork size at text scale; 1eb28a937 fix(settings): expose text scale in Appearance navigation; 342aafc49 fix: preserve search spacing and scaled episode menu anchors
+- Próximo passo: rev3 BLOQUEIA 09:20 (P2 busca no celular ainda redimensiona cartaz; P2 prova visual incompleta) + fix3 08:32 -> precisa review novo; 18 commits fora
+- Notas: [sync 2026-10-17 09:25] 18 commits fora (tip 342aafc49, 08:32), ainda sem merge. rev BLOQUEIA 06:50 -> rev2 BLOQUEIA 08:15 -> j-fix3-textoescala done 08:32 -> rev3 BLOQUEIA 09:20. P1 antigo (opcao fora de Ajustes) foi resolvido (1eb28a937). Sync 2026-10-17 07:05: 5 commits fora do HEAD, ainda sem merge.
+
+### Player perdeu o vidro: frost sobre o video de volta (pedido do dono)
+
+- Plataforma: Todas (onde o video da para ler)
+- Status: integrada
+- Release: 2.0.7
+- Conserto: ce33fe44a fix(glass): frost over live video via baked title-art stand-in; governor trial (agente/205-playervidro); 6974f7293 Player glass: real translucent look over live video, denser tint, one-shot governor (agente/205-playervidro); 04375ab4f (Merge agente/205-playervidro); agente/205-playervidro (merge 04375ab4f)
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: [sync 2026-10-17 09:25] Dono: "O player nao ta mais com o glass, o que aconteceu?". Causa: 6f1c61cb8 (foscoleve4) tirou o foscoSobreVideo() e o gfx_vidro_fonte_video(), deixando todo vidro sobre o video defumado; o governador ainda derruba o app inteiro para defumado na C9. A branch devolve o frost por arte pre-desfocada e afrouxa o governador. | Escrivao 10-17 11:55: merged 04375ab4f com os 3 rounds de fix (vidro real sobre o video, tinta mais densa, governador one-shot).
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-playervidro: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-playervidro: merged; No mapped review verdict. 
+
+### Fileira do Trakt continua sem vidro e sem ganho de FPS (pedido do dono)
+
+- Plataforma: Todas
+- Status: em_job
+- Release: 2.0.7
+- Conserto: nenhum encontrado
+- Próximo passo: j-traktvidro done 08:24 com log vazio e branch sem commit novo (head=8df743dff, pre-merge): tratar como QUEUED/falhou -> relancar ou investigar
+- Notas: [sync 2026-10-17 09:25] Dono, depois de 335bd2abc instalado na C9: "o trakt ainda ta igual" e "a performance que era o importante tb nao mexeu do traktv". Reabre o trabalho de dono-205-traktcoment. | Escrivao 10-17 11:55: o head da branch e 8df743dff (pre-merge de vidroilhas/vidromenu): o job nao commitou nada, log vazio.
+
+### Tela ainda pisca na LG C9 com frost ligado (pedido do dono)
+
+- Plataforma: LG webOS (C9)
+- Status: integrada
+- Release: 2.0.7
+- Conserto: 98bc829e1 fix(tex): keep mipmaps on hero-promoted art that rows also draw (agente/205-pisca3); fc6d35d69 (Merge agente/205-pisca3); agente/205-pisca3 (merge fc6d35d69)
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: [sync 2026-10-17 09:25] Dono depois do fix instalado na C9: "A tela ainda ta piscando". O fix anterior (5528dc0ad, dinDescarregar antes da copia do backdrop) so foi provado por contador de ordem no desktop GL e nao resolveu na TV. | Escrivao 10-17 11:55: merged fc6d35d69. A causa provada desta vez: mipmaps descartados da arte promovida no hero que as fileiras tambem desenham (tex_cache). Sem teste na TV ainda.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-pisca3: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pisca3: merged; No mapped review verdict. 
+
+### Caixa de texto do episodio focado maior, com margem e em vidro; lentidao titulo->abas de temporada; log do fontepref por quadro (pedido do dono)
+
+- Plataforma: LG webOS / TCL (detalhe de serie)
+- Status: integrada
+- Release: 2.0.7
+- Conserto: df06809f2 fix(detail): glass episode focus plate with padded text; cheap title->episodes scroll (agente/205-epfoco); e5eb23eba fix(fontepref): pick the remembered auto source once per list, log once (agente/205-epfoco); 3b39999e5 (Merge agente/205-epfoco); agente/205-epfoco (merge 3b39999e5)
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: [sync 2026-10-17 11:55] Pedido literal do dono: "o focu do texto do episodio tem que ser um pouco maior e ta sem margem" + "e falta o glass" + "agora no frost so ta lerdo quando vai do titulo para as tabs". j-epfoco done 11:02, sem review dedicado antes do merge. Fix: placa em vidro com padding alinhada ao cartao focado; scroll titulo->episodios mais barato; fontepref cacheado por lista (o log por quadro, 2347 linhas em 2 min, some). Pendente: medida de 60 fps real na TV.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-epfoco: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-epfoco: merged; No mapped review verdict. 
+
+### PR #572 (Tolu-Walop-E): ParaleloDataSource Android — indice de fim de arquivo nas conexoes paralelas + destino lembrado do add-on com fallback
+
+- Plataforma: Android
 - Status: em_revisao
 - Release: 2.0.7
-- Conserto: 8806e6aff (fix(friends): polish every friends row style with the Home focus, drop See all and Add pills); d95bd32e1 (fix(friends): drop the add column from classic style 5, last avatar stops RIGHT)
-- Próximo passo: fix do P2 do j-rev-amigospolish (23:53, BLOQUEIA): incluir o painel expandido do ultimo amigo na extensao do scroll de toque do estilo 5 (src/amigosfil.c:122); re-review; depois merge e teste na TV
-- Notas: [sync 2026-10-17 00:08] Dono na TCL (p-amigospolish.txt): "a fileira de amigos ta com contorno estranho ao inves do padrao de foco, ta feio, todas as versoes nao estao polidas, e tira aqueles dois botoes see all + add". Jobs j-amigospolish (23:25) e j-fix-amigospolish-r2 (23:46); 2 commits fora, sem merge. Review j-rev-amigospolish 23:53 VEREDITO BLOQUEIA (P2); tests/amigos_polish.sh rc=124 = timeout do harness de captura, nao achado; tests/recamigos.sh falha igual no HEAD limpo (pre-existente).
+- Conserto: cc61bfdd8 perf(android): read the end-of-file index over the parallel connections; 809bd7c96 perf(android): open later requests at the add-on link's known destination; 8876c13c6 perf(android): split end-of-file windows above 256 KB too; f6618db6b fix(android): don't trust a remembered destination that serves another file; 22f3d22bb (Merge pr/572); pr/572 (merge 22f3d22bb)
+- Próximo passo: Review latest fix.
+- Notas: [sync 2026-10-17 11:55] rev-pr572 VEREDITO OK: abertura de fonte le o indice do fim do arquivo em paralelo e lembra o destino real do add-on (TTL 2h + checagem de tamanho, com fallback). Testes Kotlin nao rodaram local (JDK 25).
+Snapshot 2026-10-17T12:48:52-03:00: pr/572: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: pr/572: done-awaiting-review; No mapped review verdict. 
+
+### Profile selector artwork flicker regression
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/205-pisca4
+- Próximo passo: Review latest fix.
+- Notas: Snapshot 2026-10-17T12:48:52-03:00: agente/205-pisca4: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pisca4: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/202-biblioteca; agente/205-triagem-velhas
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/202-biblioteca: done-awaiting-review; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-p323, branch agente/205-p323. Port the #323 fix from agente/203-323 (and the streams.c part of agente/203-318-play). src/streams.c ~1824: Conferencia c lives on the stack, c.rodada = fa_rodada_atual(), a
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/203-318-play; agente/203-323; agente/205-p323
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/203-318-play: done-awaiting-review; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/203-323: done-awaiting-review; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-p323: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/203-perfilsel; agente/205-triagem-velhas
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/203-perfilsel: done-awaiting-review; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas, branch agente/205-triagem-velhas (docs only). Fix the review findings below in the triage doc, keep it docs-only.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/2031-dvp5-hdr10; agente/205-triagem-velhas
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/2031-dvp5-hdr10: done-awaiting-review; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/204-arabe370; agente/205-triagem-velhas
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/204-arabe370: done-awaiting-review; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/204-pr381; agente/205-triagem-velhas
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/204-pr381: done-awaiting-review; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/204-webos-versao; agente/205-triagem-velhas
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/204-webos-versao: done-awaiting-review; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-abastopo, branch agente/205-abastopo (from integracao/2.0.5).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-abastopo
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-abastopo: merged; j-revg-abastopo.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-ajperf, branch agente/205-ajperf, base integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/ajperf.diff. Owner: Settings has very low fps on LG C9 (webOS, GLES2). Fix d0d5b067: 
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-ajperf
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-ajperf: merged; j-rev2-ajperf.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-ajsecoes, branch agente/205-ajsecoes, base integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/ajsecoes.diff. Claim: tests/ajustes_secoes was outdated after owner commit 4d5fcd
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-ajsecoes
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-ajsecoes: merged; j-rev-ajsecoes.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-amigosestilo, branch agente/205-amigosestilo (from integracao/2.0.5). Native C app (Nuvio Legacy TV).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-amigosestilo
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-amigosestilo: merged; j-revg-amigosestilo.log: OK. Newer fix log requires review. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-andbugs, branch agente/205-andbugs (base integracao/2.0.5 = what will ship as 2.0.6). Nuvio Legacy native TV app (C, SDL/GL; webOS, Android TV, Samsung Tizen .tpk via tizen-tpk/*.cs).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-andbugs
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-andbugs: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-androidusb, branch agente/205-androidusb.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-androidusb
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-androidusb: merged; j-rev-androidusb.log: OK. 
+
+### Review only, do not edit. Diff: /Volumes/ExternalSSD/tmp/rev/205-artevazia.diff (branch agente/205-artevazia in worktree /Volumes/ExternalSSD/nv-205-artevazia; base integracao/2.0.5). Read code around changes as needed. Report findings P0-P
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-artevazia
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-artevazia: merged; j-rev-205-artevazia.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-b4addons (branch agente/205-b4addons, base integracao/2.0.5). C app in src/.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-b4addons
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-b4addons: merged; j-revg-b4addons.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-b6simkl (branch agente/205-b6simkl, base integracao/2.0.5). C app in src/.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-b6simkl
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-b6simkl: merged; j-rev-205-b6simkl-2.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-botaoinicio
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-botaoinicio: merged; j-revg-botaoinicio.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-c9poster
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-c9poster: merged; j-revf-c9poster.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-ccmax
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-ccmax: merged; j-revg-ccmax.log: OK. 
+
+### # Control Center title: smaller left margin
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-cctitulo
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-cctitulo: merged; j-revg-cctitulo2.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-cctitulo2
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-cctitulo2: merged; j-revg-cctitulo2.log: OK. 
+
+### # Cinematic source opening: logo-coloured bar + soft start without player chrome
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-cineaddon
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-cineaddon: merged; j-revf-cineaddon.log: OK. Newer fix log requires review. 
+
+### Follow ponytail full. Repo: this worktree (branch agente/205-cineblur off integracao/2.0.5, Nuvio Legacy C/SDL2 + GLES2 TV app). Commit on this branch (English message ending with "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"). 
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-cineblur
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-cineblur: merged; No mapped review verdict. 
+
+### # Perf bug: FPS drops only while collection rows are on screen
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-colfps
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-colfps: merged; No mapped review verdict. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-colordem
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-colordem: merged; j-revg-colordem-r2.log: OK. Newer fix log requires review. 
+
+### # Streaming pages: Ranking and Decades layouts still show the side poster — remove it
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-colrank
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-colrank: merged; j-revg-colrank.log: OK. Newer fix log requires review. 
+
+### # Collection Cover Flow: bigger posters + focus navigation fixes
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-coverflow3
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-coverflow3: merged; No mapped review verdict. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-cw12
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-cw12: merged; j-rev-cw12-r3.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-cwperfil (branch agente/205-cwperfil, from integracao/2.0.5). Nuvio Legacy. Follow ponytail full. Never push, never deploy. Commit in English.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-cwperfil
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-cwperfil: merged; j-rev-cwperfil.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-cwtestlink, branch agente/205-cwtestlink. On integracao/2.0.5, `bash tests/cwordem.sh` and `bash tests/cwremover.sh` fail at link time on macOS (undefined ling_* and curadoria_* symbols in the *_home tes
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-cwtestlink
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-cwtestlink: merged; j-rev-cwtestlink.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-debridprem, branch agente/205-debridprem vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/debridprem-rev.diff. Original task: /Volumes/ExternalSSD/tmp/rev/p-205-debridpre
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-debridprem
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-debridprem: merged; j-rev-205-debridprem.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-lgbugs, branch agente/205-lgbugs, base integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/lgbugs.diff. #428 webOS: 3d7f6d0c defers the screensaver reply from the Luna callback
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-descansocrash
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK. 
+
+### # Vertical nav keeps column
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-descecol
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-descecol: merged; j-revg-descecol.log: OK. 
+
+### Design task for release 2.1, round 2. No app code changes, no commits. Read-only repo: /Volumes/ExternalSSD/nv-205-detalhe21 (detail page today: src/detail.c, detmais.c, sinopse.c, temporadas_grafico.c, ilha*.c).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-detalhe21
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-detalhe21: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-detfps, branch agente/205-detfps.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-detfps
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-detfps: merged; j-rev-detfps.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-detnotas (branch agente/205-detnotas). Review only, do not edit. Diff vs integracao/2.0.5: /Volumes/ExternalSSD/tmp/rev/detnotas-r3.diff. Re-review after fix of P2 in /Volumes/ExternalSSD/tmp/rev/j-rev2-
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-detnotas
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-detnotas: merged; j-rev3-detnotas.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-dicasch, branch agente/205-dicasch.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-dicasch
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dicasch: merged; j-revg-dicasch.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-dicatoque-large, branch agente/205-dicatoque-large (from integracao/2.0.5).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-dicatoque-large
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dicatoque-large: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-dirfoto, branch agente/205-dirfoto (from integracao/2.0.5). C app, GL renderer (src/).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-diretores; agente/205-dirfoto
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-diretores: merged; j-rev-205-diretores3.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dirfoto: merged; j-rev-205-dirfoto.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-dither
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dither: merged; j-revg-dither.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pfdvabre (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-dvabre.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes, one test 
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-dvabre
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dvabre: merged; j-revg-dvabre-r2.log: OK. Newer fix log requires review. 
+
+### # Cinematic source opening: logo-coloured bar + soft start without player chrome
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-dvcinema
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dvcinema: merged; j-revg-dvcinema.log: OK. Newer fix log requires review. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-dvp5, branch agente/205-dvp5. Port agente/2031-dvp5-hdr10. src/streams.c ~856-860: on LG, Dolby Vision profile 5 in MP4 is demoted to level 4 without checking whether the same track has HDR10. Add the hd
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-dvp5
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dvp5: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-epcinza, branch agente/205-epcinza. Previous commit 5f3f33cf8 moved the focused episode gray plate to sit only behind the text block (title + synopsis). See /Volumes/ExternalSSD/tmp/rev/epcinza/depois/de
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-epcinza
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-epcinza: merged; j-revg-epcinza-3.log: OK. 
+
+### # Episode list, modern mode: title and description below the thumbnail
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-episodiotexto
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-episodiotexto: merged; j-rev-205-episodiotexto.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-epsdupstub, branch agente/205-epsdupstub. After merging agente/205-vistos548, tests/episodiosdup.sh fails to link: Undefined symbol _contapend_reenviar referenced from fioContinuar. Fix the test harness 
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-epsdupstub; agente/205-vistos548
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-epsdupstub: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-estatbotoes, branch agente/205-estatbotoes (from integracao/2.0.5).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-estatbotoes
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-estatbotoes: merged; j-revg-estatbotoes.log: OK. 
+
+### # Live statistics (#338): open from the clock island + three sizes
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-estatvivo
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-estatvivo: merged; j-rev-205-estatvivo.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-farah, branch agente/205-farah vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/farah.diff.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-farah
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-farah: merged; j-rev-205-farah.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-filnav, branch agente/205-filnav (base integracao/2.0.5). Owner report on LG C9 (Portuguese, literal): "Não tem como chegar nesse botões apertando pro lado, eles só são acessíveis se eu for pro final da 
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-filnav
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-filnav: merged; j-rev-filnav.log: BLOQUEIA. Newer fix log requires review. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-fimhighcache, branch agente/205-fimhighcache. Fix this review finding with one targeted test FAIL->PASS, then commit. Follow ponytail full. Never push, never deploy, never git stash. Commit in English. R
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-fimhighcache
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-fimhighcache: merged; j-rev3-fimhighcache.log: OK. Newer fix log requires review. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-fingerpct
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-fingerpct: merged; j-revg-fingerpct.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-fontesrelogio
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-fontesrelogio: merged; j-rev-fontesrelogio.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-fosco-nova
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-fosco-nova: merged; j-rev-fosco-nova.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-fosco-perf, branch agente/205-fosco-perf (from integracao/2.0.5).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-fosco-perf
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-fosco-perf: merged; j-rev-fosco-perf.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-foscoleve2, branch agente/205-foscoleve2. Owner, literal: "o frost ainda ta um pouco pesado, sera que ainda tem jeito?" (LG C9 / TCL). Owner APPROVED the current C9 frost LOOK: it must not change (compar
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-foscoleve2
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-foscoleve2: merged; No mapped review verdict. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-foscovelho
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-foscovelho: merged; j-rev-foscovelho-r4.log: OK. Newer fix log requires review. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-barra27, branch agente/205-barra27 (from integracao/2.0.5).
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/205-glassmock
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-glassmock: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-guia-celular (branch agente/205-guia-celular). Owner approved (PLANO-ECOSSISTEMA.md Q8): a short English guide "Set it up on your phone, the TV follows" — AIOManager / Xperience / Nuvio Configurator writ
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-guia-celular
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-guia-celular: merged; No mapped review verdict. 
+
+### # New row type: single wide hero card (Apple TV style)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-herocard
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-herocard: merged; j-revg-herocard-r3.log: OK. Newer fix log requires review. 
+
+### Review only, do not edit. Diff: /Volumes/ExternalSSD/tmp/rev/205-herocat.diff (branch agente/205-herocat in worktree /Volumes/ExternalSSD/nv-205-herocat; base integracao/2.0.5). Read code around changes as needed. Report findings P0-P2 with
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-herocat
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-herocat: merged; j-rev-205-herocat.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-vidroqual, branch agente/205-vidroqual, at 0940ae7bf (integration after merging agente/205-homelerdo [region-only backdrop capture, e70adbf7a] and agente/205-naskhbold). Before these merges (22f3d22bb) t
+
+- Plataforma: See task prompt
+- Status: em_job
+- Release: 2.0.7
+- Conserto: agente/205-homelerdo (merge d7522dd17); agente/205-naskhbold (merge 0940ae7bf); agente/205-vidroqual
+- Próximo passo: Wait for job; review latest commit.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-homelerdo: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-naskhbold: merged; No mapped review verdict. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidroqual: running; No mapped review verdict. 
+
+### # Add missing i18n keys
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-i18nfix
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i18nfix: merged; No mapped review verdict. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-iconeauto (branch agente/205-iconeauto, from integracao/2.0.5). Nuvio Legacy. Follow ponytail full. Never push, never deploy. Commit in English.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-iconeauto
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-iconeauto: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-imgres, branch agente/205-imgres.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-imgres
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-imgres: merged; j-rev-imgres-r2.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-issues-novas (branch agente/205-issues-novas, from integracao/2.0.5 after the triage merge). Work only there. No network, no commit. GitHub data snapshot in .triagem/github-issues.json (body excerpt + l
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-issues-novas
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-issues-novas: merged; No mapped review verdict. 
+
+### Same worktree /Volumes/ExternalSSD/nv-205-issues-triagem, continuing your triage (uncommitted changes there). Data still in .triagem/. You cannot commit and have no network.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-issues-triagem
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-issues-triagem: merged; No mapped review verdict. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-legcontorno
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-legcontorno: merged; j-rev-legcontorno-r2.log: OK. Newer fix log requires review. 
+
+### # Fix review findings
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-legpre
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-legpre: merged; j-revg-legpre.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-livetv2, branch agente/205-livetv2 (from integracao/2.0.5).
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/205-livetv2
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-livetv2: done-awaiting-review; No mapped review verdict. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-m3umisto
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-m3umisto: merged; j-revg-m3umisto-z.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-mergemaster, branch agente/205-mergemaster: merge of origin/master (external PRs #527 #533 #535 #536 #537) into integracao/2.0.5 for release 2.0.6, plus follow-up fix/test commi
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-mergemaster
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-mergemaster: merged; j-revg3-mergemaster.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-notwebready, branch agente/205-notwebready vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/notwebready-rev2.diff. Original task: /Volumes/ExternalSSD/tmp/rev/p-205-notwe
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-notwebready
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-notwebready: merged; j-rev3-205-notwebready.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-novidades207
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-novidades207: merged; j-rev-novidades207-b.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-painel (branch agente/205-painel, based on integracao/2.0.5). Work only there.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-painel
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-painel: merged; No mapped review verdict. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-painel-ui (branch agente/205-painel-ui). Work only there. You cannot commit; the coordinator commits.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-painel-ui
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-painel-ui: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-perf206, branch agente/205-perf206 (from integracao/2.0.5). Owner reports FPS dropped noticeably in 2.0.6 vs 2.0.5 on TVs (Home, rows, topbar, Settings, title page). Task: find what costs frame time per 
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-perf206
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-perf206: merged; No mapped review verdict. 
+
+### # Profile picker: remove bar in light style
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-perfilbarra
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-perfilbarra: merged; j-revg-perfilbarra.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pfbotoes (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-botoes.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes, one test 
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-pfbotoes
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pfbotoes: merged; No mapped review verdict. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-pfcolordem
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pfcolordem: merged; j-revg-pfcolordem.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pfcoverflow2 (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-coverflow2.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes, o
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-pfcoverflow2
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pfcoverflow2: merged; j-revg-pfcoverflow2.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pfdicatoque2 (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-dicatoque2.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes, o
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-pfdicatoque2
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pfdicatoque2: merged; No mapped review verdict. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-pfdvabre
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pfdvabre: merged; j-revg-pfdvabre.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pfherocard (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-herocard.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes, one t
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-pfherocard
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pfherocard: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pfi505 (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-i505.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes, one test FAIL
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-pfi505
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pfi505: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pfi509trailer (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-i509trailer.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes,
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-pfi509trailer
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pfi509trailer: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pluginsresto, branch agente/205-pluginsresto. Finish the port of agente/plugins (14 commits; 23 of 28 new files already in). Missing: src/plugin_rodar.c and the screenshot harnesses plugins_folha_shot / 
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/205-pluginsresto; agente/plugins
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pluginsresto: merged; j-revg-pluginsresto.log: OK. 
+Snapshot 2026-10-17T13:48:33-03:00: agente/plugins: done-awaiting-review; No mapped review verdict. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-plx-arte (branch agente/205-plx-arte, base integracao/2.0.5). C app in src/.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-plx-arte
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-plx-arte: merged; j-rev-205-plx-arte.log: OK. Newer fix log requires review. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-plx-fps (branch agente/205-plx-fps). First: export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-plx-fps
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-plx-fps: merged; j-revg-plx-fps.log: OK. Newer fix log requires review. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-plx-hls (branch agente/205-plx-hls). First: export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-plx-hls
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-plx-hls: merged; j-rev3-205-plx-hls.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-plx-input (branch agente/205-plx-input). First: export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-plx-input
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-plx-input: merged; j-rev-205-plx-input-2.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-plx-legenda (branch agente/205-plx-legenda, base integracao/2.0.5). C app in src/.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-plx-legenda
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-plx-legenda: merged; j-rev-205-plx-legenda-2.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-plx-recusa, branch agente/205-plx-recusa. export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp. No network.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-plx-recusa
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-plx-recusa: merged; j-revc-plx-recusa.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-poster34
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-poster34: merged; j-revg-poster34.log: OK. 
+
+### # RESUME: previous run died (disk full) before committing. Uncommitted work exists in this worktree (src/biblioteca.c, home.c, tex_cache.c/.h, tests/posterfluido.c). Review it, finish, test, commit. Do not discard it.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-posterfluido
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-posterfluido: merged; j-revg-posterfluido-f.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-posterurl
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-posterurl: merged; j-rev-posterurl-r2.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pr431c, branch agente/205-pr431c (at integracao/2.0.5 tip).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-pr431c
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr431c: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pr491resto, branch agente/205-pr491resto. PR #491 from contributor (local branch pr-491, 44 commits). Already in: VC-1/MPEG-2 stay original (src/dts/dts_remux.c:230). Go commit by commit (git log integra
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-pr491resto
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr491resto: merged; j-revf-pr491resto.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pr540c, branch agente/205-pr540c (at integracao/2.0.5 tip).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-pr540c
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr540c: merged; No mapped review verdict. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-pr541
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr541: merged; j-rev-pr541.log: OK. 
+
+### # Resolve merge conflict
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-pr543b
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-pr543b: merged; No mapped review verdict. 
+
+### # Streaming pages: Ranking and Decades layouts still show the side poster — remove it
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-rankdecadas
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-rankdecadas: merged; j-revg-rankdecadas.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-relacionados
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-relacionados: merged; j-revg-relacionados.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-respostas (branch agente/205-respostas). Nuvio Legacy (repo iqui27/nuvio-native-legacy). Never post to GitHub, never push: DRAFTS ONLY. Issues are ALREADY downloaded: /Volumes/ExternalSSD/tmp/rev/issues
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/205-respostas
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-respostas: done-awaiting-review; No mapped review verdict. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-retido
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-retido: merged; j-revg-retido.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-rust-mkvcore (branch agente/205-rust-mkvcore) vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/205-rust-mkvcore-r.diff. Plan: docs/plans/rust-mapa.md (phase 1: single mkv
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-rust-mkvcore
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-rust-mkvcore: merged; j-rev-205-rust-mkvcore.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-rustbp
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-rustbp: merged; j-revf-rustbp.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-rustliga, branch agente/205-rustliga. export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp. No network installs beyond what the Rust toolchain already has; never push, deploy or install on devices.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-rustliga
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-rustliga: merged; j-revc-rustliga.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-rustmapa (branch agente/205-rustmapa). First: export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-rustmapa
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-rustmapa: merged; j-rev-205-rustmapa.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-s18medidor (branch agente/205-s18medidor, base integracao/2.0.5). C app.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-s18medidor
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-s18medidor: merged; j-rev-205-s18medidor-2.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-205-s5loading (branch agente/205-s5loading, base integracao/2.0.5). C app, TV UI.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-s5loading
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-s5loading: merged; j-rev-205-s5loading.log: OK. 
+
+### # Fix review findings
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-sanitizers
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-sanitizers: merged; j-revg-sanitizers.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-segurarcc
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-segurarcc: merged; j-revg-segurarcc.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-selovisto, branch agente/205-selovisto (from integracao/2.0.5).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-selovisto
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-selovisto: merged; j-revg-selovisto.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-semfosco, branch agente/205-semfosco (from integracao/2.0.5). Nuvio Legacy, C/SDL2/GLES2.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-semfosco
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-semfosco: merged; No mapped review verdict. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-shuffledica
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-shuffledica: merged; j-rev-shuffledica.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-sidebarat
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-sidebarat: merged; j-revg-sidebarat.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-simklanime (branch agente/205-simklanime).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-simklanime
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-simklanime: merged; j-rev-simklanime.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-skip1 (branch agente/205-skip1), diff vs integracao/2.0.5 at /Volumes/ExternalSSD/tmp/rev/skip1-r.diff. Skip-intro coverage (fill missing marker types from next source, provenan
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-skip1
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-skip1: merged; j-rev3-skip1.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-teclasch, branch agente/205-teclasch vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/teclasch-rev2.diff. Original task: /Volumes/ExternalSSD/tmp/rev/p-205-teclasch.md. E
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-teclasch
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-teclasch: merged; j-revc-teclasch.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-testbase, branch agente/205-testbase (base integracao/2.0.5). Nuvio Legacy native TV app (C).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-testbase
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-testbase: merged; j-rev-testbase.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-testbase2, branch agente/205-testbase2 (base integracao/2.0.5). Nuvio Legacy native TV app (C).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-testbase2
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-testbase2: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-testbase3, branch agente/205-testbase3 (base integracao/2.0.5). Nuvio Legacy native TV app (C).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-testbase3
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-testbase3: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-testbase4, branch agente/205-testbase4 (from integracao/2.0.5). These tests fail on the integration branch: tests/cwdesmarcado.sh tests/cwdup244.sh tests/cwleg.sh tests/cwlocal.sh tests/cwordem.sh tests/
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-testbase4
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-testbase4: merged; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-textoescala, branch agente/205-textoescala. Follow ponytail full. Fix these review findings (rev4), each with a FAIL->PASS test through the real drawing/runtime path. Reviewer tool limit is 60 s per comm
+
+- Plataforma: See task prompt
+- Status: em_job
+- Release: 2.0.7
+- Conserto: agente/205-textoescala
+- Próximo passo: Wait for job; review latest commit.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-textoescala: running; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-tokvencido (branch agente/205-tokvencido). Follow ponytail full. No push. Commit English.
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-tokvencido
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-tokvencido: merged; j-rev2-tokvencido.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-tpkfim, branch agente/205-tpkfim. Fix the review findings below (round 2 of review). Add a bounded wait: if the episode list request finished (failed, timeout, or empty) or a max deadline passes (e.g. 8 
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-tpkfim
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-tpkui, branch agente/205-tpkui, base integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/tpkui.diff. Fixes: #407 (UP at top of title page no longer opens Saved/Alerts panel), #
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-tpkui
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-trailerexp
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-trailerexp: merged; j-rev-trailerexp.log: OK. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-trailerleg
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-trailerleg: merged; j-rev-trailerleg.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-traktcw, branch agente/205-traktcw (from integracao/2.0.5).
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-traktcw
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-traktcw: merged; j-revf-traktcw.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-traktvidro, branch agente/205-traktvidro vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/traktvidro.diff. Original task prompt (owner request + constraints): /Volumes/Ex
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/205-traktvidro
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-traktvidro: done-awaiting-review; No mapped review verdict. 
+
+### # Dynamic UI sizing: text and components look right on every screen size (all platforms)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-uidinamica
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-uidinamica: merged; j-revg-uidinamica.log: OK. 
+
+### # Resolve merge conflict
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-usbmodal
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-usbmodal: merged; j-rev-usbmodal.log: OK. Newer fix log requires review. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-usbtizen, branch agente/205-usbtizen. P2P cache on USB drive: webOS and Android TV probe USB roots (src/p2pmotor.c usbBases includes /opt/media/USBDriveA1). Samsung .tpk manifests (tizen-tpk/*/tizen-mani
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-usbtizen
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-usbtizen: merged; j-rev-usbtizen.log: OK. 
+
+### # Resolve merge conflict
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-uxinteracao
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-uxinteracao: merged; j-rev-uxinteracao.log: OK. Newer fix log requires review. 
+
+### # Independent review (final, before merge)
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-vidrodetalhe
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-vidrodetalhe: merged; j-rev-vidrodetalhe.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-21-21-legux (branch: see `git branch --show-current`). Base: integracao/2.1.
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-21-legux
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-21-legux: done-awaiting-review; No mapped review verdict. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-21-biblio, branch agente/21-biblio, base integracao/2.1. Diff: /Volumes/ExternalSSD/tmp/rev/21-biblio.diff. 2.1 screen: Library "Origem" filter (Todas/Trakt/Simkl/Conta Nuvio) per d
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-biblio
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-biblio: review-OK; j-rev3-21-biblio.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-21-comecar, branch agente/21-comecar. Fix finding 2 below (webOS Back repeat). Do not rely on SDL repeat/timestamp for Back: either keep the real repeat flag/timestamp when main.c translates the LG Back scan
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-comecar
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-comecar: review-OK; j-rev3-21-comecar.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-21-conquistas, branch agente/21-conquistas. Review only, do not edit any tracked file.
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-conquistas
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-conquistas: needs review; j-rev3-21-conquistas.log: OK. Newer fix log requires review. 
+
+### Worktree: /Volumes/ExternalSSD/nv-21-filmo-impl (branch agente/21-filmo-impl, base integracao/2.1). C app in src/. TV UI (D-pad, focus, 10-foot).
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-filmo-impl
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-filmo-impl: needs review; j-rev-21-filmo-impl.log: BLOQUEIA. Newer fix log requires review. 
+
+### Worktree: /Volumes/ExternalSSD/nv-21-filmo-impl (branch agente/21-filmo-impl, base integracao/2.1). C app in src/. TV UI (D-pad, focus, 10-foot).
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-filmografia
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-filmografia: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-21-glance-impl, branch agente/21-glance-impl (target integracao/2.1). export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp. First merge integracao/2.1 into the branch (resolve, keep both sides). Fix every P0-P2 fin
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-glance-impl
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-glance-impl: needs review; j-rev-21-glance-impl.log: BLOQUEIA. Newer fix log requires review. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-21-home, branch agente/21-home, base integracao/2.1. Diff: /Volumes/ExternalSSD/tmp/rev/21-home.diff. 2.1 Home screen per design/2.1 mockup and NOTAS.md: Continue/Upcoming under the
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-home
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-home: review-OK; j-rev3-21-home.log: OK. 
+
+### # Resolve merge conflict
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-listas
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-listas: needs review; j-rev4-21-listas.log: OK. Newer fix log requires review. 
+
+### Worktree /Volumes/ExternalSSD/nv-21-resolver, branch agente/21-resolver (base integracao/2.1). Nuvio Legacy native TV app (C, SDL/GL; webOS, Android TV, Samsung .tpk). This is the 2.1 redesign; it must NOT destabilize 2.0.6.
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-resolver
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-resolver: review-OK; j-rev3-21-resolver.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-21-rewatch-impl (branch agente/21-rewatch-impl, base integracao/2.1). C app in src/. TV UI (D-pad, focus, 10-foot).
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-rewatch-impl
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-rewatch-impl: needs review; j-rev-21-rewatch-impl.log: BLOQUEIA. Newer fix log requires review. 
+
+### Worktree /Volumes/ExternalSSD/nv-21-sync205, branch agente/21-sync205 (base integracao/2.1). integracao/2.1 is 89 commits behind integracao/2.0.5 (the 2.0.6 fixes). Task: git merge integracao/2.0.5 into this branch and resolve every conflic
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-sync205
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-sync205: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-21-titulo, branch agente/21-titulo. Round 4 review fix (round-3 fix 8907bcf4 accepted but over-resets). Finding:
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-titulo
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK. 
+
+### Worktree: /Volumes/ExternalSSD/nv-21-rewatch-impl (branch agente/21-rewatch-impl, base integracao/2.1). C app in src/. TV UI (D-pad, focus, 10-foot).
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: -
+- Conserto: agente/21-trakt-ideias
+- Próximo passo: Deferred to 2.1; retain tracking.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/21-trakt-ideias: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/ajustesvisual
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/ajustesvisual: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/biblioteca-ilimitada-plano
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/biblioteca-ilimitada-plano: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/codex-contexto
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/codex-contexto: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/guiaunicode
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/guiaunicode: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/icones
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/icones: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/p2p
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/p2p: needs review; j-rev3-205-p2p486.log: OK. Newer fix log requires review. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/pr259-merge
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/pr259-merge: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/rastreio
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/rastreio: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: agente/refatoracao-plano
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: agente/refatoracao-plano: done-awaiting-review; No mapped review verdict. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-pr526-v3, branch pr/526-v3 = external PR #526 head plus our fix commits. Diff vs master: /Volumes/ExternalSSD/tmp/rev/prs/526-v3.diff. Previous blocking review: /Volumes/Externa
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/526-v3
+- Próximo passo: Merge reviewed branch.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: pr/526-v3: review-OK; j-revprf-526-b.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-pr527-v2, branch pr/527-v2 = current head of external PR #527 plus our fix commits ported (report: /Volumes/ExternalSSD/tmp/rev/j-port-527.log). Diff vs master: /Volumes/Externa
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/527-v2
+- Próximo passo: Merge reviewed branch.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: pr/527-v2: review-OK; j-revprf-527-v2.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pr533-fix2, branch pr/533-fix2 = head of external GitHub PR #533 (7006085b2a31bae3f8c361af439eb556fd2d0fde). PR description: /Volumes/ExternalSSD/tmp/rev/prs/533.md. Our blocking review: /Volumes/Externa
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/533-fix2
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: pr/533-fix2: needs review; j-revprf-533-b.log: OK. Newer fix log requires review. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pr534-fix2, branch pr/534-fix2 = head of external GitHub PR #534 (cca9acf95b614bff17098f8eda4254472f1e62ca). PR description: /Volumes/ExternalSSD/tmp/rev/prs/534.md. Our blocking review: /Volumes/Externa
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/534-fix2
+- Próximo passo: Merge reviewed branch.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: pr/534-fix2: review-OK; j-revprf-534-b.log: OK. 
+
+### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-pr535-fix2, branch pr/535-fix2 = external PR #535 head plus our fix commits. Diff vs master: /Volumes/ExternalSSD/tmp/rev/prs/535-fix2.diff. Previous blocking review: /Volumes/E
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/535-fix2
+- Próximo passo: Merge reviewed branch.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: pr/535-fix2: review-OK; j-revprf-535-d.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pr535-v2, branch pr/535-v2 = current head 9eef1355b14a031b86ebc501d2d15f7467b04a7c of external GitHub PR #535 (author rewrote history). Our previous fixed branch: pr/535-fix2 (review fixes from /Volumes/
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/535-v2
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: pr/535-v2: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pr535-v3, branch pr/535-v3 = current head b833e3169bc8e7f63815e52b76ac33d1f25a4fb9 of external GitHub PR #535 (author rewrote history). Our previous fixed branch: pr/535-v2 (reviewed OK; port only our co
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/535-v3
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: pr/535-v3: done-awaiting-review; No mapped review verdict. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pr536-fix2, branch pr/536-fix2 = head of external GitHub PR #536 (2faf69154a371fa9b5147c1ccd58017fb387077f). PR description: /Volumes/ExternalSSD/tmp/rev/prs/536.md. Our blocking review: /Volumes/Externa
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/536-fix2
+- Próximo passo: Merge reviewed branch.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: pr/536-fix2: review-OK; j-revprf-536-e.log: OK. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pr536-v2, branch pr/536-v2 = external PR #536 plus our reviewed fix commits (review OK). The PR cannot merge on GitHub: master moved (other PRs merged) and/or the author pushed new commits.
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/536-v2
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: pr/536-v2: needs review; j-revprf-536-v2.log: OK. Newer fix log requires review. 
+
+### Worktree /Volumes/ExternalSSD/nv-205-pr537-fix2, branch pr/537-fix2 = head of external GitHub PR #537 (0abdc40c381c9a6746d01d669652f3f399a8f875). PR description: /Volumes/ExternalSSD/tmp/rev/prs/537.md. Our blocking review: /Volumes/Externa
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: pr/537-fix2
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: pr/537-fix2: needs review; j-revprf-537.log: OK. Newer fix log requires review. 
+
+### Review only, do not edit source. Worktree /Volumes/ExternalSSD/nv-205-pr554 = current integracao/2.0.5 (no PR applied). Community PR #554 (branch pr/554, diff /Volumes/ExternalSSD/tmp/rev/pr554.diff, gh pr view 554 read-only; never comment/
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: rev/pr554
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: rev/pr554: done-awaiting-review; No mapped review verdict. 
+
+### Review only, do not edit source (you may build and run tests). Community PR #561 merged locally for testing into worktree /Volumes/ExternalSSD/nv-205-pr561 (branch rev/pr561 = integracao/2.0.5 + PR). PR diff: /Volumes/ExternalSSD/tmp/rev/pr
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: rev/pr561
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: rev/pr561: done-awaiting-review; No mapped review verdict. 
+
+### Review only, do not edit source (you may build and run tests). Community PR #573 merged locally for testing into worktree /Volumes/ExternalSSD/nv-205-pr573 (branch rev/pr573 = integracao/2.0.5 + PR). PR diff: /Volumes/ExternalSSD/tmp/rev/pr
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: rev/pr573
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: rev/pr573: done-awaiting-review; No mapped review verdict. 
+
+### Review only, do not edit source (you may build and run tests). Community PR #574 merged locally for testing into worktree /Volumes/ExternalSSD/nv-205-pr574 (branch rev/pr574 = integracao/2.0.5 + PR). PR diff: /Volumes/ExternalSSD/tmp/rev/pr
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: rev/pr574
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: rev/pr574: done-awaiting-review; No mapped review verdict. 
+
+### Review only, do not edit source (you may build and run tests). Community PR #575 merged locally for testing into worktree /Volumes/ExternalSSD/nv-205-pr575 (branch rev/pr575 = integracao/2.0.5 + PR). PR diff: /Volumes/ExternalSSD/tmp/rev/pr
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: rev/pr575
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: rev/pr575: done-awaiting-review; No mapped review verdict. 
+
+### Review only, do not edit source (you may build and run tests). Community PR #576 merged locally for testing into worktree /Volumes/ExternalSSD/nv-205-pr576 (branch rev/pr576 = integracao/2.0.5 + PR). PR diff: /Volumes/ExternalSSD/tmp/rev/pr
+
+- Plataforma: See task prompt
+- Status: em_revisao
+- Release: 2.0.7
+- Conserto: rev/pr576
+- Próximo passo: Review latest fix.
+- Notas: 
+Snapshot 2026-10-17T13:48:33-03:00: rev/pr576: done-awaiting-review; No mapped review verdict. 

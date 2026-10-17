@@ -164,7 +164,7 @@ int  detail_pediu_do_inicio(void);
 // do card inteiro, que nasce com a mola do foco (alpha ate ~14% de branco) e
 // cresce 3% a partir do centro. FORA das medidas do card: sobra na fileira.
 #define NV_DETP_EP_PLACA_PAD 18.0f    // a placa respira alem da caixa do card
-#define NV_DETP_EP_PLACA_INSET 16.0f  // a placa fica mais estreita que a miniatura, de cada lado
+#define NV_DETP_EPM_PLACA_PAD 26.0f   // Moderna: a placa desce alem do card (respiro de baixo)
 #define NV_DETP_EP_PLACA_A   0.14f    // teto do branco translucido (12%~16%)
 #define NV_DETP_EP_THUMB_H   414.0f
 #define NV_DETP_EP_RAIO       32.0f
@@ -212,6 +212,7 @@ int  detail_pediu_do_inicio(void);
 #define NV_DETP_EPM_META_DY   70.0f   // da base da miniatura ao rodape de duracao
 #define NV_DETP_EPM_BARRA_DY  24.0f   // da base da miniatura a barra de progresso
 #define NV_DETP_EPM_TIT_DY    16.0f   // base da miniatura ao topo do titulo
+#define NV_DETP_EPM_TEXTO_X   12.0f   // titulo/sinopse a partir da borda do card
 #define NV_DETP_EPM_SIN_DY    62.0f   // base da miniatura ao topo da sinopse
 #define NV_DETP_EPM_SIN_LINHAS 4      // #205: eram 2; o dono pediu 4
 // Selo "Assistido": disco de check no canto superior direito da miniatura.

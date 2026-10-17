@@ -132,7 +132,8 @@ static const char *TIPO_ROT[FIL_TIPO_N] = {
   "Destaque 4:3", "Ranking numerado", "Faixa com título",
   "Destaque 4:3 médio", "Destaque 4:3 grande",
   "Linha do tempo", "Cartaz com ficha", "Palco", "Redonda", "Herói",
-  "Pôster grande", "Herói dividido"
+  "Pôster grande", "Herói dividido",
+  "Pôster grande menor", "Pôster grande maior"
 };
 static const char *TAM_ROT[FIL_TAM_N] = { "Compacto", "Padrão", "Grande" };
 // 0,85 e 1,2 e nao 0,5 e 2,0: o card do web mede 212x322 e o passo da fileira
@@ -155,9 +156,15 @@ float fil_tam_escala(int t) {
 // do terceiro por tela. O medio fica no meio do caminho.
 #define FATOR_4_3_M 1.25f
 #define FATOR_4_3_G 1.5f
+// Pôster grande: o M e o de sempre (1); o menor cabe mais cartazes, o maior e
+// 25% maior (a Moderna/Padrao limita a ALTURA, home.c alargaPosterG).
+#define FATOR_PG_P 0.8f
+#define FATOR_PG_G 1.25f
 float fil_tipo_fator(int t) {
   if (t == FIL_TIPO_DESTAQUE_QUADRADO_M) return FATOR_4_3_M;
   if (t == FIL_TIPO_DESTAQUE_QUADRADO_G) return FATOR_4_3_G;
+  if (t == FIL_TIPO_POSTER_GRANDE_P) return FATOR_PG_P;
+  if (t == FIL_TIPO_POSTER_GRANDE_G) return FATOR_PG_G;
   return 1.0f;
 }
 
@@ -265,7 +272,8 @@ static const FilEstiloLinha LINHAS_CAT[] = {
   { "Palco",             1, { FIL_TIPO_PALCO }, { "Palco" } },
   { "Redonda",           1, { FIL_TIPO_REDONDA }, { "Redonda" } },
   { "Herói",             1, { FIL_TIPO_HEROI }, { "Herói" } },
-  { "Pôster grande",     1, { FIL_TIPO_POSTER_GRANDE }, { "Pôster grande" } },
+  { "Pôster grande",     3, { FIL_TIPO_POSTER_GRANDE_P, FIL_TIPO_POSTER_GRANDE, FIL_TIPO_POSTER_GRANDE_G },
+                           { "Pôster grande menor", "Pôster grande", "Pôster grande maior" } },
   { "Herói dividido",    1, { FIL_TIPO_HEROI_DIVIDIDO }, { "Herói dividido" } },
 };
 #define N_LINHAS_CAT (int)(sizeof LINHAS_CAT / sizeof *LINHAS_CAT)
@@ -1652,7 +1660,10 @@ const char *fil_estilo_ajuda(const char *chave, int t) {
       case FIL_TIPO_RANKING:
       case FIL_TIPO_LINHA_TEMPO:
         return "Cartaz em pé com a capa da coleção.";
-      case FIL_TIPO_PALCO:   return "Cartaz em pé maior com a capa da coleção.";
+      case FIL_TIPO_PALCO:
+      case FIL_TIPO_POSTER_GRANDE:
+      case FIL_TIPO_POSTER_GRANDE_G: return "Cartaz em pé maior com a capa da coleção.";
+      case FIL_TIPO_POSTER_GRANDE_P: return "Cartaz em pé com a capa da coleção.";
       case FIL_TIPO_REDONDA: return "Card quadrado com a capa da coleção.";
       case FIL_TIPO_FICHA:   return "Cartaz com a capa da coleção num card mais largo.";
       case FIL_TIPO_DESTAQUE:
@@ -1687,6 +1698,8 @@ const char *fil_estilo_ajuda(const char *chave, int t) {
     case FIL_TIPO_PALCO:    return "O título em foco fica grande no centro e os vizinhos diminuem dos dois lados.";
     case FIL_TIPO_HEROI_DIVIDIDO: return "O título em foco aparece grande à esquerda, com arte, nota, sinopse e elenco; os cartazes da fileira correm à direita.";
     case FIL_TIPO_POSTER_GRANDE: return "Cartaz 3:4 grande com logo, gênero, classificação e duas linhas de sinopse na base, sobre um véu na cor predominante da arte.";
+    case FIL_TIPO_POSTER_GRANDE_P: return "Pôster 3:4 menor, com logo, gênero e uma linha de sinopse: cabem mais cartazes por tela.";
+    case FIL_TIPO_POSTER_GRANDE_G: return "Pôster 3:4 maior, com logo, gênero e três linhas de sinopse sobre o véu na cor da arte.";
     case FIL_TIPO_REDONDA:  return "Foto circular com o nome embaixo, para fileiras de pessoas.";
     case FIL_TIPO_HEROI:    return "Um cartão único do tamanho da fileira, com fundo, selo, título e duas linhas — o banner entre fileiras do Apple TV.";
     default:                return "O app escolhe a forma pelo nome do catálogo e pelo layout da Home.";

@@ -196,6 +196,9 @@ static const char *uxSinonimos(int op) {
     case AJ_MENU_TOPO: return "menu barra topo alto cima lateral esquerda rail posicao navegacao top bar toolbar sidebar left position";
     case AJ_EP_TAMANHO: return "tamanho episodio cards cartao moderno pequeno medio grande serie episode card size small medium large";
     case AJ_ABERTURA_ADDON: return "addon add-on provedor fonte nome abertura cinema tela carregando tentativa provider name opening source";
+    case AJ_TITULO_FIL: return "titulo fileira fileiras estilo classico ilha editorial acento pilula vidro home row title style island accent classic";
+    case AJ_VIDRO_QUALIDADE: return "qualidade vidro automatica desempenho alta fumaca esfumacado desfoque fosco glass quality automatic performance high smoked blur";
+    case AJ_FUNDO_DIN: case AJ_FUNDO_DIN_COR: return "fundo dinamica cinza cor imersivo apple tv background dynamic gray color immersive";
     case AJ_ABERTURA_ESTILO: return "estilo tela abertura carregando logo centro canto esquerda anel opening style center corner";
     case AJ_ABERTURA_FUNDO: return "fundo arte backdrop imagem titulo abertura cinema tela carregando desligado nitida borrada desfocada preto opening backdrop blurred sharp off";
     case AJ_TELA_ABERTURA: return "tela abertura abrindo carregando loading cinema detalhada fonte play transicao opening source screen";
@@ -315,7 +318,7 @@ static const char *uxCaminhoAntigo(int op) {
     case AJ_HERO_TRAILER_SOM: case AJ_DET_TRAILER_SOM: case AJ_TRAILER_FONTE: case AJ_HERO_TRAILER_ESPERA:
     case AJ_TRAILER_QUAL: case AJ_TRAILER_ASPECTO: case AJ_TRAILER_ZOOM_TPK: case AJ_LOGO_TRAILER:  case AJ_TRAILER_AUDIO:
       return "Trailers";
-    case AJ_EXPANDIR: case AJ_EXPANDIR_ATRASO: case AJ_BORDA_FOCO: case AJ_GRAD_CLASSICO:
+    case AJ_MENU_CARTAZ: case AJ_EXPANDIR: case AJ_EXPANDIR_ATRASO: case AJ_BORDA_FOCO: case AJ_GRAD_CLASSICO:
     case AJ_LARGURA_DP: case AJ_RAIO_DP: case AJ_PROF: case AJ_PROF_BORDA: case AJ_PROF_BRILHO:
     case AJ_PROF_COBERTURA: case AJ_PROF_POSTERS: case AJ_PROF_CW: case AJ_PROF_EPS: case AJ_PROF_ELENCO:
     case AJ_PROF_TRAILERS: case AJ_HERO_FUNDO: case AJ_HERO_ARTE_DIF: case AJ_POSTER_PROV:

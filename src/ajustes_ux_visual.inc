@@ -7,6 +7,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_LANDSCAPE: return "aj_layout-dashboard";
     case AJ_HERO: return "aj_layout-dashboard";
     case AJ_HERO_CHEIO: return "aj_layout-dashboard";
+    case AJ_FUNDO_DIN: case AJ_FUNDO_DIN_COR: return "aj_layout-dashboard";
     case AJ_HERO_CATALOGOS: return "aj_layout-dashboard";
     case AJ_HERO_GENERO: return "aj_layout-dashboard";
     case AJ_HERO_SINOPSE: return "aj_layout-dashboard";
@@ -141,6 +142,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_FILTROS_FONTES: return "aj_funnel";
     case AJ_PROVEDORES_ESCOPO: return "aj_key-round";
     case AJ_AMIGOS_ESTILO: return "aj_users";
+    case AJ_TITULO_FIL: return "aj_type";
     case AJ_MURAL_TITULOS: return "aj_images";
     case AJ_FONTE_CONFERIR_VARIAS: return "aj_layers";
     case AJ_FONTE_AQUECER: return "aj_wifi";
@@ -219,7 +221,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_RELOGIO: case AJ_RELOGIO_12H: return "aj_clock";
     case AJ_VIDRO_CONTORNO: return "aj_layers";
     case AJ_VIDRO_OPAC: return "aj_layers";
-    case AJ_VIDRO_FOSCO: return "aj_layers";
+    case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE: return "aj_layers";
     case AJ_XTREAM_SERVIDOR: return "aj_server";
     case AJ_XTREAM_USUARIO: return "aj_server";
     case AJ_XTREAM_SENHA: return "aj_server";

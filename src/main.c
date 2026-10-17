@@ -1979,6 +1979,7 @@ int main(int argc, char **argv) {
                          pNBind=fNBind; pNBusca=fNBusca; pOutMs=fOutMs; pNOut=fNOut; pFill=fFill; pNCheio=fNCheio; }
       if (dtms > swapint_limite_jank(&swapInt)) janks++;
     }
+    gfx_vidro_governar(dtms, swapint_periodo(&swapInt));
     // RASTRO POR QUADRO, so com /tmp/nuvio-quadros presente (conferido no
     // relatorio de 3 s): cada quadro acima de 25 ms sai com a reparticao, os
     // uploads e o texto rasterizado. O [quadro] de 3 s mostra UM pior por

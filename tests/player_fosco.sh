@@ -1,6 +1,8 @@
 #!/bin/bash
-# Frost over live video: every player scene over a full 16:9 hole must draw
-# glass with a blur source (the baked title art), not flat. Mac GL window.
+# Glass over live video: every player scene over a full 16:9 hole draws
+# TRANSLUCENT flat glass (GL alpha < 1 where glass is drawn, so the hardware
+# video plane shows through) with no blur source, zero captures, zero blur
+# passes. Composites each frame over a bright pattern (the plane) as PNG. Mac GL window.
 #   bash tests/player_fosco.sh [capture-dir]
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -20,5 +22,7 @@ out=$(NUVIO_SHOT_VIDRO=1 NUVIO_SHOT_VIDRO_FOSCO=1 NUVIO_DADOS="$tmp/dados" NUVIO
   "$tmp/t" "$caps" fosco-osd fosco-audio fosco-stats 2>/dev/null | grep '^F ')
 echo "$out"
 [ "$(echo "$out" | wc -l)" -eq 3 ] || { echo "FAIL: missing scenes"; exit 1; }
-if echo "$out" | grep -q 'fonte=0$'; then echo "FAIL: player glass over video is flat"; exit 1; fi
+echo "$out" | grep -q 'fonte=[1-9]' && { echo "FAIL: player glass over video reads a blur source"; exit 1; }
+echo "$out" | grep -qv 'cap=0 pas=0$' && { echo "FAIL: player glass over video captures or blurs per frame"; exit 1; }
+echo "$out" | awk '{ split($3, b, "="); if (b[2] < 3000) bad = 1 } END { exit !bad }' && { echo "FAIL: glass is not translucent (alpha 1 hides the video plane)"; exit 1; }
 echo PASS

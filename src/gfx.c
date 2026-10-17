@@ -1912,7 +1912,6 @@ static float dinPend[4];
 static void dinDescarregar(void);
 static void dinPintar(float y0);
 static int foscoBloq; // este quadro tem video vivo por baixo (gfx_vidro_fosco_bloquear)
-static GLuint foscoVideo; // gfx_vidro_fonte_video: what glass over live video reads
 unsigned gfx_quadro_n;
 // O BACKDROP DO VIDRO (gfx_vidro): um snapshot desfocado em meia resolucao,
 // dividido pelas superficies do quadro e reaproveitado entre quadros enquanto
@@ -1943,6 +1942,7 @@ static int vidroNRegAnt, vidroNRegCur;
 static float vidroDesde[4];   // caixa do que foi pintado na tela desde a ultima captura
 static float vidroVidros[VID_N][4], vidroFuros[VID_NFUROS][4];
 int gfx_vidro_capturas, gfx_vidro_passadas;
+int gfx_vidro_camada;
 double gfx_vidro_fill, gfx_vidro_copia;
 // BACKDROP-ONLY SOURCE (docs/fosco-nova.md): the glasses read a blurred copy
 // of the backdrop layer alone (art, light, veils: every draw before the
@@ -2003,6 +2003,12 @@ static int vidroRegContem(const float r[][4], int n, const float b[4]) {
   for (i = 0; i < n; i++) if (vidroContem(r[i], b)) return 1;
   return 0;
 }
+#ifdef NV_SHOT_HOOKS
+// tests/dina_pisca_shot.c: a copia do backdrop tem de acontecer com o fundo
+// da Dinamica adiado JA resolvido na tela (dinAdiado = 0). 1 = leu o
+// framebuffer transparente do clear — a faixa que piscava no Apple TV+frost.
+int gfx_vidro_copia_com_din_adiado;
+#endif
 static int vidroDentro(GfxRect r) {
   float b[4] = { r.x, r.y, r.x + r.w, r.y + r.h };
   int i;
@@ -2093,14 +2099,14 @@ void gfx_novo_quadro(void) {
   memcpy(gfx_fill_modo_ult, gfx_fill_modo, sizeof gfx_fill_modo);
   memset(gfx_fill_modo, 0, sizeof gfx_fill_modo);
   desfGeradosQuadro = 0;
-  ambPendente = 0; ambIntacta = 0; foscoBloq = 0; foscoVideo = 0;
+  ambPendente = 0; ambIntacta = 0; foscoBloq = 0;
   memset(vidroDesde, 0, sizeof vidroDesde);
   vidroHash = 2166136261u; vidroNVidros = 0; vidroNFuros = 0;
   memcpy(vidroLeAnt, vidroLeCur, sizeof vidroLeAnt); memset(vidroLeCur, 0, sizeof vidroLeCur);
   memcpy(vidroRegAnt, vidroRegCur, sizeof vidroRegAnt); vidroNRegAnt = vidroNRegCur; vidroNRegCur = 0;
   vidroSlot = -1; vidroRecapturou = 0;
   fundoFim = fundoDepois = 0;
-  gfx_vidro_capturas = 0; gfx_vidro_passadas = 0; gfx_vidro_com_fonte = 0;
+  gfx_vidro_capturas = 0; gfx_vidro_passadas = 0; gfx_vidro_com_fonte = 0; gfx_vidro_chapados = 0; gfx_vidro_area = 0;
   gfx_vidro_fill = gfx_vidro_copia = 0.0;
   ambFonte = 0; dinPendente = 0; dinAdiado = 0; dinNOp = 0;
   gfx_n_assados = 0;
@@ -3250,19 +3256,75 @@ static float vidroTom(float cinza);
 // COM VIDEO VIVO POR BAIXO a tela nao e o fundo (o plano de video fica atras
 // dela, pelo alfa 0 do furo): o player avisa por quadro e o vidro sai chapado.
 #define VID_ALCANCE 68.0f   // BLUR_REACH: ate onde a lente e o desfoque leem fora do vidro
+#define VID_FOLGA 64.0f     // slack around last frame's glass regions (scroll per frame)
 #define VID_RUIDO_N 256
-static GLuint vidBackdrop, vidGrab, vidH2, vidH2Fbo, vidQa, vidQaFbo, vidQb, vidQbFbo, vidRuido, vidProg;
+static GLuint vidGrab, vidH2, vidH2Fbo, vidQa, vidQaFbo, vidQb, vidQbFbo, vidRuido, vidProg;
 static GLuint vidSlot[VID_NSLOTS], vidSlotFbo[VID_NSLOTS], vidFundo, vidFundoFbo;
+static float vidroSlotReg[VID_NSLOTS][4];
 static GLint vidLocR, vidLocT, vidLocO;
 static int vidW, vidH, vidFalhou;
 // Blur budget: the half-res target never exceeds 960x540 (the 1080p chain), so
 // a 4K screen pays the 1080p fill and blurs the same in layout units.
 static int vidBw, vidBh;
 void gfx_vidro_fosco_bloquear(void) { foscoBloq = 1; }
-int gfx_vidro_com_fonte;
-// No TV lets GL read the video plane; the player hands a stand-in (its title
-// art, blurred and baked once) and glass over the hole reads that instead.
-void gfx_vidro_fonte_video(GLuint tex) { foscoVideo = tex; }
+// A full-screen veil was just drawn over the glasses so far: they are now plain
+// backdrop, so a modal island over them frosts instead of going flat.
+void gfx_vidro_cobrir(void) { vidroNVidros = 0; }
+int gfx_vidro_com_fonte, gfx_vidro_chapados;
+
+// GLASS GOVERNOR ("Qualidade do vidro" = Automatica). Frames are counted in
+// windows of GOV_JANELA frames that drew blurred glass; a window is janky when
+// >= 20% of its frames took over 1.5x the target frame time. GOV_SEGUIDAS janky
+// windows in a row start ONE trial: the glass drops to smoked glass for a window.
+// If the mean frame time improves (< 80% of the janky one) the drop stays until
+// the app restarts; if not, the glass was not the cost (a slow TV is slow with or
+// without it): the frost comes back and the governor stops for the session.
+// Only equivalent workloads are compared: every frame carries a signature (how
+// many glasses, how much glass area). A window whose frames mix signatures says
+// nothing; consecutive janky windows must share one signature; a trial window must
+// match the baseline's. A trial that was interrupted by a scene change is dropped
+// (frost back, no verdict): at most one trial, so the governor stops too.
+#define GOV_JANELA 150
+#define GOV_SEGUIDAS 4
+int gfx_vidro_area;   // glass area (px^2) drawn this frame
+static int govN, govLentos, govSeguidas, vidroDegradou, govProva, govFim, govSig, govSigBase, govDifere;
+static double govSoma, govBase;
+int gfx_vidro_degradado(void) { return vidroDegradou; }
+void gfx_vidro_governar_zerar(void) { govN = govLentos = govSeguidas = vidroDegradou = govProva = govFim = govSig = govSigBase = govDifere = 0; govSoma = govBase = 0.0; }   // tests
+static int govAssinatura(void) {
+  int a = gfx_vidro_area / 250000;
+  return (gfx_vidro_com_fonte + gfx_vidro_chapados) * 64 + (a > 63 ? 63 : a);
+}
+void gfx_vidro_governar(double ms, double alvo_ms) {
+  int sig, comparavel;
+  if (govFim || ajustes_vidro_qualidade() != 0) return;
+  if (govProva ? gfx_vidro_chapados <= 0 : (vidroDegradou || gfx_vidro_com_fonte <= 0)) return;
+  sig = govAssinatura();
+  if (govN == 0) govSig = sig; else govDifere += sig != govSig;
+  govN++; govSoma += ms; govLentos += ms > alvo_ms * 1.5;
+  if (govN < GOV_JANELA) return;
+  comparavel = govDifere <= GOV_JANELA / 10;
+  if (govProva) {
+    double m = govSoma / govN;
+    govProva = 0;
+    if (!comparavel || govSig != govSigBase) {
+      vidroDegradou = 0; govSeguidas = 0; govFim = 1;
+      printf("[vidro] governador: prova interrompida (carga mudou), frost de volta, sem nova prova\n");
+    } else {
+      govFim = 1; vidroDegradou = m < govBase * 0.8;
+      printf("[vidro] governador: prova %.1f ms (frost %.1f ms) -> %s\n", m, govBase, vidroDegradou ? "desempenho" : "frost mantido");
+    }
+  } else if (!comparavel) {
+    govSeguidas = 0;
+  } else {
+    if (govSig != govSigBase) govSeguidas = 0;
+    govSigBase = govSig;
+    govSeguidas = govLentos * 5 >= govN ? govSeguidas + 1 : 0;
+    govBase = govSoma / govN;
+    if (govSeguidas >= GOV_SEGUIDAS) { vidroDegradou = govProva = 1; printf("[vidro] governador: prova do desempenho\n"); }
+  }
+  govN = govLentos = govDifere = 0; govSoma = 0.0;
+}
 
 static const char *VID_VS =
   NV_GLSL_PREFIXO
@@ -3296,7 +3358,6 @@ static void vidLiberar(void) {
   memset(vidroSlotValido, 0, sizeof vidroSlotValido);
   glDeleteTextures(1, &vidFundo); glDeleteFramebuffers(1, &vidFundoFbo);
   vidFundo = vidFundoFbo = 0; fundoValido = 0;
-  glDeleteTextures(1, &vidBackdrop); vidBackdrop = 0;
   gfx_tex_esquecer(0);
 }
 static GLuint vidTex(int w, int h, GLenum fmt) {
@@ -3483,29 +3544,38 @@ static int vidCapturar(const float reg[][4], int n, GLuint dst, GLuint dstFbo, G
   return 1;
 }
 
-// Save the full backdrop before foreground draws. Blur only last frame's
-// regions; a new region can then blur the same saved source on its miss frame.
-// Every changed backdrop captures immediately, including cuts during fades.
+// Blur last frame's regions from the backdrop before foreground draws. Every
+// changed backdrop captures immediately, including cuts during fades.
 static float fundoReg[VID_NREG][4];
 static int fundoNReg;
 static void vidroFundoFechar(void) {
-  const float (*reg)[4] = (const float (*)[4])vidroRegAnt;
+  // Last frame's read regions plus VID_FOLGA: a glass that scrolled a few px
+  // (detail page, title -> season tabs) stays inside them instead of forcing a
+  // second, full-screen capture every frame of the scroll.
+  float reg[VID_NREG][4];
   int n = vidroNRegAnt, i, fora = 0;
+  for (i = 0; i < n; i++) {
+    reg[i][0] = vidroRegAnt[i][0] - VID_FOLGA; reg[i][1] = vidroRegAnt[i][1] - VID_FOLGA;
+    reg[i][2] = vidroRegAnt[i][2] + VID_FOLGA; reg[i][3] = vidroRegAnt[i][3] + VID_FOLGA;
+  }
   fundoFim = 2;
   if (foscoBloq || !ajustes_vidro_fosco() || efeitosMinimos) return;
   if (!vidPreparar()) return;
-  if (!vidBackdrop) vidBackdrop = vidTex(telaW, telaH, GL_RGB);
+  // No glass last frame (frost just resumed or appeared): its regions are
+  // unknown, so blur the whole screen once, before foreground, instead of one
+  // capture per glass. Not for smoked glass or over a video hole: no backdrop read.
+  if (!n && !vidroNFuros && ajustes_vidro() && (ajustes_vidro_qualidade() == 2 || (ajustes_vidro_qualidade() == 0 && !vidroDegradou))) { reg[0][0] = reg[0][1] = 0; reg[0][2] = NV_TELA_W; reg[0][3] = NV_TELA_H; n = 1; }
+  // A copia le a TELA: o fundo da Dinamica adiado tem de sair nela antes
+  // (dinAdiado), senao a copia fica com o framebuffer transparente do
+  // clear e o vidro le preto/lixo ate a proxima mudanca de hash — a faixa
+  // que pisca no "Apple TV + frost". Os outros pontos de leitura da tela
+  // (furo, mini, alvo) ja resolvem o fundo; aqui faltava.
+  dinDescarregar();
   for (i = 0; i < vidroNRegAnt; i++) fora |= !vidroRegContem(fundoReg, fundoNReg, vidroRegAnt[i]);
   if (!fundoValido || fundoHash != vidroHash || fora) {
-    if (!fundoValido || fundoHash != vidroHash) {
-      GFX_OUTRO_INI();
-      glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, vidBackdrop);
-      glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, telaW, telaH);
-      glBindTexture(GL_TEXTURE_2D, 0); gfx_tex_esquecer(0);
-      gfx_vidro_copia += (double)telaW * telaH / ((double)telaRealW * telaRealH);
-      GFX_OUTRO_FIM();
-    }
+#ifdef NV_SHOT_HOOKS
+    if (!fundoValido || fundoHash != vidroHash) gfx_vidro_copia_com_din_adiado += dinAdiado;
+#endif
     fundoValido = 0;
     if (!vidFundo) {
       GLint ant = fboLigado();
@@ -3515,7 +3585,9 @@ static void vidroFundoFechar(void) {
       gfx_tex_esquecer(0);
       if (!ok) return;
     }
-    if (n && !vidCapturar(reg, n, vidFundo, vidFundoFbo, vidBackdrop)) return;
+    // Copy only the regions it blurs: a full-screen copy on every changed
+    // frame (each Home hero crossfade frame) cost a screen of bandwidth.
+    if (n && !vidCapturar((const float (*)[4])reg, n, vidFundo, vidFundoFbo, 0)) return;
     memcpy(fundoReg, reg, n * sizeof fundoReg[0]); fundoNReg = n;
     for (i = 0; i < n; i++) {   // past a screen edge there is nothing to read
       float *f = fundoReg[i];
@@ -3552,17 +3624,11 @@ static GLuint vidroFonte(GfxRect r) {
   // full-screen draw after the backdrop (modal veil) or without a copy.
   if (gfx_vidro_so_fundo) {
     if (!fundoFim) vidroFundoFechar();
-    if (fundoFim == 1 && !fundoDepois) {
-      if (vidroRegContem(fundoReg, fundoNReg, lido)) return vidFundo;
-      const float full[1][4] = { { 0, 0, NV_TELA_W, NV_TELA_H } };
-      if (!vidCapturar(full, 1, vidFundo, vidFundoFbo, vidBackdrop)) return 0;
-      fundoReg[0][0] = fundoReg[0][1] = -1e9f;
-      fundoReg[0][2] = fundoReg[0][3] = 1e9f; fundoNReg = 1;
-      return vidFundo;
-    }
+    // A new region misses for one frame and takes the slot path below.
+    if (fundoFim == 1 && !fundoDepois && vidroRegContem(fundoReg, fundoNReg, lido)) return vidFundo;
   }
   if (!vidH2 || vidW != telaW || vidH != telaH) { if (!vidPreparar()) return 0; }
-  else if (vidroSlot >= 0 && !vidroCruza(vidroDesde, lido))
+  else if (vidroSlot >= 0 && vidroContem(vidroSlotReg[vidroSlot], lido) && !vidroCruza(vidroDesde, lido))
     return vidSlot[vidroSlot];
   sl = vidroSlot + 1 < VID_NSLOTS ? vidroSlot + 1 : VID_NSLOTS - 1;
   tex = &vidSlot[sl]; fbo = &vidSlotFbo[sl];
@@ -3575,10 +3641,13 @@ static GLuint vidroFonte(GfxRect r) {
     if (!ok) return 0;
   }
   memset(vidroDesde, 0, sizeof vidroDesde);
-  if (!(!vidroRecapturou && vidroSlotValido[sl] && vidroSlotHash[sl] == vidroHash && vidroContem(vidroLeAnt, lido))) {
+  if (!(!vidroRecapturou && vidroSlotValido[sl] && vidroSlotHash[sl] == vidroHash && vidroContem(vidroSlotReg[sl], lido))) {
     const float full[4] = { 0, 0, NV_TELA_W, NV_TELA_H };
+    const float *reg = fundoDepois ? lido : full;
     vidroSlotValido[sl] = 0;
-    if (!vidCapturar(&full, 1, *tex, *fbo, 0)) return 0;
+    // Modal veils need the live framebuffer, but only the island's sampling region.
+    if (!vidCapturar((const float (*)[4])reg, 1, *tex, *fbo, 0)) return 0;
+    memcpy(vidroSlotReg[sl], reg, sizeof vidroSlotReg[sl]);
     vidroSlotHash[sl] = vidroHash; vidroSlotValido[sl] = 1; vidroRecapturou = 1;
   }
   vidroSlot = sl;
@@ -3623,10 +3692,22 @@ static void vidroAplicar(Programa *P, GfxRect r) {
   glActiveTexture(GL_TEXTURE0);
 }
 
+// Tint alpha of glass over live video: low enough to see the picture through it,
+// dark enough to keep the labels readable over a bright frame. "Opacidade do
+// vidro" still scales it (k = 1 at the default 78 %).
+static float vidroVideoAlfa(void) {
+  float t = ajustes_vidro_opacidade();
+  float d = 0.30f + t * 0.45f;   // 65 % at the default 78 %
+  return d;}
+static int vidroSobreVideo(const float tela[4]) {
+  int i, video = foscoBloq;
+  for (i = 0; !video && i < vidroNFuros; i++) video = vidroCruza(vidroFuros[i], tela);
+  return video;
+}
 void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a) {
   GfxRect t = r;
   float d = dens, tela[4];
-  int chapado, video, i, contorno = ajustes_vidro_contorno();
+  int chapado, video, fumaca, i, contorno = ajustes_vidro_contorno();
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
   GFX_TR_RECT(t.x, t.y, t.w, t.h);
   if (escAtiva != 1.0f) { t.x *= escAtiva; t.y *= escAtiva; t.w *= escAtiva; t.h *= escAtiva; }
@@ -3636,17 +3717,25 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   chapado = !ajustes_vidro_fosco() || efeitosMinimos || snapAtivo || miniAtiva || giroOn ||
             gfx_opacidade_grupo < 0.999f ||
             t.x >= NV_TELA_W || t.y >= NV_TELA_H || t.x + t.w <= 0.0f || t.y + t.h <= 0.0f;
-  for (i = 0; !chapado && i < vidroNVidros; i++) chapado = vidroCruza(vidroVidros[i], tela);
-  video = foscoBloq;
-  for (i = 0; !video && i < vidroNFuros; i++) video = vidroCruza(vidroFuros[i], tela);
-  if (video && !foscoVideo) chapado = 1;
+  // A layer over the page (sidebar) frosts even where page glass (pills, cards)
+  // sits under it: it reads the blurred backdrop, not those glasses.
+  for (i = 0; !chapado && !gfx_vidro_camada && i < vidroNVidros; i++) chapado = vidroCruza(vidroVidros[i], tela);
+  video = vidroSobreVideo(tela);
+  // Flat glass: over live video (the video is a hardware plane behind the GL
+  // surface: no blur is possible, but the glass is translucent, alpha < 1 over
+  // the alpha-0 hole, so the video shows through) — translucent by design
+  // (Nuvio Arc): the real glass look is the tint plus the in-shader rim/top
+  // highlight, never an art stand-in or a flat opaque box. With quality =
+  // Desempenho, or once the governor dropped the tier.
+  fumaca = video || ajustes_vidro_qualidade() == 1 || (vidroDegradou && ajustes_vidro_qualidade() == 0);
+  if (fumaca) chapado = 1;
   if (vidroNVidros < VID_N) memcpy(vidroVidros[vidroNVidros++], tela, sizeof tela);
   memset(&vidPend, 0, sizeof vidPend);
   vidPend.tipo = tipo; vidPend.raio = raio;
   vidRuidoPreparar();   // o dither vale tambem no chapado
   if (!chapado) {
     gfx_ambiente_descarregar();   // a luz e o fundo pendentes ficam ATRAS do vidro
-    vidPend.fonte = video ? foscoVideo : vidroFonte(t);
+    vidPend.fonte = vidroFonte(t);
   }
   // Scrim CINZA NEUTRO (o verde vinha da fonte, nao daqui; R = G = B): a
   // barra 14/255 como a deles. Sem fonte, o scrim e o vidro inteiro.
@@ -3658,8 +3747,9 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
     float al = gfx_chrome_tinta();
     // Frost off: no blur source, but the bar stays see-through. Same tint on
     // the live scene, alpha floored (no luma solve here) to keep text readable.
-    int claro = !vidPend.fonte && !ajustes_vidro_fosco() && !efeitosMinimos;
-    if (claro && al < 0.62f) al = 0.62f;
+    int claro = !vidPend.fonte && (fumaca || (!ajustes_vidro_fosco() && !efeitosMinimos));
+    if (video) al = vidroVideoAlfa();
+    else if (claro && al < 0.62f) al = 0.62f;
     if (vidPend.fonte || claro) {
       vidPend.scrT[0] = vidPend.scrB[0] = 0x12 / 255.0f;
       vidPend.scrT[1] = vidPend.scrB[1] = 0x14 / 255.0f;
@@ -3674,6 +3764,8 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   } else {
     float c = vidroTom(cinza);
     if (d > 1.0f) d = 1.0f;
+    if (video) d = vidroVideoAlfa();   // over video: light tint, the video shows through
+    else if (fumaca) d = d < 0.50f ? 0.50f : d > 0.86f ? 0.86f : d;   // smoked glass: tinted, see-through
     vidPend.scrT[0] = vidPend.scrT[1] = vidPend.scrT[2] = c; vidPend.scrT[3] = vidPend.fonte ? d * 0.85f : d;
     vidPend.scrB[0] = vidPend.scrB[1] = vidPend.scrB[2] = c; vidPend.scrB[3] = d;
   }
@@ -3682,9 +3774,11 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   vidPend.dens[0] = 0.125f; vidPend.dens[1] = 0.72f; vidPend.dens[2] = 0.82f; vidPend.dens[3] = 1.0f;
   // A27 chrome: the same solve, scaled by "Opacidade do vidro" (gfx_chrome_dens).
   if (tipo == GFX_VIDRO_BARRA) gfx_chrome_dens(vidPend.dens);
-  vidPend.aro = contorno ? 0.14f : 0.0f;
-  vidPend.aroLuz = contorno ? 0.28f : 0.0f;
+  vidPend.aro = 0.14f + (contorno ? 0.0f : video ? 0.04f : 0.0f);
+  vidPend.aroLuz = 0.28f;
   gfx_vidro_com_fonte += vidPend.fonte != 0;
+  gfx_vidro_chapados += vidPend.fonte == 0;
+  gfx_vidro_area += (int)(r.w * r.h);
   gfx_rect(r, vidPend.fonte, GFX_VIDRO, 0, 0, 0, raio, 1, 1, 1, a);
   gfx_vidro_matiz(r, raio, a);
   if (tipo == GFX_VIDRO_PAINEL) gfx_vidro_luz(r, raio, a);
@@ -3865,8 +3959,13 @@ void gfx_vidro_luz(GfxRect r, float raio, float a) {
 // chapado do gfx_vidro_painel, no mesmo tom e alfa pela opacidade, com o aro e
 // a luz de borda. Barato: cabe um por fileira.
 void gfx_vidro_chip(GfxRect r, float raio, float fundo, float a) {
-  float c = vidroTom(VIDRO_MIOLO), d = fundo * gfx_vidro_opacidade();
+  float c = vidroTom(VIDRO_MIOLO), d = fundo * gfx_vidro_opacidade(), tela[4];
+  GfxRect t = r;
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
+  GFX_TR_RECT(t.x, t.y, t.w, t.h);
+  if (escAtiva != 1.0f) { t.x *= escAtiva; t.y *= escAtiva; t.w *= escAtiva; t.h *= escAtiva; }
+  tela[0] = t.x; tela[1] = t.y; tela[2] = t.x + t.w; tela[3] = t.y + t.h;
+  if (vidroSobreVideo(tela)) d = vidroVideoAlfa();   // over video: light tint
   gfx_cor(r, raio, c, c, c, (d > 1.0f ? 1.0f : d) * a);
   gfx_vidro_aro(r, raio, 1.0f, 1, 1, 1, 0.14f * a);
   gfx_vidro_luz(r, raio, a);
@@ -4005,6 +4104,20 @@ void gfx_vidro_pilula_cheia(GfxRect r, float raio, float foco, float a) {
   float f = foco < 0.0f ? 0.0f : (foco > 1.0f ? 1.0f : foco), cr, cg, cb;
   if (f <= 0.01f || a <= 0.001f) return;
   ajustes_acento(&cr, &cg, &cb);
+  // Coloured accents supply their own frost, including Library tabs/chips
+  // without a glass backing. 0.92 preserves >= 90 % of solid accent chroma.
+  // White/grey keeps the solid pill of the reference.
+  if (ajustes_vidro() && !efeitosMinimos) {
+    float mx = cr > cg ? (cr > cb ? cr : cb) : (cg > cb ? cg : cb);
+    float mn = cr < cg ? (cr < cb ? cr : cb) : (cg < cb ? cg : cb);
+    if (mx - mn > 0.1f) {
+      gfx_vidro_painel(r, raio, 0.55f, f * a);
+      gfx_cor(r, raio, cr, cg, cb, GFX_VIDRO_ACENTO_ALFA * f * a);
+      gfx_vidro_aro(r, raio, 1.0f, 1, 1, 1, 0.30f * f * a);
+      gfx_brilho_topo(r, raio, 0.45f, 1.0f, 1.0f, 1.0f, 0.16f * f * a);
+      return;
+    }
+  }
   gfx_cor(r, raio, cr, cg, cb, f * a);
 }
 // Texto sobre a pilula cheia: a tinta que contrasta com o realce (escura sobre
@@ -4126,6 +4239,26 @@ void gfx_furo_raio_veu(GfxRect r, float raio, float veu, float rolada, float exp
   vidroFuro(t);
   glBlendFuncSeparate(GL_SRC_ALPHA, GL_ZERO, GL_ONE, GL_ZERO);
   gfx_rect(r, 0, GFX_JANELA, veu, rolada, exp, raio, 0, 0, 0, ca);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+// FURO PARCIAL: multiplica cor e alfa do retangulo por 1 - a (a = 1 e o
+// gfx_furo). O trailer do destaque entrando e saindo: o furo inteiro com a arte
+// a (1 - a) por cima deixava as rampas da arte (alfa < 1 no "vazar" sobre o
+// Frost) abertas para o plano de video ate a = 0,005, e ai o Frost voltava de
+// uma vez (tests/pisca3_shot.c, home-stall: salto de 35 contra 0,9).
+void gfx_furo_alfa(GfxRect r, float a) {
+  GfxRect t = r;
+  if (a >= 0.995f) { gfx_furo(r); return; }
+  if (a <= 0.0f) return;
+  if (dinPendente) dinDescarregar();
+  if (ambPendente) gfx_ambiente_descarregar();
+  ambIntacta = 0;
+  GFX_TR_RECT(t.x, t.y, t.w, t.h);
+  if (escAtiva != 1.0f) { t.x *= escAtiva; t.y *= escAtiva; t.w *= escAtiva; t.h *= escAtiva; }
+  vidroFuro(t);
+  glBlendFuncSeparate(GL_ZERO, GL_SRC_ALPHA, GL_ZERO, GL_SRC_ALPHA);
+  gfx_rect(r, 0, GFX_COR, 0, 0, 0, 0.0f, 0, 0, 0, 1.0f - a);
   glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 }
 

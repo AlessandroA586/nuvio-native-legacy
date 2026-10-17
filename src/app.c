@@ -2134,7 +2134,18 @@ static void prepararAoAbrir(void) {
   if (!stream_lista_do_alvo(alvo)) return;
   g = stream_lista_geracao();
   idBaseDoTitulo(base, sizeof base);
-  lembrada = base[0] ? fontepref_escolher(base) : -1;
+  // Runs every frame on the detail page: pick (and log) once per list, title
+  // and preference change, not 60 times a second.
+  // The 1 s refresh follows verification marking a source dead in place.
+  { static char ultBase[24]; static unsigned ultG, ultRev; static Uint32 ultT;
+    static int ultN = -1, ultLembrada = -1;
+    if (ultN != stream_n() || ultG != g || ultRev != fontepref_revisao() || strcmp(ultBase, base) ||
+        SDL_GetTicks() - ultT > 1000) {
+      ultLembrada = base[0] ? fontepref_escolher(base) : -1;
+      ultN = stream_n(); ultG = g; ultRev = fontepref_revisao(); ultT = SDL_GetTicks();
+      snprintf(ultBase, sizeof ultBase, "%s", base);
+    }
+    lembrada = ultLembrada; }
   preparoContexto(&contexto);
   if (preparoVale(alvo, lembrada)) { preparoBufferTentar(); return; }
   if (!preparo.falhou && preparoUltimo.tem && preparoUltimo.lista == g && !strcmp(preparoUltimo.alvo, alvo) &&

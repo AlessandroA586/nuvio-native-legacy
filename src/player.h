@@ -176,7 +176,10 @@ int  player_pediu_guia(void);
 // O botao "Guia" do OSD do canal: o guia COMPLETO com o canal no preview.
 int  player_pediu_guia_cheio(void);
 int  player_pediu_zap(void);        // deslocamento em canais (+3, -1...), 0 = nenhum
-int  player_pediu_recarregar(void);  // "Recarregar" do OSD: refaz a fonte do mesmo canal
+int  player_pediu_recarregar(void);  // live OSD or current VOD source reload
+// Capture on Sources open. A changed source/session rejects the request.
+unsigned player_recarregar_contexto(void);
+int player_recarregar_fonte(unsigned contexto);
 // Identidade do canal congelada na abertura: o indice do catalogo pode ser
 // remapeado por uma republicacao da descoberta em plena reproducao, e zap/foco
 // do guia nao podem depender dele. "" quando a sessao nao e de canal.

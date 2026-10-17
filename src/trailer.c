@@ -26,6 +26,9 @@ static Uint32 abertoEm;   // SDL_GetTicks da abertura da fonte atual, para o log
 static int    dono;       // TRAILER_DONO_* (trailer.h)
 static int    noCartao;   // trailer_no_cartao: quadro inteiro encaixado no .tpk
 static char   donoImdb[32];
+static int    falso;      // trailer_teste_falso: 0 off, 1 open without image, 2 playing
+
+void trailer_teste_falso(int tocando) { falso = tocando < 0 ? 0 : 1 + (tocando != 0); }
 
 void trailer_recorte(int vw, int vh, float z, float dw, float dh,
                      int *sx, int *sy, int *sw, int *sh) {
@@ -306,7 +309,7 @@ static Uint32 tocandoVisto;
 #endif
 int trailer_suportado(void) {
 #if defined(__APPLE__) || defined(NV_LINUX_DESKTOP)
-  return 0;
+  return falso != 0;
 #else
   // O FRACASSO NAO TRAVA, MAS TEM TETO. O deploy mata o processo e relanca
   // em seguida, e o hub LS2 pode demorar para soltar o nome anterior; so o
@@ -425,7 +428,7 @@ void trailer_abrir(const char *fonte, GfxRect r, int som, int modoCheia) {
   if (!trailer_js_abrir(fonte, r.x, r.y, r.w, r.h, som, ajustes_trailer_zoom(), NV_REC_URL)) return;
 #else
   if (nova) {
-    if (!video_tocar(fonte)) return;
+    if (!falso && !video_tocar(fonte)) return;
 #ifdef NV_TPK
     video_tpk_trailer_marcar(1);
 #endif
@@ -519,6 +522,7 @@ int trailer_tocando(void) {
   int e = aberto ? trailer_js_estado() : -2;
   return e == 1 || e == 3;
 #else
+  if (falso) return aberto && falso == 2;
   if(!aberto||!video_pronto()||video_falhou()||video_terminou()||video_conflito_recurso())return 0;
   if(video_tocando())tocouFonte=1;
   return tocouFonte;

@@ -23,7 +23,7 @@ static int ajDicasDe(int op, AjDica *d) {
     d[2] = (AjDica){ "Voltar", "Sair" };
     return 3;
   }
-  if (op == AJ_TEMA && ajEditandoLinha(op)) {
+  if (ajPaleta(op) && ajEditandoLinha(op)) {
     d[0] = (AjDica){ "← →", "Escolher" }; d[1] = (AjDica){ "↑ ↓", "Fileira" };
     d[2] = (AjDica){ "OK", "Confirmar" };
     return 3;

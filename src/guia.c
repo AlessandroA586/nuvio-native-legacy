@@ -41,6 +41,7 @@
 // nunca tocam no staging — mesma disciplina do epg.c.
 #include "horafmt.h"
 #include "guia.h"
+#include "idcanal.h"
 #include "registro.h"
 #include "guiaaddons.h"
 #include "plrui.h"
@@ -756,11 +757,14 @@ static int lerPagina(const GFonte *f, int skip, int teto, int *novos) {
   while (p && sNCanais < G_MAX_CANAL && *novos < teto) {
     const char *fim = js_fim(p);
     GCanal c;
-    char gen[64] = "";
+    char gen[64] = "", idLongo[IDCANAL_LONGO_MAX + 1];
     memset(&c, 0, sizeof c);
     c.epg = -1; c.cat = -1;
     n++;
-    if (js_texto(p, fim, "id", c.id, sizeof c.id) &&
+    // Id longo (CNCVerse: "cnc:<base64>") vira apelido curto; ver idcanal.h.
+    idLongo[0] = 0;
+    if (js_texto(p, fim, "id", idLongo, sizeof idLongo) &&
+        idcanal_curto(idLongo, c.id, sizeof c.id) &&
         js_texto(p, fim, "name", c.nome, sizeof c.nome) &&
         sCanalPorId(c.id) < 0) {
       char mtipo[16] = "";
