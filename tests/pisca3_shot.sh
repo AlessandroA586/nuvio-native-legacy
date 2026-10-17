@@ -31,4 +31,4 @@ cc "${objects[@]}" -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz \
   -L"$angle" -lEGL -lGLESv2 -Wl,-rpath,"$angle" -Wl,-headerpad_max_install_names -o "$work/shot"
 for l in libEGL libGLESv2; do install_name_tool -change "./$l.dylib" "$angle/$l.dylib" "$work/shot" 2>/dev/null || true; done
 codesign -f -s - "$work/shot" 2>/dev/null || true
-"$work/shot" "$saida"
+"$work/shot" "$saida" ${2:-}

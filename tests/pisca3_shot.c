@@ -18,6 +18,8 @@
 #include "ilha.h"
 #include "layout.h"
 #include "menu.h"
+#include "perfilsel.h"
+#include "perfis.h"
 #include "tex_cache.h"
 #include "text.h"
 #include "trailer.h"
@@ -44,6 +46,7 @@ static int failures;
 static unsigned char *q1, *q2;   // the two frames before this one
 static int nquadro, flashes, sujas, saltos;   // sujas: textures given garbage
 static const char *cena = "settle";   // last window started (transitions follow it)
+static int escolha;   // "Who's watching?" up: the Home assembles hidden behind it (app.c)
 
 Uint32 pisca3_ticks(void) { return relogio; }   // tests/pisca3_gles.h
 
@@ -78,7 +81,10 @@ static int caixa(const char *nome, int i, int falar) {
 static void frame(void) {
   Uint32 now = relogio += 16;
   tex_bombear(8);
+  home_oculta(escolha);
   home_atualizar(1.0f / 60, now);
+  home_oculta(0);
+  if (escolha) perfilsel_atualizar(1.0f / 60, now);
   home_trailer_passo(!detail_aberto(), 1.0f / 60, now);   // as app.c
   if (!detail_aberto() && home_pediu_abrir()) {
     HomeItem it;
@@ -92,9 +98,12 @@ static void frame(void) {
   glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
   gfx_ambiente(1.0f);
-  if (!detail_cobre_tela()) home_desenhar(now);
-  detail_desenhar(now);
-  if (!detail_aberto()) menu_desenhar(now);
+  if (escolha) perfilsel_desenhar(now);
+  else {
+    if (!detail_cobre_tela()) home_desenhar(now);
+    detail_desenhar(now);
+    if (!detail_aberto()) menu_desenhar(now);
+  }
   ilha_desenhar(now);
   gfx_ambiente_descarregar();
   glReadPixels(0, 0, W, H, GL_RGBA, GL_UNSIGNED_BYTE, px);
@@ -389,6 +398,31 @@ static void homeArte(const char *promoArte) {
   failures += piscas || vpiscas;
 }
 
+// PROFILE PICKER (owner, C9, 10-17): "No profile picker tb ta piscando a
+// artwork". Fundo Filmes (the default): the poster wall behind "Who's
+// watching?", the Home assembling hidden behind it as app.c does.
+static void escolhaPerfil(void) {
+  char nm[64];
+  int i, antes;
+  snprintf(nm, sizeof nm, "%s/perfil", out); mkdir(nm, 0755);
+  assert(dados_gravar("perfis.txt", "1\t0\t1\t0\t#FB8C00\tHenrique\tdeploy/app/art/poster/00.jpg\t\n"
+                                    "2\t1\t0\t0\t#2F3BFF\tJose\t\t\n"));
+  assert(dados_gravar("perfil.txt", "1\n"));
+  perfis_carregar_ativo();
+  assert(perfis_n() == 2);
+  perfilsel_iniciar();
+  escolha = 1;
+  antes = flashes;
+  for (i = 0; i < 300; i++) {
+    frame();
+    if (i % 15 == 0) { snprintf(nm, sizeof nm, "perfil/f%03d", i); png(nm); }
+    if (i % 15 == 0) printf("[pisca3] perfil f%03d evictions=%ld hot=%ld\n", i, tex_despejos_total, tex_despejos_quentes_total);
+  }
+  escolha = 0;
+  printf("%s: profile picker wall without a single-frame flash (%d)\n", flashes > antes ? "FAIL" : "PASS", flashes - antes);
+  failures += flashes > antes;
+}
+
 // Fake native trailer: plays, settles, then the webOS pipeline stalls
 // (video_pronto drops while the uMS reloads) and resumes, then a 4-frame blip.
 static void trailerCiclo(const char *onde, int dono) {
@@ -473,6 +507,8 @@ int main(int argc, char **argv) {
     snprintf(items[i].logo, sizeof items[i].logo, "deploy/app/art/logo/%02d.png", i);
   }
   cat_definir_tudo(items, 10, &row, 1);
+  escolhaPerfil();
+  if (argc > 2 && !strcmp(argv[2], "perfil")) return failures ? 1 : 0;
 
   for (i = 0; i < 240; i++) frame();          // settle: art loads, springs rest
   parado("home-idle", 90);
