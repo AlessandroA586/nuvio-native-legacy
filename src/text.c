@@ -1525,7 +1525,7 @@ static int medirCorridas(TTF_Font *f, TTF_Font *a, TTF_Font *b, const char *s,
     if (len <= 0 || len >= (int)sizeof pedaco) continue;
     memcpy(pedaco, s + c[i].ini, (size_t)len); pedaco[len] = 0;
     { TTF_Font *g = c[i].f; int ex = extra;
-      if (bidi_tem_arabe(pedaco) && (extra & TTF_STYLE_BOLD)) {
+      if (bidi_tem_arabe(pedaco)) {
         TTF_Font *bf = arabeBoldFace(g);
         if (bf) g = bf;
         ex = extra & ~TTF_STYLE_BOLD;
@@ -1552,7 +1552,7 @@ static SDL_Surface *renderCorridas(TTF_Font *f, TTF_Font *a, TTF_Font *b,
     sf[i] = NULL; gf[i] = g;
     if (len <= 0 || len >= (int)sizeof pedaco) continue;
     memcpy(pedaco, s + c[i].ini, (size_t)len); pedaco[len] = 0;
-    if (bidi_tem_arabe(pedaco) && (extra & TTF_STYLE_BOLD)) {
+    if (bidi_tem_arabe(pedaco)) {
       TTF_Font *bf = arabeBoldFace(g);
       if (bf) g = bf;
       ex = extra & ~TTF_STYLE_BOLD;
@@ -1784,7 +1784,7 @@ static SDL_Surface *rasterLinha(TxtEstilo estilo, const char *s, SDL_Color cor,
   // tiraria delas o peso que o app inteiro conta com.
   int estiloAnt, novo = 0;
   arabeCorpo = (int)(corpoAtual(estilo) * ESC_T + 0.5f);
-  if (enfase && bidi_tem_arabe(v) && !txtTemLatim(v) && (enfase & TXT_ENF_NEGRITO)) {   // #335
+  if (bidi_tem_arabe(v) && !txtTemLatim(v)) {   // #335, #205: Naskh Bold em todo peso
     TTF_Font *bf = arabeBoldFace(fonte);
     if (bf) fonte = bf;               // a face Bold de verdade
     enfase &= ~TXT_ENF_NEGRITO;       // nunca o sintetico sobre arabe
@@ -1929,7 +1929,7 @@ static int larguraLinhaMedir(TxtEstilo estilo, const char *s, TxtFamilia familia
   const char *v = visualDe(fonte, s, vis, sizeof vis);
   int estiloAnt, novo = 0;
   arabeCorpo = (int)(corpoAtual(estilo) * ESC_T + 0.5f);
-  if (enfase && bidi_tem_arabe(v) && !txtTemLatim(v) && (enfase & TXT_ENF_NEGRITO)) {   // #335
+  if (bidi_tem_arabe(v) && !txtTemLatim(v)) {   // #335, #205: Naskh Bold em todo peso
     TTF_Font *bf = arabeBoldFace(fonte);
     if (bf) fonte = bf;               // a face Bold de verdade
     enfase &= ~TXT_ENF_NEGRITO;       // nunca o sintetico sobre arabe
