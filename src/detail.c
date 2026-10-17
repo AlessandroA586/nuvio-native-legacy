@@ -6351,6 +6351,8 @@ static void desenhaColecao(float x, float y, float f, float a) {
   // Anel so com "Foco no cartaz" ligado (focoprof.h); vidro usa o cartao de
   // vidro como anel, por cima da arte, logo abaixo.
   if (!ajustes_vidro()) foco_anel(r, raio, f, a);
+  // The shared frost reads the page backdrop; keep collection art above it.
+  else gfx_vidro_material(r, raio, GFX_VIDRO_DENS, a);
   if (t) {
     gfx_tex_aspect_atual = tex_aspecto(fundo);
     gfx_rect(r, t, GFX_VITRINE, 1.0f, 0.5f, 0.0f, raio, 0.30f, 0, 0, a);
@@ -6359,10 +6361,7 @@ static void desenhaColecao(float x, float y, float f, float a) {
     if (!ajustes_vidro()) moldura(r, COL_CARD_RAIO, a);
     if (fundo[0] && !tex_falhou(fundo)) gfx_esqueleto(r, raio, 0.12f, 0.12f, 0.13f, a * 0.6f);
   }
-  if (ajustes_vidro()) {
-    gfx_vidro_material(r, raio, GFX_VIDRO_DENS, a);
-    foco_anel(r, raio, f, a);
-  }
+  if (ajustes_vidro()) foco_anel(r, raio, f, a);
 
   // Escada: de tras para a frente, para a primeira parte ficar por cima.
   nCapas = n < 3 ? n : 3;

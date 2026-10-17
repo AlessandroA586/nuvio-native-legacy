@@ -37,6 +37,19 @@ static int card_checks(void) {
     if (row == 3) {
       assert(tex_obter_larg(extras_colecao_fundo(), COL_CARD_W));
       desenhaColecao(100, 100, 1, 1);
+      // Empty artwork strip above the title/posters must survive the material.
+      unsigned char actual[32 * 4], expected[32 * 4];
+      glReadPixels(400, 1080 - 120, 32, 1, GL_RGBA, GL_UNSIGNED_BYTE, actual);
+      gfx_tex_aspect_atual = tex_aspecto(extras_colecao_fundo());
+      gfx_rect((GfxRect){100, 100, COL_CARD_W, COL_CARD_H},
+               tex_obter_larg(extras_colecao_fundo(), COL_CARD_W), GFX_VITRINE,
+               1, .5f, 0, COL_CARD_RAIO / COL_CARD_H, .30f, 0, 0, 1);
+      gfx_tex_aspect_atual = 0;
+      glReadPixels(400, 1080 - 120, 32, 1, GL_RGBA, GL_UNSIGNED_BYTE, expected);
+      int mismatch = 0;
+      for (int i = 0; i < 32 * 4; i++) mismatch += abs(actual[i] - expected[i]) > 1;
+      printf("%s: collection artwork pixels mismatch=%d\n", mismatch ? "FAIL" : "PASS", mismatch);
+      failures += mismatch != 0;
     }
     int ok = ajustes_vidro() ? cardMaterial == 1 && cardFrost == 1
              : row >= 2 || captionSolid == 1;
