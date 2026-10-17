@@ -5,6 +5,8 @@
 #   bash tests/textoescala_prova.sh            # compares this tree with $NV_BASE
 #   NV_BASE=<ref> bash tests/textoescala_prova.sh
 #   NV_ONLY_NEW=1 ...                          # skip the baseline comparison
+#   NV_REUSE=<previous kept W> ...             # reuse binaries after a link-only fix
+#   NV_PNG_PICK=<regex> ...                    # select PNG frame names
 #
 # For each screen (Home, Library, Settings, Title page, Player pause panel) the
 # real shot program runs three times and a spy on gfx_rect logs what it draws
@@ -21,7 +23,7 @@ cd "$(dirname "$0")/.."
 export TMPDIR="${NV_TMP:-/tmp}"; TMPDIR="${TMPDIR%/}"
 SRC="${NV_SRC:-.}"
 BASE_REF="${NV_BASE:-f22761e28}"
-W="$(mktemp -d "$TMPDIR/nv-textoescala.XXXXXX")"
+W="${NV_REUSE:-$(mktemp -d "$TMPDIR/nv-textoescala.XXXXXX")}"
 [ -n "${NV_KEEP:-}" ] && echo "keeping $W" || trap 'rm -rf "$W"' EXIT
 TESTS="$PWD/tests"
 CFLAGS=(-O1 -w -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -DNV_TRAKT_CLIENT_ID='"chave-de-teste"')
@@ -48,12 +50,13 @@ build() {
   objs "$root" "$out/o" || return 1
   objs "$root" "$out/oa" -DAJUSTES_TESTE || return 1
   cc "${CFLAGS[@]}" -I"$root/src" -c "$TESTS/textoescala_espiao.c" -o "$out/espiao.o" || return 1
-  for s in homelayouts biblioteca ajustes detail_secoes player_pausa; do
+  for s in homelayouts biblioteca ajustes detail_secoes player_pausa busca vertudo teclado; do
     set -- "$out"/o/*.o; ex=()
     if [ "$s" = detail_secoes ]; then set -- $(ls "$out"/o/*.o | grep -v 'src_detail\.c\.o'); fi
-    if [ "$s" = ajustes ]; then set -- "$out"/oa/*.o; ex=(-DAJUSTES_TESTE); fi
+    if [ "$s" = vertudo ]; then set -- $(ls "$out"/o/*.o | grep -v 'src_vertudo\.c\.o'); fi
+    if [ "$s" = ajustes ] || [ "$s" = teclado ]; then set -- "$out"/oa/*.o; ex=(-DAJUSTES_TESTE); fi
     shot="$TESTS/${s}_shot.c"
-    if [ "$s" = detail_secoes ]; then   # the shot #includes ../src/detail.c: point it at this tree
+    if [ "$s" = detail_secoes ] || [ "$s" = vertudo ]; then   # shots include the production source
       mkdir -p "$out/t"; ln -sfn "$(cd "$root" && pwd)/src" "$out/src"
       cp "$shot" "$out/t/"; shot="$out/t/${s}_shot.c"
     fi
@@ -78,16 +81,18 @@ run() {
   ( cd "$saida" && find . \( -name '*.bmp' -o -name '*.png' \) | sort | xargs shasum 2>/dev/null ) > "$W/$t/$tag-$s.sum"
   if [ -n "${NV_PNG_OUT:-}" ] && [ "$t" = new ] && case "$tag" in p85|p100|p130) true;; *) false;; esac; then   # keep a few frames per run as PNG
     find "$saida" \( -name '*.png' -o -name '*.bmp' \) | sort | while read -r f; do
-      case "$(basename "$f")" in $NV_PNG_PICK) ;; *) continue;; esac
+      [[ "$(basename "$f")" =~ ${NV_PNG_PICK:-.*} ]] || continue
       sips -s format png "$f" --out "$NV_PNG_OUT/$s-$tag-$(basename "${f%.*}").png" >/dev/null 2>&1
     done
   fi
   rm -rf "$saida"   # the disk is shared; only the hashes are kept
 }
 
-SHOTS="${NV_SHOTS:-homelayouts biblioteca ajustes detail_secoes player_pausa}"
+SHOTS="${NV_SHOTS:-homelayouts biblioteca ajustes detail_secoes player_pausa busca vertudo teclado}"
 rc=0
-echo "build: this tree"; mkdir -p "$W/new"; build "$SRC" "$W/new" || { echo "FAIL: build"; exit 1; }
+if [ -z "${NV_REUSE:-}" ]; then
+  echo "build: this tree"; mkdir -p "$W/new"; build "$SRC" "$W/new" || { echo "FAIL: build"; exit 1; }
+fi
 if [ -z "${NV_ONLY_NEW:-}" ]; then
   echo "build: baseline $BASE_REF"; mkdir -p "$W/old/src"; git archive "$BASE_REF" src | tar -x -C "$W/old"
   build "$W/old" "$W/base" || { echo "FAIL: baseline build"; exit 1; }

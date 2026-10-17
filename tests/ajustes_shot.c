@@ -241,6 +241,18 @@ int main(int argc, char **argv) {
   fileiras_prontas:
 
   ajustes_iniciar();
+  if (getenv("NV_TEXT_SCALE_NAV")) {
+    int op, sec, i, found = 0;
+    const char *key, *label;
+    for (i = 0; ajustes_teste_cena_item(i, &op, &sec, &key, &label); i++) {
+      if (strcmp(key, "escalaTextoLocal")) continue;
+      assert(ajustes_teste_focar_opcao(op));
+      found++;
+    }
+    assert(found == 1);
+    puts("PASS text scale settings navigation");
+    return 0;
+  }
   if (getenv("NUVIO_SHOT_AJUSTES_ESCALA"))
     ajustes_teste_escala(atoi(getenv("NUVIO_SHOT_AJUSTES_ESCALA")));
   ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_OPAC / _FOSCO
