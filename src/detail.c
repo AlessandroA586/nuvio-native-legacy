@@ -107,7 +107,7 @@ static float larguraLogoHero(void) {
   return detalheRetrato() ? fminf(NV_DETW_LOGO_MAXW, larguraTextoHero()) : NV_DETW_LOGO_MAXW;
 }
 static float larguraDetalhes(void) {
-  return detalheRetrato() ? fminf(NV_DETF_DET_W, NV_TELA_W - NV_DETP_X * 2) : NV_DETF_DET_W;
+  return detalheRetrato() ? fminf(NV_DETF_DET_W, NV_TELA_W - ANC(NV_DETP_X) * 2) : NV_DETF_DET_W;
 }
 static GfxRect heroAcaoRect(float *x, float *cy, float w, float h) {
   if (detalheRetrato() && *x + w > NV_TELA_W - 96.0f) {
@@ -163,8 +163,8 @@ static GfxRect heroAcaoRect(float *x, float *cy, float w, float h) {
 
 static float colecaoTopo(void) { return detalheRetrato() ? 480.0f : COLL_TOPO; }
 static GfxRect colecaoListaRect(void) {
-  float x = detalheRetrato() ? NV_DETP_X : COLL_X;
-  return (GfxRect){x, colecaoTopo(), NV_TELA_W - NV_DETP_X - x, NV_TELA_H - colecaoTopo() - 60.0f};
+  float x = detalheRetrato() ? ANC(NV_DETP_X) : COLL_X;
+  return (GfxRect){x, colecaoTopo(), NV_TELA_W - ANC(NV_DETP_X) - x, NV_TELA_H - colecaoTopo() - 60.0f};
 }
 
 // Cartao de produtora/rede: o dobro aproximado do `.detail-company-card` do web
@@ -266,14 +266,14 @@ static int  ratTemp;
 static int  ratSinc;
 #define PES_FOTO_W   (280.0f * gfx_poster_k())
 #define PES_FOTO_H   (420.0f * gfx_poster_k())
-#define PES_COL_X    (NV_DETP_X + PES_FOTO_W + 56.0f)
+#define PES_COL_X    (ANC(NV_DETP_X) + PES_FOTO_W + 56.0f)
 #define PES_CARD_W   (212.0f * gfx_poster_k())
 #define PES_CARD_H   (318.0f * gfx_poster_k())
 #define PES_CARD_GAP  32.0f
 #define PES_POR_LINHA  6
 static int pessoaColunas(void) {
   if (!detalheRetrato()) return PES_POR_LINHA;
-  int n = (int)((NV_TELA_W - NV_DETP_X - PES_COL_X + PES_CARD_GAP) / (PES_CARD_W + PES_CARD_GAP));
+  int n = (int)((NV_TELA_W - ANC(NV_DETP_X) - PES_COL_X + PES_CARD_GAP) / (PES_CARD_W + PES_CARD_GAP));
   return n < 1 ? 1 : n > PES_POR_LINHA ? PES_POR_LINHA : n;
 }
 
@@ -1033,7 +1033,7 @@ static float vaoAntes(int r) {
 
 static void recalcularLayout(void) {
   int r;
-  for (r = 0; r < N_SECOES; r++) { dxSec[r] = 0; wSec[r] = NV_TELA_W - NV_DETP_X * 2; }
+  for (r = 0; r < N_SECOES; r++) { dxSec[r] = 0; wSec[r] = NV_TELA_W - ANC(NV_DETP_X) * 2; }
   if (ehSerie()) {
     // As quatro primeiras vem de MEDIDA ABSOLUTA na referencia; nao sao um
     // empilhamento. As de baixo (comentarios) sim: elas ficam depois do elenco,
@@ -3310,7 +3310,7 @@ static float estLargura(int c) {
   return (float)w + EST_PAD * 2.0f;
 }
 static float estColuna(void) {
-  return ehSerie() ? NV_TELA_W - NV_DETP_X * 2 : wSec[SEC_ESTUDIOS];
+  return ehSerie() ? NV_TELA_W - ANC(NV_DETP_X) * 2 : wSec[SEC_ESTUDIOS];
 }
 static void estPosicao(int c, float *x, float *y) {
   float px = 0.0f, py = 0.0f, lim = estColuna();
@@ -3359,14 +3359,14 @@ static float larguraItem(int r, int c) {
     case SEC_NOTAS:
     case SEC_NOTAS_EP:
     case SEC_PROGTEMP:
-    case SEC_FRASES:      return NV_TELA_W - NV_DETP_X * 2;
+    case SEC_FRASES:      return NV_TELA_W - ANC(NV_DETP_X) * 2;
     case SEC_COLECAO:     return COL_CARD_W;
     default:              return NV_DETP_EL_W;
   }
 }
 // x do item `c` DENTRO da fileira (antes da rolagem horizontal).
 static float xItem(int r, int c) {
-  float x = NV_DETP_X;
+  float x = ANC(NV_DETP_X);
   for (int k = 0; k < c; k++) {
     if (r == SEC_EPISODIOS) { x += epCardPasso(); continue; }
     if (r == SEC_ELENCO)    { x += NV_DETP_EL_PASSO; continue; }
@@ -3380,10 +3380,10 @@ static float xItem(int r, int c) {
       // FOCADA, nunca a sequencia inteira.
       int np = nPilulasCom();
       if (c <= np) x += larguraPilulaCom(rotuloPilulaCom(k)) + COM_PILL_GAP;
-      else if (k >= np) x = NV_DETP_X + (float)(c - np) * (COM_CARD_W + COM_CARD_GAP);
+      else if (k >= np) x = ANC(NV_DETP_X) + (float)(c - np) * (COM_CARD_W + COM_CARD_GAP);
       continue;
     }
-    if (r == SEC_DETALHES)  { continue; }   // coluna unica: sempre em NV_DETP_X
+    if (r == SEC_DETALHES)  { continue; }   // coluna unica: sempre em ANC(NV_DETP_X)
     // Audiencia tem uma coluna por EPISODIO, mas elas nao sao itens lado a
     // lado: sao posicoes dentro de um grafico que ocupa a faixa inteira. Todas
     // comecam em NV_DETP_X, e quem marca a escolhida e serieaud_selecionar.
@@ -3943,9 +3943,9 @@ static void detail_atualizar_(float dt, Uint32 agora) {
   // rolam o necessario, com 24px de folga nas bordas.
   { int r = foco.fileira;
     if (r >= 0 && r < N_SECOES && secaoN(r) > 0) {
-      float x = xItem(r, foco.coluna) - NV_DETP_X;
+      float x = xItem(r, foco.coluna) - ANC(NV_DETP_X);
       float w = larguraItem(r, foco.coluna);
-      float vista = NV_TELA_W - NV_DETP_X * 2;
+      float vista = NV_TELA_W - ANC(NV_DETP_X) * 2;
       float alvo = scrollSec[r];
       if (r == SEC_EPISODIOS) alvo = x;
       else {
@@ -3978,7 +3978,7 @@ static void detail_atualizar_(float dt, Uint32 agora) {
         !toquerol_livre(&toqueSec[SEC_EPISODIOS]) &&
 #endif
         epAncora < foco.nColunas[SEC_EPISODIOS]) {
-      float ax = xItem(SEC_EPISODIOS, epAncora) - NV_DETP_X;
+      float ax = xItem(SEC_EPISODIOS, epAncora) - ANC(NV_DETP_X);
       if (ax < 0.0f) ax = 0.0f;
       scrollSec[SEC_EPISODIOS] = anim_mola2(&velSec[SEC_EPISODIOS],
                                             scrollSec[SEC_EPISODIOS], ax, dt,
@@ -4419,13 +4419,13 @@ static void logoCinema(float a) {
     trailercinema_logo(asp, &w, &h);
     gfx_tex_aspect_atual = 0.0f;
     { GfxModo m = tex_marca_escura(arqLogo) ? GFX_MARCA : GFX_TEXTO;
-      gfx_rect((GfxRect){ NV_DETW2_X, baseY - h, w, h }, texLogo, m, 0, 0, 0, 0.0f, 1, 1, 1, a); }
+      gfx_rect((GfxRect){ ANC(NV_DETW2_X), baseY - h, w, h }, texLogo, m, 0, 0, 0, 0.0f, 1, 1, 1, a); }
   } else {
     const CatItem *ci = cat_item(idx);
     const char *nome = ci ? ci->titulo : NULL;
     if (nome && nome[0]) {
       TxtLinha t2 = txt_linha_corta(TXT_TITULO2, nome, 255, 255, 255, 255, larguraLogoHero() * 0.5f);
-      txt_desenhar_alpha(t2, NV_DETW2_X, baseY - t2.h, a);
+      txt_desenhar_alpha(t2, ANC(NV_DETW2_X), baseY - t2.h, a);
     }
   }
 }
@@ -4486,7 +4486,7 @@ static void esqueletoSinopse(float x, float y, float a) {
 // bloco inteiro — sem tocar nas medidas do resto da pagina.
 #pragma push_macro("NV_DETW2_X")
 #undef NV_DETW2_X
-#define NV_DETW2_X (96.0f + heroDx)
+#define NV_DETW2_X (ANC(96.0f) + heroDx)
 // Unknown language is not evidence of a mismatch. Keep a loaded logo clean;
 // only a confirmed foreign image needs a caption. Missing images keep text.
 static int mostrarNomeLogo(const CatItem *ci, const char *url, int loaded,
@@ -4610,7 +4610,7 @@ static void heroWeb(float a, float desloc) {
   // UMA LINHA DE META SO (dono, 12/10/2026): a de baixo (selo de
   // classificacao/status, pais, direcao) saiu e a duracao do filme subiu para
   // a linha dos generos. O bloco inteiro desce o que ela ocupava.
-  float yMeta1 = NV_DETW2_BASE - NV_DETW2_M1_H;
+  float yMeta1 = ANC(NV_DETW2_BASE) - NV_DETW2_M1_H;
   float ySin   = yMeta1 - NV_DETW2_GAP_SIN - hSin;
   AmigosTitulo amg;
   int temAmg = amigosDoTitulo(&amg);
@@ -5290,7 +5290,7 @@ static void resumoTemporada(float x, float yPilulas, float a) {
 // O TRILHO do segmentado, desenhado uma vez por fileira antes dos itens:
 // branco 6% no vidro, #1D1E23 no solido (plrui_seg).
 static void trilhoTemporadas(float y, float a) {
-  GfxRect tr = { NV_DETP_X - scrollSec[SEC_TEMPORADAS], y - DET_SEG_PAD,
+  GfxRect tr = { ANC(NV_DETP_X) - scrollSec[SEC_TEMPORADAS], y - DET_SEG_PAD,
                  larguraSegTemporadas(), NV_DETP_TEMP_H + DET_SEG_PAD * 2.0f };
   if (ajustes_vidro()) gfx_cor(tr, 0.5f, 1, 1, 1, 0.06f * a);
   else gfx_cor(tr, 0.5f, 0.114f, 0.118f, 0.137f, a);
@@ -6087,7 +6087,7 @@ static void desenhaNotasEpisodio(float x, float y, float a) {
   // JANELA: com mais temporadas do que cabem na faixa (South Park tem 27,
   // #79) a fileira mostra um trecho com a escolhida dentro, em vez de
   // desenhar chips fora da tela.
-  cabem = (int)((NV_TELA_W - NV_DETP_X * 2 + RAT_TEMP_GAP) / (58.0f + RAT_TEMP_GAP));
+  cabem = (int)((NV_TELA_W - ANC(NV_DETP_X) * 2 + RAT_TEMP_GAP) / (58.0f + RAT_TEMP_GAP));
   if (cabem < 1) cabem = 1;
   if (nt > cabem) {
     primeira = ratTemp - cabem / 2;
@@ -6112,7 +6112,7 @@ static void desenhaNotasEpisodio(float x, float y, float a) {
       int nd = extras_ep_nota(ratTemp, i);
       float cr, cg, cb, tx;
       char ep[8], nv[8];
-      if (gx + RAT_PIL_W > NV_TELA_W - NV_DETP_X) break;
+      if (gx + RAT_PIL_W > NV_TELA_W - ANC(NV_DETP_X)) break;
       corDaNota(nd, &cr, &cg, &cb, &tx);
       gfx_cor((GfxRect){ gx, gy, RAT_PIL_W, RAT_PIL_H }, 14.0f / RAT_PIL_H,
               cr, cg, cb, a);
@@ -6491,11 +6491,11 @@ static void desenhaListaColecao(float a) {
 
   // --- coluna da colecao --------------------------------------------------
   { const char *capa = extras_colecao_capa();
-    GfxRect rc = { NV_DETP_X, COLL_TOPO, 240.0f * gfx_poster_k(), 360.0f * gfx_poster_k() };
-    float y, tx = NV_DETP_X, tw = COLL_ESQ_W;
+    GfxRect rc = { ANC(NV_DETP_X), COLL_TOPO, 240.0f * gfx_poster_k(), 360.0f * gfx_poster_k() };
+    float y, tx = ANC(NV_DETP_X), tw = COLL_ESQ_W;
     if (detalheRetrato()) {
       rc.w = COLL_PO_W; rc.h = COLL_PO_H;
-      tx += rc.w + 32.0f; tw = NV_TELA_W - NV_DETP_X - tx;
+      tx += rc.w + 32.0f; tw = NV_TELA_W - ANC(NV_DETP_X) - tx;
     }
     char meta[64];
     if (!capa[0]) capa = extras_colecao_poster(0);
@@ -6702,7 +6702,7 @@ static float cabecalhoComentarios(float x, float y, float a) {
     if (n > 0) {
       char b[12]; snprintf(b, sizeof b, "%d", n);
       { TxtLinha ln = txt_linha(TXT_ILHA_NUM, b, 243, 242, 239, 102);
-        txt_desenhar_alpha(ln, NV_TELA_W - NV_DETP_X - (float)ln.w,
+        txt_desenhar_alpha(ln, NV_TELA_W - ANC(NV_DETP_X) - (float)ln.w,
                            yl + (float)lc.h - (float)ln.h - 4.0f, a); } }
     yy = base + NV_DETF_CAB_GAP; }
 
@@ -6920,9 +6920,9 @@ static float desenhaChamada(float x, float y, const char *titulo,
   // de apoio em 18 a 55% e 40%.
   TxtLinha lt = txt_linha(TXT_LOG_T34, i18n(titulo), 243, 242, 239, 255);
   TxtLinha lf = txt_linha_corta(TXT_G18R, i18n(fonte), 243, 242, 239, 140,
-                                NV_TELA_W - NV_DETP_X * 2);
+                                NV_TELA_W - ANC(NV_DETP_X) * 2);
   TxtLinha lc = txt_linha_corta(TXT_G18R, i18n(custo), 243, 242, 239, 102,
-                                NV_TELA_W - NV_DETP_X * 2);
+                                NV_TELA_W - ANC(NV_DETP_X) * 2);
   txt_desenhar_alpha(lt, x, y, a);
   txt_desenhar_alpha(lf, x, y + lt.h + 6.0f, a * 0.95f);
   txt_desenhar_alpha(lc, x, y + lt.h + 6.0f + lf.h + 10.0f, a * 0.9f);
@@ -6954,9 +6954,9 @@ static void desenhaNumeros(float x, float y, float a) {
 // impede a secao de ser uma tela inteira com uma linha de "nao tem" no meio.
 static GfxRect frasesColuna(float x, float y, float hq, int fatos) {
   if (detalheRetrato())
-    return (GfxRect){x, y + (fatos ? hq + 48.0f : 0), NV_TELA_W - NV_DETP_X * 2, 0};
+    return (GfxRect){x, y + (fatos ? hq + 48.0f : 0), NV_TELA_W - ANC(NV_DETP_X) * 2, 0};
   return (GfxRect){x + (fatos ? FR_COL_W + FR_COL_GAP : 0), y,
-    fatos ? NV_TELA_W - NV_DETP_X * 2 - FR_COL_W - FR_COL_GAP : FR_COL_W, 0};
+    fatos ? NV_TELA_W - ANC(NV_DETP_X) * 2 - FR_COL_W - FR_COL_GAP : FR_COL_W, 0};
 }
 static float desenhaFrases(float x, float y, float a) {
   // 1.7.4: o componente antigo (frases | ficha de producao), em filme e serie.
@@ -7021,7 +7021,7 @@ static void cabecalhoSecao(int r, const char *cab, float x, float base, float a)
     if (n > 0) {
       char b[12]; snprintf(b, sizeof b, "%d", n);
       { TxtLinha ln = txt_linha(TXT_ILHA_NUM, b, 243, 242, 239, 102);
-        txt_desenhar_alpha(ln, NV_TELA_W - NV_DETP_X - (float)ln.w,
+        txt_desenhar_alpha(ln, NV_TELA_W - ANC(NV_DETP_X) - (float)ln.w,
                            yl + (float)lc.h - (float)ln.h - 4.0f, a); }
     } }
 }
@@ -7091,21 +7091,21 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
       // Serie com notas por episodio mostra o painel do web; o resto (filme, ou
       // serie sem essa fonte) cai nos cartoes de nota.
       if (ehSerie() && extras_n_temporadas() > 0)
-        desenhaNotasEpisodio(NV_DETP_X, yAba, a);
+        desenhaNotasEpisodio(ANC(NV_DETP_X), yAba, a);
       else
-        desenhaAvaliacoes(NV_DETP_X, yAba, a);
+        desenhaAvaliacoes(ANC(NV_DETP_X), yAba, a);
       return;
     }
     if (r == SEC_ELENCO && aba == ABA_RELACIONADOS) {
-      desenhaRelacionados(NV_DETP_X, yAba, a, 0, 7); return;
+      desenhaRelacionados(ANC(NV_DETP_X), yAba, a, 0, 7); return;
     }
     if (r == SEC_ELENCO && aba == ABA_COLECAO) {
-      desenhaColecao(NV_DETP_X, yAba,
+      desenhaColecao(ANC(NV_DETP_X), yAba,
                      foco.fileira == SEC_ELENCO ? animFoco[SEC_ELENCO][0] : 0.0f, a);
       return;
     }
     if (r == SEC_ELENCO && aba == ABA_COMENTARIOS) {
-      desenhaComentarios(NV_DETP_X, yAba, a); return;
+      desenhaComentarios(ANC(NV_DETP_X), yAba, a); return;
     } }
   if (n <= 0) return;
   // FILME le o layout empilhado; SERIE mantem as coordenadas medidas. Note que
@@ -7147,8 +7147,8 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
   if (!(EH_AUD(r) || r == SEC_FRASES || r == SEC_NOTAS || r == SEC_NOTAS_EP || r == SEC_PROGTEMP)) {
     float fim = 0.0f, topo = fmaxf(0.0f, y), base = fminf(NV_TELA_H, y + alturaSecao(r));
     for (int i = 0; i < n; i++) fim = fmaxf(fim, xItem(r, i) + larguraItem(r, i));
-    toquerol_vincular(&toqueSec[r], (GfxRect){NV_DETP_X, topo, NV_TELA_W - NV_DETP_X * 2, fmaxf(0, base - topo)},
-                     gfx_escala(), 0, fim - (NV_TELA_W - NV_DETP_X), 0, &scrollSec[r]);
+    toquerol_vincular(&toqueSec[r], (GfxRect){ANC(NV_DETP_X), topo, NV_TELA_W - ANC(NV_DETP_X) * 2, fmaxf(0, base - topo)},
+                     gfx_escala(), 0, fim - (NV_TELA_W - ANC(NV_DETP_X)), 0, &scrollSec[r]);
   }
 #endif
 
@@ -7172,7 +7172,7 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
   { const char *cab = cabecalhoDe(r);   // na serie: Trailers e Estudios
     if (cab) {
       TxtLinha lc = txt_linha(TXT_HEADLINE, cab, 245, 248, 255, 255);
-      txt_desenhar_alpha(lc, NV_DETP_X, y - lc.h - NV_DETF_CAB_GAP, a);
+      txt_desenhar_alpha(lc, ANC(NV_DETP_X), y - lc.h - NV_DETF_CAB_GAP, a);
     } }
   { float alt = alturaSecao(r);
     if (y > NV_TELA_H || y + alt < -40.0f) return; }
@@ -7181,23 +7181,23 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
   // desenha acima de `y`, dentro da mesma faixa) e antes do laco de colunas,
   // porque nao pertence a nenhuma pilula: e uma linha por FILEIRA. Em filme
   // secaoN(SEC_TEMPORADAS) ja devolveu 0 e nao se chega aqui.
-  if (r == SEC_TEMPORADAS) resumoTemporada(NV_DETP_X, y, a);
+  if (r == SEC_TEMPORADAS) resumoTemporada(ANC(NV_DETP_X), y, a);
   // O grafico e UM desenho; as colunas focaveis sao posicoes dentro dele.
   if (r == SEC_PROGTEMP) {
-    tgraf_desenhar(tgraf_dados(idx), NV_DETP_X, y, NV_TELA_W - NV_DETP_X * 2,
+    tgraf_desenhar(tgraf_dados(idx), ANC(NV_DETP_X), y, NV_TELA_W - ANC(NV_DETP_X) * 2,
                    nivel >= 1 && foco.fileira == SEC_PROGTEMP ? foco.coluna : -1,
                    temporadaEm(temporada), a, agora);
     return;
   }
 
   // The row owns its card culling; column zero may already be offscreen.
-  if (r == SEC_COMENTARIOS) desenhaComentarios(NV_DETP_X, y, a);
+  if (r == SEC_COMENTARIOS) desenhaComentarios(ANC(NV_DETP_X), y, a);
 
   for (int c = 0; c < n && c < N_ITENS; c++) {
     float f = animFoco[r][c];
     float x = xItem(r, c) - scrollSec[r];
     float w = larguraItem(r, c);
-    if (x > NV_TELA_W || x + w < -NV_DETP_X) continue;   // shadow/glow reach, not a whole extra card
+    if (x > NV_TELA_W || x + w < -ANC(NV_DETP_X)) continue;   // shadow/glow reach, not a whole extra card
     if (ponteiro_ativo() && a > 0.3f && c < secaoColunas(r) && alturaAlvo(r) > 0.0f)
       ponteiro_alvo(x, y,
                     w, alturaAlvo(r), ponteiroDetalhe, NULL, r, c);
@@ -7239,13 +7239,13 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
       // destaque), como os cartazes de "Mais como este" no filme. A altura
       // medida volta para o empilhamento do proximo quadro.
       case SEC_AUD_ARCO:
-        if (c == 0) desenhaNumeros(NV_DETP_X, y, a);
+        if (c == 0) desenhaNumeros(ANC(NV_DETP_X), y, a);
         break;
       case SEC_FRASES:
-        if (c == 0) frasesAlt = desenhaFrases(NV_DETP_X, y, a);
+        if (c == 0) frasesAlt = desenhaFrases(ANC(NV_DETP_X), y, a);
         break;
       case SEC_NOTAS:
-        if (c == 0) notasui_fontes_desenhar(notasDados(), NV_DETP_X, y, a, animFoco[SEC_NOTAS]);
+        if (c == 0) notasui_fontes_desenhar(notasDados(), ANC(NV_DETP_X), y, a, animFoco[SEC_NOTAS]);
         break;
       case SEC_ESTUDIOS:
         desenhaEstudio(x, y, c, f, a);
@@ -7272,13 +7272,13 @@ static void desenhaEsqueletoEpisodios(float a) {
   if (yt < NV_TELA_H && yt + NV_DETP_TEMP_H > 0) {
     for (c = 0; c < 3; c++) {
       float w = c == 0 ? 238.0f : 214.0f;
-      GfxRect p = { NV_DETP_X + c * 276.0f, yt, w, NV_DETP_TEMP_H };
+      GfxRect p = { ANC(NV_DETP_X) + c * 276.0f, yt, w, NV_DETP_TEMP_H };
       gfx_cor(p, 0.5f, 0.17f, 0.18f, 0.20f, a * 0.62f);
     }
   }
   if (ye < NV_TELA_H && ye + epCardH() > 0) {
     for (c = 0; c < 3; c++) {
-      float x = NV_DETP_X + c * epCardPasso();
+      float x = ANC(NV_DETP_X) + c * epCardPasso();
       const int m = epModerna();
       GfxRect card = { x, ye, epCardW(), m ? epThumbH() : epCardH() };
       GfxRect selo = { x + NV_DETP_EP_PAD, ye + (m ? NV_DETP_EPM_SELO_Y : NV_DETP_EP_SELO_Y),
@@ -7311,11 +7311,11 @@ static void desenhaEsqueletoRelacionados(float y, float a) {
   int c;
   if (y > NV_TELA_H || y + REL_CARD_H < -40.0f) return;
   for (c = 0; c < 5; c++) {
-    float x = NV_DETP_X + c * (REL_CARD_W + REL_CARD_GAP);
+    float x = ANC(NV_DETP_X) + c * (REL_CARD_W + REL_CARD_GAP);
     GfxRect card = { x, y, REL_CARD_W, REL_CARD_H };
     GfxRect tit  = { x, y + REL_CARD_H + 12.0f, REL_CARD_W * 0.82f, 20.0f };
     GfxRect ano  = { x, y + REL_CARD_H + 40.0f, 62.0f, 15.0f };
-    if (x + REL_CARD_W > NV_TELA_W - NV_DETP_X) break;
+    if (x + REL_CARD_W > NV_TELA_W - ANC(NV_DETP_X)) break;
     gfx_cor(card, raioCartaz(REL_CARD_W, REL_CARD_H), 0.133f, 0.133f, 0.133f, a * 0.82f);
     gfx_cor(tit, 0.5f, 0.22f, 0.23f, 0.25f, a * 0.55f);
     gfx_cor(ano, 0.5f, 0.20f, 0.21f, 0.23f, a * 0.45f);
@@ -7329,9 +7329,9 @@ static void desenhaEsqueletoElenco(float a) {
   float y = conteudoSec[SEC_ELENCO] - scrollY;
   if (y > NV_TELA_H || y + NV_DETF_EL_ALT < -40.0f) return;
   { TxtLinha lc = txt_linha(TXT_HEADLINE, "Elenco", 245, 248, 255, 255);
-    txt_desenhar_alpha(lc, NV_DETP_X, y - lc.h - NV_DETF_CAB_GAP, a); }
+    txt_desenhar_alpha(lc, ANC(NV_DETP_X), y - lc.h - NV_DETF_CAB_GAP, a); }
   for (int c = 0; c < 6; c++) {
-    float x = NV_DETP_X + c * NV_DETP_EL_PASSO;
+    float x = ANC(NV_DETP_X) + c * NV_DETP_EL_PASSO;
     GfxRect av = { x + (NV_DETP_EL_W-NV_DETP_EL_AVATAR)*.5f, y, NV_DETP_EL_AVATAR, NV_DETP_EL_AVATAR };
     GfxRect nome = { x, y + NV_DETP_EL_AVATAR + NV_DETP_EL_NOME_DY + 4.0f,
                      c % 2 ? 150.0f : 184.0f, 20.0f };
@@ -7357,7 +7357,7 @@ static void desenhaPessoa(float a) {
   // 640 unico decodificava o retrato inteiro para 280 de cartao. Ver
   // tests/artemenor.c.
   { GLuint t = pessoa_foto()[0] ? tex_obter_larg(pessoa_foto(), PES_FOTO_W) : 0;
-    GfxRect r = { NV_DETP_X, 96.0f, PES_FOTO_W, PES_FOTO_H };
+    GfxRect r = { ANC(NV_DETP_X), 96.0f, PES_FOTO_W, PES_FOTO_H };
     if (t) {
       gfx_tex_aspect_atual = tex_aspecto(pessoa_foto());
       gfx_rect(r, t, GFX_CARD, 0, 0, 0, raioCartaz(PES_FOTO_W, PES_FOTO_H), 0, 0, 0, a);
@@ -7369,15 +7369,15 @@ static void desenhaPessoa(float a) {
   { float y = 96.0f + PES_FOTO_H + 32.0f;
     TxtLinha ln = txt_linha_corta(TXT_TITULO3, pessoa_nome(), 245, 248, 255, 255,
                                   PES_FOTO_W);
-    txt_desenhar_alpha(ln, NV_DETP_X, y, a);
+    txt_desenhar_alpha(ln, ANC(NV_DETP_X), y, a);
     y += ln.h + 10.0f;
     if (pessoa_area()[0]) {
       TxtLinha la = txt_linha(TXT_DET_META2, pessoa_area(), 150, 154, 163, 255);
-      txt_desenhar_alpha(la, NV_DETP_X, y, a * 0.9f);
+      txt_desenhar_alpha(la, ANC(NV_DETP_X), y, a * 0.9f);
       y += la.h + 18.0f;
     }
     if (pessoa_bio()[0])
-      txt_bloco(TXT_DET_META2, pessoa_bio(), 190, 195, 205, NV_DETP_X, y,
+      txt_bloco(TXT_DET_META2, pessoa_bio(), 190, 195, 205, ANC(NV_DETP_X), y,
                 PES_FOTO_W, 32.0f, a * 0.9f, 6);
   }
 

@@ -1357,7 +1357,7 @@ static void tvDesenhar(void) {
 #define TOPO_VAO_MIN   TOPO_VAO
 #define TOPO_PAD_MIN   TP(10.0f)
 #define TOPO_TXT       TXT_BODY     // o corpo dos rotulos da rail
-#define TOPO_RELOGIO   ((NV_ILHA_MARGEM_D * gfx_escala_ui() + ilha_relogio_largura() + 16.0f) / NV_MENU_ESCALA)
+#define TOPO_RELOGIO   ((NV_ILHA_MARGEM_D * gfx_escala_ui_base() + ilha_relogio_largura() + 16.0f) / NV_MENU_ESCALA)
 
 // AS CAPSULAS VIAJAM entre as pilulas (Capsule::step deles): mola criticamente
 // amortecida na borda esquerda E na largura (uma pilula larga vira estreita

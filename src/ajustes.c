@@ -175,7 +175,7 @@ static int focoEscuro(void) { return tintaFoco() < 128; }   // superficie do foc
 // "Pôsteres e cards"), duas palavras para o mesmo lugar. Agora o nome da
 // coluna e o titulo da lista sao a mesma string. A lista perde 40 px e o
 // painel de ajuda fica exatamente onde estava (1320).
-#define AJ_IDX_X        ajustes_conteudo_x()
+#define AJ_IDX_X        (ajustes_conteudo_x() / gfx_escala_txt())   // real px under text scale (#205)
 #define AJ_IDX_W        310.0f
 #define AJ_IDX_GAP       48.0f
 #define AJ_IDX_H         52.0f

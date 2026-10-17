@@ -694,7 +694,7 @@ void ilha_ancorar(float x, float y, int daDireita) {
 // Ajustes). `guia` ficou so por compatibilidade com quem chama.
 void ilha_posicionar(int guia) {
   (void)guia;
-  ilha_ancorar(NV_TELA_W - NV_ILHA_MARGEM_D, NV_ILHA_Y, 1);
+  ilha_ancorar(NV_TELA_W - NV_ILHA_MARGEM_D / gfx_escala_txt(), NV_ILHA_Y / gfx_escala_txt(), 1);
 }
 
 // COM SINAL: quem renova a atividade chama SDL_GetTicks DEPOIS de o quadro ter
@@ -2145,7 +2145,7 @@ static void ilha_desenharCorpo_(Uint32 agora) {
     modalFocoA[i] = anim_mola(modalFocoA[i], modalAberto && i == modalFoco ? 1.0f : 0.0f, dt, NV_MOLA_FOCO);
   // POSICAO, num ponto so (ilha_ancorar ou o padrao, que e a direita).
   if (ancDef) { x = ancX; y = ancY; dir = ancDir; }
-  else { x = NV_TELA_W - NV_ILHA_MARGEM_D; y = NV_ILHA_Y; dir = 1; }
+  else { x = NV_TELA_W - NV_ILHA_MARGEM_D / gfx_escala_txt(); y = NV_ILHA_Y / gfx_escala_txt(); dir = 1; }
   // Quem ancora em outro x (testes) desliza em vez de saltar; troca de lado ou
   // ilha apagada assenta seco.
   { static float xSuave; static int xDir = -1;

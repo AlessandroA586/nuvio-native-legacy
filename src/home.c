@@ -718,10 +718,10 @@ static float homeConteudoX(void) {
   // espelha sua reserva para centralizar sem desenhar por baixo dela.
   if (homeRetratoTelefone())
     return ajustes_rail_largura_fixa() > 0.0f ? fmaxf(48.0f, ajustes_conteudo_x()) : 48.0f;
-  return ajustes_conteudo_x();
+  return ANC(ajustes_conteudo_x());
 }
 static float homeMargemDireita(void) {
-  return homeRetratoTelefone() ? homeConteudoX() : NV_HOME_SAFE_RIGHT;
+  return homeRetratoTelefone() ? homeConteudoX() : ANC(NV_HOME_SAFE_RIGHT);
 }
 static float homeConteudoDireita(void) { return NV_TELA_W - homeMargemDireita(); }
 static float homeLarguraUtil(void) {
@@ -755,10 +755,10 @@ static float repousoFileirasDin(void) {
   return NV_DIN_REPOUSO_FIL * (heroCompactoTelefone() ? 0.75f : 1.0f);
 }
 static float empurraHeroModerna(void) {
-  if (homeRetratoTelefone()) return 620.0f - NV_SHELF_TOP;
+  if (homeRetratoTelefone()) return 620.0f - ANC(NV_SHELF_TOP);
   return heroCompactoTelefone()
-       ? (NV_SHELF_TOP + NV_HOME_HERO_EMPURRA) * 0.75f - NV_SHELF_TOP
-       : NV_HOME_HERO_EMPURRA;
+       ? (ANC(NV_SHELF_TOP) + ANC(NV_HOME_HERO_EMPURRA)) * 0.75f - ANC(NV_SHELF_TOP)
+       : ANC(NV_HOME_HERO_EMPURRA);
 }
 static float heroVisivelToque(void) {
 #ifdef NV_TOUCH_UI
@@ -784,7 +784,7 @@ static float topoFileiras(void) {
     case HOME_LAYOUT_PADRAO:
       return heroOn ? NV_PAD_TOPO_FIL : NV_DIN_TOPO_FIL - 10.0f;
     case HOME_LAYOUT_DINAMICA: return NV_DIN_TOPO_FIL;
-    default:                   return NV_SHELF_TOP;
+    default:                   return ANC(NV_SHELF_TOP);
   }
 }
 // Acima disto nada de fileira se desenha (o gfx_recorte): a Moderna deixa as
@@ -799,14 +799,14 @@ static float corteFileiras(void) {
     if (layoutHome() == HOME_LAYOUT_PADRAO)
       return fmaxf(132.0f, NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f - scrollY);
     if (layoutHome() == HOME_LAYOUT_DINAMICA) return 132.0f;
-    return 132.0f + (NV_SHELF_TOP - 132.0f) * heroVisivelToque();
+    return 132.0f + (ANC(NV_SHELF_TOP) - 132.0f) * heroVisivelToque();
   }
 #endif
   switch (layoutHome()) {
     case HOME_LAYOUT_PADRAO:
       return ajustes_hero_ligado() ? NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f : 0.0f;
     case HOME_LAYOUT_DINAMICA: return 0.0f;
-    default:                   return NV_SHELF_TOP - (heroCompactoTelefone() ? 0.0f : 96.0f);
+    default:                   return ANC(NV_SHELF_TOP) - (heroCompactoTelefone() ? 0.0f : 96.0f);
   }
 }
 // Quanto as fileiras DESCEM com o foco no destaque (a rolagem vale menos isto).
@@ -4648,7 +4648,7 @@ static GfxRect heroArtworkRect(int lay, int cheio) {
   if (heroCompactoTelefone()) {
     if (lay == HOME_LAYOUT_DINAMICA) r.h = repousoFileirasDin() - 20.0f;
     else {
-      float repouso = NV_SHELF_TOP + empurraHeroModerna() - 20.0f;
+      float repouso = ANC(NV_SHELF_TOP) + empurraHeroModerna() - 20.0f;
       float primeira = topoFileiras() - scrollY - 20.0f;
       r.h = fminf(r.h, fminf(repouso, fmaxf(132.0f, primeira)));
       if (homeRetratoTelefone()) { r.x = 0.0f; r.w = NV_TELA_W; }
@@ -4680,7 +4680,7 @@ static GfxRect heroArtworkOverlayRect(GfxRect r, GfxRect hero) {
 static float heroBaseCopia(int lay, GfxRect r, float empurra, float descida) {
   if (lay == HOME_LAYOUT_PADRAO) return r.y + r.h - NV_PAD_TEXTO_BASE + descida;
   if (lay == HOME_LAYOUT_DINAMICA) return r.y + alturaTextoHeroDin() - NV_DIN_TEXTO_BASE + descida;
-  return NV_SHELF_TOP - NV_HERO_COPY_GAP - 24.0f + empurra + descida;
+  return ANC(NV_SHELF_TOP - NV_HERO_COPY_GAP - 24.0f) + empurra + descida;
 }
 static GfxRect heroEditorialRect(int editorial, float aspect) {
   float largura = NV_TELA_W;
@@ -4963,7 +4963,7 @@ static void desenhaHero(Uint32 agora, float saida) {
           // O bloco comeca logo abaixo do nome e TERMINA antes do cabecalho da
           // fileira (NV_SHELF_TOP): o numero de linhas da bio e o que cede.
           // Largura 780: fica aquem do cartao da capa (que comeca em 1096).
-          float yy=fimTitulo+30,teto=NV_SHELF_TOP-30,larg=780;
+          float yy=fimTitulo+30,teto=ANC(NV_SHELF_TOP)-30,larg=780;
           const char *meta=diretor_meta(folder->title),*bio=diretor_bio(folder->title),*con=diretor_conhecido(folder->title);
           float fixo=(meta[0]?38:0)+(con[0]?38:0)+34;   // meta + conhecido + legenda
           int linhas=(int)((teto-yy-fixo-12)/31);if(linhas>3)linhas=3;
@@ -5272,7 +5272,7 @@ static void desenhaHero(Uint32 agora, float saida) {
   // Logo, actions, then the real information and compact synopsis. Keep
   // each layout's bottom boundary; use the measured copy for the action Y.
   float empurra = scrollY < 0.0f ? -scrollY : 0.0f;
-  float empurraMax = lay == HOME_LAYOUT_MODERNA ? empurraHero() : NV_HOME_HERO_EMPURRA;
+  float empurraMax = lay == HOME_LAYOUT_MODERNA ? empurraHero() : ANC(NV_HOME_HERO_EMPURRA);
   float aBotao = anim_clamp(empurra / empurraMax, 0.0f, 1.0f);
   float base = heroBaseCopia(lay, r, empurra, descidaCopy);
   // Padrao e Dinamica ancoram o bloco na BASE DO PROPRIO DESTAQUE (e o botao
@@ -6346,7 +6346,7 @@ static void desenhaLinhaTempo(int r, float topoFil, float top, float passo, floa
   prog = 1.0f - (1.0f - prog) * (1.0f - prog) * (1.0f - prog);
   tempoCol[r] = anim_mola(tempoCol[r], (float)alvo, dt, NV_MOLA_FOCO);
   ajustes_acento(&ar, &ag, &ab);
-#define XCOL(k) (ajustes_conteudo_x() + (k) * passo - scrollX[r] + lw * 0.5f + bordaX(r))
+#define XCOL(k) (homeConteudoX() + (k) * passo - scrollX[r] + lw * 0.5f + bordaX(r))
   x0 = XCOL(0.0f); xN = XCOL((float)(fl->n - 1));
   if (fl->n == 1) xN = x0 + lw;
   { float xf = x0 + (xN - x0) * prog;
@@ -6390,7 +6390,7 @@ static void desenhaLinhaTempo(int r, float topoFil, float top, float passo, floa
       tempoAno[r] = anim_mola(tempoAno[r], (float)ano, dt, NV_MOLA_FOCO * 0.6f);
       snprintf(s, sizeof s, "%d", (int)(tempoAno[r] + 0.5f));
       t = txt_linha(TXT_ROW_TITULO, s, (int)(ar * 255), (int)(ag * 255), (int)(ab * 255), 255);
-      if (focada) txt_desenhar(t, NV_TELA_W - NV_HOME_SAFE_RIGHT - 150.0f - t.w, topoFil);
+      if (focada) txt_desenhar(t, NV_TELA_W - ANC(NV_HOME_SAFE_RIGHT) - 150.0f - t.w, topoFil);
     } }
 }
 
@@ -6718,7 +6718,7 @@ float home_vitrine_topo(float filH) {
   switch (home_vitrine_layout()) {
     case HOME_LAYOUT_PADRAO:   return NV_PAD_TOPO_FIL;
     case HOME_LAYOUT_DINAMICA: return NV_TELA_H - filH;
-    default:                   return NV_SHELF_TOP;
+    default:                   return ANC(NV_SHELF_TOP);
   }
 }
 void home_vitrine_medida(float *w, float *h, float *passo, float *rotH) {

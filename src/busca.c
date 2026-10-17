@@ -93,8 +93,8 @@ static int buRetratoTelefone(void) { return buRetrato() && buTelefone(); }
 static int buTecladoNativo(void) { return buTelefone() && st_ime_disponivel(); }
 static int buUmaColuna(void) { return buRetrato() || buTecladoNativo(); }
 static float buCampoH(void) { return buTecladoNativo() ? 104.0f : 76.0f; }
-static float buMargem(void) { return buTelefone() ? 48.0f : BU_MARG; }
-static float buX(void)   { return ajustes_rail_largura_fixa() + buMargem(); }
+static float buMargem(void) { return buTelefone() ? 48.0f : ANC(BU_MARG); }
+static float buX(void)   { return ANC(ajustes_rail_largura_fixa()) + buMargem(); }
 static float buDir(void) { return NV_TELA_W - (buRetratoTelefone() ? buX() : buMargem()); }
 static float buColW(void) { return buUmaColuna() ? buDir() - buX() : 520.0f; }
 static float buResY(void);
