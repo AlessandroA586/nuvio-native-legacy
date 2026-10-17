@@ -309,3 +309,4 @@
   0, /* trailer audio: Automatic */
   0, /* anime player (#205): Same as Player */
   0, /* opening screen style (#205): Center (A3) */
+  2, /* text and component scale: 100% */
