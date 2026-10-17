@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `b03502f84` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-16T22:15:31-03:00. 478 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `f40a93dc3` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-16T22:40:00-03:00. 478 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -180,8 +180,8 @@ Por status:
 | Status | Qtd |
 |---|---|
 | lancada | 304 |
-| integrada | 65 |
-| aberta | 48 |
+| integrada | 67 |
+| aberta | 47 |
 | respondida | 22 |
 | por-desenho | 15 |
 | fechada-sem-resposta | 7 |
@@ -189,7 +189,6 @@ Por status:
 | fora-do-escopo | 4 |
 | em_revisao | 3 |
 | duplicada | 2 |
-| em_job | 1 |
 
 Por release (grupo de planejamento):
 
@@ -320,33 +319,33 @@ Notas:
 | [#459](https://github.com/iqui27/nuvio-native-legacy/issues/459) | Send partial playback progress to Simkl | LG | feature | integrada | - | 2.0.6 | fe1366e5 | sem comentários | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#461](https://github.com/iqui27/nuvio-native-legacy/issues/461) | Top toolbar | Android | feature | integrada | - | 2.0.6 | f3de11e7 | nós 10-12 | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#462](https://github.com/iqui27/nuvio-native-legacy/issues/462) | Samsung .tpk: test build for automatic subtitle sync (Tizen  | Samsung .tpk | meta | integrada | - | 2.0.6 | 84095af, 3247fcd22, da9e686a7 | autor 10-12 | merged em integracao/2.0.5 (1d946dad0 i18n: fill subtitle-sync entries in all 28 languag) |
-| [#468](https://github.com/iqui27/nuvio-native-legacy/issues/468) | All Jellyfin catalogs do not show in catalogs list | LG | bug | aberta | - | 2.0.6 | - | sem comentários | Pedir log e nomes/quantidade dos catálogos esperados sem endereço/credenciais; obter fixtu |
+| [#468](https://github.com/iqui27/nuvio-native-legacy/issues/468) | All Jellyfin catalogs do not show in catalogs list | LG | bug | integrada | - | 2.0.6 | b0e429762, c47a40788, 08c98b017 | sem comentários | merged 08c98b017; review OK j-rev-homerefresh; build+install e confirmar na TV que a filei |
 | [#494](https://github.com/iqui27/nuvio-native-legacy/issues/494) | Add contribution path for Aniskip and TheIntroDB skip marker | ? | feature | aberta | - | 2.0.6 | - | sem comentários | triar e criar job |
 | [#496](https://github.com/iqui27/nuvio-native-legacy/issues/496) | No next-episode suggestion / no quick next episode shortcut  | ? | feature | aberta | - | 2.0.6 | - | sem comentários | triar e criar job |
 | [#497](https://github.com/iqui27/nuvio-native-legacy/issues/497) | Prioritize continue watch sync on startup | ? | feature | aberta | - | 2.0.6 | - | sem comentários | triar e criar job |
 | [#500](https://github.com/iqui27/nuvio-native-legacy/issues/500) | [Samsung Tizen 9 / V2.0.5] Trailers not playing on Hero | ? | bug | integrada | - | 2.0.6 | b07ef570a, bf9edb493, agente/205-herotrailer | sem comentários | merged via agente/205-trailerexp/ad3b042cb + herotrailer; review OK j-rev-trailerexp |
-| [#501](https://github.com/iqui27/nuvio-native-legacy/issues/501) | [Android TV] Add External Player Selection and Custom Subtit | ? | feature | integrada | - | 2.0.6 | 161cdebd2, 281b4af37, 059f4d4f3/276207fac/a04f2a820; | sem comentários | build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7 |
+| [#501](https://github.com/iqui27/nuvio-native-legacy/issues/501) | [Android TV] Add External Player Selection and Custom Subtit | ? | feature | integrada | - | 2.0.6 | 161cdebd2, 281b4af37, 059f4d4f3/276207fac/a04f2a820; | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
 | [#505](https://github.com/iqui27/nuvio-native-legacy/issues/505) | My P2p add on sources don’t load with version2.05 | ? | bug | integrada | - | 2.0.6 | b576c7a9, b576c7a9a, cdb45cb92 | sem comentários | merged (fix i505 8f4fb5587 + 6d524f947 PR #559 URL http sem P2P); build+install no .tpk e  |
 | [#506](https://github.com/iqui27/nuvio-native-legacy/issues/506) | App fails to connect: "The Nuvio account server didn't respo | ? | bug | integrada | - | 2.0.6 | 0e567d1a, agente/205-dicascontrole | sem comentários | merged em integracao/2.0.5 (a5c857c51 Merge integracao/2.0.5 into agente/205-dicascontro) |
 | [#507](https://github.com/iqui27/nuvio-native-legacy/issues/507) | Library on home | ? | feature | aberta | - | 2.0.6 | - | sem comentários | triar e criar job |
 | [#508](https://github.com/iqui27/nuvio-native-legacy/issues/508) | Stream loading backdrop | ? | feature | integrada | - | 2.0.6 | d57b79e9, d57b79e9b | sem comentários | merged em integracao/2.0.5 (95d225dc2 Merge branch 'integracao/2.0.5' into agente/205-i5) |
 | [#530](https://github.com/iqui27/nuvio-native-legacy/issues/530) | Subtitle issues | ? | ? | integrada |  | 2.0.6 | cbd542148, 23cb26843, agente/205-legatraso | sem comentários | merged em integracao/2.0.5 (23cb26843, sinal do atraso manual invertido); revisao BLOQUEIA |
-| [#539](https://github.com/iqui27/nuvio-native-legacy/issues/539) | Feature Request: Add Deep Link Support to Open Specific Movi | ? | feature | integrada |  | 2.0.6 | a4f220cd7, 8f38bb943/a3eb1e19a/7cf145dca/f44e64863;, a4f220cd7 | sem comentários | build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7 |
-| [#545](https://github.com/iqui27/nuvio-native-legacy/issues/545) | Catalog Now Showing | ? | bug | integrada | - | 2.0.6 | 26b9c635b/21d1783b6/67985ea5d, merged, review | sem comentários | build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7 |
-| [#548](https://github.com/iqui27/nuvio-native-legacy/issues/548) | Mark as watched not working | ? | bug | integrada | - | 2.0.6 | merged, 66a608ef7/8330673a8/2d04fbecc/da2c69701/f87c41ed7/9bc31cc9d/b074d9fd5/5b37cecd8, 91da5935e | sem comentários | build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7 |
+| [#539](https://github.com/iqui27/nuvio-native-legacy/issues/539) | Feature Request: Add Deep Link Support to Open Specific Movi | ? | feature | integrada |  | 2.0.6 | a4f220cd7, 8f38bb943/a3eb1e19a/7cf145dca/f44e64863;, a4f220cd7 | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
+| [#545](https://github.com/iqui27/nuvio-native-legacy/issues/545) | Catalog Now Showing | ? | bug | integrada | - | 2.0.6 | 26b9c635b/21d1783b6/67985ea5d, merged, review | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
+| [#548](https://github.com/iqui27/nuvio-native-legacy/issues/548) | Mark as watched not working | ? | bug | integrada | - | 2.0.6 | merged, 66a608ef7/8330673a8/2d04fbecc/da2c69701/f87c41ed7/9bc31cc9d/b074d9fd5/5b37cecd8, 91da5935e | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
 | [#549](https://github.com/iqui27/nuvio-native-legacy/issues/549) | Needs the See All tile for every row in showcase layout | ? | enhancement | integrada | - | 2.0.6 | 4baf783fa | sem comentários | build+install no HEAD b72189c5d e resposta na issue |
-| [#551](https://github.com/iqui27/nuvio-native-legacy/issues/551) | Catalog Not Loading 2.0.6 | LG webOS 25/26 | bug | integrada | 2.0.6 | 2.0.6 | 1c9043ed0/a2e9daf91, merged, e680776ed | sem comentários | build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7 |
-| [#552](https://github.com/iqui27/nuvio-native-legacy/issues/552) | The add-on sources aren't appearing | ? | bug | integrada | 2.0.6 | 2.0.6 | cbcf467f5/6d524f947/27988615e, merged, 0d7821a01 | sem comentários | build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7 |
+| [#551](https://github.com/iqui27/nuvio-native-legacy/issues/551) | Catalog Not Loading 2.0.6 | LG webOS 25/26 | bug | integrada | 2.0.6 | 2.0.6 | 1c9043ed0/a2e9daf91, merged, e680776ed | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
+| [#552](https://github.com/iqui27/nuvio-native-legacy/issues/552) | The add-on sources aren't appearing | ? | bug | integrada | 2.0.6 | 2.0.6 | cbcf467f5/6d524f947/27988615e, merged, 0d7821a01 | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
 | [#553](https://github.com/iqui27/nuvio-native-legacy/issues/553) | queda de desempenho | ? | bug | integrada | - | 2.0.6 | - | sem comentários | merged (perf glass + detail); build+install no HEAD e medir na TV antes de responder |
-| [#555](https://github.com/iqui27/nuvio-native-legacy/issues/555) | Search does not work as expected | ? | ? | integrada | - | 2.0.6 | merged, 438423097 | sem comentários | build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7 |
-| [#556](https://github.com/iqui27/nuvio-native-legacy/issues/556) | Special / out-of-order seasons recognised by Trakt are not s | ? | ? | integrada | - | 2.0.6 | 054ccef24 | sem comentários | build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7 |
-| [#557](https://github.com/iqui27/nuvio-native-legacy/issues/557) | Playback cannot be skipped to a particular time stamp | ? | ? | aberta | - | 2.0.6 | - | sem comentários | triar e criar job |
-| [#558](https://github.com/iqui27/nuvio-native-legacy/issues/558) | Black screen on launch | ? | bug | integrada | - | 2.0.6 | cc49341e6, merged, a1888d007 | sem comentários | build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7 |
-| [#562](https://github.com/iqui27/nuvio-native-legacy/issues/562) | Reload button in player | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar e criar job |
-| [#564](https://github.com/iqui27/nuvio-native-legacy/issues/564) | Request to Add Playback Speed Controls | ? | feature | aberta | - | 2.0.6 | - | sem comentários | triar e criar job |
-| [#565](https://github.com/iqui27/nuvio-native-legacy/issues/565) | PenguPlay add on doesn't work | ? | bug | em_job | - | 2.0.6 | 5aad21874, 68cf2c63b/c32a87bbf | sem comentários | falta fix de produto PenguPlay com P2P off — criar job |
-| [#566](https://github.com/iqui27/nuvio-native-legacy/issues/566) | Some issues | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar e criar job |
-| [#570](https://github.com/iqui27/nuvio-native-legacy/issues/570) | [Samsung Tizen 9] Changing episode source shows previous mov | Samsung Tizen 9 | bug | aberta | - | 2.0.6 | - | sem comentários | triar e criar job |
+| [#555](https://github.com/iqui27/nuvio-native-legacy/issues/555) | Search does not work as expected | ? | ? | integrada | - | 2.0.6 | merged, 438423097 | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
+| [#556](https://github.com/iqui27/nuvio-native-legacy/issues/556) | Special / out-of-order seasons recognised by Trakt are not s | ? | ? | integrada | - | 2.0.6 | 054ccef24 | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
+| [#557](https://github.com/iqui27/nuvio-native-legacy/issues/557) | Playback cannot be skipped to a particular time stamp | ? | ? | aberta | - | 2.0.6 | - | sem comentários | triar: seek para timestamp especifico; criar job |
+| [#558](https://github.com/iqui27/nuvio-native-legacy/issues/558) | Black screen on launch | ? | bug | integrada | - | 2.0.6 | cc49341e6, merged, a1888d007 | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
+| [#562](https://github.com/iqui27/nuvio-native-legacy/issues/562) | Reload button in player | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: botao de recarregar fonte no player; criar job |
+| [#564](https://github.com/iqui27/nuvio-native-legacy/issues/564) | Request to Add Playback Speed Controls | ? | feature | aberta | - | 2.0.6 | - | sem comentários | triar: controle de velocidade de reproducao; criar job |
+| [#565](https://github.com/iqui27/nuvio-native-legacy/issues/565) | PenguPlay add on doesn't work | ? | bug | integrada | - | 2.0.6 | d25a3e513, 68cf2c63b/c32a87bbf, 5aad21874 | sem comentários | merged 5aad21874; review OK j-rev-i565pengu (tests/pengu.sh 27/27 com P2P off); falta test |
+| [#566](https://github.com/iqui27/nuvio-native-legacy/issues/566) | Some issues | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar "Some issues": esperar detalhes do usuario antes de criar job |
+| [#570](https://github.com/iqui27/nuvio-native-legacy/issues/570) | [Samsung Tizen 9] Changing episode source shows previous mov | Samsung Tizen 9 | bug | aberta | - | 2.0.6 | - | sem comentários | triar: trocar de fonte mostra o filme anterior e perde a retomada (Tizen 9) |
 
 Notas:
 
@@ -360,7 +359,7 @@ Notas:
 - **#459**: LG 2.0.4, Simkl conectado diretamente: pede enviar progresso parcial ao pausar/sair para retomar em outros apps. src/simkl.c:simkl_ler_playback e simkl_continuar leem pausados; simkl_episodios_marcar/simkl_titulo_marcar enviam histórico de visto. src/player.c chama trakt_scrobble ao tocar/pausar; não há envio Simkl equivalente neste caminho. Leitura de playback e histórico existem, envio incremental Simkl não comprovado. Limite demonstrado do cliente, sem afirmar capacidade atual da API Simkl offline. Escrivão 14/10 14:47: integrada via simkl-scrobble.
 - **#461**: Pede opção de toolbar no topo; mantenedor responde que hoje há menu lateral e relaciona #407. src/menu.c:desenhaBarra/geoEm implementam rail/painel lateral; src/detail.c roteia CIMA para área social e ESQUERDA para menu. Não há opção top toolbar comprovada; barra social no topo não é substituto da navegação principal. Sem bug ou causa a diagnosticar. Escrivão 14/10 14:47: integrada via menutopo.
 - **#462**: Job i462sync done 20:07: 84095af auto sync rejection translated tracks; tests autosync.sh/legsync.sh rc 0. [sync 2026-10-15: agente/205-i18n462 integrada] [sync 2026-10-15: agente/205-i462sync integrada] Escrivao 10-15 22:49: merged via agente/205-i462sync (da9e686a7).
-- **#468**: C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato.
+- **#468**: [sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato.
 - **#494**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#496**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#497**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
@@ -384,7 +383,7 @@ Notas:
 - **#558**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova, tela preta no lancamento num Q50A Tizen 6 2.0.6. Job j-tpk558 done (cc49341e6, tools/tpk.sh rc 0); sem review. | Escrivao 10-16 14:58: merged a1888d007 (adiar IME da Samsung e expor falha no boot); review OK j-rev-tpk558; spec docs/issues/558-tpk-startup.md. | [sync 2026-10-16 21:00] merged a1888d007; review OK j-rev-tpk558 | [sync 2026-10-16 22:55] merged a1888d007 no HEAD f0f4f4928 | Escrivão 2026-10-16 22:1x: merged a1888d007 nesta janela (HEAD b72189c5d); review j-rev-tpk558; tela preta no lancamento .tpk; confirmar na TV do reporter; entra na 2.0.7
 - **#562**: Nova em 2026-10-16 (issues.json, labels [bug]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova no snapshot 10-16 21:00 | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#564**: Nova em 2026-10-16 (issues.json, labels [enhancement]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova no snapshot 10-16 21:00 | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
-- **#565**: Nova em 2026-10-16 (issues.json, labels [bug]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures provam que a politica notWebReady esconde 27/27 streams https publicos; falta o fix de produto. | [sync 2026-10-16 22:55] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures merged, produto segue aberto
+- **#565**: [sync 2026-10-16 22:40] Jobs j-i565pengu (tests, 17:46) e j-rev-i565pengu (VEREDITO OK). merged 5aad21874. Os dois commits sao so fixtures/testes; o fix de produto (d25a3e513) ja estava integrado. Nova em 2026-10-16 (issues.json, labels [bug]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures provam que a politica notWebReady esconde 27/27 streams https publicos; falta o fix de produto. | [sync 2026-10-16 22:55] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures merged, produto segue aberto
 - **#566**: Nova em 2026-10-16 21:13 (issues.json, labels [bug]). Sem job no snapshot. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova em 2026-10-16 21:13 (issues.json, labels [bug]) | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#570**: Nova em 2026-10-16 23:34 (issues.json, Tizen 9; trocar de fonte do episodio mostra o filme anterior e reseta a retomada). | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 
@@ -1148,7 +1147,7 @@ Notas:
 | [#476](https://github.com/iqui27/nuvio-native-legacy/issues/476) | No internet | ? | bug | aberta | - | - | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
 | [#480](https://github.com/iqui27/nuvio-native-legacy/issues/480) | Remember Preferred Audio Language Across Sources | ? | feature | aberta | - | - | - | sem comentários | triar: reaberta no GH 10-15; sem commit de conserto identificado |
 | [#482](https://github.com/iqui27/nuvio-native-legacy/issues/482) | Continue Watching content leaks between profiles | ? | bug | em_revisao | - | - | - | sem comentários | fix novo + re-review (ultimo VEREDITO BLOQUEIA); depois merge e resposta na issue |
-| [#483](https://github.com/iqui27/nuvio-native-legacy/issues/483) | Anime subtitles not rendering | ? | bug | integrada | - | - | 251632be, 251632beb, 251632be | sem comentários | build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7 |
+| [#483](https://github.com/iqui27/nuvio-native-legacy/issues/483) | Anime subtitles not rendering | ? | bug | integrada | - | - | 251632be, 251632beb, 251632be | sem comentários | build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7 |
 | [#511](https://github.com/iqui27/nuvio-native-legacy/issues/511) | Show subtitle track name instead of only showing language | ? | enhancement | integrada |  | - | f0ab7c91, f0ab7c918 | sem comentários | merged em integracao/2.0.5 (2e05dd94d subtitles: show track name as the row title, langu) |
 | [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | integrada |  | - | 84add4581 | sem comentários | merged em integracao/2.0.5 (adbaf0f9f fix: initialize episode outputs before storing sou) |
 | [#528](https://github.com/iqui27/nuvio-native-legacy/issues/528) | [Bug/FR] Cast Images Fail to Load — Request for Metadata Add | ? | ? | integrada |  | - | f5c785d4f | sem comentários | merged em integracao/2.0.5 (10501d047 fix(metadata): preserve addon cast portraits when ) |
@@ -1258,6 +1257,10 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 
 | Data | Quem | O que | Issues | Ref | Resultado | Evidência |
 |---|---|---|---|---|---|---|
+| 2026-10-16 22:27 | dono (integracao) | Revert do merge agente/205-foscovelho (f40a93dc3): dono achou o fosco anterior (captura de tela) mais bonito e mais leve; otimizar esse caminho | - | f40a93dc3 | passou | log.txt + j-foscoleve3.prompt (pedido literal do dono) |
+| 2026-10-16 22:21 | job-claude (j-rev-homerefresh) | Review final de agente/205-homerefresh (#468, views Jellyfin + refresh da Home): VEREDITO OK | #468 | b0e429762/c47a40788 (agente/205-homerefresh) | passou | /Volumes/ExternalSSD/tmp/rev/j-rev-homerefresh.log |
+| 2026-10-16 22:12 | job-claude (j-rev-semepanterior) | Review final de agente/205-semepanterior (remocao do botao "episodio anterior"): VEREDITO OK | - | 4e6b592d8 (agente/205-semepanterior) | passou | /Volumes/ExternalSSD/tmp/rev/j-rev-semepanterior.log |
+| 2026-10-16 22:08 | job-claude (j-rev-foscovelho-r4) | Review r4 de agente/205-foscovelho (vignette do frost na fonte): VEREDITO OK — chegou depois do merge 76bc9d0c3, que foi revertido | - | 35f5f4fc3 (agente/205-foscovelho) | passou | /Volumes/ExternalSSD/tmp/rev/j-rev-foscovelho-r4.log |
 | 2026-10-16 21:14 | job-claude (fix foscovelho r4) | Fix r4 do frost: toda a sombra do backdrop entra na fonte do frost; tests/vidro_neutro.sh + build-local rc 0 | - | 35f5f4fc3 | passou | j-fix-foscovelho-r4.log |
 | 2026-10-16 21:01 | job-claude (build+install HEAD b03502f84) | Build e install do HEAD b03502f84: Android rc 0, .tpk rc 0, webOS C9 rc 255 (TV sem SSH); TVs seguem em cb7ece972 | - | build/android/Nuvio-2.0.6-android.apk | inconclusivo | instalado.txt 10-16 21:01 |
 | 2026-10-16 20:57 | Magpie nv-revisao (revg pfhome545) | Review follow-up #545: fileira fora da cota atualiza ao adicionar | #545 | b03502f84 (975638744/53b050753) | passou | j-revg-pfhome545.log |
@@ -4317,11 +4320,11 @@ Quem validou o quê, em que ref, com que resultado e onde está a prova; mais re
 ### Frost barato igual ao aprovado na LG C9
 
 - Plataforma: Todas
-- Status: em_revisao
+- Status: revertida
 - Release: 2.0.7
-- Conserto: ab02d4aaa (perf(glass): frost reads the backdrop art pre-blurred once, no screen capture — agente/205-foscovelho, 1 ahead); 35f5f4fc3 (fix(gfx): carry all backdrop shading into the frost source, r4)
-- Próximo passo: needs review de 35f5f4fc3 (r4): rodar j-rev-foscovelho; depois merge; confirmar na C9
-- Notas: [sync 2026-10-16 22:55] Dono aprovou o visual atual do frost ("o frost glass na c9 ta bem bom") e pediu barato: voltar a fonte antiga (arte pre-blurred, zero captura). Jobs j-foscovelho, j-rev-foscovelho (BLOQUEIA), j-fix-foscovelho-r2 (RUNNING). | [sync 2026-10-16 21:10] job j-fix-foscovelho-r4 RUNNING (log vazio 20:36); r3 BLOQUEIA (vignette do detalhe) | Escrivão 2026-10-16 22:1x: j-fix-foscovelho-r4 done 21:14 (35f5f4fc3, tests/vidro_neutro + build-local rc 0); 4 ahead; BLOQUEIA j-rev-foscovelho-r3 antes do fix = needs review
+- Conserto: ab02d4aaa/d0789c13a/50a1ac232/35f5f4fc3 (agente/205-foscovelho, 4 commits: fonte de arte pre-blurred); 76bc9d0c3 (Merge agente/205-foscovelho) — REVERTIDO por f40a93dc3; 35f5f4fc3 (fix r4, review OK j-rev-foscovelho-r4 22:08 — nao entrou)
+- Próximo passo: fonte de arte pre-blurred revertida (f40a93dc3, dono achou o fosco anterior mais bonito e mais leve); otimizar o caminho atual de captura de tela — job j-foscoleve3 RUNNING (log vazio 22:29)
+- Notas: [sync 2026-10-16 22:40] Dono no TCL: "o fosco anterior tava mais bonito e mais leve que esse" + "tem que otimizar o antes desse que vai ficar top". foscovelho entrou em 76bc9d0c3 e saiu em f40a93dc3. j-rev-foscovelho-r4 (OK, 22:08) chegou depois do merge: o r4 nao entrou. j-foscoleve2 done 22:25 (log vazio, ENOSPC); j-foscoleve3 RUNNING 22:29. [sync 2026-10-16 22:55] Dono aprovou o visual atual do frost ("o frost glass na c9 ta bem bom") e pediu barato: voltar a fonte antiga (arte pre-blurred, zero captura). Jobs j-foscovelho, j-rev-foscovelho (BLOQUEIA), j-fix-foscovelho-r2 (RUNNING). | [sync 2026-10-16 21:10] job j-fix-foscovelho-r4 RUNNING (log vazio 20:36); r3 BLOQUEIA (vignette do detalhe) | Escrivão 2026-10-16 22:1x: j-fix-foscovelho-r4 done 21:14 (35f5f4fc3, tests/vidro_neutro + build-local rc 0); 4 ahead; BLOQUEIA j-rev-foscovelho-r3 antes do fix = needs review
 
 ### Temporadas/episodios fantasmas vindo do add-on
 

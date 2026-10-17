@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-16T22:15:31-03:00",
- "base": "b03502f84",
- "nota": "Sync 2026-10-16 22:1x, HEAD integracao/2.0.5 b72189c5d (merge agente/205-release207). Merges nesta janela: pfhome545 (#545), port569 (#556/#569), loadtela (A3), epsdupstub, fontesrelogio, vistos548 (#548), temporadas, prs207, foscoplayer, foscotudo, topvidro, p2pusbtela, colhdr, imgres, detfps, fosco-nova, novidades207, simklanime, shuffledica, posterurl, i565pengu, legcontorno, deeplink, playerext, trailerexp, androidusb, fosco-perf, usbmodal, cw12, eps555 (#555), pr431c, vidrodetalhe, trailerleg, usbtizen, pr543b, uxinteracao, pr540c, pr538b, busca555 (#555), cwtestlink, usbpreparo, extplayer (#501), pr547, legenda552, buscafila, trailerlingua, tpk558, pr543, pr550, pr540b, pr546, pr559. Build 21:01 instalado: Android rc 0, .tpk rc 0, C9 rc 255; TV ainda em cb7ece972 (146 merges). issues.json 10-16 23:34: #483/#467/#466/#430 CLOSED; #570 nova. Ver escrivao/estado.md.",
+ "atualizado_em": "2026-10-16T22:40:00-03:00",
+ "base": "f40a93dc3",
+ "nota": "Sync 2026-10-16 22:40, HEAD integracao/2.0.5 f40a93dc3. Merges nesta janela: foscovelho (76bc9d0c3, REVERTIDO f40a93dc3), semepanterior (d51d4e46c), homerefresh (08c98b017). Cached-art frost reverted by the owner (prefers the screen-capture frost, wants it cheaper); j-foscoleve3 RUNNING optimizes that path. agente/205-loadtelab (B3 corner loading style, 922500ef4) done but not merged and unreviewed. FEATURES.md 2.0.7 updated with this window. TV install stays at cb7ece972 (151 merges behind).",
  "itens": [
   {
    "numero": 1,
@@ -9262,19 +9262,24 @@
    "estado_github": "aberta",
    "plataforma": "LG",
    "tipo": "bug",
-   "status": "aberta",
+   "status": "integrada",
    "release": "-",
-   "conserto": [],
+   "conserto": [
+    "b0e429762 (fix(jellyfin): list every catalog view of many-library servers (#468) — agente/205-homerefresh)",
+    "c47a40788 (test(home): Home follows reorder/disable and new sources without restart (#468))",
+    "08c98b017 (Merge agente/205-homerefresh, integracao/2.0.5)"
+   ],
    "ultima_resposta": {
     "nos": false,
     "data": "",
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "Pedir log e nomes/quantidade dos catálogos esperados sem endereço/credenciais; obter fixture sanitizada de UserViews/Items para verificar teto, tipos, IDs e vazios com mais de seis bibliotecas.",
-   "notas": "C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato.",
+   "proximo_passo": "merged 08c98b017; review OK j-rev-homerefresh; build+install e confirmar na TV que a fileira reordenada/ativada atualiza sem reiniciar",
+   "notas": "[sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/468",
-   "alvo": "2.0.6"
+   "alvo": "2.0.6",
+   "n_notas": "Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato."
   },
   {
    "numero": 469,
@@ -9550,7 +9555,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7",
+   "proximo_passo": "build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7",
    "notas": "Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01. | Escrivao 2026-10-15 11:48: prompt p-205-i483remux em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i483remux integrada] Escrivao 10-16 12:48: agente/205-i483remux ja ancestral de HEAD; sem mudanca. | Escrivão 2026-10-16 22:1x: merged 251632be nesta janela (HEAD b72189c5d); review j-revg-i483remux; fetch Tracks via SeekHead quando a sonda erra o REMUX; entra na 2.0.7 | Escrivão 2026-10-16 22:1x: issues.json 10-16 23:34 marca CLOSED; alvo removido (campo so vale para abertas).",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/483",
    "criada_em": "2026-10-13"
@@ -9807,7 +9812,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7",
+   "proximo_passo": "build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7",
    "notas": "Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. | Escrivao 10-16 14:58: job extplayer done f954a272c (configuracao de player externo); sem review; PNG nao sai no host (sem NV_ANDROID). | [sync 2026-10-16 21:00] extplayer 161cdebd2 + playerext 281b4af37 merged; reviews OK j-rev-extplayer-r2/j-rev-playerext-r2; fix a04f2a820/276207fac | [sync 2026-10-16 22:55] merged 281b4af37 no HEAD f0f4f4928 | Escrivão 2026-10-16 22:1x: merged 281b4af37 nesta janela (HEAD b72189c5d); review j-rev-extplayer-r2/j-rev-playerext-r2; player externo Android; falta a fonte de legenda custom; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/501",
    "criada_em": "2026-10-14",
@@ -10253,7 +10258,7 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7",
+   "proximo_passo": "build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7",
    "notas": "Escrivao 2026-10-15 20:48: novo no GitHub 2026-10-15, sem job. | [sync 2026-10-16 21:00] conserto entrou em integracao/2.0.5 (a4f220cd7): nuvio-legacy://, stremio:// e imdb.com abrem titulo/play/busca. | [sync 2026-10-16 22:55] merged a4f220cd7 no HEAD f0f4f4928 | Escrivão 2026-10-16 22:1x: merged a4f220cd7 nesta janela (HEAD b72189c5d); review j-rev-deeplink-r4; deep links; BLOQUEIA r1-r3 antes do fix; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/539",
    "criada_em": "2026-10-15",
@@ -10301,7 +10306,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7",
+   "proximo_passo": "build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7",
    "notas": "Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot. Escrivao 10-16 12:48: job home545 done (26b9c635b), 1 ahead de HEAD; review j-rev2-home545 BLOQUEIA. Distinto de #551 (descoberta nao reinicia apos PIN). | Escrivao 10-16 14:58: merged 9e2138f9d; review OK j-rev-home545-r4 depois dos fixes de cota/selecao explicita. | [sync 2026-10-16 21:00] merged 9e2138f9d; review OK j-rev-home545-r4 apos fixes de cota/selecao explicita; pos-merge BLOQUEIA j-revg-home545-posmerge 17:51 com fix j-fix-home545-posmerge | [sync 2026-10-16 22:55] agente/205-pfhome545 2 ahead (975638744/53b050753); VEREDITO BLOQUEIA j-revg-pfhome545 (18:47), fix 53b050753 sem review | [sync 2026-10-16 21:10] follow-up pfhome545 merged b03502f84; VEREDITO OK j-revg-pfhome545 (20:57) | Escrivão 2026-10-16 22:1x: merged b03502f84 (follow-up: fileira fora da cota atualiza ao adicionar); review OK j-revg-pfhome545",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/545",
    "criada_em": "2026-10-16"
@@ -10325,7 +10330,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7",
+   "proximo_passo": "build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7",
    "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivao 10-16 14:58: job vistos548 rodando (branch agente/205-vistos548 = HEAD, 0 ahead); log vivo; sem fix ainda. | [sync 2026-10-16 21:00] branch agente/205-vistos548 6 ahead; fixes 8330673a8 e 5b37cecd8 (weak defaults para fixtures isoladas) depois do ultimo review BLOQUEIA r4; review r5 rodando. | [sync 2026-10-16 22:55] branch agente/205-vistos548 8 ahead (tip b074d9fd5); VEREDITO BLOQUEIA j-rev-vistos548-r7 (19:48) | [sync 2026-10-16 21:10] merged 91da5935e em integracao/2.0.5; VEREDITO OK j-rev-vistos548-r9, nenhum commit depois; sai na 2.0.7 | Escrivão 2026-10-16 22:1x: merged 91da5935e (agente/205-vistos548, 12 commits); reviews OK j-rev-vistos548-r8/r9; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/548",
    "criada_em": "2026-10-16",
@@ -10373,7 +10378,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7",
+   "proximo_passo": "build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7",
    "notas": "Escrivao 10-16 12:48: job catal551 done; review BLOQUEIA j-rev-catal551 -> fix 1c9043ed0 -> OK j-rev2-catal551; merged e680776ed. Causa: sessao de perfil velha nao reiniciava a descoberta. | [sync 2026-10-16 21:00] merged e680776ed; review OK j-rev2-catal551 apos fix 1c9043ed0/a2e9daf91 | [sync 2026-10-16 22:55] merged e680776ed no HEAD f0f4f4928 | Escrivão 2026-10-16 22:1x: merged e680776ed nesta janela (HEAD b72189c5d); review j-rev2-catal551; sessao de perfil velha antes de tentar de novo; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/551",
    "criada_em": "2026-10-16",
@@ -10398,7 +10403,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7",
+   "proximo_passo": "build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7",
    "notas": "Escrivao 10-16 12:48: job fonte552 done; review BLOQUEIA j-rev-fonte552 -> fix cbcf467f5 -> OK j-rev2-fonte552; merged 0d7821a01. Hostnames de stream passam a ser lidos antes de exigir P2P. | Escrivao 10-16 14:58: follow-up do reporter (addons de legenda nao aparecem): fix 27988615e em agente/205-legenda552, sem review. | [sync 2026-10-16 21:00] merged 0d7821a01 (fonte552) + b897be584 (legenda552) + d25a3e513/6d524f947 (#505/#552 PR #559); reviews OK j-rev2-fonte552/j-rev-legenda552/j-rev-pr559 | [sync 2026-10-16 22:55] merged 0d7821a01/b897be584 no HEAD f0f4f4928 | Escrivão 2026-10-16 22:1x: merged 0d7821a01 nesta janela (HEAD b72189c5d); review j-rev2-fonte552/j-rev-legenda552; fonte552 + legenda552 + PR #559 (URL http sem P2P); entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/552",
    "criada_em": "2026-10-16",
@@ -10443,7 +10448,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7",
+   "proximo_passo": "build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7",
    "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | [sync 2026-10-16 21:00] merged 438423097 (eps555) + d5ae66d9e (busca555); reviews OK j-rev-eps555/j-rev-busca555 | [sync 2026-10-16 22:55] merged 438423097 + d5ae66d9e no HEAD f0f4f4928 | Escrivão 2026-10-16 22:1x: merged 438423097 nesta janela (HEAD b72189c5d); review j-rev-eps555/j-rev-busca555; busca555 (titulo exato) + eps555 (episodios pelo catalogo); entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/555",
    "criada_em": "2026-10-16",
@@ -10466,7 +10471,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7",
+   "proximo_passo": "build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7",
    "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: merged 054ccef24 (port PR #569 de @ghbarker + fix 4a443422b); review OK j-rev-port569-r2; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/556",
    "criada_em": "2026-10-16",
@@ -10487,7 +10492,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "triar e criar job",
+   "proximo_passo": "triar: seek para timestamp especifico; criar job",
    "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/557",
    "criada_em": "2026-10-16",
@@ -10512,7 +10517,7 @@
     "ultimo_comentario_por": "",
     "ultima_nossa": ""
    },
-   "proximo_passo": "build+install no HEAD b72189c5d e resposta na issue; sai na 2.0.7",
+   "proximo_passo": "build+install no HEAD f40a93dc3 e resposta na issue; sai na 2.0.7",
    "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova, tela preta no lancamento num Q50A Tizen 6 2.0.6. Job j-tpk558 done (cc49341e6, tools/tpk.sh rc 0); sem review. | Escrivao 10-16 14:58: merged a1888d007 (adiar IME da Samsung e expor falha no boot); review OK j-rev-tpk558; spec docs/issues/558-tpk-startup.md. | [sync 2026-10-16 21:00] merged a1888d007; review OK j-rev-tpk558 | [sync 2026-10-16 22:55] merged a1888d007 no HEAD f0f4f4928 | Escrivão 2026-10-16 22:1x: merged a1888d007 nesta janela (HEAD b72189c5d); review j-rev-tpk558; tela preta no lancamento .tpk; confirmar na TV do reporter; entra na 2.0.7",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/558",
    "criada_em": "2026-10-16",
@@ -10534,7 +10539,7 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "triar e criar job",
+   "proximo_passo": "triar: botao de recarregar fonte no player; criar job",
    "notas": "Nova em 2026-10-16 (issues.json, labels [bug]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova no snapshot 10-16 21:00 | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/562",
    "criada_em": "2026-10-16"
@@ -10555,7 +10560,7 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "triar e criar job",
+   "proximo_passo": "triar: controle de velocidade de reproducao; criar job",
    "notas": "Nova em 2026-10-16 (issues.json, labels [enhancement]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova no snapshot 10-16 21:00 | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/564",
    "criada_em": "2026-10-16"
@@ -10566,12 +10571,13 @@
    "estado_github": "aberta",
    "plataforma": "?",
    "tipo": "bug",
-   "status": "em_job",
+   "status": "integrada",
    "release": "-",
    "alvo": "2.0.6",
    "conserto": [
-    "5aad21874 (Merge agente/205-i565pengu, integracao/2.0.5) — apenas testes",
-    "68cf2c63b/c32a87bbf (#565 fixtures; notWebReady http streams com P2P off)"
+    "d25a3e513 (fix de produto PenguPlay/P2P off, ja em integracao/2.0.5)",
+    "68cf2c63b/c32a87bbf (tests PenguPlay: manifest, token, notWebReady http com P2P off — agente/205-i565pengu)",
+    "5aad21874 (Merge agente/205-i565pengu, integracao/2.0.5)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10579,10 +10585,11 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "falta fix de produto PenguPlay com P2P off — criar job",
-   "notas": "Nova em 2026-10-16 (issues.json, labels [bug]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures provam que a politica notWebReady esconde 27/27 streams https publicos; falta o fix de produto. | [sync 2026-10-16 22:55] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures merged, produto segue aberto",
+   "proximo_passo": "merged 5aad21874; review OK j-rev-i565pengu (tests/pengu.sh 27/27 com P2P off); falta teste em .wgt Samsung real",
+   "notas": "[sync 2026-10-16 22:40] Jobs j-i565pengu (tests, 17:46) e j-rev-i565pengu (VEREDITO OK). merged 5aad21874. Os dois commits sao so fixtures/testes; o fix de produto (d25a3e513) ja estava integrado. Nova em 2026-10-16 (issues.json, labels [bug]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures provam que a politica notWebReady esconde 27/27 streams https publicos; falta o fix de produto. | [sync 2026-10-16 22:55] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures merged, produto segue aberto",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/565",
-   "criada_em": "2026-10-16"
+   "criada_em": "2026-10-16",
+   "n_notas": "Jobs j-i565pengu (tests, 17:46) e j-rev-i565pengu (VEREDITO OK). merged 5aad21874. Os dois commits sao so fixtures/testes; o fix de produto (d25a3e513) ja estava integrado. Nova em 2026-10-16 (issues.json, labels [bug]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures provam que a politica notWebReady esconde 27/27 streams https publicos; falta o fix de produto. | [sync 2026-10-16 22:55] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures merged, produto segue aberto"
   },
   {
    "numero": 566,
@@ -10599,7 +10606,7 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "triar e criar job",
+   "proximo_passo": "triar \"Some issues\": esperar detalhes do usuario antes de criar job",
    "notas": "Nova em 2026-10-16 21:13 (issues.json, labels [bug]). Sem job no snapshot. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova em 2026-10-16 21:13 (issues.json, labels [bug]) | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/566",
    "criada_em": "2026-10-16",
@@ -10620,7 +10627,7 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "triar e criar job",
+   "proximo_passo": "triar: trocar de fonte mostra o filme anterior e perde a retomada (Tizen 9)",
    "notas": "Nova em 2026-10-16 23:34 (issues.json, Tizen 9; trocar de fonte do episodio mostra o filme anterior e reseta a retomada). | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/570",
    "criada_em": "2026-10-16",
@@ -12108,6 +12115,44 @@
    "ref": "build/android/Nuvio-2.0.6-android.apk",
    "resultado": "inconclusivo",
    "evidencia": "instalado.txt 10-16 21:01"
+  },
+  {
+   "data": "2026-10-16 22:12",
+   "quem": "job-claude (j-rev-semepanterior)",
+   "o_que": "Review final de agente/205-semepanterior (remocao do botao \"episodio anterior\"): VEREDITO OK",
+   "issues": [],
+   "ref": "4e6b592d8 (agente/205-semepanterior)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-rev-semepanterior.log"
+  },
+  {
+   "data": "2026-10-16 22:08",
+   "quem": "job-claude (j-rev-foscovelho-r4)",
+   "o_que": "Review r4 de agente/205-foscovelho (vignette do frost na fonte): VEREDITO OK — chegou depois do merge 76bc9d0c3, que foi revertido",
+   "issues": [],
+   "ref": "35f5f4fc3 (agente/205-foscovelho)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-rev-foscovelho-r4.log"
+  },
+  {
+   "data": "2026-10-16 22:21",
+   "quem": "job-claude (j-rev-homerefresh)",
+   "o_que": "Review final de agente/205-homerefresh (#468, views Jellyfin + refresh da Home): VEREDITO OK",
+   "issues": [
+    468
+   ],
+   "ref": "b0e429762/c47a40788 (agente/205-homerefresh)",
+   "resultado": "passou",
+   "evidencia": "/Volumes/ExternalSSD/tmp/rev/j-rev-homerefresh.log"
+  },
+  {
+   "data": "2026-10-16 22:27",
+   "quem": "dono (integracao)",
+   "o_que": "Revert do merge agente/205-foscovelho (f40a93dc3): dono achou o fosco anterior (captura de tela) mais bonito e mais leve; otimizar esse caminho",
+   "issues": [],
+   "ref": "f40a93dc3",
+   "resultado": "passou",
+   "evidencia": "log.txt + j-foscoleve3.prompt (pedido literal do dono)"
   }
  ],
  "decisoes": [
@@ -16500,14 +16545,16 @@
    "id": "dono-205-foscovelho",
    "titulo": "Frost barato igual ao aprovado na LG C9",
    "plataforma": "Todas",
-   "status": "em_revisao",
+   "status": "revertida",
    "release": "2.0.7",
    "conserto": [
-    "ab02d4aaa (perf(glass): frost reads the backdrop art pre-blurred once, no screen capture — agente/205-foscovelho, 1 ahead)",
-    "35f5f4fc3 (fix(gfx): carry all backdrop shading into the frost source, r4)"
+    "ab02d4aaa/d0789c13a/50a1ac232/35f5f4fc3 (agente/205-foscovelho, 4 commits: fonte de arte pre-blurred)",
+    "76bc9d0c3 (Merge agente/205-foscovelho) — REVERTIDO por f40a93dc3",
+    "35f5f4fc3 (fix r4, review OK j-rev-foscovelho-r4 22:08 — nao entrou)"
    ],
-   "proximo_passo": "needs review de 35f5f4fc3 (r4): rodar j-rev-foscovelho; depois merge; confirmar na C9",
-   "notas": "[sync 2026-10-16 22:55] Dono aprovou o visual atual do frost (\"o frost glass na c9 ta bem bom\") e pediu barato: voltar a fonte antiga (arte pre-blurred, zero captura). Jobs j-foscovelho, j-rev-foscovelho (BLOQUEIA), j-fix-foscovelho-r2 (RUNNING). | [sync 2026-10-16 21:10] job j-fix-foscovelho-r4 RUNNING (log vazio 20:36); r3 BLOQUEIA (vignette do detalhe) | Escrivão 2026-10-16 22:1x: j-fix-foscovelho-r4 done 21:14 (35f5f4fc3, tests/vidro_neutro + build-local rc 0); 4 ahead; BLOQUEIA j-rev-foscovelho-r3 antes do fix = needs review"
+   "proximo_passo": "fonte de arte pre-blurred revertida (f40a93dc3, dono achou o fosco anterior mais bonito e mais leve); otimizar o caminho atual de captura de tela — job j-foscoleve3 RUNNING (log vazio 22:29)",
+   "notas": "[sync 2026-10-16 22:40] Dono no TCL: \"o fosco anterior tava mais bonito e mais leve que esse\" + \"tem que otimizar o antes desse que vai ficar top\". foscovelho entrou em 76bc9d0c3 e saiu em f40a93dc3. j-rev-foscovelho-r4 (OK, 22:08) chegou depois do merge: o r4 nao entrou. j-foscoleve2 done 22:25 (log vazio, ENOSPC); j-foscoleve3 RUNNING 22:29. [sync 2026-10-16 22:55] Dono aprovou o visual atual do frost (\"o frost glass na c9 ta bem bom\") e pediu barato: voltar a fonte antiga (arte pre-blurred, zero captura). Jobs j-foscovelho, j-rev-foscovelho (BLOQUEIA), j-fix-foscovelho-r2 (RUNNING). | [sync 2026-10-16 21:10] job j-fix-foscovelho-r4 RUNNING (log vazio 20:36); r3 BLOQUEIA (vignette do detalhe) | Escrivão 2026-10-16 22:1x: j-fix-foscovelho-r4 done 21:14 (35f5f4fc3, tests/vidro_neutro + build-local rc 0); 4 ahead; BLOQUEIA j-rev-foscovelho-r3 antes do fix = needs review",
+   "n_notas": "Dono no TCL: \"o fosco anterior tava mais bonito e mais leve que esse\" + \"tem que otimizar o antes desse que vai ficar top\". foscovelho entrou em 76bc9d0c3 e saiu em f40a93dc3. j-rev-foscovelho-r4 (OK, 22:08) chegou depois do merge: o r4 nao entrou. j-foscoleve2 done 22:25 (log vazio, ENOSPC); j-foscoleve3 RUNNING 22:29. [sync 2026-10-16 22:55] Dono aprovou o visual atual do frost (\"o frost glass na c9 ta bem bom\") e pediu barato: voltar a fonte antiga (arte pre-blurred, zero captura). Jobs j-foscovelho, j-rev-foscovelho (BLOQUEIA), j-fix-foscovelho-r2 (RUNNING). | [sync 2026-10-16 21:10] job j-fix-foscovelho-r4 RUNNING (log vazio 20:36); r3 BLOQUEIA (vignette do detalhe) | Escrivão 2026-10-16 22:1x: j-fix-foscovelho-r4 done 21:14 (35f5f4fc3, tests/vidro_neutro + build-local rc 0); 4 ahead; BLOQUEIA j-rev-foscovelho-r3 antes do fix = needs review"
   },
   {
    "id": "dono-205-temporadas",

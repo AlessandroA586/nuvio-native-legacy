@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-16 22:1x, HEAD `b72189c5d`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-16 22:40, HEAD `f40a93dc3`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -73,6 +73,13 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 - **Menu do topo translúcido com o frost desligado**: com o Vidro ligado e o "Vidro fosco" desligado, a
   barra do topo (e a ilha de avatar/relógio) fica transparente e tingida em vez de opaca. LG webOS.
   `b5007ae85`.
+- **Home que acompanha seus ajustes sem reiniciar** (#468, pedido do dono): reordenar ou desativar fileiras
+  em Ajustes e adicionar um servidor Jellyfin/add-on novo atualiza a Home na hora, e um servidor com muitas
+  bibliotecas deixa de mostrar só quatro catálogos — o teto subiu de 6 para 16 visões, com boxsets e visões
+  sem tipo aceitas. Todas as plataformas. Refs #468, `b0e429762`, `c47a40788`, `08c98b017`.
+- **Um botão a menos no player** (pedido do dono): o botão de voltar episódio sai da barra de ações das
+  séries; o de avançar e todos os outros ficam, com a ordem de foco e o espaçamento intactos. Todas as
+  plataformas. Refs pedido do dono, `4e6b592d8`, `d51d4e46c`.
 - **Linha "Cache do P2P" no Android**: a configuração de cache em pendrive aparece e funciona no APK
   Android, como já acontecia no webOS. Android. `9b4f37efb`.
 - **Ver tudo em grade nas coleções**: as fileiras de destaque abrem em grade de "Ver tudo" com todos
@@ -131,6 +138,13 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   `d25a3e513`, `6d524f947`.
 - **Hostnames e P2P** (#552): comparação de host sem diferenciar maiúsculas, ignora usuário e porta e entende
   loopback IPv4/IPv6, então fonte local não some. Todas as plataformas. `cbcf467f5`.
+- **Muitos catálogos Jellyfin aparecem** (#468): servidores como AIOMetadata expõem uma visão por catálogo;
+  o app parava em 6 e só aceitava movies/tvshows, então cerca de quatro catálogos apareciam. O teto subiu
+  para 16 visões, com boxsets, mistos e sem tipo aceitos, e o orçamento de itens é dividido entre as linhas
+  para a memória não crescer. Todas as plataformas. `b0e429762`, `c47a40788`.
+- **Temporada especial do Kitsu sem quebrar a fonte**: quando o add-on Kitsu não informa a temporada, ela
+  continua ausente em vez de virar 0 — a numeração do provedor segue valendo na fonte, na retomada e no
+  próximo episódio. Todas as plataformas. `4a443422b`.
 - **Perfil que não carregava o catálogo** (#551): sessão de perfil velha é recuperada antes de tentar a
   descoberta de novo, e um PIN que completa a escolha abre a sessão na hora. LG webOS. `1c9043ed0`, `a2e9daf91`.
 - **Escolha explícita não se perde** (#545): fileira colocada à mão ou na fila continua valendo quando outras
@@ -163,10 +177,14 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   Todas as plataformas. PR #538, `cee137de7`, `cfc15aeab`, `8c99638f7`.
 - **Buffer preso na memória ativa**: a faixa DTS em uso reserva seu 4 MiB antes de medir a fila.
   Todas as plataformas. `62421bfdc`.
-- **Vidro fosco: uma captura por mudança de cena**: o desfoque do vidro agora lê uma cópia em meia
-  resolução só da camada de fundo, e apenas quando ela muda — 1,15 → 0,35 capturas por quadro com foco/arte
-  em movimento, 0,54 → 0,04 na Exploração e 1 → 0 ao rolar fileiras sobre fundo parado. Todas as plataformas.
-  `e9c809475`.
+- **Vidro fosco: uma captura por mudança de cena** — *revertido nesta janela*: o desfoque do vidro
+  passou a ler uma cópia em meia resolução só da camada de fundo (1,15 → 0,35 capturas por quadro, 0,54 → 0,04
+  na Exploração, 1 → 0 ao rolar fileiras), mas o dono achou o resultado anterior mais bonito e mais leve na
+  TCL e o merge foi desfeito (`f40a93dc3`); o caminho atual está sendo otimizado (`j-foscoleve3`).
+  Todas as plataformas. `e9c809475` (medidas do caminho que saiu).
+- **Home reage a reordenar/ativar fileiras sem recarregar tudo**: a atualização da rede depois de fechar
+  Ajustes roda uma vez, e as linhas de servidor acima do teto da Home são cortadas em vez de descartadas.
+  Todas as plataformas. `b0e429762`.
 - **Detalhe: menos camadas de tela cheia**: furo e véu do cartão de trailer passam a ser um único desenho, e
   um cartão vizinho quase fora da tela deixa de contar como cheio — 4 → 2 camadas, preenchimento 1,81 → 0,99
   no harness, PNGs idênticos. Todas as plataformas. `5ed6ddfaa`.
@@ -207,6 +225,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   (`33b0d7de0`).
 - Triagem dos PRs abertos (`72ba10761`) com o port de fixes de busca, coleção, Trakt e player
   (`e0ddeca5f`, `4baf783fa`, `ff1f1aa25`, `61d73a5bf`).
+- Teste novo `tests/homerefresh.sh`: a Home segue reordenar/desativar fileiras e novas fontes sem reiniciar;
+  fixtures de home/coleção consertadas depois do merge (`c47a40788`, `0bfe5ce71`).
 
 ### Pendente (ainda não integrado)
 
@@ -217,9 +237,15 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 - **PR #493 v2 / v3** (perfil e sessão) — `agente/205-pr493`, 12 commits fora. VEREDITO **BLOQUEIA**
   `j-revg-pr493` (mais novo); `j-revpr493-v3` OK foi antes. Precisa de fix novo + review.
   Android, LG webOS.
-- **Vidro fosco: deixar como estava** — `agente/205-foscovelho`, 1 commit fora (`ab02d4aaa`); o job
-  `j-fix-foscovelho-r2` (rodada 2 dos achados do review) está com log vazio = QUEUED/RUNNING. Dono relata
-  que o frost piorou. Todas as plataformas. **Needs review.**
+- **Vidro fosco: deixar como estava** — `agente/205-foscovelho` foi **merged** (`76bc9d0c3`) e depois
+  **revertido** (`f40a93dc3`): na TCL o dono achou o fosco anterior (captura de tela + desfoque) mais bonito
+  e mais leve. A fonte de arte pré-desfocada (`ab02d4aaa`, `d0789c13a`, `50a1ac232`, `35f5f4fc3`) **não** está
+  na 2.0.7; o review r4 deu OK (`j-rev-foscovelho-r4`, 22:08) já depois do merge. Quem fica pendente é
+  **otimizar o caminho atual** (job `j-foscoleve3` RUNNING 22:29, log vazio). Todas as plataformas.
+- **Estilo da tela de abertura em Canto (B3)** (pedido do dono) — `agente/205-loadtelab`, 1 commit fora
+  (`922500ef4`): ajuste "Estilo da tela de abertura" com Centro (A3, padrão) e Canto (logo embaixo à
+  esquerda, anel fino sob ela). Job feito (testes, i18n e build rc 0), **sem review e sem merge**. Todas as
+  plataformas.
 - **Vistos, temporadas fantasmas, catálogo fora da cota (#548 #556 #545) e tela de abertura A3** entraram
   nesta janela (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`) e já estão em Destaques.
 - **Vidaa** — `agente/205-vidaa` foi **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
@@ -291,6 +317,13 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   Refs owner requests, `46e0bd5bd`, `3982ef84b`.
 - **Translucent top chrome with frost off**: with Glass on and "Vidro fosco" off, the top bar (and the
   avatar/clock island) is see-through tinted glass instead of opaque. LG webOS. `b5007ae85`.
+- **Home follows your changes without a restart** (#468, owner request): reordering or disabling rows in
+  Settings and adding a new Jellyfin server/add-on refreshes Home on the spot, and a server with many
+  libraries stops showing only four catalogs — the view cap went from 6 to 16, boxsets and untyped views
+  are accepted. All platforms. Refs #468, `b0e429762`, `c47a40788`, `08c98b017`.
+- **One less button in the player** (owner request): the previous-episode button leaves the series action
+  bar; next episode and every other button stay, with focus order and spacing intact. All platforms.
+  Refs owner request, `4e6b592d8`, `d51d4e46c`.
 - **"P2P cache" row on Android**: the USB drive cache setting shows up and works in the standard Android
   APK, as it already did on webOS. Android. `9b4f37efb`.
 - **See all grid in collections**: showcase rows open into a full "See all" grid of the collection.
@@ -368,6 +401,13 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   and Space limit are greyed out. All platforms. `2e480806c`, `f170d77ba`, `6d537cb92`.
 - **Uploaded log keeps its start**: the 16 KB startup header is back in the uploaded log, which is the part
   that diagnoses. All platforms. `84c1a90b6`, `3b12a5d2f`.
+- **Many Jellyfin catalogs show up** (#468): servers like AIOMetadata expose one view per catalog; the app
+  stopped at 6 and only accepted movies/tvshows, so about four catalogs appeared. The cap went to 16 views,
+  with boxsets, mixed and untyped views accepted, and the item budget is split across rows so memory does
+  not grow. All platforms. `b0e429762`, `c47a40788`.
+- **Kitsu special season without breaking the source**: when the Kitsu add-on does not report a season it
+  stays absent instead of becoming 0 — the provider's numbering keeps working in the source, on resume and on
+  the next episode. All platforms. `4a443422b`.
 
 ### Performance
 
@@ -378,9 +418,14 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   PR #538, `cee137de7`, `cfc15aeab`, `8c99638f7`.
 - **Buffer clamp accounts for active DTS**: the in-use range reserves its 4 MiB before queue capacity is
   chosen. All platforms. `62421bfdc`.
-- **Frosted glass: one capture per backdrop change**: the glass blur now reads a half-res copy of the
-  backdrop layer alone, only when that layer changes — 1.15 → 0.35 captures per frame with focus/art moving,
-  0.54 → 0.04 on Explore, and 1 → 0 while rows scroll over a static backdrop. All platforms. `e9c809475`.
+- **Frosted glass: one capture per backdrop change** — *reverted in this window*: the glass blur started
+  reading a half-res copy of the backdrop layer alone (1.15 → 0.35 captures per frame, 0.54 → 0.04 on Explore,
+  1 → 0 while rows scroll), but on the TCL the owner found the previous look prettier and lighter and the merge
+  was undone (`f40a93dc3`); the current path is being made cheaper (`j-foscoleve3`). All platforms.
+  `e9c809475` (numbers from the path that left).
+- **Home reacts to reordering/enabling rows without reloading everything**: the network refresh that follows
+  closing Settings runs once, and server rows over the Home cap are clamped instead of dropped. All platforms.
+  `b0e429762`.
 - **Detail: fewer full-screen layers**: the trailer card's hole and veil are drawn in one pass, and a
   neighbour card almost off screen no longer counts as full — 4 → 2 layers, fill 1.81 → 0.99 on the harness,
   PNGs byte-identical. All platforms. `5ed6ddfaa`.
@@ -419,6 +464,8 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   (`33b0d7de0`).
 - Triaged open PRs (`72ba10761`) and ported fixes for search, collections, Trakt and player
   (`e0ddeca5f`, `4baf783fa`, `ff1f1aa25`, `61d73a5bf`).
+- New `tests/homerefresh.sh`: Home follows row reorder/disable and new sources without a restart; home and
+  collection fixtures repaired after a merge (`c47a40788`, `0bfe5ce71`).
 
 ### Pending (not integrated yet)
 
@@ -429,9 +476,18 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 - **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out. VEREDITO **BLOQUEIA**
   `j-revg-pr493` (newer); the OK `j-revpr493-v3` came before. Needs a new fix + review.
   Android, LG webOS.
-- **Frosted glass: put it back as it was** — `agente/205-foscovelho`, 1 commit out (`ab02d4aaa`); the
-  round-2 fix job `j-fix-foscovelho-r2` has an empty log = QUEUED/RUNNING. Owner reports frosted glass got
-  worse. All platforms. **Needs review.**
+- **Frosted glass: put it back as it was** — `agente/205-foscovelho` was **merged** (`76bc9d0c3`) and then
+  **reverted** (`f40a93dc3`): on the TCL the owner found the previous frosted glass (screen capture + blur)
+  prettier and lighter. The pre-blurred art source (`ab02d4aaa`, `d0789c13a`, `50a1ac232`, `35f5f4fc3`) is
+  **not** in 2.0.7; its round-4 review was OK (`j-rev-foscovelho-r4`, 22:08), already after the merge. What
+  stays pending is **making the current path cheaper** (job `j-foscoleve3` RUNNING 22:29, empty log).
+  All platforms.
+- **Opening screen style in the Corner (B3)** (owner request) — `agente/205-loadtelab`, 1 commit out
+  (`922500ef4`): an "Estilo da tela de abertura" setting with Center (A3, default) and Corner (logo
+  bottom-left, thin ring under it). Job done (tests, i18n and build rc 0), **no review and no merge yet**.
+  All platforms.
+- **Watch tracking, ghost seasons, quota-excluded catalog (#548 #556 #545) and the A3 loading screen** landed
+  in this window (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`) and are already under Highlights. **Needs review.**
 - **Watch, ghost seasons, catalog outside the quota (#548 #556 #545) and the A3 loading screen** landed in
   this window (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`) and are already in Highlights.
 - **Vidaa** — `agente/205-vidaa` was **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
@@ -459,13 +515,21 @@ Landing in 2.0.7, already in the sections above:
   **USB P2P on every platform** (`0fe8a7731`, `2ed922f03`, `84c1a90b6`), **buffer size** (`35a944d9f`),
   **trailer audio + captions** (`b43655122`, `31dcf5275`), **P2P reasons** (`e21441cd2`, `30b57ccf1`),
   **glass/frost work** (`46e0bd5bd`, `b5007ae85`, `e9c809475`, `0c77460c1`, `d98d72026`),
-  **release 2.0.7 bump and notes** (`b72189c5d`, `e275de18a`).
+  **release 2.0.7 bump and notes** (`b72189c5d`, `e275de18a`),
+  **#468 Home/Jellyfin views** (`08c98b017`), **previous-episode button removed** (`d51d4e46c`) and the
+  **revert of the cached-art frost** (`f40a93dc3`, undoing `76bc9d0c3`).
 
 ### Frost performance (to fill before tagging)
 
 Placeholder carried from `j-release207`: the measured numbers belong here once the frost work is measured on a
 device. Points to report: one backdrop capture per frame on Android/.tpk (`0c77460c1`, `d98d72026`, `5536ee8da`)
 and one capture per backdrop change everywhere (`e9c809475`).
+
+**Update 22:40:** the owner reverted the cached-art source (`f40a93dc3`), so the *shipping* path is the screen
+capture + blur again. Job `j-foscoleve3` (RUNNING) is measuring that path per screen (Home top bar, side menu,
+Settings, detail, player overlay) with `src/gputempo.c` / `desempenho.c` / `fpscena.c`; its before/after PNGs
+land in `/Volumes/ExternalSSD/tmp/foscoleve3/{antes,depois}/` with max pixel diff. Fill this section from
+`medidas.md` when it finishes.
 
 ### Merged in this window (not pending any more)
 
@@ -480,10 +544,18 @@ Landing in 2.0.7, already in the sections above:
   **USB P2P on every platform** (`0fe8a7731`, `2ed922f03`, `84c1a90b6`), **buffer size** (`35a944d9f`),
   **trailer audio + captions** (`b43655122`, `31dcf5275`), **P2P reasons** (`e21441cd2`, `30b57ccf1`),
   **glass/frost work** (`46e0bd5bd`, `b5007ae85`, `e9c809475`, `0c77460c1`, `d98d72026`),
-  **release 2.0.7 bump and notes** (`b72189c5d`, `e275de18a`).
+  **release 2.0.7 bump and notes** (`b72189c5d`, `e275de18a`),
+  **#468 Home/Jellyfin views** (`08c98b017`), **previous-episode button removed** (`d51d4e46c`) and the
+  **revert of the cached-art frost** (`f40a93dc3`, undoing `76bc9d0c3`).
 
 ### Frost performance (to fill before tagging)
 
 Placeholder carried from `j-release207`: the measured numbers belong here once the frost work is measured on a
 device. Points to report: one backdrop capture per frame on Android/.tpk (`0c77460c1`, `d98d72026`,
 `5536ee8da`) and one capture per backdrop change everywhere (`e9c809475`).
+
+**Update 22:40:** the owner reverted the cached-art source (`f40a93dc3`), so the *shipping* path is the screen
+capture + blur again. Job `j-foscoleve3` (RUNNING) is measuring that path per screen (Home top bar, side menu,
+Settings, detail, player overlay) with `src/gputempo.c` / `desempenho.c` / `fpscena.c`; its before/after PNGs
+land in `/Volumes/ExternalSSD/tmp/foscoleve3/{antes,depois}/` with max pixel diff. Fill this section from
+`medidas.md` when it finishes.
