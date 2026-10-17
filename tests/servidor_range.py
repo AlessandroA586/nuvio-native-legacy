@@ -48,6 +48,7 @@ import http.server, os, re, socketserver, sys, threading
 PASTA = sys.argv[1]
 BIND = os.environ.get("NUVIO_RANGE_BIND", "127.0.0.1")
 contagem = 0
+cabecalhos = 0
 curtoPedidos = 0
 ativos1 = 0
 recusas429 = 0
@@ -161,9 +162,12 @@ class H(http.server.BaseHTTPRequestHandler):
         self._get()
 
     def _get(self):
-        global contagem, curtoPedidos, recusas429, redirs, cortes, recusasResto, videoAberto
+        global contagem, cabecalhos, curtoPedidos, recusas429, redirs, cortes, recusasResto, videoAberto
         if self.path == "/contagem":
             with trava: v = contagem
+            self._texto(v); return
+        if self.path == "/contagemcabecalhos":
+            with trava: v = cabecalhos
             self._texto(v); return
         if self.path == "/contagem429":
             with trava: v = recusas429
@@ -183,6 +187,7 @@ class H(http.server.BaseHTTPRequestHandler):
         if self.path == "/zerar":
             with trava:
                 contagem = 0
+                cabecalhos = 0
                 curtoPedidos = 0
                 recusas429 = 0
                 redirs = 0
@@ -222,6 +227,8 @@ class H(http.server.BaseHTTPRequestHandler):
                 self.send_response(416); self.send_header("Content-Range", "bytes */%d" % total)
                 self.send_header("Content-Length", "0"); self.end_headers(); return
             parcial = True
+        if parcial and ini == 0:
+            with trava: cabecalhos += 1
         if curto and os.environ.get("NUVIO_RANGE_TRACE") == "1":
             print("range-trace curto #%d %s bytes=%d-%d" %
                   (curtoN, self.path, ini, fim), file=sys.stderr, flush=True)

@@ -18,6 +18,8 @@
 #include "ilha.h"
 #include "layout.h"
 #include "menu.h"
+#include "perfilsel.h"
+#include "perfis.h"
 #include "tex_cache.h"
 #include "text.h"
 #include "trailer.h"
@@ -44,6 +46,7 @@ static int failures;
 static unsigned char *q1, *q2;   // the two frames before this one
 static int nquadro, flashes, sujas, saltos;   // sujas: textures given garbage
 static const char *cena = "settle";   // last window started (transitions follow it)
+static int escolha;   // "Who's watching?" up: the Home assembles hidden behind it (app.c)
 
 Uint32 pisca3_ticks(void) { return relogio; }   // tests/pisca3_gles.h
 
@@ -78,7 +81,10 @@ static int caixa(const char *nome, int i, int falar) {
 static void frame(void) {
   Uint32 now = relogio += 16;
   tex_bombear(8);
+  home_oculta(escolha);
   home_atualizar(1.0f / 60, now);
+  home_oculta(0);
+  if (escolha) perfilsel_atualizar(1.0f / 60, now);
   home_trailer_passo(!detail_aberto(), 1.0f / 60, now);   // as app.c
   if (!detail_aberto() && home_pediu_abrir()) {
     HomeItem it;
@@ -92,9 +98,12 @@ static void frame(void) {
   glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
   gfx_ambiente(1.0f);
-  if (!detail_cobre_tela()) home_desenhar(now);
-  detail_desenhar(now);
-  if (!detail_aberto()) menu_desenhar(now);
+  if (escolha) perfilsel_desenhar(now);
+  else {
+    if (!detail_cobre_tela()) home_desenhar(now);
+    detail_desenhar(now);
+    if (!detail_aberto()) menu_desenhar(now);
+  }
   ilha_desenhar(now);
   gfx_ambiente_descarregar();
   glReadPixels(0, 0, W, H, GL_RGBA, GL_UNSIGNED_BYTE, px);
@@ -389,6 +398,128 @@ static void homeArte(const char *promoArte) {
   failures += piscas || vpiscas;
 }
 
+// Freeze the real picker at its current animation state. Compare every pixel,
+// so missing/streaked artwork lasting any number of frames cannot pass.
+static void pickerPixels(void) {
+  gfx_novo_quadro();
+  glClearColor(0, 0, 0, 1);
+  glClear(GL_COLOR_BUFFER_BIT);
+  perfilsel_desenhar(relogio);
+  glReadPixels(0, 0, W, H, GL_RGBA, GL_UNSIGNED_BYTE, px);
+}
+
+static void pickerPressure(void) {
+  char paths[513][1024];
+  int slots, i, j, ready, bad = 0;
+  long evictions = tex_despejos_total, hot = tex_despejos_quentes_total;
+  SDL_Surface *s = SDL_CreateRGBSurfaceWithFormat(0, 8, 8, 32, SDL_PIXELFORMAT_RGBA32);
+  assert(s);
+  SDL_FillRect(s, NULL, SDL_MapRGBA(s->format, 255, 0, 255, 255));
+  tex_orcamento_info(NULL, NULL, NULL, &slots);
+  assert(slots > 12 && slots <= 512);
+  // Home/background preloads compete with the wall in the same bounded cache.
+  // Keep the picker hot while filling it; older preloads become cold victims.
+  for (i = 0; i <= slots; i++) {
+    snprintf(paths[i], sizeof paths[i], "%s/pressure-%03d.bmp", getenv("NUVIO_DADOS"), i);
+    assert(SDL_SaveBMP(s, paths[i]) == 0);
+    ready = 0;
+    for (j = 0; j < 1000 && !ready; j++) {
+      tex_novo_quadro();
+      perfilsel_atualizar(0, relogio);
+      ready = tex_obter_larg(paths[i], 128) != 0;
+      tex_bombear(8);
+      SDL_Delay(1);
+    }
+    assert(ready);
+  }
+  SDL_FreeSurface(s);
+  // Drain pending picker promotions before taking the clean reference.
+  for (i = 0; i < 120; i++) {
+    tex_bombear(8);
+    tex_novo_quadro();
+    perfilsel_atualizar(0, relogio);
+    SDL_Delay(1);
+  }
+  pickerPixels();
+  png("perfil/pressure-clean");
+  memcpy(ant, px, (size_t)W * H * 4);
+  // All resident preloads are now hot, with the wall oldest in LRU order.
+  // A new request must wait, rather than deleting artwork already handed out.
+  for (i = 0; i <= slots; i++)
+    if (tex_aspecto(paths[i]) > 0) assert(tex_obter_larg(paths[i], 128));
+  assert(tex_aspecto(paths[0]) == 0);
+  assert(tex_obter_larg(paths[0], 128) == 0);
+  for (i = 0; i < 4; i++) {
+    pickerPixels();
+    bad += memcmp(ant, px, (size_t)W * H * 4) != 0;
+  }
+  png("perfil/pressure-loaded");
+  printf("%s: picker artwork survives full hot cache (bad frames=%d hot evictions=%ld cold evictions=%ld)\n",
+         bad || tex_despejos_quentes_total != hot ? "FAIL" : "PASS", bad,
+         tex_despejos_quentes_total - hot,
+         tex_despejos_total - evictions - (tex_despejos_quentes_total - hot));
+  failures += bad || tex_despejos_quentes_total != hot;
+  failures += tex_despejos_total == evictions; // The reproduction must exercise eviction.
+
+  // Explicitly discard a visible poster, then require identical artwork again.
+  assert(tex_esquecer("deploy/app/art/poster/00.jpg"));
+  tex_novo_quadro();
+  perfilsel_atualizar(0, relogio);
+  pickerPixels();
+  assert(memcmp(ant, px, (size_t)W * H * 4)); // The discarded art was visible.
+  ready = 0;
+  for (i = 0; i < 1000; i++) {
+    tex_bombear(8);
+    tex_novo_quadro();
+    perfilsel_atualizar(0, relogio);
+    pickerPixels();
+    if (!memcmp(ant, px, (size_t)W * H * 4)) { ready = 1; break; }
+    SDL_Delay(1);
+  }
+  png("perfil/pressure-recovered");
+  printf("%s: picker restores original artwork after eviction\n", ready ? "PASS" : "FAIL");
+  failures += !ready;
+  // Deferred requests must eventually load when the preload set cools down.
+  ready = 0;
+  for (i = 0; i < 1000 && !ready; i++) {
+    tex_novo_quadro();
+    perfilsel_atualizar(0, relogio);
+    ready = tex_obter_larg(paths[0], 128) != 0;
+    tex_bombear(8);
+    SDL_Delay(1);
+  }
+  printf("%s: deferred artwork loads after cold eviction\n", ready ? "PASS" : "FAIL");
+  failures += !ready;
+  failures += glGetError() != GL_NO_ERROR;
+}
+
+// PROFILE PICKER (owner, C9, 10-17): "No profile picker tb ta piscando a
+// artwork". Fundo Filmes (the default): the poster wall behind "Who's
+// watching?", the Home assembling hidden behind it as app.c does.
+static void escolhaPerfil(void) {
+  char nm[64];
+  int i, antes;
+  snprintf(nm, sizeof nm, "%s/perfil", out); mkdir(nm, 0755);
+  assert(dados_gravar("perfis.txt", "1\t0\t1\t0\t#FB8C00\tHenrique\tdeploy/app/art/poster/00.jpg\t\n"
+                                    "2\t1\t0\t0\t#2F3BFF\tJose\t\t\n"));
+  assert(dados_gravar("perfil.txt", "1\n"));
+  perfis_carregar_ativo();
+  assert(perfis_n() == 2);
+  perfilsel_iniciar();
+  escolha = 1;
+  antes = flashes;
+  for (i = 0; i < 300; i++) {
+    frame();
+    if (i % 15 == 0) { snprintf(nm, sizeof nm, "perfil/f%03d", i); png(nm); }
+    { int h = furos(); if (h) printf("[pisca3] perfil f%03d holes=%d\n", i, h);
+      failures += h != 0; }
+  }
+  pickerPressure();
+  escolha = 0;
+  printf("%s: profile picker wall without a single-frame flash (%d)\n", flashes > antes ? "FAIL" : "PASS", flashes - antes);
+  failures += flashes > antes;
+}
+
 // Fake native trailer: plays, settles, then the webOS pipeline stalls
 // (video_pronto drops while the uMS reloads) and resumes, then a 4-frame blip.
 static void trailerCiclo(const char *onde, int dono) {
@@ -473,6 +604,8 @@ int main(int argc, char **argv) {
     snprintf(items[i].logo, sizeof items[i].logo, "deploy/app/art/logo/%02d.png", i);
   }
   cat_definir_tudo(items, 10, &row, 1);
+  escolhaPerfil();
+  if (argc > 2 && !strcmp(argv[2], "perfil")) return failures ? 1 : 0;
 
   for (i = 0; i < 240; i++) frame();          // settle: art loads, springs rest
   parado("home-idle", 90);

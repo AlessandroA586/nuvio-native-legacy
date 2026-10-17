@@ -968,7 +968,8 @@ int main(int argc, char **argv) {
   // Range do mkvass era cortado e o resto recusado. PRE-BUSCA antes do video,
   // recuo longo no resto recusado, fontes que nao derrubam a legenda e a
   // varredura quando o Cues nao vem.
-  { char urlP[600], scP[64], scPF[80]; long ms, pedAntes, pedDepois, gets; int e, col = 0, tot = 0;
+  { char urlP[600], scP[64], scPF[80]; long ms, pedAntes, pedDepois, gets; int e, col = 0, tot = 0, nJan = 0;
+    for (int i = 0; i < nEsp; i++) if (esp[i].inicio <= 12.0) nJan++;
     printf("\n[12a] pre-busca antes do video, CDN que corta e recusa o resto COM o video aberto\n");
     snprintf(urlP, sizeof urlP, "%s/rd11929/%s", base, argv[2]);
     nomeSidecar(urlP, -1, scP, sizeof scP); dados_apagar(scP);
@@ -983,13 +984,17 @@ int main(int argc, char **argv) {
            mkvass_prebusca_fase());
     ok(ms <= MKVASS_PREBUSCA_MS + 250, "o video sai dentro do teto da pre-busca");
     ok(mkvass_prebusca_fase() == 2, "pre-busca terminou dentro do teto (servidor local)");
-    ok(tot == nEsp && col == nEsp, "cabecalho, Cues e os blocos da janela lidos antes do video");
+    // Desde cd22ce703 a pre-busca colhe so a janela lateral de 12 s (o video
+    // nao espera); o resto vem depois da adocao, com o playhead andando.
+    ok(tot == nEsp && nJan > 0 && col == nJan, "cabecalho, Cues e os blocos da janela lidos antes do video");
     ok(!legenda_ligada_em(legenda_geracao()), "sem adocao, nada foi entregue ao overlay");
     { unsigned char *cab = NULL; long cabN = 0; MkvFaixa fx[MKV_MAX_FAIXAS]; int nfx = 0;
-      long g0 = contagemServidor();
+      long g0 = contagemDe("contagemcabecalhos");
       if (mkvass_cabecalho(urlP, &cab, &cabN)) nfx = mkv_faixas_do_trecho(cab, cabN, fx, MKV_MAX_FAIXAS, NULL, 0, NULL);
       free(cab);
-      ok(nfx >= 3 && contagemServidor() == g0, "sonda do cabecalho pelo trecho da pre-busca: faixas, sem rede"); }
+      ok(nfx >= 3 && contagemDe("contagemcabecalhos") == g0, "sonda do cabecalho pelo trecho da pre-busca: faixas, sem rede"); }
+    // Count header requests only: queued font jobs may finish during adoption.
+    gets = contagemDe("contagemcabecalhos");
     // O video abre; faixas.c escolhe a faixa (legenda_desligar + ordinal 0).
     videoServidor(1);
     legenda_desligar();
@@ -998,13 +1003,16 @@ int main(int argc, char **argv) {
       while (!legenda_ligada_em(legenda_geracao()) && agoraMs() - t0 < 3000) usleep(5 * 1000);
       printf("    adocao: overlay com a legenda em %ld ms\n", agoraMs() - t0);
       ok(legenda_ligada_em(legenda_geracao()), "adotada: a legenda chega ao overlay"); }
+    ok(contagemDe("contagemcabecalhos") == gets, "a adocao nao repetiu o cabecalho no servidor");
+    // Keep the playhead at zero: later playback must not fill missing initial cues.
+    for (int i = 0; i < nEsp; i++) if (esp[i].inicio <= 12.0)
+      ok(conferirCues(esp + i, 1) == 1, "adocao preservou o cue da janela inicial");
     rodarAte(4.0, 30000, 0.0);
     e = mkvass_estado();
     mkvass_estatisticas(&pedDepois, NULL, NULL, NULL);
     printf("    estado %d, %ld Ranges antes da adocao, %ld depois, %ld resto(s) recusado(s)\n",
            e, pedAntes, pedDepois, contagemDe("contagemrecusas"));
     ok(e == MKVASS_COMPLETO, "COMPLETO com o video aberto, sem no-go");
-    ok(pedDepois == pedAntes, "a adocao nao pediu nada de novo ao servidor");
     ok(conferirCues(esp, nEsp) == nEsp, "todos os cues batem");
     esperarFio(); videoServidor(0);
 

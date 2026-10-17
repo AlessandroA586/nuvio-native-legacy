@@ -307,6 +307,7 @@ static int  pedReproduzir = 0, pedMarcar = 0, pedFontes = 0;
 static int  pedFontesT = 0, pedFontesE = 0;
 // Marcar como ASSISTIDO. Separado de pedMarcar, que e "adicionar a lista".
 static int  pedAssistido = 0;
+static char pedAssistidoId[24];
 static int  pedDoInicio = 0;         // botao "Reproduzir desde o inicio"
 static Uint32 okDesceEm = 0;
 static float pg = 0.0f;              // 0..1: hero -> pagina rolada
@@ -2543,6 +2544,9 @@ static int nBotoes(void) {
 // traducao, na serie o segundo circular (que e o de fontes) dispararia
 // "marcar assistido". Quando temInicio, a posicao 1 e o secundario de texto
 // e os circulares escorregam um para a direita.
+// O pedido do assistido tambem tem DE NASCER COM O TITULO (#595): a linha de
+// acoes e do detail que apertou, e o roteador pode trocar de titulo antes de
+// consumir o pedido.
 enum { ACAO_PRIMARIO = 0, ACAO_LISTA = 1, ACAO_ASSISTIDO = 2, ACAO_FONTES = 3,
        ACAO_INICIO = 4, ACAO_RECOMENDAR = 5, ACAO_LEMBRAR = 6, ACAO_ARTE = 7,
        ACAO_TRAILER = 8, ACAO_EXPLORAR = 9, ACAO_MAIS = 10 };
@@ -3001,7 +3005,9 @@ static void detail_evento_(const SDL_Event *e) {
       } else if (acao == ACAO_LISTA) {
         pedMarcar = 1;
       } else if (acao == ACAO_ASSISTIDO) {
+        const CatItem *ci = cat_item(idx);
         pedAssistido = 1;
+        snprintf(pedAssistidoId, sizeof pedAssistidoId, "%s", ci ? ci->imdb : "");
       } else if (acao == ACAO_MAIS) {
         int d[DMAIS_N];
         maisDisponiveis(d);
@@ -7853,7 +7859,18 @@ void detail_volta_notar(int novo) {
   }
   voltaPilha[nVolta++] = idx;
 }
-int detail_pediu_assistido(void) { int v = pedAssistido; pedAssistido = 0; return v; }
+// Consume only on the same title that received the request: a stale
+// action would mark the newly opened detail as watched on Trakt.
+int detail_pediu_assistido(void) {
+  const CatItem *ci;
+  int v = pedAssistido;
+  char id[sizeof pedAssistidoId];
+  pedAssistido = 0;
+  snprintf(id, sizeof id, "%s", pedAssistidoId);
+  pedAssistidoId[0] = 0;
+  ci = cat_item(idx);
+  return v && ci && !strcmp(ci->imdb, id);
+}
 int detail_pediu_marcar(void)     { int v = pedMarcar;     pedMarcar = 0;     return v; }
 int detail_pediu_amigos(char *imdb, size_t tam) {
   const CatItem *c = cat_item(idx);

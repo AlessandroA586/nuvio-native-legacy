@@ -463,17 +463,18 @@ static void doBlocoTrakt(CatItem *d, const char *bloco, const char *fim,
 // TkUltimo e a regra de empate: traktult.h (issue #213).
 static TkUltimo *ult;   // nUlt: ver trakt_esquecer
 static int ultCap;
-// Os ids ("tt:S:E") dos itens "a seguir" desta rodada, para enfeitar() saber
-// que precisa CONFERIR que o episodio existe antes de publicar.
-static char proxIds[TK_ULT_MAX][32];   // nProxIds: ver trakt_esquecer
+// Keep Trakt-confirmed episodes distinct from guesses that metadata must validate.
+typedef struct { char id[32]; int confirmado; } TkProximo;
+static TkProximo proxIds[TK_ULT_MAX];   // nProxIds: ver trakt_esquecer
 static int ehProximo(const char *id) {
   int i, achou = 0;
   pthread_mutex_lock(&travaCred);
-  for (i = 0; i < nProxIds && !achou; i++) achou = !strcmp(proxIds[i], id);
+  for (i = 0; i < nProxIds && !achou; i++)
+    if (!strcmp(proxIds[i].id, id)) achou = proxIds[i].confirmado ? 2 : 1;
   pthread_mutex_unlock(&travaCred);
   return achou;
 }
-int trakt_e_a_seguir(const char *id) { return id && ehProximo(id); }
+int trakt_e_a_seguir(const char *id) { return id && ehProximo(id) != 0; }
 int trakt_cw_concluiu(const char *id, long long progressoMs) {
   char base[24]; int t = 0, e = 0, i;
   const char *sep = id ? strchr(id, ':') : NULL;
@@ -580,7 +581,7 @@ static int enfeitar(CatItem *d, const char *tipo, uint64_t sessao) {
   char url[300], *corpo;
   char serie[24];
   const char *dp;
-  int precisaCinemeta, proximo, daConta, virou = 0, provFicha = -1;
+  int precisaCinemeta, proximo, confirmado, daConta, virou = 0, provFicha = -1;
   const char *epc;   // de onde saem o nome e a data do episodio "a seguir"
   char *corpoCine = NULL;
   // Arte PRIMEIRO, sem rede: mesma URL que trakt_lista ja monta. Antes cada
@@ -597,11 +598,12 @@ static int enfeitar(CatItem *d, const char *tipo, uint64_t sessao) {
   if (dp) *(char *)dp = 0;
   // Cinemeta so para o que o metahub nao tem: validar "a seguir", sinopse,
   // runtime/meta e nota. Arte ja esta; falha la NAO apaga o item.
-  // "A seguir" e o do Trakt (historico) ou o da CONTA (vistos, issue #199):
-  // os dois sao sugestao de episodio que ninguem confirmou que existe.
+  // Metadata validates guesses; Trakt next_episode already confirms its target.
   if (!nv_perfil_sessao_travar(sessao)) return 0;
   daConta = cwo_conta_a_seguir(d->imdb);
-  proximo = ehProximo(d->imdb) || daConta;
+  proximo = ehProximo(d->imdb);
+  confirmado = proximo == 2;
+  proximo = proximo || daConta;
   nv_perfil_sessao_destravar();
   precisaCinemeta = proximo || !d->sinopse[0] ||
                     !d->meta[0] || d->nota <= 0;
@@ -624,7 +626,7 @@ static int enfeitar(CatItem *d, const char *tipo, uint64_t sessao) {
     deCache = corpo != NULL;
     // "A seguir" que o cache nao confirma pode ser episodio novo: pergunta a
     // rede antes de descartar o item.
-    if (corpo && proximo &&
+    if (corpo && proximo && !confirmado &&
         !metaep_existe(corpo, d->temporada, d->episodio) &&
         !metaep_proximo(corpo, d->temporada, d->episodio, NULL)) {
       free(corpo); corpo = NULL; deCache = 0;
@@ -640,15 +642,13 @@ static int enfeitar(CatItem *d, const char *tipo, uint64_t sessao) {
     (void)deCache; }
   marcarTentada(d->imdb);
   if (!corpo) {
-    // "A seguir" sem meta: nao da para confirmar que o episodio existe.
-    if (proximo) return 0;
+    // A metadata outage cannot invalidate Trakt next_episode.
+    if (proximo && !confirmado) return 0;
     return d->poster[0] != 0;
   }
-  // "A SEGUIR" SO ENTRA SE O EPISODIO EXISTE. Depois do ultimo da temporada o
-  // proximo e o primeiro da seguinte; depois do ultimo da serie nao ha
-  // proximo, e a serie nao entra — nao e "continuar", e "acabou".
+  // Only unconfirmed guesses may advance to another metadata episode.
   epc = corpo;
-  if (proximo && !metaep_existe(corpo, d->temporada, d->episodio) &&
+  if (proximo && !confirmado && !metaep_existe(corpo, d->temporada, d->episodio) &&
       !metaep_proximo(corpo, d->temporada, d->episodio, NULL) &&
       provFicha != METAPROV_CINEMETA && !strcmp(tipo, "series")) {
     // A ficha do Nuvio pode estar atras do Cinemeta (The Rookie: 1 futuro
@@ -673,7 +673,7 @@ static int enfeitar(CatItem *d, const char *tipo, uint64_t sessao) {
   }
   if (proximo) {
     MetaEpInfo prox;
-    if (!metaep_existe(epc, d->temporada, d->episodio)) {
+    if (!confirmado && !metaep_existe(epc, d->temporada, d->episodio)) {
       if (metaep_proximo(epc, d->temporada, d->episodio, &prox)) {
         char velho[sizeof d->imdb];
         snprintf(velho, sizeof velho, "%s", d->imdb);
@@ -1639,7 +1639,7 @@ int trakt_continuar(CatItem *saida, int max) {
   int n = 0;
   TkPlay playLocal[TK_PLAY_MAX] = {0}; int nPlayLocal = 0;
   TkUltimo *ultLocal; int nUltLocal = 0, capUltLocal = TK_ULT_MAX;
-  char proxIdsLocal[TK_ULT_MAX][32] = {{0}}; int nProxLocal = 0;
+  TkProximo proxIdsLocal[TK_ULT_MAX] = {0}; int nProxLocal = 0;
   HistoricoPedido pedido = historicoPedido();
   if (!cabecalhosPedido(pedido, cab, aut, sizeof aut, chave, sizeof chave)) return 0;
   if (pedidoTravar(pedido)) { continuarFalhou = 0; pedidoDestravar(); } else return 0;
@@ -1759,10 +1759,8 @@ int trakt_continuar(CatItem *saida, int max) {
   // abaixo; so sao esperados no fim, antes de a fileira sair.
   if (!filmes) carregarFilmesVistos(cab, pedido);
   printf("[trakt] historico: %d serie(s) com ultimo episodio visto\n", nUltLocal);
-  // "A SEGUIR": serie cujo ultimo episodio visto terminou e que nao esta
-  // pausada em nada. Entra com progresso 0 no episodio seguinte; enfeitar()
-  // confere no Cinemeta que ele existe (ou salta para a temporada seguinte) e
-  // descarta o que acabou. Ver ultLocal[].
+  // Up Next uses Trakt next_episode when available. Only history guesses
+  // need episode validation during metadata enrichment.
   nProxLocal = 0;
   { int u, nTar = 0, acabou = 0;
     TarefaProx *tar = calloc((size_t)nUltLocal, sizeof *tar);
@@ -1822,7 +1820,11 @@ int trakt_continuar(CatItem *saida, int max) {
         snprintf(d->tipo, sizeof d->tipo, "series");
         d->progresso = 0;
         d->retomadoMs = ultLocal[u].quandoMs;
-        if (nProxLocal < TK_ULT_MAX) snprintf(proxIdsLocal[nProxLocal++], sizeof proxIdsLocal[0], "%s", d->imdb);
+        if (nProxLocal < TK_ULT_MAX) {
+          TkProximo *p = &proxIdsLocal[nProxLocal++];
+          snprintf(p->id, sizeof p->id, "%s", d->imdb);
+          p->confirmado = tarDe[u] >= 0 && tar[tarDe[u]].estado == 1;
+        }
         printf("[trakt] a seguir: %s (ultimo visto T%dE%d, %lld)\n", d->imdb, ultLocal[u].temporada, ultLocal[u].episodio, ultLocal[u].quandoMs);
       }
     }
