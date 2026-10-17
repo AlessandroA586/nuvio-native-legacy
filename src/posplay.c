@@ -683,10 +683,10 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
     gfx_rect((GfxRect){ 0.0f, NV_TELA_H - 400.0f, NV_TELA_W, 400.0f }, 0, GFX_VEU_BAIXO,
              0, 0, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.62f * a);
     plrui_material(ilha, 36.0f, 0, a);
-    bw = plrui_botao(ilha.x + 28.0f, by, "Cena pós-créditos — continuar assistindo", "pl_play-f", 1.0f, a);
+    bw = plrui_botao_video(ilha.x + 28.0f, by, "Cena pós-créditos — continuar assistindo", "pl_play-f", 1.0f, a);
     if (visivel && a > 0.99f && a < 1.01f)
       ponteiro_alvo(ilha.x + 28.0f, by, bw, 60.0f, ponteiroComecar, NULL, 0, 0);
-    plrui_dicas(k, r, 2, ilha.x + 28.0f + bw + 22.0f, by + 30.0f, 0, a);
+    plrui_dicas_video(k, r, 2, ilha.x + 28.0f + bw + 22.0f, by + 30.0f, 0, a);
     return;
   }
 
@@ -752,19 +752,19 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
         sinopse_bloco_corta(TXT_ILHA_SUB, px->sinopse, 243, 242, 239, tx, ty, tw, 28.5f, a * 0.68f, 2);
       { float by = ilha.y + ilha.h - 28.0f - 60.0f;
         if (aguardaCena && temProximo()) {   // continuar | proximo episodio, foco no OK
-          float b0 = plrui_botao(tx, by, "Continuar assistindo", "pl_play-f", foco == 0 ? 1.0f : 0.0f, a);
-          float b1 = plrui_botao(tx + b0 + 16.0f, by, "Próximo episódio", NULL, foco == 1 ? 1.0f : 0.0f, a);
+          float b0 = plrui_botao_video(tx, by, "Continuar assistindo", "pl_play-f", foco == 0 ? 1.0f : 0.0f, a);
+          float b1 = plrui_botao_video(tx + b0 + 16.0f, by, "Próximo episódio", NULL, foco == 1 ? 1.0f : 0.0f, a);
           if (visivel && a > 0.99f && a < 1.01f) {
             ponteiro_alvo(tx, by, b0, 60.0f, ponteiroCena, NULL, 0, 0);
             ponteiro_alvo(tx + b0 + 16.0f, by, b1, 60.0f, ponteiroCena, NULL, 1, 0);
           }
           return;
         }
-        float bw = plrui_botao(tx, by, aguardaCena ? "Cena pós-créditos — continuar assistindo" : "Começar agora", "pl_play-f", 1.0f, a);
+        float bw = plrui_botao_video(tx, by, aguardaCena ? "Cena pós-créditos — continuar assistindo" : "Começar agora", "pl_play-f", 1.0f, a);
         if (visivel && a > 0.99f && a < 1.01f)   // so assentado (sem a subida)
           ponteiro_alvo(tx, by, bw, 60.0f, ponteiroComecar, NULL, 0, 0);
         const char *k[2] = { "\xe2\x86\x93", "Voltar" }, *r[2] = { "Voltar ao player", "Ficar nos créditos" };
-        plrui_dicas(k, r, 2, tx + bw + 22.0f, by + 30.0f, 0, a); } }
+        plrui_dicas_video(k, r, 2, tx + bw + 22.0f, by + 30.0f, 0, a); } }
     return;
   }
 
@@ -792,7 +792,7 @@ static void posplay_desenharCorpo_(Uint32 agora, float baseY) {
         }
       }
       { const char *k[3] = { "OK", "\xe2\x86\x93", "Voltar" }, *r[3] = { "Abrir", "Voltar ao player", "Dispensar" };
-        if (!telefoneui_ativo()) plrui_dicas(k, r, 3, ilha.x + ilha.w - 34.0f, yc, 1, a); } }
+        if (!telefoneui_ativo()) plrui_dicas_video(k, r, 3, ilha.x + ilha.w - 34.0f, yc, 1, a); } }
     y += 30.0f + 22.0f + extra;
     cx = ilha.x + 34.0f;
 #ifdef NV_TOUCH_UI

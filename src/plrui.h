@@ -28,14 +28,16 @@ void plrui_linha_foco(GfxRect r, float raioPx, float a);
 void plrui_pilula_foco(GfxRect r, float a);
 // Botao em repouso dentro de uma ilha: branco 8% (solido #24262C).
 void plrui_botao_repouso(GfxRect r, float a);
-// Disco/pilula de botao do OSD em repouso: o material da ilha a 52%
-// (solido #15161A).
+// Video variant: glass off keeps the live frame visible through the fill.
+void plrui_botao_repouso_video(GfxRect r, float a);
+// OSD disc: shared glass at 52%; glass off uses an opacity-dependent tint.
 void plrui_disco_osd(GfxRect r, float a);
 
 // Botao de ilha (.btn do mockup: 60 de altura, 21/600, icone 22): devolve a
 // largura. `foco` 0..1 (mola). Desenha em (x, y).
 float plrui_botao_largura(const char *rotulo, const char *icone);
 float plrui_botao(float x, float y, const char *rotulo, const char *icone, float foco, float a);
+float plrui_botao_video(float x, float y, const char *rotulo, const char *icone, float foco, float a);
 
 // Kicker: 15/700 em caixa alta espacada, `cinza` 0..255 (115 = .45, 158 = .62).
 // Devolve a largura. x < 0 so mede.
@@ -46,6 +48,8 @@ float plrui_kicker(const char *s, float x, float y, int r, int g, int b, float a
 // `alinhaDir` = 1 faz x ser a borda DIREITA. Devolve a largura total.
 float plrui_dicas(const char *const *teclas, const char *const *rotulos, int n,
                   float x, float yc, int alinhaDir, float a);
+float plrui_dicas_video(const char *const *teclas, const char *const *rotulos, int n,
+                        float x, float yc, int alinhaDir, float a);
 
 // SEGMENTADO (.seg): shared frosted sheet track (solid #1D1E23), item
 // selecionado 14% (solido #34363E); `ed` = selecionado E em foco (cheio no

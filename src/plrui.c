@@ -63,10 +63,12 @@ void plrui_pilula_foco(GfxRect r, float a) {
 
 void plrui_botao_repouso(GfxRect r, float a) {
   if (ajustes_vidro()) { gfx_vidro_painel(r, 0.5f, 0.55f, a); return; }
-  // Pilulas tambem flutuam sobre o video: vidro desligado usa o mesmo tom
-  // translucido do disco OSD, nunca o #24262C opaco.
-  gfx_cor(r, 0.5f, 0.082f, 0.086f, 0.102f, (0.30f + 0.45f * ajustes_vidro_opacidade()) * a);
-  gfx_anel(r, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.14f * a);
+  gfx_cor(r, 0.5f, 0.141f, 0.149f, 0.173f, a);
+}
+
+void plrui_botao_repouso_video(GfxRect r, float a) {
+  if (ajustes_vidro()) plrui_botao_repouso(r, a);
+  else plrui_disco_osd(r, a);
 }
 
 // The OSD discs float over the live video (hardware plane under an alpha-0
@@ -93,7 +95,7 @@ float plrui_botao_largura(const char *rotulo, const char *icone) {
   if (icone) w += BT_ICONE + BT_VAO;
   return w;
 }
-float plrui_botao(float x, float y, const char *rotulo, const char *icone, float foco, float a) {
+static float botao(float x, float y, const char *rotulo, const char *icone, float foco, float a, int video) {
   float w = plrui_botao_largura(rotulo, icone);
   GfxRect r = { x, y, w, BT_H };
   int c = 225;
@@ -103,7 +105,10 @@ float plrui_botao(float x, float y, const char *rotulo, const char *icone, float
   // Repouso esvai enquanto a pilula do acento cresce; o TEXTO rasterizado nao
   // pode trocar de cor a cada passo (cache), entao a tinta troca no ponto medio.
   if (f > 0.005f) plrui_pilula_foco(r, a * f);
-  if (f < 0.995f) plrui_botao_repouso(r, a * (1.0f - f));
+  if (f < 0.995f) {
+    if (video) plrui_botao_repouso_video(r, a * (1.0f - f));
+    else plrui_botao_repouso(r, a * (1.0f - f));
+  }
   if (f > 0.5f) c = plrui_tinta();
   if (icone) {
     float k = c / 255.0f;
@@ -115,6 +120,13 @@ float plrui_botao(float x, float y, const char *rotulo, const char *icone, float
   return w;
 }
 
+float plrui_botao(float x, float y, const char *rotulo, const char *icone, float foco, float a) {
+  return botao(x, y, rotulo, icone, foco, a, 0);
+}
+float plrui_botao_video(float x, float y, const char *rotulo, const char *icone, float foco, float a) {
+  return botao(x, y, rotulo, icone, foco, a, 1);
+}
+
 float plrui_kicker(const char *s, float x, float y, int r, int g, int b, float a) {
   char up[200];
   idioma_maiusc(up, sizeof up, i18n(s));
@@ -123,8 +135,8 @@ float plrui_kicker(const char *s, float x, float y, int r, int g, int b, float a
 }
 
 #define KBD_H   30.0f
-float plrui_dicas(const char *const *teclas, const char *const *rotulos, int n,
-                  float x, float yc, int alinhaDir, float a) {
+static float dicas(const char *const *teclas, const char *const *rotulos, int n,
+                   float x, float yc, int alinhaDir, float a, int video) {
   float tot = 0.0f, xx;
   int i, pass;
   for (pass = 0; pass < 2; pass++) {
@@ -137,8 +149,9 @@ float plrui_dicas(const char *const *teclas, const char *const *rotulos, int n,
       if (pass == 1) {
         GfxRect kr = { xx, yc - KBD_H * 0.5f, kw, KBD_H };
         if (ajustes_vidro()) gfx_cor(kr, 0.5f, 1, 1, 1, 0.09f * a);
-        else gfx_cor(kr, 0.5f, 0.082f, 0.086f, 0.102f,
-                     (0.30f + 0.45f * ajustes_vidro_opacidade()) * a);
+        else if (video) gfx_cor(kr, 0.5f, 0.082f, 0.086f, 0.102f,
+                                (0.30f + 0.45f * ajustes_vidro_opacidade()) * a);
+        else gfx_cor(kr, 0.5f, 0.141f, 0.149f, 0.173f, a);
         txt_desenhar_alpha(k, xx + (kw - (float)k.w) * 0.5f, yc - (float)k.h * 0.5f, a);
         txt_desenhar_alpha(l, xx + kw + 9.0f, yc - (float)l.h * 0.5f, a);
       }
@@ -147,6 +160,15 @@ float plrui_dicas(const char *const *teclas, const char *const *rotulos, int n,
     if (pass == 0) tot = xx;
   }
   return tot;
+}
+
+float plrui_dicas(const char *const *teclas, const char *const *rotulos, int n,
+                  float x, float yc, int alinhaDir, float a) {
+  return dicas(teclas, rotulos, n, x, yc, alinhaDir, a, 0);
+}
+float plrui_dicas_video(const char *const *teclas, const char *const *rotulos, int n,
+                        float x, float yc, int alinhaDir, float a) {
+  return dicas(teclas, rotulos, n, x, yc, alinhaDir, a, 1);
 }
 
 #define SEG_PAD  5.0f
