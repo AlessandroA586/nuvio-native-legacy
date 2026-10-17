@@ -5,7 +5,7 @@
 # before = detmais.c at e047eecee; other sources stay current.
 set -eu
 cd "$(dirname "$0")/.."
-OUT=/Volumes/ExternalSSD/tmp/detalheglass/fix
+OUT=${NUVIO_DETAIL_OUT:-/Volumes/ExternalSSD/tmp/detalheglass/fix2}
 export TMPDIR="$OUT/tmp"
 export OBJ="${OBJ:-/Volumes/ExternalSSD/tmp/detalheglass/obj}"
 mkdir -p "$OUT" "$TMPDIR" "$OBJ"

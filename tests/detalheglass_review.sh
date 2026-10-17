@@ -1,5 +1,5 @@
 #!/bin/bash
-# Regression proof + tier budgets + focused before/after PNGs. No installs.
+# Regression proof + host configuration budgets + before/after PNGs. No installs.
 set -eu
 cd "$(dirname "$0")/.."
 out=/Volumes/ExternalSSD/tmp/detalheglass/fix2
@@ -29,9 +29,7 @@ if run rows-before env NUVIO_DETAIL_CHECK=rows NUVIO_DETAIL_SOURCE="$out/detail-
 fi
 grep -q 'FAIL: isolated movie card 0' "$out/rows-before.log"
 grep -q 'FAIL: isolated series card 0' "$out/rows-before.log"
-for tier in tizen webos android c9; do
-  run "rows-$tier" env NUVIO_DETAIL_TIER=$tier bash tests/detalheglass.sh check
-done
+run configs bash tests/detalheglass_configs.sh
 # Pixel proof must fail against the previous menu source, pass on current.
 git show e047eecee:src/detmais.c > "$out/detmais-before.c"
 if run menu-before env NUVIO_DETMAIS_SOURCE="$out/detmais-before.c" bash tests/detmaisglass.sh check; then
@@ -59,4 +57,4 @@ while IFS= read -r bmp; do
   sips -s format png "$bmp" --out "${bmp%.bmp}.png" >/dev/null
   rm "$bmp"
 done < <(find "$out" -name '*.bmp')
-echo 'PASS: reviewed regressions rejected; current cards/menu/tier budgets passed; PNGs saved'
+echo 'PASS: reviewed regressions rejected; current cards/menu/host budgets passed; PNGs saved'

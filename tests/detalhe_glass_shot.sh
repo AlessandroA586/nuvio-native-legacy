@@ -12,6 +12,10 @@ TMPDIR="${TMPDIR%/}"
 # recompilam quando o .c muda; detail.c entra pelo include do teste.
 set -eu
 cd "$(dirname "$0")/.."
+if [ -n "${NUVIO_DETAIL_TIER:-}" ]; then
+  echo 'device tiers require a device GLES runner; use NUVIO_DETAIL_CONFIG for host checks' >&2
+  exit 2
+fi
 OBJ=${OBJ:-${TMPDIR:-/tmp}/nuvio-detglass-obj}
 mkdir -p "$OBJ" "$1"
 NUVIO_DADOS=$(mktemp -d ${TMPDIR:-/tmp}/nuvio-detglass-dados.XXXXXX)
@@ -37,16 +41,6 @@ for s in src/*.c src/dts/*.c; do
   if [ "$s" = src/detmais.c ] && [ -n "${NUVIO_DETMAIS_SOURCE:-}" ]; then
     s="$NUVIO_DETMAIS_SOURCE"
     o="$OBJ/detmais-before.o"
-  fi
-  if [ "$s" = src/gfx.c ] && [ -n "${NUVIO_DETAIL_TIER:-}" ]; then
-    o="$OBJ/gfx-$NUVIO_DETAIL_TIER.o"
-    case "$NUVIO_DETAIL_TIER" in
-      webos) extra="-DNV_WEBOS";;
-      android) extra="-DNV_ANDROID";;
-      tizen) extra="-DNV_TIZEN";;
-      c9) extra="-DNV_WEBOS";;
-      *) exit 2;;
-    esac
   fi
   objs+=("$o")
   if [ ! -f "$o" ] || [ "$s" -nt "$o" ] || [ -n "$(find src -name '*.h' -newer "$o" -print -quit)" ]; then

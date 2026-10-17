@@ -419,19 +419,26 @@ static int quer(int argc, char **argv, const char *id) {
 int main(int argc, char **argv) {
   SDL_GLContext gl;
   const char *dd;
+  const char *config = getenv("NUVIO_DETAIL_CONFIG");
+  int width = 1920, height = 1080;
+  if (config) {
+    if (!strcmp(config, "720-frost")) { width = 1280; height = 720; }
+    else if (!strcmp(config, "2160-frost")) { width = 3840; height = 2160; }
+    else if (strcmp(config, "1080-frost") && strcmp(config, "1080-clear") && strcmp(config, "1080-minimal")) return 2;
+  }
   saida = argc > 1 ? argv[1] : nvt("/nuvio-detglass");
   assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
   IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
   janela = SDL_CreateWindow("Nuvio: detalhe glass", SDL_WINDOWPOS_CENTERED,
-                            SDL_WINDOWPOS_CENTERED, 1920, 1080,
+                            SDL_WINDOWPOS_CENTERED, width, height,
                             SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
   assert(janela);
   gl = SDL_GL_CreateContext(janela);
   SDL_GL_SetSwapInterval(0);
-  glViewport(0, 0, 1920, 1080);
-  gfx_tamanho_alvo(1920, 1080);
+  glViewport(0, 0, width, height);
+  gfx_tamanho_alvo(width, height);
   assert(gfx_iniciar());
   { char ic[1024]; if (realpath("deploy/app/art", ic)) gfx_icones_dir(ic); }
   assert(txt_iniciar("deploy/app", 1));
@@ -465,6 +472,16 @@ int main(int argc, char **argv) {
     ajustes_teste_vidro_env();
     ajustes_definir_vidro(getenv("NUVIO_SHOT_VIDRO") && atoi(getenv("NUVIO_SHOT_VIDRO")));
     assert(ajustes_vidro() == (getenv("NUVIO_SHOT_VIDRO") && atoi(getenv("NUVIO_SHOT_VIDRO"))));
+  }
+  if (config) {
+    setenv("NUVIO_SHOT_VIDRO_FOSCO", !strcmp(config, "1080-clear") ? "0" : "1", 1);
+    ajustes_teste_vidro_env();
+    gfx_definir_efeitos_minimos(!strcmp(config, "1080-minimal"));
+    int w, h;
+    gfx_tamanho_tela(&w, &h);
+    assert(w == width && h == height);
+    printf("PASS: renderer config=%s drawable=%dx%d frost=%d minimal=%d GL=%s (host only)\n",
+           config, w, h, ajustes_vidro_fosco(), gfx_efeitos_minimos(), glGetString(GL_VERSION));
   }
   if (vt_ligado()) vt_vidro();
   // As marcas das notas (IMDb, Rotten Tomatoes, Trakt) vem da pasta de arte.

@@ -66,7 +66,9 @@ static int rows_checks(void) {
     { "cast", SEC_ELENCO, 6 }, { "recommendations", SEC_RELACIONADOS, 7 },
     { "trailers", SEC_TRAILERS, 1 }, { "collection", SEC_COLECAO, 1 },
   };
-  int failures = card_checks();
+  // Pixel/card checks use the canonical 1080p frost setup separately.
+  int failures = getenv("NUVIO_DETAIL_CONFIG") ? 0 : card_checks();
+  int frost = ajustes_vidro_fosco() && !gfx_efeitos_minimos();
   for (int serie = 0; serie < 2; serie++)
     for (int l = 0; l < 4; l++) {
       int capt = 0, pass = 0, src = 0, up = 0, cols;
@@ -85,7 +87,7 @@ static int rows_checks(void) {
              serie ? "series" : "movie", linhas[l].nome, cols, capt, pass, src, up);
       printf("%s %s budget: rects=%d fill=%.3f blur-fill=%.3f\n",
              serie ? "series" : "movie", linhas[l].nome, rowRects, rowFill, rowBlur);
-      if (capt > 1 || pass > 5 || src == 0 || up != 0 || rowRects > 260 || rowFill > 5.4 || rowBlur > .75) {
+      if (capt > 1 || pass > 5 || (frost ? src == 0 : src != 0 || capt != 0 || pass != 0) || up != 0 || rowRects > 260 || rowFill > 5.4 || rowBlur > .75) {
         fprintf(stderr, "FAIL: %s %s over budget\n", serie ? "series" : "movie", linhas[l].nome);
         failures++;
       }
