@@ -10,6 +10,7 @@
 #include "idioma.h"
 #include "js.h"
 #include "layout.h"
+#include "plrui.h"
 #include "linguas.h"
 #include "detail.h"
 #include "ponteiro.h"
@@ -681,10 +682,16 @@ void trocaarte_desenhar(const char *logoPagina) {
   // A rampa termina OPACA logo acima do cabecalho (medido na captura: a
   // legenda em cinza sumia sobre um fundo claro com a rampa comecando em 360)
   // e o chao continua dali sem emenda.
-  gfx_rect((GfxRect){ 0, 200.0f, NV_TELA_W, 340.0f }, 0, GFX_VEU_BAIXO,
-           0, 0, 0, 0.0f, 0.035f, 0.038f, 0.045f, a);
-  gfx_cor((GfxRect){ 0, 526.0f, NV_TELA_W, NV_TELA_H - 526.0f }, 0.0f,
-          0.035f, 0.038f, 0.045f, a);
+  // Glass UI: o chao e a folha de vidro do app (a pagina do titulo fosca por
+  // baixo), sem rampa; sai da tela por baixo, so o topo e arredondado.
+  if (ajustes_vidro())
+    plrui_material((GfxRect){ 0, 526.0f, NV_TELA_W, NV_TELA_H - 526.0f + 40.0f }, 28.0f, 0, a);
+  else {
+    gfx_rect((GfxRect){ 0, 200.0f, NV_TELA_W, 340.0f }, 0, GFX_VEU_BAIXO,
+             0, 0, 0, 0.0f, 0.035f, 0.038f, 0.045f, a);
+    gfx_cor((GfxRect){ 0, 526.0f, NV_TELA_W, NV_TELA_H - 526.0f }, 0.0f,
+            0.035f, 0.038f, 0.045f, a);
+  }
 
   // CABECALHO: titulo, as duas abas e a legenda do controle.
   { TxtLinha t = txt_linha(TXT_HEADLINE, "Trocar arte", 245, 248, 255, 255);
