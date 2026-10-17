@@ -20,6 +20,7 @@
 #include "menu.h"
 #include "tex_cache.h"
 #include "text.h"
+#include "trailer.h"
 #include "gl_compat.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -37,7 +38,7 @@ static unsigned char *px;
 static unsigned char *ant;
 static int failures;
 static unsigned char *q1, *q2;   // the two frames before this one
-static int nquadro, flashes, sujas;   // sujas: textures given garbage
+static int nquadro, flashes, sujas, saltos;   // sujas: textures given garbage
 static const char *cena = "settle";   // last window started (transitions follow it)
 
 // Mean |diff| over every 7th pixel (RGBA).
@@ -72,6 +73,7 @@ static void frame(void) {
   Uint32 now = relogio += 16;
   tex_bombear(8);
   home_atualizar(1.0f / 60, now);
+  home_trailer_passo(!detail_aberto(), 1.0f / 60, now);   // as app.c
   if (!detail_aberto() && home_pediu_abrir()) {
     HomeItem it;
     if (home_item_focado(&it)) detail_abrir(&it);
@@ -171,6 +173,64 @@ static void parado(const char *nome, int n) {
   failures += mudou != 0;
 }
 
+// Frames until the whole frame stays identical for 60 frames (at most `max`):
+// late network text must not land inside a settled window. Flicker never
+// settles, and the window after it still fails.
+static void assentar(int max) {
+  unsigned h0 = 0;
+  int i, iguais = 0;
+  for (i = 0; i < max && iguais < 60; i++) {
+    unsigned h;
+    frame();
+    h = hash(0, H);
+    iguais = h == h0 ? iguais + 1 : 0;
+    h0 = h;
+  }
+}
+
+// A run that may change (fades): print per-frame mean diff and hole pixels,
+// so a jump (one frame far above its neighbours) stands out.
+static void rampa(const char *nome, int n) {
+  int i;
+  double d, dAnt = 0;
+  cena = nome;
+  for (i = 0; i < n; i++) {
+    frame();
+    d = dif(ant, px);
+    printf("[pisca3] %s f%03d dif=%.2f holes=%d\n", nome, i, d, furos());
+    // JUMP: a fade step far above the step before it (a fade only slows down).
+    if (i && d > 8.0 && d > 6.0 * dAnt) {
+      char nm[96];
+      saltos++;
+      printf("[pisca3] JUMP %s f%03d: %.2f after %.2f\n", nome, i, d, dAnt);
+      snprintf(nm, sizeof nm, "%s-f%03d-jump", nome, i); png(nm);
+      memcpy(px, ant, (size_t)W * H * 4);
+      snprintf(nm, sizeof nm, "%s-f%03d-before", nome, i); png(nm);
+      memcpy(px, q1, (size_t)W * H * 4);
+    }
+    dAnt = d;
+    memcpy(ant, px, (size_t)W * H * 4);
+  }
+}
+
+// Fake native trailer: plays, settles, then the webOS pipeline stalls
+// (video_pronto drops while the uMS reloads) and resumes, then a 4-frame blip.
+static void trailerCiclo(const char *onde, int dono) {
+  char nm[64];
+  GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
+  trailer_teste_falso(1);
+  frame(); frame();                           // home: the hero claims the trailer slot
+  trailer_abrir("fake://trailer", tela, 0, 0);
+  trailer_marcar_dono(dono, "tt9000000");
+  snprintf(nm, sizeof nm, "%s-trailer-in", onde); rampa(nm, 120);
+  snprintf(nm, sizeof nm, "%s-trailer", onde); parado(nm, 60);
+  trailer_teste_falso(0); snprintf(nm, sizeof nm, "%s-stall", onde); rampa(nm, 90);
+  trailer_teste_falso(1); snprintf(nm, sizeof nm, "%s-resume", onde); rampa(nm, 90);
+  trailer_teste_falso(0); snprintf(nm, sizeof nm, "%s-blip", onde); rampa(nm, 4);
+  trailer_teste_falso(1); snprintf(nm, sizeof nm, "%s-blip-back", onde); rampa(nm, 60);
+  trailer_fechar(); trailer_teste_falso(0);   // still supported, as on the TV
+}
+
 int main(int argc, char **argv) {
   static CatItem items[10];
   CatFileira row;
@@ -197,7 +257,11 @@ int main(int argc, char **argv) {
   FILE *f = fopen(path, "w"); assert(f);
   // Apple TV layout, Fundo = Frost, glass on, no clock (it ticks).
   fputs("homeLayoutLocal 2\nvidroLocal 0\nfundoLocal 2\nidioma 0\ntrailerHero 0\nrelogioTelaLocal 0\nselected_theme 12\n", f);
-  fclose(f); ajustes_dir(getenv("NUVIO_DADOS"));
+  fclose(f);
+  // V_LIGA: 0 = on. trailer-1310.txt: skip the one-time "trailers off" migration.
+  snprintf(path, sizeof path, "%s/trailer-1310.txt", getenv("NUVIO_DADOS"));
+  f = fopen(path, "w"); assert(f); fputs("1\n", f); fclose(f);
+  ajustes_dir(getenv("NUVIO_DADOS"));
   setenv("NUVIO_SHOT_VIDRO_FOSCO", "1", 1); ajustes_teste_vidro_env();
   assert(ajustes_vidro() && ajustes_vidro_fosco() && ajustes_home_layout() == HOME_LAYOUT_DINAMICA);
   assert(ajustes_cor_viva() == CORVIVA_SIMPLES);   // C9 log: cor-viva=1
@@ -225,16 +289,26 @@ int main(int argc, char **argv) {
 
   for (i = 0; i < 240; i++) frame();          // settle: art loads, springs rest
   parado("home-idle", 90);
+  trailerCiclo("home", TRAILER_DONO_HOME);
+  for (i = 0; i < 120; i++) frame();
   tecla(SDLK_DOWN);
   for (i = 0; i < 150; i++) frame();
   parado("home-moved", 60);
   tecla(SDLK_RIGHT);
   for (i = 0; i < 90; i++) frame();
   { HomeItem it;                              // open the title (carousel, Frost page)
+    int k;
+    for (k = 0; k < 3 && !home_item_focado(&it); k++) {   // catalogue revision moved: refocus
+      tecla(SDLK_LEFT); for (i = 0; i < 60; i++) frame();
+      tecla(SDLK_RIGHT); for (i = 0; i < 60; i++) frame();
+    }
     assert(home_item_focado(&it)); detail_abrir(&it); }
   for (i = 0; i < 300; i++) frame();
+  assentar(900);                              // network meta (Cinemeta, IMDb) lands late
   assert(detail_aberto());
   parado("detail-idle", 90);
+  trailerCiclo("detail", TRAILER_DONO_DETALHE);   // C9 log: "[trailer] apple tt1430132 ... HLS"
+  for (i = 0; i < 120; i++) frame();
   tecla(SDLK_DOWN);                           // into the page: the card expands over Frost
   for (i = 0; i < 200; i++) frame();
   parado("page-idle", 90);
@@ -244,6 +318,8 @@ int main(int argc, char **argv) {
   for (i = 0; i < 4 * 150; i++) gfx_vidro_governar(100.0, 16.7);   // C9: the governor trips
   for (i = 0; i < 30; i++) frame();
   parado("detail-smoked", 90);
+  printf("[pisca3] jumps=%d\n%s: trailer fades without a jump\n", saltos, saltos ? "FAIL" : "PASS");
+  failures += saltos != 0;
   printf("[pisca3] garbage-textures=%d\n", sujas);
   printf("[pisca3] flashes=%d\n%s: no single-frame flash\n", flashes, flashes ? "FAIL" : "PASS");
   failures += flashes != 0;
