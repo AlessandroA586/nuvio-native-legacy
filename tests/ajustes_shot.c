@@ -108,6 +108,10 @@ static void captura(const char *nome, SDL_Window *win) {
     if (getenv("NUVIO_SHOT_MENU")) {
       menu_definir_destino(MENU_AJUSTES);
       menu_pilula_mostrar(1.0f);
+      if (atoi(getenv("NUVIO_SHOT_MENU")) == 2) {   // 2 = sidebar open over Settings
+        if (!menu_aberto()) menu_abrir();
+        menu_atualizar(1.0f / 60.0f, SDL_GetTicks());
+      }
       menu_desenhar(SDL_GetTicks());
     }
     if (spot_visivel()) {   // "Buscar no guia" (o Spotlight no modo guia)
@@ -149,6 +153,19 @@ static void captura(const char *nome, SDL_Window *win) {
         memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
       assert(strstr(nome, ".png") ? IMG_SavePNG(s, nome) == 0 : SDL_SaveBMP(s, nome) == 0);
       SDL_FreeSurface(s);
+      // NUVIO_SHOT_MENU=2: blur proof, as in detalhe_glass_shot.c (fraction of
+      // pixels with a luma step > 6 in the empty right strip of the sidebar).
+      if (getenv("NUVIO_SHOT_MENU") && atoi(getenv("NUVIO_SHOT_MENU")) == 2) {
+        double g = 0; int n = 0, x;
+        for (y = 175; y < 780; y++)
+          for (x = 330; x < 410; x++) {
+            const unsigned char *a = pix + ((1079 - y) * 1920 + x) * 4, *b = a + 4;
+            g += abs((a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2])) / 3 > 6; n++;
+          }
+        g /= n;
+        printf("menu-var %s %.4f com_fonte=%d capturas=%d\n", nome, g, gfx_vidro_com_fonte, gfx_vidro_capturas);
+        if (g > 0.003) { printf("FAIL menu-var: page seen through the sidebar (not frosted)\n"); exit(1); }
+      }
       free(pix);
     }
     SDL_GL_SwapWindow(win);

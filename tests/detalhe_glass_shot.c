@@ -82,6 +82,7 @@
 
 #include "dados.h"
 #include "ilha.h"
+#include "menu.h"
 #include "salvospainel.h"
 #include "vidro_telas.h"
 
@@ -293,6 +294,20 @@ static void gravar(const char *id) {
     memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
   SDL_SaveBMP(s, nome);
   SDL_FreeSurface(s);
+  // NUVIO_SHOT_MENU: blur proof. Fraction of pixels with a |horizontal luma step| > 6 over the empty
+  // right strip of the open sidebar (x 330..410, y 175..780, no labels there):
+  // page text/pills seen through a flat tint give a high value, frost a low one.
+  if (getenv("NUVIO_SHOT_MENU")) {
+    double g = 0; int n = 0;
+    for (int y = 175; y < 780; y++)
+      for (int x = 330; x < 410; x++) {
+        const unsigned char *a = pix + ((1079 - y) * 1920 + x) * 4, *b = a + 4;
+        g += abs((a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2])) / 3 > 6; n++;
+      }
+    g /= n;
+    printf("menu-var %s %.4f\n", id, g);
+    if (g > 0.003) { printf("FAIL menu-var %s: page seen through the sidebar (not frosted)\n", id); exit(1); }
+  }
   free(pix);
   printf("captura: %s\n", nome);
   // A rolagem do documento, para montar a pagina inteira (lado a lado com o
@@ -322,6 +337,13 @@ static void quadros(int n) {
       if (!spainel_aberto()) spainel_abrir();
       spainel_atualizar(1.0f / 60.0f, SDL_GetTicks());
       if (spainel_visivel()) spainel_desenhar(SDL_GetTicks());
+    }
+    // NUVIO_SHOT_MENU=1: the sidebar opened over the page (menu_abrir_sobre), as app.c draws it.
+    if (getenv("NUVIO_SHOT_MENU")) {
+      if (!menu_aberto()) { menu_iniciar(); menu_abrir_sobre(1); }
+      menu_atualizar(1.0f / 60.0f, SDL_GetTicks());
+      menu_desenhar(SDL_GetTicks());
+      if (i == n - 1) printf("menu-fonte: com_fonte=%d capturas=%d\n", gfx_vidro_com_fonte, gfx_vidro_capturas);
     }
     // The sources sheet over the page, as app.c draws it.
     if (stream_folha_aberta()) { stream_folha_atualizar(1.0f / 60.0f, SDL_GetTicks()); stream_folha_desenhar(SDL_GetTicks()); }
@@ -398,6 +420,7 @@ int main(int argc, char **argv) {
     if (getenv("NUVIO_SHOT_FUNDO")) fprintf(f, "fundoLocal %d\n", atoi(getenv("NUVIO_SHOT_FUNDO")));
     fclose(f);
     ajustes_dir(dd); }
+  ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_FOSCO / _OPAC
   if (vt_ligado()) vt_vidro();
   // As marcas das notas (IMDb, Rotten Tomatoes, Trakt) vem da pasta de arte.
   { char ar[1024]; if (realpath("deploy/app/art", ar)) extras_carregar(ar); }

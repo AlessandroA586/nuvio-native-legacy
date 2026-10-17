@@ -602,6 +602,9 @@ void gfx_chrome_dens(float out[3]);
 #define GFX_VIDRO_DENS       0.80f
 #define GFX_VIDRO_DENS_MODAL 0.86f
 void gfx_vidro_material(GfxRect r, float raio, float dens, float a);
+// 1 while drawing a glass LAYER above the screen (sidebar): earlier glasses it
+// covers no longer force it flat (set/cleared by the caller around the draw).
+extern int gfx_vidro_camada;
 // O mesmo com "Interface de vidro" desligada: a cor lisa (sr,sg,sb) a `sa`.
 void gfx_vidro_ou_solido(GfxRect r, float raio, float dens, float a,
                          float sr, float sg, float sb, float sa);

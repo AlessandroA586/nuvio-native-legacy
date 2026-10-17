@@ -1934,6 +1934,7 @@ static int vidroNRegAnt, vidroNRegCur;
 static float vidroDesde[4];   // caixa do que foi pintado na tela desde a ultima captura
 static float vidroVidros[VID_N][4], vidroFuros[VID_NFUROS][4];
 int gfx_vidro_capturas, gfx_vidro_passadas;
+int gfx_vidro_camada;
 double gfx_vidro_fill, gfx_vidro_copia;
 // BACKDROP-ONLY SOURCE (docs/fosco-nova.md): the glasses read a blurred copy
 // of the backdrop layer alone (art, light, veils: every draw before the
@@ -3627,7 +3628,9 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   chapado = !ajustes_vidro_fosco() || efeitosMinimos || snapAtivo || miniAtiva || giroOn ||
             gfx_opacidade_grupo < 0.999f ||
             t.x >= NV_TELA_W || t.y >= NV_TELA_H || t.x + t.w <= 0.0f || t.y + t.h <= 0.0f;
-  for (i = 0; !chapado && i < vidroNVidros; i++) chapado = vidroCruza(vidroVidros[i], tela);
+  // A layer over the page (sidebar) frosts even where page glass (pills, cards)
+  // sits under it: it reads the blurred backdrop, not those glasses.
+  for (i = 0; !chapado && !gfx_vidro_camada && i < vidroNVidros; i++) chapado = vidroCruza(vidroVidros[i], tela);
   video = foscoBloq;
   for (i = 0; !video && i < vidroNFuros; i++) video = vidroCruza(vidroFuros[i], tela);
   if (video && !foscoVideo) chapado = 1;
