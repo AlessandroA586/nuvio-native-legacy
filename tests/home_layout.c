@@ -396,6 +396,21 @@ int main(void) {
       anim_politica_reduzida = 0;
     }
 #endif
+    // Changing text scale must keep the last poster's panel and See all visible.
+    fileiras[0].n = 4;
+    fileiras[0].verTudo = 1;
+    foco.fileira = focoHero = 0;
+    foco.coluna = 3;
+    palcoUlt[0] = 0;
+    testeTxt = testeAtiva = .85f;
+    scrollX[0] = alvoScrollFil(0, 3, 0, 0);
+    palcoPasso(0, 3000);
+    testeTxt = testeAtiva = 1.15f;
+    palcoPasso(0, 4000);
+    GfxRect panel = palcoInfoRect(0, 100, larguraFil(0), alturaFil(0));
+    assert(panel.x + panel.w <= NV_TELA_W);
+    assert(fabsf(scrollX[0] - alvoScrollFil(0, 3, scrollX[0], 0)) < .01f);
+    testeTxt = testeAtiva = 1;
     testeImdb = 0;
   }
   // A composicao abaixo e a da home SEM o destaque no topo: e nela que a

@@ -6228,7 +6228,14 @@ static void palcoPasso(int r, Uint32 agora) {
   Uint32 ms = agora - palcoUlt[r];
   float k = palcoProgresso(ms);
   palcoPos[r] = k >= 1 ? (float)alvo : anim_mistura(palcoMov[r].de, (float)alvo, k);
-  scrollX[r] = k >= 1 ? palcoMov[r].scrollAlvo : anim_mistura(palcoMov[r].scrollDe, palcoMov[r].scrollAlvo, k);
+#ifdef NV_TOUCH_UI
+  if (!toqueLivreX[r])
+#endif
+  {
+    // Recheck viewport geometry even when focus stays on the same column.
+    palcoMov[r].scrollAlvo = alvoScrollFil(r, alvo, palcoMov[r].scrollAlvo, 0);
+    scrollX[r] = k >= 1 ? palcoMov[r].scrollAlvo : anim_mistura(palcoMov[r].scrollDe, palcoMov[r].scrollAlvo, k);
+  }
   if (palcoMov[r].alvo == palcoMov[r].anterior || anim_politica_reduzida) palcoMov[r].texto = 1;
   else palcoMov[r].texto = anim_clamp(((float)ms - NV_PALCO_TEXT_DELAY_MS) / NV_PALCO_TEXT_MS, 0, 1);
   if (palcoMov[r].texto >= 1) palcoMov[r].anterior = alvo;
