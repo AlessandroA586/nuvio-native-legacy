@@ -242,6 +242,37 @@ int main(void) {
   assert(NV_LEGACY_ROW_HEAD_H >= 64.0f);
   assert(NV_FILEIRA_GAP >= 80.0f);
   assert(NV_FICHA_W <= 540.0f);
+  // PÔSTER GRANDE P/M/G (dono: "esse estilo de fileira pode ter 3 tamanhos
+  // tb"): a mesma forma em tres tamanhos, crescendo sem tirar o card da tela.
+  // O M e o de sempre (fator 1, 3:4); no menor a altura cai, e o maior nunca
+  // fica mais baixo que o M — na Moderna/Padrao o teto de altura vale para ele
+  // tambem, entao la ele cresce na LARGURA (alargaPosterG); na Dinamica, nos dois.
+  { static const int T3[3] = { FIL_TIPO_POSTER_GRANDE_P, FIL_TIPO_POSTER_GRANDE, FIL_TIPO_POSTER_GRANDE_G };
+    static const int LAY[2] = { HOME_LAYOUT_MODERNA, HOME_LAYOUT_DINAMICA };
+    for (int li = 0; li < 2; li++) {
+      float w[3], h[3], wc[3];
+      homeCom(LAY[li], 0);
+      for (int k = 0; k < 3; k++) {
+        assert(tipoDaEscolha(T3[k]) == FILEIRA_POSTER_GRANDE);
+        fileiras[0] = (Fileira){.tipo = FILEIRA_POSTER_GRANDE, .n = 3,
+                                .escala = fil_tipo_fator(T3[k]), .fator = fil_tipo_fator(T3[k])};
+        w[k] = larguraFil(0); h[k] = alturaFil(0);
+        fileiras[0] = (Fileira){.tipo = FILEIRA_CATALOGOS, .n = 3, .estiloCol = FILEIRA_POSTER_GRANDE,
+                                .escala = fil_tipo_fator(T3[k]), .fator = fil_tipo_fator(T3[k])};
+        wc[k] = larguraFil(0);
+        assert(h[k] > 0.0f && h[k] <= NV_TELA_H - 64.0f);   // cabe na tela
+      }
+      assert(w[0] < w[1] && w[1] < w[2]);                    // largura cresce
+      assert(h[0] < h[1] && h[1] <= h[2] + 0.01f);           // altura nunca encolhe
+      assert(w[0] * h[0] < w[1] * h[1] && w[1] * h[1] < w[2] * h[2]);   // area cresce
+      assert(wc[0] < wc[1] && wc[1] < wc[2]);                // a pasta (colecao) tambem
+      if (LAY[li] == HOME_LAYOUT_DINAMICA) assert(h[1] < h[2]);          // sem teto: mais alto
+      // O M e o de antes dos tres tamanhos: 3:4 cheio ou preso so pelo teto.
+      fileiras[0] = (Fileira){.tipo = FILEIRA_POSTER_GRANDE, .n = 3, .escala = 1.0f, .fator = 1.0f};
+      assert(fabsf(larguraFil(0) / alturaFil(0) - 0.75f) < 0.001f);
+    }
+    homeCom(HOME_LAYOUT_MODERNA, 0);
+    memset(&fileiras[0], 0, sizeof fileiras[0]); }
   assert(larguraDe(FILEIRA_COLECAO) > larguraDe(FILEIRA_SERVICO));
   assert(!temRotulo(FILEIRA_DESTAQUE));
   assert(!temRotulo(FILEIRA_CATALOGOS));

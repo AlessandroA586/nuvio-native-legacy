@@ -1472,7 +1472,8 @@ static void estGlifo(GfxRect q, int tipo, float tinta, float a) {
   switch (tipo) {
     case FIL_TIPO_CARTAZ: case FIL_TIPO_TOP10: case FIL_TIPO_RANKING:
     case FIL_TIPO_LINHA_TEMPO: case FIL_TIPO_FICHA: case FIL_TIPO_PALCO:
-    case FIL_TIPO_POSTER_GRANDE:
+    case FIL_TIPO_POSTER_GRANDE: case FIL_TIPO_POSTER_GRANDE_P:
+    case FIL_TIPO_POSTER_GRANDE_G:
       w = 14.0f; h = 20.0f; break;
     case FIL_TIPO_DESTAQUE_QUADRADO: case FIL_TIPO_DESTAQUE_QUADRADO_M:
     case FIL_TIPO_DESTAQUE_QUADRADO_G: case FIL_TIPO_AUTO:

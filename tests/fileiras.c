@@ -178,6 +178,39 @@ int main(void) {
     // Issue #201: os dois rankings no menu, o numerado (Dinamica) primeiro.
     assert(tipos[9] == FIL_TIPO_RANKING && tipos[10] == FIL_TIPO_TOP10 &&
            !strcmp(rot[9], "Ranking numerado"));
+    // PÔSTER GRANDE em 3 tamanhos (dono: "esse estilo de fileira pode ter 3
+    // tamanhos tb"): UMA linha do modal, P / M / G. Os dois novos entram no FIM
+    // do enum (o 16 gravado continua sendo o M), o M tem o fator 1, e cada
+    // tamanho vale para catalogo e colecao, com ajuda propria em ambos.
+    { FilEstiloLinha pg[FIL_TIPO_N];
+      int npg = fil_estilo_linhas("addon_movie_formas", pg, FIL_TIPO_N), kpg;
+      assert(FIL_TIPO_POSTER_GRANDE == 16 && FIL_TIPO_HEROI_DIVIDIDO == 17 &&
+             FIL_TIPO_POSTER_GRANDE_P == 18 && FIL_TIPO_POSTER_GRANDE_G == 19 &&
+             FIL_TIPO_N == 20);
+      for (kpg = 0; kpg < npg && pg[kpg].tipos[0] != FIL_TIPO_POSTER_GRANDE_P; kpg++);
+      assert(kpg < npg && pg[kpg].n == 3 && pg[kpg].tipos[1] == FIL_TIPO_POSTER_GRANDE &&
+             pg[kpg].tipos[2] == FIL_TIPO_POSTER_GRANDE_G);
+      assert(fil_tipo_fator(FIL_TIPO_POSTER_GRANDE) == 1.0f &&
+             fil_tipo_fator(FIL_TIPO_POSTER_GRANDE_P) < 1.0f &&
+             fil_tipo_fator(FIL_TIPO_POSTER_GRANDE_G) > 1.0f);
+      for (kpg = 0; kpg < 3; kpg++) {
+        int tpg = kpg == 0 ? FIL_TIPO_POSTER_GRANDE_P : kpg == 1 ? FIL_TIPO_POSTER_GRANDE : FIL_TIPO_POSTER_GRANDE_G;
+        assert(fil_estilo_ajuda("addon_movie_formas", tpg)[0]);
+        assert(fil_estilo_ajuda("collection_formas", tpg)[0]);   // colecao: a frase da pasta
+        assert(strcmp(fil_estilo_ajuda("collection_formas", tpg),
+                      fil_estilo_ajuda("addon_movie_formas", tpg)));
+        assert(fil_definir_tipo("addon_movie_formas", tpg) && fil_tipo("addon_movie_formas") == tpg);
+        assert(fil_definir_tipo("collection_formas", tpg) && fil_tipo("collection_formas") == tpg);
+      }
+      assert(fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_POSTER_GRANDE_P) !=
+             fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_POSTER_GRANDE_G) &&
+             strcmp(fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_POSTER_GRANDE_P),
+                    fil_estilo_ajuda("addon_movie_formas", FIL_TIPO_POSTER_GRANDE_G)));
+      assert(fil_escala_tipo("addon_movie_formas", FIL_TIPO_POSTER_GRANDE_P) <
+             fil_escala_tipo("addon_movie_formas", FIL_TIPO_POSTER_GRANDE) &&
+             fil_escala_tipo("addon_movie_formas", FIL_TIPO_POSTER_GRANDE) <
+             fil_escala_tipo("addon_movie_formas", FIL_TIPO_POSTER_GRANDE_G));
+      assert(fil_definir_tipo("addon_movie_formas", FIL_TIPO_AUTO)); }
     // AS LINHAS: o que so muda de tamanho divide uma linha so.
     { FilEstiloLinha l[FIL_TIPO_N];
       int nl = fil_estilo_linhas("addon_movie_formas", l, FIL_TIPO_N);
@@ -188,7 +221,7 @@ int main(void) {
              l[9].tipos[0] == FIL_TIPO_PALCO && l[10].tipos[0] == FIL_TIPO_REDONDA);
       // #205: a fileira Herói — um cartão só do tamanho da fileira.
       assert(l[11].tipos[0] == FIL_TIPO_HEROI && !strcmp(l[11].rotulo, "Herói"));
-      assert(l[12].tipos[0] == FIL_TIPO_POSTER_GRANDE &&
+      assert(l[12].n == 3 && l[12].tipos[1] == FIL_TIPO_POSTER_GRANDE &&
              !strcmp(l[12].rotulo, "Pôster grande"));
       assert(l[13].tipos[0] == FIL_TIPO_HEROI_DIVIDIDO &&
              !strcmp(l[13].rotulo, "Herói dividido"));
@@ -198,7 +231,7 @@ int main(void) {
       assert(!strcmp(l[4].rotulo, "Destaque 4:3") && l[4].n == 3 &&
              l[4].tipos[0] == FIL_TIPO_DESTAQUE_QUADRADO &&
              l[4].tipos[2] == FIL_TIPO_DESTAQUE_QUADRADO_G);
-      for (k = 0; k < nl; k++) if (k != 2 && k != 4) assert(l[k].n == 1);
+      for (k = 0; k < nl; k++) if (k != 2 && k != 4 && k != 12) assert(l[k].n == 1);
       // A colecao oferece AS MESMAS LINHAS do catalogo.
       assert(fil_estilo_linhas("collection_formas", l, FIL_TIPO_N) == nl);
       assert(fil_estilo_linhas("continue_watching", l, FIL_TIPO_N) == 0); }
