@@ -2155,6 +2155,13 @@ static void *lerMkv(void *arg) {
     if (nt > NV_FAIXA_MAX) nt = NV_FAIXA_MAX;
     for (i = 0; i < nt; i++) tv[i] = faixaLeg[i].numero;
     modo = mkv_casar_legendas(fx, n, tv, nt, idx);
+    // SEM_IMAGEM so confere contagem: com idioma dos dois lados, tem de bater.
+    if (modo == MKV_CASA_SEM_IMAGEM && !faixasmkv_idiomas_coerentes(faixaLeg, nt, fx, idx)) {
+      int q;
+      printf("[mkv] legendas: casamento sem imagem contradiz o idioma da TV; descartado\n");
+      for (q = 0; q < nt; q++) idx[q] = -1;
+      modo = MKV_CASA_NADA;
+    }
     if (modo == MKV_CASA_NADA && faixasmkv_legendas_por_idioma(faixaLeg, nt, fx, n, idx))
       printf("[mkv] legendas: pares unicos por idioma (lista da TV diferente)\n");
     // DIAGNOSTICO que faltou no #92: sem as duas listas lado a lado no log, o

@@ -885,11 +885,19 @@ int mkv_faixas_e_caps(const char *url, MkvFaixa *saida, int max,
   diagTrecho((const unsigned char *)buf, n, saida, achou);
   // Tracks cortado pela janela: uma lista PELA METADE faria o casamento das
   // legendas dar "nenhum" e deixaria TODA faixa ASS com a TV (#483 so cobria o
-  // caso de 0 faixas). O SeekHead diz onde o elemento inteiro mora; sem ele, a
-  // lista incompleta nao serve (mesma regra do mkv_faixas_do_trecho).
+  // caso de 0 faixas). O SeekHead diz onde o elemento inteiro mora. Sem ele (ou
+  // se o Range falha) ficam so as faixas COMPLETAS que nao sao legenda: video e
+  // audio continuam servindo ao DV/DTS/rotulos, e sem TrackEntry de legenda o
+  // casamento da TV cai em "nenhum" em vez de errar com uma lista incompleta.
   if (tracksCortado) {
     int alem = mkv_tracks_alem(url, saida, max, NULL);
-    achou = alem > 0 ? alem : 0;
+    if (alem > 0) achou = alem;
+    else {
+      int i, m = 0;
+      for (i = 0; i < achou; i++) if (saida[i].tipo != 17) saida[m++] = saida[i];
+      achou = m;
+    }
+    tracksNaoVisto = 0;   // uma tentativa por sonda: o lerMkv nao repete o mesmo Range
   }
   if (caps && nCaps && !*nCaps && posChapters >= 0)
     *nCaps = capsPorPosicao(url, posChapters, caps, maxCaps, NULL);
@@ -916,9 +924,10 @@ int mkv_faixas(const char *url, MkvFaixa *saida, int max) {
   return mkv_faixas_e_caps(url, saida, max, NULL, 0, NULL);
 }
 
-// Legenda de imagem (BD: PGS; DVD: VobSub). O mesmo criterio de faixasmkv.c.
+// Legenda de imagem (BD: PGS; DVD: VobSub; DVB). O mesmo criterio de faixasmkv.c.
 static int legendaImagemMkv(const MkvFaixa *f) {
-  return !strncmp(f->codec, "S_HDMV", 6) || !strncmp(f->codec, "S_VOBSUB", 8);
+  return !strncmp(f->codec, "S_HDMV", 6) || !strncmp(f->codec, "S_VOBSUB", 8) ||
+         !strncmp(f->codec, "S_DVBSUB", 8);
 }
 
 // Ver a nota em mkv.h. Puro: sem rede, sem estado — e o que o teste

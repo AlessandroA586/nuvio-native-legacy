@@ -135,9 +135,11 @@ int main(void) {
   ok(n == 2 && fx[1].tipo == 17 && !strncmp(fx[1].codec, "S_TEXT/ASS", 10),
      "legenda ASS presente apos a leitura pelo SeekHead");
 
-  // Sem SeekHead nao ha como completar: lista pela metade nao serve (como no pre-busca).
+  // Sem SeekHead nao ha como completar: nunca uma lista parcial COM legenda (o
+  // casamento erraria); o video ja lido continua valendo.
   montar(300, 100, 0);
   n = mkv_faixas_e_caps("https://example.test/cortado-sem-seek.mkv", fx, MKV_MAX_FAIXAS, NULL, 0, NULL);
-  ok(n == 0, "Tracks cortado sem SeekHead: nenhuma lista parcial");
+  { int i, leg = 0; for (i = 0; i < n; i++) leg += fx[i].tipo == 17;
+    ok(n >= 1 && leg == 0, "Tracks cortado sem SeekHead: sem legenda parcial, video preservado"); }
   return falhas ? 1 : 0;
 }
