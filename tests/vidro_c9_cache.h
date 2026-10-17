@@ -72,6 +72,32 @@ static int vc_run(void) {
       if (!phase) gravar(names[screen]);
     }
   }
+  // Frost and blurred artwork already bake on change. Keep this invariant,
+  // including glass disabled (no consumer may trigger a fallback capture).
+  for (int mode = FUNDO_BORRADA; mode <= FUNDO_FROST; mode++) {
+    for (int glass = 1; glass >= 0; glass--) {
+      ajustes_definir_vidro(glass);
+      for (int i = 0; i < 5; i++) {
+        gfx_novo_quadro(); gfx_sem_recorte();
+        fundo_desenhar_modo(mode, (GfxRect){0, 0, 1920, 1080}, 0, itens[1].backdrop, 1);
+        gfx_vidro_ou_solido((GfxRect){100, 100, 400, 200}, .1f, .8f, 1, .1f, .1f, .1f, 1);
+      }
+      int baked = gfx_n_fundo_assados, captures = 0, passes = 0;
+      double blur = 0;
+      for (int i = 0; i < 30; i++) {
+        gfx_novo_quadro(); gfx_sem_recorte();
+        fundo_desenhar_modo(mode, (GfxRect){0, 0, 1920, 1080}, 0, itens[1].backdrop, 1);
+        gfx_vidro_ou_solido((GfxRect){100, 100, 400, 200}, .1f, .8f, 1, .1f, .1f, .1f, 1);
+        captures += gfx_vidro_capturas; passes += gfx_vidro_passadas;
+        blur += gfx_fill_modo[GFX_BLUR];
+      }
+      int ok = !captures && !passes && !blur && baked == gfx_n_fundo_assados;
+      printf("%s: background=%d glass=%d captures=%d passes=%d art-blur-fill=%.3f bakes=%d\n",
+             ok ? "PASS" : "FAIL", mode, glass, captures, passes, blur, gfx_n_fundo_assados - baked);
+      failures += !ok;
+    }
+  }
+  ajustes_definir_vidro(1);
   // A texture actually used by the backdrop must still invalidate, including
   // reuse of the same GL name and explicit in-place upload notifications.
   GLuint source;

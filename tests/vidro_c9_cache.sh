@@ -6,7 +6,19 @@ export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp
 shots=/Volumes/ExternalSSD/tmp/rev/vidroc9-shots
 mkdir -p "$shots"
 export NUVIO_C9_CACHE=1 NUVIO_SHOT_VIDRO=1 NUVIO_SHOT_VIDRO_FOSCO=1
-export NUVIO_SHOT_FUNDO=2 NUVIO_SHOT_VIDRO_QUAL=2
+export NUVIO_SHOT_FUNDO=2
+export NUVIO_SHOT_VIDRO_QUAL=${NUVIO_SHOT_VIDRO_QUAL:-2}
+if [ $# = 0 ]; then
+  if bash "$0" before > "$shots/before.log" 2>&1; then
+    echo 'FAIL: baseline unexpectedly passed' >&2; exit 1
+  fi
+  [ "$(rg -c '^FAIL: .*frames=30' "$shots/before.log")" = 6 ]
+  rg '^(FAIL|PASS): .*frames=30' "$shots/before.log"
+  bash "$0" after
+  NUVIO_SHOT_VIDRO_QUAL=0 bash "$0" automatic
+  python3 tools/vidroc9_pixel_diff.py
+  exit 0
+fi
 export OBJ="$TMPDIR/nuvio-vidroc9-cache-obj"
 # macOS GL, with the webOS renderer branches enabled in gfx.c only.
 mkdir -p "$OBJ"
