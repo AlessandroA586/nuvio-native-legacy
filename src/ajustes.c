@@ -5831,7 +5831,12 @@ int ajustes_iniciar(void) {
   rotulosDeIdioma();
   return 1;
 }
-void ajustes_encerrar(void) { pediuRelogio = 0; faRetornarFolha = 0; uxCancelar(); uxRetornarOp = -1; guiaFechar(); ajlog_vazar_tudo(); }
+static int fileirasBusca;  // network cycle owed; run once when Settings closes
+void ajustes_encerrar(void) {
+  // One network cycle for all row changes made in this visit (low-end TVs).
+  if (fileirasBusca) { fileirasBusca = 0; desc_repetir(); }
+  pediuRelogio = 0; faRetornarFolha = 0; uxCancelar(); uxRetornarOp = -1; guiaFechar(); ajlog_vazar_tudo();
+}
 int ajustes_quer_sair(void) { return sair; }
 int ajustes_pediu_relogio(void) { int v = pediuRelogio; pediuRelogio = 0; return v; }
 
@@ -7224,9 +7229,9 @@ static void fileirasReagir(void) {
     // quem esta so na fila (fil_escolhida devolve a posicao mesmo alem dele).
     { int esc = fil_escolhida(fil_chave(i));
       if (esc >= 0 && esc < teto && fil_linha_vista(i) && !fil_linha_na_home(i)) {
-      printf("[ajustes] %d dentro do limite sem dados: ciclo de rede\n", i);
+      printf("[ajustes] %d dentro do limite sem dados: ciclo de rede ao sair\n", i);
       fflush(stdout);
-      desc_repetir();
+      fileirasBusca = 1;
       return;
     } }
 }
