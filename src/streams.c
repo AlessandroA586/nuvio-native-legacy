@@ -74,6 +74,12 @@
 // browsing pages. Without a visible clock, keep the right-edge sheet.
 // folhaOY places content below the clock header; folhaBase ends the list.
 static float folhaOY, folhaBase;
+// Tab change (add-on / filter tabs): the focus pill slides to the new tab and
+// the list slides in with a fade, 200 ms ease-out. Time based, no extra pass.
+#define FOLHA_TROCA_MS 200.0f
+static int filtroVisto = -2, trocaDir;
+static Uint32 trocaDesde;
+static float pillX, pillW = -1.0f, pillDeX, pillDeW;   // x relative to the list column
 static int folhaRelogio; // Latched at opening, retained through closing.
 #define FOLHA_ILHA_Y     48.0f   // plrilha.c: Y_TOPO
 #define FOLHA_ILHA_CAB   64.0f   // plrilha.c: CAB_H (a linha da hora)
@@ -4026,7 +4032,7 @@ void stream_folha_abrir(void) {
 #endif
   int excl, aut, alvo;
   fitAbrir();
-  aberta=1; escolha=-1; grupo=1; filtro=0; soMp4=0; soCache=0; soDub=0; recarregar=0;
+  aberta=1; escolha=-1; grupo=1; filtro=0; filtroVisto=-2; pillW=-1.0f; trocaDesde=0; soMp4=0; soCache=0; soDub=0; recarregar=0;
   { float ix, iy, iw, ih;
     folhaRelogio = !player_aberto() && ajustes_relogio_ligado() && ilha_rect(&ix, &iy, &iw, &ih); }
   recarregarFonteConfirmacao = 0;
@@ -4693,12 +4699,13 @@ static void stream_folha_desenharCorpo_(Uint32 agora) {
       memset(&p,0,sizeof p);
       p.w = FOLHA_W;
       p.h = folhaIlhaH();
+      p.semSombra = 1;
       p.corpo = corpoIlhaFolha;
       plrilha_pedir(&p); }
     return;
   }
   if (folhaRelogio) {
-    if (aberta) ilha_corpo(FOLHA_W, folhaBase + 16.0f - NV_ILHA_Y, corpoIlhaFolha, NULL);
+    if (aberta) { ilha_corpo(FOLHA_W, folhaBase + 16.0f - NV_ILHA_Y, corpoIlhaFolha, NULL); ilha_corpo_sem_sombra(); }
     return; // ilha_desenhar owns the surface, dim and closing.
   }
   float x=NV_TELA_W-FOLHA_W-FOLHA_MARGEM+(1-anim)*(FOLHA_W+FOLHA_MARGEM);
@@ -4709,15 +4716,20 @@ static void stream_folha_desenharCorpo_(Uint32 agora) {
   { const int vid = ajustes_vidro();
     GfxRect corpo={x,FOLHA_MARGEM,FOLHA_W,NV_TELA_H-2*FOLHA_MARGEM};
     gfx_cor((GfxRect){0,0,NV_TELA_W,NV_TELA_H},0,0,0,0,(vid?.30f:.42f)*anim);
-    if (vid) {
-      gfx_rect((GfxRect){corpo.x-18.0f,corpo.y-8.0f,corpo.w+36.0f,corpo.h+40.0f},
-               0,GFX_SOMBRA,1.0f,0,0,.5f,0,0,0,.38f*anim);
-      gfx_vidro_folha(corpo,FOLHA_RAIO_IL/corpo.h,anim);
-    } else plrui_material(corpo,FOLHA_RAIO_IL,0,anim); }
+    if (vid) gfx_vidro_folha(corpo,FOLHA_RAIO_IL/corpo.h,anim);
+    else plrui_material_s(corpo,FOLHA_RAIO_IL,0,anim,1); }
   corpoFolha(x, FOLHA_W, anim, agora, 0);
 }
 // `anim` aqui e o alfa do corpo (sombra a variavel da mola de proposito: na
 // ilha quem manda na opacidade e a forma, nao a mola da folha).
+#ifdef NV_SHOT_HOOKS
+float stream_folha_pilula_x(void) { return pillX; }
+#endif
+static float trocaEase(Uint32 agora) {
+  float t=(float)(agora-trocaDesde)/FOLHA_TROCA_MS;
+  if(ajustes_animacoes_reduzidas()||t>=1.0f) return 1.0f;
+  t=1.0f-t; return 1.0f-t*t*t;
+}
 static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
   float ar, ag, ab;
   int ai, nf, automatica, melhor;
@@ -4837,6 +4849,18 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
 #ifdef NV_TOUCH_UI
     if (layout_modo_mobile()) sx -= toqueFontesAbasOffset;
 #endif
+    { float tx0=sx, tw=0;
+      for(int i=ini;i<fim;i++){ if(i==filtro) tw=iw[i+1]; else if(!tw) tx0+=iw[i+1]+6.0f; }
+      tx0-=lx;
+      if(filtro!=filtroVisto){
+        if(filtroVisto==-2||pillW<0) pillW=tw, pillX=tx0;
+        else { trocaDesde=agora; trocaDir=filtro>filtroVisto?1:-1; }
+        pillDeX=pillX; pillDeW=pillW; filtroVisto=filtro; }
+      { float e=trocaEase(agora);
+        pillX=pillDeX+(tx0-pillDeX)*e; pillW=pillDeW+(tw-pillDeW)*e; }
+      { GfxRect r={lx+pillX,segY+pin,pillW,FOLHA_ABA_H};
+        if(grupo==0) focoFonte(r,.5f,anim);
+        else if (ajustes_vidro()) gfx_cor(r,.5f,1,1,1,.12f*anim); else gfx_cor(r,.5f,.204f,.212f,.243f,anim); } }
     for(int i=ini;i<fim;i++){
       int qidx=i+1;
       GfxRect r={sx,segY+pin,iw[qidx],FOLHA_ABA_H}; int sel=i==filtro;
@@ -4849,11 +4873,12 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
 #endif
         ponteiro_alvo(r.x, r.y, r.w, r.h, NULL, ponteiroFolhaFiltro, i, 0);
       }
-      if(sel&&grupo==0) focoFonte(r,.5f,anim);
-      else if(sel) { if (ajustes_vidro()) gfx_cor(r,.5f,1,1,1,.12f*anim); else gfx_cor(r,.5f,.204f,.212f,.243f,anim); }
       txt_desenhar_alpha(nome[qidx],r.x+22,r.y+(FOLHA_ABA_H-nome[qidx].h)*.5f,anim);
       txt_desenhar_alpha(num[qidx],r.x+22+nome[qidx].w+10,r.y+(FOLHA_ABA_H-num[qidx].h)*.5f+1,anim);
       sx+=iw[qidx]+6.0f; } }
+  // The list comes in from the side the new tab is on, fading up.
+  const float animLista=anim, dxLista=trocaDir*28.0f*(1-trocaEase(agora));
+  { float e=trocaEase(agora); anim*=.3f+.7f*e; lx+=dxLista; tx+=dxLista; tr+=dxLista; }
   automatica = automaticaDaFolha();
   melhor = melhorFolha = automaticoDaFolhaModo();
   montar(automatica);
@@ -5145,6 +5170,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
                                     : txt_linha_corta(TXT_PG_FIM,f2,c,c,c-2,255,tr-tx);
           txt_desenhar_alpha(l2,tx,fy+FOLHA_FIT_H,anim*a); } } } }
   }
+  anim=animLista; lx-=dxLista; tx-=dxLista; tr-=dxLista;
   // O TOPO DA LISTA ESMAECE em vez de cortar seco embaixo do seletor: a linha
   // que sobe some aos poucos, na cor da folha. So com a lista rolada: parada
   // no topo, o esmaecido apagaria o cabecalho "4K" do primeiro grupo.

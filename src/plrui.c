@@ -15,15 +15,19 @@ static float raioDe(GfxRect r, float px) {
 }
 
 void plrui_material(GfxRect r, float raioPx, int modal, float a) {
+  plrui_material_s(r, raioPx, modal, a, 0);
+}
+
+void plrui_material_s(GfxRect r, float raioPx, int modal, float a, int semSombra) {
   float raio = raioDe(r, raioPx);
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.002f) return;
   if (ajustes_vidro()) {
     // box-shadow 0 14 40 rgba(0,0,0,.36): caida, nunca halo.
-    gfx_rect((GfxRect){ r.x - 20.0f, r.y - 6.0f, r.w + 40.0f, r.h + 40.0f }, 0, GFX_SOMBRA,
+    if (!semSombra) gfx_rect((GfxRect){ r.x - 20.0f, r.y - 6.0f, r.w + 40.0f, r.h + 40.0f }, 0, GFX_SOMBRA,
              1.0f, 0, 0, 0.5f, 0, 0, 0, 0.36f * a);
     gfx_vidro_material(r, raio, modal ? GFX_VIDRO_DENS_MODAL : GFX_VIDRO_DENS, a);   // + gfx_vidro_luz
   } else {
-    gfx_sombra_sob((GfxRect){ r.x - 16.0f, r.y - 4.0f, r.w + 32.0f, r.h + 30.0f }, 1.0f, 0, 0.5f,
+    if (!semSombra) gfx_sombra_sob((GfxRect){ r.x - 16.0f, r.y - 4.0f, r.w + 32.0f, r.h + 30.0f }, 1.0f, 0, 0.5f,
                    0, 0, 0, 0.45f * a, r, raio * r.h, a);
     gfx_cor(r, raio, 0.082f, 0.086f, 0.102f, a);
   }

@@ -48,6 +48,7 @@ typedef struct {
   // (a de falha da legenda: faixas_pilula_tecla). NULL = so informativa.
   void (*ponteiroOk)(int a, int b);
   float insetEsq;           // recuo esquerdo do cabecalho do corpo (o titulo); 0 = 28
+  int semSombra;            // 1 = material sem a sombra caida (Fontes)
   int tituloLeve;           // 1 = titulo delicado (PLR_TIT_*): Medium um degrau abaixo, cinza polido
 } PlrIlhaPedido;
 

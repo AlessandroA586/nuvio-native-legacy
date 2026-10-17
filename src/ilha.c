@@ -119,7 +119,7 @@ static IlhaModal modalM;
 static char modalChave[80];
 static float modalT, modalV, modalFocoA[ILHA_MODAL_BOTOES];
 // O CORPO PEDIDO (ilha_corpo): vale um quadro; o ultimo fica para a saida.
-static int corpoPed;
+static int corpoPed, corpoSemSombra;
 static float corpoW, corpoH, corpoT, corpoV;
 static float corpoWa, corpoHa, corpoVw, corpoVh;   // o tamanho na mola (o pedido muda)
 static IlhaCorpo corpoFn;
@@ -1999,10 +1999,11 @@ static void salvarVoo(Uint32 agora, float x, float y, int dir) {
 static void ilha_desenharCorpo_(Uint32 agora);
 // Camada ampliada (escala.h): o corpo desenha na tela virtual.
 void ilha_corpo(float w, float h, IlhaCorpo corpo, void *u) {
-  corpoPed = 1; corpoW = w; corpoH = h; corpoFn = corpo; corpoU = u;
+  corpoPed = 1; corpoW = w; corpoH = h; corpoFn = corpo; corpoU = u; corpoSemSombra = 0;
   if (modalAberto) ilha_modal_fechar(1);
 }
 float ilha_corpo_t(void) { return corpoT; }
+void ilha_corpo_sem_sombra(void) { corpoSemSombra = 1; }
 
 // A hora da pilula em repouso, no lugar exato dela: com o corpo aberto e a
 // pilula mostrando outra coisa (aviso, cartao), e ela que fica no cabecalho.
@@ -2243,7 +2244,7 @@ static void ilha_desenharCorpo_(Uint32 agora) {
     // modal ela cresce junto (e o tamanho dele + folga, nunca a tela).
     { float k = modalT > corpoT ? modalT : corpoT;
       k = k > 1.0f ? 1.0f : k < 0.0f ? 0.0f : k;
-      gfx_rect((GfxRect){ R.x - 16.0f - 24.0f * k, R.y - 6.0f - 10.0f * k,
+      if (!(corpoSemSombra && corpoT > 0.0f)) gfx_rect((GfxRect){ R.x - 16.0f - 24.0f * k, R.y - 6.0f - 10.0f * k,
                           R.w + 32.0f + 48.0f * k, R.h + 34.0f + 50.0f * k }, 0, GFX_SOMBRA,
                1.0f, 0, 0, 0.5f, 0, 0, 0, (0.34f + 0.16f * k) * A); }
     // At rest (no modal, no body) the island is the A27 top chrome: the same
