@@ -178,7 +178,7 @@ static int perto(double a, double b) { return a > b - 0.01 && a < b + 0.01; }
 
 // --- the fake cdnlink ---------------------------------------------------------
 static int resolveOk = 1, nResolve, recenteSim, validadeMs = 150 * 60 * 1000;
-static int fOrigem(const char *u) { return u && !strncmp(u, "http", 4) && !strstr(u, "127.0.0.1") && !strstr(u, ".m3u8"); }
+static int fOrigem(const char *u) { return u && !strncmp(u, "http", 4) && !strstr(u, "127.0.0.1") && !strstr(u, ".m3u8") && !strstr(u, "tb-cdn.st"); }
 static int fRecente(const char *o, unsigned maxMs, char *d, unsigned t, unsigned *idade) {
   (void)o; (void)maxMs;
   if (!recenteSim) return 0;
@@ -200,6 +200,7 @@ int debrid_tb_link(int usenet, int item, int file, char *dst, unsigned n) {
   snprintf(dst, n, "https://nexus.tb-cdn.st/fresh%d", fileRequests);
   return 1;
 }
+#include "tpk-cdn-mkv.inc"
 static unsigned fValidade(void) { return (unsigned)validadeMs; }
 void video_tpk_cdn_arquivo(const char *url, int usenet, int item, int file);
 static void esperarAbrir(int n) { Uint32 t0 = SDL_GetTicks(); while (nAbriu < n && SDL_GetTicks() - t0 < 3000) bombear(1); }
@@ -241,6 +242,27 @@ int main(void) {
   ok(retomadas == 0 && fileRequests == 2, "expired direct file: requestdl before resume");
   video_parar();
   validadeMs = 150 * 60 * 1000;
+
+  // Hidden-index selected files must refresh inside the active proxy.
+  hiddenHeader(); hiddenMkv = 1;
+  for (int i = 0; i < 3; i++) {
+    nAbriu = fileRequests = 0;
+    video_definir_reconexao(1);
+    video_tocar("https://nexus.tb-cdn.st/direct");
+    video_tpk_cdn_arquivo("https://nexus.tb-cdn.st/direct", 1, 42, 7);
+    playerPronto();
+    Uint32 start = SDL_GetTicks();
+    while (mkvfix_estado() != MKVFIX_PRECISA && SDL_GetTicks() - start < 3000) bombear(1);
+    ok(mkvfix_estado() == MKVFIX_PRECISA, "selected file has hidden-index repair");
+    video_buscar(120); esperarAbrir(2);
+    playerPronto(); bombear(3);
+    video_pausar(1); validadeMs = 0; SDL_Delay(2); video_pausar(0);
+    expiredStatus = i == 0 ? 403 : i == 1 ? 404 : 410;
+    proxyRead(ultUrl);
+    ok(fileRequests == 1, "proxy expiry requests same TorBox item/file once");
+    video_parar(); validadeMs = 150 * 60 * 1000;
+  }
+  hiddenMkv = 0;
 
   // RESOLVED IN A THREAD: nothing opens until the CDN link is known.
   nAbriu = 0; nResolve = 0;

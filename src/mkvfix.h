@@ -64,6 +64,8 @@ int  mkvfix_montar(const uint32_t *id, const int64_t *pos, int n, unsigned char 
 // igual) e de onde pedir um link novo se o do CDN vencer. Troca a sessao
 // anterior (cancela as conexoes dela).
 void mkvfix_sondar(const char *url, const char *cabecalhos, const char *origem);
+// Selected-file refresh identity is copied before the probe thread starts.
+void mkvfix_sondar_arquivo(const char *url, const char *cabecalhos, int usenet, int item, int file);
 int  mkvfix_estado(void);
 // O endereco local do arquivo consertado (sobe o servidor na primeira vez).
 // 0 se a sessao atual nao e MKVFIX_PRECISA ou o servidor nao subiu.

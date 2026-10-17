@@ -179,6 +179,9 @@ int mkvfix_montar(const uint32_t *id, const int64_t *pos, int n, unsigned char *
 // ---- servidor ----------------------------------------------------------------
 #if defined(__EMSCRIPTEN__) || defined(NV_ANDROID) || defined(NV_MKVFIX_SEM_REDE)   // tests: no network
 void mkvfix_sondar(const char *u, const char *c, const char *o) { (void)u; (void)c; (void)o; }
+void mkvfix_sondar_arquivo(const char *u, const char *c, int usenet, int item, int file) {
+  (void)usenet; (void)item; (void)file; mkvfix_sondar(u, c, NULL);
+}
 int  mkvfix_estado(void) { return MKVFIX_NADA; }
 int  mkvfix_url(char *out, size_t n) { (void)out; (void)n; return 0; }
 int  mkvfix_e_url(const char *u) { (void)u; return 0; }
@@ -186,6 +189,7 @@ void mkvfix_parar(void) {}
 #else
 
 #include "rede.h"
+#include "debrid.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -212,6 +216,7 @@ typedef struct {
   char token[16];
   char *orig, *cab;              // o que o player tocava e os cabecalhos dele
   char *origem;                  // de onde pedir link novo (pode ser NULL)
+  int usenet, item, file;        // selected TorBox file, owned by this session
   pthread_mutex_t m;
   char up[8192];                 // o link de verdade (final, depois de redirect), sob m
   int upSemCab;                  // o final e de outra origem: sem cabecalhos
@@ -369,7 +374,8 @@ fim:
   return NULL;
 }
 
-void mkvfix_sondar(const char *url, const char *cabecalhos, const char *origem) {
+static void sondar(const char *url, const char *cabecalhos, const char *origem,
+                   int usenet, int item, int file) {
   Sess *s, *velho;
   pthread_t t;
   if (!url || (strncmp(url, "http://", 7) && strncmp(url, "https://", 8))) return;
@@ -379,6 +385,7 @@ void mkvfix_sondar(const char *url, const char *cabecalhos, const char *origem) 
   s->orig = strdup(url); s->cab = strdup(cabecalhos ? cabecalhos : "");
   s->origem = origem && *origem && strcmp(origem, url) ? strdup(origem) : NULL;
   snprintf(s->up, sizeof s->up, "%s", url);
+  s->usenet = usenet; s->item = item; s->file = file;
   s->total = -1; s->regiao = -1;
   atomic_store(&s->estado, MKVFIX_SONDANDO);
   atomic_store(&s->refs, 2);   // a sessao atual + o fio da sonda
@@ -395,6 +402,13 @@ void mkvfix_sondar(const char *url, const char *cabecalhos, const char *origem) 
     return;
   }
   pthread_detach(t);
+}
+
+void mkvfix_sondar(const char *url, const char *cabecalhos, const char *origem) {
+  sondar(url, cabecalhos, origem, 0, 0, 0);
+}
+void mkvfix_sondar_arquivo(const char *url, const char *cabecalhos, int usenet, int item, int file) {
+  sondar(url, cabecalhos, NULL, usenet, item, file);
 }
 
 int mkvfix_estado(void) {
@@ -490,11 +504,16 @@ static int renovar(Sess *s) {
   char fin[8192] = "";
   long n = 0; int st = 0, cross = 0;
   unsigned char *b;
-  if (!s->origem) return 0;
-  b = (unsigned char *)rede_baixar_trecho64_final(s->origem, s->cab, 0, 0, &n, NULL, &st,
-                                                  &s->cancelar, fin, &cross);
-  free(b);
-  if (!fin[0] || st != 206) return 0;
+  if (s->item > 0) {
+    if (!debrid_tb_link(s->usenet, s->item, s->file, fin, sizeof fin) || !fin[0]) return 0;
+    cross = 1;
+  } else {
+    if (!s->origem) return 0;
+    b = (unsigned char *)rede_baixar_trecho64_final(s->origem, s->cab, 0, 0, &n, NULL, &st,
+                                                    &s->cancelar, fin, &cross);
+    free(b);
+    if (!fin[0] || st != 206) return 0;
+  }
   pthread_mutex_lock(&s->m);
   snprintf(s->up, sizeof s->up, "%s", fin);
   s->upSemCab = cross;

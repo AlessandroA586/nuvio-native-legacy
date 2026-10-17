@@ -656,7 +656,8 @@ static int mfPode(void) {
 static void mfSondar(void) {
   if (!mfPode()) return;
   mf.sondou = 1;
-  mkvfix_sondar(hostUrl, hostCab, strcmp(urlAtual, hostUrl) ? urlAtual : NULL);
+  if (cdn.arquivo) mkvfix_sondar_arquivo(hostUrl, hostCab, cdn.usenet, cdn.item, cdn.file);
+  else mkvfix_sondar(hostUrl, hostCab, strcmp(urlAtual, hostUrl) ? urlAtual : NULL);
 }
 static void mfBombear(void) {
   int e;
