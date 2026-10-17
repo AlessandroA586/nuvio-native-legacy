@@ -29,7 +29,9 @@ enum { LW = 1920, LH = 1080 };
 static Uint32 relogio = 100000;
 static SDL_Surface *strip;
 static int noPlayer, semRelogio;
-float stream_folha_pilula_x(void) __attribute__((weak));
+#ifndef NV_BASELINE
+float stream_folha_pilula_x(void);
+#endif
 
 static unsigned char q[LW * LH * 3];
 static void salvar(const char *pre, int n) {
@@ -98,7 +100,7 @@ int main(int argc, char **argv) {
   const char *pre = argc > 1 ? argv[1] : nvt("/nv-fontes-sombra");
   float x = 0, y = 0, w = 0, h = 0;
   const char *mode = argc > 2 ? argv[2] : "detail";
-  noPlayer = !strcmp(mode, "player");
+  noPlayer = !strncmp(mode, "player", 6);
   semRelogio = !strcmp(mode, "no-clock");
   strip = SDL_CreateRGBSurfaceWithFormat(0, LW * 3 / 2, LH / 2, 32, SDL_PIXELFORMAT_RGBA32);
   assert(strip);
@@ -125,6 +127,11 @@ int main(int argc, char **argv) {
     fclose(f);
     ajustes_dir(getenv("NUVIO_DADOS")); }
   ajustes_iniciar();
+  if (strstr(mode, "glass")) {
+    assert(ajustes_shot_valor("vidroLocal", 0));
+    assert(ajustes_shot_valor("selected_theme", 3));
+    assert(ajustes_vidro());
+  }
   if (semRelogio) assert(ajustes_shot_valor("relogioTelaLocal", 1));
   { CatItem c = {0};
     snprintf(c.titulo, sizeof c.titulo, "Silo");
@@ -170,9 +177,11 @@ int main(int argc, char **argv) {
   ler(qa);
   gfx_shot_sombras = 0; quadro();
   unsigned sombrasAberta = gfx_shot_sombras;
+  printf("%s: submitted fill %.6f screens, shadow fill %.6f screens\n",
+         mode, gfx_fill, gfx_fill_modo[GFX_SOMBRA]);
 
   // (2) Tab change: pill slides through intermediate positions.
-  assert(stream_folha_pilula_x && "no sliding pill");
+#ifndef NV_BASELINE
   { float p0 = stream_folha_pilula_x(), mid, last, end;
     SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RIGHT;
     stream_folha_evento(&e);
@@ -186,6 +195,34 @@ int main(int argc, char **argv) {
     printf("%s: pill x %.1f -> mid %.1f -> %.1f -> end %.1f\n", mode, p0, mid, last, end);
     assert(end > p0 + 20);
     assert(mid > p0 + 2 && mid < end - 2 && "pill jumped instead of sliding"); }
+#else
+  { SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RIGHT;
+    stream_folha_evento(&e);
+    for (int i = 0; i < 30; i++) quadro(); }
+#endif
+  // Empty Where to watch content must fade with the selected tab too.
+  { static unsigned char shadow[LW * LH * 3];
+    memcpy(shadow, qa, sizeof qa);
+    SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_LEFT;
+    stream_folha_evento(&e); // All
+    for (int i = 0; i < 30; i++) quadro();
+    stream_folha_evento(&e); // Where to watch (no services in this fixture)
+    quadro(); ler(q);
+    for (int i = 0; i < 30; i++) quadro();
+    ler(qa);
+    // Sum bright message pixels, above the dark panel, over its whole slide.
+    double early = 0, settled = 0;
+    int top = 280 + (semRelogio ? 0 : noPlayer ? 60 : (int)(NV_ILHA_Y + NV_ILHA_H + 22 - 74));
+    for (int row = top; row < top + 45; row++)
+      for (int col = (int)x + 45; col < (int)(x + w - 55); col++) {
+        size_t k = ((size_t)(LH - 1 - row) * LW + col) * 3;
+        early += fmax(0, q[k] - 50);
+        settled += fmax(0, qa[k] - 50);
+      }
+    printf("%s: empty message bright pixels early %.0f, settled %.0f\n", mode, early, settled);
+    assert(settled > 1000 && early < settled * .8 && "empty content skipped the fade");
+    memcpy(qa, shadow, sizeof qa);
+  }
   { char path[700]; snprintf(path, sizeof path, "%s-strip.png", pre);
     assert(IMG_SavePNG(strip, path) == 0); SDL_FreeSurface(strip); }
   // Close the sheet; the veil is uniform, a drop shadow is darker near the edge.
@@ -195,12 +232,12 @@ int main(int argc, char **argv) {
   ler(q);
   gfx_shot_sombras = 0; quadro();
   printf("%s: sheet-sized shadow draws open %u, closed %u\n", mode, sombrasAberta, gfx_shot_sombras);
-  assert(sombrasAberta <= gfx_shot_sombras && "shadow drawn for the Sources sheet");
   { int y0 = (int)y + 250, y1 = (int)(y + h) - 250, ex = (int)x;
     double nearR = banda(qa, ex - 12, ex - 2, y0, y1) / banda(q, ex - 12, ex - 2, y0, y1);
     double farR = banda(qa, ex - 70, ex - 60, y0, y1) / banda(q, ex - 70, ex - 60, y0, y1);
     printf("%s: open/closed luma near edge %.3f, far %.3f\n", mode, nearR, farR);
     assert(nearR > farR - .03 && "shadow around the Sources sheet"); }
+  assert(sombrasAberta <= gfx_shot_sombras && "shadow drawn for the Sources sheet");
   printf("PASS: %s no shadow, tab slides\n", mode);
   return 0;
 }
