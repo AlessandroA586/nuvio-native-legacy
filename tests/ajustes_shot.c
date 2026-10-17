@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "menu_frost_probe.h"
 
 static const char *const AJ_IDS[] = {
   "AJ_QUALIDADE", "AJ_DV", "AJ_ATMOS", "AJ_LEG_LINGUA",
@@ -93,7 +94,7 @@ static void captura(const char *nome, SDL_Window *win) {
   rail_shot_aplicar();
   for (i = 0; i < quadrosCaptura; i++) {
     SDL_PumpEvents();
-    if (getenv("NUVIO_SHOT_PERF")) gfx_novo_quadro();   // os contadores do quadro, como app.c
+    if (getenv("NUVIO_SHOT_PERF") || getenv("NUVIO_SHOT_MENU_PROBE")) gfx_novo_quadro();   // os contadores do quadro, como app.c
     txt_novo_quadro();
     gfx_rastro_grandes = getenv("NUVIO_SHOT_RASTRO") && i == quadrosCaptura - 1;
     tex_novo_quadro();
@@ -112,7 +113,9 @@ static void captura(const char *nome, SDL_Window *win) {
         if (!menu_aberto()) menu_abrir();
         menu_atualizar(1.0f / 60.0f, SDL_GetTicks());
       }
+      menu_probe_draw();
       menu_desenhar(SDL_GetTicks());
+      if (getenv("NUVIO_SHOT_MENU_OPAQUE")) gfx_cor((GfxRect){330, 175, 81, 605}, 0, .1f, .1f, .1f, 1);
     }
     if (spot_visivel()) {   // "Buscar no guia" (o Spotlight no modo guia)
       spot_atualizar(1.0f / 60.0f, SDL_GetTicks());
@@ -156,15 +159,7 @@ static void captura(const char *nome, SDL_Window *win) {
       // NUVIO_SHOT_MENU=2: blur proof, as in detalhe_glass_shot.c (fraction of
       // pixels with a luma step > 6 in the empty right strip of the sidebar).
       if (getenv("NUVIO_SHOT_MENU") && atoi(getenv("NUVIO_SHOT_MENU")) == 2) {
-        double g = 0; int n = 0, x;
-        for (y = 175; y < 780; y++)
-          for (x = 330; x < 410; x++) {
-            const unsigned char *a = pix + ((1079 - y) * 1920 + x) * 4, *b = a + 4;
-            g += abs((a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2])) / 3 > 6; n++;
-          }
-        g /= n;
-        printf("menu-var %s %.4f com_fonte=%d capturas=%d\n", nome, g, gfx_vidro_com_fonte, gfx_vidro_capturas);
-        if (g > 0.003) { printf("FAIL menu-var: page seen through the sidebar (not frosted)\n"); exit(1); }
+        menu_probe_check(pix);
       }
       free(pix);
     }
