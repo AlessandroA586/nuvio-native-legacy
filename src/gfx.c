@@ -1903,7 +1903,6 @@ static float dinPend[4];
 static void dinDescarregar(void);
 static void dinPintar(float y0);
 static int foscoBloq; // este quadro tem video vivo por baixo (gfx_vidro_fosco_bloquear)
-static GLuint foscoVideo; // gfx_vidro_fonte_video: what glass over live video reads
 unsigned gfx_quadro_n;
 // O BACKDROP DO VIDRO (gfx_vidro): um snapshot desfocado em meia resolucao,
 // dividido pelas superficies do quadro e reaproveitado entre quadros enquanto
@@ -2084,14 +2083,14 @@ void gfx_novo_quadro(void) {
   memcpy(gfx_fill_modo_ult, gfx_fill_modo, sizeof gfx_fill_modo);
   memset(gfx_fill_modo, 0, sizeof gfx_fill_modo);
   desfGeradosQuadro = 0;
-  ambPendente = 0; ambIntacta = 0; foscoBloq = 0; foscoVideo = 0;
+  ambPendente = 0; ambIntacta = 0; foscoBloq = 0;
   memset(vidroDesde, 0, sizeof vidroDesde);
   vidroHash = 2166136261u; vidroNVidros = 0; vidroNFuros = 0;
   memcpy(vidroLeAnt, vidroLeCur, sizeof vidroLeAnt); memset(vidroLeCur, 0, sizeof vidroLeCur);
   memcpy(vidroRegAnt, vidroRegCur, sizeof vidroRegAnt); vidroNRegAnt = vidroNRegCur; vidroNRegCur = 0;
   vidroSlot = -1; vidroRecapturou = 0;
   fundoFim = fundoDepois = 0;
-  gfx_vidro_capturas = 0; gfx_vidro_passadas = 0; gfx_vidro_com_fonte = 0;
+  gfx_vidro_capturas = 0; gfx_vidro_passadas = 0; gfx_vidro_com_fonte = 0; gfx_vidro_chapados = 0;
   gfx_vidro_fill = gfx_vidro_copia = 0.0;
   ambFonte = 0; dinPendente = 0; dinAdiado = 0; dinNOp = 0;
   gfx_n_assados = 0;
@@ -3250,10 +3249,7 @@ static int vidW, vidH, vidFalhou;
 // a 4K screen pays the 1080p fill and blurs the same in layout units.
 static int vidBw, vidBh;
 void gfx_vidro_fosco_bloquear(void) { foscoBloq = 1; }
-int gfx_vidro_com_fonte;
-// No TV lets GL read the video plane; the player hands a stand-in (its title
-// art, blurred and baked once) and glass over the hole reads that instead.
-void gfx_vidro_fonte_video(GLuint tex) { foscoVideo = tex; }
+int gfx_vidro_com_fonte, gfx_vidro_chapados;
 
 static const char *VID_VS =
   NV_GLSL_PREFIXO
@@ -3617,7 +3613,7 @@ static void vidroAplicar(Programa *P, GfxRect r) {
 void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a) {
   GfxRect t = r;
   float d = dens, tela[4];
-  int chapado, video, i, contorno = ajustes_vidro_contorno();
+  int chapado, video, fumaca, i, contorno = ajustes_vidro_contorno();
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
   GFX_TR_RECT(t.x, t.y, t.w, t.h);
   if (escAtiva != 1.0f) { t.x *= escAtiva; t.y *= escAtiva; t.w *= escAtiva; t.h *= escAtiva; }
@@ -3630,14 +3626,15 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   for (i = 0; !chapado && i < vidroNVidros; i++) chapado = vidroCruza(vidroVidros[i], tela);
   video = foscoBloq;
   for (i = 0; !video && i < vidroNFuros; i++) video = vidroCruza(vidroFuros[i], tela);
-  if (video && !foscoVideo) chapado = 1;
+  fumaca = video;   // no TV lets GL read the video plane: smoked glass
+  if (fumaca) chapado = 1;
   if (vidroNVidros < VID_N) memcpy(vidroVidros[vidroNVidros++], tela, sizeof tela);
   memset(&vidPend, 0, sizeof vidPend);
   vidPend.tipo = tipo; vidPend.raio = raio;
   vidRuidoPreparar();   // o dither vale tambem no chapado
   if (!chapado) {
     gfx_ambiente_descarregar();   // a luz e o fundo pendentes ficam ATRAS do vidro
-    vidPend.fonte = video ? foscoVideo : vidroFonte(t);
+    vidPend.fonte = vidroFonte(t);
   }
   // Scrim CINZA NEUTRO (o verde vinha da fonte, nao daqui; R = G = B): a
   // barra 14/255 como a deles. Sem fonte, o scrim e o vidro inteiro.
@@ -3649,7 +3646,7 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
     float al = gfx_chrome_tinta();
     // Frost off: no blur source, but the bar stays see-through. Same tint on
     // the live scene, alpha floored (no luma solve here) to keep text readable.
-    int claro = !vidPend.fonte && !ajustes_vidro_fosco() && !efeitosMinimos;
+    int claro = !vidPend.fonte && (fumaca || (!ajustes_vidro_fosco() && !efeitosMinimos));
     if (claro && al < 0.62f) al = 0.62f;
     if (vidPend.fonte || claro) {
       vidPend.scrT[0] = vidPend.scrB[0] = 0x12 / 255.0f;
@@ -3665,6 +3662,7 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   } else {
     float c = vidroTom(cinza);
     if (d > 1.0f) d = 1.0f;
+    if (fumaca) d = d < 0.50f ? 0.50f : d > 0.86f ? 0.86f : d;   // smoked glass: tinted, see-through
     vidPend.scrT[0] = vidPend.scrT[1] = vidPend.scrT[2] = c; vidPend.scrT[3] = vidPend.fonte ? d * 0.85f : d;
     vidPend.scrB[0] = vidPend.scrB[1] = vidPend.scrB[2] = c; vidPend.scrB[3] = d;
   }
@@ -3676,6 +3674,7 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   vidPend.aro = contorno ? 0.14f : 0.0f;
   vidPend.aroLuz = contorno ? 0.28f : 0.0f;
   gfx_vidro_com_fonte += vidPend.fonte != 0;
+  gfx_vidro_chapados += vidPend.fonte == 0;
   gfx_rect(r, vidPend.fonte, GFX_VIDRO, 0, 0, 0, raio, 1, 1, 1, a);
   gfx_vidro_matiz(r, raio, a);
   if (tipo == GFX_VIDRO_PAINEL) gfx_vidro_luz(r, raio, a);
