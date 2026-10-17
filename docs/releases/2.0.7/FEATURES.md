@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-16 22:40, HEAD `f40a93dc3`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-16 22:51, HEAD `1b5c9d39a`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -227,6 +227,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   (`e0ddeca5f`, `4baf783fa`, `ff1f1aa25`, `61d73a5bf`).
 - Teste novo `tests/homerefresh.sh`: a Home segue reordenar/desativar fileiras e novas fontes sem reiniciar;
   fixtures de home/coleção consertadas depois do merge (`c47a40788`, `0bfe5ce71`).
+- Fixture do `tests/homerefresh.sh` consertada outra vez no merge: stubs duplicados de home e stubs de
+  trava de add-on que faltavam (`c47a40788`).
 
 ### Pendente (ainda não integrado)
 
@@ -238,14 +240,16 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   `j-revg-pr493` (mais novo); `j-revpr493-v3` OK foi antes. Precisa de fix novo + review.
   Android, LG webOS.
 - **Vidro fosco: deixar como estava** — `agente/205-foscovelho` foi **merged** (`76bc9d0c3`) e depois
-  **revertido** (`f40a93dc3`): na TCL o dono achou o fosco anterior (captura de tela + desfoque) mais bonito
-  e mais leve. A fonte de arte pré-desfocada (`ab02d4aaa`, `d0789c13a`, `50a1ac232`, `35f5f4fc3`) **não** está
-  na 2.0.7; o review r4 deu OK (`j-rev-foscovelho-r4`, 22:08) já depois do merge. Quem fica pendente é
-  **otimizar o caminho atual** (job `j-foscoleve3` RUNNING 22:29, log vazio). Todas as plataformas.
+  **revertido** (`f40a93dc3`, agora no HEAD `1b5c9d39a`): na TCL o dono achou o fosco anterior (captura de
+  tela + desfoque) mais bonito e mais leve. A fonte de arte pré-desfocada (`ab02d4aaa`, `d0789c13a`,
+  `50a1ac232`, `35f5f4fc3`) **não** está na 2.0.7; o review r4 deu OK (`j-rev-foscovelho-r4`, 22:08) já
+  depois do merge. Quem fica pendente é **otimizar o caminho atual** (job `j-foscoleve3` RUNNING 22:29,
+  log vazio). Todas as plataformas.
 - **Estilo da tela de abertura em Canto (B3)** (pedido do dono) — `agente/205-loadtelab`, 1 commit fora
   (`922500ef4`): ajuste "Estilo da tela de abertura" com Centro (A3, padrão) e Canto (logo embaixo à
-  esquerda, anel fino sob ela). Job feito (testes, i18n e build rc 0), **sem review e sem merge**. Todas as
-  plataformas.
+  esquerda, anel fino sob ela). Job feito (testes, i18n e build rc 0) e **review OK** `j-revg-loadtelab`
+  (22:47); **falta o merge** antes do tag. Ficou pendente o FAIL→PASS de `tests/ajustes_padroes.sh` no HEAD
+  e o visual na TV. Todas as plataformas.
 - **Vistos, temporadas fantasmas, catálogo fora da cota (#548 #556 #545) e tela de abertura A3** entraram
   nesta janela (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`) e já estão em Destaques.
 - **Vidaa** — `agente/205-vidaa` foi **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
@@ -466,6 +470,8 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   (`e0ddeca5f`, `4baf783fa`, `ff1f1aa25`, `61d73a5bf`).
 - New `tests/homerefresh.sh`: Home follows row reorder/disable and new sources without a restart; home and
   collection fixtures repaired after a merge (`c47a40788`, `0bfe5ce71`).
+- The `tests/homerefresh.sh` fixture repaired again at merge time: duplicate home stubs and missing add-on
+  lock stubs (`c47a40788`).
 
 ### Pending (not integrated yet)
 
@@ -484,12 +490,11 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
   All platforms.
 - **Opening screen style in the Corner (B3)** (owner request) — `agente/205-loadtelab`, 1 commit out
   (`922500ef4`): an "Estilo da tela de abertura" setting with Center (A3, default) and Corner (logo
-  bottom-left, thin ring under it). Job done (tests, i18n and build rc 0), **no review and no merge yet**.
-  All platforms.
+  bottom-left, thin ring under it). Job done (tests, i18n and build rc 0) and **review OK**
+  `j-revg-loadtelab` (22:47); **the merge is still missing** before tagging. Left pending: the
+  `tests/ajustes_padroes.sh` FAIL→PASS at HEAD and the on-TV look. All platforms.
 - **Watch tracking, ghost seasons, quota-excluded catalog (#548 #556 #545) and the A3 loading screen** landed
-  in this window (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`) and are already under Highlights. **Needs review.**
-- **Watch, ghost seasons, catalog outside the quota (#548 #556 #545) and the A3 loading screen** landed in
-  this window (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`) and are already in Highlights.
+  in this window (`91da5935e`, `c0dc799a3`, `b03502f84`, `ace1fd53a`) and are already under Highlights.
 - **Vidaa** — `agente/205-vidaa` was **merged** (`d0bf5ba79`, 10-15 22:10); VEREDITO OK `j-revg-vidaa-6`
   after a run of BLOQUEIAS. It ships in 2.0.7; no longer pending.
 - **Different collection header** (owner request) — `agente/205-colhdr` was **merged** (`fec2dc0ac`),
