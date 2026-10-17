@@ -1,8 +1,13 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-16 21:10, HEAD `b03502f84`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-16 22:1x, HEAD `b72189c5d`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
+
+Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
+`deploy/app/appinfo.json` and `tools/tizen-config.xml`, the what's-new card (`src/novidades_cartao.c`) points
+at 2.0.7 and `docs/releases/2.0.7/NOTAS.md` holds the GitHub release notes. Before tagging, `repo.json` still
+needs the built .ipk (url, sha256, size) and the frost performance line below has to be filled in.
 
 > O cartao dentro do app (`src/novidades/207.inc`) tem uma lista menor, escrita em conjunto com o dono;
 > este arquivo e a fonte completa para as release notes do GitHub.
@@ -46,6 +51,9 @@ that landed in the same window. Last tracking sync: 2026-10-16 21:10, HEAD `b035
   `718e61abb`, `ace1fd53a`.
 - **Ficha de fontes pelo relógio**: a folha de fontes agora nasce da ilha do relógio, com a mesma mola e o
   mesmo material do resto da interface. Todas as plataformas. `fbe06f5e7`, `ae39b748a`.
+- **Ver tudo em grade** (PR #568 #563): as fileiras de destaque das coleções e os resultados de busca de cada
+  catálogo abrem em grade com todos os itens, sem o limite da fileira. Todas as plataformas.
+  Refs PR #568 #563, `4baf783fa`, `e0ddeca5f`.
 - **Catálogo fora da cota atualiza na hora** (follow-up de #545): a fileira que você acabou de adicionar
   renova sozinha, sem depender de outra ação. Todas as plataformas. `975638744`, `53b050753`, `b03502f84`.
 - **Busca e episódios voltam a funcionar** (#555): séries de título exato como "Bigg Boss" não ficam mais fora
@@ -70,7 +78,11 @@ that landed in the same window. Last tracking sync: 2026-10-16 21:10, HEAD `b035
 - **Ver tudo em grade nas coleções**: as fileiras de destaque abrem em grade de "Ver tudo" com todos
   os itens da coleção. Todas as plataformas. `4baf783fa`.
 - **Episódio certo no scrobble**: o progresso enviado para o Trakt usa a identidade exata do episódio.
-  Todas as plataformas. `ff1f1aa25`.
+  Todas as plataformas. Refs PR #560, `ff1f1aa25`.
+- **Identidade da série preservada** (PR #561): a série continua a mesma ao ser buscada e ao tocar, em vez de
+  virar outro título. Todas as plataformas. Refs PR #561, `61d73a5bf`.
+- **Continuar assistindo com até 40 itens** (PR #538): o limite nativo subiu de 12 para 40 e fileiras futuras
+  são publicadas até o teto. Todas as plataformas. Refs PR #538, `4cbf5ad5c`, `696a3a6ee`, `cee137de7`.
 - **Tamanho do buffer** (*Ajustes › Tamanho do buffer*): Automático, 64, 128 ou 256 MiB, sempre limitado pela
   memória livre. Todas as plataformas. `42b3718cf`, `62421bfdc`, `35a944d9f`.
 - **Linha "Split hero"** (*Ajustes › Aparência da Home › Estilo de linha*): o título focado vira um painel
@@ -259,6 +271,9 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
   `ace1fd53a`.
 - **Sources sheet grows from the clock**: the sources sheet now opens out of the clock island, with the same
   spring and material as the rest of the interface. All platforms. `fbe06f5e7`, `ae39b748a`.
+- **See all grid** (PR #568 #563): showcase rows in collections and the search results of each catalog open
+  into a grid of every item, without the row limit. All platforms. Refs PR #568 #563, `4baf783fa`,
+  `e0ddeca5f`.
 - **Catalog outside the quota refreshes right away** (#545 follow-up): a row you just added renews on its own,
   without needing another action. All platforms. `975638744`, `53b050753`, `b03502f84`.
 - **Search and episodes work again** (#555): exact-title series like "Bigg Boss" are no longer cut by the
@@ -281,7 +296,11 @@ Trabalho em branch aberta, sem merge — **não** faz parte da 2.0.7 como está:
 - **See all grid in collections**: showcase rows open into a full "See all" grid of the collection.
   All platforms. `4baf783fa`.
 - **Exact episode identity in scrobbles**: progress sent to Trakt uses the exact episode identity.
-  All platforms. `ff1f1aa25`.
+  All platforms. Refs PR #560, `ff1f1aa25`.
+- **Series identity kept through lookup and playback** (PR #561): a series stays the same series while it is
+  looked up and played, instead of turning into a different title. All platforms. Refs PR #561, `61d73a5bf`.
+- **Continue Watching up to 40 items** (PR #538): the native cap went from 12 to 40 and future rows are
+  published up to it. All platforms. Refs PR #538, `4cbf5ad5c`, `696a3a6ee`, `cee137de7`.
 - **Buffer size** (*Settings › Buffer size*): Automatic, 64, 128 or 256 MiB, always clamped to free RAM.
   All platforms. `42b3718cf`, `62421bfdc`, `35a944d9f`.
 - **Split hero row style** (*Settings › Home appearance › Row style*): the focused title becomes a large
@@ -426,3 +445,45 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 - **Manual subtitle sync** — `agente/205-legajuste`, spec only. Deferred to 2.1.
 - **Open PRs with no local branch**: #456/#457/#466/#467/#468/#469/#478/#482 (out-of-scope ones stay in the
   map). Triage, not lost.
+
+### Merged in this window (not pending any more)
+
+Landing in 2.0.7, already in the sections above:
+
+- **A3 loading screen** (`ace1fd53a`), **watch tracking / ghost seasons** (`91da5935e`, `c0dc799a3`),
+  **#545 quota follow-up** (`b03502f84`), **deep links** (`a4f220cd7`), **external player** (`281b4af37`,
+  `161cdebd2`), **PR #569 Specials** (`054ccef24`), **#555 search/episodes** (`d5ae66d9e`, `438423097`),
+  **#551** (`e680776ed`), **#552** (`0d7821a01`), **#558** (`a1888d007`), **#483** (`251632be`),
+  **#529** (`f8fbd3bd3`), **row styles / See all** (`4baf783fa`, `d2b4e0b12`, `76c6e8eea`),
+  **Vidaa** (`d0bf5ba79`), **collection header** (`fec2dc0ac`), **PR #431 TV/Mobile auto** (`875d7f18f`),
+  **USB P2P on every platform** (`0fe8a7731`, `2ed922f03`, `84c1a90b6`), **buffer size** (`35a944d9f`),
+  **trailer audio + captions** (`b43655122`, `31dcf5275`), **P2P reasons** (`e21441cd2`, `30b57ccf1`),
+  **glass/frost work** (`46e0bd5bd`, `b5007ae85`, `e9c809475`, `0c77460c1`, `d98d72026`),
+  **release 2.0.7 bump and notes** (`b72189c5d`, `e275de18a`).
+
+### Frost performance (to fill before tagging)
+
+Placeholder carried from `j-release207`: the measured numbers belong here once the frost work is measured on a
+device. Points to report: one backdrop capture per frame on Android/.tpk (`0c77460c1`, `d98d72026`, `5536ee8da`)
+and one capture per backdrop change everywhere (`e9c809475`).
+
+### Merged in this window (not pending any more)
+
+Landing in 2.0.7, already in the sections above:
+
+- **A3 loading screen** (`ace1fd53a`), **watch tracking / ghost seasons** (`91da5935e`, `c0dc799a3`),
+  **#545 quota follow-up** (`b03502f84`), **deep links** (`a4f220cd7`), **external player** (`281b4af37`,
+  `161cdebd2`), **PR #569 Specials** (`054ccef24`), **#555 search/episodes** (`d5ae66d9e`, `438423097`),
+  **#551** (`e680776ed`), **#552** (`0d7821a01`), **#558** (`a1888d007`), **#483** (`251632be`),
+  **#529** (`f8fbd3bd3`), **row styles / See all** (`4baf783fa`, `d2b4e0b12`, `76c6e8eea`),
+  **Vidaa** (`d0bf5ba79`), **collection header** (`fec2dc0ac`), **PR #431 TV/Mobile auto** (`875d7f18f`),
+  **USB P2P on every platform** (`0fe8a7731`, `2ed922f03`, `84c1a90b6`), **buffer size** (`35a944d9f`),
+  **trailer audio + captions** (`b43655122`, `31dcf5275`), **P2P reasons** (`e21441cd2`, `30b57ccf1`),
+  **glass/frost work** (`46e0bd5bd`, `b5007ae85`, `e9c809475`, `0c77460c1`, `d98d72026`),
+  **release 2.0.7 bump and notes** (`b72189c5d`, `e275de18a`).
+
+### Frost performance (to fill before tagging)
+
+Placeholder carried from `j-release207`: the measured numbers belong here once the frost work is measured on a
+device. Points to report: one backdrop capture per frame on Android/.tpk (`0c77460c1`, `d98d72026`,
+`5536ee8da`) and one capture per backdrop change everywhere (`e9c809475`).
