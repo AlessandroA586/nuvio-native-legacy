@@ -6771,6 +6771,22 @@ static float cabecalhoComentarios(float x, float y, float a) {
   return yy;
 }
 
+// Comment card material. Up to five 600x340 cards each paid the full glass
+// shader (backdrop sample) plus the corner light: the row cost ~1.7 screens of
+// glass fill against ~0.7 for a cast row. Only the focused card keeps the real
+// frost; the others are the chip glass (tint at the glass density, rim and a
+// top highlight), which reads as the same material over the blurred page.
+static void cartaoComentario(GfxRect card, float raio, int foc, float a) {
+  if (!ajustes_vidro()) {
+    gfx_cor(card, raio, 0.082f, 0.094f, 0.118f, 0.92f * a);
+    return;
+  }
+  if (foc) { gfx_vidro_material(card, raio, GFX_VIDRO_DENS, a); return; }
+  // Resting cards: the shared cheap glass (tint + rim + corner light). Only the
+  // focused one pays for a real backdrop sample.
+  gfx_vidro_chip(card, raio, GFX_VIDRO_DENS, a);
+}
+
 static void desenhaComentarios(float x, float y, float a) {
   int daSerie = !(ehSerie() && comentEp);
   int n = daSerie ? extras_n_comentarios() : extras_n_comentarios_ep();
@@ -6809,8 +6825,7 @@ static void desenhaComentarios(float x, float y, float a) {
     // A troca e em DEGRAU e nao interpolada: `txt_linha` guarda a linha ja
     // rasterizada na cor pedida, entao uma cor que varia por quadro seria uma
     // entrada nova de cache por quadro.
-    gfx_vidro_ou_solido(card, 20.0f / COM_CARD_H, GFX_VIDRO_DENS, a,
-                        0.082f, 0.094f, 0.118f, 0.92f);
+    cartaoComentario(card, 20.0f / COM_CARD_H, foc, a);
     int tintaEsc = 1;   // tinta escura sobre o foco (realce claro); 0 = clara
     // Shared translucent focus surface; glass text stays light.
     const int focCor = foc && !ajustes_vidro();
@@ -7198,7 +7213,11 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
       case SEC_COLECAO:
         if (c == 0) desenhaColecao(x, y, f, a);
         break;
-      case SEC_COMENTARIOS:  desenhaComentarios(NV_DETP_X, y, a); break;
+      // Once, not per column: columns here are pills + cards of one drawing, and
+      // a call per column stacked the row's glass 5-10 times a frame.
+      case SEC_COMENTARIOS:
+        if (c == 0) desenhaComentarios(NV_DETP_X, y, a);
+        break;
       // UMA VEZ SO, e nao uma por coluna: as colunas destas duas sao posicoes
       // dentro de um desenho unico (o episodio em destaque, a frase em
       // destaque), como os cartazes de "Mais como este" no filme. A altura

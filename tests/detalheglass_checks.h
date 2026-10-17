@@ -2,7 +2,7 @@
 // Draws the real page while the focus walks each cast/recommendations/
 // trailers/collection row and checks the per-frame frost budget.
 static int rowRects;
-static double rowFill, rowBlur;
+static double rowFill, rowBlur, rowCopy;
 static int rows_frame(int *capt, int *pass, int *src, int *up) {
   int before = txt_rasterizadas;
   SDL_PumpEvents();
@@ -16,7 +16,10 @@ static int rows_frame(int *capt, int *pass, int *src, int *up) {
   if (gfx_n_rect > rowRects) rowRects = gfx_n_rect;
   if (gfx_fill > rowFill) rowFill = gfx_fill;
   if (gfx_vidro_fill > rowBlur) rowBlur = gfx_vidro_fill;
+  if (gfx_vidro_copia > rowCopy) rowCopy = gfx_vidro_copia;
   *up += txt_rasterizadas - before;
+  if (getenv("NUVIO_DETAIL_UP") && txt_rasterizadas != before)
+    printf("  upload col=%d scroll=%.0f\n", foco.coluna, scrollSec[SEC_COMENTARIOS]);
   return 0;
 }
 
@@ -70,6 +73,7 @@ static int rows_checks(void) {
   static const struct { const char *nome; int sec; int max; } linhas[] = {
     { "cast", SEC_ELENCO, 6 }, { "recommendations", SEC_RELACIONADOS, 7 },
     { "trailers", SEC_TRAILERS, 1 }, { "collection", SEC_COLECAO, 1 },
+    { "trakt-comments", SEC_COMENTARIOS, 1 },
   };
   // Pixel/card checks use the canonical 1080p frost setup separately.
   int failures = getenv("NUVIO_DETAIL_CONFIG") ? 0 : card_checks();
@@ -77,14 +81,20 @@ static int rows_checks(void) {
   // NUVIO_DETAIL_FRAMES: shorter measured window for the quick check.
   int frames = getenv("NUVIO_DETAIL_FRAMES") ? atoi(getenv("NUVIO_DETAIL_FRAMES")) : 180;
   for (int serie = 0; serie < 2; serie++)
-    for (int l = 0; l < 4; l++) {
+    for (int l = 0; l < 5; l++) {
       int capt = 0, pass = 0, src = 0, up = 0, cols;
       abrir(serie ? 0 : 1, 1, linhas[l].sec, 0);
       cols = secaoN(linhas[l].sec);
       if (cols < 1) { printf("SKIP: %s %s has no cards\n", serie ? "series" : "movie", linhas[l].nome); continue; }
-      for (int frame = 0; frame < 60; frame++) { foco.coluna = frame % cols; rows_frame(&capt, &pass, &src, &up); }
+      // Warm-up walks the exact measured path: text first shown by a focus/scroll
+      // combination is rasterized once here, so the window counts only steady state.
+      for (int frame = 0; frame < frames; frame++) {
+        foco.coluna = (frame / 6) % cols;
+        scrollSec[linhas[l].sec] = (float)(frame % 60) * 6;
+        rows_frame(&capt, &pass, &src, &up);
+      }
       capt = pass = src = up = 0;
-      rowRects = 0; rowFill = rowBlur = 0;
+      rowRects = 0; rowFill = rowBlur = rowCopy = 0;
       for (int frame = 0; frame < frames; frame++) {
         foco.coluna = (frame / 6) % cols;
         scrollSec[linhas[l].sec] = (float)(frame % 60) * 6;
@@ -92,8 +102,8 @@ static int rows_checks(void) {
       }
       printf("%s %s: cols=%d frames=%d max-captures=%d max-passes=%d max-frost-panels=%d text-uploads=%d\n",
              serie ? "series" : "movie", linhas[l].nome, cols, frames, capt, pass, src, up);
-      printf("%s %s budget: rects=%d fill=%.3f blur-fill=%.3f\n",
-             serie ? "series" : "movie", linhas[l].nome, rowRects, rowFill, rowBlur);
+      printf("%s %s budget: rects=%d fill=%.3f blur-fill=%.3f copy=%.3f\n",
+             serie ? "series" : "movie", linhas[l].nome, rowRects, rowFill, rowBlur, rowCopy);
       if (capt > 1 || pass > 5 || (frost ? src == 0 : src != 0 || capt != 0 || pass != 0) || up != 0 || rowRects > 260 || rowFill > 5.4 || rowBlur > .75) {
         fprintf(stderr, "FAIL: %s %s over budget\n", serie ? "series" : "movie", linhas[l].nome);
         failures++;
