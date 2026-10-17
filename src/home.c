@@ -4641,9 +4641,9 @@ static void ponteiroHero(int a, int b);
 static GfxRect heroArtworkRect(int lay, int cheio) {
   if (lay == HOME_LAYOUT_PADRAO) return padBannerRect();
   GfxRect r = lay == HOME_LAYOUT_DINAMICA
-            ? (GfxRect){0, dinHeroY(), NV_TELA_W, NV_DIN_ARTE_H}
-            : cheio ? (GfxRect){0, 0, NV_TELA_W, NV_HERO_CHEIO_H}
-                    : (GfxRect){NV_HERO_ARTE_X, 0, NV_HERO_ARTE_W, NV_HERO_ARTE_H};
+            ? (GfxRect){0, dinHeroY(), NV_TELA_W, ANC(NV_DIN_ARTE_H)}
+            : cheio ? (GfxRect){0, 0, NV_TELA_W, ANC(NV_HERO_CHEIO_H)}
+                    : (GfxRect){ANC(NV_HERO_ARTE_X), 0, ANC(NV_HERO_ARTE_W), ANC(NV_HERO_ARTE_H)};
 #ifdef NV_TOUCH_UI
   if (heroCompactoTelefone()) {
     if (lay == HOME_LAYOUT_DINAMICA) r.h = repousoFileirasDin() - 20.0f;
@@ -6736,11 +6736,11 @@ int home_vitrine_arte_pronta(const CatItem *ci) {
 int home_vitrine_arte(const CatItem *ci, float alfa) {
   const char *a = ci ? arte_hero_do_item(ci) : NULL;
   int lay = home_vitrine_layout();
-  GfxRect r = { 0, 0, NV_TELA_W, NV_HERO_CHEIO_H };
+  GfxRect r = { 0, 0, NV_TELA_W, ANC(NV_HERO_CHEIO_H) };
   if (!a || !a[0] || alfa <= 0.004f) return 0;
   if (lay == HOME_LAYOUT_MODERNA) return desenhaArteHero(r, GFX_HERO_CHEIO, ci, a, alfa, 0.0f);
   if (lay == HOME_LAYOUT_PADRAO) r = (GfxRect){ 0, ANC(NV_PAD_BANNER_Y), NV_TELA_W, ANC(NV_PAD_BANNER_H) };
-  else r.h = NV_DIN_ARTE_H;
+  else r.h = ANC(NV_DIN_ARTE_H);
   heroVeuLayout(lay, r.h);
   return desenhaArteHero(r, GFX_VITRINE, ci, a, alfa, 0.0f);
 }

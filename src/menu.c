@@ -940,13 +940,16 @@ static GfxRect tvPainel(void) {
   return r;
 }
 
+// Closed pill anchors stay fixed while its label follows text scale (#205).
+#define TV_PIL_X (NV_MENU_PILULA_X / gfx_escala_txt())
+#define TV_PIL_SETA (NV_MENU_PILULA_SETA / gfx_escala_txt())
 // A PILULA FECHADA: "‹" + circulo + rotulo da secao atual.
 static float tvPilulaLargura(void) {
   return 7.0f + TV_PIL_CIRC + 14.0f + (float)txt_largura(TXT_BODY, tvRotulo(destino)) + 24.0f;
 }
 static GfxRect tvPilula(void) {
-  GfxRect r = { NV_MENU_PILULA_X + NV_MENU_PILULA_SETA, NV_MENU_PILULA_Y,
-                tvPilulaLargura(), NV_MENU_PILULA_H };
+  GfxRect r = { TV_PIL_X + TV_PIL_SETA, NV_MENU_PILULA_Y / gfx_escala_txt(),
+                tvPilulaLargura(), NV_MENU_PILULA_H / gfx_escala_txt() };
   return r;
 }
 
@@ -958,9 +961,9 @@ int menu_pilula_rect(float *x, float *y, float *w, float *h) {
   // pixels da tela REAL: a pilula e camada ampliada (escala.h), e quem pergunta
   // (Busca, Biblioteca, a ilha) converte para a tela dele.
   { float e = NV_MENU_ESCALA;
-    if (x) *x = NV_MENU_PILULA_X * e;
+    if (x) *x = TV_PIL_X * e;
     if (y) *y = r.y * e;
-    if (w) *w = (r.x + r.w - NV_MENU_PILULA_X) * e;
+    if (w) *w = (r.x + r.w - TV_PIL_X) * e;
     if (h) *h = r.h * e; }
   return 1;
 }
@@ -1164,7 +1167,7 @@ static void tvDesenhar(void) {
     // abre ao passar, como a rail recolhida.
     if (ponteiro_ativo()) {
       if (pa > 0.5f)
-        ponteiro_alvo(NV_MENU_PILULA_X, P.y, P.x + P.w - NV_MENU_PILULA_X, P.h,
+        ponteiro_alvo(TV_PIL_X, P.y, P.x + P.w - TV_PIL_X, P.h,
                       NULL, tvPonteiroPilula, 0, 0);
       else
 #ifdef NV_TOUCH_UI
@@ -1222,7 +1225,7 @@ static void tvDesenhar(void) {
       TxtLinha seta = txt_linha(TXT_HEADLINE, "\xE2\x80\xB9", 245, 245, 248, 255);
       TxtLinha sombra = txt_linha(TXT_HEADLINE, "\xE2\x80\xB9", 0, 0, 0, 255);
       float cy = P.y + P.h * 0.5f;
-      float sx = NV_MENU_PILULA_X + (NV_MENU_PILULA_SETA - seta.w) * 0.5f - 3.0f;
+      float sx = TV_PIL_X + (TV_PIL_SETA - seta.w) * 0.5f - 3.0f;
       float sy = cy - seta.h * 0.5f - 2.0f;
       txt_desenhar_alpha(sombra, sx + 1.0f, sy + 2.0f, ap * 0.35f);
       txt_desenhar_alpha(seta, sx, sy, ap * 0.90f);
