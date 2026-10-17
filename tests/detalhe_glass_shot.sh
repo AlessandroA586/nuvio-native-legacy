@@ -34,6 +34,20 @@ for s in src/*.c src/dts/*.c; do
     o="$OBJ/plrui-spy.o"
     extra="-Dgfx_vidro_material=spy_vidro_material"
   fi
+  if [ "$s" = src/detmais.c ] && [ -n "${NUVIO_DETMAIS_SOURCE:-}" ]; then
+    s="$NUVIO_DETMAIS_SOURCE"
+    o="$OBJ/detmais-before.o"
+  fi
+  if [ "$s" = src/gfx.c ] && [ -n "${NUVIO_DETAIL_TIER:-}" ]; then
+    o="$OBJ/gfx-$NUVIO_DETAIL_TIER.o"
+    case "$NUVIO_DETAIL_TIER" in
+      webos) extra="-DNV_WEBOS";;
+      android) extra="-DNV_ANDROID";;
+      tizen) extra="-DNV_TIZEN";;
+      c9) extra="-DNV_WEBOS";;
+      *) exit 2;;
+    esac
+  fi
   objs+=("$o")
   if [ ! -f "$o" ] || [ "$s" -nt "$o" ] || [ -n "$(find src -name '*.h' -newer "$o" -print -quit)" ]; then
     cc $FL $extra -c "$s" -o "$o" & pids+=($!)

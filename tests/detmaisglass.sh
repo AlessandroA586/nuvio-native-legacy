@@ -2,12 +2,12 @@
 # Title-page "..." more menu on the shared glass+frost material.
 #   bash tests/detmaisglass.sh [check]      frost under the panel (rc=0 passes)
 #   bash tests/detmaisglass.sh before|after [glass...]   PNGs, glass 0 and/or 1
-# before = detmais.c / sinopse.c / trocaarte.c at e047eecee.
+# before = detmais.c at e047eecee; other sources stay current.
 set -eu
 cd "$(dirname "$0")/.."
-OUT=/Volumes/ExternalSSD/tmp/detalheglass
+OUT=/Volumes/ExternalSSD/tmp/detalheglass/fix
 export TMPDIR="$OUT/tmp"
-export OBJ="$OUT/obj"
+export OBJ="${OBJ:-/Volumes/ExternalSSD/tmp/detalheglass/obj}"
 mkdir -p "$OUT" "$TMPDIR" "$OBJ"
 mode=${1:-check}
 export NUVIO_SHOT_VIDRO=1 NUVIO_SHOT_VIDRO_FOSCO=1
@@ -16,6 +16,10 @@ if [ "$mode" = check ]; then
   exit "${PIPESTATUS[0]}"
 fi
 export NUVIO_DETAIL_SHOT=1
+if [ "$mode" = before ]; then
+  git show e047eecee:src/detmais.c > "$OUT/detmais-before.c"
+  export NUVIO_DETMAIS_SOURCE="$OUT/detmais-before.c"
+fi
 shift || true
 for glass in ${@:-0 1}; do
   dir="$OUT/mais-$mode/glass-$glass"

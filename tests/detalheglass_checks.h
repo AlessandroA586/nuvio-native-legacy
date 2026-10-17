@@ -1,6 +1,8 @@
 // Included by the offline detail-page harness (NUVIO_DETAIL_CHECK=rows).
 // Draws the real page while the focus walks each cast/recommendations/
 // trailers/collection row and checks the per-frame frost budget.
+static int rowRects;
+static double rowFill, rowBlur;
 static int rows_frame(int *capt, int *pass, int *src, int *up) {
   int before = txt_rasterizadas;
   SDL_PumpEvents();
@@ -11,6 +13,9 @@ static int rows_frame(int *capt, int *pass, int *src, int *up) {
   if (gfx_vidro_capturas > *capt) *capt = gfx_vidro_capturas;
   if (gfx_vidro_passadas > *pass) *pass = gfx_vidro_passadas;
   if (gfx_vidro_com_fonte > *src) *src = gfx_vidro_com_fonte;
+  if (gfx_n_rect > rowRects) rowRects = gfx_n_rect;
+  if (gfx_fill > rowFill) rowFill = gfx_fill;
+  if (gfx_vidro_fill > rowBlur) rowBlur = gfx_vidro_fill;
   *up += txt_rasterizadas - before;
   return 0;
 }
@@ -18,8 +23,9 @@ static int rows_frame(int *capt, int *pass, int *src, int *up) {
 // Isolate each real renderer: page chrome cannot satisfy a card assertion.
 static int card_checks(void) {
   int failures = 0;
-  abrir(1, 1, SEC_COLECAO, 0);
-  for (int row = 0; row < 4; row++) {
+  for (int serie = 0; serie < 2; serie++) {
+  abrir(serie ? 0 : 1, 1, serie ? SEC_ELENCO : SEC_COLECAO, 0);
+  for (int row = 0; row < (serie ? 3 : 4); row++) {
     txt_novo_quadro(); tex_novo_quadro(); gfx_novo_quadro();
     glClear(GL_COLOR_BUFFER_BIT);
     cardMaterial = cardFrost = captionSolid = 0;
@@ -34,9 +40,10 @@ static int card_checks(void) {
     }
     int ok = ajustes_vidro() ? cardMaterial == 1 && cardFrost == 1
              : row >= 2 || captionSolid == 1;
-    printf("%s: isolated card %d material=%d frost=%d solid=%d\n",
-           ok ? "PASS" : "FAIL", row, cardMaterial, cardFrost, captionSolid);
+    printf("%s: isolated %s card %d material=%d frost=%d solid=%d\n",
+           ok ? "PASS" : "FAIL", serie ? "series" : "movie", row, cardMaterial, cardFrost, captionSolid);
     failures += !ok;
+  }
   }
   return failures ? 1 : 0;
 }
@@ -46,7 +53,7 @@ static int rows_checks(void) {
     { "cast", SEC_ELENCO, 6 }, { "recommendations", SEC_RELACIONADOS, 7 },
     { "trailers", SEC_TRAILERS, 1 }, { "collection", SEC_COLECAO, 1 },
   };
-  int failures = 0;
+  int failures = card_checks();
   for (int serie = 0; serie < 2; serie++)
     for (int l = 0; l < 4; l++) {
       int capt = 0, pass = 0, src = 0, up = 0, cols;
@@ -55,6 +62,7 @@ static int rows_checks(void) {
       if (cols < 1) { printf("SKIP: %s %s has no cards\n", serie ? "series" : "movie", linhas[l].nome); continue; }
       for (int frame = 0; frame < 60; frame++) { foco.coluna = frame % cols; rows_frame(&capt, &pass, &src, &up); }
       capt = pass = src = up = 0;
+      rowRects = 0; rowFill = rowBlur = 0;
       for (int frame = 0; frame < 180; frame++) {
         foco.coluna = (frame / 6) % cols;
         scrollSec[linhas[l].sec] = (float)(frame % 60) * 6;
@@ -62,7 +70,9 @@ static int rows_checks(void) {
       }
       printf("%s %s: cols=%d frames=180 max-captures=%d max-passes=%d max-frost-panels=%d text-uploads=%d\n",
              serie ? "series" : "movie", linhas[l].nome, cols, capt, pass, src, up);
-      if (capt > 1 || pass > 5 || src == 0 || up != 0) {
+      printf("%s %s budget: rects=%d fill=%.3f blur-fill=%.3f\n",
+             serie ? "series" : "movie", linhas[l].nome, rowRects, rowFill, rowBlur);
+      if (capt > 1 || pass > 5 || src == 0 || up != 0 || rowRects > 260 || rowFill > 5.4 || rowBlur > .75) {
         fprintf(stderr, "FAIL: %s %s over budget\n", serie ? "series" : "movie", linhas[l].nome);
         failures++;
       }
@@ -86,6 +96,41 @@ void spy_vidro_material(GfxRect r, float raio, float dens, float a) {
   gfx_vidro_material(r, raio, dens, a);
 }
 
+// Same patterned backdrop and settled menu; only frost changes. Sample the
+// empty left gutter inside the panel, excluding text, icons and focus rows.
+static int menu_pixels(int serie) {
+  GfxRect r = detmais_caixa(maisAncora);
+  unsigned char pixels[2][32 * 4];
+  for (int frost = 0; frost < 2; frost++) {
+    setenv("NUVIO_SHOT_VIDRO_FOSCO", frost ? "1" : "0", 1);
+    ajustes_teste_vidro_env();
+    gfx_novo_quadro(); glClear(GL_COLOR_BUFFER_BIT);
+    for (int x = 0; x < 1920; x += 8)
+      gfx_cor((GfxRect){ x, 0, 8, 1080 }, 0, (x / 8) % 2 ? 1.0f : .6f, .9f, .8f, 1);
+    gfx_vidro_sujar();
+    detmais_desenhar(maisAncora, 1);
+    glReadPixels((int)r.x + 8, 1080 - (int)r.y - 56, 1, 32, GL_RGBA, GL_UNSIGNED_BYTE, pixels[frost]);
+    char id[80];
+    snprintf(id, sizeof id, "%s-menu-frost-%d", serie ? "series" : "movie", frost);
+    gravar(id);
+  }
+  int changed = 0, mismatch = 0;
+  unsigned char expected[32 * 4];
+  gfx_novo_quadro(); glClear(GL_COLOR_BUFFER_BIT);
+  for (int x = 0; x < 1920; x += 8)
+    gfx_cor((GfxRect){ x, 0, 8, 1080 }, 0, (x / 8) % 2 ? 1.0f : .6f, .9f, .8f, 1);
+  gfx_vidro_sujar();
+  plrui_cartao(r, 32, 1);
+  glReadPixels((int)r.x + 8, 1080 - (int)r.y - 56, 1, 32, GL_RGBA, GL_UNSIGNED_BYTE, expected);
+  for (int i = 0; i < 32 * 4; i++) {
+    changed += abs(pixels[0][i] - pixels[1][i]) > 2;
+    mismatch += abs(expected[i] - pixels[1][i]) > 1;
+  }
+  printf("%s: menu interior frost pixels changed=%d card-mismatch=%d\n",
+         changed > 16 && mismatch == 0 ? "PASS" : "FAIL", changed, mismatch);
+  return changed > 16 && mismatch == 0 ? 0 : 1;
+}
+
 static int mais_checks(void) {
   int failures = 0;
   for (int serie = 0; serie < 2; serie++) {
@@ -106,6 +151,7 @@ static int mais_checks(void) {
       fprintf(stderr, "FAIL: %s menu panel has no frost (or over budget)\n", serie ? "series" : "movie");
       failures++;
     }
+    failures += menu_pixels(serie);
     detmais_zerar();
   }
   printf("%s: more-menu panel frosted (open frost panels > closed, <=1 capture, <=5 passes)\n",
