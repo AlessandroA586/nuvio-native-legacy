@@ -93,6 +93,104 @@ static void neutro(const char *nome, double m[3]) {
   confere(fabs(d) <= 2.0, t);
 }
 
+// Compare frost with a flat source matching the displayed pixel. The dense
+// scrim exceeds the density-solve cap, so distant samples cannot change it.
+static void backdrop_shading(const char *dir) {
+  const GfxRect tela = {0, 0, 1920, 1080};
+  const GfxModo modes[] = {GFX_DETALHE, GFX_DETALHE, GFX_DETALHE, GFX_DETALHE,
+    GFX_HERO, GFX_HERO_CHEIO, GFX_VITRINE, GFX_VITRINE_DIN, GFX_ARTE,
+    GFX_VEU_CSS, GFX_VEU_TOPO, GFX_VEU_BAIXO, GFX_COR, GFX_LUZ, GFX_ARTE,
+    GFX_HERO, GFX_HERO_CHEIO, GFX_VEU_CSS, GFX_VEU_CSS, GFX_ARTE};
+  const char *names[] = {"detail vignette", "detail scrolled", "detail veiled Borrada",
+    "detail deferred Frost", "home hero ambient", "home full hero ambient",
+    "home Vitrine", "home Dynamic Vitrine", "settings fused art veil",
+    "search gradient veil", "player top veil", "player bottom veil",
+    "modal flat veil", "menu radial shadow", "library ambient",
+    "home hero crossfade ambient", "home full hero crossfade ambient",
+    "gradient then colored modal veil", "settings split veils", "deferred Frost veil"};
+  GLuint white = arte(1, 1), base = arte(0.35f, 0.35f);
+  int n, side, pass, c;
+  for (n = 0; n < (int)(sizeof modes / sizeof modes[0]); n++) {
+    for (side = 0; side < 2; side++) {
+      GfxRect panel = {side ? 1390 : 110, side ? 830 : 120, 220, 180};
+      double backdrop[3], glass[2][3];
+      GLuint reference = 0;
+      for (pass = 0; pass < 2; pass++) {
+        nv_ambiente_forca = 0;
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo); glViewport(0, 0, LW, LH);
+        gfx_novo_quadro();
+        glClearColor(nv_cor_fundo_viva[0], nv_cor_fundo_viva[1], nv_cor_fundo_viva[2], 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+        if (pass) gfx_rect(tela, reference, GFX_ARTE, 0, 0, 0, 0, 1, 1, 1, 1);
+        else {
+          if (n == 2) {
+            const float veil[] = {0.03f, 0.05f, 0.09f, 0.65f};
+            gfx_luz_canal_desenhar(base, 1, veil, 0);
+          } else if (n == 3 || n == 19) assert(gfx_luz_canal_adiar(base, 0));
+          else if (n == 4 || n == 5 || n == 14 || n == 15 || n == 16) {
+            nv_ambiente_forca = 1;
+            gfx_ambiente_preparar();
+            glBindFramebuffer(GL_FRAMEBUFFER, fbo); glViewport(0, 0, LW, LH);
+            gfx_ambiente(1);
+          } else gfx_rect(tela, base, GFX_ARTE, 0, 0, 0, 0, 1, 1, 1, 1);
+          if (n == 7) {
+            const float top[] = {0.18f, 0.25f, 0.35f};
+            gfx_fundo_din_desenhar(top, 0.15f);
+          }
+          if (n == 15 || n == 16) {
+            GfxModo hero = n == 15 ? GFX_HERO : GFX_HERO_CHEIO;
+            gfx_rect(tela, base, hero, 0, 0, 0, 0, 0, 0, 0, 0.65f);
+            gfx_rect(tela, white, hero, 0, 0, 0, 0, 0, 0, 0, 0.40f);
+          } else if (n <= 7) {
+            nv_ambiente_forca = n >= 2 && n <= 5 ? 1 : 0;
+            gfx_rect(tela, white, n == 7 ? GFX_VITRINE : modes[n], n == 1 ? 0.3f : 1, 0, n == 7 ? 0.7f : 0,
+                     0, 0, 0, 0, n == 1 || n == 2 ? 0.45f : 1);
+          } else if (n == 8)
+            gfx_rect(tela, white, GFX_ARTE, 0.40f, 0.367f, 0.167f, 0, 1, 1, 1, 1);
+          else if (n == 9) {
+            gfx_cor(tela, 0, 0, 0, 0, 0.45f);
+            gfx_veu_css(tela, 0, 1, 1, 0.60f);
+          } else if (n == 10 || n == 11)
+            gfx_rect(tela, 0, modes[n], 0, 0, 0, 0, 0, 0, 0, 0.60f);
+          else if (n == 12) gfx_cor(tela, 0, 0.03f, 0.05f, 0.09f, 0.65f);
+          else if (n == 13) gfx_luz_canto(tela, 0, 200, 500, 1200, 0, 0, 0, 0.70f);
+          else if (n == 17) {
+            gfx_veu_css(tela, 0, 1.25f, 1, 0.70f);
+            gfx_cor(tela, 0, 0.1f, 0.2f, 0.3f, 0.60f);
+          } else if (n == 18) {
+            gfx_veu_css_base((GfxRect){0, 0, 960, 1080}, 2, 1, 1, 0.367f, 0.40f);
+            gfx_veu_css_base((GfxRect){960, 0, 960, 1080}, 3, 1, 1, 0.167f, 0.40f);
+          } else if (n == 19) gfx_cor(tela, 0, 0.03f, 0.05f, 0.09f, 0.65f);
+          gfx_ambiente_descarregar();
+          media((int)panel.x + 100, (int)panel.y + 80, 20, 20, backdrop);
+          unsigned char pixel[4] = {(unsigned char)lround(backdrop[0]),
+            (unsigned char)lround(backdrop[1]), (unsigned char)lround(backdrop[2]), 255};
+          glGenTextures(1, &reference); glBindTexture(GL_TEXTURE_2D, reference);
+          glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+          glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+          gfx_tex_esquecer(0);
+        }
+        nv_ambiente_forca = 0; // Compare the source without an extra material tint.
+        gfx_vidro(panel, 0, GFX_VIDRO_PAINEL, 0.06f, 0.85f, 1);
+        media((int)panel.x + 100, (int)panel.y + 80, 20, 20, glass[pass]);
+        if (!pass && n == 0 && !side) salvar(dir, "detail-vignette.bmp");
+      }
+      char label[160];
+      snprintf(label, sizeof label, "%s: frost matches displayed shading (%s)", names[n], side ? "bottom/right" : "top/left");
+      int ok = 1;
+      for (c = 0; c < 3; c++) ok &= fabs(glass[0][c] - glass[1][c]) <= 2.0;
+      if (!ok) printf("source mismatch: backdrop %.1f,%.1f,%.1f actual %.1f,%.1f,%.1f expected %.1f,%.1f,%.1f\n",
+        backdrop[0], backdrop[1], backdrop[2], glass[0][0], glass[0][1], glass[0][2], glass[1][0], glass[1][1], glass[1][2]);
+      confere(ok, label);
+      gfx_tex_esquecer(reference);
+      glDeleteTextures(1, &reference);
+    }
+  }
+  gfx_tex_esquecer(white); gfx_tex_esquecer(base);
+  glDeleteTextures(1, &white); glDeleteTextures(1, &base);
+}
+
 int main(int argc, char **argv) {
   const char *dir = argc > 1 ? argv[1] : NULL;
   GfxRect painel = { 1240, 140, 560, 760 }, folha = { 160, 140, 560, 760 };
@@ -173,6 +271,7 @@ int main(int argc, char **argv) {
     }
     glDeleteTextures(1, &source);
   }
+  backdrop_shading(dir);
   printf("vidro_neutro: %s\n", falhas ? "FALHA" : "ok");
   return falhas ? 1 : 0;
 }
