@@ -47,6 +47,7 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 5; i++) {
     char path[1024]; snprintf(path, sizeof path, "%s/%s.log", argv[1], names[i]);
     proof = fopen(path, "w"); assert(proof);
+    fputs("F 0\n", proof);
     gfx_escala_sair(i ? 1.3f : 1);
     for (int j = 0; j < 5; j++) {
       if (i == 2 && j == 4) gfx_escala_sair(1);

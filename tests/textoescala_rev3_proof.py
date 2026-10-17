@@ -21,5 +21,5 @@ for name in ('scaled', 'unscaled-text', 'unscaled-button', 'missing-button'):
                             capture_output=True, text=True)
     assert (result.returncode == 0) == (name == 'scaled'), result.stdout + result.stderr
     print(f'PASS runtime proof: {name} rc={result.returncode}')
-assert '${NV_BASE:-8df743dff}' in (root / 'tests/textoescala_prova.sh').read_text()
-print('PASS integration baseline default: 8df743dff')
+assert '${NV_BASE:-f22761e28}' in (root / 'tests/textoescala_prova.sh').read_text()
+print('PASS integration baseline default: f22761e28')

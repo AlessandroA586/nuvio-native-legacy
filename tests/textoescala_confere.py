@@ -45,10 +45,12 @@ def compare(name, base, target, factor):
     cards = 0
     for i, (a, b) in enumerate(zip(f0, f1)):
         scaled('text', i, [t[0] for t in a['T'] if t[0] < 150], [t[0] for t in b['T'] if t[0] < 150], factor, .08)
+        assert not a['R'] or b['R'], f'frame {i}: buttons vanished'
         if a['R'] and b['R']:   # a transient 44x34 rect shows on Home in ~1 run of 7
             scaled('button', i, [r[1] for r in a['R']], [r[1] for r in b['R']], factor, .12)
         assert a['C'] or not b['C'], f'frame {i}: artwork appeared'
         assert b['C'] or not any(map(seen, a['C'])), f'frame {i}: on-screen artwork vanished'
+        assert len(b['C']) >= sum(map(seen, a['C'])), f'frame {i}: on-screen artwork vanished'
         if len(a['C']) == len(b['C']):
             for p, q in zip(a['C'], b['C']):
                 assert same(p, q), f'frame {i} artwork resized: {p[1:3]} -> {q[1:3]}'

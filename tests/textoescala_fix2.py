@@ -150,15 +150,15 @@ def proof():
     with tempfile.TemporaryDirectory() as tmp:
         p = pathlib.Path(tmp)
         base, target = p / 'base', p / 'target'
-        base.write_text('T 20\nR 100 50\nC 7 1 180 270\nC 8 1 360 203\n')
-        target.write_text('T 24\nC 7 1 180 270\nC 8 1 432 243.6\n')
+        base.write_text('F 0\nT 20\nR 100 50\nC 7 180 270 20 20\nC 8 360 203 220 20\n')
+        target.write_text('F 0\nT 24\nR 120 60\nC 7 180 270 20 20\nC 8 432 243.6 220 20\n')
         cmd = [sys.executable, str(ROOT / 'tests/textoescala_confere.py'), 'fixture', str(base), str(target), '1.2']
         assert subprocess.run(cmd, capture_output=True).returncode != 0, 'resized landscape accepted'
-        target.write_text('T 24\nC 7 1 180 270\n')
+        target.write_text('F 0\nT 24\nR 120 60\nC 7 180 270 20 20\n')
         assert subprocess.run(cmd, capture_output=True).returncode != 0, 'missing card accepted'
-        target.write_text('T 24\nC 7 1 180 270\nC 7 1 180 270\n')
-        assert subprocess.run(cmd, capture_output=True).returncode != 0, 'replaced card identity accepted'
-        target.write_text('T 24\nR 120 60\nC 7 1 180 270\nC 8 1 360 203\n')
+        target.write_text('F 0\nT 24\nR 120 60\nC 7 180 270 20 20\nC 7 180 270 220 20\n')
+        assert subprocess.run(cmd, capture_output=True).returncode != 0, 'replaced card size accepted'
+        target.write_text('F 0\nT 24\nR 120 60\nC 7 180 270 20 20\nC 8 360 203 220 20\n')
         assert subprocess.run(cmd, capture_output=True).returncode == 0, 'preserved cards rejected'
         # Run the actual hash checker used by the shell proof.
         cmd = [sys.executable, str(ROOT / 'tests/textoescala_hashes.py'), str(base), str(target)]

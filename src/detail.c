@@ -5655,7 +5655,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   // Meta: relogio + duracao + data, 20/400 rgb(179,179,179), com 38 de folga
   // entre os dois blocos. Na Moderna e ancorado na BASE da miniatura
   // (NV_DETP_EPM_META_DY), para acompanhar os tres tamanhos do card.
-  { float x = tx, y = r.y + (moderna ? epThumbH() - NV_DETP_EPM_META_DY : NV_DETP_EP_META_Y);
+  { float x = tx, y = r.y + (epThumbH() - (moderna ? NV_DETP_EPM_META_DY : NV_DETP_EP_THUMB_H - NV_DETP_EP_META_Y));
     // Relogio de 28x28. O glifo do web e um disco CHEIO em rgb(179,179,179) com
     // os ponteiros VAZADOS — o `path` do SVG recorta o L do ponteiro do disco.
     // Aqui o vazado sai pintando os ponteiros de preto por cima: naquele ponto
@@ -5718,7 +5718,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     if (ci && ci->progresso > 0 && ep && ci->temporada == ep->temporada &&
         ci->episodio == ep->episodio) prog = ci->progresso;
     if (prog > 2 && prog < 98) {
-      GfxRect tr = { tx, r.y + (moderna ? epThumbH() - NV_DETP_EPM_BARRA_DY : NV_DETP_EP_BARRA_Y), epTextoW(),
+      GfxRect tr = { tx, r.y + (epThumbH() - (moderna ? NV_DETP_EPM_BARRA_DY : NV_DETP_EP_THUMB_H - NV_DETP_EP_BARRA_Y)), epTextoW(),
                      NV_DETP_EP_BARRA_H };
       // Anda do valor que esta tela mostrava ate o novo (revela.h): na volta
       // do player a barra do episodio cresce ate onde a pessoa parou.
