@@ -1,7 +1,7 @@
 #!/bin/bash
 # Trakt row glass: per-frame cost check (before/after) and PNGs with the reference glass.
 #   bash tests/traktvidro.sh check   - row cost vs a normal row (must PASS)
-#   bash tests/traktvidro.sh before  - the same check on 995376c07 detail.c (expected FAIL)
+#   bash tests/traktvidro.sh before  - the same check on the flat-chip card (expected FAIL)
 #   bash tests/traktvidro.sh shots   - PNGs (quality Alta=2, Automatica=0) into $OUT
 set -eu
 cd "$(dirname "$0")/.."
@@ -13,7 +13,7 @@ export NUVIO_SHOT_VIDRO=1 NUVIO_SHOT_VIDRO_FOSCO=1 NUVIO_SHOT_VIDRO_QUAL=0
 case "$mode" in
   check) NUVIO_TRAKT_CHECK=vidro bash tests/detalhe_glass_shot.sh "$OUT" trakt-check ;;
   before)
-    git show "${2:-995376c07}:src/detail.c" > "$OUT/detail-before.c"
+    git show "${2:-bb9f2abc9}:src/detail.c" > "$OUT/detail-before.c"
     NUVIO_DETAIL_SOURCE="$OUT/detail-before.c" NUVIO_TRAKT_CHECK=vidro bash tests/detalhe_glass_shot.sh "$OUT" trakt-check ;;
   shots)
     src=${2:-995376c07}

@@ -9,6 +9,7 @@ static int trakt_checks(void) {
     static const char *nome[9] = { "captures", "passes", "fill", "copy", "sampled", "flat", "rects", "uploads", "area" };
     double c[2][9] = {{0}};
     abrir(1, 1, SEC_COMENTARIOS, 0);
+    gfx_vidro_governar_zerar();
     for (int row = 0; row < 2; row++)
       for (int frame = 0; frame < 120; frame++) {
         scrollSec[SEC_COMENTARIOS] = (float)(frame % 90) * 40;
@@ -23,15 +24,26 @@ static int trakt_checks(void) {
                         gfx_vidro_com_fonte, gfx_vidro_chapados, gfx_n_rect, txt_rasterizadas - up,
                         gfx_vidro_area };
         for (int k = 0; k < 9; k++) c[row][k] += v[k] / 90.0;
+        // The real governor entry point, fed fast frames (1 ms vs a 16.7 ms
+        // target): any timing-driven fallback would show up as degraded=1.
+        gfx_vidro_governar(1.0, 16.7);
       }
     for (int row = 0; row < 2; row++) {
       printf("%s row per frame:", rows[row]);
       for (int k = 0; k < 9; k++) printf(" %s=%.1f", nome[k], c[row][k]);
       printf("\n");
     }
-    // The Trakt row may not put more glass-shader area than a normal row (studios, one 8-card row).
-    failures = c[0][8] > c[1][8] * 1.5 + 1 || c[0][4] > c[1][4];
-    printf("%s: trakt row glass cost close to a normal row\n", failures ? "FAIL" : "PASS");
+    // Frost is required, so raw glass area (~4x the smaller studio cards) is
+    // not the gate. The gates are the TOTAL row cost: shared-backdrop capture
+    // work (captures, blur fill, copies) must match a normal frosted row, and
+    // rects — every gfx_rect of the row, so a cheaper-glass-but-more-layers
+    // card still fails — stays within a normal row's budget.
+    failures = c[0][0] > c[1][0] || c[0][2] > c[1][2] * 1.5 + 1 ||
+               c[0][3] > c[1][3] * 1.5 + 1 || c[0][6] > c[1][6] * 1.5 + 1;
+    printf("%s: trakt row total draw cost close to a normal frosted row\n", failures ? "FAIL" : "PASS");
+    // Zero sampled panels means the cards went flat and the capture gates
+    // above measured nothing (the gfx_vidro_chip regression this catches).
+    if (c[0][4] <= 0) { failures = 1; printf("FAIL: trakt cards lost the frosted backdrop read\n"); }
     // The governor must not have smoked the glass (frames here are fast, quality Automatica).
     printf("governor: quality=%d degraded=%d\n", ajustes_vidro_qualidade(), gfx_vidro_degradado());
     if (gfx_vidro_degradado()) failures = 1;
