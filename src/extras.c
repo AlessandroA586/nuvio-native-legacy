@@ -921,12 +921,11 @@ static void *buscar(void *arg) {
   if (corpo) {
     ComentAchado achado[EX_COMENT_MAX];
     int n = 0;
-    // p+1 e nao js_prox: js_prox recebe o FIM do elemento anterior, e aqui
-    // ainda nao ha anterior. Com js_prox o primeiro item era pulado e, em
-    // resposta de tres itens, sobrava lixo — as duas listas vinham vazias.
     const char *p = strchr(corpo, '[');
     p = p ? p + 1 : NULL;
-    while (p && n < EX_COMENT_MAX) {
+    // js_fim expects an object, not array whitespace or the closing bracket.
+    while (p && *p && (unsigned char)*p <= ' ') p++;
+    while (p && *p == '{' && n < EX_COMENT_MAX) {
       const char *f = js_fim(p);
       achado[n].u[0] = achado[n].t[0] = 0;
       js_texto(p, f, "comment", achado[n].t, sizeof achado[n].t);
@@ -1768,11 +1767,10 @@ static void *buscarEpComent(void *arg) {
   if (corpo) {
     ComentAchado achado[EX_COMENT_MAX];
     int n = 0;
-    // p+1 e nao js_prox, pelo mesmo motivo da lista da serie: ainda nao ha
-    // elemento anterior de onde partir.
     const char *p = strchr(corpo, '[');
     p = p ? p + 1 : NULL;
-    while (p && n < EX_COMENT_MAX) {
+    while (p && *p && (unsigned char)*p <= ' ') p++;
+    while (p && *p == '{' && n < EX_COMENT_MAX) {
       const char *f = js_fim(p);
       achado[n].u[0] = achado[n].t[0] = 0;
       js_texto(p, f, "comment", achado[n].t, sizeof achado[n].t);

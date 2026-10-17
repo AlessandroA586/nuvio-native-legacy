@@ -1613,6 +1613,7 @@ static void abrirInterno(const HomeItem *it) {
   // respondeu neste instante.
   temporada = 0;
   epAncora = 0;
+  comentEp = 0;  // Every title opens on show comments, never a previous episode.
   comEpT = comEpE = 0;
   comPicando = 0;
   { const CatItem *ci0 = cat_item(idx);
