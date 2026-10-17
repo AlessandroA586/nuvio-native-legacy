@@ -2855,17 +2855,6 @@ static void verAdocao(Fio *f) {
 // A pre-busca chegou ao fim do que devia ler antes do video: solta o player
 // (fase 2) e DORME sem tocar a rede ate ser adotada (1) ou trocada/parada (0).
 static int esperarAdocao(Fio *f) {
-#ifdef MKVASS_TESTE_DRENAR_PREBUSCA
-  // Host tests compare global request counters across header probing/adoption.
-  // Drain queued jobs before publishing readiness; production releases early.
-  soltarPrebusca(f);
-  if (f->fontesPasso == 4 || f->fontesPasso == 5) {
-    f->jobFontes = submeter(f, f->fontesPasso == 4 ? f->posAttachments : f->fontesDadosIni,
-                          f->fontesPasso == 4 ? 64 : f->fontesCabN);
-    f->fontesPasso = f->jobFontes ? (f->fontesPasso == 4 ? 1 : 2) : 3;
-  }
-  avancarFontes(f, 2);
-#endif
   prebuscaFase(f, 2);
   while (minhaVez(f)) {
     verAdocao(f);
