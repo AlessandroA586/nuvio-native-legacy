@@ -112,6 +112,7 @@ int main(void) {
 def coverage():
     search = source('busca.c')
     assert '#define NV_TXT_TELA' in search
+    assert '330.0f * gfx_poster_k()' in search and '186.0f * gfx_poster_k()' in search, 'Search best-result artwork scales'
     draw = function(search, 'busca_desenhar')
     assert 'TXT_INI()' in draw and 'TXT_FIM()' in draw, 'Search missing text layer'
     vt = source('vertudo.c')

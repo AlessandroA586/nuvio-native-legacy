@@ -1897,7 +1897,7 @@ static void desenhaResultados(Uint32 agora) {
         gfx_opacidade_grupo = grupo * entra;
       }
       { const char *url = ci->backdrop[0] ? ci->backdrop : ci->poster;
-        GfxRect art = { t.x + 20.0f, t.y + 20.0f, 330.0f, t.h - 40.0f };
+        GfxRect art = { t.x + 20.0f, t.y + 20.0f, 330.0f * gfx_poster_k(), 186.0f * gfx_poster_k() };
         float tx, ty, bloco;
         if (!ci->backdrop[0]) art.w = art.h * 2.0f / 3.0f;
         if (buTelefone()) art.w = fminf(art.w, fmaxf(1.0f, (t.w - 68.0f) * 0.45f));
