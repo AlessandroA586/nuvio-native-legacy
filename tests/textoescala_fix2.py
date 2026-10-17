@@ -122,6 +122,8 @@ def coverage():
     draw = function(keyboard, 'teclado_desenhar')
     assert 'TXT_INI()' in draw and 'ESCALA_REAL_INI()' not in draw, 'TV keyboard ignores scale'
     assert '#define NV_TXT_TELA' in keyboard
+    assert 'TXT_INI()' in function(keyboard, 'teclado_evento'), 'Keyboard event geometry skips text layer'
+    assert 'TXT_INI()' in function(keyboard, 'teclado_atualizar'), 'Keyboard update geometry skips text layer'
     ccheck('''
 static float scale = 1;
 float gfx_poster_k(void) { return 1 / scale; }

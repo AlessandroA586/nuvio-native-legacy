@@ -781,7 +781,7 @@ static void aplicar(void) {
   fechar(TECLADO_PRONTO);
 }
 
-void teclado_evento(const SDL_Event *e) {
+static void teclado_evento_(const SDL_Event *e) {
   SDL_Keycode k;
   if (aberto && st_evento(e)) return;   // teclado da TV: valor inteiro por sistexto
   if (!aberto || e->type != SDL_KEYDOWN) return;
@@ -857,7 +857,7 @@ void teclado_evento(const SDL_Event *e) {
   }
 }
 
-void teclado_atualizar(float dt, Uint32 agora) {
+static void teclado_atualizar_(float dt, Uint32 agora) {
   int f, c;
   (void)agora;
   if (aberto) {
@@ -1318,6 +1318,9 @@ static void tePhoneDesenhar(Uint32 agora) {
   }
 }
 #endif
+
+void teclado_evento(const SDL_Event *e) { TXT_INI(); teclado_evento_(e); TXT_FIM(); }
+void teclado_atualizar(float dt, Uint32 agora) { TXT_INI(); teclado_atualizar_(dt, agora); TXT_FIM(); }
 
 static void teDesenhar(Uint32 agora);
 // TV follows text scale; the virtual viewport keeps the modal centered.
