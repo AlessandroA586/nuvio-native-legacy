@@ -5393,7 +5393,7 @@ void player_morph_de(GfxRect logo, GfxRect play) {
 static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
   float v = cine.veu, f = cine.foco, t = (float)(agora - cine.desde) / 1000.0f;
-  float entra, cx = NV_TELA_W * 0.5f, tm, k, base, y;
+  float entra, cx = NV_TELA_W * 0.5f, tm, k, base, y, tx;
   int reduz = ajustes_animacoes_reduzidas();
   // #508: preserve the saved Off / Art / Blurred art choice. Reuse the
   // title page's own artwork without starting a second metadata request.
@@ -5407,7 +5407,11 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   static Uint32 morphDe;
   static int morph;
   static GfxRect l0, p0;
-  GfxRect anel = { cx - 28.0f, 756.0f, 56.0f, 56.0f }, ra = anel;
+  // B3 (Canto): same morph, same art and veil; only the targets move. Logo at the
+  // bottom left (x 96, 0.744 of the A3 size), the 44 px ring under it, lines beside the ring.
+  int canto = ajustes_abertura_estilo();
+  float sc = canto ? 0.744f : 1.0f, lx = 96.0f, gap = canto ? 40.0f : 64.0f;
+  GfxRect anel = canto ? (GfxRect){ lx, 940.0f, 44.0f, 44.0f } : (GfxRect){ cx - 28.0f, 756.0f, 56.0f, 56.0f }, ra = anel;
   if (v <= 0.0f) return;
   if (morphDe != cine.desde) {
     morphDe = cine.desde; l0 = morphLogo; p0 = morphPlay;
@@ -5448,10 +5452,10 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
   // O LOGO: a mesma textura do detalhe, so o quad anda e escala ate o centro.
   lg = marca ? tex_obter_larg_qualquer(marca, 640) : 0;
   if (lg) {
-    float ar = tex_aspecto(marca), lw = 560.0f, lh = ar > 0.0f ? lw / ar : 172.0f;
+    float ar = tex_aspecto(marca), lw = 560.0f * sc, lh = ar > 0.0f ? lw / ar : 172.0f * sc;
     GfxRect r;
-    if (lh > 172.0f) { lh = 172.0f; lw = lh * ar; }
-    r = (GfxRect){ cx - lw * 0.5f, anel.y - 64.0f - lh, lw, lh };
+    if (lh > 172.0f * sc) { lh = 172.0f * sc; lw = lh * ar; }
+    r = (GfxRect){ canto ? lx : cx - lw * 0.5f, anel.y - gap - lh, lw, lh };
     if (morph && l0.w > 0.0f) {
       r.x = l0.x + (r.x - l0.x) * k; r.y = l0.y + (r.y - l0.y) * k;
       r.w = l0.w + (r.w - l0.w) * k; r.h = l0.h + (r.h - l0.h) * k;
@@ -5460,7 +5464,7 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
              v * entra);
   } else {
     TxtLinha l = txt_linha_corta(TXT_TITULO2, c ? c->titulo : "", 255, 255, 255, 255, 1400.0f);
-    txt_desenhar_alpha(l, cx - l.w * 0.5f, anel.y - 64.0f - l.h, v * entra);
+    txt_desenhar_alpha(l, canto ? lx : cx - l.w * 0.5f, anel.y - gap - l.h, v * entra);
   }
 
   // O PLAY VIRA O ANEL: a pilula encolhe ate o circulo (raio = h/2), o branco
@@ -5488,10 +5492,11 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
 
   // UMA LINHA QUIETA sob o anel: o episodio (so serie). O add-on so com o
   // ajuste ligado; a de demora so depois de 8 s.
-  base = ra.y + ra.h + 30.0f; y = base;
+  base = canto ? ra.y + 4.0f : ra.y + ra.h + 30.0f; y = base;
+  tx = ra.x + ra.w + 20.0f;
   if (linhaEp[0]) {
     TxtLinha l = txt_linha_corta(TXT_ILHA_SUB, linhaEp, 243, 242, 239, 170, 1100.0f);
-    txt_desenhar_alpha(l, cx - l.w * 0.5f, y, v * entra);
+    txt_desenhar_alpha(l, canto ? tx : cx - l.w * 0.5f, y, v * entra);
     y += 34.0f;
   }
   if (ajustes_abertura_addon()) {
@@ -5508,14 +5513,14 @@ static void desenharCinema(Uint32 agora, const CatItem *c, int furou) {
     }
     if (det[0]) {
       TxtLinha d = txt_linha_corta(TXT_G19M, det, 243, 242, 239, 140, 1100.0f);
-      txt_desenhar_alpha(d, cx - d.w * 0.5f, y, v * entra);
+      txt_desenhar_alpha(d, canto ? tx : cx - d.w * 0.5f, y, v * entra);
       y += 34.0f;
     } }
   // DEMOROU: uma linha so, curta e calma, que entra devagar.
   if (abrecine_demorando(&cine, agora)) {
     float d = (float)(agora - cine.desde - ABRECINE_DEMORA_MS) / 600.0f;
     TxtLinha l = txt_linha(TXT_G19M, i18n("Só mais um instante…"), 243, 242, 239, 255);
-    txt_desenhar_alpha(l, cx - l.w * 0.5f, y, 0.62f * v * (reduz || d > 1.0f ? 1.0f : d));
+    txt_desenhar_alpha(l, canto ? tx : cx - l.w * 0.5f, y, 0.62f * v * (reduz || d > 1.0f ? 1.0f : d));
   }
 }
 

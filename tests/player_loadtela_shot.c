@@ -3,6 +3,8 @@
 //
 //   bash tests/player_loadtela_shot.sh /Volumes/ExternalSSD/tmp/loadtela/depois
 //
+// A second arg "canto" shoots the B3 style (logo bottom-left, ring under it).
+
 // Builds against an older tree too (before/after): player_morph_de is weak.
 #include "catalogo.h"
 #include "player.h"
@@ -77,6 +79,7 @@ int main(int argc, char **argv) {
     fclose(f);
     ajustes_dir(getenv("NUVIO_DADOS")); }
   ajustes_iniciar();
+  if (argc > 2 && !strcmp(argv[2], "canto")) assert(ajustes_shot_valor("aberturaEstiloLocal", 1));
 
   memset(&c, 0, sizeof c);
   snprintf(c.tipo, sizeof c.tipo, "movie");

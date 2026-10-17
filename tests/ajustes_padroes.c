@@ -172,7 +172,8 @@ int main(void) {
   AJ_PLAYER_EXTERNO == AJ_COLECAO_EXIBICAO + 1 &&   // #501: player externo depois
   AJ_TRAILER_AUDIO == AJ_PLAYER_EXTERNO + 1 &&      // idioma do audio do trailer
   AJ_PLAYER_ANIME == AJ_TRAILER_AUDIO + 1 &&        // #205: player so para anime
-  AJ_N == AJ_PLAYER_ANIME + 1);   // 2.0.6: master's #535 views appended after
+  AJ_ABERTURA_ESTILO == AJ_PLAYER_ANIME + 1 &&      // #205: estilo da abertura (B3)
+  AJ_N == AJ_ABERTURA_ESTILO + 1);   // 2.0.6: master's #535 views appended after
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));
@@ -213,6 +214,14 @@ int main(void) {
   valor[AJ_ABERTURA_FUNDO] = 1;
   assert(OPCOES[AJ_ABERTURA_FUNDO].n == 3 && !strcmp(OPCOES[AJ_ABERTURA_FUNDO].valores[0], "Desligado") &&
          !strcmp(OPCOES[AJ_ABERTURA_FUNDO].valores[1], "Arte") && !strcmp(OPCOES[AJ_ABERTURA_FUNDO].valores[2], "Arte borrada"));
+  // #205: estilo da tela de abertura: Centro (A3) por padrao, Canto (B3), local.
+  assert(valor[AJ_ABERTURA_ESTILO] == 0 && ajustes_abertura_estilo() == 0);
+  assert(!strcmp(CHAVE[AJ_ABERTURA_ESTILO], "aberturaEstiloLocal") && somenteDesteAparelho(AJ_ABERTURA_ESTILO) && !dePerfil(AJ_ABERTURA_ESTILO));
+  valor[AJ_ABERTURA_ESTILO] = 1; assert(ajustes_abertura_estilo() == 1);
+  valor[AJ_ABERTURA_ESTILO] = 0; assert(ajustes_abertura_estilo() == 0);
+  assert(OPCOES[AJ_ABERTURA_ESTILO].n == 2 && !strcmp(OPCOES[AJ_ABERTURA_ESTILO].valores[0], "Centro") &&
+         !strcmp(OPCOES[AJ_ABERTURA_ESTILO].valores[1], "Canto"));
+  assert(!strcmp(i18n(OPCOES[AJ_ABERTURA_ESTILO].rotulo), "Opening screen style"));
   // #205: o tamanho dos cards de episodio da Moderna — Medio de fabrica, local,
   // na secao da pagina do titulo, com tres valores.
   assert(!strcmp(CHAVE[AJ_EP_TAMANHO], "epTamanhoLocal"));
