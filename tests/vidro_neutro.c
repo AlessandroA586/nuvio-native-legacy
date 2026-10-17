@@ -114,6 +114,29 @@ int main(int argc, char **argv) {
     if (k == 2) salvar(dir, "vidro-branco.bmp");
   }
 
+  // Settle a small region, then open a distant panel after foreground drew.
+  // Both the miss and the following regional frame must use backdrop only.
+  {
+    GfxRect small = { 100, 40, 300, 90 }, expanded = { 1100, 250, 600, 600 };
+    double miss[3], settled[3];
+    for (int i = 0; i < 35; i++) {
+      if (i == 34) gfx_vidro_sujar();
+      quadro(.5f);
+      gfx_vidro_painel(small, .3f, .8f, 1);
+      if (i == 34) confere(gfx_vidro_capturas == 1 && gfx_vidro_fill > 0 && gfx_vidro_fill < .1,
+                           "neutral test reaches regional blur before the miss");
+    }
+    for (int i = 0; i < 2; i++) {
+      quadro(.5f);
+      gfx_vidro_painel(small, .3f, .8f, 1);
+      gfx_cor((GfxRect){1000, 200, 800, 800}, 0, 0, 1, 0, 1);
+      gfx_vidro_painel(expanded, .06f, .8f, 1);
+      media(1250, 400, 200, 200, i ? settled : miss);
+    }
+    neutro("regional miss excludes foreground", miss);
+    confere(fabs(miss[1] - settled[1]) <= 1.0, "region expansion has no source pop");
+  }
+
   // O vidro desfoca o que esta atras: metade esquerda preta, direita branca,
   // a borda em x = 960 no meio do painel. Dentro do painel a luz sobe em
   // rampa dos dois lados da borda (degrade), nao num degrau so em x = 960.
@@ -122,7 +145,11 @@ int main(int argc, char **argv) {
     double v[4][3];
     int i, sobe = 1;
     quadro(0.0f);
-    gfx_cor((GfxRect){ 960, 0, 960, 1080 }, 0, 1, 1, 1, 1.0f);
+    // Full-screen backdrop draw clipped to its white half. A half-size COR
+    // draw is foreground and would close the backdrop before painting white.
+    gfx_recorte(960, 0, 960, 1080);
+    gfx_cor((GfxRect){ 0, 0, 1920, 1080 }, 0, 1, 1, 1, 1.0f);
+    gfx_sem_recorte();
     gfx_vidro_painel(p, 36.0f / p.h, 0.30f, 1.0f);
     for (i = 0; i < 4; i++) media(944 + 10 * i, 500, 2, 40, v[i]);
     for (i = 0; i < 3; i++) sobe &= v[i + 1][1] > v[i][1] + 2.0;

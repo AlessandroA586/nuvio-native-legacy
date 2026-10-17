@@ -3242,7 +3242,7 @@ static float vidroTom(float cinza);
 // dela, pelo alfa 0 do furo): o player avisa por quadro e o vidro sai chapado.
 #define VID_ALCANCE 68.0f   // BLUR_REACH: ate onde a lente e o desfoque leem fora do vidro
 #define VID_RUIDO_N 256
-static GLuint vidGrab, vidH2, vidH2Fbo, vidQa, vidQaFbo, vidQb, vidQbFbo, vidRuido, vidProg;
+static GLuint vidBackdrop, vidGrab, vidH2, vidH2Fbo, vidQa, vidQaFbo, vidQb, vidQbFbo, vidRuido, vidProg;
 static GLuint vidSlot[VID_NSLOTS], vidSlotFbo[VID_NSLOTS], vidFundo, vidFundoFbo;
 static GLint vidLocR, vidLocT, vidLocO;
 static int vidW, vidH, vidFalhou;
@@ -3287,6 +3287,7 @@ static void vidLiberar(void) {
   memset(vidroSlotValido, 0, sizeof vidroSlotValido);
   glDeleteTextures(1, &vidFundo); glDeleteFramebuffers(1, &vidFundoFbo);
   vidFundo = vidFundoFbo = 0; fundoValido = 0;
+  glDeleteTextures(1, &vidBackdrop); vidBackdrop = 0;
   gfx_tex_esquecer(0);
 }
 static GLuint vidTex(int w, int h, GLenum fmt) {
@@ -3403,7 +3404,7 @@ static void vidPassada(GLuint src, GLuint fbo, int w, int h, const float uv[][4]
 // Captura e desfoca as `n` regioes `reg` (layout de tela) da tela atual em
 // `dst` (vidFundo or a slot, 1/4 of the 1080p chain). Each pass binds its
 // target once and draws every region.
-static int vidCapturar(const float reg[][4], int n, GLuint dst, GLuint dstFbo) {
+static int vidCapturar(const float reg[][4], int n, GLuint dst, GLuint dstFbo, GLuint source) {
   float ex = (float)telaW / NV_TELA_W, ey = (float)telaH / NV_TELA_H, uv[VID_NREG][4], fq;
   int x0, y0, x1, y1, qw, qh, tesoura, i, k = 0;
   double copia = 0.0;
@@ -3438,8 +3439,8 @@ static int vidCapturar(const float reg[][4], int n, GLuint dst, GLuint dstFbo) {
   if (tesoura) glDisable(GL_SCISSOR_TEST);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, vidGrab);
-  // Copy each region with that margin too: the first pass reads it.
-  for (i = 0; i < k; i++) {
+  // A saved backdrop excludes foreground even when this frame adds a region.
+  for (i = 0; !source && i < k; i++) {
     x0 = (int)floorf(uv[i][0] * telaW); x1 = (int)ceilf(uv[i][2] * telaW);
     y0 = (int)floorf(uv[i][1] * telaH); y1 = (int)ceilf(uv[i][3] * telaH);
     glCopyTexSubImage2D(GL_TEXTURE_2D, 0, x0, y0, x0, y0, x1 - x0, y1 - y0);
@@ -3453,11 +3454,11 @@ static int vidCapturar(const float reg[][4], int n, GLuint dst, GLuint dstFbo) {
   // 1/4 is one 4x4 box (one pass); capped (4K) a 4x4 box to 960x540 first.
   if (telaW > 2 * vidBw) {
     float o = (float)telaW / vidBw * 0.5f - 1.0f;
-    vidPassada(vidGrab, vidH2Fbo, vidBw, vidBh, uv, k, o / telaW, o / telaH);
+    vidPassada(source ? source : vidGrab, vidH2Fbo, vidBw, vidBh, uv, k, o / telaW, o / telaH);
     vidPassada(vidH2, vidQaFbo, qw, qh, uv, k, 0.0f, 0.0f);
   } else {
     float o = (float)telaW / qw * 0.5f - 1.0f;
-    vidPassada(vidGrab, vidQaFbo, qw, qh, uv, k, o / telaW, o / telaH);
+    vidPassada(source ? source : vidGrab, vidQaFbo, qw, qh, uv, k, o / telaW, o / telaH);
   }
   vidPassada(vidQa, vidQbFbo, qw, qh, uv, k, 0.35f / qw, 0.35f / qh);         // Kawase
   vidPassada(vidQb, dstFbo, qw, qh, uv, k, 0.75f / qw, 0.75f / qh);
@@ -3473,25 +3474,30 @@ static int vidCapturar(const float reg[][4], int n, GLuint dst, GLuint dstFbo) {
   return 1;
 }
 
-// Closes this frame's backdrop layer: recaptures it into vidFundo if its hash
-// changed, only when last frame had glass (screens without glass pay nothing).
-// Only what last frame's glasses read is copied and blurred (fundoReg); a glass
-// reading outside it takes the old path that frame and the next captures take
-// the full screen until glasses stay put (fundoCheio frames).
+// Save the full backdrop before foreground draws. Blur only last frame's
+// regions; a new region can then blur the same saved source on its miss frame.
 // Every changed backdrop captures immediately, including cuts during fades.
 static float fundoReg[VID_NREG][4];
-static int fundoNReg, fundoCheio;
+static int fundoNReg;
 static void vidroFundoFechar(void) {
-  float full[1][4] = { { 0, 0, NV_TELA_W, NV_TELA_H } };
-  const float (*reg)[4] = fundoCheio ? (const float (*)[4])full : (const float (*)[4])vidroRegAnt;
-  int n = fundoCheio ? 1 : vidroNRegAnt, i, fora = 0;
+  const float (*reg)[4] = (const float (*)[4])vidroRegAnt;
+  int n = vidroNRegAnt, i, fora = 0;
   fundoFim = 2;
-  if (fundoCheio) fundoCheio--;
-  if (vidroLeAnt[2] <= vidroLeAnt[0] || foscoBloq || !ajustes_vidro_fosco() || efeitosMinimos) return;
+  if (foscoBloq || !ajustes_vidro_fosco() || efeitosMinimos) return;
+  if (!vidPreparar()) return;
+  if (!vidBackdrop) vidBackdrop = vidTex(telaW, telaH, GL_RGB);
   for (i = 0; i < vidroNRegAnt; i++) fora |= !vidroRegContem(fundoReg, fundoNReg, vidroRegAnt[i]);
   if (!fundoValido || fundoHash != vidroHash || fora) {
+    if (!fundoValido || fundoHash != vidroHash) {
+      GFX_OUTRO_INI();
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, vidBackdrop);
+      glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, telaW, telaH);
+      glBindTexture(GL_TEXTURE_2D, 0); gfx_tex_esquecer(0);
+      gfx_vidro_copia += (double)telaW * telaH / ((double)telaRealW * telaRealH);
+      GFX_OUTRO_FIM();
+    }
     fundoValido = 0;
-    if (!vidPreparar()) return;
     if (!vidFundo) {
       GLint ant = fboLigado();
       int ok = vidAlvo(&vidFundo, &vidFundoFbo, vidBw / 2, vidBh / 2);
@@ -3500,7 +3506,7 @@ static void vidroFundoFechar(void) {
       gfx_tex_esquecer(0);
       if (!ok) return;
     }
-    if (!vidCapturar(reg, n, vidFundo, vidFundoFbo)) return;
+    if (n && !vidCapturar(reg, n, vidFundo, vidFundoFbo, vidBackdrop)) return;
     memcpy(fundoReg, reg, n * sizeof fundoReg[0]); fundoNReg = n;
     for (i = 0; i < n; i++) {   // past a screen edge there is nothing to read
       float *f = fundoReg[i];
@@ -3539,7 +3545,11 @@ static GLuint vidroFonte(GfxRect r) {
     if (!fundoFim) vidroFundoFechar();
     if (fundoFim == 1 && !fundoDepois) {
       if (vidroRegContem(fundoReg, fundoNReg, lido)) return vidFundo;
-      fundoCheio = 30;
+      const float full[1][4] = { { 0, 0, NV_TELA_W, NV_TELA_H } };
+      if (!vidCapturar(full, 1, vidFundo, vidFundoFbo, vidBackdrop)) return 0;
+      fundoReg[0][0] = fundoReg[0][1] = -1e9f;
+      fundoReg[0][2] = fundoReg[0][3] = 1e9f; fundoNReg = 1;
+      return vidFundo;
     }
   }
   if (!vidH2 || vidW != telaW || vidH != telaH) { if (!vidPreparar()) return 0; }
@@ -3559,7 +3569,7 @@ static GLuint vidroFonte(GfxRect r) {
   if (!(!vidroRecapturou && vidroSlotValido[sl] && vidroSlotHash[sl] == vidroHash && vidroContem(vidroLeAnt, lido))) {
     const float full[4] = { 0, 0, NV_TELA_W, NV_TELA_H };
     vidroSlotValido[sl] = 0;
-    if (!vidCapturar(&full, 1, *tex, *fbo)) return 0;
+    if (!vidCapturar(&full, 1, *tex, *fbo, 0)) return 0;
     vidroSlotHash[sl] = vidroHash; vidroSlotValido[sl] = 1; vidroRecapturou = 1;
   }
   vidroSlot = sl;
