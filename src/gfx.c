@@ -3250,6 +3250,9 @@ static int vidW, vidH, vidFalhou;
 // a 4K screen pays the 1080p fill and blurs the same in layout units.
 static int vidBw, vidBh;
 void gfx_vidro_fosco_bloquear(void) { foscoBloq = 1; }
+// A full-screen veil was just drawn over the glasses so far: they are now plain
+// backdrop, so a modal island over them frosts instead of going flat.
+void gfx_vidro_cobrir(void) { vidroNVidros = 0; }
 int gfx_vidro_com_fonte;
 // No TV lets GL read the video plane; the player hands a stand-in (its title
 // art, blurred and baked once) and glass over the hole reads that instead.

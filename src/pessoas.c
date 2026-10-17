@@ -1380,6 +1380,7 @@ static void pessoas_desenharCorpo_(Uint32 agora) {
   y = (NV_TELA_H - alt) * 0.5f + (1.0f - a) * 40.0f;
 
   gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0, (ajustes_vidro() ? 0.55f : 0.66f) * anim);
+  gfx_vidro_cobrir();
   // A ILHA no material das outras do Glass UI (plrui_material): o mesmo miolo
   // da folha de Fontes e do player, vidro ou solido pelo ajuste.
   plrui_material((GfxRect){ x, y, PE_W, alt }, PE_RAIO, 1, a);

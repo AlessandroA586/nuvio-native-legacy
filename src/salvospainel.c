@@ -4961,6 +4961,7 @@ static void desenharPainel(Uint32 agora) {
   // veu ja nao custa nada por quadro; o que sobra sao a entrada, a saida e o
   // painel sobre outras telas.
   if (!veuNoFundo) veuInteiro();
+  gfx_vidro_cobrir();   // the veil covers the home glass drawn before: the island frosts
   // Painel flutuante escuro e neutro; o veu separa a camada do conteudo sem
   // uma luz decorativa colorida competindo com posters e selos.
   { GfxRect p = { SP_X + x, SP_Y, SP_W, SP_H };

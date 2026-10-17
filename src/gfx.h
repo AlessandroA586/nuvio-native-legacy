@@ -615,6 +615,9 @@ extern double gfx_vidro_fill, gfx_vidro_copia;
 // O quadro tem video vivo (furo) por baixo: o vidro sai chapado ate o proximo
 // gfx_novo_quadro (a tela ali e o furo, nao o que passa no video).
 void gfx_vidro_fosco_bloquear(void);
+// Call right after a full-screen veil: glass drawn earlier no longer makes a
+// glass over it go flat (modal islands over the Home sidebar).
+void gfx_vidro_cobrir(void);
 // The live-video stand-in for this frame (until gfx_novo_quadro): a blurred
 // screen-oriented texture (a GfxMini target) that glass over the video hole
 // reads instead of going flat. 0 = flat, as before.
