@@ -3907,7 +3907,8 @@ static void home_atualizar_(float dt, Uint32 agora) {
       // deixar o card crescer para fora da tela.
       float abre = (r == expFileira && foco.coluna == expColuna) ? expAbre : 0.0f;
       float alvo = alvoScrollFil(r, foco.coluna, scrollX[r], abre);
-      scrollX[r] = anim_mola2_reduzida(&velX[r], scrollX[r], alvo, dt,
+      if (fileiras[r].tipo != FILEIRA_PALCO)
+        scrollX[r] = anim_mola2_reduzida(&velX[r], scrollX[r], alvo, dt,
                                        NV_MOLA2_SCROLL, motionReduzido);
     }
   }
@@ -6133,6 +6134,10 @@ static void desenhaNumeral(int pos, float px, float py, float h, float vao, floa
 // cache e a arte que o card ja pediu: nenhum blur, nenhuma textura nova.
 static float  palcoPos[MAX_FIL];
 static Uint32 palcoUlt[MAX_FIL];
+static struct {
+  float de, scrollDe, scrollAlvo, texto;
+  int alvo, anterior;
+} palcoMov[MAX_FIL];
 static float  tempoCol[MAX_FIL], tempoAno[MAX_FIL];
 static Uint32 tempoEntraEm[MAX_FIL], tempoUlt[MAX_FIL];
 static float dtFil(Uint32 *ult, Uint32 agora) {
@@ -6192,62 +6197,84 @@ static int palcoColunaEm(int r, float u) {
   return col;
 }
 #endif // NV_TOUCH_UI || NV_TESTE_HOME
-// PALCO: o nome e a linha de meta do titulo do centro, embaixo dele.
-static void palcoLegenda(int r, float base, float lw) {
-  int c = (int)(palcoPos[r] + 0.5f);
-  float cx, s, perto = 1.0f - 2.0f * fabsf(palcoPos[r] - (float)c);
-  const CatItem *it = cat_item_exato(fileiraItemIndice(&fileiras[r], c));
-  if (!it || perto < 0.02f) return;
-  palcoGeo(r, c, lw, &cx, &s);
-  { TxtLinha t = txt_linha_corta(TXT_CW_TITULO, it->titulo, 245, 246, 249, 255, lw * 1.8f);
-    TxtLinha m = txt_linha_corta(TXT_CAPTION, it->meta[0] ? it->meta : it->genero, 182, 188, 200, 255, lw * 1.8f);
-    txt_desenhar_alpha(t, cx - t.w * 0.5f, base + 14.0f, perto);
-    txt_desenhar_alpha(m, cx - m.w * 0.5f, base + 14.0f + t.h + 2.0f, perto * 0.9f); }
+static float palcoProgresso(Uint32 ms) {
+  if (anim_politica_reduzida) return 1.0f;
+  float t = anim_clamp(((float)ms - NV_PALCO_START_MS) / NV_PALCO_MOVE_MS, 0, 1);
+  float u = 1.0f - t;
+  return 1.0f - u * u * u * u * u;
 }
-// PALCO, 17/10: a ficha no vao a direita do foco (palcoDesloca abre o vao).
-// Nome, ano e duracao ja estao na legenda embaixo do cartaz; aqui entra o
-// resto da Split: genero, selos, sinopse e elenco, alinhados pelo topo dos
-// vizinhos. Na fileira em foco ela tambem marca o alvo do holofote.
-static GfxRect holoPoster;   // o cartaz em foco do Palco, no quadro corrente
-static int     holoTem;
+// Frame-time driven: retargets from the current position, never queues.
+static void palcoPasso(int r, Uint32 agora) {
+  int alvo = colunaDaFileira(r);
+  if (!palcoUlt[r]) {
+    palcoMov[r].alvo = palcoMov[r].anterior = alvo;
+    palcoMov[r].de = palcoPos[r] = (float)alvo;
+    palcoMov[r].scrollDe = palcoMov[r].scrollAlvo = scrollX[r];
+    palcoMov[r].texto = 1;
+    palcoUlt[r] = agora ? agora : 1;
+  } else if (alvo != palcoMov[r].alvo) {
+    palcoMov[r].anterior = palcoMov[r].texto >= .5f ? palcoMov[r].alvo : palcoMov[r].anterior;
+    palcoMov[r].alvo = alvo;
+    palcoMov[r].scrollAlvo = alvoScrollFil(r, alvo, scrollX[r], 0);
+    palcoMov[r].de = palcoPos[r];
+    palcoMov[r].scrollDe = scrollX[r];
+    palcoUlt[r] = agora;
+    palcoMov[r].texto = 0;
+  }
+  Uint32 ms = agora - palcoUlt[r];
+  float k = palcoProgresso(ms);
+  palcoPos[r] = k >= 1 ? (float)alvo : anim_mistura(palcoMov[r].de, (float)alvo, k);
+  scrollX[r] = k >= 1 ? palcoMov[r].scrollAlvo : anim_mistura(palcoMov[r].scrollDe, palcoMov[r].scrollAlvo, k);
+  if (palcoMov[r].alvo == palcoMov[r].anterior || anim_politica_reduzida) palcoMov[r].texto = 1;
+  else palcoMov[r].texto = anim_clamp(((float)ms - NV_PALCO_TEXT_DELAY_MS) / NV_PALCO_TEXT_MS, 0, 1);
+  if (palcoMov[r].texto >= 1) palcoMov[r].anterior = alvo;
+}
+// Stage B: panel and light share one continuous, poster-top anchor.
+static GfxRect holoPoster;
+static int holoTem;
 static GfxRect palcoInfoRect(int r, float cardY, float lw, float artH) {
-  float cx, s;
-  palcoGeo(r, (int)(palcoPos[r] + 0.5f), lw, &cx, &s);
-  return (GfxRect){ cx + lw * s * 0.5f + NV_PALCO_INFO_VAO, cardY, NV_PALCO_INFO_W, artH };
+  float cx = homeFileiraX(r, 0) + palcoPos[r] * passoFil(r) + lw * .5f;
+  return (GfxRect){cx + lw * .5f + NV_PALCO_INFO_VAO, cardY, NV_PALCO_INFO_W, artH};
+}
+static void palcoTexto(int r, int c, GfxRect p, float a) {
+  const CatItem *it = cat_item_exato(fileiraItemIndice(&fileiras[r], c));
+  float x = p.x, y = p.y, ar, ag, ab;
+  if (!it || a < .004f) return;
+  ajustes_acento(&ar, &ag, &ab);
+  if (it->genero[0]) {
+    char up[sizeof it->genero * 2];
+    idioma_maiusc_em(ajustes_idioma(), up, sizeof up, it->genero);
+    TxtLinha g = txt_linha_corta(TXT_CW_META, up, ar * 255, ag * 255, ab * 255, 255, p.w);
+    txt_desenhar_alpha(g, x, y, a); y += g.h + 12;
+  }
+  y += txt_bloco_corta(TXT_TITULO3, it->titulo, 243, 242, 239,
+                       x, y, p.w, 52, a, 3) + 16;
+  {
+    int nota = imdbnota_obter(it->imdb, it->nota, !strcmp(it->tipo, "series"));
+    float bw = badge_imdb_largura(nota), gap = it->meta[0] && nota > 0 ? 30 : 0;
+    TxtLinha meta = txt_linha_corta(TXT_CW_META, it->meta, 184, 186, 193, 255, p.w - bw - gap);
+    txt_desenhar_alpha(meta, x, y, a);
+    if (nota > 0) {
+      if (gap) gfx_cor((GfxRect){x + meta.w + 14, y + 4, 1, 22}, 0, 1, 1, 1, .28f * a);
+      badge_imdb(x + meta.w + gap, y, nota, 0, a);
+    }
+    y += fmaxf(meta.h, BADGE_H) + 24;
+  }
+  if (it->sinopse[0])
+    sinopse_bloco_corta(TXT_DET_SIN, it->sinopse, 214, 218, 228,
+                        x, y, p.w, 38, .95f * a, 3);
 }
 static void palcoFicha(int r, float cardY, float lw, float artH) {
-  int c = (int)(palcoPos[r] + 0.5f);
-  float perto = 1.0f - 2.0f * fabsf(palcoPos[r] - (float)c);
-  const CatItem *it = cat_item_exato(fileiraItemIndice(&fileiras[r], c));
   GfxRect p = palcoInfoRect(r, cardY, lw, artH);
-  float x = p.x, y = cardY + artH * (1.0f - NV_PALCO_VIZ) * 0.5f;
   if (r == foco.fileira && !focoHero) {
-    float cx, s;
-    palcoGeo(r, colunaDaFileira(r), lw, &cx, &s);
-    holoPoster = (GfxRect){ cx - lw * s * 0.5f, cardY + artH * (1.0f - s) * 0.5f, lw * s, artH * s };
+    holoPoster = (GfxRect){p.x - NV_PALCO_INFO_VAO - lw, cardY, lw, artH};
     holoTem = 1;
   }
-  if (!it || perto < 0.02f) return;
-  if (it->genero[0]) {
-    TxtLinha g = txt_linha_corta(TXT_CW_META, it->genero, 218, 222, 232, 255, p.w);
-    txt_desenhar_alpha(g, x, y, perto); y += g.h + 12.0f;
-  }
-  { float bx = x;
-    int nota = imdbnota_obter(it->imdb, it->nota, !strcmp(it->tipo, "series"));
-    if (it->classificacao[0]) bx += badge_desenhar(bx, y, it->classificacao, BADGE_NEUTRO, perto) + BADGE_IMDB_GAP;
-    if (nota > 0) bx += badge_imdb(bx, y, nota, 0, perto);
-    if (bx > x) y += BADGE_H + 16.0f; }
-  if (it->sinopse[0])
-    y += sinopse_bloco(TXT_HERO_SIN, it->sinopse, 214, 218, 228, x, y, p.w, 30.0f, 0.95f * perto, 3) + 10.0f;
-  { char elenco[240]; size_t n = 0; int k;
-    elenco[0] = 0;
-    for (k = 0; k < CAT_ELENCO_MAX && k < 3 && it->elenco[k].nome[0]; k++)
-      n += (size_t)snprintf(elenco + n, sizeof elenco - n, "%s%s", k ? ", " : "", it->elenco[k].nome);
-    if (elenco[0] && y + 24.0f < p.y + p.h) {
-      char l[300];
-      snprintf(l, sizeof l, "%s: %s", i18n("Elenco"), elenco);
-      txt_desenhar_alpha(txt_linha_corta(TXT_MINI, l, 168, 174, 186, 255, p.w), x, y, perto);
-    } }
+  int c = colunaDaFileira(r);
+  float t = palcoUlt[r] ? palcoMov[r].texto : 1;
+  if (palcoMov[r].anterior != c && t < 1)
+    palcoTexto(r, palcoMov[r].anterior, p, 1 - t);
+  palcoTexto(r, c, p, palcoMov[r].anterior == c ? 1 : t);
 }
 // O holofote so acende com o foco NA fileira Palco (nem no destaque, nem em
 // outra fileira): fora dela o veu apaga e nada e desenhado.
@@ -7570,6 +7597,7 @@ static void home_desenhar_(Uint32 agora) {
         continue;
       }
 
+      if (tipo == FILEIRA_PALCO) palcoPasso(r, agora);
       // CARD "VER TUDO" no fim da fileira. Desenhado antes do laco dos cartazes
       // para nao herdar as variaveis dele; ele nao e um titulo e nao usa arte.
       //
@@ -7611,9 +7639,6 @@ static void home_desenhar_(Uint32 agora) {
       }
 
       const float numA = tipo == FILEIRA_TOP10_NUM ? numeraisAlfa(r, agora) : 0.0f;
-      if (tipo == FILEIRA_PALCO)
-        palcoPos[r] = anim_mola(palcoPos[r], (float)colunaDaFileira(r),
-                                dtFil(&palcoUlt[r], agora), NV_MOLA_FOCO);
       // ITEM 4 (plx): recusa no ponto do pedido. A fileira diz se esta em
       // movimento (limiar MOVING_SPEED = 120 px/s, o mesmo da grade) e marca os
       // cartoes fora da tela; o cache recusa so pedido NOVO dessa arte enquanto
@@ -7936,7 +7961,13 @@ static void home_desenhar_(Uint32 agora) {
       }
       gfx_opacidade_grupo = grupoFil;
       if (tipo == FILEIRA_LINHA_TEMPO) desenhaLinhaTempo(r, y, cardY + artH, passo, lw, agora);
-      if (tipo == FILEIRA_PALCO) { palcoLegenda(r, cardY + artH, lw); palcoFicha(r, cardY, lw, artH); }
+      if (tipo == FILEIRA_PALCO) {
+        GfxRect p = palcoInfoRect(r, cardY, lw, artH);
+        float fim = p.x - NV_PALCO_INFO_VAO - lw;
+        if (fim > 0)
+          gfx_veu_css_base((GfxRect){0, cardY, fim, artH}, 2, 1, 1, .80f, .18f);
+        palcoFicha(r, cardY, lw, artH);
+      }
       if (tipo == FILEIRA_HEROI_DIVIDIDO) desenhaDividido(r, cardY);
     } else if (tipo == FILEIRA_LINHA_TEMPO) tempoEntraEm[r] = 0;   // fora: redesenha ao voltar
     y += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r) + fileiraGap();
@@ -8216,6 +8247,7 @@ void home_abrir_sessao(void) {
   memset(bordaFil, 0, sizeof bordaFil); memset(&bordaPag, 0, sizeof bordaPag);
   memset(numPedidoEm, 0, sizeof numPedidoEm); memset(numProntoEm, 0, sizeof numProntoEm);
   memset(palcoPos, 0, sizeof palcoPos); memset(palcoUlt, 0, sizeof palcoUlt);
+  memset(palcoMov, 0, sizeof palcoMov);
   memset(tempoCol, 0, sizeof tempoCol); memset(tempoAno, 0, sizeof tempoAno);
   memset(tempoEntraEm, 0, sizeof tempoEntraEm); memset(tempoUlt, 0, sizeof tempoUlt);
   fileirasVistasEm = 0;

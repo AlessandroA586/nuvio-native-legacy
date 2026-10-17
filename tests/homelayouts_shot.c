@@ -190,6 +190,7 @@ static void ajusta(int layout, int vidro) {
   if (getenv("NV_AJ")) fprintf(a, "%s\n", getenv("NV_AJ"));   // ex.: "heroSectionEnabled 1"
   fclose(a);
   ajustes_dir(dirDados);
+  gfx_escala_txt_definir(getenv("NV_STAGE_SCALE") ? (float)atof(getenv("NV_STAGE_SCALE")) : ajustes_escala_texto());
   ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_OPAC / _FOSCO
   // O roteamento de app.c (app_atualizar), que este teste nao roda.
   artehero_fundo_addon(ajustes_fundo_addon());
@@ -292,6 +293,12 @@ int main(int argc, char **argv) {
       snprintf(c->titulo, sizeof c->titulo, "%s", NOMES[(ini + i) % NN]);
       snprintf(c->genero, sizeof c->genero, "%s · Drama", strcmp(FILS[k].tipo, "series") ? "Filme" : "Série");
       snprintf(c->meta, sizeof c->meta, "%d · 2 h 04 min", 2018 + (ini + i) % 8);
+      if (getenv("NV_STAGE_SCALE")) {
+        snprintf(c->titulo, sizeof c->titulo, "Teenage Sex and Death at Camp Miasma");
+        snprintf(c->meta, sizeof c->meta, "2026 · 112 min");
+        snprintf(c->genero, sizeof c->genero, "Movie · Comedy · Horror");
+        c->nota = 65;
+      }
       snprintf(c->classificacao, sizeof c->classificacao, "%s", (i % 3) ? "14" : "16");
       snprintf(c->sinopse, sizeof c->sinopse,
                "Sinopse de enchimento, comprida o bastante para ocupar as linhas "
@@ -441,6 +448,8 @@ int main(int argc, char **argv) {
     quadros(60, NULL);
     snprintf(bmp, sizeof bmp, "%s-palco-3-foco-rolou.bmp", saida);
     quadros(1, bmp);
+    printf("[shot] Stage scale=%.2f glass=%d fill=%.2f rects=%d\n", gfx_escala_txt(), ajustes_vidro(), fillVisUlt, rectUlt);
+    if (getenv("NV_STAGE_SCALE")) return 0;
   }
 
   // NV_HEROI=N (com NV_TIPOS="pop_movie=<FilTipo>"): desce N fileiras e

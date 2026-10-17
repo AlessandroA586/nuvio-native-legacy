@@ -85,20 +85,53 @@ void gfx_escala_sair(float a) { testeAtiva = a; }
 // Duble do desenho do card editorial: sem GL, so o que o teste do genero conta.
 float gfx_tex_aspect_atual;
 void gfx_veu_base(GfxRect c, float r, float f, float a) { (void)c; (void)r; (void)f; (void)a; }
-static int nHolofote;
+static int nHolofote, stageTitleDraws, stageTextDraws;
+static GfxRect stageTitleRect, stageGenreRect;
+static float stageBadgeWidth;
 void gfx_rect(GfxRect r, GLuint t, GfxModo m, float f, float a, float b, float c, float d, float e, float g, float h) {
   if (m == GFX_HOLOFOTE) nHolofote++;
+  if (m == GFX_COR && d > 0.9f && e > 0.7f && g < 0.2f) stageBadgeWidth = r.w;
   (void)r; (void)t; (void)m; (void)f; (void)a; (void)b; (void)c; (void)d; (void)e; (void)g; (void)h; }
+void gfx_cor(GfxRect r, float raio, float cr, float cg, float cb, float a) {
+  gfx_rect(r, 0, GFX_COR, 0, 0, 0, raio, cr, cg, cb, a);
+}
 GLuint tex_obter_logo_larg(const char *c, float l) { (void)c; (void)l; return 0; }
 int  tex_marca_escura(const char *c) { (void)c; return 0; }
 TxtLinha txt_linha_corta(TxtEstilo e, const char *s, int r, int g, int b, int a, float w) {
   (void)e; (void)s; (void)r; (void)g; (void)b; (void)a; (void)w; return (TxtLinha){ 1, 10, 10, 0, 0 }; }
 float badge_desenhar(float x, float y, const char *t, BadgeEstilo e, float a) { nBadge++; (void)x; (void)y; (void)t; (void)e; (void)a; return 0; }
-float badge_imdb(float x, float y, int n, int e, float a) { nBadge++; (void)x; (void)y; (void)n; (void)e; (void)a; return 0; }
-float badge_imdb_largura(int n) { (void)n; return 0; }
+// Exercise the real IMDb measurement/drawing code in this scene.
+#define badge_desenhar stage_real_badge_desenhar
+#define badge_imdb stage_real_badge_imdb
+#include "../src/badges.c"
+#undef badge_desenhar
+#undef badge_imdb
+float badge_imdb(float x, float y, int n, int e, float a) {
+  nBadge++; return stage_real_badge_imdb(x, y, n, e, a);
+}
+TxtLinha txt_linha(TxtEstilo e, const char *s, int r, int g, int b, int a) {
+  (void)e; (void)r; (void)g; (void)b; (void)a;
+  return (TxtLinha){1, (int)strlen(s) * 16, 24, 0, 0};
+}
+float txt_bloco_corta(TxtEstilo e, const char *s, int r, int g, int b,
+                       float x, float y, float w, float leading, float a, int max) {
+  (void)s; (void)r; (void)g; (void)b;
+  if (e == TXT_TITULO3 && a > 0) {
+    stageTitleDraws++;
+    stageTitleRect = (GfxRect){x, y, w, leading * max};
+  }
+  return leading * max;
+}
+float sinopse_bloco_corta(TxtEstilo e, const char *s, int r, int g, int b,
+                          float x, float y, float w, float leading, float a, int max) {
+  assert(max <= 3);
+  return txt_bloco_corta(e, s, r, g, b, x, y, w, leading, a, max);
+}
 int  imdbnota_obter(const char *i, int c, int s) { (void)i; (void)c; (void)s; return testeImdb; }
 const char *i18n(const char *s) { return s; }
-void txt_desenhar_alpha(TxtLinha l, float x, float y, float a) { (void)l; (void)x; (void)y; (void)a; }
+void txt_desenhar_alpha(TxtLinha l, float x, float y, float a) {
+  if (a > 0 && stageTextDraws++ == 0) stageGenreRect = (GfxRect){x, y, l.w, l.h};
+}
 float sinopse_bloco(TxtEstilo o, const char *t, int r, int g, int b, float x, float y, float l, float d, float a, int m) {
   (void)o; (void)t; (void)r; (void)g; (void)b; (void)x; (void)y; (void)l; (void)d; (void)a; (void)m; return 90.0f; }
 static void homeCom(int layout, int heroLigado) { testeLayout = layout; testeHero = heroLigado; }
@@ -288,6 +321,78 @@ int main(void) {
       anim_politica_reduzida = 0;
       focoHero = 1;
     }
+  }
+  // Stage B scene: inspect actual draw coordinates at every supported anchor.
+  {
+    CatItem item = {0};
+    CatFileira row = {.ini = 0, .n = 1};
+    snprintf(item.titulo, sizeof item.titulo, "Teenage Sex and Death at Camp Miasma");
+    snprintf(item.genero, sizeof item.genero, "Movie · Comedy · Horror");
+    cat_definir_tudo(&item, 1, &row, 1);
+    fileiras[0] = (Fileira){.tipo = FILEIRA_PALCO, .ini = 0, .n = 1, .escala = 1};
+    foco.fileira = foco.coluna = focoHero = 0;
+    palcoPos[0] = 0;
+    const float scales[] = {.80f, .85f, 1, 1.15f};
+    for (int i = 0; i < 4; i++) {
+      testeTxt = testeAtiva = scales[i];
+      float w = larguraFil(0), h = alturaFil(0);
+      GfxRect p = palcoInfoRect(0, 100, w, h);
+      stageTitleDraws = stageTextDraws = 0;
+      palcoFicha(0, 100, w, h);
+      assert(stageTitleDraws == 1);
+      float cx, scale;
+      palcoGeo(0, 0, w, &cx, &scale);
+      assert(stageGenreRect.y == p.y && p.y == 100 + h * (1 - scale) * .5f);
+      assert(fabsf(p.x - cx - w * scale * .5f - 36) < .01f);
+      assert(stageTitleRect.x >= p.x && stageTitleRect.y >= p.y);
+      assert(stageTitleRect.x + stageTitleRect.w <= p.x + p.w);
+      assert(stageTitleRect.y + stageTitleRect.h <= p.y + p.h);
+      stageBadgeWidth = 0;
+      float used = badge_imdb(0, 0, 65, 0, 1);
+      assert(stageBadgeWidth >= txt_linha(TXT_MINI, "IMDb", 0, 0, 0, 255).w + 16);
+      assert(used == badge_imdb_largura(65));
+    }
+    testeTxt = testeAtiva = 1;
+#ifndef NV_STAGE_BASELINE
+    // Same elapsed time at 30/60 fps; repeat retargets without a position jump.
+    fileiras[0].n = 12;
+    for (int fps = 30; fps <= 60; fps += 30) {
+      foco.coluna = 0;
+      palcoUlt[0] = 0;
+      scrollX[0] = 0;
+      palcoPasso(0, 1000);
+      assert(palcoMov[0].texto == 1);
+      foco.coluna = 1;
+      palcoPasso(0, 1100);
+      for (int frame = 1; frame * 1000 / fps < 160; frame++)
+        palcoPasso(0, 1100 + frame * 1000 / fps);
+      palcoPasso(0, 1260);
+      assert(palcoPos[0] > .5f && palcoPos[0] < .9f);
+      assert(fabsf(palcoMov[0].texto - .4f) < .001f);
+      palcoPasso(0, 1500);
+      assert(palcoPos[0] == 1 && palcoMov[0].texto == 1);
+      foco.coluna = 2;
+      palcoPasso(0, 1600);
+      palcoPasso(0, 1760);
+      float position = palcoPos[0], scroll = scrollX[0];
+      foco.coluna = 8;
+      palcoPasso(0, 1760);
+      assert(palcoPos[0] == position && scrollX[0] == scroll);
+      palcoPasso(0, 2160);
+      assert(palcoPos[0] == 8 && scrollX[0] == palcoMov[0].scrollAlvo);
+      foco.coluna = 7;
+      palcoPasso(0, 2200);
+      palcoPasso(0, 2360);
+      assert(8 - palcoPos[0] > .5f && 8 - palcoPos[0] < .9f);
+      palcoPasso(0, 2600);
+      assert(palcoPos[0] == 7);
+      anim_politica_reduzida = 1;
+      foco.coluna = 0;
+      palcoPasso(0, 2700);
+      assert(palcoPos[0] == 0 && palcoMov[0].texto == 1);
+      anim_politica_reduzida = 0;
+    }
+#endif
   }
   // A composicao abaixo e a da home SEM o destaque no topo: e nela que a
   // primeira fileira de catalogo vira a vitrine (vitrineNaPrimeira). O #201
