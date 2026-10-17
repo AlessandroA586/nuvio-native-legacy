@@ -2618,9 +2618,9 @@ int ajustes_vidro(void) { return 1; }
 int ajustes_vidro(void) { return lig(AJ_VIDRO) && !SEGURO; }
 int ajustes_fundo(void) { int v = valor[AJ_FUNDO]; return v >= 0 && v < 3 ? v : 0; }
 int ajustes_vidro_contorno(void) { return lig(AJ_VIDRO_CONTORNO); }
-int ajustes_foco_acento(void) { return lig(AJ_FOCO_ACENTO) && lig(AJ_VIDRO); }
 int ajustes_addons_do_principal(void) { return lig(AJ_ADDONS_PRINCIPAL); }
 #endif
+int ajustes_foco_acento(void) { return lig(AJ_FOCO_ACENTO) && ajustes_vidro(); }
 float ajustes_vidro_opacidade(void) {
   static const float F[] = { 0.60f, 0.70f, 0.78f, 0.86f, 0.92f };
   int v = valor[AJ_VIDRO_OPAC];

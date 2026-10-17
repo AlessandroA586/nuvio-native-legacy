@@ -236,7 +236,8 @@ static int mais_checks(void) {
 // NUVIO_DETAIL_CHECK=eps (tests/epfoco.sh): Moderna series page, Frost on.
 // 1. The focused episode's text plate spans the zoomed thumbnail, pads the
 //    text, and is drawn as glass (frost sampled) when glass is on.
-// 2. Title -> season tabs -> episodes: the per-frame budget of the scroll.
+// 2. Title -> season tabs -> episodes and back up: the per-frame budget of the
+//    scroll, counting frames that recapture the glass backdrop (#205).
 static int epsPlate;
 // The detail page asks for the remembered automatic source every frame
 // (app.c prepararAoAbrir): 60 asks of the same list log one line, and reads
@@ -289,30 +290,55 @@ static int eps_checks(void) {
     printf("%s: episode plate x=%.0f..%.0f thumb=%.0f..%.0f text-inset=%.0f glass=%d\n",
            ok ? "PASS" : "FAIL", p.x, p.x + p.w, z.x, z.x + z.w, inset, epsPlate);
     failures += !ok; }
-  // Title (button row) -> DOWN -> season tabs -> DOWN -> episodes.
+  // Title (button row) -> DOWN -> season tabs -> DOWN -> episodes, then back UP.
   abrir(0, 0, 0, 0);
   for (int k = 0; k < 10; k++) { int c = 0, pa = 0, s = 0, u = 0; rows_frame(&c, &pa, &s, &u); }
-  int capt = 0, pass = 0, src = 0, up = 0, binds = 0, dobradas = 0;
-  double gpu = 0;
-  rowRects = 0; rowFill = rowBlur = rowCopy = 0;
-  for (int step = 0; step < 2; step++) {
-    SDL_Event e; memset(&e, 0, sizeof e);
-    e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_DOWN; detail_evento(&e);
-    for (int k = 0; k < 40; k++) {
-      rows_frame(&capt, &pass, &src, &up);
-      // A second backdrop capture is a full-screen copy + blur: only frames where
-      // a new glass enters may pay it, not every frame of the scroll.
-      dobradas += gfx_vidro_capturas > 1;
-      if (gfx_n_bind > binds) binds = gfx_n_bind;
-      if (gfx_fill_gpu > gpu) gpu = gfx_fill_gpu;
-      SDL_Delay(8);
+  double desce = 0, sobe = 0;
+  for (int dir = 0; dir < 2; dir++) {
+    int capt = 0, pass = 0, src = 0, up = 0, binds = 0, dobradas = 0, recapt = 0;
+    // Summed over the 80 frames, in screens of pixels: what the GPU paints,
+    // and what the glass capture copies + blurs (a copy flushes Mali tiles).
+    double gpu = 0, custo = 0, pinta = 0;
+    rowRects = 0; rowFill = rowBlur = rowCopy = 0;
+    for (int step = 0; step < 2; step++) {
+      SDL_Event e; memset(&e, 0, sizeof e);
+      e.type = SDL_KEYDOWN; e.key.keysym.sym = dir ? SDLK_UP : SDLK_DOWN; detail_evento(&e);
+      for (int k = 0; k < 40; k++) {
+        rows_frame(&capt, &pass, &src, &up);
+        // A second backdrop capture is a full-screen copy + blur: only frames where
+        // a new glass enters may pay it, not every frame of the scroll.
+        dobradas += gfx_vidro_capturas > 1;
+        custo += gfx_vidro_copia + gfx_vidro_fill;
+        pinta += gfx_fill_gpu;
+        recapt += gfx_vidro_capturas > 0;
+        if (getenv("NUVIO_EPS_FRAMES"))
+          printf("  f%d.%02d pg=%.3f sy=%.0f gpu=%.2f capt=%d pass=%d copy=%.2f blur=%.2f rects=%d\n",
+                 dir, step * 40 + k, pg, scrollY, gfx_fill_gpu, gfx_vidro_capturas, gfx_vidro_passadas,
+                 gfx_vidro_copia, gfx_vidro_fill, gfx_n_rect);
+        if (getenv("NUVIO_EPS_FRAMES") && (step * 40 + k) % 10 == 5) {
+          printf("    fill by mode:");
+          for (int m = 0; m < GFX_NMODOS; m++) if (gfx_fill_modo[m] > 0.05) printf(" %d=%.2f", m, gfx_fill_modo[m]);
+          printf("\n");
+        }
+        if (gfx_n_bind > binds) binds = gfx_n_bind;
+        if (gfx_fill_gpu > gpu) gpu = gfx_fill_gpu;
+        SDL_Delay(8);
+      }
     }
+    *(dir ? &sobe : &desce) = custo;
+    printf("title %s: fileira=%d frost-panels=%d capture-frames=%d/80 double=%d passes=%d rects=%d binds=%d"
+           " gpu-fill peak=%.2f sum=%.1f glass copy+blur sum=%.2f screens\n",
+           dir ? "<-seasons<-episodes" : "->seasons->episodes",
+           foco.fileira, src, recapt, dobradas, pass, rowRects, binds, gpu, pinta, custo);
+    int ok = foco.fileira == (dir ? 0 : SEC_EPISODIOS) && recapt <= 8 && dobradas <= 6 && src <= 16 &&
+             rowRects <= 260 && gpu <= 4.0;
+    printf("%s: %s transition budget (<=8 capture frames, <=6 double, <=16 frost panels, <=260 rects, gpu fill<=4)\n",
+           ok ? "PASS" : "FAIL", dir ? "title" : "episodes");
+    failures += !ok;
   }
-  printf("title->seasons->episodes: fileira=%d frost-panels=%d double-capture-frames=%d/80 passes=%d rects=%d binds=%d gpu-fill=%.3f\n",
-         foco.fileira, src, dobradas, pass, rowRects, binds, gpu);
-  int ok = foco.fileira == SEC_EPISODIOS && dobradas <= 6 && src <= 16 && rowRects <= 260 && gpu <= 4.0;
-  printf("%s: episodes transition budget (<=6 double-capture frames, <=16 frost panels, <=260 rects, gpu fill<=4)\n",
-         ok ? "PASS" : "FAIL");
+  // Going up must not cost clearly more than going down (owner: "lerdeza quando sobe").
+  int ok = sobe <= desce * 1.25 + 0.5;
+  printf("%s: up glass-cost %.2f vs down %.2f\n", ok ? "PASS" : "FAIL", sobe, desce);
   failures += !ok;
   return failures ? 1 : 0;
 }
