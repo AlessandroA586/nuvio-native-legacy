@@ -29,6 +29,18 @@ void plrui_material(GfxRect r, float raioPx, int modal, float a) {
   }
 }
 
+// Same material as the title-page cards (detail.c cartaoVidro): the shared
+// glass at GFX_VIDRO_DENS with the island drop shadow. Frost only where the
+// glass samples it; glass off keeps the solid #15161A of plrui_material.
+void plrui_cartao(GfxRect r, float raioPx, float a) {
+  float raio = raioDe(r, raioPx);
+  if (!ajustes_vidro()) { plrui_material(r, raioPx, 1, a); return; }
+  if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.002f) return;
+  gfx_rect((GfxRect){ r.x - 20.0f, r.y - 6.0f, r.w + 40.0f, r.h + 40.0f }, 0, GFX_SOMBRA,
+           1.0f, 0, 0, 0.5f, 0, 0, 0, 0.36f * a);
+  gfx_vidro_material(r, raio, GFX_VIDRO_DENS, a);
+}
+
 void plrui_linha_foco(GfxRect r, float raioPx, float a) {
   float raio = raioDe(r, raioPx);
   if (a <= 0.002f) return;

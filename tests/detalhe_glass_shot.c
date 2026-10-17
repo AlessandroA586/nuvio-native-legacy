@@ -455,7 +455,10 @@ int main(int argc, char **argv) {
   montarCatalogo();
   cacheFrases();
   if (getenv("NUVIO_TRAKT_CHECK")) return trakt_checks();
-  if (getenv("NUVIO_DETAIL_CHECK")) return rows_checks();
+  if (getenv("NUVIO_DETAIL_CHECK")) {
+    const char *m = getenv("NUVIO_DETAIL_CHECK");
+    return strcmp(m, "mais") == 0 ? mais_checks() : rows_checks();
+  }
   // NUVIO_SHOT_AMIGOS=1: amigos falsos (feed externo) no filme e na serie —
   // o que a ilha e a lista "O que os amigos acharam" mostram (06/10/2026):
   // quem recomendou, reacao, nota de tracker, progresso, "parou" e "terminou".

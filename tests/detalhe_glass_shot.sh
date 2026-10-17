@@ -29,6 +29,11 @@ for s in src/*.c src/dts/*.c; do
     o="$OBJ/agendaui-trakt.o"
     extra="-Dtxt_largura=trakt_largura -Dtxt_token_tam=trakt_token_tam"
   fi
+  # NUVIO_DETAIL_CHECK=mais: spy on the glass density plrui hands to gfx.
+  if [ "$s" = src/plrui.c ] && [ "${NUVIO_DETAIL_CHECK:-}" = mais ]; then
+    o="$OBJ/plrui-spy.o"
+    extra="-Dgfx_vidro_material=spy_vidro_material"
+  fi
   objs+=("$o")
   if [ ! -f "$o" ] || [ "$s" -nt "$o" ] || [ -n "$(find src -name '*.h' -newer "$o" -print -quit)" ]; then
     cc $FL $extra -c "$s" -o "$o" & pids+=($!)

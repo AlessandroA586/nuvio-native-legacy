@@ -45,3 +45,44 @@ static int rows_checks(void) {
          failures ? "FAIL" : "PASS");
   return failures ? 1 : 0;
 }
+
+// NUVIO_DETAIL_CHECK=mais: the "..." menu panel must be a frosted glass panel,
+// not a flat slab. Frost-sampled panels with the menu open must exceed the
+// same page with it closed, within the frame budget, and the panel must use
+// the card density (GFX_VIDRO_DENS), not the heavier modal one.
+// plrui.c is built with gfx_vidro_material renamed to this (detalhe_glass_shot.sh).
+static GfxRect spyRect;
+static float spyDens;
+static int spyN;
+void spy_vidro_material(GfxRect r, float raio, float dens, float a) {
+  GfxRect cx = detmais_caixa(maisAncora);
+  if (fabsf(r.w - cx.w) < 1.0f && fabsf(r.h - cx.h) < 1.0f) { spyRect = r; spyDens = dens; spyN++; }
+  gfx_vidro_material(r, raio, dens, a);
+}
+
+static int mais_checks(void) {
+  int failures = 0;
+  for (int serie = 0; serie < 2; serie++) {
+    int capt = 0, pass = 0, src_off = 0, src_on = 0, up = 0, d[DMAIS_N];
+    abrir(serie ? 0 : 1, 0, 0, 0);
+    maisAcoes = 1; botao = nBotoesTodos() - 1;
+    for (int k = 0; k < 30; k++) { rows_frame(&capt, &pass, &src_off, &up); SDL_Delay(16); }
+    src_off = 0;
+    for (int k = 0; k < 10; k++) rows_frame(&capt, &pass, &src_off, &up);
+    maisDisponiveis(d);
+    detmais_abrir(d);
+    for (int k = 0; k < 40; k++) { rows_frame(&capt, &pass, &src_on, &up); SDL_Delay(16); }
+    capt = pass = src_on = 0; spyN = 0;
+    for (int k = 0; k < 10; k++) rows_frame(&capt, &pass, &src_on, &up);
+    printf("%s menu: frost-panels closed=%d open=%d max-captures=%d max-passes=%d panel-calls=%d dens=%.2f (card %.2f)\n",
+           serie ? "series" : "movie", src_off, src_on, capt, pass, spyN, spyDens, GFX_VIDRO_DENS);
+    if (src_on <= src_off || capt > 1 || pass > 5 || spyN == 0 || spyDens != GFX_VIDRO_DENS) {
+      fprintf(stderr, "FAIL: %s menu panel has no frost (or over budget)\n", serie ? "series" : "movie");
+      failures++;
+    }
+    detmais_zerar();
+  }
+  printf("%s: more-menu panel frosted (open frost panels > closed, <=1 capture, <=5 passes)\n",
+         failures ? "FAIL" : "PASS");
+  return failures ? 1 : 0;
+}
