@@ -22,6 +22,7 @@ NUVIO_DADOS=$(mktemp -d ${TMPDIR:-/tmp}/nuvio-detglass-dados.XXXXXX)
 export NUVIO_DADOS
 trap 'rm -rf "$NUVIO_DADOS"' EXIT
 FL="-O1 -g -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -Wall -Wextra -Wno-deprecated-declarations -Wno-macro-redefined"
+if [ -n "${NUVIO_C9_CACHE:-}" ]; then FL="$FL -DNV_SHOT_HOOKS"; fi
 objs=()
 pids=()
 for s in src/*.c src/dts/*.c; do
