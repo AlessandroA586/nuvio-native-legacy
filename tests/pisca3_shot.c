@@ -24,6 +24,7 @@
 #include "gl_compat.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <EGL/egl.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,7 +32,8 @@
 
 #define W 1920
 #define H 1080
-static SDL_Window *win;
+static EGLDisplay egl;
+static EGLSurface eglTela;
 static const char *out;
 static Uint32 relogio = 10000;
 static unsigned char *px;
@@ -101,7 +103,7 @@ static void frame(void) {
     }
   }
   memcpy(q2, q1, (size_t)W * H * 4); memcpy(q1, px, (size_t)W * H * 4); nquadro++;
-  SDL_GL_SwapWindow(win);
+  eglSwapBuffers(egl, eglTela);
   // GLES: the back buffer is undefined after the swap. Garbage it.
   glClearColor(1.0f, 0.0f, 1.0f, 0.0f);
   glClear(GL_COLOR_BUFFER_BIT);
@@ -243,12 +245,23 @@ int main(int argc, char **argv) {
   SDL_SetHint("SDL_MAC_BACKGROUND_APP", "1");
   assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
   IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-  SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);   // as main.c: alpha is the video-plane window
-  win = SDL_CreateWindow("pisca3", 0, 0, W, H, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
-  assert(win && SDL_GL_CreateContext(win));
-  SDL_GL_SetSwapInterval(0);
+  { // GLES2 (ANGLE), as the TV. Alpha 8 as main.c: alpha is the video-plane window.
+    static const EGLint ca[] = { EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
+                                 EGL_SURFACE_TYPE, EGL_PBUFFER_BIT, EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+                                 EGL_NONE };
+    static const EGLint sa[] = { EGL_WIDTH, W, EGL_HEIGHT, H, EGL_NONE };
+    static const EGLint xa[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
+    EGLint n;
+    EGLConfig c;
+    EGLContext x;
+    egl = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    assert(egl != EGL_NO_DISPLAY && eglInitialize(egl, NULL, NULL));
+    assert(eglChooseConfig(egl, ca, &c, 1, &n) && n == 1);
+    eglTela = eglCreatePbufferSurface(egl, c, sa); assert(eglTela != EGL_NO_SURFACE);
+    x = eglCreateContext(egl, c, EGL_NO_CONTEXT, xa); assert(x != EGL_NO_CONTEXT);
+    assert(eglMakeCurrent(egl, eglTela, eglTela, x));
+    printf("[pisca3] GL: %s | %s\n", (const char *)glGetString(GL_VERSION), (const char *)glGetString(GL_RENDERER));
+  }
   glViewport(0, 0, W, H); gfx_tamanho_alvo(W, H);
   { GLint ab = 0; glGetIntegerv(GL_ALPHA_BITS, &ab); printf("[pisca3] alpha bits %d\n", ab); }
   assert(gfx_iniciar() && txt_iniciar("deploy/app", 1));
