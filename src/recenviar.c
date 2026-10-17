@@ -983,6 +983,7 @@ static void recenviar_desenharCorpo_(Uint32 agora) {
 
   gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0,
           (ajustes_vidro() ? 0.34f : 0.46f) * anim);
+  gfx_vidro_cobrir();
   // A ILHA no tamanho da mola, centrada; entra subindo 40 px.
   cx = NV_TELA_W * 0.5f;
   cy = NV_TELA_H * 0.5f + (1.0f - a) * 40.0f;

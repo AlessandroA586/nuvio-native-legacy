@@ -3249,12 +3249,16 @@ static float vidroTom(float cinza);
 #define VID_RUIDO_N 256
 static GLuint vidBackdrop, vidGrab, vidH2, vidH2Fbo, vidQa, vidQaFbo, vidQb, vidQbFbo, vidRuido, vidProg;
 static GLuint vidSlot[VID_NSLOTS], vidSlotFbo[VID_NSLOTS], vidFundo, vidFundoFbo;
+static float vidroSlotReg[VID_NSLOTS][4];
 static GLint vidLocR, vidLocT, vidLocO;
 static int vidW, vidH, vidFalhou;
 // Blur budget: the half-res target never exceeds 960x540 (the 1080p chain), so
 // a 4K screen pays the 1080p fill and blurs the same in layout units.
 static int vidBw, vidBh;
 void gfx_vidro_fosco_bloquear(void) { foscoBloq = 1; }
+// A full-screen veil was just drawn over the glasses so far: they are now plain
+// backdrop, so a modal island over them frosts instead of going flat.
+void gfx_vidro_cobrir(void) { vidroNVidros = 0; }
 int gfx_vidro_com_fonte, gfx_vidro_chapados;
 
 // GLASS GOVERNOR ("Qualidade do vidro" = Automatica). Frames are counted in
@@ -3582,7 +3586,7 @@ static GLuint vidroFonte(GfxRect r) {
     }
   }
   if (!vidH2 || vidW != telaW || vidH != telaH) { if (!vidPreparar()) return 0; }
-  else if (vidroSlot >= 0 && !vidroCruza(vidroDesde, lido))
+  else if (vidroSlot >= 0 && vidroContem(vidroSlotReg[vidroSlot], lido) && !vidroCruza(vidroDesde, lido))
     return vidSlot[vidroSlot];
   sl = vidroSlot + 1 < VID_NSLOTS ? vidroSlot + 1 : VID_NSLOTS - 1;
   tex = &vidSlot[sl]; fbo = &vidSlotFbo[sl];
@@ -3595,10 +3599,13 @@ static GLuint vidroFonte(GfxRect r) {
     if (!ok) return 0;
   }
   memset(vidroDesde, 0, sizeof vidroDesde);
-  if (!(!vidroRecapturou && vidroSlotValido[sl] && vidroSlotHash[sl] == vidroHash && vidroContem(vidroLeAnt, lido))) {
+  if (!(!vidroRecapturou && vidroSlotValido[sl] && vidroSlotHash[sl] == vidroHash && vidroContem(vidroSlotReg[sl], lido))) {
     const float full[4] = { 0, 0, NV_TELA_W, NV_TELA_H };
+    const float *reg = fundoDepois ? lido : full;
     vidroSlotValido[sl] = 0;
-    if (!vidCapturar(&full, 1, *tex, *fbo, 0)) return 0;
+    // Modal veils need the live framebuffer, but only the island's sampling region.
+    if (!vidCapturar((const float (*)[4])reg, 1, *tex, *fbo, 0)) return 0;
+    memcpy(vidroSlotReg[sl], reg, sizeof vidroSlotReg[sl]);
     vidroSlotHash[sl] = vidroHash; vidroSlotValido[sl] = 1; vidroRecapturou = 1;
   }
   vidroSlot = sl;
