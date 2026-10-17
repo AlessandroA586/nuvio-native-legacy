@@ -124,7 +124,35 @@ def coverage():
     assert '#define NV_TXT_TELA' in keyboard
 
 
-checks = {'settings': settings, 'artwork': artwork, 'rows': rows, 'coverage': coverage}
+def proof():
+    with tempfile.TemporaryDirectory() as tmp:
+        p = pathlib.Path(tmp)
+        base, target = p / 'base', p / 'target'
+        base.write_text('T 20\nC 7 1 180 270\nC 8 1 360 203\n')
+        target.write_text('T 24\nC 7 1 180 270\nC 8 1 432 243.6\n')
+        cmd = [sys.executable, str(ROOT / 'tests/textoescala_confere.py'), 'fixture', str(base), str(target), '1.2']
+        assert subprocess.run(cmd, capture_output=True).returncode != 0, 'resized landscape accepted'
+        target.write_text('T 24\nC 7 1 180 270\n')
+        assert subprocess.run(cmd, capture_output=True).returncode != 0, 'missing card accepted'
+        target.write_text('T 24\nC 7 1 180 270\nC 7 1 180 270\n')
+        assert subprocess.run(cmd, capture_output=True).returncode != 0, 'replaced card identity accepted'
+        target.write_text('T 24\nC 7 1 180 270\nC 8 1 360 203\n')
+        assert subprocess.run(cmd, capture_output=True).returncode == 0, 'preserved cards rejected'
+        # Run the actual hash checker used by the shell proof.
+        cmd = [sys.executable, str(ROOT / 'tests/textoescala_hashes.py'), str(base), str(target)]
+        for left, right, rc in [('a f\na f\na f\n', 'a f\na f\na f\n', 0),
+                                ('a f\nb f\nc f\n', 'd f\ne f\nf f\n', 1),
+                                ('a f\na f\na f\n', 'b f\nb f\nb f\n', 1),
+                                ('a f\na f\na f\n', '', 1)]:
+            base.write_text(left)
+            target.write_text(right)
+            assert subprocess.run(cmd, capture_output=True).returncode == rc
+    shell = (ROOT / 'tests/textoescala_prova.sh').read_text()
+    assert 'textoescala_hashes.py' in shell
+    assert 'paisagem' not in shell
+
+
+checks = {'settings': settings, 'artwork': artwork, 'rows': rows, 'coverage': coverage, 'proof': proof}
 for name in sys.argv[1:] or checks:
     checks[name]()
     print('PASS', name)

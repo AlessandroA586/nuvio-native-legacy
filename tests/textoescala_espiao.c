@@ -23,6 +23,7 @@ int nvreal_ajustes_iniciar(void);
 void nvreal_ajustes_dir(const char *dir);
 
 static FILE *log_;
+static unsigned card_; 
 
 void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco, float parx,
               float pary, float raio, float cr, float cg, float cb, float ca) {
@@ -30,7 +31,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco, float parx,
   if (log_) {
     const float e = gfx_escala(), w = r.w * e, h = r.h * e;
     if (modo == GFX_TEXTO) fprintf(log_, "T %.2f\n", h);
-    else if (modo == GFX_CARD) fprintf(log_, "C %.1f %.1f\n", w, h);
+    else if (modo == GFX_CARD) fprintf(log_, "C %u %u %.1f %.1f\n", card_++, tex, w, h);
     else if ((modo == GFX_COR || modo == GFX_ANEL) && h >= 8 && h < 150 && w >= 8)
       fprintf(log_, "R %.1f %.1f\n", w, h);
   }

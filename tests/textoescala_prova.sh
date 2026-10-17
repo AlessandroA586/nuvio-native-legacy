@@ -98,24 +98,13 @@ for s in $SHOTS; do
   run new "$s" 2 p100 || rc=1
   run new "$s" 4 p120 || rc=1
   if [ -n "${NV_PNG_OUT:-}" ]; then run new "$s" 0 p85 || rc=1; run new "$s" 5 p130 || rc=1; fi   # screenshots for review
-  python3 "$TESTS/textoescala_confere.py" "$s" "$W/new/p100-$s.log" "$W/new/p120-$s.log" 1.2 $( [ "$s" = detail_secoes ] && echo paisagem ) || rc=1
+  python3 "$TESTS/textoescala_confere.py" "$s" "$W/new/p100-$s.log" "$W/new/p120-$s.log" 1.2 || rc=1
   if [ -z "${NV_ONLY_NEW:-}" ]; then
-    # Some frames animate off the wall clock and differ run to run in BOTH trees. Each
-    # tree runs three times; a frame fails only when both are reproducible and differ.
+    # Unstable frames are inconclusive and fail; never silently skip them.
     mkdir -p "$W/base"; run base "$s" - def || rc=1
     for n in def2 def3; do run base "$s" - $n || rc=1; run new "$s" - $n || rc=1; done
     cat "$W/base"/def*-"$s".sum > "$W/base/all-$s.sum"; cat "$W/new"/def*-"$s".sum > "$W/new/all-$s.sum"
-    bad=$(awk '{ f=$2; h=$1 }
-      FILENAME==ARGV[1] { if (!((f" "h) in b)) { b[f" "h]=1; nb[f]++; hb[f]=h } next }
-      { if (!((f" "h) in n)) { n[f" "h]=1; nn[f]++; hn[f]=h } }
-      END { for (f in nb) if (nb[f]==1 && nn[f]==1 && hb[f]!=hn[f]) print f
-            for (f in nn) if (!(f in nb)) print f }' "$W/base/all-$s.sum" "$W/new/all-$s.sum")
-    nt=$(wc -l < "$W/new/def-$s.sum" | tr -d ' ')
-    if [ -z "$bad" ] && [ "$nt" -gt 0 ]; then
-      echo "  default 100%: $nt frames, none differs from the baseline"
-    else
-      echo "  FAIL $s: default frames differ from baseline: $(echo $bad | head -c 200)"; rc=1
-    fi
+    python3 "$TESTS/textoescala_hashes.py" "$W/base/all-$s.sum" "$W/new/all-$s.sum" || rc=1
   fi
 done
 [ $rc -eq 0 ] && echo "PASS textoescala" || echo "FAIL textoescala"

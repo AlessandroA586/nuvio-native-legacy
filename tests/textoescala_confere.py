@@ -1,45 +1,43 @@
 #!/usr/bin/env python3
-"""Compare two spy logs (tests/textoescala_espiao.c): argv = nome base alvo fator [paisagem].
+"""Compare text/button scale and ordered artwork identities, counts and sizes."""
+import statistics
+import sys
 
-`paisagem` exempts 16:9 art cards (episode/trailer tiles carrying text), which are
-components, not posters."""
-import sys, statistics
 
-def ler(p):
-    t, c, r = [], [], []
-    for l in open(p):
-        k, *v = l.split()
-        v = [float(x) for x in v]
-        (t if k == "T" else c if k == "C" else r).append(v)
-    return t, c, r
+def read(path):
+    text, cards, rects = [], [], []
+    with open(path) as stream:
+        for line in stream:
+            kind, *values = line.split()
+            values = [float(x) for x in values]
+            if kind == 'T':
+                text.append(values[0])
+            elif kind == 'C':
+                assert len(values) == 4, 'card log lacks frame/texture identity'
+                cards.append(values)
+            elif kind == 'R':
+                rects.append(values)
+    return text, cards, rects
 
-nome, base, alvo, fator = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
-paisagem = len(sys.argv) > 5 and sys.argv[5] == "paisagem"
-def cartaz(w, h): return not (paisagem and w / h > 1.5)
-t0, c0, r0 = ler(base)
-t1, c1, r1 = ler(alvo)
-ok = True
-def falha(msg):
-    global ok
-    ok = False
-    print("  FAIL %s: %s" % (nome, msg))
 
-if not t0 or not t1:
-    falha("no text drawn (%d/%d)" % (len(t0), len(t1)))
-else:
-    m = statistics.median(h for (h,) in t1) / statistics.median(h for (h,) in t0)
-    print("  %s text height x%.3f (want ~%.2f)" % (nome, m, fator))
-    if abs(m - fator) > 0.08: falha("text did not scale")
-if r0 and r1:
-    m = statistics.median(h for _, h in r1) / statistics.median(h for _, h in r0)
-    print("  %s button/pill height x%.3f" % (nome, m))
-    if abs(m - fator) > 0.12: falha("buttons did not scale")
-if c0:
-    c0 = [(w, h) for w, h in c0 if cartaz(w, h)]
-    c1 = [(w, h) for w, h in c1 if cartaz(w, h)]
-    tam = {(round(w), round(h)) for w, h in c0}
-    for w, h in {(round(w), round(h)) for w, h in c1}:
-        if not any(abs(w - a) <= 2 and abs(h - b) <= 2 for a, b in tam):
-            falha("poster rect %dx%d is new at the larger scale" % (w, h))
-    print("  %s poster sizes: %d at base, %d at target, none resized" % (nome, len(tam), len({(round(w), round(h)) for w, h in c1})))
-sys.exit(0 if ok else 1)
+def compare(name, base, target, factor):
+    t0, c0, r0 = read(base)
+    t1, c1, r1 = read(target)
+    assert t0 and t1, 'no text drawn'
+    ratio = statistics.median(t1) / statistics.median(t0)
+    assert abs(ratio - factor) <= .08, f'text height x{ratio:.3f}, expected {factor}'
+    if r0 and r1:
+        ratio = statistics.median(h for _, h in r1) / statistics.median(h for _, h in r0)
+        assert abs(ratio - factor) <= .12, f'button height x{ratio:.3f}'
+    assert len(c0) == len(c1), f'artwork count changed: {len(c0)} -> {len(c1)}'
+    for before, after in zip(c0, c1):
+        assert before[:2] == after[:2], f'artwork frame/texture changed: {before} -> {after}'
+        assert all(abs(a - b) <= 2 for a, b in zip(before[2:], after[2:])), f'artwork resized: {before} -> {after}'
+    print(f'PASS {name}: text scaled, {len(c0)} matching artwork draws unchanged')
+
+
+if __name__ == '__main__':
+    try:
+        compare(*sys.argv[1:4], float(sys.argv[4]))
+    except (AssertionError, ValueError) as error:
+        sys.exit(f'FAIL {sys.argv[1]}: {error}')
