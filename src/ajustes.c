@@ -9747,6 +9747,7 @@ int ajustes_teste_quadro(const char *id) {
   int tema = valor[AJ_TEMA], vidro = valor[AJ_VIDRO];
   memcpy(valor, valorPadrao, sizeof valor);
   valor[AJ_TEMA] = tema; valor[AJ_VIDRO] = vidro;
+  ajustes_teste_vidro_env();   // the defaults above would drop NUVIO_SHOT_VIDRO_FOSCO / _OPAC
   valor[AJ_IDIOMA] = IDIOMA_PT + 1;
   // NUVIO_SHOT_IDIOMA=N (IDIOMA_*: 1 en, 4 ru, 6 de...): o quadro sai nesse idioma.
   if (getenv("NUVIO_SHOT_IDIOMA") && *getenv("NUVIO_SHOT_IDIOMA")) valor[AJ_IDIOMA] = atoi(getenv("NUVIO_SHOT_IDIOMA")) + 1;

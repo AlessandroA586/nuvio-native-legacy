@@ -1933,6 +1933,7 @@ static int vidroNRegAnt, vidroNRegCur;
 static float vidroDesde[4];   // caixa do que foi pintado na tela desde a ultima captura
 static float vidroVidros[VID_N][4], vidroFuros[VID_NFUROS][4];
 int gfx_vidro_capturas, gfx_vidro_passadas;
+int gfx_vidro_camada;
 double gfx_vidro_fill, gfx_vidro_copia;
 // BACKDROP-ONLY SOURCE (docs/fosco-nova.md): the glasses read a blurred copy
 // of the backdrop layer alone (art, light, veils: every draw before the
@@ -3663,7 +3664,9 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   chapado = !ajustes_vidro_fosco() || efeitosMinimos || snapAtivo || miniAtiva || giroOn ||
             gfx_opacidade_grupo < 0.999f ||
             t.x >= NV_TELA_W || t.y >= NV_TELA_H || t.x + t.w <= 0.0f || t.y + t.h <= 0.0f;
-  for (i = 0; !chapado && i < vidroNVidros; i++) chapado = vidroCruza(vidroVidros[i], tela);
+  // A layer over the page (sidebar) frosts even where page glass (pills, cards)
+  // sits under it: it reads the blurred backdrop, not those glasses.
+  for (i = 0; !chapado && !gfx_vidro_camada && i < vidroNVidros; i++) chapado = vidroCruza(vidroVidros[i], tela);
   video = foscoBloq;
   for (i = 0; !video && i < vidroNFuros; i++) video = vidroCruza(vidroFuros[i], tela);
   // Smoked glass: over live video (no TV lets GL read the video plane), with
@@ -4037,6 +4040,20 @@ void gfx_vidro_pilula_cheia(GfxRect r, float raio, float foco, float a) {
   float f = foco < 0.0f ? 0.0f : (foco > 1.0f ? 1.0f : foco), cr, cg, cb;
   if (f <= 0.01f || a <= 0.001f) return;
   ajustes_acento(&cr, &cg, &cb);
+  // Coloured accents supply their own frost, including Library tabs/chips
+  // without a glass backing. 0.92 preserves >= 90 % of solid accent chroma.
+  // White/grey keeps the solid pill of the reference.
+  if (ajustes_vidro() && !efeitosMinimos) {
+    float mx = cr > cg ? (cr > cb ? cr : cb) : (cg > cb ? cg : cb);
+    float mn = cr < cg ? (cr < cb ? cr : cb) : (cg < cb ? cg : cb);
+    if (mx - mn > 0.1f) {
+      gfx_vidro_painel(r, raio, 0.55f, f * a);
+      gfx_cor(r, raio, cr, cg, cb, GFX_VIDRO_ACENTO_ALFA * f * a);
+      gfx_vidro_aro(r, raio, 1.0f, 1, 1, 1, 0.30f * f * a);
+      gfx_brilho_topo(r, raio, 0.45f, 1.0f, 1.0f, 1.0f, 0.16f * f * a);
+      return;
+    }
+  }
   gfx_cor(r, raio, cr, cg, cb, f * a);
 }
 // Texto sobre a pilula cheia: a tinta que contrasta com o realce (escura sobre

@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "menu_frost_probe.h"
 
 static const char *const AJ_IDS[] = {
   "AJ_QUALIDADE", "AJ_DV", "AJ_ATMOS", "AJ_LEG_LINGUA",
@@ -93,7 +94,7 @@ static void captura(const char *nome, SDL_Window *win) {
   rail_shot_aplicar();
   for (i = 0; i < quadrosCaptura; i++) {
     SDL_PumpEvents();
-    if (getenv("NUVIO_SHOT_PERF")) gfx_novo_quadro();   // os contadores do quadro, como app.c
+    if (getenv("NUVIO_SHOT_PERF") || getenv("NUVIO_SHOT_MENU_PROBE")) gfx_novo_quadro();   // os contadores do quadro, como app.c
     txt_novo_quadro();
     gfx_rastro_grandes = getenv("NUVIO_SHOT_RASTRO") && i == quadrosCaptura - 1;
     tex_novo_quadro();
@@ -108,7 +109,13 @@ static void captura(const char *nome, SDL_Window *win) {
     if (getenv("NUVIO_SHOT_MENU")) {
       menu_definir_destino(MENU_AJUSTES);
       menu_pilula_mostrar(1.0f);
+      if (atoi(getenv("NUVIO_SHOT_MENU")) == 2) {   // 2 = sidebar open over Settings
+        if (!menu_aberto()) menu_abrir();
+        menu_atualizar(1.0f / 60.0f, SDL_GetTicks());
+      }
+      menu_probe_draw();
       menu_desenhar(SDL_GetTicks());
+      if (getenv("NUVIO_SHOT_MENU_OPAQUE")) gfx_cor((GfxRect){330, 175, 81, 605}, 0, .1f, .1f, .1f, 1);
     }
     if (spot_visivel()) {   // "Buscar no guia" (o Spotlight no modo guia)
       spot_atualizar(1.0f / 60.0f, SDL_GetTicks());
@@ -149,6 +156,11 @@ static void captura(const char *nome, SDL_Window *win) {
         memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
       assert(strstr(nome, ".png") ? IMG_SavePNG(s, nome) == 0 : SDL_SaveBMP(s, nome) == 0);
       SDL_FreeSurface(s);
+      // NUVIO_SHOT_MENU=2: blur proof, as in detalhe_glass_shot.c (fraction of
+      // pixels with a luma step > 6 in the empty right strip of the sidebar).
+      if (getenv("NUVIO_SHOT_MENU") && atoi(getenv("NUVIO_SHOT_MENU")) == 2) {
+        menu_probe_check(pix);
+      }
       free(pix);
     }
     SDL_GL_SwapWindow(win);

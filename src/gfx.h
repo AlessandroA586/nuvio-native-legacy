@@ -602,6 +602,9 @@ void gfx_chrome_dens(float out[3]);
 #define GFX_VIDRO_DENS       0.80f
 #define GFX_VIDRO_DENS_MODAL 0.86f
 void gfx_vidro_material(GfxRect r, float raio, float dens, float a);
+// 1 while drawing a glass LAYER above the screen (sidebar): earlier glasses it
+// covers no longer force it flat (set/cleared by the caller around the draw).
+extern int gfx_vidro_camada;
 // O mesmo com "Interface de vidro" desligada: a cor lisa (sr,sg,sb) a `sa`.
 void gfx_vidro_ou_solido(GfxRect r, float raio, float dens, float a,
                          float sr, float sg, float sb, float sa);
@@ -739,6 +742,9 @@ void gfx_vidro_cartao(GfxRect r, float raio, float foco, float a);
 // FOCO de botao de acao e item de menu: a pilula vira BRANCA cheia (a mola
 // interpola a opacidade), e o texto passa a escuro em foco >= 0,5 — quem chama
 // escolhe a tinta com gfx_vidro_tinta.
+// Com vidro e realce colorido ela e vidro tingido: realce a GFX_VIDRO_ACENTO_ALFA
+// (cor viva), aro claro e brilho de topo como as pilulas de vidro em repouso.
+#define GFX_VIDRO_ACENTO_ALFA 0.92f
 void gfx_vidro_pilula_cheia(GfxRect r, float raio, float foco, float a);
 // Tinta do texto sobre a superficie de vidro: escura sobre a pilula branca do
 // foco, clara (235) no resto.

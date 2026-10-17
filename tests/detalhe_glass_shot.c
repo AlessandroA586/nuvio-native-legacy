@@ -111,8 +111,10 @@ size_t trakt_token_tam(const char *s) {
 
 #include "dados.h"
 #include "ilha.h"
+#include "menu.h"
 #include "salvospainel.h"
 #include "vidro_telas.h"
+#include "menu_frost_probe.h"
 
 #define IMDB_SERIE "tt12637874"
 #define IMDB_FILME "tt33612209"
@@ -329,7 +331,15 @@ static void gravar(const char *id) {
   for (int y = 0; y < 1080; y++)
     memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
   SDL_SaveBMP(s, nome);
+  snprintf(nome, sizeof nome, "%s/%s.png", saida, id);
+  assert(IMG_SavePNG(s, nome) == 0);
   SDL_FreeSurface(s);
+  // NUVIO_SHOT_MENU: blur proof. Fraction of pixels with a |horizontal luma step| > 6 over the empty
+  // right strip of the open sidebar (x 330..410, y 175..780, no labels there):
+  // page text/pills seen through a flat tint give a high value, frost a low one.
+  if (getenv("NUVIO_SHOT_MENU")) {
+    menu_probe_check(pix);
+  }
   free(pix);
   printf("captura: %s\n", nome);
   // A rolagem do documento, para montar a pagina inteira (lado a lado com o
@@ -364,6 +374,15 @@ static void quadros(int n) {
       if (!spainel_aberto()) spainel_abrir();
       spainel_atualizar(1.0f / 60.0f, SDL_GetTicks());
       if (spainel_visivel()) spainel_desenhar(SDL_GetTicks());
+    }
+    // NUVIO_SHOT_MENU=1: the sidebar opened over the page (menu_abrir_sobre), as app.c draws it.
+    if (getenv("NUVIO_SHOT_MENU")) {
+      if (!menu_aberto()) { menu_iniciar(); menu_abrir_sobre(1); }
+      menu_atualizar(1.0f / 60.0f, SDL_GetTicks());
+      menu_probe_draw();
+      menu_desenhar(SDL_GetTicks());
+      if (getenv("NUVIO_SHOT_MENU_OPAQUE")) gfx_cor((GfxRect){330, 175, 81, 605}, 0, .1f, .1f, .1f, 1);
+      if (i == n - 1) printf("menu-fonte: com_fonte=%d capturas=%d\n", gfx_vidro_com_fonte, gfx_vidro_capturas);
     }
     // The sources sheet over the page, as app.c draws it.
     if (stream_folha_aberta()) { stream_folha_atualizar(1.0f / 60.0f, SDL_GetTicks()); stream_folha_desenhar(SDL_GetTicks()); }
@@ -442,9 +461,9 @@ int main(int argc, char **argv) {
     if (getenv("NUVIO_SHOT_FUNDO")) fprintf(f, "fundoLocal %d\n", atoi(getenv("NUVIO_SHOT_FUNDO")));
     fclose(f);
     ajustes_dir(dd); }
+  ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_FOSCO / _OPAC
   // First-run appearance migration overrides the file; apply shot settings after it.
   if (getenv("NUVIO_TRAKT_SHOT") || getenv("NUVIO_TRAKT_CHECK")) {
-    ajustes_teste_vidro_env();
     ajustes_definir_vidro(getenv("NUVIO_SHOT_VIDRO") && atoi(getenv("NUVIO_SHOT_VIDRO")));
     assert(ajustes_vidro() == (getenv("NUVIO_SHOT_VIDRO") && atoi(getenv("NUVIO_SHOT_VIDRO"))));
   }

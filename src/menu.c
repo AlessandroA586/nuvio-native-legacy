@@ -328,14 +328,16 @@ static void desenhaMaterial(const MenuGeo *g, float a) {
     GfxRect s = { r.x - b, r.y + dy - b, r.w + 2.0f * b, r.h + 2.0f * b };
     gfx_sombra_sob(s, 1.0f, b * 1.41f * gfx_escala(), (g->raio + b) / s.h,
                    0, 0, 0, (topo() ? 0.34f : vidro ? 0.36f : 0.45f) * a, r, g->raio, vidro ? 0.0f : a); }
-  if (topo()) gfx_chrome(r, raio, a);
+  if (topo()) { gfx_vidro_camada = 1; gfx_chrome(r, raio, a); gfx_vidro_camada = 0; }
   else if (ajustes_vidro()) {
     // Fechada, os .80 do mockup (a rail fica sobre a arte do destaque).
     // Aberto, o painel cobre o TEXTO da home (titulo, sinopse, "Continuar
     // assistindo" em x 152..400), e a 80 % ele atravessava legivel entre os
     // rotulos (captura de tests/homelayouts_shot.sh): sobe a 86 %.
     float al = anim_mistura(.80f, .86f, limita01((g->w - NV_MENU_W_RAIL) / (NV_MENU_W_ABERTO - NV_MENU_W_RAIL)));
+    gfx_vidro_camada = 1;   // frost over page glass too (detail pills, tabs, cards)
     gfx_vidro_material(r, raio, al, a);
+    gfx_vidro_camada = 0;
   } else {
     gfx_cor(r, raio, 21.0f / 255.0f, 22.0f / 255.0f, 26.0f / 255.0f, a);
   }
@@ -1207,7 +1209,9 @@ static void tvDesenhar(void) {
   // The shared material at TV_MIOLO_MIN (88 % at the default "Opacity"): at
   // 78 % the Home row titles read through the panel (TCL print). It follows
   // the slider like every other glass surface.
+  gfx_vidro_camada = 1;   // frost over page glass too (detail pills, tabs, cards)
   gfx_vidro_material(R, raioPx / R.h, TV_MIOLO_MIN, A);
+  gfx_vidro_camada = 0;
   gfx_vidro_matiz(R, raioPx / R.h, A);
 
   // Conteudo da pilula fechada: some no comeco da abertura.
