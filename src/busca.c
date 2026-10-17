@@ -1041,7 +1041,7 @@ static int menuNoResultado(void) {
   return ctxlista_abrir(itemFoco.indice, itemFoco.rect, arte);
 }
 
-void busca_evento(const SDL_Event *e) {
+static void busca_evento_(const SDL_Event *e) {
   pediuRelogio = 0;
   buInterfaceAtualizar();
   if (e->type == SDL_QUIT) { sair = 1; return; }
@@ -1375,7 +1375,7 @@ static void toqueBuscaRetomarFoco(void) {
 }
 #endif
 
-void busca_atualizar(float dt, Uint32 agora) {
+static void busca_atualizar_(float dt, Uint32 agora) {
   buInterfaceAtualizar();
   // TECLADO/VOZ DO SISTEMA (sistexto.h): o texto vem inteiro e substitui o campo.
   { char t[BU_MAX_CONSULTA * 2];
@@ -1995,8 +1995,7 @@ static void desenhaResultados(Uint32 agora) {
   gfx_sem_recorte();
 }
 
-void busca_desenhar(Uint32 agora) {
-  TXT_INI();
+static void busca_desenhar_(Uint32 agora) {
   buInterfaceAtualizar();
 #ifdef NV_TOUCH_UI
   if (buTelefone()) ponteiro_rolagem(toqueBuscaRolar);
@@ -2010,8 +2009,11 @@ void busca_desenhar(Uint32 agora) {
   desenhaCampo(agora);
   desenhaTeclado();
   desenhaResultados(agora);
-  TXT_FIM();
 }
+
+void busca_evento(const SDL_Event *e) { TXT_INI(); busca_evento_(e); TXT_FIM(); }
+void busca_atualizar(float dt, Uint32 agora) { TXT_INI(); busca_atualizar_(dt, agora); TXT_FIM(); }
+void busca_desenhar(Uint32 agora) { TXT_INI(); busca_desenhar_(agora); TXT_FIM(); }
 
 #ifdef NV_BUSCA_TESTE
 // Gancho de teste (tests/busca_debounce.sh): soma dos itens das fileiras de titulos.
