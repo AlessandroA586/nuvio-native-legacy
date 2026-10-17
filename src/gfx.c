@@ -1770,6 +1770,7 @@ static GLuint texAtual = 0;
 // (upload de arte, raster de glifo) — nos dois casos o cache mentiria.
 // tex = 0 significa "esqueca tudo": e o que os uploads usam.
 static void desfEsquecerFonte(GLuint tex);
+static void vidroEsquecerFonte(GLuint tex);
 void gfx_tex_esquecer(GLuint tex) {
   if (tex == 0 || texAtual == tex) texAtual = 0;
   // Textura de arte que vai ser destruida: a copia desfocada dela deixa de
@@ -1778,7 +1779,7 @@ void gfx_tex_esquecer(GLuint tex) {
   // O nome volta de glGenTextures com outra imagem e o mesmo hash: o backdrop
   // guardado do vidro deixa de valer. (tex = 0 e o bind por fora, todo quadro
   // no alvo interno do gpunivel — nao muda conteudo.)
-  if (tex) gfx_vidro_sujar();
+  if (tex) vidroEsquecerFonte(tex);
 }
 
 int    gfx_n_rect = 0, gfx_n_prog = 0, gfx_n_bind = 0, gfx_n_outros = 0;
@@ -1965,6 +1966,13 @@ static unsigned vidroHash;
 #define VID_NSLOTS 4
 static unsigned vidroSlotHash[VID_NSLOTS];
 static int vidroSlotValido[VID_NSLOTS], vidroSlot, vidroRecapturou;
+// Conservative texture dependencies: collisions only cause extra captures.
+// Retiring a foreground label must not invalidate an unrelated backdrop.
+#define VID_DEP_WORDS 32
+static unsigned vidroDep[VID_DEP_WORDS], fundoDep[VID_DEP_WORDS], vidroSlotDep[VID_NSLOTS][VID_DEP_WORDS];
+static void vidroDepAnotar(GLuint tex) {
+  if (tex) vidroDep[(tex / 32) % VID_DEP_WORDS] |= 1u << (tex % 32);
+}
 static float vidroLeAnt[4], vidroLeCur[4];   // union of what the glasses read, last/this frame
 // The same as up to VID_NREG boxes, merged where they overlap: what the backdrop
 // capture copies and blurs (vidroFundoFechar).
@@ -2057,6 +2065,12 @@ static int vidroDentro(GfxRect r) {
 // Conteudo que muda sem passar pelo hash (textura reenviada no lugar, nome
 // de textura reaproveitado): nenhum vidro reaproveita a captura antiga.
 void gfx_vidro_sujar(void) { memset(vidroSlotValido, 0, sizeof vidroSlotValido); fundoValido = 0; }
+static void vidroEsquecerFonte(GLuint tex) {
+  unsigned word = (tex / 32) % VID_DEP_WORDS, bit = 1u << (tex % 32);
+  if (fundoDep[word] & bit) fundoValido = 0;
+  for (int i = 0; i < VID_NSLOTS; i++)
+    if (vidroSlotDep[i][word] & bit) vidroSlotValido[i] = 0;
+}
 // Todo desenho do quadro, ja em layout de tela (r depois de GFX_TR_RECT e da
 // escala): entra no hash, e o que cai na tela entra na caixa vidroDesde.
 static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float parx, float pary,
@@ -2096,6 +2110,9 @@ static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float 
     for (i = 0; i < 24; i++) v[i] = floorf(v[i] * 256.0f + 0.5f);
   }
   if (conta) {
+    if (P->tex >= 0) vidroDepAnotar(tex);
+    if (P->texB >= 0) vidroDepAnotar(camTexB);
+    if (P->ambOn >= 0) vidroDepAnotar(ambFonte);
     vidroSoma(v, sizeof v);
     vidroSoma(e, sizeof e);
     if (recorteAtivo) vidroSoma(recorteBox, sizeof recorteBox);
@@ -2141,6 +2158,7 @@ void gfx_novo_quadro(void) {
   ambPendente = 0; ambIntacta = 0; foscoBloq = 0;
   memset(vidroDesde, 0, sizeof vidroDesde);
   vidroHash = 2166136261u; vidroNVidros = 0; vidroNFuros = 0;
+  memset(vidroDep, 0, sizeof vidroDep);
   memcpy(vidroLeAnt, vidroLeCur, sizeof vidroLeAnt); memset(vidroLeCur, 0, sizeof vidroLeCur);
   memcpy(vidroRegAnt, vidroRegCur, sizeof vidroRegAnt); vidroNRegAnt = vidroNRegCur; vidroNRegCur = 0;
   vidroSlot = -1; vidroRecapturou = 0;
@@ -3644,6 +3662,7 @@ static void vidroFundoFechar(void) {
       if (f[2] >= NV_TELA_W) f[2] = 1e9f;
       if (f[3] >= NV_TELA_H) f[3] = 1e9f;
     }
+    memcpy(fundoDep, vidroDep, sizeof fundoDep);
     fundoHash = vidroHash; fundoPassoCap = fundoPasso; fundoValido = 1;
   }
   fundoFim = 1;
@@ -3696,6 +3715,7 @@ static GLuint vidroFonte(GfxRect r) {
     // Modal veils need the live framebuffer, but only the island's sampling region.
     if (!vidCapturar((const float (*)[4])reg, 1, *tex, *fbo, 0)) return 0;
     memcpy(vidroSlotReg[sl], reg, sizeof vidroSlotReg[sl]);
+    memcpy(vidroSlotDep[sl], vidroDep, sizeof vidroDep);
     vidroSlotHash[sl] = vidroHash; vidroSlotValido[sl] = 1; vidroRecapturou = 1;
   }
   vidroSlot = sl;

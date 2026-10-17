@@ -432,6 +432,7 @@ static void abrir(int i, int nv, int sec, int col) {
 
 #include "traktcoment_checks.h"
 #include "detalheglass_checks.h"
+#include "vidro_c9_cache.h"
 
 static int quer(int argc, char **argv, const char *id) {
   if (argc <= 2) return 1;
@@ -513,6 +514,7 @@ int main(int argc, char **argv) {
   { char ar[1024]; if (realpath("deploy/app/art", ar)) extras_carregar(ar); }
   montarCatalogo();
   cacheFrases();
+  if (getenv("NUVIO_C9_CACHE")) return vc_run();
   if (getenv("NUVIO_TRAKT_CHECK")) return trakt_checks();
   if (getenv("NUVIO_DETAIL_CHECK")) {
     const char *m = getenv("NUVIO_DETAIL_CHECK");
