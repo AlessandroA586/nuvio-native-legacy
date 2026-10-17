@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-17T20:50:10-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-17T20:53:24-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -321,8 +321,6 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 - **Automatic TV and Mobile mode on Android** — @community, PR #431 (`c305e6f7e`, `875d7f18f`).
 - **Series identity during lookup and playback** — PR #561 (`cdf5bdd88`, `2537db6a0`, `86d194462`).
-- **Add-on reported audio and subtitle languages** — @ghbarker, PR #487 (`e4fb8c08`; reviewed, not merged —
-  see *Pending*).
 - **Continue Watching without blocking catalogs** — @ghbarker, PR #538 (`cfc15aeab`, `a748ebf32`).
 - **Keep add-on cast portraits when TMDB fails** — @ghbarker, PR #540 (`a1eca619b`, `8cc5d723d`).
 - **Remove uninstalled add-on rows** — @ghbarker, PR #543 (`11e6e8535`, `0d44804f0`).
@@ -336,7 +334,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Internal
 
-- **C9 rendering and subtitle timing checks**: Regression checks cover glass-cache budgets and unchanged frost images, plus production readiness and the complete initial 12-second ASS window. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `b12b8e11f`, `9e778e588`.
+- **C9 rendering and subtitle timing checks**: Regression checks cover glass-cache budgets and unchanged frost images, plus production readiness and the complete initial 12-second ASS window. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `b12b8e11f`, `9e778e588`, `3934284c5`, `8e8a90415`, `0661e272d`.
 
 - **Broader visual regression coverage**: Sources shadows, profile-cache pressure and deterministic text-scale fixtures cover more UI states. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `45aef45f9`, `915e360a4`, `d6b0c2363`, `cff9c7e1b`, `15903519f`, `0c0c80d58`, `0d5d0d735`, `04ed0d150`, `207e0a283`.
 - **Tracking and release documentation**: Release notes, issue tracking and fixed-width caller documentation stay synchronized. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `733bc65e0`, `442021716`, `0eee6cbc3`, `71a57d7b4`.
@@ -396,7 +394,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
 
-- **PR #487 v2** (add-on reported audio and subtitle languages) — `agente/205-pr487v2`, 3 commits out,
+- **PR #487 v2 by @ghbarker** (add-on reported audio and subtitle languages; `e4fb8c08`) — `agente/205-pr487v2`, 3 commits out,
   VEREDITO OK `j-rev-pr487-v2`, no commit after. **Needs final re-review.** Android, LG webOS.
 - **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out. VEREDITO **BLOQUEIA**
   `j-revg-pr493` (newer); the OK `j-revpr493-v3` came before. Needs a new fix + review.
@@ -424,7 +422,7 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
   option never shows up in Settings › Appearance (P1), cards still resize (P2) and Library rows overlap at
   85% (P2). Owner request. All platforms.
 - **Trakt comments with glass, frosted context menu and #562/PR #574** landed in this window
-  (`335bd2abc`, `dc040ef2d`, `2c7c85860`, all review OK: `rev-traktcoment`, `rev-ctxgrande`, `rev-pr574`) and
+  (`335bd2abc`, `a363d821c`, `dc040ef2d`, `a2ea074c7`, `2c7c85860`, all review OK: `rev-traktcoment`, `rev-ctxgrande`, `rev-pr574`) and
   are already in New/Fixes/Performance. Still to measure on a device: the FPS of the 8 glass panels.
 - **Cheaper frost, polished friends row, PR #561 (#524), glass tabs and Settings at 100%** landed in this
   window (`4c82273d7`, `f21d993b2`, `86d194462`, `a096e5eb8`, `f22761e28`) and are already under
