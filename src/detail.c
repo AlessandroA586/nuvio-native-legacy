@@ -2108,25 +2108,37 @@ static float epCardH(void) {
 static float epCardPasso(void) { return epApple() ? 420.0f + NV_DETP_EP_GAP : NV_DETP_EP_PASSO * epEscala(); }
 // A placa de foco estilo Apple TV (#205): alpha da mola `f` vezes o teto
 // NV_DETP_EP_PLACA_A. Sem foco (f=0) nao ha placa; o teste le daqui.
-// A placa cobre so o texto e e MAIS ESTREITA que a miniatura (dono: "o contorno
-// do texto tem que ser um pouco menor que a imagem"): recuo de 16 de cada lado
-// (o respiro de 3% do foco come ~10), centrada sob a imagem. `r` e a caixa do
-// card, `thH` a altura da miniatura, `ft` o foco 0..1.
+// Moderna: a placa tem a largura da miniatura JA com o zoom do foco (mesmas
+// bordas, dono: "ta sem margem" / mais larga que o texto; o texto fica a
+// NV_DETP_EPM_TEXTO_X do card, >= 16 da borda da placa), comeca embaixo dela
+// e desce NV_DETP_EPM_PLACA_PAD alem do card. `r` e a caixa do card, `thH` a
+// altura da miniatura, `ft` o foco 0..1.
 // Standard keeps the full-card plate because its text overlays the thumbnail.
 static GfxRect epPlacaRect(GfxRect r, float thH, float ft) {
-  GfxRect p = { r.x + NV_DETP_EP_PLACA_INSET, r.y + thH,
-                r.w - NV_DETP_EP_PLACA_INSET * 2.0f,
-                r.h - thH + NV_DETP_EP_PLACA_PAD };
-  if (!epModerna())
-    p = (GfxRect){ r.x - NV_DETP_EP_PLACA_PAD, r.y - NV_DETP_EP_PLACA_PAD,
-                   r.w + NV_DETP_EP_PLACA_PAD * 2.0f,
-                   r.h + NV_DETP_EP_PLACA_PAD * 2.0f };
+  if (epModerna()) {
+    GfxRect z = foco_zoom((GfxRect){ r.x, r.y, r.w, thH }, ft);
+    float base = z.y + z.h;
+    // Com o anel nao ha zoom: a placa acompanha a borda de fora do anel.
+    if (ajustes_borda_foco()) { z.x -= NV_ANEL_FOCO; z.w += 2.0f * NV_ANEL_FOCO; }
+    return (GfxRect){ z.x, base, z.w, r.y + r.h + NV_DETP_EPM_PLACA_PAD - base };
+  }
+  GfxRect p = { r.x - NV_DETP_EP_PLACA_PAD, r.y - NV_DETP_EP_PLACA_PAD,
+                r.w + NV_DETP_EP_PLACA_PAD * 2.0f,
+                r.h + NV_DETP_EP_PLACA_PAD * 2.0f };
   float pw = p.w, ph = p.h, s = 1.0f + 0.03f * ft;
   p.w *= s; p.h *= s;
   p.x -= (p.w - pw) * 0.5f; p.y -= (p.h - ph) * 0.5f;
   return p;
 }
 static float epPlacaA(float f) { return NV_DETP_EP_PLACA_A * anim_clamp(f, 0.0f, 1.0f); }
+// Vidro com o mesmo material dos cartoes de elenco/Trakt (ajustes_vidro; o
+// governor cai para o esfumacado dentro do gfx_vidro). Sem vidro, o branco de sempre.
+static void epPlacaDesenha(GfxRect p, float f, float a) {
+  if (ajustes_vidro())
+    gfx_vidro_material(p, 24.0f / p.h, GFX_VIDRO_DENS, anim_clamp(f, 0.0f, 1.0f) * a);
+  else
+    gfx_cor(p, 24.0f / p.h, 1, 1, 1, epPlacaA(f) * a);
+}
 // Largura do texto abaixo da miniatura (titulo, sinopse e barra): a do card,
 // menos as margens do Padrao (32 de cada lado, o NV_DETP_EP_TEXTO_W medido).
 static float epTextoW(void) { return epCardW() - NV_DETP_EP_PAD * 2.0f; }
@@ -5427,8 +5439,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   // so ganhava anel/zoom e o texto ficava parado. Nao muda a caixa (`r`), logo
   // nao move nenhum vizinho; some desfocando pelo mesmo caminho.
   if (!epApple() && f > 0.005f) {
-    GfxRect p = epPlacaRect(r, th.h, ft);
-    gfx_cor(p, 24.0f / p.h, 1, 1, 1, epPlacaA(f) * a);
+    epPlacaDesenha(epPlacaRect(r, th.h, ft), f, a);
   }
   if (!epApple()) { foco_anel(th, raioTh, f, a); th = foco_zoom(th, f); }
 
@@ -5558,7 +5569,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
 
   float tx = r.x + NV_DETP_EP_PAD;
   const int moderna = epModerna();
-  const float textoX = moderna ? r.x + 12.0f : tx;   // abaixo da miniatura nao ha margem interna
+  const float textoX = moderna ? r.x + NV_DETP_EPM_TEXTO_X : tx;   // a placa de foco sobra 16 alem do card
   const float epSeloY = moderna ? NV_DETP_EPM_SELO_Y : NV_DETP_EP_SELO_Y;
 
   // Ausencia de check nao afirma que o historico ja chegou. Evita um selo
@@ -7173,7 +7184,7 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
     float f = animFoco[r][c];
     float x = xItem(r, c) - scrollSec[r];
     float w = larguraItem(r, c);
-    if (x > NV_TELA_W || x + w < -w) continue;
+    if (x > NV_TELA_W || x + w < -NV_DETP_X) continue;   // shadow/glow reach, not a whole extra card
     if (ponteiro_ativo() && a > 0.3f && c < secaoColunas(r) && alturaAlvo(r) > 0.0f)
       ponteiro_alvo(x, y,
                     w, alturaAlvo(r), ponteiroDetalhe, NULL, r, c);
