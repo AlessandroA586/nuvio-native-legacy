@@ -22,7 +22,7 @@ set -u
 cd "$(dirname "$0")/.."
 export TMPDIR="${NV_TMP:-/tmp}"; TMPDIR="${TMPDIR%/}"
 SRC="${NV_SRC:-.}"
-BASE_REF="${NV_BASE:-f22761e28}"
+BASE_REF="${NV_BASE:-8df743dff}"
 W="${NV_REUSE:-$(mktemp -d "$TMPDIR/nv-textoescala.XXXXXX")}"
 [ -n "${NV_KEEP:-}" ] && echo "keeping $W" || trap 'rm -rf "$W"' EXIT
 TESTS="$PWD/tests"

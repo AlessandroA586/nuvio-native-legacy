@@ -1277,7 +1277,15 @@ static float buPasso(void) {
   }
 }
 static float buCartazW(void) {
-  if (!buTelefone() && gfx_escala_txt() != 1.0f) return BU_CARTAZ_W;
+  if (gfx_escala_txt() != 1.0f) {
+    if (!buTelefone()) return BU_CARTAZ_W;
+    float old = gfx_escala();
+    gfx_escala_sair(1.0f);
+    float w = buPasso() - 22.0f;
+    if (!buTecladoNativo() && w > BU_CARTAZ_W) w = BU_CARTAZ_W;
+    gfx_escala_sair(old);
+    return w * gfx_poster_k();
+  }
   float w = buPasso() - 22.0f;
   return buTecladoNativo() || w < BU_CARTAZ_W ? w : BU_CARTAZ_W;
 }

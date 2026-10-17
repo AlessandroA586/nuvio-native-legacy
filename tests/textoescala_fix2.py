@@ -130,6 +130,8 @@ static float scale = 1;
 float gfx_poster_k(void) { return 1 / scale; }
 #define BU_CARTAZ_W (180.0f * gfx_poster_k())
 float gfx_escala_txt(void) { return scale; }
+float gfx_escala(void) { return scale; }
+void gfx_escala_sair(float value) { (void)value; }
 int buTelefone(void) { return 0; }
 int buTecladoNativo(void) { return 0; }
 float buPasso(void) { return scale == 1 ? 202 : 171; }
@@ -148,7 +150,7 @@ def proof():
     with tempfile.TemporaryDirectory() as tmp:
         p = pathlib.Path(tmp)
         base, target = p / 'base', p / 'target'
-        base.write_text('T 20\nC 7 1 180 270\nC 8 1 360 203\n')
+        base.write_text('T 20\nR 100 50\nC 7 1 180 270\nC 8 1 360 203\n')
         target.write_text('T 24\nC 7 1 180 270\nC 8 1 432 243.6\n')
         cmd = [sys.executable, str(ROOT / 'tests/textoescala_confere.py'), 'fixture', str(base), str(target), '1.2']
         assert subprocess.run(cmd, capture_output=True).returncode != 0, 'resized landscape accepted'
@@ -156,7 +158,7 @@ def proof():
         assert subprocess.run(cmd, capture_output=True).returncode != 0, 'missing card accepted'
         target.write_text('T 24\nC 7 1 180 270\nC 7 1 180 270\n')
         assert subprocess.run(cmd, capture_output=True).returncode != 0, 'replaced card identity accepted'
-        target.write_text('T 24\nC 7 1 180 270\nC 8 1 360 203\n')
+        target.write_text('T 24\nR 120 60\nC 7 1 180 270\nC 8 1 360 203\n')
         assert subprocess.run(cmd, capture_output=True).returncode == 0, 'preserved cards rejected'
         # Run the actual hash checker used by the shell proof.
         cmd = [sys.executable, str(ROOT / 'tests/textoescala_hashes.py'), str(base), str(target)]

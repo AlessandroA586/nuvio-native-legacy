@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Compare text/button scale and ordered artwork identities, counts and sizes."""
-import statistics
 import sys
 
 
@@ -24,11 +23,15 @@ def compare(name, base, target, factor):
     t0, c0, r0 = read(base)
     t1, c1, r1 = read(target)
     assert t0 and t1, 'no text drawn'
-    ratio = statistics.median(t1) / statistics.median(t0)
-    assert abs(ratio - factor) <= .08, f'text height x{ratio:.3f}, expected {factor}'
-    if r0 and r1:
-        ratio = statistics.median(h for _, h in r1) / statistics.median(h for _, h in r0)
-        assert abs(ratio - factor) <= .12, f'button height x{ratio:.3f}'
+    assert len(t0) == len(t1), f'text draw count changed: {len(t0)} -> {len(t1)}'
+    for index, (before, after) in enumerate(zip(t0, t1)):
+        ratio = after / before
+        assert abs(ratio - factor) <= .08, f'text draw {index} height x{ratio:.3f}, expected {factor}'
+    assert r0 and r1, 'no button draws; component scaling unproven'
+    assert len(r0) == len(r1), f'button draw count changed: {len(r0)} -> {len(r1)}'
+    for index, ((_, before), (_, after)) in enumerate(zip(r0, r1)):
+        ratio = after / before
+        assert abs(ratio - factor) <= .12, f'button draw {index} height x{ratio:.3f}'
     assert len(c0) == len(c1), f'artwork count changed: {len(c0)} -> {len(c1)}'
     for before, after in zip(c0, c1):
         assert before[:2] == after[:2], f'artwork frame/texture changed: {before} -> {after}'

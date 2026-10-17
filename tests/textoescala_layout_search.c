@@ -16,11 +16,44 @@ static void card_draw(GfxRect r, GLuint tex, GfxModo modo, float f, float px,
 static void tile_draw(GfxRect r, float radius, int mode) {
   (void)radius; (void)mode; tile = r;
 }
+#ifdef NV_REV3
+float nv_layout_w = 1920, nv_layout_h = 1080;
+static int mobile;
+static int mobile_mode(void) { return mobile; }
+static int native_keyboard(void) { return mobile; }
+#define NV_TOUCH_UI
+#define layout_modo_mobile mobile_mode
+#define st_ime_disponivel native_keyboard
+#endif
 #define tex_obter_larg art_texture
 #define gfx_rect card_draw
 #define ajustes_ui_ilha tile_draw
 #include "../src/busca.c"
 
+#ifdef NV_REV3
+int test_mobile_rev3(void) {
+  mobile = 1;
+  nv_layout_w = 1080; nv_layout_h = 1920;
+  nFil = 1; sugestao = 0; painel = 0; scrollY = 0;
+  memset(fil, 0, sizeof fil); memset(animRes, 0, sizeof animRes);
+  fil[0].titulo = "Titles"; fil[0].n = 3;
+  for (int i = 0; i < 3; i++) fil[0].itens[i] = i;
+  float widths[2];
+  for (int i = 0; i < 2; i++) {
+    gfx_escala_txt_definir(i ? 1.3f : 1);
+    float old = gfx_escala_txt_entrar();
+    ncards = 0;
+    desenhaResultados(1000);
+    assert(ncards >= 2);
+    widths[i] = cards[0].w * gfx_escala();
+    gfx_escala_sair(old);
+  }
+  int bad = fabsf(widths[0] - widths[1]) > .01f;
+  printf("%s Mobile Search artwork: %.2f -> %.2f\n", bad ? "FAIL" : "PASS", widths[0], widths[1]);
+  mobile = 0; nv_layout_w = 1920; nv_layout_h = 1080;
+  return bad;
+}
+#endif
 int test_search_layout(float scale) {
   float old = gfx_escala_txt_entrar();
   nFil = 2; sugestao = 0; painel = 0; scrollY = 0;
