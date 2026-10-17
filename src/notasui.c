@@ -337,6 +337,8 @@ typedef struct {
   float h, scoreH;             // altura da secao e do resumo
 } Medidas;
 
+static float desenhaCartao(const Medidas *m, float x, float y, float h, float f, float a);
+
 static void medir(const NotasSecao *s, Medidas *m) {
   int pos;
   memset(m, 0, sizeof *m);
@@ -356,6 +358,7 @@ static void medir(const NotasSecao *s, Medidas *m) {
     // MDBList — o "52 de 100 · so uma fonte" da TCL. 208 cabem o numero e a
     // linha "de 100"; com 2+ o resumo cheio volta a precisar da altura toda.
     float minimo = m->nFontes == 1 ? 208.0f : SCORE_MIN_H;
+    if (notasB2()) minimo = fmaxf(minimo, desenhaCartao(m, 0, 0, 0, 0, 0));
     m->scoreH = notasEmpilhadas() ? minimo : fmaxf(hg, minimo);
     m->h = notasEmpilhadas() ? m->scoreH + COL_GAP + hg : m->scoreH;
   }
@@ -395,7 +398,8 @@ static TxtLinha texto(TxtEstilo e, const char *s, int c) {
 static const char *nomeCurto(int f) { return f == EX_METAUSER ? "Metacritic" : nf_nome(f); }
 
 // CARTAO DE NOTA, a esquerda.
-static void desenhaCartao(const Medidas *m, float x, float y, float h, float f, float a) {
+// Alpha zero measures the same text flow without submitting draw commands.
+static float desenhaCartao(const Medidas *m, float x, float y, float h, float f, float a) {
   NfResumo r;
   GfxRect box = { x, y, SCORE_W, h };
   float px = x + 40.0f, py = y + 34.0f, larg = SCORE_W - 80.0f;
@@ -404,14 +408,14 @@ static void desenhaCartao(const Medidas *m, float x, float y, float h, float f, 
   // O foco da secao mora AQUI, no numero grande: os blocos de fonte nao sao
   // paradas do D-pad (o detalhe de cada um ja esta na grade ao lado).
   if (!ajustes_vidro()) foco_anel(box, CARD_RAIO / h, f, a);
-  painel(box, CARD_RAIO, a);
+  if (a > 0) painel(box, CARD_RAIO, a);
   if (f > 0.01f) gfx_cor(box, CARD_RAIO / h, 1, 1, 1, 0.07f * f * a);
-  if (ajustes_vidro()) foco_anel(box, CARD_RAIO / h, f, a);
+  if (ajustes_vidro() && a > 0) foco_anel(box, CARD_RAIO / h, f, a);
   if (r.n == 0) {
     // So a nota agregada do MDBList (ou nenhuma que conte): nada a comparar.
     txt_bloco_corta(TXT_DET_META2, i18n("Só a nota agregada chegou; não há o que comparar."),
                     180, 184, 192, px, py, larg, 32.0f, a, 3);
-    return;
+    return 34.0f + 3.0f * 32.0f + 34.0f;
   }
   // MEDIA grande, com "de 100 / media de N fontes" na linha de base dela.
   { char n[8]; TxtLinha big, l1, l2;
@@ -457,11 +461,11 @@ static void desenhaCartao(const Medidas *m, float x, float y, float h, float f, 
     if (tot < 1.0f) tot = 1.0f;
     wc = (larg - gap) * (float)r.criticos / tot;
     wp = (larg - gap) - wc;
-    gfx_cor((GfxRect){ px, py, wc, 14.0f }, 0.5f, 0.486f, 0.769f, 1.0f, a);          // #7cc4ff
-    gfx_cor((GfxRect){ px + wc + gap, py, wp, 14.0f }, 0.5f, 0.788f, 0.655f, 1.0f, a); // #c9a7ff
+    if (a > 0) gfx_cor((GfxRect){ px, py, wc, 14.0f }, 0.5f, 0.486f, 0.769f, 1.0f, a);          // #7cc4ff
+    if (a > 0) gfx_cor((GfxRect){ px + wc + gap, py, wp, 14.0f }, 0.5f, 0.788f, 0.655f, 1.0f, a); // #c9a7ff
     py += 14.0f + 26.0f;
     // A frase que explica a diferenca, sob um fio.
-    gfx_cor((GfxRect){ px, py, larg, 1.0f }, 0, 1, 1, 1, 0.09f * a);
+    if (a > 0) gfx_cor((GfxRect){ px, py, larg, 1.0f }, 0, 1, 1, 1, 0.09f * a);
     py += 20.0f;
     { int d = r.diff < 0 ? -r.diff : r.diff;
       const char *v;
@@ -478,8 +482,9 @@ static void desenhaCartao(const Medidas *m, float x, float y, float h, float f, 
     { int duas = (float)txt_largura(TXT_ILHA_SUB, buf) > larg;
       float yl = y + h - 34.0f - (duas ? 52.0f : 26.0f);
       if (yl < py + 8.0f) yl = py + 8.0f;
-      txt_bloco_corta(TXT_ILHA_SUB, buf, 140, 144, 152, px, yl, larg, 26.0f, a, 2); }
+      py = yl + txt_bloco_corta(TXT_ILHA_SUB, buf, 140, 144, 152, px, yl, larg, 26.0f, a, 2); }
   }
+  return py - y + 34.0f;
 }
 
 // UM BLOCO DE FONTE. `f` = foco 0..1 (mola de detail.c).

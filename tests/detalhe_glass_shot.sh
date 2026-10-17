@@ -35,7 +35,7 @@ for s in src/*.c src/dts/*.c; do
   fi
   if [ "$s" = src/notasui.c ] && [ "${NUVIO_DETAIL_CHECK:-}" = b2 ]; then
     o="$OBJ/notasui-b2.o"
-    extra="-Dgfx_vidro_painel=b2_panel -Dgfx_luz_canto=b2_tint -Dgfx_cor=b2_color"
+    extra="-Dgfx_vidro_painel=b2_panel -Dgfx_luz_canto=b2_tint -Dgfx_cor=b2_color -Dtxt_desenhar_alpha=b2_text -Dtxt_bloco_corta=b2_block"
     if [ -n "${NUVIO_NOTAS_SOURCE:-}" ]; then
       s="$NUVIO_NOTAS_SOURCE"
       o="$OBJ/notasui-b2-before.o"

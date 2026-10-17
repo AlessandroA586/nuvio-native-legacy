@@ -2192,12 +2192,17 @@ static float serieGrupo(int r) {
   return groups[r];
 }
 
+static GfxRect elencoCartao(float x, float y) {
+  return (GfxRect){ x, y - 14.0f, NV_DETP_EL_W,
+    NV_DETP_EL_AVATAR + NV_DETP_EL_NOME_DY + NV_DETP_EL_PAPEL_DY + 49.0f };
+}
+
 static float alturaSecao(int r) {
   switch (r) {
     case SEC_TEMPORADAS: return NV_DETP_TEMP_H;
     case SEC_EPISODIOS:  return epCardH();
     case SEC_ABAS_INFO:  return NV_DETP_ABA_H;
-    case SEC_ELENCO:     return NV_DETF_EL_ALT;
+    case SEC_ELENCO:     return ajustes_vidro() ? elencoCartao(0, 0).h : NV_DETF_EL_ALT;
     // B2 (glass): trailer title and poster caption live inside the art.
     case SEC_TRAILERS:     return ajustes_vidro() ? NV_DETF_TR_VIDEO_H : NV_DETF_TR_ALT;
     case SEC_RELACIONADOS: return REL_CARD_H + (ajustes_vidro() ? 0.0f : 56.0f);   // cartaz + titulo/ano
@@ -5893,9 +5898,7 @@ static void desenhaElenco(float x, float y, int c, float f, float a) {
     gfx_cor(info, 18.0f / info.h, .19f, .21f, .23f, .6f * f * a);
   }
   // B2: the tile edge sits on the side margin, flush with the row header.
-  cartaoVidro((GfxRect){ x, y - 14.0f, NV_DETP_EL_W,
-                         NV_DETP_EL_AVATAR + NV_DETP_EL_NOME_DY + NV_DETP_EL_PAPEL_DY + 49.0f },
-              f, a);
+  cartaoVidro(elencoCartao(x, y), f, a);
   GfxRect av = { x + (NV_DETP_EL_W-NV_DETP_EL_AVATAR)*.5f, y, NV_DETP_EL_AVATAR, NV_DETP_EL_AVATAR };
   // Foco da Home (focoprof.h): anel so com o ajuste ligado, senao o avatar
   // cresce; a profundidade segue o ajuste de Elenco.
@@ -7184,7 +7187,8 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
 
 #ifdef NV_TOUCH_UI
   if (!(EH_AUD(r) || r == SEC_FRASES || r == SEC_NOTAS || r == SEC_NOTAS_EP || r == SEC_PROGTEMP)) {
-    float fim = 0.0f, topo = fmaxf(0.0f, y), base = fminf(NV_TELA_H, y + alturaSecao(r));
+    float rowY = r == SEC_ELENCO && ajustes_vidro() ? elencoCartao(0, y).y : y;
+    float fim = 0.0f, topo = fmaxf(0.0f, rowY), base = fminf(NV_TELA_H, y + alturaSecao(r));
     for (int i = 0; i < n; i++) fim = fmaxf(fim, xItem(r, i) + larguraItem(r, i));
     toquerol_vincular(&toqueSec[r], (GfxRect){NV_DETP_X, topo, NV_TELA_W - NV_DETP_X * 2, fmaxf(0, base - topo)},
                      gfx_escala(), 0, fim - (NV_TELA_W - NV_DETP_X), 0, &scrollSec[r]);
@@ -7214,7 +7218,8 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
       txt_desenhar_alpha(lc, NV_DETP_X, y - lc.h - NV_DETF_CAB_GAP, a);
     } }
   { float alt = alturaSecao(r);
-    if (y > NV_TELA_H || y + alt < -40.0f) return; }
+    float rowY = r == SEC_ELENCO && ajustes_vidro() ? elencoCartao(0, y).y : y;
+    if (rowY > NV_TELA_H || y + alt < -40.0f) return; }
 
   // O resumo da temporada ESCOLHIDA, acima das pilulas. Depois do culling (ele
   // desenha acima de `y`, dentro da mesma faixa) e antes do laco de colunas,
