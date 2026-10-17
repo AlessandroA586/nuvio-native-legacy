@@ -260,6 +260,8 @@ def contexto(txt, i):
 IGNORAR = {
     "daqui em diante",  # episodios.c nomeModo: so no log [visto] menu, nunca rotulo
     "fechar",  # main.c: nome do evento de janela so no log "[ciclo] janela="
+    # PR #567: motivos so de log ([fonte] lembrada / auto / link guardado).
+    "lancamento sem grupo", "todos os add-ons permitidos responderam", "relogio para tras",
     # video_tpk.c: motivos de cartaoModo()/cartaoEncaixar(), so no log "[video] tpk cartao".
     "cover maior que o painel", "cover sem prova nesta familia", "recorte de fonte",
     # video_tpk.c: motivos de convIniciar/convSondar/convDesistir/convReabrir e o

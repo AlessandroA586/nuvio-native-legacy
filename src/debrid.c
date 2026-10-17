@@ -1527,8 +1527,13 @@ int debrid_tb_link(int usenet, int id, int arquivo, char *url, unsigned n) {
   r = rede_baixar_st(u, 15, cab, &st);
   ok = ok2xx(r, st) && js_texto_raiz(r, "data", url, n) && !strncmp(url, "http", 4);
   if (!ok) {
-    printf("[partes] TorBox requestdl (%s): HTTP %d%s\n", usenet ? "usenet" : "torrent", st,
-           r && debrid_eh_sem_plano(st, r) ? " (conta sem plano para a API)" : "");
+    // O texto do proprio TorBox (sem chave nem URL): "error"/"detail" dizem se
+    // foi o item que sumiu, o plano, ou o servidor (dono, 16/10, log 19).
+    char erro[96] = "", det[160] = "";
+    if (r) { js_texto_raiz(r, "error", erro, sizeof erro); js_texto_raiz(r, "detail", det, sizeof det); }
+    printf("[partes] TorBox requestdl (%s): HTTP %d%s%s%s%s%s\n", usenet ? "usenet" : "torrent", st,
+           r && debrid_eh_sem_plano(st, r) ? " (conta sem plano para a API)" : "",
+           erro[0] ? ", error=" : "", erro, det[0] ? ", detail=" : "", det);
     if (url && n) url[0] = 0;
   }
   free(r);
@@ -1543,7 +1548,12 @@ int debrid_tb_adicionar(const char *hash) {
   snprintf(magnet, sizeof magnet, "magnet:?xt=urn:btih:%s", h);
   r = tbCriarCom(k, magnet, 1, &st);
   tid = ok2xx(r, st) ? (int)js_num(r, NULL, "torrent_id", -1) : -1;
-  if (tid < 0) printf("[partes] TorBox createtorrent (so em cache): HTTP %d\n", st);
+  if (tid < 0) {
+    char erro[96] = "", det[160] = "";
+    if (r) { js_texto_raiz(r, "error", erro, sizeof erro); js_texto_raiz(r, "detail", det, sizeof det); }
+    printf("[partes] TorBox createtorrent (so em cache): HTTP %d%s%s%s%s\n", st,
+           erro[0] ? ", error=" : "", erro, det[0] ? ", detail=" : "", det);
+  }
   free(r);
   return tid;
 }

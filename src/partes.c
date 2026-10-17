@@ -3,6 +3,8 @@
 #include "debrid.h"
 #include "dados.h"
 #include "js.h"
+#include "rede.h"
+#include <unistd.h>
 #include <ctype.h>
 #include <math.h>
 #include <pthread.h>
@@ -130,6 +132,103 @@ static int nomeDeExtra(const char *caminho) {
   return 0;
 }
 
+// O caminho sem a pasta do torrent (o primeiro componente, quando ha pastas):
+// "[KH] Baka and Test S1+S2+OVAs+SP/..." nao pode fazer todo arquivo virar
+// especial por causa do nome do pacote.
+static const char *semRaiz(const char *caminho) {
+  const char *b = strchr(caminho, '/');
+  if (!b) b = strchr(caminho, '\\');
+  return b && b[1] ? b + 1 : caminho;
+}
+// "S00E03", "S0E3", "Season 0", pasta "Specials".
+static int temporadaZero(const char *s) {
+  for (const char *p = s; *p; p++) {
+    if ((p == s || !isalnum((unsigned char)p[-1])) && tolower((unsigned char)p[0]) == 's') {
+      const char *q = p + 1;
+      if (*q == '0') { while (*q == '0') q++; if (tolower((unsigned char)*q) == 'e' && isdigit((unsigned char)q[1])) return 1; }
+    }
+    if (!strncasecmp(p, "season", 6)) {
+      const char *q = p + 6;
+      while (*q == ' ' || *q == '.' || *q == '_' || *q == '-') q++;
+      if (*q == '0' && !isdigit((unsigned char)q[1])) return 1;
+    }
+  }
+  return 0;
+}
+static int nomeDeEspecial(const char *rel) {
+  static const char *w[] = { "ova", "ovas", "oad", "oads", "ona", "sp", "sps", "special", "specials",
+                             "movie", "recap", "picture drama", NULL };
+  for (int i = 0; w[i]; i++) if (temPalavra(rel, w[i])) return 1;
+  return temporadaZero(rel);
+}
+
+static int numeroEm(const char *p, int max, int *usou) {
+  int v = 0, k = 0;
+  while (isdigit((unsigned char)p[k]) && k < 4) v = v * 10 + (p[k++] - '0');
+  *usou = k;
+  return k > 0 && k <= max ? v : -1;
+}
+// TEMPORADA E EPISODIO pelo nome: "S01E05", "1x05", "Season 2/...", "2nd
+// Season", " S2 ", "E05", "EP05", "Episode 5", " - 05" (o jeito dos fansubs).
+void partes_temporada_episodio(const char *nome, int *temporada, int *episodio) {
+  const char *b = nome ? base(nome) : "";
+  int t = 0, e = 0, u;
+  if (temporada) *temporada = 0;
+  if (episodio) *episodio = 0;
+  if (!nome) return;
+  for (const char *p = nome; *p; p++) {
+    int antes = p == nome || !isalnum((unsigned char)p[-1]);
+    if (antes && tolower((unsigned char)*p) == 's' && isdigit((unsigned char)p[1])) {
+      int v = numeroEm(p + 1, 2, &u);
+      const char *q = p + 1 + u;
+      if (v >= 0 && tolower((unsigned char)*q) == 'e' && isdigit((unsigned char)q[1])) {
+        int ep = numeroEm(q + 1, 3, &u);
+        if (ep > 0) { t = v; e = ep; break; }
+      }
+      if (v > 0 && !isalnum((unsigned char)*q) && !t) t = v;
+    }
+    if (antes && isdigit((unsigned char)*p)) {
+      int v = numeroEm(p, 2, &u);
+      const char *q = p + u;
+      if (v > 0 && tolower((unsigned char)*q) == 'x' && isdigit((unsigned char)q[1])) {
+        int ep = numeroEm(q + 1, 3, &u);
+        if (ep > 0 && !isdigit((unsigned char)q[1 + u]) && u >= 2) { t = v; e = ep; break; }
+      }
+      if (v > 0 && (!strncasecmp(q, "st", 2) || !strncasecmp(q, "nd", 2) || !strncasecmp(q, "rd", 2) || !strncasecmp(q, "th", 2))) {
+        const char *r = q + 2;
+        while (*r == ' ' || *r == '.' || *r == '_' || *r == '-') r++;
+        if (!strncasecmp(r, "season", 6) && !t) t = v;
+      }
+    }
+    if (antes && !strncasecmp(p, "season", 6)) {
+      const char *q = p + 6;
+      int v;
+      while (*q == ' ' || *q == '.' || *q == '_' || *q == '-') q++;
+      v = numeroEm(q, 2, &u);
+      if (v > 0 && !t) t = v;
+    }
+  }
+  if (!e) {
+    for (const char *p = b; *p && !e; p++) {
+      int antes = p == b || !isalnum((unsigned char)p[-1]);
+      if (antes && !strncasecmp(p, "episode", 7)) {
+        const char *q = p + 7; while (*q == ' ' || *q == '.' || *q == '_') q++;
+        int v = numeroEm(q, 3, &u); if (v > 0) e = v;
+      } else if (antes && !strncasecmp(p, "ep", 2) && (isdigit((unsigned char)p[2]) || ((p[2] == ' ' || p[2] == '.') && isdigit((unsigned char)p[3])))) {
+        int v = numeroEm(p + (isdigit((unsigned char)p[2]) ? 2 : 3), 3, &u); if (v > 0) e = v;
+      } else if (antes && tolower((unsigned char)*p) == 'e' && isdigit((unsigned char)p[1])) {
+        int v = numeroEm(p + 1, 3, &u); if (v > 0 && !isalnum((unsigned char)p[1 + u])) e = v;
+      } else if (p[0] == ' ' && p[1] == '-' && p[2] == ' ' && isdigit((unsigned char)p[3])) {
+        int v = numeroEm(p + 3, 3, &u);
+        if (v > 0 && !isalnum((unsigned char)p[3 + u]) && p[3 + u] != '.') e = v;
+        else if (v > 0 && p[3 + u] == '.' && !isdigit((unsigned char)p[4 + u])) e = v;   // " - 05.mkv"
+      }
+    }
+  }
+  if (temporada) *temporada = t;
+  if (episodio) *episodio = e;
+}
+
 // ORDEM NATURAL: "2" antes de "10", caixa ignorada.
 static int natural(const char *a, const char *b) {
   while (*a && *b) {
@@ -148,10 +247,14 @@ static int natural(const char *a, const char *b) {
 }
 
 typedef struct { ParteArq a; char caminho[512]; } ArqTmp;
-// As partes primeiro, na ordem natural do caminho; os extras no fim da lista.
+// Episodios, depois especiais, depois extras; dentro de cada um a ordem
+// natural do caminho — e a temporada primeiro quando TODO episodio diz a sua.
+static int ordemPorTemporada;   // sob tmpTrava
 static int cmpArq(const void *x, const void *y) {
   const ArqTmp *a = x, *b = y;
-  if (a->a.extra != b->a.extra) return a->a.extra - b->a.extra;
+  if (a->a.tipo != b->a.tipo) return a->a.tipo - b->a.tipo;
+  if (ordemPorTemporada && a->a.tipo == PARTE_EP && a->a.temporada != b->a.temporada)
+    return a->a.temporada - b->a.temporada;
   return natural(a->caminho, b->caminho);
 }
 
@@ -168,6 +271,9 @@ int partes_ler_item(const char *item, const char *fim, int usenet, PartesLista *
   l->usenet = usenet;
   l->item = (int)numRaiz(item, fim, "id", -1);
   if (l->item <= 0) return 0;
+  { char h[64] = "";
+    if (textoRaiz(item, fim, "hash", h, sizeof h) && strlen(h) == 40)
+      for (int i = 0; i <= 40; i++) l->hash[i] = (char)tolower((unsigned char)h[i]); }
   fa = raiz(item, fim, "files");
   if (!fa || *fa != '[') return 0;
   pthread_mutex_lock(&tmpTrava);
@@ -189,18 +295,31 @@ int partes_ler_item(const char *item, const char *fim, int usenet, PartesLista *
     tmp[n].a.bytes = tam > 0 ? (uint64_t)tam : 0;
     snprintf(tmp[n].a.nome, sizeof tmp[n].a.nome, "%s", curto);
     snprintf(tmp[n].caminho, sizeof tmp[n].caminho, "%s", nome);
-    tmp[n].a.extra = nomeDeExtra(nome);
+    { const char *rel = semRaiz(nome);
+      tmp[n].a.tipo = nomeDeEspecial(rel) ? PARTE_ESPECIAL : nomeDeExtra(rel) ? PARTE_EXTRA : PARTE_EP;
+      partes_temporada_episodio(rel, &tmp[n].a.temporada, &tmp[n].a.episodio); }
     if (tmp[n].a.bytes > maior) maior = tmp[n].a.bytes;
     n++;
   }
   // Bem menor que o maior arquivo (um quinto) tambem e extra: abertura sem
   // creditos, previa, menu. Uma parte de filme nunca e tao menor que a maior.
   // O nome so vale com o tamanho junto: "The Menu (2022).mkv" e o filme, e
-  // nenhum extra tem a metade do tamanho do maior arquivo.
-  for (int i = 0; i < n; i++) {
-    if (maior > 0 && tmp[i].a.bytes * 2 >= maior) tmp[i].a.extra = 0;
-    if (maior > 0 && tmp[i].a.bytes > 0 && tmp[i].a.bytes * 5 < maior) tmp[i].a.extra = 1;
-  }
+  // nenhum extra tem a metade do tamanho do maior arquivo. Especial curto
+  // (SP de 5 min) continua especial.
+  { int eps = 0, todosComTemporada = 1;
+    for (int i = 0; i < n; i++) {
+      ParteArq *a = &tmp[i].a;
+      if (a->tipo == PARTE_EXTRA && maior > 0 && a->bytes * 2 >= maior) a->tipo = PARTE_EP;
+      if (a->tipo == PARTE_EP && maior > 0 && a->bytes > 0 && a->bytes * 5 < maior) a->tipo = PARTE_EXTRA;
+      eps += a->tipo == PARTE_EP;
+    }
+    // Tudo "especial" (um filme cujo nome diz Movie): sao as partes.
+    if (!eps) for (int i = 0; i < n; i++) if (tmp[i].a.tipo == PARTE_ESPECIAL) tmp[i].a.tipo = PARTE_EP;
+    for (int i = 0; i < n; i++) {
+      tmp[i].a.extra = tmp[i].a.tipo != PARTE_EP;
+      if (tmp[i].a.tipo == PARTE_EP && tmp[i].a.temporada <= 0) todosComTemporada = 0;
+    }
+    ordemPorTemporada = todosComTemporada; }
   qsort(tmp, (size_t)n, sizeof tmp[0], cmpArq);
   for (int i = 0; i < n; i++) l->arq[i] = tmp[i].a;
   pthread_mutex_unlock(&tmpTrava);
@@ -209,19 +328,48 @@ int partes_ler_item(const char *item, const char *fim, int usenet, PartesLista *
 }
 
 // O arquivo da fonte dentro da lista: pelo nome (e tamanho, quando ha dois
-// com o mesmo nome em pastas diferentes); sem nome, o maior.
+// com o mesmo nome em pastas diferentes), pelo tamanho exato, pelo numero do
+// episodio do nome da fonte; sem nada disso, o maior so num item de um video
+// principal (num pacote, "o maior" e um episodio qualquer).
 static int arquivoDaFonte(const PartesLista *l, const char *arquivo, uint64_t bytes) {
-  int achou = -1, maior = -1;
+  int achou = -1, maior = -1, eps = 0, t = 0, e = 0;
   const char *b = arquivo && *arquivo ? base(arquivo) : "";
   for (int i = 0; i < l->n; i++) {
     if (b[0] && !strcasecmp(l->arq[i].nome, b)) {
       if (achou < 0 || (bytes && l->arq[i].bytes == bytes)) achou = i;
     }
     if (maior < 0 || l->arq[i].bytes > l->arq[maior].bytes) maior = i;
+    eps += !l->arq[i].extra;
   }
   if (achou < 0 && bytes)
     for (int i = 0; i < l->n && achou < 0; i++) if (l->arq[i].bytes == bytes) achou = i;
-  return achou >= 0 ? achou : maior;
+  if (achou < 0 && b[0]) {
+    partes_temporada_episodio(b, &t, &e);
+    for (int i = 0; e > 0 && i < l->n && achou < 0; i++)
+      if (l->arq[i].tipo == PARTE_EP && l->arq[i].episodio == e && (!t || !l->arq[i].temporada || l->arq[i].temporada == t))
+        achou = i;
+  }
+  if (achou >= 0) return achou;
+  return eps <= 1 || !b[0] ? maior : -1;
+}
+// O item tem um VIDEO deste tamanho exato?
+static int itemTemTamanho(const char *item, const char *fim, uint64_t bytes) {
+  const char *fa = raiz(item, fim, "files"), *el;
+  if (!fa || *fa != '[' || !bytes) return 0;
+  el = fa + 1;
+  while (el < fim && isspace((unsigned char)*el)) el++;
+  for (; el && el < fim && *el == '{'; el = js_prox(js_fim(el))) {
+    const char *ef = js_fim(el);
+    char curto[PARTES_NOME] = "", nome[512] = "";
+    double tm = numRaiz(el, ef, "size", 0);
+    if (tm <= 0 || (uint64_t)tm != bytes) continue;
+    if (!textoRaiz(el, ef, "short_name", curto, sizeof curto) || !curto[0]) {
+      textoRaiz(el, ef, "name", nome, sizeof nome);
+      snprintf(curto, sizeof curto, "%s", base(nome));
+    }
+    if (ehVideo(curto)) return 1;
+  }
+  return 0;
 }
 
 // O item tem um VIDEO com este nome (e, sabendo, este tamanho)?
@@ -327,14 +475,6 @@ static void grupoDoArquivo(const char *arquivo, char *d, size_t n) {
   g[f - b - 1] = 0;
   partes_normalizar(g, d, n);
 }
-// O arquivo de nome igual ao da fonte, ou -1 (no achado pelo titulo, a marca
-// "Arquivo do addon" so vale se o arquivo for mesmo o da fonte).
-static int arquivoPorNome(const PartesLista *l, const char *arquivo) {
-  const char *b = arquivo && *arquivo ? base(arquivo) : "";
-  for (int i = 0; b[0] && i < l->n; i++) if (!strcasecmp(l->arq[i].nome, b)) return i;
-  return -1;
-}
-
 int partes_achar_n(const char *corpo, int usenet, char hashes[][41], int nHashes,
                    int hashesConfiaveis, const char *arquivo, uint64_t bytes, PartesLista *l, int *itens) {
   return partes_achar_t(corpo, usenet, hashes, nHashes, hashesConfiaveis, arquivo, bytes, NULL, l, itens);
@@ -364,6 +504,7 @@ int partes_achar_t(const char *corpo, int usenet, char hashes[][41], int nHashes
       if (!partes_ler_item(v[k].ini, v[k].fim, usenet, l)) break;
       l->atual = arquivoDaFonte(l, arquivo, bytes);
       snprintf(l->como, sizeof l->como, "%s", i / 2 == 0 && hashesConfiaveis ? "hash" : "link hash");
+      l->exato = 1;
       achou = 1;
     }
   }
@@ -393,57 +534,185 @@ int partes_achar_t(const char *corpo, int usenet, char hashes[][41], int nHashes
       }
     }
   }
-  // 3) PELO NOME DO TITULO (dono, 16/10: "devia achar pela pasta principal").
-  //    A fonte na folha pode ser de outro lancamento, sem hash no link e com
-  //    outro nome de arquivo, e mesmo assim o titulo estar na conta — o
-  //    pacote de Baka and Test da Koten_Gars estava la. Candidatos: itens cujo
-  //    nome (a pasta, ou o arquivo unico) contem o titulo inteiro ou a parte
-  //    antes de ":". Vence o do mesmo grupo da fonte, depois o titulo inteiro,
-  //    depois o que tem mais videos, depois o mais novo (o TorBox lista os mais
-  //    novos primeiro).
-  if (!achou && titulo && *titulo) {
-    char tInteiro[256], tPrincipal[256], grp[96], nome[512], nn[600];
-    static PartesLista cand;   // so o fio da busca usa (fioTrava)
-    int melhorK = -1, melhorPts = -1, nCand = 0, melhorGrupo = 0;
-    const char *dois = strchr(titulo, ':');
-    partes_normalizar(titulo, tInteiro, sizeof tInteiro);
-    if (dois) {
-      char pre[256];
-      snprintf(pre, sizeof pre, "%.*s", (int)(dois - titulo), titulo);
-      partes_normalizar(pre, tPrincipal, sizeof tPrincipal);
-    } else snprintf(tPrincipal, sizeof tPrincipal, "%s", tInteiro);
-    grupoDoArquivo(arquivo, grp, sizeof grp);
-    // Titulo curto demais ("up", "it") casaria com qualquer coisa.
-    if (strlen(tPrincipal) >= 6) {
-      for (int k = 0; k < n; k++) {
-        int pts, inteiro, doGrupo;
-        if (!textoRaiz(v[k].ini, v[k].fim, "name", nome, sizeof nome)) continue;
-        partes_normalizar(nome, nn, sizeof nn);
-        inteiro = strstr(nn, tInteiro) != NULL;
-        if (!inteiro && !strstr(nn, tPrincipal)) continue;
-        if (!partes_ler_item(v[k].ini, v[k].fim, usenet, &cand)) continue;
-        nCand++;
-        doGrupo = grp[0] && strstr(nn, grp) != NULL;
-        pts = doGrupo * 100000 + inteiro * 10000 + (cand.n > 9999 ? 9999 : cand.n);
-        if (pts > melhorPts) { melhorPts = pts; melhorK = k; melhorGrupo = doGrupo; }
-      }
-    }
-    if (melhorK >= 0 && partes_ler_item(v[melhorK].ini, v[melhorK].fim, usenet, l)) {
-      l->atual = arquivoPorNome(l, arquivo);
-      snprintf(l->como, sizeof l->como, "%s", melhorGrupo ? "title + group" : "title");
-      textoRaiz(v[melhorK].ini, v[melhorK].fim, "name", nome, sizeof nome);
-      printf("[partes] title match \"%.*s\": %d torrent(s) with it, picked \"%.120s\" (%d video file(s)%s)\n",
-             (int)strlen(tPrincipal) - 2, tPrincipal + 1, nCand, nome, l->n,
-             melhorGrupo ? ", same release group" : "");
+  // 4) TAMANHO EXATO do arquivo (videoSize do addon) num video de algum item:
+  //    num arquivo de varios GB, o mesmo numero de bytes e o mesmo arquivo.
+  if (!achou && bytes > 1024ULL * 1024 * 50) {
+    char num[32];
+    snprintf(num, sizeof num, "%llu", (unsigned long long)bytes);
+    for (const char *p = strstr(corpo, num); p && !achou; p = strstr(p + 1, num)) {
+      int k = vaoDe(v, n, p);
+      if (isdigit((unsigned char)p[strlen(num)]) || (p > corpo && isdigit((unsigned char)p[-1]))) continue;
+      if (k < 0 || !itemTemTamanho(v[k].ini, v[k].fim, bytes)) continue;
+      if (!partes_ler_item(v[k].ini, v[k].fim, usenet, l)) continue;
+      l->atual = arquivoDaFonte(l, arquivo, bytes);
+      snprintf(l->como, sizeof l->como, "size");
       achou = 1;
     }
   }
+  // O titulo NAO escolhe sozinho (dono, 16/10: [Prof] no lugar de
+  // [Koten_Gars]): ele so alimenta a lista de copias (partes_copias).
+  (void)titulo;
   free(v);
   return achou;
 }
 int partes_achar(const char *corpo, int usenet, char hashes[][41], int nHashes,
                  int hashesConfiaveis, const char *arquivo, uint64_t bytes, PartesLista *l) {
   return partes_achar_n(corpo, usenet, hashes, nHashes, hashesConfiaveis, arquivo, bytes, l, NULL);
+}
+
+// ---------------------------------------------------------------- copias
+//
+// SMART DETECT POR PONTOS (dono, 16/10, a tela do AIOStreams: tamanho,
+// resolucao, qualidade, codec, grupo, edicao, audio, canais, idiomas). Cada
+// copia do titulo na conta ganha pontos pelo que concorda com a fonte e perde
+// pelo que discorda; temporada e tamanho do episodio pesam quase como veto.
+typedef struct { int res, codec, bits10, audio, origem, dual; } Atrib;
+static void atributos(const char *texto, Atrib *a) {
+  char n[1400];
+  memset(a, 0, sizeof *a);
+  partes_normalizar(texto, n, sizeof n);
+  if (strstr(n, "2160") || strstr(n, " 4k ") || strstr(n, " uhd ")) a->res = 2160;
+  else if (strstr(n, "1080")) a->res = 1080;
+  else if (strstr(n, "720p") || strstr(n, " 720 ")) a->res = 720;
+  else if (strstr(n, "480p") || strstr(n, "576p")) a->res = 480;
+  if (strstr(n, "x265") || strstr(n, "h265") || strstr(n, " h 265 ") || strstr(n, "hevc")) a->codec = 2;
+  else if (strstr(n, "x264") || strstr(n, "h264") || strstr(n, " h 264 ") || strstr(n, " avc ")) a->codec = 1;
+  else if (strstr(n, " av1 ")) a->codec = 3;
+  if (strstr(n, "10bit") || strstr(n, " 10 bit ") || strstr(n, "hi10")) a->bits10 = 1;
+  if (strstr(n, "eac3") || strstr(n, " ddp") || strstr(n, " dd ")) a->audio = 4;
+  else if (strstr(n, "truehd")) a->audio = 7;
+  else if (strstr(n, "flac")) a->audio = 1;
+  else if (strstr(n, " dts")) a->audio = 5;
+  else if (strstr(n, " ac3 ")) a->audio = 3;
+  else if (strstr(n, " opus ")) a->audio = 6;
+  else if (strstr(n, " aac")) a->audio = 2;
+  if (strstr(n, "remux") || strstr(n, "bluray") || strstr(n, " blu ray ") || strstr(n, "bdrip") || strstr(n, " bd ") ||
+      strstr(n, " bdmv ")) a->origem = 1;
+  else if (strstr(n, " web") || strstr(n, "webrip")) a->origem = 2;
+  else if (strstr(n, " dvd")) a->origem = 3;
+  if (strstr(n, " dual ") || strstr(n, " multi ")) a->dual = 1;
+}
+static const char *nomeCodec(int c) { return c == 2 ? "x265" : c == 1 ? "x264" : c == 3 ? "AV1" : ""; }
+static const char *nomeAudio(int c) {
+  static const char *t[] = { "", "FLAC", "AAC", "AC3", "E-AC3", "DTS", "Opus", "TrueHD" };
+  return c >= 0 && c < 8 ? t[c] : "";
+}
+static void porqueMais(char *d, size_t n, const char *w) {
+  size_t k = strlen(d);
+  if (k + strlen(w) + 3 < n) snprintf(d + k, n - k, "%s%s", k ? ", " : "", w);
+}
+// O arquivo deste episodio numa copia: pelo numero (e temporada), senao o de
+// tamanho mais perto, senao o maior episodio.
+static int arquivoDoEpisodio(const PartesLista *c, int t, int e, uint64_t bytes) {
+  int melhor = -1;
+  if (e > 0)
+    for (int i = 0; i < c->n; i++)
+      if (c->arq[i].tipo == PARTE_EP && c->arq[i].episodio == e && (!t || !c->arq[i].temporada || c->arq[i].temporada == t))
+        { if (melhor < 0 || (t && c->arq[i].temporada == t && c->arq[melhor].temporada != t)) melhor = i; }
+  if (melhor >= 0) return melhor;
+  for (int i = 0; i < c->n; i++) {
+    if (c->arq[i].tipo != PARTE_EP) continue;
+    if (melhor < 0) { melhor = i; continue; }
+    if (bytes) {
+      uint64_t da = c->arq[i].bytes > bytes ? c->arq[i].bytes - bytes : bytes - c->arq[i].bytes;
+      uint64_t db = c->arq[melhor].bytes > bytes ? c->arq[melhor].bytes - bytes : bytes - c->arq[melhor].bytes;
+      if (da < db) melhor = i;
+    } else if (c->arq[i].bytes > c->arq[melhor].bytes) melhor = i;
+  }
+  return melhor;
+}
+
+int partes_copias(const char *corpo, const char *titulo, const char *arquivo, uint64_t bytes,
+                  const char *fonteTexto, PartesLista *l) {
+  static PartesLista cand;           // grande: so o fio da busca usa (fioTrava)
+  static pthread_mutex_t candTrava = PTHREAD_MUTEX_INITIALIZER;
+  char tInteiro[256], tPrincipal[256], grp[96], nome[512], nn[600], txt[1400];
+  const char *dois;
+  Vao *v = NULL;
+  int n, srcT = 0, srcE = 0, novos = 0;
+  Atrib fa;
+  if (!corpo || !titulo || !*titulo || !l) return 0;
+  dois = strchr(titulo, ':');
+  partes_normalizar(titulo, tInteiro, sizeof tInteiro);
+  if (dois) {
+    char pre[256];
+    snprintf(pre, sizeof pre, "%.*s", (int)(dois - titulo), titulo);
+    partes_normalizar(pre, tPrincipal, sizeof tPrincipal);
+  } else snprintf(tPrincipal, sizeof tPrincipal, "%s", tInteiro);
+  // Titulo curto demais ("up", "it") casaria com qualquer coisa.
+  if (strlen(tPrincipal) < 6) return 0;
+  grupoDoArquivo(arquivo, grp, sizeof grp);
+  partes_temporada_episodio(arquivo ? base(arquivo) : "", &srcT, &srcE);
+  atributos(fonteTexto ? fonteTexto : arquivo, &fa);
+  n = itensDoCorpo(corpo, &v);
+  pthread_mutex_lock(&candTrava);
+  for (int k = 0; k < n; k++) {
+    int pts = 0, f, temTemp = 0, mesmaTemp = 0, j, pior;
+    ParteCopia cp;
+    Atrib ca;
+    if (!textoRaiz(v[k].ini, v[k].fim, "name", nome, sizeof nome)) continue;
+    partes_normalizar(nome, nn, sizeof nn);
+    if (!strstr(nn, tInteiro) && !strstr(nn, tPrincipal)) continue;
+    if (!partes_ler_item(v[k].ini, v[k].fim, 0, &cand)) continue;
+    memset(&cp, 0, sizeof cp);
+    cp.item = cand.item;
+    snprintf(cp.nome, sizeof cp.nome, "%s", nome);
+    for (int i = 0; i < cand.n; i++) cp.nArq += cand.arq[i].tipo == PARTE_EP;
+    f = arquivoDoEpisodio(&cand, srcT, srcE, bytes);
+    if (f >= 0) { cp.epBytes = cand.arq[f].bytes; cp.temporada = cand.arq[f].temporada; }
+    // Tamanho do episodio contra o do addon.
+    if (bytes && cp.epBytes) {
+      double r = cp.epBytes > bytes ? (double)(cp.epBytes - bytes) / (double)bytes : (double)(bytes - cp.epBytes) / (double)bytes;
+      if (r < .002) { pts += 600; cp.tamanho = 2; }
+      else if (r < .02) { pts += 300; cp.tamanho = 1; }
+      else if (r < .10) pts += 100;
+      else if (r > .50) pts -= 400;
+      else pts -= 150;
+    }
+    // Temporada.
+    for (int i = 0; i < cand.n; i++) if (cand.arq[i].temporada) { temTemp = 1; if (cand.arq[i].temporada == srcT) mesmaTemp = 1; }
+    if (srcT) {
+      if (f >= 0 && cand.arq[f].temporada == srcT) pts += 150;
+      else if (mesmaTemp) pts += 60;
+      else if (temTemp) pts -= 400;
+    }
+    // Grupo do lancamento.
+    if (grp[0] && (strstr(nn, grp) || (f >= 0 && (partes_normalizar(cand.arq[f].nome, txt, sizeof txt), strstr(txt, grp))))) {
+      pts += 200; cp.grupo = 1;
+    }
+    // Resolucao, codec, 10 bits, audio, origem, dual.
+    snprintf(txt, sizeof txt, "%s %s", nome, f >= 0 ? cand.arq[f].nome : "");
+    atributos(txt, &ca);
+    if (fa.res && ca.res) pts += fa.res == ca.res ? 60 : -80;
+    if (fa.codec && ca.codec) pts += fa.codec == ca.codec ? 50 : -50;
+    if (fa.bits10 != ca.bits10 && (fa.codec || ca.codec)) pts -= 20;
+    if (fa.audio && ca.audio) pts += fa.audio == ca.audio ? 50 : -50;
+    if (fa.origem && ca.origem) pts += fa.origem == ca.origem ? 30 : -30;
+    if (fa.dual && ca.dual) pts += 20;
+    if (ca.res) { char r[12]; snprintf(r, sizeof r, "%dp", ca.res); porqueMais(cp.porque, sizeof cp.porque, r); }
+    if (ca.codec) porqueMais(cp.porque, sizeof cp.porque, nomeCodec(ca.codec));
+    if (ca.audio) porqueMais(cp.porque, sizeof cp.porque, nomeAudio(ca.audio));
+    // O nome com o titulo inteiro desempata, nada mais.
+    if (strstr(nn, tInteiro)) pts += 5;
+    cp.pontos = pts;
+    // Entra na lista (sem repetir o item), mantendo as PARTES_COPIAS melhores.
+    for (j = 0; j < l->nCopias; j++) if (l->copias[j].item == cp.item) break;
+    if (j < l->nCopias) { if (cp.pontos > l->copias[j].pontos) l->copias[j] = cp; continue; }
+    if (l->nCopias < PARTES_COPIAS) { l->copias[l->nCopias++] = cp; novos++; continue; }
+    pior = 0;
+    for (j = 1; j < l->nCopias; j++) if (l->copias[j].pontos < l->copias[pior].pontos) pior = j;
+    if (cp.pontos > l->copias[pior].pontos) { l->copias[pior] = cp; novos++; }
+  }
+  pthread_mutex_unlock(&candTrava);
+  free(v);
+  // Melhor primeiro.
+  for (int a = 1; a < l->nCopias; a++) {
+    ParteCopia t = l->copias[a];
+    int b = a - 1;
+    while (b >= 0 && l->copias[b].pontos < t.pontos) { l->copias[b + 1] = l->copias[b]; b--; }
+    l->copias[b + 1] = t;
+  }
+  return novos;
 }
 
 int partes_principais(const PartesLista *l) {
@@ -488,13 +757,19 @@ int partes_conta_virtual(const PartesLista *l, int k, double pos, double dur, do
 
 typedef struct {
   char url[4096];
+  char cab[512];      // cabecalhos que o addon exige (para abrir o link)
   char arquivo[512];
   char hash[48];
   char titulo[256];
   char chave[160];
+  char casa[400];     // a chave da copia lembrada (sem URL)
+  char texto[1400];   // arquivo + rotulo + descricao: os atributos da fonte
   uint64_t bytes;
   unsigned geracao;
   int cedo;   // partes_pedir_cedo: so a pagina 1 da memoria, sem rede
+  int item;   // partes_pedir_item: abre este item (Escolher outra copia)
+  int nCopias;
+  ParteCopia copias[PARTES_COPIAS];
 } PedidoLista;
 
 static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
@@ -528,6 +803,77 @@ static void memoGuardarSemTrava(const char *ch, const PartesLista *l) {
   memo[i].l = *l;
 }
 
+static void memoTirarItem(int item) {
+  pthread_mutex_lock(&trava);
+  for (int i = 0; i < PARTES_MEMO; i++) if (memo[i].chave[0] && memo[i].l.item == item) memo[i].chave[0] = 0;
+  pthread_mutex_unlock(&trava);
+}
+
+// AS COPIAS CONFIRMADAS (disco): "<fonte>\t<hash do item>\t<quando>". A fonte
+// e o addon + o nome do arquivo + o tamanho (nunca a URL). Hash, o passo que
+// adicionou pelo link e "Escolher outra copia" gravam; o proximo segurar acha
+// a mesma copia pelo hash dela.
+#define CASA_LINHA 480
+static char (*casas)[CASA_LINHA];
+static int nCasas, casasLidas;
+static pthread_mutex_t casaTrava = PTHREAD_MUTEX_INITIALIZER;
+static void casaChave(const Stream *s, char *d, size_t n) {
+  const char *b = base(s->arquivo);
+  snprintf(d, n, "%.80s|%.200s|%llu", s->provedor, b[0] ? b : s->rotulo, (unsigned long long)s->tamanhoBytes);
+  for (char *c = d; *c; c++) if (*c == '\t' || *c == '\n' || *c == '\r') *c = ' ';
+}
+static void casasLer(void) {
+  char *t, *l, *ctx = NULL;
+  casasLidas = 1; nCasas = 0;
+  if (!casas) casas = calloc(PARTES_CASA_MAX, CASA_LINHA);
+  if (!casas || !(t = dados_ler(PARTES_CASA_ARQUIVO))) return;
+  for (l = strtok_r(t, "\n", &ctx); l && nCasas < PARTES_CASA_MAX; l = strtok_r(NULL, "\n", &ctx))
+    if (strchr(l, '\t') && strlen(l) < CASA_LINHA) snprintf(casas[nCasas++], CASA_LINHA, "%s", l);
+  free(t);
+}
+static void casasGravar(void) {
+  size_t tam = (size_t)nCasas * (CASA_LINHA + 1) + 1, k = 0;
+  char *b = malloc(tam);
+  if (!b) return;
+  b[0] = 0;
+  for (int i = 0; i < nCasas; i++) k += (size_t)snprintf(b + k, tam - k, "%s\n", casas[i]);
+  dados_gravar(PARTES_CASA_ARQUIVO, b);
+  free(b);
+}
+static int casaAchar(const char *ch) {
+  size_t L = strlen(ch);
+  for (int i = 0; i < nCasas; i++) if (!strncmp(casas[i], ch, L) && casas[i][L] == '\t') return i;
+  return -1;
+}
+static int casaPegar(const char *ch, char hash[41]) {
+  int i, ok = 0;
+  if (!ch[0]) return 0;
+  pthread_mutex_lock(&casaTrava);
+  if (!casasLidas) casasLer();
+  if (casas && (i = casaAchar(ch)) >= 0) {
+    const char *h = casas[i] + strlen(ch) + 1;
+    if (strlen(h) >= 40) { memcpy(hash, h, 40); hash[40] = 0; ok = 1; }
+  }
+  pthread_mutex_unlock(&casaTrava);
+  return ok;
+}
+static void casaGuardar(const char *ch, const char *hash, const char *porque) {
+  int i;
+  if (!ch[0] || !hash || strlen(hash) != 40) return;
+  pthread_mutex_lock(&casaTrava);
+  if (!casasLidas) casasLer();
+  if (casas) {
+    if ((i = casaAchar(ch)) >= 0 && !strncmp(casas[i] + strlen(ch) + 1, hash, 40)) { pthread_mutex_unlock(&casaTrava); return; }
+    if (i >= 0) { memmove(casas[i], casas[i + 1], (size_t)(nCasas - i - 1) * CASA_LINHA); nCasas--; }
+    if (nCasas == PARTES_CASA_MAX) { memmove(casas[0], casas[1], (size_t)(nCasas - 1) * CASA_LINHA); nCasas--; }
+    snprintf(casas[nCasas++], CASA_LINHA, "%s\t%s\t%lld", ch, hash, (long long)time(NULL));
+    casasGravar();
+    printf("[partes] remembered this copy for the source (%s)\n", porque);
+    fflush(stdout);
+  }
+  pthread_mutex_unlock(&casaTrava);
+}
+
 static void publicar(const PedidoLista *pd, const PartesLista *l) {
   pthread_mutex_lock(&trava);
   if (l->estado == PARTES_PRONTO) memoGuardarSemTrava(pd->chave, l);
@@ -558,8 +904,12 @@ static unsigned msAgora(void) {
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (unsigned)((unsigned long long)ts.tv_sec * 1000ULL + (unsigned long long)ts.tv_nsec / 1000000ULL);
 }
+// Fresca da memoria so com menos de 10 s (dono, 16/10, log 19: uma lista
+// vazia lida logo depois de esvaziar a conta respondia "nao achou em 0 ms").
+#define LISTA_FRESCA_MS 10000u
 static char *copiaCache(ListaCache *c, int fresco, int *st) {
-  if (!c->corpo || msAgora() - c->em >= LISTA_VALIDADE_MS || (fresco && !c->fresco)) return NULL;
+  if (!c->corpo || msAgora() - c->em >= LISTA_VALIDADE_MS || (fresco && (!c->fresco || msAgora() - c->em >= LISTA_FRESCA_MS)))
+    return NULL;
   if (st) *st = c->st;
   return strdup(c->corpo);
 }
@@ -618,6 +968,59 @@ void partes_aquecer(void) {
   if (pthread_create(&t, NULL, fioAquecer, NULL) == 0) pthread_detach(t);
 }
 
+// O corpo de um mylist?id=: o item (objeto, ou o primeiro de uma lista).
+static const char *itemDoCorpo(const char *r) {
+  const char *d = r ? strstr(r, "\"data\"") : NULL;
+  if (d) { d = strchr(d + 6, ':'); if (d) { d++; while (isspace((unsigned char)*d)) d++; } }
+  if (d && *d == '[') { d++; while (isspace((unsigned char)*d)) d++; }
+  return d && *d == '{' ? d : NULL;
+}
+// download_state/active do item (o TorBox apaga itens parados; log 19).
+static void logEstadoItem(const char *item, const char *porque) {
+  char ds[48] = "";
+  const char *f = item ? js_fim(item) : NULL;
+  const char *a = item ? raiz(item, f, "active") : NULL;
+  if (!item) return;
+  textoRaiz(item, f, "download_state", ds, sizeof ds);
+  printf("[partes] %s: TorBox item state=%s active=%s\n", porque, ds[0] ? ds : "?",
+         a ? (!strncmp(a, "true", 4) ? "yes" : !strncmp(a, "false", 5) ? "no" : "?") : "?");
+  fflush(stdout);
+}
+// A copia lembrada (so o hash dela; o arquivo da fonte e achado depois).
+static int acharLembrado(const char *corpo, char lembrado[][41], const PedidoLista *pd, uint64_t bytes, PartesLista *l) {
+  static PartesLista t;   // fioTrava
+  if (!partes_achar(corpo, 0, lembrado, 1, 0, NULL, 0, &t)) return 0;
+  *l = t;
+  l->atual = arquivoDaFonte(l, pd->arquivo, bytes);
+  l->exato = 0;
+  snprintf(l->como, sizeof l->como, "remembered");
+  return 1;
+}
+// "Escolher outra copia": le o item escolhido, acha nele o arquivo da fonte e
+// lembra a escolha.
+static void abrirItem(PedidoLista *pd, PartesLista *l) {
+  int st = 0;
+  unsigned t0 = msAgora();
+  char *r = debrid_tb_mylist(0, pd->item, 0, 1, &st);
+  const char *d = itemDoCorpo(r);
+  memset(l, 0, sizeof *l);
+  l->atual = -1;
+  if (d && partes_ler_item(d, js_fim(d), 0, l)) {
+    l->atual = arquivoDaFonte(l, pd->arquivo, pd->bytes);
+    l->estado = PARTES_PRONTO;
+    snprintf(l->como, sizeof l->como, "chosen");
+    l->nCopias = pd->nCopias;
+    memcpy(l->copias, pd->copias, sizeof l->copias);
+    casaGuardar(pd->casa, l->hash, "chosen in Choose another copy");
+    logEstadoItem(d, "chosen copy");
+  } else l->estado = st >= 200 && st < 300 ? PARTES_NAO_ACHOU : PARTES_ERRO;
+  printf("[partes] chosen copy (TorBox torrent %d): %s in %u ms, %d video file(s), the add-on's file is %d\n", pd->item,
+         l->estado == PARTES_PRONTO ? "read" : "not readable", msAgora() - t0, l->n, l->atual + 1);
+  fflush(stdout);
+  free(r);
+  publicar(pd, l);
+}
+
 static void *fioLista(void *u) {
   PedidoLista *pd = u;
   static PartesLista l;   // grande demais para a pilha dos fios do Tizen
@@ -655,7 +1058,8 @@ static void *fioLista(void *u) {
         nh = 1; confiavel = 1;
       }
       nh += partes_hashes_texto(pd->url, hashes + nh, 9 - nh);
-      if (partes_achar_t(r, 0, hashes, nh, confiavel, pd->arquivo, pd->bytes, pd->titulo, &l, NULL)) {
+      // So o hash responde cedo: o resto precisa das copias (busca inteira).
+      if (partes_achar_t(r, 0, hashes, nh, confiavel, pd->arquivo, pd->bytes, pd->titulo, &l, NULL) && l.exato) {
         l.estado = PARTES_PRONTO;
         publicar(pd, &l);
       }
@@ -663,6 +1067,7 @@ static void *fioLista(void *u) {
     }
     goto fim;
   }
+  if (pd->item > 0) { abrirItem(pd, &l); goto fim; }
   if (pd->hash[0] && strlen(pd->hash) == 40) {
     for (int i = 0; i < 40; i++) hashes[0][i] = (char)tolower((unsigned char)pd->hash[i]);
     hashes[0][40] = 0;
@@ -670,49 +1075,128 @@ static void *fioLista(void *u) {
   }
   nh += partes_hashes_texto(pd->url, hashes + nh, 9 - nh);
   {
-    int achou = 0, st = 0, mem = 0, fresco0 = 0, itens = 0, paginas = 0;
+    static PartesLista cop;   // so as copias (fioTrava)
+    char lembrado[1][41];
+    int temLembrado = casaPegar(pd->casa, lembrado[0]);
+    int achou = 0, st = 0, mem = 0, fresco0 = 0, itens = 0, paginas = 0, pelaLista = 0;
+    uint64_t bytes = pd->bytes;
     char *r;
+    cop.nCopias = 0;
     // 1) os torrents da conta, pagina por pagina (MEDIDO na TV, 16/10: a
     //    primeira pagina de uma conta com mais de 1000 itens nao tinha o pacote
     //    de Baka and Test, que estava na conta). Ate 10 paginas. So torrents:
-    //    usenet nao entra (dono, 16/10).
+    //    usenet nao entra (dono, 16/10). Em cada pagina: hash, a copia lembrada,
+    //    nome do arquivo, tamanho exato; e as copias do titulo para a escolha.
     for (int pg = 0; pg < 10 && !achou; pg++) {
       int m = 0;
       r = listaConta(0, pg, 0, &st, &m);
       if (pg == 0) mem = m;
       itens = 0;
-      if (r) achou = partes_achar_t(r, 0, hashes, nh, confiavel, pd->arquivo, pd->bytes, pd->titulo, &l, &itens);
+      if (r) achou = partes_achar_t(r, 0, hashes, nh, confiavel, pd->arquivo, bytes, pd->titulo, &l, &itens);
+      if (r && (!achou || !l.exato) && temLembrado && acharLembrado(r, lembrado, pd, bytes, &l)) achou = 1;
+      if (r && !achou) partes_copias(r, pd->titulo, pd->arquivo, bytes, pd->texto, &cop);
       free(r);
       paginas++;
       if (!r || itens < DEBRID_TB_PAGINA) break;
     }
-    // 3) a de torrents FRESCA: o addon pode ter posto o torrent na conta agora
+    // 2) a de torrents FRESCA: o addon pode ter posto o torrent na conta agora
     //    (a copia em cache do TorBox atrasa). Os novos ficam na primeira pagina.
     if (!achou) {
       fresco0 = 1;
       r = listaConta(0, 0, 1, &st, NULL);
-      if (r) achou = partes_achar_t(r, 0, hashes, nh, confiavel, pd->arquivo, pd->bytes, pd->titulo, &l, NULL);
+      if (r) achou = partes_achar_t(r, 0, hashes, nh, confiavel, pd->arquivo, bytes, pd->titulo, &l, NULL);
+      if (r && (!achou || !l.exato) && temLembrado && acharLembrado(r, lembrado, pd, bytes, &l)) achou = 1;
+      if (r && !achou) partes_copias(r, pd->titulo, pd->arquivo, bytes, pd->texto, &cop);
       free(r);
     }
-    // 4) fora da conta: com um hash (do addon, ou o do link, que o NMR poe no
+    // 3) fora da conta: com um hash (do addon, ou o do link, que o NMR poe no
     //    caminho), o TorBox poe o torrent na conta SO se ele ja estiver em cache.
     if (!achou && nh > 0) {
       int id = debrid_tb_adicionar(hashes[0]);
       if (id > 0) {
         listaEsquecer();
         r = debrid_tb_mylist(0, id, 0, 1, &st);
-        if (r && partes_achar(r, 0, hashes, 1, confiavel, pd->arquivo, pd->bytes, &l)) {
-          achou = 1;
+        if (r && partes_achar(r, 0, hashes, 1, confiavel, pd->arquivo, bytes, &l)) {
+          achou = 1; l.exato = 1;
           snprintf(l.como, sizeof l.como, "added");
         }
         free(r);
       }
     }
+    // 4) FORA DA CONTA, SEM HASH (dono, 16/10, log 16: o pacote [KH] so casou
+    //    depois de tocar a fonte, que o pos na conta): abre o link do addon
+    //    como o Play abre — o addon pede ao TorBox, o torrent entra na conta —
+    //    e le a pagina 1 fresca, com o tamanho exato que o link responde.
+    if (!achou && (!strncmp(pd->url, "http://", 7) || !strncmp(pd->url, "https://", 8))) {
+      static PartesLista aviso;   // fioTrava; grande demais para a pilha
+      long n = 0; int stl = 0, cross = 0;
+      int64_t total = -1;
+      unsigned t1 = msAgora();
+      char *fin = malloc(8192);
+      unsigned char *b;
+      memset(&aviso, 0, sizeof aviso);
+      aviso.estado = PARTES_ADICIONANDO; aviso.atual = -1;
+      publicar(pd, &aviso);
+      if (fin) fin[0] = 0;
+      b = (unsigned char *)rede_baixar_trecho64_final(pd->url, pd->cab, 0, 0, &n, &total, &stl, NULL, fin, &cross);
+      free(b); free(fin);
+      printf("[partes] not in your TorBox list: opened the add-on link the way Play does (HTTP %d, file %lld bytes, %u ms)\n",
+             stl, (long long)total, msAgora() - t1);
+      fflush(stdout);
+      if (!bytes && total > 1024LL * 1024 * 50) bytes = (uint64_t)total;
+      if (stl == 206 || stl == 200) {
+        static const unsigned espera[3] = { 1200, 2500, 4000 };
+        for (int t = 0; t < 3 && !achou; t++) {
+          usleep(espera[t] * 1000u);
+          listaEsquecer();
+          r = listaConta(0, 0, 1, &st, NULL);
+          if (r) achou = partes_achar_t(r, 0, hashes, nh, confiavel, pd->arquivo, bytes, pd->titulo, &l, NULL);
+          if (r && !achou && t == 2) partes_copias(r, pd->titulo, pd->arquivo, bytes, pd->texto, &cop);
+          free(r);
+        }
+        if (achou) {
+          pelaLista = 1;
+          { char c[24]; snprintf(c, sizeof c, "link + %s", l.como); snprintf(l.como, sizeof l.como, "%s", c); }
+        }
+      }
+    }
+    // 5) MELHOR COPIA, so com prova forte: tamanho do episodio a 2% (ou o
+    //    mesmo), o mesmo grupo quando a fonte diz um, e bem a frente da segunda.
+    if (!achou && cop.nCopias > 0) {
+      const ParteCopia *c0 = &cop.copias[0];
+      char grp[96];
+      grupoDoArquivo(pd->arquivo, grp, sizeof grp);
+      if (c0->tamanho >= 1 && (!grp[0] || c0->grupo) &&
+          (cop.nCopias == 1 || c0->pontos - cop.copias[1].pontos >= 150)) {
+        const char *d;
+        r = debrid_tb_mylist(0, c0->item, 0, 1, &st);
+        d = itemDoCorpo(r);
+        if (d && partes_ler_item(d, js_fim(d), 0, &l)) {
+          l.atual = arquivoDaFonte(&l, pd->arquivo, bytes);
+          achou = 1;
+        }
+        if (achou) { l.exato = 0; snprintf(l.como, sizeof l.como, "best match"); }
+        free(r);
+      }
+    }
     if (achou) {
       l.estado = PARTES_PRONTO;
+      if (!l.exato) {
+        l.nCopias = cop.nCopias;
+        memcpy(l.copias, cop.copias, sizeof l.copias);
+      }
+      if (l.exato || pelaLista) casaGuardar(pd->casa, l.hash, l.exato ? "hash" : "added by its link");
       printf("[partes] files of the source: found in TorBox in %u ms (%s, by %s%s): %d video file(s), %d part(s); "
-             "the add-on's file is %d (0 = not in it)\n", msAgora() - t0, l.usenet ? "usenet" : "torrent", l.como,
-             mem ? ", list from memory" : "", l.n, partes_principais(&l), l.atual + 1);
+             "the add-on's file is %d (0 = not in it); %d other cop%s\n", msAgora() - t0, l.usenet ? "usenet" : "torrent", l.como,
+             mem ? ", list from memory" : "", l.n, partes_principais(&l), l.atual + 1, l.nCopias, l.nCopias == 1 ? "y" : "ies");
+    } else if (cop.nCopias > 0) {
+      memset(&l, 0, sizeof l);
+      l.atual = -1;
+      l.estado = PARTES_ESCOLHER;
+      l.nCopias = cop.nCopias;
+      memcpy(l.copias, cop.copias, sizeof l.copias);
+      printf("[partes] files of the source: no sure match after %u ms; %d cop%s of the title to choose from\n",
+             msAgora() - t0, l.nCopias, l.nCopias == 1 ? "y" : "ies");
     } else {
       // A lista de torrents nem veio (rede, 4xx/5xx): e erro, nao "nao achou".
       l.estado = st >= 200 && st < 300 ? PARTES_NAO_ACHOU : PARTES_ERRO;
@@ -720,6 +1204,11 @@ static void *fioLista(void *u) {
              "hash from add-on %s, %d hash(es) in the link, filename %s)\n", msAgora() - t0, paginas,
              st, fresco0 ? " fresh" : "", confiavel ? "yes" : "no", nh - confiavel, pd->arquivo[0] ? "yes" : "no");
     }
+    for (int i = 0; i < l.nCopias && i < 6; i++)
+      printf("[partes]   copy %d: %d pts%s%s, episode file %.2f GB, season %d, %d episode(s) [%s] \"%.90s\"\n", i + 1,
+             l.copias[i].pontos, l.copias[i].tamanho == 2 ? ", same size" : l.copias[i].tamanho ? ", size within 2%" : "",
+             l.copias[i].grupo ? ", same group" : "", (double)l.copias[i].epBytes / 1073741824.0, l.copias[i].temporada,
+             l.copias[i].nArq, l.copias[i].porque, l.copias[i].nome);
     fflush(stdout);
     publicar(pd, &l);
   }
@@ -733,6 +1222,9 @@ static PedidoLista *novoPedido(const Stream *s, const char *titulo, const char *
   PedidoLista *pd = calloc(1, sizeof *pd);
   if (!pd) return NULL;
   snprintf(pd->url, sizeof pd->url, "%s", s->url);
+  snprintf(pd->cab, sizeof pd->cab, "%s", s->cabecalhos);
+  snprintf(pd->texto, sizeof pd->texto, "%s\n%s\n%s", s->arquivo, s->rotulo, s->descricao);
+  casaChave(s, pd->casa, sizeof pd->casa);
   snprintf(pd->arquivo, sizeof pd->arquivo, "%s", s->arquivo);
   snprintf(pd->hash, sizeof pd->hash, "%s", s->hashTorrent[0] ? s->hashTorrent : s->infoHash);
   snprintf(pd->titulo, sizeof pd->titulo, "%s", titulo ? titulo : "");
@@ -797,6 +1289,39 @@ void partes_pedir_cedo(const Stream *s, const char *titulo) {
   pthread_detach(t);
 }
 
+void partes_pedir_item(const Stream *s, int item) {
+  PedidoLista *pd;
+  pthread_t t;
+  char ch[160];
+  if (!s || item <= 0) return;
+  chaveFonte(s, ch, sizeof ch);
+  pd = novoPedido(s, NULL, ch);
+  if (!pd) return;
+  pd->item = item;
+  pthread_mutex_lock(&trava);
+  pd->nCopias = ultima.nCopias;
+  memcpy(pd->copias, ultima.copias, sizeof pd->copias);
+  geracaoLista++;
+  pd->geracao = geracaoLista;
+  memset(&ultima, 0, sizeof ultima);
+  ultima.estado = PARTES_BUSCANDO;
+  ultima.atual = -1;
+  ultima.nCopias = pd->nCopias;
+  memcpy(ultima.copias, pd->copias, sizeof ultima.copias);
+  snprintf(chaveUltima, sizeof chaveUltima, "%s", ch);
+  pthread_mutex_unlock(&trava);
+  printf("[partes] Choose another copy: TorBox torrent %d\n", item);
+  fflush(stdout);
+  if (pthread_create(&t, NULL, fioLista, pd) != 0) {
+    free(pd);
+    pthread_mutex_lock(&trava);
+    ultima.estado = PARTES_ERRO;
+    pthread_mutex_unlock(&trava);
+    return;
+  }
+  pthread_detach(t);
+}
+
 int partes_resultado_de(const Stream *s, PartesLista *l) {
   char ch[160];
   int e;
@@ -858,9 +1383,13 @@ static void *fioLink(void *u) {
       snprintf(l.como, sizeof l.como, "saved");
     }
     if (!ok) printf("[partes] saved part: the TorBox item or file is gone (HTTP %d)\n", st);
+    else logEstadoItem(itemDoCorpo(r), "saved part");
     free(r);
   }
   if (ok) ok = debrid_tb_link(pd->usenet, pd->item, pd->arquivo, url, sizeof url);
+  // Falhou: a lista na memoria e a do item podem estar velhas (o item sumiu
+  // da conta); o proximo segurar le de novo.
+  if (!ok) { listaEsquecer(); memoTirarItem(pd->item); }
   pthread_mutex_lock(&trava);
   if (pd->geracao == geracaoLink) {
     linkEstado = ok ? 1 : -1;

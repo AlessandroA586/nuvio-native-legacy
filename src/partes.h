@@ -6,13 +6,28 @@
 // (folha de Fontes) abre "Arquivos desta fonte": os videos do item na conta
 // TorBox da pessoa, na ordem do torrent. Escolher um toca aquele arquivo.
 //
-// ACHAR O ITEM DA FONTE NO TORBOX, nesta ordem (o log diz qual serviu):
-//   1. o hash que o addon mandou (infoHash / clientResolve.infoHash);
-//   2. o nome do arquivo (behaviorHints.filename) num arquivo de algum item;
-//   3. um hash de 40 hex dentro do link do addon (MediaFusion poe o hash no
-//      caminho) — so comparado com os hashes da conta, nunca enviado.
-// Nao achou e o addon mandou o hash: o torrent entra na conta SO se ja estiver
-// em cache no TorBox (o mesmo que o addon faz ao tocar).
+// ACHAR O ITEM DA FONTE NO TORBOX (dono, 16/10: "nunca mostrar arquivo de
+// outro lancamento"; o log diz qual passo serviu):
+//   1. HASH: o do addon (infoHash / clientResolve.infoHash) ou 40 hex no link.
+//      Vence tudo e e o unico caso sem "Escolher outra copia".
+//   2. LEMBRADO: a copia que a pessoa ja confirmou para esta fonte (disco).
+//   3. NOME DO ARQUIVO (behaviorHints.filename) num arquivo de algum item; com
+//      o tamanho do addon (videoSize), so o item cujo arquivo tem esse tamanho.
+//   4. TAMANHO EXATO do arquivo (videoSize) num arquivo de algum item.
+//   5. FORA DA CONTA: abre o link do addon como o Play abre (o TorBox poe o
+//      torrent na conta), le a pagina 1 fresca e tenta 3 e 4 de novo, com o
+//      tamanho que o link responde. A modal diz "Adicionando ao seu TorBox…".
+//   6. NENHUM: as copias do titulo na conta (pelo nome) viram a lista "Escolha
+//      uma copia", em ordem de pontos (estilo smart detect do AIOStreams:
+//      tamanho do episodio, temporada, grupo, resolucao, codec, audio, origem);
+//      o titulo nunca escolhe sozinho, salvo grupo + temporada + tamanho a 2%.
+// Com o hash do addon e fora da conta: o torrent entra SO se ja estiver em
+// cache no TorBox (o mesmo que o addon faz ao tocar).
+//
+// AS ABAS: Episodios (com separador por temporada; "Partes" num filme),
+// Especiais (OVA/OAD/ONA/SP/S00/Movie/Recap) e Extras (NCOP/NCED/menu/PV/CM/
+// trailer/sample, ou bem menor que os episodios). A sequencia de partes e o
+// autoplay andam so pela primeira.
 //
 // O FILME EM PARTES: tocando um arquivo da lista que tem duas partes ou mais
 // (extras como NCOP/NCED/sample ficam de fora da sequencia), a SESSAO DE
@@ -31,7 +46,10 @@
 #include <stdint.h>
 #include "streams.h"
 
-#define PARTES_MAX 64
+#define PARTES_MAX 160
+#define PARTES_COPIAS 12
+#define PARTES_CASA_ARQUIVO "partescasa.txt"
+#define PARTES_CASA_MAX 200
 #define PARTES_NOME 192
 #define PARTES_ARQUIVO "partes.txt"
 #define PARTES_GUARDADAS 50
@@ -41,15 +59,34 @@
 
 enum {
   PARTES_VAZIO = 0, PARTES_BUSCANDO, PARTES_PRONTO,
-  PARTES_SEM_CHAVE, PARTES_SEM_PLANO, PARTES_NAO_ACHOU, PARTES_ERRO
+  PARTES_SEM_CHAVE, PARTES_SEM_PLANO, PARTES_NAO_ACHOU, PARTES_ERRO,
+  PARTES_ADICIONANDO,      // abrindo o link do addon para o TorBox por na conta
+  PARTES_ESCOLHER          // sem casamento certo: a lista de copias (copias[])
 };
+enum { PARTE_EP = 0, PARTE_ESPECIAL = 1, PARTE_EXTRA = 2 };
 
 typedef struct {
   int id;                  // file_id do TorBox
   char nome[PARTES_NOME];  // so o nome, sem as pastas
   uint64_t bytes;
-  int extra;               // NCOP/NCED/sample/trailer ou bem menor que o maior
+  int extra;               // fora da sequencia: tipo != PARTE_EP
+  int tipo;                // PARTE_EP / PARTE_ESPECIAL / PARTE_EXTRA
+  int temporada;           // 0 = o nome nao diz
+  int episodio;            // 0 = o nome nao diz
 } ParteArq;
+
+// Uma copia do titulo na conta, para "Escolher outra copia".
+typedef struct {
+  int item;
+  char nome[160];          // o nome do item (a pasta do torrent)
+  uint64_t epBytes;        // o arquivo deste episodio nela (0 = nao achou)
+  int nArq;                // videos
+  int temporada;           // do arquivo do episodio (0 = nao diz)
+  int pontos;
+  int tamanho;             // 2 = mesmo tamanho do arquivo do addon, 1 = a menos de 2%
+  int grupo;               // mesmo grupo do lancamento
+  char porque[72];         // resolucao, codec, audio da copia ("1080p, x264, FLAC")
+} ParteCopia;
 
 typedef struct {
   int estado;              // PARTES_*
@@ -58,7 +95,11 @@ typedef struct {
   int n;
   ParteArq arq[PARTES_MAX];   // so videos, na ordem natural do caminho
   int atual;               // o arquivo que a fonte toca (-1 = nao se sabe)
-  char como[24];           // "hash", "filename", "link hash", "added"
+  char como[24];           // "hash", "filename", "link hash", "added", "size", "remembered", "chosen"
+  int exato;               // casou por hash: sem "Escolher outra copia"
+  char hash[41];           // o hash do item no TorBox (minusculas), para lembrar a copia
+  int nCopias;
+  ParteCopia copias[PARTES_COPIAS];   // as copias do titulo, melhor primeiro
 } PartesLista;
 
 // ---- puro (testes) --------------------------------------------------------
@@ -80,6 +121,12 @@ int  partes_achar_n(const char *corpo, int usenet, char hashes[][41], int nHashe
 int  partes_achar_t(const char *corpo, int usenet, char hashes[][41], int nHashes,
                     int hashesConfiaveis, const char *arquivo, uint64_t bytes, const char *titulo,
                     PartesLista *l, int *itens);
+// Pontua as copias do titulo no corpo (puro, testes): preenche l->copias.
+// `fonteTexto` = nome do arquivo + rotulo + descricao da fonte. Devolve quantas.
+int  partes_copias(const char *corpo, const char *titulo, const char *arquivo, uint64_t bytes,
+                   const char *fonteTexto, PartesLista *l);
+// Temporada e episodio no nome de um arquivo (0 = nao diz).
+void partes_temporada_episodio(const char *nome, int *temporada, int *episodio);
 // Texto para comparar nomes: " palavra palavra " em minusculas (ver partes.c).
 void partes_normalizar(const char *s, char *d, size_t n);
 // Quantas partes de verdade (nao extras) a lista tem.
@@ -103,6 +150,9 @@ void partes_pedir(const Stream *fonte, const char *titulo);
 // O OK afundou numa fonte: procura so na pagina 1 ja lida, sem rede e sem
 // mudar o que a modal mostra; achou, o segurar responde da memoria.
 void partes_pedir_cedo(const Stream *fonte, const char *titulo);
+// "Escolher outra copia": abre o item `item` como a lista desta fonte e lembra
+// a escolha (disco) para os proximos segurares.
+void partes_pedir_item(const Stream *fonte, int item);
 // Copia o estado da ultima busca. Devolve l->estado.
 int  partes_resultado(PartesLista *l);
 // O mesmo, so se a ultima busca for DESTA fonte (PARTES_VAZIO se nao for).

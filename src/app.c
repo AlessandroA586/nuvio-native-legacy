@@ -2737,10 +2737,11 @@ static void vigiarPartes(void) {
       }
       if (parteAutoEsperando) {
         int e = partes_resultado_de(fs, &l);
-        if (e == PARTES_BUSCANDO) return;
+        if (e == PARTES_BUSCANDO || e == PARTES_ADICIONANDO) return;
         parteAutoEsperando = 0;
+        // So com o arquivo que toca achado de verdade (nunca a "melhor copia").
         if (e != PARTES_PRONTO || !fs || strcmp(parteAutoUrl, video_url_atual()) || video_falhou() ||
-            l.atual < 0 || l.arq[l.atual].extra || partes_principais(&l) < 2) return;
+            l.atual < 0 || l.arq[l.atual].extra || partes_principais(&l) < 2 || !strcmp(l.como, "best match")) return;
         alvoPlayer(alvo, sizeof alvo);
         partes_sessao_iniciar(alvo, &l, l.atual);
         if (!partes_sessao_de(alvo)) return;

@@ -4219,6 +4219,15 @@ static unsigned ptEscolhaGeracao;
 static PartesLista ptEscolhaL;
 #define PT_LINHA_H 84.0f
 #define PT_JAN_H   440.0f
+// AS LINHAS DA MODAL (dono, 16/10): "Escolher outra copia" no topo (menos num
+// casamento por hash), os arquivos da aba (Episodios com separador por
+// temporada / Especiais / Extras), ou a lista de copias do titulo.
+enum { PR_ESCOLHER = 0, PR_TEMPORADA, PR_ARQ, PR_COPIA };
+typedef struct { int tipo, idx; float y, h; } PtLinha;
+#define PT_LINHAS (PARTES_MAX + PARTES_COPIAS + 48)
+static PtLinha ptLinhas[PT_LINHAS];
+static int ptNLinhas, ptAba, ptCopias, ptSemCopias;
+static int ptAbaTipos[3], ptNAbas;
 
 static int linhaAceitaPartes(int i) {
   return partes_disponivel() && !canalFolha && i >= 0 && i < n &&
@@ -4226,6 +4235,7 @@ static int linhaAceitaPartes(int i) {
 }
 static void partesAbrirPainel(int i) {
   ptAberto = 1; ptFonte = i; ptFoco = 0; ptFocoPosto = 0; ptRol = ptRolAlvo = 0; ptDesde = SDL_GetTicks();
+  ptAba = 0; ptCopias = 0; ptSemCopias = 0; ptNLinhas = 0;
   memset(&ptL, 0, sizeof ptL);
   ptL.estado = PARTES_BUSCANDO; ptL.atual = -1;
   nv_limpar_texto(lista[i].provedor, ptProv, sizeof ptProv, NV_LIMPA_UMA_LINHA);
@@ -4253,29 +4263,106 @@ static int ptTocando(void) {
   }
   return ptFonte == atual && player_aberto() ? ptL.atual : -1;
 }
+static int ptSelecionavel(int r) { return r >= 0 && r < ptNLinhas && ptLinhas[r].tipo != PR_TEMPORADA; }
+static int ptCopiasVisiveis(void) { return ptCopias || ptL.estado == PARTES_ESCOLHER; }
+// As abas que existem nesta lista (so as que tem arquivo).
+static void ptAbas(void) {
+  int tem[3] = {0, 0, 0};
+  ptNAbas = 0;
+  for (int i = 0; i < ptL.n; i++) if (ptL.arq[i].tipo >= 0 && ptL.arq[i].tipo < 3) tem[ptL.arq[i].tipo] = 1;
+  for (int t = 0; t < 3; t++) if (tem[t]) ptAbaTipos[ptNAbas++] = t;
+  if (ptAba >= ptNAbas) ptAba = ptNAbas > 0 ? ptNAbas - 1 : 0;
+}
+// Monta as linhas do que a modal mostra agora.
+static void ptMontar(void) {
+  float y = 0;
+  ptNLinhas = 0;
+  if (ptCopiasVisiveis()) {
+    for (int c = 0; c < ptL.nCopias && ptNLinhas < PT_LINHAS; c++) {
+      ptLinhas[ptNLinhas] = (PtLinha){PR_COPIA, c, y, PT_LINHA_H}; y += PT_LINHA_H; ptNLinhas++;
+    }
+    return;
+  }
+  if (ptL.estado != PARTES_PRONTO || ptL.n <= 0) return;
+  ptAbas();
+  if (!ptL.exato) { ptLinhas[ptNLinhas++] = (PtLinha){PR_ESCOLHER, 0, y, 64.0f}; y += 64.0f; }
+  { int tipo = ptNAbas ? ptAbaTipos[ptAba] : PARTE_EP, temps = 0, ult = -1, ultT = -999;
+    // Separador de temporada so com duas ou mais temporadas nos episodios.
+    if (tipo == PARTE_EP)
+      for (int i = 0; i < ptL.n; i++)
+        if (ptL.arq[i].tipo == PARTE_EP && ptL.arq[i].temporada != ult) { if (ptL.arq[i].temporada > 0) temps++; ult = ptL.arq[i].temporada; }
+    for (int i = 0; i < ptL.n && ptNLinhas < PT_LINHAS - 1; i++) {
+      if (ptL.arq[i].tipo != tipo) continue;
+      if (temps >= 2 && ptL.arq[i].temporada != ultT) {
+        ultT = ptL.arq[i].temporada;
+        ptLinhas[ptNLinhas++] = (PtLinha){PR_TEMPORADA, ultT, y, 46.0f}; y += 46.0f;
+      }
+      ptLinhas[ptNLinhas++] = (PtLinha){PR_ARQ, i, y, PT_LINHA_H}; y += PT_LINHA_H;
+    }
+  }
+}
+static int ptLinhaDoArquivo(int k) {
+  for (int r = 0; r < ptNLinhas; r++) if (ptLinhas[r].tipo == PR_ARQ && ptLinhas[r].idx == k) return r;
+  return -1;
+}
+static int ptPrimeira(void) { for (int r = 0; r < ptNLinhas; r++) if (ptSelecionavel(r)) return r; return 0; }
+static void ptIrAba(int d) {
+  if (ptNAbas < 2) return;
+  ptAba = (ptAba + d + ptNAbas) % ptNAbas;
+  ptMontar();
+  ptFoco = 0;
+  // Abre no primeiro arquivo da aba (a linha "Escolher outra copia" fica em cima).
+  for (int r = 0; r < ptNLinhas; r++) if (ptLinhas[r].tipo == PR_ARQ) { ptFoco = r; break; }
+  ptRolAlvo = 0;
+}
 static int partesEvento(const SDL_Event *e) {
   SDL_Keycode k;
   if (!ptAberto) return 0;
   if (e->type != SDL_KEYDOWN) return 1;
   k = e->key.keysym.sym;
   if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE || k == SDLK_DELETE) {
+    // Nas copias abertas pela linha "Escolher outra copia": volta aos arquivos.
+    if (ptCopias && ptL.estado == PARTES_PRONTO) { ptCopias = 0; ptMontar(); ptFoco = ptPrimeira(); ptRolAlvo = 0; return 1; }
+    if (ptSemCopias) { ptSemCopias = 0; return 1; }
     ptAberto = 0; partes_cancelar(); return 1;
   }
   // O OK segurado que abriu a modal continua repetindo: nao e escolha.
   if (e->key.repeat && (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE)) return 1;
-  if (ptL.estado != PARTES_PRONTO || ptL.n <= 0) {
-    if (k == SDLK_RETURN || k == SDLK_KP_ENTER) ptAberto = 0;
+  ptMontar();
+  if (ptNLinhas <= 0) {
+    if (k == SDLK_RETURN || k == SDLK_KP_ENTER) { if (ptSemCopias) ptSemCopias = 0; else ptAberto = 0; }
     return 1;
   }
-  if (k == SDLK_UP && ptFoco > 0) ptFoco--;
-  else if (k == SDLK_DOWN && ptFoco < ptL.n - 1) ptFoco++;
-  else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
-    ptEscolhaFonte = ptFonte; ptEscolhaK = ptFoco; ptEscolhaL = ptL;
-    ptEscolhaGeracao = listaGeracao;
-    printf("[partes] file %d of %d picked in the files list (%s)\n", ptFoco + 1, ptL.n,
-           ptL.arq[ptFoco].extra ? "extra" : "part");
-    fflush(stdout);
-    ptAberto = 0; aberta = 0;
+  if (k == SDLK_UP) { int r = ptFoco - 1; while (r >= 0 && !ptSelecionavel(r)) r--; if (r >= 0) ptFoco = r; }
+  else if (k == SDLK_DOWN) { int r = ptFoco + 1; while (r < ptNLinhas && !ptSelecionavel(r)) r++; if (r < ptNLinhas) ptFoco = r; }
+  else if (k == SDLK_LEFT && !ptCopiasVisiveis()) ptIrAba(-1);
+  else if (k == SDLK_RIGHT && !ptCopiasVisiveis()) ptIrAba(1);
+  else if ((k == SDLK_RETURN || k == SDLK_KP_ENTER) && ptSelecionavel(ptFoco)) {
+    const PtLinha *ln = &ptLinhas[ptFoco];
+    if (ln->tipo == PR_ESCOLHER) {
+      if (ptL.nCopias <= 0) { ptSemCopias = 1; return 1; }
+      ptCopias = 1; ptMontar(); ptFoco = 0; ptRolAlvo = 0;
+      for (int c = 0; c < ptL.nCopias; c++) if (ptL.copias[c].item == ptL.item) { ptFoco = c; break; }
+      printf("[partes] Choose another copy: %d cop%s listed\n", ptL.nCopias, ptL.nCopias == 1 ? "y" : "ies");
+      fflush(stdout);
+    } else if (ln->tipo == PR_COPIA) {
+      const ParteCopia *c = &ptL.copias[ln->idx];
+      if (ptFonte >= 0 && ptFonte < n) {
+        printf("[partes] copy %d picked (%d pts): TorBox torrent %d\n", ln->idx + 1, c->pontos, c->item);
+        fflush(stdout);
+        partes_pedir_item(&lista[ptFonte], c->item);
+        ptCopias = 0; ptFocoPosto = 0; ptDesde = SDL_GetTicks(); ptAba = 0; ptRolAlvo = 0;
+        memset(&ptL, 0, sizeof ptL); ptL.estado = PARTES_BUSCANDO; ptL.atual = -1;
+      }
+    } else if (ln->tipo == PR_ARQ) {
+      int f = ln->idx;
+      ptEscolhaFonte = ptFonte; ptEscolhaK = f; ptEscolhaL = ptL;
+      ptEscolhaGeracao = listaGeracao;
+      printf("[partes] file %d of %d picked in the files list (%s)\n", f + 1, ptL.n,
+             ptL.arq[f].tipo == PARTE_EP ? "part" : ptL.arq[f].tipo == PARTE_ESPECIAL ? "special" : "extra");
+      fflush(stdout);
+      ptAberto = 0; aberta = 0;
+    }
   }
   return 1;
 }
@@ -4413,15 +4500,27 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
   if(!aberta) { detAberto=0; if (ptAberto) partes_cancelar(); ptAberto=0; ctxhold_cancelar(&folhaHold); }
   ptAnim=anim_mola(ptAnim,ptAberto?1:0,dt,NV_MOLA_TELA);
   if (ptAberto) {
-    if (partes_resultado(&ptL) == PARTES_PRONTO && !ptFocoPosto) {
-      int t = ptTocando();
-      ptFoco = t >= 0 ? t : ptL.atual >= 0 ? ptL.atual : 0;
+    int e = partes_resultado(&ptL);
+    if (e == PARTES_PRONTO && !ptFocoPosto) {
+      // Abre na aba e na linha do arquivo que toca (ou o da fonte).
+      int t = ptTocando(), f = t >= 0 ? t : ptL.atual;
+      ptAba = 0; ptCopias = 0;
+      ptAbas();
+      if (f >= 0 && f < ptL.n) for (int a2 = 0; a2 < ptNAbas; a2++) if (ptAbaTipos[a2] == ptL.arq[f].tipo) ptAba = a2;
+      ptMontar();
+      ptFoco = f >= 0 ? ptLinhaDoArquivo(f) : -1;
+      if (ptFoco < 0) { ptFoco = ptPrimeira(); for (int r = 0; r < ptNLinhas; r++) if (ptLinhas[r].tipo == PR_ARQ) { ptFoco = r; break; } }
       ptFocoPosto = 1;
-    }
-    if (ptFoco >= ptL.n) ptFoco = ptL.n > 0 ? ptL.n - 1 : 0;
-    { float alvo = ptRolAlvo, topo = ptFoco * PT_LINHA_H, jan = PT_JAN_H - 60.0f;
+    } else if (e == PARTES_ESCOLHER && !ptFocoPosto) { ptMontar(); ptFoco = 0; ptFocoPosto = 1; }
+    ptMontar();
+    if (ptFoco >= ptNLinhas) ptFoco = ptNLinhas > 0 ? ptNLinhas - 1 : 0;
+    { float alvo = ptRolAlvo, jan = PT_JAN_H - 60.0f;
+      float topo = ptNLinhas ? ptLinhas[ptFoco].y : 0, lh = ptNLinhas ? ptLinhas[ptFoco].h : PT_LINHA_H;
+      // O separador logo acima da linha focada aparece junto.
+      if (ptFoco > 0 && ptLinhas[ptFoco - 1].tipo == PR_TEMPORADA) topo = ptLinhas[ptFoco - 1].y;
+      float fundo = ptNLinhas ? ptLinhas[ptFoco].y + lh : lh;
       if (topo < alvo) alvo = topo;
-      if (topo + PT_LINHA_H > alvo + jan) alvo = topo + PT_LINHA_H - jan;
+      if (fundo > alvo + jan) alvo = fundo - jan;
       if (alvo < 0) alvo = 0;
       ptRolAlvo = alvo;
       float d = ptRolAlvo - ptRol;
@@ -4838,22 +4937,40 @@ static void desenhaDetalhe(float x, float w, int ptr) {
 // "PARTE 2" (ou "EXTRA") e a marca no acento em cima, o nome do arquivo
 // embaixo, o tamanho na coluna da direita.
 static const char *ptMensagem(void) {
+  if (ptSemCopias) return "Nenhuma outra cópia deste título no seu TorBox";
   switch (ptL.estado) {
     case PARTES_BUSCANDO:  // a busca segue no fundo; a modal nao espera para sempre
       return SDL_GetTicks() - ptDesde > 45000u ? "O TorBox não respondeu. Tente de novo." : "Procurando os arquivos no TorBox…";
+    case PARTES_ADICIONANDO:
+      return SDL_GetTicks() - ptDesde > 60000u ? "O TorBox não respondeu. Tente de novo." : "Adicionando ao seu TorBox…";
     case PARTES_SEM_CHAVE: return "Para ver os arquivos, adicione sua chave do TorBox em Ajustes > Integrações > Debrid";
     case PARTES_SEM_PLANO: return "Sua conta TorBox não permite uso pela API";
     case PARTES_NAO_ACHOU: return "Esta fonte não foi achada na sua conta TorBox";
-    case PARTES_PRONTO:    return ptL.n > 0 ? NULL : "Esta fonte não foi achada na sua conta TorBox";
+    case PARTES_ESCOLHER:  return ptL.nCopias > 0 ? NULL : "Esta fonte não foi achada na sua conta TorBox";
+    case PARTES_PRONTO:    return ptL.n > 0 || ptCopias ? NULL : "Esta fonte não foi achada na sua conta TorBox";
     default:               return "O TorBox não respondeu. Tente de novo.";
   }
+}
+// O tamanho em GB a direita da linha, como na folha.
+static void ptTamanho(uint64_t bytes, int sel, float ix, float iw, float ry, float a) {
+  TxtLinha lg, lu;
+  char gb[24];
+  int cg = sel ? 250 : 218;
+  if (!bytes) return;
+  snprintf(gb, sizeof gb, bytes >= (uint64_t)100 << 30 ? "%.0f" : "%.1f", (double)bytes / 1073741824.0);
+  plrui_decimal(gb);
+  lg = txt_linha(TXT_CW_TITULO, gb, cg, cg, cg - 2, 255);
+  lu = txt_linha(TXT_PG_FIM, "GB", 120, 120, 118, 255);
+  txt_desenhar_alpha(lu, ix + iw - lu.w, ry + 14 + (lg.h - lu.h) - 3, a);
+  txt_desenhar_alpha(lg, ix + iw - lu.w - 6 - lg.w, ry + 14, a);
 }
 static void desenhaPartes(float x, float w, int ptr, Uint32 agora) {
   float a = ptAnim;
   const char *msg;
+  int copias;
   if (a < .01f) return;
   float ar, ag, ab; ajustes_acento(&ar, &ag, &ab);
-  int ai = (int)(ar * 255.0f + .5f);
+  int ai = (int)(ar * 255.0f + .5f), agi = (int)(ag * 255), abi = (int)(ab * 255);
   float cw = w - 96.0f, ch = PT_JAN_H + 150.0f;
   float cx = x + (w - cw) * .5f, cy = (NV_TELA_H - ch) * .5f + (1.0f - a) * 16.0f;
   float pad = 40.0f, ix = cx + pad, iw = cw - 2 * pad;
@@ -4863,14 +4980,31 @@ static void desenhaPartes(float x, float w, int ptr, Uint32 agora) {
     ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ponteiroPartesFora, 0, 0);
     ponteiro_alvo(cx, cy, cw, ch, NULL, NULL, 0, 0);
   }
+  ptMontar();
+  copias = ptCopiasVisiveis();
+  msg = ptMensagem();
   float y = cy + 34.0f;
-  plrui_kicker("Arquivos desta fonte", ix, y, 243, 242, 239, a * .45f);
+  plrui_kicker(copias ? "Escolha uma cópia" : "Arquivos desta fonte", ix, y, 243, 242, 239, a * .45f);
   y += 34.0f;
-  if (ptProv[0])
-    txt_desenhar_alpha(txt_linha_corta(TXT_PAINEL_ITEM, ptProv, ai, (int)(ag * 255), (int)(ab * 255), 255, iw), ix, y, a);
+  // A linha de baixo do titulo: o addon; com abas, as abas (← → troca).
+  if (!msg && !copias && ptNAbas >= 2) {
+    float tx = ix;
+    int dois = 0;
+    for (const char *c = alvoPedido; *c; c++) dois += *c == ':';
+    for (int t = 0; t < ptNAbas; t++) {
+      int tipo = ptAbaTipos[t], sel = t == ptAba;
+      const char *nm = tipo == PARTE_EP ? (dois >= 2 ? "Episódios" : "Partes") : tipo == PARTE_ESPECIAL ? "Especiais" : "Extras";
+      TxtLinha tl = txt_linha(TXT_PAINEL_ITEM, nm, sel ? ai : 150, sel ? agi : 150, sel ? abi : 148, 255);
+      txt_desenhar_alpha(tl, tx, y, a);
+      if (sel) gfx_cor((GfxRect){tx, y + tl.h + 4, tl.w, 3}, .5f, ar, ag, ab, a);
+      tx += tl.w + 36;
+    }
+  } else if (copias && ptL.estado == PARTES_ESCOLHER) {
+    txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM, "Esta fonte não está no seu TorBox. Escolha uma das suas cópias:", 200, 200, 198, 255, iw), ix, y + 6, a);
+  } else if (ptProv[0])
+    txt_desenhar_alpha(txt_linha_corta(TXT_PAINEL_ITEM, ptProv, ai, agi, abi, 255, iw), ix, y, a);
   y += 48.0f;
   float jy = y, jh = PT_JAN_H - 60.0f;
-  msg = ptMensagem();
   if (msg) {
     txt_bloco(TXT_PG_FIM, msg, 200, 200, 198, ix, jy, iw, DET_LD, a, 0);
   } else {
@@ -4879,13 +5013,20 @@ static void desenhaPartes(float x, float w, int ptr, Uint32 agora) {
     // partes de um filme — sem "PARTE N" nas linhas.
     for (const char *c = alvoPedido; *c; c++) dois += *c == ':';
     gfx_recorte(ix - 16, jy, iw + 32, jh);
-    for (int r = 0; r < ptL.n; r++) {
-      const ParteArq *f = &ptL.arq[r];
-      float ry = jy + r * PT_LINHA_H - ptRol;
-      int sel = r == ptFoco, num = partes_numero(&ptL, r);
-      char gb[24], tag[48];
-      if (ry + PT_LINHA_H < jy || ry > jy + jh) continue;
-      GfxRect rr = {ix - 14, ry, iw + 28, PT_LINHA_H - 6};
+    for (int r = 0; r < ptNLinhas; r++) {
+      const PtLinha *ln = &ptLinhas[r];
+      float ry = jy + ln->y - ptRol;
+      int sel = r == ptFoco;
+      if (ry + ln->h < jy || ry > jy + jh) continue;
+      if (ln->tipo == PR_TEMPORADA) {
+        char tt[48];
+        if (ln->idx > 0) snprintf(tt, sizeof tt, i18n("Temporada %d"), ln->idx);
+        else snprintf(tt, sizeof tt, "%s", i18n("Episódios"));
+        caixaAlta(tt, 150, 150, 148, ix, ry + 18, a);
+        gfx_cor((GfxRect){ix, ry + ln->h - 6, iw, 1}, 0, 1, 1, 1, .10f * a);
+        continue;
+      }
+      GfxRect rr = {ix - 14, ry, iw + 28, ln->h - 6};
       if (sel) {
         if (ajustes_vidro()) gfx_cor(rr, FOLHA_RAIO / rr.h, 1, 1, 1, .12f * a);
         else gfx_cor(rr, FOLHA_RAIO / rr.h, .17f, .176f, .204f, a);
@@ -4894,35 +5035,56 @@ static void desenhaPartes(float x, float w, int ptr, Uint32 agora) {
         float t = ry < jy ? jy : ry, b = ry + rr.h > jy + jh ? jy + jh : ry + rr.h;
         if (b > t) ponteiro_alvo(rr.x, t, rr.w, b - t, ponteiroPartesLinha, NULL, r, 0);
       }
-      // Tamanho a direita, como na folha.
-      { TxtLinha lg, lu;
-        int cg = sel ? 250 : 218;
-        snprintf(gb, sizeof gb, f->bytes >= (uint64_t)100 << 30 ? "%.0f" : "%.1f", (double)f->bytes / 1073741824.0);
-        plrui_decimal(gb);
-        lg = txt_linha(TXT_CW_TITULO, gb, cg, cg, cg - 2, 255);
-        lu = txt_linha(TXT_PG_FIM, "GB", 120, 120, 118, 255);
-        txt_desenhar_alpha(lu, ix + iw - lu.w, ry + 14 + (lg.h - lu.h) - 3, a);
-        txt_desenhar_alpha(lg, ix + iw - lu.w - 6 - lg.w, ry + 14, a); }
-      { float mx = ix;
+      if (ln->tipo == PR_ESCOLHER) {
+        char cc[64];
+        txt_desenhar_alpha(txt_linha_corta(TXT_PAINEL_ITEM, "Escolher outra cópia", sel ? 250 : 220, sel ? 250 : 220, sel ? 248 : 218, 255, iw - 200),
+                           ix, ry + 16, a);
+        if (ptL.nCopias > 0) {
+          TxtLinha cl;
+          snprintf(cc, sizeof cc, i18n("%d cópias"), ptL.nCopias);
+          cl = txt_linha(TXT_PG_FIM, cc, 140, 140, 138, 255);
+          txt_desenhar_alpha(cl, ix + iw - cl.w, ry + 20, a);
+        }
+        continue;
+      }
+      if (ln->tipo == PR_COPIA) {
+        const ParteCopia *c = &ptL.copias[ln->idx];
+        char tg[200] = "";
+        float mx = ix;
+        ptTamanho(c->epBytes, sel, ix, iw, ry, a);
+        if (c->item == ptL.item && ptL.estado == PARTES_PRONTO)
+          mx += caixaAlta("Cópia atual", ai, agi, abi, mx, ry + 12, a) + 18;
+        if (c->tamanho == 2) mx += caixaAlta("Mesmo tamanho", ai, agi, abi, mx, ry + 12, a) + 18;
+        if (c->grupo) mx += caixaAlta("Mesmo grupo", ai, agi, abi, mx, ry + 12, a) + 18;
+        if (c->temporada > 0) { snprintf(tg, sizeof tg, i18n("Temporada %d"), c->temporada); mx += caixaAlta(tg, 150, 150, 148, mx, ry + 12, a) + 18; }
+        snprintf(tg, sizeof tg, "%s%s", c->porque, c->porque[0] ? " · " : "");
+        { size_t k = strlen(tg); snprintf(tg + k, sizeof tg - k, i18n("%d arquivos"), c->nArq); }
+        txt_desenhar_alpha(txt_linha_corta(TXT_MINI, tg, 150, 150, 148, 255, ix + iw - 140 - mx), mx, ry + 13, a);
+        txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM, c->nome, sel ? 250 : 205, sel ? 250 : 205, sel ? 248 : 203, 255,
+                                           iw - 140), ix, ry + 44, a);
+        continue;
+      }
+      { const ParteArq *f = &ptL.arq[ln->idx];
+        int num = partes_numero(&ptL, ln->idx);
+        char tag[48] = "";
+        float mx = ix;
+        ptTamanho(f->bytes, sel, ix, iw, ry, a);
         if (num > 0 && dois < 2) snprintf(tag, sizeof tag, i18n("Parte %d"), num);
-        else if (num > 0) tag[0] = 0;
-        else snprintf(tag, sizeof tag, "%s", i18n("Extra"));
-        if (tag[0])
-          mx += caixaAlta(tag, num > 0 ? ai : 150, num > 0 ? (int)(ag * 255) : 150, num > 0 ? (int)(ab * 255) : 148,
-                          ix, ry + 12, a) + 18;
-        if (r == tocando) {
-          float w2 = caixaAlta("Reproduzindo agora", ai, (int)(ag * 255), (int)(ab * 255), mx, ry + 12, a);
+        if (tag[0]) mx += caixaAlta(tag, ai, agi, abi, ix, ry + 12, a) + 18;
+        if (ln->idx == tocando) {
+          float w2 = caixaAlta("Reproduzindo agora", ai, agi, abi, mx, ry + 12, a);
           desenharAudioBars(mx + w2 + 12, ry + 13, 14, a, agora);
-        } else if (r == ptL.atual) {
+        } else if (ln->idx == ptL.atual) {
           gfx_cor((GfxRect){mx, ry + 17, 7, 7}, .5f, ar, ag, ab, a);
           caixaAlta("Arquivo do addon", 150, 150, 148, mx + 16, ry + 12, a);
-        } }
-      txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM, f->nome, sel ? 250 : 205, sel ? 250 : 205, sel ? 248 : 203, 255,
-                                         iw - 140), ix, ry + 44, a);
+        }
+        txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM, f->nome, sel ? 250 : 205, sel ? 250 : 205, sel ? 248 : 203, 255,
+                                           iw - 140), ix, ry + (tag[0] || ln->idx == tocando || ln->idx == ptL.atual ? 44 : 30), a); }
     }
     gfx_sem_recorte();
   }
-  { const char *dica = msg ? "OK ou Voltar fecha" : "OK toca · Voltar fecha";
+  { const char *dica = msg ? "OK ou Voltar fecha" : copias ? "OK abre · Voltar volta"
+                       : ptNAbas >= 2 ? "OK toca · ← → abas · Voltar fecha" : "OK toca · Voltar fecha";
     txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM, dica, 120, 120, 118, 255, iw), ix, cy + ch - pad - 8, a); }
 }
 // Camada ampliada (escala.h): o corpo desenha na tela virtual.
