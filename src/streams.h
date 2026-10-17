@@ -142,6 +142,7 @@ int stream_filtro_permite(const Stream *fonte);
 int stream_filtro_bloqueou(void);
 void stream_definir_atual(int indice);
 int stream_atual(void);
+int stream_kbps_atual(void);   // declared kbps of stream_atual() (0 = unknown)
 void stream_folha_contexto(const char *texto);
 // O nome do conteudo da lista (titulo do filme ou da serie), para o titulo de
 // cada linha no modo "Do Nuvio" ("Silo  Temporada 2 Episodio 5"). Chamar antes

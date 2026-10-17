@@ -2739,6 +2739,13 @@ static void tentarProximaFonteVOD(void) {
 #endif
     motivo = 3;
   }
+#ifdef NV_ANDROID
+  // Playback StreamFit: this source cannot keep up while playing (slow
+  // download vs declared bitrate, or rebuffers). Same path as the stall, but
+  // only with a next candidate: a slow film keeps playing, never an error.
+  else if (!fonteFalha && video_rede_lenta() && fonteVODTentativas < VOD_FONTE_MAX_TENTATIVAS &&
+           stream_proxima_vod(stream_atual()) >= 0) motivo = 4;
+#endif
   if (!motivo) return;
   // #415 (LG G4, webOS 9): erro 600 com 4K tocando, 92 MB livres, e o app
   // reabria a fonte no mesmo instante — o webOS o fechou por memoria. Antes de

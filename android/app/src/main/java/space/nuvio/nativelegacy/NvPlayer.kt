@@ -150,6 +150,8 @@ object NvPlayer {
     private var quadrosPerdidos = 0L
     private var statsTiques = 0
     private var bufferAlvoMs = androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_MAX_BUFFER_MS
+    private var bufferMinMs = 0
+    private var bufferBytes = 0
 
     // --- natives (src/video_android.c, Java_space_nuvio_nativelegacy_NvPlayer_*) ---
     @JvmStatic external fun nativeIniciar()
@@ -175,7 +177,8 @@ object NvPlayer {
     // a frente e o alvo do DefaultLoadControl em ms, conexoes abertas, 1o byte,
     // quadros perdidos (onDroppedVideoFrames) e entregues; host final.
     @JvmStatic external fun nativeStats(bytes: Long, bufferMs: Int, alvoMs: Int, conexoes: Int,
-                                        primeiroByteMs: Int, perdidos: Long, quadros: Long, host: String)
+                                        primeiroByteMs: Int, perdidos: Long, quadros: Long, host: String,
+                                        minMs: Int, alvoMb: Int, carregando: Int)
 
     // F06 sincronia por audio (AudioSyncTap.kt / AudioSyncSink.kt). Fio de
     // reproducao; o C so copia para um anel limitado (src/audsync.c).
@@ -369,7 +372,7 @@ object NvPlayer {
     private const val PREPARO_MAX_US = 5_000_000L
     private const val PREPARO_ESPERA_MS = 30_000L
 
-    private class CargaPlayer(minMs: Int, maxMs: Int, bytes: Int, preparando: Boolean) :
+    private class CargaPlayer(val minMs: Int, maxMs: Int, val bytes: Int, preparando: Boolean) :
         DefaultLoadControl(DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE),
             minMs, maxMs, 2_500, 5_000, bytes, false, 0, false) {
         @Volatile var adotada = !preparando
@@ -1110,6 +1113,9 @@ object NvPlayer {
     // #338: buffer size in MiB (0 Auto; C already clamped it to free RAM), sticky, read at open.
     @Volatile private var bufferPreset = 0
     @JvmStatic fun buffer(mb: Int) { bufferPreset = mb.coerceIn(0, 256) }
+    // Declared kbps of the next open (0 = unknown/trailer), sticky like buffer().
+    @Volatile private var kbpsDeclarado = 0
+    @JvmStatic fun kbps(k: Int) { kbpsDeclarado = k.coerceIn(0, 400_000) }
     @JvmStatic fun cache(mb: Int) { cacheMbPedido = mb.coerceIn(0, 1024) }
     @JvmStatic fun cacheTitle(id: String) { tituloPedido = id }
     // Profile switch (C side): the kept cache belongs to the old profile.
@@ -1161,9 +1167,15 @@ object NvPlayer {
         val tetoBuffer = if (poucaRam) (heap / 8).coerceIn(24L shl 20, 48L shl 20).toInt()
                          else (heap / 4).coerceIn(32L shl 20, 96L shl 20).toInt()
         // preset = MiB from Settings (0 Auto). ExoPlayer holds it in the Java heap: never past heap/3.
+        // Auto with a high declared bitrate: 48 MB is ~7 s of a 52.8 Mbps remux
+        // (TCL rebuffered every 12-30 s). Aim at 30 s of it, never past heap/5
+        // and 80 MB on low RAM (the 575 MB PSS kill), heap/3 and 192 MB otherwise.
+        val porBitrate = kbpsDeclarado.toLong() * 1000 / 8 * 30
+        val tetoAlto = if (poucaRam) minOf(heap / 5, 80L shl 20) else minOf(heap / 3, 192L shl 20)
+        val autoBytes = porBitrate.coerceAtMost(tetoAlto).coerceAtLeast(tetoBuffer.toLong()).toInt()
         val (minMs, maxMs, bytes) = if (preset > 0)
             Triple(50_000, 150_000, minOf(preset.toLong() shl 20, heap / 3).toInt())
-        else Triple(50_000, 50_000, tetoBuffer)
+        else Triple(50_000, 50_000, autoBytes)
         val r = RecursosPlayer(CargaPlayer(minMs, maxMs, bytes, preparando), maxMs, if (preparando) idiomaAudio else "")
         try {
             val http = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
@@ -1323,7 +1335,7 @@ object NvPlayer {
             tap = r.tap
             cacheMidia = r.cache; cacheEstado = r.cacheEstado
             if (preparada == null && r.cache != null) { tituloAberto = titulo; chaveAberta = url.substringBefore('#') }
-            bufferAlvoMs = r.alvoMs
+            bufferAlvoMs = r.alvoMs; bufferMinMs = r.carga.minMs; bufferBytes = r.carga.bytes
             if (preparada != null) {
                 decoderDv = preparada.decoderDv
                 p.setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
@@ -1536,7 +1548,8 @@ object NvPlayer {
             nativeStats(if (e.usado) e.bytes.get() else -1L, buf,
                 bufferAlvoMs,
                 if (e.usado) e.conexoes.get().coerceAtLeast(0) else -1,
-                e.primeiroByteMs, perdidos, quadros, e.host)
+                e.primeiroByteMs, perdidos, quadros, e.host,
+                bufferMinMs, bufferBytes shr 20, if (p.isLoading) 1 else 0)
         } catch (t: UnsatisfiedLinkError) { }
     }
 

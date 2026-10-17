@@ -1143,6 +1143,13 @@ static void notaDe(const Stream *s, FonteNota *nt) {
   *nt = notaCache[i];
   pthread_mutex_unlock(&notaTrava);
 }
+int stream_kbps_atual(void) {
+  const Stream *s = stream_item(stream_atual());
+  FonteNota nt;
+  if (!s) return 0;
+  notaDe(s, &nt);
+  return nt.kbps;
+}
 // Evidencia + idioma de uma fonte, para comparar duas da mesma resolucao
 // (memoria do automatico, stream_grupo_sem_perda).
 // Evidence gap allowed before automatic memory yields to the current winner.
