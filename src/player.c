@@ -5137,6 +5137,10 @@ static void corpoCarregando(GfxRect r, float a, void *u) {
   plrui_respira(x + 6.0f + 5.0f, y + 16.0f, 10.0f, agora, a);
   { TxtLinha l = txt_linha(TXT_G26B, "Abrindo fonte", 243, 242, 239, 255);
     txt_desenhar_alpha(l, x + 6.0f + 10.0f + 16.0f, y + 16.0f - (float)l.h * 0.5f, a); }
+  if (dvtela_visivel() && dvtela_variante() == DVT_VAR_DETALHADA) {
+    dvtela_abertura_marca(1, x + w - 260.0f, r.y + 62.0f, a);
+    dvtela_abertura_linha(1, x + 32.0f, r.y + CAR_LOGO_H - 10.0f, a);
+  }
   // A dica de tecla na ponta direita da linha do estado: no compacto leva aos
   // detalhes, no expandido volta. Discreta (o apoio cinza das outras dicas).
   if (ac > 0.01f) { const char *k[1] = { "Baixo" }, *rt[1] = { "Detalhes" };
@@ -5800,7 +5804,7 @@ void player_desenhar(Uint32 agora) {
   } else if (player_carregando() && !stream_folha_aberta() && stream_folha_anim() < 0.05f &&
              // A TELA DO DOLBY VISION substitui o cartao: sem ela, o caminho do
              // DV mostrava "Abrindo fonte" DUAS vezes (a TV e depois o demux).
-             !dvtela_visivel() &&
+             (!dvtela_visivel() || dvtela_variante() == DVT_VAR_DETALHADA) &&
              // A CINEMA (#205) esta no lugar do cartao.
              !abrecine_cinema(&cine)) {
     // COM A FOLHA DE FONTES NA TELA o cartao fica de fora: ela e a escolha que

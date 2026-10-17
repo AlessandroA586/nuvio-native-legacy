@@ -228,8 +228,18 @@ int main(int argc, char **argv) {
   ajustar(0, 1, 0);
   snprintf(nome, sizeof nome, "%s/detalhada-normal.png", saida);
   abrir(0); quadros(K); capturar(quadro_[0], nome);
+  GfxRect normal, dv;
+  assert(plrilha_shot_centro(&normal));
   snprintf(nome, sizeof nome, "%s/detalhada-dv.png", saida);
   abrir(1); quadros(K); capturar(quadro_[1], nome);
+  confere(plrilha_shot_centro(&dv) && fabsf(normal.w - dv.w) < 1 &&
+          fabsf(normal.h - dv.h) < 1 && fabsf(normal.x - dv.x) < 1 &&
+          fabsf(normal.y - dv.y) < 1 && fabsf(dv.w - 680) < 1,
+          "Detailed DV preserves the normal 680 px loading card geometry");
+  { int fora, em;
+    comparar(quadro_[0], quadro_[1], &fora, &em);
+    confere(fora == 0, "Detailed DV preserves background, title logo and card pixels");
+  }
   confere(dvtela_variante() == DVT_VAR_DETALHADA, "Detalhada: o DV mostra o cartao");
 
   printf("dvabertura_shot: %s\n", falhas ? "FALHOU" : "ok");

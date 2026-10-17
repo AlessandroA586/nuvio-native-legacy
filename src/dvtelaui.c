@@ -400,7 +400,7 @@ void dvtela_desenhar(Uint32 agora) {
     molasZerar(&molas);
   }
 
-  if (dvtela_variante() == DVT_VAR_CINEMA) {
+  { // Both variants use the player's loading presentation.
     // A cinema nao tem botao nem desenho proprio (o player desenha, com os encaixes
     // acima): so o anteparo do ponteiro (o player por baixo nao o recebe).
     dvtPont = 0;
@@ -410,20 +410,6 @@ void dvtela_desenhar(Uint32 agora) {
     }
     return;
   }
-  fundo(a);
-  dvtPont = 0;
-  if (e->ativa) {
-    ponteiro_camada();   // o player por baixo nao recebe o ponteiro
-    if (a >= 0.999f) {
-      ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, NULL, 0, 0);   // anteparo
-      dvtPont = 1;
-    }
-  }
-  { ESCALA_SE_COUBER_INI(C_W, C_H);
-    float sobe = (1.0f - a) * 18.0f;
-    cartao(e, &molas, agora, a, (NV_TELA_W - C_W) * 0.5f, (NV_TELA_H - C_H) * 0.5f + sobe,
-           dvtela_dica_alfa(), dvtela_foco_botao(), dvtPont);
-    ESCALA_SE_COUBER_FIM(); }
 }
 
 // A PREVIA DAS NOVIDADES (novidades_cartao.h): o MESMO cartao, desenhado por
