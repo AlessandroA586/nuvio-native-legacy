@@ -318,10 +318,10 @@ static long malMapeado(const char *id,long tmdb,int t,int *ep){
 }
 
 // O PEDIDO, no molde do plugin oficial (tidb.plugin.js, fetchData):
-//   - tmdb_id quando o app sabe o id do TMDB E o par temporada/episodio do
-//     TMDB deste episodio (o TMDB confirmou o par, catalogo.h CatEp.tmdbE): sem
-//     remapeamento nenhum. So sem isso vai imdb_id + numeracao do Cinemeta, e
-//     ai vale a regra de descartar a resposta que ecoa outro episodio;
+//   - tmdb_id with TMDB-confirmed season/episode (CatEp.tmdbE), otherwise
+//     imdb_id with Cinemeta numbering. v4 converts provider coordinates
+//     server-side; omit mapping because we have no verified TVDB order.
+//     Reject responses that echo a different episode;
 //   - duration_ms = a duracao REAL do video quando o player ja sabe, e um
 //     pedido de novo quando ela chega ou muda (intro_definir_duracao);
 //   - 200 = trechos; 204 (sem dados) e 404 (desconhecido) = zero trechos,
@@ -331,8 +331,8 @@ typedef struct{char id[24];long tmdb;int t,e,anime;double durAnt,durProx,dur;uns
 
 void intro_montar_url(char *url,size_t n,const char *imdb,long tmdb,int t,int e,double durSeg){
   size_t k;
-  if(tmdb>0)k=(size_t)snprintf(url,n,"https://api.theintrodb.org/v3/media?tmdb_id=%ld",tmdb);
-  else k=(size_t)snprintf(url,n,"https://api.theintrodb.org/v3/media?imdb_id=%s",imdb?imdb:"");
+  if(tmdb>0)k=(size_t)snprintf(url,n,"https://api.theintrodb.org/v4/media?tmdb_id=%ld",tmdb);
+  else k=(size_t)snprintf(url,n,"https://api.theintrodb.org/v4/media?imdb_id=%s",imdb?imdb:"");
   if(k<n&&t>=0&&e>0)k+=(size_t)snprintf(url+k,n-k,"&season=%d&episode=%d",t,e);
   if(k<n&&durSeg>1.0)snprintf(url+k,n-k,"&duration_ms=%.0f",durSeg*1000.0);
 }
@@ -352,7 +352,8 @@ void intro_definir_buscador(int (*f)(const char *,char **,int *)){buscar=f?f:bus
 static int buscarInterno(const char *url,char **corpo,int *status){return buscar(url,corpo,status);}
 
 enum{R_OK,R_VAZIO,R_FALHA};
-// Chave do cache de "nao conhece": o id que foi perguntado.
+// Episode misses are session-only (credfonte.c), cleared on upgrade/restart.
+// Persistent network misses hash the full URL, so /v3 cannot block /v4.
 static void chave404(char *k,size_t n,const Pedido *p){
   if(p->tmdb>0)snprintf(k,n,"tmdb:%ld",p->tmdb);else snprintf(k,n,"%s",p->id);
 }
