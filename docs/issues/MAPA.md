@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `b207a8a51` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-17T14:53:44-03:00. 491 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `b207a8a51` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-17T15:50:00-03:00. 491 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -187,9 +187,8 @@ Por status:
 | fechada-sem-resposta | 8 |
 | precisa-log | 8 |
 | fora-do-escopo | 4 |
-| em_revisao | 3 |
+| em_revisao | 4 |
 | duplicada | 2 |
-| em_job | 1 |
 
 Por release (grupo de planejamento):
 
@@ -274,7 +273,7 @@ Notas:
 | [#412](https://github.com/iqui27/nuvio-native-legacy/issues/412) | Playback makes UI extremely laggy | Samsung .tpk | bug | integrada | 2.0.7 | 2.0.6 | 224063f2, 224063f22, agente/205-tpk412b | nós 10-11 | Verify merged result; build/install and check device. |
 | [#413](https://github.com/iqui27/nuvio-native-legacy/issues/413) | [Samsung Tizen 4 / v2.0.3] Finished movie plays again when s | Samsung .tpk | bug | integrada | - | 2.0.6 | d8cc7fa2 | autor 10-10 | lancar com 2.0.5 (testar no TCL antes do release) |
 | [#414](https://github.com/iqui27/nuvio-native-legacy/issues/414) | https://nuvio.tvflix.co.uk | Samsung .tpk | bug | integrada | 2.0.7 | 2.0.6 | 168be34d9, agente/205-col414 | sem comentários | Verify merged result; build/install and check device. |
-| [#415](https://github.com/iqui27/nuvio-native-legacy/issues/415) | constant crashing, no matter if I play or not | LG | bug | em_job | 2.0.7 | 2.0.6 | 5c6b8093d, 5c266499, f77eeeef7 | nós 10-10 | Wait for job; review latest commit. |
+| [#415](https://github.com/iqui27/nuvio-native-legacy/issues/415) | constant crashing, no matter if I play or not | LG | bug | em_revisao | 2.0.7 | 2.0.6 | 5c6b8093d, 5c266499, f77eeeef7 | nós 10-10 | j-fix3-memg4 done 15:43 (4 achados do rev3 corrigidos); branch 5 commits fora do HEAD, pre |
 | [#418](https://github.com/iqui27/nuvio-native-legacy/issues/418) | App fails to connect: "The Nuvio account server didn't respo | Samsung .tpk | bug | integrada | 2.0.7 | 2.0.6 | deb68c4b9, agente/205-login418 | sem comentários | Verify merged result; build/install and check device. |
 | [#423](https://github.com/iqui27/nuvio-native-legacy/issues/423) | Not update LG | LG | bug | aberta | - | 2.0.6 | - | autor 10-11 | triar/reproduzir; falta conserto comprovado |
 | [#424](https://github.com/iqui27/nuvio-native-legacy/issues/424) | Live tv not loading categories | Android | bug | aberta | - | 2.0.6 | - | sem comentários | triar/reproduzir; falta conserto comprovado |
@@ -302,7 +301,7 @@ Notas:
 | [#551](https://github.com/iqui27/nuvio-native-legacy/issues/551) | Catalog Not Loading 2.0.6 | LG webOS 25/26 | bug | integrada | 2.0.7 | 2.0.6 | 1c9043ed0/a2e9daf91, merged, e680776ed | sem comentários | Verify merged result; build/install and check device. |
 | [#553](https://github.com/iqui27/nuvio-native-legacy/issues/553) | queda de desempenho | ? | bug | integrada | 2.0.7 | 2.0.6 | 6a64c2e13, a691e96fb, abb9e49b9 | sem comentários | Verify merged result; build/install and check device. |
 | [#555](https://github.com/iqui27/nuvio-native-legacy/issues/555) | Search does not work as expected | ? | ? | integrada | 2.0.7 | 2.0.6 | merged, 438423097, agente/205-busca555 | sem comentários | Verify merged result; build/install and check device. |
-| [#557](https://github.com/iqui27/nuvio-native-legacy/issues/557) | Playback cannot be skipped to a particular time stamp | ? | ? | integrada | 2.0.7 | 2.0.6 | agente/205-i557 | sem comentários | Verify merged result; build/install and check device. |
+| [#557](https://github.com/iqui27/nuvio-native-legacy/issues/557) | Playback cannot be skipped to a particular time stamp | ? | ? | integrada | 2.0.7 | 2.0.6 | d034960e8, agente/205-i557 | sem comentários | Verify merged result; build/install and check device. |
 | [#558](https://github.com/iqui27/nuvio-native-legacy/issues/558) | Black screen on launch | ? | bug | integrada | 2.0.7 | 2.0.6 | cc49341e6, merged, a1888d007 | sem comentários | Verify merged result; build/install and check device. |
 | [#564](https://github.com/iqui27/nuvio-native-legacy/issues/564) | Request to Add Playback Speed Controls | ? | feature | aberta | - | 2.0.6 | - | sem comentários | triar: controle de velocidade de reproducao; criar job |
 | [#565](https://github.com/iqui27/nuvio-native-legacy/issues/565) | PenguPlay add on doesn't work | ? | bug | integrada | 2.0.7 | 2.0.6 | d25a3e513, 68cf2c63b/c32a87bbf, 5aad21874 | sem comentários | Verify merged result; build/install and check device. |
@@ -312,8 +311,8 @@ Notas:
 | [#578](https://github.com/iqui27/nuvio-native-legacy/issues/578) | Converted audio slightly delayed / out of lip sync on Samsun | Samsung .tpk | ? | aberta | - | 2.0.6 | - | sem comentários | triar: audio atrasado no Tizen 10; pedir amostra e criar job |
 | [#579](https://github.com/iqui27/nuvio-native-legacy/issues/579) | V2.06 scrolling catalogue display glitch | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: glitch de rolagem do catalogo na 2.0.6; pedir video e criar job |
 | [#582](https://github.com/iqui27/nuvio-native-legacy/issues/582) | Frequent Stuttering and Freezing on LG TVs, Even with Reduce | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: travamento/congelamento em LG TV mesmo com desempenho reduzido; mesmo eixo de #553/ |
-| [#581](https://github.com/iqui27/nuvio-native-legacy/issues/581) | Changing Volume pauses the playback | ? | bug | integrada | 2.0.7 | 2.0.6 | agente/205-i581 | sem comentários | Verify merged result; build/install and check device. |
-| [#584](https://github.com/iqui27/nuvio-native-legacy/issues/584) | IMDb trailers start in low resolution and take too long to i | ? | bug | integrada | 2.0.7 | 2.0.6 | agente/205-i584 | sem comentários | Verify merged result; build/install and check device. |
+| [#581](https://github.com/iqui27/nuvio-native-legacy/issues/581) | Changing Volume pauses the playback | ? | bug | integrada | 2.0.7 | 2.0.6 | 4a0b3408d, agente/205-i581 | sem comentários | Verify merged result; build/install and check device. |
+| [#584](https://github.com/iqui27/nuvio-native-legacy/issues/584) | IMDb trailers start in low resolution and take too long to i | ? | bug | integrada | 2.0.7 | 2.0.6 | b89ddc139, agente/205-i584 | sem comentários | Verify merged result; build/install and check device. |
 | [#585](https://github.com/iqui27/nuvio-native-legacy/issues/585) | There isn't mic icon in search window | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: icone do microfone nao aparece na janela de busca; pedir print/plataforma e criar j |
 | [#588](https://github.com/iqui27/nuvio-native-legacy/issues/588) | Live Sport Stream addons | ? | bug | aberta | - | 2.0.6 | - | sem comentários | triar: add-ons de esporte ao vivo nao aparecem/nao carregam; sem job |
 
@@ -333,6 +332,7 @@ Snapshot 2026-10-17T14:53:44-03:00: agente/205-col414: merged; j-rev2-205-col414
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-memg4: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-memg4: running; No mapped review verdict. 
 Snapshot 2026-10-17T14:53:44-03:00: agente/205-memg4: running; No mapped review verdict. 
+Snapshot 2026-10-17T15:50:00-03:00: j-fix3-memg4 done 15:43 -> 8feec1a91; rev4 prompt exists (p-rev4-memg4.md), review not logged yet.
 - **#418**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [sync 2026-10-15: agente/205-login418 integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-login418: merged; j-rev-205-login418.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-login418: merged; j-rev-205-login418.log: OK. 
@@ -464,6 +464,7 @@ Snapshot 2026-10-17T14:53:44-03:00: agente/205-busca555: merged; j-rev-busca555.
 Snapshot 2026-10-17T14:53:44-03:00: agente/205-eps555: merged; j-rev-eps555.log: OK. 
 - **#557**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 Snapshot 2026-10-17T14:53:44-03:00: agente/205-i557: merged; No mapped review verdict. 
+Snapshot 2026-10-17T15:50:00-03:00: merged 5cf77f08d (15:37); reply to issue drafted in job log, not posted.
 - **#558**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova, tela preta no lancamento num Q50A Tizen 6 2.0.6. Job j-tpk558 done (cc49341e6, tools/tpk.sh rc 0); sem review. | Escrivao 10-16 14:58: merged a1888d007 (adiar IME da Samsung e expor falha no boot); review OK j-rev-tpk558; spec docs/issues/558-tpk-startup.md. | [sync 2026-10-16 21:00] merged a1888d007; review OK j-rev-tpk558 | [sync 2026-10-16 22:55] merged a1888d007 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged a1888d007 nesta janela (HEAD ab0e9a597); review j-rev-tpk558; tela preta no lancamento .tpk; confirmar na TV do reporter; entra na 2.0.7
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-tpk558: merged; j-rev-tpk558.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-tpk558: merged; j-rev-tpk558.log: OK. 
@@ -481,8 +482,10 @@ Snapshot 2026-10-17T14:53:44-03:00: agente/205-i565pengu: merged; j-rev-i565peng
 - **#582**: Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:26:52Z).
 - **#581**: Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:15:16Z).
 Snapshot 2026-10-17T14:53:44-03:00: agente/205-i581: merged; No mapped review verdict. 
+Snapshot 2026-10-17T15:50:00-03:00: merged 5b0d2a35d (15:37); reply to issue drafted in job log, not posted.
 - **#584**: [sync 2026-10-17 09:25] issue nova (createdAt 2026-10-17T11:47:33Z, label bug). Sem job nem branch.
 Snapshot 2026-10-17T14:53:44-03:00: agente/205-i584: merged; No mapped review verdict. 
+Snapshot 2026-10-17T15:50:00-03:00: merged 2bc1ddb55 (15:37); reply to issue drafted in job log, not posted.
 - **#585**: Sync 2026-10-17 11:00: issue nova (createdAt 2026-10-17T11:48:21Z), sem job.
 - **#588**: Sync 2026-10-17 11:00: issue nova (createdAt 2026-10-17T13:15:04Z), sem job.
 
@@ -505,7 +508,7 @@ Snapshot 2026-10-17T14:53:44-03:00: agente/205-i584: merged; No mapped review ve
 | [#514](https://github.com/iqui27/nuvio-native-legacy/issues/514) | Ability to rate a movie or an episode | ? | ? | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
 | [#521](https://github.com/iqui27/nuvio-native-legacy/issues/521) | Layout | ? | bug | integrada | 2.0.7 | futuro | 5184d0a1b, agente/205-i521q | sem comentários | Verify merged result; build/install and check device. |
 | [#542](https://github.com/iqui27/nuvio-native-legacy/issues/542) | Torbox cloud library | ? | feature | aberta | - | futuro | - | sem comentários | triar; sem job |
-| [#589](https://github.com/iqui27/nuvio-native-legacy/issues/589) | Not all GIFs are animated | ? | bug | integrada | 2.0.7 | 2.1 | agente/205-i589 | sem comentários | Verify merged result; build/install and check device. |
+| [#589](https://github.com/iqui27/nuvio-native-legacy/issues/589) | Not all GIFs are animated | ? | bug | integrada | 2.0.7 | 2.1 | b2aa59ada, agente/205-i589 | sem comentários | Verify merged result; build/install and check device. |
 | [#590](https://github.com/iqui27/nuvio-native-legacy/issues/590) | Imdb score displayed in % on title page | ? | bug | integrada | 2.0.7 | 2.1 | 03a144294, 0d998e33a, agente/205-imdbnota | sem comentários | Verify merged result; build/install and check device. |
 | [#592](https://github.com/iqui27/nuvio-native-legacy/issues/592) | MP4 Playback Issue on LG webOS 26 | ? | ? | precisa-log | - | 2.1 | - | sem comentários | Ask for log + example source (MP4 on webOS 26). |
 | [#591](https://github.com/iqui27/nuvio-native-legacy/issues/591) | The audio language of the trailer would match the audio lang | ? | ? | aberta | - | 2.1 | - | sem comentários | Deferred to 2.1 by triage3 (trailer audio language match). |
@@ -539,6 +542,7 @@ Snapshot 2026-10-17T14:53:44-03:00: agente/205-i521q: merged; j-revg-i521q-3.log
 - **#542**: Entered mapa 2026-10-15 from issues.json; feature request, not in 2.0.5 scope.
 - **#589**: [sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:19:12Z, label bug), sem job.
 Snapshot 2026-10-17T14:53:44-03:00: agente/205-i589: merged; No mapped review verdict. 
+Snapshot 2026-10-17T15:50:00-03:00: merged 5ab9fc44c (15:37); reply to issue drafted in job log, not posted.
 - **#590**: [sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:37:44Z, label bug); j-imdbnota done 11:50 (03a144294 normaliza IMDb 0-100 -> 0-10, testes/notasfontes.sh + imdbnota.sh rc=0), branch 1 ahead, sem merge e sem review.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-imdbnota: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-imdbnota: merged; No mapped review verdict.  Sync 2026-10-17 15:30: imdbnota merged eea9aac9d; IMDb normalized 0-100->0-10 at ingestion.
@@ -5580,11 +5584,12 @@ Snapshot 2026-10-17T14:53:44-03:00: agente/205-vidroilhas: merged; No mapped rev
 ### Escala de texto e componentes (85-130%) - pedido do dono
 
 - Plataforma: todas
-- Status: em-revisao
+- Status: integrada
 - Release: -
 - Conserto: e7fa6d67c feat(ui): add text and component scale to gfx layer; 406359d3a feat(settings): add text and component scale option (85-130%); bab9c56e3 feat(ui): apply text scale to home, title page, library and player; 86fed77d7 i18n: add text and component scale strings; 4bfafc814 test: add text scale proof (rev-textoescala BLOQUEIA 06:50); e24e614a2 fix(keyboard): keep navigation geometry at the configured text scale; 5ff1d7ef3/ebb0b1365 fix(search): preserve poster and landscape artwork size at text scale; 1eb28a937 fix(settings): expose text scale in Appearance navigation; 342aafc49 fix: preserve search spacing and scaled episode menu anchors
-- Próximo passo: rev3 BLOQUEIA 09:20 (P2 busca no celular ainda redimensiona cartaz; P2 prova visual incompleta) + fix3 08:32 -> precisa review novo; 18 commits fora
+- Próximo passo: Branch merged via 9f0588a80; keep tracking only for post-merge review/regressions.
 - Notas: [sync 2026-10-17 09:25] 18 commits fora (tip 342aafc49, 08:32), ainda sem merge. rev BLOQUEIA 06:50 -> rev2 BLOQUEIA 08:15 -> j-fix3-textoescala done 08:32 -> rev3 BLOQUEIA 09:20. P1 antigo (opcao fora de Ajustes) foi resolvido (1eb28a937). Sync 2026-10-17 07:05: 5 commits fora do HEAD, ainda sem merge.
+Snapshot 2026-10-17T15:50:00-03:00: merged 9f0588a80 (rev3 BLOQUEIA foi antes do merge; j-merge-textoescala resolveu conflitos e testes passaram).
 
 ### Player perdeu o vidro: frost sobre o video de volta (pedido do dono)
 
@@ -7073,13 +7078,14 @@ Snapshot 2026-10-17T14:53:44-03:00: agente/205-testbase4: merged; No mapped revi
 ### Worktree /Volumes/ExternalSSD/nv-205-textoescala, branch agente/205-textoescala. Follow ponytail full. Fix these review findings (rev4), each with a FAIL->PASS test through the real drawing/runtime path. Reviewer tool limit is 60 s per comm
 
 - Plataforma: See task prompt
-- Status: em_revisao
+- Status: integrada
 - Release: 2.0.7
 - Conserto: agente/205-textoescala
-- Próximo passo: Review latest fix.
+- Próximo passo: merged 9f0588a80 (15:00) apos j-merge-textoescala (302d2bf4f + b0c947387); verificar no device.
 - Notas: 
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-textoescala: running; No mapped review verdict. 
 Snapshot 2026-10-17T14:53:44-03:00: agente/205-textoescala: done-awaiting-review; No mapped review verdict. 
+Snapshot 2026-10-17T15:50:00-03:00: agente/205-textoescala: merged 9f0588a80; rev3 BLOQUEIA era pre-merge; merged result still lacks dedicated review.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-tokvencido (branch agente/205-tokvencido). Follow ponytail full. No push. Commit English.
 

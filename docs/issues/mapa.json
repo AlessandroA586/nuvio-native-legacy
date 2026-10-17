@@ -1,5 +1,5 @@
 {
- "atualizado_em": "2026-10-17T14:53:44-03:00",
+ "atualizado_em": "2026-10-17T15:50:00-03:00",
  "base": "b207a8a51",
  "nota": "Local snapshot sync 2026-10-17T14:53:44-03:00, HEAD b207a8a51. Added 0 issues. Device validation remains pending; see external estado.md. Previous history retained in item notes.",
  "itens": [
@@ -8563,13 +8563,14 @@
    "estado_github": "aberta",
    "plataforma": "LG",
    "tipo": "bug",
-   "status": "em_job",
+   "status": "em_revisao",
    "release": "2.0.7",
    "conserto": [
     "5c6b8093d Log: process and TV memory in the FPS line and around video loads (#415)",
     "5c266499 (integracao/2.0.5; memlog)",
     "f77eeeef7 (agente/205-memg4: teto de textura por MemAvailable + retry travado, 10-17 12:20)",
-    "agente/205-memg4"
+    "agente/205-memg4",
+    "8feec1a91 (agente/205-memg4: libass cache flush real, floor PiP, cap por MemTotal, fix3 15:43)"
    ],
    "ultima_resposta": {
     "nos": true,
@@ -8577,8 +8578,8 @@
     "ultimo_comentario_por": "iqui27",
     "ultima_nossa": "2026-10-10"
    },
-   "proximo_passo": "Wait for job; review latest commit.",
-   "notas": "[sync 2026-10-17 12:15] Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5c6b8093d); status -> integrada\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-memg4: done-awaiting-review; No mapped review verdict.\nSnapshot 2026-10-17T13:48:33-03:00: agente/205-memg4: running; No mapped review verdict. \nSnapshot 2026-10-17T14:53:44-03:00: agente/205-memg4: running; No mapped review verdict. ",
+   "proximo_passo": "j-fix3-memg4 done 15:43 (4 achados do rev3 corrigidos); branch 5 commits fora do HEAD, precisa review (j-rev4-memg4) e merge.",
+   "notas": "[sync 2026-10-17 12:15] Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5c6b8093d); status -> integrada\nSnapshot 2026-10-17T12:48:52-03:00: agente/205-memg4: done-awaiting-review; No mapped review verdict.\nSnapshot 2026-10-17T13:48:33-03:00: agente/205-memg4: running; No mapped review verdict. \nSnapshot 2026-10-17T14:53:44-03:00: agente/205-memg4: running; No mapped review verdict. \nSnapshot 2026-10-17T15:50:00-03:00: j-fix3-memg4 done 15:43 -> 8feec1a91; rev4 prompt exists (p-rev4-memg4.md), review not logged yet.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/415",
    "criada_em": "2026-10-10",
    "alvo": "2.0.6"
@@ -10619,7 +10620,8 @@
    "status": "integrada",
    "release": "2.0.7",
    "conserto": [
-    "agente/205-i557"
+    "d034960e8 (agente/205-i557)",
+    "agente/205-i557 (merge 5cf77f08d)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10628,7 +10630,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "Verify merged result; build/install and check device.",
-   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.\nSnapshot 2026-10-17T14:53:44-03:00: agente/205-i557: merged; No mapped review verdict. ",
+   "notas": "Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.\nSnapshot 2026-10-17T14:53:44-03:00: agente/205-i557: merged; No mapped review verdict. \nSnapshot 2026-10-17T15:50:00-03:00: merged 5cf77f08d (15:37); reply to issue drafted in job log, not posted.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/557",
    "criada_em": "2026-10-16",
    "alvo": "2.0.6"
@@ -10888,7 +10890,8 @@
    "status": "integrada",
    "release": "2.0.7",
    "conserto": [
-    "agente/205-i581"
+    "4a0b3408d (agente/205-i581)",
+    "agente/205-i581 (merge 5b0d2a35d)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10897,7 +10900,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "Verify merged result; build/install and check device.",
-   "notas": "Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:15:16Z).\nSnapshot 2026-10-17T14:53:44-03:00: agente/205-i581: merged; No mapped review verdict. ",
+   "notas": "Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:15:16Z).\nSnapshot 2026-10-17T14:53:44-03:00: agente/205-i581: merged; No mapped review verdict. \nSnapshot 2026-10-17T15:50:00-03:00: merged 5b0d2a35d (15:37); reply to issue drafted in job log, not posted.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/581",
    "criada_em": "2026-10-17",
    "alvo": "2.0.6"
@@ -10911,7 +10914,8 @@
    "status": "integrada",
    "release": "2.0.7",
    "conserto": [
-    "agente/205-i584"
+    "b89ddc139 (agente/205-i584)",
+    "agente/205-i584 (merge 2bc1ddb55)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10920,7 +10924,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "Verify merged result; build/install and check device.",
-   "notas": "[sync 2026-10-17 09:25] issue nova (createdAt 2026-10-17T11:47:33Z, label bug). Sem job nem branch.\nSnapshot 2026-10-17T14:53:44-03:00: agente/205-i584: merged; No mapped review verdict. ",
+   "notas": "[sync 2026-10-17 09:25] issue nova (createdAt 2026-10-17T11:47:33Z, label bug). Sem job nem branch.\nSnapshot 2026-10-17T14:53:44-03:00: agente/205-i584: merged; No mapped review verdict. \nSnapshot 2026-10-17T15:50:00-03:00: merged 2bc1ddb55 (15:37); reply to issue drafted in job log, not posted.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/584",
    "criada_em": "2026-10-17",
    "alvo": "2.0.6"
@@ -10976,7 +10980,8 @@
    "status": "integrada",
    "release": "2.0.7",
    "conserto": [
-    "agente/205-i589"
+    "b2aa59ada (agente/205-i589)",
+    "agente/205-i589 (merge 5ab9fc44c)"
    ],
    "ultima_resposta": {
     "nos": false,
@@ -10985,7 +10990,7 @@
     "ultima_nossa": ""
    },
    "proximo_passo": "Verify merged result; build/install and check device.",
-   "notas": "[sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:19:12Z, label bug), sem job.\nSnapshot 2026-10-17T14:53:44-03:00: agente/205-i589: merged; No mapped review verdict. ",
+   "notas": "[sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:19:12Z, label bug), sem job.\nSnapshot 2026-10-17T14:53:44-03:00: agente/205-i589: merged; No mapped review verdict. \nSnapshot 2026-10-17T15:50:00-03:00: merged 5ab9fc44c (15:37); reply to issue drafted in job log, not posted.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/589",
    "criada_em": "2026-10-17",
    "alvo": "2.1"
@@ -17963,7 +17968,7 @@
    "id": "texto-escala-componentes",
    "titulo": "Escala de texto e componentes (85-130%) - pedido do dono",
    "plataforma": "todas",
-   "status": "em-revisao",
+   "status": "integrada",
    "release": "-",
    "conserto": [
     "e7fa6d67c feat(ui): add text and component scale to gfx layer",
@@ -17976,8 +17981,8 @@
     "1eb28a937 fix(settings): expose text scale in Appearance navigation",
     "342aafc49 fix: preserve search spacing and scaled episode menu anchors"
    ],
-   "proximo_passo": "rev3 BLOQUEIA 09:20 (P2 busca no celular ainda redimensiona cartaz; P2 prova visual incompleta) + fix3 08:32 -> precisa review novo; 18 commits fora",
-   "notas": "[sync 2026-10-17 09:25] 18 commits fora (tip 342aafc49, 08:32), ainda sem merge. rev BLOQUEIA 06:50 -> rev2 BLOQUEIA 08:15 -> j-fix3-textoescala done 08:32 -> rev3 BLOQUEIA 09:20. P1 antigo (opcao fora de Ajustes) foi resolvido (1eb28a937). Sync 2026-10-17 07:05: 5 commits fora do HEAD, ainda sem merge."
+   "proximo_passo": "Branch merged via 9f0588a80; keep tracking only for post-merge review/regressions.",
+   "notas": "[sync 2026-10-17 09:25] 18 commits fora (tip 342aafc49, 08:32), ainda sem merge. rev BLOQUEIA 06:50 -> rev2 BLOQUEIA 08:15 -> j-fix3-textoescala done 08:32 -> rev3 BLOQUEIA 09:20. P1 antigo (opcao fora de Ajustes) foi resolvido (1eb28a937). Sync 2026-10-17 07:05: 5 commits fora do HEAD, ainda sem merge.\nSnapshot 2026-10-17T15:50:00-03:00: merged 9f0588a80 (rev3 BLOQUEIA foi antes do merge; j-merge-textoescala resolveu conflitos e testes passaram)."
   },
   {
    "id": "dono-205-playervidro",
@@ -19595,13 +19600,13 @@
    "id": "tracking-agente-205-textoescala",
    "titulo": "Worktree /Volumes/ExternalSSD/nv-205-textoescala, branch agente/205-textoescala. Follow ponytail full. Fix these review findings (rev4), each with a FAIL->PASS test through the real drawing/runtime path. Reviewer tool limit is 60 s per comm",
    "plataforma": "See task prompt",
-   "status": "em_revisao",
+   "status": "integrada",
    "release": "2.0.7",
    "conserto": [
     "agente/205-textoescala"
    ],
-   "proximo_passo": "Review latest fix.",
-   "notas": "\nSnapshot 2026-10-17T13:48:33-03:00: agente/205-textoescala: running; No mapped review verdict. \nSnapshot 2026-10-17T14:53:44-03:00: agente/205-textoescala: done-awaiting-review; No mapped review verdict. "
+   "proximo_passo": "merged 9f0588a80 (15:00) apos j-merge-textoescala (302d2bf4f + b0c947387); verificar no device.",
+   "notas": "\nSnapshot 2026-10-17T13:48:33-03:00: agente/205-textoescala: running; No mapped review verdict. \nSnapshot 2026-10-17T14:53:44-03:00: agente/205-textoescala: done-awaiting-review; No mapped review verdict. \nSnapshot 2026-10-17T15:50:00-03:00: agente/205-textoescala: merged 9f0588a80; rev3 BLOQUEIA era pre-merge; merged result still lacks dedicated review."
   },
   {
    "id": "tracking-agente-205-tokvencido",

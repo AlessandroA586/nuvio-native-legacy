@@ -430,7 +430,11 @@ Landing in 2.0.7, already in the sections above:
   (`2c7c85860`), the **Dynamic Gray/Colour background** (`e3fdbe717`), the **Home frost islands**
   (`f087f4b59`), the **sidebar frost / glass accent pill** (`ab0e9a597`), **PR #572** (`22f3d22bb`), the
   **player glass / episode plate / hero mipmap** fixes (`04375ab4f`, `3b39999e5`, `fc6d35d69`), the
-  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`) and the **IMDb 0-100 fix** (`eea9aac9d`), the **flat-glass Trakt cards** (`24047051b`), the **governor/glass-off fixes** (`3f95a9241`) and **CNCVerse long ids** (`47ad499ad`).
+  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`) and the **IMDb 0-100 fix** (`eea9aac9d`), the **flat-glass Trakt cards** (`24047051b`), the **governor/glass-off fixes** (`3f95a9241`) and **CNCVerse long ids** (`47ad499ad`), the
+  **text/component scale merge** (`9f0588a80`, `302d2bf4f`, `b0c947387`), the **#557 seek warning**
+  (`5cf77f08d`, `d034960e8`), the **#581 audio-focus fix** (`5b0d2a35d`, `4a0b3408d`), the
+  **#584 720p Auto trailers** (`2bc1ddb55`, `b89ddc139`) and the **#589 slow-motion GIF**
+  (`5ab9fc44c`, `b2aa59ada`).
 
 ### Frost performance (to fill before tagging)
 
@@ -471,7 +475,11 @@ Landing in 2.0.7, already in the sections above:
   (`2c7c85860`), the **Dynamic Gray/Colour background** (`e3fdbe717`), the **Home frost islands**
   (`f087f4b59`), the **sidebar frost / glass accent pill** (`ab0e9a597`), **PR #572** (`22f3d22bb`), the
   **player glass / episode plate / hero mipmap** fixes (`04375ab4f`, `3b39999e5`, `fc6d35d69`), the
-  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`) and the **IMDb 0-100 fix** (`eea9aac9d`), the **flat-glass Trakt cards** (`24047051b`), the **governor/glass-off fixes** (`3f95a9241`) and **CNCVerse long ids** (`47ad499ad`).
+  **region-only backdrop copy** (`d7522dd17`) and **Arabic Naskh Bold** (`0940ae7bf`) and the **IMDb 0-100 fix** (`eea9aac9d`), the **flat-glass Trakt cards** (`24047051b`), the **governor/glass-off fixes** (`3f95a9241`) and **CNCVerse long ids** (`47ad499ad`), the
+  **text/component scale merge** (`9f0588a80`, `302d2bf4f`, `b0c947387`), the **#557 seek warning**
+  (`5cf77f08d`, `d034960e8`), the **#581 audio-focus fix** (`5b0d2a35d`, `4a0b3408d`), the
+  **#584 720p Auto trailers** (`2bc1ddb55`, `b89ddc139`) and the **#589 slow-motion GIF**
+  (`5ab9fc44c`, `b2aa59ada`).
 
 ### Frost performance (to fill before tagging)
 
