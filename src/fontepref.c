@@ -304,7 +304,11 @@ static char *campo(char **p) {
 // separado por TAB como os outros. Pode: limpar() ja troca TODO byte abaixo de
 // 32 por espaco antes de gravar, e o TAB e um deles. O ultimo campo agora e o
 // bingeGroup, que passa pelo mesmo limpar().
+static unsigned revisao;   // fontepref_revisao: bumps on every change of the tables
+unsigned fontepref_revisao(void) { return revisao; }
+
 static void gravar(void) {
+  revisao++;
   size_t cap = (size_t)FONTEPREF_MAX * 850u + 64u;
   char *buf = (char *)malloc(cap);
   size_t k = 0;
@@ -343,6 +347,7 @@ static void autoCarregar(void) {
 }
 
 static void autoGravar(void) {
+  revisao++;
   size_t cap = (size_t)FONTEPREF_MAX * 200u + 64u, k = 0;
   char *buf = (char *)malloc(cap);
   int i;
@@ -370,7 +375,7 @@ static void autoRemover(int k) {
 void fontepref_iniciar(void) {
   char *b, *linha, *prox;
   if (carregado) return;
-  carregado = 1;
+  carregado = 1; revisao++;
   nTab = 0;
   autoCarregar();
   b = dados_ler(arquivoDoPerfil());
@@ -424,7 +429,7 @@ void fontepref_definir_perfil(int p) {
   perfil = p;
   nTab = 0;
   nAuto = 0;
-  carregado = 0;
+  carregado = 0; revisao++;
 }
 
 void fontepref_esquecer(void) {
@@ -442,7 +447,7 @@ void fontepref_esquecer(void) {
   }
   nTab = 0;
   nAuto = 0;
-  carregado = 1;   // ja sabemos o que ha no disco: nada
+  carregado = 1; revisao++;   // ja sabemos o que ha no disco: nada
 }
 
 // VENCEU? Ver FONTEPREF_VALIDADE_S em fontepref.h para o prazo e o porque.
@@ -705,11 +710,14 @@ static int escolherAuto(const char *id) {
     if (!stream_grupo_sem_perda(i)) continue;
     melhor = i;
   }
-  if (melhor >= 0) {
-    printf("[fonte] preferida de %s na posicao %d por bingeGroup do automatico (%s)\n",
-           base, melhor, tabAuto[k].bingeGroup);
-    fflush(stdout);
-  }
+  // Logged when the answer changes, not on every repeat of the same pick.
+  { static char ultBase[24]; static int ultMelhor = -2;
+    if (melhor >= 0 && (melhor != ultMelhor || strcmp(ultBase, base))) {
+      printf("[fonte] preferida de %s na posicao %d por bingeGroup do automatico (%s)\n",
+             base, melhor, tabAuto[k].bingeGroup);
+      fflush(stdout);
+    }
+    ultMelhor = melhor; snprintf(ultBase, sizeof ultBase, "%s", base); }
   return melhor;
 }
 
