@@ -3382,6 +3382,9 @@ static void vidPassada(GLuint src, GLuint fbo, int w, int h, const float uv[][4]
   int i;
   glBindFramebuffer(GL_FRAMEBUFFER, fbo);
   glViewport(0, 0, w, h);
+  // Nothing outside the regions is read (vidroFundoFechar), so a tiler need not
+  // load the old target. A clear, not the discard: defined contents (#318).
+  glClear(GL_COLOR_BUFFER_BIT);
   glUniform2f(vidLocO, ox, oy);
   glBindTexture(GL_TEXTURE_2D, src);
   for (i = 0; i < n; i++) {
