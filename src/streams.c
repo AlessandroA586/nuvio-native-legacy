@@ -535,6 +535,8 @@ static int soP2P(const Stream *s) {
 // para um servidor de streaming local.
 static int pedeP2P(const Stream *s) {
   if (!s->notWebReady) return 0;
+  // infoHash sem url (Lumio): a conta de debrid o resolve, nao precisa de P2P.
+  if (!s->url[0] && s->infoHash[0] && debrid_ativo()) return 0;
   const char *h = s->url, *end, *hostEnd;
   if (!strncasecmp(h, "http://", 7)) h += 7;
   else if (!strncasecmp(h, "https://", 8)) h += 8;
