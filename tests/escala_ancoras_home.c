@@ -21,8 +21,16 @@ void fixture_home(float scale, int focused) {
   if(!(lay==2 && focused)) info=shot_text(txt_linha_corta(TXT_HERO_META,meta,179,179,179,255,lay==2?760:NV_HERO_SIN_W));
   // The first row is rendered by desenhaTituloFil, not a helper coordinate.
   GfxRect row=shot_text(txt_linha_corta(TXT_ROW_TITULO,fileiras[0].titulo,168,173,181,255,NV_TELA_W-homeConteudoX()-180));
-  if(!(lay==2 && focused)) shot_anchor("hero information",info,0); shot_anchor("first row title",row,0);
-  shot_disjoint("hero information / first row",info,row);
+  shot_anchor("first row title",row,0);
+  if(!(lay==2 && focused)) {
+    shot_reset(); desenhaHero(10000,0);
+    // Exclude the full-width artwork and right-side pagination, retaining
+    // every rendered logo, text, badge and action surface in the copy column.
+    GfxRect hero=shot_component_bounds((GfxRect){homeConteudoX(),0,
+      homeTextoLargura(lay==2?760:NV_HERO_SIN_W),NV_TELA_H});
+    shot_anchor("hero block left/bottom",hero,1);
+    shot_disjoint("complete hero / first row",hero,row);
+  }
   if(!(lay==2 && focused)) shot_check("text height follows scale",info.h>12*scale && info.h<70*scale);
   gfx_escala_sair(old);
 }

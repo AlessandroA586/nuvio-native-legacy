@@ -74,6 +74,23 @@ GfxRect shot_text_bounds(void) {
   }
   return r;
 }
+GfxRect shot_component_bounds(GfxRect area) {
+  GfxRect bounds={0}; int count=0;
+  float e=gfx_escala();
+  area=(GfxRect){area.x*e,area.y*e,area.w*e,area.h*e};
+  for(int i=0;i<nboxes;i++) {
+    GfxRect r=boxes[i].r;
+    if(r.x<area.x-1 || r.y<area.y-1 || r.x+r.w>area.x+area.w+1 || r.y+r.h>area.y+area.h+1) continue;
+    if(!count++) bounds=r;
+    else {
+      float right=fmaxf(bounds.x+bounds.w,r.x+r.w), bottom=fmaxf(bounds.y+bounds.h,r.y+r.h);
+      bounds.x=fminf(bounds.x,r.x); bounds.y=fminf(bounds.y,r.y);
+      bounds.w=right-bounds.x; bounds.h=bottom-bounds.y;
+    }
+  }
+  shot_check("component has rendered bounds",count>0);
+  return bounds;
+}
 void shot_anchor(const char *name, GfxRect r, int edges) {
   // edges: 0 left/top, 1 left/bottom, 2 right/top; dimensions may grow.
   if (edges == 1) r.y += r.h;
@@ -155,13 +172,13 @@ int main(void) {
     AddonRemoto addon={.nome="Fixture",.url="http://127.0.0.1:1/manifest.json",.ativo=1};
     addons_definir_lista(&addon,1); assert(addons_n()==1);
     cat_definir_tudo(items,6,&row,1); cat_definir_episodios(0,eps,3);
-    float scales[]={1,.8f,.85f,1.15f};
-    for(int i=0;i<4;i++) {
+    float scales[]={1,.8f,.85f,.9f,1.15f,1.3f};
+    for(int i=0;i<(int)(sizeof scales/sizeof scales[0]);i++) {
       gfx_escala_txt_definir(scales[i]);
       fixture_home(scales[i],0); fixture_home(scales[i],1);
       fixture_search(scales[i]);
       for(int section=-1;section<4;section++) fixture_detail(scales[i],section);
-      if(layout==0) { fixture_settings(scales[i],0); fixture_settings(scales[i],1); }
+      if(layout==0 && scales[i]!=.9f && scales[i]!=1.3f) { fixture_settings(scales[i],0); fixture_settings(scales[i],1); }
       gfx_escala_txt_definir(scales[i]);
       shot_begin(layout==0?"clock-modern":layout==1?"clock-standard":"clock-dynamic",scales[i]);
       ilha_relogio_visivel(1);

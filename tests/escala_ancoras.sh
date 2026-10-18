@@ -1,5 +1,5 @@
 #!/bin/bash
-# Real Home/Search/Detail/Settings/clock draws and PNGs at 80/85/100/115%.
+# Real Home/Search/Detail/Settings/clock draws and PNGs at 80/85/90/100/115/130%.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export TMPDIR="${TMPDIR:-/Volumes/ExternalSSD/tmp/jobtmp}"

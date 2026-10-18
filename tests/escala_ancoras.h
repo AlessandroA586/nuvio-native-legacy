@@ -12,6 +12,7 @@ void shot_anchor(const char *name, GfxRect r, int edges);
 GfxRect shot_text(TxtLinha line);
 GfxRect shot_box(GfxRect expected);
 GfxRect shot_text_bounds(void);
+GfxRect shot_component_bounds(GfxRect area);
 void shot_disjoint(const char *name, GfxRect a, GfxRect b);
 void shot_contains(const char *name, GfxRect outer, GfxRect inner);
 void shot_check(const char *name, int ok);

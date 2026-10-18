@@ -4477,14 +4477,8 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
     minTop = base - ANC(NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE) + 24.0f;
   else if (lay == HOME_LAYOUT_DINAMICA)
     minTop = base - ANC(NV_DIN_HERO_H - NV_DIN_TEXTO_BASE) + 54.0f;
-  if (!heroCompactoTelefone() && !homeRetratoTelefone()) {
-    float previous = gfx_escala();
-    gfx_escala_sair(1.0f);
-    hSin = sinopse[0] ? txt_bloco_corta(heroSinEstilo(), sinopse, 255, 255, 255, -1, 0,
-                                      sinW, heroSinEntrelinha(), 0, sinLinhas) : 0;
-    gfx_escala_sair(previous);
-    hSin = ANC(hSin);
-  }
+  if (!heroCompactoTelefone() && !homeRetratoTelefone() && sinopse[0])
+    hSin += txt_linha(heroSinEstilo(), "Ag", 255, 255, 255, 255).h - heroSinEntrelinha();
   AmigosTitulo amigos;
   int temAmigos = ci && ci->imdb[0] && amigostitulo_obter(ci->imdb, &amigos);
   float friendsH = temAmigos ? NV_AMIGOS_HERO_H : 0.0f;
@@ -5359,7 +5353,7 @@ static void desenhaHero(Uint32 agora, float saida) {
         // que botao_superficie devolve para este foco: antes era TXT_ILHA_NOME
         // 24/600 com ajustes_tinta_foco, mais pesado e fora da pilula do app.
         TxtLinha lb = txt_linha(TXT_DET_BOTAO, rot, 245, 245, 245, 255);
-        float bh = btnH;
+        float bh = (heroCompactoTelefone() || homeRetratoTelefone()) ? btnH : ANC(btnH);
         float bw = lb.w + 38.0f * 2;   // NV_DETW2_BTN_PADX, igual ao detalhe
         float by = actionY;
         GfxRect bt = { x, by, bw, bh };
