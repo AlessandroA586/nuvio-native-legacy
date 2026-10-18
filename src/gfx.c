@@ -1648,8 +1648,10 @@ static GLuint compila(GLenum tipo, const char *src) {
   return s;
 }
 
-// Build programs only during initialization. Cold driver compilation/linking
-// must never block an interactive draw, including the first glass draw.
+// Monta o programa de um modo. Quase todos nascem em gfx_iniciar; o vidro
+// (o fragment shader mais pesado) so no primeiro desenho dele, porque numa
+// Mali-G52 sem cache o link de todos juntos segurava a tela preta por 12 s e
+// quem desligou o vidro (o padrao) nunca o desenha.
 static GLuint vsProg;
 static int progMontar(int m) {
   GLuint vs = vsProg;
@@ -1734,7 +1736,8 @@ int gfx_iniciar(void) {
   // interface" sem passar por Ajustes. No app quem define e ajustes.c.
   { const char *t = getenv("NUVIO_TAMANHO_UI"); if (t && *t) { gfx_escala_ui_definir((float)atof(t)); escUiFixa = 1; } }
   for (int m = 0; m < GFX_NMODOS; m++) {
-    if (!progMontar(m) && m != GFX_VIDRO) return 0;
+    if (m == GFX_VIDRO) continue;   // sob demanda: progMontar em gfx_rect
+    if (!progMontar(m)) return 0;
   }
   glUseProgram(progs[GFX_CARD].prog);
   progAtual = GFX_CARD;
@@ -3805,13 +3808,23 @@ static int vidroSobreVideo(const float tela[4]) {
   for (i = 0; !video && i < vidroNFuros; i++) video = vidroCruza(vidroFuros[i], tela);
   return video;
 }
+// O programa do vidro e montado aqui, a partir do 3o quadro: o link pesado nao
+// segura o primeiro quadro, e ate la (ou se o driver o recusar) o painel sai
+// no solido de gfx_chrome, nunca sem fundo.
+static int vidroPronto(void) {
+  static int falhou;
+  if (progs[GFX_VIDRO].prog) return 1;
+  if (falhou || gfx_quadro_n < 3) return 0;
+  if (progMontar(GFX_VIDRO)) { progAtual = -1; return 1; }   // o link deixou o programa do vidro em uso
+  falhou = 1;
+  return 0;
+}
 void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a) {
   GfxRect t = r;
   float d = dens, tela[4];
   int chapado, video, fumaca, i, contorno = ajustes_vidro_contorno();
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
-  // A rejected glass program uses the flat panel without retrying in a draw.
-  if (!progs[GFX_VIDRO].prog) {
+  if (!vidroPronto()) {
     gfx_cor(r, raio, 0x1a / 255.0f, 0x1c / 255.0f, 0x21 / 255.0f, 0.94f * a);
     gfx_anel(r, raio, 1.0f, 1.0f, 1.0f, 1.0f, 0.22f * a);
     return;
