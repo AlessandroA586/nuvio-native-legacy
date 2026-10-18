@@ -107,21 +107,13 @@ int main(int argc, char **argv) {
   hint[0] = 0; draw(win, NULL); assert(!hint[0]);
   stream_definir_lista(v, 22); assert(n == 22);
   hint[0] = 0; draw(win, NULL); assert(!hint[0]);
-  // notWebReady sources require P2P even with debrid connected.
+  // Lumio-like infoHash-only notWebReady sources: debrid resolves them, no P2P needed.
   for (int i = 5; i < 22; i++) v[i].notWebReady = 1;
-  stream_definir_lista(v, 22); assert(n == 5);
-  hint[0] = 0; draw(win, NULL);
-#ifdef __EMSCRIPTEN__
-  assert(!hint[0]);
-#else
-  if (!strstr(hint, "P2P") || strstr(hint, "debrid")) {
-    fprintf(stderr, "FAIL: active-debrid P2P-only remedy: '%s'\n", hint);
-    failures++;
-  }
-#endif
-  if (!failures) puts("PASS: active-debrid P2P-only remedy");
+  stream_definir_lista(v, 22); assert(n == 22);
+  hint[0] = 0; draw(win, NULL); assert(!hint[0]);
+  puts("PASS: active-debrid keeps infoHash-only notWebReady sources");
   debrid_esquecer();
-  // Connecting debrid cannot restore sources rejected by pedeP2P().
+  // Without debrid, notWebReady infoHash sources stay rejected by pedeP2P().
   for (int engine = 0; engine <= 1; engine++) {
     atomic_store(&motorP2pParaDica, engine);
     stream_definir_lista(v, 22); assert(n == 5);
