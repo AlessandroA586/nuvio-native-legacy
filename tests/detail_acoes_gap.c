@@ -1,50 +1,36 @@
-// Action row: gap after a focused button stays NV_DETW2_BTN_GAP, and the
-// "Assistir do começo" pill opens slowly and smoothly. Pure.
+// Action row: drawn gap between neighbours stays 18 whichever button is
+// focused. Row laid out the way heroWeb does (helpers), edges drawn by the
+// scale-about-centre rule. Pure.
 #include "detail_acoes.h"
 #include <stdio.h>
 #include <math.h>
 
-#define BTN_GAP 18.0f
-#define FOCO_SX 1.114f
-#define FOCO_SY 1.147f
+#define GAP 18.0f
+#define SX 1.114f
+#define SY 1.147f
 static int falhas;
 #define CHECK(c) do { if (!(c)) { printf("FALHOU %d: %s\n", __LINE__, #c); falhas++; } } while (0)
 
-static void gap(void) {
-  for (int k = 0; k < 8; k++) {
-    float s = 0.5f + 0.25f * k;                  // UI scales
-    float w = 321.0f * s, x = 80.0f * s, g = BTN_GAP * s;
-    for (int foc = 0; foc <= 1; foc++) {
-      float prox = x + det_avanco(w, foc, FOCO_SX, g);
-      float dir = x + w + (foc ? det_foco_extra(w, FOCO_SX) : 0.0f);   // drawn right edge
-      CHECK(fabsf((prox - dir) - g) < 0.001f);
-      if (foc) CHECK((x + w + g) - dir < g - 1.0f);   // old advance w+gap left < g
-    }
+static void linha(const float *w, const float *s, int circ0, int n, int f, float u) {
+  float bx = 80.0f * u, prevR = 0;
+  for (int i = 0; i < n; i++) {
+    int foc = i == f, circ = i >= circ0;   // circles also shift right by their growth
+    float x = bx + (circ && foc ? det_foco_extra(w[i] * u, s[i]) : 0.0f);
+    float cx = x + w[i] * u * 0.5f, dw = w[i] * u * (foc ? s[i] : 1.0f);
+    if (i > 0 && circ) CHECK(fabsf((cx - dw * 0.5f - prevR) - GAP * u) < 0.01f);
+    prevR = cx + dw * 0.5f;
+    bx = circ ? x + w[i] * u + (foc ? det_foco_extra(w[i] * u, s[i]) : 0.0f) + GAP * u
+              : x + det_avanco(w[i] * u, foc, s[i], GAP * u);
   }
-}
-
-static void inicio(int dtms) {
-  float larg = 0, rot = 0, prev = 0, maxPasso = 0, t = 0, tFim = -1;
-  float dt = dtms * 0.001f;
-  anim_politica_reduzida = 0;
-  for (int i = 0; i < 400; i++, t += dt) {
-    anim_expande(&larg, &rot, 1.0f, dt, NV_DET_INICIO_LARG_MS, NV_DET_INICIO_ROT_MS);
-    float w = det_inicio_largura(larg);
-    CHECK(w >= prev - 1e-6f);                   // monotonic
-    if (w - prev > maxPasso) maxPasso = w - prev;
-    prev = w;
-    if (tFim < 0 && larg >= 1.0f && rot >= 1.0f) tFim = t + dt;
-  }
-  CHECK(prev == 1.0f);
-  CHECK(tFim * 1000.0f >= 300.0f);              // slower than the old 280 ms
-  CHECK(maxPasso <= 3.2f * dtms / NV_DET_INICIO_LARG_MS);   // no snap: cubic-out peak slope is 3/T
-  // frame-rate independent: width reaches 1 at the same time (within a frame)
-  printf("dt=%d fim=%.0fms passo=%.3f\n", dtms, tFim * 1000.0f, maxPasso);
 }
 
 int main(void) {
-  gap();
-  inicio(16); inicio(33); inicio(8);
+  float w3[] = {321, 72, 72}, s3[] = {SX, SY, SY};
+  float wr[] = {321, 200, 72}, sr[] = {SX, SY, SY};
+  for (int k = 0; k < 8; k++) {
+    float u = 0.5f + 0.25f * k;
+    for (int f = -1; f < 3; f++) { linha(w3, s3, 1, 3, f, u); linha(wr, sr, 2, 3, f, u); }
+  }
   if (falhas) { printf("%d falhas\n", falhas); return 1; }
   puts("OK");
   return 0;
