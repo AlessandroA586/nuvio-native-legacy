@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T10:48:12-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T11:47:54-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -347,7 +347,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 - **C9 rendering and subtitle timing checks**: Regression checks cover glass-cache budgets and unchanged frost images, plus production readiness, the complete initial 12-second ASS window, and deterministic prefetch timeout checks. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `527c69cf3`, `5f29a8095`, `b12b8e11f`, `9e778e588`, `3934284c5`, `8e8a90415`, `0661e272d`.
 
 - **Broader visual regression coverage**: Sources shadows, profile-cache pressure and deterministic text-scale fixtures cover more UI states. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `45aef45f9`, `915e360a4`, `d6b0c2363`, `cff9c7e1b`, `15903519f`, `0c0c80d58`, `0d5d0d735`, `04ed0d150`, `207e0a283`.
-- **Tracking and release documentation**: Release notes, issue tracking and fixed-width caller documentation stay synchronized. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `733bc65e0`, `442021716`, `0eee6cbc3`, `71a57d7b4`, snapshot HEAD `5ff69db39`.
+- **Tracking and release documentation**: Release notes, issue tracking and fixed-width caller documentation stay synchronized. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `733bc65e0`, `442021716`, `0eee6cbc3`, `71a57d7b4`, snapshot HEAD `6a54b2213`.
 
 - **Graphics regression coverage**: frame-hash, native trailer and ANGLE GLES2 probes cover Home artwork flicker; measured Frost and menu pixel checks replace misleading fixtures. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `491f8ce0e`, `698fa7417`, `0f1b20514`, `01603fd5b`, `453c7a73c`, `fff6df801`.
 - **Integration fixture repairs**: isolated Mach-O linking, discovery retry, sync handshakes and fallback artwork fixtures remain runnable. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `5b37cecd8`, `ac616c0bd`, `da2c69701`, `f87c41ed7`.
@@ -405,9 +405,9 @@ Tracking snapshot: 22 branches have unmerged commits and no running job; 13 open
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
-- **Variant A Hero layouts**: Wide Hero cards and split Hero rows follow the owner-selected artwork and metadata layout; integration and device validation remain pending. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-heroisA`.
+- **Variant A Hero layouts**: Wide Hero cards and split Hero rows follow the owner-selected artwork and metadata layout, with focus and draw-budget fixes awaiting review of the newest tip and device validation. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-heroisA`, `c3985174d`.
 
-- **Selected PR #567 playback improvements**: Pending work ports source file selection, binge-source continuity, refreshed TorBox links, DTS fallback, wait-all source selection and MKVToolNix seeking; these requests are not confirmed release behavior. Platforms: Samsung .tpk first; Android/webOS coverage pending. Refs @Namer03, PR #567, `agente/205-pr567port`.
+- **Selected PR #567 playback improvements**: Pending work ports source file selection, binge-source continuity, refreshed TorBox links, DTS fallback, wait-all source selection, MKVToolNix seeking and source-font preferences; the latest launch fixes need review before integration. Platforms: Samsung .tpk first; Android/webOS coverage pending. Refs @Namer03, PR #567, `agente/205-pr567port`, `385b44106`.
 
 
 
@@ -415,21 +415,19 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
   VEREDITO OK `j-rev-pr487-v2`, no commit after. **Needs final re-review.** Android, LG webOS.
 - **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out. Latest mapped review is **OK**; see `estado.md` for the current review log. Awaiting merge of the reviewed tip.
   Android, LG webOS.
-- **Tizen/homebrew, glassmock, mock21, perfis21, owner answers** — branches with a finished job and no review
-  (`agente/205-homebrew`, `agente/205-tizenbrew`, `agente/205-glassmock`, `agente/205-mock21`,
-  `agente/205-perfis21`, `agente/205-respostas`). No confirmed user-facing content.
+- **Deferred experiments and owner answers**: Homebrew, Tizenbrew, glass mockups and profile experiments remain deferred to 2.1; owner-answer tracking remains on an unmerged branch. Platforms: webOS, Android, Samsung .tpk, WASM; no confirmed release behavior. Refs `agente/205-homebrew`, `agente/205-tizenbrew`, `agente/205-glassmock`, `agente/205-mock21`, `agente/205-perfis21`, `agente/205-respostas`.
 - **Custom subtitle font** — the other half of #501, no branch. Android.
 - **Manual subtitle sync** — `agente/205-legajuste`, spec only. Deferred to 2.1.
 - **Open PRs with no local branch**: #456/#457/#466/#467/#468/#469/#478/#482 (out-of-scope ones stay in the
   map). Triage, not lost.
 
 
-- **Hero A layout polish**: Wide hero cards and focus rendering receive layout and draw-budget fixes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-heroisA, `c3985174d`. The latest fix postdates the last review; review the newest tip and check devices before integration.
 
 
 
 
-- **PR #567 port follow-ups**: Source-font preference and launch behavior receive follow-up fixes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-pr567port, `385b44106`. The latest fix postdates the last review; review the newest tip and check devices before integration.
+
+
 
 ### Previously pending, now integrated
 
