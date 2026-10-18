@@ -2024,7 +2024,8 @@ void txt_desenhar_borda(TxtLinha b, float x, float y, int borda, float alpha) {
 }
 
 void txt_desenhar_tom(TxtLinha l, float x, float y, float cr, float cg, float cb, float alpha) {
-  if (!l.tex) return;
+  // Layout probes use alpha zero to measure cached lines without drawing.
+  if (!l.tex || alpha <= 0.0f) return;
   camadaAtualizar();
   GfxRect r = { encaixa(x), encaixa(y), (float)l.w, (float)l.h };
   if (camada && l.pw > 0) { r.w = (float)l.pw / ESC_T; r.h = (float)l.ph / ESC_T; }

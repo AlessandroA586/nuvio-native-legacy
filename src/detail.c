@@ -5465,7 +5465,10 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   const CatItem *serie = cat_item(idx);
   const char *arte = (ep && ep->thumb[0]) ? ep->thumb
                      : (serie && serie->backdrop[0] ? serie->backdrop : NULL);
-  GLuint t2 = arte ? tex_obter_larg(arte, th.w) : 0;
+  // Reserve the largest focus size once; spring motion must not promote
+  // and decode the same thumbnail at successive 32-pixel cache limits.
+  const float texW = r.w * (ajustes_borda_foco() || epApple() ? 1.0f : 1.0f + FOCO_ZOOM);
+  GLuint t2 = arte ? tex_obter_larg(arte, texW) : 0;
   // STILL QUE NAO EXISTE NEM NO METAHUB NEM NO TMDB (One Piece da 2a
   // temporada em diante, 23/09): o card nao fica cinza, leva o fundo da serie
   // — o numero e o nome do episodio ja estao no texto por cima. O still
@@ -5473,7 +5476,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   if (!t2 && ep && ep->thumb[0] && arte == ep->thumb && tex_falhou(arte) && serie) {
     const char *reserva = serie->backdrop[0] ? serie->backdrop
                         : (serie->poster[0] ? serie->poster : NULL);
-    GLuint t3 = reserva ? tex_obter_larg(reserva, th.w) : 0;
+    GLuint t3 = reserva ? tex_obter_larg(reserva, texW) : 0;
     if (t3) { arte = reserva; t2 = t3; }
   }
   float aArte = (c >= 0 && c < DET_REV_EP) ? revela_arte(&revEp[c], t2 != 0, agora) : 1.0f;
@@ -7248,7 +7251,10 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
     float f = animFoco[r][c];
     float x = xItem(r, c) - scrollSec[r];
     float w = larguraItem(r, c);
-    if (x > NV_TELA_W || x + w < -ANC(NV_DETP_X)) continue;   // shadow/glow reach, not a whole extra card
+    // Episodes have only a focus rim/zoom, no wide shadow. Keep the
+    // protruding pixels, but do not request textures or lay out hidden cards.
+    float margin = r == SEC_EPISODIOS ? fmaxf(w * FOCO_ZOOM * 0.5f, NV_ANEL_FOCO + 10.0f) : ANC(NV_DETP_X);
+    if (x > NV_TELA_W + (r == SEC_EPISODIOS ? margin : 0.0f) || x + w < -margin) continue;
     if (ponteiro_ativo() && a > 0.3f && c < secaoColunas(r) && alturaAlvo(r) > 0.0f)
       ponteiro_alvo(x, y,
                     w, alturaAlvo(r), ponteiroDetalhe, NULL, r, c);

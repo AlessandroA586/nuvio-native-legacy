@@ -97,7 +97,11 @@ static float fx_titulo_bloco(TxtEstilo estilo, const char *s, int r, int g, int 
 static int fxTrailerVivo;
 static int fx_trailer_aberto(void) { return fxTrailerVivo; }
 #define trailer_aberto fx_trailer_aberto
+static Uint32 fxTick;
+static Uint32 fx_ticks(void) { return getenv("NV_EP_PERF") ? fxTick : SDL_GetTicks(); }
+#define SDL_GetTicks fx_ticks
 #include "../src/detail.c"
+#undef SDL_GetTicks
 #include "menu.h"
 #include "ilha.h"
 #undef txt_bloco
@@ -443,7 +447,8 @@ static void quadros(int n) {
     // do backdrop e as miniaturas dos episodios em cinza — de volta ao chao
     // chapado que este arquivo existe para nao ter.
     tex_bombear(3);
-    if (!parado) detail_atualizar(1.0f / 60.0f, SDL_GetTicks());
+    if (getenv("NV_EP_PERF") && !parado) fxTick += 16;
+    if (!parado) detail_atualizar(1.0f / 60.0f, fx_ticks());
     if (fxTrailerVivo) trailerFade = 1.0f;
     txt_novo_quadro();
     tex_novo_quadro();
@@ -455,7 +460,7 @@ static void quadros(int n) {
     gfx_ambiente_preparar();
     glClear(GL_COLOR_BUFFER_BIT);
     gfx_ambiente(1.0f);
-    detail_desenhar(SDL_GetTicks());
+    detail_desenhar(fx_ticks());
     gfx_ambiente_descarregar();
     // MENU OVER THE PAGE (NV_MENU_SOBRE): the same order as app.c — page,
     // side menu on top, clock island last (always top-right).
@@ -557,6 +562,7 @@ int main(int argc, char **argv) {
   gfx_icones_dir("deploy/app/art");   // o check do card visto e icone (#74)
   ajustes_iniciar();
   dados_iniciar("deploy/app/art");
+  if (getenv("NV_EP_PERF")) dados_gravar("aparencia-20.txt", "1\n");
   // EM PORTUGUES, e nao no padrao de fabrica. `valor[AJ_IDIOMA]` nasce em 1
   // (ingles) e a captura saia com "Season 2 / EPISODE 9 / Cast & Crew" — o que
   // se precisa julgar aqui e a largura das frases que o dono ve na TV dele, e
@@ -579,6 +585,50 @@ int main(int argc, char **argv) {
     ajustes_dir(dados_dir()); }
 
   montarCatalogo();
+  if (getenv("NV_EP_PERF")) {
+    assert(ajustes_home_layout() == HOME_LAYOUT_MODERNA && ajustes_vidro());
+    semear(1, T1_N, 3);
+    for (int i = 0; i < T1_N; i++)
+      snprintf(episodios[i].thumb, sizeof episodios[i].thumb,
+               "deploy/app/art/%02d.jpg", i + 1);
+    cat_definir_episodios(0, episodios, T1_N + T2_N + T3_N);
+    abrir(0, 0); nosEpisodios(0);
+    // Freeze animation/time so the before/after pixels can be compared.
+    parado = 1;
+    medindo = 1; fpsN = 0;
+    quadros(8);
+    fpsRelata("episode-rest");
+    snprintf(nome, sizeof nome, "%s-episodes.png", saida); gravar(nome);
+    int rects = gfx_n_rect;
+    double fill = gfx_fill_gpu;
+    printf("[episode-cap] episodes=%d rects=%d fill=%.3f cap=220/3.2\n",
+           epVisiveis(), rects, fill);
+    fflush(stdout);
+    assert(epVisiveis() >= 8);
+    assert(rects <= 220 && fill <= 3.2);
+    int count = gfx_n_rect;
+    TxtLinha probe = txt_linha(TXT_CAPTION, "Layout probe", 255, 255, 255, 255);
+    txt_desenhar_alpha(probe, 0, 0, 0);
+    assert(gfx_n_rect == count);
+    // Measurement-only rating layout must submit no GL draws.
+    notasui_fontes_altura(notasDados());
+    assert(gfx_n_rect == count);
+    // An unseen card must not be drawn; walk the complete ten-card season.
+    parado = 0;
+    medindo = 0;
+    for (int col = 1; col < T1_N; col++) {
+      nosEpisodios(col);
+      assert(gfx_n_rect <= 220 && gfx_fill_gpu <= 3.2);
+      for (int frame = 0; frame < 8; frame++) {
+        quadros(1);
+        assert(tex_upl_n == 0 && txt_rasterizadas == 0);
+      }
+    }
+    foco.fileira = SEC_ELENCO; foco.coluna = 0; quadros(120);
+    printf("[episode-cast] rects=%d fill=%.3f\n", gfx_n_rect, gfx_fill_gpu);
+    printf("[episode-navigation] ten cards, no settled uploads or rasterization\n");
+    return 0;
+  }
   if (getenv("NV_APPLE_EP")) {
     semear(1,2,T1_N);
     itens[0].temporada=1; itens[0].episodio=3;
