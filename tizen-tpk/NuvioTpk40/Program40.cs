@@ -196,23 +196,12 @@ namespace NuvioTpk
             {
                 // Janela do video, atras da janela GL (JuvoPlayer.OpenGL faz igual).
                 Etapa("begin video-window");
-                // The UI must start even if the TV refuses this window: without it
-                // only video playback is lost, and the reason goes to the log.
-                try
-                {
-                    janelaVideo = new Window("NuvioVideo") { Geometry = new Rect(0, 0, W, H) };
-                    janelaVideo.Show();
-                    janelaVideo.Lower();
-                }
-                catch (Exception e)
-                {
-                    janelaVideo = null;
-                    Etapa("note video-window failed, continuing without it: " + e.GetType().Name + ": " + e.Message);
-                }
-                video = new Video(() => janelaVideo == null ? null : new Tizen.Multimedia.Display(janelaVideo), a => EcoreMainloop.PostAndWakeUp(a), dados, W, H);
+                janelaVideo = new Window("NuvioVideo") { Geometry = new Rect(0, 0, W, H) };
+                janelaVideo.Show();
+                janelaVideo.Lower();
+                video = new Video(() => new Tizen.Multimedia.Display(janelaVideo), a => EcoreMainloop.PostAndWakeUp(a), dados, W, H);
                 video.GeometriaJanela = (gx, gy, gw, gh) =>
                 {
-                    if (janelaVideo == null) return "no video window";
                     try { janelaVideo.Geometry = new Rect(gx, gy, gw, gh); return null; }
                     catch (Exception e) { return e.GetType().Name + ": " + e.Message; }
                 };
