@@ -2871,7 +2871,7 @@
   T("Mover para categoria", "Chuyển đến danh mục"),
   T("Movimento", "Chuyển động"),
   T("Movimento e relógio", "Chuyển động và đồng hồ"),
-  T("Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 100%.", "Changes the size of text, buttons and components on Home, the title page and Library. Posters keep the size chosen in the rows. The default is 100%."),
+  T("Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 85%.", "Changes the size of text, buttons and components on Home, the title page and Library. Posters keep the size chosen in the rows. The default is 85%."),
   T("Muda só o tamanho dos Ajustes nesta TV. O padrão é 100%.", "Chỉ thay đổi kích thước Cài đặt trên TV này. Mặc định: 100%."),
   T("Mudar", "Đổi"),
   T("Mude quando quiser", "Đổi bất cứ lúc nào"),

@@ -11,7 +11,7 @@
 # For each screen (Home, Library, Settings, Title page, Player pause panel) the
 # real shot program runs three times and a spy on gfx_rect logs what it draws
 # in real pixels:
-#   1. default setting          -> baseline BMPs, must equal the BASE tree's BMPs
+#   1. explicit 100%            -> baseline BMPs, must equal the BASE tree's BMPs
 #   2. escalaTextoLocal = 100%  -> metrics baseline
 #   3. escalaTextoLocal = 120%  -> text and button heights x1.2, poster rects
 #                                  unchanged
@@ -85,7 +85,7 @@ run() {
     detail_secoes) dados="$(mktemp -d "$TMPDIR/nuvio-detsec-dados.XXXXXX")"; args=("$saida/d");;
     *) dados="$(mktemp -d "$TMPDIR/nv-te-dados.XXXXXX")"; args=("$saida/x");;
   esac
-  ( [ "$idx" != - ] && export NV_TXT_IDX="$idx"
+  ( export NV_TXT_IDX="${idx/-/2}"
     export NV_TXT_LOG="$W/$t/$tag-$s.log" NUVIO_DADOS="$dados" NUVIO_TESTE_DIR="$dados" NUVIO_AJUSTES_UX=1
     export NV_SHOT_PACOTE="${NV_SHOT_PACOTE:-$PWD/deploy/app/art/03.jpg}"
     "$W/$t/$s" "${args[@]}" > "$W/$t/$tag-$s.out" 2>&1 ) || { echo "  run failed: $t $tag $s"; tail -5 "$W/$t/$tag-$s.out"; rm -rf "$dados"; return 1; }

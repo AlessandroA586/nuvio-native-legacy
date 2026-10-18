@@ -2871,7 +2871,7 @@
   T("Mover para categoria", "Μετακίνηση σε κατηγορία"),
   T("Movimento", "Κίνηση"),
   T("Movimento e relógio", "Κίνηση και ρολόι"),
-  T("Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 100%.", "Changes the size of text, buttons and components on Home, the title page and Library. Posters keep the size chosen in the rows. The default is 100%."),
+  T("Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 85%.", "Changes the size of text, buttons and components on Home, the title page and Library. Posters keep the size chosen in the rows. The default is 85%."),
   T("Muda só o tamanho dos Ajustes nesta TV. O padrão é 100%.", "Αλλάζει μόνο το μέγεθος των Ρυθμίσεων σε αυτήν την TV. Προεπιλογή: 100%."),
   T("Mudar", "Αλλαγή"),
   T("Mude quando quiser", "Άλλαξέ το όποτε θέλεις"),
