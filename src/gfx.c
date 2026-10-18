@@ -2312,13 +2312,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
   int comAmb = 0, veuAmb = 0, opaco = 0, cheia, clearCor, duplo = 0;
   float din[4] = { 0.0f, 0.0f, 0.0f, 0.0f }, dinResto = -1.0f;
   if ((int)modo < 0 || (int)modo >= GFX_NMODOS) return;
-  if (modo == GFX_VIDRO && !progs[modo].prog) {
-    static int tentou;
-    if (tentou) return;
-    tentou = 1;
-    if (!progMontar(modo)) return;
-    progAtual = -1;   // o link deixou o programa do vidro em uso
-  }
+  if (modo == GFX_VIDRO && !progs[modo].prog) return;   // gfx_vidro so chega aqui com o programa pronto
   if (modo == GFX_CARD && gfx_card_heroi_veu_atual[3] > 0.0f) modo = GFX_CARD_HERO;
   // Grupo a 0 = "desenhar sem aparecer" (quem mede uma previa ou pede as
   // texturas de uma cena que ainda nao entrou): todo modo multiplica o alfa
@@ -3814,11 +3808,27 @@ static int vidroSobreVideo(const float tela[4]) {
   for (i = 0; !video && i < vidroNFuros; i++) video = vidroCruza(vidroFuros[i], tela);
   return video;
 }
+// O programa do vidro e montado aqui, a partir do 3o quadro: o link pesado nao
+// segura o primeiro quadro, e ate la (ou se o driver o recusar) o painel sai
+// no solido de gfx_chrome, nunca sem fundo.
+static int vidroPronto(void) {
+  static int falhou;
+  if (progs[GFX_VIDRO].prog) return 1;
+  if (falhou || gfx_quadro_n < 3) return 0;
+  if (progMontar(GFX_VIDRO)) { progAtual = -1; return 1; }   // o link deixou o programa do vidro em uso
+  falhou = 1;
+  return 0;
+}
 void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a) {
   GfxRect t = r;
   float d = dens, tela[4];
   int chapado, video, fumaca, i, contorno = ajustes_vidro_contorno();
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
+  if (!vidroPronto()) {
+    gfx_cor(r, raio, 0x1a / 255.0f, 0x1c / 255.0f, 0x21 / 255.0f, 0.94f * a);
+    gfx_anel(r, raio, 1.0f, 1.0f, 1.0f, 1.0f, 0.22f * a);
+    return;
+  }
   GFX_TR_RECT(t.x, t.y, t.w, t.h);
   if (escAtiva != 1.0f) { t.x *= escAtiva; t.y *= escAtiva; t.w *= escAtiva; t.h *= escAtiva; }
   tela[0] = t.x; tela[1] = t.y; tela[2] = t.x + t.w; tela[3] = t.y + t.h;
