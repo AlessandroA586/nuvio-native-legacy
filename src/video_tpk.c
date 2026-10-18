@@ -390,6 +390,27 @@ static struct {
 static atomic_int mfRecusas;   // EV_BUSCA_FALHOU (fio do host)
 static atomic_int mfAviso;     // video_tpk_aviso_busca consome
 static void abrirHost(const char *url, const char *cab) {
+  char seguros[sizeof cabecalhos];
+  const char *orig = strstr(urlAtual, "://"), *dest = url ? strstr(url, "://") : NULL;
+  size_t no = orig ? (size_t)(orig + 3 - urlAtual) + strcspn(orig + 3, "/?#") : 0;
+  size_t nd = dest ? (size_t)(dest + 3 - url) + strcspn(dest + 3, "/?#") : 0;
+  // Across origins, forward only transport preferences, never source secrets.
+  if (cab && *cab && (!no || no != nd || strncasecmp(urlAtual, url, no))) {
+    size_t used = 0;
+    seguros[0] = 0;
+    for (const char *p = cab; *p;) {
+      size_t n = strcspn(p, "\r\n");
+      if (!strncasecmp(p, "User-Agent:", 11) || !strncasecmp(p, "Accept:", 7) ||
+          !strncasecmp(p, "Accept-Language:", 16)) {
+        if (n + 1 < sizeof seguros - used) {
+          memcpy(seguros + used, p, n); used += n;
+          seguros[used++] = '\n'; seguros[used] = 0;
+        }
+      }
+      p += n; while (*p == '\r' || *p == '\n') p++;
+    }
+    cab = seguros;
+  }
   if (!mkvfix_e_url(url)) {
     snprintf(hostUrl, sizeof hostUrl, "%s", url ? url : "");
     snprintf(hostCab, sizeof hostCab, "%s", cab ? cab : "");

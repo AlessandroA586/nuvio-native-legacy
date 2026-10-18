@@ -147,7 +147,7 @@ int video_tpk_convertendo(void);
 int video_tpk_capa(void);
 static char ultUrl[256];
 static int nAbriu, nBuscas, posMs;
-static char ultCab[128];
+static char ultCab[512];
 static void hAbrir(const char *u, const char *c) { nAbriu++; snprintf(ultUrl, sizeof ultUrl, "%s", u); snprintf(ultCab, sizeof ultCab, "%s", c ? c : ""); }
 static void hSem(void) {}
 static void hInt(int v) { (void)v; }
@@ -178,11 +178,12 @@ static int perto(double a, double b) { return a > b - 0.01 && a < b + 0.01; }
 
 // --- the fake cdnlink ---------------------------------------------------------
 static int resolveOk = 1, nResolve, recenteSim, validadeMs = 150 * 60 * 1000;
+static const char *cachedUrl = "https://cdn.test/checked";
 static int fOrigem(const char *u) { return u && !strncmp(u, "http", 4) && !strstr(u, "127.0.0.1") && !strstr(u, ".m3u8") && !strstr(u, "tb-cdn.st"); }
 static int fRecente(const char *o, unsigned maxMs, char *d, unsigned t, unsigned *idade) {
   (void)o; (void)maxMs;
   if (!recenteSim) return 0;
-  snprintf(d, t, "https://cdn.test/checked"); if (idade) *idade = 5000; return 1;
+  snprintf(d, t, "%s", cachedUrl); if (idade) *idade = 5000; return 1;
 }
 static int fResolver(const char *o, const char *c, int s, char *d, unsigned t, unsigned *ms) {
   (void)o; (void)c; (void)s; (void)ms;
@@ -218,6 +219,38 @@ int main(void) {
   video_parar();
 
   video_tpk_cdn_ganchos(&g);
+
+  // Both CDN open paths must keep only destination-safe headers.
+  const char *headers = "Cookie: session=secret\naUtHoRiZaTiOn: Bearer secret\nX-Api-Key: secret\nUser-Agent: fixture\nAccept: video/*\n";
+  for (int cached = 0; cached < 2; cached++) {
+    recenteSim = cached; nAbriu = 0;
+    video_definir_reconexao(1);
+    video_definir_cabecalhos(headers);
+    video_tocar("https://addon.test/private.mkv");
+    esperarAbrir(1);
+    ok(!strcmp(ultCab, "User-Agent: fixture\nAccept: video/*\n"),
+       cached ? "cached CDN strips origin credentials" : "resolved CDN strips origin credentials");
+    ok(!strcmp(video_cabecalhos(), headers), "source credentials retained for source requests");
+    video_parar();
+  }
+  cachedUrl = "https://ADDON.test/same-origin"; recenteSim = 1; nAbriu = 0;
+  video_definir_reconexao(1);
+  video_definir_cabecalhos(headers);
+  video_tocar("https://addon.test/private.mkv");
+  ok(!strcmp(ultCab, headers), "same origin retains source credentials");
+  video_parar();
+  cachedUrl = "https://addon.test:8443/other-origin"; nAbriu = 0;
+  video_definir_reconexao(1);
+  video_definir_cabecalhos(headers);
+  video_tocar("https://addon.test/private.mkv");
+  ok(!strstr(ultCab, "secret"), "different port strips source credentials");
+  video_parar(); cachedUrl = "https://cdn.test/checked";
+  recenteSim = 0; resolveOk = 0; nAbriu = 0;
+  video_definir_reconexao(1);
+  video_definir_cabecalhos(headers);
+  video_tocar("https://addon.test/private.mkv"); esperarAbrir(1);
+  ok(!strcmp(ultCab, headers), "failed CDN keeps source credentials on source host");
+  video_parar(); video_definir_cabecalhos(""); resolveOk = 1;
 
   // A direct TorBox URL skips redirect resolution, but still expires.
   nAbriu = nBuscas = fileRequests = 0;

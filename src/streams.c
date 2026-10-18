@@ -4334,7 +4334,6 @@ static int partesEvento(const SDL_Event *e) {
   }
   // O OK segurado que abriu a modal continua repetindo: nao e escolha.
   if (e->key.repeat && (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE)) return 1;
-  ptMontar();
   if (ptNLinhas <= 0) {
     if (k == SDLK_RETURN || k == SDLK_KP_ENTER) { if (ptSemCopias) ptSemCopias = 0; else ptAberto = 0; }
     return 1;
@@ -4358,7 +4357,7 @@ static int partesEvento(const SDL_Event *e) {
         fflush(stdout);
         partes_pedir_item(&lista[ptFonte], c->item);
         ptCopias = 0; ptFocoPosto = 0; ptDesde = SDL_GetTicks(); ptAba = 0; ptRolAlvo = 0;
-        partes_lista_limpar(&ptL); ptL.estado = PARTES_BUSCANDO; ptL.atual = -1;
+        partes_lista_limpar(&ptL); ptL.estado = PARTES_BUSCANDO; ptL.atual = -1; ptNLinhas = 0;
       }
     } else if (ln->tipo == PR_ARQ) {
       int f = ln->idx;
@@ -4507,7 +4506,13 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
   if(!aberta) { detAberto=0; if (ptAberto) partes_cancelar(); ptAberto=0; ctxhold_cancelar(&folhaHold); }
   ptAnim=anim_mola(ptAnim,ptAberto?1:0,dt,NV_MOLA_TELA);
   if (ptAberto) {
-    int e = partes_resultado(&ptL);
+    int e = partes_resultado(NULL);
+    if (e != ptL.estado) {
+      if (e == PARTES_VAZIO) partes_lista_limpar(&ptL);
+      else e = partes_resultado(&ptL);
+      ptFocoPosto = 0;
+      ptMontar();
+    }
     if (e == PARTES_PRONTO && !ptFocoPosto) {
       // Abre na aba e na linha do arquivo que toca (ou o da fonte).
       int t = ptTocando(), f = t >= 0 ? t : ptL.atual;
@@ -4518,8 +4523,7 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
       ptFoco = f >= 0 ? ptLinhaDoArquivo(f) : -1;
       if (ptFoco < 0) { ptFoco = ptPrimeira(); for (int r = 0; r < ptNLinhas; r++) if (ptLinhas[r].tipo == PR_ARQ) { ptFoco = r; break; } }
       ptFocoPosto = 1;
-    } else if (e == PARTES_ESCOLHER && !ptFocoPosto) { ptMontar(); ptFoco = 0; ptFocoPosto = 1; }
-    ptMontar();
+    } else if (e == PARTES_ESCOLHER && !ptFocoPosto) { ptFoco = 0; ptFocoPosto = 1; }
     if (ptFoco >= ptNLinhas) ptFoco = ptNLinhas > 0 ? ptNLinhas - 1 : 0;
     { float alvo = ptRolAlvo, jan = PT_JAN_H - 60.0f;
       float topo = ptNLinhas ? ptLinhas[ptFoco].y : 0, lh = ptNLinhas ? ptLinhas[ptFoco].h : PT_LINHA_H;
@@ -4987,7 +4991,6 @@ static void desenhaPartes(float x, float w, int ptr, Uint32 agora) {
     ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ponteiroPartesFora, 0, 0);
     ponteiro_alvo(cx, cy, cw, ch, NULL, NULL, 0, 0);
   }
-  ptMontar();
   copias = ptCopiasVisiveis();
   msg = ptMensagem();
   float y = cy + 34.0f;
