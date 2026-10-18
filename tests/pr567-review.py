@@ -20,6 +20,7 @@ duration = player.split('int player_parece_parte(void)', 1)[1].split('// O titul
 countdown = player.split('static void durFonteContagem(', 1)[1].split('static void durFonteAtualizar(', 1)[0]
 # Compile the real confirmation hook when present; baseline has no cancellation.
 confirm = player.split('void player_confirmar_partes(void) {', 1)[1].split('\n}', 1)[0] if 'void player_confirmar_partes(void) {' in player else ''
+automatic = app.split('    { const Stream *fs = stream_atual()', 1)[1].split('        parteArqLista = l;', 1)[0]
 confirmation = app.split('        partes_sessao_iniciar(alvo, &l, l.atual);', 1)[1].split('        parteArqLista = l;', 1)[0]
 code = r'''
 #include <assert.h>
@@ -29,12 +30,13 @@ typedef unsigned Uint32;
 #define main partes_existing_tests
 #include "tests/partes.c"
 #undef main
-typedef struct { char tipo[16]; } CatItem;
+typedef struct { char tipo[16]; char titulo[64]; } CatItem;
 static CatItem ci = {"series"};
+static int catalogAvailable = 1;
 static Stream source;
 static int aguardandoFonte, playing, gotT, gotE;
 const Stream *stream_item(int n) { (void)n; return &source; }
-static const CatItem *cat_item(int n) { (void)n; return &ci; }
+static const CatItem *cat_item(int n) { (void)n; return catalogAvailable ? &ci : NULL; }
 static int player_aberto(void) { return playing; }
 static int player_indice(void) { return 0; }
 static int detail_indice(void) { return 0; }
@@ -92,6 +94,28 @@ static void confirmParts(void) {
   const char *alvo="tt-duration";
 ''' + confirmation + r'''
 }
+static int parteAutoEsperando;
+static char parteAutoUrl[4096];
+static PartesLista automaticPack;
+int stream_atual(void) { return 0; }
+static int video_falhou(void) { return 0; }
+static double video_duracao(void) { return 1200; }
+static const char *video_url_atual(void) { return "https://fixture/part1.mkv"; }
+static void requestParts(const Stream *s, const char *title) { (void)s; (void)title; }
+static int resultParts(const Stream *s, PartesLista *l) { (void)s; *l=automaticPack; return PARTES_PRONTO; }
+#define debrid_tb_disponivel() 1
+#define partes_pedir requestParts
+#define partes_resultado_de resultParts
+static void detectParts(void) {
+  char alvo[64];
+  PartesLista l;
+  { const Stream *fs = stream_atual()''' + automatic + r'''
+      }
+  }
+}
+#undef debrid_tb_disponivel
+#undef partes_pedir
+#undef partes_resultado_de
 int main(void) {
   int failed=0;
   // A 40-minute part of a 130-minute movie arms rejection at t=1 s.
@@ -132,6 +156,26 @@ int main(void) {
   assert(partes_ler_item("{\"id\":9,\"files\":[{\"id\":1,\"name\":\"Show.S00E01.mkv\",\"size\":300000000},{\"id\":2,\"name\":\"Show.S00E02.mkv\",\"size\":300000000}]}",NULL,0,&specials));
   specials.atual=0;
   assert(partes_principais(&specials)==2);
+  automaticPack=specials;
+  strcpy(source.url,"https://fixture/part1.mkv");
+  playing=1; durFonteCurta=1;
+  for (int scenario=0;scenario<6;scenario++) {
+    int movie=scenario==5;
+    catalogAvailable=scenario!=4;
+    strcpy(ci.tipo,movie ? "movie" : "series");
+    currentT=scenario==1 ? 1 : scenario==2 ? -1 : 0;
+    currentE=scenario<2 ? 1 : scenario==2 ? -1 : 0;
+    parteAutoEsperando=0; parteAutoUrl[0]=0;
+    partes_sessao_parar("automatic detection test");
+    detectParts();
+    if (!!partes_sessao_lista()!=movie) {
+      puts("FAIL automatic detection chains series specials or rejects a movie"); failed=1;
+    }
+  }
+  puts("PASS automatic detection accepts only catalog movies");
+  partes_sessao_parar("automatic detection done");
+  catalogAvailable=1;
+  strcpy(ci.tipo,"series");
   for (int season=-1;season<=1;season++) {
     currentT=season; currentE=season<0 ? -1 : 1;
     partes_sessao_parar("resume test");

@@ -2738,9 +2738,10 @@ static void vigiarPartes(void) {
       return;
     }
     { const Stream *fs = stream_atual() >= 0 ? stream_item(stream_atual()) : NULL;
+      const CatItem *ci = cat_item(player_indice());
       int et = 0, ee = 0;
       player_episodio_atual(&et, &ee);
-      if (!parteAutoEsperando && fs && !(et > 0 && ee > 0) && player_parece_parte() && video_pronto() && !video_falhou() &&
+      if (!parteAutoEsperando && fs && ci && !strcmp(ci->tipo, "movie") && !(et > 0 && ee > 0) && player_parece_parte() && video_pronto() && !video_falhou() &&
           video_duracao() >= 600.0 &&
           video_url_atual()[0] && strcmp(parteAutoUrl, video_url_atual()) &&
           (!strncmp(fs->url, "http", 4) || fs->infoHash[0]) && debrid_tb_disponivel() > 0) {
