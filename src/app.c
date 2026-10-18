@@ -2574,7 +2574,7 @@ static int parteArqK = -1;
 // nada (o link do addon continua tocando) e a parte seguinte entra no fim.
 static char parteAutoUrl[4096];
 static int parteAutoEsperando;
-static int parteProx = -1, parteProxFase;   // 0 nada, 1 pedido, 2 pronto, 3 falhou
+static int parteProx = -1, parteProxFase;   // 0 nada, 1 pedido, 2 pronto, 3 falhou, 4 ultima tentativa
 static Uint32 parteProxDesde;
 static char parteProxUrl[4096];
 
@@ -2876,10 +2876,13 @@ static void vigiarPartes(void) {
       partes_link_pedir(sl->usenet, sl->item, sl->arq[prox].id, 0);
       parteProxFase = 1; parteProxDesde = SDL_GetTicks();
     }
-    if (parteProxFase == 1) {
+    if (parteProxFase == 1 || parteProxFase == 4) {
       r = partes_link_estado(parteProxUrl, sizeof parteProxUrl, NULL);
       if (r == 1) parteProxFase = 2;
-      else if (r == -1 || r == -2) parteProxFase = 3;
+      else if (r == -1 || r == -2) {
+        if (parteProxFase == 4) { parteFalhou("no link for the next part"); return; }
+        parteProxFase = 3;
+      }
     }
     // Fim de verdade: o fluxo acabou PERTO do fim do arquivo. Um fim de fluxo
     // no meio e queda de rede, que a reconexao do video cuida.
@@ -2891,10 +2894,10 @@ static void vigiarPartes(void) {
         fflush(stdout);
       }
       partes_link_pedir(sl->usenet, sl->item, sl->arq[prox].id, 0);
-      parteProxFase = 1; parteProxDesde = SDL_GetTicks();
+      parteProxFase = 4; parteProxDesde = SDL_GetTicks();
       return;
     }
-    if (parteProxFase == 1) {
+    if (parteProxFase == 1 || parteProxFase == 4) {
       if (SDL_GetTicks() - parteProxDesde > 30000u) {
         parteProxFase = 0;
         parteFalhou("no link for the next part");

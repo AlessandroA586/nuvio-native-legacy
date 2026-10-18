@@ -351,7 +351,7 @@ static int arquivoDaFonte(const PartesLista *l, const char *arquivo, uint64_t by
         achou = i;
   }
   if (achou >= 0) return achou;
-  return eps <= 1 || !b[0] ? maior : -1;
+  return eps <= 1 ? maior : -1;
 }
 // O item tem um VIDEO deste tamanho exato?
 static int itemTemTamanho(const char *item, const char *fim, uint64_t bytes) {

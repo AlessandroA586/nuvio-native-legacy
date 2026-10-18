@@ -35,6 +35,8 @@ def function(text, signature):
         end += 1
     return text[start:end]
 
+next_part = app.split('    if (parteProx != prox)', 1)[1].split('    // parteProxFase == 2:', 1)[0]
+next_part = '    if (parteProx != prox)' + next_part
 rules = '\n'.join(function(player, signature) for signature in (
     'int player_regra_proximo(double', 'int player_regra_visto(double', 'int player_regra_concluiu(double'))
 code = r'''
@@ -131,6 +133,27 @@ static void detectParts(void) {
 #undef debrid_tb_disponivel
 #undef partes_pedir
 #undef partes_resultado_de
+static int parteProx=-1, parteProxFase, requests, openingErrors, linkResult;
+static Uint32 parteProxDesde;
+static char parteProxUrl[4096];
+static void requestNext(int u,int item,int file,int mode) {
+  (void)u; (void)item; (void)file; (void)mode; requests++;
+}
+static int nextResult(char *url,size_t n,PartesLista *l) {
+  (void)url; (void)n; (void)l; return linkResult;
+}
+static void parteFalhou(const char *reason) { (void)reason; openingErrors++; }
+#define partes_link_pedir requestNext
+#define partes_link_estado nextResult
+static void watchNext(void) {
+  PartesLista list={0};
+  const PartesLista *sl=&list;
+  int prox=1,r;
+  double d=1800,pos=1800;
+''' + next_part + r'''
+}
+#undef partes_link_pedir
+#undef partes_link_estado
 #include <math.h>
 static double intro_creditos_janela(double d) { return fmin(180.0, d*.2); }
 static int scrobble_concluiu(double p,double d,int fim) { return fim || (d>1 && p>=d*.9); }
@@ -168,6 +191,19 @@ static int closeMovie(void) {
 #undef partes_ponto_guardar
 int main(void) {
   int failed=0;
+  for (int early=0;early<2;early++) {
+    parteProx=-1; requests=openingErrors=0; ticks=100; ended=!early; linkResult=-1;
+    watchNext();
+    ended=1;
+    for (int i=0;i<10 && !openingErrors;i++) { ticks+=100; watchNext(); }
+    if (!openingErrors || requests>2) {
+      puts("FAIL next-part immediate errors must stop after at most one EOF retry"); failed=1;
+    } else puts("PASS next-part immediate errors stop with file-opening error");
+  }
+  parteProx=-1; requests=openingErrors=0; ticks=100; ended=1; linkResult=0;
+  watchNext(); ticks+=30001; watchNext();
+  assert(openingErrors==1 && requests==1);
+  puts("PASS next-part pending request times out after 30 seconds");
   PartesLista completionMovie = {.n=4,.atual=3,.arq={
     {.id=1,.tipo=PARTE_EP}, {.id=2,.tipo=PARTE_EP},
     {.id=3,.tipo=PARTE_EP}, {.id=4,.tipo=PARTE_EP}}};
@@ -226,6 +262,24 @@ int main(void) {
   assert(partes_ler_item("{\"id\":9,\"files\":[{\"id\":1,\"name\":\"Show.S00E01.mkv\",\"size\":300000000},{\"id\":2,\"name\":\"Show.S00E02.mkv\",\"size\":300000000}]}",NULL,0,&specials));
   specials.atual=0;
   assert(partes_principais(&specials)==2);
+  char hashes[1][41]={H1};
+  const char *unknownMovie="{\"data\":[{\"id\":7,\"hash\":\"" H1 "\",\"files\":[{\"id\":1,\"name\":\"Movie.CD1.mkv\",\"size\":300},{\"id\":2,\"name\":\"Movie.CD2.mkv\",\"size\":400},{\"id\":3,\"name\":\"Movie.CD3.mkv\",\"size\":350}]}]}";
+  for (int mismatch=0;mismatch<2;mismatch++) {
+    assert(partes_achar(unknownMovie,0,hashes,1,1,"",mismatch ? 999 : 0,&automaticPack)==1);
+    if (automaticPack.atual!=-1) {
+      puts("FAIL hash-only multipart identity must remain unknown"); failed=1;
+    } else puts("PASS hash-only multipart identity remains unknown");
+    strcpy(ci.tipo,"movie"); strcpy(source.url,"https://fixture/part1.mkv");
+    playing=1; durFonteCurta=1; currentT=currentE=0;
+    parteAutoEsperando=0; parteAutoUrl[0]=0;
+    partes_sessao_parar("unknown current file");
+    detectParts();
+    if (partes_sessao_lista()) {
+      puts("FAIL unknown current file starts automatic multipart playback"); failed=1;
+    } else puts("PASS unknown current file blocks automatic multipart playback");
+  }
+  assert(partes_achar(unknownMovie,0,hashes,1,1,"Movie.CD1.mkv",0,&automaticPack)==1 && automaticPack.atual==0);
+  assert(partes_achar(unknownMovie,0,hashes,1,1,"",350,&automaticPack)==1 && automaticPack.atual==2);
   automaticPack=specials;
   strcpy(source.url,"https://fixture/part1.mkv");
   playing=1; durFonteCurta=1;
