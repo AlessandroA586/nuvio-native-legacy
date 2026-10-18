@@ -4915,18 +4915,20 @@ static void heroWeb(float a, float desloc) {
         }
       } else desenhaSecundario(rs, rotIni, selIni, a);
       if (a > 0.3f) ponteiro_alvo(rs.x, rs.y, rs.w, rs.h, ponteiroDetalhe, NULL, -1, nb);
-      bx += det_avanco(rs.w, selIni, acoesAgrupadas() ? NV_DETW2_FOCO_SY : NV_DETW2_FOCO_SX,
-                       NV_DETW2_BTN_GAP); nb++;
+      bx += rs.w + NV_DETW2_BTN_GAP; nb++;
     }
     if (temLembrar() && !acoesAgrupadas()) {
       const CatItem *ciL = cat_item(idx);
+      int foc = nivel == 0 && botao == nb;
+      float ext = foc ? det_foco_extra(NV_DETW2_CIRC, NV_DETW2_FOCO_SY) : 0.0f;
+      bx += ext;
       GfxRect rs = { bx, cyBtn - NV_DETW2_CIRC * 0.5f,
                      NV_DETW2_CIRC, NV_DETW2_CIRC };
       if (detalheRetrato()) rs = heroAcaoRect(&bx, &cyBtn, rs.w, rs.h);
       desenhaLembrete(rs, ciL && agenda_lembrete(ciL->imdb),
                       nivel == 0 && botao == nb, a);
       if (a > 0.3f) ponteiro_alvo(rs.x, rs.y, rs.w, rs.h, ponteiroDetalhe, NULL, -1, nb);
-      bx += NV_DETW2_CIRC + NV_DETW2_BTN_GAP; nb++;
+      bx += det_avanco(NV_DETW2_CIRC, nivel == 0 && botao == nb, NV_DETW2_FOCO_SY, NV_DETW2_BTN_GAP); nb++;
     }
     if (acoesAgrupadas()) {
       static float reveal, revealVelocity;
@@ -4948,9 +4950,17 @@ static void heroWeb(float a, float desloc) {
       for (int j=nBotoesTodos()-1; j>first; j--) {
         float stagger = anim_clamp((progress-(j-first-1)*.045f)/.78f,0,1);
         if (stagger < .005f) continue;
-        GfxRect rc = {bx+((j-first)*(NV_DETW2_CIRC+NV_DETW2_BTN_GAP)+ext)*stagger,
+        // A focused circle grows around its center: its left half is inside
+        // the stagger distance; every circle at or past it shifts right —
+        // the focused one by one half, the ones beyond by two — so the gaps
+        // stay 18.
+        float jext = nivel == 0 && botao > first && botao <= j
+          ? det_foco_extra(NV_DETW2_CIRC, NV_DETW2_FOCO_SY) * (1.0f + (botao < j)) *
+            anim_clamp((progress-(botao-first-1)*.045f)/.78f,0,1) : 0.0f;
+        int selected = nivel == 0 && botao == j;
+        GfxRect rc = {bx+((j-first)*(NV_DETW2_CIRC+NV_DETW2_BTN_GAP)+ext)*stagger+jext,
           anchor.y,NV_DETW2_CIRC,NV_DETW2_CIRC};
-        int action = acaoEm(j), selected = nivel == 0 && botao == j;
+        int action = acaoEm(j);
         if (action == ACAO_LEMBRAR)
           desenhaLembrete(rc,ci && agenda_lembrete(ci->imdb),selected,a*stagger);
         else desenhaBotao(rc,NULL,action,selected,a*stagger);
