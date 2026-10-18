@@ -493,8 +493,11 @@ static int addonsAplicar(void) {
   if (!nAddonsRem) return 0;
   // Other clients may write default/unsupported enabled values. Existing
   // addon toggles belong to this app; only membership/order come from pull.
+  // List ownership tracks the active profile, even with primary-profile addons.
+  // Never inherit flags from a previous profile left in memory without a cache.
+  int preservarFlags = addons_perfil_da_lista() == perfis_ativo();
   // Match normalized identity before replacing any slots (reorders/removals).
-  for (i = 0; i < nAddonsRem; i++) {
+  for (i = 0; preservarFlags && i < nAddonsRem; i++) {
     char key[NV_ADDON_URL_MAX], localKey[NV_ADDON_URL_MAX];
     nv_addon_chave(addonsRem[i].url, key, sizeof key);
     for (int j = 0; j < n; j++) {

@@ -1,10 +1,25 @@
 // Exercise the production account parser, pull merge and applied cache.
 // Existing sync fixture supplies disk and addon-list doubles; no network.
 #define main syncaddons_fixture_main
+#define perfis_ativo fixture_perfis_ativo
+#define perfis_ativo_addons fixture_perfis_ativo_addons
+#define addons_marcar_da_conta fixture_addons_marcar_da_conta
+#define addons_perfil_da_lista fixture_addons_perfil_da_lista
 #include "syncaddons.c"
 #undef main
-#include "../src/sync.c"
+#undef perfis_ativo
+#undef perfis_ativo_addons
+#undef addons_marcar_da_conta
+#undef addons_perfil_da_lista
 #include <assert.h>
+
+static int activeProfile = 1, addonProfile = 1, listProfile = 1;
+int perfis_ativo(void) { return activeProfile; }
+int perfis_ativo_addons(void) { return addonProfile; }
+void addons_marcar_da_conta(int perfil) { listProfile = perfil; }
+int addons_perfil_da_lista(void) { return listProfile; }
+
+#include "../src/sync.c"
 
 int perfis_sessao_atual(uint64_t g) { return g == 0; }
 int sessao_identidade_local_copiar(char *u, size_t n, char *t, size_t m) {
@@ -141,7 +156,29 @@ int main(void) {
           puxarAddons() == 1 && !strcmp(conta, "aBZ") && patches == priorPatches + 1);
   addonsAplicar();
   expect("first pull preserves disabled state and remote membership", "aBZ");
+  // Switch to an independent profile without an applied snapshot. Restoration
+  // leaves profile 1's disabled A in memory; profile 2 must use its own flags.
+  activeProfile = addonProfile = addonsPerfilCiclo = 2;
+  addonsRestaurar();
+  expect("uncached switch leaves previous list until pull", "aBZ");
+  assert(addons_perfil_da_lista() == 1);
+  pull("[{\"url\":\"https://a.exemplo/manifest.json\",\"enabled\":true},"
+        "{\"url\":\"https://b.exemplo/manifest.json\",\"enabled\":false}]");
+  expect("independent profile does not inherit ON or OFF", "Ab");
+  saved = contacache_ler(CC_ADDONS_APLICADOS, 2, usuarioDoCiclo, NULL);
+  assert(saved);
+  nTv = 0;
+  nAddonsRem = lerAddons(saved);
+  addons_definir_lista(addonsRem, nAddonsRem);
+  free(saved);
+  expect("independent profile persists its own flags", "Ab");
+  // Ownership is the active profile even when addons come from primary.
+  addonProfile = addonsPerfilCiclo = 1;
+  addons_marcar_da_conta(activeProfile);
+  pull("[{\"url\":\"https://a.exemplo/manifest.json\",\"enabled\":false},"
+        "{\"url\":\"https://b.exemplo/manifest.json\",\"enabled\":true}]");
+  expect("shared primary preserves current profile local flags", "Ab");
   assert(!falhas);
-  puts("PASS: production addon pull preserves local toggles and remote membership/order");
+  puts("PASS: production addon pull preserves profile-local toggles and remote membership/order");
   return 0;
 }
