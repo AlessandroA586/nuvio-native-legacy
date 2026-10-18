@@ -2108,10 +2108,9 @@ static float epCardH(void) {
   if (epApple()) return ANC(500.0f);
   if (!epModerna()) return ANC(NV_DETP_EP_H);
   // Miniatura + bloco de texto: titulo (1 linha) + sinopse de 4 linhas (#205),
-  // com o mesmo respiro de 10 do card de sempre. As fontes nao escalam, entao
-  // o bloco e o mesmo nos tres tamanhos — so a miniatura muda.
-  return epThumbH() + ANC(NV_DETP_EPM_SIN_DY +
-         (float)NV_DETP_EPM_SIN_LINHAS * NV_DETP_EP_LD_SIN + 10.0f);
+  // Reserve scaled text offsets and line advances before following sections.
+  return epThumbH() + NV_DETP_EPM_SIN_DY +
+         (float)NV_DETP_EPM_SIN_LINHAS * NV_DETP_EP_LD_SIN + ANC(10.0f);
 }
 static float epCardPasso(void) { return epCardW() + (epApple() ? NV_DETP_EP_GAP : (NV_DETP_EP_PASSO - NV_DETP_EP_W) * epEscala()); }
 // A placa de foco estilo Apple TV (#205): alpha da mola `f` vezes o teto

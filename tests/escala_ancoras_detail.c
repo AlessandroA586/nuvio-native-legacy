@@ -51,6 +51,11 @@ void fixture_detail(float scale,int section) {
       shot_check("tab label rendered below section top",label.y>=(epAbasY()-scrollY)*scale);
     }
     if(section==SEC_EPISODIOS) {
+      if(epModerna()) {
+        GfxRect text=shot_text_bounds();
+        shot_check("episode text fits card height",
+          text.y+text.h <= (menuOrigem.y+epCardH())*scale+1);
+      }
       GfxRect card=menuOrigem;
       card=shot_box((GfxRect){card.x,card.y,card.w,epThumbH()});
       shot_anchor("episode card",card,0);

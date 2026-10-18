@@ -15,13 +15,18 @@ void fixture_search(float scale) {
   GfxRect fieldBox=shot_box((GfxRect){buX(),buTopoEsq(),BU_COL_W,BU_CAMPO_H});
   shot_anchor("search field",fieldBox,0); shot_contains("field text inside",fieldBox,field);
   shot_reset(); buCabecalho(0,BU_RES_Y+4,BU_DIR-BU_RES_X); GfxRect heading=shot_text_bounds();
-  shot_anchor("result section title top",(GfxRect){0,heading.y,0,0},0);
-  shot_check("results follow scaled left column",fabsf(heading.x-fieldBox.x-fmaxf(520.0f,fieldBox.w)-56.0f)<=2);
+  shot_anchor("result section title origin",(GfxRect){heading.x,heading.y,0,0},0);
   shot_disjoint("field panel / results",fieldBox,heading);
   shot_reset(); desenhaTeclado();
   GfxRect keyboard=shot_box((GfxRect){BU_KB_X,BU_KB_Y,BU_COL_W,
     2.0f*BU_KB_PAD+(kbFil+1)*BU_TECLA_W+kbFil*BU_TECLA_GAP});
   shot_check("keyboard panel ends before results",keyboard.x+keyboard.w+56.0f<=heading.x+1);
+  for(int row=0;row<=kbFil;row++)
+    for(int col=0;col<KB_COLUNAS[row];col++) {
+      GfxRect key=retanguloTecla(row,col);
+      shot_check("keyboard key fits input column",
+        key.x>=BU_KB_X && key.x+key.w<=BU_KB_X+BU_COL_W+1);
+    }
   shot_reset(); desenhaResultados(10000); GfxRect results=shot_text_bounds();
   shot_contains("results within screen",(GfxRect){0,0,1920,1080},results);
   gfx_escala_sair(old);
