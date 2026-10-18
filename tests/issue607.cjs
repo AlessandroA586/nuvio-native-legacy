@@ -40,7 +40,41 @@ function probe() {
   console.log('PASS: generated probe validates numeric Content-Length');
 }
 
-const cases = {probe};
+function avplay() {
+  const context = vm.createContext({console, document:{}, UTF8ToString:x=>x,
+    performance:{now:()=>0}, setTimeout() {}, clearTimeout() {}, stringToUTF8() {}});
+  vm.runInContext('window = globalThis', context);
+  vm.runInContext(fs.readFileSync('tools/fake-avplay.js','utf8'), context);
+  const run = vm.runInContext('(function(cmd,txt,a,b,c,d,dst,dstTam) {' +
+    bridge('src/video_tizen.c','nv_av') + '})', context);
+  context.nv_av = run;
+  const call = op => run(op,'https://fixture.invalid/video',0,0,0,0,0,0);
+  assert.equal(call('abrir'),1);
+  const player = context.webapis.avplay;
+  const stop = player.stop, close = player.close;
+  let closed = 0;
+  player.stop = () => { throw Error('stop failed'); };
+  player.close = () => { closed++; close(); };
+  assert.equal(call('encerrar'),0,'shutdown must report stop failure');
+  assert.equal(closed,1,'close must run despite stop failure');
+  assert.match(context.__nvav.erro,/stop/);
+  assert.equal(call('abrir'),1);
+  assert.equal(call('abrir'),0,'reopen must report stop failure');
+  assert.equal(closed,2);
+  assert.equal(context.__avReg().filter(x=>x.startsWith('open(')).length,2);
+  player.stop = stop;
+  player.close = () => { throw Error('close failed'); };
+  assert.equal(call('abrir'),1);
+  assert.equal(call('encerrar'),0);
+  assert.equal(context.__nvav.aberto,1,'failed close must remain retryable');
+  assert.match(context.__nvav.erro,/close/);
+  player.close = close;
+  assert.equal(call('encerrar'),1);
+  assert.equal(call('abrir'),1);
+  console.log('PASS: AVPlay always closes, reports failures, retries cleanup');
+}
+
+const cases = {probe, avplay};
 (async () => {
   const selected = process.argv.slice(2);
   for (const name of selected.length ? selected : Object.keys(cases)) await cases[name]();

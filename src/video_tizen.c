@@ -265,11 +265,11 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
   if (op === "abrir") {
     var p = pl();
     if (!p) return 0;
-    var geracao = ++S.geracao;
     // Fechar antes de abrir. Sem isto o segundo titulo da sessao encontra o
     // player em estado PLAYING e o open() e recusado — o mesmo formato do bug
     // "abrir -> sair -> abrir" que o caminho da LG ja tinha.
-    try { if (S.aberto) { p.stop(); p.close(); } } catch (e) {}
+    if (S.aberto && !nv_av("encerrar", 0, 0, 0, 0, 0, 0, 0)) return 0;
+    var geracao = ++S.geracao;
     S.aberto = 0; S.tocando = 0; S.pronto = 0; S.posMs = 0;
     S.durMs = 0; S.tDur = 0; S.tEvento = 0; S.tSeek = 0; S.tPos = 0;
     S.erro = ""; S.fim = 0; S.bufPct = 0; S.larg = 0; S.alt = 0;
@@ -735,9 +735,18 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
   if (op === "encerrar") {
     var pb = pl();
     ++S.geracao;
-    try { if (pb && S.aberto) { pb.stop(); pb.close(); } } catch (e) {}
-    S.aberto = 0; S.tocando = 0; S.pronto = 0; S.trilhas = null;
-    return 1;
+    var ok = 1;
+    S.erro = "";
+    if (S.aberto) {
+      if (!pb) { S.erro = "close: AVPlay unavailable"; ok = 0; }
+      else {
+        try { pb.stop(); } catch (e) { S.erro = "stop: " + e; ok = 0; }
+        try { pb.close(); S.aberto = 0; }
+        catch (e) { S.erro += " close: " + e; ok = 0; }
+      }
+    }
+    S.tocando = 0; S.pronto = 0; S.trilhas = null;
+    return ok;
   }
 
   return 0;
