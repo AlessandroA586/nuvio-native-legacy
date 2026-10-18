@@ -661,6 +661,7 @@ typedef struct {
 static GAddonCarga *addonsCarga;
 static int nAddonsCarga;
 static NvPerfilSessao cargaSessao;
+static LtvUrl cargaUrls[LTV_URLS_MAX]; static int nCargaUrls;
 static volatile int cargaCancelada;
 
 static int cargaAtual(void) {
@@ -1266,7 +1267,7 @@ static int xtreamCarregar(void) {
   x.fl = sFonte(LTV_XTREAM, "", "Xtream", "");
   if (x.fl < 0) return 0;
   x.nsel = sGruposEscolhidos(x.fl, x.sel, 256);
-  xtream_canais_cb(xtCat, xtCanal, &x, &total);
+  xtream_canais_cb_sessao(xtCat, xtCanal, &x, &total, cargaSessao);
   sXtFalha = xtream_ultima_falha(); sXtHttp = xtream_ultimo_http();
   sLtvF[x.fl].erro = sXtFalha;
   free(x.giDe);
@@ -1296,7 +1297,7 @@ static int m3uCanal(const LtvM3uCanal *m, void *u) {
   sCanalAdd(x->fl, &c);
   return 1;
 }
-static int alimentarM3u(const char *d, size_t n, void *u) { return ltv_m3u_alimentar((LtvM3u *)u, d, n); }
+static int alimentarM3u(const char *d, size_t n, void *u) { return cargaAtual() && ltv_m3u_alimentar((LtvM3u *)u, d, n); }
 static int m3uCarregar(const LtvUrl *u) {
   static LtvM3u p;     // ~10 KB: fora da pilha do fio
   M3uCtx x;
@@ -1566,8 +1567,8 @@ static void *fioGuia(void *u) {
     if (xtreamCarregar() > 0) ok = 1;
     else fonteVaziaRecupera(LTV_XTREAM, "", "Xtream", "");
   }
-  nu = ltv_urls_copiar(urls, LTV_URLS_MAX);
-  for (i = 0; i < nu; i++) {
+  nu = nCargaUrls; memcpy(urls, cargaUrls, sizeof urls);
+  for (i = 0; cargaAtual() && i < nu; i++) {
     if (urls[i].tipo != LTV_URL_M3U) continue;
     if (m3uCarregar(&urls[i]) > 0) ok = 1;
     else fonteVaziaRecupera(LTV_M3U, urls[i].url, urls[i].nome, "");
@@ -1825,6 +1826,7 @@ static void iniciarCarga(void) {
   // Copia no desenho: nenhum pedido relera as URLs ou os manifestos do
   // perfil novo enquanto a resposta do anterior ainda estiver em voo.
   cargaSessao = nv_perfil_sessao_ler(); cargaCancelada = 0;
+  nCargaUrls = ltv_urls_copiar(cargaUrls, LTV_URLS_MAX);
   nAddonsCarga = addons_n();
   addonsCarga = nAddonsCarga > 0 ? calloc((size_t)nAddonsCarga, sizeof *addonsCarga) : NULL;
   if (nAddonsCarga > 0 && !addonsCarga) { nAddonsCarga = 0; estado = G_FALHOU; return; }
@@ -2492,7 +2494,10 @@ int guia_zap_ver(const char *idAtual, int dir, CatItem *saida) {
 
 // CANAL DE LISTA M3U (M9): o id e "m3u:<chave da fonte>:<hash>" e a URL, o
 // User-Agent e o Referer ficam no canal (arena), nunca no log. 1 = achou.
-int guia_e_m3u(const char *id) { return id && !strncmp(id, "m3u:", 4); }
+int guia_e_m3u(const char *id) {
+  const GCanal *c = id && !strncmp(id, "m3u:", 4) ? canalPorId(id) : NULL;
+  return c && c->url && c->url[0];
+}
 int guia_m3u_canal(const char *id, char *url, size_t nu, char *ua, size_t nua, char *ref, size_t nr) {
   const GCanal *c = guia_e_m3u(id) ? canalPorId(id) : NULL;
   if (url && nu) url[0] = 0;
@@ -2538,7 +2543,10 @@ int guia_numero_canal(int numero, CatItem *saida, char *fonte, size_t nf, int ap
     snprintf(fonte, nf, "%s", ltvF[canais[idx].fonte].nome);
   if (saida) {
     canalParaItem(&canais[idx], saida);
-    if (aplicar) snprintf(pedidoBase, sizeof pedidoBase, "%s", canais[idx].base);
+    if (aplicar) {
+    snprintf(pedidoBase, sizeof pedidoBase, "%s", canais[idx].base);
+    snprintf(pedidoTipo, sizeof pedidoTipo, "%s", canais[idx].tipo);
+  }
   }
   return 1;
 }
@@ -4216,7 +4224,7 @@ static void desenharHero(float a, time_t agoraT, time_t tFoco) {
     char num[16], cat[96];
     float tx = x + 132.0f, tw = w - 132.0f, ey;
     TxtLinha n;
-    snprintf(num, sizeof num, "%d", (int)(c - canais) + 1);
+    snprintf(num, sizeof num, "%d", c->numero);
     snprintf(cat, sizeof cat, "%s", c->cat >= 0 ? i18n(cats[c->cat].nome) : "");
     logoNaCaixa(c, lx, 112.0f, 60.0f, G_LOGO_CLARO, ha);
     n = txt_linha(TXT_DET_META2, num, 150, 153, 162, 255);
@@ -4579,7 +4587,7 @@ static void haQuanto(long long quando, char *d, size_t n) {
 }
 
 static void desenharFontes(float a) {
-  float x0 = G_INFO_X, xm = G_INFO_X + G_INFO_W, y = G_HERO_Y, h = 40.0f, x, alvo, xf = 0, wf = 0;
+  float x0 = G_INFO_X, xm = G_INFO_X + G_INFO_W, y = G_HERO_Y + G_INFO_H - 112.0f, h = 40.0f, x, alvo, xf = 0, wf = 0;
   float xs[2 + G_MAX_LTV], ws[2 + G_MAX_LTV];
   char rot[2 + G_MAX_LTV][96];
   int i, n = fontesN(), sel = chipDoFiltro(), tf = ajustes_tinta_foco();
@@ -4640,7 +4648,7 @@ static void desenharFontes(float a) {
       snprintf(linha + u, sizeof linha - u, " \xc2\xb7 %s", F->deCache ? i18n("lista guardada") : quando);
     }
     { TxtLinha t = txt_linha_corta(TXT_CAPTION, linha, 196, 198, 206, 255, G_INFO_W);
-      GfxRect p = { x0, y + h + 8.0f, (float)t.w + 28.0f, 36.0f };
+      GfxRect p = { x0, y - 44.0f, (float)t.w + 28.0f, 36.0f };
       gfx_cor(p, 0.5f, 0.08f, 0.085f, 0.10f, 0.94f * a);
       txt_desenhar_alpha(t, p.x + 14.0f, p.y + (p.h - (float)t.h) * 0.5f, a); }
   }
@@ -5176,7 +5184,7 @@ static void desenharLinhaLista(GCanal *c, float y, int focada, float a,
   } else {
     char num[16];
     TxtLinha n;
-    snprintf(num, sizeof num, "%d", (int)(c - canais) + 1);
+    snprintf(num, sizeof num, "%d", c->numero);
     n = txt_linha(textoRetrato ? TXT_DET_META2 : TXT_ILHA_HORA, num, 115, 114, 113, 255);
     { GfxRect cx = { G_AREA_X + 14.0f, y + (h - 44.0f) * 0.5f, 84.0f, 44.0f };
       logoNaCaixa(c, cx, 76.0f, 36.0f, G_LOGO_CLARO, a); }
@@ -5696,7 +5704,7 @@ static void buscaFazer(const char *q) {
   for (p = agulha; *p; p++) if (*p < '0' || *p > '9') soDigito = 0;
   if (soDigito) numero = atoi(agulha);
   for (i = 0; i < nCanais && buscaNC < G_BUSCA_CANAIS; i++)
-    if ((numero && i + 1 == numero) || nv_contem_dobrado(canais[i].nome, agulha))
+    if ((numero && canais[i].numero == numero) || nv_contem_dobrado(canais[i].nome, agulha))
       buscaCanal[buscaNC++] = i;
   // PROGRAMAS: a grade de cada canal entre agora e G_BUSCA_HORAS a frente. Os
   // que estao no ar primeiro; depois por horario.

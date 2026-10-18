@@ -363,17 +363,16 @@ static int catIndice(const XtCat *cats, int n, const char *id) {
 // sem vetor de XtreamCanal (900 B cada: 57 mil canais seriam 51 MB). As
 // categorias vao antes, na ORDEM DO PAINEL e com a contagem de cada uma, para o
 // guia decidir que grupos inteiros cabem no teto da TV.
-int xtream_canais_cb(void (*cat)(const char *nome, int ordem, int n, void *u),
-                     XtreamCb cb, void *u, int *totalOut) {
+int xtream_canais_cb_sessao(void (*cat)(const char *nome, int ordem, int n, void *u),
+                     XtreamCb cb, void *u, int *totalOut, uint64_t sessao) {
   static XtCat cats[XT_MAX_CAT];
   static int conta[XT_MAX_CAT + 1];
   int nCat, n = 0, total = 0, st = 0, classe, i, passo;
   char *corpo;
   const char *p, *ini;
-  NvPerfilSessao sessao = nv_perfil_sessao_ler();
   ultimaFalha = XT_OK; ultimoHttp = 0; ultimoTotal = 0;
   if (totalOut) *totalOut = 0;
-  if (!xtream_configurado() || !cb) return 0;
+  if (!nv_perfil_sessao_atual(sessao) || !xtream_configurado() || !cb) return 0;
   // A conta ANTES da lista: e pequena, e o que ela diz (expirada, telas em
   // uso, formatos) e o que a tela precisa quando a lista falha. Sem resposta
   // aqui a lista ainda e tentada — o login pode ter caido por prazo.
@@ -472,6 +471,11 @@ int xtream_canais_cb(void (*cat)(const char *nome, int ordem, int n, void *u),
   return total;
 }
 
+int xtream_canais_cb(void (*cat)(const char *, int, int, void *),
+                     XtreamCb cb, void *u, int *totalOut) {
+  return xtream_canais_cb_sessao(cat, cb, u, totalOut, nv_perfil_sessao_ler());
+}
+
 typedef struct { XtreamCanal *v; int n, max, total; } XtVetor;
 static int xtNoVetor(const XtreamItem *c, void *u) {
   XtVetor *x = u;
@@ -491,7 +495,7 @@ int xtream_canais_sessao(XtreamCanal *saida, int max, uint64_t sessao) {
   if (!nv_perfil_sessao_atual(sessao)) return 0;
   if (!saida || max < 1) return 0;
   x.v = saida; x.n = 0; x.max = max; x.total = 0;
-  xtream_canais_cb(NULL, xtNoVetor, &x, NULL);
+  xtream_canais_cb_sessao(NULL, xtNoVetor, &x, NULL, sessao);
   if (x.total > x.n)
     printf("[xtream] lista cortada: %d de %d canais cabem no guia\n", x.n, x.total);
   return nv_perfil_sessao_atual(sessao) ? x.n : 0;

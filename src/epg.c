@@ -1588,8 +1588,15 @@ int epg_faixa_desde(int epg, time_t de, time_t ate, int pular, EpgProg *out, int
   topo = P.canais[epg].evIni + P.canais[epg].evN;
   m = pubPrimeiroVivo(epg, de);
   if (m >= 0)
-    for (; m < topo && (time_t)P.evs[m].ini < ate; m++, n++)
-      if (out && n < cap) pubProg(m, &out[n]);
+    for (; m < topo && (time_t)P.evs[m].ini < ate; m++) {
+      if ((time_t)P.evs[m].fim <= de) continue;
+      if (v++ < pular) continue;
+      if (out) {
+        if (n >= cap) break;
+        pubProg(m, &out[n]);
+      }
+      n++;
+    }
   pthread_mutex_unlock(&trava);
   return n;
 }

@@ -65,6 +65,8 @@ typedef struct {
 typedef int (*XtreamCb)(const XtreamItem *c, void *u);
 int xtream_canais_cb(void (*cat)(const char *nome, int ordem, int n, void *u),
                      XtreamCb cb, void *u, int *total);
+int xtream_canais_cb_sessao(void (*cat)(const char *, int, int, void *),
+                     XtreamCb cb, void *u, int *total, uint64_t sessao);
 // Baixa categorias + canais ao vivo e preenche `saida`. Devolve quantos; 0 sem
 // cadastro ou sem resposta. BLOQUEIA: e do fio do guia.
 int xtream_canais(XtreamCanal *saida, int max);

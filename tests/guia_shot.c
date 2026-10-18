@@ -242,6 +242,8 @@ static void semearGuia(void) {
   { const char *idAntes = canais[2].id, *urlAntes = canais[2].url, *uaAntes = canais[2].ua, *refAntes = canais[2].ref;
     char u[200], ua[64], rf[64];
     assert(!guia_m3u_canal(canais[2].id, u, sizeof u, ua, sizeof ua, rf, sizeof rf));
+    canais[2].id = "m3u:canaisabertos:0";
+    assert(!guia_e_m3u(canais[2].id)); // Add-on IDs keep the add-on stream resolver.
     canais[2].id = "m3u:m1234abcd:0000beef"; canais[2].url = "http://exemplo.invalid/c.m3u8";
     canais[2].ua = "VLC/3.0"; canais[2].ref = "";
     assert(guia_e_m3u(canais[2].id) && guia_m3u_canal(canais[2].id, u, sizeof u, ua, sizeof ua, rf, sizeof rf));

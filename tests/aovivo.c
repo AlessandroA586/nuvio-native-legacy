@@ -3,6 +3,7 @@
 //   - debounce de 600 ms: soma toques, espera o ultimo, cancela +1/-1;
 //   - agora / a seguir: cobertura, buraco, grade sobreposta, sem grade;
 //   - o mesmo, de ponta a ponta, sobre uma grade XMLTV de molde (epg.c).
+#include "stub_perfisessao.h"
 #include <assert.h>
 #include "nvtmp.h"
 #include <stdio.h>
