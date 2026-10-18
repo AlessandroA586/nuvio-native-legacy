@@ -17,6 +17,7 @@ if [ -n "${NUVIO_DETAIL_TIER:-}" ]; then
   exit 2
 fi
 OBJ=${OBJ:-${TMPDIR:-/tmp}/nuvio-detglass-obj}
+if [ $# -eq 0 ]; then set -- "$TMPDIR/nuvio-detglass-shots"; fi
 mkdir -p "$OBJ" "$1"
 NUVIO_DADOS=$(mktemp -d ${TMPDIR:-/tmp}/nuvio-detglass-dados.XXXXXX)
 export NUVIO_DADOS
@@ -33,6 +34,14 @@ for s in src/*.c src/dts/*.c; do
   if [ "$s" = src/agendaui.c ] && [ -n "${NUVIO_TRAKT_CHECK:-}" ]; then
     o="$OBJ/agendaui-trakt.o"
     extra="-Dtxt_largura=trakt_largura -Dtxt_token_tam=trakt_token_tam"
+  fi
+  if [ "$s" = src/notasui.c ] && [ "${NUVIO_DETAIL_CHECK:-}" = b2 ]; then
+    o="$OBJ/notasui-b2.o"
+    extra="-Dgfx_vidro_painel=b2_panel -Dgfx_luz_canto=b2_tint -Dgfx_cor=b2_color -Dtxt_desenhar_alpha=b2_text -Dtxt_bloco_corta=b2_block"
+    if [ -n "${NUVIO_NOTAS_SOURCE:-}" ]; then
+      s="$NUVIO_NOTAS_SOURCE"
+      o="$OBJ/notasui-b2-before.o"
+    fi
   fi
   # NUVIO_DETAIL_CHECK=mais: spy on the glass density plrui hands to gfx.
   if [ "$s" = src/plrui.c ] && [ "${NUVIO_DETAIL_CHECK:-}" = mais ]; then

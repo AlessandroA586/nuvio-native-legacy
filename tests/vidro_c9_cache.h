@@ -38,7 +38,7 @@ static int vc_run(void) {
     if (screen == 0) menu_abrir();
     if (screen == 1) { menu_fechar(); abrir(1, 0, 0, 0); }
     if (screen == 2) { ajustes_iniciar(); ajustes_shot_valor("fundoLocal", FUNDO_FROST); }
-    for (int i = 0; i < 180; i++) vc_frame(screen, 200 + i);
+    for (int i = 0; i < 180; i++) { vc_frame(screen, 200 + i); SDL_Delay(16); }
     for (int phase = 0; phase < 2; phase++) {
       int captures = 0, passes = 0, sources = 0;
       double fill = 0, copy = 0;
@@ -49,6 +49,8 @@ static int vc_run(void) {
         if (!screen) menu_evento(&e);
         else if (screen == 1) detail_evento(&e);
         else ajustes_evento(&e);
+        // Let the accent-focus transition settle before measuring cache reuse.
+        for (int i = 0; i < 180; i++) { vc_frame(screen, 380 + i); SDL_Delay(16); }
       }
       for (int i = 0; i < 30; i++) {
         // Text LRU retires labels while focus/clock/diagnostics change. This
@@ -58,7 +60,7 @@ static int vc_run(void) {
         unsigned char pixel[4] = {255, 255, 255, 255};
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
         gfx_tex_esquecer(label); glDeleteTextures(1, &label);
-        vc_frame(screen, 380 + phase * 30 + i);
+        vc_frame(screen, 380 + phase * 180 + i);
         captures += gfx_vidro_capturas; passes += gfx_vidro_passadas;
         sources += gfx_vidro_com_fonte;
         fill += gfx_vidro_fill; copy += gfx_vidro_copia;

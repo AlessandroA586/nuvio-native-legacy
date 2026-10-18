@@ -1963,7 +1963,7 @@ static unsigned vidroHash;
 // them reaches the next one's read region, e.g. detail cards under a section
 // title) keeps each in its own half-res target, so a static frame reuses all
 // of them. Slot k is vidSlot[k], quarter res like vidFundo.
-#define VID_NSLOTS 4
+#define VID_NSLOTS 8
 static unsigned vidroSlotHash[VID_NSLOTS];
 static int vidroSlotValido[VID_NSLOTS], vidroSlot, vidroRecapturou;
 // Conservative texture dependencies: collisions only cause extra captures.

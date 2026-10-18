@@ -137,7 +137,7 @@ static GfxRect heroAcaoRect(float *x, float *cy, float w, float h) {
 // Glass UI (mockup "Detalhe", "Mais como este"): cartaz 218x327, vao 24.
 #define REL_CARD_W   (212.0f * gfx_poster_k())
 #define REL_CARD_H   (318.0f * gfx_poster_k())
-#define REL_CARD_GAP  32.0f
+#define REL_CARD_GAP  (32.0f + 8.0f * NV_DETP_ESP)
 
 // MINI CARD DA COLECAO (#194, 2a volta). Um cartao UNICO deitado, e nao uma
 // fileira de cartazes: o dono viu a lista de nomes e pediu algo que "nao fique
@@ -174,7 +174,7 @@ static GfxRect colecaoListaRect(void) {
 // coluna.
 #define EST_CARD_W 240.0f
 #define EST_CARD_H   100.0f
-#define EST_GAP       18.0f
+#define EST_GAP       (18.0f + 8.0f * NV_DETP_ESP)
 #define EST_PAD       22.0f
 // MEDIDO na referencia (TCL, 1920x1080): cartao 722x466, vao 25, canto 20.
 // 722x466 era o MEDIDO na TCL; o dono, olhando a C9 em 19/09/2026, mandou
@@ -185,7 +185,7 @@ static GfxRect colecaoListaRect(void) {
 #define COM_CARD_W   600.0f
 #define COM_CARD_H   340.0f
 #define COM_PAD       24.0f
-#define COM_CARD_GAP  22.0f
+#define COM_CARD_GAP  (22.0f + 8.0f * NV_DETP_ESP)
 // Altura da CHAMADA das duas secoes sob demanda: a linha do titulo (TXT_HEADLINE,
 // 38), a da procedencia e a do custo (TXT_DET_META2, 23), com os mesmos vaos
 // que o cabecalho dos proprios modulos usa. Constante e nao medida por txt_linha
@@ -1039,7 +1039,7 @@ static void recalcularLayout(void) {
     // As quatro primeiras vem de MEDIDA ABSOLUTA na referencia; nao sao um
     // empilhamento. As de baixo (comentarios) sim: elas ficam depois do elenco,
     // cuja altura e conhecida.
-    static const float G[N_SECOES] = {
+    const float G[N_SECOES] = {
       NV_DETP_G_TEMP, NV_DETP_G_EP, NV_DETP_G_ABAS, NV_DETP_G_ELENCO, 0, 0
     };
     float y;
@@ -2140,11 +2140,11 @@ static GfxRect epPlacaRect(GfxRect r, float thH, float ft) {
   return p;
 }
 static float epPlacaA(float f) { return NV_DETP_EP_PLACA_A * anim_clamp(f, 0.0f, 1.0f); }
-// Vidro com o mesmo material dos cartoes de elenco/Trakt (ajustes_vidro; o
-// governor cai para o esfumacado dentro do gfx_vidro). Sem vidro, o branco de sempre.
+// Glass cards tint the shared page backdrop, without a per-card material pass.
+// Glass off keeps the existing white focus plate.
 static void epPlacaDesenha(GfxRect p, float f, float a) {
   if (ajustes_vidro())
-    gfx_vidro_material(p, 24.0f / p.h, GFX_VIDRO_DENS, anim_clamp(f, 0.0f, 1.0f) * a);
+    gfx_cor(p, 24.0f / p.h, 1, 1, 1, 0.07f * anim_clamp(f, 0.0f, 1.0f) * a);
   else
     gfx_cor(p, 24.0f / p.h, 1, 1, 1, epPlacaA(f) * a);
 }
@@ -2162,9 +2162,9 @@ static float epAppleExtra(void) { return epCardH() - 414.0f; }
 // Topo do cabecalho: fundo dos cartoes de episodio + o vao antes das notas (60,
 // o mesmo de vaoAntes).
 // O GRAFICO DE TEMPORADAS ("Seu progresso") vem antes das Notas e as empurra.
-static float progTopoSerie(void) { return epRowY() + epCardH() + 60.0f; }
+static float progTopoSerie(void) { return epRowY() + epCardH() + 60.0f + 16.0f * NV_DETP_ESP; }
 static float progBloco(void) {
-  return secaoN(SEC_PROGTEMP) > 0 ? alturaSecao(SEC_PROGTEMP) + 60.0f : 0.0f;
+  return secaoN(SEC_PROGTEMP) > 0 ? alturaSecao(SEC_PROGTEMP) + 60.0f + 16.0f * NV_DETP_ESP : 0.0f;
 }
 static float notasTopoSerie(void) { return progTopoSerie() + progBloco(); }
 // Fim das Notas (= topo dos Numeros da temporada, que vem logo depois).
@@ -2184,14 +2184,18 @@ static float notasBloco(void) {
   return fim - NV_DETP_G_ABAS - epAppleExtra();
 }
 static float epExtraAltura(void) { return epAppleExtra() + notasBloco(); }
-static float epTempY(void) { return epApple() ? 1160.0f : NV_DETP_TEMP_Y; }
-static float epRowY(void) { return epApple() ? 1286.0f : NV_DETP_EP_Y; }
-static float epAbasY(void) { return (epApple() ? 1758.0f : NV_DETP_ABA_Y) + epExtraAltura(); }
-static float epElencoY(void) { return (epApple() ? 1817.0f : NV_DETP_EL_Y) + epExtraAltura(); }
+static float epTempY(void) { return NV_DETP_TEMP_Y; }
+static float epRowY(void) { return NV_DETP_EP_Y; }
+static float epAbasY(void) { return NV_DETP_ABA_Y + epExtraAltura(); }
+static float epElencoY(void) { return NV_DETP_EL_Y + epExtraAltura(); }
 static float serieGrupo(int r) {
-  static const float glass[] = { NV_DETP_G_TEMP, NV_DETP_G_EP, NV_DETP_G_ABAS, NV_DETP_G_ELENCO };
-  static const float apple[] = { 1080.0f, 1194.0f, 1680.0f, 1749.0f };
-  return (epApple() ? apple : glass)[r];
+  const float groups[] = { NV_DETP_G_TEMP, NV_DETP_G_EP, NV_DETP_G_ABAS, NV_DETP_G_ELENCO };
+  return groups[r];
+}
+
+static GfxRect elencoCartao(float x, float y) {
+  return (GfxRect){ x, y - 14.0f, NV_DETP_EL_W,
+    NV_DETP_EL_AVATAR + NV_DETP_EL_NOME_DY + NV_DETP_EL_PAPEL_DY + 49.0f };
 }
 
 static float alturaSecao(int r) {
@@ -2199,9 +2203,10 @@ static float alturaSecao(int r) {
     case SEC_TEMPORADAS: return NV_DETP_TEMP_H;
     case SEC_EPISODIOS:  return epCardH();
     case SEC_ABAS_INFO:  return NV_DETP_ABA_H;
-    case SEC_ELENCO:     return NV_DETF_EL_ALT;
-    case SEC_TRAILERS:     return NV_DETF_TR_ALT;
-    case SEC_RELACIONADOS: return REL_CARD_H + 56.0f;   // cartaz + titulo/ano
+    case SEC_ELENCO:     return ajustes_vidro() ? elencoCartao(0, 0).h : NV_DETF_EL_ALT;
+    // B2 (glass): trailer title and poster caption live inside the art.
+    case SEC_TRAILERS:     return ajustes_vidro() ? NV_DETF_TR_VIDEO_H : NV_DETF_TR_ALT;
+    case SEC_RELACIONADOS: return REL_CARD_H + (ajustes_vidro() ? 0.0f : 56.0f);   // cartaz + titulo/ano
     // Um mini card so, qualquer que seja o tamanho da saga.
     case SEC_COLECAO:      return COL_CARD_H;
     // + o cabecalho: sem ele a secao seguinte ("Detalhes do Filme") era
@@ -5804,7 +5809,6 @@ static void desenhaTrailer(float x, float y, int c, float f, float a) {
 
   // Foco da Home (focoprof.h): anel so com o ajuste ligado, senao a miniatura
   // cresce; brilho/profundidade seguem os Ajustes (Trailers).
-  cartaoVidro((GfxRect){ x - 10.0f, y - 10.0f, NV_DETF_TR_W + 20.0f, NV_DETF_TR_ALT + 20.0f }, f, a);
   foco_anel(v, raio, f, a);
   v = foco_zoom(v, f);
 
@@ -5816,15 +5820,27 @@ static void desenhaTrailer(float x, float y, int c, float f, float a) {
     gfx_cor(v, raio, 0.13f, 0.13f, 0.13f, a);
   }
 
-  // Selo de play: disco escuro e o triangulo por cima, centrados na miniatura.
+  // Selo de play: disco escuro e o triangulo por cima, centrados na miniatura
+  // (B2 com vidro: um pouco acima, para o chip do titulo caber embaixo).
   { float d = NV_DETF_TR_PLAY_D;
     GfxRect disco = { v.x + (v.w - d) * 0.5f,
-                      v.y + (v.h - d) * 0.5f, d, d };
+                      v.y + v.h * (ajustes_vidro() ? 0.40f : 0.5f) - d * 0.5f, d, d };
     GfxRect tri   = { disco.x + d * 0.34f, disco.y + d * 0.28f,
                       d * 0.36f, d * 0.44f };
     gfx_cor(disco, 0.5f, 0.0f, 0.0f, 0.0f, a * 0.48f);
     gfx_rect(tri, 0, GFX_PLAY, 0, 0, 0, 0.0f, 1, 1, 1, a); }
 
+  // B2: name and source in a tint chip on the frame, not under it.
+  if (ajustes_vidro()) {
+    GfxRect ch = { v.x + 16.0f, v.y + v.h - 96.0f, v.w - 32.0f, 80.0f };
+    TxtLinha ln = txt_linha_corta(TXT_DET_META2, extras_trailer_nome(c), 245, 248, 255, 255, ch.w - 36.0f);
+    TxtLinha lt = txt_linha(TXT_CAPTION2, "YouTube", 200, 200, 200, 255);
+    gfx_cor(ch, 18.0f / ch.h, 0.071f, 0.078f, 0.094f, 0.62f * a);   // tint rgb 18,20,24
+    gfx_vidro_aro(ch, 18.0f / ch.h, 1.0f, 1, 1, 1, 0.14f * a);
+    txt_desenhar_alpha(ln, ch.x + 18.0f, ch.y + 10.0f, a);
+    txt_desenhar_alpha(lt, ch.x + 18.0f, ch.y + 12.0f + (float)ln.h, a * 0.9f);
+    return;
+  }
   { TxtLinha ln = txt_linha_corta(TXT_ROW_TITULO, extras_trailer_nome(c),
                                   245, 248, 255, 255, NV_DETF_TR_W);
     txt_desenhar_alpha(ln, x, y + NV_DETF_TR_NOME_DY, a); }
@@ -5887,14 +5903,13 @@ static void desenhaElenco(float x, float y, int c, float f, float a) {
     GfxRect info = { x - 12, top, NV_DETP_EL_W + 24, 76 };
     gfx_cor(info, 18.0f / info.h, .19f, .21f, .23f, .6f * f * a);
   }
-  cartaoVidro((GfxRect){ x - 10.0f, y - 10.0f, NV_DETP_EL_W + 20.0f,
-                         NV_DETP_EL_AVATAR + NV_DETP_EL_NOME_DY + NV_DETP_EL_PAPEL_DY + 45.0f },
-              f, a);
+  // B2: the tile edge sits on the side margin, flush with the row header.
+  cartaoVidro(elencoCartao(x, y), f, a);
   GfxRect av = { x + (NV_DETP_EL_W-NV_DETP_EL_AVATAR)*.5f, y, NV_DETP_EL_AVATAR, NV_DETP_EL_AVATAR };
   // Foco da Home (focoprof.h): anel so com o ajuste ligado, senao o avatar
   // cresce; a profundidade segue o ajuste de Elenco.
   if (epApple()) { if (ajustes_borda_foco() && f > 0.01f) gfx_anel(av,.5f,1.5f,1,1,1,.22f*f*a); }
-  else foco_anel(av, 0.5f, f, a);
+  else if (!ajustes_vidro()) foco_anel(av, 0.5f, f, a);   // B2: the ink tile is the focus
   av = foco_zoom(av, f);
   GLuint t2 = foto ? tex_obter_larg(foto, NV_DETP_EL_AVATAR) : 0;
   if (t2) {
@@ -5919,6 +5934,16 @@ static void desenhaElenco(float x, float y, int c, float f, float a) {
                        av.y + (av.h - li.h) * 0.5f, a * 0.9f);
   }
   float yn = y + NV_DETP_EL_AVATAR + NV_DETP_EL_NOME_DY;
+  if (ajustes_vidro()) {   // B2: light text, dark on the focused ink tile
+    int cn = (int)(240.0f - 222.0f * f), cp = (int)(196.0f - 150.0f * f);
+    TxtLinha ln = txt_linha_corta(TXT_CALLOUT, nome, cn, cn, cn, 255, NV_DETP_EL_W - 20.0f);
+    txt_desenhar_alpha(ln, x + (NV_DETP_EL_W-ln.w)*.5f, yn, a);
+    if (papel && papel[0]) {
+      TxtLinha lp = txt_linha_corta(TXT_CAPTION2, papel, cp, cp, cp, 255, NV_DETP_EL_W - 20.0f);
+      txt_desenhar_alpha(lp, x + (NV_DETP_EL_W-lp.w)*.5f, yn + NV_DETP_EL_PAPEL_DY, a);
+    }
+    return;
+  }
   TxtLinha ln = txt_linha_corta(TXT_CALLOUT, nome, epApple()?238:179, epApple()?240:179, epApple()?244:179, 255, NV_DETP_EL_W);
   txt_desenhar_alpha(ln, x + (NV_DETP_EL_W-ln.w)*.5f, yn, a);
   if (papel && papel[0]) {
@@ -5984,7 +6009,7 @@ static void moldura(GfxRect r, float raio, float a) {
   // SUPERFICIE ESCURA TINGIDA, um degrau acima do fundo. O cinza #2D2D2D da
   // primeira versao competia com os graficos e fazia esta aba parecer um modal
   // separado; o navy quase-preto mantem a hierarquia sem virar uma placa.
-  if (ajustes_vidro()) { gfx_vidro_painel(r, raio, 0.5f, a); return; }
+  if (ajustes_vidro()) { gfx_cor(r, raio, 1, 1, 1, 0.07f * a); return; }
   gfx_cor(r, raio, 0.082f, 0.094f, 0.118f, 0.92f * a);
   // SEM FIO DE CONTORNO. Havia aqui um anel branco a 14% que existia para
   // "fechar" o cartao sobre a arte de fundo — o dono mandou tirar em 16/09
@@ -5993,13 +6018,19 @@ static void moldura(GfxRect r, float raio, float a) {
   // #151820 ja separa o cartao do fundo sozinho.
 }
 
-// Shared glass plate behind a cast/recommendation/trailer item: the same
-// material and focus surface as the Trakt comments cards. Glass off draws
-// nothing, so the old bare look stays. Sizes and the focus scale are untouched.
+// Tile behind a cast item (mockup B2 .tile): tint only, white 7% + 1 px rim +
+// the top light, no blur pass of its own (GLES2: zero per-card backdrop reads).
+// Glass off draws nothing, so the old bare look stays. Sizes are untouched.
 static void cartaoVidro(GfxRect r, float f, float a) {
+  float raio = 24.0f / r.h;
   if (!ajustes_vidro()) return;
-  gfx_vidro_material(r, 20.0f / r.h, GFX_VIDRO_DENS, a);
-  if (f > 0.005f) plrui_linha_foco(r, 20.0f, f * a);
+  gfx_cor(r, raio, 1, 1, 1, 0.07f * a);
+  gfx_vidro_aro(r, raio, 1.0f, 1, 1, 1, 0.12f * a);
+  gfx_vidro_luz(r, raio, a);
+  if (f > 0.005f) {   // B2 focus: ink fill #F3F2EF + the ring
+    gfx_cor(r, raio, 0.953f, 0.949f, 0.937f, f * a);
+    plrui_linha_foco(r, 24.0f, f * a);
+  }
 }
 
 // Disco com a inicial (o .av do mockup), na cor que o nome sorteia.
@@ -6207,20 +6238,31 @@ static void desenhaRelacionados(float x, float y, float a, int primeiro, int lim
     // Foco da Home no cartaz (focoprof.h): anel so com o ajuste ligado, senao
     // ele cresce; brilho e profundidade seguem os Ajustes.
     float fRel = (aceso && i < N_ITENS) ? animFoco[SEC_RELACIONADOS][i] : 0.0f;
-    cartaoVidro((GfxRect){ cx - 10.0f, y - 10.0f, REL_CARD_W + 20.0f, REL_CARD_H + 88.0f }, fRel, a);
     if (!epApple()) foco_anel(r, raio, fRel, a);
     r = foco_zoom(r, fRel);
     { float aArte = revela_arte(&revRel[i], t != 0, SDL_GetTicks());
       if (t) {
         if (aArte < 0.999f) gfx_cor(r, raio, 0.133f, 0.133f, 0.133f, a);
         gfx_tex_aspect_atual = tex_aspecto(po);
+        // B2 caption scrim, in the poster's own pass (rounded, no extra quad).
+        if (ajustes_vidro()) { gfx_veu_card_limpar(); gfx_veu_card_por(130.0f / r.h, 0.92f); }
         gfx_rect(r, t, GFX_CARD, fRel, 0, 0, raio, 0, 0, 0, a * aArte);
+        gfx_veu_card_limpar();
         gfx_tex_aspect_atual = 0.0f;
       } else if (po[0] && !tex_falhou(po)) {
         gfx_esqueleto(r, raio, 0.133f, 0.133f, 0.133f, a);
       } else {
         gfx_cor(r, raio, 0.133f, 0.133f, 0.133f, a);
       } }
+    if (ajustes_vidro()) {   // B2: caption inside the poster, on a bottom scrim
+      float w = r.w - 30.0f;
+      TxtLinha lt = txt_linha_corta(TXT_DET_META2, extras_relacionado_titulo(i), 245, 245, 245, 255, w);
+      TxtLinha la = txt_linha(TXT_MINI, ano, 200, 202, 208, 255);
+      float yb = r.y + r.h - 14.0f - (ano[0] ? (float)la.h + 1.0f : 0.0f) - (float)lt.h;
+      txt_desenhar_alpha(lt, r.x + 16.0f, yb, a);
+      if (ano[0]) txt_desenhar_alpha(la, r.x + 16.0f, yb + (float)lt.h + 1.0f, a * 0.95f);
+      continue;
+    }
     { int c = aceso ? 255 : 225;
       TxtLinha lt = txt_linha_corta(TXT_DET_META2, extras_relacionado_titulo(i),
                                     c, c, c, 255, REL_CARD_W);
@@ -6377,11 +6419,11 @@ static void desenhaColecao(float x, float y, float f, float a) {
   // Anel so com "Foco no cartaz" ligado (focoprof.h); vidro usa o cartao de
   // vidro como anel, por cima da arte, logo abaixo.
   if (!ajustes_vidro()) foco_anel(r, raio, f, a);
-  // The shared frost reads the page backdrop; the art sits over it, translucent.
-  else gfx_vidro_material(r, raio, GFX_VIDRO_DENS, a);
+  // Match the other B2 cards: tint, rim and top light over the shared backdrop.
+  else cartaoVidro(r, 0, a);
   if (t) {
     gfx_tex_aspect_atual = tex_aspecto(fundo);
-    // Glass: art at 0.8 so the frost underneath shows through it.
+    // Glass: art at 0.8 so the shared backdrop shows through it.
     gfx_rect(r, t, GFX_VITRINE, 1.0f, 0.5f, 0.0f, raio, 0.30f, 0, 0,
              ajustes_vidro() ? a * 0.8f : a);
     gfx_tex_aspect_atual = 0.0f;
@@ -6797,17 +6839,13 @@ static float cabecalhoComentarios(float x, float y, float a) {
   return yy;
 }
 
-// Keep the existing comment material for both focused and resting cards.
+// Match the B2 tint for both focused and resting comment cards.
 static void cartaoComentario(GfxRect card, float raio, float a) {
   if (!ajustes_vidro()) {
     gfx_cor(card, raio, 0.082f, 0.094f, 0.118f, 0.92f * a);
     return;
   }
-  // O MESMO VIDRO FOSCO dos demais cartoes da pagina (gfx_vidro_material): a
-  // captura do backdrop e a unica compartilhada do quadro (gfx_vidro_so_fundo),
-  // entao os ate 8 cartoes leem a mesma copia desfocada — o custo por cartao e
-  // o shader, nao uma captura propria.
-  gfx_vidro_material(card, raio, GFX_VIDRO_DENS, a);
+  cartaoVidro(card, 0, a);
 }
 
 static void desenhaComentarios(float x, float y, float a) {
@@ -7151,7 +7189,8 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
 
 #ifdef NV_TOUCH_UI
   if (!(EH_AUD(r) || r == SEC_FRASES || r == SEC_NOTAS || r == SEC_NOTAS_EP || r == SEC_PROGTEMP)) {
-    float fim = 0.0f, topo = fmaxf(0.0f, y), base = fminf(NV_TELA_H, y + alturaSecao(r));
+    float rowY = r == SEC_ELENCO && ajustes_vidro() ? elencoCartao(0, y).y : y;
+    float fim = 0.0f, topo = fmaxf(0.0f, rowY), base = fminf(NV_TELA_H, y + alturaSecao(r));
     for (int i = 0; i < n; i++) fim = fmaxf(fim, xItem(r, i) + larguraItem(r, i));
     toquerol_vincular(&toqueSec[r], (GfxRect){NV_DETP_X, topo, NV_TELA_W - NV_DETP_X * 2, fmaxf(0, base - topo)},
                      gfx_escala(), 0, fim - (NV_TELA_W - NV_DETP_X), 0, &scrollSec[r]);
@@ -7181,7 +7220,8 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
       txt_desenhar_alpha(lc, NV_DETP_X, y - lc.h - NV_DETF_CAB_GAP, a);
     } }
   { float alt = alturaSecao(r);
-    if (y > NV_TELA_H || y + alt < -40.0f) return; }
+    float rowY = r == SEC_ELENCO && ajustes_vidro() ? elencoCartao(0, y).y : y;
+    if (rowY > NV_TELA_H || y + alt < -40.0f) return; }
 
   // O resumo da temporada ESCOLHIDA, acima das pilulas. Depois do culling (ele
   // desenha acima de `y`, dentro da mesma faixa) e antes do laco de colunas,

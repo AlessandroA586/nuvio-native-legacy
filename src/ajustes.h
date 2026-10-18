@@ -478,6 +478,7 @@ int ajustes_sinopse_tamanho(void);
 // Main UI thread: validated VtLayout ID (vertudo.h); 0 keeps automatic behavior.
 int ajustes_colecao_exibicao(void);
 float ajustes_tamanho_ui(void);
+int   ajustes_det_espaco(void);     // title page row spacing: 0 Compacto, 1 Normal (default), 2 Confortavel
 float ajustes_escala_texto(void);   // 0,85..1,3 (Escala de texto e componentes); 1 = de sempre
 // Settings only: 0.8/0.9/1.0, default 0.9; independent of global UI zoom.
 float ajustes_tamanho_ajustes(void);
