@@ -112,9 +112,9 @@ int fonteauto_pode_decidir(const FonteautoParcial *p) {
     if (!(p->excluida && p->excluida[q]) && !(p->grupo && p->grupo[q] < 0)) { temCand = 1; break; }
   if (!temCand) return 0;
   if (!p->algumPendente) return 1;
+  if (p->esperaTodos) return 0;      // "Todos os add-ons": falta um, espera
   if (p->preferida >= 0 && p->preferida < p->total &&
       !(p->excluida && p->excluida[p->preferida])) return 1;
-  if (p->esperaTodos) return 0;      // "Todos os add-ons": falta um, espera
   if (p->prefPendente) return 0;
   if (p->prazoPassou) return 1;
   nf = fonteauto_fila_o(p->modo, p->total, -1, p->pontos, p->acimaTeto,

@@ -2796,11 +2796,13 @@ static void vigiarPartes(void) {
     }
     if (parteFase == PF_RETOMAR) {
       int rt = 0, re = 0;
+      const CatItem *ci = cat_item(player_indice());
       alvoPlayer(alvo, sizeof alvo);
       if (l.atual < 0) { parteRecuar("the saved file is gone"); return; }
       // Episodio: o arquivo toca sozinho, como na escolha (abrirParte).
       player_episodio_atual(&rt, &re);
-      if (!(rt > 0 && re > 0)) partes_sessao_iniciar(alvo, &l, l.atual);
+      if (!(ci && !strcmp(ci->tipo, "series")) && !(rt > 0 && re > 0))
+        partes_sessao_iniciar(alvo, &l, l.atual);
       parteArqLista = l; parteArqK = l.atual;
       parteMp4 = nomeMp4(l.arq[l.atual].nome);
     }

@@ -10,6 +10,7 @@ player = Path('src/player.c').read_text()
 selected_play = app.split('static void parteTocar(', 1)[1].split('static void abrirParte(', 1)[0]
 assert selected_play.index('definirFonteVOD(url)') < selected_play.index('video_tpk_cdn_arquivo('), 'selected-file CDN identity registered before player open'
 selection = app.split('static void abrirParte(', 1)[1].split('  stream_definir_atual(fonte);', 1)[0]
+resume = app.split('    if (parteFase == PF_RETOMAR) {\n', 1)[1].split('    parteTocar(url, partePos);', 1)[0].rsplit('    }', 1)[0]
 start = player.split('{ int ok = fontePrincipal()', 1)[1].split(';   // PRONTO', 1)[0]
 pause = player.split('if (tocouS > 0.0f && cs', 1)[1].split(' {', 1)[0]
 # Keep the actual duration gate, with harmless preceding predicates removed.
@@ -32,7 +33,8 @@ static const CatItem *cat_item(int n) { (void)n; return &ci; }
 static int player_aberto(void) { return playing; }
 static int player_indice(void) { return 0; }
 static int detail_indice(void) { return 0; }
-static void player_episodio_atual(int *t,int *e) { *t=1; *e=1; }
+static int currentT=1, currentE=1;
+static void player_episodio_atual(int *t,int *e) { *t=currentT; *e=currentE; }
 static void detail_ep_foco(int *t,int *e) { *t=1; *e=1; }
 static void player_encerrar(void) {}
 static void limparFonteVOD(void) {}
@@ -42,6 +44,15 @@ static void diagnostico_cancelar_vazao(void) {}
 static void player_abrir(int n,void *p) { (void)n; (void)p; }
 static void player_definir_episodio(int t,int e) { gotT=t; gotE=e; }
 static void selectFile(''' + selection + r'''
+}
+static PartesLista parteArqLista;
+static int parteArqK, parteMp4;
+static void alvoPlayer(char *alvo, size_t n) { snprintf(alvo,n,"tt-resume"); }
+static void parteRecuar(const char *reason) { (void)reason; assert(0); }
+static int nomeMp4(const char *name) { (void)name; return 0; }
+static void resumeFile(PartesLista l) {
+  char alvo[64];
+''' + resume + r'''
 }
 static int fontePrincipal(void) { return 1; }
 static int video_pronto(void) { return 1; }
@@ -80,6 +91,27 @@ int main(void) {
   assert(partes_ler_item("{\"id\":7,\"files\":[{\"id\":1,\"name\":\"Show.S00E02.mkv\",\"size\":300000000}]}",NULL,0,&pack));
   assert(pack.arq[0].temporada==0 && pack.arq[0].episodio==2);
   assert(pack.arq[0].tipo==PARTE_EP && partes_principais(&pack)==1);
+  static PartesLista specials;
+  assert(partes_ler_item("{\"id\":9,\"files\":[{\"id\":1,\"name\":\"Show.S00E01.mkv\",\"size\":300000000},{\"id\":2,\"name\":\"Show.S00E02.mkv\",\"size\":300000000}]}",NULL,0,&specials));
+  specials.atual=0;
+  assert(partes_principais(&specials)==2);
+  for (int season=-1;season<=1;season++) {
+    currentT=season; currentE=season<0 ? -1 : 1;
+    partes_sessao_parar("resume test");
+    resumeFile(specials);
+    if (partes_sessao_lista()) {
+      puts("FAIL series Resume starts multipart session"); failed=1;
+    }
+    assert(parteArqK==0 && parteArqLista.arq[0].id==1);
+  }
+  currentT=currentE=1;
+  partes_sessao_parar("resume test");
+  strcpy(ci.tipo,"movie"); resumeFile(specials);
+  assert(!partes_sessao_lista());
+  currentT=currentE=0; resumeFile(specials);
+  assert(partes_sessao_lista());
+  partes_sessao_parar("resume test done");
+  strcpy(ci.tipo,"series"); currentT=currentE=1;
   for (playing=0;playing<2;playing++) {
     selectFile(0,&pack,0);
     if (gotT!=0 || gotE!=2) { puts("FAIL specials-only pack selects S01E02 instead of S00E02"); failed=1; }
