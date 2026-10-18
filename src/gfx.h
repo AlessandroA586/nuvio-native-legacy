@@ -219,6 +219,7 @@ typedef enum {
   //   uFoco    = quanto da cor sobra na base (0..1)
   //   uPar.x   = 0 = alfa cheio ate a base; > 0 = onde o ALFA comeca a
   //              esvair (fracao da altura, 1-smoothstep ate a base)
+  //   uPar.y   = fade endpoint when > uPar.x; otherwise the bottom edge
   GFX_FUNDO_DIN = 35,
   // GFX_HERO_CAM / GFX_HERO_CHEIO_CAM — as camadas do destaque numa passada
   // (o crossfade). So por gfx_hero_camadas.
@@ -271,7 +272,9 @@ typedef enum {
   //   uCor.g   = beam x (fraction of width), uCor.b = floor pool radius
   //              (fraction of height). uAcento = current app accent.
   GFX_HOLOFOTE = 45,
-  GFX_NMODOS = 46
+  // Selected internally for GFX_CARD while the Hero reading tint is active.
+  GFX_CARD_HERO = 46,
+  GFX_NMODOS = 47
 } GfxModo;
 
 typedef struct {
@@ -313,6 +316,8 @@ extern float gfx_card_forcar_cover_atual;
 // desenhados por cima, sem as duas passadas de largura inteira. So a parede
 // de capas (psestilos.c) liga; quem liga desliga.
 extern float gfx_card_veu_tela_atual;
+// Hero A horizontal tint inside GFX_CARD; callers reset alpha to zero after drawing.
+extern float gfx_card_heroi_veu_atual[4];
 // 1 = o cartaz em foco ganha o rebordo claro no GFX_CARD; 0 = nao ganha. E um
 // ajuste da pessoa (Ajustes > Foco no cartaz), lido uma vez por quadro pela
 // tela que desenha; o brilho e o especular do foco nao dependem dele.
@@ -444,6 +449,7 @@ typedef struct { GLuint fbo, tex; int w, h; } GfxMini;
 int  gfx_mini_alvo(GfxMini *m, int w, int h);   // cria ou recria; 0 = sem FBO
 void gfx_mini_comecar(GfxMini *m, float x0, float y0, float esc);
 void gfx_mini_terminar(void);
+int  gfx_mini_ativo(void);
 void gfx_mini_desenhar(const GfxMini *m, GfxRect r, float raioPx, float a);
 void gfx_mini_liberar(GfxMini *m);
 // Dentro da miniatura: a base de `r` some ate `alfa` (o .gv.fade do mockup).
