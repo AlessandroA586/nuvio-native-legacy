@@ -2834,7 +2834,7 @@
   T("Mostra ou esconde a sinopse do destaque.", "Zobrazí nebo skryje děj ve zvýrazněném."),
   T("Mostra ou esconde esta fonte na fileira de notas da página do título.", "Zobrazí nebo skryje tento zdroj v řadě hodnocení na stránce titulu."),
   T("Mostra ou esconde o ano no destaque.", "Zobrazí nebo skryje rok ve zvýrazněném."),
-  T("Mostra ou esconde o gênero sob o logo do destaque.", "Zobrazí nebo skryje žánr pod logem ve zvýrazněném."),
+  T("Mostra ou esconde o gênero sob o logo do destaque e dos pôsteres grandes.", "Zobrazí nebo skryje žánr pod logem ve zvýrazněném a na velkých plakátech."),
   T("Mostra quadros por segundo, o pior quadro e a memória dentro da ilha do relógio, atualizados a cada 3 s. Mínimo fica na linha da hora, Menor ganha uma segunda linha e Grande abre o painel completo. Quando a ilha mostra um aviso, o medidor se recolhe e volta depois.", "Ukazuje snímky za sekundu, nejhorší snímek a paměť v ostrůvku hodin, aktualizováno každé 3 s. Minimální zůstává na řádku času, Kompaktní přidá druhý řádek a Velký otevře celý panel. Když ostrůvek ukazuje upozornění, měřič se stáhne a pak se vrátí."),
   T("Mostra um código de 4 letras: digite em plex.tv/link no celular. Nada é digitado nesta TV; só um token fica aqui.", "Zobrazí čtyřpísmenný kód: zadejte ho na plex.tv/link v telefonu. V televizi se nic nepíše; zůstane tu jen token."),
   T("Mostra uma miniatura do filme acima da barra enquanto você avança ou volta. As imagens vêm do Seekr (seekr.tv) e precisam da sua chave pessoal; cada título aberto conta uma consulta da sua cota diária.", "Při přetáčení vpřed nebo vzad zobrazí nad lištou náhled filmu. Obrázky pocházejí ze Seekr (seekr.tv) a vyžadují váš osobní klíč; každý otevřený titul spotřebuje jeden dotaz z denní kvóty."),

@@ -2834,7 +2834,7 @@
   T("Mostra ou esconde a sinopse do destaque.", "注目枠のあらすじを表示または非表示にします。"),
   T("Mostra ou esconde esta fonte na fileira de notas da página do título.", "作品ページの評価の行で、このソースを表示または非表示にします。"),
   T("Mostra ou esconde o ano no destaque.", "注目枠の年を表示または非表示にします。"),
-  T("Mostra ou esconde o gênero sob o logo do destaque.", "注目枠のロゴの下のジャンルを表示または非表示にします。"),
+  T("Mostra ou esconde o gênero sob o logo do destaque e dos pôsteres grandes.", "注目枠と大きいポスターのロゴの下のジャンルを表示または非表示にします。"),
   T("Mostra quadros por segundo, o pior quadro e a memória dentro da ilha do relógio, atualizados a cada 3 s. Mínimo fica na linha da hora, Menor ganha uma segunda linha e Grande abre o painel completo. Quando a ilha mostra um aviso, o medidor se recolhe e volta depois.", "時計のアイランド内にフレームレート、最悪フレーム、メモリを表示し、3 秒ごとに更新します。最小は時刻の行に、コンパクトは2行目を追加し、大は全パネルを開きます。アイランドに通知が出ている間は計測表示が引っ込み、その後戻ります。"),
   T("Mostra um código de 4 letras: digite em plex.tv/link no celular. Nada é digitado nesta TV; só um token fica aqui.", "4文字のコードを表示します。スマートフォンで plex.tv/link に入力してください。このテレビでは何も入力せず、トークンだけが残ります。"),
   T("Mostra uma miniatura do filme acima da barra enquanto você avança ou volta. As imagens vêm do Seekr (seekr.tv) e precisam da sua chave pessoal; cada título aberto conta uma consulta da sua cota diária.", "早送りや巻き戻しのとき、バーの上に映画のサムネイルを表示します。画像は Seekr（seekr.tv）から取得し、個人キーが必要です。作品を開くたびに、1日の上限から1回分が使われます。"),

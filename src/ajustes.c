@@ -6754,7 +6754,7 @@ static const char *ajudaOpcaoBase(int op) {
 
     // --- Home
     case AJ_LANDSCAPE: return "Usa a arte deitada (16:9) no lugar do cartaz em pé nas fileiras que têm as duas.";
-    case AJ_HERO_GENERO: return "Mostra ou esconde o gênero sob o logo do destaque.";
+    case AJ_HERO_GENERO: return "Mostra ou esconde o gênero sob o logo do destaque e dos pôsteres grandes.";
     case AJ_HERO_SINOPSE: return "Mostra ou esconde a sinopse do destaque.";
     case AJ_HERO_NOTAS: return "Mostra ou esconde a nota do IMDb no destaque.";
     case AJ_HERO_ANO: return "Mostra ou esconde o ano no destaque.";
@@ -7225,7 +7225,7 @@ static const char *beneficioProprio(int op) {
     case AJ_MENU_TOPO: return "Onde fica o menu: na esquerda ou no alto da tela.";
     case AJ_ABAS_ESTILO: return "Como as abas de uma coleção de streaming aparecem: chips, menu suspenso, barra central ou páginas.";
     case AJ_HERO_FUNDO: return "De onde vem a arte grande do destaque e da página do título.";
-    case AJ_HERO_GENERO: return "Mostra ou esconde o gênero sob o logo do destaque.";
+    case AJ_HERO_GENERO: return "Mostra ou esconde o gênero sob o logo do destaque e dos pôsteres grandes.";
     case AJ_HERO_SINOPSE: return "Mostra ou esconde a sinopse do destaque.";
     case AJ_HERO_NOTAS: return "Mostra ou esconde a nota do IMDb no destaque.";
     case AJ_HERO_ANO: return "Mostra ou esconde o ano no destaque.";
