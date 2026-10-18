@@ -205,7 +205,7 @@ static float gPreviewLargura(void) {
 // CATEGORIAS e o primeiro chip: a porta VISIVEL do painel de categorias,
 // que antes so abria segurando a seta (ninguem descobre gesto que nao se ve).
 enum { G_TOPO_BUSCAR = 0, G_TOPO_CATEGORIAS, G_TOPO_CARTOES, G_TOPO_LISTA, G_TOPO_ADDONS, G_TOPO_DIAG,
-       G_TOPO_PREVIEW, G_TOPO_N };
+       G_TOPO_LIMPAR, G_TOPO_PREVIEW, G_TOPO_N };
 
 #ifdef NV_TOUCH_UI
 static GfxRect gTopoRects[G_TOPO_N];
@@ -670,7 +670,7 @@ static int cargaAtual(void) {
 static int cargaBaseLigada(const char *base) {
   for (int i = 0; i < nAddonsCarga; i++)
     if (!strcmp(addonsCarga[i].base, base)) return addonsCarga[i].ativo;
-  return 1;
+  return 0;
 }
 static char *cargaBaixar(const char *url) {
   RedeControle ctl = {0};
@@ -685,15 +685,14 @@ static int sabeCanal(const char *base) {   // 1, 0, ou -1 = desconhecido
   return -1;
 }
 
-// A base pertence a um addon da conta que esta DESLIGADO? Base que nenhum
-// addon reivindica (portal Stalker, addon recem-removido) conta como ligada:
-// o painel so manda no que ele lista.
+// Only an installed, enabled add-on may supply channels. Native IPTV sources
+// have an empty base and bypass this add-on check.
 static int baseLigada(const char *base) {
   for (int i = 0; i < addons_n(); i++) {
     const char *b = addons_base(i);
     if (b && b[0] && !strcmp(b, base)) return addons_ativo(i);
   }
-  return 1;
+  return 0;
 }
 
 // --- add-ons escondidos SO NO GUIA (#283) ---------------------------------------
@@ -1478,6 +1477,100 @@ static void cacheGravar(void) {
   fflush(stdout);
 }
 
+// As chaves de fonte que a configuracao ATUAL do perfil justifica: addons
+// ligados, Stalker/Xtream so quando configurados, e cada M3U por URL. O
+// cache no disco e lido so para chave desta lista — a fonte removida nao
+// volta pela porta do cache (a que so falha a rede esta aqui: configurada
+// continua).
+static int fontesChavesAtuais(char chaves[][LTV_CHAVE], int max) {
+  LtvUrl us[LTV_URLS_MAX];
+  int i, n = 0, nu;
+  for (i = 0; i < addons_n() && n < max; i++) {
+    const char *b = addons_base(i);
+    if (b && b[0] && addons_ativo(i))
+      ltv_chave_fonte(LTV_ADDON, b, chaves[n++], LTV_CHAVE);
+  }
+  if (stalker_configurado() && n < max) ltv_chave_fonte(LTV_STALKER, "", chaves[n++], LTV_CHAVE);
+  if (xtream_configurado() && n < max)  ltv_chave_fonte(LTV_XTREAM,  "", chaves[n++], LTV_CHAVE);
+  nu = ltv_urls_copiar(us, LTV_URLS_MAX);
+  for (i = 0; i < nu && n < max; i++)
+    if (us[i].tipo == LTV_URL_M3U) ltv_chave_fonte(LTV_M3U, us[i].url, chaves[n++], LTV_CHAVE);
+  return n;
+}
+static int chaveConfigurada(const char *ch) {
+  char chaves[64][LTV_CHAVE];
+  int i, n = fontesChavesAtuais(chaves, 64);
+  for (i = 0; i < n; i++) if (!strcmp(chaves[i], ch)) return 1;
+  return 0;
+}
+
+static void focoValido(void);
+static void empacotar(void);
+static void epgExtrasMontar(void);
+
+// Apaga o arquivo de cache de UMA fonte deste perfil.
+static void cacheFonteApagar(const char *ch) {
+  char nome[64], caminho[600], *t;
+  cacheNomeIndice(nome, sizeof nome);
+  t = dados_ler(nome);
+  if (t) {
+    char *p = t, *w = t;
+    while (*p) {
+      size_t k = strcspn(p, "\r\n"), linha = k;
+      while (p[linha] == '\r' || p[linha] == '\n') linha++;
+      if (strlen(ch) != k || strncmp(p, ch, k)) { memmove(w, p, linha); w += linha; }
+      p += linha;
+    }
+    *w = 0; dados_gravar(nome, t); free(t);
+  }
+  cacheNomeFonte(ch, nome, sizeof nome);
+  if (dados_caminho(caminho, sizeof caminho, nome)) remove(caminho);
+  snprintf(nome, sizeof nome, "epg-x-%s-p%d.bin", ch, perfis_ativo() > 0 ? perfis_ativo() : 1);
+  if (dados_caminho(caminho, sizeof caminho, nome)) remove(caminho);
+#ifdef __EMSCRIPTEN__
+  dados_marcar_sujo(0);
+#endif
+}
+
+// Fonte que saiu da configuracao (addon removido, Xtream/M3U apagado): some
+// os canais dela e o cache em disco NA HORA. Chamada por Ajustes/sync no fio
+// de desenho.
+void guia_fonte_esquecer(const char *chave) {
+  int i, w;
+  char ch[LTV_CHAVE];
+  snprintf(ch, sizeof ch, "%s", chave);
+  chave = ch;   // O chamador pode apontar para ltvF, que sera compactado.
+  if (fioVivo) { cargaCancelada = 1; recarregarPend = 1; }
+  cacheFonteApagar(chave);
+  if (!favLido) favLer();
+  for (i = 0, w = 0; i < nFav; i++)
+    if (strcmp(fav[i].chave, chave)) fav[w++] = fav[i];
+  if (w != nFav) { nFav = w; favGravar(); }
+  for (i = 0; i < nLtvF; i++)
+    if (!strcmp(ltvF[i].chave, chave)) {
+      int k, w;
+      for (k = 0, w = 0; k < nCanais; k++)
+        if (canais[k].fonte != i) canais[w++] = canais[k];
+      nCanais = w;
+      for (k = 0; k < nCanais; k++) if (canais[k].fonte > i) canais[k].fonte--;
+      for (k = 0; k < nCats; k++) if (cats[k].fonte > i) cats[k].fonte--;
+      free(ltvF[i].gi); ltvF[i].gi = NULL;
+      memmove(&ltvF[i], &ltvF[i + 1], sizeof ltvF[0] * (size_t)(nLtvF - i - 1));
+      nLtvF--;
+      break;
+    }
+  if (filtroChave[0] && !strcmp(filtroChave, chave)) {
+    filtro = G_FILTRO_TODAS; filtroChave[0] = 0;
+  }
+  empacotar();
+  focoValido();
+  assinaturaPublicada = 0;
+  if (!strcmp(chave, "xt")) xtepg_limpar();
+  epgExtrasMontar();
+  printf("[guia] fonte %s esquecida: %d canais ficam\n", chave, nCanais);
+  fflush(stdout);
+}
+
 // Assinatura INDEPENDENTE DA ORDEM (soma de hashes por canal).
 static unsigned long assinaturaDe(const GCanal *c, int n, const GCat *cs, const GFonteLtv *fs) {
   unsigned long soma = 0;
@@ -1686,11 +1779,18 @@ static int cacheLer(void) {
   for (p = t; *p; ) {
     char ch[LTV_CHAVE];
     size_t k = strcspn(p, "\r\n");
-    if (k && k < sizeof ch) { memcpy(ch, p, k); ch[k] = 0; cacheFonteLer(ch); }
+    // Fonte que nao existe mais na configuracao nao volta do cache (addon
+    // removido, Xtream/M3U apagado, outra conta neste perfil). A que so
+    // FALHOU a rede continua configurada e entra normal.
+    if (k && k < sizeof ch) {
+      memcpy(ch, p, k); ch[k] = 0;
+      if (chaveConfigurada(ch)) cacheFonteLer(ch);
+      else guia_fonte_esquecer(ch);
+    }
     p += k; while (*p == '\r' || *p == '\n') p++;
   }
   free(t);
-  if (!sNCanais) { stagingZerar(); return 0; }
+  if (!sNCanais) { stagingZerar(); empacotar(); focoValido(); return 0; }
   adotarStaging();
   assinaturaPublicada = assinaturaDe(canais, nCanais, cats, ltvF);
   printf("[guia] cache lido: %d canais em %d grupos, %d fonte(s)\n", nCanais, nCats, nLtvF);
@@ -2889,7 +2989,7 @@ static void fontesEscolher(int i) {
   printf("[ltv] filtro: %s\n", i == 0 ? "favoritos" : i == 1 ? "todas" : ltvF[i - 2].chave);
   fflush(stdout);
 }
-enum { FOP_AZ, FOP_GRUPOS, FOP_FUSO, FOP_RECARREGAR, FOP_N };
+enum { FOP_AZ, FOP_GRUPOS, FOP_FUSO, FOP_RECARREGAR, FOP_LIMPAR, FOP_N };
 static void gpAbrir(int f);
 static void fopCanalAbrir(GCanal *c) { fopAberto = 1; fopModo = FOP_CANAL; fopFoco = 0; fopCanal = c; }
 static int fopItens(void) { return fopModo == FOP_CANAL ? 2 : fopModo == FOP_GRADE ? 2 + sugN : FOP_N; }
@@ -2910,6 +3010,7 @@ static void fopCanalOk(void) {
   epgCoberturaZerar();
   fopAberto = 0;
 }
+static int limparConfirm, limparFoco;   // confirmacao do "Limpar lista"
 static void fopMudar(int dir) {
   int f = fontesCol - 2;
   LtvPref *p;
@@ -2928,8 +3029,12 @@ static void fopMudar(int dir) {
     fopAberto = 0;
     if (fioVivo) recarregarPend = 1;
     else { estado = G_PARADO; ultTentativa = 0; iniciarCarga(); }
+  } else if (fopFoco == FOP_LIMPAR && dir == 0) {
+    fopAberto = 0;
+    limparConfirm = 1; limparFoco = 1;
   }
 }
+// OK na confirmacao do Limpar: foco 0 = executa, 1 = cancela.
 // --- ESCOLHER GRUPOS (M2) ---------------------------------------------------------
 // Uma fonte que passa do teto da TV mostra so parte dos canais; aqui a pessoa
 // marca os grupos que quer, vendo "N de M canais" ao vivo (M = o teto da
@@ -3081,6 +3186,17 @@ void guia_evento(const SDL_Event *e) {
     gpEvento(k, e->key.repeat, agora);
     return;
   }
+  // CONFIRMACAO DO LIMPAR: so esta camada ve tecla enquanto aberta.
+  if (limparConfirm) {
+    if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE ||
+        k == SDLK_DELETE || e->key.keysym.scancode == NV_SCANCODE_BACK) { limparConfirm = 0; return; }
+    if (k == SDLK_LEFT || k == SDLK_RIGHT) { limparFoco = !limparFoco; return; }
+    if ((k == SDLK_RETURN || k == SDLK_KP_ENTER) && !e->key.repeat) {
+      limparConfirm = 0;
+      if (limparFoco == 0) guia_limpar_lista();
+    }
+    return;
+  }
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE ||
       k == SDLK_DELETE || e->key.keysym.scancode == NV_SCANCODE_BACK) {
     if (fopAberto) { fopAberto = 0; return; }
@@ -3181,6 +3297,7 @@ void guia_evento(const SDL_Event *e) {
       else if (topoCol == G_TOPO_CATEGORIAS) catAbrir(2, 0);
       else if (topoCol == G_TOPO_ADDONS) painelAbrir();
       else if (topoCol == G_TOPO_DIAG) pedLivetvDiag = 1;
+      else if (topoCol == G_TOPO_LIMPAR) { limparConfirm = 1; limparFoco = 1; }
       else if (topoCol == G_TOPO_PREVIEW) {
         previewLigado = !previewLigado;
         previewGravar();
@@ -3610,6 +3727,40 @@ void guia_fontes_mudaram(void) {
   else { estado = G_PARADO; ultTentativa = 0; iniciarCarga(); }
 }
 
+// Explicit reset: discard this profile's lists, then reload configured sources.
+void guia_limpar_lista(void) {
+  char nome[48], *t, *p;
+  int i;
+  if (fioVivo) cargaCancelada = 1;
+  cacheNomeIndice(nome, sizeof nome);
+  t = dados_ler(nome);
+  if (t) {
+    for (p = t; *p; ) {
+      char ch[LTV_CHAVE];
+      size_t k = strcspn(p, "\r\n");
+      if (k && k < sizeof ch) {
+        memcpy(ch, p, k); ch[k] = 0;
+        cacheFonteApagar(ch);
+      }
+      p += k; while (*p == '\r' || *p == '\n') p++;
+    }
+    free(t);
+  }
+  for (i = 0; i < nLtvF; i++) cacheFonteApagar(ltvF[i].chave);
+  cacheNomeIndice(nome, sizeof nome);
+  dados_gravar(nome, "");
+  fontesLtvSoltar(ltvF, nLtvF); nLtvF = 0;
+  nCanais = nCats = 0;
+  filtro = G_FILTRO_TODAS; filtroChave[0] = 0;
+  fopAberto = gpAberto = 0;
+  assinaturaPublicada = 0;
+  empacotar(); focoValido();
+  epg_extras_definir(NULL, 0);
+  xtepg_limpar();
+  if (fioVivo) recarregarPend = 1;
+  else { estado = G_PARADO; ultTentativa = 0; iniciarCarga(); }
+}
+
 int guia_atualizando_lista(void) {
   return recargaDoPainel && !painel && (fioVivo || recarregarPend);
 }
@@ -3639,6 +3790,9 @@ void guia_atualizar(float dt, Uint32 agora) {
   int prontoPend = atomic_load_explicit(&pendPronto, memory_order_acquire);
   if (recargaDoPainel && !fioVivo && !recarregarPend && !prontoPend) recargaDoPainel = 0;
   drenarCarga();
+  // Configuracao mudou fora do guia (inclusive pull da conta): remove agora.
+  for (int i = nLtvF - 1; i >= 0; i--)
+    if (!chaveConfigurada(ltvF[i].chave)) guia_fonte_esquecer(ltvF[i].chave);
   // O painel de addons pediu recarga com o fio ainda vivo: agora que ele
   // acabou, vai.
   if (recarregarPend && !fioVivo) {
@@ -4696,6 +4850,7 @@ static void desenharFontes(float a) {
       snprintf(it[FOP_FUSO] + u, sizeof it[0] - u, "  \xe2\x97\x82\xe2\x96\xb8"); }
     snprintf(it[FOP_GRUPOS], sizeof it[0], "%s", i18n("Escolher grupos"));
     snprintf(it[FOP_RECARREGAR], sizeof it[0], "%s", i18n("Recarregar"));
+    snprintf(it[FOP_LIMPAR], sizeof it[0], "%s", i18n("Limpar lista de canais"));
     if (c.x + c.w > xm) c.x = xm - c.w;
     (void)wf;
     materialPainelGuia(c, 22.0f, a);
@@ -4709,6 +4864,39 @@ static void desenharFontes(float a) {
       if (foc) plrui_linha_foco(r, 18.0f, a);
       t = txt_linha_corta(TXT_BODY, it[k], cc, cc, cc, 255, r.w - 28.0f);
       txt_desenhar_alpha(t, r.x + 14.0f, r.y + (r.h - (float)t.h) * 0.5f, a);
+    }
+  }
+
+}
+
+static void ponteiroLimpar(int i, int b) { (void)b; limparFoco = i; }
+static void desenharLimpar(float a) {
+  // CONFIRMACAO de "Limpar lista de canais": um cartao central, porque a
+  // acao apaga cache E a lista da tela — sem ela, um toque errado no chip
+  // esvaziava o guia e a pessoa nao sabia como voltar atras.
+  if (limparConfirm) {
+    GfxRect c = { (NV_TELA_W - 640.0f) * 0.5f, (NV_TELA_H - 300.0f) * 0.5f, 640.0f, 300.0f };
+    TxtLinha t;
+    int tf2 = ajustes_tinta_foco();
+    gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0, 0.55f * a);
+    materialPainelGuia(c, 26.0f, a);
+    gfx_cor(c, 26.0f / c.h, 0.071f, 0.075f, 0.086f, 0.94f * a);
+    t = txt_linha(TXT_HEADLINE, i18n("Limpar a lista de canais?"), 240, 242, 248, 255);
+    txt_desenhar_alpha(t, c.x + 36.0f, c.y + 32.0f, a);
+    txt_bloco(TXT_BODY,
+              i18n("Apaga a lista guardada deste perfil e recarrega dos addons e contas configurados."),
+              200, 202, 210, c.x + 36.0f, c.y + 100.0f, c.w - 72.0f, 30.0f, a, 3);
+    { GfxRect r0 = { c.x + 36.0f, c.y + 216.0f, (c.w - 84.0f) * 0.5f, 56.0f };
+      GfxRect r1 = { r0.x + r0.w + 12.0f, r0.y, r0.w, r0.h };
+      int f0 = limparFoco == 0;
+      TxtLinha t0, t1;
+      ponteiro_alvo(r0.x, r0.y, r0.w, r0.h, ponteiroLimpar, NULL, 0, 0);
+      ponteiro_alvo(r1.x, r1.y, r1.w, r1.h, ponteiroLimpar, NULL, 1, 0);
+      if (f0) plrui_linha_foco(r0, 18.0f, a); else plrui_linha_foco(r1, 18.0f, a);
+      t0 = txt_linha(TXT_BODY, i18n("Limpar"), f0 ? tf2 : 225, f0 ? tf2 : 225, f0 ? tf2 : 225, 255);
+      t1 = txt_linha(TXT_BODY, i18n("Cancelar"), !f0 ? tf2 : 225, !f0 ? tf2 : 225, !f0 ? tf2 : 225, 255);
+      txt_desenhar_alpha(t0, r0.x + (r0.w - t0.w) * 0.5f, r0.y + (r0.h - t0.h) * 0.5f, a);
+      txt_desenhar_alpha(t1, r1.x + (r1.w - t1.w) * 0.5f, r1.y + (r1.h - t1.h) * 0.5f, a);
     }
   }
 }
@@ -4810,7 +4998,7 @@ static void desenharGrupos(float a) {
 // caminho de sempre. Gaveta, busca e painel sao camadas (so elas valem
 // enquanto abertas), e so com a animacao assentada.
 static int buscaEstado;   // declarada de novo com a busca, mais abaixo
-static int guiaCamadaAberta(void) { return catAberto || buscaEstado || painel; }
+static int guiaCamadaAberta(void) { return catAberto || buscaEstado || painel || limparConfirm; }
 #ifdef NV_TOUCH_UI
 static int guiaVazioTelefone(void) {
   return telefoneui_ativo() && aberta && !overlay && !nCanais &&
@@ -4931,6 +5119,7 @@ static void gTopoRotulos(const char **rot) {
   // DIAGNOSTICO na barra (dono, 01/10: o controle do Android nao tem a tecla
   // VERDE). O verde continua como atalho onde existe.
   rot[G_TOPO_DIAG]    = i18n("Diagnóstico");
+  rot[G_TOPO_LIMPAR]  = i18n("Limpar lista de canais");
   rot[G_TOPO_PREVIEW] = previewLigado ? i18n("Preview: sim") : i18n("Preview: não");
 }
 
@@ -6366,6 +6555,7 @@ void guia_desenhar(Uint32 agora) {
   buscaDesenhar(agora);
   if (painel) desenharPainelAddons(a);
   desenharGrupos(a);
+  desenharLimpar(a);
   // O CANAL NO AR ENCOLHENDO para o preview: o furo segue o degrau da janela
   // do player por cima de tudo, e o video "pousa" no preview.
   { float x, y, w, h;
@@ -6431,7 +6621,7 @@ void guia_abrir_sessao(void) {
   free(rolXv); rolXv = NULL; capRolX = 0;
   memset(animTopo, 0, sizeof animTopo);
   nLtvF = nVis = nZapL = 0; filtro = G_FILTRO_TODAS; filtroChave[0] = 0;
-  focoFontes = fontesCol = fopAberto = gpAberto = 0; perfilPrefs = -999;
+  focoFontes = fontesCol = fopAberto = gpAberto = limparConfirm = 0; perfilPrefs = -999;
   catAberto = catFoco = dirSeg = okLongo = 0;
   catUlt = dirDesde = dirTick = ultNavCat = okDesde = 0;
   catAnim = catRol = catVelRol = 0.0f;
