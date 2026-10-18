@@ -121,6 +121,34 @@ int main(int argc, char **argv) {
 #endif
   if (!failures) puts("PASS: active-debrid P2P-only remedy");
   debrid_esquecer();
+  // Connecting debrid cannot restore sources rejected by pedeP2P().
+  for (int engine = 0; engine <= 1; engine++) {
+    atomic_store(&motorP2pParaDica, engine);
+    stream_definir_lista(v, 22); assert(n == 5);
+    hint[0] = 0; draw(win, NULL);
+#if defined(__EMSCRIPTEN__)
+    int available = 0;
+#else
+    int available = engine;
+#endif
+    if ((available && (!strstr(hint, "17") || !strstr(hint, "P2P"))) ||
+        (!available && hint[0]) || strstr(hint, "debrid")) {
+      fprintf(stderr, "FAIL: no-debrid P2P-only remedy, engine %d: '%s'\n", engine, hint);
+      failures++;
+    }
+    // Only the source that does not require P2P can benefit from debrid.
+    v[5].notWebReady = 0;
+    stream_definir_lista(v, 22);
+    hint[0] = 0; draw(win, NULL);
+    if (!strstr(hint, available ? "17" : "1 torrent") || !strstr(hint, "debrid") ||
+        (!!strstr(hint, "P2P") != available) ||
+        (!available && strstr(hint, "HdHub"))) {
+      fprintf(stderr, "FAIL: mixed requirements, engine %d: '%s'\n", engine, hint);
+      failures++;
+    }
+    v[5].notWebReady = 1;
+  }
+  atomic_store(&motorP2pParaDica, 1);
   // Ten maximum-length addon names must not hide the remedy from the remote.
   for (int i = 5; i < 22; i++) {
     snprintf(v[i].provedor, sizeof v[i].provedor,

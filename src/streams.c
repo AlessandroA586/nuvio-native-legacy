@@ -1808,12 +1808,14 @@ int stream_torrents_para_p2p(void) {
 // #599: explain partial results without changing the empty-sheet diagnosis.
 static int dicaTorrents(char *texto, size_t tam) {
   int p2p = stream_torrents_para_p2p();
-  int qtd = !debrid_ativo() ? descartadosSemDebrid : p2p;
+  int debrid = !debrid_ativo() ? descartadosSemDebrid - descartadosP2P : 0;
+  int qtd = p2p > 0 ? p2p : debrid;
   // Keep the summary within the footer area reachable from the last source.
   char nomes[192] = "";
   if (!n || qtd <= 0) return 0;
   for (int i = 0; i < nDescartadosAddon; i++) {
-    int total = debrid_ativo() ? descartadosAddon[i].p2p : descartadosAddon[i].total;
+    int total = debrid_ativo() ? descartadosAddon[i].p2p :
+      descartadosAddon[i].total - (p2p > 0 ? 0 : descartadosAddon[i].p2p);
     size_t len = strlen(nomes);
     if (total > 0 && len + sizeof descartadosAddon[i].nome + 24 < sizeof nomes)
       snprintf(nomes + len, sizeof nomes - len, "%s%s: %d", len ? ", " : " (", descartadosAddon[i].nome, total);
@@ -1826,7 +1828,7 @@ static int dicaTorrents(char *texto, size_t tam) {
   int len = snprintf(texto, tam, i18n("%d fontes torrent ocultas%s."), qtd, nomes);
   if (len >= 0 && (size_t)len < tam)
     snprintf(texto + len, tam - (size_t)len, " %s", p2p > 0
-      ? (debrid_ativo() ? i18n("Ligue o P2P em Ajustes.")
+      ? (!debrid ? i18n("Ligue o P2P em Ajustes.")
                         : i18n("Ligue o P2P em Ajustes ou conecte uma conta de debrid."))
       : i18n("Conecte uma conta de debrid."));
   return 1;
