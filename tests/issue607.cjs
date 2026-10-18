@@ -74,7 +74,47 @@ function avplay() {
   console.log('PASS: AVPlay always closes, reports failures, retries cleanup');
 }
 
-const cases = {probe, avplay};
+function decoder() {
+  const source = fs.readFileSync('src/webp.c','utf8');
+  const body = source.match(/void navegador_iniciar\(void\)[\s\S]*?EM_ASM\(\{([\s\S]*?)\n  \},/)[1];
+  const heap = new Int32Array(new SharedArrayBuffer(1024));
+  const workers = [];
+  class Worker {
+    constructor() { workers.push(this); }
+    postMessage() {}
+    terminate() { assert.equal(heap[2] & 4,0,'publish death only after termination'); this.dead = true; }
+  }
+  const context = {Module:{},HEAP32:heap,wasmMemory:{buffer:heap.buffer},SharedArrayBuffer,
+    OffscreenCanvas:function(){},Worker,MessageChannel:class {constructor(){this.port1={};this.port2={};}},console};
+  vm.runInNewContext('(function($0,$1){' + body + '})(4,8)',context);
+  heap[2] = 3;
+  workers[0].onerror({message:'decoder failure'});
+  assert(workers.every(w=>w.dead),'both workers must stop before jobs can be freed');
+  assert.equal(heap[2],7);
+  assert(context.Module.nvDec.morto);
+  const declarations = source.slice(source.indexOf('enum { J_EST'),source.indexOf('// printf SEM ESPERAR'));
+  const functions = source.slice(source.indexOf('static void soltarJob'),source.indexOf('int navegador_abandonados_vivos'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(),'issue607-gc-'));
+  try {
+    fs.writeFileSync(path.join(dir,'gc.c'), '#include <stdint.h>\n#include <stdlib.h>\n#include <pthread.h>\n#include <assert.h>\n' + declarations + functions + `
+int main(void) {
+  int32_t job[J_INTS] = {0}; job[J_ORIGEM] = 2;
+  canalEstado = 3; largarCanalMorto(job); assert(job[J_EST] == 0);
+  canalEstado = 7; largarCanalMorto(job); assert(job[J_EST] == 1);
+  job[J_EST] = 4; largarCanalMorto(job); assert(job[J_EST] == 5);
+  job[J_EST] = 0; job[J_ORIGEM] = 1; largarCanalMorto(job); assert(job[J_EST] == 0);
+  lixo = calloc(J_INTS,sizeof(int32_t)); nLixo = 1;
+  lixo[J_EST] = 4; lixo[J_ORIGEM] = 2;
+  assert(varrer() == 0 && !lixo);
+  return 0;
+}\n`);
+    cp.execFileSync('cc',[path.join(dir,'gc.c'),'-pthread','-o',path.join(dir,'gc')]);
+    cp.execFileSync(path.join(dir,'gc'));
+  } finally { fs.rmSync(dir,{recursive:true,force:true}); }
+  console.log('PASS: decoder death fails active jobs; GC frees abandoned jobs');
+}
+
+const cases = {probe, avplay, decoder};
 (async () => {
   const selected = process.argv.slice(2);
   for (const name of selected.length ? selected : Object.keys(cases)) await cases[name]();
