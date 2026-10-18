@@ -212,7 +212,8 @@ int main(int argc, char **argv) {
   fonteVaziaRecupera(LTV_ADDON, bases[0], "A", bases[0]);
   assert(sNCanais == 2 && sLtvF[0].deCache);
   stagingZerar();
-  // Removal must close selectors bound to removed or shifted source indices.
+  // Removal must invalidate focus and options before source/channel compaction.
+  for (int mode = FOP_FONTE; mode <= FOP_GRADE; mode++)
   for (int scenario = 0; scenario < 4; scenario++) {
     semearFonteCache(bases[0], "Grupo A", a, 2);
     semearFonteCache(bases[1], "Grupo B", b, 1);
@@ -225,8 +226,15 @@ int main(int argc, char **argv) {
     assert(gpAberto && gpN > 0);
     gpMarca[0] = 1;
     gpFoco = 0; // Apply is focused when the source disappears.
+    focoFontes = 1; fontesCol = scenario >= 2 ? 2 : 3;
+    fontesOkDesde = SDL_GetTicks(); fontesOkLongo = 1;
+    fopCanalAbrir(&canais[0]);
+    fopModo = mode;
     guia_fonte_esquecer(scenario == 0 || scenario == 3 ? chB : chA);
     assert(!gpAberto);
+    assert(!focoFontes && fontesCol == 0);
+    assert(!fontesOkDesde && !fontesOkLongo);
+    assert(!fopAberto && fopCanal == NULL);
     if (scenario == 3) assert(nLtvF == 0 && nCanais == 0);
     else assert(nLtvF == 1 && ltvF[0].gi && ltvF[0].ngi == 1);
   }

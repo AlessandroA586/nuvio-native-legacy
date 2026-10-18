@@ -1503,6 +1503,10 @@ static void focoValido(void);
 static void empacotar(void);
 static void epgExtrasMontar(void);
 static int gpAberto;
+static int focoFontes, fontesCol;
+static Uint32 fontesOkDesde; static int fontesOkLongo;
+static int fopAberto, fopFoco;            // opcoes da fonte
+static GCanal *fopCanal;
 
 // Apaga o arquivo de cache de UMA fonte deste perfil.
 static void cacheFonteApagar(const char *ch) {
@@ -1545,12 +1549,15 @@ void guia_fonte_esquecer(const char *chave) {
   for (i = 0; i < nLtvF; i++)
     if (!strcmp(ltvF[i].chave, chave)) {
       int k, w;
+      // Source slots and channel pointers become invalid during compaction.
+      gpAberto = fopAberto = focoFontes = fontesCol = 0;
+      fontesOkDesde = fontesOkLongo = 0;
+      fopCanal = NULL;
       for (k = 0, w = 0; k < nCanais; k++)
         if (canais[k].fonte != i) canais[w++] = canais[k];
       nCanais = w;
       for (k = 0; k < nCanais; k++) if (canais[k].fonte > i) canais[k].fonte--;
       for (k = 0; k < nCats; k++) if (cats[k].fonte > i) cats[k].fonte--;
-      gpAberto = 0; // Source indices and group data are about to change.
       free(ltvF[i].gi); ltvF[i].gi = NULL;
       memmove(&ltvF[i], &ltvF[i + 1], sizeof ltvF[0] * (size_t)(nLtvF - i - 1));
       nLtvF--;
@@ -2965,16 +2972,12 @@ static void sair(void) {
 // OK filtra (a escolha vale so na sessao, decisao 1); segurar OK abre as opcoes
 // da fonte: ordem dos grupos (provedor / A-Z) e o horario da grade (M6).
 #define G_FONTES_H 56.0f
-static int focoFontes, fontesCol;
-static Uint32 fontesOkDesde; static int fontesOkLongo;
-static int fopAberto, fopFoco;            // opcoes da fonte
 // OPCOES DO CANAL (segurar OK numa linha, M5/M7): Favorito e "Escolher grade
 // deste canal". fopModo 0 = fonte, 1 = canal, 2 = lista de grades.
 enum { FOP_FONTE = 0, FOP_CANAL, FOP_GRADE };
 static int fopModo;
 #define G_SUG 8
 static int sugN, sug[G_SUG];
-static GCanal *fopCanal;
 static void mapaDefinir(GCanal *c, const char *gf, const char *gid);
 static float fontesRol;
 static int barraVisivel(void) { return nLtvF > 0 && !overlay; }
