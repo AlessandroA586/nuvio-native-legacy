@@ -6098,6 +6098,8 @@ trailer_hero_fim:
                   trailer_mostra_video() &&
                   (!heroTrailerNoCartao || cartaoAssentado(agora))) ? 1.0f : 0.0f;   // .tpk: ate o recorte assentar (#178)
     heroTrailerFade = anim_mola(heroTrailerFade, alvo, dt, NV_MOLA_SCROLL);
+    // Android fraco: card moving = no hole at all (a fade would leave the video plane still while the card moves).
+    if (alvo == 0.0f && heroTrailerNoCartao && !cartaoAssentado(agora)) heroTrailerFade = 0.0f;
     // O `playing` chegou: este titulo ja teve o seu trailer (ver heroTrailerTocou).
     if (alvo > 0.5f) heroTrailerMarcarTocou(heroTrailerImdb);
     // MODO CINEMA: so com o trailer do DESTAQUE tocando (foco no hero). No do
