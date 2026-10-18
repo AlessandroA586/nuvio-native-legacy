@@ -8,7 +8,7 @@ Episode thumbnails request a stable maximum focus width, preventing successive 3
 
 ## Reproduction and results
 
-`bash tests/detail_episode_perf.sh` renders the real Modern detail screen in a hidden OpenGL window/FBO, without network fixtures. It uses ten episodes with local thumbnails and glass enabled, a deterministic detail animation clock, a complete navigation pass, a measurement-only draw check, and a 220-rectangle / 3.2-screen fill cap.
+`bash tests/detail_episode_perf.sh` renders the real Modern detail screen in a hidden OpenGL window/FBO, without network fixtures. It uses ten episodes with local thumbnails and glass enabled, a deterministic detail animation clock, a complete navigation pass, and a measurement-only draw check. The regression now compares episode rectangles and GPU fill directly against the cast-focused screen; the former 220-rectangle / 3.2-screen allowance is removed.
 
 With the alpha guard absent: **rc 134**, 343 rectangles, 3.779 screens of fill; cap assertion fails. With the fix: **rc 0**, 175 rectangles, 2.359 screens of fill. Settled navigation frames have zero texture uploads and zero text rasterizations. Static glass requires zero captures during the measured eight frames.
 
@@ -18,6 +18,10 @@ Final build: `NUVIO_MAC_SO_COMPILAR=1 NUVIO_MAC_BIN=/tmp/nv205-episode-mac bash 
 
 ## Limits
 
-The cast-focused screen measures 169 rectangles / 1.610 screens of fill: exact cast parity is **not met**. The episode screen is under the regression cap and saves 49% of submitted rectangles and 38% of fill, but TCL draw time <=25 ms needs on-device measurement. No device deployment was performed.
+The cast-focused screen measures 169 rectangles / 1.610 screens of fill: exact cast parity is **not met**. With strict comparison enabled, the test exits **134**: initial episodes cost 175 rectangles / 2.359 screens of fill, and 4,630 of 5,120 checked navigation frames exceed cast rectangles or fill. This remains a rendering acceptance failure; the test no longer approves it.
+
+Navigation checks start at the first frame after each column change, cover 128 frames per move, and traverse all ten cards forward and backward with both ring and zoom focus. Forward moves allow at most two thumbnail uploads and 16 rasterizations for newly visible content; warm return moves allow zero. The observed first ring traversal uses one upload and four or five rasterizations when a new card enters; warm navigation and zoom navigation have zero. No moves exceed these bounds. The zoom setting change receives one warm-up before navigation to load the new maximum thumbnail size. Scrolled ring and zoom PNGs are generated in `/tmp`; no full-diff visual comparison was performed.
+
+TCL draw time <=25 ms still needs on-device measurement. No device deployment was performed.
 
 The reused fixture lacks rating brand PNG paths (`/marcas/trakt.png`, `/marcas/imdb.png`); both images share that limitation. This is a hidden-window GL test, not an SDL dummy-video test: it requires an available OpenGL session and the existing Homebrew SDL libraries.

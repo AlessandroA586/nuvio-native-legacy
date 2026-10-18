@@ -601,11 +601,7 @@ int main(int argc, char **argv) {
     snprintf(nome, sizeof nome, "%s-episodes.png", saida); gravar(nome);
     int rects = gfx_n_rect;
     double fill = gfx_fill_gpu;
-    printf("[episode-cap] episodes=%d rects=%d fill=%.3f cap=220/3.2\n",
-           epVisiveis(), rects, fill);
-    fflush(stdout);
     assert(epVisiveis() >= 8);
-    assert(rects <= 220 && fill <= 3.2);
     int count = gfx_n_rect;
     TxtLinha probe = txt_linha(TXT_CAPTION, "Layout probe", 255, 255, 255, 255);
     txt_desenhar_alpha(probe, 0, 0, 0);
@@ -613,20 +609,54 @@ int main(int argc, char **argv) {
     // Measurement-only rating layout must submit no GL draws.
     notasui_fontes_altura(notasDados());
     assert(gfx_n_rect == count);
-    // An unseen card must not be drawn; walk the complete ten-card season.
     parado = 0;
     medindo = 0;
-    for (int col = 1; col < T1_N; col++) {
-      nosEpisodios(col);
-      assert(gfx_n_rect <= 220 && gfx_fill_gpu <= 3.2);
-      for (int frame = 0; frame < 8; frame++) {
-        quadros(1);
-        assert(tex_upl_n == 0 && txt_rasterizadas == 0);
+    foco.fileira = SEC_ELENCO; foco.coluna = 0; quadros(120);
+    const int castRects = gfx_n_rect;
+    const double castFill = gfx_fill_gpu;
+    int overBudget = rects > castRects || fill > castFill;
+    int churn = 0, checked = 0;
+    printf("[episode-cast] episodes=%d/%.3f cast=%d/%.3f\n",
+           rects, fill, castRects, castFill);
+    nosEpisodios(0);
+    // Check the first frame of each focus move, not only settled frames.
+    // First traversal admits newly visible cards; the warm return admits no
+    // uploads/rasterizations. Repeat with zoom, whose texture size must stay fixed.
+    int border = ajustes_rapido_op("bordaFocoCartaz");
+    assert(border >= 0 && ajustes_borda_foco());
+    for (int zoom = 0; zoom < 2; zoom++) {
+      if (zoom) {
+        assert(ajustes_rapido_passo(border, 1));
+        assert(!ajustes_borda_foco());
+        quadros(120); // Allow the new maximum thumbnail size once.
+      }
+      for (int pass = 0; pass < 2; pass++) {
+        for (int step = 0; step < T1_N; step++) {
+          int col = pass ? T1_N - 1 - step : step;
+          foco.coluna = col;
+          int uploads = 0, rasterizations = 0;
+          for (int frame = 0; frame < 128; frame++) {
+            quadros(1);
+            uploads += tex_upl_n; rasterizations += txt_rasterizadas;
+            overBudget += gfx_n_rect > castRects || gfx_fill_gpu > castFill;
+            checked++;
+          }
+          churn += uploads > (pass ? 0 : 2) || rasterizations > (pass ? 0 : 16);
+          if (uploads || rasterizations)
+            printf("[episode-move] zoom=%d pass=%d col=%d upl=%d txt=%d\n",
+                   zoom, pass, col, uploads, rasterizations);
+          if (col == T1_N - 1) {
+            snprintf(nome, sizeof nome, "%s-%s-scroll.png", saida, zoom ? "zoom" : "ring");
+            gravar(nome);
+          }
+        }
       }
     }
-    foco.fileira = SEC_ELENCO; foco.coluna = 0; quadros(120);
-    printf("[episode-cast] rects=%d fill=%.3f\n", gfx_n_rect, gfx_fill_gpu);
-    printf("[episode-navigation] ten cards, no settled uploads or rasterization\n");
+    printf("[episode-navigation] frames=%d over-cast=%d churn=%d\n",
+           checked, overBudget, churn);
+    fflush(stdout);
+    assert(churn == 0);
+    assert(overBudget == 0);
     return 0;
   }
   if (getenv("NV_APPLE_EP")) {
