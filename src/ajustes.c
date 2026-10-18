@@ -3,6 +3,8 @@
 // cancela. A lista mostra valor e chevron, a ficha explica alcance e padrao.
 // IDs, chaves persistidas e indices de valores continuam os legados.
 #include "ajustes.h"
+#include "jsw.h"
+#include <limits.h>
 #include "player.h"
 #include "legenda.h"
 #include "legenda2.h"
@@ -2154,7 +2156,7 @@ static int ajFalhaDefinir(int op, int novo) {
   else if (op >= AJ_FALHA_RD_LIMITE && op <= AJ_FALHA_AD_LIMITE)
     ok = fontefalha_provedor_definir_limite(op - AJ_FALHA_RD_LIMITE, novo);
   else ok = faAddonEditar[0] && fontefalha_addon_definir_limite(faAddonEditar, novo);
-  if (ok) ajFalhaEspelhar();
+  if (ok) { ajFalhaEspelhar(); sync_proteger_ajustes_locais(); }
   return ok;
 }
 // These rows are views of player.txt, not independent Settings values.
@@ -2199,7 +2201,7 @@ static int ajLegendaDefinir(int op, int v) {
     default: return 0;
   }
   int ok = player_leg_estilo_definir(&e, tocou);
-  if (ok) ajLegendaEspelhar();
+  if (ok) { ajLegendaEspelhar(); sync_proteger_ajustes_locais(); }
   return ok;
 }
 
@@ -4576,6 +4578,7 @@ static int gravar(void) {
   // onde voltava ao padrao. Na LG o disco e real e nada disto acontecia.
   dados_marcar_sujo(0);
   ajLogDiff();
+  if (ajOrigem) sync_proteger_ajustes_locais();
   legenda2_atualizar_offset_manual(ajustes_leg2_atraso());
   // Provedor de poster ou idioma da interface mudaram? So reconfigura se a
   // configuracao final for outra (reconfigurar zera a memoria de falhas).
@@ -5153,6 +5156,8 @@ static const char *chaveConta(int i) {
   return i == AJ_FOCO_TRAILER ? "focusedPosterBackdropTrailerEnabled" : CHAVE[i];
 }
 
+static int ajustesExtrasAplicar(const char *json);
+
 int ajustes_aplicar_blob(const char *json) {
   const char *fim;
   int i, mudou = 0, reconhecidas = 0;
@@ -5270,7 +5275,7 @@ int ajustes_aplicar_blob(const char *json) {
   // na primeira verificacao na TV.
   printf("[ajustes] blob da conta: %d chave(s) reconhecida(s), %d mudou(aram)\n",
          reconhecidas, mudou);
-  return mudou;
+  return mudou + ajustesExtrasAplicar(json);
 }
 
 // ---------------------------------------------------------------- subir (#85)
@@ -5665,7 +5670,7 @@ static int textoDoValor(int op, const char *vi, const char *vf,
 
 typedef struct { const char *vi, *vf; char texto[160]; } Troca;
 
-int ajustes_mesclar_blob(const char *base, char **saida) {
+static int ajustesMesclarWeb(const char *base, char **saida) {
   Troca troca[AJ_N];
   int n = 0, i, j;
   const char *fim, *p;
@@ -5739,6 +5744,8 @@ int ajustes_mesclar_blob(const char *base, char **saida) {
   printf("[ajustes] %d ajuste(s) desta TV entram no blob da conta\n", n);
   return n;
 }
+
+#include "ajustes_sync.inc"
 
 // TODA OPCAO APARECE NA TELA, E UMA VEZ SO. Nao da para exigir isso do
 // compilador (TELA e uma lista de itens, nao um vetor indexado pelo enum),
@@ -7326,6 +7333,7 @@ static float alturaFoco(int i) { return TELA[i].tipo == IT_GRP ? AJ_GRUPO_H : TE
 //    Scan every row: fixed rows shift raw indices beyond the catalog quota.
 //    Only chosen catalog positions below the limit need a network cycle.
 static void fileirasReagir(void) {
+  sync_proteger_ajustes_locais();
   int i, teto = fil_limite(), n = fil_n();
   desc_remontar_fileiras();
   for (i = 0; i < n; i++)
@@ -7490,6 +7498,7 @@ static void heroFonteCiclar(int dir) {
   if (atual < 0) atual = n - 1;
   if (atual >= n) atual = 0;
   fil_definir_hero_fonte(ops[atual]);
+  sync_proteger_ajustes_locais();
 }
 
 // Pula para a primeira linha da letra vizinha (a regua A-Z da aba Fora).
@@ -7675,7 +7684,7 @@ static void eventoFileiras(SDL_Keycode k) {
               if (filFoco >= filListaN) filFoco = filListaN > 0 ? filListaN - 1 : 0;
               break;
       case 2: if (fil_aceita_tipo(idx)) { fil_ciclar_tipo(idx); fileirasReagir(); } break;
-      default: fil_ciclar_tam(idx); break;
+      default: fil_ciclar_tam(idx); sync_proteger_ajustes_locais(); break;
     }
   }
 }
@@ -7984,6 +7993,7 @@ static void faMover(int i, int delta) {
   int ok = item.servico >= 0 ? fontefalha_provedor_mover(item.servico, delta)
                            : fontefalha_addon_mover(item.chave, distancia);
   if (!ok) { uxNotificar("Não foi possível salvar. O valor anterior foi mantido."); return; }
+  sync_proteger_ajustes_locais();
   faMontar();
   for (int k = 0; k < faN; k++) if ((item.servico >= 0 && faItem[k].servico == item.servico) ||
                                   (item.servico < 0 && !strcmp(faItem[k].chave, item.chave))) faFoco = k;
@@ -8072,6 +8082,7 @@ static void ffGruposDefinir(const char *texto) {
   if (!fontefalha_filtro_definir(&cfg)) {
     uxNotificar("Não foi possível salvar. O valor anterior foi mantido."); return;
   }
+  sync_proteger_ajustes_locais();
   uxNotificar("Ajuste salvo nesta TV.");
 }
 static void ffEscolher(void) {
@@ -8083,7 +8094,7 @@ static void ffEscolher(void) {
     cfg.excluir[ffCategoria] ^= bit;
     if (!fontefalha_filtro_definir(&cfg))
       uxNotificar("Não foi possível salvar. O valor anterior foi mantido.");
-    else uxNotificar("Ajuste salvo nesta TV.");
+    else { sync_proteger_ajustes_locais(); uxNotificar("Ajuste salvo nesta TV."); }
     return;
   }
   if (ffFoco == 2) {
@@ -8297,6 +8308,7 @@ static void hcEscolher(int i) {
   }
   if (hcL[i].tipo == HC_FIXA) fil_definir_hero_fonte(hcL[i].idx ? "*" : "");
   else fil_definir_hero_fonte(fil_chave(hcL[i].idx));
+  sync_proteger_ajustes_locais();
   hcAberta = 0;
 }
 static void hcEvento(SDL_Keycode k) {
@@ -8658,12 +8670,13 @@ static void eventoTela(const SDL_Event *e) {
       int ok;
       if (focoOp == AJ_LEG1_RESTAURAR) {
         ok = player_leg_estilo_definir(player_leg_estilo_padrao(), PLR_LEG_NADA);
-        if (ok) ajLegendaEspelhar();
+        if (ok) { ajLegendaEspelhar(); sync_proteger_ajustes_locais(); }
       } else {
         int salvo[AJ_N]; memcpy(salvo, valor, sizeof salvo);
         for (int op = 0; op < AJ_N; op++) if (ajLegendaSecundaria(op)) valor[op] = valorPadrao[op];
         ok = gravar();
         if (!ok) memcpy(valor, salvo, sizeof salvo);
+        else sync_proteger_ajustes_locais();
       }
       uxNotificar(ok ? "Ajuste salvo nesta TV." : "Não foi possível salvar. O valor anterior foi mantido.");
       return;

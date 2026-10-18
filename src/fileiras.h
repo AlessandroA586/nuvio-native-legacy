@@ -508,6 +508,8 @@ int  fil_unir(const char *const *chaves, int n, int *saida, int max);
 // Esquece a escolha e o registro. Chamar no logout junto do resto: a home e da
 // conta de quem saiu.
 void fil_esquecer(void);
+// Reload the active profile after its cloud preferences were restored.
+void fil_recarregar(void);
 
 // LIMPEZA UNICA DO #197 (ver a definicao): desfaz, so no arquivo com o padrao
 // exato do defeito, a rajada do limite e os catalogos fora da cota que entraram

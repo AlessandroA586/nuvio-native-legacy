@@ -2133,6 +2133,16 @@ int fil_unir(const char *const *chaves, int n, int *saida, int max) {
   return q;
 }
 
+void fil_recarregar(void) {
+  pthread_mutex_lock(&trava);
+  // The cloud row snapshot omits this device's row/memory budget.
+  nLinhas = 0; ordemLocal = 0; limiteOrigem = 0;
+  memset(linhas, 0, sizeof linhas);
+  registroSujo = 0;
+  carregar(); revisao++;
+  pthread_mutex_unlock(&trava);
+}
+
 void fil_esquecer(void) {
   pthread_mutex_lock(&trava);
   passadaGeracao++;   // #392: fotos de antes do logout nao valem
