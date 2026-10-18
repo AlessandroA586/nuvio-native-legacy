@@ -158,6 +158,14 @@ char *rede_baixar(const char *url, int segundos);
 // Igual, mas para conteudo BINARIO: devolve o tamanho em *n. A versao acima
 // termina em NUL e serve para JSON; imagem tem zeros no meio e strlen mentiria.
 char *rede_baixar_bin(const char *url, int segundos, long *n);
+// GET EM FLUXO: o corpo vai em pedacos para `cb` (que devolve 0 para cortar a
+// transferencia de proposito, o que conta como sucesso) e nada fica na memoria.
+// `maxBytes` 0 = sem teto. 1 = terminou (2xx); 0 = falha (*status = HTTP, 0 sem
+// resposta). BLOQUEIA. Usado pelo XMLTV e pela M3U do guia de TV.
+int rede_baixar_fluxo(const char *url, int segundos, const char *const *cab,
+                      int (*cb)(const char *dados, size_t n, void *u), void *u,
+                      long long maxBytes, int *status, long long *bytes);
+
 
 #ifdef __EMSCRIPTEN__
 // POST de corpo text/plain com resposta BINARIA (tamanho em *n; 4xx/5xx viram
