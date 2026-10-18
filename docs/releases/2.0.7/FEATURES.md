@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T10:47:45-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T10:48:12-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -400,6 +400,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   generation token / "Play from beginning" (`5195cd14f`, `1165245fc`, `075fec9a4`, `6a6d5b71b`).
 
 ### Pending (not integrated yet)
+
+Tracking snapshot: 22 branches have unmerged commits and no running job; 13 open issues have no mapped job or prompt. Newer fixes on `agente/205-heroisA`, `agente/205-pr567port` and `agente/p2p` need review and are not classified as lost. Queued jobs and deferred 2.1 work remain tracked separately. The C9 installation attempt at `cb7ece972` failed; later integration merges have not been confirmed on TV.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 

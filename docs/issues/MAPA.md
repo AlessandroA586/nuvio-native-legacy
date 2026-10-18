@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `e978236b6` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-18T10:47:32-03:00. 494 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `e978236b6` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-18T10:48:26-03:00. 494 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
