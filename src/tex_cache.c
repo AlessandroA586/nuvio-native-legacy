@@ -3018,7 +3018,6 @@ static int threadDecode(void *arg) {
       if (conv) {
         itens[idx].estado = DECODIFICADO;
         itens[idx].filaUploadEm = SDL_GetTicks();
-        itens[idx].falhas = 0;
         // O QUE SAIU, e nao o que foi pedido: e este par que a promocao le.
         itens[idx].tetoUsado = limite;
         itens[idx].fonteW = srcW;
@@ -4287,7 +4286,8 @@ static int envioFalhou(int alvo, GLuint t, SDL_Surface *sup) {
     itens[alvo].estado = FALHOU;
     itens[alvo].urgente = 0;
     itens[alvo].falhas++;
-    itens[alvo].tentarEm = SDL_GetTicks() + 2000;
+    itens[alvo].tentarEm = SDL_GetTicks() +
+        (itens[alvo].falhas == 1 ? 2000 : (itens[alvo].falhas == 2 ? 10000 : 60000));
   }
   SDL_UnlockMutex(mtx);
   liberarSup(sup);
@@ -4355,6 +4355,7 @@ static int publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
   gfx_tex_esquecer(0);  // o bind do upload passou por fora do gfx_rect
   if (envioFalhou(alvo, t, sup)) return 0;
   gfx_tex_aquecer(t);
+  if (envioFalhou(alvo, t, sup)) return 0;
   glMs += SDL_GetTicks() - mipEm;
 
   SDL_LockMutex(mtx);
@@ -4379,6 +4380,7 @@ static int publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
   itens[alvo].mip = comMip;
   itens[alvo].estado = PRONTO;
   itens[alvo].urgente = 0;
+  itens[alvo].falhas = 0;
   bytesUsados += bytesTextura(&itens[alvo]);
   podar();
   SDL_UnlockMutex(mtx);

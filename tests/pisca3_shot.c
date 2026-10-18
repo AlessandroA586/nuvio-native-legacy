@@ -548,7 +548,7 @@ static void uploadFrame(GLuint poster) {
   fundo_desenhar_modo(FUNDO_FROST, (GfxRect){0, 0, W, H}, 0, NULL, 1);
   gfx_rect((GfxRect){200, 200, 288, 432}, poster, GFX_CARD, 0, 0, 0, 0, 1, 1, 1, 1);
   gfx_rect((GfxRect){650, 420, 960, 540}, poster, GFX_CARD, 0, 0, 0, 0, 1, 1, 1, 1);
-  gfx_vidro((GfxRect){1000, 100, 400, 200}, .1f, GFX_VIDRO_PAINEL, .1f, .8f, 1);
+  if (ajustes_vidro()) gfx_vidro((GfxRect){1000, 100, 400, 200}, .1f, GFX_VIDRO_PAINEL, .1f, .8f, 1);
   gfx_ambiente_descarregar();
   glReadPixels(0, 0, W, H, GL_RGBA, GL_UNSIGNED_BYTE, px);
   eglSwapBuffers(egl, eglTela);
@@ -597,7 +597,7 @@ static void uploadFailure(void) {
   int mode;
   float saved = nv_ambiente_forca;
   nv_ambiente_forca = 0;
-  for (mode = 1; mode <= 3; mode++) {
+  for (mode = 1; mode <= 4; mode++) {
     char path[1024], name[64];
     GLuint poster = 0;
     int i, bad = 0, injected = uploadFaults, captures = 0;
@@ -624,7 +624,7 @@ static void uploadFailure(void) {
       visible = tex_obter_larg_qualquer(path, 200);
       uploadFrame(visible);
       captures += gfx_vidro_capturas;
-      if (memcmp(ant, px, (size_t)W * H * 4)) {
+      if (visible != poster || memcmp(ant, px, (size_t)W * H * 4)) {
         if (!bad) {
           printf("[pisca3] failed promotion mode=%d first changed frame=f%03d\n", mode, i);
           snprintf(name, sizeof name, "upload-fault-%d-f%03d", mode, i); png(name);
@@ -642,7 +642,7 @@ static void uploadFailure(void) {
     failures += glGetError() != GL_NO_ERROR;
   }
   // Without an older texture, the failed item must remain unavailable.
-  for (mode = 1; mode <= 3; mode++) {
+  for (mode = 1; mode <= 4; mode++) {
     char path[1024];
     int i, bad = 0, injected = uploadFaults;
     SDL_Surface *s = SDL_CreateRGBSurfaceWithFormat(0, W, H, 32, SDL_PIXELFORMAT_RGBA32);
@@ -663,6 +663,82 @@ static void uploadFailure(void) {
     failures += uploadFaults == injected || bad;
     failures += glGetError() != GL_NO_ERROR;
   }
+  nv_ambiente_forca = saved;
+}
+
+// Poll real decode/upload work without advancing the injected retry clock.
+static GLuint retryPoll(const char *path) {
+  GLuint visible = 0;
+  for (int i = 0; i < 100; i++) {
+    tex_novo_quadro();
+    visible = tex_obter_larg_qualquer(path, 200);
+    tex_bombear(1); SDL_Delay(1);
+  }
+  return visible;
+}
+
+static void uploadRetry(void) {
+  static const Uint32 waits[] = {2000, 10000, 60000};
+  for (int recovery = 0; recovery < 2; recovery++) {
+    char path[1024];
+    int injected = uploadFaults, bad = 0;
+    SDL_Surface *s = SDL_CreateRGBSurfaceWithFormat(0, 200, 300, 32, SDL_PIXELFORMAT_RGBA32);
+    assert(s); SDL_FillRect(s, NULL, SDL_MapRGBA(s->format, 70, 180, 110, 255));
+    snprintf(path, sizeof path, "%s/retry-%d.bmp", getenv("NUVIO_DADOS"), recovery);
+    assert(SDL_SaveBMP(s, path) == 0); SDL_FreeSurface(s);
+    uploadFault = 3;
+    bad += retryPoll(path) != 0 || !tex_falhou(path) || uploadFaults - injected != 1;
+    for (int attempt = 0; attempt < (recovery ? 2 : 3); attempt++) {
+      relogio += waits[attempt] - 1;
+      bad += retryPoll(path) != 0 || !tex_falhou(path) || uploadFaults - injected != attempt + 1;
+      relogio++;
+      if (recovery && attempt == 1) uploadFault = 0;
+      GLuint visible = retryPoll(path);
+      if (recovery && attempt == 1)
+        bad += !visible || tex_falhou(path) || uploadFaults - injected != 2;
+      else
+        bad += visible != 0 || !tex_falhou(path) || uploadFaults - injected != attempt + 2;
+    }
+    relogio += 120000;
+    GLuint visible = retryPoll(path);
+    bad += recovery ? !visible || uploadFaults - injected != 2
+                    : visible != 0 || !tex_falhou(path) || uploadFaults - injected != 4;
+    uploadFault = 0;
+    printf("%s: GPU retry %s failures=%d violations=%d\n", bad ? "FAIL" : "PASS",
+           recovery ? "recovery" : "limit/backoff", uploadFaults - injected, bad);
+    failures += bad != 0;
+    failures += glGetError() != GL_NO_ERROR;
+  }
+}
+
+// Fixed accent and immersive off: changing scene colors cannot change Frost.
+static void frostCache(void) {
+  float regions[4][3], saved = nv_ambiente_forca;
+  memcpy(regions, nv_ambiente_viva, sizeof regions);
+  assert(ajustes_shot_valor("selected_theme", 0));
+  assert(ajustes_cor_viva() == 0);
+  nv_ambiente_forca = 0;
+  for (int glass = 1; glass >= 0; glass--) {
+    ajustes_definir_vidro(glass);
+    for (int i = 0; i < 5; i++) uploadFrame(0);
+    memcpy(ant, px, (size_t)W * H * 4);
+    int baked = gfx_n_fundo_assados, changed = 0, captures = 0;
+    for (int i = 0; i < 30; i++) {
+      for (int region = 0; region < 4; region++)
+        for (int c = 0; c < 3; c++) nv_ambiente_viva[region][c] = (float)(i + region + c) / 40;
+      nv_tempo_viva += 1.0f / 60;
+      uploadFrame(0);
+      changed += memcmp(ant, px, (size_t)W * H * 4) != 0;
+      captures += gfx_vidro_capturas;
+    }
+    int bad = changed || captures || gfx_n_fundo_assados != baked;
+    printf("%s: fixed-accent Frost glass=%d bakes=%d changed=%d captures=%d\n",
+           bad ? "FAIL" : "PASS", glass, gfx_n_fundo_assados - baked, changed, captures);
+    failures += bad;
+  }
+  ajustes_definir_vidro(1);
+  assert(ajustes_shot_valor("selected_theme", 12));
+  memcpy(nv_ambiente_viva, regions, sizeof regions);
   nv_ambiente_forca = saved;
 }
 
@@ -788,6 +864,8 @@ int main(int argc, char **argv) {
   if (argc > 2 && !strcmp(argv[2], "upload")) {
     uploadPressure();
     uploadFailure();
+    uploadRetry();
+    frostCache();
     tex_encerrar(); SDL_Quit();
     return failures ? 1 : 0;
   }
@@ -852,6 +930,7 @@ int main(int argc, char **argv) {
 #undef glTexImage2D
 #undef glTexSubImage2D
 #undef glGenerateMipmap
+#undef glDrawArrays
 #undef glGetError
 extern GLenum glGetError(void);
 extern void glGenerateMipmap(GLenum);
@@ -866,6 +945,15 @@ GLenum pisca3_error(void) {
   GLenum e = uploadError;
   uploadError = GL_NO_ERROR;
   return e ? e : glGetError();
+}
+extern void glDrawArrays(GLenum, GLint, GLsizei);
+void pisca3_drawarrays(GLenum mode, GLint first, GLsizei count) {
+  if (uploadFault == 4) {
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    if (viewport[2] == 1 && viewport[3] == 1 && failUpload(4, 1024)) return;
+  }
+  glDrawArrays(mode, first, count);
 }
 void pisca3_mipmap(GLenum target) {
   if (!failUpload(3, 0)) glGenerateMipmap(target);

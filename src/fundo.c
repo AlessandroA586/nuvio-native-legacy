@@ -404,7 +404,7 @@ static void frostTela(GfxRect r, float raioPx, float a) {
   k[12] = NV_COR_FUNDO_R; k[13] = NV_COR_FUNDO_G; k[14] = NV_COR_FUNDO_B;
   k[15] = nv_ambiente_forca;
   k[16] = nv_ambiente_forca > 0.0f ? floorf(nv_tempo_viva * 12.0f) : 0.0f;
-  memcpy(k + 17, nv_ambiente_viva[3], 3 * sizeof(float));
+  for (int i = 0; i < 3; i++) k[17 + i] = nv_ambiente_forca > 0.0f ? nv_ambiente_viva[3][i] : 0.0f;
   if (conferido[K_FROST] != 0) t = gfx_luz_canal(CANAL_FROST, k, 20, pintarFrost, NULL);
   // ADIADO (gfx_luz_canal_adiar): a arte de tela cheia que vier por cima (o
   // topo da pagina do titulo) le o Frost pelo uAmb e sai opaca, ou o veu de

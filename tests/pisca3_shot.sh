@@ -18,7 +18,7 @@ ndk=$(ls -d "$HOME"/Library/Android/sdk/ndk/*/toolchains/llvm/prebuilt/*/sysroot
 mkdir -p "$work/inc"
 for d in GLES2 EGL KHR; do ln -s "$ndk/$d" "$work/inc/$d"; done
 # One upload stripe per pump exposes the C9's slow-upload lifetime across frames.
-flags=(-O1 -g -DNV_GLES_NO_MAC -DNV_TEX_UPLOAD_BUDGET_MS=0.0 -I"$work/inc" -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2
+flags=(-O1 -g -DNV_GLES_NO_MAC -DNV_SHOT_HOOKS -DNV_TEX_UPLOAD_BUDGET_MS=0.0 -I"$work/inc" -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2
        -Wno-deprecated-declarations -Wno-macro-redefined -include tests/pisca3_gles.h ${NV_CFLAGS:-})
 objects=()
 pids=()
