@@ -163,9 +163,12 @@ int main(void) {
     snprintf(eps[i].nome,sizeof eps[i].nome,"Episode %d",i+1);
     strcpy(eps[i].sinopse,"A long episode synopsis exercises every reserved line without crossing into the following section. The story continues with another unexpected turn.");
     strcpy(eps[i].duracao,"48 min");
+    if(getenv("NV_ANCHOR_UPCOMING")) strcpy(eps[i].data,"03/15/2027");
   }
   cat_definir_episodios(0,eps,3);
+  int upcoming=getenv("NV_ANCHOR_UPCOMING")!=NULL;
   for(int layout=0;layout<3;layout++) {
+    if(upcoming && layout!=HOME_LAYOUT_DINAMICA) continue;
     char path[1024]; snprintf(path,sizeof path,"%s/ajustes.txt",dir);
     FILE *f=fopen(path,"w"); assert(f);
     fprintf(f,"homeLayoutLocal %d\ncollapseSidebar 1\nmodernSidebar 0\ntamanhoAjustesLocal 2\n",layout); fclose(f);
@@ -175,7 +178,9 @@ int main(void) {
     cat_definir_tudo(items,6,&row,1); cat_definir_episodios(0,eps,3);
     float scales[]={1,.8f,.85f,.9f,1.15f,1.3f};
     for(int i=0;i<(int)(sizeof scales/sizeof scales[0]);i++) {
+      if(upcoming && scales[i]!=1 && scales[i]!=1.3f) continue;
       gfx_escala_txt_definir(scales[i]);
+      if(upcoming) { fixture_detail(scales[i],1); continue; }
       if(!focused) { fixture_home(scales[i],0); fixture_home(scales[i],1); }
       fixture_search(scales[i]);
       for(int section=-1;section<4;section++)

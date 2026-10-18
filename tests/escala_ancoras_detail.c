@@ -2,7 +2,11 @@
 #define extras_nota fixture_rating
 #define extras_n_colecao fixture_collection_count
 #define extras_colecao_titulo fixture_collection_title
+#define extras_agenda_temporada fixture_agenda_season
+#define extras_agenda_episodio fixture_agenda_episode
 #include "../src/detail.c"
+int fixture_agenda_season(void) { return getenv("NV_ANCHOR_UPCOMING") ? 1 : 0; }
+int fixture_agenda_episode(void) { return getenv("NV_ANCHOR_UPCOMING") ? 1 : 0; }
 int fixture_rating(int source) { return source==EX_IMDB?80:0; }
 int fixture_collection_count(void) { return 2; }
 const char *fixture_collection_title(int i) { return i?"Second film":"First film"; }
@@ -51,7 +55,7 @@ void fixture_detail(float scale,int section) {
       shot_check("tab label rendered below section top",label.y>=(epAbasY()-scrollY)*scale);
     }
     if(section==SEC_EPISODIOS) {
-      if(epModerna()) {
+      if(epModerna() || epApple()) {
         GfxRect text=shot_text_bounds();
         shot_check("episode text fits card height",
           text.y+text.h <= (menuOrigem.y+epCardH())*scale+1);

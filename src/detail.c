@@ -5560,8 +5560,12 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     // O titulo acende com a mola do foco, como nos outros layouts (#205).
     txt_desenhar_alpha(name,textX,textY+30,a*(0.86f+0.14f*ft));
     float y = textY+64;
-    if (epSin) y += sinopse_bloco_corta(TXT_CAPTION, epSin,171,177,185,
-                                   textX,y,textW,29,a,4);
+    float copyBottom = r.y + epCardH() - (epNaoExibido(ep) ? 30.0f : 0.0f);
+    if (epData) copyBottom -= 10.0f + txt_linha(TXT_CAPTION2,epData,165,171,180,255).h;
+    int lines = (int)floorf((copyBottom-y)/29.0f);
+    if (lines > 4) lines = 4;
+    if (epSin && lines > 0) y += sinopse_bloco_corta(TXT_CAPTION, epSin,171,177,185,
+                                   textX,y,textW,29,a,lines);
     if (epData) {
       const char *date = epData;
       if (!ajustes_data_completa() && strlen(date)>=4) date += strlen(date)-4;
