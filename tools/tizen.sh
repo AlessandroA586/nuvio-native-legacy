@@ -303,7 +303,9 @@ if [ "$UM_FIO" = "1" ]; then
   # aumenta primeiro, com NUVIO_ASSERTS=1 para achar onde estourou.
   RUNTIME_EXPORTS="'[\"ccall\"]'"
 else
-  FIO_FLAGS="-pthread -sPTHREAD_POOL_SIZE=$POOL -sPTHREAD_POOL_SIZE_STRICT=0"
+  # POOL EM TEMPO DE EXECUCAO (#205): tizen-shell.html escolhe o heap (256/192/
+  # 160 MiB) e poe o pool do degrau em Module.nvPool; $POOL e so o padrao.
+  FIO_FLAGS="-pthread -sPTHREAD_POOL_SIZE='(Module.nvPool||$POOL)' -sPTHREAD_POOL_SIZE_STRICT=0"
   RUNTIME_EXPORTS="'[\"PThread\",\"ccall\"]'"
 fi
 # WEBP ANIMADO (#141): a libwebp de tools/build-webp-wasm.sh liga NV_WEBP_ANIM
@@ -338,7 +340,13 @@ eval emcc $SOURCES ${EXTRA_SOURCES} -o "$SAIDA/index.html" -O2 "$ENV_D" ${NUVIO_
   -sUSE_ZLIB=1 \
   -sSDL2_IMAGE_FORMATS='["png","jpg"]' \
   -sMAX_WEBGL_VERSION=1 \
-  -sINITIAL_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=0 -sABORTING_MALLOC=1 \
+  `# HEAP MINIMO DE 160 MiB, NAO 256 (#205). INITIAL_MEMORY e tambem o minimo que` \
+  `# o wasm exige da memoria importada: com 256 a Samsung de 1 GB (Chromium 69)` \
+  `# nao arrancava ("WebAssembly.Memory(): could not allocate memory"). O heap` \
+  `# real vem do tizen-shell.html (Module.wasmMemory, 256 -> 192 -> 160 MiB), que` \
+  `# usa 256 onde cabe — TV de 1,5 GB+ segue como antes. Sem crescimento: o` \
+  `# limite do malloc e o tamanho da memoria entregue.` \
+  -sINITIAL_MEMORY=167772160 -sALLOW_MEMORY_GROWTH=0 -sABORTING_MALLOC=1 \
   `# PILHAS DE 8 MB, e nao o padrao de 64 KB do emscripten. Esta build estava` \
   `# SEM as duas linhas, sozinha entre as builds do projeto: a bancada de teste` \
   `# do AVPlay ja usava 8 MB nos dois. Pilha de fio pequena ja custou caro aqui` \
