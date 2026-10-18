@@ -2417,6 +2417,9 @@ static void fecharSessao(int manter) {
     if (!jaRetido && partesVirt(&vp, &vd, &ult)) {
       const PartesLista *sl = partes_sessao_lista();
       int k = partes_sessao_indice();
+      // IntroDB describes the whole movie; embedded chapters describe this file.
+      if (video_creditos() <= 1.0)
+        duracaoContradita = cred > 1.0 && cred - vd > intro_creditos_janela(vd);
       assistiu = ult && !duracaoContradita &&
                  (player_regra_concluiu(posSeg, duracaoSeg, cred) || scrobble_concluiu(posSeg, duracaoSeg, 0));
       durG = vd; posG = vp;

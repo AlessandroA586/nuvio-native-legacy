@@ -5,13 +5,28 @@
 #include "../src/partes.c"
 
 static unsigned account = 1;
-static int requests, switchDuringRequest;
+static int requests, switchDuringRequest, paginated;
+#define REQUESTED_HASH "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 unsigned debrid_tb_geracao(void) { return account; }
 int debrid_tb_disponivel(void) { return 1; }
 char *debrid_tb_mylist(int u, int id, int p, int f, int *st) {
   (void)u; (void)id; (void)p; (void)f;
   requests++; *st = 200;
   if (switchDuringRequest) account++;
+  if (paginated) {
+    if (p == 0) {
+      char *page = calloc(DEBRID_TB_PAGINA * 160 + 64, 1);
+      strcat(page, "{\"data\":[");
+      for (int i = 0; i < DEBRID_TB_PAGINA; i++) {
+        char entry[160];
+        snprintf(entry, sizeof entry, "%s{\"id\":%d,\"files\":[{\"id\":1,\"name\":\"episode.mkv\",\"size\":300000000}]}", i ? "," : "", i + 1);
+        strcat(page, entry);
+      }
+      strcat(page, "]}");
+      return page;
+    }
+    return strdup("{\"data\":[{\"id\":9999,\"hash\":\"" REQUESTED_HASH "\",\"files\":[{\"id\":1,\"name\":\"episode.mkv\",\"size\":300000000}]}]}");
+  }
   return strdup("account files");
 }
 int debrid_tb_link(int u, int id, int a, char *url, unsigned n) {
@@ -63,5 +78,17 @@ int main(void) {
   assert(r && requests == before + 1); free(r);
   listaEsquecer();
   puts("PASS account switch during network rejects response and cache publication");
+  paginated = 1;
+  strcpy(source.infoHash, REQUESTED_HASH);
+  strcpy(source.arquivo, "episode.mkv");
+  source.tamanhoBytes = 300000000;
+  pd = novoPedido(&source, "title", "paginated");
+  assert(pd);
+  pd->geracao = geracaoLista;
+  before = requests;
+  fioLista(pd);
+  assert(partes_resultado(&out) == PARTES_PRONTO);
+  assert(out.item == 9999 && out.exato && requests == before + 2);
+  puts("PASS explicit hash reaches page 2 despite identical filename and size on page 1");
   return 0;
 }

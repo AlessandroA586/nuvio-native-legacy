@@ -63,7 +63,8 @@ int main(void) {
 
   { char outro[1][41] = { "cccccccccccccccccccccccccccccccccccccc3" "c" };
     memset(&l, 0, sizeof l);
-    ok(partes_achar(corpo, 0, outro, 1, 1, "", 0, &l) != 1, "an unknown hash never shows another release"); }
+    ok(partes_achar(corpo, 0, outro, 1, 1, "Kaguya-sama First Kiss - 02.mkv", 300000000, &l) != 1,
+       "an unknown explicit hash never falls back to another release's filename/size"); }
 
   printf(falhas ? "partes: %d FAIL\n" : "partes: ok\n", falhas);
   return falhas != 0;

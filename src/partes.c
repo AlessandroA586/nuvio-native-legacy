@@ -512,7 +512,7 @@ int partes_achar_t(const char *corpo, int usenet, char hashes[][41], int nHashes
   // 2) o nome do arquivo da fonte num arquivo de algum item. Nome com aspa,
   //    barra ou fora do ASCII pode vir escapado no JSON: ai vale a varredura
   //    item a item, a lenta.
-  if (!achou && b[0]) {
+  if (!achou && nHashes == 0 && b[0]) {
     int simples = 1;
     for (const unsigned char *c = (const unsigned char *)b; *c; c++)
       if (*c >= 0x80 || *c == '"' || *c == '\\') simples = 0;
@@ -537,7 +537,7 @@ int partes_achar_t(const char *corpo, int usenet, char hashes[][41], int nHashes
   }
   // 4) TAMANHO EXATO do arquivo (videoSize do addon) num video de algum item:
   //    num arquivo de varios GB, o mesmo numero de bytes e o mesmo arquivo.
-  if (!achou && bytes > 1024ULL * 1024 * 50) {
+  if (!achou && nHashes == 0 && bytes > 1024ULL * 1024 * 50) {
     char num[32];
     snprintf(num, sizeof num, "%llu", (unsigned long long)bytes);
     for (const char *p = strstr(corpo, num); p && !achou; p = strstr(p + 1, num)) {
@@ -1085,7 +1085,7 @@ static void *fioLista(void *u) {
   {
     static PartesLista cop;   // so as copias (fioTrava)
     char lembrado[1][41];
-    int temLembrado = casaPegar(pd->casa, lembrado[0]);
+    int temLembrado = nh == 0 && casaPegar(pd->casa, lembrado[0]);
     int achou = 0, st = 0, mem = 0, fresco0 = 0, itens = 0, paginas = 0, pelaLista = 0;
     uint64_t bytes = pd->bytes;
     char *r;

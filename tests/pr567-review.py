@@ -22,6 +22,21 @@ countdown = player.split('static void durFonteContagem(', 1)[1].split('static vo
 confirm = player.split('void player_confirmar_partes(void) {', 1)[1].split('\n}', 1)[0] if 'void player_confirmar_partes(void) {' in player else ''
 automatic = app.split('    { const Stream *fs = stream_atual()', 1)[1].split('        parteArqLista = l;', 1)[0]
 confirmation = app.split('        partes_sessao_iniciar(alvo, &l, l.atual);', 1)[1].split('        parteArqLista = l;', 1)[0]
+closing = player.split('  double cred = credEfetivo();\n  int duracaoContradita', 1)[1]
+closing = '  double cred = credEfetivo();\n  int duracaoContradita' + closing.split('  // Concluido e concluido:', 1)[0]
+trakt_close = next(line.strip() for line in player.splitlines() if 'if (!duracaoContradita) trakt_marcar(' in line)
+def function(text, signature):
+    start = text.index(signature)
+    opening = text.index('{', start)
+    depth = 1
+    end = opening + 1
+    while depth:
+        depth += (text[end] == '{') - (text[end] == '}')
+        end += 1
+    return text[start:end]
+
+rules = '\n'.join(function(player, signature) for signature in (
+    'int player_regra_proximo(double', 'int player_regra_visto(double', 'int player_regra_concluiu(double'))
 code = r'''
 #include <assert.h>
 #include <stdio.h>
@@ -116,8 +131,63 @@ static void detectParts(void) {
 #undef debrid_tb_disponivel
 #undef partes_pedir
 #undef partes_resultado_de
+#include <math.h>
+static double intro_creditos_janela(double d) { return fmin(180.0, d*.2); }
+static int scrobble_concluiu(double p,double d,int fim) { return fim || (d>1 && p>=d*.9); }
+static double credJanelaDe(double d) { return intro_creditos_janela(d); }
+static double intro_fim_estimado(double d) { return d>=120 ? 50 : 0; }
+''' + rules + r'''
+static double posSeg, duracaoSeg, assistidoSeg, testCredits, virtualPos, virtualDur;
+static int jaRetido, comVideo=1, finalPart, forgot, saved, marked, watched;
+static double chapterCredits;
+static double video_creditos(void) { return chapterCredits; }
+static double credEfetivo(void) { return testCredits; }
+static int concluiuAgora(double cred) { return player_regra_concluiu(posSeg,duracaoSeg,cred); }
+static int partesVirt(double *p,double *d,int *u) { *p=virtualPos; *d=virtualDur; *u=finalPart; return partes; }
+static void alvoStream(char *s,size_t n) { snprintf(s,n,"tt-completion"); }
+static int sessao_usuario(void) { return 0; }
+static int perfis_ativo(void) { return 0; }
+static int testArquivo(const char *a,PartesPonto *p) { (void)a; memset(p,0,sizeof *p); return 1; }
+static void testForget(const char *a,int u,int p) { (void)a;(void)u;(void)p; forgot++; }
+static void testSave(const char *a,int u,int p,const PartesPonto *pt) { (void)a;(void)u;(void)p;(void)pt; saved++; }
+static void trakt_marcar(const char *id,double p,double d,double s,int done) { (void)id;(void)s; marked++; watched=done; if(done) assert(p==d && d==5760); }
+#define partes_arquivo_de testArquivo
+#define partes_ponto_esquecer testForget
+#define partes_ponto_guardar testSave
+static int closeMovie(void) {
+  double base=0, baseDur=0, basePos=0, basePct=0;
+  int chegou=0;
+''' + closing + r'''
+  double pos=assistiu ? durG : posG;
+  const char *id="tt-completion";
+  ''' + trakt_close + r'''
+  return assistiu;
+}
+#undef partes_arquivo_de
+#undef partes_ponto_esquecer
+#undef partes_ponto_guardar
 int main(void) {
   int failed=0;
+  PartesLista completionMovie = {.n=4,.atual=3,.arq={
+    {.id=1,.tipo=PARTE_EP}, {.id=2,.tipo=PARTE_EP},
+    {.id=3,.tipo=PARTE_EP}, {.id=4,.tipo=PARTE_EP}}};
+  partes_sessao_iniciar("tt-completion", &completionMovie, 3);
+  partes=1; finalPart=1; posSeg=duracaoSeg=1440; assistidoSeg=1440;
+  virtualPos=virtualDur=5760; testCredits=5520;
+  if (!closeMovie() || forgot!=1 || saved || marked!=1 || !watched) {
+    puts("FAIL final multipart EOF with whole-movie credits must mark watched, clear resume and close Trakt"); failed=1;
+  } else puts("PASS final multipart EOF marks watched, clears resume and closes Trakt");
+  finalPart=0; virtualPos=1440; forgot=saved=marked=watched=0;
+  assert(!closeMovie() && !forgot && saved==1 && !watched);
+  finalPart=1; virtualPos=5760; chapterCredits=testCredits=1800;
+  forgot=saved=marked=watched=0;
+  assert(!closeMovie() && !forgot && saved==1 && !marked);
+  chapterCredits=0; testCredits=6000;
+  forgot=saved=marked=watched=0;
+  assert(!closeMovie() && !forgot && saved==1 && !marked);
+  partes_sessao_parar("completion done");
+  partes=0;
+
   // A 40-minute part of a 130-minute movie arms rejection at t=1 s.
   PartesLista movie = {.n=3,.atual=0,.arq={
     {.id=1,.tipo=PARTE_EP}, {.id=2,.tipo=PARTE_EP}, {.id=3,.tipo=PARTE_EP}}};
