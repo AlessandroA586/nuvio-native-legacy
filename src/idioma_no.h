@@ -1906,6 +1906,7 @@
   T("Esportes", "Sport"),
   T("Esquerda", "Venstre"),
   T("Esquerda e direita escolhem o objetivo", "Venstre og høyre velger målet"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "Venstre og høyre velger opp eller ned; OK flytter. Det som står utenfor rekkefølgen, kommer etter alle andre."),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "Venstre og høyre velger · OK bekrefter · Tilbake avslutter"),
   T("Esquerda na borda abre o menu", "Venstre ved kanten åpner menyen"),

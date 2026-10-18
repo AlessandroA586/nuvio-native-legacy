@@ -1905,6 +1905,7 @@
   T("Esportes", "Спорт"),
   T("Esquerda", "Слева"),
   T("Esquerda e direita escolhem o objetivo", "Влево и вправо — выбор цели"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "Влево и вправо выбирают, поднять или опустить; OK перемещает. То, что вне порядка, идёт после всех."),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "Влево и вправо — выбор · OK — подтвердить · Назад — выйти"),
   T("Esquerda na borda abre o menu", "Влево у края открывает меню"),

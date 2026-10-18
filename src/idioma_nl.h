@@ -1906,6 +1906,7 @@
   T("Esportes", "Sport"),
   T("Esquerda", "Links"),
   T("Esquerda e direita escolhem o objetivo", "Links en rechts kiezen het doel"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "Links en rechts kiezen omhoog of omlaag; OK verplaatst. Wat buiten de volgorde valt, komt na alle andere."),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "Links en rechts kiezen · OK bevestigt · Terug sluit af"),
   T("Esquerda na borda abre o menu", "Links aan de rand opent het menu"),

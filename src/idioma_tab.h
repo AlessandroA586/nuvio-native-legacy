@@ -1905,6 +1905,7 @@
   { "Esportes", "Sports" },
   { "Esquerda", "Left" },
   { "Esquerda e direita escolhem o objetivo", "Left and right choose the goal" },
+  { "Esquerda e direita escolhem subir ou descer; OK move.", "Left and right select up or down; OK moves." },
   { "Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "Left and right pick move up or down; OK moves. Anything outside the order plays after all of them." },
   { "Esquerda e direita escolhem · OK confirma · Voltar sai", "Left and right choose · OK confirms · Back exits" },
   { "Esquerda na borda abre o menu", "Left at the edge opens the menu" },

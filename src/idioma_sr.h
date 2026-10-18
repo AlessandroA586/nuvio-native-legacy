@@ -1906,6 +1906,7 @@
   T("Esportes", "Sportovi"),
   T("Esquerda", "Levo"),
   T("Esquerda e direita escolhem o objetivo", "Levo i desno biraju cilj"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "Levo i desno biraju pomeranje gore ili dole; OK pomera. Ono što je van redosleda ide posle svih."),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "Levo/desno bira · OK potvrđuje · Nazad izlazi"),
   T("Esquerda na borda abre o menu", "Levo na ivici otvara meni"),

@@ -1906,6 +1906,7 @@
   T("Esportes", "Športy"),
   T("Esquerda", "Vľavo"),
   T("Esquerda e direita escolhem o objetivo", "Vľavo a vpravo vyberiete cieľ"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "Vľavo a vpravo vyberajú posun nahor alebo nadol; OK presunie. Čo je mimo poradia, ide po všetkých ostatných."),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "Vľavo a vpravo vyberte · OK potvrdí · Späť ukončí"),
   T("Esquerda na borda abre o menu", "Doľava pri okraji otvorí ponuku"),

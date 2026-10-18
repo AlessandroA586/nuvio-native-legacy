@@ -1905,6 +1905,7 @@
   T("Esportes", "Спорт"),
   T("Esquerda", "Ліворуч"),
   T("Esquerda e direita escolhem o objetivo", "Вліво й вправо — вибір цілі"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "Вліво й вправо вибирають підняти чи опустити; OK переміщує. Те, що поза порядком, іде після всіх."),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "Вліво й вправо — вибір · OK — підтвердити · Назад — вийти"),
   T("Esquerda na borda abre o menu", "Ліворуч біля краю відкриває меню"),

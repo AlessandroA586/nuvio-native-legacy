@@ -1906,6 +1906,7 @@
   T("Esportes", "Sportok"),
   T("Esquerda", "Bal"),
   T("Esquerda e direita escolhem o objetivo", "Balra és jobbra választasz célt"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "A balra és jobbra gomb felfelé vagy lefelé mozgatást választ; az OK mozgat. Ami a sorrenden kívül van, mindenki után jön."),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "Balra és jobbra választ · OK megerősít · Vissza kilép"),
   T("Esquerda na borda abre o menu", "Balra a szélén megnyitja a menüt"),

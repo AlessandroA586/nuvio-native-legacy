@@ -22,6 +22,7 @@
 #include "teclado.h"
 #include "descoberta.h"
 #include "extras.h"
+#include "notasfontes.h"
 #include "fileiras.h"
 #include "herocat_regras.h"
 #include "listas.h"
@@ -643,7 +644,7 @@ typedef enum {
   AJ_ESCALA_TEXTO,     // text and component scale (gfx.h): 85/90/100/110/120/130%, default 100%; local, append-only
   AJ_DET_ESPACO,       // title page row spacing (detail.h): 0 Compacto, 1 Normal (default), 2 Confortavel; local, append-only
   AJ_FOCO_ACENTO,      // focus plate in the accent colour instead of gray (glass only); default off; local, append-only
-  AJ_NT_ORDEM,         // title-line rating order: 0 Padrao, 1 Letterboxd primeiro; local, append-only
+  AJ_NT_ORDEM,         // local rating-source reorder sheet; append-only
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -686,7 +687,6 @@ _Static_assert(sizeof V_FUNDO_DIN_COR / sizeof *V_FUNDO_DIN_COR == sizeof FUNDO_
                "V_FUNDO_DIN_COR: um nome por linha de FUNDO_DIN_TEMA");
 static const char *V_QUALIDADE[] = { "Automática", "4K", "1080p", "720p" };
 static const char *V_LIGA[]      = { "Ligado", "Desligado" };
-static const char *V_NT_ORDEM[]  = { "Padrão", "Letterboxd primeiro" };
 // TRAILER DO CARTAZ EM FOCO EM TRES MODOS (dono, 07/10/2026). O indice e o
 // AJ_TRAILER_CARTAZ_* de ajustes.h e o gravado em "trailerCartazModo"; a chave
 // antiga (V_LIGA, a mesma do web) migra no carregar (focoTrailerMigrar) e a
@@ -1683,7 +1683,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Escala de texto e componentes", V_ESCALA_TEXTO, 6),   // local: escalaTextoLocal
   ESC("Espaçamento das fileiras", V_DET_ESPACO, 3),          // local: detEspacoLocal
   ESC("Foco na cor de destaque", V_LIGA, 2),   // local: focoAcentoLocal
-  ESC("Ordem das notas na linha do título", V_NT_ORDEM, 2),   // local: notaTituloOrdem
+  ACAO("Ordem das notas na linha do título"),   // local: notaTituloOrdem
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -2676,7 +2676,11 @@ int ajustes_colecao_exibicao(void) {
   int v = valor[AJ_COLECAO_EXIBICAO];
   return v >= VT_LAY_AUTO && v < VT_LAY_N ? v : VT_LAY_AUTO;
 }
-int ajustes_nota_ordem(void) { return valor[AJ_NT_ORDEM] == 1; }
+static int notaFontes[EX_NFONTES] = { -1 };
+int ajustes_nota_fonte(int pos) {
+  if (pos < 0 || pos >= EX_NFONTES) return -1;
+  return notaFontes[0] < 0 ? nf_na_posicao_ord(pos, valor[AJ_NT_ORDEM] == 1) : notaFontes[pos];
+}
 int ajustes_det_espaco(void) { int v = valor[AJ_DET_ESPACO]; return v >= 0 && v <= 2 ? v : 1; }
 float ajustes_escala_texto(void) {
   static const float F[] = { 0.85f, 0.9f, 1.0f, 1.1f, 1.2f, 1.3f };
@@ -4194,6 +4198,8 @@ void ajustes_dir(const char *dir) {
   // Tizen logo abaixo grava no meio da primeira, levando o padrao ao disco.
   rotulosDeIdioma();
   snprintf(caminho, sizeof caminho, "%s/ajustes.txt", dirAjustes);
+  notaFontes[0] = -1;
+  valor[AJ_NT_ORDEM] = 0;
   f = fopen(caminho, "r");
   if (!f) {
     // Nunca gravou nada: o idioma nasce automatico (o padrao de valor[]).
@@ -4218,6 +4224,17 @@ void ajustes_dir(const char *dir) {
   while (fgets(linha, sizeof linha, f)) {
     char chave[64]; int v, i, inicio = 0;
     if (sscanf(linha, "%63s%n", chave, &inicio) != 1) continue;
+    if (!strcmp(chave, "notaTituloFontes")) {
+      int ordem[EX_NFONTES], seen[EX_NFONTES] = {0}, pos;
+      char *p = linha + inicio, *fim;
+      for (pos = 0; pos < EX_NFONTES; pos++) {
+        long fonte = strtol(p, &fim, 10);
+        if (fim == p || fonte < 0 || fonte >= EX_NFONTES || seen[fonte]) break;
+        seen[fonte] = 1; ordem[pos] = (int)fonte; p = fim;
+      }
+      if (pos == EX_NFONTES) memcpy(notaFontes, ordem, sizeof ordem);
+      continue;
+    }
     if (!strcmp(chave, "interfaceModoLocal")) {
       // The host reads the same logical record: at most 94 UTF-8 bytes,
       // excluding LF/CRLF. Drain an oversized record before the next key.
@@ -4241,6 +4258,7 @@ void ajustes_dir(const char *dir) {
       continue;
     }
     if (sscanf(linha, "%63s %d", chave, &v) != 2) continue;
+    if (!strcmp(chave, "notaTituloOrdem")) { valor[AJ_NT_ORDEM] = v == 1; continue; }
     // O idioma nao passa pelo laco: o numero do disco e um IDIOMA_*, e o
     // indice da lista da tela e outro (ver "IDIOMA AUTOMATICO").
     if (!strcmp(chave, "idioma")) {
@@ -4568,6 +4586,9 @@ static int gravar(void) {
     }
     fprintf(f, "%s %d\n", CHAVE[i], valor[i]);
   }
+  fprintf(f, "notaTituloFontes");
+  for (i = 0; i < EX_NFONTES; i++) fprintf(f, " %d", ajustes_nota_fonte(i));
+  fprintf(f, "\n");
   if (memoriaEscolhida) fprintf(f, "texturasEscolhaLocal 1\n");
   { int erro = ferror(f);
     if (fclose(f)) erro = 1;
@@ -6906,7 +6927,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_TAMANHO_UI: return "Aumenta os controles do player, os painéis e os avisos. Os Ajustes têm um tamanho próprio.";
     case AJ_INTERFACE_MODO: return "Automático usa TV em aparelhos Android TV e Mobile nos demais aparelhos. TV mantém a interface do controle remoto; Mobile usa toque em retrato ou paisagem. A escolha fica salva só neste aparelho.";
     case AJ_TAMANHO_AJUSTES: return i18n("Muda só o tamanho dos Ajustes nesta TV. O padrão é 100%.");
-    case AJ_NT_ORDEM: return "Padrão: IMDb, Rotten Tomatoes, Popcornmeter, Metacritic… Letterboxd primeiro: o Letterboxd abre a linha e é o último a sair quando a linha não cabe.";
+    case AJ_NT_ORDEM: return "Esquerda e direita escolhem subir ou descer; OK move.";
     case AJ_DET_ESPACO: return i18n("Margem lateral e vãos entre as fileiras e os cartões da página do título. Normal é o de sempre; Confortável dá folga em TVs com overscan. Vale só nesta TV.");
     case AJ_FOCO_ACENTO: return "O item em foco ganha um vidro tingido com a cor de destaque, em vez da barra cinza. O texto e os ícones continuam legíveis em qualquer cor.";
     case AJ_ESCALA_TEXTO: return i18n("Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 100%.");
@@ -8176,6 +8197,15 @@ static void frMontarOrdem(void) {
 static void frMontar(void) {
   int plugin = frAberta == 2, i, j, k;
   char nm[FR_NOME_MAX];
+  if (frAberta == 7) {
+    frN = EX_NFONTES;
+    for (i = 0; i < frN; i++) {
+      int f = ajustes_nota_fonte(i);
+      snprintf(frNome[i], FR_NOME_MAX, "%s", nf_nome(f));
+      snprintf(frApoio[i], sizeof frApoio[i], "%s", f == EX_METAUSER ? "Metacritic (usuários)" : "");
+    }
+    return;
+  }
   if (frAberta == 3) { frMontarOrdem(); return; }
   frN = 0;
   if (!plugin) {
@@ -8204,6 +8234,13 @@ static void frOrdemMover(int k, int dir) {
   char tmp[FR_NOME_MAX], ap[64];
   int j = k + dir, i;
   if (k < 0 || k >= frN || j < 0 || j >= frN) return;
+  if (frAberta == 7) {
+    int ordem[EX_NFONTES], t;
+    for (i = 0; i < EX_NFONTES; i++) ordem[i] = ajustes_nota_fonte(i);
+    t = ordem[k]; ordem[k] = ordem[j]; ordem[j] = t;
+    memcpy(notaFontes, ordem, sizeof ordem);
+    gravar(); frFoco = j + 1; return;
+  }
   snprintf(tmp, sizeof tmp, "%s", frNome[k]); snprintf(frNome[k], FR_NOME_MAX, "%s", frNome[j]); snprintf(frNome[j], FR_NOME_MAX, "%s", tmp);
   snprintf(ap, sizeof ap, "%s", frApoio[k]); snprintf(frApoio[k], sizeof frApoio[k], "%s", frApoio[j]); snprintf(frApoio[j], sizeof frApoio[j], "%s", ap);
   for (i = 0; i < frN; i++) ptr[i] = frNome[i];
@@ -8219,12 +8256,14 @@ static void frEventoOrdem(SDL_Keycode k) {
   if (k == SDLK_LEFT) frCol = 0;
   if (k == SDLK_RIGHT) frCol = 1;
   if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
-    if (frFoco == 0) { fonteregra_ordem_definir(NULL, 0); sync_proteger_ajustes_locais(); uxNotificar("Ordem removida."); }
+    if (frFoco == 0 && frAberta == 7) { notaFontes[0] = -1; valor[AJ_NT_ORDEM] = 0; gravar(); }
+    else if (frFoco == 0) { fonteregra_ordem_definir(NULL, 0); sync_proteger_ajustes_locais(); uxNotificar("Ordem removida."); }
     else frOrdemMover(frFoco - 1, frCol ? 1 : -1);
   }
 }
 static void frEvento(SDL_Keycode k) {
   int plugin = frAberta == 2;
+  if (frAberta == 7) { frEventoOrdem(k); return; }
   if (frAberta == 6) { ffEvento(k); return; }
   if (frAberta >= 4) { faEvento(k); return; }
   if (frAberta == 3) { frEventoOrdem(k); return; }
@@ -8621,6 +8660,7 @@ static void eventoTela(const SDL_Event *e) {
       if (b[0]) snprintf(kc, sizeof kc, "%s · %s", i18n(uxCaminho(focoOp)), i18n(b));
       else snprintf(kc, sizeof kc, "%s", i18n(uxCaminho(focoOp)));
       teclado_contexto(kc); }
+    if (focoOp == AJ_NT_ORDEM) { frAberta = 7; frFoco = frCol = 0; frMontar(); return; }
     if (focoOp == AJ_FIL_ORDEM) {
       filAberta = 1; filFoco = 0; filCampo = 0; filPegou = 0; filTopo = 0;
       filAba = 0; filNaBarra = 0; filAviso[0] = 0;
@@ -9606,7 +9646,8 @@ static void ajDesenharTudo(Uint32 agora) {
 #endif
     ESCALA_REAL_INI(); desenhaFileiras(); ESCALA_REAL_FIM(); }
   if (riscoFolha) desenhaRiscoFolha();
-  if (frAberta == 6) desenhaFolhaFiltros();
+  if (frAberta == 7) desenhaFolhaOrdem();
+  else if (frAberta == 6) desenhaFolhaFiltros();
   else if (frAberta >= 4) desenhaFolhaFalha();
   else if (frAberta == 3) desenhaFolhaOrdem();
   else if (frAberta) desenhaFolhaPermitidos();
@@ -9742,6 +9783,7 @@ int ajustes_teste_op_atualizar(void) { return AJ_ATUALIZAR; }
 int ajustes_teste_op_icone(int escolha) { valor[AJ_ICONE_APP] = escolha; return AJ_ICONE_APP; }
 // O primeiro dos onze interruptores de "Notas no titulo" (consecutivos no enum).
 int ajustes_teste_primeira_nota_titulo(void) { return AJ_NT_IMDB; }
+int ajustes_teste_ordem_notas(void) { return AJ_NT_ORDEM; }
 
 int ajustes_teste_familia_previa(int op) {
   return (int)familiaPreviaOpcao(op);

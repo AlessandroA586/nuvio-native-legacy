@@ -52,7 +52,8 @@ int nf_na_posicao_ord(int pos, int letterFirst) {
 }
 
 int nf_prioridade_ord(int f, int letterFirst) {
-  return letterFirst && f == EX_LETTERBOXD ? -1 : nf_prioridade(f);
+  (void)letterFirst;
+  return f == EX_LETTERBOXD ? -1 : nf_prioridade(f);
 }
 
 // Decimos da nota crua. O IMDb e 0..10, mas o MDBList as vezes manda 0..100

@@ -1906,6 +1906,7 @@
   T("Esportes", "Thể thao"),
   T("Esquerda", "Trái"),
   T("Esquerda e direita escolhem o objetivo", "Trái và phải để chọn mục tiêu"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "Trái và phải chọn lên hoặc xuống; OK để di chuyển. Mục nằm ngoài thứ tự sẽ phát sau tất cả."),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "Trái và phải để chọn · OK để xác nhận · Quay lại để thoát"),
   T("Esquerda na borda abre o menu", "Trái ở mép mở menu"),

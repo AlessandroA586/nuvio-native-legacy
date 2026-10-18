@@ -1906,6 +1906,7 @@
   T("Esportes", "スポーツ"),
   T("Esquerda", "左"),
   T("Esquerda e direita escolhem o objetivo", "左右キーで目標を選びます"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "左右で上げるか下げるかを選び、OKで移動します。順序に入っていないものは最後に回ります。"),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "左右キーで選択 · OK: 決定 · 戻る: 終了"),
   T("Esquerda na borda abre o menu", "端で左を押すとメニュー"),

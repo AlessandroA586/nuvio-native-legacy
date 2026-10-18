@@ -1906,6 +1906,7 @@
   T("Esportes", "体育"),
   T("Esquerda", "左"),
   T("Esquerda e direita escolhem o objetivo", "左右键选择目标"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "左右键选择上移或下移，OK 移动。不在顺序中的排在所有项之后。"),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "左右键选择 · 确定键：确认 · 返回键：退出"),
   T("Esquerda na borda abre o menu", "在边缘按左键打开菜单"),

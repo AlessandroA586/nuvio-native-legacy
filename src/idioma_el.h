@@ -1906,6 +1906,7 @@
   T("Esportes", "Αθλητικά"),
   T("Esquerda", "Αριστερά"),
   T("Esquerda e direita escolhem o objetivo", "Αριστερά και δεξιά επιλέγεις τον στόχο"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "Αριστερά και δεξιά επιλέγουν ανέβασμα ή κατέβασμα· το OK μετακινεί. Ό,τι είναι εκτός σειράς έρχεται μετά από όλα."),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "Αριστερά και δεξιά επιλέγεις · το OK επιβεβαιώνει · το Πίσω βγαίνει"),
   T("Esquerda na borda abre o menu", "Αριστερά στην άκρη ανοίγει το μενού"),

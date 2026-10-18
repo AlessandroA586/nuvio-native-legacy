@@ -1906,6 +1906,7 @@
   T("Esportes", "Spor"),
   T("Esquerda", "Sol"),
   T("Esquerda e direita escolhem o objetivo", "Sol ve sağ hedefi seçer"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "Sol ve sağ yukarı veya aşağı taşımayı seçer; OK taşır. Sıranın dışında kalan hepsinden sonra gelir."),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "Sol ve sağ seçer · OK onaylar · Geri çıkar"),
   T("Esquerda na borda abre o menu", "Kenarda sol menüyü açar"),

@@ -34,9 +34,8 @@ int  nf_na_posicao(int pos);
 // Igual a nf_na_posicao, mas com `letterFirst` o Letterboxd abre a linha e os
 // demais seguem na ordem de sempre.
 int  nf_na_posicao_ord(int pos, int letterFirst);
-// Igual a nf_prioridade; com `letterFirst` o Letterboxd e o ULTIMO a sair
-// (-1): quem o colocou na frente quer ve-lo, e ele sumia quando o IMDb e o
-// Rotten Tomatoes chegavam e a linha deixava de caber.
+// Letterboxd survives late IMDb/RT loads regardless of display order.
+// The legacy order argument is retained for callers testing both presets.
 int  nf_prioridade_ord(int fonte, int letterFirst);
 
 // PRIORIDADE quando a linha nao cabe: 0 sai por ultimo. Nao e a ordem da linha

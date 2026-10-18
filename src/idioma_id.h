@@ -1906,6 +1906,7 @@
   T("Esportes", "Olahraga"),
   T("Esquerda", "Kiri"),
   T("Esquerda e direita escolhem o objetivo", "Kiri dan kanan memilih tujuan"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "Kiri dan kanan memilih naik atau turun; OK memindahkan. Yang di luar urutan diputar setelah semuanya."),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "Kiri dan kanan memilih · OK mengonfirmasi · Kembali keluar"),
   T("Esquerda na borda abre o menu", "Kiri di tepi membuka menu"),

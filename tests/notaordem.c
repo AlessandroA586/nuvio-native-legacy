@@ -24,8 +24,7 @@ int main(void) {
     fonte[0] = EX_LETTERBOXD; fonte[1] = EX_IMDB; fonte[2] = EX_TOMATOES;
     for (i = 0; i < 3; i++) prio[i] = nf_prioridade_ord(fonte[i], ord);
     nf_encaixar(larg, prio, 3, 250.0f, manter);
-    if (ord) assert(manter[0]);       // Letterboxd stays
-    else     assert(!manter[0]);      // old behaviour: it vanished
+    assert(manter[0]);               // Letterboxd survives in either order
   }
   return 0;
 }

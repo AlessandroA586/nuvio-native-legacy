@@ -1905,6 +1905,7 @@
   T("Esportes", "Sporturi"),
   T("Esquerda", "Stânga"),
   T("Esquerda e direita escolhem o objetivo", "Stânga și dreapta aleg obiectivul"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "Stânga și dreapta aleg urcarea sau coborârea; OK mută. Ce e în afara ordinii rulează după toate."),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "Stânga și dreapta aleg · OK confirmă · Înapoi iese"),
   T("Esquerda na borda abre o menu", "Stânga la margine deschide meniul"),

@@ -1906,6 +1906,7 @@
   T("Esportes", "Sportas"),
   T("Esquerda", "Kairė"),
   T("Esquerda e direita escolhem o objetivo", "Kairė ir dešinė pasirenka tikslą"),
+  T("Esquerda e direita escolhem subir ou descer; OK move.", ""),
   T("Esquerda e direita escolhem subir ou descer; OK move. Quem está fora da ordem toca depois de todos.", "Kairėn ir dešinėn pasirenkama kelti aukštyn ar žemyn; OK perkelia. Kas nėra tvarkoje, eina po visų."),
   T("Esquerda e direita escolhem · OK confirma · Voltar sai", "Kairė/dešinė renkasi · OK patvirtina · Atgal išeina"),
   T("Esquerda na borda abre o menu", "Kairėn prie krašto atidaro meniu"),
