@@ -358,7 +358,11 @@ int layout_modo_mobile(void);
 // direita por NV_PALCO_INFO_W + NV_PALCO_INFO_VAO. Holofote: o veu da tela
 // inteira com a fileira em foco e a luz no titulo (GFX_HOLOFOTE).
 #define NV_PALCO_INFO_W    480.0f
-#define NV_PALCO_INFO_VAO  40.0f
+#define NV_PALCO_INFO_VAO  36.0f
+#define NV_PALCO_MOVE_MS   340u
+#define NV_PALCO_START_MS   40u
+#define NV_PALCO_TEXT_MS   200u
+#define NV_PALCO_TEXT_DELAY_MS 80u
 #define NV_HOLOFOTE_VEU    0.62f
 // FILEIRA "PÔSTER GRANDE" (home.c): o card 3:4 grande do pedido de 14/10
 // ("o pôster só que do tamanho do grande tipo o 3:4 grande"). A base do card

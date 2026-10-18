@@ -73,6 +73,9 @@ static inline float escala_min(float m) {
 #undef NV_TELA_H
 #define NV_TELA_W (NV_LAYOUT_REAL_W / gfx_escala_tela_txt())
 #define NV_TELA_H (NV_LAYOUT_REAL_H / gfx_escala_tela_txt())
+// ANC: an anchor (margin, row top, hero base) in REAL px -> layer px. The text
+// scale grows text and components from it, never moves it (#205).
+#define ANC(v) ((v) / gfx_escala_tela_txt())
 #endif
 
 #ifdef NV_ESCALA_TELA_ATIVA

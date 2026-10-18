@@ -35,7 +35,7 @@ static const char *const VID_NOMES[VID_NU] = {
 typedef struct {
   GLuint prog;
   GLint rect, tela, tex, foco, reflexo, par, raio, cor, asp, texAsp, forcarCover, veuTela, heroiVeu, borda, varre, veu, desl, fundo,
-        grad0, grad1, grad2, tempo, reg0, reg1, reg2, reg3, vaza;
+        grad0, grad1, grad2, tempo, reg0, reg1, reg2, reg3, vaza, acento;
   GLint amb, ambOn;         // uAmb/uAmbOn: so os tres modos de arte com rampa
   GLint texB, texAspB, alfaB;   // camadas do destaque (gfx_hero_camadas)
   GLint alt;     // uAlt: altura do rect em pixels do alvo (a rampa de 1 px do SDF)
@@ -296,6 +296,7 @@ static const char *FS_CABECA =
   // com o tema dinamico estilizado o fundo e tingido (layout.h,
   // NV_COR_FUNDO_R), e a rampa cravada deixaria uma emenda onde a arte acaba.
   "uniform vec3  uFundo;\n"
+  "uniform vec3  uAcento;\n"
   // Cor viva: paradas do degrade, relogio, luzes de regiao e o "vazar" das
   // rampas (imersiva: a arte se apaga em alfa em vez de se fundir no fundo,
   // e o que aparece por tras e a luz ambiente). Cada programa so declara de
@@ -1566,17 +1567,25 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // GFX_HOLOFOTE — see gfx.h. Distances in units of the height (x * uAspect).
   "void main(){\n"
   "  vec2 p = (vUv - uPar) * vec2(uAspect, 1.0);\n"
-  "  float e = length(p / vec2(max(uRaio, 0.001), max(uFoco, 0.001)));\n"
-  "  float luz = 1.0 - smoothstep(0.72, 1.28, e);\n"
-  "  float k = clamp(vUv.y / max(uPar.y, 0.001), 0.0, 1.0);\n"
-  "  float meia = mix(0.035, max(uCor.b, 0.04), k);\n"
+  "  vec2 q = p / vec2(max(uRaio, 0.001), max(uFoco, 0.001));\n"
+  "  float luz = 1.0 - smoothstep(0.5184, 1.6384, dot(q, q));\n"
+  // tan(12 degrees), with a soft edge and a source above the viewport.
+  "  float meia = (vUv.y + 0.24) * 0.21256;\n"
   "  float dx = abs(vUv.x - uCor.g) * uAspect;\n"
-  "  float feixe = (1.0 - smoothstep(meia * 0.55, meia, dx)) * sqrt(k)\n"
-  "              * (1.0 - smoothstep(0.80, 1.0, k)) * (uLeve > 0.5 ? 0.0 : uCor.r);\n"
-  "  float d = uCor.a * (1.0 - luz) * (1.0 - 0.8 * feixe);\n"
-  "  float l = 0.14 * feixe;\n"
+  "  float feixe = (1.0 - smoothstep(meia * 0.65, meia, dx))\n"
+  "              * (1.0 - smoothstep(0.0, max(uCor.r, 0.001), vUv.y));\n"
+  "  vec2 pool = vec2(dx / max(uCor.b * 1.7, 0.001), (vUv.y - uCor.r - 0.018) / 0.035);\n"
+  "  float luzChao = 1.0 - smoothstep(0.0, 1.0, dot(pool, pool));\n"
+  "  float l = (uLeve > 0.5 ? 0.0 : 1.0) * uCor.a * max(0.25 * feixe, 0.42 * luzChao);\n"
+  // One horizontal neighbour ramp, fused into the existing fullscreen quad.
+  "  float posterH = uFoco * 1.25;\n"
+  "  float edge = uCor.g - uCor.b / uAspect / 1.1;\n"
+  "  float band = step(uCor.r - posterH * 0.83, vUv.y) * step(vUv.y, uCor.r - posterH * 0.17);\n"
+  "  float ramp = band * step(vUv.x, edge) * mix(0.80, 0.18, clamp(vUv.x / max(edge, 0.001), 0.0, 1.0));\n"
+  "  float d = uCor.a * (1.0 - luz);\n"
+  "  d = 1.0 - (1.0 - d) * (1.0 - ramp * uCor.a);\n"
   "  float a = d + l * (1.0 - d);\n"
-  "  vec3 c = vec3(1.0, 0.95, 0.86) * l * (1.0 - d) / max(a, 0.001)\n"
+  "  vec3 c = uAcento * l * (1.0 - d) / max(a, 0.001)\n"
   "         + vec3(0.012, 0.014, 0.022) * d / max(a, 0.001);\n"
   "  gl_FragColor = nv_dither(c, a);\n"
   "}\n",
@@ -1667,6 +1676,7 @@ int gfx_iniciar(void) {
     progs[m].veu    = glGetUniformLocation(p, "uVeu");
     progs[m].desl   = glGetUniformLocation(p, "uDesliza");
     progs[m].fundo  = glGetUniformLocation(p, "uFundo");
+    progs[m].acento = glGetUniformLocation(p, "uAcento");
     progs[m].grad0  = glGetUniformLocation(p, "uGrad0");
     progs[m].grad1  = glGetUniformLocation(p, "uGrad1");
     progs[m].grad2  = glGetUniformLocation(p, "uGrad2");
@@ -1770,6 +1780,7 @@ static GLuint texAtual = 0;
 // (upload de arte, raster de glifo) — nos dois casos o cache mentiria.
 // tex = 0 significa "esqueca tudo": e o que os uploads usam.
 static void desfEsquecerFonte(GLuint tex);
+static void vidroEsquecerFonte(GLuint tex);
 void gfx_tex_esquecer(GLuint tex) {
   if (tex == 0 || texAtual == tex) texAtual = 0;
   // Textura de arte que vai ser destruida: a copia desfocada dela deixa de
@@ -1778,7 +1789,7 @@ void gfx_tex_esquecer(GLuint tex) {
   // O nome volta de glGenTextures com outra imagem e o mesmo hash: o backdrop
   // guardado do vidro deixa de valer. (tex = 0 e o bind por fora, todo quadro
   // no alvo interno do gpunivel — nao muda conteudo.)
-  if (tex) gfx_vidro_sujar();
+  if (tex) vidroEsquecerFonte(tex);
 }
 
 int    gfx_n_rect = 0, gfx_n_prog = 0, gfx_n_bind = 0, gfx_n_outros = 0;
@@ -1793,6 +1804,9 @@ double gfx_fill_vis = 0.0;
 double gfx_fill_gpu = 0.0, gfx_fill_gpu_mist = 0.0;
 double gfx_fill_gpu_ult = 0.0, gfx_fill_gpu_mist_ult = 0.0;
 unsigned long long gfx_modos_desligados = 0;
+#ifdef NV_SHOT_HOOKS
+unsigned gfx_shot_sombras = 0;  // sheet-sized GFX_SOMBRA draws, for tests
+#endif
 int    gfx_n_cheio = 0;   // desenhos que cobrem >= 50% da tela
 // So na medida (tests/fluidez_perf.c, -DNV_FLUIDEZ_PERF): quantos desses foram
 // desenhados COM mistura, que e a leitura da tela que a Mali paga a mais.
@@ -1959,9 +1973,16 @@ static unsigned vidroHash;
 // them reaches the next one's read region, e.g. detail cards under a section
 // title) keeps each in its own half-res target, so a static frame reuses all
 // of them. Slot k is vidSlot[k], quarter res like vidFundo.
-#define VID_NSLOTS 4
+#define VID_NSLOTS 8
 static unsigned vidroSlotHash[VID_NSLOTS];
 static int vidroSlotValido[VID_NSLOTS], vidroSlot, vidroRecapturou;
+// Conservative texture dependencies: collisions only cause extra captures.
+// Retiring a foreground label must not invalidate an unrelated backdrop.
+#define VID_DEP_WORDS 32
+static unsigned vidroDep[VID_DEP_WORDS], fundoDep[VID_DEP_WORDS], vidroSlotDep[VID_NSLOTS][VID_DEP_WORDS];
+static void vidroDepAnotar(GLuint tex) {
+  if (tex) vidroDep[(tex / 32) % VID_DEP_WORDS] |= 1u << (tex % 32);
+}
 static float vidroLeAnt[4], vidroLeCur[4];   // union of what the glasses read, last/this frame
 // The same as up to VID_NREG boxes, merged where they overlap: what the backdrop
 // capture copies and blurs (vidroFundoFechar).
@@ -2054,6 +2075,12 @@ static int vidroDentro(GfxRect r) {
 // Conteudo que muda sem passar pelo hash (textura reenviada no lugar, nome
 // de textura reaproveitado): nenhum vidro reaproveita a captura antiga.
 void gfx_vidro_sujar(void) { memset(vidroSlotValido, 0, sizeof vidroSlotValido); fundoValido = 0; }
+static void vidroEsquecerFonte(GLuint tex) {
+  unsigned word = (tex / 32) % VID_DEP_WORDS, bit = 1u << (tex % 32);
+  if (fundoDep[word] & bit) fundoValido = 0;
+  for (int i = 0; i < VID_NSLOTS; i++)
+    if (vidroSlotDep[i][word] & bit) vidroSlotValido[i] = 0;
+}
 // Todo desenho do quadro, ja em layout de tela (r depois de GFX_TR_RECT e da
 // escala): entra no hash, e o que cai na tela entra na caixa vidroDesde.
 static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float parx, float pary,
@@ -2093,6 +2120,9 @@ static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float 
     for (i = 0; i < 24; i++) v[i] = floorf(v[i] * 256.0f + 0.5f);
   }
   if (conta) {
+    if (P->tex >= 0) vidroDepAnotar(tex);
+    if (P->texB >= 0) vidroDepAnotar(camTexB);
+    if (P->ambOn >= 0) vidroDepAnotar(ambFonte);
     vidroSoma(v, sizeof v);
     vidroSoma(e, sizeof e);
     if (recorteAtivo) vidroSoma(recorteBox, sizeof recorteBox);
@@ -2139,6 +2169,7 @@ void gfx_novo_quadro(void) {
   ambPendente = 0; ambIntacta = 0; foscoBloq = 0;
   memset(vidroDesde, 0, sizeof vidroDesde);
   vidroHash = 2166136261u; vidroNVidros = 0; vidroNFuros = 0;
+  memset(vidroDep, 0, sizeof vidroDep);
   memcpy(vidroLeAnt, vidroLeCur, sizeof vidroLeAnt); memset(vidroLeCur, 0, sizeof vidroLeCur);
   memcpy(vidroRegAnt, vidroRegCur, sizeof vidroRegAnt); vidroNRegAnt = vidroNRegCur; vidroNRegCur = 0;
   vidroSlot = -1; vidroRecapturou = 0;
@@ -2316,6 +2347,9 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
       (modo == GFX_BRILHO_TOPO && cr + cg + cb > 1.5f))) return;
   // Efeitos minimos: sombra e halo tambem saem (o anel continua marcando o foco).
   if (efeitosMinimos && (modo == GFX_SOMBRA || modo == GFX_HOLOFOTE)) return;
+#ifdef NV_SHOT_HOOKS
+  if (modo == GFX_SOMBRA && r.w > 600.0f && r.h > 600.0f) gfx_shot_sombras++;
+#endif
   if (gfx_modos_desligados && ((gfx_modos_desligados >> (unsigned)modo) & 1ull)) return;
   // O FUNDO DA DINAMICA ADIADO (gfx_fundo_din_desenhar) E O DESTAQUE POR CIMA
   // DELE NUMA PASSADA SO. O destaque (GFX_VITRINE) de largura inteira, a partir
@@ -2500,6 +2534,10 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
   // So os tres modos de rampa declaram uFundo: e uma chamada por destaque ou
   // fundo de detalhe desenhado, nao por retangulo.
   if (P->fundo >= 0)  glUniform3f(P->fundo, NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B);
+  if (P->acento >= 0) {
+    float ar, ag, ab; ajustes_acento(&ar, &ag, &ab);
+    glUniform3f(P->acento, ar, ag, ab);
+  }
   // Cor viva: so os modos que declaram (degrade, luz, rampas) pagam a chamada.
   if (P->grad0 >= 0) {
     glUniform3fv(P->grad0, 1, nv_grad_viva[0]);
@@ -3636,6 +3674,7 @@ static void vidroFundoFechar(void) {
       if (f[2] >= NV_TELA_W) f[2] = 1e9f;
       if (f[3] >= NV_TELA_H) f[3] = 1e9f;
     }
+    memcpy(fundoDep, vidroDep, sizeof fundoDep);
     fundoHash = vidroHash; fundoPassoCap = fundoPasso; fundoValido = 1;
   }
   fundoFim = 1;
@@ -3688,6 +3727,7 @@ static GLuint vidroFonte(GfxRect r) {
     // Modal veils need the live framebuffer, but only the island's sampling region.
     if (!vidCapturar((const float (*)[4])reg, 1, *tex, *fbo, 0)) return 0;
     memcpy(vidroSlotReg[sl], reg, sizeof vidroSlotReg[sl]);
+    memcpy(vidroSlotDep[sl], vidroDep, sizeof vidroDep);
     vidroSlotHash[sl] = vidroHash; vidroSlotValido[sl] = 1; vidroRecapturou = 1;
   }
   vidroSlot = sl;

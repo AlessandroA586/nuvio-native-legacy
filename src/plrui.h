@@ -17,6 +17,8 @@
 // `raioPx` em pixels; `modal` = 1 deixa o miolo um degrau mais denso (.86),
 // como a ilha que vira modal.
 void plrui_material(GfxRect r, float raioPx, int modal, float a);
+// Same material; semSombra = 1 drops the drop shadow (Sources sheet).
+void plrui_material_s(GfxRect r, float raioPx, int modal, float a, int semSombra);
 // The title-page card material (shared glass, GFX_VIDRO_DENS): what the
 // "..." more menu draws, so it matches cast / trailers / comments cards.
 void plrui_cartao(GfxRect r, float raioPx, float a);

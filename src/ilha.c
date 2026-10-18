@@ -119,7 +119,7 @@ static IlhaModal modalM;
 static char modalChave[80];
 static float modalT, modalV, modalFocoA[ILHA_MODAL_BOTOES];
 // O CORPO PEDIDO (ilha_corpo): vale um quadro; o ultimo fica para a saida.
-static int corpoPed;
+static int corpoPed, corpoSemSombra;
 static float corpoW, corpoH, corpoT, corpoV;
 static float corpoWa, corpoHa, corpoVw, corpoVh;   // o tamanho na mola (o pedido muda)
 static IlhaCorpo corpoFn;
@@ -694,7 +694,7 @@ void ilha_ancorar(float x, float y, int daDireita) {
 // Ajustes). `guia` ficou so por compatibilidade com quem chama.
 void ilha_posicionar(int guia) {
   (void)guia;
-  ilha_ancorar(NV_TELA_W - NV_ILHA_MARGEM_D, NV_ILHA_Y, 1);
+  ilha_ancorar(NV_TELA_W - NV_ILHA_MARGEM_D / gfx_escala_txt(), NV_ILHA_Y / gfx_escala_txt(), 1);
 }
 
 // COM SINAL: quem renova a atividade chama SDL_GetTicks DEPOIS de o quadro ter
@@ -1999,10 +1999,11 @@ static void salvarVoo(Uint32 agora, float x, float y, int dir) {
 static void ilha_desenharCorpo_(Uint32 agora);
 // Camada ampliada (escala.h): o corpo desenha na tela virtual.
 void ilha_corpo(float w, float h, IlhaCorpo corpo, void *u) {
-  corpoPed = 1; corpoW = w; corpoH = h; corpoFn = corpo; corpoU = u;
+  corpoPed = 1; corpoW = w; corpoH = h; corpoFn = corpo; corpoU = u; corpoSemSombra = 0;
   if (modalAberto) ilha_modal_fechar(1);
 }
 float ilha_corpo_t(void) { return corpoT; }
+void ilha_corpo_sem_sombra(void) { corpoSemSombra = 1; }
 
 // A hora da pilula em repouso, no lugar exato dela: com o corpo aberto e a
 // pilula mostrando outra coisa (aviso, cartao), e ela que fica no cabecalho.
@@ -2145,7 +2146,7 @@ static void ilha_desenharCorpo_(Uint32 agora) {
     modalFocoA[i] = anim_mola(modalFocoA[i], modalAberto && i == modalFoco ? 1.0f : 0.0f, dt, NV_MOLA_FOCO);
   // POSICAO, num ponto so (ilha_ancorar ou o padrao, que e a direita).
   if (ancDef) { x = ancX; y = ancY; dir = ancDir; }
-  else { x = NV_TELA_W - NV_ILHA_MARGEM_D; y = NV_ILHA_Y; dir = 1; }
+  else { x = NV_TELA_W - NV_ILHA_MARGEM_D / gfx_escala_txt(); y = NV_ILHA_Y / gfx_escala_txt(); dir = 1; }
   // Quem ancora em outro x (testes) desliza em vez de saltar; troca de lado ou
   // ilha apagada assenta seco.
   { static float xSuave; static int xDir = -1;
@@ -2243,7 +2244,7 @@ static void ilha_desenharCorpo_(Uint32 agora) {
     // modal ela cresce junto (e o tamanho dele + folga, nunca a tela).
     { float k = modalT > corpoT ? modalT : corpoT;
       k = k > 1.0f ? 1.0f : k < 0.0f ? 0.0f : k;
-      gfx_rect((GfxRect){ R.x - 16.0f - 24.0f * k, R.y - 6.0f - 10.0f * k,
+      if (!(corpoSemSombra && corpoT > 0.0f)) gfx_rect((GfxRect){ R.x - 16.0f - 24.0f * k, R.y - 6.0f - 10.0f * k,
                           R.w + 32.0f + 48.0f * k, R.h + 34.0f + 50.0f * k }, 0, GFX_SOMBRA,
                1.0f, 0, 0, 0.5f, 0, 0, 0, (0.34f + 0.16f * k) * A); }
     // At rest (no modal, no body) the island is the A27 top chrome: the same
