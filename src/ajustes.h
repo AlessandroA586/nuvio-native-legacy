@@ -418,6 +418,19 @@ int   ajustes_salvos_no_simkl(void);
 // ja usa o app: valor novo entra no fim, nunca no meio. tests/simkl_cw.sh
 // confere cada um contra o rotulo em ajustes.c.
 enum { AJ_SALVOS_LOCAL = 0, AJ_SALVOS_TRAKT = 1, AJ_SALVOS_SIMKL = 2 };
+// FONTE DA BIBLIOTECA: a escolha gravada (AJ_SALVOS_*) vira a fonte efetiva
+// conforme o que esta vinculado. Escolha desvinculada cai no outro servico
+// ligado e, sem nenhum, na lista local. Pura, para o teste e para o selo.
+static inline int ajustes_fonte_resolver(int escolha, int trakt, int simkl) {
+  if (escolha == AJ_SALVOS_TRAKT) return trakt ? AJ_SALVOS_TRAKT : simkl ? AJ_SALVOS_SIMKL : AJ_SALVOS_LOCAL;
+  if (escolha == AJ_SALVOS_SIMKL) return simkl ? AJ_SALVOS_SIMKL : trakt ? AJ_SALVOS_TRAKT : AJ_SALVOS_LOCAL;
+  return AJ_SALVOS_LOCAL;
+}
+// Texto do selo da aba Salvos para a fonte efetiva; a local o chamador resolve.
+static inline const char *ajustes_fonte_selo(int fonte) {
+  return fonte == AJ_SALVOS_TRAKT ? "TRAKT" : fonte == AJ_SALVOS_SIMKL ? "SIMKL" : "LOCAL";
+}
+int   ajustes_fonte_biblioteca(void);
 enum { AJ_CWF_AMBAS = 0, AJ_CWF_CONTA = 1, AJ_CWF_TRAKT = 2, AJ_CWF_SIMKL = 3 };
 // Envio automatico do registro (Sobre). 1 = ligado.
 int   ajustes_envio_auto(void);

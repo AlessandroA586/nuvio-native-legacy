@@ -4258,7 +4258,7 @@ static void *fioListas(void *u) {
   int nw = 0, nc = 0;
   CatItem *wl = NULL, *col = NULL;
   if (descSessaoVincular(j->sessao)) {
-    wl = listaBuscar("watchlist", &nw);
+    if (ajustes_fonte_biblioteca() != AJ_SALVOS_SIMKL) wl = listaBuscar("watchlist", &nw);
     if (descSessaoAtual()) col = listaBuscar("collection", &nc);
   }
   pthread_mutex_lock(&listasTrava);
@@ -5225,7 +5225,7 @@ static void *montar(void *u) {
     listas = NULL;
   } else {
     GARANTE(TRAKT_LISTA_MAX);
-    n += trakt_lista("watchlist",  lote + n, cap - n);
+    if (ajustes_fonte_biblioteca() != AJ_SALVOS_SIMKL) n += trakt_lista("watchlist",  lote + n, cap - n);
     GARANTE(TRAKT_LISTA_MAX);
     n += trakt_lista("collection", lote + n, cap - n);
   }
@@ -5238,7 +5238,7 @@ static void *montar(void *u) {
   // TITULO QUE JA ESTA NO LOTE (na watchlist do Trakt, ou numa fileira) SO
   // GANHA A MARCA, nao entra de novo: dois CatItem com o mesmo imdb poriam o
   // titulo duas vezes na Biblioteca.
-  if (ajustes_salvos_no_simkl() && simkl_ativo()) {
+  if (ajustes_fonte_biblioteca() == AJ_SALVOS_SIMKL) {
     // DIRETO NO LOTE, e nao num vetor a parte: 300 CatItem sao 4,7 MB, e a
     // Samsung roda com teto de 128 MiB. O lote ja cresce por GARANTE; os
     // repetidos saem na compactacao logo abaixo.

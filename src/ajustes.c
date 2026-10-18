@@ -51,6 +51,7 @@
 #include "simklauth.h"
 #include "discord.h"
 #include "simkl.h"
+#include "trakt.h"
 #include "qr.h"
 #include "atualizacao.h"
 #include "avisos.h"
@@ -1401,7 +1402,7 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Remover o Xtream"),
   LER("Conta Xtream"),
   ESC("Grade de programação",      V_EPG_PAIS, AJ_N_EPG_PAIS),
-  ESC("Onde o + salva",             V_SALVOS, 3),
+  ESC("Fonte da biblioteca",        V_SALVOS, 3),
   ACAO("Trakt"),
   ACAO("Simkl"),
   ACAO("Sair da conta"),
@@ -3242,6 +3243,9 @@ int ajustes_salvos_no_simkl(void)     { return valor[AJ_SALVOS_DEST] == AJ_SALVO
 void ajustes_definir_salvos_no_trakt(int noTrakt) {
   valor[AJ_SALVOS_DEST] = noTrakt ? 1 : 0;
   AJ_COM_ORIGEM(AJLOG_PRIMEIRA, gravar());
+}
+int ajustes_fonte_biblioteca(void) {
+  return ajustes_fonte_resolver(valor[AJ_SALVOS_DEST], trakt_ativo(), simkl_ativo());
 }
 void ajustes_definir_salvos_destino(int destino) {
   if (destino < AJ_SALVOS_LOCAL || destino > AJ_SALVOS_SIMKL) return;
@@ -7410,7 +7414,7 @@ static const char *efeitoOpcao(int op) {
     case AJ_SALVOS_DEST:
       if (valor[op] == AJ_SALVOS_SIMKL && !simklauth_token()[0])
         return "Vincule o Simkl em Ajustes: sem o vínculo, o + guarda só na lista desta TV.";
-      return "A lista desta TV recebe o título em todos os casos. Isto decide se ele também vai para o Trakt ou para o Simkl.";
+      return "Escolhe de onde vem a Biblioteca e para onde o + também publica. A lista desta TV recebe o título em todos os casos.";
     case AJ_TRAKT: case AJ_SIMKL:
       return (op == AJ_TRAKT ? traktauth_estado() == TRA_LIGADO : simklauth_estado() == SMK_LIGADO)
         ? "OK abre o vínculo de novo, com QR e código. As setas laterais não fazem nada nesta linha."

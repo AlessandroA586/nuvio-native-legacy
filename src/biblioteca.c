@@ -2260,9 +2260,8 @@ static void desenhaCabecalho(void) {
                              : fonte == FONTE_FIXADAS ? "LOCAL"
                              : "TRAKT")
       : modo == MODO_NUVEM ? (trakt_ativo() ? "TRAKT" : "LOCAL")
-      : (contalib_tem_conta() ? seloCaixaAlta("Conta")
-                              : ajustes_salvos_no_simkl() && simkl_ativo() ? "SIMKL"
-                              : trakt_ativo() ? "TRAKT" : "LOCAL");
+      : ajustes_fonte_biblioteca() == AJ_SALVOS_LOCAL && contalib_tem_conta() ? seloCaixaAlta("Conta")
+      : ajustes_fonte_selo(ajustes_fonte_biblioteca());
     // TRAKT SAI COMO LOGO, nao como palavra. As outras origens continuam texto
     // espacado porque nao ha wordmark delas no pacote — "SIMKL" e "NUVIO"
     // escritos sao o que existe, e inventar um desenho seria pior.
