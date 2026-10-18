@@ -7143,34 +7143,57 @@ static void desenhaHeroiCard(const CatItem *ci, int completo, const char *texto,
 }
 
 // Split Hero A: logo on art; metadata and two synopsis lines share the caption band.
+// The row runs to the screen edge: the last poster is clipped there, not at the margin.
+static float divididoDireita(void) {
+  return homeRetratoTelefone() ? homeConteudoDireita() : NV_TELA_W;
+}
 static int divididoItem(int r) { return fileiraItemIndice(&fileiras[r], colunaDaFileira(r)); }
 // O cartaz `c` (centro cx, largura w) entra na fila a direita do painel? O que
 // ja passou fica atras do painel (pintado depois).
 static int divididoCartazVisivel(int r, float cx, float w) {
   return cx + w * 0.5f > homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO + 0.5f &&
-         cx - w * 0.5f < homeConteudoDireita() - 0.5f;
+         cx - w * 0.5f < divididoDireita() - 0.5f;
 }
 static GfxRect divididoPainel(int r, float cardY) {
   return (GfxRect){ homeConteudoX() + bordaX(r), cardY, divPainelW(), divArteH() };
+}
+static float divididoRotuloAlfa(float k) { return 1.0f - anim_clamp(k, 0.0f, 1.0f); }
+// Focused: no card; the logo block ends on the text line of the side posters.
+static float divididoFimY(float cardY, float yh) {
+  return cardY + divArteH() + 18.0f + (fmaxf(34.0f, yh) + yh) * 0.5f;
+}
+typedef struct { float logoB, meta, ov; } DivBloco;
+static DivBloco divididoBloco(float fim, float ovH, float metaH) {
+  DivBloco b = { 0, 0, fim - ovH };
+  b.meta = b.ov - 14.0f - metaH;
+  b.logoB = b.meta - 20.0f;
+  return b;
+}
+static GfxRect divididoLogoRect(float x, float bottom, float ap) {
+  float w = NV_DIV_LOGO_W, h = w / ap;
+  if (h > NV_DIV_LOGO_H) { h = NV_DIV_LOGO_H; w = h * ap; }
+  return (GfxRect){ x, bottom - h, w, h };
 }
 static void desenhaDividido(int r, float cardY) {
   GfxRect p = divididoPainel(r, cardY);
   int idx = divididoItem(r), d;
   const CatItem *ci = cat_item_exato(idx);
   const char *caminho = arte_por_identidade(idx, 1);
-  GLuint t = caminho ? tex_obter_larg(caminho, p.w) : 0;
+  const int em = foco.fileira == r && !focoHero;
+  GLuint t = caminho && !em ? tex_obter_larg(caminho, p.w) : 0;
   float x = p.x, y = p.y + p.h + 18.0f;
-  for (d = -1; d <= 1; d += 2) {
+  for (d = -1; d <= 1 && !em; d += 2) {
     int c = colunaDaFileira(r) + d;
     if (c >= 0 && c < fileiras[r].n) {
       const char *v = arte_por_identidade(fileiraItemIndice(&fileiras[r], c), 1);
       if (v) (void)tex_lookahead_pedir(v, p.w);
     }
   }
-  desenhaHeroiCard(ci, 0, NULL, caminho, t, 1.0f, p.x, p.y, p.w, p.h,
-                   raioDe(p.w, p.h), foco.fileira == r && !focoHero ? 1.0f : 0.0f, 0.0f);
+  if (!em)
+    desenhaHeroiCard(ci, 0, NULL, caminho, t, 1.0f, p.x, p.y, p.w, p.h,
+                     raioDe(p.w, p.h), 0.0f, 0.0f);
   // O foco mora no painel: o poster dele nao e mais desenhado na fila.
-  if (foco.fileira == r && !focoHero) {
+  if (em) {
     itemFoco = (HomeItem){ .indice = idx, .rect = p, .arte = caminho,
       .titulo = ci ? ci->titulo : NULL, .genero = ci ? ci->genero : NULL,
       .meta = ci ? ci->meta : NULL };
@@ -7178,10 +7201,31 @@ static void desenhaDividido(int r, float cardY) {
     ancoraFoco = p; temAncoraFoco = 1;
   }
   if (!ci) return;
-  y += heroiMeta(ci, x, y, p.w) + 14.0f;
-  if (ci->sinopse[0])
-    sinopse_bloco_corta(TXT_DET_SIN, ci->sinopse, 243, 242, 239,
-                        x, y, p.w, 36.0f, 0.95f, 2);
+  if (!em) {
+    y += heroiMeta(ci, x, y, p.w) + 14.0f;
+    if (ci->sinopse[0])
+      sinopse_bloco_corta(TXT_DET_SIN, ci->sinopse, 243, 242, 239,
+                          x, y, p.w, 36.0f, 0.95f, 2);
+    return;
+  }
+  const float tw = fminf(NV_DIV_LOGO_W, p.w);
+  float ovH = ci->sinopse[0]
+    ? sinopse_bloco_corta(TXT_DET_SIN, ci->sinopse, 243, 242, 239, x, 0, tw, 36.0f, 0, 2) : 0;
+  DivBloco b = divididoBloco(divididoFimY(cardY, txt_linha(TXT_CAPTION2, "2025", 218,222,232,255).h),
+                             ovH, fmaxf(34.0f, BADGE_H));
+  if (ovH > 0)
+    sinopse_bloco_corta(TXT_DET_SIN, ci->sinopse, 243, 242, 239, x, b.ov, tw, 36.0f, 0.95f, 2);
+  heroiMeta(ci, x, b.meta, tw);
+  const char *urlL = artehero_logo_sessao_larg(ci, NV_DIV_LOGO_W);
+  GLuint tl = urlL ? tex_obter_logo_larg(urlL, NV_DIV_LOGO_W) : 0;
+  if (tl && tex_aspecto(urlL) > 0) {
+    GfxRect lr = divididoLogoRect(x, b.logoB, tex_aspecto(urlL));
+    gfx_tex_aspect_atual = 0;
+    gfx_rect(lr, tl, tex_marca_escura(urlL) ? GFX_MARCA : GFX_TEXTO, 0,0,0,0,1,1,1,1);
+  } else if (ci->titulo[0]) {
+    TxtLinha tn = txt_linha_corta(TXT_TITULO1, ci->titulo, 245,246,249,255, tw);
+    txt_desenhar(tn, x, b.logoB - tn.h);
+  }
 }
 
 static void pintarCartao(const CartaoFoco *k, float raio) {
@@ -7672,7 +7716,10 @@ static void home_desenhar_(Uint32 agora) {
         int cb = 181 + (int)((249 - 181) * k + 0.5f);
         const float maxW = homeRetratoTelefone() ? homeLarguraUtil() - 76.0f : NV_TELA_W - homeConteudoX() - 180.0f;
         const int mudo = tipo == FILEIRA_SOCIAL && ajustes_amigos_estilo() == 3 && !amigosfil_convite();
-        fimTit = desenhaTituloFil(r, y, rotFil, cr, cg, cb, k, maxW, !mudo, &tl); }
+        const float og = gfx_opacidade_grupo;
+        if (tipo == FILEIRA_HEROI_DIVIDIDO) gfx_opacidade_grupo = og * divididoRotuloAlfa(k);
+        fimTit = desenhaTituloFil(r, y, rotFil, cr, cg, cb, k, maxW, !mudo, &tl);
+        gfx_opacidade_grupo = og; }
       // A FONTE (Trakt, Simkl...) NAO APARECE NA FILEIRA DE AMIGOS: a pessoa
       // quer saber quem viu e o que achou, nao de onde veio o dado. Ela fica
       // so no perfil do amigo (amigoperfil.c). Era a marca do Trakt aqui.
@@ -7786,7 +7833,7 @@ static void home_desenhar_(Uint32 agora) {
       // Keep partial posters moving inside the strip, with the row's vertical clip.
       if (tipo == FILEIRA_HEROI_DIVIDIDO) {
         float left = homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO;
-        gfx_recorte(left, corte, homeConteudoDireita() - left, NV_TELA_H - corte);
+        gfx_recorte(left, corte, divididoDireita() - left, NV_TELA_H - corte);
       }
       for (int passe = 1; passe < 2; passe++) {
         for (int c = 0; c < fileiras[r].n; c++) {
