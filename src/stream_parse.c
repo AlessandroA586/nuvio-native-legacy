@@ -1061,6 +1061,12 @@ int stream_extrair(const char *json, const char *provedor, Stream **saida) {
       if (isfinite(indice) && indice >= 0 && indice <= INT_MAX)
         s.fileIdx = (int)indice;
       if (s.infoHash[0]) lerFontesP2P(p, fim, s.fontes, sizeof s.fontes);
+    } else {
+      // Fonte com link: o hash, quando o addon manda, so serve para achar o
+      // torrent na conta TorBox (partes.h). Nao vira infoHash.
+      const char *cr = strstr(p, "\"clientResolve\"");
+      if (!js_texto(p, fim, "infoHash", s.hashTorrent, sizeof s.hashTorrent) && cr && cr < fim)
+        js_texto(cr, fim, "infoHash", s.hashTorrent, sizeof s.hashTorrent);
     }
     // Nao tocar URL cortada; sem url e sem hash nao ha o que tocar.
     if ((s.infoHash[0] || !strncmp(s.url, "http", 4)) &&
