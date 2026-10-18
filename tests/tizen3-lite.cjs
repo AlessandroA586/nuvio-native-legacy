@@ -9,10 +9,15 @@ const { chromium } = require('playwright');
 const emsdk = process.env.EMSDK_DIR || path.join(os.homedir(), 'emsdk');
 const acorn = require(path.join(emsdk, 'upstream/emscripten/node_modules/acorn'));
 const out = 'build/tizen3-lite';
-const shots = 'docs/shots/wgtlite3';
+const shots = process.env.NUVIO_LITE_SHOTS || fs.mkdtempSync(path.join(os.tmpdir(), 'lite-shots-'));
 
 async function main() {
   cp.execFileSync('bash', ['-n', 'tools/tizen.sh', 'tools/tizen3-lite.sh']);
+  for (const shell of ['tools/tizen-shell.html', 'tools/tizen3-lite-shell.html']) {
+    cp.execFileSync('node', ['tests/wgt_voz_shell.js', shell], {stdio:'inherit'});
+  }
+  const shell = fs.readFileSync('tools/tizen3-lite-shell.html', 'utf8');
+  acorn.parse(shell.match(/<script>([\s\S]*?)<\/script>/)[1], {ecmaVersion:5});
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'lite-es5-'));
   try {
     const body = 'function(info) { var braces = "}"; function wasm2js_trap() { throw Error("trap"); } return info; }';

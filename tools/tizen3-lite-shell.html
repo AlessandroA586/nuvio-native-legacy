@@ -60,11 +60,222 @@
     printErr: function (t) { try { console.error(t); } catch (e) {} },
     onRuntimeInitialized: function () { window.nvLiteRuntime = true; }
   };
-  if (window.tizen && tizen.tvinputdevice) {
-    ['MediaPlay', 'MediaPause', 'MediaPlayPause', 'MediaStop', 'MediaRewind',
-     'MediaFastForward', 'ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue']
-      .forEach(function (key) { try { tizen.tvinputdevice.registerKey(key); } catch (e) {} });
+  // Preserve the standard Samsung text bridge and remote mappings in ES5.
+  (function () {
+    var t = { seq: 0, valor: "", fim: -1, aberto: false, microfone: -1 };
+    try {
+      if (window.tizen && tizen.systeminfo && tizen.systeminfo.getCapability)
+        t.microfone = tizen.systeminfo.getCapability("http://tizen.org/feature/microphone") ? 1 : 0;
+    } catch (e) { console.log("[texto] wgt: feature/microphone: " + e); }
+    console.log("[texto] wgt: feature/microphone = " + t.microfone);
+    var campo = function () { return document.getElementById("nvTextoCampo"); };
+    function devolverFoco() {
+      var c = document.getElementById("canvas");
+      if (c) c.focus();
+    }
+    function terminar(confirmou, falhou) {
+      if (!t.aberto) return;
+      t.aberto = false;
+      t.fim = falhou ? 2 : confirmou ? 1 : 0;
+      var el = campo();
+      if (el) el.blur();
+      devolverFoco();
+    }
+    function ler() {
+      var el = campo();
+      if (!el || !t.aberto) return;
+      if (el.value !== t.valor) { t.valor = el.value; t.seq++; }
+    }
+    t.abrir = function (atual, voz) {
+      var el = campo();
+      t.valor = atual || ""; t.fim = -1; t.aberto = true;
+      t.seq++;
+      if (el) {
+        el.value = t.valor;
+        try { el.focus(); } catch (e) { console.warn("[texto] wgt: focus: " + e); }
+      }
+      if (!el || document.activeElement !== el) {
+        console.warn("[voice] keyboard startup failed: input did not receive focus");
+        terminar(0, true); return;   // C ja abriu a sessao: devolve o cancelamento.
+      }
+      try { el.setSelectionRange(el.value.length, el.value.length); } catch (e) {}
+      console.log("[texto] wgt: campo focado (voz=" + (voz ? 1 : 0) + ")");
+    };
+    t.fechar = function () {
+      if (!t.aberto) return;
+      t.aberto = false;
+      var el = campo();
+      if (el) el.blur();
+      devolverFoco();
+    };
+    window.nvTexto = t;
+    window.addEventListener("load", function () {
+      var el = campo();
+      if (!el) return;
+      el.addEventListener("input", ler);
+      el.addEventListener("compositionend", ler);
+      el.addEventListener("change", ler);
+      el.addEventListener("blur", function () { ler(); terminar(t.valor.trim() ? 1 : 0); });
+      ["keydown", "keyup", "keypress"].forEach(function (tipo) {
+        el.addEventListener(tipo, function (ev) {
+          if (!t.aberto) return;
+          ev.stopPropagation();
+          if (tipo !== "keydown") return;
+          if (ev.keyCode === 65376 || ev.keyCode === 13) { ev.preventDefault(); ler(); terminar(1); }
+          else if (ev.keyCode === 65385 || ev.keyCode === 27) { ev.preventDefault(); ler(); terminar(0); }
+        });
+      });
+    });
+    window.addEventListener("keydown", function (ev) {
+      if (!t.aberto || ev.keyCode !== 10009) return;
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      ler(); terminar(0);
+    }, true);
+  })();
+
+  try {
+    if (window.tizen && tizen.tvinputdevice) {
+      ["MediaPlay", "MediaPause", "MediaPlayPause", "MediaStop",
+       "MediaRewind", "MediaFastForward", "ChannelUp", "ChannelDown",
+       "ColorF0Red", "ColorF1Green", "ColorF2Yellow", "ColorF3Blue", "Search"]
+        .forEach(function (k) {
+          try { tizen.tvinputdevice.registerKey(k); } catch (e) {}
+        });
+    }
+  } catch (e) {}
+
+  function imeAberto() { return window.nvTexto && window.nvTexto.aberto; }
+
+  window.addEventListener("keydown", function (ev) {
+    if (imeAberto()) return;
+    if (ev.keyCode !== 10009) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    var alvo = document.getElementById("canvas") || window;
+    ["keydown", "keyup"].forEach(function (t) {
+      alvo.dispatchEvent(new KeyboardEvent(t, {
+        key: "Escape", code: "Escape", keyCode: 27, which: 27,
+        bubbles: true, cancelable: true
+      }));
+    });
+  }, true);
+
+  var MEDIA_TECLA = {
+    10252: { key: "Pause", code: "Pause", keyCode: 19 },  // MediaPlayPause
+    415:   { key: "Pause", code: "Pause", keyCode: 19 },  // MediaPlay
+    19:    { key: "Pause", code: "Pause", keyCode: 19 },  // MediaPause
+    413:   { key: "Escape", code: "Escape", keyCode: 27 }, // MediaStop
+    412:   { key: "ArrowLeft", code: "ArrowLeft", keyCode: 37 },  // MediaRewind
+    417:   { key: "ArrowRight", code: "ArrowRight", keyCode: 39 } // MediaFastForward
+  };
+  window.addEventListener("keydown", function (ev) {
+    if (imeAberto()) return;
+    if (!ev.isTrusted) return;
+    var alvoTecla = MEDIA_TECLA[ev.keyCode];
+    if (!alvoTecla) return;
+    if (!window.nvPlayerAberto) { ev.preventDefault(); ev.stopPropagation(); return; }
+    ev.preventDefault();
+    ev.stopPropagation();
+    var alvo = document.getElementById("canvas") || window;
+    ["keydown", "keyup"].forEach(function (t) {
+      alvo.dispatchEvent(new KeyboardEvent(t, {
+        key: alvoTecla.key, code: alvoTecla.code,
+        keyCode: alvoTecla.keyCode, which: alvoTecla.keyCode,
+        bubbles: true, cancelable: true
+      }));
+    });
+  }, true);
+
+  function mostrarPainelDOM() {
+    var p = document.getElementById("diag");
+    if (!p) return;
+    p.hidden = !p.hidden;
+    if (!p.hidden && window.__nvPintar) window.__nvPintar();
   }
+  window.addEventListener("keydown", function (ev) {
+    if (imeAberto()) return;
+    var vermelha = (ev.keyCode === 403 || ev.key === "F1");
+    var verde    = (ev.keyCode === 404 || ev.key === "F2");
+    var canal    = (ev.keyCode === 427 || ev.key === "F3");
+    var canalMenos = (ev.keyCode === 428 || ev.key === "F4");
+    if (!vermelha && !verde && !canal && !canalMenos) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (canal) {
+      var alvoS = document.getElementById("canvas") || window;
+      alvoS.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "F7", code: "F7", keyCode: 118, which: 118,
+        bubbles: true, cancelable: true
+      }));
+      return;
+    }
+    if (canalMenos) {
+      var alvoM = document.getElementById("canvas") || window;
+      alvoM.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "F8", code: "F8", keyCode: 119, which: 119,
+        bubbles: true, cancelable: true
+      }));
+      return;
+    }
+    if (verde || !window.__nvPrimeiroQuadro) { mostrarPainelDOM(); return; }
+    var alvo = document.getElementById("canvas") || window;
+    ["keydown", "keyup"].forEach(function (t) {
+      alvo.dispatchEvent(new KeyboardEvent(t, {
+        key: "F9", code: "F9", keyCode: 120, which: 120,
+        bubbles: true, cancelable: true
+      }));
+    });
+  }, true);
+
+  window.addEventListener("keyup", function (ev) {
+    if (imeAberto()) return;
+    var mais = (ev.keyCode === 427 || ev.key === "F3");
+    var menos = (ev.keyCode === 428 || ev.key === "F4");
+    if (!mais && !menos) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    var alvoS = document.getElementById("canvas") || window;
+    alvoS.dispatchEvent(new KeyboardEvent("keyup", mais ? {
+      key: "F7", code: "F7", keyCode: 118, which: 118,
+      bubbles: true, cancelable: true
+    } : {
+      key: "F8", code: "F8", keyCode: 119, which: 119,
+      bubbles: true, cancelable: true
+    }));
+  }, true);
+
+  window.addEventListener("keydown", function (ev) {
+    if (imeAberto()) return;
+    if (!ev.isTrusted) return;
+    var f = ev.keyCode === 10225 ? "F6" : ev.keyCode === 405 ? "F5" : null;
+    if (!f) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    var alvo = document.getElementById("canvas") || window;
+    var code = f === "F6" ? 117 : 116;
+    ["keydown", "keyup"].forEach(function (t) {
+      alvo.dispatchEvent(new KeyboardEvent(t, {
+        key: f, code: f, keyCode: code, which: code,
+        bubbles: true, cancelable: true
+      }));
+    });
+  }, true);
+  (function () {
+    var vistos = {};
+    window.addEventListener("keydown", function (ev) {
+      if (!ev.isTrusted || ev.keyCode < 300 || vistos[ev.keyCode]) return;
+      vistos[ev.keyCode] = 1;
+      var t = "[tecla] wgt keyCode=" + ev.keyCode + " key=" + ev.key;
+      console.log(t);
+      if (window.__nvDiag) window.__nvDiag(t);
+    }, true);
+  })();
+
+  window.addEventListener("load", function () {
+    var c = document.getElementById("canvas");
+    if (c) c.focus();
+  });
 </script>
 {{{ SCRIPT }}}
 </body>
