@@ -1921,6 +1921,7 @@
   T("Esmeralda", "祖母綠"),
   T("Espanha", "西班牙"),
   T("Espanhol", "西班牙語"),
+  T("Español (Latinoamérica)", ""),
   T("Espaçamento das fileiras", "列間距"),
   T("Espaçamento, proporção padrão e resolução automática.", "間距、預設畫面比例和自動解析度。"),
   T("Espaço entre fileiras", "列間距"),

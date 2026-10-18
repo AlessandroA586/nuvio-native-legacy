@@ -1921,6 +1921,7 @@
   T("Esmeralda", "Smaragd"),
   T("Espanha", "Spanien"),
   T("Espanhol", "Spansk"),
+  T("Español (Latinoamérica)", ""),
   T("Espaçamento das fileiras", "Rækkeafstand"),
   T("Espaçamento, proporção padrão e resolução automática.", "Afstand, standardbilledformat og automatisk opløsning."),
   T("Espaço entre fileiras", "Afstand mellem rækker"),

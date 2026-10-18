@@ -321,6 +321,27 @@ int main(void) {
     assert(valor[AJ_AUD_LINGUA] == LING_OPC_ORIGINAL);       // "~" intacto
   }
 
+  // es-419 na conta: ler + mesclar mantem "es-419" (nao encolhe para "es");
+  // escolher a opcao nova grava es-419 e pede es-MX ao TMDB.
+  {
+    const char *blob = "{\"features\":{\"tmdb_settings\":{\"tmdb_language\":\"es-419\"}}}";
+    char *m = NULL;
+    valor[AJ_TMDB_IDIOMA] = 0;
+    ajustes_aplicar_blob(blob);
+    assert(valor[AJ_TMDB_IDIOMA] == 33 && !strcmp(ajustes_tmdb_idioma(), "es-MX"));
+    ajustes_mesclar_blob(blob, &m);
+    assert(!m || strstr(m, "\"es-419\""));
+    free(m); m = NULL;
+    valor[AJ_TMDB_IDIOMA] = 3;   // Español: escolha real diferente
+    ajustes_mesclar_blob(blob, &m);
+    assert(m && strstr(m, "\"tmdb_language\":\"es\""));
+    free(m); m = NULL;
+    valor[AJ_TMDB_IDIOMA] = 33;
+    ajustes_mesclar_blob("{\"features\":{\"tmdb_settings\":{\"tmdb_language\":\"pt\"}}}", &m);
+    assert(m && strstr(m, "\"es-419\""));
+    free(m);
+  }
+
   unlink(caminho);
   { char tmp[700]; snprintf(tmp, sizeof tmp, "%s/ajustes.tmp", dir); unlink(tmp); }
   rmdir(dir);

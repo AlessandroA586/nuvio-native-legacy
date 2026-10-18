@@ -1921,6 +1921,7 @@
   T("Esmeralda", "Ngọc lục bảo"),
   T("Espanha", "Tây Ban Nha"),
   T("Espanhol", "Tiếng Tây Ban Nha"),
+  T("Español (Latinoamérica)", ""),
   T("Espaçamento das fileiras", "Khoảng cách hàng"),
   T("Espaçamento, proporção padrão e resolução automática.", "Khoảng cách, tỷ lệ hình và độ phân giải tự động."),
   T("Espaço entre fileiras", "Khoảng cách giữa các hàng"),

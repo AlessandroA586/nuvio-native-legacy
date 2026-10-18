@@ -1920,6 +1920,7 @@
   T("Esmeralda", "Смарагдовий"),
   T("Espanha", "Іспанія"),
   T("Espanhol", "Іспанська"),
+  T("Español (Latinoamérica)", ""),
   T("Espaçamento das fileiras", "Відступи між рядами"),
   T("Espaçamento, proporção padrão e resolução automática.", "Відступи, типові пропорції кадру і авто-роздільність."),
   T("Espaço entre fileiras", "Відстань між рядами"),

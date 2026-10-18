@@ -1920,6 +1920,7 @@
   T("Esmeralda", "Esmeralda"),
   T("Espanha", "España"),
   T("Espanhol", "Español"),
+  T("Español (Latinoamérica)", ""),
   T("Espaçamento das fileiras", "Espaciado de las filas"),
   T("Espaçamento, proporção padrão e resolução automática.", "Espaciado, relación de aspecto y resolución automática."),
   T("Espaço entre fileiras", "Espacio entre filas"),

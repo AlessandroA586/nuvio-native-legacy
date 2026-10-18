@@ -1920,6 +1920,7 @@
   { "Esmeralda", "Emerald" },
   { "Espanha", "Spain" },
   { "Espanhol", "Spanish" },
+  { "Español (Latinoamérica)", "Español (Latinoamérica)" },
   { "Espaçamento das fileiras", "Row spacing" },
   { "Espaçamento, proporção padrão e resolução automática.", "Spacing, default aspect ratio and automatic resolution." },
   { "Espaço entre fileiras", "Space between rows" },

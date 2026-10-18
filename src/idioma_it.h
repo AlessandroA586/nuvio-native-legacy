@@ -1921,6 +1921,7 @@
   T("Esmeralda", "Smeraldo"),
   T("Espanha", "Spagna"),
   T("Espanhol", "Spagnolo"),
+  T("Español (Latinoamérica)", ""),
   T("Espaçamento das fileiras", "Spaziatura delle file"),
   T("Espaçamento, proporção padrão e resolução automática.", "Spaziatura, proporzioni predefinite e risoluzione automatica."),
   T("Espaço entre fileiras", "Spazio tra le righe"),
