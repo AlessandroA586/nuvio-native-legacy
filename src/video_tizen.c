@@ -82,6 +82,7 @@
 #if defined(__EMSCRIPTEN__) && !defined(NV_VIDAA)
 
 #include "video.h"
+#include "avroi.h"
 #include "video_reconexao.h"
 #include "linguas.h"
 #include "audioescolha.h"
@@ -865,6 +866,9 @@ static int faixasLidas;
 // Retangulo pedido pela interface, em 1920x1080. Guardado para nao repetir a
 // mesma chamada a cada quadro — o mesmo cuidado do caminho da LG.
 static int janX, janY, janW = 1920, janH = 1080;
+// setVideoRoi fica valendo no AVPlay ate ser trocado. 1 = pode haver recorte
+// de fonte antigo (zoom, ou titulo novo cujo estado nao se conhece).
+static int roiAtivo;
 
 // AVANCO COM REPOUSO, identico ao do webOS e pela mesma razao medida la:
 // segurar a seta produzia quatro seeks em 0,8 s, e os tres primeiros sao
@@ -916,6 +920,7 @@ int video_tocar(const char *url) {
   // Titulo novo: o marcador do anterior nao vale. Sem isto um filme sem
   // capitulos herdaria os creditos do filme de antes.
   creditosNomeado = creditosUltimo = 0.0;
+  roiAtivo = 1;   // o recorte do titulo anterior pode ter ficado no player
   snprintf(urlAtual, sizeof urlAtual, "%s", url);
   nv_recon_zerar(&recon);
   reconPermitida = reconProxima; reconProxima = 0; reconIniciou = 0;
@@ -1426,7 +1431,20 @@ static int aplicarRect(int x, int y, int w, int h) {
   return 1;
 }
 
-void video_janela(int x, int y, int w, int h) {
+// Manda ao AVPlay o recorte que avroi_pedido decidir. Devolve 1 se mandou.
+static int roiAplicar(int sx, int sy, int sw, int sh) {
+  int o[4], k = avroi_pedido(roiAtivo, sx, sy, sw, sh,
+                             (int)video_largura(), (int)video_altura(), o);
+  if (!k) return 0;
+  if (avChamar("roi", NULL, o[0], o[1], o[2], o[3], NULL, 0) < 1) {
+    if (k == 2) roiAtivo = 0;   // sem setVideoRoi nesta TV: nao insistir a cada quadro
+    return 0;
+  }
+  roiAtivo = k == 1;
+  return 1;
+}
+
+static void janelaGrampeada(int x, int y, int w, int h) {
   // GRAMPEIA A TELA, e so este caminho grampeia. Ver video_janela_fonte: o
   // recorte emulado PRECISA de um retangulo que saia da tela, e passar por aqui
   // era o que anulava o zoom inteiro.
@@ -1436,6 +1454,13 @@ void video_janela(int x, int y, int w, int h) {
   if (x + w > 1920) w = 1920 - x;
   if (y + h > 1080) h = 1080 - y;
   aplicarRect(x, y, w, h);
+}
+
+// Destino simples = quadro inteiro. Um recorte antigo (zoom que saiu, miniatura,
+// titulo novo) esticaria a imagem dentro deste retangulo, entao limpa antes.
+void video_janela(int x, int y, int w, int h) {
+  if (roiAtivo) roiAplicar(0, 0, 0, 0);
+  janelaGrampeada(x, y, w, h);
 }
 
 // RECORTE DE FONTE: setVideoRoi (ver a op "roi" no JS).
@@ -1493,7 +1518,8 @@ void video_janela_fonte(int sx, int sy, int sw, int sh,
 
   // Sem as dimensoes do quadro, ou sem recorte de verdade, o destino cru serve.
   if (qw < 2.0 || qh < 2.0 || sw <= 0 || sh <= 0) { video_janela(dx, dy, dw, dh); return; }
-  // Recorte que cobre o quadro inteiro E o caso sem zoom: mesma coisa.
+  // Recorte que cobre o quadro inteiro E o caso sem zoom: mesma coisa (e
+  // video_janela devolve o quadro inteiro ao ROI se um zoom o deixou recortado).
   if (sx <= 0 && sy <= 0 && sw >= (int)qw && sh >= (int)qh) { video_janela(dx, dy, dw, dh); return; }
 
   ex = (double)dw / (double)sw;
@@ -1514,11 +1540,11 @@ void video_janela_fonte(int sx, int sy, int sw, int sh,
   //
   // A Samsung documenta o ROI junto do PLAYER_DISPLAY_MODE_FULL_SCREEN, que e
   // o modo que este arquivo ja seleciona no open (ver a nota la em cima).
-  if (avChamar("roi", NULL, sx, sy, sw, sh, NULL, 0) >= 1) {
+  if (roiAplicar(sx, sy, sw, sh)) {
     printf("[video] roi %d,%d %dx%d de %.0fx%.0f (recorte na fonte)\n",
            sx, sy, sw, sh, qw, qh);
     fflush(stdout);
-    video_janela(dx, dy, dw, dh);
+    janelaGrampeada(dx, dy, dw, dh);
     return;
   }
 
