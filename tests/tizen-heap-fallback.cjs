@@ -84,6 +84,20 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const build = fs.readFileSync(__dirname + '/../tools/tizen.sh', 'utf8');
+// Evaluate the production variant setup and pool flag, including --leve.
+const variant = build.slice(build.indexOf('VARIANTE=""'), build.indexOf('if [ "${1:-}" = "--alto-cache" ]'));
+const poolFlag = build.match(/^  FIO_FLAGS="-pthread .*$/m)[0];
+for (const leve of [false, true]) {
+  const fioFlags = execFileSync('bash', ['-c', variant + '\n' + poolFlag + '\nprintf "%s" "$FIO_FLAGS"',
+    'pool-test', ...(leve ? ['--leve'] : [])], { encoding: 'utf8' });
+  const expression = fioFlags.match(/-sPTHREAD_POOL_SIZE='([^']+)'/)[1];
+  for (const [limit, expected] of [[256, leve ? 12 : 20], [192, 12], [160, 8]]) {
+    const Module = { nvPool: pick(limit, 2).r.pool };
+    assert.strictEqual(vm.runInNewContext(expression, { Module }), expected,
+      `${leve ? '--leve' : 'normal'} pool at ${limit} MiB`);
+  }
+  assert.strictEqual(vm.runInNewContext(expression, { Module: {} }), leve ? 12 : 20);
+}
 const flags = build.match(/^  -sINITIAL_MEMORY=.*$/m)[0].trim().replace(/\s*\\$/, '').split(/\s+/);
 const incoming = build.match(/^  -sINCOMING_MODULE_JS_API=(.*?)(?:\s*\\)?$/m);
 if (incoming) flags.push('-sINCOMING_MODULE_JS_API=' + incoming[1].trim().replace(/^'|'$/g, ''));

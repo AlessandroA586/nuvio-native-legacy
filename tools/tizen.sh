@@ -304,8 +304,8 @@ if [ "$UM_FIO" = "1" ]; then
   RUNTIME_EXPORTS="'[\"ccall\"]'"
 else
   # POOL EM TEMPO DE EXECUCAO (#205): tizen-shell.html escolhe o heap (256/192/
-  # 160 MiB) e poe o pool do degrau em Module.nvPool; $POOL e so o padrao.
-  FIO_FLAGS="-pthread -sPTHREAD_POOL_SIZE='(Module.nvPool||$POOL)' -sPTHREAD_POOL_SIZE_STRICT=0"
+  # 160 MiB) e poe o pool do degrau em Module.nvPool; $POOL limita a variante.
+  FIO_FLAGS="-pthread -sPTHREAD_POOL_SIZE='Math.min(Module.nvPool||$POOL,$POOL)' -sPTHREAD_POOL_SIZE_STRICT=0"
   RUNTIME_EXPORTS="'[\"PThread\",\"ccall\"]'"
 fi
 # WEBP ANIMADO (#141): a libwebp de tools/build-webp-wasm.sh liga NV_WEBP_ANIM
