@@ -1,6 +1,7 @@
 """Compile actual app identity selection and player scrobble gates in isolation."""
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 
 app = Path('src/app.c').read_text()
@@ -13,21 +14,20 @@ start = player.split('{ int ok = fontePrincipal()', 1)[1].split(';   // PRONTO',
 pause = player.split('if (tocouS > 0.0f && cs', 1)[1].split(' {', 1)[0]
 # Keep the actual duration gate, with harmless preceding predicates removed.
 pause = pause[pause.index('duracaoSeg >='):].rstrip().removesuffix(')')
+eof = player.split('    int noFim = ', 1)[1].split('\n  }\n  // Com o painel', 1)[0]
 code = r'''
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 typedef unsigned Uint32;
-typedef struct { int dolbyVision; } Stream;
-typedef struct { int temporada, episodio, tipo, extra; } ParteArq;
-typedef struct { int n, atual; ParteArq arq[3]; } PartesLista;
-typedef struct { double pos; } PartesPonto;
-enum { PARTE_EP, PARTE_ESPECIAL, PARTE_EXTRA };
+#define main partes_existing_tests
+#include "tests/partes.c"
+#undef main
 typedef struct { char tipo[16]; } CatItem;
 static CatItem ci = {"series"};
 static Stream source;
 static int aguardandoFonte, playing, gotT, gotE;
-static const Stream *stream_item(int n) { (void)n; return &source; }
+const Stream *stream_item(int n) { (void)n; return &source; }
 static const CatItem *cat_item(int n) { (void)n; return &ci; }
 static int player_aberto(void) { return playing; }
 static int player_indice(void) { return 0; }
@@ -51,8 +51,46 @@ static int partes;
 static int partesAtiva(void) { return partes; }
 static double duracaoCatalogo(void) { return 7200; }
 static int player_duracao_suspeita(double d,double c) { return d < c/2; }
+static int ended = 1, hasNext;
+static double clockEof;
+static int video_terminou(void) { return ended; }
+static double video_pos(void) { return 1800; }
+static double monoSeg(void) { return clockEof; }
+static int desc_episodios_carregando(int i) { (void)i; return 0; }
+static int idxAtual(void) { return 0; }
+static int player_proximo_episodio(void) { return hasNext; }
+static int checkEof(int meio, int eSerie) {
+  int saindo=0, pediuSair=0, scrubbing=0, retomandoSalto=0, aguardaBusca=0;
+  double duracaoSeg=1800, posSeg=1800, eofDesde=-1;
+  int noFim = ''' + eof + r'''
+  return saindo || pediuSair;
+}
 int main(void) {
-  PartesLista l = {.n=3,.atual=0,.arq={{1,1,PARTE_EP,0},{1,3,PARTE_EP,0},{0,0,PARTE_ESPECIAL,1}}};
+  int failed=0;
+  /* EOF stays latched while prefetch waits or retries, then final EOF exits. */
+  for (int retry=0;retry<2;retry++) {
+    for (clockEof=0;clockEof<=30;clockEof+=10)
+      if (checkEof(1,0)) failed=1;
+  }
+  if (failed) puts("FAIL intermediate multipart EOF exits while next link waits/retries");
+  else puts("PASS intermediate multipart EOF waits for transition");
+  assert(checkEof(0,0));
+  hasNext=1; assert(!checkEof(0,1)); hasNext=0;
+  static PartesLista pack;
+  assert(partes_ler_item("{\"id\":7,\"files\":[{\"id\":1,\"name\":\"Show.S00E02.mkv\",\"size\":300000000}]}",NULL,0,&pack));
+  assert(pack.arq[0].temporada==0 && pack.arq[0].episodio==2);
+  assert(pack.arq[0].tipo==PARTE_EP && partes_principais(&pack)==1);
+  for (playing=0;playing<2;playing++) {
+    selectFile(0,&pack,0);
+    if (gotT!=0 || gotE!=2) { puts("FAIL specials-only pack selects S01E02 instead of S00E02"); failed=1; }
+  }
+  assert(partes_ler_item("{\"id\":8,\"files\":[{\"id\":1,\"name\":\"Movie.CD1.mkv\",\"size\":300},{\"id\":2,\"name\":\"Movie.CD2.mkv\",\"size\":300}]}",NULL,0,&pack));
+  assert(partes_principais(&pack)==2 && partes_seguinte(&pack,0)==1);
+  assert(!pack.arq[0].temporadaZero);
+  PartesLista l = {.n=3,.atual=0,.arq={
+    {.temporada=1,.episodio=1,.tipo=PARTE_EP},
+    {.temporada=1,.episodio=3,.tipo=PARTE_EP},
+    {.tipo=PARTE_ESPECIAL,.extra=1}}};
   for (playing=0;playing<2;playing++) {
     selectFile(0,&l,1);
     if (gotT!=1 || gotE!=3) { puts("FAIL selected S01E03 inherits S01E01"); return 1; }
@@ -72,13 +110,16 @@ int main(void) {
     if (start!=partes || pause!=partes) { puts("FAIL multipart progress/start/pause gate"); return 1; }
   }
   puts("PASS selected identity and multipart start/pause gates");
+  return failed;
 }
 '''
 # Run identity and gate cases independently so baseline exposes both findings.
 with tempfile.TemporaryDirectory() as tmp:
     src = Path(tmp)/'review.c'
     src.write_text(code)
-    subprocess.run(['cc', '-w', str(src), '-o', tmp+'/review'], check=True)
+    includes = ['-I/opt/homebrew/include', '-I/opt/homebrew/include/SDL2'] if sys.platform == 'darwin' else subprocess.check_output(['pkg-config', '--cflags', 'sdl2'], text=True).split()
+    subprocess.run(['cc', '-w', '-I.', '-Isrc', *includes, str(src), 'src/partes.c', 'src/js.c',
+                    '-lpthread', '-lm', '-o', tmp+'/review'], check=True)
     result = subprocess.run([tmp+'/review'])
     # The explicit unknown sentinel must survive the player's series default.
     default = player.split('// 0/0 e sem episodio;', 1)[1].split('// AS FONTES', 1)[0]

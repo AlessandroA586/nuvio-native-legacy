@@ -71,7 +71,8 @@ typedef struct {
   uint64_t bytes;
   int extra;               // fora da sequencia: tipo != PARTE_EP
   int tipo;                // PARTE_EP / PARTE_ESPECIAL / PARTE_EXTRA
-  int temporada;           // 0 = o nome nao diz
+  int temporada;           // 0 = o nome nao diz, ou temporada zero explicita
+  int temporadaZero;       // explicit season zero, independent of multipart classification
   int episodio;            // 0 = o nome nao diz
 } ParteArq;
 

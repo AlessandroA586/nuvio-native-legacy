@@ -297,6 +297,7 @@ int partes_ler_item(const char *item, const char *fim, int usenet, PartesLista *
     snprintf(tmp[n].caminho, sizeof tmp[n].caminho, "%s", nome);
     { const char *rel = semRaiz(nome);
       tmp[n].a.tipo = nomeDeEspecial(rel) ? PARTE_ESPECIAL : nomeDeExtra(rel) ? PARTE_EXTRA : PARTE_EP;
+      tmp[n].a.temporadaZero = temporadaZero(rel);
       partes_temporada_episodio(rel, &tmp[n].a.temporada, &tmp[n].a.episodio); }
     if (tmp[n].a.bytes > maior) maior = tmp[n].a.bytes;
     n++;

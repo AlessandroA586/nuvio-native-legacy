@@ -2637,7 +2637,7 @@ static void abrirParte(int fonte, const PartesLista *l, int k) {
   if (serie) {
     const ParteArq *a = &l->arq[k];
     if (a->episodio > 0 && a->tipo != PARTE_EXTRA) {
-      if (a->temporada > 0 || a->tipo == PARTE_ESPECIAL) t = a->temporada;
+      if (a->temporada > 0 || a->temporadaZero || a->tipo == PARTE_ESPECIAL) t = a->temporada;
       e = a->episodio;
     } else if (k != l->atual || a->tipo != PARTE_EP) t = e = -1;
   }
