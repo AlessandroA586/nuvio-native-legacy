@@ -5,10 +5,11 @@
 static float headingY;
 static GLuint headingTexture;
 static int overlayProbe;
-static int budgetBaseline;
-static int recordVeil(float fraction, float alpha) {
-  return budgetBaseline ? 0 : gfx_veu_card_por(fraction, alpha);
-}
+static float detailProgress;
+static float maskAlpha;
+static int maskClears;
+static void recordClear(GLbitfield mask) { maskClears++; glClear(mask); }
+static float recordDetail(void) { return detailProgress; }
 static const char *heading;
 static unsigned renderTime = 1000;
 static TxtLinha recordLine(TxtEstilo style, const char *s, int r, int g, int b, int a, float width) {
@@ -23,18 +24,8 @@ static void recordText(TxtLinha l, float x, float y) {
 static void recordRect(GfxRect r, GLuint tex, GfxModo mode, float focus,
                        float px, float py, float radius,
                        float red, float green, float blue, float alpha) {
-  if (budgetBaseline && r.x == 0 && r.y < 96 && r.w == 1920 &&
-      r.h <= 96 && (mode == GFX_VEU_CSS || mode == GFX_COR)) return;
-  if (budgetBaseline && mode == GFX_CARD && gfx_card_heroi_veu_atual[3] > 0) {
-    float alpha = gfx_card_heroi_veu_atual[3];
-    gfx_card_heroi_veu_atual[3] = 0;
-    gfx_rect(r, tex, mode, focus, px, py, radius, red, green, blue, 1);
-    gfx_rect(r, 0, GFX_VEU, 0, 1, 0, radius,
-             gfx_card_heroi_veu_atual[0], gfx_card_heroi_veu_atual[1],
-             gfx_card_heroi_veu_atual[2], alpha);
-    gfx_card_heroi_veu_atual[3] = alpha;
-    return;
-  }
+  if (r.x == 0 && r.y == 43.2f && mode == GFX_VEU_CSS)
+    maskAlpha = alpha * gfx_opacidade_grupo;
   if (overlayProbe == 1 && r.x == 0 && r.y == 0 && r.h <= 96 &&
       (mode == GFX_VEU_CSS || mode == GFX_COR)) {
     gfx_cor((GfxRect){0, 0, r.w, 96}, 0, 1, 1, 1, 1);
@@ -43,7 +34,6 @@ static void recordRect(GfxRect r, GLuint tex, GfxModo mode, float focus,
   gfx_rect(r, tex, mode, focus, px, py, radius, red, green, blue, alpha);
 }
 static void recordColor(GfxRect r, float radius, float red, float green, float blue, float alpha) {
-  if (budgetBaseline && r.x == 0 && r.y < 96 && r.w == 1920 && r.h <= 96) return;
   if (overlayProbe == 1 && r.x == 0 && r.y == 0 && r.h <= 96) {
     gfx_cor((GfxRect){0,0,r.w,96},0,1,1,1,1); overlayProbe = 2;
   }
@@ -57,29 +47,28 @@ static void recordClip(float x, float y, float w, float h) {
   }
   gfx_recorte(x, y, w, h);
 }
-static void recordClear(GLbitfield mask) {
-  if (!budgetBaseline) glClear(mask);
-}
-#define gfx_recorte recordClip
 #define glClear recordClear
+#define gfx_recorte recordClip
 #define txt_linha_corta recordLine
 #define gfx_cor recordColor
 #define txt_desenhar recordText
 #define gfx_rect recordRect
-#define gfx_veu_card_por recordVeil
-#include "../src/home.c"
-#undef gfx_recorte
+#define detail_progresso recordDetail
+#ifndef HOME_SOURCE
+#define HOME_SOURCE "../src/home.c"
+#endif
+#include HOME_SOURCE
 #undef glClear
+#undef gfx_recorte
 #undef txt_linha_corta
 #undef gfx_cor
 #undef txt_desenhar
 #undef gfx_rect
-#undef gfx_veu_card_por
+#undef detail_progresso
 #include "dados.h"
 #include <SDL2/SDL_image.h>
 #include <assert.h>
 
-static int budgetFailed;
 static SDL_Window *window;
 static CatItem items[12];
 static void setup(int split, int glass) {
@@ -89,6 +78,7 @@ static void setup(int split, int glass) {
   fprintf(f, "idioma 1\nhomeLayoutLocal 2\nmodernLandscapePostersEnabled 1\nbordaFocoCartaz 0\nvidroLocal %d\nselected_theme %d\n", glass ? 0 : 1,
           getenv("NV_HEROIS_TEMA") ? atoi(getenv("NV_HEROIS_TEMA")) : 0);
   fclose(f); ajustes_dir(getenv("NUVIO_DADOS"));
+  assert(ajustes_borda_foco());
   memset(fileiras, 0, sizeof fileiras);
   nFileiras = 2; focoHero = 0; foco.fileira = foco.coluna = 0;
   fileiras[0].tipo = split ? FILEIRA_HEROI_DIVIDIDO : FILEIRA_HEROI;
@@ -118,7 +108,7 @@ static void renderHome(int split, int probe) {
     glReadPixels(10,1080-96,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
     assert(pixel[0] > 245);
     puts("PASS top overlay: solid through 45%, then fades to 96px");
-  } else {
+  } else if (!getenv("NV_HEROIS_BASELINE")) {
     if (fabsf(headingY-(split ? 78 : 98))>=0.01f)
       fprintf(stderr,"heading=%g split=%d row=%d layout=%d scroll=%g\n",headingY,split,foco.fileira,layoutHome(),scrollY);
     assert(fabsf(headingY-(split ? 78 : 98))<0.01f);
@@ -143,21 +133,8 @@ static void capture(const char *prefix, int split, int glass, float scale) {
       snprintf(path,sizeof path,"%s-%s%s.png",prefix,split?"heroidiv":"heroicard",glass?"":"-semvidro");
       assert(IMG_SavePNG(s,path)==0); SDL_FreeSurface(s); free(pixels);
       printf("PNG %s; rects=%d fill=%.3f gpu=%.3f\n",path,gfx_n_rect,gfx_fill,gfx_fill_gpu);
-      if (scale == 1.0f) {
-        int draws = gfx_n_rect;
-        double fill = gfx_fill, gpu = gfx_fill_gpu;
-        // Same complete Home frame, with pre-fusion artwork/veils and no top overlay.
-        budgetBaseline = 1;
-        gfx_novo_quadro();
-        renderHome(split, 0);
-        budgetBaseline = 0;
-        printf("GPU Home split=%d glass=%d draws=%d/%d fill=%.6f/%.6f gpu=%.6f/%.6f (current/baseline)\n",
-               split, glass, draws, gfx_n_rect, fill, gfx_fill, gpu, gfx_fill_gpu);
-        if (draws > gfx_n_rect || fill > gfx_fill + 0.000001 || gpu > gfx_fill_gpu + 0.000001) {
-          fprintf(stderr, "FAIL whole Home GPU budget: split=%d glass=%d\n", split, glass);
-          budgetFailed = 1;
-        }
-      }
+      if (scale == 1.0f)
+        printf("BUDGET %d %d %d %.9f %.9f\n", split, glass, gfx_n_rect, gfx_fill, gfx_fill_gpu);
     }
     SDL_GL_SwapWindow(window); SDL_Delay(4);
   }
@@ -199,6 +176,30 @@ int main(int argc,char **argv) {
     SDL_Delay(4);
   }
   assert(tex_obter_larg(items[0].backdrop,1744));
+  if (getenv("NV_HEROIS_BASELINE")) {
+    for (int split=0;split<2;split++) for (int glass=0;glass<2;glass++)
+      capture(getenv("NUVIO_DADOS"),split,glass,1);
+    SDL_Quit(); return 0;
+  }
+#ifndef HERO_BASELINE
+  if(argc>1 && !strcmp(argv[1],"--transitions")) {
+    for (int split=0;split<2;split++) {
+      const float values[] = {0, 0.5f, 1};
+      for (int kind=0;kind<2;kind++) for (int i=0;i<3;i++) {
+        setup(split,0); heroCinema.v = kind == 0 ? values[i] : 0;
+        detailProgress = kind == 1 ? values[i] : 0;
+        maskAlpha = 0; maskClears = 0;
+        glClearColor(1,1,1,1); glClear(GL_COLOR_BUFFER_BIT);
+        home_desenhar(renderTime);
+        float expected = (1-detailProgress)*(1-trailercinema_t(&heroCinema));
+        fprintf(stderr,"mask split=%d detail=%g cinema=%g alpha=%g expected=%g\n",
+                split,detailProgress,heroCinema.v,maskAlpha,expected);
+        assert(fabsf(maskAlpha-expected)<0.001f);
+        if (i > 0) assert(maskClears == 0);
+      }
+    }
+    puts("PASS top mask cinema/detail transitions"); SDL_Quit(); return 0;
+  }
   if(argc>1 && !strcmp(argv[1],"--fade")) {
     setup(0,0); renderHome(0,1); SDL_Quit(); return 0;
   }
@@ -223,8 +224,7 @@ int main(int argc,char **argv) {
   }
   if (argc == 1) for (int split=0;split<2;split++) for (int glass=0;glass<2;glass++)
     capture(getenv("NUVIO_DADOS"),split,glass,1);
-  assert(!budgetFailed);
-  puts("PASS whole Home GPU budget: draws and fill <= unfused baseline, both Hero/glass modes");
+
   gfx_escala_txt_definir(1);
   setup(0,0);
   assert(fabsf(alturaFil(0)/larguraFil(0)-372.0f/1744)<0.0001f);
@@ -280,5 +280,6 @@ int main(int argc,char **argv) {
     TXT_FIM();
   }
   puts("PASS hero A: card aspect, three flush posters, shared 150px meta band, measured IMDb padding; scales 80/100/115%");
+#endif
   SDL_Quit(); return 0;
 }

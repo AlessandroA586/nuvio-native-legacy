@@ -7999,16 +7999,24 @@ static void home_desenhar_(Uint32 agora) {
   }
 
   gfx_opacidade_grupo=1;
-  // Clear the solid band without a fragment pass; split artwork carries its caption veil.
-  if (!focoHero && foco.fileira >= 0 && foco.fileira < nFileiras &&
+  // The top mask belongs to the row viewport and follows its transitions.
+  if (!fileirasOcultas && !vazioQr && corte < 96.0f &&
+      !focoHero && foco.fileira >= 0 && foco.fileira < nFileiras &&
       (fileiras[foco.fileira].tipo == FILEIRA_HEROI ||
        fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO)) {
-    gfx_recorte(0, 0, NV_TELA_W, 43.2f);
-    glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
-    gfx_sem_recorte();
+    float alpha = (1.0f - pd) * (1.0f - cinema);
+    gfx_recorte(0, corte, NV_TELA_W, 96.0f - corte);
+    if (alpha == 1.0f) {
+      gfx_recorte(0, corte, NV_TELA_W, fmaxf(0, 43.2f - corte));
+      glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1);
+      glClear(GL_COLOR_BUFFER_BIT);
+      gfx_recorte(0, corte, NV_TELA_W, 96.0f - corte);
+    } else {
+      gfx_cor((GfxRect){0, 0, NV_TELA_W, 43.2f}, 0,
+              NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, alpha);
+    }
     gfx_rect((GfxRect){0, 43.2f, NV_TELA_W, 52.8f}, 0, GFX_VEU_CSS, 0, 1, 1, 0,
-             NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1);
+             NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, alpha);
   }
   // DEVOLVE O REBORDO ao sair: a variavel e global e o detalhe, a busca e a
   // biblioteca desenham GFX_CARD tambem. O ajuste e "na Home", entao ele nao
