@@ -1934,7 +1934,7 @@ static void processarTorrentJob(void) {
     } else if (j->resultado == 0) {
       if (!player_id_canal()[0]) marcarFonteMorta(j->indice);
       player_erro_fonte_motivo(i18n("O serviço de debrid não abriu este torrent"),
-          i18n("Abra Fontes para escolher outra opção."));
+          i18n("O problema é do serviço de debrid, não do app. Abra Fontes e tente outra fonte."));
     } else {
       player_erro_fonte();
     }
@@ -2515,8 +2515,7 @@ static void vigiarAberturaManual(void) {
     sondarAposRecusa();
     fonteManualDesde = 0;
     marcarFonteMorta(stream_atual());
-    if (!player_fonte_falhou())
-      player_erro_fonte_motivo(i18n("Não foi possível abrir a fonte"), NULL);
+    if (!player_fonte_falhou()) player_erro_fonte();   // the cause comes from the player error
     return;
   }
   if (!fontevolta_abertura_vencida(&g, FONTE_MANUAL_PRAZO_MS) &&
