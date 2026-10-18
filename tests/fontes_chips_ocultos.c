@@ -27,6 +27,33 @@ int main(void) {
   assert(fraseVazioChips() && strstr(fraseVazioChips(), "MP4") && "empty state names the filters");
   soMp4 = 0;
   assert(!chipsOcultos(NULL, 0) && !fraseVazioChips());
+  v[0].emCache = v[1].emCache = 1;
+  snprintf(v[0].audioIdiomas, sizeof v[0].audioIdiomas, "pt");
+  snprintf(v[2].audioIdiomas, sizeof v[2].audioIdiomas, "pt");
+  ling_local_audio("pt");
+  filtro = 0; soCache = 1;
+  assert(chipsOcultos(NULL, 0) == 2 && nFiltrados() == 2);
+  soCache = 0; soDub = 1;
+  assert(chipsOcultos(NULL, 0) == 2 && nFiltrados() == 2);
+  soMp4 = soCache = 1;
+  assert(chipsOcultos(NULL, 0) == 3 && nFiltrados() == 1);
+  aberta = 1; grupo = 2; rolagem = 100; velRol = 10;
+  SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RETURN;
+  stream_folha_evento(&e);
+  assert(!soMp4 && !soCache && !soDub && !rolagem && !velRol);
+  assert(grupo == 1 && foco == 0 && nFiltrados() == 4 && !fraseDicaChips());
+  soMp4 = soCache = soDub = 1;
+  // Real font metrics: all filter names and the recovery instruction must fit.
+  gfx_tamanho_alvo(1920, 1080);
+  assert(txt_iniciar("deploy/app", 1));
+  txt_definir_fonte_interface(TXT_FAMILIA_MONTSERRAT);
+  const float width = FOLHA_W - FOLHA_PAD_E - FOLHA_PAD_D + 4 - 48;
+  float height = txt_bloco(TXT_HERO_META, fraseDicaChips(), 255,255,255,
+                           0,0,width,28,0,0);
+  assert(height > 28 && "fixture must require wrapping");
+  folhaGeometria();
+  assert(folhaDica >= height + 18 && "warning must reserve every wrapped line");
+  txt_encerrar();
   // A closed sheet must not inspect retained sources, with any quick filters enabled.
   void *guard = mmap(NULL, sizeof v, PROT_NONE, MAP_PRIVATE | MAP_ANON, -1, 0);
   assert(guard != MAP_FAILED);

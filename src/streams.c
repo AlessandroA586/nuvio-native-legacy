@@ -95,7 +95,6 @@ static int folhaRelogio; // Latched at opening, retained through closing.
 #define FOLHA_ABAS_H    56.0f
 #define FOLHA_ABA_H     44.0f  // a pilula de cada aba, dentro da faixa
 #define FOLHA_TOPO     (FOLHA_ABAS_Y + FOLHA_ABAS_H + 24.0f + folhaOY + folhaDica)
-#define FOLHA_DICA_H    46.0f  // linha "N fontes ocultas por ..." sob as abas (so com filtro rapido ocultando)
 static void medirCabecalho(void);
 #define FOLHA_LINHA_H  112.0f  // linha sem marca e sem arquivo
 #define FOLHA_MARCA_H   30.0f  // "SUA ESCOLHA ANTERIOR" / "REPRODUZINDO AGORA"
@@ -4092,7 +4091,9 @@ static void folhaGeometria(void) {
     folhaOY = 0.0f;
     folhaBase = NV_TELA_H - FOLHA_MARGEM - 16.0f;
   }
-  folhaDica = chipsOcultos(NULL, 0) ? FOLHA_DICA_H : 0.0f;
+  const char *dica = fraseDicaChips();
+  folhaDica = dica ? 18.0f + txt_bloco(TXT_HERO_META, dica, 255,255,255, 0,0,
+      FOLHA_W-FOLHA_PAD_E-FOLHA_PAD_D+4.0f-48.0f, 28.0f, 0, 0) : 0.0f;
 }
 static float areaLista(void) { return folhaBase - FOLHA_TOPO; }
 // A linha em foco no meio da area; a primeira de um grupo leva o cabecalho
@@ -4999,13 +5000,16 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       txt_desenhar_alpha(num[qidx],r.x+22+nome[qidx].w+10,r.y+(FOLHA_ABA_H-num[qidx].h)*.5f+1,anim);
       sx+=iw[qidx]+6.0f; } }
   // AVISO DOS FILTROS RAPIDOS, sob as abas: quantas fontes eles escondem. OK
-  // (ou toque) tira todos. Reserva FOLHA_DICA_H so enquanto houver o que avisar.
+  // (ou toque) tira todos. Reserva todas as linhas, inclusive a acao de recuperar.
   { const char *dica = fraseDicaChips();
     if (dica) {
       float tw = (float)txt_linha(TXT_HERO_META, dica, 255, 255, 255, 255).w;
-      GfxRect r = {lx-2.0f, FOLHA_ABAS_Y+oy+FOLHA_ABAS_H+6.0f, fminf(tw+48.0f, rw+4.0f), FOLHA_DICA_H-6.0f};
+      GfxRect r = {lx-2.0f, FOLHA_ABAS_Y+oy+FOLHA_ABAS_H+6.0f, fminf(tw+48.0f, rw+4.0f), folhaDica-6.0f};
       if (ptr) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroFolhaDica, NULL, 0, 0);
-      chipFolha(r, dica, r.w-48.0f, NULL, grupo==2, 1, anim);
+      chipFolha(r, "", r.w-48.0f, NULL, grupo==2, 1, anim);
+      int c = ajustes_tinta_foco();
+      txt_bloco(TXT_HERO_META, dica, grupo==2?c:ai, grupo==2?c:(int)(ag*255),
+                grupo==2?c:(int)(ab*255), r.x+24.0f, r.y+6.0f, r.w-48.0f, 28.0f, anim, 0);
     } }
   // The list comes in from the side the new tab is on, fading up.
   const float animLista=anim, dxLista=trocaDir*28.0f*(1-trocaEase(agora));
