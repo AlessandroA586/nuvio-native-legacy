@@ -199,16 +199,8 @@ static long redeLimiteAtual(void) {
 // abrir. O emcc compila aquele codigo sem reclamar — dlfcn.h tem stubs — e o
 // unico sintoma e a tela de login dizendo "sem fio para falar com o servidor".
 //
-// POR QUE XHR SINCRONO E NAO emscripten_fetch: rede_url_final precisa do
-// ENDERECO FINAL depois dos redirecionamentos, para distinguir um link de
-// debrid que leva ao arquivo de um que leva a "downloading.mp4". emscripten_fetch
-// nao expoe isso; XHR expoe, em responseURL. Um mecanismo so, com cabecalhos,
-// status, Range e endereco final, e mais simples que dois.
-//
-// XHR sincrono BLOQUEIA o fio que chama, que e exatamente o contrato de
-// rede_baixar ("BLOQUEIA — chamar de um fio proprio"). Nos fios de trabalho ele
-// e plenamente suportado; no fio principal o navegador ainda o atende, com um
-// aviso no console.
+// Fetch exposes the final response URL and allows deadline/size aborts.
+// The C API still waits: pthreads yield through Asyncify, fibers to fio1.
 //
 // CORS: NO NAVEGADOR COMUM, ISTO NAO FUNCIONA E NAO E DEFEITO. Os hosts de
 // addon, o TMDB e o Supabase nao mandam Access-Control-Allow-Origin para uma
@@ -217,10 +209,10 @@ static long redeLimiteAtual(void) {
 // JavaScript funciona na TV. Para testar no Chrome do desktop e preciso subir o
 // navegador com --disable-web-security ou por um proxy.
 //
-// Worker synchronous XHR supports timeout. On the browser main thread it
-// throws InvalidAccessError: fail instead of starting an unbounded request.
+// Requests stop at their deadline, including while reading the response.
 
 #include <emscripten.h>
+#include <emscripten/threading.h>
 #include "fio1.h"   // so tem corpo com NV_UM_FIO; nv_http troca de implementacao abaixo
 
 // Faz a requisicao e devolve um buffer de malloc com o corpo (com um NUL extra
@@ -231,194 +223,125 @@ static long redeLimiteAtual(void) {
 // separadas por \n, porque atravessar um vetor de ponteiros por EM_JS custaria
 // mais codigo do que juntar e separar.
 //
-// DUAS IMPLEMENTACOES, MESMA ASSINATURA C, nada abaixo desta regiao muda:
-// pedir2() chama nv_http() sem saber qual das duas esta ativa.
-//
-//   mt/ (pthreads de verdade): XHR SINCRONO. O fio que chama fica bloqueado
-//   de verdade, que e o contrato de rede_baixar ("chamar de um fio proprio")
-//   — o worker pthread trava, os outros workers e o fio principal seguem.
-//
-//   st/ (--um-fio, NV_UM_FIO): nao ha OUTRO fio de verdade para travar sem
-//   travar TUDO — so existe este fio de JS. Por isso aqui e fetch()
-//   ASSINCRONO, mas com um cuidado que nao e obvio: um EM_ASYNC_JS comum
-//   (await fetch(...)) suspenderia, via ASYNCIFY, a PILHA INTEIRA desta
-//   fibra e devolveria o controle ao LACO DE EVENTOS DO NAVEGADOR ate a
-//   promessa resolver — exatamente o mesmo mecanismo de nv_ceder_quadro em
-//   main.c. Isso tiraria o controle do ESCALONADOR DE FIBRAS (fio1.c) pelo
-//   tempo inteiro da requisicao: nenhuma OUTRA fibra (nem o proprio desenho,
-//   que so roda quando o fio principal volta a chamar fio1_rodar a cada
-//   quadro) rodaria nesse meio tempo — o app inteiro pareceria travado numa
-//   unica requisicao de rede, o oposto do que pthreads de verdade dão.
-//
-//   A saida e nao usar EM_ASYNC_JS aqui: o fetch() e disparado por uma
-//   EM_JS comum (sincrona, so entrega o pedido e devolve um id na hora), e a
-//   fibra chamadora fica num LACO POLLING fio1_ceder()+nv_http_pronto_assinc,
-//   que devolve o controle ao ESCALONADOR (nao ao navegador) a cada volta —
-//   as demais fibras (e o desenho, via fio1_rodar no laco de quadro) correm
-//   normalmente enquanto o fetch() ainda esta em voo no proprio navegador.
-#ifdef NV_UM_FIO
-
+// One bounded reader serves worker threads and cooperative fibers.
 EM_JS(int, nv_http_iniciar_assinc, (const char *metodo, const char *url,
-                                    const char *cabs, const char *corpo, int prazo), {
+                                    const char *cabs, const char *corpo, int prazo,
+                                    int teto, int modo), {
   if (!Module.nvFioReqs) { Module.nvFioReqs = {}; Module.nvFioProxId = 1; }
   var id = Module.nvFioProxId++;
-  var m = UTF8ToString(metodo), u = UTF8ToString(url);
   var cab = {};
-  if (cabs) {
-    UTF8ToString(cabs).split("\n").forEach(function (linha) {
-      var i = linha.indexOf(":");
-      if (i <= 0) return;
-      cab[linha.slice(0, i).trim()] = linha.slice(i + 1).trim();
-    });
-  }
-  // redirect:'follow' (padrao do fetch) para manter o mesmo comportamento do
-  // XHR sincrono: rede_url_final quer o ENDERECO FINAL depois de
-  // redirecionamentos (res.url), nao o pedido.
+  if (cabs) UTF8ToString(cabs).split("\n").forEach(function (linha) {
+    var i = linha.indexOf(":");
+    if (i > 0) cab[linha.slice(0, i).trim()] = linha.slice(i + 1).trim();
+  });
   var controle = new AbortController();
-  var init = { method: m, headers: cab, redirect: "follow", signal: controle.signal };
-  if (corpo) init.body = UTF8ToString(corpo);
-  var reg = { pronto: false, erro: false, status: 0, url: "", etag: "", bytes: null };
+  var reg = { pronto: false, erro: false, status: 0, url: "", etag: "", bytes: null,
+              mime: "", tamanho: -1, retry: 0, limitado: false };
   Module.nvFioReqs[id] = reg;
+  var terminar = function () {
+    if (reg.pronto) return;
+    reg.pronto = true;
+    clearTimeout(timer);
+  };
   var timer = setTimeout(function () {
-    reg.erro = true; reg.pronto = true; controle.abort();
+    reg.erro = true; controle.abort(); terminar();
   }, prazo);
-  fetch(u, init).then(function (res) {
+  var init = { method: UTF8ToString(metodo), headers: cab, redirect: "follow", signal: controle.signal };
+  if (corpo) init.body = UTF8ToString(corpo);
+  teto = teto > 0 ? teto : 33554432;
+  fetch(UTF8ToString(url), init).then(async function (res) {
     reg.status = res.status;
-    // Pelo /v1/proxy do worker (so no VIDAA), res.url e o endereco do PROXY;
-    // o destino real depois dos redirecionamentos vem neste cabecalho, que o
-    // worker expoe por CORS. Sem proxy ele nao existe e vale res.url.
     reg.url = res.headers.get("x-nuvio-url-final") || res.url || "";
-    // getResponseHeader (XHR) e headers.get (fetch) tem a mesma regra: null
-    // quando o servidor nao mandou (ou o CORS escondeu) — string vazia e a
-    // resposta certa para quem chama nos dois casos.
     reg.etag = res.headers.get("etag") || "";
-    return res.arrayBuffer();
-  }).then(function (buf) {
-    // arrayBuffer(), nao responseText+charset=x-user-defined como no XHR
-    // sincrono: aqui os bytes vem binarios de verdade, sem o truque de
-    // tunelar byte a byte por um charset de 1 byte.
-    reg.bytes = new Uint8Array(buf);
-    reg.pronto = true;
-  }).catch(function () {
-    // Mesma regra do XHR sincrono: falha de rede (CORS, DNS, offline) vira
-    // "requisicao nem saiu" — nv_http_colher_assinc devolve 0.
-    reg.erro = true;
-    reg.pronto = true;
-  }).finally(function () { clearTimeout(timer); });
+    reg.mime = (res.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    var cl = res.headers.get("content-length");
+    reg.tamanho = res.status === 200 && cl !== null && /^\\d+$/.test(cl.trim()) ? (Number(cl) <= 64 ? Number(cl) : -1) : -1;
+    var raw = (res.headers.get("retry-after") || "").trim();
+    if (/^[0-9]+$/.test(raw)) reg.retry = Math.min(2147483647, Number(raw));
+    else if (/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i.test(raw)) {
+      var until = Date.parse(raw);
+      if (isFinite(until)) reg.retry = Math.min(2147483647, Math.max(0, Math.ceil((until - Date.now()) / 1000)));
+    }
+    if (modo === 1) { controle.abort(); reg.bytes = new Uint8Array(0); return; }
+    if (!res.body) { reg.bytes = new Uint8Array(0); return; }
+    // No arrayBuffer fallback: it would allocate an unbounded body.
+    var reader = res.body.getReader(), parts = [], n = 0;
+    while (!reg.pronto) {
+      var part = await reader.read();
+      if (part.done) break;
+      var take = Math.min(part.value.length, teto - n);
+        if (modo !== 2 && take) parts.push(part.value.slice(0, take));
+      n += take;
+      if (part.value.length > take || n === teto) {
+        reg.limitado = true; controle.abort(); break;
+      }
+    }
+    if (reg.pronto) return;
+    reg.n = n;
+    reg.retry = reg.retry || 0;
+    reg.bytes = new Uint8Array(modo === 2 ? 0 : n);
+    var offset = 0;
+    parts.forEach(function (p) { reg.bytes.set(p, offset); offset += p.length; });
+  }).catch(function (e) { if (!reg.pronto && e && e.name === 'AbortError') reg.erro = true; })
+    .finally(terminar);
   return id;
 });
 
-// Nao-bloqueante DE VERDADE (nao e EM_ASYNC_JS): so olha uma flag. E o que
-// permite ao chamador ceder para outras fibras entre uma chamada e outra.
 EM_JS(int, nv_http_pronto_assinc, (int id), {
   var reg = Module.nvFioReqs && Module.nvFioReqs[id];
-  return (reg && reg.pronto) ? 1 : 0;
+  return reg && reg.pronto ? 1 : 0;
 });
 
 EM_JS(char *, nv_http_colher_assinc, (int id, int *tam, int *status,
                                       char *urlFinal, int urlFinalTam,
-                                      char *etag, int etagTam), {
-  var reg = Module.nvFioReqs && Module.nvFioReqs[id];
-  if (Module.nvFioReqs) delete Module.nvFioReqs[id];
+                                      char *etag, int etagTam, int *retryAfter,
+                                      int *limitado, char *mime, int mimeTam,
+                                      long *tamanho, int modo), {
+  var reg = Module.nvFioReqs[id];
+  delete Module.nvFioReqs[id];
   if (status) HEAP32[status >> 2] = 0;
   if (tam) HEAP32[tam >> 2] = 0;
+  if (tamanho) HEAP32[tamanho >> 2] = reg && !reg.erro ? reg.tamanho : -1;
+  if (retryAfter) HEAP32[retryAfter >> 2] = reg ? reg.retry : 0;
   if (!reg || reg.erro || !reg.bytes) return 0;
   if (status) HEAP32[status >> 2] = reg.status;
   if (urlFinal && urlFinalTam > 0) stringToUTF8(reg.url, urlFinal, urlFinalTam);
   if (etag && etagTam > 0) stringToUTF8(reg.etag, etag, etagTam);
-  var n = reg.bytes.length;
-  var p = _malloc(n + 1);
+  if (mime && mimeTam > 0) stringToUTF8(reg.mime, mime, mimeTam);
+  if (limitado) HEAP32[limitado >> 2] = reg.limitado ? 1 : 0;
+  if (modo) { if (tam) HEAP32[tam >> 2] = reg.n || 0; return 1; }
+  var n = reg.bytes.length, p = _malloc(n + 1);
   if (!p) return 0;
-  HEAPU8.set(reg.bytes, p);
-  HEAPU8[p + n] = 0;
+  HEAPU8.set(reg.bytes, p); HEAPU8[p + n] = 0;
   if (tam) HEAP32[tam >> 2] = n;
   return p;
 });
+
+static void nv_http_esperar(int id) {
+  while (!nv_http_pronto_assinc(id)) {
+#ifdef NV_UM_FIO
+    fio1_ceder();
+#else
+    emscripten_sleep(1);
+#endif
+  }
+}
 
 static char *nv_http(const char *metodo, const char *url, const char *cabs,
                      const char *corpo, int *tam, int *status,
                      char *urlFinal, int urlFinalTam,
                      char *etag, int etagTam, int *retryAfter, int prazo) {
-  int id = nv_http_iniciar_assinc(metodo, url, cabs, corpo, prazo);
-  // Retry-After nao e lido no st/: 0 = "sem pista", o chamador usa a espera padrao.
-  if (retryAfter) *retryAfter = 0;
-  // fio1_ceder() dentro de uma fibra troca para outra fibra pronta (ou para
-  // o desenho, via o escalonador); chamado da RAIZ (fio principal fora de
-  // fibra — nao deveria acontecer aqui, rede_baixar exige "fio proprio", mas
-  // sem essa garantia em tempo de compilacao) ele gira o escalonador em vez
-  // de travar o navegador parado num while(1) puro.
-  while (!nv_http_pronto_assinc(id)) fio1_ceder();
-  return nv_http_colher_assinc(id, tam, status, urlFinal, urlFinalTam, etag, etagTam);
+  int limitado = 0, id;
+  long limite = redeLimiteAtual();
+  if (limite <= 0 || limite > REDE_CORPO_MAXIMO) limite = REDE_CORPO_MAXIMO;
+  id = nv_http_iniciar_assinc(metodo, url, cabs, corpo, prazo, (int)limite, 0);
+  // Worker event loops must run fetch callbacks while C waits.
+  nv_http_esperar(id);
+  char *r = nv_http_colher_assinc(id, tam, status, urlFinal, urlFinalTam,
+                                 etag, etagTam, retryAfter, &limitado, NULL, 0, NULL, 0);
+  if (limitado) redeLimitouLocal = 1;
+  return r;
 }
-
-#else /* !NV_UM_FIO: mt/, pthreads de verdade, XHR sincrono de sempre */
-
-EM_JS(char *, nv_http, (const char *metodo, const char *url, const char *cabs,
-                        const char *corpo, int *tam, int *status,
-                        char *urlFinal, int urlFinalTam,
-                        char *etag, int etagTam, int *retryAfter, int prazo), {
-  var m = UTF8ToString(metodo), u = UTF8ToString(url);
-  var xhr = new XMLHttpRequest();
-  try {
-    xhr.open(m, u, false);   // false = sincrono
-    xhr.timeout = prazo;
-  } catch (e) { return 0; }
-  // Le a resposta como texto BRUTO, byte a byte. responseType='arraybuffer' é
-  // proibido em XHR sincrono no fio principal, e a mesma funcao serve os dois
-  // lados; este truque de charset entrega os bytes intactos em qualquer um.
-  try { xhr.overrideMimeType("text/plain; charset=x-user-defined"); } catch (e) {}
-  if (cabs) {
-    UTF8ToString(cabs).split("\n").forEach(function (linha) {
-      var i = linha.indexOf(":");
-      if (i <= 0) return;
-      try {
-        xhr.setRequestHeader(linha.slice(0, i).trim(), linha.slice(i + 1).trim());
-      } catch (e) {}
-    });
-  }
-  try {
-    xhr.send(corpo ? UTF8ToString(corpo) : null);
-  } catch (e) { return 0; }
-
-  if (status) HEAP32[status >> 2] = xhr.status;
-  if (urlFinal && urlFinalTam > 0) {
-    // x-nuvio-url-final: so o /v1/proxy do worker manda (VIDAA). Pelo proxy,
-    // responseURL e o endereco do proprio proxy e nao diz para onde a fonte
-    // redirecionou; nos outros alvos o cabecalho nunca vem e nada muda.
-    var fim = null;
-    try { fim = xhr.getResponseHeader("x-nuvio-url-final"); } catch (e) {}
-    stringToUTF8(fim || xhr.responseURL || "", urlFinal, urlFinalTam);
-  }
-  // Cabecalho de RESPOSTA, para rede_baixar_etag. getResponseHeader devolve
-  // null quando o servidor nao mandou o cabecalho (ou quando o CORS o esconde);
-  // nos dois casos a string vazia e a resposta certa para quem chama.
-  if (etag && etagTam > 0) {
-    stringToUTF8(xhr.getResponseHeader("etag") || "", etag, etagTam);
-  }
-  if (retryAfter) {
-    // null significa ausente OU oculto pelo CORS, nao um prazo inventado.
-    var raw = "", wait = 0;
-    try { raw = (xhr.getResponseHeader("retry-after") || "").trim(); } catch (e) {}
-    if (/^[0-9]+$/.test(raw)) {
-      wait = Math.min(2147483647, Number(raw));
-    } else if (/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i.test(raw)) {
-      var until = Date.parse(raw);
-      if (isFinite(until)) wait = Math.max(0, Math.ceil((until - Date.now()) / 1000));
-    }
-    HEAP32[retryAfter >> 2] = Math.min(2147483647, wait);
-  }
-
-  var s = xhr.responseText || "";
-  var n = s.length;
-  var p = _malloc(n + 1);
-  if (!p) return 0;
-  for (var i = 0; i < n; i++) HEAPU8[p + i] = s.charCodeAt(i) & 0xff;
-  HEAPU8[p + n] = 0;
-  if (tam) HEAP32[tam >> 2] = n;
-  return p;
-});
-
-#endif /* NV_UM_FIO */
 
 #ifndef NV_UM_FIO
 _Thread_local long rede_teto = 0;
@@ -836,22 +759,18 @@ static char *pedir(const char *metodo, const char *url, int segundos, const char
 
 char *rede_baixar_etag(const char *url, int segundos, const char *const *cab,
                        int *status, char *etag, unsigned tamEtag) {
-  (void)segundos;
   return pedir2("GET", url, segundos, cab, NULL, NULL, NULL, status, etag, tamEtag, NULL);
 }
 
 char *rede_baixar(const char *url, int segundos) {
-  (void)segundos;
   return pedir("GET", url, segundos, NULL, NULL, NULL, NULL, NULL);
 }
 
 char *rede_baixar_bin(const char *url, int segundos, long *tam) {
-  (void)segundos;
   return pedir("GET", url, segundos, NULL, NULL, NULL, tam, NULL);
 }
 
 char *rede_baixar_com(const char *url, int segundos, const char *const *cab) {
-  (void)segundos;
   return pedir("GET", url, segundos, cab, NULL, NULL, NULL, NULL);
 }
 
@@ -859,18 +778,15 @@ char *rede_baixar_com(const char *url, int segundos, const char *const *cab) {
 // e loga so o host (rede_url_publica) — a url do painel vai no corpo e nunca
 // passa por aqui em log.
 char *rede_postar_bin(const char *url, int segundos, const char *corpo, long *tam) {
-  (void)segundos;
   return pedir("POST", url, segundos, NULL, "Content-Type: text/plain", corpo ? corpo : "", tam, NULL);
 }
 
 char *rede_baixar_st(const char *url, int segundos, const char *const *cab,
                      int *status) {
-  (void)segundos;
   return pedir("GET", url, segundos, cab, NULL, NULL, NULL, status);
 }
 char *rede_baixar_st_retry(const char *url, int segundos, const char *const *cab,
                            int *status, int *retryAfter) {
-  (void)segundos;
   return pedir2("GET", url, segundos, cab, NULL, NULL, NULL, status, NULL, 0, retryAfter);
 }
 
@@ -884,7 +800,6 @@ static char *trechoUmaVez(const char *url, int segundos, long long ini, long lon
   const char *cab[2];
   char *r;
   int st = 0;
-  (void)segundos;
   if (erro) *erro = 0;
   if (final && tamFinal) final[0] = 0;
   snprintf(faixa, sizeof faixa, "Range: bytes=%lld-%lld", ini, fim);
@@ -917,7 +832,6 @@ char *rede_postar(const char *url, int segundos, const char *const *cab,
 char *rede_apagar(const char *url, int segundos, const char *const *cab,
                   int *status) {
   char *r;
-  (void)segundos;
   r = pedir("DELETE", url, segundos, cab, NULL, NULL, NULL, status);
   // 204 sem corpo e a resposta NORMAL de um DELETE aceito. Devolver NULL ali
   // faria o chamador ler sucesso como falha de transporte.
@@ -929,7 +843,6 @@ char *rede_postar_st(const char *url, int segundos, const char *const *cab,
                      const char *corpo, int *status) {
   int temCt = 0, k;
   char *r;
-  (void)segundos;
   // JSON e o padrao (Supabase, Trakt); quem manda o proprio Content-Type
   // (Real-Debrid quer form-urlencoded) nao recebe um segundo.
   for (k = 0; cab && cab[k]; k++)
@@ -970,45 +883,23 @@ static int sondaVidaa(const char *url, int segundos, const char *cabs, char *dst
   return *http > 0 ? 0 : -1;
 }
 #else
-// Sonda sem corpo atravessando a ponte. O XHR ainda recebe o corpo inteiro se
-// o servidor ignorar Range, mas nao aloca essa copia no heap do WASM.
-EM_JS(int, nv_url_sonda, (const char *url, const char *cabs, char *dst,
-                         int tam, int *status, char *mime, int mimeTam, long *corpo, int prazo), {
-  var xhr = new XMLHttpRequest();
-  if (status) HEAP32[status >> 2] = 0;
-  try {
-    xhr.open("GET", UTF8ToString(url), false);
-    xhr.timeout = prazo;
-    if (cabs) UTF8ToString(cabs).split("\n").forEach(function (linha) {
-      var i = linha.indexOf(":");
-      if (i <= 0) return;
-      try { xhr.setRequestHeader(linha.slice(0, i).trim(), linha.slice(i + 1).trim()); } catch (e) {}
-    });
-    xhr.setRequestHeader("Range", "bytes=0-63");
-    xhr.send(null);
-  } catch (e) { return 0; }
-  if (status) HEAP32[status >> 2] = xhr.status;
-  if (mime && mimeTam > 0) {
-    var ct = (xhr.getResponseHeader("Content-Type") || "").split(";")[0].trim().toLowerCase();
-    stringToUTF8(ct, mime, mimeTam);
+// Probe headers only: abort before downloading media, even if Range is ignored.
+static int nv_url_sonda(const char *url, const char *cabs, char *dst,
+                         int tam, int *status, char *mime, int mimeTam, long *corpo, int prazo) {
+  int id;
+  char *headers = cabs && *cabs ? NULL : strdup("Range: bytes=0-63");
+  if (cabs && *cabs) {
+    headers = malloc(strlen(cabs) + 22);
+    if (headers) sprintf(headers, "%s\nRange: bytes=0-63", cabs);
   }
-  if (corpo) {
-    // Pelo Content-Length, sem ler o corpo (nao copia midia para o JS).
-    var cl = xhr.getResponseHeader("Content-Length");
-    var len = (xhr.status === 200 && cl !== null && /^\\d+$/.test(cl.trim())) ? parseInt(cl, 10) : -1;
-    HEAP32[corpo >> 2] = len > 64 ? -1 : len;
-  }
-  var finalUrl = xhr.responseURL || "";
-  var bytes = 0;
-  for (var k = 0; k < finalUrl.length; k++) {
-    var code = finalUrl.charCodeAt(k);
-    if (code >= 0xD800 && code <= 0xDBFF && k + 1 < finalUrl.length) { bytes += 4; k++; }
-    else bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : 3;
-  }
-  if (xhr.status < 200 || xhr.status >= 300 || !finalUrl || bytes >= tam) return 0;
-  stringToUTF8(finalUrl, dst, tam);
-  return 1;
-});
+  if (!headers) return 0;
+  id = nv_http_iniciar_assinc("GET", url, headers, NULL, prazo, 64, 1);
+  free(headers);
+  nv_http_esperar(id);
+  char *ok = nv_http_colher_assinc(id, NULL, status, dst, tam, NULL, 0, NULL,
+                                  NULL, mime, mimeTam, corpo, 1);
+  return ok && *status >= 200 && *status < 300 && dst[0];
+}
 #endif
 
 int rede_url_final_cab(const char *url, int segundos, const char *const *cab,
@@ -1022,7 +913,6 @@ int rede_url_final_tipo(const char *url, int segundos, const char *const *cab,
   char *cabs;
   int ok, http = 0;
   long c32 = -1;
-  (void)segundos;
   if (status) *status = 0;
   if (mime && mimeTam) mime[0] = 0;
   if (corpo) *corpo = -1;
@@ -1059,7 +949,6 @@ int rede_url_final(const char *url, int segundos, char *dst, unsigned tam) {
 // ROTINEIRO, nao a excecao, e e exatamente o que -1 comunica ao chamador.
 int rede_url_final_vidaa(const char *url, int segundos, char *dst, unsigned tam) {
   int http;
-  (void)segundos;
   if (!url || !*url || !dst || tam == 0) return -1;
   return sondaVidaa(url, segundos, NULL, dst, tam, &http);
 }
@@ -1081,29 +970,19 @@ int rede_url_final_vidaa(const char *url, int segundos, char *dst, unsigned tam)
 // Mesma limitacao ja escrita em pedir2: servidor que IGNORA o Range manda o
 // arquivo inteiro, e a chamada so volta depois. Os CDNs de debrid honram
 // Range; se um nao honrar, o teste trava o fio dele ate o navegador desistir.
-EM_JS(int, nv_http_contar, (const char *url, const char *cabs, double ini,
+static int nv_http_contar(const char *url, const char *cabs, double ini,
                             double fim, int *status, char *urlFinal,
-                            int urlFinalTam, int prazo), {
-  var xhr = new XMLHttpRequest();
-  HEAP32[status >> 2] = 0;
-  try { xhr.open("GET", UTF8ToString(url), false); xhr.timeout = prazo; } catch (e) { return -1; }
-  try { xhr.overrideMimeType("text/plain; charset=x-user-defined"); } catch (e) {}
-  if (cabs) {
-    UTF8ToString(cabs).split("\n").forEach(function (linha) {
-      var i = linha.indexOf(":");
-      if (i <= 0) return;
-      try {
-        xhr.setRequestHeader(linha.slice(0, i).trim(), linha.slice(i + 1).trim());
-      } catch (e) {}
-    });
-  }
-  try { xhr.setRequestHeader("Range", "bytes=" + ini + "-" + fim); } catch (e) {}
-  try { xhr.send(null); } catch (e) { return -1; }
-  HEAP32[status >> 2] = xhr.status;
-  if (urlFinal && urlFinalTam > 0) stringToUTF8(xhr.responseURL || "", urlFinal, urlFinalTam);
-  var s = xhr.responseText || "";
-  return s.length;
-});
+                            int urlFinalTam, int prazo) {
+  int id, n = 0;
+  char *headers = malloc((cabs ? strlen(cabs) : 0) + 96);
+  if (!headers) return -1;
+  sprintf(headers, "%s%sRange: bytes=%.0f-%.0f", cabs ? cabs : "", cabs && *cabs ? "\n" : "", ini, fim);
+  id = nv_http_iniciar_assinc("GET", url, headers, NULL, prazo, (int)(fim - ini + 1), 2);
+  free(headers);
+  nv_http_esperar(id);
+  return nv_http_colher_assinc(id, &n, status, urlFinal, urlFinalTam, NULL, 0, NULL,
+                              NULL, NULL, 0, NULL, 2) ? n : -1;
+}
 
 void rede_vazao_espera(unsigned long ms) { (void)ms; }
 

@@ -17,27 +17,28 @@ function bridge(file, name) {
       '#define EM_JS(ret,name,args,...) const char *body = #__VA_ARGS__;\n' +
       match[0] + '\nint main(void) { puts(body); }\n');
     cp.execFileSync('cc', [path.join(dir, 'bridge.c'), '-o', path.join(dir, 'bridge')], {stdio:'pipe'});
-    return cp.execFileSync(path.join(dir, 'bridge'), {encoding:'utf8'}).trim().slice(1, -1);
+    let out = cp.execFileSync(path.join(dir, 'bridge'), {encoding:'utf8'}).trim();
+    return out.trim();
   } finally { fs.rmSync(dir, {recursive:true, force:true}); }
 }
 
-function probe() {
-  const heap = new Int32Array(32);
-  let length = '9';
-  class XHR {
-    open() {} setRequestHeader() {}
-    send() { this.status = 200; this.responseURL = 'https://fixture.invalid/final'; }
-    getResponseHeader(key) { return key === 'Content-Length' ? length : null; }
-  }
-  const context = {XMLHttpRequest:XHR, HEAP32:heap, UTF8ToString:x=>x, stringToUTF8() {}};
-  const run = vm.runInNewContext('(function(url,cabs,dst,tam,status,mime,mimeTam,corpo,prazo) {' +
-    bridge('src/rede.c', 'nv_url_sonda') + '})', context);
+async function probe() {
   for (const [raw, expected] of [['9',9], [' 64 ',64], ['65',-1], ['ddd',-1], ['9x',-1], [null,-1]]) {
-    length = raw;
-    assert.equal(run('https://fixture.invalid',0,8,256,4,0,0,12,1000), 1);
-    assert.equal(heap[3], expected, 'Content-Length ' + raw);
+    let aborted = false;
+    const module = {};
+    const run = vm.runInNewContext('(function(metodo,url,cabs,corpo,prazo,teto,modo){' +
+      bridge('src/rede.c','nv_http_iniciar_assinc') + '})', {
+      Module:module,UTF8ToString:x=>x,setTimeout,clearTimeout,Uint8Array,
+      AbortController:class {abort(){aborted=true;}},
+      fetch:async()=>({status:200,url:'url',headers:{get:key=>key==='content-length'?raw:null},
+        body:{getReader(){throw Error('probe must not read media');}}})
+    });
+    run('GET','url',0,0,1000,64,1);
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(module.nvFioReqs[1].tamanho,expected,'Content-Length '+raw);
+    assert(aborted); assert(!module.nvFioReqs[1].erro);
   }
-  console.log('PASS: generated probe validates numeric Content-Length');
+  console.log('PASS: generated probe validates Content-Length and aborts before media');
 }
 
 function avplay() {
@@ -138,41 +139,40 @@ function fatal() {
 }
 
 async function deadlines() {
-  const heap = new ArrayBuffer(1024);
-  const context = {HEAP32:new Int32Array(heap),HEAPU8:new Uint8Array(heap),
-    UTF8ToString:x=>x,stringToUTF8(){},_malloc:()=>128,Date};
-  let timeout;
-  context.XMLHttpRequest = class {
-    open() {} overrideMimeType() {} setRequestHeader() {}
-    send() { timeout = this.timeout; throw Error('deadline elapsed'); }
-  };
-  for (const [name,args] of [
-    ['nv_http',['GET','https://fixture.invalid',0,0,4,8,0,0,0,0,0,37]],
-    ['nv_url_sonda',['https://fixture.invalid',0,8,256,4,0,0,12,37]],
-    ['nv_http_contar',['https://fixture.invalid',0,0,63,4,0,0,37]]
-  ]) {
-    const params = {nv_http:'metodo,url,cabs,corpo,tam,status,urlFinal,urlFinalTam,etag,etagTam,retryAfter,prazo',
-      nv_url_sonda:'url,cabs,dst,tam,status,mime,mimeTam,corpo,prazo',
-      nv_http_contar:'url,cabs,ini,fim,status,urlFinal,urlFinalTam,prazo'}[name];
-    const run = vm.runInNewContext('(function(' + params + '){' + bridge('src/rede.c',name) + '})',context);
-    timeout = undefined; run(...args);
-    assert.equal(timeout,37,name + ' must set transport timeout before send');
-  }
-  const source = fs.readFileSync('src/rede.c','utf8');
-  const body = source.match(/EM_JS\(int, nv_http_iniciar_assinc,[\s\S]*?, \{([\s\S]*?)\n\}\);/)[1];
   const module = {};
   let aborted = false, elapsed;
-  vm.runInNewContext('(function(metodo,url,cabs,corpo,prazo){' + body + '})("GET","url",0,0,37)', {
+  const run = vm.runInNewContext('(function(metodo,url,cabs,corpo,prazo,teto,modo){' +
+    bridge('src/rede.c','nv_http_iniciar_assinc') + '})', {
     Module:module,UTF8ToString:x=>x,AbortController:class {abort(){aborted=true;}},
     setTimeout:(fn,ms)=>{elapsed=ms;fn();return 1;},clearTimeout(){},
     fetch:()=>new Promise(()=>{})
   });
+  run('GET','url',0,0,37,64,0);
   assert.equal(elapsed,37); assert(aborted);
-  assert.equal(module.nvFioReqs[1].pronto,true,'deadline must release polling fiber');
-  console.log('PASS: worker XHR and cooperative fetch enforce requested deadlines');
+  assert.equal(module.nvFioReqs[1].pronto,true,'deadline must release C caller');
+  console.log('PASS: shared fetch transport enforces requested deadline');
 }
 
-const cases = {probe, avplay, decoder, fatal, deadlines};
+async function limits() {
+  const source = fs.readFileSync('src/rede.c','utf8');
+  const body = source.match(/EM_JS\(int, nv_http_iniciar_assinc,[\s\S]*?, \{([\s\S]*?)\n\}\);/)[1];
+  const module = {};
+  let reads = 0, aborted = false;
+  const response = {status:200,url:'url',headers:{get:()=>null},
+    body:{getReader:()=>({read:async()=>{reads++;return {done:false,value:new Uint8Array(16)};}})},
+    arrayBuffer:async()=>{reads=1000;return new ArrayBuffer(16000);}};
+  vm.runInNewContext('(function(metodo,url,cabs,corpo,prazo,teto,modo,pronto){' + body + '})("GET","url",0,0,1000,32,0,0)', {
+    Module:module,UTF8ToString:x=>x,HEAP32:new Int32Array(8),AbortController:class {abort(){aborted=true;}},
+    setTimeout,clearTimeout,fetch:async()=>response,Uint8Array
+  });
+  await new Promise(resolve=>setTimeout(resolve,20));
+  assert(reads <= 3,'must stop reading at limit; reads=' + reads);
+  assert(aborted,'oversized transfer must abort');
+  assert.equal(module.nvFioReqs[1].pronto,true);
+  console.log('PASS: ignored Range/chunked response aborts at byte limit');
+}
+
+const cases = {probe, avplay, decoder, fatal, deadlines, limits};
 (async () => {
   const selected = process.argv.slice(2);
   for (const name of selected.length ? selected : Object.keys(cases)) await cases[name]();
