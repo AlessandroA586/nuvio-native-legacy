@@ -870,6 +870,9 @@ static int janX, janY, janW = 1920, janH = 1080;
 // setVideoRoi fica valendo no AVPlay ate ser trocado. 1 = pode haver recorte
 // de fonte antigo (zoom, ou titulo novo cujo estado nao se conhece).
 static int roiAtivo;
+static int roiResetTentativas;
+static Uint32 roiResetEm;
+static int roiAplicar(int sx, int sy, int sw, int sh);
 
 // AVANCO COM REPOUSO, identico ao do webOS e pela mesma razao medida la:
 // segurar a seta produzia quatro seeks em 0,8 s, e os tres primeiros sao
@@ -921,6 +924,7 @@ int video_tocar(const char *url) {
   // Titulo novo: o marcador do anterior nao vale. Sem isto um filme sem
   // capitulos herdaria os creditos do filme de antes.
   creditosNomeado = creditosUltimo = 0.0;
+  roiResetTentativas = 0;
   roiAtivo = 1;   // o recorte do titulo anterior pode ter ficado no player
   snprintf(urlAtual, sizeof urlAtual, "%s", url);
   nv_recon_zerar(&recon);
@@ -1248,6 +1252,7 @@ int video_recarregar(void) {
 }
 
 void video_bombear(void) {
+  video_recorte_reaplicar();
   double est[EST_N];
   int estavaPronto = pronto;
 
@@ -1364,6 +1369,7 @@ void video_parar(void) {
   reconFaixasPend = 0; reconBuscar = -1.0;
   recarregarPausa = -1; pausaPedida = 0;
   seekEm = 0; mkvPendente = 0;
+  roiResetTentativas = 0;
   if (temAvplay) AV0("parar");
   ativo = tocando = pronto = terminou = 0;
   posSeg = durSeg = 0;
@@ -1374,7 +1380,13 @@ void video_parar(void) {
 // Trailer mudo no fundo nao passa pelo AVPlay neste alvo (trailer.c usa o
 // embed do YouTube); o volume fica por conta da TV.
 void video_volume(int pct) { (void)pct; }
-void video_recorte_reaplicar(void) {}
+void video_recorte_reaplicar(void) {
+  if (!roiResetTentativas || !temAvplay || !ativo ||
+      (int)(SDL_GetTicks() - roiResetEm) < 0) return;
+  --roiResetTentativas;
+  roiResetEm = SDL_GetTicks() + 250;
+  roiAplicar(0, 0, 0, 0);
+}
 // Tizen: o AVPlay recebe o retangulo em unidades de tela 1920x1080 do proprio
 // firmware, sem relacao com o drawable do GL; nada a escalar (#176 e so LG).
 void video_escala_definir(int sw, int sh) { (void)sw; (void)sh; }
@@ -1440,10 +1452,11 @@ static int roiAplicar(int sx, int sy, int sw, int sh) {
   double r = avChamar("roi", NULL, o[0], o[1], o[2], o[3], NULL, 0);
   if (r < 1) {
     // Only a missing API rules out a stale crop; rejection must retry.
-    if (r < 0) roiAtivo = 0;
+    if (r < 0) { roiAtivo = 0; roiResetTentativas = 0; }
     return 0;
   }
   roiAtivo = k == 1;
+  roiResetTentativas = 0;
   return 1;
 }
 
@@ -1462,7 +1475,11 @@ static void janelaGrampeada(int x, int y, int w, int h) {
 // Destino simples = quadro inteiro. Um recorte antigo (zoom que saiu, miniatura,
 // titulo novo) esticaria a imagem dentro deste retangulo, entao limpa antes.
 void video_janela(int x, int y, int w, int h) {
-  if (roiAtivo) roiAplicar(0, 0, 0, 0);
+  roiResetTentativas = 0;
+  if (roiAtivo && !roiAplicar(0, 0, 0, 0) && roiAtivo) {
+    roiResetTentativas = 3;
+    roiResetEm = SDL_GetTicks() + 250;
+  }
   janelaGrampeada(x, y, w, h);
 }
 
@@ -1515,6 +1532,7 @@ void video_janela(int x, int y, int w, int h) {
 // dele — e o log abaixo mostra exatamente o retangulo pedido.
 void video_janela_fonte(int sx, int sy, int sw, int sh,
                         int dx, int dy, int dw, int dh) {
+  roiResetTentativas = 0;
   double qw = video_largura(), qh = video_altura();
   double ex, ey;
   int X, Y, W, H;
