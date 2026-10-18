@@ -49,9 +49,11 @@ int main(void) {
   assert(!st_voz_iniciar(ST_BUSCA));
 
   // AJUSTE "Botao de microfone na busca" contra o que a TV respondeu.
-  // TV que diz NAO ter microfone: Automatico esconde, Ligado mostra.
+  // #585: TV microphone capability does not describe the remote's mic.
+  // Automatic must keep the registered Samsung keyboard reachable.
   nv_tpk_voz_registrar(hIniciar, hParar, 0);
-  texto_sistema_mic_modo(TS_MIC_AUTO);     assert(!st_voz_disponivel());
+  texto_sistema_mic_modo(TS_MIC_AUTO);
+  assert(st_voz_disponivel() && texto_sistema_voz_pelo_teclado());
   texto_sistema_mic_modo(TS_MIC_LIGADO);   assert(st_voz_disponivel());
   texto_sistema_mic_modo(TS_MIC_DESLIGADO); assert(!st_voz_disponivel());
   // TV sem resposta: Automatico mostra (o teclado continua util).
