@@ -844,6 +844,28 @@ char *rede_baixar_com(const char *url, int segundos, const char *const *cab) {
   return pedir("GET", url, cab, NULL, NULL, NULL, NULL);
 }
 
+// GET em fluxo no .wgt: o XHR sincrono so entrega o corpo inteiro, entao o
+// "fluxo" aqui e o corpo baixado de uma vez, entregue em pedacos de 64 KB. O
+// teto de bytes vale do mesmo jeito (o heap WASM e o limite).
+int rede_baixar_fluxo(const char *url, int segundos, const char *const *cab,
+                      int (*cb)(const char *dados, size_t n, void *u), void *u,
+                      long long maxBytes, int *status, long long *bytes) {
+  long tam = 0, i;
+  char *b;
+  (void)segundos;
+  if (bytes) *bytes = 0;
+  if (status) *status = 0;
+  if (!cb) return 0;
+  b = pedir("GET", url, cab, NULL, NULL, &tam, status);
+  if (!b) return 0;
+  if (maxBytes > 0 && tam > maxBytes) { free(b); return 0; }
+  if (bytes) *bytes = tam;
+  for (i = 0; i < tam; i += 65536)
+    if (!cb(b + i, (size_t)(tam - i < 65536 ? tam - i : 65536), u)) break;
+  free(b);
+  return status ? (*status >= 200 && *status < 300) : 1;
+}
+
 // Ver rede.h. Sem `status` para pedir2, que entao ja devolve NULL em >= 400
 // e loga so o host (rede_url_publica) — a url do painel vai no corpo e nunca
 // passa por aqui em log.
@@ -2674,6 +2696,76 @@ char *rede_apagar(const char *url, int segundos, const char *const *cab,
   // faria o chamador ler sucesso como falha de transporte.
   if (!b.p) return strdup("");
   return baldeFinal(&b);
+}
+
+
+// GET EM FLUXO (guia de TV, M4/M9): o corpo vai em pedacos para `cb` e nada
+// fica na memoria — e o que deixa um XMLTV de centenas de MB ou uma M3U de 20
+// mil canais passar numa TV de 1,5 GB. Ver rede.h.
+typedef struct {
+  int (*cb)(const char *, size_t, void *);
+  void *u;
+  long long n, max;
+  int cortou, limitou;
+} Fluxo;
+static size_t receberFluxo(void *dados, size_t tam, size_t qtd, void *u) {
+  Fluxo *f = u;
+  size_t bytes;
+  if (tam && qtd > SIZE_MAX / tam) return 0;
+  bytes = tam * qtd;
+  if (redeCancelLocal && *redeCancelLocal) { redeCancelouLocal = 1; return 0; }
+  if (f->max > 0 && f->n + (long long)bytes > f->max) { f->limitou = 1; return 0; }
+  f->n += (long long)bytes;
+  if (bytes && !f->cb((const char *)dados, bytes, f->u)) { f->cortou = 1; return 0; }
+  return bytes;
+}
+int rede_baixar_fluxo(const char *url, int segundos, const char *const *cab,
+                      int (*cb)(const char *dados, size_t n, void *u), void *u,
+                      long long maxBytes, int *status, long long *bytes) {
+  Fluxo f;
+  Vigia vigia;
+  void *c, *lista = NULL;
+  unsigned long prazoMs;
+  long http = 0;
+  int r;
+  if (status) *status = 0;
+  if (bytes) *bytes = 0;
+  if (!url || !*url || !cb || !abrir()) return 0;
+  memset(&f, 0, sizeof f);
+  f.cb = cb; f.u = u; f.max = maxBytes;
+  c = pegarHandle(url);
+  if (!c) return 0;
+  curl_setopt(c, OPT_URL, url);
+  curl_setopt(c, OPT_WRITEFUNCTION, receberFluxo);
+  curl_setopt(c, OPT_WRITEDATA, &f);
+  curl_setopt(c, OPT_FOLLOWLOCATION, (long)1);
+  prazoMs = (unsigned long)(segundos > 0 ? segundos : 60) * 1000UL;
+  opcoesComuns(c, prazoMs);
+  ligarVigia(c, &vigia, prazoMs);
+  curl_setopt(c, OPT_ACCEPT_ENCODING, "");
+  if (cab && slist_append) {
+    int k;
+    for (k = 0; cab[k]; k++) lista = slist_append(lista, cab[k]);
+    if (lista) curl_setopt(c, OPT_HTTPHEADER, lista);
+  }
+  r = curl_perform(c);
+  if (r == 42 && vigia.parou) r = 28;
+  if (curl_getinfo) curl_getinfo(c, INFO_RESPONSE_CODE, &http);
+  if (status) *status = (int)http;
+  if (bytes) *bytes = f.n;
+  redeCurlLocal = r;
+  anotarErro(r);
+  if (lista) { curl_setopt(c, OPT_HTTPHEADER, (void *)0); if (slist_free) slist_free(lista); }
+  soltarHandleR(c, r, url);
+  if (r == 23 && f.cortou) r = 0;            // o cb cortou de proposito
+  if (r != 0 || http < 200 || http >= 300) {
+    char seg[120];
+    printf("[rede] fluxo: curl %d, HTTP %ld, %lld bytes em %s%s\n", r, http, f.n,
+           rede_url_publica(url, seg, sizeof seg), f.limitou ? " (teto)" : "");
+    fflush(stdout);
+    return 0;
+  }
+  return 1;
 }
 
 // Set once at startup before OAuth/WebSocket workers begin.

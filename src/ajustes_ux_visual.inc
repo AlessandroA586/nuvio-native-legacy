@@ -164,6 +164,8 @@ static const char *ajVisualIcone(int op) {
     case AJ_SELOS_PACOTE: return "aj_list-video";
     case AJ_SELOS_PACOTE_ADD: return "aj_list-video";
     case AJ_SELOS_PACOTE_REM: return "aj_list-video";
+    case AJ_URL_LISTA: case AJ_URL_M3U_ADD: case AJ_URL_XMLTV_ADD: return "aj_server";
+    case AJ_URL_REM: return "aj_x";
     case AJ_QUALIDADE: return "aj_monitor-play";
     case AJ_DV: return "aj_monitor-play";
     case AJ_DV_MKV: return "aj_monitor-play";

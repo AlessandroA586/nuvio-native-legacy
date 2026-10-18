@@ -7,6 +7,14 @@ static int xmlEstado = EPG_PRONTO, xmlMatch = -1;
 int epg_estado(void) { return xmlEstado; }
 int epg_match(const char *nome) { (void)nome; return xmlMatch; }
 int epg_match_id(const char *id) { (void)id; return xmlMatch; }
+int epg_casar(const char *f, const char *id, const char *tv, const char *nm, int *m) {
+  (void)f; (void)id; (void)tv; (void)nm; *m = 0; return xmlMatch;
+}
+int epg_achar(const char *f, const char *id) { (void)f; (void)id; return xmlMatch; }
+int perfis_ativo(void) { return 1; }
+uint64_t perfis_sessao_geracao(void) { return 0; }
+int perfis_sessao_atual(uint64_t s) { return s == 0; }
+char *dados_ler(const char *n) { (void)n; return NULL; }
 int xtream_e_id(const char *id) { return id && !strncmp(id, "xtream:", 7); }
 int xtream_ultimo_retry_after(void) { return 0; }
 int xtream_epg_curto(const char *id, XtreamProg *out, int cap, int *st) {
@@ -15,7 +23,7 @@ int xtream_epg_curto(const char *id, XtreamProg *out, int cap, int *st) {
 
 int main(void) {
   GCanal c = {0};
-  strcpy(c.id, "addon:1"); c.epg = -1;
+  c.id = "addon:1"; c.nome = c.epgId = c.tvgNome = ""; c.epg = -1;
   assert(gEstadoGrade(&c) == -2); // XMLTV finished, no matching schedule.
   xmlEstado = EPG_FALHOU; c.epg = -1;
   assert(gEstadoGrade(&c) == -2);
@@ -24,7 +32,7 @@ int main(void) {
   xmlEstado = EPG_PRONTO; xmlMatch = 5; c.epg = -1;
   assert(gEstadoGrade(&c) == 0);
 
-  xmlMatch = -1; strcpy(c.id, "xtream:1"); c.epg = -1;
+  xmlMatch = -1; c.id = "xtream:1"; c.epg = -1;
   // Keep requests queued locally, then publish actual cache results.
   fioVivo = 1;
   xtepg_querer(c.id);

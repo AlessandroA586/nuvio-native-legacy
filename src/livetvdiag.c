@@ -717,6 +717,7 @@ void livetvdiag_evento(const SDL_Event *e) {
       ajustes_livetv_aplicar(L.rec.resolucao, L.rec.formato, L.rec.espera);
       if (L.recModo >= 0) ajustes_livetv_aplicar_modo(L.recModo);
       if (L.tocouModo[M_P]) ajustes_livetv_aplicar_proxy(1);
+      if (L.n > 0) guia_fonte_gravar_diag(L.it[0].id, L.rec.formato, L.recModo, L.tocouModo[M_P] ? 1 : -1);
       L.aplicado = 1;
       printf("[livetv-diag] aplicado: resolucao=%d formato=%d espera=%d\n", L.rec.resolucao,
              L.rec.formato, L.rec.espera);

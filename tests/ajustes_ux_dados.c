@@ -724,7 +724,10 @@ int main(void) {
   // Memoria da fonte (15-16/10/2026): quatro linhas no fim, locais. Preferir o
   // grupo e entre sessoes ligados (o comportamento de antes); reusar o ultimo
   // link ligado de fabrica (dono), 24 h. Uma vez cada na tela.
-  assert(AJ_FONTE_GRUPO == AJ_ESCALA_TEXTO + 1 && AJ_LINK_PRAZO == AJ_FONTE_GRUPO + 3 && AJ_N == AJ_LINK_PRAZO + 1);
+  assert(AJ_FONTE_GRUPO == AJ_ESCALA_TEXTO + 1 && AJ_LINK_PRAZO == AJ_FONTE_GRUPO + 3 &&
+         AJ_DET_ESPACO == AJ_LINK_PRAZO + 1 && AJ_FOCO_ACENTO == AJ_DET_ESPACO + 1 &&
+         AJ_URL_LISTA == AJ_FOCO_ACENTO + 1 && AJ_URL_REM == AJ_N - 1 &&
+         !strcmp(CHAVE[AJ_URL_REM], "-urlRem"));
   { static const char *CH[4] = { "fonteGrupoLocal", "fonteGrupoSessoesLocal", "linkReusarLocal", "linkPrazoLocal" };
     static const int PAD[4] = { 0, 0, 0, 5 }, NV[4] = { 2, 2, 2, 9 };
     for (int o = 0; o < 4; o++) {
@@ -761,6 +764,7 @@ int main(void) {
   assert(somenteDesteAparelho(AJ_DTS_AC3) && !dePerfil(AJ_DTS_AC3));
   { int vz = 0, k; for (k = 0; k < AJ_N_TELA; k++) if (TELA[k].tipo == IT_OPC && TELA[k].op == AJ_DTS_AC3) vz++; assert(vz == 1); }
   assert(indiceResultado(AJ_DTS_AC3, ajustes_buscar("dolby digital", resultados, AJ_N)) >= 0);
+  // (URL lists and guides order asserted above, after accent focus.)
   { int vz = 0, k; for (k = 0; k < AJ_N_TELA; k++) if (TELA[k].tipo == IT_OPC && TELA[k].op == AJ_APOIAR) vz++; assert(vz == 1); }
   // #287: forced subtitle when the audio is in your language. Local, last, default ON, once on screen.
   assert(AJ_LEG_FORCADA == AJ_FONTE_ESCOPO - 2 && AJ_LEG_FORCADA == AJ_APOIAR + 1 && !strcmp(CHAVE[AJ_LEG_FORCADA], "legendaForcadaLocal"));

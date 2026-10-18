@@ -189,6 +189,11 @@ int  player_pediu_recarregar(void);  // live OSD or current VOD source reload
 // Capture on Sources open. A changed source/session rejects the request.
 unsigned player_recarregar_contexto(void);
 int player_recarregar_fonte(unsigned contexto);
+// "0" ou o botao "Ultimo canal" na Live TV (decisao 5): voltar ao canal anterior.
+int  player_pediu_ultimo(void);
+// Numero digitado na Live TV (M7) ja confirmado (1,5 s ou OK); 0 = nada.
+int  player_pediu_numero(void);
+const char *player_titulo_canal(void);   // nome do canal no ar ("" sem canal)
 // Identidade do canal congelada na abertura: o indice do catalogo pode ser
 // remapeado por uma republicacao da descoberta em plena reproducao, e zap/foco
 // do guia nao podem depender dele. "" quando a sessao nao e de canal.

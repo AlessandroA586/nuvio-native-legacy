@@ -127,6 +127,59 @@ int  epg_faixa(int epg, time_t de, time_t ate, EpgProg *out, int cap);
 // com sobreposicao na grade (o horario nao serve de cursor).
 int  epg_faixa_desde(int epg, time_t de, time_t ate, int pular, EpgProg *out, int cap);
 
+// --- GRADES POR FONTE (guia de TV, M4/M5/M9) -----------------------------------
+// Alem do epgshare01 (fonte 0, por pais), ate EPG_MAX_EXTRAS grades de quem
+// SABE delas: o xmltv.php do Xtream, o url-tvg de uma M3U, um XMLTV por URL dos
+// Ajustes. Cada uma tem a CHAVE da fonte de canais dona dela ("xt", "m1a2b3c4";
+// "" = vale para todas), a URL (pode levar credencial: nunca vai a log, no disco
+// fica so um hash) e um FILTRO: os epg ids e os nomes da lista. A grade e lida
+// EM FLUXO (xmltv.h) e so os canais do filtro ficam; o resultado vai para um
+// cache binario por fonte (epg-x-<chave>.bin), que a proxima abertura le sem
+// tocar a rede enquanto tiver menos de 12 h. Sem teto de tamanho de arquivo: o
+// teto agora e de memoria retida (programas e titulos), com uma linha de log.
+#define EPG_MAX_EXTRAS 6
+typedef struct {
+  const char *chave;           // chave da fonte de canais (ltv.h)
+  const char *url;
+  const char *const *ids;      // epg ids da lista (tvg-id, epg_channel_id)
+  int nIds;
+  const char *const *nomes;    // nomes da lista (crus: o epg normaliza)
+  int nNomes;
+} EpgExtra;
+// Copia tudo. Mudou a URL ou a fonte: recarrega no proximo epg_passo. Mudou so o
+// filtro: vale a partir da proxima carga.
+void epg_extras_definir(const EpgExtra *v, int n);
+
+// O resultado de cada grade na ultima carga, para a saude da fonte e o log.
+typedef struct {
+  char chave[24];
+  int  ok;                 // 1 = entrou (da rede ou do cache)
+  int  deCache;            // 1 = veio do cache binario
+  int  canais, programas;
+  long long bytes;         // bytes lidos da rede (0 do cache)
+  long idadeS;             // idade do que entrou
+  int  descartados;        // programas fora por teto de memoria
+} EpgFonteInfo;
+int epg_fontes_info(EpgFonteInfo *out, int max);
+
+// CASAMENTO EM CASCATA (M5), explicavel: 1) epg id exato (sem caixa), primeiro
+// na grade da propria fonte (`fonte` = chave, NULL = qualquer); 2) tvg-name e
+// 3) nome normalizados exatos; 4) apelidos e as regras de afiliada/prefixo de
+// epg_match. O fuzzy NAO casa sozinho: so sugere (epg_sugerir). O manual e do
+// guia (ele guarda a escolha). Devolve o indice ou -1; *metodo = EPG_M_*.
+enum { EPG_M_NENHUM = 0, EPG_M_ID, EPG_M_NOME, EPG_M_ALIAS, EPG_M_MANUAL };
+int epg_casar(const char *fonte, const char *epgId, const char *tvgNome,
+              const char *nome, int *metodo);
+// Canal da grade por fonte + id exato (a escolha manual guardada). -1 = nao ha.
+int epg_achar(const char *fonte, const char *id);
+// Para o painel "Escolher grade deste canal": os canais da grade COM programa
+// mais parecidos com `nome` (palavras em comum), do melhor para o pior.
+int epg_sugerir(const char *nome, int *out, int max);
+int epg_n_canais(void);
+const char *epg_canal_id(int epg);
+const char *epg_canal_nome(int epg);
+const char *epg_canal_fonte(int epg);      // "" = epgshare01
+
 // --- SUPERFICIE DE TESTE ----------------------------------------------------
 // epg_xml_processar alimenta o parser sem rede nem disco: os testes chamam
 // isto com um XMLTV de molde e conferem match/agora. Fora de teste, so o fio
