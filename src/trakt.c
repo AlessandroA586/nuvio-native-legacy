@@ -2181,7 +2181,8 @@ static int listaNucleo(const char *qual, CatItem **pv, int *cap, int cresce,
     for (;;) {
       int lidos = 0;
       if (paginavel)
-        snprintf(url, sizeof url, "https://api.trakt.tv/sync/%s/%s?page=%d&limit=%d",
+        // added/desc: the most recently added title comes first (#610).
+        snprintf(url, sizeof url, "https://api.trakt.tv/sync/%s/%s/added/desc?page=%d&limit=%d",
                  qual, tipo, pagina, TRAKT_LISTA_PAGINA);
       else
         snprintf(url, sizeof url, "https://api.trakt.tv/sync/%s/%s", qual, tipo);

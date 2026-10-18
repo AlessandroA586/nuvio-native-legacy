@@ -13,3 +13,5 @@ cc tests/trakt610_auth.c src/credfio.c src/js.c src/jsw.c -Isrc \
   -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -o "$dir/auth" -O1 -g -Wno-deprecated-declarations -Wno-macro-redefined -lpthread
 "$dir/auth"
+# #610 review: the retry POST helper keeps the Android Java fallback.
+grep -A22 '^char \*rede_postar_st_retry(' src/rede.c | grep -q 'androidDepois("POST"'

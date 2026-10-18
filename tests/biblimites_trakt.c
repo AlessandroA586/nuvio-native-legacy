@@ -49,6 +49,7 @@ char *rede_baixar_com(const char *url, int segundos, const char *const *cab) {
   nPedidos++;
   if (strstr(url, "/sync/collection/")) return itens(0, serie ? 0 : filmesCol, serie);
   assert(strstr(url, "/sync/watchlist/"));
+  assert(strstr(url, "/added/desc"));   // #610: newest first
   total = serie ? seriesWl : filmesWl;
   // SEM page/limit o servidor falso entrega so 250 (um Trakt que trunca a
   // resposta sem paginar e exatamente o sintoma do Shield: 213 de 1600+).

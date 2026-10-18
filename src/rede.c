@@ -2739,16 +2739,22 @@ static char *postarNativo(const char *url, int segundos, const char *const *cab,
 
 char *rede_postar_st(const char *url, int segundos, const char *const *cab,
                      const char *corpo, int *status) {
+  return rede_postar_st_retry(url, segundos, cab, corpo, status, NULL);
+}
+
+char *rede_postar_st_retry(const char *url, int segundos, const char *const *cab,
+                           const char *corpo, int *status, int *retryAfter) {
 #ifdef NV_ANDROID
   char *r;
   int st = 0;
+  if (retryAfter) *retryAfter = 0;   // o caminho Java nao expoe Retry-After
   if (!url || !*url) { if (status) *status = 0; return NULL; }
   if (androidPrimeiro()) {   // st local: com status NULL o 4xx tambem volta com corpo, como no curl
     r = viaAndroid("POST", url, segundos, cab, corpo ? corpo : "", &st, NULL, "libcurl fora");
     if (status) *status = st;
     return r;
   }
-  r = postarNativo(url, segundos, cab, corpo, &st, 0, NULL);
+  r = postarNativo(url, segundos, cab, corpo, &st, 0, retryAfter);
   if (status) *status = st;
   if (!r && st == 0) {
     r = androidDepois("POST", url, segundos, cab, corpo ? corpo : "", &st);
@@ -2756,13 +2762,8 @@ char *rede_postar_st(const char *url, int segundos, const char *const *cab,
   }
   return r;
 #else
-  return postarNativo(url, segundos, cab, corpo, status, 0, NULL);
-#endif
-}
-
-char *rede_postar_st_retry(const char *url, int segundos, const char *const *cab,
-                           const char *corpo, int *status, int *retryAfter) {
   return postarNativo(url, segundos, cab, corpo, status, 0, retryAfter);
+#endif
 }
 
 char *rede_postar_seguro_st(const char *url, int segundos, const char *const *cab,
