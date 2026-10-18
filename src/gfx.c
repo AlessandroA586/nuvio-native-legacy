@@ -41,6 +41,7 @@ typedef struct {
   GLint alt;     // uAlt: altura do rect em pixels do alvo (a rampa de 1 px do SDF)
   GLint margem;  // uMargem do VS: 1 px de folga no quad dos modos de SDF
   GLint jan;     // uJan: janela do GFX_JANELA
+  GLint peso;    // uPeso: GFX_TEXTO faux-bold scale/offsets in highp
   GLint leve;    // uLeve: 1 = efeitos leves (sem dither), ver gfx_definir_efeitos_leves
   GLint sub;     // uSub do VS: o pedaco do rect desenhado (gfx_sombra_vazada)
   float subAtual[4];
@@ -404,6 +405,9 @@ static const char *FS_CABECA =
   "#else\n"
   "#define NV_HP mediump\n"
   "#endif\n"
+  // GFX_TEXTO faux bold: line scale and copy offsets. mediump would put a
+  // ~1000-texel line up to half a texel off (soft or shimmering glyphs).
+  "uniform NV_HP vec3 uPeso;\n"
   // O fundo social (GFX_SOCIAL), como funcao da posicao na tela (y para
   // baixo), para o modo SOCIAL e para servir de fundo em gfx_hero_camadas.
   "vec3 nv_social(vec2 p){\n"
@@ -537,7 +541,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "    float v = 1.0 - (1.0 - uVeu.y * t1 * t1) * (1.0 - uVeu.w * t2 * t2);\n"
   "    cor = mix(cor, vec3(0.02, 0.02, 0.03), v);\n"
   "  }\n"
-  "  gl_FragColor = vec4(cor, m * uCor.a);\n"
+  "  gl_FragColor = uVeu.x < 0.0 ? nv_dither(cor, m * uCor.a) : vec4(cor, m * uCor.a);\n"
   "}\n",
 
   // GFX_SOMBRA — mancha difusa atras do item em foco
@@ -624,18 +628,18 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  vec4 g = texture2D(uTex, vUv);\n"
   // Negative uPar.x composes snapped faux-bold copies of the cached glyphs.
   "  if (uPar.x < 0.0) {\n"
-  "    vec2 uv = vec2(vUv.x / -uPar.x, vUv.y);\n"
+  "    NV_HP vec2 uv = vec2(vUv.x / uPeso.x, vUv.y);\n"
   "    g = texture2D(uTex, uv);\n"
   "    g.a *= step(uv.x, 1.0) * uCor.a;\n"
   "    vec3 rgb = g.rgb * g.a;\n"
-  "    if (uPar.y >= 0.0) {\n"
-  "      vec2 p = uv - vec2(uPar.y, 0.0);\n"
+  "    if (uPeso.y >= 0.0) {\n"
+  "      NV_HP vec2 p = uv - vec2(uPeso.y, 0.0);\n"
   "      vec4 h = texture2D(uTex, p);\n"
   "      float a = h.a * uCor.a * step(0.0, p.x) * step(p.x, 1.0);\n"
   "      rgb = h.rgb * a + rgb * (1.0-a); g.a = a + g.a * (1.0-a);\n"
   "    }\n"
-  "    if (uRaio >= 0.0) {\n"
-  "      vec2 p = uv - vec2(uRaio, 0.0);\n"
+  "    if (uPeso.z >= 0.0) {\n"
+  "      NV_HP vec2 p = uv - vec2(uPeso.z, 0.0);\n"
   "      vec4 h = texture2D(uTex, p);\n"
   "      float a = h.a * uCor.a * step(0.0, p.x) * step(p.x, 1.0);\n"
   "      rgb = h.rgb * a + rgb * (1.0-a); g.a = a + g.a * (1.0-a);\n"
@@ -1684,6 +1688,7 @@ int gfx_iniciar(void) {
     progs[m].reflexo = glGetUniformLocation(p, "uReflexo");
     progs[m].par  = glGetUniformLocation(p, "uPar");
     progs[m].raio = glGetUniformLocation(p, "uRaio");
+    progs[m].peso = glGetUniformLocation(p, "uPeso");
     progs[m].cor  = glGetUniformLocation(p, "uCor");
     progs[m].asp  = glGetUniformLocation(p, "uAspect");
     progs[m].texAsp = glGetUniformLocation(p, "uTexAsp");
@@ -2561,6 +2566,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
     glUniform1f(P->reflexo, ajustes_profundidade() ? ajustes_profundidade_brilho() : 0.0f);
   if (P->par >= 0)    glUniform2f(P->par, parx, pary);
   if (P->raio >= 0)   glUniform1f(P->raio, raio);
+  if (P->peso >= 0 && parx < 0) glUniform3f(P->peso, -parx, pary, raio);
   if (P->asp >= 0)    glUniform1f(P->asp, r.h > 0 ? r.w / r.h : 1.0f);
   if (P->texAsp >= 0) glUniform1f(P->texAsp, gfx_tex_aspect_atual);
   if (P->jan >= 0) {

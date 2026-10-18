@@ -7647,8 +7647,17 @@ static void reacaoPendente(float s) {
 // juntarem, a troca e AQUI e em mais lugar nenhum. O conteudo da pagina nao
 // depende da arte nitida para ter contraste — o veu de leitura do heroi
 // (veuLeitura) e desenhado por cima, fora desta funcao.
+// Alpha of the first two series rows (seasons and episodes).
+static float epLinhaAlfa(void) {
+  float a2 = fase2();
+  float aTopo = a2 * (1.0f - trailercinema_t(&trailerCinema)) * (1.0f - trocaarte_visivel());
+  return aTopo > corpoAlpha(a2) ? aTopo : corpoAlpha(a2);
+}
+
 static int epFuros(GfxRect *holes) {
   int n = 0;
+  // Holes are only hidden under fully opaque thumbnails (desenhaEpisodio's mergedVeil).
+  if (epLinhaAlfa() * gfx_opacidade_grupo < .999f) return 0;
   // Glass captures this backdrop before thumbnails repaint, including the
   // 68 px sampling fringe. Keep the complete source intact while frost is on.
   if (ajustes_vidro() && ajustes_vidro_fosco()) return 0;
@@ -7856,10 +7865,9 @@ static void detail_desenhar_(Uint32 agora) {
   desenhaEsqueletoElenco(corpoAlpha(a2));
   // As duas fileiras da primeira tela da serie entram com o heroi, e nao com
   // a rolagem (pg fica em 0 com o foco nelas).
-  { float aTopo = a2 * (1.0f - trailercinema_t(&trailerCinema)) * (1.0f - trocaarte_visivel());
-    for (int r = 0; r < N_SECOES; r++)
-      desenhaSecao(r, (ehSerie() && (r == SEC_TEMPORADAS || r == SEC_EPISODIOS))
-                      ? (aTopo > corpoAlpha(a2) ? aTopo : corpoAlpha(a2)) : corpoAlpha(a2), agora); }
+  for (int r = 0; r < N_SECOES; r++)
+    desenhaSecao(r, (ehSerie() && (r == SEC_TEMPORADAS || r == SEC_EPISODIOS))
+                    ? epLinhaAlfa() : corpoAlpha(a2), agora);
   // POR CIMA de tudo: a ficha e outra tela, nao uma secao desta.
   // O ponteiro (#99) nao alcanca a pagina por baixo de nenhuma das duas.
   if (pessoaAberta) { ponteiro_camada(); desenhaPessoa(s); }
