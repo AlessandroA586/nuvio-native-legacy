@@ -11,9 +11,23 @@ const char *desc_tmdb_idioma(void) { return "pt-BR"; }
 int ajustes_tmdb_elenco(void) { return 1; }
 static pthread_mutex_t portao = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t sinal = PTHREAD_COND_INITIALIZER;
-static int aberto, entrou, falhar;
+static int aberto, entrou, falhar, cenario, perfis;
+
 char *rede_baixar(const char *u, int t) {
   (void)t;
+  if (cenario) {
+    if (strstr(u, "/find/"))
+      return cenario == 1 ? NULL : strdup("{\"movie_results\":[{\"id\":42}]}");
+    if (strstr(u, "/movie/42/credits"))
+      return cenario == 2 ? NULL : strdup("{\"cast\":[{\"id\":8,\"name\":\"Ator B\"}]}");
+    if (strstr(u, "/search/person"))
+      return strdup("{\"results\":[{\"id\":99,\"name\":\"Ator B\"},{\"id\":8,\"name\":\"ATOR B\"}]}");
+    if (strstr(u, "/person/")) {
+      perfis++;
+      return strdup("{\"name\":\"Ator B\",\"combined_credits\":{\"cast\":[{\"title\":\"Wrong film\"}]}}");
+    }
+    return NULL;
+  }
   if (strstr(u, "/person/7")) {
     pthread_mutex_lock(&portao);
     entrou = 1;
@@ -77,5 +91,17 @@ int main(void) {
   esperar();
   assert(!pessoa_falhou() && pessoa_pronta() && pessoa_n_creditos() == 1);
   puts("ok #205: unresolved names and network failures allow retry");
+  pessoa_contexto_titulo("tt0000042", "movie");
+  for (cenario = 1; cenario <= 2; cenario++) {
+    pessoa_pedir(0, "Ator B", "b.jpg");
+    esperar();
+    assert(pessoa_falhou() && !pessoa_pronta() && pessoa_n_creditos() == 0);
+    assert(perfis == 0);
+  }
+  puts("ok #205: ambiguous missing-ID cast rejected after title lookup or credits failure");
+  pessoa_pedir(0, "Ator B", "b.jpg");
+  esperar();
+  assert(pessoa_pronta() && !pessoa_falhou() && idPedido == 8 && perfis == 1);
+  puts("ok #205: title credits confirm cast identity despite ambiguous name search");
   return 0;
 }

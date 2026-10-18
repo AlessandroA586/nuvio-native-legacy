@@ -130,11 +130,15 @@ static long resolverId(const char *nomeAlvo, const char *imdb, const char *tipo)
     corpo = rede_baixar(url, 20);
     if (corpo) {
       const char *r = js_array(corpo, NULL, "results");
-      while (r && !idPessoa) {
+      int correspondencias = 0;
+      while (r) {
         const char *fr = js_fim(r);
         char nome[96] = "";
         js_texto(r, fr, "name", nome, sizeof nome);
-        if (mesmoNome(nome, nomeAlvo)) idPessoa = (long)js_num(r, fr, "id", 0);
+        if (mesmoNome(nome, nomeAlvo)) {
+          if (++correspondencias > 1) { idPessoa = 0; break; }
+          idPessoa = (long)js_num(r, fr, "id", 0);
+        }
         r = js_prox(fr);
       }
       free(corpo);
