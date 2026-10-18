@@ -1007,7 +1007,7 @@ void player_definir_episodio(int t, int e) {
   if (c->imdb[0]) {
     char alvo[64];
     cat_id_stream(idxAtual(), epT, epE, alvo, sizeof alvo);
-    if (!abrindoSessao && stream_n() > 0 && !stream_lista_do_alvo(alvo))
+    if (!abrindoSessao && !aberto && stream_n() > 0 && !stream_lista_do_alvo(alvo))
       stream_invalidar("episode changed");
   }
   // T/E vira S/E em ingles, e a frase montada nao casa com chave nenhuma:
@@ -4108,6 +4108,21 @@ void player_atualizar(float dt, Uint32 agora) {
   if (scrubbing && agora - scrubUltimo > salto_fim_ms(ajustes_seekr_ligado())) terminarSalto();
 
   medirAssistido();
+    { static Uint32 vodPosEm; static double vodPos; static int vodBuf;
+      unsigned agora = SDL_GetTicks(), buf = video_bufferando_ms();
+      double pos = video_pos();
+      if (!comVideo || !video_pronto() || ehCanal()) { vodPos = pos; vodPosEm = agora; vodBuf = 0; }
+      else if (pos > vodPos + 0.05) { vodPos = pos; vodPosEm = agora; vodBuf = buf > 0; }
+      else if (vodPosEm && (unsigned)(agora - vodPosEm) >= 8000u && (!vodBuf || buf == 0)) {
+        vodBuf = 1;
+        { int itens = 0; long bytes = 0; char mem[96] = "";
+          tex_estatisticas(&itens, NULL, &bytes, NULL, NULL);
+          memlog_amostra(mem, sizeof mem);
+          printf("[player] VOD parado pos=%.3f idade=%ums buffering=%u pronto=%d tocando=%d gpu-cache=%d %.1fMB%s quem=pipeline\n",
+                 pos, (unsigned)(agora - vodPosEm), buf, video_pronto(), video_tocando(),
+                 itens, bytes / 1048576.0, mem); }
+        fflush(stdout);
+      } }
   if (fontePrincipal() && video_ativo()) {
     double d = video_duracao();
     // AVANCANDO, a posicao e a que o dono escolheu. Ler video_pos() aqui era o
