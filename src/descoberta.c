@@ -4728,6 +4728,8 @@ static void *montar(void *u) {
     { int r2, w2 = 0, canais = 0;
       for (r2 = 0; r2 < nDecl; r2++) {
         if (ehCanal(decls[r2].tipo) && fil_escolhida(decls[r2].chave) < 0) {
+          // Keep installed TV catalogs visible in management, outside Home.
+          foraCotaGuardar(&decls[r2]);
           canais++;
           continue;
         }
@@ -9375,6 +9377,18 @@ void desc_episodios(int indiceItem, int temporada) {
   } else pthread_detach(fioEp);
 }
 
+// Elenco com nomes mas sem id de pessoa do TMDB em ninguem: veio de catalogo
+// em memoria (o elenco.txt so tem nome~papel~foto) e nunca passou pelo
+// casamento de /credits — o OK num ator nao abre nada (#205).
+static int descElencoPrecisaPessoas(const CatItem *ci) {
+  int i;
+  if (!ci || !ci->nElenco || !ajustes_tmdb_elenco() || !desc_chave_tmdb()[0]) return 0;
+  for (i = 0; i < ci->nElenco; i++) if (ci->elenco[i].tmdb > 0) return 0;
+  return 1;
+}
+
+int desc_elenco_precisa_pessoas(const CatItem *ci) { return descElencoPrecisaPessoas(ci); }
+
 // Ponto unico das entradas (detalhe, player, retomada) e do roteador de app.c:
 // pede a lista de episodios do titulo se ela falta. Mesma regra e argumentos do
 // roteador: serie, tipo incerto, ou filme sem elenco (o fio traz o /meta).
@@ -9382,7 +9396,8 @@ void desc_episodios(int indiceItem, int temporada) {
 void desc_episodios_garantir(int indiceItem) {
   const CatItem *ci = cat_item(indiceItem);
   if (!ci || !ci->imdb[0]) return;
-  if (!(!strcmp(ci->tipo, "series") || strcmp(ci->tipo, "movie") || ci->nElenco == 0)) return;
+  if (!(!strcmp(ci->tipo, "series") || strcmp(ci->tipo, "movie") ||
+        ci->nElenco == 0 || descElencoPrecisaPessoas(ci))) return;
   if (desc_episodios_carregando(indiceItem)) return;
   desc_episodios(indiceItem, 0);
 }
@@ -9393,7 +9408,8 @@ void desc_episodios_garantir(int indiceItem) {
 int desc_episodios_precarregar(int indiceItem) {
   const CatItem *ci = cat_item(indiceItem);
   if (!ci || !ci->imdb[0]) return 0;
-  if (!(!strcmp(ci->tipo, "series") || strcmp(ci->tipo, "movie") || ci->nElenco == 0)) return 0;
+  if (!(!strcmp(ci->tipo, "series") || strcmp(ci->tipo, "movie") ||
+        ci->nElenco == 0 || descElencoPrecisaPessoas(ci))) return 0;
   if (cat_n_episodios(indiceItem) > 0 && !ci->epsParciais) return 0;
   if (fioEpVivo || pendItem >= 0) return -1;
   desc_episodios(indiceItem, 0);

@@ -103,7 +103,8 @@ int prog_gravar_local(const char *imdb, int t, int e, double p, double d, int to
 
 void  SDL_Delay(Uint32 ms)                 { usleep(ms * 1000); }
 int   ajustes_cw_fonte(void)               { return 0; }
-int   ajustes_tmdb_ligado(void)            { return 1; }
+static int fakeTmdbLigado = 1;
+int   ajustes_tmdb_ligado(void)            { return fakeTmdbLigado; }
 static int fakeMetaExterno, fakeTmdbBasico;
 int   ajustes_meta_externo(void)           { return fakeMetaExterno; }
 static int fakeSoCinemeta;
@@ -1314,6 +1315,71 @@ int main(void) {
     assert(cat_item(0)->temporadas[2] == 3);
     puts("ok  #372: cauda do fio velho nao repoe as abas que o fio novo trocou");
     nRotas = 0; limparCacheMeta(); }
+
+  // #205: filme com elenco so em memoria (nomes do catalogo, sem id de pessoa)
+  // ainda pede o casamento /credits do TMDB ao abrir.
+  { static const char *CREDITS =
+      "{\"cast\":[{\"id\":9001,\"name\":\"Rory Kinnear\",\"character\":\"X\"},"
+      "{\"id\":9002,\"name\":\"Jason Flemyng\",\"character\":\"Y\"}]}";
+    CatItem it;
+    limparCacheMeta(); nRotas = 0; nFake = 0; metaprov_zerar_pausa();
+    addonMeta = 0; fakeTmdbElenco = 1; fakeTmdbBasico = 0; fakeTmdbArte = 0;
+    snprintf(tmdbChave, sizeof tmdbChave, "%s", "01234567890123456789012345678901");
+    tmdbFind = "{\"movie_results\":[{\"id\":424242}]}";
+    rota("/meta/movie/tt28498219.json",
+         "{\"meta\":{\"id\":\"tt28498219\",\"type\":\"movie\",\"name\":\"Matchbox\",\"videos\":[]}}");
+    rota("themoviedb.org/3/movie/424242/credits", CREDITS);
+    rota("themoviedb.org/3/movie/424242/watch/providers", "{}");
+    memset(&it, 0, sizeof it);
+    snprintf(it.imdb, sizeof it.imdb, "%s", "tt28498219");
+    snprintf(it.tipo, sizeof it.tipo, "%s", "movie");
+    snprintf(it.titulo, sizeof it.titulo, "%s", "Matchbox the Movie");
+    it.nElenco = 2;
+    snprintf(it.elenco[0].nome, sizeof it.elenco[0].nome, "%s", "Rory Kinnear");
+    snprintf(it.elenco[1].nome, sizeof it.elenco[1].nome, "%s", "Jason Flemyng");
+    cat_definir_tudo(&it, 1, NULL, 0);
+    assert(desc_elenco_precisa_pessoas(cat_item(0)));
+    desc_episodios_garantir(0);
+    while (fioEpVivo) SDL_Delay(1);
+    assert(cat_item(0)->elenco[0].tmdb == 9001);
+    assert(cat_item(0)->elenco[1].tmdb == 9002);
+    assert(!desc_elenco_precisa_pessoas(cat_item(0)));
+    // Reopening can replace localized metadata while preserving every person ID.
+    it = *cat_item(0);
+    assert(desc_meta_elenco("{\"cast\":[{\"name\":\"Rory Kinnear\","
+                           "\"character\":\"Addon role\",\"photo\":\"https://addon.test/rory.jpg\"},"
+                           "{\"name\":\"Jason Flemyng\"}]}", &it, 0) == 2);
+    assert(it.elenco[0].tmdb == 9001 && it.elenco[1].tmdb == 9002);
+    assert(!strcmp(it.elenco[0].papel, "Addon role"));
+    nRotas = 0; nPedidos = 0;
+    rota("themoviedb.org/3/movie/424242/credits",
+         "{\"cast\":[{\"id\":9001,\"name\":\"Rory Kinnear\","
+         "\"character\":\"Papel localizado\",\"profile_path\":\"/rory.jpg\"},"
+         "{\"id\":9002,\"name\":\"Jason Flemyng\"},"
+         "{\"id\":9003,\"name\":\"Additional actor\"}]}");
+    fotosDoElenco(&it, it.imdb, 0, 0);
+    assert(pediu("/credits?"));
+    assert(!strcmp(it.elenco[0].papel, "Papel localizado"));
+    assert(!strcmp(it.elenco[0].foto, "https://image.tmdb.org/t/p/w185/rory.jpg"));
+    assert(it.nElenco == 3 && it.elenco[2].tmdb == 9003);
+
+    // Missing IDs alone must not schedule work when enrichment cannot run.
+    it.elenco[0].tmdb = it.elenco[1].tmdb = it.elenco[2].tmdb = 0;
+    for (int disabled = 0; disabled < 3; disabled++) {
+      fakeTmdbElenco = disabled != 0;
+      fakeTmdbLigado = disabled != 1;
+      tmdbChave[0] = disabled == 2 ? 0 : '0';
+      cat_definir_tudo(&it, 1, NULL, 0);
+      nPedidos = 0;
+      assert(!desc_elenco_precisa_pessoas(cat_item(0)));
+      desc_episodios_garantir(0);
+      assert(desc_episodios_precarregar(0) == 0);
+      assert(!fioEpVivo && nPedidos == 0);
+    }
+    fakeTmdbLigado = 1;
+    fakeTmdbElenco = 0; tmdbFind = NULL; tmdbChave[0] = 0; nRotas = 0;
+    limparCacheMeta();
+    puts("ok  #205: cast IDs, refresh after addon metadata, and integration scheduling gates"); }
 
   puts("detalheanime: tudo ok");
   return 0;

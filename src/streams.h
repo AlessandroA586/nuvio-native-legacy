@@ -131,6 +131,11 @@ typedef struct Stream {
   unsigned short selosPacote[16];
   unsigned char  nSelosPacote;
   unsigned       selosPacoteVer;
+  // O HASH DO TORRENT de uma fonte que JA VEM COM url (AIOStreams/MediaFusion
+  // com debrid): `infoHash` acima fica vazio nelas de proposito (ele e o que
+  // manda resolver no debrid local). So a lista de arquivos da fonte
+  // (partes.h) le este: e um dos tres jeitos de achar o item no TorBox.
+  char hashTorrent[48];
 } Stream;
 
 // Parser sem rede: o chamador libera *saida. Retorna -1 se a alocacao falhar.
@@ -181,6 +186,8 @@ int  stream_ordem_addon(int i);
 // fonteauto_pode_decidir. `preferida` e o indice da lembrada nesta lista (-1).
 // `instantaneo` (#202): "Espera pelos add-ons" = Instantaneo.
 int  stream_auto_pode_decidir(int preferida, int prefPendente, int prazoPassou, int instantaneo);
+// 1 = o add-on `nome` esta dentro de "Fontes do auto-play" (fonteregra).
+int  stream_addon_no_escopo(const char *nome);
 // REGRAS DE AUTO-PLAY (#202, fonteregra.h): o grupo da fonte i (-1 = fora,
 // 0..3 = ordem) e se a ultima escolha so falhou por causa delas.
 int  stream_grupo_regra(int i);
@@ -269,12 +276,13 @@ FonteFalhaSessao *stream_preparo_tomar_politica(StreamPreparo *preparo);
 const Stream *stream_preparo_lista(const StreamPreparo *preparo, int *n);
 Stream *stream_preparo_tomar_lista(StreamPreparo *preparo, int *n);
 void stream_preparo_liberar(StreamPreparo *preparo);
-// A fonte `i` pode ser seguida por um grupo lembrado SEM rebaixar o que o
-// automatico escolheria hoje: nao excluida pelas regras do dono, grupo de
-// regras igual ou melhor, resolucao e Dolby Vision iguais ou maiores e, na LG,
-// nunca um nao-MP4 no lugar do MP4 da mesma faixa. Usada so pela memoria do
-// AUTOMATICO (fontepref); a manual nao passa por aqui, e escolha da pessoa.
-int  stream_grupo_sem_perda(int i);
+// A fonte `i` pode ser seguida pela memoria do AUTOMATICO (fontepref): nao
+// excluida, nao aviso do addon, nao barrada pelas regras do dono e, na LG,
+// nunca um nao-MP4 no lugar do MP4 da mesma resolucao. Resolucao nao conta
+// (dono, 16/10: a fonte que ja tocou manda; uma "4K" de IA nao a tira); na
+// mesma resolucao, uma release com evidencia claramente maior ainda vence
+// (Code Geass). A manual nao passa por aqui.
+int  stream_grupo_sem_perda(int i, int forte);
 // O mesmo sem as regras de auto-play (#202): canal ao vivo.
 int  stream_automatico_canal(void);
 // Exclui uma candidata que ja foi entregue ao player e travou no pipeline.
@@ -331,6 +339,11 @@ int  stream_antecipada(int *estado);
 int  stream_urls_para_aquecer(char dst[][256], int max);
 // Conferencia de uma URL avulsa, sem lista (bloqueia; chamar de fio proprio).
 int  stream_url_serve(const char *url, const char *cabecalhos);
+// Ganchos do endereco final (cdnlink.h): quando a verificacao (ou
+// stream_url_serve) resolve uma URL que serve, chama isto com a original e o
+// endereco final, para o .tpk entregar o link do CDN ao player sem pedir de
+// novo. NULL fora do .tpk (o tpk.c liga) e nos testes.
+extern void (*stream_cdn_lembrar)(const char *orig, const char *final, const char *cabecalhos, uint64_t sessao);
 
 // 1 quando o texto da fonte diz "fora de cache" (ver Stream.foraCache).
 // Publica para o parser e o teste; a lista ja vem com o campo preenchido.

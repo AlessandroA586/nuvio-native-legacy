@@ -257,8 +257,8 @@ extern long rede_teto;
 
 // Segue os redirecionamentos com GET Range de 64 bytes e devolve o endereco
 // FINAL somente em HTTP2xx, sem truncar o destino. Nativo descarta o corpo e
-// aborta ao passar de 64 bytes; XHR sincrono do WGT recebe a resposta inteira,
-// mas nao a copia para o heap WASM (nao pode abortar durante o recebimento).
+// aborta ao passar de 64 bytes; WGT fetch aborts after response headers,
+// without reading or copying the media body.
 // Serve para saber se um link de debrid leva ao arquivo ou a um video de aviso
 // ("downloading.mp4", "slate.mp4") — que TOCA NORMALMENTE e por isso nao da
 // erro nenhum. 1 se conseguiu resolver.
@@ -376,10 +376,10 @@ char *rede_baixar_etag(const char *url, int segundos,
 // (opcional) recebe o endereco depois dos redirecionamentos. `cancelado` e
 // lido durante o recebimento.
 //
-// NO TIZEN nao ha como contar bytes enquanto chegam (XHR sincrono entrega o
-// corpo inteiro de uma vez): la sao pedidos de Range em pedacos crescentes,
-// cada um descartado no proprio JavaScript e cronometrado, e cada pedaco
-// vira tantas amostras quantos segundos ele levou. Um CDN sem CORS para a
+// Tizen uses growing Range chunks, discarded in JavaScript and timed.
+// Each chunk contributes samples for its elapsed seconds. Fetch stops at
+// the chunk limit/deadline even if Range is ignored; bytes/kbps count only
+// consumed bytes, not the complete file. A CDN without CORS for the
 // origem do app (debrid) aparece como status 0 e erro -1: quem chama diz
 // "nao deu para medir pelo navegador", sem inventar numero.
 typedef struct {

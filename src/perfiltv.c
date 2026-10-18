@@ -193,6 +193,12 @@ int ptv_trailer_indice(PtvPlataforma p, long mem, int teto, const int *alt, int 
   return n - 1;
 }
 
+// Teto duro (Android fraco): -1 quando nem a menor definicao cabe no teto.
+int ptv_trailer_indice_duro(PtvPlataforma p, long mem, int teto, const int *alt, int n) {
+  int i = ptv_trailer_indice(p, mem, teto, alt, n);
+  return (teto && alt[i] > teto) ? -1 : i;
+}
+
 void ptv_padrao(PtvPlataforma p, long mem, PtvPerfil *out) {
   if (!out) return;
   out->texMb = ptv_tex_auto_mb(p, mem);
