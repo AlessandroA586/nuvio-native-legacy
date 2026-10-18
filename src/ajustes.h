@@ -673,6 +673,8 @@ int         ajustes_seekr_ajuste_s(void);   // sincronia, em segundos (-60..60)
 int         ajustes_mdblist_fonte(int fonte);   // mdblist_show_*
 // A fonte (ExFonte) entra na linha do titulo? Escolha local + disponibilidade.
 int         ajustes_nota_titulo(int fonte);
+// 1 = Letterboxd primeiro na linha do titulo (e o ultimo a sair). 0 = ordem de fabrica.
+int         ajustes_nota_ordem(void);
 
 // --- AJUSTES QUE VEM DA CONTA ------------------------------------------------
 // Aplica o blob de `sync_pull_profile_settings_blob` (o objeto `settings_json`,

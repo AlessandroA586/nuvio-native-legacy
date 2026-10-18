@@ -643,6 +643,7 @@ typedef enum {
   AJ_ESCALA_TEXTO,     // text and component scale (gfx.h): 85/90/100/110/120/130%, default 100%; local, append-only
   AJ_DET_ESPACO,       // title page row spacing (detail.h): 0 Compacto, 1 Normal (default), 2 Confortavel; local, append-only
   AJ_FOCO_ACENTO,      // focus plate in the accent colour instead of gray (glass only); default off; local, append-only
+  AJ_NT_ORDEM,         // title-line rating order: 0 Padrao, 1 Letterboxd primeiro; local, append-only
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -685,6 +686,7 @@ _Static_assert(sizeof V_FUNDO_DIN_COR / sizeof *V_FUNDO_DIN_COR == sizeof FUNDO_
                "V_FUNDO_DIN_COR: um nome por linha de FUNDO_DIN_TEMA");
 static const char *V_QUALIDADE[] = { "Automática", "4K", "1080p", "720p" };
 static const char *V_LIGA[]      = { "Ligado", "Desligado" };
+static const char *V_NT_ORDEM[]  = { "Padrão", "Letterboxd primeiro" };
 // TRAILER DO CARTAZ EM FOCO EM TRES MODOS (dono, 07/10/2026). O indice e o
 // AJ_TRAILER_CARTAZ_* de ajustes.h e o gravado em "trailerCartazModo"; a chave
 // antiga (V_LIGA, a mesma do web) migra no carregar (focoTrailerMigrar) e a
@@ -1681,6 +1683,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Escala de texto e componentes", V_ESCALA_TEXTO, 6),   // local: escalaTextoLocal
   ESC("Espaçamento das fileiras", V_DET_ESPACO, 3),          // local: detEspacoLocal
   ESC("Foco na cor de destaque", V_LIGA, 2),   // local: focoAcentoLocal
+  ESC("Ordem das notas na linha do título", V_NT_ORDEM, 2),   // local: notaTituloOrdem
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1979,6 +1982,7 @@ static const char *CHAVE[] = {
   "escalaTextoLocal",
   "detEspacoLocal",
   "focoAcentoLocal",
+  "notaTituloOrdem",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2672,6 +2676,7 @@ int ajustes_colecao_exibicao(void) {
   int v = valor[AJ_COLECAO_EXIBICAO];
   return v >= VT_LAY_AUTO && v < VT_LAY_N ? v : VT_LAY_AUTO;
 }
+int ajustes_nota_ordem(void) { return valor[AJ_NT_ORDEM] == 1; }
 int ajustes_det_espaco(void) { int v = valor[AJ_DET_ESPACO]; return v >= 0 && v <= 2 ? v : 1; }
 float ajustes_escala_texto(void) {
   static const float F[] = { 0.85f, 0.9f, 1.0f, 1.1f, 1.2f, 1.3f };
@@ -5394,6 +5399,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_TAMANHO_AJUSTES:
     case AJ_ESCALA_TEXTO:   /* text/component scale is this screen's, the web has none */
     case AJ_DET_ESPACO:     /* title page spacing is this screen's too */
+    case AJ_NT_ORDEM:       /* the web has no title rating line */
     case AJ_FOCO_ACENTO:    /* look of this screen (depends on the local glass) */
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
     case AJ_INTERFACE_MODO: /* TV/Mobile follows this device, never the account */
@@ -6900,6 +6906,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_TAMANHO_UI: return "Aumenta os controles do player, os painéis e os avisos. Os Ajustes têm um tamanho próprio.";
     case AJ_INTERFACE_MODO: return "Automático usa TV em aparelhos Android TV e Mobile nos demais aparelhos. TV mantém a interface do controle remoto; Mobile usa toque em retrato ou paisagem. A escolha fica salva só neste aparelho.";
     case AJ_TAMANHO_AJUSTES: return i18n("Muda só o tamanho dos Ajustes nesta TV. O padrão é 100%.");
+    case AJ_NT_ORDEM: return "Padrão: IMDb, Rotten Tomatoes, Popcornmeter, Metacritic… Letterboxd primeiro: o Letterboxd abre a linha e é o último a sair quando a linha não cabe.";
     case AJ_DET_ESPACO: return i18n("Margem lateral e vãos entre as fileiras e os cartões da página do título. Normal é o de sempre; Confortável dá folga em TVs com overscan. Vale só nesta TV.");
     case AJ_FOCO_ACENTO: return "O item em foco ganha um vidro tingido com a cor de destaque, em vez da barra cinza. O texto e os ícones continuam legíveis em qualquer cor.";
     case AJ_ESCALA_TEXTO: return i18n("Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 100%.");
@@ -9529,7 +9536,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_MDB_MAL:
     case AJ_NT_IMDB: case AJ_NT_TOMATES: case AJ_NT_AUDIENCIA: case AJ_NT_META:
     case AJ_NT_METAUSER: case AJ_NT_TRAKT: case AJ_NT_TMDB: case AJ_NT_LETTER:
-    case AJ_NT_MAL: case AJ_NT_EBERT: case AJ_NT_SCORE:
+    case AJ_NT_MAL: case AJ_NT_EBERT: case AJ_NT_SCORE: case AJ_NT_ORDEM:
       return AJPV_MDB;
     case AJ_RESOLUCAO: case AJ_QUALIDADE_IMG: case AJ_TEX_MB:
     case AJ_ESPACO:

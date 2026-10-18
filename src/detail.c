@@ -5791,12 +5791,12 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
         }
       break;
     }
-    if (nota > 0)
+    if (nota > 0 && (ajustes_nota_titulo(EX_TRAKT) || ajustes_nota_titulo(EX_IMDB)))
       x += desenhaNotaEpisodio(x, y - 4, EX_TRAKT, nota, a);
     // O voto do TMDB entra AO LADO do do Trakt, no mesmo selo compacto
     // (issue #87). Sao fontes diferentes — o logo diz qual e qual, e um
     // episodio pode ter uma, a outra ou as duas.
-    if (ep && ep->nota > 0)
+    if (ep && ep->nota > 0 && ajustes_nota_titulo(EX_TMDB))
       x += desenhaNotaEpisodio(x, y - 4, EX_TMDB, ep->nota, a);
     // A DATA vai para a direita do card, como na referencia: a esquerda fica so
     // a duracao, e as duas deixam de disputar a mesma linha corrida.

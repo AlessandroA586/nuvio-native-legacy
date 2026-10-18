@@ -158,13 +158,14 @@ void notasui_planejar(NotasPlano *p, const int cru[EX_NFONTES], float disp,
   int fonte[EX_NFONTES], prio[EX_NFONTES];
   float larg[EX_NFONTES], comVao[EX_NFONTES];
   unsigned char manter[EX_NFONTES];
+  int ord = ajustes_nota_ordem();
   memset(p, 0, sizeof *p);
   for (pos = 0; pos < EX_NFONTES; pos++) {
-    int f = nf_na_posicao(pos);
+    int f = nf_na_posicao_ord(pos, ord);
     if (f < 0 || cru[f] <= 0) continue;
     if (querer ? !querer[f] : !ajustes_nota_titulo(f)) continue;
     fonte[n] = f;
-    prio[n] = nf_prioridade(f);
+    prio[n] = nf_prioridade_ord(f, ord);
     larg[n] = larguraItem(f, cru[f]);
     comVao[n] = larg[n] + VAO_ITEM;
     n++;
