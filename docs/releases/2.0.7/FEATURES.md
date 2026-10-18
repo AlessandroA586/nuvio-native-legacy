@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T08:48:35-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T09:48:18-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -179,6 +179,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Stable layouts at every text size (#205)**: Home, title pages, Search and Settings preserve poster sizes, trailer coverage and fixed screen anchors, while upcoming episode descriptions leave room for release dates and status. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #205, `15e810e9f`, `1ae9bf582`, `ccfb08bac`, `9c94e014a`, `6626d68d6`, `f8b4d650a`, `c2954cf49`, `d3fff84c9`, `dc59d2c72`, merge `cb398fc2f`.
 
 - **Smooth immersive background changes**: Immersive backgrounds blend into frosted glass without abrupt threshold jumps. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `a933eb0fe`, merge `ddc51a964`.
 
@@ -402,7 +404,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
 - **Variant A Hero layouts**: Wide Hero cards and split Hero rows follow the owner-selected artwork and metadata layout; integration and device validation remain pending. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-heroisA`.
-- **Fixed layout anchors across text sizes**: Home, title pages, Search and Settings keep margins and anchor positions while text size changes; latest open-branch follow-ups still need integration. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, #205, `agente/205-escalafixa`.
+
 - **Selected PR #567 playback improvements**: Pending work ports source file selection, binge-source continuity, refreshed TorBox links, DTS fallback, wait-all source selection and MKVToolNix seeking; these requests are not confirmed release behavior. Platforms: Samsung .tpk first; Android/webOS coverage pending. Refs @Namer03, PR #567, `agente/205-pr567port`.
 
 
@@ -423,7 +425,7 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 - **Hero A layout polish**: Wide hero cards and focus rendering receive layout and draw-budget fixes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-heroisA, `c3985174d`. Latest fix is complete; queued review work and device checks remain before integration.
 
 
-- **Fixed poster sizes with text scaling**: Text-scale follow-ups preserve poster dimensions and improve row anchors. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-escalafixa, `d3fff84c9`. Latest fix is complete; queued review work and device checks remain before integration.
+
 
 - **PR #567 port follow-ups**: Source-font preference and launch behavior receive follow-up fixes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-pr567port, `385b44106`. Latest fix is complete; queued review work and device checks remain before integration.
 
