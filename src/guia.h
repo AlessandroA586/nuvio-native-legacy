@@ -71,6 +71,11 @@ void guia_evento(const SDL_Event *e);
 int  guia_atualizando_lista(void);
 // Ajustes mudou as listas M3U / guias XMLTV por URL: recarrega a lista.
 void guia_fontes_mudaram(void);
+// UMA fonte saiu da configuracao (Xtream/Stalker/M3U removido, addon
+// removido): apaga o cache dela em disco e some os canais dela da tela.
+void guia_fonte_esquecer(const char *chave);
+// "Limpar lista de canais": apaga as listas em cache deste perfil e recarrega.
+void guia_limpar_lista(void);
 void guia_atualizar(float dt, Uint32 agora);
 void guia_desenhar(Uint32 agora);
 

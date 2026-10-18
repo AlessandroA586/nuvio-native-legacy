@@ -4266,7 +4266,14 @@ static void urlAdicionar(int tipo, const char *url) {
 }
 static void urlRemover(void) {
   int v = valor[AJ_URL_LISTA];
+  char ch[LTV_CHAVE];
   if (v < 1 || v > urlN) return;
+  // O cache da lista sai junto: senao a URL removida continuava na tela ate
+  // a proxima carga (o relato do "lista limpa").
+  if (urlV[v - 1].tipo == LTV_URL_M3U) {
+    ltv_chave_fonte(LTV_M3U, urlV[v - 1].url, ch, sizeof ch);
+    guia_fonte_esquecer(ch);
+  }
   ltv_urls_remover(v - 1);
   urlResultado = -1;
   urlEspelhar();
@@ -8862,7 +8869,7 @@ static void eventoTela(const SDL_Event *e) {
     // O primeiro OK so arma (ver pedeConfirmacao); o segundo age.
     if (pedeConfirmacao(focoOp) && sairArmado != focoOp) { sairArmado = focoOp; return; }
     sairArmado = 0;
-    if (focoOp == AJ_STALKER_LIMPAR) { stalker_esquecer(); return; }
+    if (focoOp == AJ_STALKER_LIMPAR) { stalker_esquecer(); guia_fonte_esquecer("st"); return; }
     if (focoOp == AJ_XTREAM_SERVIDOR || focoOp == AJ_XTREAM_USUARIO || focoOp == AJ_XTREAM_SENHA) {
       int srv = focoOp == AJ_XTREAM_SERVIDOR, sen = focoOp == AJ_XTREAM_SENHA;
       stCampo = focoOp;
@@ -8878,7 +8885,7 @@ static void eventoTela(const SDL_Event *e) {
       return;
     }
     // A grade curta guardada era da conta que saiu (#158).
-    if (focoOp == AJ_XTREAM_LIMPAR) { xtream_esquecer(); xtepg_limpar(); return; }
+    if (focoOp == AJ_XTREAM_LIMPAR) { xtream_esquecer(); xtepg_limpar(); guia_fonte_esquecer("xt"); return; }
     if (focoOp == AJ_SEEKR_CHAVE) {
       // Como o fanart: a chave NUNCA volta para o campo; vazio apaga.
       stCampo = focoOp;

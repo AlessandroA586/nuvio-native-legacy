@@ -295,6 +295,19 @@ int main(int argc, char **argv) {
   gfx_icones_dir("deploy/app/art");
   badges_carregar("deploy/app/art");   // marcas de resolucao no heroi; no app quem faz e home.c
 
+  if (getenv("NUVIO_GUIALIMPA_SHOT")) {
+    semearGuia(); aberta = 1; entrada = 1; overlay = 0;
+    focoTopo = 1; topoCol = G_TOPO_LIMPAR;
+    snprintf(nome, sizeof nome, "%s-action.bmp", saida); capturaTela(nome, w, 1);
+    limparConfirm = 1; limparFoco = 1;
+    snprintf(nome, sizeof nome, "%s-confirm.bmp", saida); capturaTela(nome, w, 1);
+    stagingZerar(); adotarStaging(); estado = G_FALHOU;
+    snprintf(nome, sizeof nome, "%s-empty-confirm.bmp", saida); capturaTela(nome, w, 0);
+    tex_encerrar(); txt_encerrar(); gfx_encerrar();
+    SDL_GL_DeleteContext(gl); SDL_DestroyWindow(w); SDL_Quit();
+    return 0;
+  }
+
   if(getenv("NUVIO_GUIDE_PANELS")) {
     extern void ajustes_teste_vidro_env(void);
     const char *dir=getenv("NUVIO_DADOS");FILE *f;int i;
