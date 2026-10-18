@@ -161,7 +161,7 @@ enum {
   AJC_TIT_APARECE, AJC_TIT_NOTAS, AJC_TIT_DADOS, AJC_TIT_BUSCA,
   AJC_CAR_FOCO, AJC_CAR_FORMA, AJC_CAR_ORIGEM,
   AJC_TRL_ONDE, AJC_TRL_SOM,
-  AJC_APA_VIDRO, AJC_APA_MOVIMENTO,
+  AJC_APA_VIDRO, AJC_APA_MOVIMENTO, AJC_APA_FILEIRAS,
   AJC_REP_FONTE, AJC_REP_IMAGEM, AJC_REP_DURANTE, AJC_REP_SEEKR,
   AJC_IDI_INTERFACE, AJC_IDI_FAIXAS, AJC_IDI_LEGENDA2,
   AJC_TV_PROVEDOR, AJC_TV_PROBLEMAS,
@@ -181,8 +181,10 @@ static int ajCenaSecao(int op) {
       return AJC_HOME_ESTILO;
     case AJ_FIL_ORDEM: case AJ_FIL_LIMITE: case AJ_ITENS_FILEIRA: case AJ_ESPACO_FILEIRAS: case AJ_ESPACO_TITULOS: case AJ_OCULTAR_NLANC: case AJ_NOTAS_HOME:
     case AJ_ROTULOS: case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_SELO_VISTO: case AJ_ABAS_ESTILO:
-    case AJ_OCULTAR_FILMES_VISTOS: case AJ_AMIGOS_ESTILO: case AJ_TITULO_FIL:
+    case AJ_OCULTAR_FILMES_VISTOS: case AJ_AMIGOS_ESTILO:
       return AJC_HOME_FILEIRAS;
+    case AJ_TITULO_FIL: case AJ_PALCO_FUNDO:
+      return AJC_APA_FILEIRAS;
     case AJ_MENU_TOPO: case AJ_RAIL_MODERNA: case AJ_RAIL: case AJ_MENU_EXPLORAR: case AJ_MENU_GUIA: case AJ_MENU_AGENDA:
     case AJ_MENU_PERFIL: case AJ_RAIL_BLUR: case AJ_DESCOBRIR: case AJ_MIC_BUSCA:
       return AJC_HOME_BARRA;
@@ -1319,7 +1321,7 @@ static float ajSecaoDesenhar(int cena, int op, float x, float y, float w) {
   gfx_recorte(x, y, w, ajc.h);
   switch (cena) {
     case AJC_HOME_ESTILO: ajcHomeEstilo(A); break;
-    case AJC_HOME_FILEIRAS: ajcHomeFileiras(A); break;
+    case AJC_HOME_FILEIRAS: case AJC_APA_FILEIRAS: ajcHomeFileiras(A); break;
     case AJC_HOME_BARRA: ajcHomeBarra(A); break;
     case AJC_HOME_PERFIL: ajcHomePerfil(A); break;
     case AJC_TIT_APARECE: ajcTitAparece(A); break;

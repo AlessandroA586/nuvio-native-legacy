@@ -655,6 +655,7 @@ typedef enum {
   AJ_DET_ESPACO,       // title page row spacing (detail.h): 0 Compacto, 1 Normal (default), 2 Confortavel; local, append-only
   AJ_FOCO_ACENTO,      // focus plate in the accent colour instead of gray (glass only); default off; local, append-only
   AJ_ARTE_TOM,         // Device-local, append-only: 0 Vivid (unchanged), 1 Light.
+  AJ_PALCO_FUNDO,      // Device-local, append-only: Black / Current / Artwork only.
   // FONTES POR URL (Guia de TV, M9, ltv.h): listas M3U e guias XMLTV deste
   // perfil. AJ_URL_LISTA escolhe uma das ja cadastradas (so o nome e o host na
   // tela, nunca a URL: ela pode levar usuario e senha), os dois ADD abrem o
@@ -690,6 +691,7 @@ static const char *V_TELA_ABERTURA[] = { "Cinema", "Detalhada" };
 static const char *V_ABERTURA_FUNDO[] = { "Desligado", "Arte", "Arte borrada" };
 static const char *V_ABERTURA_ESTILO[] = { "Centro", "Canto" };
 static const char *V_ARTE_TOM[] = { "Vívido", "Claro" };
+static const char *V_PALCO_FUNDO[] = { "Preto", "Como está", "Só arte" };
 static const char *V_TITULO_FIL[] = { "Clássico", "Ilha", "Editorial", "Acento" };
 static const char *V_VIDRO_QUALIDADE[] = { "Automática", "Desempenho", "Alta" };
 static const char *V_FUNDO_DIN[] = { "Cinza", "Cor", "Imersivo" };
@@ -781,7 +783,7 @@ _Static_assert(sizeof V_COLECAO_EXIBICAO / sizeof *V_COLECAO_EXIBICAO == VT_LAY_
 static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%", "80%", "85%", "90%", "115%", "Automático" };
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
 static const char *V_ESCALA_TEXTO[] = { "85%", "90%", "100%", "110%", "120%", "130%" };   // stored in escalaTextoLocal
-#define ESCALA_TEXTO_PADRAO 2
+#define ESCALA_TEXTO_PADRAO 0
 static const char *V_DET_ESPACO[] = { "Compacto", "Normal", "Confortável" };   // stored in detEspacoLocal
 static const char *V_INTERFACE_MODO[] = { "TV", "Mobile", "Automático" };
 static const char *V_MENU_POS[] = { "Na lateral", "No topo" };   // #461
@@ -1713,6 +1715,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Espaçamento das fileiras", V_DET_ESPACO, 3),          // local: detEspacoLocal
   ESC("Foco na cor de destaque", V_LIGA, 2),   // local: focoAcentoLocal
   ESC("Tom da arte", V_ARTE_TOM, 2),                       // local: artToneLocal
+  ESC("Fundo do Palco", V_PALCO_FUNDO, 3),
   ESC("Listas e guias por URL",          V_URL_LISTA, 9),     // por perfil: ltv-urls-p<N>.txt (tamanho dinamico)
   ACAO("Adicionar lista M3U"),
   ACAO("Adicionar guia XMLTV"),
@@ -2018,6 +2021,7 @@ static const char *CHAVE[] = {
   "detEspacoLocal",
   "focoAcentoLocal",
   "artToneLocal",
+  "palcoFundoLocal",
   "-urlLista", "-urlM3uAdd", "-urlXmltvAdd", "-urlRem",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
@@ -2884,6 +2888,7 @@ int ajustes_abertura_detalhada(void) { return valor[AJ_TELA_ABERTURA] == 1; }
 int ajustes_abertura_addon(void) { return lig(AJ_ABERTURA_ADDON); }
 int ajustes_abertura_fundo(void) {   // #508: 0 = off, 1 = sharp, 2 = blurred
   int v = valor[AJ_ABERTURA_FUNDO]; return v >= 0 && v <= 2 ? v : 1; }
+int ajustes_palco_fundo(void) { return valor[AJ_PALCO_FUNDO]; }
 int ajustes_titulo_fil(void) { int v = valor[AJ_TITULO_FIL]; return v >= 0 && v <= 3 ? v : 0; }
 int ajustes_abertura_estilo(void) { return valor[AJ_ABERTURA_ESTILO] == 1; }   // 0 Centro (A3), 1 Canto (B3)
 int ajustes_menu_cartaz_simples(void) { return valor[AJ_MENU_CARTAZ] == 1; }
@@ -5538,6 +5543,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_FUNDO_DIN_COR: /* idem */
     case AJ_EP_TAMANHO:    /* idem */
     case AJ_AMIGOS_ESTILO: /* local friends row presentation */
+    case AJ_PALCO_FUNDO:   /* Stage background belongs to this device */
     case AJ_TITULO_FIL:    /* local row title presentation */
     case AJ_MURAL_TITULOS: /* #521: idem */
     case AJ_MIC_BUSCA:     /* o microfone e o controle sao desta TV */
@@ -7144,6 +7150,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_TELA_ABERTURA: return "Cinema (padrão): a arte e o logo do título ficam na tela até o vídeo entrar. Detalhada: a fonte, o add-on e cada passo da abertura. Na Cinema, Para cima ou Para baixo mostra os detalhes. Vale só nesta TV.";
     case AJ_TITULO_FIL: return "Como o título de cada fileira da Home aparece. Clássico (padrão): só o texto. Ilha: numa pílula de vidro. Editorial: com uma linha de categoria acima. Acento: com um ponto de destaque. Vale só nesta TV.";
     case AJ_FUNDO_DIN: return "O fundo do layout Dinâmica. Cinza (padrão): o cinza escuro da Apple TV, sempre o mesmo. Cor: uma cor sua, fixa. Imersivo: acompanha a arte do título, em tons suaves e com troca lenta. Vale só nesta TV.";
+    case AJ_PALCO_FUNDO: return "Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.";
     case AJ_FUNDO_DIN_COR: return "A cor do fundo da Dinâmica, escurecida para o texto continuar legível. Vale só nesta TV.";
     case AJ_ABERTURA_ESTILO: return "Como a tela de abertura se organiza. Centro (padrão): o logo no meio e o anel de progresso embaixo dele. Canto: o logo no canto inferior esquerdo, com o anel pequeno embaixo dele. Vale só nesta TV.";
     case AJ_MENU_CARTAZ: return "Ligado (padrão): o menu de contexto traz o cartaz ampliado com logo, notas e sinopse, e a Home continua atrás. Desligado: só a lista de ações ao lado do cartaz, sem ampliar. Vale só nesta TV.";
@@ -9629,6 +9636,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_FONTE_ORDEM: case AJ_FONTE_ORDEM_USO:
       return AJPV_REPRO;
     case AJ_HOME_LAYOUT:
+    case AJ_PALCO_FUNDO:
     case AJ_HERO_SINOPSE_TAM:
     case AJ_LANDSCAPE: case AJ_HERO_CHEIO: case AJ_FUNDO_DIN: case AJ_FUNDO_DIN_COR: case AJ_HERO_FUNDO:
     case AJ_HERO_ARTE_DIF: case AJ_HERO_TRAILER: case AJ_FIL_LIMITE:
