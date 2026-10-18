@@ -599,6 +599,16 @@ static int cartaoAssentado(Uint32 agora) {
   }
   return agora - cartaoAssentaDesde >= NV_CARTAO_ASSENTA_MS;
 }
+static float cartaoTrailerAlpha(int item, Uint32 agora) {
+  if (heroTrailerNoCartao && heroTrailerItem == item && heroTrailerFade > 0.004f &&
+      trailer_dono() != TRAILER_DONO_DETALHE) {
+    // Draw publishes current geometry after the trailer step used the previous
+    // frame. Close the hole before exposing a still-unmoved Android surface.
+    if (!cartaoAssentado(agora)) heroTrailerFade = 0.0f;
+    return heroTrailerFade;
+  }
+  return 0.0f;
+}
 // Proporcao minima (largura/altura) do cartaz que recebe o trailer: o 4:3
 // (1,33) entra, o 2:3 em pe (0,67) nao.
 #define NV_CARTAO_TRAILER_ASP 1.2f
@@ -7961,9 +7971,7 @@ static void home_desenhar_(Uint32 agora) {
             cartaoTrailerRect = (GfxRect){ px, py, w, h };
             cartaoTrailerPode = naTela && (deitadoJa || expande);
             cartaoTrailerServe = naTela && deitadoJa && (!expande || abre >= 0.999f);
-            if (heroTrailerNoCartao && heroTrailerItem == idxCat && heroTrailerFade > 0.004f &&
-                trailer_dono() != TRAILER_DONO_DETALHE)
-              trailerCard = heroTrailerFade;
+            trailerCard = cartaoTrailerAlpha(idxCat, agora);
           }
           CartaoFoco ck = { r, c, tipo, cItem, caminho, t, aArte, deitado, rotuloFora, abre, esc, f,
                             px, py, w, h, (!focoHero && focus_indice(&foco, r, c)) ? varreFoco : 0.0f,

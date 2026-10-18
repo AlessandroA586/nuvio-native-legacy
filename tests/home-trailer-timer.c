@@ -565,8 +565,16 @@ int main(void) {
       playing=1;rectCalls=0;
       for (int q=0;q<60;q++) { cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+144+NV_CARTAO_ASSENTA_MS+q*16); }
       rc|=check("low-end: video fully visible before the card moves",heroTrailerFade>0.9f);
+      // Production order: step sees the previous rect, then draw publishes the
+      // new rect and chooses the hole alpha before the next step can hide it.
+      Uint32 movingAt=t+500+NV_CARTAO_ASSENTA_MS+1000;
+      cartaoTrailerServe=1;home_trailer_passo(1,.016f,movingAt);
+      rc|=check("low-end: stationary draw keeps the video visible",cartaoTrailerAlpha(heroAtual,movingAt)>0.9f);
       cartaoTrailerRect.x+=40.0f;
-      cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+500+NV_CARTAO_ASSENTA_MS+1000);
+      float movingAlpha=cartaoTrailerAlpha(heroAtual,movingAt);
+      printf("first-moving-frame alpha: %.6f\n",movingAlpha);
+      rc|=check("low-end: draw hides hole before the next trailer step",movingAlpha==0.0f&&rectCalls==0);
+      cartaoTrailerServe=1;home_trailer_passo(1,.016f,movingAt+16);
       rc|=check("low-end: hole gone on the first moving frame",heroTrailerFade<0.01f);
       for (int q=1;q<5;q++) { cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+500+NV_CARTAO_ASSENTA_MS+1000+q*16); }
       rc|=check("low-end: plane holds while the card moves",rectCalls==0);
