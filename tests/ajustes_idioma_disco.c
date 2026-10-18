@@ -339,6 +339,13 @@ int main(void) {
     valor[AJ_TMDB_IDIOMA] = 33;
     ajustes_mesclar_blob("{\"features\":{\"tmdb_settings\":{\"tmdb_language\":\"pt\"}}}", &m);
     assert(m && strstr(m, "\"es-419\""));
+    free(m); m = NULL;
+    // Guarda de preservacao isolada: "pt-BR" so cai em "pt" por fallback.
+    valor[AJ_TMDB_IDIOMA] = 0;
+    ajustes_aplicar_blob("{\"features\":{\"tmdb_settings\":{\"tmdb_language\":\"pt-BR\"}}}");
+    assert(valor[AJ_TMDB_IDIOMA] == 1);
+    ajustes_mesclar_blob("{\"features\":{\"tmdb_settings\":{\"tmdb_language\":\"pt-BR\"}}}", &m);
+    assert(!m || strstr(m, "\"pt-BR\""));
     free(m);
   }
 
