@@ -42,15 +42,22 @@ async function probe() {
 }
 
 function avplay() {
-  const context = vm.createContext({console, document:{}, UTF8ToString:x=>x,
+  const heap = Buffer.alloc(1024);
+  function pointer(text) { heap.fill(0); heap.write(text, 16); return 16; }
+  const context = vm.createContext({console, document:{}, UTF8ToString:p=>{
+    assert.equal(typeof p,'number','EM_JS strings must be WASM pointers');
+    return heap.toString('utf8',p,heap.indexOf(0,p));
+  },
     performance:{now:()=>0}, setTimeout() {}, clearTimeout() {}, stringToUTF8() {}});
   vm.runInContext('window = globalThis', context);
   vm.runInContext(fs.readFileSync('tools/fake-avplay.js','utf8'), context);
   const run = vm.runInContext('(function(cmd,txt,a,b,c,d,dst,dstTam) {' +
     bridge('src/video_tizen.c','nv_av') + '})', context);
   context.nv_av = run;
-  const call = op => run(op,'https://fixture.invalid/video',0,0,0,0,0,0);
+  const call = op => run(pointer(op),0,0,0,0,0,0,0);
   assert.equal(call('abrir'),1);
+  assert.equal(call('abrir'),1,'healthy reopen must close then open');
+
   const player = context.webapis.avplay;
   const stop = player.stop, close = player.close;
   let closed = 0;
@@ -62,7 +69,7 @@ function avplay() {
   assert.equal(call('abrir'),1);
   assert.equal(call('abrir'),0,'reopen must report stop failure');
   assert.equal(closed,2);
-  assert.equal(context.__avReg().filter(x=>x.startsWith('open(')).length,2);
+  assert.equal(context.__avReg().filter(x=>x.startsWith('open(')).length,3);
   player.stop = stop;
   player.close = () => { throw Error('close failed'); };
   assert.equal(call('abrir'),1);

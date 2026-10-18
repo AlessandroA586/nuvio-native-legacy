@@ -305,6 +305,12 @@ EM_JS(char *, nv_http_colher_assinc, (int id, int *tam, int *status,
   if (retryAfter) HEAP32[retryAfter >> 2] = reg ? reg.retry : 0;
   if (!reg || reg.erro || !reg.bytes) return 0;
   if (status) HEAP32[status >> 2] = reg.status;
+  // Probe URLs must fit in full: a truncated signed URL is unusable.
+  if (modo === 1 && (reg.status < 200 || reg.status >= 300 ||
+      !reg.url || lengthBytesUTF8(reg.url) >= urlFinalTam)) {
+    if (urlFinal && urlFinalTam > 0) stringToUTF8("", urlFinal, urlFinalTam);
+    return 0;
+  }
   if (urlFinal && urlFinalTam > 0) stringToUTF8(reg.url, urlFinal, urlFinalTam);
   if (etag && etagTam > 0) stringToUTF8(reg.etag, etag, etagTam);
   if (mime && mimeTam > 0) stringToUTF8(reg.mime, mime, mimeTam);
@@ -317,6 +323,10 @@ EM_JS(char *, nv_http_colher_assinc, (int id, int *tam, int *status,
   return p;
 });
 
+// Call-site audit: app sondarRecusaFio, streams probes, diagnostico
+// vazaoWorker and livetvdiag fioRede run in workers; descoberta also has
+// synchronous fallbacks on thread-creation failure. Both contexts must yield
+// to fetch callbacks. NV_UM_FIO uses its scheduler instead of nested Asyncify.
 static void nv_http_esperar(int id) {
   while (!nv_http_pronto_assinc(id)) {
 #ifdef NV_UM_FIO
@@ -954,22 +964,11 @@ int rede_url_final_vidaa(const char *url, int segundos, char *dst, unsigned tam)
 }
 #endif
 
-// VAZAO NO TIZEN (ver rede_medir_vazao em rede.h). XHR sincrono so devolve
-// quando o corpo inteiro chegou, entao nao ha "bytes por segundo" de dentro de
-// uma resposta: sao pedidos de Range em PEDACOS, cronometrados um a um, com o
-// corpo descartado no proprio JavaScript (so o tamanho atravessa para o C —
-// nada vai para o heap do WASM).
-//
-// O pedaco comeca em 1 MB e dobra enquanto volta em menos de 0,7 s, ate 8 MB:
-// pedaco pequeno numa rede rapida mediria mais o vai-e-volta de cada pedido do
-// que a vazao; pedaco grande numa rede lenta passaria da janela sem como
-// cortar (XHR sincrono nao tem prazo nem aborto). Cada pedaco vira tantas
-// amostras quantos segundos inteiros levou (no minimo uma), todas com a taxa
-// dele — e a equivalencia mais proxima de "uma amostra por segundo".
-//
-// Mesma limitacao ja escrita em pedir2: servidor que IGNORA o Range manda o
-// arquivo inteiro, e a chamada so volta depois. Os CDNs de debrid honram
-// Range; se um nao honrar, o teste trava o fio dele ate o navegador desistir.
+// Tizen throughput uses timed Range chunks, starting at 1 MB and doubling
+// below 0.7 s up to 8 MB. Fetch discards the body in JavaScript and aborts
+// at the chunk limit or remaining deadline. Even when Range is ignored,
+// bytes/kbps describe only bytes consumed before abort, never the file size.
+// Each chunk contributes at least one sample, repeated per elapsed second.
 static int nv_http_contar(const char *url, const char *cabs, double ini,
                             double fim, int *status, char *urlFinal,
                             int urlFinalTam, int prazo) {
@@ -1028,7 +1027,7 @@ int rede_medir_vazao(const char *url, const char *const *cab, int segundos,
     if (reps < 1) reps = 1;
     for (k = 0; k < reps && kbps && nSeg < nMax; k++)
       kbps[nSeg++] = (int)((long long)n * 8 / (long long)(dt > 0 ? dt : 1));
-    if (st == 200) break;              // Range ignorado: veio o arquivo todo
+    if (st == 200) break;              // Range ignored: bounded sample only
     if ((long long)n < pedaco) break;  // o arquivo acabou
     if (dt < 700UL && pedaco < 8LL * 1024LL * 1024LL) pedaco *= 2;
   }

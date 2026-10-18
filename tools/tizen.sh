@@ -294,9 +294,8 @@ if [ "$UM_FIO" = "1" ]; then
   # verdadeiro), entao o wrap so precisa fechar o link.
   # ASYNCIFY_STACK_SIZE ACIMA (131072) SUBSTITUI O 32768 GLOBAL: o ultimo -s
   # de mesma chave vence no emcc, e $FIO_FLAGS entra DEPOIS do
-  # -sASYNCIFY_STACK_SIZE=32768 fixo mais abaixo neste arquivo. Sem
-  # ASYNCIFY_ONLY (o --um-fio ja pula essa restricao, ver o $( ... ) logo
-  # depois de -sASYNCIFY), essa pilha atende tanto o suspend/resume comum
+  # -sASYNCIFY_STACK_SIZE=32768 fixo mais abaixo neste arquivo. Com
+  # instrumentacao completa do Asyncify, essa pilha atende o suspend/resume
   # (nv_ceder_quadro, dados_iniciar) quanto emscripten_fiber_swap, que se
   # apoia no mesmo mecanismo do Asyncify por baixo. NAO MEDIDO NA TV — se
   # aparecer "unreachable" ao ceder quadro ou trocar de fibra, e aqui que se
@@ -363,7 +362,8 @@ eval emcc $SOURCES ${EXTRA_SOURCES} -o "$SAIDA/index.html" -O2 "$ENV_D" ${NUVIO_
   `# Inspector da TV) mostra wasm-function[729] e nao diz o que e.` \
   --profiling-funcs \
   `# Bounded fetch waits can occur through any network caller, including pthreads.` \
-  `# Instrument the complete call stack so emscripten_sleep can yield safely.` \
+  `# Network waits yield in workers and synchronous caller fallbacks (rede.c).` \
+  `# Keep full Asyncify instrumentation; the old allowlist missed these stacks.` \
   -sASYNCIFY -sASYNCIFY_STACK_SIZE=32768 \
   `# POOL DE 12. Ja esteve em 4, por um palpite meu que a evidencia derrubou:` \
   `# cortei supondo que o arranque estava LENTO por causa dos doze workers, e os` \

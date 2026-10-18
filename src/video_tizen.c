@@ -268,7 +268,7 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
     // Fechar antes de abrir. Sem isto o segundo titulo da sessao encontra o
     // player em estado PLAYING e o open() e recusado — o mesmo formato do bug
     // "abrir -> sair -> abrir" que o caminho da LG ja tinha.
-    if (S.aberto && !nv_av("encerrar", 0, 0, 0, 0, 0, 0, 0)) return 0;
+    if (S.aberto && !encerrar()) return 0;
     var geracao = ++S.geracao;
     S.aberto = 0; S.tocando = 0; S.pronto = 0; S.posMs = 0;
     S.durMs = 0; S.tDur = 0; S.tEvento = 0; S.tSeek = 0; S.tPos = 0;
@@ -732,7 +732,11 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
     return 1;
   }
 
-  if (op === "encerrar") {
+  if (op === "encerrar") return encerrar();
+
+  return 0;
+
+  function encerrar() {
     var pb = pl();
     ++S.geracao;
     var ok = 1;
@@ -748,8 +752,6 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
     S.tocando = 0; S.pronto = 0; S.trilhas = null;
     return ok;
   }
-
-  return 0;
 });
 
 // Indices do vetor devolvido por "estado". Precisam casar com a ordem escrita
