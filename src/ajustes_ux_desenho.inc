@@ -583,8 +583,8 @@ static void aj2Bolinha(int v, float cx, float cy, int foco, int gravada, float a
 static void aj2CorDin(int v, const char *url, float c1[3], float c2[3]) {
   CorvivaPaleta p;
   if (url && url[0] && corviva_paleta(url, &p) && p.ok) {
-    memcpy(c1, p.acento, sizeof p.acento);
-    memcpy(c2, v == AJ_TEMA_GRADIENTE ? p.grad[2] : p.acento, sizeof p.acento);
+    memcpy(c1, v == AJ_TEMA_DINAMICA && valor[AJ_ARTE_TOM] == 1 ? nv_acento_viva : p.acento, sizeof p.acento);
+    memcpy(c2, v == AJ_TEMA_GRADIENTE ? p.grad[2] : c1, sizeof p.acento);
     return;
   }
   memcpy(c1, nv_acento_viva, sizeof nv_acento_viva);
@@ -728,6 +728,7 @@ static int uxPaiVisual(int op) {
     case AJ_FONTE_ADDONS_PERM: case AJ_FONTE_PLUGINS_PERM: return AJ_FONTE_ESCOPO;
     case AJ_LEG2_POS: case AJ_LEG2_TAMANHO: case AJ_LEG2_COR: case AJ_LEG2_FUNDO: case AJ_LEG2_BORDA:
       return AJ_LEG_LINGUA2;
+    case AJ_ARTE_TOM: return AJ_TEMA;
     case AJ_DESCANSO_ESTILO: case AJ_DESCANSO_FONTE: return AJ_ESMAECER;
     case AJ_CW_BLUR_PROX: return AJ_CW_THUMB;
     case AJ_HERO_CHEIO: return -1;   // depende do layout, que nao e a linha de cima

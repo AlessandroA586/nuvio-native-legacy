@@ -647,6 +647,7 @@ typedef enum {
   AJ_ESCALA_TEXTO,     // text and component scale (gfx.h): 85/90/100/110/120/130%, default 85%; local, append-only
   AJ_DET_ESPACO,       // title page row spacing (detail.h): 0 Compacto, 1 Normal (default), 2 Confortavel; local, append-only
   AJ_FOCO_ACENTO,      // focus plate in the accent colour instead of gray (glass only); default off; local, append-only
+  AJ_ARTE_TOM,         // Device-local, append-only: 0 Vivid (unchanged), 1 Light.
   // FONTES POR URL (Guia de TV, M9, ltv.h): listas M3U e guias XMLTV deste
   // perfil. AJ_URL_LISTA escolhe uma das ja cadastradas (so o nome e o host na
   // tela, nunca a URL: ela pode levar usuario e senha), os dois ADD abrem o
@@ -681,6 +682,7 @@ static const char *V_FONTE_ORDEM_ADDON[] = { "Por qualidade", "Do addon" };
 static const char *V_TELA_ABERTURA[] = { "Cinema", "Detalhada" };
 static const char *V_ABERTURA_FUNDO[] = { "Desligado", "Arte", "Arte borrada" };
 static const char *V_ABERTURA_ESTILO[] = { "Centro", "Canto" };
+static const char *V_ARTE_TOM[] = { "Vívido", "Claro" };
 static const char *V_TITULO_FIL[] = { "Clássico", "Ilha", "Editorial", "Acento" };
 static const char *V_VIDRO_QUALIDADE[] = { "Automática", "Desempenho", "Alta" };
 static const char *V_FUNDO_DIN[] = { "Cinza", "Cor", "Imersivo" };
@@ -1695,6 +1697,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Escala de texto e componentes", V_ESCALA_TEXTO, 6),   // local: escalaTextoLocal
   ESC("Espaçamento das fileiras", V_DET_ESPACO, 3),          // local: detEspacoLocal
   ESC("Foco na cor de destaque", V_LIGA, 2),   // local: focoAcentoLocal
+  ESC("Tom da arte", V_ARTE_TOM, 2),                       // local: artToneLocal
   ESC("Listas e guias por URL",          V_URL_LISTA, 9),     // por perfil: ltv-urls-p<N>.txt (tamanho dinamico)
   ACAO("Adicionar lista M3U"),
   ACAO("Adicionar guia XMLTV"),
@@ -1997,6 +2000,7 @@ static const char *CHAVE[] = {
   "escalaTextoLocal",
   "detEspacoLocal",
   "focoAcentoLocal",
+  "artToneLocal",
   "-urlLista", "-urlM3uAdd", "-urlXmltvAdd", "-urlRem",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
@@ -2622,7 +2626,7 @@ static int temaDinamico(void) { return temaEhDinamico(valor[AJ_TEMA]); }
 static int temaLocal(void) { return valor[AJ_TEMA] >= AJ_N_TEMAS && valor[AJ_TEMA] < AJ_N_TEMAS_OPC; }
 int ajustes_cor_viva(void) {
   if (SEGURO) return CORVIVA_DESLIGADA;   // qualquer tema dinamico: a cor viva anima a arte inteira
-  return valor[AJ_TEMA] == AJ_TEMA_DINAMICA   ? CORVIVA_SIMPLES
+  return valor[AJ_TEMA] == AJ_TEMA_DINAMICA   ? (valor[AJ_ARTE_TOM] == 1 ? CORVIVA_SIMPLES_CLARO : CORVIVA_SIMPLES)
        : valor[AJ_TEMA] == AJ_TEMA_ESTILIZADA ? CORVIVA_SIMPLES   // so ate o arranque migrar
        : valor[AJ_TEMA] == AJ_TEMA_GRADIENTE  ? CORVIVA_GRADIENTE
        : valor[AJ_TEMA] == AJ_TEMA_IMERSIVA   ? CORVIVA_IMERSIVA
@@ -2725,6 +2729,7 @@ float ajustes_tamanho_ajustes(void) {
 // The phone always uses List. Keep the stored TV preference unchanged.
 static int ajLayoutSelecionavel(void) { return !telefoneui_ativo(); }
 static int ajOpcaoDisponivel(int op) {
+  if (op == AJ_ARTE_TOM) return valor[AJ_TEMA] == AJ_TEMA_DINAMICA;
   if (op == AJ_FALHA_ADDON_LIMITE) return faAddonEditar[0] != 0;
 #ifndef NV_ANDROID
   if (op == AJ_FONTE_PRECARREGAR) return 0;
@@ -5487,6 +5492,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_TAMANHO_AJUSTES:
     case AJ_ESCALA_TEXTO:   /* text/component scale is this screen's, the web has none */
     case AJ_DET_ESPACO:     /* title page spacing is this screen's too */
+    case AJ_ARTE_TOM:       /* Art tone belongs to this device. */
     case AJ_FOCO_ACENTO:    /* look of this screen (depends on the local glass) */
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
     case AJ_INTERFACE_MODO: /* TV/Mobile follows this device, never the account */
@@ -7060,6 +7066,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_PROVEDORES_ESCOPO: return "Compartilhada usa as mesmas contas de provedores neste aparelho. Separada guarda uma cópia para este perfil. Trocar de opção mantém as duas configurações.";
     case AJ_ADDONS_PRINCIPAL: return "Os outros perfis desta conta usam os addons do perfil principal. Desligado, cada perfil usa os seus — a não ser que a conta já diga para usar os do principal.";
     case AJ_VIDRO_CONTORNO: return "O contorno das linhas e dos cartões, inclusive o do foco. Desligado, o item em foco é marcado só por um fundo mais claro na cor de destaque.";
+    case AJ_ARTE_TOM: return "Vívido mantém as cores da arte. Claro usa tons pastel da mesma cor, com texto contrastante. Só nesta TV.";
     case AJ_COR_LOGO: return "Com um tema dinâmico, a cor sai do logo do título em vez da arte de fundo. Logo branco ou preto usa a arte.";
     case AJ_MANTER_VIDEO: return "Mantém o player pausado pelo tempo escolhido. Usa memória e decoder; o trailer espera. Desligado por padrão.";
     case AJ_RETOMADA_MORNA: return "Ligado por padrão: mesma fonte e posição, sem prender o player. Prepara a conexão ao focar Retomar. Disco e último quadro no Android.";
@@ -9621,7 +9628,7 @@ static AjPreview familiaPreviaOpcao(int op) {
       return AJPV_PROFUNDIDADE;
     case AJ_LARGURA_DP: case AJ_RAIO_DP:
       return AJPV_CARTAZ;
-    case AJ_IDIOMA: case AJ_ANIM: case AJ_TEMA:
+    case AJ_IDIOMA: case AJ_ANIM: case AJ_TEMA: case AJ_ARTE_TOM:
     case AJ_COR_LOGO: case AJ_FONTE_UI: case AJ_VIDRO: case AJ_VIDRO_CONTORNO: case AJ_FOCO_ACENTO:
     case AJ_RELOGIO: case AJ_RELOGIO_POS: case AJ_SAIDA_PLAYER: case AJ_RELOGIO_12H:
     case AJ_TAMANHO_UI: case AJ_ESCALA_TEXTO: case AJ_DET_ESPACO: case AJ_TAMANHO_AJUSTES: case AJ_LAYOUT_AJUSTES: case AJ_INTERFACE_MODO: case AJ_TECLADO_ANDROID: case AJ_FUNDO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE:
