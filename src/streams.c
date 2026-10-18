@@ -4251,8 +4251,8 @@ static void partesAbrirPainel(int i) {
     fflush(stdout); }
   partes_pedir(&lista[i], nomeFolha);
 }
-// O arquivo que esta tocando AGORA nesta lista (sessao de partes do mesmo
-// item, ou o da fonte quando ela e a que toca); -1 se nenhum.
+// Current file: multipart session, recorded standalone file, or source file.
+// Match TorBox item and transport before file ID; -1 if none.
 static int ptTocando(void) {
   const PartesLista *sl = partes_sessao_lista();
   if (ptL.estado != PARTES_PRONTO) return -1;
@@ -4260,6 +4260,22 @@ static int ptTocando(void) {
     int k = partes_sessao_indice();
     if (k >= 0 && k < sl->n)
       for (int i = 0; i < ptL.n; i++) if (ptL.arq[i].id == sl->arq[k].id) return i;
+  }
+  if (player_aberto()) {
+    const CatItem *c = cat_item(player_indice());
+    char alvo[64];
+    int t, e;
+    PartesPonto p;
+    player_episodio_atual(&t, &e);
+    if (player_id_canal()[0]) snprintf(alvo, sizeof alvo, "%s", player_id_canal());
+    else if (!c) alvo[0] = 0;
+    else if (t >= 0 && e > 0) cat_id_stream(player_indice(), t, e, alvo, sizeof alvo);
+    else snprintf(alvo, sizeof alvo, "%s", c->imdb);
+    if (partes_arquivo_de(alvo, &p)) {
+      if (p.item == ptL.item && p.usenet == ptL.usenet)
+        for (int i = 0; i < ptL.n; i++) if (ptL.arq[i].id == p.arquivo) return i;
+      return -1;
+    }
   }
   return ptFonte == atual && player_aberto() ? ptL.atual : -1;
 }

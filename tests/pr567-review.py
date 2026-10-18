@@ -9,7 +9,7 @@ player = Path('src/player.c').read_text()
 # Registration must follow the synchronous player open, which clears CDN identity.
 selected_play = app.split('static void parteTocar(', 1)[1].split('static void abrirParte(', 1)[0]
 assert selected_play.index('definirFonteVOD(url)') < selected_play.index('video_tpk_cdn_arquivo('), 'selected-file CDN identity registered before player open'
-selection = app.split('static void abrirParte(', 1)[1].split('  stream_definir_atual(fonte);', 1)[0]
+selection = app.split('static void abrirParte(', 1)[1].split('  torrentSessao++;', 1)[0]
 resume = app.split('    if (parteFase == PF_RETOMAR) {\n', 1)[1].split('    parteTocar(url, partePos);', 1)[0].rsplit('    }', 1)[0]
 start = player.split('{ int ok = fontePrincipal()', 1)[1].split(';   // PRONTO', 1)[0]
 pause = player.split('if (tocouS > 0.0f && cs', 1)[1].split(' {', 1)[0]
@@ -47,12 +47,15 @@ typedef unsigned Uint32;
 #define main partes_existing_tests
 #include "tests/partes.c"
 #undef main
-typedef struct { char tipo[16]; char titulo[64]; } CatItem;
-static CatItem ci = {"series"};
+typedef struct { char tipo[16]; char titulo[64]; char imdb[24]; } CatItem;
+static CatItem ci = {.tipo="series", .imdb="tt-test"};
 static int catalogAvailable = 1;
-static Stream source;
+static Stream source, voltaFonte;
+static int sourceCount=1, sourceIndex;
 static int aguardandoFonte, playing, gotT, gotE;
-const Stream *stream_item(int n) { (void)n; return &source; }
+const Stream *stream_item(int n) { return n>=0 && n<sourceCount ? &source : NULL; }
+''' + function(Path('src/streams.c').read_text(), 'void stream_definir_atual(int').replace('atual =', 'sourceIndex =').replace('i < n', 'i < sourceCount') + r'''
+
 static const CatItem *cat_item(int n) { (void)n; return catalogAvailable ? &ci : NULL; }
 static int player_aberto(void) { return playing; }
 static int player_indice(void) { return 0; }
@@ -61,13 +64,29 @@ static int currentT=1, currentE=1;
 static void player_episodio_atual(int *t,int *e) { *t=currentT; *e=currentE; }
 static void detail_ep_foco(int *t,int *e) { *t=1; *e=1; }
 static void player_encerrar(void) {}
-static void limparFonteVOD(void) {}
+static void limparFonteVOD(void) { memset(&voltaFonte,0,sizeof voltaFonte); }
 static void parteZerar(void) {}
 static void consumirFolhaTocar(int *t,int *e) { *t=1; *e=1; }
 static void diagnostico_cancelar_vazao(void) {}
 static void player_abrir(int n,void *p) { (void)n; (void)p; }
-static void player_definir_episodio(int t,int e) { gotT=t; gotE=e; }
-static void selectFile(''' + selection + r'''
+// Execute the production episode-list invalidation gate, rather than a recording-only setter.
+static int abrindoSessao;
+int stream_n(void) { return sourceCount; }
+int stream_lista_do_alvo(const char *a) { (void)a; return gotT==currentT && gotE==currentE; }
+static int idxAtual(void);
+static void cat_id_stream(int i,int t,int e,char *a,size_t n) { (void)i; snprintf(a,n,"tt-test:%d:%d",t,e); }
+void stream_invalidar(const char *why) { (void)why; sourceCount=0; sourceIndex=-1; memset(&source,0,sizeof source); }
+static void player_definir_episodio(int t,int e) {
+  gotT=t; gotE=e;
+  CatItem *c=&ci;
+  int epT=t, epE=e;
+''' + '  if (c->imdb[0]) {' + function(player, 'void player_definir_episodio(int').split('  if (c->imdb[0]) {',1)[1].split('  // T/E vira',1)[0] + r'''
+}
+static void selectedFile(''' + selection + r'''
+}
+static void selectFile(int source, const PartesLista *l, int k) {
+  sourceCount=1;
+  selectedFile(source,l,k);
 }
 static PartesLista parteArqLista;
 static int parteArqK, parteMp4;
@@ -329,7 +348,19 @@ int main(void) {
     {.temporada=1,.episodio=3,.tipo=PARTE_EP},
     {.tipo=PARTE_ESPECIAL,.extra=1}}};
   for (playing=0;playing<2;playing++) {
+    sourceCount=1;
+    strcpy(source.url,"https://fixture/release");
+    strcpy(source.bingeGroup,"release-a");
     selectFile(0,&l,1);
+    const Stream *s;
+    s = stream_item(sourceIndex);
+''' + function(app, 'static void lembrarTocando(void)').split('  s = stream_item(stream_atual());',1)[1].split('  if (!s) return;',1)[0] + r'''
+    const Stream *selected=s;
+    if (!selected || strcmp(selected->bingeGroup,"release-a")) {
+      puts("FAIL selected release identity lost after episode-list invalidation"); return 1;
+    }
+    puts("PASS selected release survives production episode-list invalidation");
+    sourceCount=1;
     if (gotT!=1 || gotE!=3) { puts("FAIL selected S01E03 inherits S01E01"); return 1; }
     selectFile(0,&l,2);
     if (gotT!=-1 || gotE!=-1) { puts("FAIL unnumbered OVA inherits episode"); return 1; }

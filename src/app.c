@@ -2645,6 +2645,7 @@ static void abrirParte(int fonte, const PartesLista *l, int k) {
   player_abrir(titulo, NULL);
   player_definir_episodio(t, e);
   stream_definir_atual(fonte);
+  voltaFonte = escolhida;
   torrentSessao++;
   p2pmotor_cancelar();
   p2pmotor_parar_fundo();

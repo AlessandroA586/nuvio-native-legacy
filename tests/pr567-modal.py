@@ -22,8 +22,22 @@ static float ptRolAlvo;
 enum { PR_ESCOLHER, PR_TEMPORADA, PR_ARQ, PR_COPIA };
 typedef struct { int tipo, idx; float y,h; } PtLinha;
 static PtLinha *ptLinhas;
-static int ptTocando(void) { return -1; }
-int partes_resultado(PartesLista *l) {
+#define main partes_existing_tests
+#include "tests/partes.c"
+#undef main
+static int playing, ptFonte, atual;
+static int player_aberto(void) { return playing; }
+static const char *player_id_canal(void) { return ""; }
+static int player_indice(void) { return 0; }
+static void player_episodio_atual(int *t,int *e) { *t=*e=-1; }
+typedef struct { char imdb[64]; } CatItem;
+static CatItem catalog={"tt-special"};
+static const CatItem *cat_item(int i) { (void)i; return &catalog; }
+static int cat_id_stream(int i,int t,int e,char *a,unsigned n) { (void)i;snprintf(a,n,"tt-special:%d:%d",t,e);return 1; }
+''' + source[source.index('static int ptTocando('):source.index('static int ptSelecionavel(')] + r'''
+
+#define partes_resultado modalResult
+int modalResult(PartesLista *l) {
   if (l) {
     copies++;
     free(l->arq);
@@ -53,6 +67,23 @@ int main(void) {
   assert(copies == 2 && ptNLinhas == 0);
   published = PARTES_PRONTO; ptFocoPosto = 0; frame();
   assert(copies == 3 && ptNLinhas > 0);
+  playing=1; ptFonte=atual=0;
+  ptL.item=7; ptL.usenet=0; ptL.atual=0;
+  for (int i=0;i<ptL.n;i++) ptL.arq[i].id=i;
+  partes_arquivo_definir("tt-special",0,7,2);
+  assert(!partes_sessao_lista());
+  if (ptTocando()!=2) {
+    puts("FAIL standalone special marks original add-on file as playing"); return 1;
+  }
+  ptFocoPosto=0; frame();
+  assert(ptAbaTipos[ptAba]==ptL.arq[2].tipo);
+  assert(ptLinhas[ptFoco].idx==2);
+  partes_arquivo_definir("tt-special",1,7,2); assert(ptTocando()==-1);
+  partes_arquivo_definir("tt-special",0,8,2); assert(ptTocando()==-1);
+  partes_arquivo_definir("tt-special",0,7,ptL.n+1); assert(ptTocando()==-1);
+  partes_arquivo_limpar(); assert(ptTocando()==0);
+  playing=0; assert(ptTocando()==-1);
+  puts("PASS standalone special marker/focus use recorded item/file identity");
   free(ptL.arq); free(ptLinhas);
   puts("PASS 10,000-file idle pack: no copies or row rebuilds; tab/result changes refresh");
 }
@@ -62,7 +93,7 @@ draw = source[source.index('static void desenhaPartes('):source.index('static vo
 with tempfile.TemporaryDirectory() as tmp:
     c = Path(tmp) / 'modal.c'
     c.write_text(code)
-    subprocess.run(['cc', '-O1', '-Isrc', '-I/opt/homebrew/include', '-I/opt/homebrew/include/SDL2', str(c), '-o', str(Path(tmp)/'modal')], check=True)
+    subprocess.run(['cc', '-O1', '-I.', '-Isrc', '-I/opt/homebrew/include', '-I/opt/homebrew/include/SDL2', str(c), 'src/partes.c', 'src/js.c', '-lpthread', '-lm', '-o', str(Path(tmp)/'modal')], check=True)
     subprocess.run([str(Path(tmp)/'modal')], check=True)
 assert 'ptMontar();' not in draw, 'draw must reuse prepared rows'
 print('PASS draw reuses prepared rows')
