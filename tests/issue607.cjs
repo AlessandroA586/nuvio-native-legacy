@@ -137,7 +137,42 @@ function fatal() {
   console.log('PASS: both web shells reveal fatal errors with recovery guidance');
 }
 
-const cases = {probe, avplay, decoder, fatal};
+async function deadlines() {
+  const heap = new ArrayBuffer(1024);
+  const context = {HEAP32:new Int32Array(heap),HEAPU8:new Uint8Array(heap),
+    UTF8ToString:x=>x,stringToUTF8(){},_malloc:()=>128,Date};
+  let timeout;
+  context.XMLHttpRequest = class {
+    open() {} overrideMimeType() {} setRequestHeader() {}
+    send() { timeout = this.timeout; throw Error('deadline elapsed'); }
+  };
+  for (const [name,args] of [
+    ['nv_http',['GET','https://fixture.invalid',0,0,4,8,0,0,0,0,0,37]],
+    ['nv_url_sonda',['https://fixture.invalid',0,8,256,4,0,0,12,37]],
+    ['nv_http_contar',['https://fixture.invalid',0,0,63,4,0,0,37]]
+  ]) {
+    const params = {nv_http:'metodo,url,cabs,corpo,tam,status,urlFinal,urlFinalTam,etag,etagTam,retryAfter,prazo',
+      nv_url_sonda:'url,cabs,dst,tam,status,mime,mimeTam,corpo,prazo',
+      nv_http_contar:'url,cabs,ini,fim,status,urlFinal,urlFinalTam,prazo'}[name];
+    const run = vm.runInNewContext('(function(' + params + '){' + bridge('src/rede.c',name) + '})',context);
+    timeout = undefined; run(...args);
+    assert.equal(timeout,37,name + ' must set transport timeout before send');
+  }
+  const source = fs.readFileSync('src/rede.c','utf8');
+  const body = source.match(/EM_JS\(int, nv_http_iniciar_assinc,[\s\S]*?, \{([\s\S]*?)\n\}\);/)[1];
+  const module = {};
+  let aborted = false, elapsed;
+  vm.runInNewContext('(function(metodo,url,cabs,corpo,prazo){' + body + '})("GET","url",0,0,37)', {
+    Module:module,UTF8ToString:x=>x,AbortController:class {abort(){aborted=true;}},
+    setTimeout:(fn,ms)=>{elapsed=ms;fn();return 1;},clearTimeout(){},
+    fetch:()=>new Promise(()=>{})
+  });
+  assert.equal(elapsed,37); assert(aborted);
+  assert.equal(module.nvFioReqs[1].pronto,true,'deadline must release polling fiber');
+  console.log('PASS: worker XHR and cooperative fetch enforce requested deadlines');
+}
+
+const cases = {probe, avplay, decoder, fatal, deadlines};
 (async () => {
   const selected = process.argv.slice(2);
   for (const name of selected.length ? selected : Object.keys(cases)) await cases[name]();

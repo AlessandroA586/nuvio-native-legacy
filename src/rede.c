@@ -217,9 +217,8 @@ static long redeLimiteAtual(void) {
 // JavaScript funciona na TV. Para testar no Chrome do desktop e preciso subir o
 // navegador com --disable-web-security ou por um proxy.
 //
-// timeout NAO E HONRADO: XHR sincrono proibe xhr.timeout (lanca
-// InvalidAccessError). O parametro `segundos` e aceito e ignorado; quem corta a
-// espera e o navegador.
+// Worker synchronous XHR supports timeout. On the browser main thread it
+// throws InvalidAccessError: fail instead of starting an unbounded request.
 
 #include <emscripten.h>
 #include "fio1.h"   // so tem corpo com NV_UM_FIO; nv_http troca de implementacao abaixo
@@ -260,7 +259,7 @@ static long redeLimiteAtual(void) {
 #ifdef NV_UM_FIO
 
 EM_JS(int, nv_http_iniciar_assinc, (const char *metodo, const char *url,
-                                    const char *cabs, const char *corpo), {
+                                    const char *cabs, const char *corpo, int prazo), {
   if (!Module.nvFioReqs) { Module.nvFioReqs = {}; Module.nvFioProxId = 1; }
   var id = Module.nvFioProxId++;
   var m = UTF8ToString(metodo), u = UTF8ToString(url);
@@ -275,10 +274,14 @@ EM_JS(int, nv_http_iniciar_assinc, (const char *metodo, const char *url,
   // redirect:'follow' (padrao do fetch) para manter o mesmo comportamento do
   // XHR sincrono: rede_url_final quer o ENDERECO FINAL depois de
   // redirecionamentos (res.url), nao o pedido.
-  var init = { method: m, headers: cab, redirect: "follow" };
+  var controle = new AbortController();
+  var init = { method: m, headers: cab, redirect: "follow", signal: controle.signal };
   if (corpo) init.body = UTF8ToString(corpo);
   var reg = { pronto: false, erro: false, status: 0, url: "", etag: "", bytes: null };
   Module.nvFioReqs[id] = reg;
+  var timer = setTimeout(function () {
+    reg.erro = true; reg.pronto = true; controle.abort();
+  }, prazo);
   fetch(u, init).then(function (res) {
     reg.status = res.status;
     // Pelo /v1/proxy do worker (so no VIDAA), res.url e o endereco do PROXY;
@@ -301,7 +304,7 @@ EM_JS(int, nv_http_iniciar_assinc, (const char *metodo, const char *url,
     // "requisicao nem saiu" — nv_http_colher_assinc devolve 0.
     reg.erro = true;
     reg.pronto = true;
-  });
+  }).finally(function () { clearTimeout(timer); });
   return id;
 });
 
@@ -335,8 +338,8 @@ EM_JS(char *, nv_http_colher_assinc, (int id, int *tam, int *status,
 static char *nv_http(const char *metodo, const char *url, const char *cabs,
                      const char *corpo, int *tam, int *status,
                      char *urlFinal, int urlFinalTam,
-                     char *etag, int etagTam, int *retryAfter) {
-  int id = nv_http_iniciar_assinc(metodo, url, cabs, corpo);
+                     char *etag, int etagTam, int *retryAfter, int prazo) {
+  int id = nv_http_iniciar_assinc(metodo, url, cabs, corpo, prazo);
   // Retry-After nao e lido no st/: 0 = "sem pista", o chamador usa a espera padrao.
   if (retryAfter) *retryAfter = 0;
   // fio1_ceder() dentro de uma fibra troca para outra fibra pronta (ou para
@@ -353,11 +356,12 @@ static char *nv_http(const char *metodo, const char *url, const char *cabs,
 EM_JS(char *, nv_http, (const char *metodo, const char *url, const char *cabs,
                         const char *corpo, int *tam, int *status,
                         char *urlFinal, int urlFinalTam,
-                        char *etag, int etagTam, int *retryAfter), {
+                        char *etag, int etagTam, int *retryAfter, int prazo), {
   var m = UTF8ToString(metodo), u = UTF8ToString(url);
   var xhr = new XMLHttpRequest();
   try {
     xhr.open(m, u, false);   // false = sincrono
+    xhr.timeout = prazo;
   } catch (e) { return 0; }
   // Le a resposta como texto BRUTO, byte a byte. responseType='arraybuffer' é
   // proibido em XHR sincrono no fio principal, e a mesma funcao serve os dois
@@ -680,13 +684,18 @@ static int vidaaPodeProxiar(const char *url, const char *const *cab, const char 
 }
 #endif
 
-static char *pedir2(const char *metodo, const char *url, const char *const *cab,
+static int nvPrazo(int segundos) {
+  return segundos > 0 ? (segundos > INT_MAX / 1000 ? INT_MAX : segundos * 1000) : 15000;
+}
+
+static char *pedir2(const char *metodo, const char *url, int segundos, const char *const *cab,
                     const char *extraCab, const char *corpo,
                     long *tam, int *status, char *etag, unsigned tamEtag,
                     int *retryAfter) {
   char *cabs, *corpoResp;
   int n = 0, http = 0;
 #ifdef NV_VIDAA
+  unsigned long inicioPedido = redeAgoraMs();
   char *urlProxiada = NULL;
   const char *urlEfetiva = url;
 #endif
@@ -715,7 +724,7 @@ static char *pedir2(const char *metodo, const char *url, const char *const *cab,
   }
   cabs = juntarCabs(cab, extraCab);
   corpoResp = nv_http(metodo, urlEfetiva, cabs, corpo, &n, &http,
-                      redeFinalDst, (int)redeFinalTam, etag, (int)tamEtag, retryAfter);
+                      redeFinalDst, (int)redeFinalTam, etag, (int)tamEtag, retryAfter, nvPrazo(segundos));
   free(cabs);
   // HTTPS QUE FALHOU DIRETO (http==0: nem chegou a ter status, o mesmo
   // sintoma do bloqueio de conteudo misto) -> tenta 1x via proxy. So quando
@@ -729,7 +738,9 @@ static char *pedir2(const char *metodo, const char *url, const char *const *cab,
       char fim2[512];
       char *r2;
       fim2[0] = 0;
-      r2 = nv_http(metodo, urlP, cabs2, corpo, &n2, &http2, fim2, (int)sizeof fim2, etag, (int)tamEtag, NULL);
+      unsigned long gastoPedido = redeAgoraMs() - inicioPedido;
+      int resta = nvPrazo(segundos) - (int)gastoPedido;
+      r2 = resta > 0 ? nv_http(metodo, urlP, cabs2, corpo, &n2, &http2, fim2, (int)sizeof fim2, etag, (int)tamEtag, NULL, resta) : NULL;
       free(cabs2);
       // SO VALE SE FOI O PROXY QUE BUSCOU. rotaProxy manda x-nuvio-url-final
       // (o destino real, "http...") em TODA resposta que veio do destino, 404
@@ -764,7 +775,7 @@ static char *pedir2(const char *metodo, const char *url, const char *const *cab,
 #else
   cabs = juntarCabs(cab, extraCab);
   corpoResp = nv_http(metodo, url, cabs, corpo, &n, &http,
-                      redeFinalDst, (int)redeFinalTam, etag, (int)tamEtag, retryAfter);
+                      redeFinalDst, (int)redeFinalTam, etag, (int)tamEtag, retryAfter, nvPrazo(segundos));
   free(cabs);
 #endif
   if (status) *status = http;
@@ -817,31 +828,31 @@ static char *pedir2(const char *metodo, const char *url, const char *const *cab,
   return corpoResp;
 }
 
-static char *pedir(const char *metodo, const char *url, const char *const *cab,
+static char *pedir(const char *metodo, const char *url, int segundos, const char *const *cab,
                    const char *extraCab, const char *corpo,
                    long *tam, int *status) {
-  return pedir2(metodo, url, cab, extraCab, corpo, tam, status, NULL, 0, NULL);
+  return pedir2(metodo, url, segundos, cab, extraCab, corpo, tam, status, NULL, 0, NULL);
 }
 
 char *rede_baixar_etag(const char *url, int segundos, const char *const *cab,
                        int *status, char *etag, unsigned tamEtag) {
   (void)segundos;
-  return pedir2("GET", url, cab, NULL, NULL, NULL, status, etag, tamEtag, NULL);
+  return pedir2("GET", url, segundos, cab, NULL, NULL, NULL, status, etag, tamEtag, NULL);
 }
 
 char *rede_baixar(const char *url, int segundos) {
   (void)segundos;
-  return pedir("GET", url, NULL, NULL, NULL, NULL, NULL);
+  return pedir("GET", url, segundos, NULL, NULL, NULL, NULL, NULL);
 }
 
 char *rede_baixar_bin(const char *url, int segundos, long *tam) {
   (void)segundos;
-  return pedir("GET", url, NULL, NULL, NULL, tam, NULL);
+  return pedir("GET", url, segundos, NULL, NULL, NULL, tam, NULL);
 }
 
 char *rede_baixar_com(const char *url, int segundos, const char *const *cab) {
   (void)segundos;
-  return pedir("GET", url, cab, NULL, NULL, NULL, NULL);
+  return pedir("GET", url, segundos, cab, NULL, NULL, NULL, NULL);
 }
 
 // Ver rede.h. Sem `status` para pedir2, que entao ja devolve NULL em >= 400
@@ -849,18 +860,18 @@ char *rede_baixar_com(const char *url, int segundos, const char *const *cab) {
 // passa por aqui em log.
 char *rede_postar_bin(const char *url, int segundos, const char *corpo, long *tam) {
   (void)segundos;
-  return pedir("POST", url, NULL, "Content-Type: text/plain", corpo ? corpo : "", tam, NULL);
+  return pedir("POST", url, segundos, NULL, "Content-Type: text/plain", corpo ? corpo : "", tam, NULL);
 }
 
 char *rede_baixar_st(const char *url, int segundos, const char *const *cab,
                      int *status) {
   (void)segundos;
-  return pedir("GET", url, cab, NULL, NULL, NULL, status);
+  return pedir("GET", url, segundos, cab, NULL, NULL, NULL, status);
 }
 char *rede_baixar_st_retry(const char *url, int segundos, const char *const *cab,
                            int *status, int *retryAfter) {
   (void)segundos;
-  return pedir2("GET", url, cab, NULL, NULL, NULL, status, NULL, 0, retryAfter);
+  return pedir2("GET", url, segundos, cab, NULL, NULL, NULL, status, NULL, 0, retryAfter);
 }
 
 // UM pedido de Range (o laco em pedacos e rede_baixar_trecho_st, no fim do
@@ -880,7 +891,7 @@ static char *trechoUmaVez(const char *url, int segundos, long long ini, long lon
   cab[0] = faixa; cab[1] = NULL;
   rede_teto = (long)(fim - ini + 1);
   redeFinalDst = final; redeFinalTam = final ? tamFinal : 0;
-  r = pedir("GET", url, cab, NULL, NULL, tam, &st);
+  r = pedir("GET", url, segundos, cab, NULL, NULL, tam, &st);
   redeFinalDst = NULL; redeFinalTam = 0;
   rede_teto = 0;
   if (status) *status = st;
@@ -907,7 +918,7 @@ char *rede_apagar(const char *url, int segundos, const char *const *cab,
                   int *status) {
   char *r;
   (void)segundos;
-  r = pedir("DELETE", url, cab, NULL, NULL, NULL, status);
+  r = pedir("DELETE", url, segundos, cab, NULL, NULL, NULL, status);
   // 204 sem corpo e a resposta NORMAL de um DELETE aceito. Devolver NULL ali
   // faria o chamador ler sucesso como falha de transporte.
   if (!r && status && *status > 0) return strdup("");
@@ -923,7 +934,7 @@ char *rede_postar_st(const char *url, int segundos, const char *const *cab,
   // (Real-Debrid quer form-urlencoded) nao recebe um segundo.
   for (k = 0; cab && cab[k]; k++)
     if (!strncasecmp(cab[k], "Content-Type:", 13)) temCt = 1;
-  r = pedir("POST", url, cab, temCt ? NULL : "Content-Type: application/json",
+  r = pedir("POST", url, segundos, cab, temCt ? NULL : "Content-Type: application/json",
             corpo ? corpo : "", NULL, status);
   // Falha de TRANSPORTE continua sendo NULL; corpo de 4xx e devolvido. Um POST
   // que respondeu com corpo vazio devolve "" e nao NULL, como no outro caminho.
@@ -946,12 +957,12 @@ char *rede_postar_seguro_st(const char *url, int segundos, const char *const *ca
 // in --um-fio nv_http is fetch() and yields to the other fibers meanwhile.
 // 1 resolved, 0 dead (real HTTP error), -1 unknown (blocked, or HEAD refused:
 // signed GET URLs answer HEAD with 403).
-static int sondaVidaa(const char *url, const char *cabs, char *dst, unsigned tam, int *http) {
+static int sondaVidaa(const char *url, int segundos, const char *cabs, char *dst, unsigned tam, int *http) {
   int n = 0;
   char *corpo;
   *http = 0;
   dst[0] = 0;
-  corpo = nv_http("HEAD", url, cabs, NULL, &n, http, dst, (int)tam, NULL, 0, NULL);
+  corpo = nv_http("HEAD", url, cabs, NULL, &n, http, dst, (int)tam, NULL, 0, NULL, nvPrazo(segundos));
   if (!corpo) return -1;
   free(corpo);
   if (*http == 403 || *http == 405 || *http == 501) return -1;
@@ -962,11 +973,12 @@ static int sondaVidaa(const char *url, const char *cabs, char *dst, unsigned tam
 // Sonda sem corpo atravessando a ponte. O XHR ainda recebe o corpo inteiro se
 // o servidor ignorar Range, mas nao aloca essa copia no heap do WASM.
 EM_JS(int, nv_url_sonda, (const char *url, const char *cabs, char *dst,
-                         int tam, int *status, char *mime, int mimeTam, long *corpo), {
+                         int tam, int *status, char *mime, int mimeTam, long *corpo, int prazo), {
   var xhr = new XMLHttpRequest();
   if (status) HEAP32[status >> 2] = 0;
   try {
     xhr.open("GET", UTF8ToString(url), false);
+    xhr.timeout = prazo;
     if (cabs) UTF8ToString(cabs).split("\n").forEach(function (linha) {
       var i = linha.indexOf(":");
       if (i <= 0) return;
@@ -1024,11 +1036,11 @@ int rede_url_final_tipo(const char *url, int segundos, const char *const *cab,
 #ifdef NV_VIDAA
   // No type/size from HEAD (mime empty, corpo -1). Unknown is not dead: the
   // player tries the URL itself (same policy as verificarUma).
-  ok = sondaVidaa(url, cabs, dst, tam, &http);
+  ok = sondaVidaa(url, segundos, cabs, dst, tam, &http);
   if (ok < 0) ok = snprintf(dst, tam, "%s", url) < (int)tam;
 #else
   ok = nv_url_sonda(url, cabs, dst, (int)tam, &http, mime,
-                    mime && mimeTam < INT_MAX ? (int)mimeTam : 0, &c32);
+                    mime && mimeTam < INT_MAX ? (int)mimeTam : 0, &c32, nvPrazo(segundos));
 #endif
   free(cabs);
   if (corpo) *corpo = c32;
@@ -1049,7 +1061,7 @@ int rede_url_final_vidaa(const char *url, int segundos, char *dst, unsigned tam)
   int http;
   (void)segundos;
   if (!url || !*url || !dst || tam == 0) return -1;
-  return sondaVidaa(url, NULL, dst, tam, &http);
+  return sondaVidaa(url, segundos, NULL, dst, tam, &http);
 }
 #endif
 
@@ -1071,10 +1083,10 @@ int rede_url_final_vidaa(const char *url, int segundos, char *dst, unsigned tam)
 // Range; se um nao honrar, o teste trava o fio dele ate o navegador desistir.
 EM_JS(int, nv_http_contar, (const char *url, const char *cabs, double ini,
                             double fim, int *status, char *urlFinal,
-                            int urlFinalTam), {
+                            int urlFinalTam, int prazo), {
   var xhr = new XMLHttpRequest();
   HEAP32[status >> 2] = 0;
-  try { xhr.open("GET", UTF8ToString(url), false); } catch (e) { return -1; }
+  try { xhr.open("GET", UTF8ToString(url), false); xhr.timeout = prazo; } catch (e) { return -1; }
   try { xhr.overrideMimeType("text/plain; charset=x-user-defined"); } catch (e) {}
   if (cabs) {
     UTF8ToString(cabs).split("\n").forEach(function (linha) {
@@ -1119,7 +1131,7 @@ int rede_medir_vazao(const char *url, const char *const *cab, int segundos,
     if (cancelado && *cancelado) { if (res) res->cancelado = 1; break; }
     fin[0] = 0;
     n = nv_http_contar(atual, cabs, (double)pos, (double)(pos + pedaco - 1), &st,
-                       fin, (int)sizeof fin);
+                       fin, (int)sizeof fin, (int)(janela - gasto));
     dt = redeAgoraMs() - a;
     if (res) res->status = st;
     if (primeiro && final && tamFinal) snprintf(final, tamFinal, "%s", fin);
