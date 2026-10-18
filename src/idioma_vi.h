@@ -2886,7 +2886,7 @@
   T("Mostra ou esconde a sinopse do destaque.", "Hiện hoặc ẩn tóm tắt ở mục nổi bật."),
   T("Mostra ou esconde esta fonte na fileira de notas da página do título.", "Hiện hoặc ẩn nguồn này ở hàng điểm đánh giá của trang tựa phim."),
   T("Mostra ou esconde o ano no destaque.", "Hiện hoặc ẩn năm ở mục nổi bật."),
-  T("Mostra ou esconde o gênero sob o logo do destaque.", "Hiện hoặc ẩn thể loại dưới logo của mục nổi bật."),
+  T("Mostra ou esconde o gênero sob o logo do destaque e dos pôsteres grandes.", "Hiện hoặc ẩn thể loại dưới logo của mục nổi bật và poster lớn."),
   T("Mostra quadros por segundo, o pior quadro e a memória dentro da ilha do relógio, atualizados a cada 3 s. Mínimo fica na linha da hora, Menor ganha uma segunda linha e Grande abre o painel completo. Quando a ilha mostra um aviso, o medidor se recolhe e volta depois.", "Hiển thị khung hình mỗi giây, khung hình tệ nhất và bộ nhớ trong đảo đồng hồ, cập nhật mỗi 3 giây. Tối giản nằm trên dòng giờ, Gọn thêm một dòng thứ hai và Lớn mở bảng đầy đủ. Khi đảo hiển thị thông báo, đồng hồ đo tạm ẩn rồi quay lại."),
   T("Mostra um código de 4 letras: digite em plex.tv/link no celular. Nada é digitado nesta TV; só um token fica aqui.", "Hiện mã gồm 4 chữ cái: nhập tại plex.tv/link trên điện thoại. Không gõ gì trên TV này; ở đây chỉ còn lại một token."),
   T("Mostra uma miniatura do filme acima da barra enquanto você avança ou volta. As imagens vêm do Seekr (seekr.tv) e precisam da sua chave pessoal; cada título aberto conta uma consulta da sua cota diária.", "Hiện ảnh thu nhỏ của phim phía trên thanh khi bạn tua tới hoặc lui. Ảnh lấy từ Seekr (seekr.tv) và cần khóa cá nhân của bạn; mỗi tựa mở ra tính một lượt truy vấn trong hạn mức hằng ngày."),

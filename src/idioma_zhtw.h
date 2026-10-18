@@ -2886,7 +2886,7 @@
   T("Mostra ou esconde a sinopse do destaque.", "顯示或隱藏焦點推薦的劇情簡介。"),
   T("Mostra ou esconde esta fonte na fileira de notas da página do título.", "在作品頁的評分列中顯示或隱藏此來源。"),
   T("Mostra ou esconde o ano no destaque.", "顯示或隱藏焦點推薦的年份。"),
-  T("Mostra ou esconde o gênero sob o logo do destaque.", "顯示或隱藏焦點推薦標誌下方的類型。"),
+  T("Mostra ou esconde o gênero sob o logo do destaque e dos pôsteres grandes.", "顯示或隱藏焦點推薦和大海報標誌下方的類型。"),
   T("Mostra quadros por segundo, o pior quadro e a memória dentro da ilha do relógio, atualizados a cada 3 s. Mínimo fica na linha da hora, Menor ganha uma segunda linha e Grande abre o painel completo. Quando a ilha mostra um aviso, o medidor se recolhe e volta depois.", "在時鐘島內顯示每秒影格數、最差影格和記憶體，每 3 秒更新。最小顯示在時間列上，精簡增加第二列，大則開啟完整面板。島上顯示通知時，監測器會暫時收起，之後恢復。"),
   T("Mostra um código de 4 letras: digite em plex.tv/link no celular. Nada é digitado nesta TV; só um token fica aqui.", "顯示 4 個字母的代碼：請在手機上開啟 plex.tv/link 輸入。這台電視上不需要輸入任何內容，只保留權杖。"),
   T("Mostra uma miniatura do filme acima da barra enquanto você avança ou volta. As imagens vêm do Seekr (seekr.tv) e precisam da sua chave pessoal; cada título aberto conta uma consulta da sua cota diária.", "快轉或倒轉時，在進度條上方顯示影片縮圖。圖片來自 Seekr（seekr.tv），需要您的個人金鑰；每開啟一個片名會消耗一次每日額度。"),

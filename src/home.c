@@ -6440,7 +6440,10 @@ static void desenhaPosterGrande(const CatItem *ci, const char *caminho,
   CorvivaPaleta p;
   CorvivaTokens tk;
   int tem, tr, tg, tb, sr, sg, sb, linhas = fator < 0.9f ? 1 : fator > 1.1f ? 3 : 2;
-  float cr, cg, cb, pad = fator < 0.9f ? 26.0f : 34.0f, veuTopo, veuF, y, logoMaxH;
+  float cr, cg, cb, pad = fator < 0.9f ? 26.0f : 34.0f, veuTopo, veuF, y, logoMaxH, yLogo;
+  // "Mostrar genero no destaque" desligado: so arte e logo, sem sinopse nem
+  // linha de genero/classificacao (dono: TV Samsung, interface limpa).
+  const int semMeta = !ajustes_hero_genero();
   if (!ci) return;
   veuF = NV_POSTER_G_VEU_F;
   if (linhas != 2) {
@@ -6463,13 +6466,14 @@ static void desenhaPosterGrande(const CatItem *ci, const char *caminho,
              raio / veuF, cr, cg, cb, NV_POSTER_G_VEU_A * a); }
   // Sinopse: 1, 2 ou 3 linhas ancoradas na base do card.
   y = py + h - pad - 30.0f * (float)linhas;
-  if (ci->sinopse[0])
+  if (!semMeta && ci->sinopse[0])
     txt_bloco_corta(TXT_HERO_SIN, ci->sinopse, sr, sg, sb,
                     px + pad, y, w - pad * 2.0f, 30.0f, 0.95f * a, linhas);
   // Linha de meta: o genero ("Filme · Terror · Suspense") e, ao lado, o selo da
   // classificacao — o mesmo chip do card aberto (desenhaFaixaAberta), na tinta.
   y -= 46.0f;
-  if (ci->genero[0]) {
+  yLogo = semMeta ? py + h - pad : y - 18.0f;   // base do logo
+  if (!semMeta && ci->genero[0]) {
     // O selo mora a direita do genero, DENTRO do card: o genero cede a largura
     // dele (e ganha reticencias), em vez de empurrar o selo para fora.
     TxtLinha cl = { 0 };
@@ -6493,7 +6497,7 @@ static void desenhaPosterGrande(const CatItem *ci, const char *caminho,
   // Logo: a arte de logo do titulo (logotitulo), rente a linha de meta. Sem
   // logo, o nome em texto NA MESMA CAIXA e na tinta do veu — a caixa e
   // reservada, o card nao pula quando a logo chega.
-  logoMaxH = y - 18.0f - (veuTopo + 24.0f);
+  logoMaxH = yLogo - (veuTopo + 24.0f);
   if (logoMaxH > 40.0f) {
     const char *uL = logotitulo_url(ci, w - pad * 2.0f);
     GLuint tl = uL ? tex_obter_logo_larg_qualquer(uL, w - pad * 2.0f) : 0;
@@ -6503,13 +6507,13 @@ static void desenhaPosterGrande(const CatItem *ci, const char *caminho,
       GfxModo m = tex_marca_escura(uL) ? GFX_MARCA : GFX_TEXTO;
       if (hL > logoMaxH) { hL = logoMaxH; wL = hL * asp; }
       gfx_tex_aspect_atual = 0.0f;
-      gfx_rect((GfxRect){ px + pad, y - 18.0f - hL, wL, hL }, tl, m,
+      gfx_rect((GfxRect){ px + pad, yLogo - hL, wL, hL }, tl, m,
                0, 0, 0, 0.0f, 1, 1, 1, a);
       gfx_tex_aspect_atual = 0.0f;
     } else if (ci->titulo[0]) {
       TxtLinha lt = txt_linha_corta(TXT_CW_TITULO, ci->titulo, tr, tg, tb, 255,
                                     w - pad * 2.0f);
-      txt_desenhar_alpha(lt, px + pad, y - 18.0f - lt.h, a);
+      txt_desenhar_alpha(lt, px + pad, yLogo - lt.h, a);
     }
   }
 }
