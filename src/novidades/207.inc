@@ -1,53 +1,123 @@
-// Conteudo da 2.0.7: docs/releases/2.0.7/NOVIDADES.md.
-// Sem cenas nem artes. Tetos de linhas para as traducoes; o motor mede antes de paginar.
+// User-facing release summary, checked against v2.0.6..HEAD.
+// Existing translated copy is shared with Settings and the release notes.
+static void visual207(GfxRect p, float t, float a);
 static const NovItem ITENS_207[] = {
-  { .grupo = "Destaques", .icone = "aj_layout-dashboard", .nome = "Herói dividido",
-    .frase = "Novo estilo de fileira: o título em foco fica grande ao lado dos pôsteres. Escolha em Estilo da fileira.", .linhas = 3 },
-  { .icone = "aj_monitor-play", .nome = "Player externo",
-    .frase = "Escolha qualquer player instalado e, se quiser, outro só para anime.", .linhas = 2,
-    .plataformas = NOV_ANDROID | NOV_OUTRAS },
+  { .grupo = "Destaques", .icone = "aj_layout-dashboard", .nome = "Palco",
+    .frase = "O título em foco aparece grande à esquerda, com arte, nota, sinopse e elenco; os cartazes da fileira correm à direita.", .linhas = 5 },
   { .icone = "aj_audio-lines", .nome = "Trailer dublado",
-    .frase = "Áudio do trailer põe o trailer dublado na frente, e Original mantém o idioma do título. Se o YouTube falhar, entra o da Apple ou do IMDb.", .linhas = 3 },
-  { .icone = "aj_captions", .nome = "Legendas no trailer",
-    .frase = "O trailer do YouTube mostra legendas no idioma das suas legendas.", .linhas = 2 },
-  { .icone = "aj_smartphone", .nome = "Modo TV e Mobile",
-    .frase = "O APK padrão escolhe sozinho entre TV e Mobile; dá para fixar em Modo da interface.", .linhas = 2,
-    .plataformas = NOV_ANDROID | NOV_OUTRAS },
+    .frase = "Áudio do trailer põe o trailer dublado na frente, e Original mantém o idioma do título. Se o YouTube falhar, entra o da Apple ou do IMDb.", .linhas = 6 },
   { .icone = "aj_play", .nome = "Continuar assistindo",
-    .frase = "Até 40 títulos, e a fileira chega primeiro sem segurar os outros catálogos da Home.", .linhas = 2 },
+    .frase = "Até 40 títulos, e a fileira chega primeiro sem segurar os outros catálogos da Home.", .linhas = 4 },
   { .icone = "aj_droplet", .nome = "Vidro fosco",
-    .frase = "Bem mais leve: uma só captura do fundo por quadro, em todas as plataformas.", .linhas = 2 },
-  { .grupo = "Mais novidades", .icone = "aj_tv-minimal-play", .nome = "Trailer no cartão",
-    .frase = "O trailer toca no cartão em foco ou expandido, mesmo com o destaque desligado.", .linhas = 2 },
+    .frase = "Telas mais fluidas, com vidro mais leve e menos sobreposição.", .linhas = 3 },
+  { .grupo = "Mais novidades", .icone = "aj_layout-dashboard", .nome = "Herói dividido",
+    .frase = "Novo estilo de fileira: o título em foco fica grande ao lado dos pôsteres. Escolha em Estilo da fileira.", .linhas = 5 },
+  { .icone = "aj_monitor-play", .nome = "Player externo",
+    .frase = "Escolha qualquer player instalado e, se quiser, outro só para anime.", .linhas = 4,
+    .plataformas = NOV_ANDROID | NOV_OUTRAS },
+  { .icone = "aj_smartphone", .nome = "Modo TV e Mobile",
+    .frase = "O APK padrão escolhe sozinho entre TV e Mobile; dá para fixar em Modo da interface.", .linhas = 4,
+    .plataformas = NOV_ANDROID | NOV_OUTRAS },
+  { .icone = "aj_captions", .nome = "Legendas no trailer",
+    .frase = "O trailer do YouTube mostra legendas no idioma das suas legendas.", .linhas = 4, .plataformas = NOV_LG | NOV_OUTRAS },
+  { .icone = "aj_tv-minimal-play", .nome = "Trailer no cartão",
+    .frase = "O trailer toca no cartão em foco ou expandido, mesmo com o destaque desligado.", .linhas = 4 },
   { .icone = "aj_languages", .nome = "Áudio da série",
-    .frase = "A faixa de áudio que você escolher fica valendo para a série inteira.", .linhas = 2 },
+    .frase = "A faixa de áudio que você escolher fica valendo para a série inteira.", .linhas = 4 },
   { .icone = "aj_memory-stick", .nome = "Tamanho do buffer",
-    .frase = "Novo ajuste do player: Automático, 64, 128 ou 256 MB, dentro da memória livre.", .linhas = 2 },
+    .frase = "Novo ajuste do player: Automático, 64, 128 ou 256 MB, dentro da memória livre.", .linhas = 4 },
   { .icone = "aj_hard-drive", .nome = "Cache no pendrive",
-    .frase = "Agora no Android e na Samsung, com todos os detalhes do pendrive.", .linhas = 2,
+    .frase = "Agora no Android e na Samsung, com todos os detalhes do pendrive.", .linhas = 4,
     .plataformas = NOV_ANDROID | NOV_TPK | NOV_OUTRAS },
   { .icone = "aj_link", .nome = "Links externos",
-    .frase = "Links nuvio-legacy://, stremio:// e do IMDb abrem o título, tocam ou buscam no Nuvio.", .linhas = 2,
+    .frase = "Links nuvio-legacy://, stremio:// e do IMDb abrem o título, tocam ou buscam no Nuvio.", .linhas = 4,
     .plataformas = NOV_ANDROID | NOV_OUTRAS },
-  { .grupo = "Correções", .icone = "aj_puzzle", .nome = "Fontes",
-    .frase = "Fontes de link direto, como StreamBridge e Emby, voltaram, mesmo com o P2P desligado.", .linhas = 2 },
+  { .icone = "aj_play", .nome = "Especiais",
+    .frase = "Episódios especiais aparecem e podem ser reproduzidos.", .linhas = 4 },
+  { .grupo = "Melhorias", .icone = "aj_sliders-horizontal", .nome = "Escala de texto e componentes",
+    .frase = "Texto de 85% a 130%, sem deslocar cartazes e controles.", .linhas = 4 },
+  { .icone = "aj_layout-dashboard", .nome = "Espaçamento das fileiras",
+    .frase = "Compacto, Normal ou Confortável na página do título.", .linhas = 4 },
+  { .icone = "aj_droplet", .nome = "Foco na cor de destaque",
+    .frase = "Realce o item selecionado com a sua cor em Aparência.", .linhas = 4 },
+  { .grupo = "Correções", .icone = "aj_play", .nome = "Assistidas sincronizam sozinhas",
+    .frase = "Marcas de assistido e próximos episódios ficam em dia no Trakt.", .linhas = 4 },
+  { .icone = "aj_puzzle", .nome = "Fontes",
+    .frase = "Fontes de link direto, como StreamBridge e Emby, voltaram, mesmo com o P2P desligado.", .linhas = 4 },
   { .icone = "aj_search", .nome = "Busca",
-    .frase = "O título exato vem primeiro, e séries com id do TMDB ganham os episódios.", .linhas = 2 },
+    .frase = "O título exato vem primeiro, e séries com id do TMDB ganham os episódios.", .linhas = 4 },
   { .icone = "aj_user-round", .nome = "PIN do perfil",
-    .frase = "Digitar o PIN abre o perfil de primeira.", .linhas = 2 },
+    .frase = "Digitar o PIN abre o perfil de primeira.", .linhas = 3 },
   { .icone = "aj_house", .nome = "Fileiras da Home",
-    .frase = "Somem as fileiras de add-ons desinstalados, e catálogos extras não tomam o lugar das suas.", .linhas = 2 },
+    .frase = "Somem as fileiras de add-ons desinstalados, e catálogos extras não tomam o lugar das suas.", .linhas = 4 },
   { .icone = "aj_users", .nome = "Elenco",
-    .frase = "As fotos do elenco ficam mesmo quando o TMDB não responde.", .linhas = 2 },
-  { .icone = "aj_clock", .nome = "Relógio",
-    .frase = "Para cima chega ao relógio nas páginas de navegação.", .linhas = 2 },
+    .frase = "As fotos do elenco ficam mesmo quando o TMDB não responde.", .linhas = 3 },
+  { .icone = "aj_monitor-play", .nome = "Player",
+    .frase = "Volume sem pausar no Android, legendas mais nítidas e abertura mais rápida.", .linhas = 4 },
   { .icone = "aj_sliders-horizontal", .nome = "Samsung .tpk",
-    .frase = "Abre de forma mais estável, e o teclado não atrapalha mais a inicialização.", .linhas = 2,
+    .frase = "Abre de forma mais estável, e o teclado não atrapalha mais a inicialização.", .linhas = 4,
     .plataformas = NOV_TPK | NOV_OUTRAS },
 };
-static const NovConteudo NOV_ATUAL = {
-  .versao = "2.0.7",
-  .arquivo = "novidades-207.txt",
-  .subtitulo = "Nova Home com Herói dividido, players externos e trailers dublados.",
-  .itens = ITENS_207, .nItens = (int)(sizeof ITENS_207 / sizeof *ITENS_207),
+static const NovCena CENAS_207[] = {
+  { "Destaques", "Palco", visual207, 5.5f, 0 },
+  { "Destaques", "Trailer dublado", visual207, 5.5f, 0 },
+  { "Destaques", "Continuar assistindo", visual207, 5.5f, 0 },
+  { "Destaques", "Vidro fosco", visual207, 5.5f, 0 },
 };
+static const int ARTES_207[] = { 2, 4, 7, 9 };
+static const NovConteudo NOV_ATUAL = {
+  .versao = "2.0.7", .arquivo = "novidades-207.txt",
+  .subtitulo = NULL,
+  .itens = ITENS_207, .nItens = (int)(sizeof ITENS_207 / sizeof *ITENS_207),
+  .cenas = CENAS_207, .nCenas = 4,
+  .artes = ARTES_207, .nArtes = 4,
+};
+
+// Small, static feature mockups. Only their entrance moves; no live video.
+static void visual207(GfxRect p, float t, float a) {
+  int c = (int)(relogio / 5.5f) % 4;
+  float e = ajustes_animacoes_reduzidas() ? 1 : sai3(t / .45f);
+  float x = p.x + 40, y = p.y + 100 + (1 - e) * 16;
+  float w = p.w - 80;
+  const char *icons[] = { "aj_layout-dashboard", "aj_audio-lines", "aj_play", "aj_droplet" };
+  novArte(ARTES_207[c], (GfxRect){p.x, p.y, p.w, p.h}, PV_RAIO, .68f * a);
+  gfx_rect(p, 0, GFX_VEU_CARD, 0, 0, 0, PV_RAIO / p.h, .025f, .03f, .045f, a);
+  float vs = fminf(1, (p.h - 230) / 540);
+  gfx_transformar(p.x, p.y, vs, 0, 0);
+  gfx_icone((GfxRect){x, p.y + 36, 40, 40}, icons[c], .85f, .90f, 1, a);
+  if (c == 0) {
+    novArte(2, (GfxRect){x, y, w * .58f, 310}, 18, a * e);
+    for (int j = 0; j < 2; j++) {
+      GfxRect r = {x + w * .62f, y + j * 160, w * .38f, 145};
+      novArte(ARTES_207[j + 1], r, 14, a * e);
+    }
+    gfx_cor((GfxRect){x + 14, y + 270, w * .45f, 4}, .5f, .9f, .9f, 1, .9f * a);
+    for (int j = 0; j < 3; j++) gfx_cor((GfxRect){x, y + 340 + j * 16, w * (.8f - j * .12f), 5}, .5f, 1, 1, 1, .3f * a);
+  } else if (c == 1) {
+    novArte(4, (GfxRect){x, y, w, 310}, 20, a * e);
+    gfx_icone((GfxRect){x + w / 2 - 36, y + 110, 72, 72}, "aj_play", 1, 1, 1, a);
+    for (int j = 0; j < 17; j++) {
+      float h = 12 + (j % 5) * 12;
+      gfx_cor((GfxRect){x + j * (w / 17), y + 355 - h / 2, 8, h}, .4f, .75f, .84f, 1, .8f * a);
+    }
+    gfx_icone((GfxRect){x + w - 48, y + 250, 32, 32}, "aj_captions", 1, 1, 1, a);
+  } else if (c == 2) {
+    TxtLinha n = txt_linha(TXT_NOV_TITULO, "40", 245, 247, 255, 255);
+    txt_desenhar_alpha(n, x, y, a * e);
+    for (int j = 0; j < 3; j++) {
+      float cw = (w - 32) / 3;
+      GfxRect r = {x + j * (cw + 16), y + 100, cw, 240};
+      novArte(ARTES_207[j], r, 14, a * e);
+      gfx_cor((GfxRect){r.x + 12, r.y + r.h - 18, r.w - 24, 4}, .5f, 1, 1, 1, .3f * a);
+      gfx_cor((GfxRect){r.x + 12, r.y + r.h - 18, (r.w - 24) * (.3f + .2f * j), 4}, .5f, .8f, .88f, 1, a);
+    }
+  } else {
+    for (int j = 0; j < 3; j++) {
+      GfxRect r = {x, y + j * 112, w, 90};
+      gfx_vidro_folha(r, 18 / r.h, a * e);
+      gfx_icone((GfxRect){x + 24, r.y + 25, 40, 40}, icons[j], .9f, .94f, 1, a);
+      gfx_cor((GfxRect){x + 88, r.y + 38, w - 130, 6}, .5f, 1, 1, 1, .5f * a);
+    }
+  }
+  gfx_sem_transformar();
+}

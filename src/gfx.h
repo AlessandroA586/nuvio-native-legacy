@@ -757,6 +757,9 @@ void gfx_cartao_foco_vidro(GfxRect r, float raio, float foco, float alfa,
 // escura; ~0,78 num painel flutuante sobre arte, onde o texto precisa de
 // contraste). Em repouso 0,16 x 0,55 sobre o fundo #0D0D0D da 0,11 — o cinza
 // das pilulas do video de referencia.
+// Scoped pre-blurred full-screen artwork, independent of the glass toggle.
+// Returns the previous source; restore it after drawing the owning screen.
+GLuint gfx_vidro_fonte_fixa(GLuint tex);
 void gfx_vidro_folha(GfxRect r, float raio, float a);
 // Borda de vidro (Liquid Glass): fio claro de 1 px e a luz que escorre do alto,
 // por cima do miolo. Nada em efeitos minimos (TVs fracas: so translucido liso).
