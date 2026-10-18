@@ -46,6 +46,11 @@ int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
 int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le o ajuste
 int ajustes_ocultar_filmes_vistos(void) { return 0; }    // #366: descoberta.c le o ajuste
 #include "../src/descoberta.c"
+#ifndef MONTAGEM_PERFIS_REAIS
+#define NV_TEST_SESSAO_PROPRIA
+#endif
+#define NV_TEST_ADDONS_PROPRIOS
+#define NV_TEST_SOCIAL_PROPRIO
 #include "jellyfin_stub.inc"
 #include "nvtmp.h"
 Uint32 SDL_GetTicks(void) { return 0; }
@@ -294,7 +299,9 @@ unsigned fil_perfil_geracao(void)          { return 0; }
 FilPassada fil_passada_ler(void)          { FilPassada p = {0, 0}; return p; }
 int   fil_passada_valida(const FilPassada *p) { (void)p; return 1; }
 void  fil_registrar_de(const FilPassada *p, const char *c, const char *t, const char *a, const char *k, int n) { (void)p; (void)c; (void)t; (void)a; (void)k; (void)n; }
+#ifndef NV_TEST_FIL_REGISTRAR_PROPRIO
 void  fil_registrar_se_couber_de(const FilPassada *p, const char *c, const char *t, const char *a, const char *k) { (void)p; (void)c; (void)t; (void)a; (void)k; }
+#endif
 int   fil_podar_catalogos(const char *const *ids, const char *const *bases, int n,
                           int perfilDaLista) {
   (void)ids; (void)bases; (void)n; (void)perfilDaLista; return 0; }
