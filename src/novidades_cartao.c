@@ -733,6 +733,7 @@ static void visPagina(int i, float *alfa, float *dx) {
 static void desenharCorpo(void) {
   float a = sai3(entrada), y0, altura = N_H;
   GLuint fonteAnterior;
+  int efeitosAnteriores;
   float largura = compacto() ? COMPACTO_W : N_W;
   float x0 = (NV_TELA_W - largura) * 0.5f;
   int i;
@@ -758,6 +759,9 @@ static void desenharCorpo(void) {
     gfx_cor((GfxRect){0, 0, NV_TELA_W, NV_TELA_H}, 0, .025f, .03f, .045f, .20f * entrada);
   } else gfx_cor((GfxRect){0, 0, NV_TELA_W, NV_TELA_H}, 0, .025f, .03f, .045f, entrada);
   fonteAnterior = gfx_vidro_fonte_fixa(fundoFosco);
+  // Keep every nested sheet and button flat while packaged artwork is missing.
+  efeitosAnteriores = gfx_efeitos_minimos();
+  if (!fundoFosco) gfx_definir_efeitos_minimos(1);
   if (compacto()) {
     int p = (int)pag, q = p < paginaApoio() ? p + 1 : p;
     float hp = p < paginaApoio() ? alturaPag[p] : N_H;
@@ -801,6 +805,7 @@ static void desenharCorpo(void) {
   }
   rodape(y0, altura, a);
   gfx_vidro_fonte_fixa(fonteAnterior);
+  gfx_definir_efeitos_minimos(efeitosAnteriores);
 }
 
 #ifdef NV_TOUCH_UI

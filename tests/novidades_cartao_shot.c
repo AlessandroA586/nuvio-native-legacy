@@ -35,7 +35,7 @@ static void ajustesDeTeste(int idioma, int reduzidas, int tema) {
   // NUVIO_SHOT_FONTE=3 (TXT_FAMILIA_*): a fonte da interface da TV
   // (Montserrat na TCL do dono), mais larga que a Inter do Mac.
   if (getenv("NUVIO_SHOT_FONTE")) fprintf(f, "fonteInterface %d\n", atoi(getenv("NUVIO_SHOT_FONTE")));
-  fprintf(f, "escalaTextoLocal %s\nvidroLocal %s\n", getenv("NUVIO_SHOT_ESCALA") ? getenv("NUVIO_SHOT_ESCALA") : "2", getenv("NUVIO_SHOT_VIDRO") ? getenv("NUVIO_SHOT_VIDRO") : "1");
+  fprintf(f, "escalaTextoLocal %s\nvidroLocal %s\nvidroFoscoLocal 1\n", getenv("NUVIO_SHOT_ESCALA") ? getenv("NUVIO_SHOT_ESCALA") : "2", getenv("NUVIO_SHOT_VIDRO") ? getenv("NUVIO_SHOT_VIDRO") : "1");
   fclose(f);
   ajustes_dir(dados_dir());
   gfx_escala_txt_definir(ajustes_escala_texto());
@@ -191,6 +191,29 @@ int main(int argc, char **argv) {
   tex_iniciar(64);
   gfx_tex_esquecer(0);
   gfx_icones_dir("deploy/app/art");
+
+  // Missing artwork keeps the opening cold for the entire entrance animation.
+  setenv("NUVIO_SHOT_VIDRO", "0", 1);
+  ajustesDeTeste(1, 0, 2);
+  ajustes_definir_vidro(1); // Override the first-run appearance migration.
+  assert(ajustes_vidro() && ajustes_vidro_fosco());
+  novcartao_dir(nvt("/missing-novcartao-art"));
+  novcartao_abrir();
+  for (int i = 0; i < 40; i++) {
+    quadro(1.0f / 60.0f);
+    assert(!novcartao_previa_pronta());
+    assert(gfx_vidro_capturas == 0 && gfx_vidro_passadas == 0);
+    assert(gfx_vidro_com_fonte == 0);
+  }
+  tecla(SDLK_ESCAPE);
+  for (int i = 0; i < 20; i++) {
+    quadro(1.0f / 60.0f);
+    assert(gfx_vidro_capturas == 0 && gfx_vidro_passadas == 0);
+  }
+  novcartao_dir("deploy/app/art");
+  unsetenv("NUVIO_SHOT_VIDRO");
+  puts("PASS: cold entrance and exit with glass enabled, missing artwork, zero live blur");
+  if (so && !strcmp(so, "cold")) goto fim;
 
   if (so && (!strcmp(so, "baseline") || !strcmp(so, "showoff"))) {
     const float escalas[] = { .85f, 1.0f, 1.3f };
