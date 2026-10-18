@@ -4301,10 +4301,9 @@ void ajustes_dir(const char *dir) {
       break;
     }
   }
-  // Legacy saves wrote every default: index 2 cannot prove an explicit 100%.
-  // Version 1 preserves every later choice, including 100%, across saves.
-  if (escalaVersao < 1 && valor[AJ_ESCALA_TEXTO] == 2)
-    valor[AJ_ESCALA_TEXTO] = valorPadrao[AJ_ESCALA_TEXTO];
+  // Preserve valid saved scales, including unversioned 100%: historical
+  // explicit choices and factory defaults are indistinguishable.
+  // Missing or invalid values use the new 85% default.
   if (!viuSinopse) {
     if (sinopseQuatro >= 0) valor[AJ_HERO_SINOPSE_TAM] = sinopseQuatro > 0;
     else if (sinopseAntiga >= 0) valor[AJ_HERO_SINOPSE_TAM] = sinopseAntiga > 0;

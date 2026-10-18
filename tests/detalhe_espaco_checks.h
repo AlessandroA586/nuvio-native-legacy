@@ -11,7 +11,7 @@ static int espaco_um(int p, int esc, unsigned char *pix) {
   { char c[600]; FILE *f;
     snprintf(c, sizeof c, "%s/ajustes.txt", dados_dir());
     f = fopen(c, "w"); assert(f);
-    fprintf(f, "selected_theme 2\nvidroLocal 0\ndetEspacoLocal %d\nescalaTextoLocal %d\n", p, esc);
+    fprintf(f, "selected_theme 2\nvidroLocal 0\ndetEspacoLocal %d\nescalaTextoLocal %d\nescalaTextoVersaoLocal 1\n", p, esc);
     fclose(f);
     ajustes_dir(dados_dir()); ajustes_definir_vidro(1); }
   abrir(1, 1, SEC_ELENCO, 0);
