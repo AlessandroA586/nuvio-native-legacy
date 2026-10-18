@@ -67,7 +67,7 @@ static void semear(const char *dir) {
   if (!idx || !dir) return;
   snprintf(caminho, sizeof caminho, "%s/ajustes.txt", dir);
   f = fopen(caminho, "a");
-  if (f) { fprintf(f, "escalaTextoLocal %s\n", idx); fclose(f); }
+  if (f) { fprintf(f, "escalaTextoLocal %s\nescalaTextoVersaoLocal 1\n", idx); fclose(f); }
 }
 
 void ajustes_dir(const char *dir) {

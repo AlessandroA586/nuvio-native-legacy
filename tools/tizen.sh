@@ -324,21 +324,23 @@ if [ "$UM_FIO" = "1" ]; then
   # verdadeiro), entao o wrap so precisa fechar o link.
   # ASYNCIFY_STACK_SIZE ACIMA (131072) SUBSTITUI O 32768 GLOBAL: o ultimo -s
   # de mesma chave vence no emcc, e $FIO_FLAGS entra DEPOIS do
-  # -sASYNCIFY_STACK_SIZE=32768 fixo mais abaixo neste arquivo. Sem
-  # ASYNCIFY_ONLY (o --um-fio ja pula essa restricao, ver o $( ... ) logo
-  # depois de -sASYNCIFY), essa pilha atende tanto o suspend/resume comum
+  # -sASYNCIFY_STACK_SIZE=32768 fixo mais abaixo neste arquivo. Com
+  # instrumentacao completa do Asyncify, essa pilha atende o suspend/resume
   # (nv_ceder_quadro, dados_iniciar) quanto emscripten_fiber_swap, que se
   # apoia no mesmo mecanismo do Asyncify por baixo. NAO MEDIDO NA TV — se
   # aparecer "unreachable" ao ceder quadro ou trocar de fibra, e aqui que se
   # aumenta primeiro, com NUVIO_ASSERTS=1 para achar onde estourou.
   RUNTIME_EXPORTS="'[\"ccall\"]'"
 else
-  FIO_FLAGS="-pthread -sPTHREAD_POOL_SIZE=$POOL -sPTHREAD_POOL_SIZE_STRICT=0"
+  # POOL EM TEMPO DE EXECUCAO (#205): tizen-shell.html escolhe o heap (256/192/
+  # 160 MiB) e poe o pool do degrau em Module.nvPool; $POOL limita a variante.
+  FIO_FLAGS="-pthread -sPTHREAD_POOL_SIZE='Math.min(Module.nvPool||$POOL,$POOL)' -sPTHREAD_POOL_SIZE_STRICT=0"
   RUNTIME_EXPORTS="'[\"PThread\",\"ccall\"]'"
 fi
 WASM_FLAGS=""
 OPT_LEVEL=-O2
-MEM_FLAGS="-sINITIAL_MEMORY=268435456 -sALLOW_MEMORY_GROWTH=0 -sABORTING_MALLOC=1"
+# Default (#205): 160 MiB initial, import max 256 MiB; the shell supplies the real tier.
+MEM_FLAGS="-sINITIAL_MEMORY=167772160 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=268435456 -sABORTING_MALLOC=1 -sINCOMING_MODULE_JS_API='[\"arguments\",\"canvas\",\"noInitialRun\",\"preRun\",\"print\",\"printErr\",\"setStatus\",\"wasmMemory\"]'"
 STACK_FLAGS="-sSTACK_SIZE=8388608 -sDEFAULT_PTHREAD_STACK_SIZE=2097152"
 ASYNCIFY_STACK=32768
 if [ "$LEGADO" = "1" ]; then
@@ -411,18 +413,10 @@ eval emcc $SOURCES ${EXTRA_SOURCES} -o "$SAIDA/index.html" $OPT_LEVEL "$ENV_D" $
   `# tamanho), sem custo de execucao. Sem ela o profiler (CDP no Mac ou o Web` \
   `# Inspector da TV) mostra wasm-function[729] e nao diz o que e.` \
   --profiling-funcs \
+  `# Bounded fetch waits can occur through any network caller, including pthreads.` \
+  `# Network waits yield in workers and synchronous caller fallbacks (rede.c).` \
+  `# Keep full Asyncify instrumentation; the old allowlist missed these stacks.` \
   -sASYNCIFY -sASYNCIFY_STACK_SIZE=$ASYNCIFY_STACK \
-  `# main, dados_iniciar E A PILHA DO INDICE Fribb SAO INSTRUMENTADOS. Sem a lista o ASYNCIFY` \
-  `# instrumenta toda funcao que possa estar na pilha de uma chamada assincrona` \
-  `# — e como nv_ceder_quadro e chamada do laco em main, isso era o app` \
-  `# INTEIRO: cada funcao de desenho, decode e rede ganhava o codigo de` \
-  `# desenrolar/reenrolar pilha (custo em toda chamada, e wasm maior). As` \
-  `# chamadas de arranque (nv_idbfs_montar em dados_iniciar e` \
-  `# nv_ceder_quadro em main) so tem main e dados_iniciar acima delas; o` \
-  `# fetch em fluxo tem a pilha baixar -> rede_pedir. Outra EM_ASYNC_JS` \
-  `# mais fundo exige ampliar a lista, ou aborta. NUVIO_ASYNCIFY_TUDO=1` \
-  `# volta ao comportamento antigo para comparar.` \
-  $( [ -n "${NUVIO_ASYNCIFY_TUDO:-}" ] || [ "$UM_FIO" = "1" ] || printf -- "-sASYNCIFY_ONLY=[main,dados_iniciar,baixar,pedirAniskip,malMapeado,mapaBaixar,rede_pedir]" ) \
   `# POOL DE 12. Ja esteve em 4, por um palpite meu que a evidencia derrubou:` \
   `# cortei supondo que o arranque estava LENTO por causa dos doze workers, e os` \
   `# marcos de tempo mostraram depois que ele estava CONGELADO, no WASM_BIGINT.` \

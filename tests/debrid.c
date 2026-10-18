@@ -1065,6 +1065,24 @@ static void contas(void) {
 }
 
 int main(void) {
+  unsigned scope = debrid_tb_geracao();
+  debrid_abrir_sessao(100);
+  assert(debrid_tb_geracao() != scope);
+  scope = debrid_tb_geracao();
+  debrid_nova_busca();
+  assert(debrid_tb_geracao() == scope);
+  debrid_definir_chave("torbox", K_TB);
+  assert(debrid_tb_geracao() != scope);
+  scope = debrid_tb_geracao();
+  debrid_definir_chave("torbox", K_TB);
+  assert(debrid_tb_geracao() == scope);
+  debrid_definir_chave_local("torbox", "replacement");
+  assert(debrid_tb_geracao() != scope);
+  debrid_definir_chave_local("torbox", "");
+  scope = debrid_tb_geracao();
+  debrid_esquecer();
+  assert(debrid_tb_geracao() != scope);
+  puts("PASS TorBox generation follows session/key changes, not searches");
   static char capt[200000];
   const char *arq = getenv("NUVIO_DEBRID_TEST_LOG");
   int velho, f; FILE *lido; size_t lidos;

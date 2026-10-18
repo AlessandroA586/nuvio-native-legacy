@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T13:47:59-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T17:49:08-03:00, HEAD `f2d7c9854`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -16,6 +16,21 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 ## Release features (English)
 
 ### Highlights
+
+- **Browse files and keep the same release**: Hold OK on a source to browse its complete file pack, choose another copy, continue multipart movies in order, and keep the selected release across episodes with the binge-group preference. Platforms: Samsung .tpk; shared source selection on webOS, Android and WASM. Refs PR #567, `agente/205-pr567port`, merge `d8781e9a8`, `75cf75a13`, `e13dcdb1d`, `66b5094aa`, `e14174c73`, `80c053592`, `366e3df74`, `dd1498e42`, `8a2a29540`, `0cb7d7a47`, `d4c07b768`, `2d13b3b31`, `1e45ce7b3`, `afd16f39b`, `72f9080c6`, `f23d14de9`, `1b081dcac`, `e46711c45`, `64b375d2c`.
+
+- **A real Live TV guide on every platform** (owner request): Live TV and the guide now run on a
+  per-source model — add-on, Stalker, Xtream and M3U lists each get their own groups in provider order,
+  provider channel numbers, a disk cache and a platform cap, so a huge playlist enters whole groups instead
+  of freezing the app. XMLTV grids of any size stream in chunks, keep only the list's channels and a 7-day
+  window, and match channels by id, name and alias with fuzzy suggestions and a per-source time offset. The
+  guide gains a sources bar with health dots, a group picker per source with a live "N of M channels" count,
+  manual guide pick, a last-channel jump, and channel-number entry (digits, 1.5 s or OK). M3U and XMLTV
+  URLs can be typed per profile with the TV or phone keyboard, channels play from the stored URL with the
+  list's own User-Agent and Referer, and the player OSD EPG uses the same matching cascade. All platforms.
+  Refs `f78b5470a`, `e87a44cb2`, `4f8fedfb4`, `c5b52caa7`, `a092fe530`, `695a1bc97`, `00189a790`,
+  `bc19c5d32`, `d65bd546a`, `ae9e40109`, merges `ebf14de6b` (`feat/guia-tv`), `ba0639cf0`
+  (`agente/205-guiatv`).
 
 - **Variant A Hero layouts**: Wide Hero cards and split Hero rows use the approved artwork and metadata anchors, keep posters visible while scrolling and match the active Dynamic background through transitions. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-heroisA`, `50455c6f9`, `77aa7f216`, `13a5f3bab`, `4ec7e93ee`, `d61e03956`, `124895d8c`, merge `8ff0623e9`; TV validation remains pending.
 
@@ -84,6 +99,12 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   is slow. All platforms. Refs #545 #551 #552 #504, `26b9c635b`, `1c9043ed0`, `455135df2`, `cbcf467f5`, `27988615e`.
 
 ### New
+
+- **Choose the Stage backdrop**: Modern Home Stage rows can show Black, Current or Artwork only backgrounds, with the choice saved on this device. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-palcolimpo`, merge `0fa8979c6`, `c1e6553b7`.
+
+- **Lighter artwork accents**: Choose Vivid or Light for the device-local “From the art” accent, with readable contrasting text and translations in all 29 languages. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `5897319c5`, `agente/205-artepastel`.
+
+- **Clearer playback help**: Source-opening errors explain whether to check the add-on/debrid service, internet connection or app/TV, while stall and timeout cards direct you to Settings > This TV > Speed test. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `e704faff5`, `ce4e53ba8`.
 
 - **Clearer title pages with adjustable spacing**: Tint-only cast, trailer and rating cards share the page backdrop, while Compact, Normal and Comfortable row spacing keeps ratings, seasons and cast aligned at different text sizes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `b8e94cf5c`, `5a3f41c11`, `83177ade2`, `79eca720f`, `e0c9ba77b`.
 
@@ -168,9 +189,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   Movies/Series, the title pill and the remaining segmented controls) now use the same frosted glass as the
   rest of the app, with the selected tab keeping its accent fill. All platforms. Refs owner request,
   `21696fd8c`, `796a3441f`, `a096e5eb8`.
-- **Settings at 100% by default** (owner request): the Settings scale ships at 100% instead of 80%; anyone who
-  never picked a size by hand moves to 100% and an explicit choice stays as it was. All platforms.
-  `3f8d304b7`, `f22761e28`.
+- **Settings at 85% by default** (owner request): the interface scale ships at 85%; anyone who never
+  picked a size by hand migrates to 85% while an explicit choice — including a historical explicit 100% —
+  stays untouched. All platforms. `6e0e0d644`, `be3406a3a`, `b512c4316` (earlier window: `3f8d304b7`,
+  `f22761e28`).
 - **High-quality artwork is fetched at the size it needs** (owner requests): at High quality, w342 posters and
   w780 backdrops stored by the catalog are fetched at the size the draw needs, and the 480px small backdrop
   is no longer served for cards up to 640px. All platforms. `ff1cd6dcd`, `44bf4884a`.
@@ -181,6 +203,45 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **TorBox cache labels match the source**: Explicit not-cached status takes priority over misleading names or descriptions, while confirmed cached sources remain playable. Platforms: webOS, Android, Samsung .tpk, WASM. Refs community report, `agente/205-torboxlg`, merge `f2d7c9854`, `70f756353`, `c8610436d`, `37b681acf`, `789323ed7`, `1ff87ff04`.
+- **Tizen video returns to full frame**: Ending zoom, entering picture-in-picture or opening another title restores video geometry and retries transient AVPlay reset failures. Platforms: Samsung .tpk. Refs owner request, `agente/205-tizenaspecto`, merge `39338ee31`, `d614812a1`, `acac6e9c4`, `c0b853d6b`.
+- **Automatic subtitles retain their language**: Subtitle selection preserves add-on languages and copies subtitle entries safely while playback updates the list. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #607, `f117b8cd5`, `7ab455386`, `ab3433f61`, merge `da2f454b7`; loader compatibility also covers Tizen 4/5.
+- **Browser requests finish within limits**: Network deadlines and response-size limits prevent stuck or oversized requests, and fatal runtime failures expose diagnostics. Platforms: WASM. Refs #607, `37b3a3819`, `744fc18a8`, `4b01f2454`, `d775c555f`, `6f3c88792`.
+- **Selected TorBox files keep working**: Signed links refresh for the selected file, credentials and caches remain scoped to the account, and DTS-only files can open through conversion with MKV seeking preserved. Platforms: Samsung .tpk. Refs PR #567, `20795b880`, `822be941b`, `a37082f61`, `1078df905`, `643ac294f`, `97cb8e8a6`, `0b633743a`, `93ea28a87`, `48512295f`.
+- **Appearance rows retain their settings**: The merged art and scene tables remain aligned in the Rows block. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `d232b34fd`.
+
+- **Safer episode source sheets**: Closing playback and discarding episode sources no longer frees the list while the source sheet reads it. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `67b588a0a`; previous-session player logs also help diagnose crashes.
+
+- **Clean Tizen 4 video overlays**: The overlay uses the actual EGL surface dimensions and clears startup frames transparently to prevent uninitialized pixels appearing over video. Platforms: Samsung .tpk (Tizen 4). Refs owner request, `8c45eb257`, merge `b01f47a64`.
+
+- **Stable release-card artwork**: Each 2.0.7 scene retains its own artwork during transitions, and cold cards stay flat until cached frost is available. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `f37fc0931`, `eeb95ee79`, `7bc00e0bf`.
+
+- **Resting Home actions retain frost**: Home hero buttons reuse cached frost with glass enabled or disabled while focused buttons retain the accent fill. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `a341bf956`, merge `1a04b92a3`.
+
+- **Live TV catalogs remain manageable**: Unselected Live TV catalogs remain visible in catalog management without creating unwanted Home rows. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `479ad3d77`.
+
+- **Quick-menu tiles frost with glass off**: focused quick-menu tiles reuse the shared frost material even
+  when glass is disabled, keeping the active accent and tile geometry. All platforms. `507727870`, merge
+  `31a597e54` (`agente/205-quickmenuvidro`).
+
+- **Panel kicker and selected tab tint restored**: the title and tab row keep their place with measured
+  kicker clearance, and selected pills reuse the accent focus plate under its existing glass gate. All
+  platforms. `c69b38468`, merge `31b8412f0` (`agente/205-salvostabs`).
+
+- **TV-side settings survive account sync**: a saved TV-only accent theme is no longer overwritten by a
+  web theme, existing web preference keys win over stale TV snapshots, the device row quota persists
+  atomically across restarts, and portable settings are restored before any upload — including logout
+  round-trips, fresh accounts and offline retries. All platforms. `dfcb0420d`, `79a9edcbe`, `948c6db82`,
+  merge `9d7db484b` (`agente/205-ajustessync`).
+
+- **Empty add-on cast filled from TMDB**: when an add-on returns no cast, aggregate TMDB credits fill the
+  row while preserving person IDs, portraits and limits. All platforms. `a8e7805f4`, merge `bdc5faee1`
+  (`agente/205-elencovazio`).
+
+- **Cast pages always open, even right after a search** (owner request): person IDs that the title credits never returned are resolved on demand off the UI thread, cancelled lookups no longer block the cast row, and reordered results keep their order. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `2cf7bfc0c`, `7559ce4ef`, merge `310f3aa3d` (`agente/205-pessoapagina`).
+
+- **Sources sheet explains hidden torrent sources**: when P2P is off or an add-on's summary is truncated, a muted footer in the sources sheet says how many torrent sources were hidden per add-on, and the advice now matches the actual stream requirements. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `35ff5195c`, `95d1b97a4`, `7a0e5073e`, merge `f246d8e91` (`agente/205-torrentdica`).
 
 - **Timeline text stays clear of artwork**: The text column keeps a 24-pixel gap from scaled artwork across form factors, preventing overlap. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-timelinetexto`, `2ac2c50d6`, merge `99c40f3c0`.
 
@@ -273,6 +334,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Performance
 
+- **Recover image workers after decoder failure**: Direct image jobs are reclaimed when their decoder channel fails, allowing subsequent artwork work to proceed. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #607, `93009d304`.
+- **Keep Hero and file-browser work bounded**: Hero A stays within its whole-frame baseline budget and idle file-browser rows are reused between updates. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `c3985174d`, `0b633743a`.
+
 - **Lower Hero rendering cost**: Hero artwork uses fused veils and a specialized shader, avoids shading flat backgrounds and draws split captions without extra render passes to reduce Home rendering work. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `4a7a56a1d`, `07ce4a2ff`, `4b2eb36c4`, `8d84be9a1`; target-device performance remains unconfirmed.
 
 - **Glass stays smooth when text caches change**: Retiring unrelated textures no longer rebuilds an unchanged glass backdrop, preserving the existing frost appearance. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `3e8becc0e`, `59efaef75`.
@@ -335,6 +399,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Community
 
+- **Source-file and playback improvements from @Namer03**: Selected PR #567 improvements bring file browsing, release continuity and more resilient playback into the integrated release. Platforms: Samsung .tpk; shared source logic on webOS, Android and WASM. Refs PR #567, `385b44106`, merge `d8781e9a8`.
+
 - **Automatic TV and Mobile mode on Android** — @community, PR #431 (`c305e6f7e`, `875d7f18f`).
 - **Series identity during lookup and playback** — PR #561 (`cdf5bdd88`, `2537db6a0`, `86d194462`).
 - **Continue Watching without blocking catalogs** — @ghbarker, PR #538 (`cfc15aeab`, `a748ebf32`).
@@ -349,6 +415,13 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   `f6618db6b`, `22f3d22bb`).
 
 ### Internal
+
+- **Subtitle loader and browser contracts**: Checks cover Tizen compiler TLS regressions, Asyncify callers, AVPlay cleanup and URL probe boundaries. Platforms: Samsung .tpk, WASM. Refs #607, `ab3433f61`, `d775c555f`, `6f3c88792`.
+- **Guide metadata and tracking upkeep**: Catalog genre escape decoding, guide translations and release tracking remain documented. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `6b0f0659c`, `fa5cf5dce`, `d3b41452f`.
+
+- **Playback report checklist**: Required checks ask for comparable playback, source alternatives, the speed-test file-size recommendation and a six-character log code before filing. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `bbd084ada`, `e65ea73cd`, `e5d2d0ad7`.
+
+- **Isolated discovery fixtures**: Server-only stubs preserve profile-provider ownership and restore Continue Watching regression linking. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `0476f8651`.
 
 - **Hero and timeline regression coverage**: Baseline-failure checks, whole-frame GPU comparisons including cold captions and scrolling, scale checks and hidden-window timeline capture support release verification. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `f10ae91d0`, `df65b38b6`, `8d84be9a1`, `2ac2c50d6`.
 
@@ -393,9 +466,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   the live clock digits (`4ae3e7211`); typed-title and late-playback identity tests (`2537db6a0`); an assert
   that friends row style 5 has no "+ Add" column (`d95bd32e1`) and that its touch scroll covers the last
   friend's expanded panel (`e27514693`).
-- Settings scale migration to a 100% factory default, only for anyone who never chose by hand
-  (`3f8d304b7`), and a pixel proof that the Library/catalog tabs carry regional frost
-  (`21696fd8c`, `796a3441f`).
+- Settings scale migration to a factory default, only for anyone who never chose by hand
+  (`3f8d304b7`, `f22761e28`, `6e0e0d644`, `be3406a3a`), and a pixel proof that the Library/catalog tabs
+  carry regional frost (`21696fd8c`, `796a3441f`).
 - The `tests/homerefresh.sh` fixture repaired again at merge time: duplicate home stubs and missing add-on
   lock stubs (`c47a40788`).
 - Glass merge-window regression closed: `tests/vidro_qualidade.sh` failed at `0940ae7bf`
@@ -409,13 +482,11 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-Tracking snapshot: 22 branches have unmerged commits and no running job; 16 open issues have no mapped job or prompt. Newer fixes on `agente/205-ajustessync`, `agente/205-episodioslento`, `agente/205-escala85`, `agente/205-pessoapagina`, `agente/205-pr567port`, `agente/205-torrentdica`, `agente/p2p` need review and are not classified as lost. Queued jobs and deferred 2.1 work remain tracked separately. The C9 installation attempt at `cb7ece972` failed; later integration merges have not been confirmed on TV.
+Tracking snapshot: 24 branches have unmerged commits and no running job; 17 open issues have no mapped job or prompt. Newer fixes on `agente/205-addonweb`, `agente/205-elencoappletv`, `agente/205-episodioslento`, `agente/205-guialimpa`, `agente/205-notasep`, `agente/205-tpk60preta`, `agente/205-trailercard`, `agente/205-wgtlite3`, `agente/205-wgtmem1g`, `agente/p2p` need review and are not lost. Queued work and deferred 2.1 requests remain separate. Android installed at `cb7ece972`; C9 installation failed, so TV HEAD remains unconfirmed. Later integration merges through `f2d7c9854` await device confirmation.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
-- **Explanation for hidden torrent sources**: Mixed source lists explain why torrent sources are hidden, helping users understand which playback options are available; the newest fix still needs review. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-torrentdica`, `35ff5195c`.
 
-- **Selected PR #567 playback improvements**: Pending work ports source file selection, binge-source continuity, refreshed TorBox links, DTS fallback, wait-all source selection, MKVToolNix seeking and source-font preferences; the latest launch fixes need review before integration. Platforms: Samsung .tpk first; Android/webOS coverage pending. Refs @Namer03, PR #567, `agente/205-pr567port`, `385b44106`.
 
 
 
@@ -464,6 +535,9 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 - **Trakt comments with glass, frosted context menu and #562/PR #574** landed in this window
   (`335bd2abc`, `a363d821c`, `dc040ef2d`, `a2ea074c7`, `2c7c85860`, all review OK: `rev-traktcoment`, `rev-ctxgrande`, `rev-pr574`) and
   are already in New/Fixes/Performance. Still to measure on a device: the FPS of the 8 glass panels.
+- **Live TV guide, quick-menu frost, tab tint, 85% scale, account-settings sync and empty-cast fill**
+  landed in this window (`ebf14de6b`, `ba0639cf0`, `31a597e54`, `31b8412f0`, `7507ec45a`, `9d7db484b`,
+  `bdc5faee1`, all with OK reviews `j-rev1434-*`) and are already in Highlights/Fixes.
 - **Cheaper frost, polished friends row, PR #561 (#524), glass tabs and Settings at 100%** landed in this
   window (`4c82273d7`, `f21d993b2`, `86d194462`, `a096e5eb8`, `f22761e28`) and are already under
   Highlights/New:
@@ -498,7 +572,15 @@ Landing in 2.0.7, already in the sections above:
   **text/component scale merge** (`9f0588a80`, `302d2bf4f`, `b0c947387`), the **#557 seek warning**
   (`5cf77f08d`, `d034960e8`), the **#581 audio-focus fix** (`5b0d2a35d`, `4a0b3408d`), the
   **#584 720p Auto trailers** (`2bc1ddb55`, `b89ddc139`) and the **#589 slow-motion GIF**
-  (`5ab9fc44c`, `b2aa59ada`).
+  (`5ab9fc44c`, `b2aa59ada`), the **B2 detail cards and C9 glass cache** (`e0c9ba77b`, `59efaef75`,
+  `3cf9a95af`), the **editorial Stage rows** (`8fe7cc0e0`), the **Discord artwork fallback**
+  (`e476d1707`), the **MKV ASS 12 s prefetch** (`918dd51c9`), the **frost crossfade/artwork fixes**
+  (`ddc51a964`), the **text-scale anchor set** (`cb398fc2f`, `f0143a81c`), the **Hero A performance and
+  top-mask set** (`8ff0623e9`, `e4e86c3f2`), the **timeline text gap** (`99c40f3c0`), the
+  **cast-person lookups** (`310f3aa3d`), the **hidden-torrent explanation** (`f246d8e91`), the
+  **per-source Live TV guide** (`ebf14de6b`, `ba0639cf0`), the **quick-menu frost** (`31a597e54`), the
+  **panel kicker / tab tint** (`31b8412f0`), **Settings at 85%** (`7507ec45a`), the **account-settings
+  sync** (`9d7db484b`) and the **empty-cast TMDB fill** (`bdc5faee1`).
 
 ### Frost performance (to fill before tagging)
 
@@ -543,7 +625,15 @@ Landing in 2.0.7, already in the sections above:
   **text/component scale merge** (`9f0588a80`, `302d2bf4f`, `b0c947387`), the **#557 seek warning**
   (`5cf77f08d`, `d034960e8`), the **#581 audio-focus fix** (`5b0d2a35d`, `4a0b3408d`), the
   **#584 720p Auto trailers** (`2bc1ddb55`, `b89ddc139`) and the **#589 slow-motion GIF**
-  (`5ab9fc44c`, `b2aa59ada`).
+  (`5ab9fc44c`, `b2aa59ada`), the **B2 detail cards and C9 glass cache** (`e0c9ba77b`, `59efaef75`,
+  `3cf9a95af`), the **editorial Stage rows** (`8fe7cc0e0`), the **Discord artwork fallback**
+  (`e476d1707`), the **MKV ASS 12 s prefetch** (`918dd51c9`), the **frost crossfade/artwork fixes**
+  (`ddc51a964`), the **text-scale anchor set** (`cb398fc2f`, `f0143a81c`), the **Hero A performance and
+  top-mask set** (`8ff0623e9`, `e4e86c3f2`), the **timeline text gap** (`99c40f3c0`), the
+  **cast-person lookups** (`310f3aa3d`), the **hidden-torrent explanation** (`f246d8e91`), the
+  **per-source Live TV guide** (`ebf14de6b`, `ba0639cf0`), the **quick-menu frost** (`31a597e54`), the
+  **panel kicker / tab tint** (`31b8412f0`), **Settings at 85%** (`7507ec45a`), the **account-settings
+  sync** (`9d7db484b`) and the **empty-cast TMDB fill** (`bdc5faee1`).
 
 ### Frost performance (to fill before tagging)
 

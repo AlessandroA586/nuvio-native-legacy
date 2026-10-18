@@ -515,6 +515,15 @@ static Uint32 heroTrocaEm = 0;
 //             quadro em que a textura fica pronta E o esvanecimento acabou.
 static float heroSai   = 0.0f;
 static float heroEntra = 1.0f;
+// Stage switches fade through the base background, never stack fullscreen passes.
+static int palcoFundoModo = 1, palcoFundoAlvo = 1, palcoFundoItem = -1;
+static float palcoFundoT = 1.0f, palcoFundoInicio = 1.0f;
+static float palcoFundoAlpha = 1.0f;
+static int palcoFundoDestino(void) {
+  return ajustes_home_layout() == HOME_LAYOUT_MODERNA && !focoHero &&
+         foco.fileira >= 0 && foco.fileira < nFileiras &&
+         fileiras[foco.fileira].tipo == FILEIRA_PALCO ? ajustes_palco_fundo() : 1;
+}
 // TROCA DESLIZADA (dono, 30/09: "a hero passando animado, tipo trocando a
 // imagem pro lado e a outra bem grudada nela"; ajuste "Transicao do destaque").
 // No lugar do esvanecimento, a arte e o texto do titulo que sai andam para um
@@ -3865,6 +3874,23 @@ static void home_atualizar_(float dt, Uint32 agora) {
     expAbre = 0.0f; expFileira = expColuna = -1;
   }
 
+  { int alvo = palcoFundoDestino();
+    if (alvo == 2) palcoFundoItem = fileiraItemIndice(&fileiras[foco.fileira], foco.coluna);
+    if (alvo != palcoFundoAlvo) {
+      palcoFundoAlvo = alvo; palcoFundoT = 0.0f;
+      palcoFundoInicio = palcoFundoAlpha;
+    }
+    palcoFundoT = fminf(1.0f, palcoFundoT + dt * 1000.0f / NV_HERO_FADE_MS);
+    if (motionReduzido) palcoFundoT = 1.0f;
+    if (palcoFundoModo != palcoFundoAlvo) {
+      palcoFundoAlpha = palcoFundoInicio * (1.0f - anim_saida(palcoFundoT));
+      if (palcoFundoT >= 1.0f) {
+        palcoFundoModo = palcoFundoAlvo; palcoFundoT = 0.0f; palcoFundoInicio = 0.0f;
+      }
+    } else palcoFundoAlpha = palcoFundoModo == 0 ? 0.0f : palcoFundoT >= 1.0f ? 1.0f :
+      palcoFundoInicio + (1.0f - palcoFundoInicio) * anim_saida(palcoFundoT);
+  }
+
   if (heroSai > 0.0f) {
     heroSai -= dt * (1000.0f / NV_HERO_FADE_MS);
     if (heroSai < 0.0f) heroSai = 0.0f;
@@ -4737,10 +4763,30 @@ static void heroVeuLayout(int lay, float h) {
   vitAncora = lay == HOME_LAYOUT_PADRAO ? 0.30f : 0.28f;
   vitVeuIni = lay == HOME_LAYOUT_DINAMICA ? 0.38f * alturaTextoHeroDin() / h : 0.0f;
 }
+static const char *palcoArte(const CatItem *item) {
+  if (!item) return NULL;
+  const char *poster = arte_por_formato(item, 0);
+  const char *art = item->backdrop;
+  if (!art[0] || artehero_mesma_foto(art, item->poster) ||
+      artehero_mesma_foto(art, poster) || tex_falhou(art)) return NULL;
+  return art;
+}
 static void desenhaHero(Uint32 agora, float saida) {
   (void)agora;
   const int motionReduzido = ajustes_animacoes_reduzidas();
   float aArte = 1.0f;
+  if (palcoFundoModo == 2) {
+    const CatItem *item = cat_item_exato(palcoFundoItem);
+    const char *art = palcoArte(item);
+    GLuint tex = art ? tex_obter_hero(art) : 0;
+    if (tex && palcoFundoAlpha > 0.004f) {
+      gfx_tex_aspect_atual = tex_aspecto(art);
+      gfx_rect((GfxRect){0, 0, NV_TELA_W, NV_TELA_H}, tex, GFX_VITRINE,
+               0.20f, 0.5f, 0, 0, 0, 0, 0, palcoFundoAlpha);
+      gfx_tex_aspect_atual = 0;
+    }
+    return;
+  }
   // MEDIDO no app web: .home-modern-hero-media fica em x=555, y=0, 1421x670.
   // A conta que estava aqui (0.28*W - 56 = 481,6 de largura 1438) vinha de
   // proporcao estimada e punha a arte 73px a esquerda do lugar.
@@ -5387,8 +5433,8 @@ static void desenhaHero(Uint32 agora, float saida) {
           int tb = botao_superficie(bt, 1.0f, aBtn);
           lb = txt_linha(TXT_DET_BOTAO, rot, tb, tb, tb, 255);
         }
-        else if (ajustes_vidro()) gfx_vidro_painel(bt, 0.5f, 0.55f, aBtn);
-        else gfx_cor(bt, 0.5f, 1.0f, 1.0f, 1.0f, 0.18f * aBtn);
+        // Resting actions share the cached frost sheet, including glass off.
+        else gfx_vidro_folha(bt, 0.5f, aBtn);
         // O TRIANGULO DE REPRODUZIR NAO ENTRA AQUI. Ele e a marca universal de
         // "comeca agora" e este botao nao comeca nada; desenha-lo seria a mesma
         // mentira do rotulo, so que em forma.
@@ -6326,12 +6372,15 @@ static void holofote(Uint32 agora) {
   { GfxRect p = holoPoster;
     float abre = 1.6f;
     float bw = p.w + NV_PALCO_INFO_VAO + NV_PALCO_INFO_W;
-    // One pass for the veil, accent cone and floor pool, including glass off.
-    gfx_rect((GfxRect){ 0, 0, W, H }, 0, GFX_HOLOFOTE,
+    // Clean modes draw only the floor pool, keeping the legacy shader intact.
+    int clean = palcoFundoDestino() != 1;
+    if (clean) gfx_recorte(0, p.y + p.h - H * 0.017f, W, H * 0.07f);
+    gfx_rect((GfxRect){ 0, 0, W, H }, 0, clean ? GFX_PALCO_CHAO : GFX_HOLOFOTE,
              p.h * 0.5f * abre / H, (p.x + bw * 0.5f) / W, (p.y + p.h * 0.5f) / H,
              bw * 0.5f * abre / H,
              (p.y + p.h) / H, (p.x + p.w * 0.5f) / W, p.w * 0.55f / H,
-             NV_HOLOFOTE_VEU * holoA); }
+             NV_HOLOFOTE_VEU * holoA);
+    if (clean) gfx_sem_recorte(); }
   holoTem = 0;
 }
 void home_holofote_desenhar(Uint32 agora) { TXT_INI(); holofote(agora); TXT_FIM(); }
@@ -7434,7 +7483,11 @@ static void home_desenhar_(Uint32 agora) {
   desenhaFundo(agora);
   float pd = detail_progresso();
   const int vazioQr = homevazio_ativo(nFileiras);   // sem add-ons: o cartao com o QR no lugar da Home
-  if (ajustes_hero_ligado() && !vazioQr) desenhaHero(agora, pd);
+  if (ajustes_hero_ligado() && !vazioQr && palcoFundoAlpha > 0.004f) {
+    gfx_opacidade_grupo = palcoFundoModo == 1 ? palcoFundoAlpha : 1.0f;
+    desenhaHero(agora, pd);
+    gfx_opacidade_grupo = 1.0f;
+  }
   if (ajustes_hero_ligado() && !vazioQr && heroVisivelToque() > 0.25f) {
     float heroBaixo = layoutHome() == HOME_LAYOUT_DINAMICA
                     ? dinHeroY() + alturaTextoHeroDin() : corteFileiras();

@@ -4,6 +4,7 @@
 #include "logotitulo.h"
 #include "descoberta.h"
 #include "syncprog.h"
+#include "sync.h"
 #include "tirarremoto.h"
 #include "visto.h"
 #include "trakt.h"
@@ -857,6 +858,7 @@ static int estTipo(int i) {
 // revisao de fileiras.c e a fileira mostra o resultado); o setter nao faz nada
 // quando o valor nao mudou.
 static void estAoVivo(void) {
+  sync_proteger_ajustes_locais();
   if (estSel >= 0 && estSel < nEstilos) fil_definir_tipo(filChave, estTipo(estSel));
   if (ordemLinha && ordemSel != fil_ordem(filChave)) fil_definir_ordem(filChave, ordemSel);
   estVivo = 1;
