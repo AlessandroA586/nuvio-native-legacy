@@ -47,4 +47,73 @@ assert.deepStrictEqual([nvAcaoErroHeap(msg, st), nvAcaoErroHeap(msg, st)], ['mos
 st = { mib: 0, tratado: false };
 assert.strictEqual(nvAcaoErroHeap('could not allocate memory', st), 'mostrar');
 assert.strictEqual(nvAcaoErroHeap('Uncaught TypeError: x', { mib: 192, tratado: false }), null);
-console.log('PASS tizen-heap-fallback');
+// Exercise the actual startup callback, including unavailable storage.
+const vm = require('vm');
+const startup = html.slice(html.indexOf('  var nvHeap ='), html.indexOf('\n  var Module ='));
+for (const blocked of [false, true]) {
+  const notices = [], saved = [];
+  let reloads = 0;
+  const ctx = {
+    ...new Function(m[1] + '; return { nvEscolherHeap, nvAcaoErroHeap, nvHeapAbaixo };')(),
+    window: {}, navigator: { deviceMemory: 1 }, console: { log() {} },
+    WebAssembly: mockW(256, []),
+    localStorage: {
+      getItem() { return null; },
+      setItem(key, value) {
+        if (blocked) throw new Error('storage unavailable');
+        saved.push([key, value]);
+      }
+    },
+    location: { reload() { reloads++; } },
+    document: {
+      createElement() { return { style: {} }; },
+      body: { appendChild(d) { notices.push(d.textContent); } },
+      getElementById() { return null; }
+    }
+  };
+  vm.runInNewContext(startup, ctx);
+  for (let i = 0; i < 17; i++) ctx.window.__nvHeapErro(msg);
+  assert.strictEqual(reloads, blocked ? 0 : 1, 'reload requires persisted ceiling');
+  assert.strictEqual(notices.length, blocked ? 1 : 0, 'storage failure shows terminal error once');
+  if (!blocked) assert.deepStrictEqual(saved, [['nv-heap-teto', '160']]);
+}
+
+// Compile real Emscripten glue/WASM with the production memory flags.
+// Reusing initMemory alone misses an incompatible WASM import maximum.
+const os = require('os');
+const path = require('path');
+const { execFileSync } = require('child_process');
+const build = fs.readFileSync(__dirname + '/../tools/tizen.sh', 'utf8');
+const flags = build.match(/^  -sINITIAL_MEMORY=.*$/m)[0].trim().replace(/\s*\\$/, '').split(/\s+/);
+const incoming = build.match(/^  -sINCOMING_MODULE_JS_API=(.*?)(?:\s*\\)?$/m);
+if (incoming) flags.push('-sINCOMING_MODULE_JS_API=' + incoming[1].trim().replace(/^'|'$/g, ''));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'tizen-heap-'));
+try {
+  fs.writeFileSync(path.join(tmp, 'main.c'), 'int main(void) { return 0; }\n');
+  execFileSync('bash', ['-c', 'source "$1/emsdk_env.sh" >/dev/null 2>&1; shift; emcc "$@"',
+    'heap-test', process.env.EMSDK_DIR || path.join(os.homedir(), 'emsdk'),
+    path.join(tmp, 'main.c'), '-o', path.join(tmp, 'index.js'), '-pthread', '-O0', '-sASSERTIONS=0', ...flags],
+    { stdio: 'inherit' });
+  const glue = fs.readFileSync(path.join(tmp, 'index.js'), 'utf8');
+  const init = glue.match(/function initMemory\(\) \{[\s\S]*?\n\}/)[0];
+  const wasm = new WebAssembly.Module(fs.readFileSync(path.join(tmp, 'index.wasm')));
+  for (const mib of [256, 192, 160]) {
+    const selected = nvEscolherHeap(WebAssembly, 2, mib).mem;
+    let allocations = 0;
+    const ctx = { Module: { wasmMemory: selected }, ENVIRONMENT_IS_PTHREAD: false,
+      WebAssembly: { Memory: function () { allocations++; } }, updateMemoryViews() {} };
+    vm.runInNewContext(init + ';initMemory()', ctx);
+    assert.strictEqual(ctx.wasmMemory, selected, 'generated glue must reuse shell heap');
+    assert.strictEqual(allocations, 0, 'runtime must not allocate a second heap');
+    const imports = {};
+    for (const entry of WebAssembly.Module.imports(wasm)) {
+      (imports[entry.module] ||= {})[entry.name] = entry.kind === 'memory' ? selected : () => 0;
+    }
+    new WebAssembly.Instance(wasm, imports);
+    assert.strictEqual(selected.buffer.byteLength, mib * 1024 * 1024);
+    assert.throws(() => selected.grow(1), RangeError, 'shell heap remains fixed-size');
+  }
+} finally {
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+console.log('PASS tizen-heap-fallback (startup, generated glue, WASM imports: 256/192/160 MiB)');

@@ -344,9 +344,11 @@ eval emcc $SOURCES ${EXTRA_SOURCES} -o "$SAIDA/index.html" -O2 "$ENV_D" ${NUVIO_
   `# o wasm exige da memoria importada: com 256 a Samsung de 1 GB (Chromium 69)` \
   `# nao arrancava ("WebAssembly.Memory(): could not allocate memory"). O heap` \
   `# real vem do tizen-shell.html (Module.wasmMemory, 256 -> 192 -> 160 MiB), que` \
-  `# usa 256 onde cabe — TV de 1,5 GB+ segue como antes. Sem crescimento: o` \
-  `# limite do malloc e o tamanho da memoria entregue.` \
-  -sINITIAL_MEMORY=167772160 -sALLOW_MEMORY_GROWTH=0 -sABORTING_MALLOC=1 \
+  `# Enable the incoming memory API and a WASM import maximum covering all tiers.` \
+  `# Growth must be enabled for Emscripten to retain MAXIMUM_MEMORY; the shell` \
+  `# still supplies fixed-size memories, so each selected tier cannot grow.` \
+  -sINITIAL_MEMORY=167772160 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=268435456 -sABORTING_MALLOC=1 \
+  -sINCOMING_MODULE_JS_API='["arguments","canvas","preRun","print","printErr","setStatus","wasmMemory"]' \
   `# PILHAS DE 8 MB, e nao o padrao de 64 KB do emscripten. Esta build estava` \
   `# SEM as duas linhas, sozinha entre as builds do projeto: a bancada de teste` \
   `# do AVPlay ja usava 8 MB nos dois. Pilha de fio pequena ja custou caro aqui` \

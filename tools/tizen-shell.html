@@ -481,8 +481,10 @@
     window.__nvHeapErro = function (msg) {
       var a = nvAcaoErroHeap(msg, nvHeap);
       if (a === 'baixar') {
-        try { localStorage.setItem('nv-heap-teto', String(nvHeapAbaixo(nvHeap.mib))); } catch (e) {}
-        location.reload();
+        try {
+          localStorage.setItem('nv-heap-teto', String(nvHeapAbaixo(nvHeap.mib)));
+          location.reload();
+        } catch (e) { a = 'mostrar'; aviso(); }
       } else if (a === 'mostrar') aviso();
       return a;
     };
