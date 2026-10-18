@@ -1358,6 +1358,7 @@
   T("Configuração mudou durante o teste: perfil não salvo", "Settings changed during the test: profile not saved"),
   T("Configure os próximos episódios e a ordem.", "Thiết lập các tập kế tiếp và thứ tự."),
   T("Configure seus add-ons no celular, na sua conta Nuvio. A TV acompanha sozinha.", "Hãy thiết lập tiện ích trên điện thoại, trong tài khoản Nuvio. TV sẽ tự cập nhật theo."),
+  T("Confira Ajustes > Esta TV > Teste de velocidade e veja se o arquivo é menor que o tamanho recomendado antes de relatar um problema de travamento.", "Check Settings > This TV > Speed test and make sure the file is smaller than the recommended size before reporting a buffering issue."),
   T("Confira a data e a hora desta TV. O contador não foi reiniciado.", "Check the date and time on this TV. The counter has not been reset."),
   T("Confira a grafia ou tente o nome original.", "Kiểm tra chính tả hoặc thử tên gốc."),
   T("Confira a internet da TV e tente de novo, ou escolha outra fonte.", "Check the TV's internet and try again, or pick another source."),

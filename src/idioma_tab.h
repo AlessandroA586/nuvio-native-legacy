@@ -1357,6 +1357,7 @@
   { "Configuração mudou durante o teste: perfil não salvo", "Settings changed during the test: profile not saved" },
   { "Configure os próximos episódios e a ordem.", "Set up next episodes and the order." },
   { "Configure seus add-ons no celular, na sua conta Nuvio. A TV acompanha sozinha.", "Set up your add-ons on your phone, in your Nuvio account. The TV follows on its own." },
+  { "Confira Ajustes > Esta TV > Teste de velocidade e veja se o arquivo é menor que o tamanho recomendado antes de relatar um problema de travamento.", "Check Settings > This TV > Speed test and make sure the file is smaller than the recommended size before reporting a buffering issue." },
   { "Confira a data e a hora desta TV. O contador não foi reiniciado.", "Check the date and time on this TV. The counter has not been reset." },
   { "Confira a grafia ou tente o nome original.", "Check the spelling or try the original title." },
   { "Confira a internet da TV e tente de novo, ou escolha outra fonte.", "Check the TV's internet and try again, or pick another source." },
