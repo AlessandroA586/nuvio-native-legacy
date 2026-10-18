@@ -14,6 +14,7 @@
 #include "fontecache.h"
 #include "fontefalha.h"
 #include "sessao.h"
+#include "sync.h"
 #include "perfis.h"
 #include "fontesmortas.h"
 #include "servidores.h"
@@ -3601,9 +3602,12 @@ int addons_adicionar(const char *nome, const char *urlManifest) {
 
 int addons_alternar(int i) {
   int r;
+  char base[NV_ADDON_URL_MAX] = "";
   pthread_mutex_lock(&addonTrava);
+  if (i >= 0 && i < nAddon) snprintf(base, sizeof base, "%s", addon[i].base);
   r = alternarSemTrava(i);
   pthread_mutex_unlock(&addonTrava);
+  if (base[0]) sync_sujar_addons(base);
   return r;
 }
 

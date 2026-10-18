@@ -313,6 +313,11 @@ char *rede_apagar(const char *url, int segundos, const char *const *cabecalhos,
                   int *status);
 char *rede_postar_st(const char *url, int segundos, const char *const *cabecalhos,
                      const char *corpo, int *status);
+#ifdef __EMSCRIPTEN__
+// Authenticated JSON PATCH through the legacy WGT HTTP bridge.
+char *rede_patch_st(const char *url, int segundos, const char *const *cabecalhos,
+                    const char *corpo, int *status);
+#endif
 // POST que repete (espera 1 s, 2 s, ...) so quando nao houve resposta (status 0).
 char *rede_postar_repetindo(const char *url, int segundos, const char *const *cabecalhos,
                             const char *corpo, int *status, int tentativas);

@@ -887,6 +887,15 @@ char *rede_postar_st(const char *url, int segundos, const char *const *cab,
   return r;
 }
 
+// Account row updates use the same WGT bridge as authenticated POST/DELETE.
+char *rede_patch_st(const char *url, int segundos, const char *const *cab,
+                    const char *corpo, int *status) {
+  (void)segundos;
+  char *r = pedir("PATCH", url, cab, NULL, corpo, NULL, status);
+  if (!r && status && *status > 0) return strdup("");
+  return r;
+}
+
 void rede_discord_ca(const char *caminho) { (void)caminho; }
 const char *rede_ultimo_erro(void) { return ""; }
 
