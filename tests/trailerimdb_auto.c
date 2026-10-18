@@ -12,6 +12,8 @@ int main(void) {
   CHECK(ptv_trailer_indice(PTV_TPK, 1500, 1080, alt, 4) == 0);  // explicit 1080 wins
   CHECK(ptv_trailer_indice(PTV_TPK, 1500, 480, alt, 4) == 2);
   CHECK(ptv_trailer_indice(PTV_TPK, 1500, 0, alt + 3, 1) == 0); // only 360
+  CHECK(ptv_trailer_indice_duro(PTV_ANDROID, 1500, 720, alt, 4) == 1);
+  CHECK(ptv_trailer_indice_duro(PTV_ANDROID, 1500, 720, alt, 1) == -1);  // only 1080: rejected
   if (!bad) printf("trailerimdb_auto: tudo ok\n");
   return bad;
 }

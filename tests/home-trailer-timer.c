@@ -565,8 +565,11 @@ int main(void) {
       playing=1;rectCalls=0;cartaoTrailerRect.x+=40.0f;
       for (int q=0;q<5;q++) { cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+500+q*16); }
       rc|=check("low-end: plane holds while the card moves",rectCalls==0);
+      rc|=check("low-end: poster returns (no hole) while the card moves",heroTrailerFade<0.9f);
       cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+500+80+NV_CARTAO_ASSENTA_MS);
       rc|=check("low-end: plane follows once, after the card settled",rectCalls==1&&lastRect.x==cartaoTrailerRect.x);
+      for (int q=0;q<60;q++) { cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+700+80+NV_CARTAO_ASSENTA_MS+q*16); }
+      rc|=check("low-end: video fades back in once settled",heroTrailerFade>0.9f);
     }
     fraco=0;
 
