@@ -79,6 +79,20 @@
 
 #include "text.h"
 #include "plrui.h"
+// Render the same frozen page with an intact backdrop as the glass reference.
+static int fxIntactBackdrop;
+static void fx_backdrop(GfxRect r, GLuint tex, GfxModo mode, float focus,
+                        float px, float py, float radius, float cr, float cg,
+                        float cb, float a, const GfxRect *holes, int n) {
+  if (fxIntactBackdrop) gfx_rect(r, tex, mode, focus, px, py, radius, cr, cg, cb, a);
+#ifndef NV_EP_BASELINE_BUILD
+  else gfx_rect_furos(r, tex, mode, focus, px, py, radius, cr, cg, cb, a, holes, n);
+#else
+  else gfx_rect(r, tex, mode, focus, px, py, radius, cr, cg, cb, a);
+  (void)holes; (void)n;
+#endif
+}
+#define gfx_rect_furos fx_backdrop
 static const char *fxTituloEsperado;
 static int fxTituloDesenhado;
 static const char *fxSinopseEsperada;
@@ -102,6 +116,7 @@ static Uint32 fx_ticks(void) { return getenv("NV_EP_PERF") ? fxTick : SDL_GetTic
 #define SDL_GetTicks fx_ticks
 #include "../src/detail.c"
 #undef SDL_GetTicks
+#undef gfx_rect_furos
 #include "menu.h"
 #include "ilha.h"
 #undef txt_bloco
@@ -641,10 +656,16 @@ int main(int argc, char **argv) {
     int count = gfx_n_rect;
     TxtLinha probe = txt_linha(TXT_CAPTION, "Layout probe", 255, 255, 255, 255);
     txt_desenhar_alpha(probe, 0, 0, 0);
+    // Baseline lacks the alpha-zero guard: measure its full navigation too,
+    // then fail the common cast budget below, rather than stopping this probe.
+#ifndef NV_EP_BASELINE_BUILD
     assert(gfx_n_rect == count);
+#endif
     // Measurement-only rating layout must submit no GL draws.
     notasui_fontes_altura(notasDados());
+#ifndef NV_EP_BASELINE_BUILD
     assert(gfx_n_rect == count);
+#endif
     parado = 0;
     medindo = 0;
     foco.fileira = SEC_ELENCO; foco.coluna = 0; quadros(120);
@@ -697,6 +718,29 @@ int main(int argc, char **argv) {
     assert(churn == 0);
     assert(overBudget == 0);
     checkTextWeight();
+#ifndef NV_EP_BASELINE_BUILD
+    // Frost samples the backdrop before the thumbnails, including the 68 px
+    // fringe. Compare actual GL pixels with the same page without occlusion.
+    nosEpisodios(0); parado = 1;
+    setenv("NUVIO_SHOT_VIDRO_FOSCO", "1", 1);
+    ajustes_teste_vidro_env();
+    unsigned char *actual = malloc(1920 * 1080 * 4), *expected = malloc(1920 * 1080 * 4);
+    assert(actual && expected && ajustes_vidro_fosco());
+    gfx_vidro_sujar(); quadros(8);
+    snprintf(nome, sizeof nome, "%s-frost.png", saida); gravar(nome);
+    glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, actual);
+    fxIntactBackdrop = 1;
+    gfx_vidro_sujar(); quadros(8);
+    glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, expected);
+    int changed = 0;
+    for (int i = 0; i < 1920 * 1080 * 4; i++) changed += abs(actual[i] - expected[i]) > 2;
+    printf("[glass-backdrop] channels-differing-over-2=%d\n", changed);
+    fflush(stdout);
+    free(actual); free(expected);
+    assert(changed == 0);
+    GfxRect holes[N_ITENS * 2];
+    assert(epFuros(holes) == 0);
+#endif
     return 0;
   }
   if (getenv("NV_APPLE_EP")) {

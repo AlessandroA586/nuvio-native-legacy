@@ -7649,6 +7649,9 @@ static void reacaoPendente(float s) {
 // (veuLeitura) e desenhado por cima, fora desta funcao.
 static int epFuros(GfxRect *holes) {
   int n = 0;
+  // Glass captures this backdrop before thumbnails repaint, including the
+  // 68 px sampling fringe. Keep the complete source intact while frost is on.
+  if (ajustes_vidro() && ajustes_vidro_fosco()) return 0;
   if (!epModerna() || corpoSobArte() || corpoOculto(ehSerie()) ||
       fase2() < .999f || trocaarte_visivel() > .001f ||
       trailercinema_t(&trailerCinema) > .001f || ajustes_desfocar_nao_assistidos()) return 0;
