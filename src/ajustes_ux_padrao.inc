@@ -317,3 +317,4 @@
   2, /* text and component scale: 100% */
   1, /* title page row spacing: Normal */
   1, /* accent focus: Off (gray plate) */
+  0, /* art tone: Vivid, identical to existing art colors */
