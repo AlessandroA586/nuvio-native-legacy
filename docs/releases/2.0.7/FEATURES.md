@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T14:48:50-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T15:50:00-03:00, HEAD `ba0639cf0`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -16,6 +16,19 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 ## Release features (English)
 
 ### Highlights
+
+- **A real Live TV guide on every platform** (owner request): Live TV and the guide now run on a
+  per-source model — add-on, Stalker, Xtream and M3U lists each get their own groups in provider order,
+  provider channel numbers, a disk cache and a platform cap, so a huge playlist enters whole groups instead
+  of freezing the app. XMLTV grids of any size stream in chunks, keep only the list's channels and a 7-day
+  window, and match channels by id, name and alias with fuzzy suggestions and a per-source time offset. The
+  guide gains a sources bar with health dots, a group picker per source with a live "N of M channels" count,
+  manual guide pick, a last-channel jump, and channel-number entry (digits, 1.5 s or OK). M3U and XMLTV
+  URLs can be typed per profile with the TV or phone keyboard, channels play from the stored URL with the
+  list's own User-Agent and Referer, and the player OSD EPG uses the same matching cascade. All platforms.
+  Refs `f78b5470a`, `e87a44cb2`, `4f8fedfb4`, `c5b52caa7`, `a092fe530`, `695a1bc97`, `00189a790`,
+  `bc19c5d32`, `d65bd546a`, `ae9e40109`, merges `ebf14de6b` (`feat/guia-tv`), `ba0639cf0`
+  (`agente/205-guiatv`).
 
 - **Variant A Hero layouts**: Wide Hero cards and split Hero rows use the approved artwork and metadata anchors, keep posters visible while scrolling and match the active Dynamic background through transitions. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-heroisA`, `50455c6f9`, `77aa7f216`, `13a5f3bab`, `4ec7e93ee`, `d61e03956`, `124895d8c`, merge `8ff0623e9`; TV validation remains pending.
 
@@ -168,9 +181,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   Movies/Series, the title pill and the remaining segmented controls) now use the same frosted glass as the
   rest of the app, with the selected tab keeping its accent fill. All platforms. Refs owner request,
   `21696fd8c`, `796a3441f`, `a096e5eb8`.
-- **Settings at 100% by default** (owner request): the Settings scale ships at 100% instead of 80%; anyone who
-  never picked a size by hand moves to 100% and an explicit choice stays as it was. All platforms.
-  `3f8d304b7`, `f22761e28`.
+- **Settings at 85% by default** (owner request): the interface scale ships at 85%; anyone who never
+  picked a size by hand migrates to 85% while an explicit choice — including a historical explicit 100% —
+  stays untouched. All platforms. `6e0e0d644`, `be3406a3a`, `b512c4316` (earlier window: `3f8d304b7`,
+  `f22761e28`).
 - **High-quality artwork is fetched at the size it needs** (owner requests): at High quality, w342 posters and
   w780 backdrops stored by the catalog are fetched at the size the draw needs, and the 480px small backdrop
   is no longer served for cards up to 640px. All platforms. `ff1cd6dcd`, `44bf4884a`.
@@ -181,6 +195,24 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Quick-menu tiles frost with glass off**: focused quick-menu tiles reuse the shared frost material even
+  when glass is disabled, keeping the active accent and tile geometry. All platforms. `507727870`, merge
+  `31a597e54` (`agente/205-quickmenuvidro`).
+
+- **Panel kicker and selected tab tint restored**: the title and tab row keep their place with measured
+  kicker clearance, and selected pills reuse the accent focus plate under its existing glass gate. All
+  platforms. `c69b38468`, merge `31b8412f0` (`agente/205-salvostabs`).
+
+- **TV-side settings survive account sync**: a saved TV-only accent theme is no longer overwritten by a
+  web theme, existing web preference keys win over stale TV snapshots, the device row quota persists
+  atomically across restarts, and portable settings are restored before any upload — including logout
+  round-trips, fresh accounts and offline retries. All platforms. `dfcb0420d`, `79a9edcbe`, `948c6db82`,
+  merge `9d7db484b` (`agente/205-ajustessync`).
+
+- **Empty add-on cast filled from TMDB**: when an add-on returns no cast, aggregate TMDB credits fill the
+  row while preserving person IDs, portraits and limits. All platforms. `a8e7805f4`, merge `bdc5faee1`
+  (`agente/205-elencovazio`).
 
 - **Cast pages always open, even right after a search** (owner request): person IDs that the title credits never returned are resolved on demand off the UI thread, cancelled lookups no longer block the cast row, and reordered results keep their order. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `2cf7bfc0c`, `7559ce4ef`, merge `310f3aa3d` (`agente/205-pessoapagina`).
 
@@ -397,9 +429,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   the live clock digits (`4ae3e7211`); typed-title and late-playback identity tests (`2537db6a0`); an assert
   that friends row style 5 has no "+ Add" column (`d95bd32e1`) and that its touch scroll covers the last
   friend's expanded panel (`e27514693`).
-- Settings scale migration to a 100% factory default, only for anyone who never chose by hand
-  (`3f8d304b7`), and a pixel proof that the Library/catalog tabs carry regional frost
-  (`21696fd8c`, `796a3441f`).
+- Settings scale migration to a factory default, only for anyone who never chose by hand
+  (`3f8d304b7`, `f22761e28`, `6e0e0d644`, `be3406a3a`), and a pixel proof that the Library/catalog tabs
+  carry regional frost (`21696fd8c`, `796a3441f`).
 - The `tests/homerefresh.sh` fixture repaired again at merge time: duplicate home stubs and missing add-on
   lock stubs (`c47a40788`).
 - Glass merge-window regression closed: `tests/vidro_qualidade.sh` failed at `0940ae7bf`
@@ -413,7 +445,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-Tracking snapshot: 30 branches have unmerged commits and no running job; 16 open issues have no mapped job or prompt. Newer fixes on `agente/205-elencovazio`, `agente/205-episodioslento`, `agente/205-escala85`, `agente/205-whatsnew207`, `agente/p2p` need review and are not classified as lost. Queued jobs and deferred 2.1 work remain tracked separately. The C9 installation attempt at `cb7ece972` failed; later integration merges (up to `f246d8e91`) have not been confirmed on TV.
+Tracking snapshot: 21 branches have unmerged commits and no running job; 17 open issues have no mapped job or prompt. Newer fixes on `agente/205-artepastel`, `agente/205-episodioslento`, `agente/205-issuetriagem`, `agente/205-pr567port`, `agente/205-whatsnew207`, `agente/p2p` need review and are not classified as lost. Queued jobs and deferred 2.1 work remain tracked separately. The C9 installation attempt at `cb7ece972` failed; later integration merges (up to `ba0639cf0`) have not been confirmed on TV.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
@@ -466,6 +498,9 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 - **Trakt comments with glass, frosted context menu and #562/PR #574** landed in this window
   (`335bd2abc`, `a363d821c`, `dc040ef2d`, `a2ea074c7`, `2c7c85860`, all review OK: `rev-traktcoment`, `rev-ctxgrande`, `rev-pr574`) and
   are already in New/Fixes/Performance. Still to measure on a device: the FPS of the 8 glass panels.
+- **Live TV guide, quick-menu frost, tab tint, 85% scale, account-settings sync and empty-cast fill**
+  landed in this window (`ebf14de6b`, `ba0639cf0`, `31a597e54`, `31b8412f0`, `7507ec45a`, `9d7db484b`,
+  `bdc5faee1`, all with OK reviews `j-rev1434-*`) and are already in Highlights/Fixes.
 - **Cheaper frost, polished friends row, PR #561 (#524), glass tabs and Settings at 100%** landed in this
   window (`4c82273d7`, `f21d993b2`, `86d194462`, `a096e5eb8`, `f22761e28`) and are already under
   Highlights/New:
@@ -505,7 +540,10 @@ Landing in 2.0.7, already in the sections above:
   (`e476d1707`), the **MKV ASS 12 s prefetch** (`918dd51c9`), the **frost crossfade/artwork fixes**
   (`ddc51a964`), the **text-scale anchor set** (`cb398fc2f`, `f0143a81c`), the **Hero A performance and
   top-mask set** (`8ff0623e9`, `e4e86c3f2`), the **timeline text gap** (`99c40f3c0`), the
-  **cast-person lookups** (`310f3aa3d`) and the **hidden-torrent explanation** (`f246d8e91`).
+  **cast-person lookups** (`310f3aa3d`), the **hidden-torrent explanation** (`f246d8e91`), the
+  **per-source Live TV guide** (`ebf14de6b`, `ba0639cf0`), the **quick-menu frost** (`31a597e54`), the
+  **panel kicker / tab tint** (`31b8412f0`), **Settings at 85%** (`7507ec45a`), the **account-settings
+  sync** (`9d7db484b`) and the **empty-cast TMDB fill** (`bdc5faee1`).
 
 ### Frost performance (to fill before tagging)
 
@@ -555,7 +593,10 @@ Landing in 2.0.7, already in the sections above:
   (`e476d1707`), the **MKV ASS 12 s prefetch** (`918dd51c9`), the **frost crossfade/artwork fixes**
   (`ddc51a964`), the **text-scale anchor set** (`cb398fc2f`, `f0143a81c`), the **Hero A performance and
   top-mask set** (`8ff0623e9`, `e4e86c3f2`), the **timeline text gap** (`99c40f3c0`), the
-  **cast-person lookups** (`310f3aa3d`) and the **hidden-torrent explanation** (`f246d8e91`).
+  **cast-person lookups** (`310f3aa3d`), the **hidden-torrent explanation** (`f246d8e91`), the
+  **per-source Live TV guide** (`ebf14de6b`, `ba0639cf0`), the **quick-menu frost** (`31a597e54`), the
+  **panel kicker / tab tint** (`31b8412f0`), **Settings at 85%** (`7507ec45a`), the **account-settings
+  sync** (`9d7db484b`) and the **empty-cast TMDB fill** (`bdc5faee1`).
 
 ### Frost performance (to fill before tagging)
 
