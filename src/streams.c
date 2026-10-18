@@ -1583,7 +1583,7 @@ static int resolverUrl(const char *url, const char *cabecalhos, int segundos,
   return 0;
 }
 
-void (*stream_cdn_lembrar)(const char *orig, const char *final);
+void (*stream_cdn_lembrar)(const char *orig, const char *final, const char *cabecalhos, uint64_t sessao);
 
 static int verificarUma(int i, Conferencia *c) {
   char fim[4096], url[4096], cab[512], mime[96], addon[sizeof lista->provedor];
@@ -1668,7 +1668,7 @@ static int verificarUma(int i, Conferencia *c) {
       printf("[fonte] %d tem playlist vazia (canal fora do ar)\n", i);
     } else {
       ok = 1;
-      if (stream_cdn_lembrar) stream_cdn_lembrar(url, fim);
+      if (stream_cdn_lembrar) stream_cdn_lembrar(url, fim, cab, c->sessao);
     }
   }
   return ok;
@@ -1679,6 +1679,7 @@ static int verificarUma(int i, Conferencia *c) {
 // aviso do debrid e a playlist sem segmento. 5 s e nao 10: quem chama ja esta
 // tocando a URL em paralelo e so quer saber cedo se ela morreu.
 int stream_url_serve(const char *url, const char *cabecalhos) {
+  uint64_t sessao = nv_perfil_sessao_ler();
   char fim[4096], mime[96];
   long corpo = -1;
   if (!url || !*url) return 0;
@@ -1686,7 +1687,7 @@ int stream_url_serve(const char *url, const char *cabecalhos) {
   if (naovideo_mime(mime, fim, corpo)) return 0;
   if (enderecoDeAviso(fim)) return 0;
   if (playlistVazia(fim, cabecalhos)) return 0;
-  if (stream_cdn_lembrar) stream_cdn_lembrar(url, fim);
+  if (stream_cdn_lembrar) stream_cdn_lembrar(url, fim, cabecalhos, sessao);
   return 1;
 }
 

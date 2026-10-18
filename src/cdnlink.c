@@ -1,6 +1,8 @@
 // Ver cdnlink.h para o porque.
 #include "cdnlink.h"
 #include "rede.h"
+#define NV_DUBLE_SESSAO
+#include "perfisessao.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +16,8 @@
 typedef struct {
   char orig[CDN_URL];
   char final[CDN_URL];
+  char cabecalhos[2048];
+  uint64_t sessao;
   unsigned em;    // relogio() quando foi resolvido
   int usado;
 } Entrada;
@@ -94,13 +98,16 @@ int cdnlink_aceita(const char *orig, const char *final) {
   return 1;
 }
 
-void cdnlink_lembrar(const char *orig, const char *final) {
+void cdnlink_lembrar(const char *orig, const char *final, const char *cabecalhos, uint64_t sessao) {
   int i, alvo = -1;
   unsigned agora, maisVelho = 0;
-  if (!cdnlink_aceita(orig, final)) return;
+  if (!cabecalhos) cabecalhos = "";
+  if (!cdnlink_aceita(orig, final) || strlen(cabecalhos) >= sizeof cache[0].cabecalhos) return;
   agora = relogio();
+  if (!nv_perfil_sessao_travar(sessao)) return;
   pthread_mutex_lock(&trava);
-  for (i = 0; i < CDN_MAX; i++) if (cache[i].usado && !strcmp(cache[i].orig, orig)) { alvo = i; break; }
+  for (i = 0; i < CDN_MAX; i++) if (cache[i].usado && cache[i].sessao == sessao &&
+      !strcmp(cache[i].orig, orig) && !strcmp(cache[i].cabecalhos, cabecalhos)) { alvo = i; break; }
   if (alvo < 0) for (i = 0; i < CDN_MAX; i++) if (!cache[i].usado) { alvo = i; break; }
   if (alvo < 0) for (i = 0; i < CDN_MAX; i++) {
     unsigned idade = agora - cache[i].em;
@@ -108,21 +115,27 @@ void cdnlink_lembrar(const char *orig, const char *final) {
   }
   snprintf(cache[alvo].orig, sizeof cache[alvo].orig, "%s", orig);
   snprintf(cache[alvo].final, sizeof cache[alvo].final, "%s", final);
+  snprintf(cache[alvo].cabecalhos, sizeof cache[alvo].cabecalhos, "%s", cabecalhos);
+  cache[alvo].sessao = sessao;
   cache[alvo].em = agora;
   cache[alvo].usado = 1;
   pthread_mutex_unlock(&trava);
+  nv_perfil_sessao_destravar();
 }
 
-int cdnlink_recente(const char *orig, unsigned maxMs, char *dst, unsigned tam, unsigned *idadeMs) {
+int cdnlink_recente(const char *orig, const char *cabecalhos, unsigned maxMs, char *dst, unsigned tam, unsigned *idadeMs) {
   int i, ok = 0;
   unsigned agora;
+  uint64_t sessao = nv_perfil_sessao_ler();
+  if (!cabecalhos) cabecalhos = "";
   if (dst && tam) dst[0] = 0;
   if (!orig || !*orig || !dst || !tam) return 0;
   agora = relogio();
   pthread_mutex_lock(&trava);
   for (i = 0; i < CDN_MAX; i++) {
     unsigned idade;
-    if (!cache[i].usado || strcmp(cache[i].orig, orig)) continue;
+    if (!cache[i].usado || cache[i].sessao != sessao || strcmp(cache[i].orig, orig) ||
+        strcmp(cache[i].cabecalhos, cabecalhos)) continue;
     idade = agora - cache[i].em;
     if (idade <= maxMs && strlen(cache[i].final) < tam) {
       memcpy(dst, cache[i].final, strlen(cache[i].final) + 1);
@@ -132,7 +145,7 @@ int cdnlink_recente(const char *orig, unsigned maxMs, char *dst, unsigned tam, u
     break;
   }
   pthread_mutex_unlock(&trava);
-  return ok;
+  return ok && nv_perfil_sessao_atual(sessao);
 }
 
 int cdnlink_resolver(const char *orig, const char *cabecalhos, int segundos,
@@ -141,6 +154,7 @@ int cdnlink_resolver(const char *orig, const char *cabecalhos, int segundos,
   char copia[2048], fim[CDN_URL], ho[256], hf[256];
   int nc = 0, http = 0, ok;
   unsigned t0 = relogio(), dur;
+  uint64_t sessao = nv_perfil_sessao_ler();
   if (dst && tam) dst[0] = 0;
   if (ms) *ms = 0;
   if (!dst || !tam || !cdnlink_origem_ok(orig)) return 0;
@@ -161,13 +175,14 @@ int cdnlink_resolver(const char *orig, const char *cabecalhos, int segundos,
     return 0;
   }
   cdnlink_host(fim, hf, sizeof hf);
+  if (!nv_perfil_sessao_atual(sessao)) return 0;
   if (!cdnlink_aceita(orig, fim) || strlen(fim) >= tam) {
     printf("[fonte-cdn] %s does not redirect to another host (%u ms): the player gets the add-on link\n", ho, dur);
     fflush(stdout);
     return 0;
   }
   memcpy(dst, fim, strlen(fim) + 1);
-  cdnlink_lembrar(orig, fim);
+  cdnlink_lembrar(orig, fim, cabecalhos, sessao);
   printf("[fonte-cdn] resolved %s -> %s in %u ms\n", ho, hf, dur);
   fflush(stdout);
   return 1;

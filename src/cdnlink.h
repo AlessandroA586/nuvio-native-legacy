@@ -28,6 +28,7 @@
 // Logs: so hosts, nunca o link (o do CDN carrega um token).
 #ifndef NUVIO_CDNLINK_H
 #define NUVIO_CDNLINK_H
+#include <stdint.h>
 
 // Prazo da resolucao na abertura. O app ja mostra "Abrindo fonte"; o prazo de
 // abertura do app.c e de 15 s sem sinal. 10 s e nao 6: o MediaFusion ja levou
@@ -50,12 +51,13 @@ int cdnlink_origem_ok(const char *orig);
 int cdnlink_aceita(const char *orig, const char *final);
 
 // Guarda orig -> final (a verificacao de streams.c chama pelo ponteiro
-// stream_cdn_lembrar, ligado no tpk.c). Ignora o que cdnlink_aceita recusa.
-void cdnlink_lembrar(const char *orig, const char *final);
+// stream_cdn_lembrar, ligado no tpk.c). Headers and captured profile session
+// own each entry; stale workers cannot publish. Invalid redirects are ignored.
+void cdnlink_lembrar(const char *orig, const char *final, const char *cabecalhos, uint64_t sessao);
 
 // 1 e `dst` = final guardado para `orig` ha no maximo `maxMs`; `*idadeMs`
 // (opcional) recebe a idade.
-int cdnlink_recente(const char *orig, unsigned maxMs, char *dst, unsigned tam, unsigned *idadeMs);
+int cdnlink_recente(const char *orig, const char *cabecalhos, unsigned maxMs, char *dst, unsigned tam, unsigned *idadeMs);
 
 // Resolve agora (bloqueia ate `segundos`): segue os redirecionamentos de
 // `orig` com os cabecalhos do addon (linhas "Nome: valor" separadas por \n).
@@ -75,7 +77,7 @@ const char *cdnlink_host(const char *url, char *b, unsigned n);
 // player abre o link do addon, como sempre.
 typedef struct {
   int (*origem_ok)(const char *orig);
-  int (*recente)(const char *orig, unsigned maxMs, char *dst, unsigned tam, unsigned *idadeMs);
+  int (*recente)(const char *orig, const char *cabecalhos, unsigned maxMs, char *dst, unsigned tam, unsigned *idadeMs);
   int (*resolver)(const char *orig, const char *cabecalhos, int segundos,
                   char *dst, unsigned tam, unsigned *ms);
   unsigned (*validade_ms)(void);

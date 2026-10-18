@@ -17,6 +17,14 @@ static FontePref tabela[FONTEPREF_MAX];
 static int nTab;
 static int carregado;
 static int perfil;
+static pthread_mutex_t travaTocando = PTHREAD_MUTEX_INITIALIZER;
+static FontePref tocandoPref;
+
+static void esquecerTocando(void) {
+  pthread_mutex_lock(&travaTocando);
+  memset(&tocandoPref, 0, sizeof tocandoPref);
+  pthread_mutex_unlock(&travaTocando);
+}
 
 // A MEMORIA DO AUTOMATICO (ver fontepref.h): tabela e arquivo proprios.
 // `sessao` so existe em RAM (o arquivo nao tem a coluna): 1 = gravada por este
@@ -815,6 +823,7 @@ void fontepref_iniciar(void) {
 void fontepref_definir_perfil(int p) {
   if (p < 0) p = 0;
   if (p == perfil && carregado) return;
+  if (p != perfil) esquecerTocando();
   perfil = p;
   nTab = 0;
   nAuto = 0;
@@ -823,6 +832,7 @@ void fontepref_definir_perfil(int p) {
 
 void fontepref_esquecer(void) {
   int p;
+  esquecerTocando();
   // APAGA O ARQUIVO DE TODOS OS PERFIS, e nao so o do perfil corrente. Ao
   // sair da conta os perfis somem junto (perfis_esquecer), entao um arquivo
   // de perfil 3 que ficasse para tras seria lido pela proxima pessoa que
@@ -1232,9 +1242,6 @@ int fontepref_escolher_lista(const char *id, const Stream *fontes, int total,
 // --- NEXT: A FONTE QUE ESTA TOCANDO (dono, 16/10, como o Nuvio) -----------
 // So na RAM: o bingeGroup e o add-on da fonte que tocou de verdade agora.
 // Lido tambem pelo worker do proximo episodio, dai a trava.
-static pthread_mutex_t travaTocando = PTHREAD_MUTEX_INITIALIZER;
-static FontePref tocandoPref;
-
 void fontepref_tocando(const char *id, const Stream *s) {
   char base[24];
   if (!id || !s) return;

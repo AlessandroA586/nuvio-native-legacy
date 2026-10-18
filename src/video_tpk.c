@@ -588,7 +588,7 @@ static int cdnAbrir(void) {
   // So filme/episodio (reconPermitida = !canal) e so link http(s) de fora.
   if (!reconPermitida || (!cdn.arquivo &&
       (!cdnG.resolver || !cdnG.origem_ok || !cdnG.origem_ok(urlAtual)))) return 0;
-  if (!cdn.arquivo && cdnG.recente && cdnG.recente(urlAtual, CDNLINK_REUSO_MS, fim, sizeof fim, &idade)) {
+  if (!cdn.arquivo && cdnG.recente && cdnG.recente(urlAtual, cabecalhos, CDNLINK_REUSO_MS, fim, sizeof fim, &idade)) {
     cdn.usado = 1; cdn.em = SDL_GetTicks() - idade;
     printf("[fonte-cdn] the player gets the CDN link the check resolved %u s ago\n", idade / 1000u);
     fflush(stdout);

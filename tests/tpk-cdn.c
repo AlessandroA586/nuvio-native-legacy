@@ -180,8 +180,8 @@ static int perto(double a, double b) { return a > b - 0.01 && a < b + 0.01; }
 static int resolveOk = 1, nResolve, recenteSim, validadeMs = 150 * 60 * 1000;
 static const char *cachedUrl = "https://cdn.test/checked";
 static int fOrigem(const char *u) { return u && !strncmp(u, "http", 4) && !strstr(u, "127.0.0.1") && !strstr(u, ".m3u8") && !strstr(u, "tb-cdn.st"); }
-static int fRecente(const char *o, unsigned maxMs, char *d, unsigned t, unsigned *idade) {
-  (void)o; (void)maxMs;
+static int fRecente(const char *o, const char *cab, unsigned maxMs, char *d, unsigned t, unsigned *idade) {
+  (void)o; (void)cab; (void)maxMs;
   if (!recenteSim) return 0;
   snprintf(d, t, "%s", cachedUrl); if (idade) *idade = 5000; return 1;
 }

@@ -340,7 +340,7 @@ int  stream_url_serve(const char *url, const char *cabecalhos);
 // stream_url_serve) resolve uma URL que serve, chama isto com a original e o
 // endereco final, para o .tpk entregar o link do CDN ao player sem pedir de
 // novo. NULL fora do .tpk (o tpk.c liga) e nos testes.
-extern void (*stream_cdn_lembrar)(const char *orig, const char *final);
+extern void (*stream_cdn_lembrar)(const char *orig, const char *final, const char *cabecalhos, uint64_t sessao);
 
 // 1 quando o texto da fonte diz "fora de cache" (ver Stream.foraCache).
 // Publica para o parser e o teste; a lista ja vem com o campo preenchido.

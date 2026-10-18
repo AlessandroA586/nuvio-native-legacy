@@ -3139,7 +3139,7 @@ static void lembrarTocando(void) {
   alvoPlayer(alvo, sizeof alvo);
   if (s == ultS && stream_lista_geracao() == ultGer && !strcmp(alvo, ultAlvo)) return;
   player_episodio_atual(&t, &e);
-  if (t <= 0 || e <= 0) return;
+  if (t < 0 || e <= 0) return;
   ultS = s; ultGer = stream_lista_geracao();
   snprintf(ultAlvo, sizeof ultAlvo, "%s", alvo);
   idBaseDoTitulo(base, sizeof base);
