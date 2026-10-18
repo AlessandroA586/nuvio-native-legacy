@@ -274,7 +274,8 @@ typedef enum {
   GFX_HOLOFOTE = 45,
   // Selected internally for GFX_CARD while the Hero reading tint is active.
   GFX_CARD_HERO = 46,
-  GFX_NMODOS = 47
+  GFX_PALCO_CHAO = 47, // Stage floor glow without a fullscreen veil.
+  GFX_NMODOS = 48
 } GfxModo;
 
 typedef struct {

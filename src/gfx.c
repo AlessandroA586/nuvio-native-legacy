@@ -1597,6 +1597,15 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "         + vec3(0.012, 0.014, 0.022) * d / max(a, 0.001);\n"
   "  gl_FragColor = nv_dither(c, a);\n"
   "}\n",
+
+  "", // GFX_CARD_HERO reuses GFX_CARD in the shader compiler.
+  // GFX_PALCO_CHAO: only the floor pool; scissored to its narrow band.
+  "void main(){\n"
+  "  float dx = abs(vUv.x - uCor.g) * uAspect;\n"
+  "  vec2 p = vec2(dx / max(uCor.b * 1.7, 0.001), (vUv.y - uCor.r - 0.018) / 0.035);\n"
+  "  float l = (uLeve > 0.5 ? 0.0 : 1.0) * uCor.a * 0.42 * (1.0 - smoothstep(0.0, 1.0, dot(p, p)));\n"
+  "  gl_FragColor = nv_dither(uAcento, l);\n"
+  "}\n",
 };
 
 // Cada corpo declara o que usa; montar so o necessario mantem o shader enxuto.
@@ -1636,7 +1645,8 @@ static const struct { int sdf, cover; } PRECISA[GFX_NMODOS] = {
   {1,0},   /* GFX_VIDRO — SDF proprio em pixels; o {1,..} so liga a margem de 1 px do quad */
   {1,0},   /* GFX_VITRINE_DIN — o do GFX_VITRINE */
   {0,0},   /* GFX_HOLOFOTE — procedural, tela cheia */
-  {1,1}    /* GFX_CARD_HERO — same artwork, compiled with the reading tint */
+  {1,1},   /* GFX_CARD_HERO — same artwork, compiled with the reading tint */
+  {0,0}    /* GFX_PALCO_CHAO — procedural floor pool */
 };
 
 static GLuint compila(GLenum tipo, const char *src) {
@@ -2357,7 +2367,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
   if (efeitosLeves && ((modo == GFX_LUZ && !assandoCanal) ||
       (modo == GFX_BRILHO_TOPO && cr + cg + cb > 1.5f))) return;
   // Efeitos minimos: sombra e halo tambem saem (o anel continua marcando o foco).
-  if (efeitosMinimos && (modo == GFX_SOMBRA || modo == GFX_HOLOFOTE)) return;
+  if (efeitosMinimos && (modo == GFX_SOMBRA || modo == GFX_HOLOFOTE || modo == GFX_PALCO_CHAO)) return;
 #ifdef NV_SHOT_HOOKS
   if (modo == GFX_SOMBRA && r.w > 600.0f && r.h > 600.0f) gfx_shot_sombras++;
 #endif

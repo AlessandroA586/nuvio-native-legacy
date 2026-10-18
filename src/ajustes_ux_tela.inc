@@ -122,7 +122,7 @@ static const Item TELA[] = {
       OPC(AJ_FIL_ORDEM), OPC(AJ_FIL_LIMITE), OPC(AJ_ITENS_FILEIRA),
       OPC(AJ_ESPACO_FILEIRAS), OPC(AJ_ESPACO_TITULOS),
       OPC(AJ_OCULTAR_NLANC), OPC(AJ_NOTAS_HOME), OPC(AJ_SELO_VISTO), OPC(AJ_ABAS_ESTILO),
-      OPC(AJ_OCULTAR_FILMES_VISTOS), OPC(AJ_AMIGOS_ESTILO), OPC(AJ_TITULO_FIL),
+      OPC(AJ_OCULTAR_FILMES_VISTOS), OPC(AJ_AMIGOS_ESTILO),
       // A curadoria da fileira Herói (#205): a fonte do cartão único.
       OPC(AJ_CURADORIA_URL),
     ROT("Coleções"), OPC(AJ_COLECAO_EXIBICAO),
@@ -152,6 +152,7 @@ static const Item TELA[] = {
 #endif
     ROT("Cores e vidro"),
       OPC(AJ_TEMA), OPC(AJ_FUNDO), OPC(AJ_COR_LOGO), OPC(AJ_VIDRO), OPC(AJ_VIDRO_CONTORNO), OPC(AJ_FOCO_ACENTO),
+    ROT("Fileiras"), OPC(AJ_TITULO_FIL), OPC(AJ_PALCO_FUNDO),
     ROT("Logo e abertura"),
       OPC(AJ_LOGO_APP), OPC(AJ_ABERTURA), OPC(AJ_ICONE_APP),
     ROT("Texto e tamanho"),
