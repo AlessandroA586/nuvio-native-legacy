@@ -14,6 +14,7 @@
 #include "dados.h"
 #include "detail.h"
 #include "gfx.h"
+#include "fundo.h"
 #include "home.h"
 #include "ilha.h"
 #include "layout.h"
@@ -538,6 +539,56 @@ static void trailerCiclo(const char *onde, int dono) {
   trailer_fechar(); trailer_teste_falso(0);   // still supported, as on the TV
 }
 
+// Inspect the Frost itself, before UI overlays can hide a discontinuity.
+// Every sampled pixel must stay opaque and move at most two luminance levels
+// per frame while the immersive strength moves by 1/120.
+static void frostTransicoes(void) {
+  float saved = nv_ambiente_forca;
+  float regions[4][3];
+  GfxRect tela = {0, 0, W, H};
+  int direction, i, x, y, bad = 0;
+  double worst = 0;
+  memcpy(regions, nv_ambiente_viva, sizeof regions);
+  for (i = 0; i < 4; i++) {
+    nv_ambiente_viva[i][0] = 0.44f;
+    nv_ambiente_viva[i][1] = 0.22f;
+    nv_ambiente_viva[i][2] = 0.10f;
+  }
+  for (direction = 0; direction < 2; direction++) for (i = 0; i <= 120; i++) {
+    char nm[80];
+    double jump = 0;
+    nv_ambiente_forca = (direction ? 120 - i : i) / 120.0f;
+    gfx_novo_quadro(); gfx_ambiente_preparar();
+    glClearColor(1, 0, 1, 0); glClear(GL_COLOR_BUFFER_BIT);
+    fundo_desenhar_modo(FUNDO_FROST, tela, 0, NULL, 1);
+    gfx_ambiente_descarregar();
+    glReadPixels(0, 0, W, H, GL_RGBA, GL_UNSIGNED_BYTE, px);
+    if (i) for (y = 24; y < H; y += 48) for (x = 24; x < W; x += 48) {
+      size_t p = ((size_t)y * W + x) * 4;
+      double d = fabs(0.2126 * ((int)px[p] - ant[p]) +
+                      0.7152 * ((int)px[p+1] - ant[p+1]) +
+                      0.0722 * ((int)px[p+2] - ant[p+2]));
+      if (d > jump) jump = d;
+      assert(px[p+3] == 255);
+    }
+    if (jump > worst) worst = jump;
+    printf("[pisca3] frost-immersive-%d f%03d strength=%.4f jump=%.3f bakes=%d\n",
+           direction, i, nv_ambiente_forca, jump, gfx_n_fundo_assados);
+    if (jump > 2) {
+      printf("FAIL: frost-immersive-%d f%03d luminance jump %.3f\n", direction, i, jump);
+      snprintf(nm, sizeof nm, "frost-immersive-%d-f%03d-before", direction, i); pngDe(ant, nm);
+      snprintf(nm, sizeof nm, "frost-immersive-%d-f%03d-after", direction, i); png(nm);
+      bad++;
+    }
+    memcpy(ant, px, (size_t)W * H * 4);
+    eglSwapBuffers(egl, eglTela);
+  }
+  printf("%s: Frost immersive transitions max luminance step %.3f\n", bad ? "FAIL" : "PASS", worst);
+  failures += bad != 0;
+  nv_ambiente_forca = saved;
+  memcpy(nv_ambiente_viva, regions, sizeof regions);
+}
+
 int main(int argc, char **argv) {
   static CatItem items[10];
   CatFileira row;
@@ -604,6 +655,12 @@ int main(int argc, char **argv) {
     snprintf(items[i].logo, sizeof items[i].logo, "deploy/app/art/logo/%02d.png", i);
   }
   cat_definir_tudo(items, 10, &row, 1);
+  if (argc > 2 && !strcmp(argv[2], "frost")) {
+    frostTransicoes();
+    printf("[pisca3] gl=%#x\n", glGetError());
+    tex_encerrar(); SDL_Quit();
+    return failures ? 1 : 0;
+  }
   escolhaPerfil();
   if (argc > 2 && !strcmp(argv[2], "perfil")) return failures ? 1 : 0;
 
