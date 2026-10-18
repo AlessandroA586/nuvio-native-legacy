@@ -23,6 +23,7 @@
 #define NV_TXT_TELA   // NV_TELA_W/H = tela virtual da escala de texto (escala.h)
 #include "escala.h"
 #include "detail.h"
+#include "detail_acoes.h"
 #include "focoprof.h"
 #include "posterprov.h"
 #include "episodios.h"
@@ -4870,7 +4871,7 @@ static void heroWeb(float a, float desloc) {
     player_morph_de(morphLogo, rp);   // A3: o morph da abertura parte daqui
     primarioPct = -1;   // os outros botoes nao tem trilho
     if (a > 0.3f) ponteiro_alvo(rp.x, rp.y, rp.w, rp.h, ponteiroDetalhe, NULL, -1, nb);
-    bx += rp.w + NV_DETW2_BTN_GAP; nb++;
+    bx += det_avanco(rp.w, nivel == 0 && botao == nb, NV_DETW2_FOCO_SX, NV_DETW2_BTN_GAP); nb++;
     if (temInicio()) {
       // "Assistir do comeco" entre o primario e os circulares (issue #46).
       const char *rotIni = i18n("Assistir do começo");
@@ -4891,11 +4892,11 @@ static void heroWeb(float a, float desloc) {
       // animacao dessa play from beginning nao ta legal, o texto ta meio
       // que escrevendo". Ordenado, o rotulo so existe com a pilula aberta.
       anim_expande(&inicioExp, &inicioRot, selIni ? 1.0f : 0.0f,
-                   dtIni * 0.001f, 160.0f, 120.0f);
+                   dtIni * 0.001f, NV_DET_INICIO_LARG_MS, NV_DET_INICIO_ROT_MS);
       float fechado = acoesAgrupadas() ? NV_DETW2_CIRC : larguraSecundario(rotIni);
       float abertoIni = larguraSecundario(rotIni) + 44.0f;
       GfxRect rs = { bx, cyBtn-fechado*.5f,
-        acoesAgrupadas() ? fechado+(abertoIni-fechado)*anim_suave(inicioExp) : fechado,
+        acoesAgrupadas() ? fechado+(abertoIni-fechado)*det_inicio_largura(inicioExp) : fechado,
         acoesAgrupadas() ? NV_DETW2_CIRC : NV_DETW2_BTN_H };
       rs.y = cyBtn - rs.h*.5f;
       if (detalheRetrato()) rs = heroAcaoRect(&bx, &cyBtn, rs.w, rs.h);
@@ -4957,13 +4958,16 @@ static void heroWeb(float a, float desloc) {
       desenhaBotao(anchor,NULL,ACAO_LISTA,nivel == 0 && botao == first,a);
       if (a > .3f) ponteiro_alvo(anchor.x,anchor.y,anchor.w,anchor.h,ponteiroDetalhe,NULL,-1,first);
     } else for (; nb < n; nb++) {
+      int foc = nivel == 0 && botao == nb;
+      float ext = foc ? det_foco_extra(NV_DETW2_CIRC, NV_DETW2_FOCO_SY) : 0.0f;
+      bx += ext;   // the focused circle grows both ways: keep the gap on its left too
       GfxRect rc = { bx, cyBtn - NV_DETW2_CIRC * 0.5f,
                      NV_DETW2_CIRC, NV_DETW2_CIRC };
       if (detalheRetrato()) rc = heroAcaoRect(&bx, &cyBtn, rc.w, rc.h);
-      desenhaBotao(rc, NULL, acaoEm(nb), nivel == 0 && botao == nb, a);
+      desenhaBotao(rc, NULL, acaoEm(nb), foc, a);
       if (acaoEm(nb) == ACAO_MAIS) maisAncora = rc;
       if (a > 0.3f) ponteiro_alvo(rc.x, rc.y, rc.w, rc.h, ponteiroDetalhe, NULL, -1, nb);
-      bx += NV_DETW2_CIRC + NV_DETW2_BTN_GAP;
+      bx += NV_DETW2_CIRC + ext + NV_DETW2_BTN_GAP;
     }
   }
 
