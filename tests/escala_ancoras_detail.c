@@ -15,6 +15,16 @@ void fixture_detail(float scale,int section) {
   static const char *names[3][5]={{"detail-modern-hero","detail-modern-seasons","detail-modern-episodes","detail-modern-tabs","detail-modern-cast"},{"detail-standard-hero","detail-standard-seasons","detail-standard-episodes","detail-standard-tabs","detail-standard-cast"},{"detail-dynamic-hero","detail-dynamic-seasons","detail-dynamic-episodes","detail-dynamic-tabs","detail-dynamic-cast"}};
   int lay=ajustes_home_layout();
   float old=gfx_escala_txt_entrar();
+  if(lay==HOME_LAYOUT_PADRAO) {
+    shot_begin("detail-standard-reservation",scale);
+    shot_check("text layer reserves rendered thumbnail",fabsf(epCardH()-epThumbH())<.01f);
+    float ui=gfx_escala_ui_base();
+    gfx_escala_ui_definir(1.2f);
+    float layer=gfx_escala_entrar();
+    shot_check("combined layer reserves rendered thumbnail",fabsf(epCardH()-epThumbH())<.01f);
+    gfx_escala_sair(layer);
+    gfx_escala_ui_definir(ui);
+  }
   idx=0; aberto=1; t=1; saindo=0; carro=0; nivel=section<0?0:1; pg=section<0?0:1;
   temporada=0; abaInfo=0; foco.fileira=section<0?0:section; foco.coluna=0;
   memset(animFoco,0,sizeof animFoco); memset(scrollSec,0,sizeof scrollSec);
@@ -62,6 +72,7 @@ void fixture_detail(float scale,int section) {
       }
       GfxRect card=menuOrigem;
       card=shot_box((GfxRect){card.x,card.y,card.w,epThumbH()});
+      shot_check("episode artwork fits reserved section",card.y+card.h<=(menuOrigem.y+epCardH())*scale+1);
       shot_anchor("episode card",card,0);
       float documentScroll=scrollY;
       shot_reset(); scrollY=epAbasY()-ANC(800);

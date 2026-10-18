@@ -130,6 +130,7 @@ void shot_end(void) {
 extern void ajustes_teste_cena_t(float);
 int main(void) {
   int focused=getenv("NV_ANCHOR_FOCUSED")!=NULL;
+  int quick=getenv("NV_ANCHOR_FULL")==NULL;
   shots=getenv("NV_ANCHOR_SHOTS"); assert(shots);
   const char *dir=getenv("NUVIO_DADOS"); assert(dir); dados_iniciar(dir);
   SDL_SetHint("SDL_MAC_BACKGROUND_APP","1");
@@ -179,8 +180,14 @@ int main(void) {
     float scales[]={1,.8f,.85f,.9f,1.15f,1.3f};
     for(int i=0;i<(int)(sizeof scales/sizeof scales[0]);i++) {
       if(upcoming && scales[i]!=1 && scales[i]!=1.3f) continue;
+      if(quick && scales[i]!=1 && scales[i]!=.85f && scales[i]!=1.3f) continue;
       gfx_escala_txt_definir(scales[i]);
       if(upcoming) { fixture_detail(scales[i],1); continue; }
+      if(quick) {
+        fixture_home(scales[i],0); fixture_home(scales[i],1);
+        if(layout==HOME_LAYOUT_PADRAO) fixture_detail(scales[i],1);
+        continue;
+      }
       if(!focused) { fixture_home(scales[i],0); fixture_home(scales[i],1); }
       fixture_search(scales[i]);
       for(int section=-1;section<4;section++)

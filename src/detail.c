@@ -2107,7 +2107,7 @@ static float epThumbH(void) {
 static float epCardW(void) { return (epApple() ? 420.0f : NV_DETP_EP_W * epEscala()) * gfx_poster_k(); }
 static float epCardH(void) {
   if (epApple()) return ANC(500.0f);
-  if (!epModerna()) return ANC(NV_DETP_EP_H);
+  if (!epModerna()) return epThumbH();
   // Miniatura + bloco de texto: titulo (1 linha) + sinopse de 4 linhas (#205),
   // Reserve scaled text offsets and line advances before following sections.
   return epThumbH() + NV_DETP_EPM_SIN_DY +
