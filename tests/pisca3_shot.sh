@@ -17,18 +17,32 @@ ndk=$(ls -d "$HOME"/Library/Android/sdk/ndk/*/toolchains/llvm/prebuilt/*/sysroot
 [ -f "$angle/libGLESv2.dylib" ] && [ -n "$ndk" ] || { echo "FAIL: no ANGLE/NDK for GLES2"; exit 1; }
 mkdir -p "$work/inc"
 for d in GLES2 EGL KHR; do ln -s "$ndk/$d" "$work/inc/$d"; done
-flags=(-O1 -g -DNV_GLES_NO_MAC -I"$work/inc" -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2
+# One upload stripe per pump exposes the C9's slow-upload lifetime across frames.
+flags=(-O1 -g -DNV_GLES_NO_MAC -DNV_SHOT_HOOKS -DNV_TEX_UPLOAD_BUDGET_MS=0.0 -I"$work/inc" -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2
        -Wno-deprecated-declarations -Wno-macro-redefined -include tests/pisca3_gles.h ${NV_CFLAGS:-})
 objects=()
+pids=()
+# Reproduce unsafe publication/recapture against the parent upload code.
+if [ "${NV_PISCA3_BASELINE:-0}" = 1 ]; then
+  git show a933eb0fe:src/tex_cache.c > "$work/tex_cache.c"
+fi
 for source in src/*.c src/dts/*.c tests/pisca3_shot.c; do
   [ "$source" = src/main.c ] && continue
   object="$work/$(basename "$source" .c).o"
+  if [ "$source" = src/tex_cache.c ] && [ "${NV_PISCA3_BASELINE:-0}" = 1 ]; then
+    source="$work/tex_cache.c"
+  fi
   cc "${flags[@]}" -c "$source" -o "$object" &
   objects+=("$object")
+  pids+=("$!")
+  if [ "${#pids[@]}" -ge 8 ]; then
+    for pid in "${pids[@]}"; do wait "$pid"; done
+    pids=()
+  fi
 done
-wait
+for pid in "${pids[@]}"; do wait "$pid"; done
 cc "${objects[@]}" -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz \
   -L"$angle" -lEGL -lGLESv2 -Wl,-rpath,"$angle" -Wl,-headerpad_max_install_names -o "$work/shot"
 for l in libEGL libGLESv2; do install_name_tool -change "./$l.dylib" "$angle/$l.dylib" "$work/shot" 2>/dev/null || true; done
 codesign -f -s - "$work/shot" 2>/dev/null || true
-"$work/shot" "$saida"
+"$work/shot" "$saida" ${2:-}

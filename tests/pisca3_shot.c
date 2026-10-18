@@ -14,10 +14,13 @@
 #include "dados.h"
 #include "detail.h"
 #include "gfx.h"
+#include "fundo.h"
 #include "home.h"
 #include "ilha.h"
 #include "layout.h"
 #include "menu.h"
+#include "perfilsel.h"
+#include "perfis.h"
 #include "tex_cache.h"
 #include "text.h"
 #include "trailer.h"
@@ -44,6 +47,9 @@ static int failures;
 static unsigned char *q1, *q2;   // the two frames before this one
 static int nquadro, flashes, sujas, saltos;   // sujas: textures given garbage
 static const char *cena = "settle";   // last window started (transitions follow it)
+static int escolha;   // "Who's watching?" up: the Home assembles hidden behind it (app.c)
+static int uploadFault, uploadFaults;
+static GLenum uploadError;
 
 Uint32 pisca3_ticks(void) { return relogio; }   // tests/pisca3_gles.h
 
@@ -78,7 +84,10 @@ static int caixa(const char *nome, int i, int falar) {
 static void frame(void) {
   Uint32 now = relogio += 16;
   tex_bombear(8);
+  home_oculta(escolha);
   home_atualizar(1.0f / 60, now);
+  home_oculta(0);
+  if (escolha) perfilsel_atualizar(1.0f / 60, now);
   home_trailer_passo(!detail_aberto(), 1.0f / 60, now);   // as app.c
   if (!detail_aberto() && home_pediu_abrir()) {
     HomeItem it;
@@ -92,9 +101,12 @@ static void frame(void) {
   glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
   gfx_ambiente(1.0f);
-  if (!detail_cobre_tela()) home_desenhar(now);
-  detail_desenhar(now);
-  if (!detail_aberto()) menu_desenhar(now);
+  if (escolha) perfilsel_desenhar(now);
+  else {
+    if (!detail_cobre_tela()) home_desenhar(now);
+    detail_desenhar(now);
+    if (!detail_aberto()) menu_desenhar(now);
+  }
   ilha_desenhar(now);
   gfx_ambiente_descarregar();
   glReadPixels(0, 0, W, H, GL_RGBA, GL_UNSIGNED_BYTE, px);
@@ -389,6 +401,128 @@ static void homeArte(const char *promoArte) {
   failures += piscas || vpiscas;
 }
 
+// Freeze the real picker at its current animation state. Compare every pixel,
+// so missing/streaked artwork lasting any number of frames cannot pass.
+static void pickerPixels(void) {
+  gfx_novo_quadro();
+  glClearColor(0, 0, 0, 1);
+  glClear(GL_COLOR_BUFFER_BIT);
+  perfilsel_desenhar(relogio);
+  glReadPixels(0, 0, W, H, GL_RGBA, GL_UNSIGNED_BYTE, px);
+}
+
+static void pickerPressure(void) {
+  char paths[513][1024];
+  int slots, i, j, ready, bad = 0;
+  long evictions = tex_despejos_total, hot = tex_despejos_quentes_total;
+  SDL_Surface *s = SDL_CreateRGBSurfaceWithFormat(0, 8, 8, 32, SDL_PIXELFORMAT_RGBA32);
+  assert(s);
+  SDL_FillRect(s, NULL, SDL_MapRGBA(s->format, 255, 0, 255, 255));
+  tex_orcamento_info(NULL, NULL, NULL, &slots);
+  assert(slots > 12 && slots <= 512);
+  // Home/background preloads compete with the wall in the same bounded cache.
+  // Keep the picker hot while filling it; older preloads become cold victims.
+  for (i = 0; i <= slots; i++) {
+    snprintf(paths[i], sizeof paths[i], "%s/pressure-%03d.bmp", getenv("NUVIO_DADOS"), i);
+    assert(SDL_SaveBMP(s, paths[i]) == 0);
+    ready = 0;
+    for (j = 0; j < 1000 && !ready; j++) {
+      tex_novo_quadro();
+      perfilsel_atualizar(0, relogio);
+      ready = tex_obter_larg(paths[i], 128) != 0;
+      tex_bombear(8);
+      SDL_Delay(1);
+    }
+    assert(ready);
+  }
+  SDL_FreeSurface(s);
+  // Drain pending picker promotions before taking the clean reference.
+  for (i = 0; i < 120; i++) {
+    tex_bombear(8);
+    tex_novo_quadro();
+    perfilsel_atualizar(0, relogio);
+    SDL_Delay(1);
+  }
+  pickerPixels();
+  png("perfil/pressure-clean");
+  memcpy(ant, px, (size_t)W * H * 4);
+  // All resident preloads are now hot, with the wall oldest in LRU order.
+  // A new request must wait, rather than deleting artwork already handed out.
+  for (i = 0; i <= slots; i++)
+    if (tex_aspecto(paths[i]) > 0) assert(tex_obter_larg(paths[i], 128));
+  assert(tex_aspecto(paths[0]) == 0);
+  assert(tex_obter_larg(paths[0], 128) == 0);
+  for (i = 0; i < 4; i++) {
+    pickerPixels();
+    bad += memcmp(ant, px, (size_t)W * H * 4) != 0;
+  }
+  png("perfil/pressure-loaded");
+  printf("%s: picker artwork survives full hot cache (bad frames=%d hot evictions=%ld cold evictions=%ld)\n",
+         bad || tex_despejos_quentes_total != hot ? "FAIL" : "PASS", bad,
+         tex_despejos_quentes_total - hot,
+         tex_despejos_total - evictions - (tex_despejos_quentes_total - hot));
+  failures += bad || tex_despejos_quentes_total != hot;
+  failures += tex_despejos_total == evictions; // The reproduction must exercise eviction.
+
+  // Explicitly discard a visible poster, then require identical artwork again.
+  assert(tex_esquecer("deploy/app/art/poster/00.jpg"));
+  tex_novo_quadro();
+  perfilsel_atualizar(0, relogio);
+  pickerPixels();
+  assert(memcmp(ant, px, (size_t)W * H * 4)); // The discarded art was visible.
+  ready = 0;
+  for (i = 0; i < 1000; i++) {
+    tex_bombear(8);
+    tex_novo_quadro();
+    perfilsel_atualizar(0, relogio);
+    pickerPixels();
+    if (!memcmp(ant, px, (size_t)W * H * 4)) { ready = 1; break; }
+    SDL_Delay(1);
+  }
+  png("perfil/pressure-recovered");
+  printf("%s: picker restores original artwork after eviction\n", ready ? "PASS" : "FAIL");
+  failures += !ready;
+  // Deferred requests must eventually load when the preload set cools down.
+  ready = 0;
+  for (i = 0; i < 1000 && !ready; i++) {
+    tex_novo_quadro();
+    perfilsel_atualizar(0, relogio);
+    ready = tex_obter_larg(paths[0], 128) != 0;
+    tex_bombear(8);
+    SDL_Delay(1);
+  }
+  printf("%s: deferred artwork loads after cold eviction\n", ready ? "PASS" : "FAIL");
+  failures += !ready;
+  failures += glGetError() != GL_NO_ERROR;
+}
+
+// PROFILE PICKER (owner, C9, 10-17): "No profile picker tb ta piscando a
+// artwork". Fundo Filmes (the default): the poster wall behind "Who's
+// watching?", the Home assembling hidden behind it as app.c does.
+static void escolhaPerfil(void) {
+  char nm[64];
+  int i, antes;
+  snprintf(nm, sizeof nm, "%s/perfil", out); mkdir(nm, 0755);
+  assert(dados_gravar("perfis.txt", "1\t0\t1\t0\t#FB8C00\tHenrique\tdeploy/app/art/poster/00.jpg\t\n"
+                                    "2\t1\t0\t0\t#2F3BFF\tJose\t\t\n"));
+  assert(dados_gravar("perfil.txt", "1\n"));
+  perfis_carregar_ativo();
+  assert(perfis_n() == 2);
+  perfilsel_iniciar();
+  escolha = 1;
+  antes = flashes;
+  for (i = 0; i < 300; i++) {
+    frame();
+    if (i % 15 == 0) { snprintf(nm, sizeof nm, "perfil/f%03d", i); png(nm); }
+    { int h = furos(); if (h) printf("[pisca3] perfil f%03d holes=%d\n", i, h);
+      failures += h != 0; }
+  }
+  pickerPressure();
+  escolha = 0;
+  printf("%s: profile picker wall without a single-frame flash (%d)\n", flashes > antes ? "FAIL" : "PASS", flashes - antes);
+  failures += flashes > antes;
+}
+
 // Fake native trailer: plays, settles, then the webOS pipeline stalls
 // (video_pronto drops while the uMS reloads) and resumes, then a 4-frame blip.
 static void trailerCiclo(const char *onde, int dono) {
@@ -405,6 +539,260 @@ static void trailerCiclo(const char *onde, int dono) {
   trailer_teste_falso(0); snprintf(nm, sizeof nm, "%s-blip", onde); rampa(nm, 4);
   trailer_teste_falso(1); snprintf(nm, sizeof nm, "%s-blip-back", onde); rampa(nm, 60);
   trailer_fechar(); trailer_teste_falso(0);   // still supported, as on the TV
+}
+
+// An unpublished striped upload must not invalidate settled Frost/glass.
+static void uploadFrame(GLuint poster) {
+  gfx_novo_quadro();
+  glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
+  fundo_desenhar_modo(FUNDO_FROST, (GfxRect){0, 0, W, H}, 0, NULL, 1);
+  gfx_rect((GfxRect){200, 200, 288, 432}, poster, GFX_CARD, 0, 0, 0, 0, 1, 1, 1, 1);
+  gfx_rect((GfxRect){650, 420, 960, 540}, poster, GFX_CARD, 0, 0, 0, 0, 1, 1, 1, 1);
+  if (ajustes_vidro()) gfx_vidro((GfxRect){1000, 100, 400, 200}, .1f, GFX_VIDRO_PAINEL, .1f, .8f, 1);
+  gfx_ambiente_descarregar();
+  glReadPixels(0, 0, W, H, GL_RGBA, GL_UNSIGNED_BYTE, px);
+  eglSwapBuffers(egl, eglTela);
+}
+static void uploadPressure(void) {
+  char path[1024];
+  GLuint poster = 0, incoming = 0;
+  SDL_Surface *s;
+  int i, stripes = 0, captures = 0, changed = 0;
+  float saved = nv_ambiente_forca;
+  nv_ambiente_forca = 0;
+  for (i = 0; i < 1000 && !poster; i++) {
+    poster = tex_obter_larg_qualquer("deploy/app/art/poster/00.jpg", 288);
+    tex_bombear(1); SDL_Delay(1);
+  }
+  assert(poster);
+  for (i = 0; i < 5; i++) uploadFrame(poster);
+  memcpy(ant, px, (size_t)W * H * 4); png("upload-settled");
+  snprintf(path, sizeof path, "%s/upload.bmp", getenv("NUVIO_DADOS"));
+  s = SDL_CreateRGBSurfaceWithFormat(0, W, H, 32, SDL_PIXELFORMAT_RGBA32);
+  assert(s); SDL_FillRect(s, NULL, SDL_MapRGBA(s->format, 230, 20, 180, 255));
+  assert(SDL_SaveBMP(s, path) == 0); SDL_FreeSurface(s);
+  for (i = 0; i < 1000 && !incoming; i++) {
+    tex_novo_quadro();
+    assert(tex_obter_larg_qualquer("deploy/app/art/poster/00.jpg", 288) == poster);
+    incoming = tex_obter_hero(path);
+    tex_upl_bytes = 0; tex_bombear(1);
+    uploadFrame(poster);
+    if (tex_upl_bytes && !incoming) {
+      printf("[pisca3] private upload f%03d bytes=%ld captures=%d\n", i, tex_upl_bytes, gfx_vidro_capturas);
+      stripes++;
+      captures += gfx_vidro_capturas;
+    }
+    changed += memcmp(ant, px, (size_t)W * H * 4) != 0;
+    SDL_Delay(1);
+  }
+  png("upload-finished");
+  printf("%s: private upload stripes=%d glass recaptures=%d changed frames=%d\n",
+         incoming && stripes >= 2 && !captures && !changed ? "PASS" : "FAIL", stripes, captures, changed);
+  failures += !incoming || stripes < 2 || captures || changed;
+  nv_ambiente_forca = saved;
+}
+
+// Failed GPU uploads must never replace a visible lower-resolution poster.
+static void uploadFailure(void) {
+  int mode;
+  float saved = nv_ambiente_forca;
+  nv_ambiente_forca = 0;
+  for (mode = 1; mode <= 4; mode++) {
+    char path[1024], name[64];
+    GLuint poster = 0;
+    int i, bad = 0, injected = uploadFaults, captures = 0;
+    SDL_Surface *s = SDL_CreateRGBSurfaceWithFormat(0, W, H, 32, SDL_PIXELFORMAT_RGBA32);
+    assert(s);
+    SDL_FillRect(s, NULL, SDL_MapRGBA(s->format, 70, 180, 110, 255));
+    snprintf(path, sizeof path, "%s/promotion-%d.bmp", getenv("NUVIO_DADOS"), mode);
+    assert(SDL_SaveBMP(s, path) == 0); SDL_FreeSurface(s);
+    for (i = 0; i < 1000 && !poster; i++) {
+      poster = tex_obter_larg_qualquer(path, 200);
+      tex_bombear(1); SDL_Delay(1);
+    }
+    assert(poster);
+    for (i = 0; i < 5; i++) uploadFrame(poster);
+    memcpy(ant, px, (size_t)W * H * 4);
+    snprintf(name, sizeof name, "upload-fault-%d-before", mode); png(name);
+    uploadFault = mode;
+    for (i = 0; i < 80; i++) {
+      GLuint visible;
+      tex_novo_quadro();
+      (void)tex_obter_hero(path);
+      visible = tex_obter_larg_qualquer(path, 200);
+      tex_bombear(1);
+      visible = tex_obter_larg_qualquer(path, 200);
+      uploadFrame(visible);
+      captures += gfx_vidro_capturas;
+      if (visible != poster || memcmp(ant, px, (size_t)W * H * 4)) {
+        if (!bad) {
+          printf("[pisca3] failed promotion mode=%d first changed frame=f%03d\n", mode, i);
+          snprintf(name, sizeof name, "upload-fault-%d-f%03d", mode, i); png(name);
+        }
+        bad++;
+      }
+      SDL_Delay(1);
+    }
+    uploadFault = 0;
+    snprintf(name, sizeof name, "upload-fault-%d-after", mode); png(name);
+    printf("%s: failed promotion mode=%d injected=%d changed frames=%d recaptures=%d\n",
+           uploadFaults > injected && !bad && !captures ? "PASS" : "FAIL", mode, uploadFaults - injected, bad, captures);
+    failures += uploadFaults == injected || bad || captures;
+    // The renderer must consume the upload error before touching the old art.
+    failures += glGetError() != GL_NO_ERROR;
+  }
+  // Without an older texture, the failed item must remain unavailable.
+  for (mode = 1; mode <= 4; mode++) {
+    char path[1024];
+    int i, bad = 0, injected = uploadFaults;
+    SDL_Surface *s = SDL_CreateRGBSurfaceWithFormat(0, W, H, 32, SDL_PIXELFORMAT_RGBA32);
+    assert(s); SDL_FillRect(s, NULL, SDL_MapRGBA(s->format, 70, 180, 110, 255));
+    snprintf(path, sizeof path, "%s/first-%d.bmp", getenv("NUVIO_DADOS"), mode);
+    assert(SDL_SaveBMP(s, path) == 0); SDL_FreeSurface(s);
+    uploadFault = mode;
+    for (i = 0; i < 80; i++) {
+      GLuint visible;
+      tex_novo_quadro();
+      visible = mode == 3 ? tex_obter_larg_qualquer(path, 200) : tex_obter_hero(path);
+      bad += visible != 0;
+      tex_bombear(1); SDL_Delay(1);
+    }
+    uploadFault = 0;
+    printf("%s: failed first upload mode=%d injected=%d published=%d\n",
+           uploadFaults > injected && !bad ? "PASS" : "FAIL", mode, uploadFaults - injected, bad);
+    failures += uploadFaults == injected || bad;
+    failures += glGetError() != GL_NO_ERROR;
+  }
+  nv_ambiente_forca = saved;
+}
+
+// Poll real decode/upload work without advancing the injected retry clock.
+static GLuint retryPoll(const char *path) {
+  GLuint visible = 0;
+  for (int i = 0; i < 100; i++) {
+    tex_novo_quadro();
+    visible = tex_obter_larg_qualquer(path, 200);
+    tex_bombear(1); SDL_Delay(1);
+  }
+  return visible;
+}
+
+static void uploadRetry(void) {
+  static const Uint32 waits[] = {2000, 10000, 60000};
+  for (int recovery = 0; recovery < 2; recovery++) {
+    char path[1024];
+    int injected = uploadFaults, bad = 0;
+    SDL_Surface *s = SDL_CreateRGBSurfaceWithFormat(0, 200, 300, 32, SDL_PIXELFORMAT_RGBA32);
+    assert(s); SDL_FillRect(s, NULL, SDL_MapRGBA(s->format, 70, 180, 110, 255));
+    snprintf(path, sizeof path, "%s/retry-%d.bmp", getenv("NUVIO_DADOS"), recovery);
+    assert(SDL_SaveBMP(s, path) == 0); SDL_FreeSurface(s);
+    uploadFault = 3;
+    bad += retryPoll(path) != 0 || !tex_falhou(path) || uploadFaults - injected != 1;
+    for (int attempt = 0; attempt < (recovery ? 2 : 3); attempt++) {
+      relogio += waits[attempt] - 1;
+      bad += retryPoll(path) != 0 || !tex_falhou(path) || uploadFaults - injected != attempt + 1;
+      relogio++;
+      if (recovery && attempt == 1) uploadFault = 0;
+      GLuint visible = retryPoll(path);
+      if (recovery && attempt == 1)
+        bad += !visible || tex_falhou(path) || uploadFaults - injected != 2;
+      else
+        bad += visible != 0 || !tex_falhou(path) || uploadFaults - injected != attempt + 2;
+    }
+    relogio += 120000;
+    GLuint visible = retryPoll(path);
+    bad += recovery ? !visible || uploadFaults - injected != 2
+                    : visible != 0 || !tex_falhou(path) || uploadFaults - injected != 4;
+    uploadFault = 0;
+    printf("%s: GPU retry %s failures=%d violations=%d\n", bad ? "FAIL" : "PASS",
+           recovery ? "recovery" : "limit/backoff", uploadFaults - injected, bad);
+    failures += bad != 0;
+    failures += glGetError() != GL_NO_ERROR;
+  }
+}
+
+// Fixed accent and immersive off: changing scene colors cannot change Frost.
+static void frostCache(void) {
+  float regions[4][3], saved = nv_ambiente_forca;
+  memcpy(regions, nv_ambiente_viva, sizeof regions);
+  assert(ajustes_shot_valor("selected_theme", 0));
+  assert(ajustes_cor_viva() == 0);
+  nv_ambiente_forca = 0;
+  for (int glass = 1; glass >= 0; glass--) {
+    ajustes_definir_vidro(glass);
+    for (int i = 0; i < 5; i++) uploadFrame(0);
+    memcpy(ant, px, (size_t)W * H * 4);
+    int baked = gfx_n_fundo_assados, changed = 0, captures = 0;
+    for (int i = 0; i < 30; i++) {
+      for (int region = 0; region < 4; region++)
+        for (int c = 0; c < 3; c++) nv_ambiente_viva[region][c] = (float)(i + region + c) / 40;
+      nv_tempo_viva += 1.0f / 60;
+      uploadFrame(0);
+      changed += memcmp(ant, px, (size_t)W * H * 4) != 0;
+      captures += gfx_vidro_capturas;
+    }
+    int bad = changed || captures || gfx_n_fundo_assados != baked;
+    printf("%s: fixed-accent Frost glass=%d bakes=%d changed=%d captures=%d\n",
+           bad ? "FAIL" : "PASS", glass, gfx_n_fundo_assados - baked, changed, captures);
+    failures += bad;
+  }
+  ajustes_definir_vidro(1);
+  assert(ajustes_shot_valor("selected_theme", 12));
+  memcpy(nv_ambiente_viva, regions, sizeof regions);
+  nv_ambiente_forca = saved;
+}
+
+// Inspect the Frost itself, before UI overlays can hide a discontinuity.
+// Every sampled pixel must stay opaque and move at most two luminance levels
+// per frame while the immersive strength moves by 1/120.
+static void frostTransicoes(void) {
+  float saved = nv_ambiente_forca;
+  float regions[4][3];
+  GfxRect tela = {0, 0, W, H};
+  int direction, i, x, y, bad = 0;
+  double worst = 0;
+  memcpy(regions, nv_ambiente_viva, sizeof regions);
+  for (i = 0; i < 4; i++) {
+    nv_ambiente_viva[i][0] = 0.44f;
+    nv_ambiente_viva[i][1] = 0.22f;
+    nv_ambiente_viva[i][2] = 0.10f;
+  }
+  for (direction = 0; direction < 2; direction++) for (i = 0; i <= 120; i++) {
+    char nm[80];
+    double jump = 0;
+    nv_ambiente_forca = (direction ? 120 - i : i) / 120.0f;
+    gfx_novo_quadro(); gfx_ambiente_preparar();
+    glClearColor(1, 0, 1, 0); glClear(GL_COLOR_BUFFER_BIT);
+    fundo_desenhar_modo(FUNDO_FROST, tela, 0, NULL, 1);
+    gfx_ambiente_descarregar();
+    glReadPixels(0, 0, W, H, GL_RGBA, GL_UNSIGNED_BYTE, px);
+    if (i) for (y = 24; y < H; y += 48) for (x = 24; x < W; x += 48) {
+      size_t p = ((size_t)y * W + x) * 4;
+      double d = fabs(0.2126 * ((int)px[p] - ant[p]) +
+                      0.7152 * ((int)px[p+1] - ant[p+1]) +
+                      0.0722 * ((int)px[p+2] - ant[p+2]));
+      if (d > jump) jump = d;
+      assert(px[p+3] == 255);
+    }
+    if (!direction && (i == 0 || i == 120)) {
+      snprintf(nm, sizeof nm, "frost-settled-%d", i); png(nm);
+    }
+    if (jump > worst) worst = jump;
+    printf("[pisca3] frost-immersive-%d f%03d strength=%.4f jump=%.3f bakes=%d\n",
+           direction, i, nv_ambiente_forca, jump, gfx_n_fundo_assados);
+    if (jump > 2) {
+      printf("FAIL: frost-immersive-%d f%03d luminance jump %.3f\n", direction, i, jump);
+      snprintf(nm, sizeof nm, "frost-immersive-%d-f%03d-before", direction, i); pngDe(ant, nm);
+      snprintf(nm, sizeof nm, "frost-immersive-%d-f%03d-after", direction, i); png(nm);
+      bad++;
+    }
+    memcpy(ant, px, (size_t)W * H * 4);
+    eglSwapBuffers(egl, eglTela);
+  }
+  printf("%s: Frost immersive transitions max luminance step %.3f\n", bad ? "FAIL" : "PASS", worst);
+  failures += bad != 0;
+  nv_ambiente_forca = saved;
+  memcpy(nv_ambiente_viva, regions, sizeof regions);
 }
 
 int main(int argc, char **argv) {
@@ -473,6 +861,25 @@ int main(int argc, char **argv) {
     snprintf(items[i].logo, sizeof items[i].logo, "deploy/app/art/logo/%02d.png", i);
   }
   cat_definir_tudo(items, 10, &row, 1);
+  if (argc > 2 && !strcmp(argv[2], "upload")) {
+    uploadPressure();
+    uploadFailure();
+    uploadRetry();
+    frostCache();
+    tex_encerrar(); SDL_Quit();
+    return failures ? 1 : 0;
+  }
+  if (argc > 2 && !strcmp(argv[2], "frost")) {
+    frostTransicoes();
+    printf("[pisca3] gl=%#x\n", glGetError());
+    tex_encerrar(); SDL_Quit();
+    return failures ? 1 : 0;
+  }
+  frostTransicoes();
+  uploadPressure();
+  uploadFailure();
+  escolhaPerfil();
+  if (argc > 2 && !strcmp(argv[2], "perfil")) return failures ? 1 : 0;
 
   for (i = 0; i < 240; i++) frame();          // settle: art loads, springs rest
   parado("home-idle", 90);
@@ -517,12 +924,50 @@ int main(int argc, char **argv) {
 }
 
 // GLES: a new texture's contents are undefined. Garbage, as a Mali can give.
+// Uploads that never complete allocation, stripe, or mip generation surface
+// as GL_OUT_OF_MEMORY on webOS; the caller decides whether the texture can be
+// published.
 #undef glTexImage2D
+#undef glTexSubImage2D
+#undef glGenerateMipmap
+#undef glDrawArrays
+#undef glGetError
+extern GLenum glGetError(void);
+extern void glGenerateMipmap(GLenum);
+extern void glTexSubImage2D(GLenum, GLint, GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, const void *);
+
+static int failUpload(int mode, GLsizei w) {
+  if (uploadFault != mode || (mode != 3 && w < 1024)) return 0;
+  uploadError = GL_OUT_OF_MEMORY; uploadFaults++;
+  return 1;
+}
+GLenum pisca3_error(void) {
+  GLenum e = uploadError;
+  uploadError = GL_NO_ERROR;
+  return e ? e : glGetError();
+}
+extern void glDrawArrays(GLenum, GLint, GLsizei);
+void pisca3_drawarrays(GLenum mode, GLint first, GLsizei count) {
+  if (uploadFault == 4) {
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    if (viewport[2] == 1 && viewport[3] == 1 && failUpload(4, 1024)) return;
+  }
+  glDrawArrays(mode, first, count);
+}
+void pisca3_mipmap(GLenum target) {
+  if (!failUpload(3, 0)) glGenerateMipmap(target);
+}
+void pisca3_texsubimage(GLenum t, GLint l, GLint x, GLint y, GLsizei w, GLsizei h,
+                        GLenum f, GLenum ty, const void *p) {
+  if (!failUpload(2, w)) glTexSubImage2D(t, l, x, y, w, h, f, ty, p);
+}
 extern void glTexImage2D(GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum, const GLvoid *);
 void pisca3_teximage(GLenum t, GLint l, GLint i, GLsizei w, GLsizei h, GLint b, GLenum f, GLenum ty,
                      const void *p) {
   unsigned char *lixo;
   size_t n, k;
+  if (failUpload(1, w)) return;
   glTexImage2D(t, l, i, w, h, b, f, ty, p);
   if (p || ty != GL_UNSIGNED_BYTE || (f != GL_RGB && f != GL_RGBA) || w <= 0 || h <= 0) return;
   n = (size_t)w * h * (f == GL_RGB ? 3 : 4);

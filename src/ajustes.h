@@ -240,6 +240,8 @@ int  ajustes_cor_logo(void);
 int  ajustes_vidro(void);
 // "Contorno do vidro": 1 = o fio fino dos cartoes/linhas em repouso aparece.
 int  ajustes_vidro_contorno(void);
+// "Foco na cor de destaque": 1 = o foco usa um vidro tingido com o realce em vez do cinza (so com vidro).
+int  ajustes_foco_acento(void);
 // Ajustes > Conta, "Usar os addons do perfil principal" (padrao ligado): o
 // perfil que nao e o principal le os addons do principal. Ver perfis_ativo_addons.
 int  ajustes_addons_do_principal(void);
@@ -484,6 +486,7 @@ int ajustes_sinopse_tamanho(void);
 // Main UI thread: validated VtLayout ID (vertudo.h); 0 keeps automatic behavior.
 int ajustes_colecao_exibicao(void);
 float ajustes_tamanho_ui(void);
+int   ajustes_det_espaco(void);     // title page row spacing: 0 Compacto, 1 Normal (default), 2 Confortavel
 float ajustes_escala_texto(void);   // 0,85..1,3 (Escala de texto e componentes); 1 = de sempre
 // Settings only: 0.8/0.9/1.0, default 0.9; independent of global UI zoom.
 float ajustes_tamanho_ajustes(void);
@@ -506,7 +509,7 @@ int   ajustes_abertura_estilo(void);   // 0 Centro (A3), 1 Canto (B3)
 int   ajustes_fundo_din(void);         // #205: fundo da Dinamica, 0 Cinza (padrao), 1 Cor, 2 Imersivo
 void  ajustes_fundo_din_cor(float rgb[3]);   // #205: a cor escolhida para o fundo "Cor" (sRGB 0..1)
 // #205: tamanho dos cards de episodio (Moderna): 0 pequeno, 1 medio (padrao), 2 grande.
-int   ajustes_menu_cartaz_simples(void); // 0 Full (default), 1 Simple; this TV only.
+int   ajustes_menu_cartaz_simples(void); // 0 On (default, enriched card), 1 Off (side list only); this TV only.
 int   ajustes_mural_titulos(void);      // #521: 1 = nome dentro do ladrilho do Mural
 int   ajustes_ep_tamanho(void);
 // #338: tamanho de abertura das Estatisticas ao vivo (EV_TAM_*); -1 = o ultimo usado.

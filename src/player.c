@@ -353,7 +353,7 @@ static int   esperandoFonte = 0;   // aberto sem URL, esperando o addon responde
 #ifdef NV_ANDROID
 static struct {
   unsigned token;
-  int legenda, nativo, adotado, buffer, cacheMb, proximo;
+  int legenda, nativo, adotado, buffer, cacheMb, proximo, kbps;
   MkvassPreparo *mkv;
   Uint32 desde;
   double segundos, pct;
@@ -1836,7 +1836,7 @@ void player_precarregar_cancelar(unsigned token) {
 static int preTituloComecarVideo(void) {
   preTitulo.nativo = (preTitulo.proximo ? video_precarregar_proximo : video_precarregar)(
       preTitulo.url, preTitulo.cab, preTitulo.segundos, preTitulo.pct,
-      preTitulo.buffer, preTitulo.cacheMb, preTitulo.token, preTitulo.audio);
+      preTitulo.buffer, preTitulo.cacheMb, preTitulo.token, preTitulo.audio, preTitulo.kbps);
   return preTitulo.nativo;
 }
 unsigned player_precarregar_novo_token(void) {
@@ -1856,7 +1856,7 @@ static int preTituloCriar(int indiceCatalogo, int t, int e, const Stream *s, uns
   if (!proximo) ling_definir_original(extras_idioma_original());
   pref = ling_legenda();
   player_precarregar_cancelar(0);
-  preTitulo.token = token; preTitulo.proximo = proximo;
+  preTitulo.token = token; preTitulo.proximo = proximo; preTitulo.kbps = stream_kbps(s);
   snprintf(preTitulo.url, sizeof preTitulo.url, "%s", s->url);
   snprintf(preTitulo.cab, sizeof preTitulo.cab, "%s", s->cabecalhos);
   snprintf(preTitulo.idioma, sizeof preTitulo.idioma, "%s", pref ? pref : "");
@@ -2987,7 +2987,7 @@ void player_mini_desenhar(Uint32 agora) {
       if (miniToquePode()) {
         GfxRect fechar = { il.x + il.w - 72, il.y + 16, 56, 56 };
         ponteiro_alvo(il.x, il.y, il.w, il.h, NULL, miniToqueRestaurar, 0, 0);
-        plrui_botao_repouso(fechar, 1);
+        plrui_botao_repouso_video(fechar, 1);
         gfx_icone((GfxRect){fechar.x + 16, fechar.y + 16, 24, 24}, "aj_x", 1, 1, 1, 1);
         ponteiro_alvo(fechar.x, fechar.y, fechar.w, fechar.h, NULL, miniToqueFechar, 0, 0);
         TxtLinha l = txt_linha_corta(TXT_G18M, i18n("Tela cheia"), 243, 242, 239, 255, il.w - 40);
@@ -3002,7 +3002,7 @@ void player_mini_desenhar(Uint32 agora) {
         "Azul",
 #endif
         "Voltar" }, *rt[2] = { "Tela cheia", "Fechar" };
-      plrui_dicas(k, rt, 2, il.x + 20.0f, yc + 14.0f + 8.0f + 15.0f, 0, 1.0f); } }
+      plrui_dicas_video(k, rt, 2, il.x + 20.0f, yc + 14.0f + 8.0f + 15.0f, 0, 1.0f); } }
 }
 
 // O ultimo botao da fileira: "Episodios" numa serie, "Relacionados" num filme
@@ -5382,7 +5382,7 @@ static void motivoDesenhar(GfxRect r, float a) {
   gfx_cor((GfxRect){ x, yc - ABR_MOTIVO_H * 0.5f, w, 1.0f }, 0.0f, 1, 1, 1, 0.07f * a);
   l = txt_linha_corta(TXT_G19M, motivoInicio, 255, 196, 90, 235, w - dw - 24.0f);
   txt_desenhar_alpha(l, x + 6.0f, yc + 4.0f - (float)l.h * 0.5f, a);
-  plrui_dicas(k, rt, 1, x + w - 6.0f, yc + 4.0f, 1, a * 0.85f);
+  plrui_dicas_video(k, rt, 1, x + w - 6.0f, yc + 4.0f, 1, a * 0.85f);
 }
 static void corpoCarregando(GfxRect r, float a, void *u) {
   float x = r.x + 18.0f, w = r.w - 36.0f, y = r.y + 22.0f;
@@ -5408,9 +5408,9 @@ static void corpoCarregando(GfxRect r, float a, void *u) {
   // A dica de tecla na ponta direita da linha do estado: no compacto leva aos
   // detalhes, no expandido volta. Discreta (o apoio cinza das outras dicas).
   if (ac > 0.01f) { const char *k[1] = { "Baixo" }, *rt[1] = { "Detalhes" };
-    plrui_dicas(k, rt, 1, x + w - 6.0f, y + 16.0f, 1, ac * 0.85f); }
+    plrui_dicas_video(k, rt, 1, x + w - 6.0f, y + 16.0f, 1, ac * 0.85f); }
   if (ae > 0.01f) { const char *k[1] = { "Cima" }, *rt[1] = { "Recolher" };
-    plrui_dicas(k, rt, 1, x + w - 6.0f, y + 16.0f, 1, ae * 0.85f); }
+    plrui_dicas_video(k, rt, 1, x + w - 6.0f, y + 16.0f, 1, ae * 0.85f); }
   yc = y + 32.0f;
 
   // COMPACTO: as marcas do que esta fonte tem (resolucao, HDR/DV, audio), no
@@ -5573,7 +5573,7 @@ static void corpoErro(GfxRect r, float a, void *u) {
       GfxRect b = {x + i * (w + 12) * .5f, y, (w - 12) * .5f, 76};
       int foco = erroBotao == i, tinta = foco ? plrui_tinta() : 225;
       const char *rot = i18n(i ? "Voltar" : "Abrir Fontes");
-      if (foco) plrui_pilula_foco(b, a); else plrui_botao_repouso(b, a);
+      if (foco) plrui_pilula_foco_video(b, a); else plrui_botao_repouso_video(b, a);
       float th = txt_bloco_corta(TXT_G21B, rot, tinta, tinta, tinta, 0, 0, b.w - 32, 28, 0, 2);
       txt_bloco_corta(TXT_G21B, rot, tinta, tinta, tinta, b.x + 16, b.y + (b.h - th) * .5f, b.w - 32, 28, a, 2);
       if (pont) ponteiro_alvo(b.x, b.y, b.w, b.h, NULL, erroToqueAcao, i, 0);
@@ -5581,13 +5581,13 @@ static void corpoErro(GfxRect r, float a, void *u) {
     return;
   }
 #endif
-  x += plrui_botao(x, y, "Abrir Fontes", "pl_layers", erroBotao == 0 ? 1.0f : 0.0f, a) + 12.0f;
-  plrui_botao(x, y, "Voltar", NULL, erroBotao == 1 ? 1.0f : 0.0f, a);
+  x += plrui_botao_video(x, y, "Abrir Fontes", "pl_layers", erroBotao == 0 ? 1.0f : 0.0f, a) + 12.0f;
+  plrui_botao_video(x, y, "Voltar", NULL, erroBotao == 1 ? 1.0f : 0.0f, a);
 }
 
 static void corpoDurFonte(GfxRect r, float a, void *u) {
   float x = r.x + 28, y = r.y + 12;
-  float w = plrui_botao(x, y, durFonteManter ? "Manter esta fonte (OK)" : "Tentar próxima fonte (OK)",
+  float w = plrui_botao_video(x, y, durFonteManter ? "Manter esta fonte (OK)" : "Tentar próxima fonte (OK)",
                         durFonteManter ? "aj_check" : "pl_layers", 1, a);
   (void)u;
   if (durFonteManter && durFonteSkipEm) {
@@ -6099,7 +6099,7 @@ void player_desenhar(Uint32 agora) {
     pd.icone = "aj_triangle-alert"; pd.corIcone = 1;
     pd.texto = i18n("Fonte");
     pd.w = erroLargura(); pd.h = alturaErro();
-    pd.corpo = corpoErro; pd.modal = 1;
+    pd.corpo = corpoErro; pd.modal = 1; pd.video = 1;
     plrilha_pedir(&pd);
   }
 
@@ -6120,7 +6120,7 @@ void player_desenhar(Uint32 agora) {
       pd.icone = toastIcone[0] ? toastIcone : "aj_info";
       pd.corIcone = toastCor;
       if (durFonteAcaoAte == toastAte) {
-        pd.w = 1000; pd.h = 88; pd.corpo = corpoDurFonte;
+        pd.w = 1000; pd.h = 88; pd.corpo = corpoDurFonte; pd.video = 1;
       }
     } else {
       int m, n = 0, k = 0;

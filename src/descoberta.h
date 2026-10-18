@@ -339,6 +339,9 @@ void desc_loc_apagar(void);
 // caixa nem pontuacao) e completa a lista com o resto do TMDB (#153). Pura;
 // devolve quantos nomes casaram.
 int  desc_tmdb_elenco(const char *json, CatItem *d);
+// Blocking person search: known title first, then most popular exact name.
+// Positive person ID, 0 for no match, -1 for unavailable/invalid response.
+long desc_buscar_pessoa(const char *nome, long titulo, const char *tipo);
 // Elenco/direcao do meta Stremio e app_extras (Nuvio/AIOMetadata), sem rede.
 // Preserva a ordem da raiz e casa fotos/papeis por nome; soVazios completa
 // lacunas sem trocar campos da fonte primaria. Devolve o numero de pessoas.

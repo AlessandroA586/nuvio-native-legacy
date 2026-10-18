@@ -718,10 +718,10 @@ static float homeConteudoX(void) {
   // espelha sua reserva para centralizar sem desenhar por baixo dela.
   if (homeRetratoTelefone())
     return ajustes_rail_largura_fixa() > 0.0f ? fmaxf(48.0f, ajustes_conteudo_x()) : 48.0f;
-  return ajustes_conteudo_x();
+  return ANC(ajustes_conteudo_x());
 }
 static float homeMargemDireita(void) {
-  return homeRetratoTelefone() ? homeConteudoX() : NV_HOME_SAFE_RIGHT;
+  return homeRetratoTelefone() ? homeConteudoX() : ANC(NV_HOME_SAFE_RIGHT);
 }
 static float homeConteudoDireita(void) { return NV_TELA_W - homeMargemDireita(); }
 static float homeLarguraUtil(void) {
@@ -747,18 +747,18 @@ static int heroCompactoTelefone(void) {
 #endif
 }
 static float alturaTextoHeroDin(void) {
-  if (homeRetratoTelefone()) return 600.0f;
-  return NV_DIN_HERO_H * (heroCompactoTelefone() ? 0.75f : 1.0f);
+  if (homeRetratoTelefone()) return ANC(600.0f);
+  return ANC(NV_DIN_HERO_H) * (heroCompactoTelefone() ? 0.75f : 1.0f);
 }
 static float repousoFileirasDin(void) {
-  if (homeRetratoTelefone()) return 620.0f;
-  return NV_DIN_REPOUSO_FIL * (heroCompactoTelefone() ? 0.75f : 1.0f);
+  if (homeRetratoTelefone()) return ANC(620.0f);
+  return ANC(NV_DIN_REPOUSO_FIL) * (heroCompactoTelefone() ? 0.75f : 1.0f);
 }
 static float empurraHeroModerna(void) {
-  if (homeRetratoTelefone()) return 620.0f - NV_SHELF_TOP;
+  if (homeRetratoTelefone()) return 620.0f - ANC(NV_SHELF_TOP);
   return heroCompactoTelefone()
-       ? (NV_SHELF_TOP + NV_HOME_HERO_EMPURRA) * 0.75f - NV_SHELF_TOP
-       : NV_HOME_HERO_EMPURRA;
+       ? (ANC(NV_SHELF_TOP) + ANC(NV_HOME_HERO_EMPURRA)) * 0.75f - ANC(NV_SHELF_TOP)
+       : ANC(NV_HOME_HERO_EMPURRA);
 }
 static float heroVisivelToque(void) {
 #ifdef NV_TOUCH_UI
@@ -779,12 +779,12 @@ static float heroVisivelToque(void) {
 // esvanecer das de cima (o `fade` de home_desenhar).
 static float topoFileiras(void) {
   int heroOn = ajustes_hero_ligado();
-  if (homeRetratoTelefone() && !heroOn) return NV_DIN_TOPO_FIL;
+  if (homeRetratoTelefone() && !heroOn) return ANC(NV_DIN_TOPO_FIL);
   switch (layoutHome()) {
     case HOME_LAYOUT_PADRAO:
-      return heroOn ? NV_PAD_TOPO_FIL : NV_DIN_TOPO_FIL - 10.0f;
-    case HOME_LAYOUT_DINAMICA: return NV_DIN_TOPO_FIL;
-    default:                   return NV_SHELF_TOP;
+      return ANC(heroOn ? NV_PAD_TOPO_FIL : NV_DIN_TOPO_FIL - 10.0f);
+    case HOME_LAYOUT_DINAMICA: return ANC(NV_DIN_TOPO_FIL);
+    default:                   return ANC(NV_SHELF_TOP);
   }
 }
 // Acima disto nada de fileira se desenha (o gfx_recorte): a Moderna deixa as
@@ -797,16 +797,16 @@ static float corteFileiras(void) {
   if (heroCompactoTelefone() && toqueLivreY) {
     if (!ajustes_hero_ligado()) return 132.0f;
     if (layoutHome() == HOME_LAYOUT_PADRAO)
-      return fmaxf(132.0f, NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f - scrollY);
+      return fmaxf(132.0f, ANC(NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f) - scrollY);
     if (layoutHome() == HOME_LAYOUT_DINAMICA) return 132.0f;
-    return 132.0f + (NV_SHELF_TOP - 132.0f) * heroVisivelToque();
+    return 132.0f + (ANC(NV_SHELF_TOP) - 132.0f) * heroVisivelToque();
   }
 #endif
   switch (layoutHome()) {
     case HOME_LAYOUT_PADRAO:
-      return ajustes_hero_ligado() ? NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f : 0.0f;
+      return ajustes_hero_ligado() ? ANC(NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f) : 0.0f;
     case HOME_LAYOUT_DINAMICA: return 0.0f;
-    default:                   return NV_SHELF_TOP - (heroCompactoTelefone() ? 0.0f : 96.0f);
+    default:                   return ANC(NV_SHELF_TOP - (heroCompactoTelefone() ? 0.0f : 96.0f));
   }
 }
 // Quanto as fileiras DESCEM com o foco no destaque (a rolagem vale menos isto).
@@ -818,7 +818,7 @@ static float empurraHero(void) {
   if (homeRetratoTelefone() && !heroOn) return 0.0f;
   switch (layoutHome()) {
     case HOME_LAYOUT_PADRAO:   return 0.0f;
-    case HOME_LAYOUT_DINAMICA: return heroOn ? repousoFileirasDin() - NV_DIN_TOPO_FIL : 0.0f;
+    case HOME_LAYOUT_DINAMICA: return heroOn ? repousoFileirasDin() - ANC(NV_DIN_TOPO_FIL) : 0.0f;
     default:                   return empurraHeroModerna();
   }
 }
@@ -829,11 +829,11 @@ static float dinHeroY(void) {
   return y > 0.0f ? 0.0f : y;
 }
 static GfxRect padBannerRect(void) {
-  float y = NV_PAD_BANNER_Y;
+  float y = ANC(NV_PAD_BANNER_Y);
 #ifdef NV_TOUCH_UI
   if (heroCompactoTelefone() && toqueLivreY) y -= scrollY;
 #endif
-  return (GfxRect){ 0.0f, y, NV_TELA_W, NV_PAD_BANNER_H };
+  return (GfxRect){ 0.0f, y, NV_TELA_W, ANC(NV_PAD_BANNER_H) };
 }
 // O numeral do Top 10 mora ANTES do cartaz: a fileira comeca deslocada por esta
 // faixa (e o passo dela ja a inclui, em gapDe).
@@ -843,6 +843,9 @@ static GfxRect padBannerRect(void) {
 static float divPainelW(void) { return homeLarguraUtil() * NV_DIV_PAINEL_F; }
 static float divArteH(void) {
   float h = divPainelW() * 9.0f / 16.0f;
+  // Fit three complete 2:3 neighbours and two gaps in the remaining width.
+  float fit = (homeLarguraUtil() - divPainelW() - NV_DIV_VAO - 2 * NV_CARD_GAP) * 0.5f;
+  if (h > fit) h = fit;
   if (layoutHome() != HOME_LAYOUT_DINAMICA) {
     float hMax = NV_TELA_H - topoFileiras() - NV_LEGACY_ROW_HEAD_H - NV_DIV_META_H - 24.0f;
     if (h > hMax) h = hMax;
@@ -1464,6 +1467,7 @@ static float gapDe(TipoFileira t) {
   // Espaco entre titulos (Ajustes): so o vao medido escala, nunca o xOffTipo. Os
   // cards grandes crescem 6% no foco, entao o vao deles nao desce de 24.
   float f = ajustes_espaco_titulos();
+  if (t == FILEIRA_HEROI_DIVIDIDO) return NV_CARD_GAP;
   if (t == FILEIRA_DESTAQUE || t == FILEIRA_DESTAQUE_QUADRADO) {
     float g = NV_CARD_GAP_GRANDE * f;
     return g < NV_CARD_GAP ? NV_CARD_GAP : g;
@@ -1748,8 +1752,8 @@ static float extraTipo(TipoFileira t) {
        : t == FILEIRA_HEROI_DIVIDIDO ? NV_DIV_META_H : 0.0f;
 }
 static float alturaTotalFil(int r) {
-  return alturaFil(r) + (temRotulo(fileiras[r].tipo) ? NV_POSTER_COPY_H : 0.0f)
-       + extraTipo(fileiras[r].tipo);
+  return alturaFil(r) + (temRotulo(fileiras[r].tipo) && fileiras[r].tipo != FILEIRA_HEROI_DIVIDIDO
+                         ? NV_POSTER_COPY_H : 0.0f) + extraTipo(fileiras[r].tipo);
 }
 static float alfaFileiraHome(int r, float y, float topo, float corte) {
   float fade = anim_clamp((y - (topo - 80.0f)) / 80.0f, 0.0f, 1.0f);
@@ -1797,11 +1801,14 @@ static float dinRolagemCentrada(int r, float off) {
   float total = 0.0f, s, sMax;
   int i;
   if (r < 0 || r >= nFileiras) return off;
+  // Hero A keeps its approved heading anchor, including after changing rows.
+  if (fileiras[r].tipo == FILEIRA_HEROI || fileiras[r].tipo == FILEIRA_HEROI_DIVIDIDO)
+    return off + NV_DIN_TOPO_FIL - (fileiras[r].tipo == FILEIRA_HEROI ? 98.0f : 78.0f);
   for (i = 0; i < nFileiras; i++)
     total += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(i) + (i ? fileiraGap() : 0.0f);
-  s = NV_DIN_TOPO_FIL + off + 0.5f * (NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r))
-    - NV_DIN_CENTRO_FIL;
-  sMax = NV_DIN_TOPO_FIL + total - (NV_TELA_H - NV_DIN_FOLGA_BASE);
+  s = ANC(NV_DIN_TOPO_FIL) + off + 0.5f * (NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r))
+    - ANC(NV_DIN_CENTRO_FIL);
+  sMax = ANC(NV_DIN_TOPO_FIL) + total - (NV_TELA_H - ANC(NV_DIN_FOLGA_BASE));
   if (s > sMax) s = sMax;
   if (s < 0.0f) s = 0.0f;
   return s;
@@ -1854,6 +1861,12 @@ static float alvoScrollFil(int r, int col, float atual, float abre) {
   float esq   = (float)col * passo;
   float dir   = esq + larguraFil(r) + xOffTipo(fileiras[r].tipo);
   float util  = homeLarguraUtil();
+  // PALCO: a ficha a direita do foco entra na tela junto com ele.
+  if (fileiras[r].tipo == FILEIRA_PALCO) {
+    dir += NV_PALCO_INFO_VAO + NV_PALCO_INFO_W;
+    if (fileiras[r].verTudo && col == fileiras[r].n - 1)
+      dir += larguraFil(r) * NV_PALCO_VIZ + gapDe(FILEIRA_PALCO);
+  }
   float folga = sobraDireitaFoco(r, abre);
   float alvo  = atual;
   // HERÓI DIVIDIDO: o card em foco É o painel; a fila ao lado dele começa no
@@ -3905,7 +3918,8 @@ static void home_atualizar_(float dt, Uint32 agora) {
       // deixar o card crescer para fora da tela.
       float abre = (r == expFileira && foco.coluna == expColuna) ? expAbre : 0.0f;
       float alvo = alvoScrollFil(r, foco.coluna, scrollX[r], abre);
-      scrollX[r] = anim_mola2_reduzida(&velX[r], scrollX[r], alvo, dt,
+      if (fileiras[r].tipo != FILEIRA_PALCO)
+        scrollX[r] = anim_mola2_reduzida(&velX[r], scrollX[r], alvo, dt,
                                        NV_MOLA2_SCROLL, motionReduzido);
     }
   }
@@ -4095,7 +4109,11 @@ static void dinArteColecao(float dt) {
 }
 static void desenhaFundoDin(Uint32 agora) {
   float dt = dinPasso(agora, dinArteDaCor());
-  gfx_fundo_din_desenhar(dinCor, dinQueda);
+  // A flat background needs no gradient shader; gfx_cor clears opaque full screens.
+  if (dinQueda == 1.0f)
+    gfx_cor((GfxRect){0, 0, NV_TELA_W, NV_TELA_H}, 0, dinCor[0], dinCor[1], dinCor[2], 1);
+  else
+    gfx_fundo_din_desenhar(dinCor, dinQueda);
   dinArteColecao(dt);
 }
 
@@ -4188,16 +4206,19 @@ static HeroCopyLayout heroCopyLayout(float base, float hSin, int hasMeta,
                                      float slot, float friendsH) {
   HeroCopyLayout p;
   float s = slot < 0.0f ? 0.0f : slot > 1.0f ? 1.0f : slot;
-  float slotH = btnH + btnGap;
-  float gap = NV_HERO_COPY_LINHA;
+  // Keep the information slots in screen pixels; text grows into their gaps.
+  int fixed = !heroCompactoTelefone() && !homeRetratoTelefone();
+  float slotH = fixed ? ANC(btnH + btnGap) : btnH + btnGap;
+  float gap = fixed ? ANC(NV_HERO_COPY_LINHA) : NV_HERO_COPY_LINHA;
+  if (fixed) { btnGap = ANC(btnGap); friendsH = ANC(friendsH); captionH = ANC(captionH); }
   // A larger final synopsis line borrows decorative gaps in the compact
   // phone hero, keeping its logo, metadata and action inside the same area.
   if (heroCompactoTelefone())
     gap = fmaxf(0, gap - (sinopse_entrelinha(TXT_HERO_SIN, NV_LD_HERO_SIN) - NV_LD_HERO_SIN));
   p.synopsis = base - slotH * s - hSin;
   p.action = p.synopsis + hSin + btnGap;
-  p.secondary = p.synopsis - (hasSec ? (hSin > 0 ? gap : 0) + NV_LD_HERO_SEC : 0);
-  p.meta = p.secondary - (hasMeta ? ((hasSec || hSin > 0) ? gap : 0) + NV_LD_HERO_META : 0);
+  p.secondary = p.synopsis - (hasSec ? (hSin > 0 ? gap : 0) + (fixed ? ANC(NV_LD_HERO_SEC) : NV_LD_HERO_SEC) : 0);
+  p.meta = p.secondary - (hasMeta ? ((hasSec || hSin > 0) ? gap : 0) + (fixed ? ANC(NV_LD_HERO_META) : NV_LD_HERO_META) : 0);
   // A linha de AMIGOS (quem gostou / assistiu) fica logo acima da meta.
   p.friends = p.meta - (friendsH > 0 ? gap + friendsH : 0);
   p.caption = p.friends - (captionH > 0 ? gap + captionH : 0);
@@ -4471,9 +4492,11 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
   // space when every real information line exists, including a caption.
   float minTop = 24.0f;
   if (lay == HOME_LAYOUT_PADRAO)
-    minTop = base - (NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE) + 24.0f;
+    minTop = base - ANC(NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE) + 24.0f;
   else if (lay == HOME_LAYOUT_DINAMICA)
-    minTop = base - (NV_DIN_HERO_H - NV_DIN_TEXTO_BASE) + 54.0f;
+    minTop = base - ANC(NV_DIN_HERO_H - NV_DIN_TEXTO_BASE) + 54.0f;
+  if (!heroCompactoTelefone() && !homeRetratoTelefone() && sinopse[0])
+    hSin += txt_linha(heroSinEstilo(), "Ag", 255, 255, 255, 255).h - heroSinEntrelinha();
   AmigosTitulo amigos;
   int temAmigos = ci && ci->imdb[0] && amigostitulo_obter(ci->imdb, &amigos);
   float friendsH = temAmigos ? NV_AMIGOS_HERO_H : 0.0f;
@@ -4507,9 +4530,9 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
     }
     minTop = 132.0f;
     if (lay == HOME_LAYOUT_PADRAO)
-      minTop += base - (NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE);
+      minTop += base - ANC(NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE);
     else if (lay == HOME_LAYOUT_DINAMICA)
-      minTop += base - (alturaTextoHeroDin() - NV_DIN_TEXTO_BASE);
+      minTop += base - (alturaTextoHeroDin() - ANC(NV_DIN_TEXTO_BASE));
     copy = heroCopyTelefone(base, &hSin, metaLinha[0] != 0, temSec, &captionH,
                             logoH * 0.75f, btnH, btnGap, minTop, slot, &friendsH, minLogo);
     sinLinhas = hSin > 0.0f ? (int)ceilf(hSin / heroSinEntrelinha()) : 0;
@@ -4641,14 +4664,14 @@ static void ponteiroHero(int a, int b);
 static GfxRect heroArtworkRect(int lay, int cheio) {
   if (lay == HOME_LAYOUT_PADRAO) return padBannerRect();
   GfxRect r = lay == HOME_LAYOUT_DINAMICA
-            ? (GfxRect){0, dinHeroY(), NV_TELA_W, NV_DIN_ARTE_H}
-            : cheio ? (GfxRect){0, 0, NV_TELA_W, NV_HERO_CHEIO_H}
-                    : (GfxRect){NV_HERO_ARTE_X, 0, NV_HERO_ARTE_W, NV_HERO_ARTE_H};
+            ? (GfxRect){0, dinHeroY(), NV_TELA_W, ANC(NV_DIN_ARTE_H)}
+            : cheio ? (GfxRect){0, 0, NV_TELA_W, ANC(NV_HERO_CHEIO_H)}
+                    : (GfxRect){ANC(NV_HERO_ARTE_X), 0, ANC(NV_HERO_ARTE_W), ANC(NV_HERO_ARTE_H)};
 #ifdef NV_TOUCH_UI
   if (heroCompactoTelefone()) {
     if (lay == HOME_LAYOUT_DINAMICA) r.h = repousoFileirasDin() - 20.0f;
     else {
-      float repouso = NV_SHELF_TOP + empurraHeroModerna() - 20.0f;
+      float repouso = ANC(NV_SHELF_TOP) + empurraHeroModerna() - 20.0f;
       float primeira = topoFileiras() - scrollY - 20.0f;
       r.h = fminf(r.h, fminf(repouso, fmaxf(132.0f, primeira)));
       if (homeRetratoTelefone()) { r.x = 0.0f; r.w = NV_TELA_W; }
@@ -4678,9 +4701,9 @@ static GfxRect heroArtworkOverlayRect(GfxRect r, GfxRect hero) {
 }
 
 static float heroBaseCopia(int lay, GfxRect r, float empurra, float descida) {
-  if (lay == HOME_LAYOUT_PADRAO) return r.y + r.h - NV_PAD_TEXTO_BASE + descida;
-  if (lay == HOME_LAYOUT_DINAMICA) return r.y + alturaTextoHeroDin() - NV_DIN_TEXTO_BASE + descida;
-  return NV_SHELF_TOP - NV_HERO_COPY_GAP - 24.0f + empurra + descida;
+  if (lay == HOME_LAYOUT_PADRAO) return r.y + r.h - ANC(NV_PAD_TEXTO_BASE) + descida;
+  if (lay == HOME_LAYOUT_DINAMICA) return r.y + alturaTextoHeroDin() - ANC(NV_DIN_TEXTO_BASE) + descida;
+  return ANC(NV_SHELF_TOP - NV_HERO_COPY_GAP - 24.0f) + empurra + descida;
 }
 static GfxRect heroEditorialRect(int editorial, float aspect) {
   float largura = NV_TELA_W;
@@ -4963,7 +4986,7 @@ static void desenhaHero(Uint32 agora, float saida) {
           // O bloco comeca logo abaixo do nome e TERMINA antes do cabecalho da
           // fileira (NV_SHELF_TOP): o numero de linhas da bio e o que cede.
           // Largura 780: fica aquem do cartao da capa (que comeca em 1096).
-          float yy=fimTitulo+30,teto=NV_SHELF_TOP-30,larg=780;
+          float yy=fimTitulo+30,teto=ANC(NV_SHELF_TOP)-30,larg=780;
           const char *meta=diretor_meta(folder->title),*bio=diretor_bio(folder->title),*con=diretor_conhecido(folder->title);
           float fixo=(meta[0]?38:0)+(con[0]?38:0)+34;   // meta + conhecido + legenda
           int linhas=(int)((teto-yy-fixo-12)/31);if(linhas>3)linhas=3;
@@ -5272,7 +5295,7 @@ static void desenhaHero(Uint32 agora, float saida) {
   // Logo, actions, then the real information and compact synopsis. Keep
   // each layout's bottom boundary; use the measured copy for the action Y.
   float empurra = scrollY < 0.0f ? -scrollY : 0.0f;
-  float empurraMax = lay == HOME_LAYOUT_MODERNA ? empurraHero() : NV_HOME_HERO_EMPURRA;
+  float empurraMax = lay == HOME_LAYOUT_MODERNA ? empurraHero() : ANC(NV_HOME_HERO_EMPURRA);
   float aBotao = anim_clamp(empurra / empurraMax, 0.0f, 1.0f);
   float base = heroBaseCopia(lay, r, empurra, descidaCopy);
   // Padrao e Dinamica ancoram o bloco na BASE DO PROPRIO DESTAQUE (e o botao
@@ -5348,7 +5371,7 @@ static void desenhaHero(Uint32 agora, float saida) {
         // que botao_superficie devolve para este foco: antes era TXT_ILHA_NOME
         // 24/600 com ajustes_tinta_foco, mais pesado e fora da pilula do app.
         TxtLinha lb = txt_linha(TXT_DET_BOTAO, rot, 245, 245, 245, 255);
-        float bh = btnH;
+        float bh = (heroCompactoTelefone() || homeRetratoTelefone()) ? btnH : ANC(btnH);
         float bw = lb.w + 38.0f * 2;   // NV_DETW2_BTN_PADX, igual ao detalhe
         float by = actionY;
         GfxRect bt = { x, by, bw, bh };
@@ -5775,7 +5798,7 @@ static void shotTrailerPasso(int topo, float dt, Uint32 agora, int heroSetting, 
 }
 #endif
 
-void home_trailer_passo(int topo, float dt, Uint32 agora) {
+static void home_trailer_passo_(int topo, float dt, Uint32 agora) {
   const CatItem *ci = NULL;
   int pronto;
   Uint32 decorrido;
@@ -6131,6 +6154,10 @@ static void desenhaNumeral(int pos, float px, float py, float h, float vao, floa
 // cache e a arte que o card ja pediu: nenhum blur, nenhuma textura nova.
 static float  palcoPos[MAX_FIL];
 static Uint32 palcoUlt[MAX_FIL];
+static struct {
+  float de, scrollDe, scrollAlvo, texto;
+  int alvo, anterior;
+} palcoMov[MAX_FIL];
 static float  tempoCol[MAX_FIL], tempoAno[MAX_FIL];
 static Uint32 tempoEntraEm[MAX_FIL], tempoUlt[MAX_FIL];
 static float dtFil(Uint32 *ult, Uint32 agora) {
@@ -6150,9 +6177,12 @@ static int colunaDaFileira(int r) {
 // demais ficam parados na vaga, so deslocados do mesmo tanto para a esquerda
 // ou a direita (clamp de d em -1..1): mover o foco nao arrasta a fileira
 // inteira (dono, 14/10: "as fileiras mexendo junto ao inves de ficar parada").
-// Quem anda, anda pela mola unica de palcoPos, sem misturar com a rolagem.
+// Poster and scroll share the same timed ease-out in palcoPasso.
+// Os da direita tambem abrem o vao da ficha (palcoFicha), como na Split.
 static float palcoDesloca(float lw, float d) {
-  return (d < -1.0f ? -1.0f : d > 1.0f ? 1.0f : d) * (lw - lw * NV_PALCO_VIZ) * 0.5f;
+  float k = d < -1.0f ? -1.0f : d > 1.0f ? 1.0f : d;
+  return k * (lw - lw * NV_PALCO_VIZ) * 0.5f
+       + (k > 0.0f ? k * (NV_PALCO_INFO_W + NV_PALCO_INFO_VAO) : 0.0f);
 }
 static void palcoGeo(int r, int c, float lw, float *cx, float *s) {
   float d = (float)c - palcoPos[r], ad = fabsf(d);
@@ -6187,18 +6217,124 @@ static int palcoColunaEm(int r, float u) {
   return col;
 }
 #endif // NV_TOUCH_UI || NV_TESTE_HOME
-// PALCO: o nome e a linha de meta do titulo do centro, embaixo dele.
-static void palcoLegenda(int r, float base, float lw) {
-  int c = (int)(palcoPos[r] + 0.5f);
-  float cx, s, perto = 1.0f - 2.0f * fabsf(palcoPos[r] - (float)c);
-  const CatItem *it = cat_item_exato(fileiraItemIndice(&fileiras[r], c));
-  if (!it || perto < 0.02f) return;
-  palcoGeo(r, c, lw, &cx, &s);
-  { TxtLinha t = txt_linha_corta(TXT_CW_TITULO, it->titulo, 245, 246, 249, 255, lw * 1.8f);
-    TxtLinha m = txt_linha_corta(TXT_CAPTION, it->meta[0] ? it->meta : it->genero, 182, 188, 200, 255, lw * 1.8f);
-    txt_desenhar_alpha(t, cx - t.w * 0.5f, base + 14.0f, perto);
-    txt_desenhar_alpha(m, cx - m.w * 0.5f, base + 14.0f + t.h + 2.0f, perto * 0.9f); }
+static float palcoProgresso(Uint32 ms) {
+  if (anim_politica_reduzida) return 1.0f;
+  float t = anim_clamp(((float)ms - NV_PALCO_START_MS) / NV_PALCO_MOVE_MS, 0, 1);
+  float u = 1.0f - t;
+  return 1.0f - u * u * u * u * u;
 }
+// Frame-time driven: retargets from the current position, never queues.
+static void palcoPasso(int r, Uint32 agora) {
+  int alvo = colunaDaFileira(r);
+  if (!palcoUlt[r]) {
+    palcoMov[r].alvo = palcoMov[r].anterior = alvo;
+    palcoMov[r].de = palcoPos[r] = (float)alvo;
+    palcoMov[r].scrollDe = palcoMov[r].scrollAlvo = scrollX[r];
+    palcoMov[r].texto = 1;
+    palcoUlt[r] = agora ? agora : 1;
+  } else if (alvo != palcoMov[r].alvo) {
+    palcoMov[r].anterior = palcoMov[r].texto >= .5f ? palcoMov[r].alvo : palcoMov[r].anterior;
+    palcoMov[r].alvo = alvo;
+    palcoMov[r].scrollAlvo = alvoScrollFil(r, alvo, scrollX[r], 0);
+    palcoMov[r].de = palcoPos[r];
+    palcoMov[r].scrollDe = scrollX[r];
+    palcoUlt[r] = agora;
+    palcoMov[r].texto = 0;
+  }
+  Uint32 ms = agora - palcoUlt[r];
+  float k = palcoProgresso(ms);
+  palcoPos[r] = k >= 1 ? (float)alvo : anim_mistura(palcoMov[r].de, (float)alvo, k);
+#ifdef NV_TOUCH_UI
+  if (!toqueLivreX[r])
+#endif
+  {
+    // Recheck viewport geometry even when focus stays on the same column.
+    palcoMov[r].scrollAlvo = alvoScrollFil(r, alvo, palcoMov[r].scrollAlvo, 0);
+    scrollX[r] = k >= 1 ? palcoMov[r].scrollAlvo : anim_mistura(palcoMov[r].scrollDe, palcoMov[r].scrollAlvo, k);
+  }
+  if (palcoMov[r].alvo == palcoMov[r].anterior || anim_politica_reduzida) palcoMov[r].texto = 1;
+  else palcoMov[r].texto = anim_clamp(((float)ms - NV_PALCO_TEXT_DELAY_MS) / NV_PALCO_TEXT_MS, 0, 1);
+  if (palcoMov[r].texto >= 1) palcoMov[r].anterior = alvo;
+}
+// Stage B: panel and light share one continuous, poster-top anchor.
+static GfxRect holoPoster;
+static int holoTem;
+static GfxRect palcoInfoRect(int r, float cardY, float lw, float artH) {
+  float cx = homeFileiraX(r, 0) + palcoPos[r] * passoFil(r) + lw * .5f;
+  return (GfxRect){cx + lw * .5f + NV_PALCO_INFO_VAO, cardY, NV_PALCO_INFO_W, artH};
+}
+static void palcoTexto(int r, int c, GfxRect p, float a) {
+  const CatItem *it = cat_item_exato(fileiraItemIndice(&fileiras[r], c));
+  float x = p.x, y = p.y, ar, ag, ab;
+  if (!it || a < .004f) return;
+  ajustes_acento(&ar, &ag, &ab);
+  if (it->genero[0]) {
+    char up[sizeof it->genero * 2];
+    idioma_maiusc_em(ajustes_idioma(), up, sizeof up, it->genero);
+    TxtLinha g = txt_linha_corta(TXT_CW_META, up, ar * 255, ag * 255, ab * 255, 255, p.w);
+    txt_desenhar_alpha(g, x, y, a); y += g.h + 12;
+  }
+  y += txt_bloco_corta(TXT_TITULO3, it->titulo, 243, 242, 239,
+                       x, y, p.w, 52, a, 3) + 16;
+  {
+    int nota = imdbnota_obter(it->imdb, it->nota, !strcmp(it->tipo, "series"));
+    float bw = badge_imdb_largura(nota), gap = it->meta[0] && nota > 0 ? 30 : 0;
+    char metaTexto[sizeof it->meta + 4];
+    snprintf(metaTexto, sizeof metaTexto, "%s%s", it->meta, gap ? " |" : "");
+    TxtLinha meta = txt_linha_corta(TXT_CW_META, metaTexto, 184, 186, 193, 255, p.w - bw - gap);
+    txt_desenhar_alpha(meta, x, y, a);
+    if (nota > 0) badge_imdb(x + meta.w + gap, y, nota, 0, a);
+    y += fmaxf(meta.h, BADGE_H) + 24;
+  }
+  if (it->sinopse[0]) {
+    int lines = (int)((p.y + p.h - y) / 38);
+    if (lines > 3) lines = 3;
+    if (lines > 0) sinopse_bloco_corta(TXT_DET_SIN, it->sinopse, 214, 218, 228,
+                                     x, y, p.w, 38, .95f * a, lines);
+  }
+}
+static void palcoFicha(int r, float cardY, float lw, float artH) {
+  GfxRect p = palcoInfoRect(r, cardY, lw, artH);
+  if (r == foco.fileira && !focoHero) {
+    holoPoster = (GfxRect){p.x - NV_PALCO_INFO_VAO - lw, cardY, lw, artH};
+    holoTem = 1;
+  }
+  int c = colunaDaFileira(r);
+  float t = palcoUlt[r] ? palcoMov[r].texto : 1;
+  if (palcoMov[r].anterior != c && t < 1)
+    palcoTexto(r, palcoMov[r].anterior, p, 1 - t);
+  palcoTexto(r, c, p, palcoMov[r].anterior == c ? 1 : t);
+}
+// O holofote so acende com o foco NA fileira Palco (nem no destaque, nem em
+// outra fileira): fora dela o veu apaga e nada e desenhado.
+static int holofoteAlvo(void) {
+  return !focoHero && foco.fileira >= 0 && foco.fileira < nFileiras &&
+         fileiras[foco.fileira].tipo == FILEIRA_PALCO;
+}
+// HOLOFOTE (dono, 17/10: "o dimming da tela toda quando tiver no stage, como
+// se o foco de luz estivesse no filme"): UM quad de tela cheia (GFX_HOLOFOTE)
+// por cima da home e da barra, depois de tudo. A elipse cobre cartaz + ficha
+// follows palcoPos with the poster's timed curve. Cone and floor pool work
+// with glass off. Light effects disable the decoration; the quad
+// inteiro sai nos efeitos minimos. Custo: uma tela de preenchimento por quadro.
+static float  holoA;
+static Uint32 holoUlt;
+static void holofote(Uint32 agora) {
+  float alvo = holofoteAlvo() && holoTem ? 1.0f : 0.0f, H = NV_TELA_H, W = NV_TELA_W;
+  holoA = anim_mola(holoA, alvo, dtFil(&holoUlt, agora), 12.0f);
+  if (alvo == 0.0f && holoA < 0.01f) { holoA = 0.0f; holoTem = 0; return; }
+  { GfxRect p = holoPoster;
+    float abre = 1.6f;
+    float bw = p.w + NV_PALCO_INFO_VAO + NV_PALCO_INFO_W;
+    // One pass for the veil, accent cone and floor pool, including glass off.
+    gfx_rect((GfxRect){ 0, 0, W, H }, 0, GFX_HOLOFOTE,
+             p.h * 0.5f * abre / H, (p.x + bw * 0.5f) / W, (p.y + p.h * 0.5f) / H,
+             bw * 0.5f * abre / H,
+             (p.y + p.h) / H, (p.x + p.w * 0.5f) / W, p.w * 0.55f / H,
+             NV_HOLOFOTE_VEU * holoA); }
+  holoTem = 0;
+}
+void home_holofote_desenhar(Uint32 agora) { TXT_INI(); holofote(agora); TXT_FIM(); }
 // CARTAZ COM FICHA: a placa inteira atras, o texto a direita do cartaz. O
 // cartaz e desenhado depois, pelo caminho comum (pintarCartao), na largura 2:3.
 static void desenhaFicha(const CatItem *it, float px, float py, float w, float h, float f) {
@@ -6346,7 +6482,7 @@ static void desenhaLinhaTempo(int r, float topoFil, float top, float passo, floa
   prog = 1.0f - (1.0f - prog) * (1.0f - prog) * (1.0f - prog);
   tempoCol[r] = anim_mola(tempoCol[r], (float)alvo, dt, NV_MOLA_FOCO);
   ajustes_acento(&ar, &ag, &ab);
-#define XCOL(k) (ajustes_conteudo_x() + (k) * passo - scrollX[r] + lw * 0.5f + bordaX(r))
+#define XCOL(k) (homeConteudoX() + (k) * passo - scrollX[r] + lw * 0.5f + bordaX(r))
   x0 = XCOL(0.0f); xN = XCOL((float)(fl->n - 1));
   if (fl->n == 1) xN = x0 + lw;
   { float xf = x0 + (xN - x0) * prog;
@@ -6390,7 +6526,7 @@ static void desenhaLinhaTempo(int r, float topoFil, float top, float passo, floa
       tempoAno[r] = anim_mola(tempoAno[r], (float)ano, dt, NV_MOLA_FOCO * 0.6f);
       snprintf(s, sizeof s, "%d", (int)(tempoAno[r] + 0.5f));
       t = txt_linha(TXT_ROW_TITULO, s, (int)(ar * 255), (int)(ag * 255), (int)(ab * 255), 255);
-      if (focada) txt_desenhar(t, NV_TELA_W - NV_HOME_SAFE_RIGHT - 150.0f - t.w, topoFil);
+      if (focada) txt_desenhar(t, NV_TELA_W - ANC(NV_HOME_SAFE_RIGHT) - 150.0f - t.w, topoFil);
     } }
 }
 
@@ -6560,16 +6696,17 @@ static void desenhaRotuloCard(const CatItem *cItem, TipoFileira tipo, int deitad
         txt_desenhar_alpha(tn, bx, py + h - base - tn.h, 0.98f);
       }
     } else if (tipo == FILEIRA_HEROI_DIVIDIDO) {
-      // ano ★ nota, embaixo do poster
       char l[64]; const char *e = strstr(cItem->meta, " \xc2\xb7 ");
       int nota = imdbnota_obter(cItem->imdb, cItem->nota, !strcmp(cItem->tipo, "series"));
       size_t n = e ? (size_t)(e - cItem->meta) : strlen(cItem->meta);
       if (n > 12) n = 12;
-      snprintf(l, sizeof l, "%.*s", (int)n, cItem->meta);
-      if (nota > 0) snprintf(l + strlen(l), sizeof l - strlen(l), "%s\xe2\x98\x85 %d.%d", l[0] ? "  " : "", nota / 10, nota % 10);
-      if (l[0])
-        txt_desenhar_alpha(txt_linha_corta(TXT_CAPTION2, l, 235, 237, 242, 255, w),
-                           px + NV_POSTER_COPY_PADX, py + h + NV_POSTER_COPY_PADT, 0.9f);
+      snprintf(l, sizeof l, "%.*s%s", (int)n, cItem->meta, n && nota > 0 ? " · " : "");
+      float bw = badge_imdb_largura(nota), by = py + h + 18.0f;
+      TxtLinha year = txt_linha_corta(TXT_CAPTION2, l, 218,222,232,255, fmaxf(0, w - bw - 8));
+      float bh = fmaxf(34.0f, year.h);
+      if (l[0]) txt_desenhar(year, px, by + (bh - year.h) * 0.5f);
+      if (nota > 0 && bw <= w)
+        badge_imdb(px + (l[0] ? year.w + 8 : 0), by + (bh - BADGE_H) * 0.5f, nota, 0, 1);
     } else if (rotuloFora && nome) {
       float bx = px + NV_POSTER_COPY_PADX;
       float by = py + h + NV_POSTER_COPY_PADT;
@@ -6690,7 +6827,7 @@ static void desenhaEditorialCard(const CatItem *cItem, TipoFileira tipo, float p
 
 // --- FORWARDS DO CARTAO HEROI E DA REDONDA ----------------------------------
 
-static void desenhaHeroiCard(const CatItem *ci, const char *selo, const char *texto,
+static void desenhaHeroiCard(const CatItem *ci, int completo, const char *texto,
                              const char *caminho, GLuint t, float aArte,
                              float px, float py, float w, float h, float raio,
                              float f, float varre);   // o cartão da fileira Herói (#205)
@@ -6718,7 +6855,7 @@ float home_vitrine_topo(float filH) {
   switch (home_vitrine_layout()) {
     case HOME_LAYOUT_PADRAO:   return NV_PAD_TOPO_FIL;
     case HOME_LAYOUT_DINAMICA: return NV_TELA_H - filH;
-    default:                   return NV_SHELF_TOP;
+    default:                   return ANC(NV_SHELF_TOP);
   }
 }
 void home_vitrine_medida(float *w, float *h, float *passo, float *rotH) {
@@ -6736,11 +6873,11 @@ int home_vitrine_arte_pronta(const CatItem *ci) {
 int home_vitrine_arte(const CatItem *ci, float alfa) {
   const char *a = ci ? arte_hero_do_item(ci) : NULL;
   int lay = home_vitrine_layout();
-  GfxRect r = { 0, 0, NV_TELA_W, NV_HERO_CHEIO_H };
+  GfxRect r = { 0, 0, NV_TELA_W, ANC(NV_HERO_CHEIO_H) };
   if (!a || !a[0] || alfa <= 0.004f) return 0;
   if (lay == HOME_LAYOUT_MODERNA) return desenhaArteHero(r, GFX_HERO_CHEIO, ci, a, alfa, 0.0f);
-  if (lay == HOME_LAYOUT_PADRAO) r = (GfxRect){ 0, NV_PAD_BANNER_Y, NV_TELA_W, NV_PAD_BANNER_H };
-  else r.h = NV_DIN_ARTE_H;
+  if (lay == HOME_LAYOUT_PADRAO) r = (GfxRect){ 0, ANC(NV_PAD_BANNER_Y), NV_TELA_W, ANC(NV_PAD_BANNER_H) };
+  else r.h = ANC(NV_DIN_ARTE_H);
   heroVeuLayout(lay, r.h);
   return desenhaArteHero(r, GFX_VITRINE, ci, a, alfa, 0.0f);
 }
@@ -6831,76 +6968,100 @@ static void desenhaRedonda(const CatItem *ci, GLuint t, const char *caminho,
   }
 }
 
-// O CARTÃO DA FILEIRA HERÓI (#205): um cartão só do tamanho da fileira, com
-// a arte de fundo em cover, o selo no alto à esquerda, o título (logo quando
-// o título tem) e duas linhas de texto na base — sobre o véu escuro→claro.
-// Como o banner entre fileiras da Apple TV (foto do dono,
-// fotos1014/appletv-hero-card.jpg). O anel é o mesmo dos outros cards; a arte
-// é a de desenhaArteCard (esqueleto, arte ausente, varredura do foco).
-static void desenhaHeroiCard(const CatItem *ci, const char *selo, const char *texto,
+// One metadata baseline for both Hero A rows; reserve the measured badge first.
+static float heroiMeta(const CatItem *ci, float x, float y, float w) {
+  char linha[256];
+  if (!ci) return BADGE_H;
+  int nota = imdbnota_obter(ci->imdb, ci->nota, !strcmp(ci->tipo, "series"));
+  float bw = badge_imdb_largura(nota);
+  snprintf(linha, sizeof linha, "%s%s%s%s", ci->meta,
+           ci->meta[0] && ci->genero[0] ? " · " : "", ci->genero,
+           nota > 0 && (ci->meta[0] || ci->genero[0]) ? " · " : "");
+  TxtLinha m = txt_linha_corta(TXT_CW_META, linha, 218, 222, 232, 255,
+                               fmaxf(0.0f, w - bw - 8.0f));
+  float h = fmaxf(34.0f, fmaxf(m.h, BADGE_H));
+  if (linha[0]) txt_desenhar(m, x, y + (h - m.h) * 0.5f);
+  if (nota > 0 && bw <= w)
+    badge_imdb(x + (linha[0] ? m.w + 8.0f : 0.0f), y + (h - BADGE_H) * 0.5f, nota, 0, 1);
+  return h;
+}
+
+// Hero A: ring only, tinted reading veil, logo, metadata and two synopsis lines.
+static void desenhaHeroiCard(const CatItem *ci, int completo, const char *texto,
                              const char *caminho, GLuint t, float aArte,
                              float px, float py, float w, float h, float raio,
                              float f, float varre) {
-  const float pad = NV_HEROI_PAD;
+  const float pad = completo ? NV_HEROI_PAD : 32.0f;
   GfxRect card = { px, py, w, h };
   if (f > 0.01f && ajustes_borda_foco()) {
-    GfxRect borda = { px - NV_ANEL_FOCO, py - NV_ANEL_FOCO,
-                      w + NV_ANEL_FOCO * 2, h + NV_ANEL_FOCO * 2 };
     float ar, ag, ab; ajustes_acento(&ar, &ag, &ab);
-    { float menor = w < h ? w : h;
-      if (ajustes_vidro()) gfx_vidro_cartao((GfxRect){px, py, w, h}, raio, f, 1.0f);
-      else
-      gfx_cor(borda, (raio * menor + NV_ANEL_FOCO) / (menor + 2 * NV_ANEL_FOCO),
-              ar, ag, ab, f); }
+    gfx_cor((GfxRect){px - NV_ANEL_FOCO, py - NV_ANEL_FOCO,
+                     w + 2 * NV_ANEL_FOCO, h + 2 * NV_ANEL_FOCO},
+            (raio * h + NV_ANEL_FOCO) / (h + 2 * NV_ANEL_FOCO), ar, ag, ab, f);
   }
-  desenhaArteCard(card, FILEIRA_HEROI, caminho, t, ci, f, raio, aArte, varre);
-  // O VÉU DO TEXTO: escuro na base, clareando para cima (o mesmo desenho da
-  // legenda do cartaz deitado e do destaque — só a fração é daqui).
-  gfx_veu_base(card, raio, NV_HEROI_VEU_F, NV_HEROI_VEU_A);
-  // O SELO no alto à esquerda, como o "APPLE MUSIC LIVE" da foto.
-  if (selo && selo[0]) badge_desenhar(px + pad, py + pad, selo, BADGE_NEUTRO, 1.0f);
-  // AS DUAS LINHAS, medidas primeiro: o título senta em cima delas, e sem
-  // medir o bloco não há como saber onde a base do título fica.
-  { float tw = w - pad * 2.0f;
-    float bloco = (texto && texto[0])
-      ? txt_bloco_corta(TXT_HERO_SIN, texto, 226, 228, 233,
-                        px + pad, py + h - pad, tw, 28.0f, 0.0f, 2)
-      : 0.0f;
-    float base = py + h - pad - bloco;
-    if (texto && texto[0])
-      (void)txt_bloco_corta(TXT_HERO_SIN, texto, 226, 228, 233,
-                            px + pad, py + h - pad - bloco, tw, 28.0f, 1.0f, 2);
-    // O TÍTULO: o logo quando o título tem (a tipografia própria, a mesma
-    // regra do destaque), o nome em Bold quando não tem.
-    { const char *urlL = ci ? artehero_logo_sessao_larg(ci, w * NV_HEROI_LOGO_W) : NULL;
-      GLuint tl = urlL ? tex_obter_logo_larg(urlL, w * NV_HEROI_LOGO_W) : 0;
-      if (tl) {
-        float ap = tex_aspecto(urlL);
-        if (ap > 0.0f) {
-          float hL = h * 0.20f, wL = hL * ap;
-          if (wL > w * NV_HEROI_LOGO_W) { wL = w * NV_HEROI_LOGO_W; hL = wL / ap; }
-          { GfxRect rl = { px + pad, base - 10.0f - hL, wL, hL };
-            GfxModo m = tex_marca_escura(urlL) ? GFX_MARCA : GFX_TEXTO;
-            gfx_tex_aspect_atual = 0.0f;
-            gfx_rect(rl, tl, m, 0, 0, 0, 0.0f, 1, 1, 1, 1.0f); }
-        }
-      } else if (ci && ci->titulo[0]) {
-        TxtLinha tn = txt_linha_corta(TXT_TITULO3, ci->titulo, 245, 246, 249, 255, tw);
-        txt_desenhar(tn, px + pad, base - 10.0f - tn.h);
-      }
+  if (completo) {
+    CorvivaPaleta p;
+    float cr = 0.02f, cg = 0.07f, cb = 0.09f;
+    if (caminho) tex_publicar_paleta(caminho);
+    if (caminho && corviva_paleta(caminho, &p) && p.ok) {
+      cr = p.base[0] * 0.45f; cg = p.base[1] * 0.45f; cb = p.base[2] * 0.45f;
     }
+    gfx_card_heroi_veu_atual[0] = cr;
+    gfx_card_heroi_veu_atual[1] = cg;
+    gfx_card_heroi_veu_atual[2] = cb;
+    gfx_card_heroi_veu_atual[3] = 0.95f;
+  }
+  if (t) gfx_veu_card_por(completo ? NV_HEROI_VEU_F : 0.52f,
+                           completo ? NV_HEROI_VEU_A : 0.80f);
+  desenhaArteCard(card, FILEIRA_HEROI, caminho, t, ci, f, raio, aArte, varre);
+  gfx_card_heroi_veu_atual[3] = 0;
+  if (t) gfx_veu_na_arte = 1;
+  if (completo && !t)
+    gfx_rect(card, 0, GFX_VEU, 0, 1, 0, raio,
+             gfx_card_heroi_veu_atual[0], gfx_card_heroi_veu_atual[1],
+             gfx_card_heroi_veu_atual[2], 0.95f);
+  gfx_veu_base(card, raio, completo ? NV_HEROI_VEU_F : 0.52f,
+               completo ? NV_HEROI_VEU_A : 0.80f);
+  gfx_veu_card_limpar();
+  float tw = fminf(760.0f, w - pad * 2.0f);
+  float base = py + h - (completo ? 44.0f : 30.0f);
+  if (completo) {
+    float bloco = texto && texto[0]
+      ? sinopse_bloco_corta(TXT_DET_SIN, texto, 243, 242, 239,
+                            px + pad, 0, tw, 36.0f, 0, 2) : 0;
+    if (bloco > 0) {
+      base -= bloco;
+      sinopse_bloco_corta(TXT_DET_SIN, texto, 243, 242, 239,
+                          px + pad, base, tw, 36.0f, 1, 2);
+      base -= 12.0f;
+    }
+    float mh = fmaxf(34.0f, txt_linha(TXT_CW_META, "2025", 218,222,232,255).h);
+    base -= mh;
+    heroiMeta(ci, px + pad, base, tw);
+    base -= 20.0f;
+  }
+  const char *urlL = ci ? artehero_logo_sessao_larg(ci, w * NV_HEROI_LOGO_W) : NULL;
+  GLuint tl = urlL ? tex_obter_logo_larg(urlL, w * NV_HEROI_LOGO_W) : 0;
+  if (tl && tex_aspecto(urlL) > 0) {
+    float ap = tex_aspecto(urlL), hL = fminf(96.0f, h * 0.24f), wL = hL * ap;
+    float maxW = completo ? tw : w - pad * 2;
+    if (wL > maxW) { wL = maxW; hL = wL / ap; }
+    gfx_tex_aspect_atual = 0;
+    gfx_rect((GfxRect){px + pad, base - hL, wL, hL}, tl,
+             tex_marca_escura(urlL) ? GFX_MARCA : GFX_TEXTO, 0,0,0,0,1,1,1,1);
+  } else if (ci && ci->titulo[0]) {
+    TxtLinha tn = txt_linha_corta(TXT_TITULO3, ci->titulo, 245,246,249,255,tw);
+    txt_desenhar(tn, px + pad, base - tn.h);
   }
 }
 
-// HERÓI DIVIDIDO (16/10): o painel a esquerda é o cartão Herói (arte deitada,
-// véu e logo) do título em foco na fileira, com a ficha embaixo — meta e
-// gênero, classificação e nota, três linhas de sinopse e o elenco. Os
-// vizinhos do foco já pedem a arte deitada, para o painel trocar sem buraco.
+// Split Hero A: logo on art; metadata and two synopsis lines share the caption band.
 static int divididoItem(int r) { return fileiraItemIndice(&fileiras[r], colunaDaFileira(r)); }
 // O cartaz `c` (centro cx, largura w) entra na fila a direita do painel? O que
 // ja passou fica atras do painel (pintado depois).
 static int divididoCartazVisivel(int r, float cx, float w) {
-  return cx + w * 0.5f >= homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO;
+  return cx + w * 0.5f > homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO + 0.5f &&
+         cx - w * 0.5f < homeConteudoDireita() - 0.5f;
 }
 static GfxRect divididoPainel(int r, float cardY) {
   return (GfxRect){ homeConteudoX() + bordaX(r), cardY, divPainelW(), divArteH() };
@@ -6919,8 +7080,8 @@ static void desenhaDividido(int r, float cardY) {
       if (v) (void)tex_lookahead_pedir(v, p.w);
     }
   }
-  desenhaHeroiCard(ci, NULL, NULL, caminho, t, 1.0f, p.x, p.y, p.w, p.h,
-                   raioDe(p.w, p.h), 0.0f, 0.0f);
+  desenhaHeroiCard(ci, 0, NULL, caminho, t, 1.0f, p.x, p.y, p.w, p.h,
+                   raioDe(p.w, p.h), foco.fileira == r && !focoHero ? 1.0f : 0.0f, 0.0f);
   // O foco mora no painel: o poster dele nao e mais desenhado na fila.
   if (foco.fileira == r && !focoHero) {
     itemFoco = (HomeItem){ .indice = idx, .rect = p, .arte = caminho,
@@ -6930,26 +7091,10 @@ static void desenhaDividido(int r, float cardY) {
     ancoraFoco = p; temAncoraFoco = 1;
   }
   if (!ci) return;
-  { char linha[200];
-    snprintf(linha, sizeof linha, "%s%s%s", ci->meta, ci->meta[0] && ci->genero[0] ? " · " : "", ci->genero);
-    if (linha[0]) { TxtLinha m = txt_linha_corta(TXT_CW_META, linha, 218, 222, 232, 255, p.w);
-                    txt_desenhar(m, x, y); y += m.h + 12.0f; } }
-  { float bx = x;
-    int nota = imdbnota_obter(ci->imdb, ci->nota, !strcmp(ci->tipo, "series"));
-    if (ci->classificacao[0]) bx += badge_desenhar(bx, y, ci->classificacao, BADGE_NEUTRO, 1.0f) + BADGE_IMDB_GAP;
-    if (nota > 0) bx += badge_imdb(bx, y, nota, 0, 1.0f);
-    if (bx > x) y += BADGE_H + 14.0f; }
+  y += heroiMeta(ci, x, y, p.w) + 14.0f;
   if (ci->sinopse[0])
-    y += sinopse_bloco(TXT_HERO_SIN, ci->sinopse, 214, 218, 228, x, y, p.w, 30.0f, 0.95f, 3) + 10.0f;
-  { char elenco[240]; size_t n = 0; int k;
-    elenco[0] = 0;
-    for (k = 0; k < CAT_ELENCO_MAX && k < 4 && ci->elenco[k].nome[0]; k++)
-      n += (size_t)snprintf(elenco + n, sizeof elenco - n, "%s%s", k ? ", " : "", ci->elenco[k].nome);
-    if (elenco[0]) {
-      char l[300];
-      snprintf(l, sizeof l, "%s: %s", i18n("Elenco"), elenco);
-      txt_desenhar(txt_linha_corta(TXT_MINI, l, 168, 174, 186, 255, p.w), x, y);
-    } }
+    sinopse_bloco_corta(TXT_DET_SIN, ci->sinopse, 243, 242, 239,
+                        x, y, p.w, 36.0f, 0.95f, 2);
 }
 
 static void pintarCartao(const CartaoFoco *k, float raio) {
@@ -6959,22 +7104,14 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
   const float abre = k->abre, esc = k->esc, f = k->f, px = k->px, py = k->py, w = k->w, h = k->h;
   const float varreFoco = k->varre;
   if (tipo == FILEIRA_REDONDA) { desenhaRedonda(cItem, t, caminho, px, py, w, f); return; }
-  // A FILEIRA HERÓI: o selo e as duas linhas dizem DE ONDE veio o título —
-  // "Curadoria" quando veio do Nuvio Legacy, o nome da própria fileira
-  // quando o cartão é o primeiro título dela. O texto é o da curadoria ou a
-  // sinopse do título. O OK abre o título: o card é um card de catálogo
-  // como outro qualquer, só maior.
+  // Hero A keeps the curated copy or synopsis; the row heading names its source.
   if (tipo == FILEIRA_HEROI) {
-    const char *selo = NULL, *texto = NULL;
+    const char *texto = NULL;
     if (curadoria_ativa() && cItem && heroiCuradoriaIndice() >= 0 &&
-        fileiraItemIndice(&fileiras[r], c) == heroiCuradoriaIndice()) {
-      selo = i18n("Curadoria");
+        fileiraItemIndice(&fileiras[r], c) == heroiCuradoriaIndice())
       texto = curadoria_texto();
-    } else if (fileiras[r].titulo[0]) {
-      selo = fileiras[r].titulo;
-    }
     if (!texto || !texto[0]) texto = cItem ? cItem->sinopse : NULL;
-    desenhaHeroiCard(cItem, selo, texto, caminho, t, aArte, px, py, w, h, raio,
+    desenhaHeroiCard(cItem, 1, texto, caminho, t, aArte, px, py, w, h, raio,
                      f, varreFoco);
     return;
   }
@@ -7405,10 +7542,11 @@ static void home_desenhar_(Uint32 agora) {
     // `y` é o topo do cabeçalho da fileira; os cards começam depois do título.
     // Separar os dois evita que o título da fileira seguinte seja desenhado
     // sobre a arte da anterior quando a fileira tem cards altos.
-    float cardY = y + NV_LEGACY_ROW_HEAD_H;
+    float cardY = y + (tipo == FILEIRA_HEROI ? 62.0f :
+                       tipo == FILEIRA_HEROI_DIVIDIDO ? 59.0f : NV_LEGACY_ROW_HEAD_H);
 
     int deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
-                  ((tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO) &&
+                  ((tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO && tipo != FILEIRA_PALCO) &&
                    ajustes_posteres_deitados());
     int rotuloFora = temRotulo(tipo);
     if (y < NV_TELA_H + 200 && y + NV_LEGACY_ROW_HEAD_H + lh > -200) {
@@ -7451,7 +7589,17 @@ static void home_desenhar_(Uint32 agora) {
         TxtLinha ai=txt_linha(TXT_HERO_META,"AI-powered",183,192,219,255);
         txt_desenhar(ai,fimTit+22,y+(tl.h-ai.h)*.5f);
       }
-      if (foco.fileira == r && !focoHero && tipo != FILEIRA_SOCIAL) {
+      if (foco.fileira == r && !focoHero && tipo == FILEIRA_PALCO) {
+        char current[32], total[32];
+        snprintf(current, sizeof current, "%d", colunaDaFileira(r) + 1);
+        snprintf(total, sizeof total, " / %d", fileiras[r].n);
+        TxtLinha n = txt_linha(TXT_ROW_TITULO, current, 243, 242, 239, 255);
+        TxtLinha t = txt_linha(TXT_CW_META, total, 137, 140, 147, 255);
+        float x = homeConteudoDireita() - n.w - t.w;
+        txt_desenhar(n, x, y + (tl.h - n.h) * .5f);
+        txt_desenhar(t, x + n.w, y + (tl.h - t.h) * .5f);
+      } else if (foco.fileira == r && !focoHero && tipo != FILEIRA_SOCIAL &&
+                 tipo != FILEIRA_HEROI && tipo != FILEIRA_HEROI_DIVIDIDO) {
         char pos[32];
         if (foco.coluna < fileiras[r].n)
           snprintf(pos, sizeof pos, "%d / %d", foco.coluna + 1, fileiras[r].n);
@@ -7486,6 +7634,7 @@ static void home_desenhar_(Uint32 agora) {
         continue;
       }
 
+      if (tipo == FILEIRA_PALCO) palcoPasso(r, agora);
       // CARD "VER TUDO" no fim da fileira. Desenhado antes do laco dos cartazes
       // para nao herdar as variaveis dele; ele nao e um titulo e nao usa arte.
       //
@@ -7509,11 +7658,19 @@ static void home_desenhar_(Uint32 agora) {
           float raio = raioDe(w, h);
           GfxRect r0 = { px, py, w, h };
           alvoCard(px, py, w, h, r, c);
-          float lum = 0.06f + 0.10f * f;
+          float lum = (tipo == FILEIRA_PALCO ? 0.035f : 0.06f) + 0.10f * f;
           gfx_cor(r0, raio, 1, 1, 1, lum);
-          gfx_rect(r0, 0, GFX_ANEL, 0, 2.0f / h, 0, raio,
-                   1, 1, 1, (0.12f + 0.70f * f));
-          { TxtLinha ls = txt_linha(TXT_TITULO2, "\xe2\x86\x92",
+          if (tipo != FILEIRA_PALCO)
+            gfx_rect(r0, 0, GFX_ANEL, 0, 2.0f / h, 0, raio,
+                     1, 1, 1, (0.12f + 0.70f * f));
+          if (tipo == FILEIRA_PALCO) {
+            float d = 68, x = cx - d * .5f, y0 = cy - 52;
+            gfx_anel((GfxRect){x, y0, d, d}, .5f, 2.5f, 1, 1, 1, .8f);
+            TxtLinha arrow = txt_linha(TXT_TITULO2, "\xe2\x86\x92", 243, 242, 239, 255);
+            TxtLinha label = txt_linha(TXT_CALLOUT, "Ver tudo", 243, 242, 239, 255);
+            txt_desenhar(arrow, cx - arrow.w * .5f, y0 + (d - arrow.h) * .5f);
+            txt_desenhar(label, cx - label.w * .5f, y0 + d + 20);
+          } else { TxtLinha ls = txt_linha(TXT_TITULO2, "\xe2\x86\x92",
                                     236, 237, 242, 255);
             TxtLinha lr = txt_linha(TXT_ROW_TITULO, "Ver tudo",
                                     f > 0.5f ? 255 : 190, f > 0.5f ? 255 : 194,
@@ -7527,9 +7684,6 @@ static void home_desenhar_(Uint32 agora) {
       }
 
       const float numA = tipo == FILEIRA_TOP10_NUM ? numeraisAlfa(r, agora) : 0.0f;
-      if (tipo == FILEIRA_PALCO)
-        palcoPos[r] = anim_mola(palcoPos[r], (float)colunaDaFileira(r),
-                                dtFil(&palcoUlt[r], agora), NV_MOLA_FOCO);
       // ITEM 4 (plx): recusa no ponto do pedido. A fileira diz se esta em
       // movimento (limiar MOVING_SPEED = 120 px/s, o mesmo da grade) e marca os
       // cartoes fora da tela; o cache recusa so pedido NOVO dessa arte enquanto
@@ -7538,6 +7692,11 @@ static void home_desenhar_(Uint32 agora) {
       // A direcao, em cards por quadro, alimenta o nivel 3 (lado que entra)
       // e o tex_lookahead_mover da fileira.
       tex_grade_velocidade(velX[r] / passo);
+      // Keep partial posters moving inside the strip, with the row's vertical clip.
+      if (tipo == FILEIRA_HEROI_DIVIDIDO) {
+        float left = homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO;
+        gfx_recorte(left, corte, homeConteudoDireita() - left, NV_TELA_H - corte);
+      }
       for (int passe = 1; passe < 2; passe++) {
         for (int c = 0; c < fileiras[r].n; c++) {
           float f = animFoco[r][c];
@@ -7831,6 +7990,8 @@ static void home_desenhar_(Uint32 agora) {
           }
         }
       }
+      if (tipo == FILEIRA_HEROI_DIVIDIDO)
+        gfx_recorte(0.0f, corte, NV_TELA_W, NV_TELA_H - corte);
       tex_pedido_fora(0);
       // EM MOVIMENTO: pede a arte do proximo card que vai entrar na borda,
       // antes de a rolagem chegar nele. Parado, o lookahead de repouso cobre.
@@ -7852,7 +8013,8 @@ static void home_desenhar_(Uint32 agora) {
       }
       gfx_opacidade_grupo = grupoFil;
       if (tipo == FILEIRA_LINHA_TEMPO) desenhaLinhaTempo(r, y, cardY + artH, passo, lw, agora);
-      if (tipo == FILEIRA_PALCO) palcoLegenda(r, cardY + artH, lw);
+      // The single neighbour gradient is fused into the spotlight quad.
+      if (tipo == FILEIRA_PALCO) palcoFicha(r, cardY, lw, artH);
       if (tipo == FILEIRA_HEROI_DIVIDIDO) desenhaDividido(r, cardY);
     } else if (tipo == FILEIRA_LINHA_TEMPO) tempoEntraEm[r] = 0;   // fora: redesenha ao voltar
     y += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r) + fileiraGap();
@@ -7898,6 +8060,35 @@ static void home_desenhar_(Uint32 agora) {
   }
 
   gfx_opacidade_grupo=1;
+  // The top mask belongs to the row viewport and follows its transitions.
+  if (!fileirasOcultas && !vazioQr && corte < 96.0f &&
+      !focoHero && foco.fileira >= 0 && foco.fileira < nFileiras &&
+      (fileiras[foco.fileira].tipo == FILEIRA_HEROI ||
+       fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO)) {
+    float alpha = (1.0f - pd) * (1.0f - cinema);
+    float cor[3] = { NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B };
+    int dinamica = layoutHome() == HOME_LAYOUT_DINAMICA;
+    if (dinamica) memcpy(cor, dinCor, sizeof cor);
+    gfx_recorte(0, corte, NV_TELA_W, 96.0f - corte);
+    if (dinamica && dinQueda != 1.0f) {
+      // Preserve the full-screen background gradient inside the mask viewport.
+      gfx_rect((GfxRect){0, 0, NV_TELA_W, NV_TELA_H}, 0, GFX_FUNDO_DIN,
+               dinQueda, 43.2f / NV_TELA_H, 96.0f / NV_TELA_H, 0,
+               cor[0], cor[1], cor[2], alpha);
+    } else {
+      if (alpha == 1.0f) {
+        gfx_recorte(0, corte, NV_TELA_W, fmaxf(0, 43.2f - corte));
+        glClearColor(cor[0], cor[1], cor[2], 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+        gfx_recorte(0, corte, NV_TELA_W, 96.0f - corte);
+      } else {
+        gfx_cor((GfxRect){0, 0, NV_TELA_W, 43.2f}, 0,
+                cor[0], cor[1], cor[2], alpha);
+      }
+      gfx_rect((GfxRect){0, 43.2f, NV_TELA_W, 52.8f}, 0, GFX_VEU_CSS, 0, 1, 1, 0,
+               cor[0], cor[1], cor[2], alpha);
+    }
+  }
   // DEVOLVE O REBORDO ao sair: a variavel e global e o detalhe, a busca e a
   // biblioteca desenham GFX_CARD tambem. O ajuste e "na Home", entao ele nao
   // pode vazar para as outras telas — mesma disciplina de gfx_opacidade_grupo
@@ -7947,7 +8138,8 @@ static void home_desenhar_(Uint32 agora) {
 // isso a gravacao de verdade e a de repouso, em home_atualizar; esta so pega o
 // caso em que a pessoa moveu o foco e saiu antes de completar o repouso.
 // Nada a gravar (#95): a posicao na home vive so enquanto o app esta aberto.
-void home_encerrar(void) { }
+void home_encerrar(void) {
+}
 const char *home_perf_tag(void) {
   if (!focoHero && foco.fileira >= 0 && foco.fileira < nFileiras) {
     if (fileiras[foco.fileira].tipo == FILEIRA_PALCO) return "home-stage";
@@ -8132,6 +8324,7 @@ void home_abrir_sessao(void) {
   memset(bordaFil, 0, sizeof bordaFil); memset(&bordaPag, 0, sizeof bordaPag);
   memset(numPedidoEm, 0, sizeof numPedidoEm); memset(numProntoEm, 0, sizeof numProntoEm);
   memset(palcoPos, 0, sizeof palcoPos); memset(palcoUlt, 0, sizeof palcoUlt);
+  memset(palcoMov, 0, sizeof palcoMov);
   memset(tempoCol, 0, sizeof tempoCol); memset(tempoAno, 0, sizeof tempoAno);
   memset(tempoEntraEm, 0, sizeof tempoEntraEm); memset(tempoUlt, 0, sizeof tempoUlt);
   fileirasVistasEm = 0;
@@ -8172,6 +8365,8 @@ void home_abrir_sessao(void) {
 static float homeUnidade(void) { return gfx_escala_txt(); }
 void home_evento(const SDL_Event *e) { TXT_INI(); home_evento_(e); TXT_FIM(); }
 void home_atualizar(float dt, Uint32 agora) { TXT_INI(); home_atualizar_(dt, agora); TXT_FIM(); }
+// heroArteRect is layer px: the trailer step runs in the same layer (#205).
+void home_trailer_passo(int topo, float dt, Uint32 agora) { TXT_INI(); home_trailer_passo_(topo, dt, agora); TXT_FIM(); }
 void home_desenhar(Uint32 agora) { TXT_INI(); home_desenhar_(agora); TXT_FIM(); }
 int home_cartao_foco_por_cima(int indice) {
   int r;

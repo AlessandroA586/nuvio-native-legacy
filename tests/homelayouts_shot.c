@@ -124,6 +124,7 @@ static void quadros(int n, const char *bmp) {
     home_desenhar(agora);
     ctx_atualizar(1.0f / 60.0f, agora);
     ctx_desenhar(agora);
+    if (getenv("NV_STAGE_SCALE")) home_holofote_desenhar(agora);
     // NV_MENU=1: a barra por cima, como app.c (no Dinamica, a pilula do topo).
     if (getenv("NV_MENU")) {
       menu_pilula_mostrar(home_topo_fracao());
@@ -190,6 +191,7 @@ static void ajusta(int layout, int vidro) {
   if (getenv("NV_AJ")) fprintf(a, "%s\n", getenv("NV_AJ"));   // ex.: "heroSectionEnabled 1"
   fclose(a);
   ajustes_dir(dirDados);
+  gfx_escala_txt_definir(getenv("NV_STAGE_SCALE") ? (float)atof(getenv("NV_STAGE_SCALE")) : ajustes_escala_texto());
   ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_OPAC / _FOSCO
   // O roteamento de app.c (app_atualizar), que este teste nao roda.
   artehero_fundo_addon(ajustes_fundo_addon());
@@ -292,6 +294,11 @@ int main(int argc, char **argv) {
       snprintf(c->titulo, sizeof c->titulo, "%s", NOMES[(ini + i) % NN]);
       snprintf(c->genero, sizeof c->genero, "%s · Drama", strcmp(FILS[k].tipo, "series") ? "Filme" : "Série");
       snprintf(c->meta, sizeof c->meta, "%d · 2 h 04 min", 2018 + (ini + i) % 8);
+      if (getenv("NV_STAGE_SCALE")) {
+        snprintf(c->titulo, sizeof c->titulo, "Teenage Sex and Death at Camp Miasma");
+        snprintf(c->meta, sizeof c->meta, "2026 · 112 min");
+        snprintf(c->genero, sizeof c->genero, "Movie · Comedy · Horror");
+      }
       snprintf(c->classificacao, sizeof c->classificacao, "%s", (i % 3) ? "14" : "16");
       snprintf(c->sinopse, sizeof c->sinopse,
                "Sinopse de enchimento, comprida o bastante para ocupar as linhas "
@@ -320,7 +327,7 @@ int main(int argc, char **argv) {
         snprintf(c->poster, sizeof c->poster, "%s", getenv("NV_PESSOAS"));
         c->logo[0] = 0;
       }
-      c->nota = 68 + (ini + i) % 25;
+      c->nota = getenv("NV_STAGE_SCALE") ? 65 : 68 + (ini + i) % 25;
       // NV_ELENCO=1: tres nomes de elenco por titulo (a ficha do Herói dividido).
       if (getenv("NV_ELENCO")) {
         snprintf(c->elenco[0].nome, sizeof c->elenco[0].nome, "Ana Prado");
@@ -413,6 +420,7 @@ int main(int argc, char **argv) {
   // NV_TIPOS="chave=tipo,chave=tipo": a forma escolhida em "Estilo da fileira"
   // (o numero FilTipo de fileiras.h), como se a pessoa tivesse escolhido.
   if (getenv("NV_TIPOS")) {
+    quadros(1, NULL);   // Register the current catalog before changing its style.
     char buf[400], *p, *sv = NULL;
     snprintf(buf, sizeof buf, "%s", getenv("NV_TIPOS"));
     for (p = strtok_r(buf, ",", &sv); p; p = strtok_r(NULL, ",", &sv)) {
@@ -431,6 +439,12 @@ int main(int argc, char **argv) {
     int r, desce = atoi(getenv("NV_PALCO"));
     for (r = 0; r < 14; r++) tecla(SDLK_UP);
     for (r = 0; r < desce; r++) { tecla(SDLK_DOWN); quadros(90, NULL); }
+    if (getenv("NV_STAGE_SCALE")) {
+      for (r = 0; r < 12 && strcmp(home_perf_tag(), "home-stage"); r++) {
+        tecla(SDLK_DOWN); quadros(90, NULL);
+      }
+      assert(!strcmp(home_perf_tag(), "home-stage"));
+    }
     snprintf(bmp, sizeof bmp, "%s-palco-1-foco-inicial.bmp", saida);
     quadros(1, bmp);
     for (r = 0; r < 3; r++) { tecla(SDLK_RIGHT); quadros(30, NULL); }
@@ -441,6 +455,17 @@ int main(int argc, char **argv) {
     quadros(60, NULL);
     snprintf(bmp, sizeof bmp, "%s-palco-3-foco-rolou.bmp", saida);
     quadros(1, bmp);
+    printf("[shot] Stage scale=%.2f glass=%d fill=%.2f rects=%d\n", gfx_escala_txt(), ajustes_vidro(), fillVisUlt, rectUlt);
+    if (getenv("NV_STAGE_SCALE")) {
+      assert(!ajustes_vidro());
+      assert(fillVisUlt <= (gfx_escala_txt() < .9f ? 2.18 : 2.34) + .03);
+    }
+    if (getenv("NV_STAGE_SCALE")) {
+      tecla(SDLK_RIGHT); quadros(90, NULL);
+      snprintf(bmp, sizeof bmp, "%s-palco-4-see-all.bmp", saida);
+      quadros(1, bmp);
+    }
+    if (getenv("NV_STAGE_SCALE")) return 0;
   }
 
   // NV_HEROI=N (com NV_TIPOS="pop_movie=<FilTipo>"): desce N fileiras e
@@ -486,6 +511,41 @@ int main(int argc, char **argv) {
     }
     SDL_Quit();
     return 0;
+  }
+
+  // NV_CORTE=1 (#205): text scale 80% (factor 0.85) with the friends row on. Walks
+  // down the rows; each one must draw cards past x=1700 (the clip used to stop at
+  // 1920*0.85). Exits 1 when a row band stays flat there.
+  if (getenv("NV_CORTE")) {
+    int r, mal = 0;
+    setenv("NV_AJ", "escalaTextoLocal 0", 1);
+    ajusta(0, 1);
+    gfx_escala_txt_definir(ajustes_escala_texto());
+    assert(gfx_escala_txt() == 0.85f);
+    for (r = 0; r < 14; r++) tecla(SDLK_UP);
+    quadros(60, NULL);
+    for (r = 0; r < 4; r++) {
+      unsigned char *pix = malloc(1920 * 1080 * 4);
+      int x, y, n = 0;
+      tecla(SDLK_DOWN); quadros(70, NULL);
+      glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, pix);
+      for (y = 300; y < 1000; y += 4) {
+        const unsigned char *ref = pix + ((size_t)y * 1920 + 1915) * 4;
+        for (x = 1700; x < 1900; x += 4) {
+          const unsigned char *p = pix + ((size_t)y * 1920 + x) * 4;
+          if (abs(p[0] - ref[0]) + abs(p[1] - ref[1]) + abs(p[2] - ref[2]) > 60) n++;
+        }
+      }
+      printf("[corte] fileira %d: %d px alem de x=1700 | %s\n", r + 1, n, home_rastro_foco());
+      if (n < 300) mal++;
+      if (getenv("NV_CORTE_PNG")) {
+        snprintf(bmp, sizeof bmp, "%s-corte-%d.bmp", saida, r + 1);
+        quadros(1, bmp);
+      }
+      free(pix);
+    }
+    SDL_Quit();
+    return mal ? 1 : 0;
   }
 
   // NV_SO_CTX=1: pula a volta pelos layouts e vai direto ao menu do cartaz

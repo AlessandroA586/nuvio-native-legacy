@@ -101,6 +101,8 @@ static void card_color(GfxRect r, float radius, float cr, float cg, float cb, fl
   if (cr == .19f && cg == .21f && cb == .23f && a > .5f) captionSolid++;
   gfx_cor(r, radius, cr, cg, cb, a);
 }
+void b2_panel(GfxRect r, float radius, float density, float a);
+#define gfx_vidro_painel b2_panel
 #define gfx_vidro_material card_material
 #define gfx_cor card_color
 #ifndef NV_DETAIL_SOURCE
@@ -108,6 +110,7 @@ static void card_color(GfxRect r, float radius, float cr, float cg, float cb, fl
 #endif
 #include NV_DETAIL_SOURCE
 #undef gfx_vidro_material
+#undef gfx_vidro_painel
 #undef gfx_cor
 #undef txt_bloco
 #undef txt_largura
@@ -432,6 +435,11 @@ static void abrir(int i, int nv, int sec, int col) {
 
 #include "traktcoment_checks.h"
 #include "detalheglass_checks.h"
+#include "detalhe_espaco_checks.h"
+#include "detalhe_b2_checks.h"
+#ifdef NV_SHOT_HOOKS
+#include "vidro_c9_cache.h"
+#endif
 
 static int quer(int argc, char **argv, const char *id) {
   if (argc <= 2) return 1;
@@ -513,12 +521,17 @@ int main(int argc, char **argv) {
   { char ar[1024]; if (realpath("deploy/app/art", ar)) extras_carregar(ar); }
   montarCatalogo();
   cacheFrases();
+#ifdef NV_SHOT_HOOKS
+  if (getenv("NUVIO_C9_CACHE")) return vc_run();
+#endif
   if (getenv("NUVIO_TRAKT_CHECK")) return trakt_checks();
   if (getenv("NUVIO_DETAIL_CHECK")) {
     const char *m = getenv("NUVIO_DETAIL_CHECK");
     if (!strcmp(m, "comments")) return comments_checks();
     if (!strcmp(m, "cards")) return card_checks();
     if (!strcmp(m, "eps")) return eps_checks();
+    if (!strcmp(m, "espaco")) return espaco_checks();
+    if (!strcmp(m, "b2")) return b2_checks();
     return strcmp(m, "mais") == 0 ? mais_checks() : rows_checks();
   }
   // NUVIO_SHOT_AMIGOS=1: amigos falsos (feed externo) no filme e na serie —

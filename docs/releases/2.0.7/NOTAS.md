@@ -12,7 +12,14 @@ Polish and fixes after 2.0.6, plus the work ported from community PRs. Community
 - **Watched state stays in sync** (#548): watched marks survive restarts and stale pulls, and tracker writes no longer race each other.
 - **Deep links** (#539): `nuvio-legacy://`, `stremio://` and IMDb links open a title, search, or start playing.
 - **External player on Android TV** (#501), **automatic TV/Mobile mode** in the standard APK (PR #431), and **P2P cache on a USB drive** on Android and Samsung .tpk.
-- **Frost performance work.** <!-- PLACEHOLDER: frost performance numbers/line to be filled when that work lands -->
+- **Glass looks are cheaper and better.** Frost reads a pre-blurred backdrop instead of capturing the screen, only blurred regions are copied, and a new **Glass quality** setting with an automatic mode picks the right level per TV. Player glass is now translucent over live video.
+- **Text and component scale** (85–130%) in Settings › Appearance, applied to Home, title page, library, Search, View all, keyboard and player.
+- **Home looks:** selectable row title styles (Classic, Island, Editorial, Accent), **Big poster** row style (Small/Medium/Large), fixed Gray/Color background for the Dynamic layout.
+- **Title page on glass:** Trakt comments, cast, recommendations, trailers, the More menu and collections share one glass card; episode focus is a glass plate.
+- **Playback fixes:** seeking sources that ignore Range now warns (#557), changing volume no longer pauses on Android (#581), Reload moved to Sources plus **Play from beginning** (PR #574).
+- **webOS low memory** (#415): real subtitle-cache flush, memory-gated playback cap, texture cap by available RAM.
+- **Faster big remuxes on Android** (PR #572): parallel end-of-file index read and remembered add-on redirect.
+- **IMDb rating shown as 0–10**, not a percentage (#590); **IMDb trailers start at 720p** on small Samsung TVs (#584); **GIFs animate** in slow motion when too heavy (#589).
 
 ## New
 
@@ -33,6 +40,20 @@ Polish and fixes after 2.0.6, plus the work ported from community PRs. Community
 - **Simkl anime** joins the series lists, Continue Watching and Plan to Watch.
 - Reach the clock and resume island with **Up** (PR #547).
 - YouTube trailer **captions** follow the subtitle language.
+- **Glass quality** setting with an automatic mode that adapts to the TV.
+- **Text and component scale** setting (85–130%, default 100%) in Settings › Appearance.
+- **Row title styles** for Home (Classic, Island, Editorial, Accent) and **Big poster** row style (Small, Medium, Large).
+- **Dynamic layout background**: fixed Gray or Color option, calmer Immersive look (translated in 29 languages).
+- **Opening screen style** setting: Center or Corner.
+- **Dolby Vision Cinema** opening reuses the normal opening screen.
+- **Poster menu** setting in the title menu.
+- **Play from beginning** and **Reload** moved to Sources (PR #574); previous-episode button removed from the series action bar.
+- **Arabic** drawn in Noto Naskh Bold at every UI weight and in plain subtitles.
+- **Trakt comments** on the title page, drawn on shared glass.
+- **Warning when a source ignores Range** and cannot be seeked (#557).
+- **Slow-motion playback** for GIFs over the decode budget (#589).
+- **Samsung TVs with 2 GB or less** start IMDb trailers at 720p in Auto (#584).
+- **webOS low memory** (#415): real subtitle cache flush, PiP floor, memory-gated playback cap.
 
 ## Improved
 
@@ -48,6 +69,16 @@ Polish and fixes after 2.0.6, plus the work ported from community PRs. Community
 - Uploaded logs keep the startup header.
 - Long poster URL templates are no longer cut at 1024 characters.
 - English-only diagnostic strings so the translation scan stays clean.
+- Home frost refresh is immediate when the backdrop changes and copies only blurred regions; hero fades keep backdrop shading.
+- Glass is skipped when off: no full-screen backdrop blur without glass.
+- Player glass is translucent over live video with a denser tint; quick menu, title menu, sidebar, segmented controls, library and catalog tabs, Saved modal and accent pills all frost.
+- Friends rows polished with the Home focus; last friend panel included in touch scroll.
+- Large Android remuxes open faster: end-of-file index split over parallel connections, later requests open at the add-on's known destination (PR #572).
+- Trakt comments row drawn once per frame with cheap glass cards.
+- Home artwork no longer flickers; mipmaps kept on hero art that rows also draw.
+- Remembered automatic subtitle source is picked once per list.
+- Series identity kept for on-demand playback (PR #561); Reload separated from Restart (PR #574).
+- Settings text scale defaults to 100% and appears in Appearance navigation.
 
 ## Fixed
 
@@ -69,6 +100,27 @@ Polish and fixes after 2.0.6, plus the work ported from community PRs. Community
 - Detail: focus tooltip dropped from the shuffle button; split-row hero copy restored.
 - Deep links: pending state reset on replacement, TMDB title matched by media type, season zero rejected for links.
 - Android: preload buffer sizes preserved in MiB; first-run log tip stays in the Mobile canvas.
+- **Changing volume pauses playback** on Android (#581): audio focus loss no longer pauses the player.
+- **Seeking fails silently** on sources that ignore Range (#557): player now warns.
+- **IMDb rating shown as %** on the title page (#590): MDBList 0–100 values normalised to 0–10.
+- **IMDb trailers low resolution** on small Samsung TVs (#584).
+- **Not all GIFs animated** (#589): heavy GIFs play in slow motion instead of freezing.
+- **Jellyfin servers with many libraries** list every catalog view (#468); Home follows reorder/disable and new sources without restart.
+- **Live TV (CNCVerse)**: long channel ids no longer dropped or cut.
+- **Android**: a remembered redirect that serves another file is no longer trusted.
+- **webOS** (#415): crashes under low memory reduced — decoded CPU buffers evicted on pressure, texture cap by free RAM, retry gated after pipeline error, playback floor scaled by total memory.
+- **Search and View all** keep poster width, landscape artwork sizes and spacing at any text scale; keyboard geometry follows the scale.
+- **Collection and episode artwork** keep their size and show frost through loaded art; Ranking and Saga art keep size at the text scale.
+- **Catalog refresh** after explicit Add for quota-excluded catalogs; all rows scanned for eligible refresh.
+- **Home**: screen-space focus rectangles preserved during menu draws; hero trailer hole fades instead of snapping Frost back; split hero no longer repeats the focused title.
+- **Dolby Vision** transitions and detailed card zones settle; keyboard-selected variant kept through exit.
+- **Artwork swap sheet** is glass instead of an opaque gradient.
+- **Comments** row culling fixed; show comments restored when opening a series.
+
+## Known issues
+
+- Scrolling between the title and the episodes is still slow on some TVs; being measured.
+- Two subtitle tests (`legenda_ass`, `mkvass`) are being fixed; no user-visible effect expected.
 
 ## Community
 
@@ -76,8 +128,8 @@ Thank you to everyone who sent code, reported bugs and tested builds.
 
 **Pull request authors**
 
-- @ghbarker — #538 Continue Watching, #540 cast portraits, #541 title-page artwork, #543 add-on rows, #546 artwork, #547 clock with Up, #560 Trakt scrobbles, #561 series identity, #563 search See all, #568 Showcase See all, #569 Specials, #571 external playback, #431 TV/Mobile mode.
-- @Tolu-Walop-E — #550 audio track memory, #554 PIN profile catalogs, #572 remux start.
+- @ghbarker — #574 Reload/Play from beginning, #538 Continue Watching, #540 cast portraits, #541 title-page artwork, #543 add-on rows, #546 artwork, #547 clock with Up, #560 Trakt scrobbles, #561 series identity, #563 search See all, #568 Showcase See all, #569 Specials, #571 external playback, #431 TV/Mobile mode.
+- @Tolu-Walop-E — #550 audio track memory, #554 PIN profile catalogs, #572 faster remux start.
 - @mark-major — #559 direct URL without P2P.
 - @Namer03 — #567 source fixes.
 
@@ -101,6 +153,13 @@ Thank you to everyone who sent code, reported bugs and tested builds.
 - #434 Ability to remove genre tags in title page — @Owlphibia29
 - #407 Top menu open when scrolling up on the title page — @mackojanko
 - #401 Long update time on Homebrew channel (15 mins +) — @Vidhin05
+- #415 constant crashing, no matter if I play or not — @tirth0jain
+- #557 Playback cannot be skipped to a particular time stamp — @somprakashpathakoneplus-cell
+- #581 Changing Volume pauses the playback — @darpit33
+- #584 IMDb trailers start in low resolution and take too long to improve — @rawldon
+- #589 Not all GIFs are animated — @erolasan
+- #590 Imdb score displayed in % on title page — @mackojanko
+- #468 Not all Jellyfin catalogs show up in catalogs list — @Vidhin05
 
 ## Pull requests
 
@@ -124,6 +183,7 @@ Ported PRs (the originals may stay open on GitHub; their commits are integrated 
 - #571 Android: add external playback through the system player chooser — @ghbarker
 - #572 perf(android): faster start for large remuxes (parallel end-of-file index read, remembered add-on redirect) — @Tolu-Walop-E
 - #431 Android: detect TV/Mobile and gate touch paths by the saved mode — @ghbarker
+- #574 Player: move Reload to Sources and add Play from beginning — @ghbarker
 
 ## Issues closed or addressed
 
@@ -145,17 +205,150 @@ Ported PRs (the originals may stay open on GitHub; their commits are integrated 
 - #434 Ability to remove genre tags in title page — @Owlphibia29
 - #407 Top menu open when scrolling up on the title page — @mackojanko
 - #401 Long update time on Homebrew channel (15 mins +) — @Vidhin05
+- #415 constant crashing, no matter if I play or not — @tirth0jain
+- #557 Playback cannot be skipped to a particular time stamp — @somprakashpathakoneplus-cell
+- #581 Changing Volume pauses the playback — @darpit33
+- #584 IMDb trailers start in low resolution and take too long to improve — @rawldon
+- #589 Not all GIFs are animated — @erolasan
+- #590 Imdb score displayed in % on title page — @mackojanko
+- #468 Not all Jellyfin catalogs show up in catalogs list — @Vidhin05
 
 ## Commits since v2.0.6
 
+- `8feec1a91` webOS low memory (#415): real libass cache flush, PiP floor, memory-gated playback cap
+- `b0c947387` test(settings): include text scale in the Settings enum order guard
+- `d034960e8` fix(player): warn when a source ignores Range and cannot be seeked (#557)
+- `b2aa59ada` fix(gif): slow-motion playback for GIFs over the decode budget (#589)
+- `b89ddc139` fix(trailer): start IMDb trailers at 720p in Auto on Samsung TVs with 2 GB or less
+- `4a0b3408d` fix(android): stop player pausing on audio focus loss (#581)
+- `87977f537` webOS low memory (#415): scale playback floor by MemTotal
+- `370769c09` webOS low memory (#415): full relief on aviso, no CPU drop on playback floor
+- `8b1f605d0` fix(ui): keep View all poster columns in real px and let the scale proof ignore barely-visible cards
+- `bcdd3eb04` webOS low memory (#415): evict decoded CPU buffers on pressure, floor cache when player opens
+- `630292d7e` Fix CNCVerse live channels: long ids no longer dropped or cut
+- `033c3fa70` fix(vidro): skip full-screen backdrop blur when glass is off
+- `d4317aaa4` fix(detail): restore frost on Trakt cards; gate row cost on shared-backdrop counters
+- `dab8872c2` fix(ui): anchor Standard episode overlays to preserved artwork and repair quick scale proof
+- `bb9f2abc9` fix(detail): Trakt comment cards use flat glass, no per-card backdrop pass
+- `915e360a4` test(ui): freeze the keyboard shot clock in the text scale proof
+- `0723edb59` fix(vidro): blur whole screen once when no glass last frame
+- `d6b0c2363` test(ui): make the text scale proof deterministic
+- `f77eeeef7` webOS low memory (#415): cap textures by MemAvailable, gate retry after pipeline error
+- `0d998e33a` Fix standalone rating test links and verify IMDb display from payloads
+- `71a57d7b4` docs(settings): note real-space callers of the fixed rail width
+- `15903519f` test(ui): compare text scale proof per frame, add quick subset
+- `9dbe1a156` fix(vertudo): keep Ranking and Saga artwork size at the text scale
+- `03a144294` Normalize IMDb rating to 0-10 when MDBList sends 0-100
+- `6974f7293` Player glass: real translucent look over live video, denser tint, one-shot governor
+- `458828591` feat(arabic): render Arabic in Noto Naskh Bold at every UI weight and in plain subtitles
+- `e70adbf7a` perf(glass): copy only blurred regions when the Home backdrop changes
+- `df06809f2` fix(detail): glass episode focus plate with padded text; cheap title->episodes scroll
+- `e5eb23eba` fix(fontepref): pick the remembered auto source once per list, log once
+- `98bc829e1` fix(tex): keep mipmaps on hero-promoted art that rows also draw
+- `491f8ce0e` test(gfx): home artwork flicker scene in the pisca3 GLES2 harness
+- `54242990a` fix(home): preserve screen-space focus rectangles during menu draws
+- `698fa7417` test(gfx): run the pisca3 flicker harness on ANGLE GLES2
+- `524de66ac` fix(home): fade the hero trailer hole instead of snapping Frost back
+- `0f1b20514` test(trailer): fake native trailer in the Apple TV + Frost flicker harness
+- `0fb1a0b1c` fix(glass): governor compares equivalent workloads, drops interrupted trials
+- `ef1b092c4` Fix scaled Settings reflow and mobile Search artwork
+- `db42a0a55` fix(glass): translucent flat glass over live video, drop title-art stand-in
+- `aef4e3c58` Fix comment row culling and restore resting glass material
+- `01603fd5b` test(gfx): frame-hash flicker harness for Apple TV layout + Frost + glass
+- `3aec9a8c0` perf(detail): draw Trakt comments row once per frame with cheap glass cards
+- `ce33fe44a` fix(glass): frost over live video via baked title-art stand-in; governor trial
+- `342aafc49` fix: preserve search spacing and scaled episode menu anchors
+- `26dbd9a2a` fix(trocaarte): glass sheet instead of opaque gradient and black floor
+- `937a69475` fix(detail): let frost show through loaded collection artwork; add quick check
+- `ebb0b1365` fix(search): preserve best-result landscape artwork dimensions
+- `e24e614a2` fix(keyboard): keep navigation geometry at the configured text scale
+- `5ff1d7ef3` fix(search): preserve TV poster width when text scale changes
+- `0c0c80d58` test(ui): use available artwork for View all proof fixtures
+- `0d5d0d735` test(ui): compare artwork draws only in captured frames
+- `04ed0d150` test(ui): cover settings navigation and remaining scale surfaces
+- `453c7a73c` test: replace false platform tiers with measured frost configurations
+- `a22f0dac1` fix(search): keep event and update geometry in the text layer
+- `207e0a283` test(ui): reject incomplete pixel and artwork scale proofs
+- `fff6df801` test: reject historical menu density through rendered pixels
+- `f04e6de29` fix(ui): scale Search, TV View all and keyboard text
+- `531a36f6e` fix: preserve collection artwork above shared glass
+- `93fb92118` fix(library): derive row stride from preserved poster height
+- `79a2ec3e0` fix(ui): preserve collection and episode artwork dimensions
+- `1eb28a937` fix(settings): expose text scale in Appearance navigation
+- `0cf805980` fix: reuse accent palette for dynamic background color
+- `d04f21ba4` test(detail): isolate glass cards and verify historical menu captures
+- `90c8d380d` test(menu): require backdrop response as well as edge suppression
+- `fb4af3ee5` test(gfx): reject opaque frost and cover Saved modal
+- `4bfafc814` test: add text scale proof (spy on gfx_rect, baseline compare)
+- `86fed77d7` i18n: add text and component scale strings
+- `bab9c56e3` feat(ui): apply text scale to home, title page, library and player
+- `406359d3a` feat(settings): add text and component scale option (85-130%)
+- `e7fa6d67c` feat(ui): add text and component scale to gfx layer
+- `37687dce0` fix(gfx): supply frost for standalone accent pills
+- `61764f975` fix(gfx): limit modal frost captures to sampling regions
+- `0b52916d0` fix(detail): frost loaded collections and restore solid captions
+- `9ebdc9a3b` feat(detail): draw the more menu on the shared card glass and frost
+- `e3eb56d39` feat(gfx): selected accent pill is tinted glass in glass mode
+- `90b0f9cd7` fix(gfx): frost islands drawn over Home sidebar glass
+- `e047eecee` feat(detail): draw cast, recommendations and trailers on the shared glass card
+- `7bf4caac9` fix(menu): frost the sidebar over screens that carry glass
+- `e91329dd2` i18n: translate the Dynamic layout background settings in 29 languages
+- `6da1fc418` feat(home): fixed Gray/Color background for the Dynamic layout, calmer Immersive
+- `e50a38ef6` feat(home): big poster row style in Small / Medium / Large
+- `331746034` feat(home): selectable row title styles, Classic/Island/Editorial/Accent
+- `5528dc0ad` fix(gfx): resolve the deferred Dynamic background before the frost backdrop copy
+- `4428dea18` fix(home): split hero no longer repeats the focused title in the poster list
+- `4542aeffe` fix(dv): settle transitions and detailed card zones
+- `a363d821c` feat(detail): draw Trakt comments with shared glass and frost
+- `a2ea074c7` fix(ctxmenu): frost the title menu over its art, add Poster menu setting
+- `ef33525a8` fix(dv): retain keyboard-selected detailed variant through exit
+- `b59987511` fix(dv): reuse the detailed loading card presentation
+- `796a3441f` fix(ui): frost remaining segmented control tracks
+- `21696fd8c` fix(ui): frost library and catalog tab surfaces
+- `30a932909` feat(glass): glass quality setting and automatic governor
+- `3f8d304b7` fix(settings): default Settings scale to 100%
+- `1165245fc` perf(detail): reuse cached wrapping for Trakt comments
+- `5195cd14f` fix(detail): restore show comments when opening series
+- `8f788b25b` fix(dv): append status after existing loading lines
+- `6f1c61cb8` feat(glass): smoked glass for player overlays over live video
+- `d89784e82` feat(dv): Dolby Vision Cinema opening reuses the normal opening
+- `4ae3e7211` test(gfx): enforce the 1080p frost pixel difference limit
+- `fe6a04804` fix(gfx): use the saved backdrop when frost regions expand
+- `013e1341f` fix(gfx): refresh frost immediately when the backdrop changes
+- `4dba47b60` gfx: skip the rim and normal math in the frosted glass interior
+- `e27514693` fix: include last friend panel in touch scroll extent
+- `d95bd32e1` fix(friends): drop the add column from classic style 5, last avatar stops RIGHT
+- `240bc60a0` gfx: recapture a fading frost backdrop every other frame
+- `a0f765d7f` gfx: clear each frost blur target before its pass
+- `3dc70083c` gfx: copy and blur only the regions the glasses read
+- `8806e6aff` fix(friends): polish every friends row style with the Home focus, drop See all and Add pills
+- `17717812d` gfx: drop the frost blur pass back to 1/2
+- `2537db6a0` Tests: cover typed title lookup and late playback identity
+- `cdf5bdd88` Metadata: preserve series identity during on-demand playback
+- `075fec9a4` test: cover Restart and source Reload with explicit fixture boundaries
+- `6a6d5b71b` Player: separate source reload from restart playback
+- `93b3d69ec` gfx: cap frost blur targets at the 1080p chain, box to 1/4 in one pass
+- `922500ef4` feat(player): opening screen style setting, Center (A3) or Corner (B3)
+- `f40a93dc3` Revert "Merge agente/205-foscovelho"
+- `c47a40788` test(home): Home follows reorder/disable and new sources without restart (#468)
+- `b0e429762` fix(jellyfin): list every catalog view of many-library servers (#468)
+- `4e6b592d8` feat(player): remove previous-episode button from series action bar
+- `35f5f4fc3` fix(gfx): carry all backdrop shading into the frost source
+- `e275de18a` release: 2.0.7 version bump and full release notes
 - `4a443422b` fix: preserve absent season for Kitsu torrent selection
 - `718e61abb` feat(player): A3 cinematic loading screen (sharp art, half veil, ring below logo)
+- `f6618db6b` fix(android): don't trust a remembered destination that serves another file
+- `50a1ac232` fix(gfx): preserve blurred art veil in frost source
 - `0bfe5ce71` fix(tests): restore isolated discovery harness linking
 - `8dff0e2a9` fix(episodes): show and play Specials without dropping season zero
+- `8876c13c6` perf(android): split end-of-file windows above 256 KB too
 - `fbe06f5e7` fix(sources): grow detail sheet from the clock island
+- `d0789c13a` fix(glass): preserve backdrop shading and frost throughout hero fades
+- `809bd7c96` perf(android): open later requests at the add-on link's known destination
 - `288e531ee` fix(episodes): preserve valid sparse addon catalogs
-- `620f041d8` docs(map): sync tracking
+- `cc61bfdd8` perf(android): read the end-of-file index over the parallel connections
 - `6db247078` fix: replay newer episode overrides after whole-series writes
+- `53b050753` fix(fileiras): scan all rows for eligible catalog refresh
 - `4baf783fa` feat(collections): open Showcase rows in See all grids
 - `46e0bd5bd` feat(glass): frost player glass over live video with baked title art
 - `61d73a5bf` fix(player): reuse selected detail artwork during opening
@@ -165,7 +358,7 @@ Ported PRs (the originals may stay open on GitHub; their commits are integrated 
 - `ff1f1aa25` fix(trakt): send exact episode identities in scrobbles
 - `94d16f7de` fix(episodes): ignore addon videos[] with one fake season per episode
 - `9bc31cc9d` fix: align unmark tests with retained watched intent
-- `9b86a6af8` docs(map): sync tracking
+- `ab02d4aaa` perf(glass): frost reads the backdrop art pre-blurred once, no screen capture
 - `b5007ae85` fix(glass): keep the top chrome translucent with frost off
 - `9b4f37efb` fix(settings): list P2P cache (USB) row on Android too
 - `5b37cecd8` fix: emit weak defaults so isolated fixtures link on Mach-O
@@ -176,10 +369,10 @@ Ported PRs (the originals may stay open on GitHub; their commits are integrated 
 - `c9c2d3f15` fix(detail): drop focus tooltip from shuffle button
 - `33b0d7de0` test: link fontefiltro/linguas and stub new helpers after master merge
 - `5a926a863` test(home): stub optional addons hooks so home_layout links on Mach-O
+- `975638744` fix(fileiras): refresh quota-excluded catalog right after explicit Add
 - `c76ed4632` test(colordem): stub the optional account addons symbols fileiras.c weak-imports
 - `d0f6f5986` Compose subtitle outline once so the selected opacity applies once
 - `eb03a56a4` test(colhdr): rename mock runner to *_shot so GL mock stays out of default suite
-- `61417ac95` docs(map): sync tracking
 - `c32a87bbf` test(streams): #565 PenguPlay auth fixtures — notWebReady http streams offered with P2P off
 - `68cf2c63b` test(addons): cover PenguPlay install and stream handling (#565)
 - `9356bc16c` test(detail): add NV_FPS frame-cost harness for detail open and episode swipe
@@ -216,7 +409,6 @@ Ported PRs (the originals may stay open on GitHub; their commits are integrated 
 - `4cbf5ad5c` Raise Continue Watching native cap from 12 to 40
 - `6d537cb92` fix(ajustes): align foraDestaPlataforma with TELA gates after trailer merge
 - `8c99638f7` Tests: cover independent Continue Watching work and catalog startup
-- `82dad7d43` docs(map): sync tracking
 - `27988615e` fix(addons): assume subtitle capability until the manifest probe says otherwise (#552)
 - `a04f2a820` fix(player): hold second tentar while extplayer ask modal is open, fix AJ_N invariant (#501)
 - `bd6e61119` Tests: cover addon removal and collection snapshots with current ownership APIs
@@ -259,7 +451,6 @@ Ported PRs (the originals may stay open on GitHub; their commits are integrated 
 - `8655956cb` feat(home): optional "Split hero" row style
 - `b43655122` feat(trailer): Trailer audio setting ranks the dubbed trailer first
 - `51daddd84` feat(p2p): find USB volumes on Android via getExternalFilesDirs and cap FAT32
-- `ba38888fc` docs(map): sync tracking
 - `2e480806c` fix(ajustes): explain disabled P2P before USB cache advice
 - `67985ea5d` fix(fileiras): preserve quota exclusions during registration
 - `92656f2ae` feat(ctxmenu): animate Row style picker opening

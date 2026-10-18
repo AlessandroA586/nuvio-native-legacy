@@ -76,6 +76,12 @@
 // browsing pages. Without a visible clock, keep the right-edge sheet.
 // folhaOY places content below the clock header; folhaBase ends the list.
 static float folhaOY, folhaBase;
+// Tab change (add-on / filter tabs): the focus pill slides to the new tab and
+// the list slides in with a fade, 200 ms ease-out. Time based, no extra pass.
+#define FOLHA_TROCA_MS 200.0f
+static int filtroVisto = -2, trocaDir;
+static Uint32 trocaDesde;
+static float pillX, pillW = -1.0f, pillDeX, pillDeW;   // x relative to the list column
 static int folhaRelogio; // Latched at opening, retained through closing.
 #define FOLHA_ILHA_Y     48.0f   // plrilha.c: Y_TOPO
 #define FOLHA_ILHA_CAB   64.0f   // plrilha.c: CAB_H (a linha da hora)
@@ -576,6 +582,22 @@ static int descartadosSemDebrid;
 // #505: subconjunto descartado por pedir P2P (notWebReady). Separado porque a
 // causa muda: debrid nao o oferece — ligar uma conta nao o traz de volta.
 static int descartadosP2P;
+static struct { char nome[96]; int total, p2p; } descartadosAddon[ADDONS_MAX];
+static int nDescartadosAddon;
+static void contarDescartada(const Stream *s) {
+  int p2p = pedeP2P(s), i;
+  descartadosSemDebrid++; descartadosP2P += p2p;
+  if (!s->provedor[0]) return;
+  for (i = 0; i < nDescartadosAddon; i++)
+    if (!strcmp(descartadosAddon[i].nome, s->provedor)) break;
+  if (i == nDescartadosAddon) {
+    if (i == ADDONS_MAX) return;
+    memset(&descartadosAddon[i], 0, sizeof descartadosAddon[i]);
+    snprintf(descartadosAddon[i].nome, sizeof descartadosAddon[i].nome, "%s", s->provedor);
+    nDescartadosAddon++;
+  }
+  descartadosAddon[i].total++; descartadosAddon[i].p2p += p2p;
+}
 // #486: a dica "ligue o P2P" so e dita quando este pacote tem P2P. Perguntar o
 // motor AQUI, no fio da tela, abriria a libnuvio_engine.so no .tpk (dlopen em
 // p2pmotor.c, carregamento adiado de proposito); o trabalhador confere antes
@@ -613,10 +635,11 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
   if (nova && qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
   descartadosSemDebrid = 0;
   descartadosP2P = 0;
+  nDescartadosAddon = 0;
   for (i = 0; i < qtd && nova; i++)
     // #505: tambem o notWebReady, que pede P2P — a folha vazia tem de dizer
     // "ligue o P2P", nunca fingir que o addon nao mandou nada.
-    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += pedeP2P(&l[i]); }
+    if (!fonteOferecida(&l[i])) contarDescartada(&l[i]);
   for (i = 0; i < k && nova; i++) { nova[i].selosPacoteVer = 0; filtroCompletar(&nova[i]); }   // os selos saem do fio de fundo (selosAgendar)
   pthread_mutex_lock(&verTrava);
   free(lista); lista = nova; n = nova ? k : 0; atual = -1;
@@ -684,7 +707,7 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
     if (fonteOferecida(&l[i])) nova[k++] = l[i];
   if (qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
   for (i = 0; i < qtd; i++)
-    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += pedeP2P(&l[i]); }   // #505: idem
+    if (!fonteOferecida(&l[i])) contarDescartada(&l[i]);   // #505: idem
   if (!k) { free(nova); return; }
   for (i = 0; i < k; i++) { nova[i].selosPacoteVer = 0; filtroCompletar(&nova[i]); }
   // O CARTAO EM FOCO E O QUE FICA PARADO. Guardado pelo indice da lista (que
@@ -1145,6 +1168,13 @@ static void notaDe(const Stream *s, FonteNota *nt) {
   *nt = notaCache[i];
   pthread_mutex_unlock(&notaTrava);
 }
+int stream_kbps(const Stream *s) {
+  FonteNota nt;
+  if (!s) return 0;
+  notaDe(s, &nt);
+  return nt.kbps;
+}
+int stream_kbps_atual(void) { return stream_kbps(stream_item(stream_atual())); }
 // Evidencia + idioma de uma fonte, para comparar duas da mesma resolucao
 // (memoria do automatico, stream_grupo_sem_perda).
 // Evidence gap allowed before automatic memory yields to the current winner.
@@ -1791,6 +1821,35 @@ int stream_torrents_para_p2p(void) {
 #endif
 }
 
+// #599: explain partial results without changing the empty-sheet diagnosis.
+static int dicaTorrents(char *texto, size_t tam) {
+  int p2p = stream_torrents_para_p2p();
+  int debrid = !debrid_ativo() ? descartadosSemDebrid - descartadosP2P : 0;
+  int qtd = p2p > 0 ? p2p : debrid;
+  // Keep the summary within the footer area reachable from the last source.
+  char nomes[192] = "";
+  if (!n || qtd <= 0) return 0;
+  for (int i = 0; i < nDescartadosAddon; i++) {
+    int total = debrid_ativo() ? descartadosAddon[i].p2p :
+      descartadosAddon[i].total - (p2p > 0 ? 0 : descartadosAddon[i].p2p);
+    size_t len = strlen(nomes);
+    if (total > 0 && len + sizeof descartadosAddon[i].nome + 24 < sizeof nomes)
+      snprintf(nomes + len, sizeof nomes - len, "%s%s: %d", len ? ", " : " (", descartadosAddon[i].nome, total);
+    else if (total > 0) {
+      strncat(nomes, ", …", sizeof nomes - len - 1);
+      break;
+    }
+  }
+  if (nomes[0]) strncat(nomes, ")", sizeof nomes - strlen(nomes) - 1);
+  int len = snprintf(texto, tam, i18n("%d fontes torrent ocultas%s."), qtd, nomes);
+  if (len >= 0 && (size_t)len < tam)
+    snprintf(texto + len, tam - (size_t)len, " %s", p2p > 0
+      ? (!debrid ? i18n("Ligue o P2P em Ajustes.")
+                        : i18n("Ligue o P2P em Ajustes ou conecte uma conta de debrid."))
+      : i18n("Conecte uma conta de debrid."));
+  return 1;
+}
+
 unsigned stream_lista_geracao(void) {
   unsigned g;
   pthread_mutex_lock(&verTrava);
@@ -2050,6 +2109,19 @@ static int falhaCancelada(unsigned geracao, int (*cancelado)(void *), void *ctx)
   mudou = geracao != listaGeracao;
   pthread_mutex_unlock(&verTrava);
   return mudou;
+}
+// Preview the same policy without consuming a route or interrupting playback.
+int stream_falha_tem_proxima(const FonteFalhaSessao *sessao, unsigned geracao) {
+  FonteFalhaSessao *copia = fontefalha_sessao_clonar(sessao);
+  FonteFalhaCandidata *c = NULL;
+  Stream *fontes = NULL;
+  FonteFalhaRota rota;
+  int nc = 0, tem = 0;
+  if (copia && falhaCandidatas(geracao, -1, 0, &c, &fontes, &nc))
+    tem = fontefalha_proxima(copia, c, nc, 1, &rota) == FONTEFALHA_PROXIMA;
+  for (int i = 0; i < nc; i++) free((void *)c[i].identidade);
+  free(c); free(fontes); fontefalha_sessao_liberar(copia);
+  return tem;
 }
 int stream_falha_verificar(FonteFalhaSessao *sessao, unsigned geracao, int escolhida,
                            int (*cancelado)(void *), void *ctx,
@@ -3887,6 +3959,15 @@ static long tamanhoOrdem(int i) { return lista[i].tamanhoMB > 0 ? lista[i].taman
 static int *grupoTmp;
 static int *grupoFitTmp;
 static int grupoTmpCap;
+static float dicaTorrentsAltura;
+static float medirDicaTorrents(void) {
+  char texto[1536];
+  dicaTorrentsAltura = 0;
+  if (filtro != -1 && nFiltrados() && dicaTorrents(texto, sizeof texto))
+    dicaTorrentsAltura = 12 + txt_bloco(TXT_PG_FIM, texto, 110,110,108,0,0,
+      FOLHA_W-FOLHA_PAD_E-FOLHA_PAD_D-2*FOLHA_TXT,28,0,0);
+  return dicaTorrentsAltura;
+}
 static void montar(int automatica) {
   float y = 0;
   int g, i, k, m = -1, nt;
@@ -3927,7 +4008,7 @@ static void montar(int automatica) {
       (void)grupoRes(&lista[i]);
       porLinha(i, &y, automatica);
     }
-    alturaTotal = y;
+    alturaTotal = y + medirDicaTorrents();
     return;
   }
   if (grupoTmpCap < n) {
@@ -3978,7 +4059,7 @@ static void montar(int automatica) {
     secN[g] = nt;
     for (k = 0; k < nt; k++) porLinha(grupoTmp[k], &y, automatica);
   }
-  alturaTotal = y;
+  alturaTotal = y + medirDicaTorrents();
 }
 static int filtrado(int linha) {
   return linha >= 0 && linha < nOrdem ? ordem[linha] : -1;
@@ -4057,7 +4138,7 @@ void stream_folha_abrir(void) {
 #endif
   int excl, aut, alvo;
   fitAbrir();
-  aberta=1; escolha=-1; grupo=1; filtro=0; soMp4=0; soCache=0; soDub=0; recarregar=0;
+  aberta=1; escolha=-1; grupo=1; filtro=0; filtroVisto=-2; pillW=-1.0f; trocaDesde=0; soMp4=0; soCache=0; soDub=0; recarregar=0;
   { float ix, iy, iw, ih;
     folhaRelogio = !player_aberto() && ajustes_relogio_ligado() && ilha_rect(&ix, &iy, &iw, &ih); }
   recarregarFonteConfirmacao = 0;
@@ -5141,12 +5222,13 @@ static void stream_folha_desenharCorpo_(Uint32 agora) {
       memset(&p,0,sizeof p);
       p.w = FOLHA_W;
       p.h = folhaIlhaH();
+      p.semSombra = 1;
       p.corpo = corpoIlhaFolha;
       plrilha_pedir(&p); }
     return;
   }
   if (folhaRelogio) {
-    if (aberta) ilha_corpo(FOLHA_W, folhaBase + 16.0f - NV_ILHA_Y, corpoIlhaFolha, NULL);
+    if (aberta) { ilha_corpo(FOLHA_W, folhaBase + 16.0f - NV_ILHA_Y, corpoIlhaFolha, NULL); ilha_corpo_sem_sombra(); }
     return; // ilha_desenhar owns the surface, dim and closing.
   }
   float x=NV_TELA_W-FOLHA_W-FOLHA_MARGEM+(1-anim)*(FOLHA_W+FOLHA_MARGEM);
@@ -5157,15 +5239,20 @@ static void stream_folha_desenharCorpo_(Uint32 agora) {
   { const int vid = ajustes_vidro();
     GfxRect corpo={x,FOLHA_MARGEM,FOLHA_W,NV_TELA_H-2*FOLHA_MARGEM};
     gfx_cor((GfxRect){0,0,NV_TELA_W,NV_TELA_H},0,0,0,0,(vid?.30f:.42f)*anim);
-    if (vid) {
-      gfx_rect((GfxRect){corpo.x-18.0f,corpo.y-8.0f,corpo.w+36.0f,corpo.h+40.0f},
-               0,GFX_SOMBRA,1.0f,0,0,.5f,0,0,0,.38f*anim);
-      gfx_vidro_folha(corpo,FOLHA_RAIO_IL/corpo.h,anim);
-    } else plrui_material(corpo,FOLHA_RAIO_IL,0,anim); }
+    if (vid) gfx_vidro_folha(corpo,FOLHA_RAIO_IL/corpo.h,anim);
+    else plrui_material_s(corpo,FOLHA_RAIO_IL,0,anim,1); }
   corpoFolha(x, FOLHA_W, anim, agora, 0);
 }
 // `anim` aqui e o alfa do corpo (sombra a variavel da mola de proposito: na
 // ilha quem manda na opacidade e a forma, nao a mola da folha).
+#ifdef NV_SHOT_HOOKS
+float stream_folha_pilula_x(void) { return pillX; }
+#endif
+static float trocaEase(Uint32 agora) {
+  float t=(float)(agora-trocaDesde)/FOLHA_TROCA_MS;
+  if(ajustes_animacoes_reduzidas()||t>=1.0f) return 1.0f;
+  t=1.0f-t; return 1.0f-t*t*t;
+}
 static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
   float ar, ag, ab;
   int ai, nf, automatica, melhor;
@@ -5289,6 +5376,18 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
 #ifdef NV_TOUCH_UI
     if (layout_modo_mobile()) sx -= toqueFontesAbasOffset;
 #endif
+    { float tx0=sx, tw=0;
+      for(int i=ini;i<fim;i++){ if(i==filtro) tw=iw[i+1]; else if(!tw) tx0+=iw[i+1]+6.0f; }
+      tx0-=lx;
+      if(filtro!=filtroVisto){
+        if(filtroVisto==-2||pillW<0) pillW=tw, pillX=tx0;
+        else { trocaDesde=agora; trocaDir=filtro>filtroVisto?1:-1; }
+        pillDeX=pillX; pillDeW=pillW; filtroVisto=filtro; }
+      { float e=trocaEase(agora);
+        pillX=pillDeX+(tx0-pillDeX)*e; pillW=pillDeW+(tw-pillDeW)*e; }
+      { GfxRect r={lx+pillX,segY+pin,pillW,FOLHA_ABA_H};
+        if(grupo==0) focoFonte(r,.5f,anim);
+        else if (ajustes_vidro()) gfx_cor(r,.5f,1,1,1,.12f*anim); else gfx_cor(r,.5f,.204f,.212f,.243f,anim); } }
     for(int i=ini;i<fim;i++){
       int qidx=i+1;
       GfxRect r={sx,segY+pin,iw[qidx],FOLHA_ABA_H}; int sel=i==filtro;
@@ -5301,11 +5400,12 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
 #endif
         ponteiro_alvo(r.x, r.y, r.w, r.h, NULL, ponteiroFolhaFiltro, i, 0);
       }
-      if(sel&&grupo==0) focoFonte(r,.5f,anim);
-      else if(sel) { if (ajustes_vidro()) gfx_cor(r,.5f,1,1,1,.12f*anim); else gfx_cor(r,.5f,.204f,.212f,.243f,anim); }
       txt_desenhar_alpha(nome[qidx],r.x+22,r.y+(FOLHA_ABA_H-nome[qidx].h)*.5f,anim);
       txt_desenhar_alpha(num[qidx],r.x+22+nome[qidx].w+10,r.y+(FOLHA_ABA_H-num[qidx].h)*.5f+1,anim);
       sx+=iw[qidx]+6.0f; } }
+  // The list comes in from the side the new tab is on, fading up.
+  const float animLista=anim, dxLista=trocaDir*28.0f*(1-trocaEase(agora));
+  { float e=trocaEase(agora); anim*=.3f+.7f*e; lx+=dxLista; tx+=dxLista; tr+=dxLista; }
   automatica = automaticaDaFolha();
   melhor = melhorFolha = automaticoDaFolhaModo();
   montar(automatica);
@@ -5619,6 +5719,12 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     const char *message=state==ONDE_BUSCANDO ? "Buscando onde assistir…" : state==ONDE_FALHOU ? "Não foi possível consultar a disponibilidade." : "Nenhum serviço informado para esta região.";
     txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM,message,160,164,172,255,rw),lx,FOLHA_TOPO+36,anim);
   }
+  if (nf && filtro != -1 && dicaTorrentsAltura > 0) {
+    char texto[1536];
+    if (dicaTorrents(texto, sizeof texto))
+      txt_bloco(TXT_PG_FIM,texto,110,110,108,tx,
+        FOLHA_TOPO+alturaTotal-dicaTorrentsAltura-rolagem+12,tr-tx,28,anim,0);
+  }
   if(!nFiltrados() && filtro != -1) {
     // A FOLHA VAZIA DIZ A CAUSA (B6/#107, D5). So quando a lista esta vazia
     // de verdade (n == 0): lista cheia com filtro de provedor que nao casa
@@ -5648,6 +5754,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     // Com servicos de streaming na lista, a frase vem DEPOIS deles.
     txt_bloco(TXT_PG_FIM,s,196,199,204,tx,FOLHA_TOPO+20,rw-52,28,anim,3);
   }
+  anim=animLista; lx-=dxLista; tx-=dxLista; tr-=dxLista;
   // Na ilha, de volta ao recorte dela (plrilha corta a forma inteira).
   if (ilha) gfx_recorte(ilhaR.x,ilhaR.y,ilhaR.w,ilhaR.h);
   else gfx_sem_recorte();

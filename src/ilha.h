@@ -311,5 +311,7 @@ typedef void (*IlhaCorpo)(GfxRect r, float a, void *u);
 void  ilha_corpo(float w, float h, IlhaCorpo corpo, void *u);
 // 0 = pilula, 1 = painel assentado (passa um pouco de 1 no repique).
 float ilha_corpo_t(void);
+// Chamar logo depois de ilha_corpo: este corpo (e a saida dele) sem sombra caida.
+void  ilha_corpo_sem_sombra(void);
 
 #endif

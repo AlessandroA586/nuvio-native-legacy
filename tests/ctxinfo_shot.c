@@ -37,6 +37,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <string.h>
 #include <time.h>
 
@@ -44,6 +45,11 @@ static SDL_Window *janela;
 static const char *dirDados;
 static int falhas;
 static double panelVariance;
+// Right strip of the Home (away from the card and menu), sampled from the frame.
+#define STRIP_X 1560
+#define STRIP_W 340
+#define STRIP_N (STRIP_W * 1000 / 4)
+static float strip[STRIP_N];
 static void confere(const char *o_que, int ok) {
   printf("  %-70s %s\n", o_que, ok ? "ok" : "FALHOU");
   if (!ok) falhas++;
@@ -68,12 +74,30 @@ static void gravar(const char *png) {
       }
     if (n) panelVariance = sum2 / n - (sum / n) * (sum / n);
   }
+  { int x, n = 0;
+    for (y = 40; y < 1040; y++)
+      for (x = STRIP_X; x < STRIP_X + STRIP_W; x += 4) {
+        const unsigned char *p = pix + ((1079 - y) * 1920 + x) * 4;
+        strip[n++] = (p[0] + p[1] + p[2]) / 3.0f;
+      } }
   for (y = 0; y < 1080; y++)
     memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
   assert(IMG_SavePNG(s, png) == 0);
   SDL_FreeSurface(s);
   free(pix);
   printf("  captura: %s\n", png);
+}
+
+// Pearson correlation of the strip with a copy taken earlier: 1.0 = same rows,
+// dimmed or not; near 0 = the Home was replaced by something else.
+static double correlacao(const float *a) {
+  double sa = 0, sb = 0, saa = 0, sbb = 0, sab = 0;
+  int i;
+  for (i = 0; i < STRIP_N; i++) {
+    sa += a[i]; sb += strip[i]; saa += a[i] * a[i]; sbb += strip[i] * strip[i]; sab += a[i] * strip[i];
+  }
+  { double n = STRIP_N, va = saa - sa * sa / n, vb = sbb - sb * sb / n;
+    return va > 0 && vb > 0 ? (sab - sa * sb / n) / sqrt(va * vb) : 0; }
 }
 
 static void quadros(int n, const char *png) {
@@ -278,7 +302,7 @@ int main(int argc, char **argv) {
   { int op = ajustes_rapido_op("menuCartazLocal");
     confere("poster menu setting is visible", op >= 0);
     confere("Full is the default", !ajustes_menu_cartaz_simples() &&
-            !strcmp(ajustes_rapido_valor(op), "Completo")); }
+            !strcmp(ajustes_rapido_valor(op), "Ligado")); }
   // The empty-Home gate requires a configured addon even with a seeded catalog.
   { AddonRemoto addon = { "Shot", "https://addon.invalid/x/manifest.json", 1 };
     assert(addons_definir_lista(&addon, 1)); }
@@ -346,11 +370,17 @@ int main(int argc, char **argv) {
       ev[i].quando = (long long)time(NULL) - 3600 * (i + 1);
     }
     amigostitulo_montar(ev, 2); }
-  segurar();
-  confere("o menu abriu no cartao da fileira", ctx_aberto());
-  quadros(40, NULL);
-  snprintf(png, sizeof png, "%s/home-menu-extensao.png", saida);
-  quadros(1, png);
+  { static float casa[STRIP_N];
+    snprintf(png, sizeof png, "%s/home-sem-menu.png", saida);
+    quadros(2, png);
+    memcpy(casa, strip, sizeof casa);
+    segurar();
+    confere("o menu abriu no cartao da fileira", ctx_aberto());
+    quadros(40, NULL);
+    snprintf(png, sizeof png, "%s/home-menu-extensao.png", saida);
+    quadros(1, png);
+    printf("  home rows correlation, menu open: %.3f\n", correlacao(casa));
+    confere("enriched: Home rows stay drawn behind the menu", correlacao(casa) > 0.98); }
   frost("small menu: frosted art exceeds solid-fill variance");
   ajustes_definir_vidro(0);
   snprintf(png, sizeof png, "%s/small-glass-off.png", saida);
@@ -403,7 +433,7 @@ int main(int argc, char **argv) {
     char *merged = NULL;
     confere("switch to Simple through the Settings setter", ajustes_rapido_passo(op, 1));
     confere("Simple selected", ajustes_menu_cartaz_simples() &&
-            !strcmp(ajustes_rapido_valor(op), "Simples"));
+            !strcmp(ajustes_rapido_valor(op), "Desligado"));
     ajustes_dir(dirDados);
     confere("Simple persists on this TV", ajustes_menu_cartaz_simples());
     ajustes_aplicar_blob("{\"menuCartazLocal\":0}");
@@ -413,9 +443,13 @@ int main(int argc, char **argv) {
     free(merged);
     for (i = 0; i < 2; i++) {
       HomeItem before, after;
+      static float casa[STRIP_N];
       fil_definir_tipo("pop_movie", i ? FIL_TIPO_CARTAZ : FIL_TIPO_DESTAQUE_QUADRADO);
       quadros(60, NULL);
       confere("Simple: focused poster exists", home_item_focado(&before));
+      snprintf(png, sizeof png, "%s/simple-%s-home.png", saida, i ? "small" : "big");
+      quadros(2, png);
+      memcpy(casa, strip, sizeof casa);
       segurar(); quadros(60, NULL);
       confere("Simple: long press opens the context menu", ctx_aberto());
       confere("Simple: no ctxinfo enrichment", !ctx_info_caixa(NULL, NULL, NULL));
@@ -423,6 +457,7 @@ int main(int argc, char **argv) {
               before.rect.w == after.rect.w && before.rect.h == after.rect.h);
       snprintf(png, sizeof png, "%s/simple-%s.png", saida, i ? "small" : "big");
       quadros(1, png);
+      confere("Simple: Home rows stay drawn behind the list", correlacao(casa) > 0.98);
       fechar();
     }
     confere("switch back to Full", ajustes_rapido_passo(op, 1) && !ajustes_menu_cartaz_simples());

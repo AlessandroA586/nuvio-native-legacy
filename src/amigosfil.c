@@ -11,6 +11,8 @@
 #include "anim.h"
 #include "gfx.h"
 #include "text.h"
+#define NV_TXT_TELA   // called inside home's text-scale layer: NV_TELA_W/H = virtual screen (escala.h)
+#include "escala.h"
 #include "layout.h"
 #include "idioma.h"
 #include "rolagemtoque.h"

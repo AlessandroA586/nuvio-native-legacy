@@ -1436,7 +1436,7 @@ static void ajustarRolagem(void) {
 #define IL_W        720.0f
 #define IL_PAD_X     18.0f
 #define IL_PAD_Y     22.0f
-#define IL_TIT_H     64.0f
+#define IL_TIT_H     42.0f
 #define IL_LN_H      88.0f
 #define IL_LN_VAO     4.0f
 #define IL_PE_H      47.0f
@@ -1469,11 +1469,6 @@ static float estiloCelulaH(void) {
 static float estiloPadX(void) { return telefoneui_ativo() ? 12.0f : IL_PAD_X; }
 #define IL_EST_CEL_H estiloCelulaH()
 #define IL_EST_TOPO  56.0f
-
-static const char *tituloSessao(void) {
-  const CatItem *c = cat_item(player_indice());
-  return c && c->titulo[0] ? c->titulo : "";
-}
 
 // "Ingles  ·  Atmos 7.1" -> "Ingles" e "Atmos 7.1": o nome na linha forte, o
 // resto do rotulo (canal, Atmos) embaixo, como no mockup.
@@ -1722,10 +1717,9 @@ static void ponteiroFaixa(int i, int b) {
 static void corpoLista(GfxRect c, float a) {
   int col = modo ? 1 : 0, n = nLinhas(col), r, fim, i;
   float x0 = c.x + IL_PAD_X, w = c.w - IL_PAD_X * 2.0f, y = c.y + IL_PAD_Y;
-  // Kicker + titulo; a direita, a contagem (audio) ou o segmentado (legendas).
-  plrui_kicker(tituloSessao(), x0 + 10.0f, y, 115, 115, 113, a);
+  // Titulo (o filme ja esta no cabecalho); a direita, a contagem (audio) ou o segmentado (legendas).
   { TxtLinha t = txt_linha(TXT_ILHA_PERGUNTA, modo ? "Legendas" : "\xc3\x81udio", 243, 242, 239, 255);
-    float ty = y + 22.0f;
+    float ty = y;
     txt_desenhar_alpha(t, x0 + 10.0f, ty, a);
     if (!modo) {
       char q[32];

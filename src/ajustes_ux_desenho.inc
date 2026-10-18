@@ -177,6 +177,7 @@ static void ajFocoLinha(GfxRect r, float raioPx, float f, float a) {
   if (f <= 0.01f) return;
   if (ajVid()) {
     float ar, ag, ab;
+    if (gfx_foco_placa(r, raioPx / r.h, f, a)) return;
     gfx_cor(r, raioPx / r.h, 1, 1, 1, 0.12f * f * a);
     ajustes_acento(&ar, &ag, &ab);
     gfx_vidro_aro(r, raioPx / r.h, 2.0f, ar, ag, ab, 0.96f * f * a);
@@ -357,7 +358,11 @@ static GfxRect ajInspR(void) { return (GfxRect){ ajInspX(), AJI_MARGEM, NV_VTELA
 #define AJ2_LISTA_W   1000.0f
 #define AJ2_EDITOR_DX  (252.0f / AJ2_S)   // 300
 static float aj2X0(void) {
+  // Read the same fixed rail reservation as Home, even under Settings zoom.
+  float previous = gfx_escala();
+  gfx_escala_sair(gfx_escala_txt());
   float rail = ajustes_rail_largura_fixa();
+  gfx_escala_sair(previous);
   return ((ajTelaCheia() && rail <= 0.0f ? 0.0f : 48.0f) + rail) / AJ2_S;
 }
 // A3: linhas compactas (58 + 2 de vao, rotulo 24), o dobro de linhas na tela.
@@ -389,7 +394,7 @@ static float aj2ListaWRef(void) {
 // opcao em foco fica a esquerda, grande, com kicker, titulo e descricao
 // embaixo (sem ilha); a LISTA compacta numa ilha a direita. A coluna da arte
 // comeca depois da ilha do menu recolhida; arte 44% do que sobra, 36 de vao.
-#define AJ2_CORPO (AJ2_TOPO + AJ_CAB_PAGINA)   // 2.0.2: abaixo do cabecalho da pagina
+#define AJ2_CORPO (AJ2_TOPO + AJ_CAB_PAGINA / gfx_escala_txt())   // 2.0.2: abaixo do cabecalho da pagina
 static float aj2ArteX(void) { return aj2X0(); }
 static float aj2ArteW(void) { return (NV_VTELA_W - AJ2_MARGEM - aj2ArteX()) * 0.44f; }
 static float aj2InspRetratoH(void) {
@@ -401,7 +406,7 @@ static GfxRect aj2ListaR(void) {
     float x = aj2ArteX(), y = AJ2_CORPO + (aj2TemInsp() ? aj2InspRetratoH() + 24.0f : 0.0f);
     return (GfxRect){x, y, NV_VTELA_W - AJ2_MARGEM - x, NV_VTELA_H - y - AJ2_MARGEM};
   }
-  float x = !aj2TemInsp() ? aj2ArteX() : aj2ArteX() + aj2ArteW() + 36.0f;
+  float x = !aj2TemInsp() ? aj2ArteX() : aj2ArteX() + aj2ArteW() + 36.0f / gfx_escala_txt();
   return (GfxRect){ x, AJ2_CORPO, NV_VTELA_W - AJ2_MARGEM - x, NV_VTELA_H - AJ2_CORPO - AJ2_MARGEM };
 }
 static float ajTopoLista(void) { return aj2ListaR().y + AJ_A3_CAB; }

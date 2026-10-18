@@ -33,7 +33,12 @@ if ! cc "${sources[@]}" tests/homelayouts_shot.c -Isrc -o "$NUVIO_DADOS/shot" \
   exit 1
 fi
 grep -E "homelayouts_shot|error|home\.c" "$NUVIO_DADOS/build.log" || true
-"$NUVIO_DADOS/shot" "$saida/h" "${2:-012}"
+if [ -n "${NV_STAGE_PAIR:-}" ] || [ -n "${NV_STAGE_SCALE:-}" ]; then
+  NV_STAGE_SCALE=1 "$NUVIO_DADOS/shot" "$saida/h-100" "${2:-0}"
+  NV_STAGE_SCALE=0.85 "$NUVIO_DADOS/shot" "$saida/h-85" "${2:-0}"
+else
+  "$NUVIO_DADOS/shot" "$saida/h" "${2:-012}"
+fi
 [ -n "${NV_KEEP:-}" ] && exit 0   # deixa os BMP, para comparar byte a byte
 for f in "$saida"/h-*.bmp; do
   [ -e "$f" ] || continue
