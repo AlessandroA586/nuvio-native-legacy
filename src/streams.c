@@ -5321,6 +5321,9 @@ static void stream_folha_desenharCorpo_(Uint32 agora) {
 // ilha quem manda na opacidade e a forma, nao a mola da folha).
 #ifdef NV_SHOT_HOOKS
 float stream_folha_pilula_x(void) { return pillX; }
+float stream_folha_topo(void) { return FOLHA_TOPO; }
+static float folhaRecorteY;
+float stream_folha_recorte_y(void) { return folhaRecorteY; }
 #endif
 static float trocaEase(Uint32 agora) {
   float t=(float)(agora-trocaDesde)/FOLHA_TROCA_MS;
@@ -5497,6 +5500,9 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
   montar(automatica);
   nf=nOrdem;
   { float cy = FOLHA_TOPO - (rolagem > 1.0f ? 0.0f : 8.0f);   // scrolled: no sliver of a cut row above the first card
+#ifdef NV_SHOT_HOOKS
+    folhaRecorteY = cy;
+#endif
     gfx_recorte(x,cy,w,folhaBase-cy); }
   // CABECALHOS DE GRUPO: "4K  ULTRA HD ........ 3 fontes", com um fio embaixo.
   for(int g=0;g<FOLHA_GRUPOS;g++){

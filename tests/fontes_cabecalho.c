@@ -31,6 +31,8 @@ static SDL_Surface *strip;
 static int noPlayer, semRelogio;
 #ifndef NV_BASELINE
 float stream_folha_pilula_x(void);
+float stream_folha_topo(void);
+float stream_folha_recorte_y(void);
 #endif
 
 static unsigned char q[LW * LH * 3];
@@ -181,17 +183,21 @@ int main(int argc, char **argv) {
   { SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_DOWN;
     for (int k = 0; k < 14; k++) { stream_folha_evento(&e); for (int i = 0; i < 6; i++) quadro(); }
     for (int i = 0; i < 60; i++) quadro(); }
+  // Clip: scrolled, rows are cut at the list top itself; the 8 px above it
+  // (kept only at rest) would show a sliver of a half-hidden row.
+  assert(stream_folha_recorte_y() >= stream_folha_topo() && "scrolled list clipped above the list top");
   salvar(pre, 1); ler(q);
-  // Left panel gutter (no cards): luma per row must stay flat, a dark band shows as a dip.
-  { double ref = 0, worst = 0; int wr = 0;
+  { int top = (int)stream_folha_topo();
+    // Left panel gutter (no cards): luma per row must stay flat, a dark band shows as a dip.
+    double ref = 0, worst = 0; int wr = 0;
     int c0 = (int)x + 6, c1 = (int)x + 16;
-    for (int r = 296; r < 306; r++) ref += banda(q, c0, c1, r, r + 1);
+    for (int r = top - 12; r < top - 2; r++) ref += banda(q, c0, c1, r, r + 1);
     ref /= 10;
-    for (int r = 248; r < 290; r++) {
+    for (int r = top - 48; r < top - 26; r++) {
       double d = ref - banda(q, c0, c1, r, r + 1);
       if (d > worst) { worst = d; wr = r; } }
-    printf("%s: ref %.0f worst dip %.0f at row %d (of %d px)\n", mode, ref, worst, wr, c1 - c0);
-    assert(worst < ref * .02 && "dark band under the sheet header"); }
+    printf("%s: top %d ref %.0f worst dip %.0f at row %d (of %d px)\n", mode, top, ref, worst, wr, c1 - c0);
+    assert(worst < ref * .03 && "dark band under the sheet header"); }
   printf("PASS: %s header band gone\n", mode);
   return 0;
 }

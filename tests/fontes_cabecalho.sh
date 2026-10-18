@@ -26,7 +26,7 @@ for source in "${sources[@]}" tests/fontes_cabecalho.c; do objs+=("$D/$(echo "$s
 printf '%s\n' "${sources[@]}" tests/fontes_cabecalho.c |
   xargs -P 8 -I{} sh -c 'cc "$@" -c {} -o "$0/$(echo {} | tr / _).o"' "$D" "${flags[@]}"
 cc "${objs[@]}" -o "$bin" -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL
-modes=(player)
+modes=(player detail no-clock player-glass detail-glass)
 for mode in "${modes[@]}"; do
   NUVIO_DADOS="$D/data" NUVIO_TESTE_DIR="$D/data" "$bin" "$out/$mode" "$mode"
 done
