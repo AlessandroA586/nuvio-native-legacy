@@ -11,7 +11,7 @@ cc -O1 -g -Isrc -pthread -ffunction-sections -fdata-sections -Wl,-dead_strip -I/
   src/catordemcache.c src/contacache.c src/js.c src/jsw.c -o "$bin"
 python3 tests/addons_patch_transport.py
 rc=0
-for scenario in first-enable switch-toggle early-publish; do
+for scenario in first-enable switch-toggle early-publish package-restart write-budget; do
   mkdir "$dir/$scenario"
   NV_T_DIR="$dir/$scenario" "$bin" "$scenario" || rc=1
 done

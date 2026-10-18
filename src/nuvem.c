@@ -158,7 +158,7 @@ char *nuvem_tabela(const char *tabela, const char *consulta,
   return rede_baixar_st(completo, 25, cab, status);
 }
 
-char *nuvem_addon_alternar(const char *consulta, int ativo, const char *bearer, int *status) {
+char *nuvem_addon_alternar(const char *consulta, int ativo, const char *bearer, unsigned prazo_ms, int *status) {
   char completo[52000], cabApi[1300], cabAut[3100];
   const char *cab[5];
   const char *body = ativo ? "{\"enabled\":true}" : "{\"enabled\":false}";
@@ -174,10 +174,10 @@ char *nuvem_addon_alternar(const char *consulta, int ativo, const char *bearer, 
   cab[0] = cabApi; cab[1] = cabAut; cab[2] = "Content-Type: application/json";
   cab[3] = "Prefer: return=representation"; cab[4] = NULL;
 #ifdef __EMSCRIPTEN__
-  return rede_patch_st(completo, 25, cab, body, status);
+  return rede_patch_st(completo, prazo_ms / 1000, cab, body, status);
 #else
   p.metodo = "PATCH"; p.url = completo; p.cabecalhos = cab;
-  p.corpo = body; p.n_corpo = strlen(body); p.prazo_ms = 25000;
+  p.corpo = body; p.n_corpo = strlen(body); p.prazo_ms = prazo_ms;
   rede_pedir(&p, &r);
   if (status) *status = r.status;
   char *out = r.corpo; r.corpo = NULL;

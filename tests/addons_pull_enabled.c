@@ -1,5 +1,6 @@
 // Exercise the production account parser, pull merge and applied cache.
 // Existing sync fixture supplies disk and addon-list doubles; no network.
+#define ADDON_PULL_FIXTURE
 #define main syncaddons_fixture_main
 #define perfis_ativo fixture_perfis_ativo
 #define perfis_ativo_addons fixture_perfis_ativo_addons
@@ -21,21 +22,21 @@ int addons_perfil_da_lista(void) { return listProfile; }
 
 #include "../src/sync.c"
 
-int perfis_sessao_atual(uint64_t g) { return g == 0; }
-int sessao_identidade_local_copiar(char *u, size_t n, char *t, size_t m) {
-  snprintf(u, n, "%s", sessao_usuario()); snprintf(t, m, "fixture"); return 1;
-}
-void sessao_token_recusado(const char *t) { (void)t; }
-char *nuvem_tabela(const char *t, const char *q, const char *jwt, int *st) {
-  (void)jwt; return sessao_tabela(t, q, st);
-}
-char *nuvem_rpc_com(const char *f, const char *b, const char *jwt, int *st) {
-  (void)jwt; return sessao_rpc(f, b, st);
-}
 
-static int patches, patchStatus = 200, checkEarlyPublication;
-char *nuvem_addon_alternar(const char *q, int ativo, const char *jwt, int *st) {
+static int patches, patchStatus = 200, checkEarlyPublication, stallPatch;
+
+static int pullAndWrite(void) {
+  int r = puxarAddons();
+  if (r == 1) addonsEnviarToggles(addonsTogglesRem, nAddonsTogglesRem);
+  return r;
+}
+char *nuvem_addon_alternar(const char *q, int ativo, const char *jwt, unsigned prazo_ms, int *st) {
   (void)jwt;
+  assert(prazo_ms >= 1000 && prazo_ms <= 2000);
+  if (stallPatch) {
+    confere("priority pulls published before pending write", PRONTO_LER(estruturaCedo));
+    usleep(prazo_ms * 1000);
+  }
   assert(strstr(q, "user_id=eq.dono-a&profile_id=eq.1&url=eq."));
   patches++;
   if (checkEarlyPublication) {
@@ -88,7 +89,7 @@ int main(int argc, char **argv) {
       tvAcrescentar('A');
       tv[0].ativo = 0;
       tv[0].ativo = 1;
-      sync_sujar_addons();
+      sync_sujar_addons(tv[0].url);
       char *pending = contacache_ler(CC_ADDONS_TOGGLES, 1, usuarioDoCiclo, NULL);
       confere("first enable queued without baseline", pending && strstr(pending, "true"));
       free(pending);
@@ -99,7 +100,7 @@ int main(int argc, char **argv) {
       activeProfile = addonProfile = addonsPerfilCiclo = perfilDoCiclo = 2;
       addonsRestaurar();
       tv[0].ativo = 0;
-      sync_sujar_addons();
+      sync_sujar_addons(tv[0].url);
       char *pending = contacache_ler(CC_ADDONS_TOGGLES, 2, usuarioDoCiclo, NULL);
       char *applied = contacache_ler(CC_ADDONS_APLICADOS, 2, usuarioDoCiclo, NULL);
       confere("foreign list cannot queue flags", !pending);
@@ -108,15 +109,53 @@ int main(int argc, char **argv) {
     } else if (!strcmp(argv[1], "early-publish")) {
       tvAcrescentar('A');
       tv[0].ativo = 0;
-      sync_sujar_addons();
+      sync_sujar_addons(tv[0].url);
       nTv = 0;
       addonsRestaurar();
       snprintf(conta, sizeof conta, "ABC");
       checkEarlyPublication = 1;
       confere("pending pull completes", puxarAddons() == 1);
+      confere("pull never waits for pending writes", patches == 0);
+      addonsEnviarToggles(addonsTogglesRem, nAddonsTogglesRem);
       confere("pending PATCH exercised", patches == 1);
       expect("membership available during PATCH", "aBC");
       confere("pending disable reaches account", !strcmp(conta, "aBC"));
+    } else if (!strcmp(argv[1], "package-restart")) {
+      listProfile = 0; // Package list, no account snapshot yet.
+      tvAcrescentar('A'); tvAcrescentar('B');
+      tv[0].ativo = 0;
+      sync_sujar_addons(tv[0].url);
+      char *applied = contacache_ler(CC_ADDONS_APLICADOS, 1, usuarioDoCiclo, NULL);
+      confere("package list never seeds the applied snapshot", !applied);
+      free(applied);
+      nTv = 0; // Restart: package list reloads with its default flags.
+      tvAcrescentar('A'); tvAcrescentar('B');
+      addonsRestaurar();
+      pull("[{\"url\":\"https://a.exemplo/manifest.json\",\"enabled\":true},"
+            "{\"url\":\"https://b.exemplo/manifest.json\",\"enabled\":false}]");
+      expect("toggle before first snapshot survives restart", "aB");
+      snprintf(conta, sizeof conta, "Ab");
+      confere("pull completes", puxarAddons() == 1);
+      addonsEnviarToggles(addonsTogglesRem, nAddonsTogglesRem);
+      confere("only the toggled row is written", patches == 1 && !strcmp(conta, "ab"));
+    } else if (!strcmp(argv[1], "write-budget")) {
+      tvAcrescentar('A'); tvAcrescentar('B'); tvAcrescentar('C');
+      tv[0].ativo = tv[1].ativo = tv[2].ativo = 0;
+      for (int i = 0; i < 3; i++) sync_sujar_addons(tv[i].url);
+      snprintf(conta, sizeof conta, "ABC");
+      stallPatch = 1;
+      rodar(NULL);
+      confere("stalled writes share one budget", patches == 1);
+      char *pending = contacache_ler(CC_ADDONS_TOGGLES, 1, usuarioDoCiclo, NULL);
+      confere("unfinished flags retained", pending && strstr(pending, "b.exemplo") &&
+              strstr(pending, "c.exemplo") && !strstr(pending, "a.exemplo"));
+      free(pending);
+      stallPatch = 0;
+      rodar(NULL);
+      confere("next cycle drains remaining flags", patches == 3 && !strcmp(conta, "abc"));
+      pending = contacache_ler(CC_ADDONS_TOGGLES, 1, usuarioDoCiclo, NULL);
+      confere("successful flags acknowledged", pending && !strcmp(pending, "[]"));
+      free(pending);
     } else return 2;
     return falhas ? 1 : 0;
   }
@@ -164,15 +203,15 @@ int main(int argc, char **argv) {
   // A toggle must reach the account without replacing its membership/order.
   snprintf(conta, sizeof conta, "ABZ");
   tv[0].ativo = 0;
-  sync_sujar_addons();
+  sync_sujar_addons(tv[0].url);
   perfilDoCiclo = 1;
-  confere("toggle pull completes", puxarAddons() == 1);
+  confere("toggle pull completes", pullAndWrite() == 1);
   confere("explicit disable reaches account; unrelated rows stay", !strcmp(conta, "aBZ"));
   confere("no whole-list upload", pushes == 0);
   // Seed the OFF snapshot, then enable and restart BEFORE another pull.
   addonsAplicar();
   tv[0].ativo = 1;
-  sync_sujar_addons();
+  sync_sujar_addons(tv[0].url);
   nTv = 0;
   addonsRestauradosPerfil = 0;
   addonsRestaurar();
@@ -181,15 +220,15 @@ int main(int argc, char **argv) {
         "{\"url\":\"https://b.exemplo/manifest.json\"},"
         "{\"url\":\"https://z.exemplo/manifest.json\"}]");
   expect("web false after immediate restart preserves enable", "ABZ");
-  confere("enable sync survives restart", puxarAddons() == 1 && !strcmp(conta, "ABZ"));
+  confere("enable sync survives restart", pullAndWrite() == 1 && !strcmp(conta, "ABZ"));
   confere("only explicit flags patched", patches == 2);
   // A failed request must remain durable until a later successful sync.
   tv[0].ativo = 0;
-  sync_sujar_addons();
+  sync_sujar_addons(tv[0].url);
   patchStatus = 503;
-  confere("failed patch does not claim success", puxarAddons() == 1 && !strcmp(conta, "ABZ"));
+  confere("failed patch does not claim success", pullAndWrite() == 1 && !strcmp(conta, "ABZ"));
   patchStatus = 200;
-  confere("failed flag retried", puxarAddons() == 1 && !strcmp(conta, "aBZ"));
+  confere("failed flag retried", pullAndWrite() == 1 && !strcmp(conta, "aBZ"));
   // No account snapshot exists when the first local disable is made.
   dados_apagar("conta-" CC_ADDONS_APLICADOS "-p1.json");
   contacache_gravar_geracao(CC_ADDONS_TOGGLES, 1, usuarioDoCiclo,
@@ -199,9 +238,9 @@ int main(int argc, char **argv) {
   tv[0].ativo = 0;
   snprintf(conta, sizeof conta, "ABZ");
   int priorPatches = patches;
-  sync_sujar_addons();
+  sync_sujar_addons(tv[0].url);
   confere("disable before first applied snapshot reaches account",
-          puxarAddons() == 1 && !strcmp(conta, "aBZ") && patches == priorPatches + 2);
+          pullAndWrite() == 1 && !strcmp(conta, "aBZ") && patches == priorPatches + 1);
   addonsAplicar();
   expect("first pull preserves disabled state and remote membership", "aBZ");
   // Switch to an independent profile without an applied snapshot. Restoration

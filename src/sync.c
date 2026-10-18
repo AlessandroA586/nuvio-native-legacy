@@ -418,6 +418,16 @@ static int addonsListaIgual(const AddonRemoto *a, int na, const AddonRemoto *b, 
 }
 static pthread_mutex_t addonsToggleTrava = PTHREAD_MUTEX_INITIALIZER;
 
+static int addonsAchar(const AddonRemoto *lista, int n, const char *url) {
+  char key[NV_ADDON_URL_MAX], other[NV_ADDON_URL_MAX];
+  nv_addon_chave(url, key, sizeof key);
+  for (int i = 0; i < n; i++) {
+    nv_addon_chave(lista[i].url, other, sizeof other);
+    if (!strcmp(key, other)) return i;
+  }
+  return -1;
+}
+
 static void addonsGuardar(const char *superficie, const AddonRemoto *lista, int n,
                           int perfil, const char *usuario, unsigned geracao) {
   Jsw w;
@@ -441,45 +451,54 @@ static void addonsEnviarToggles(const AddonRemoto *remotos, int nr) {
   AddonRemoto *pend = calloc(SY_ADD_MAX, sizeof *pend);
   char *url = malloc(SY_URL_LEITURA);
   char *saved;
-  int ok = 1;
+  struct timespec agora;
+  clock_gettime(CLOCK_MONOTONIC, &agora);
+  long long fim = (long long)agora.tv_sec * 1000 + agora.tv_nsec / 1000000 + 2000;
   if (!pend || !url) { free(pend); free(url); return; }
   pthread_mutex_lock(&addonsToggleTrava);
-  saved = contacache_ler(CC_ADDONS_TOGGLES, addonsPerfilCiclo, usuarioDoCiclo, NULL);
+  saved = contacache_ler(CC_ADDONS_TOGGLES, perfilDoCiclo, usuarioDoCiclo, NULL);
   pthread_mutex_unlock(&addonsToggleTrava);
   int n = saved ? lerAddonsPara(saved, pend, url) : 0;
   for (int i = 0; i < n && perfilDoCicloAtual(); i++) {
-    char key[NV_ADDON_URL_MAX], other[NV_ADDON_URL_MAX];
-    nv_addon_chave(pend[i].url, key, sizeof key);
-    for (int j = 0; j < nr; j++) {
-      nv_addon_chave(remotos[j].url, other, sizeof other);
-      if (strcmp(key, other)) continue;
-      // Use the exact remote URL, quoted for PostgREST and URL escaped.
-      Jsw w;
-      char escaped[SY_URL_LEITURA * 3], dono[240], query[SY_URL_LEITURA * 3 + 400];
-      const char *longa = nv_longa_bruto(remotos[j].url);
-      jsw_iniciar(&w); jsw_str(&w, longa ? longa : remotos[j].url);
-      nuvem_url_escapar(jsw_texto_final(&w), escaped, sizeof escaped);
-      jsw_livre(&w);
-      nuvem_url_escapar(perfis_dono(), dono, sizeof dono);
-      snprintf(query, sizeof query, "user_id=eq.%s&profile_id=eq.%d&url=eq.%s",
-               dono, addonsPerfilCiclo, escaped);
-      int st = 0;
-      char *r = nuvem_addon_alternar(query, pend[i].ativo, tokenDoCiclo, &st);
-      if (!ok2xx(r, st) || !perfilDoCicloAtual() || !js_raiz_array(r) ||
-          !strchr(js_raiz_array(r), '{')) ok = 0;
-      free(r);
-      break;
-    }
+    clock_gettime(CLOCK_MONOTONIC, &agora);
+    long long restante = fim - ((long long)agora.tv_sec * 1000 + agora.tv_nsec / 1000000);
+    // Whole seconds also bound the WGT adapter, whose timeout uses seconds.
+    if (restante < 1000) break;
+    // A row the account no longer has needs no write: the pull removes it.
+    int j = addonsAchar(remotos, nr, pend[i].url);
+    if (j < 0) { pend[i].url[0] = 0; continue; }
+    // Use the exact remote URL, quoted for PostgREST and URL escaped.
+    Jsw w;
+    char escaped[SY_URL_LEITURA * 3], dono[240], query[SY_URL_LEITURA * 3 + 400];
+    const char *longa = nv_longa_bruto(remotos[j].url);
+    jsw_iniciar(&w); jsw_str(&w, longa ? longa : remotos[j].url);
+    nuvem_url_escapar(jsw_texto_final(&w), escaped, sizeof escaped);
+    jsw_livre(&w);
+    nuvem_url_escapar(perfis_dono(), dono, sizeof dono);
+    snprintf(query, sizeof query, "user_id=eq.%s&profile_id=eq.%d&url=eq.%s",
+             dono, addonsPerfilCiclo, escaped);
+    int st = 0;
+    char *r = nuvem_addon_alternar(query, pend[i].ativo, tokenDoCiclo,
+                                   (unsigned)(restante / 1000) * 1000, &st);
+    if (ok2xx(r, st) && perfilDoCicloAtual() && js_raiz_array(r) &&
+        strchr(js_raiz_array(r), '{')) pend[i].url[0] = 0;
+    free(r);
   }
+  int restantes = 0;
+  for (int i = 0; i < n; i++)
+    if (pend[i].url[0]) pend[restantes++] = pend[i];
   pthread_mutex_lock(&addonsToggleTrava);
-  char *current = contacache_ler(CC_ADDONS_TOGGLES, addonsPerfilCiclo, usuarioDoCiclo, NULL);
-  if (ok && saved && current && !strcmp(saved, current) && perfilDoCicloAtual())
-    contacache_gravar_geracao(CC_ADDONS_TOGGLES, addonsPerfilCiclo, usuarioDoCiclo,
-                              "[]", copiaGeracaoDoCiclo);
+  char *current = contacache_ler(CC_ADDONS_TOGGLES, perfilDoCiclo, usuarioDoCiclo, NULL);
+  if (saved && current && !strcmp(saved, current) && perfilDoCicloAtual())
+    addonsGuardar(CC_ADDONS_TOGGLES, pend, restantes, perfilDoCiclo,
+                  usuarioDoCiclo, copiaGeracaoDoCiclo);
   free(current);
   pthread_mutex_unlock(&addonsToggleTrava);
   free(saved); free(pend); free(url);
 }
+
+static AddonRemoto addonsTogglesRem[SY_ADD_MAX];
+static int nAddonsTogglesRem;
 
 static int addonsAplicar(void) {
   static AddonRemoto local[SY_ADD_MAX];
@@ -490,23 +509,25 @@ static int addonsAplicar(void) {
   // Lista vazia da conta nao substitui a local (addons_definir_lista recusa)
   // nem vira snapshot: gravar "[]" apagaria a ultima lista boa do arranque.
   if (!nAddonsRem) return 0;
-  // Other clients may write default/unsupported enabled values. Existing
-  // addon toggles belong to this app; only membership/order come from pull.
-  // List ownership tracks the active profile, even with primary-profile addons.
-  // Never inherit flags from a previous profile left in memory without a cache.
+  // Flag per remote addon, first match wins: unacknowledged toggle of this
+  // profile; local flag when the list in memory is this profile's (or the
+  // package list before any account list); else the remote value. Other
+  // clients write default/unsupported enabled values, so existing addon flags
+  // belong to this app; only membership/order come from the pull.
+  static AddonRemoto pend[SY_ADD_MAX];
+  static char buf[SY_URL_LEITURA];
+  pthread_mutex_lock(&addonsToggleTrava);
+  char *c = contacache_ler(CC_ADDONS_TOGGLES, perfilDoCiclo, usuarioDoCiclo, NULL);
+  pthread_mutex_unlock(&addonsToggleTrava);
+  int np = c ? lerAddonsPara(c, pend, buf) : 0;
+  free(c);
   int donoLista = addons_perfil_da_lista();
   int preservarFlags = !donoLista || donoLista == perfis_ativo();
-  // Match normalized identity before replacing any slots (reorders/removals).
-  for (i = 0; preservarFlags && i < nAddonsRem; i++) {
-    char key[NV_ADDON_URL_MAX], localKey[NV_ADDON_URL_MAX];
-    nv_addon_chave(addonsRem[i].url, key, sizeof key);
-    for (int j = 0; j < n; j++) {
-      nv_addon_chave(local[j].url, localKey, sizeof localKey);
-      if (!strcmp(key, localKey)) {
-        addonsRem[i].ativo = local[j].ativo;
-        break;
-      }
-    }
+  for (i = 0; i < nAddonsRem; i++) {
+    int j = addonsAchar(pend, np, addonsRem[i].url);
+    if (j >= 0) addonsRem[i].ativo = pend[j].ativo;
+    else if (preservarFlags && (j = addonsAchar(local, n, addonsRem[i].url)) >= 0)
+      addonsRem[i].ativo = local[j].ativo;
   }
   if (!addonsListaIgual(local, n, addonsRem, nAddonsRem))
     mudou = addons_definir_lista(addonsRem, nAddonsRem);
@@ -609,11 +630,10 @@ static int puxarAddons(void) {
   nAddonsRem = k;
   // The main thread may merge/consume addonsRem as soon as it is published.
   // PATCHes use a worker-owned snapshot and never mutate that mailbox.
-  static AddonRemoto paraToggles[SY_ADD_MAX];
-  memcpy(paraToggles, addonsRem, (size_t)k * sizeof *paraToggles);
+  nAddonsTogglesRem = k;
+  memcpy(addonsTogglesRem, addonsRem, (size_t)k * sizeof *addonsTogglesRem);
   temAddonsRem = 1;
   PRONTO_PUBLICAR(addonsCedo, 1);
-  addonsEnviarToggles(paraToggles, k);
   // REGISTRA O PERFIL PEDIDO, e nao so o resultado. O defeito que levou a esta
   // linha (perfil secundario com "0 addons", relato do Mane155) era um pedido
   // BEM FORMADO para o perfil errado: o PostgREST responde 200 com array vazio,
@@ -1386,6 +1406,8 @@ static void *rodar(void *u) {
   // novo o que ainda nao teve 2xx.
   contapend_enviar();
   contapend_reenviar();
+  // Pending addon writes run last, with a two-second budget for the whole batch.
+  if (puxouAddons == 1) addonsEnviarToggles(addonsTogglesRem, nAddonsTogglesRem);
 
   { SyncResumo r;
     memset(&r, 0, sizeof r);
@@ -1926,42 +1948,42 @@ const char *sync_resumo(void) {
 }
 unsigned    sync_ultimo_ok(void)   { return ultimoOk; }
 void        sync_sujar_progresso(void) { sujoProgresso = 1; }
-void sync_sujar_addons(void) {
-  static AddonRemoto local[SY_ADD_MAX], before[SY_ADD_MAX], pend[SY_ADD_MAX];
-  static char url[SY_URL_LEITURA];
+// Addon flag state, per account (see addonsAplicar for the merge order):
+//  - CC_ADDONS_TOGGLES, keyed by the ACTIVE profile: each addon the user
+//    toggled, until the account acknowledges that row (PATCH 2xx) or drops it.
+//    It wins every merge and survives restart; nothing else is ever queued.
+//  - CC_ADDONS_APLICADOS, keyed by the addon profile: last merged list. A
+//    toggle updates only that flag, and only when the snapshot already exists,
+//    so a package or foreign list never seeds membership.
+void sync_sujar_addons(const char *url) {
+  static AddonRemoto local[SY_ADD_MAX], lista[SY_ADD_MAX];
+  static char buf[SY_URL_LEITURA];
   char usuario[80];
-  int perfil = perfis_ativo_addons();
+  int perfil = perfis_ativo(), perfilAddons = perfis_ativo_addons();
   unsigned geracao = contacache_geracao();
-  if (!sessao_logada()) return;
+  if (!url || !sessao_logada()) return;
+  // A list left in memory by another profile is not this profile's state.
   int donoLista = addons_perfil_da_lista();
-  if (donoLista && donoLista != perfis_ativo()) return;
+  if (donoLista && donoLista != perfil) return;
   snprintf(usuario, sizeof usuario, "%s", sessao_usuario());
   pthread_mutex_lock(&addonsToggleTrava);
   int n = addons_exportar(local, SY_ADD_MAX);
-  char *old = contacache_ler(CC_ADDONS_APLICADOS, perfil, usuario, NULL);
-  char *pending = contacache_ler(CC_ADDONS_TOGGLES, perfil, usuario, NULL);
-  int nb = old ? lerAddonsPara(old, before, url) : 0;
-  int np = pending ? lerAddonsPara(pending, pend, url) : 0;
-  for (int i = 0; i < n; i++) {
-    char key[NV_ADDON_URL_MAX], other[NV_ADDON_URL_MAX];
-    nv_addon_chave(local[i].url, key, sizeof key);
-    int j;
-    for (j = 0; j < nb; j++) {
-      nv_addon_chave(before[j].url, other, sizeof other);
-      if (!strcmp(key, other)) break;
+  int i = addonsAchar(local, n, url);
+  if (i >= 0) {
+    char *c = contacache_ler(CC_ADDONS_TOGGLES, perfil, usuario, NULL);
+    int np = c ? lerAddonsPara(c, lista, buf) : 0, k = addonsAchar(lista, np, url);
+    free(c);
+    if (k < 0 && np < SY_ADD_MAX) k = np++;
+    if (k >= 0) lista[k] = local[i];
+    addonsGuardar(CC_ADDONS_TOGGLES, lista, np, perfil, usuario, geracao);
+    c = contacache_ler(CC_ADDONS_APLICADOS, perfilAddons, usuario, NULL);
+    int nb = c ? lerAddonsPara(c, lista, buf) : 0;
+    free(c);
+    if ((k = addonsAchar(lista, nb, url)) >= 0) {
+      lista[k].ativo = local[i].ativo;
+      addonsGuardar(CC_ADDONS_APLICADOS, lista, nb, perfilAddons, usuario, geracao);
     }
-    // Without a baseline, retain both ON and OFF before the first pull.
-    if (j < nb && local[i].ativo == before[j].ativo) continue;
-    int k;
-    for (k = 0; k < np; k++) {
-      nv_addon_chave(pend[k].url, other, sizeof other);
-      if (!strcmp(key, other)) break;
-    }
-    if (k < SY_ADD_MAX) { pend[k] = local[i]; if (k == np) np++; }
   }
-  addonsGuardar(CC_ADDONS_TOGGLES, pend, np, perfil, usuario, geracao);
-  addonsGuardar(CC_ADDONS_APLICADOS, local, n, perfil, usuario, geracao);
-  free(old); free(pending);
   pthread_mutex_unlock(&addonsToggleTrava);
 }
 // Provedor que o servidor recusou com "Unsupported provider credential": o

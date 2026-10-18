@@ -54,7 +54,7 @@ int main(void) {
   for (int enabled = 0; enabled <= 1; enabled++) {
     expected = enabled ? "{\"enabled\":true}" : "{\"enabled\":false}";
     char *r = nuvem_addon_alternar("user_id=eq.owner&profile_id=eq.1&url=eq.addon",
-                                  enabled, "fixture-token", &st);
+                                  enabled, "fixture-token", 2000, &st);
     if (!r || st != 200 || calls != enabled + 1) {
       fprintf(stderr, "FAIL: authenticated WGT PATCH unavailable (HTTP %d)\n", st);
       return 1;
@@ -63,11 +63,11 @@ int main(void) {
   }
   response = 503;
   char *r = nuvem_addon_alternar("user_id=eq.owner&profile_id=eq.1&url=eq.addon",
-                                1, "fixture-token", &st);
+                                1, "fixture-token", 2000, &st);
   assert(r && st == 503); free(r);
   response = 0;
   r = nuvem_addon_alternar("user_id=eq.owner&profile_id=eq.1&url=eq.addon",
-                          1, "fixture-token", &st);
+                          1, "fixture-token", 2000, &st);
   assert(!r && st == 0);
   puts("PASS: production WGT adapter sends authenticated PATCH and preserves failures");
 }
