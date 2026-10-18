@@ -425,6 +425,20 @@ static int addonsAplicar(void) {
   // Lista vazia da conta nao substitui a local (addons_definir_lista recusa)
   // nem vira snapshot: gravar "[]" apagaria a ultima lista boa do arranque.
   if (!nAddonsRem) return 0;
+  // Other clients may write default/unsupported enabled values. Existing
+  // addon toggles belong to this app; only membership/order come from pull.
+  // Match normalized identity before replacing any slots (reorders/removals).
+  for (i = 0; i < nAddonsRem; i++) {
+    char key[NV_ADDON_URL_MAX], localKey[NV_ADDON_URL_MAX];
+    nv_addon_chave(addonsRem[i].url, key, sizeof key);
+    for (int j = 0; j < n; j++) {
+      nv_addon_chave(local[j].url, localKey, sizeof localKey);
+      if (!strcmp(key, localKey)) {
+        addonsRem[i].ativo = local[j].ativo;
+        break;
+      }
+    }
+  }
   if (!addonsListaIgual(local, n, addonsRem, nAddonsRem))
     mudou = addons_definir_lista(addonsRem, nAddonsRem);
   jsw_iniciar(&w); jsw_arr_ini(&w);
@@ -1841,9 +1855,8 @@ void        sync_sujar_progresso(void) { sujoProgresso = 1; }
 // #360 MAO UNICA: a edicao local de addons NAO sobe mais para a conta
 // (sync_push_addons deixou de existir — ela substituia a lista inteira do
 // perfil e era a origem das duplicatas e das remocoes cruzadas do relato).
-// A mudanca feita nesta TV vale so aqui ate o proximo pull, que traz a lista
-// da conta por cima. O simbolo fica como no-op porque a tela de Add-ons, o
-// guia e os testes o chamam no mesmo gesto que liga/desliga.
+// Local toggles survive pulls; membership/order still follow the account.
+// The symbol remains a no-op for callers that used it after local toggles.
 void        sync_sujar_addons(void) { }
 // Provedor que o servidor recusou com "Unsupported provider credential": o
 // servidor de hoje nao guarda trakt/simkl, e a resposta nao muda ate o app

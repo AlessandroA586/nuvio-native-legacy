@@ -388,13 +388,13 @@ int main(int argc, char **argv) {
     confere("pull sobrescreve edicao local mesmo com conta igual", !strcmp(l, "AB"));
     tv[0].ativo = 0; sync_sujar_addons();
     proximoCiclo(); tvLetras(l, sizeof l);
-    confere("ligar e desligar tambem fica local ate o pull", !strcmp(l, "AB"));
+    confere("pull preserves explicit local disable", !strcmp(l, "aB"));
     AddonRemoto tmp = tv[0]; tv[0] = tv[1]; tv[1] = tmp;
     sync_sujar_addons(); proximoCiclo(); tvLetras(l, sizeof l);
-    confere("pull restaura ordem da conta", !strcmp(l, "AB"));
+    confere("pull restores account order and preserves local disable", !strcmp(l, "aB"));
     snprintf(conta, sizeof conta, "A");
     sync_manual_addons(); ateTerminar(); tvLetras(l, sizeof l);
-    confere("botao puxa nova lista na hora", !strcmp(l, "A") && !pushes);
+    confere("manual pull removes addon and preserves local disable", !strcmp(l, "a") && !pushes);
   } else if (!strcmp(cen, "duplicata")) {
     snprintf(conta, sizeof conta, "ABB");
     sync_iniciar(); ateTerminar();
