@@ -447,6 +447,7 @@ EM_JS(double, nv_av, (const char *cmd, const char *txt,
   if (op === "roi") {
     var p8 = pl();
     if (!p8 || !S.aberto) return 0;
+    if (typeof p8.setVideoRoi !== "function") return -1;
     try { p8.setVideoRoi(a, b, c, d); } catch (e) {
       if (!S.avisouRoi) { S.avisouRoi = 1;
         try { console.log("[video] setVideoRoi recusou: " + e); } catch (e2) {} }
@@ -1436,8 +1437,10 @@ static int roiAplicar(int sx, int sy, int sw, int sh) {
   int o[4], k = avroi_pedido(roiAtivo, sx, sy, sw, sh,
                              (int)video_largura(), (int)video_altura(), o);
   if (!k) return 0;
-  if (avChamar("roi", NULL, o[0], o[1], o[2], o[3], NULL, 0) < 1) {
-    if (k == 2) roiAtivo = 0;   // sem setVideoRoi nesta TV: nao insistir a cada quadro
+  double r = avChamar("roi", NULL, o[0], o[1], o[2], o[3], NULL, 0);
+  if (r < 1) {
+    // Only a missing API rules out a stale crop; rejection must retry.
+    if (r < 0) roiAtivo = 0;
     return 0;
   }
   roiAtivo = k == 1;
