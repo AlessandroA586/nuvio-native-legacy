@@ -4903,6 +4903,7 @@ int gfx_mini_alvo(GfxMini *m, int w, int h) {
   if (st != GL_FRAMEBUFFER_COMPLETE) { gfx_mini_liberar(m); return 0; }
   return 1;
 }
+int gfx_mini_ativo(void) { return miniAtiva; }
 void gfx_mini_comecar(GfxMini *m, float x0, float y0, float esc) {
   if (!m->fbo || miniAtiva || esc <= 0.0f) return;
   // O fundo pendente (luz, Frost adiado, fundo da Dinamica) e da TELA: sai

@@ -447,6 +447,7 @@ typedef struct { GLuint fbo, tex; int w, h; } GfxMini;
 int  gfx_mini_alvo(GfxMini *m, int w, int h);   // cria ou recria; 0 = sem FBO
 void gfx_mini_comecar(GfxMini *m, float x0, float y0, float esc);
 void gfx_mini_terminar(void);
+int  gfx_mini_ativo(void);
 void gfx_mini_desenhar(const GfxMini *m, GfxRect r, float raioPx, float a);
 void gfx_mini_liberar(GfxMini *m);
 // Dentro da miniatura: a base de `r` some ate `alfa` (o .gv.fade do mockup).

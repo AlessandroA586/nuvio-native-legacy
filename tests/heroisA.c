@@ -177,6 +177,9 @@ static void capture(const char *prefix, int split, int glass, float scale) {
   if (scale == 1.0f)
     printf("BUDGET %d %d %d %.9f %.9f %.6f\n", split, glass, gfx_n_rect, gfx_fill, gfx_fill_gpu,
            (samples[31]+samples[32])/2000000.0);
+#ifndef HERO_BASELINE
+  if (split) assert(gfx_n_rect <= 31);
+#endif
   TXT_FIM();
 }
 int main(int argc,char **argv) {
