@@ -54,7 +54,7 @@
 
 static jclass    gCls;      // GlobalRef: FindClass de fio do SDL nao acha classe do app
 static jmethodID mAbrir, mParar, mPausar, mBuscar, mVolume, mJanela, mEscolher;
-static jmethodID mAbrirPosicao;
+static jmethodID mAbrirPosicao, mJanelaPronta;
 // 2.0.3 (opcional): abrirRetomada(url, cab, inicioMs, fracao, geracao). So o
 // percentual conhecido (retomada da conta, sem registro local): o Kotlin
 // aplica fracao/10000 da duracao do CONTAINER antes do primeiro quadro.
@@ -78,6 +78,7 @@ static int resolverMetodos(JNIEnv *env) {
   mBuscar   = (*env)->GetStaticMethodID(env, gCls, "buscar", "(I)V");
   mVolume   = (*env)->GetStaticMethodID(env, gCls, "volume", "(I)V");
   mJanela   = (*env)->GetStaticMethodID(env, gCls, "janela", "(IIIII)V");
+  mJanelaPronta = (*env)->GetStaticMethodID(env, gCls, "janelaPronta", "()Z");
   mEscolher = (*env)->GetStaticMethodID(env, gCls, "escolher", "(II)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); return 0; }
   // Opcional: uma casca anterior ainda abre normalmente e recebe o seek
@@ -1035,6 +1036,13 @@ static void janelaKt(int x, int y, int w, int h, int encaixa) {
 static void janelaSeMudou(int x, int y, int w, int h, int encaixa) {
   if (temEnv && x == envX && y == envY && w == envW && h == envH && encaixa == envEnc) return;
   janelaKt(x, y, w, h, encaixa);
+}
+int video_janela_pronta(void) {
+  JNIEnv *env = ambiente();
+  if (!env || !temEnv || !mJanelaPronta) return 0;
+  int pronta = (*env)->CallStaticBooleanMethod(env, gCls, mJanelaPronta);
+  fimChamada(env);
+  return pronta;
 }
 void video_janela(int x, int y, int w, int h) { janelaSeMudou(x, y, w, h, 1); }
 

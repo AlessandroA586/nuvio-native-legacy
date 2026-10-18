@@ -3,6 +3,7 @@
 // hero no topo, rail fixa à esquerda e fileiras horizontais de posters. A
 // infraestrutura nativa cuida de cache assíncrono, foco e transições.
 #include "home.h"
+#include "memlog.h"
 #include "perfis.h"
 #include "botoes.h"
 #include "cwretido.h"
@@ -591,6 +592,32 @@ static TrailerCinema heroCinema;
 static int     heroTrailerNoCartao;
 static int     cartaoTrailerItem = -1, cartaoTrailerPode, cartaoTrailerServe;
 static GfxRect cartaoTrailerRect;
+// Android fraco (Onn): the video window is a SurfaceView laid out apart from the
+// GL hole, so moving it every frame while the card expands or the row scrolls
+// flickers and stutters. Open and follow only once the card rect sat still.
+#define NV_CARTAO_ASSENTA_MS 300u
+static GfxRect cartaoAssentaRect;
+static Uint32  cartaoAssentaDesde;
+static int cartaoAssentado(Uint32 agora) {
+  if (!memlog_android_fraco()) return 1;
+  const GfxRect *r = &cartaoTrailerRect, *a = &cartaoAssentaRect;
+  if (fabsf(r->x - a->x) > 1.0f || fabsf(r->y - a->y) > 1.0f ||
+      fabsf(r->w - a->w) > 1.0f || fabsf(r->h - a->h) > 1.0f) {
+    cartaoAssentaRect = *r;
+    cartaoAssentaDesde = agora;
+  }
+  return agora - cartaoAssentaDesde >= NV_CARTAO_ASSENTA_MS;
+}
+static float cartaoTrailerAlpha(int item, Uint32 agora) {
+  if (heroTrailerNoCartao && heroTrailerItem == item && heroTrailerFade > 0.004f &&
+      trailer_dono() != TRAILER_DONO_DETALHE) {
+    // Draw publishes current geometry after the trailer step used the previous
+    // frame. Close the hole before exposing a still-unmoved Android surface.
+    if (!cartaoAssentado(agora) || (memlog_android_fraco() && !trailer_mostra_video())) heroTrailerFade = 0.0f;
+    return heroTrailerFade;
+  }
+  return 0.0f;
+}
 // Proporcao minima (largura/altura) do cartaz que recebe o trailer: o 4:3
 // (1,33) entra, o 2:3 em pe (0,67) nao.
 #define NV_CARTAO_TRAILER_ASP 1.2f
@@ -5900,6 +5927,7 @@ static void home_trailer_passo_(int topo, float dt, Uint32 agora) {
                    agora - heroPendenteEm >= (Uint32)(ajustes_expandir_poster_atraso() * 1000.0f);
     // No card: the focused card drawn last frame must accept the video.
     if (destCartao) noCartaz = noCartaz && cartaoTrailerPode && itemAtual >= 0;
+    if (destCartao && !cartaoAssentado(agora)) cartaoTrailerServe = 0;
     pronto = topo && (noHero || noCartaz);
     if (!topo) motivo = HERO_GATE_OVERLAY;
     else if (!destCartao && !ajustes_hero_ligado()) motivo = HERO_GATE_DISABLED;
@@ -6116,14 +6144,18 @@ trailer_hero_fim:
       (!heroTrailerNoCartao || cartaoTrailerItem == heroTrailerItem)) {
     GfxRect alvoR = heroTrailerNoCartao ? cartaoVideoRect(cartaoTrailerRect) : heroArteRect;
     GfxRect atual = trailer_retangulo();
-    if (fabsf(alvoR.x - atual.x) > 1.0f || fabsf(alvoR.y - atual.y) > 1.0f ||
-        fabsf(alvoR.w - atual.w) > 1.0f || fabsf(alvoR.h - atual.h) > 1.0f)
+    if ((fabsf(alvoR.x - atual.x) > 1.0f || fabsf(alvoR.y - atual.y) > 1.0f ||
+         fabsf(alvoR.w - atual.w) > 1.0f || fabsf(alvoR.h - atual.h) > 1.0f) &&
+        (!heroTrailerNoCartao || cartaoAssentado(agora)))
       trailer_rect(alvoR);
   }
   { float alvo = (heroTrailerItem >= 0 && heroTrailerItem == itemAtual &&
                   trailer_aberto() && !trailer_cheia() && trailer_tocando() &&
-                  trailer_mostra_video()) ? 1.0f : 0.0f;   // .tpk: ate o recorte assentar (#178)
+                  trailer_mostra_video() &&
+                  (!heroTrailerNoCartao || cartaoAssentado(agora))) ? 1.0f : 0.0f;   // .tpk: ate o recorte assentar (#178)
     heroTrailerFade = anim_mola(heroTrailerFade, alvo, dt, NV_MOLA_SCROLL);
+    // Android fraco: card moving = no hole at all (a fade would leave the video plane still while the card moves).
+    if (alvo == 0.0f && heroTrailerNoCartao && !cartaoAssentado(agora)) heroTrailerFade = 0.0f;
     // O `playing` chegou: este titulo ja teve o seu trailer (ver heroTrailerTocou).
     if (alvo > 0.5f) heroTrailerMarcarTocou(heroTrailerImdb);
     // MODO CINEMA: so com o trailer do DESTAQUE tocando (foco no hero). No do
@@ -7996,9 +8028,7 @@ static void home_desenhar_(Uint32 agora) {
             cartaoTrailerRect = (GfxRect){ px, py, w, h };
             cartaoTrailerPode = naTela && (deitadoJa || expande);
             cartaoTrailerServe = naTela && deitadoJa && (!expande || abre >= 0.999f);
-            if (heroTrailerNoCartao && heroTrailerItem == idxCat && heroTrailerFade > 0.004f &&
-                trailer_dono() != TRAILER_DONO_DETALHE)
-              trailerCard = heroTrailerFade;
+            trailerCard = cartaoTrailerAlpha(idxCat, agora);
           }
           CartaoFoco ck = { r, c, tipo, cItem, caminho, t, aArte, deitado, rotuloFora, abre, esc, f,
                             px, py, w, h, (!focoHero && focus_indice(&foco, r, c)) ? varreFoco : 0.0f,

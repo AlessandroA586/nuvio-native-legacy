@@ -545,6 +545,9 @@ int trailer_tocando(void) {
 #endif
 }
 int trailer_mostra_video(void) {
+#ifdef NV_ANDROID
+  if (noCartao && !video_janela_pronta()) return 0;
+#endif
 #if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
   Uint32 t = SDL_GetTicks();
   const char *porque = NULL;
