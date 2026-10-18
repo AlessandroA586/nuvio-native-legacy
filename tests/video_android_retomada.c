@@ -11,6 +11,7 @@ void *SDL_AndroidGetActivity(void);
 #include <stdint.h>
 #include <stdlib.h>
 
+int stream_kbps_atual(void) { return 0; }
 static int cap4k[4];
 void stream_definir_decoder4k(int h, int a, int v, int av) {
   cap4k[0] = h; cap4k[1] = a; cap4k[2] = v; cap4k[3] = av;
@@ -47,6 +48,7 @@ static jmethodID JNICALL metodo(JNIEnv *e, jclass c, const char *nome, const cha
     if (ausenteFracao) { excecao = 1; return NULL; }
     return (jmethodID)(uintptr_t)5;
   }
+  if (!strcmp(nome, "kbps")) return (jmethodID)(uintptr_t)8;
   if (!strcmp(nome, "pausar")) return (jmethodID)(uintptr_t)6;
   if (!strcmp(nome, "buscar")) return (jmethodID)(uintptr_t)7;
   return (jmethodID)(uintptr_t)1;
@@ -59,7 +61,7 @@ static jboolean JNICALL temExcecao(JNIEnv *e) { (void)e; return excecao; }
 static void JNICALL limparExcecao(JNIEnv *e) { (void)e; excecao = 0; }
 static void JNICALL chamar(JNIEnv *e, jclass c, jmethodID m, ...) {
   (void)e; (void)c;
-  if (m == mParar) return;
+  if (m == mParar || (uintptr_t)m == 8) return;
   if (m == mPausar) {
     va_list ap; va_start(ap, m); ultimoPausar = va_arg(ap, jint); va_end(ap);
     chamadasPausa++; return;
@@ -246,5 +248,31 @@ int main(int argc, char **argv) {
   video_bombear(); relogio += 3000; video_bombear();
   assert(chamadasPausa == pausas + 1 && ultimoPausar == 1);
   puts("ok reconexao conserva pausa pedida antes do ack");
+  int livePosicoes = chamadasPosicao, liveNormais = chamadasNormais;
+  assert(video_tocar_posicao("https://example.invalid/live-window-test.m3u8", 612.345));
+  // The live-window grace period belongs only to this open, is clamped,
+  // expires without a Kotlin callback, and is cleared by READY/stop messages.
+  unsigned liveSessao = video_android_sessao();
+  unsigned liveInicio = relogio;
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_LIVE_RECOVERY, 8000, (int)liveSessao);
+  assert(video_recuperando_live() && chamadasPosicao == livePosicoes + 1 && chamadasNormais == liveNormais);
+  relogio = liveInicio + 7999; assert(video_recuperando_live());
+  relogio++; assert(!video_recuperando_live());
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_LIVE_RECOVERY, INT_MAX, (int)liveSessao);
+  assert(video_recuperando_live());
+  relogio += 8000; assert(!video_recuperando_live());
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_LIVE_RECOVERY, 8000, (int)liveSessao);
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_LIVE_RECOVERY, 0, (int)liveSessao);
+  assert(!video_recuperando_live());
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_LIVE_RECOVERY, 8000, (int)liveSessao - 1);
+  assert(!video_recuperando_live());
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_LIVE_RECOVERY, 8000, (int)liveSessao);
+  video_parar(); assert(!video_recuperando_live());
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_LIVE_RECOVERY, 8000, (int)liveSessao);
+  assert(!video_recuperando_live());
+  assert(video_tocar_posicao("https://example.invalid/live-window-test.m3u8", 612.345));
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_LIVE_RECOVERY, 8000, (int)liveSessao);
+  assert(!video_recuperando_live());
+  puts("ok bounded live recovery, native expiry, stale sessions and stop; no automatic reopen");
   puts("video Android retomada: PASS (JNI, geracoes, fallback e limites)");
 }
