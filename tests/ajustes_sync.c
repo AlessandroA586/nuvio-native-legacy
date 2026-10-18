@@ -83,9 +83,10 @@ int main(int argc, char **argv) {
   login();
   int webEdit = !strcmp(argv[2], "webedit"), quota = !strcmp(argv[2], "quota");
   if (!strcmp(argv[2], "roundtrip") || !strcmp(argv[2], "empty") || webEdit || quota) {
-    if (strcmp(argv[2], "empty")) cloud = strdup("{\"version\":1,\"features\":{\"layout_settings\":{\"hero_section_enabled\":{\"type\":\"boolean\",\"value\":true}},\"future\":{\"untouched\":42}}}");
+    if (strcmp(argv[2], "empty")) cloud = strdup("{\"version\":1,\"selected_theme\":\"WHITE\",\"features\":{\"layout_settings\":{\"hero_section_enabled\":{\"type\":\"boolean\",\"value\":true}},\"future\":{\"untouched\":42}}}");
     cycle();
-    valor[AJ_TEMA] = 22; valor[AJ_HOME_LAYOUT] = 2; valor[AJ_IDIOMA] = 4;
+    valor[AJ_TEMA] = webEdit ? 1 : AJ_TEMA_DINAMICA;
+    valor[AJ_HOME_LAYOUT] = 2; valor[AJ_IDIOMA] = 4;
     valor[AJ_HERO] = 1; valor[AJ_PULAR_ABERTURA] = 0;
     valor[AJ_LEG_LINGUA] = 3; valor[AJ_LEG2_COR] = 2;
     valor[AJ_FONTE_UI] = 1; valor[AJ_RESOLUCAO] = RES_4K;
@@ -118,6 +119,7 @@ int main(int argc, char **argv) {
     char *saved = strdup(cloud);
     sessao_sair(); sync_esquecer_usuario();
     memcpy(valor, valorPadrao, sizeof valor);
+    valor[AJ_TEMA] = 0; // Restore onto a fixed theme, without a local accent.
     assert(player_leg_estilo_definir(player_leg_estilo_padrao(), -1));
     fonteregra_perfil_restaurar(1);
     fontefalha_definir_provedores(0); fontefalha_provedor_definir_limite(0, 3);

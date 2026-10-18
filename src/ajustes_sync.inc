@@ -90,16 +90,17 @@ static int ajustesExtrasAplicar(const char *json) {
   for (int i = 0; i < AJ_N; i++) if (ajustePortavel(i)) {
     const char *p, *end;
     char key[96];
-    // Web edits do not update the C snapshot. Existing web keys win.
-    if (!somenteDesteAparelho(i)) {
-      camelParaSnake(chaveConta(i), key, sizeof key);
-      if (acharValor(json, json + strlen(json), key, &p, &end) ||
-          acharValor(json, json + strlen(json), chaveConta(i), &p, &end)) continue;
-    }
     snprintf(key, sizeof key, "c_%s", CHAVE[i]);
     if (!acharValor(v, f, key, &p, &end) || p == end) continue;
     char *tail; long num = strtol(p, &tail, 10);
     if (tail != end || num < INT_MIN || num > INT_MAX) continue;
+    // Web edits win overlapping choices; C-only accents have no web value.
+    if (!somenteDesteAparelho(i) &&
+        !(i == AJ_TEMA && num >= AJ_N_TEMAS && num < AJ_N_TEMAS_OPC)) {
+      camelParaSnake(chaveConta(i), key, sizeof key);
+      if (acharValor(json, json + strlen(json), key, &p, &end) ||
+          acharValor(json, json + strlen(json), chaveConta(i), &p, &end)) continue;
+    }
     int novo = limita(i, (int)num);
     if (ajLegendaPrincipal(i)) { if (novo != ajLegendaValor(i)) mudou += ajLegendaDefinir(i, novo); }
     else if (valor[i] != novo) { valor[i] = novo; mudou++; }
