@@ -34,7 +34,7 @@ static const char *const VID_NOMES[VID_NU] = {
   "uLuzDir", "uEspec", "uDens", "uAmostra", "uRuido", "uRuidoEsc" };
 typedef struct {
   GLuint prog;
-  GLint rect, tela, tex, foco, reflexo, par, raio, cor, asp, texAsp, forcarCover, veuTela, borda, varre, veu, desl, fundo,
+  GLint rect, tela, tex, foco, reflexo, par, raio, cor, asp, texAsp, forcarCover, veuTela, heroiVeu, borda, varre, veu, desl, fundo,
         grad0, grad1, grad2, tempo, reg0, reg1, reg2, reg3, vaza;
   GLint amb, ambOn;         // uAmb/uAmbOn: so os tres modos de arte com rampa
   GLint texB, texAspB, alfaB;   // camadas do destaque (gfx_hero_camadas)
@@ -72,6 +72,7 @@ void gfx_textura_definir(GLuint tex, const float janela[4], float aspecto,
 int gfx_textura_ativa(void) { return txTex != 0; }
 float gfx_card_forcar_cover_atual = 0.0f;
 float gfx_card_veu_tela_atual = 0.0f;
+float gfx_card_heroi_veu_atual[4];
 // O pedaco do rect que o proximo gfx_rect desenha (uSub). So gfx_sombra_vazada
 // mexe, e devolve a (0,0,1,1) antes de sair.
 static float subAtual[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
@@ -460,6 +461,7 @@ static const char *FS_COVER =
 static const char *FS_CORPO[GFX_NMODOS] = {
   // GFX_CARD — arte inteira com cantos e especular no foco (sem zoom nem corte)
   "uniform float uReflexo;\n"
+  "uniform vec4 uHeroiVeu;\n"
   "void main(){\n"
   "  float d = sdf(vUv, uRaio, uAspect);\n"
   "  float m = borda(d);\n"
@@ -521,6 +523,11 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // do card (fotos do dono, 01/10/2026). Aqui o veu escurece a arte inteira
   // e so depois a borda recorta. Mesma rampa do GFX_BRILHO_TOPO com
   // uPar = (1, 0.42) sobre um retangulo de `fracao` da altura.
+  // Hero A tint precedes the existing bottom veil, in the artwork draw.
+  "  if (uHeroiVeu.a > 0.0) {\n"
+  "    float a = (1.0-smoothstep(0.30,0.66,vUv.x))*uHeroiVeu.a;\n"
+  "    cor = mix(cor, uHeroiVeu.rgb, a);\n"
+  "  }\n"
   "  if (uVeu.y > 0.0 || uVeu.w > 0.0) {\n"
   "    float yb = 1.0 - vUv.y;\n"
   "    float t1 = 1.0 - smoothstep(0.42, 1.0, yb / max(uVeu.x, 0.001));\n"
@@ -1654,6 +1661,7 @@ int gfx_iniciar(void) {
     progs[m].texAsp = glGetUniformLocation(p, "uTexAsp");
     progs[m].forcarCover = glGetUniformLocation(p, "uForceCover");
     progs[m].veuTela = glGetUniformLocation(p, "uVeuTela");
+    progs[m].heroiVeu = glGetUniformLocation(p, "uHeroiVeu");
     progs[m].borda  = glGetUniformLocation(p, "uBorda");
     progs[m].varre  = glGetUniformLocation(p, "uVarre");
     progs[m].veu    = glGetUniformLocation(p, "uVeu");
@@ -2091,6 +2099,7 @@ static void vidroDesenho(GfxRect r, GLuint tex, GfxModo modo, float foco, float 
     if (giroOn) vidroSoma(giroLayout, sizeof giroLayout);
     if (P->jan >= 0) vidroSoma(modo == GFX_TEXTURA ? txUv : gfx_janela_atual, sizeof txUv);
     if (P->veu >= 0) vidroSoma(gfx_veu_card_atual, sizeof gfx_veu_card_atual);
+    if (P->heroiVeu >= 0) vidroSoma(gfx_card_heroi_veu_atual, sizeof gfx_card_heroi_veu_atual);
     if (P->tempo >= 0) vidroSoma(&nv_tempo_viva, sizeof nv_tempo_viva);
     if (P->reg0 >= 0) vidroSoma(nv_ambiente_viva, sizeof nv_ambiente_viva);
     if (P->grad0 >= 0) vidroSoma(nv_grad_viva, sizeof nv_grad_viva);
@@ -2478,6 +2487,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
   }
   if (P->forcarCover >= 0) glUniform1f(P->forcarCover, gfx_card_forcar_cover_atual);
   if (P->veuTela >= 0)     glUniform1f(P->veuTela, gfx_card_veu_tela_atual);
+  if (P->heroiVeu >= 0) glUniform4fv(P->heroiVeu, 1, gfx_card_heroi_veu_atual);
   if (P->borda >= 0)  glUniform1f(P->borda, gfx_borda_foco_atual);
   if (P->varre >= 0)  glUniform1f(P->varre, gfx_varre_atual);
   // Depois da arte (gfx_veu_na_arte) a lista so serve para gfx_veu_base pular

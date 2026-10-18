@@ -6,6 +6,7 @@ static float headingY;
 static GLuint headingTexture;
 static int overlayProbe;
 static const char *heading;
+static unsigned renderTime = 1000;
 static TxtLinha recordLine(TxtEstilo style, const char *s, int r, int g, int b, int a, float width) {
   TxtLinha l = txt_linha_corta(style,s,r,g,b,a,width);
   if (style == TXT_ROW_TITULO) headingTexture = l.tex;
@@ -44,13 +45,14 @@ static void recordColor(GfxRect r, float radius, float red, float green, float b
 #include <SDL2/SDL_image.h>
 #include <assert.h>
 
+static int budgetFailed;
 static SDL_Window *window;
 static CatItem items[12];
 static void setup(int split, int glass) {
   char path[900];
   snprintf(path, sizeof path, "%s/ajustes.txt", getenv("NUVIO_DADOS"));
   FILE *f = fopen(path, "w"); assert(f);
-  fprintf(f, "idioma 1\nhomeLayoutLocal 2\nvidroLocal %d\nselected_theme %d\n", glass ? 0 : 1,
+  fprintf(f, "idioma 1\nhomeLayoutLocal 2\nmodernLandscapePostersEnabled 1\nbordaFocoCartaz 0\nvidroLocal %d\nselected_theme %d\n", glass ? 0 : 1,
           getenv("NV_HEROIS_TEMA") ? atoi(getenv("NV_HEROIS_TEMA")) : 0);
   fclose(f); ajustes_dir(getenv("NUVIO_DADOS"));
   memset(fileiras, 0, sizeof fileiras);
@@ -59,6 +61,9 @@ static void setup(int split, int glass) {
   fileiras[0].n = 8; fileiras[1].tipo = FILEIRA_NORMAL;
   snprintf(fileiras[0].titulo, sizeof fileiras[0].titulo, "%s", split ? "Top Rated - Movie" : "Horror - Movie");
   scrollX[0] = alvoScrollFil(0, 0, 0, 0);
+  animFoco[0][0] = animFocoFil[0] = 1;
+  animFocoFil[1] = 0;
+  snprintf(fileiras[1].titulo, sizeof fileiras[1].titulo, "Latest Horror - Movie");
   fileiras[1].n = 8;
   scrollY = dinRolagemCentrada(0, 0);
   fileirasVistasEm = 1000;
@@ -68,7 +73,7 @@ static void setup(int split, int glass) {
 static void renderHome(int split, int probe) {
   heading = fileiras[foco.fileira].titulo; headingTexture = 0;
   headingY = -1; overlayProbe = probe;
-  home_desenhar(1000);
+  home_desenhar(renderTime);
   if (probe) {
     unsigned char pixel[4];
     glReadPixels(10,1080-35,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
@@ -92,6 +97,7 @@ static void capture(const char *prefix, int split, int glass, float scale) {
   scrollX[0] = alvoScrollFil(0, 0, 0, 0);
 
   for (int frame = 0; frame < 50; frame++) {
+    renderTime = 1000 + frame * 16;
     SDL_PumpEvents(); tex_bombear(8); tex_novo_quadro(); txt_novo_quadro(); gfx_novo_quadro();
     glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1); glClear(GL_COLOR_BUFFER_BIT);
     renderHome(split, 0);
@@ -102,7 +108,23 @@ static void capture(const char *prefix, int split, int glass, float scale) {
       for(int row=0;row<1080;row++) memcpy((char*)s->pixels+row*s->pitch,pixels+(1079-row)*1920*4,1920*4);
       snprintf(path,sizeof path,"%s-%s%s.png",prefix,split?"heroidiv":"heroicard",glass?"":"-semvidro");
       assert(IMG_SavePNG(s,path)==0); SDL_FreeSurface(s); free(pixels);
-      printf("PNG %s; rects=%d fill=%.3f\n",path,gfx_n_rect,gfx_fill);
+      printf("PNG %s; rects=%d fill=%.3f gpu=%.3f\n",path,gfx_n_rect,gfx_fill,gfx_fill_gpu);
+      if (!split && scale == 1.0f) {
+        // Isolate the reviewed card from unrelated background/row submissions.
+        gfx_novo_quadro();
+        const CatItem *ci = cat_item(0);
+        GfxRect r = itemFoco.rect;
+        desenhaHeroiCard(ci,1,ci->sinopse,ci->backdrop,
+                        tex_obter_larg(ci->backdrop,r.w),1,
+                        r.x,r.y,r.w,r.h,raioDe(r.w,r.h),1,0);
+        double limit = 0.75; // Artwork + focus ring + copy; no separate veil area.
+        printf("GPU card glass=%d fill=%.3f limit=%.3f\n",glass,gfx_fill,limit);
+        if (gfx_fill > limit + 0.0005) {
+          fprintf(stderr, "FAIL wide hero GPU budget: glass=%d fill=%.3f limit=%.3f\n",
+                  glass, gfx_fill, limit);
+          budgetFailed = 1;
+        }
+      }
     }
     SDL_GL_SwapWindow(window); SDL_Delay(4);
   }
@@ -115,6 +137,8 @@ int main(int argc,char **argv) {
   assert(SDL_GL_CreateContext(window)); SDL_GL_SetSwapInterval(0); glViewport(0,0,1920,1080);
   gfx_tamanho_alvo(1920,1080); assert(gfx_iniciar()); assert(txt_iniciar("deploy/app",1)); tex_iniciar(64);
   dados_iniciar("deploy/app/art");
+  // Exercise explicit fixture settings, not the first-run appearance migration.
+  dados_gravar("aparencia-20.txt", "1\n");
   AddonRemoto addon = {.nome="Fixture",.url="https://fixture.invalid/manifest.json",.ativo=1};
   addons_definir_lista(&addon,1); assert(addons_n()==1);
   ajustes_iniciar(); artehero_definir_falhou(tex_falhou);
@@ -130,6 +154,18 @@ int main(int argc,char **argv) {
     snprintf(items[i].logo,sizeof items[i].logo,"deploy/app/art/logo/%02d.png",i%10);
   }
   CatFileira cf={.n=12}; cat_definir_tudo(items,12,&cf,1);
+  // Warm local artwork before measuring settled frames, never loading placeholders.
+  for (int frame=0;frame<200;frame++) {
+    int ready=1;
+    tex_pedido_fora(0); tex_bombear(24); tex_novo_quadro();
+    for (int i=0;i<8;i++) {
+      if (!tex_obter_larg(items[i].backdrop,1744)) ready=0;
+      if (!tex_obter_larg(items[i].poster,400)) ready=0;
+    }
+    if (ready) break;
+    SDL_Delay(4);
+  }
+  assert(tex_obter_larg(items[0].backdrop,1744));
   if(argc>1 && !strcmp(argv[1],"--fade")) {
     setup(0,0); renderHome(0,1); SDL_Quit(); return 0;
   }
@@ -152,6 +188,10 @@ int main(int argc,char **argv) {
       for(int split=0;split<2;split++) capture(scaled,split,0,scales[i]);
     }
   }
+  if (argc == 1) for (int glass=0;glass<2;glass++)
+    capture(getenv("NUVIO_DADOS"),0,glass,1);
+  assert(!budgetFailed);
+  puts("PASS wide hero GPU budget: isolated card <=0.75 screens in both glass modes");
   gfx_escala_txt_definir(1);
   setup(0,0);
   assert(fabsf(alturaFil(0)/larguraFil(0)-372.0f/1744)<0.0001f);

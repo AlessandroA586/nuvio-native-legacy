@@ -313,6 +313,8 @@ extern float gfx_card_forcar_cover_atual;
 // desenhados por cima, sem as duas passadas de largura inteira. So a parede
 // de capas (psestilos.c) liga; quem liga desliga.
 extern float gfx_card_veu_tela_atual;
+// Hero A horizontal tint inside GFX_CARD; callers reset alpha to zero after drawing.
+extern float gfx_card_heroi_veu_atual[4];
 // 1 = o cartaz em foco ganha o rebordo claro no GFX_CARD; 0 = nao ganha. E um
 // ajuste da pessoa (Ajustes > Foco no cartaz), lido uma vez por quadro pela
 // tela que desenha; o brilho e o especular do foco nao dependem dele.

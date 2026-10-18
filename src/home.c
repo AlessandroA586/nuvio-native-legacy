@@ -6954,7 +6954,6 @@ static void desenhaHeroiCard(const CatItem *ci, int completo, const char *texto,
                      w + 2 * NV_ANEL_FOCO, h + 2 * NV_ANEL_FOCO},
             (raio * h + NV_ANEL_FOCO) / (h + 2 * NV_ANEL_FOCO), ar, ag, ab, f);
   }
-  desenhaArteCard(card, FILEIRA_HEROI, caminho, t, ci, f, raio, aArte, varre);
   if (completo) {
     CorvivaPaleta p;
     float cr = 0.02f, cg = 0.07f, cb = 0.09f;
@@ -6962,10 +6961,22 @@ static void desenhaHeroiCard(const CatItem *ci, int completo, const char *texto,
     if (caminho && corviva_paleta(caminho, &p) && p.ok) {
       cr = p.base[0] * 0.45f; cg = p.base[1] * 0.45f; cb = p.base[2] * 0.45f;
     }
-    gfx_rect(card, 0, GFX_VEU, 0, 1, 0, raio, cr, cg, cb, 0.95f);
+    gfx_card_heroi_veu_atual[0] = cr;
+    gfx_card_heroi_veu_atual[1] = cg;
+    gfx_card_heroi_veu_atual[2] = cb;
+    gfx_card_heroi_veu_atual[3] = 0.95f;
+    if (t) gfx_veu_card_por(NV_HEROI_VEU_F, NV_HEROI_VEU_A);
   }
+  desenhaArteCard(card, FILEIRA_HEROI, caminho, t, ci, f, raio, aArte, varre);
+  gfx_card_heroi_veu_atual[3] = 0;
+  if (completo && t) gfx_veu_na_arte = 1;
+  if (completo && !t)
+    gfx_rect(card, 0, GFX_VEU, 0, 1, 0, raio,
+             gfx_card_heroi_veu_atual[0], gfx_card_heroi_veu_atual[1],
+             gfx_card_heroi_veu_atual[2], 0.95f);
   gfx_veu_base(card, raio, completo ? NV_HEROI_VEU_F : 0.52f,
                completo ? NV_HEROI_VEU_A : 0.80f);
+  if (completo) gfx_veu_card_limpar();
   float tw = fminf(760.0f, w - pad * 2.0f);
   float base = py + h - (completo ? 44.0f : 30.0f);
   if (completo) {
