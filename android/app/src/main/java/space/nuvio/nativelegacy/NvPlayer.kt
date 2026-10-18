@@ -1130,17 +1130,18 @@ object NvPlayer {
         principal.post { player?.setPlaybackSpeed(v) }
     }
     private val janelaPedido = AtomicInteger()
+    // Request -> applied on the UI thread (definida) -> acknowledged after a
+    // traversal on a valid surface (aplicada). Lifecycle/layout events drop the
+    // acknowledgement and rearm it; the SDL-side query never mutates state.
+    @Volatile private var janelaDefinida = -1
     @Volatile private var janelaAplicada = -1
     @Volatile private var janelaSuperficieAplicada: SurfaceView? = null
     private var janelaUltimoPedido: List<Any?>? = null
     @JvmStatic fun janelaPronta(): Boolean {
-        val sv = superficie
-        if (sv == null || sv.isLayoutRequested || sv.visibility != View.VISIBLE ||
-            !sv.holder.surface.isValid || recriando || recriaAgendada) {
-            janelaSuperficieAplicada = null
-            return false
-        }
-        return janelaAplicada == janelaPedido.get() && janelaSuperficieAplicada === sv
+        val sv = superficie ?: return false
+        return !sv.isLayoutRequested && sv.visibility == View.VISIBLE &&
+            sv.holder.surface.isValid && !recriando && !recriaAgendada &&
+            janelaAplicada == janelaPedido.get() && janelaSuperficieAplicada === sv
     }
     private fun observarJanela(sv: SurfaceView) {
         sv.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or2, ob ->
@@ -1150,8 +1151,9 @@ object NvPlayer {
     }
     private fun recuperarJanela(sv: SurfaceView) {
         janelaSuperficieAplicada = null
+        // A request still queued confirms itself once applied.
         val pedido = janelaPedido.get()
-        if (janelaAplicada == pedido) confirmarJanela(sv, pedido)
+        if (janelaDefinida == pedido) confirmarJanela(sv, pedido)
     }
     private fun confirmarJanela(sv: SurfaceView, pedido: Int) {
         // A queued request is not a laid-out SurfaceView. Acknowledge only
@@ -1180,6 +1182,7 @@ object NvPlayer {
         }
         principal.post {
             definirJanela(x, y, w, h, encaixa != 0)
+            janelaDefinida = pedido
             val sv = superficie ?: return@post
             confirmarJanela(sv, pedido)
         }

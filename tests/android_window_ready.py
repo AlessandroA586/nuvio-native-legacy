@@ -91,8 +91,13 @@ fun main() {
     }
     P.superficie!!.holder.surface.isValid = false
     check(!P.janelaPronta()) { "destroyed native surface still ready" }
-    P.superficie!!.holder.surface.isValid = true
-    recover()
+    P.lifecycle("destroyed"); P.superficie!!.holder.surface.isValid = true; P.lifecycle("created")
+    recover(requestAgain = false)
+    // SDL polling a transient pending layout (bounds unchanged) cannot strand readiness.
+    P.superficie!!.isLayoutRequested = true
+    check(!P.janelaPronta()) { "pending layout still ready" }
+    P.superficie!!.isLayoutRequested = false
+    check(P.janelaPronta()) { "polled transient layout request hid the trailer for good" }
     // Lifecycle callbacks must invalidate even when SDL misses the invalid interval.
     for (event in listOf("destroyed", "created", "changed")) {
         P.lifecycle(event)
@@ -102,8 +107,8 @@ fun main() {
     P.lifecycle("destroyed", SurfaceHolder()); check(P.janelaPronta())
     P.superficie!!.visibility = View.GONE
     check(!P.janelaPronta()) { "hidden surface still ready" }
-    P.superficie!!.visibility = View.VISIBLE
-    recover()
+    P.lifecycle("destroyed"); P.superficie!!.visibility = View.VISIBLE; P.lifecycle("created")
+    recover(requestAgain = false)
     P.superficie!!.isLayoutRequested = true
     check(!P.janelaPronta()) { "pending layout still ready" }
     request(12); draw(); check(!P.janelaPronta())
@@ -120,6 +125,15 @@ fun main() {
         P.recriando = false; P.recriaAgendada = false
         draw(); check(P.janelaPronta())
     }
+    // Surface replaced while a changed request awaited pre-draw: the new view's
+    // first layout must confirm the applied request without another crop request.
+    val old = P.superficie!!
+    request(13); P.principal.drain()
+    P.superficie = SurfaceView(); P.observeLayout()
+    old.viewTreeObserver.draw()
+    check(!P.janelaPronta())
+    P.superficie!!.layout(true); draw()
+    check(P.janelaPronta()) { "replacement surface stayed hidden after a pending request" }
     println("android_window_ready: valid retries preserved; lifecycle/layout recovery waits for pre-draw")
 }
 '''.replace('METHODS', methods).replace('CALLBACKS', callbacks).replace('android.view.ViewTreeObserver.OnPreDrawListener', 'Observer.OnPreDrawListener')
