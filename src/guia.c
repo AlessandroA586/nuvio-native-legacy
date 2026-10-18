@@ -1477,7 +1477,7 @@ static void cacheGravar(void) {
   fflush(stdout);
 }
 
-// Check the requested key directly: enabled add-ons cannot crowd out native sources.
+// Check installed sources directly: disabling an add-on must preserve its saved data.
 static int chaveConfigurada(const char *ch) {
   LtvUrl us[LTV_URLS_MAX];
   char atual[LTV_CHAVE];
@@ -1486,7 +1486,7 @@ static int chaveConfigurada(const char *ch) {
   if (!strcmp(ch, "xt")) return xtream_configurado();
   for (i = 0; i < addons_n(); i++) {
     const char *b = addons_base(i);
-    if (!b || !b[0] || !addons_ativo(i)) continue;
+    if (!b || !b[0]) continue;
     ltv_chave_fonte(LTV_ADDON, b, atual, sizeof atual);
     if (!strcmp(atual, ch)) return 1;
   }
@@ -4875,7 +4875,7 @@ static void desenharLimpar(float a) {
     ponteiro_camada();
     GfxRect c = { (NV_TELA_W - 640.0f) * 0.5f, (NV_TELA_H - 300.0f) * 0.5f, 640.0f, 300.0f };
     TxtLinha t;
-    int tf2 = ajustes_tinta_foco();
+    int tf2 = 240; // The focus surface stays dark for every accent.
     gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0, 0.55f * a);
     materialPainelGuia(c, 26.0f, a);
     gfx_cor(c, 26.0f / c.h, 0.071f, 0.075f, 0.086f, 0.94f * a);

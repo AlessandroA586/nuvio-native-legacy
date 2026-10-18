@@ -21,13 +21,13 @@
 // --- dubles: a "configuracao atual" mora aqui --------------------------------
 static int nAddons;
 static const char *bases[128];
-static int xtOk, stOk;
+static int xtOk, stOk, addonDisabled;
 int perfis_ativo(void) { return 1; }
 int addons_n(void) { return nAddons; }
 const char *addons_base(int i) { return bases[i]; }
 const char *addons_nome(int i) { (void)i; return "addon"; }
-int addons_ativo(int i) { (void)i; return 1; }
-int addons_base_desligada(const char *b) { (void)b; return 0; }
+int addons_ativo(int i) { return !(addonDisabled && i == 0); }
+int addons_base_desligada(const char *b) { return addonDisabled && !strcmp(b, bases[0]); }
 int addons_sondado(int i) { (void)i; return 1; }
 int addons_catalogos_canal(int i, AddCatCanal *s, int m) { (void)i; (void)s; (void)m; return 0; }
 int addons_ocupado(void) { return 1; }   // 1 = prefetch nao atrapalha
@@ -88,7 +88,7 @@ void tex_orcamento_info(int *mb, long *memTotal, int *fixo, int *slots) {
 PtvPlataforma ptv_plataforma(void) { return PTV_LG; }
 
 // Drawing stubs keep the real confirmation's pointer registration executable.
-static int pointerTargets, pointerLayers;
+static int pointerTargets, pointerLayers, clearInk, cancelInk, focusInk = 18;
 void ponteiro_camada(void) { pointerTargets = 0; pointerLayers++; }
 void ponteiro_alvo(float x, float y, float w, float h, PonteiroFn foco,
                    PonteiroFn ativar, int a, int b) {
@@ -96,7 +96,7 @@ void ponteiro_alvo(float x, float y, float w, float h, PonteiroFn foco,
   pointerTargets++;
 }
 int ajustes_vidro(void) { return 0; }
-int ajustes_tinta_foco(void) { return 20; }
+int ajustes_tinta_foco(void) { return focusInk; }
 void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco, float px, float py,
               float raio, float cr, float cg, float cb, float ca) {
   (void)r; (void)tex; (void)modo; (void)foco; (void)px; (void)py;
@@ -108,7 +108,9 @@ void gfx_cor(GfxRect r, float raio, float cr, float cg, float cb, float ca) {
 void gfx_vidro_folha(GfxRect r, float raio, float a) { (void)r; (void)raio; (void)a; }
 void plrui_linha_foco(GfxRect r, float raio, float a) { (void)r; (void)raio; (void)a; }
 TxtLinha txt_linha(TxtEstilo e, const char *s, int r, int g, int b, int a) {
-  (void)e; (void)s; (void)r; (void)g; (void)b; (void)a; return (TxtLinha){0};
+  if (!strcmp(s, "Limpar")) clearInk = r < g ? r : g < b ? g : b;
+  if (!strcmp(s, "Cancelar")) cancelInk = r < g ? r : g < b ? g : b;
+  (void)e; (void)a; return (TxtLinha){0};
 }
 void txt_desenhar_alpha(TxtLinha t, float x, float y, float a) { (void)t; (void)x; (void)y; (void)a; }
 float txt_bloco(TxtEstilo e, const char *s, int r, int g, int b, float x, float y,
@@ -161,6 +163,21 @@ int main(int argc, char **argv) {
   static const char *a[] = { "Canal A1", "Canal A2" }, *b[] = { "Canal B1" };
   char chA[LTV_CHAVE], chB[LTV_CHAVE], nome[64], caminho[600];
   assert(argc == 2);
+#ifndef GUIACACHE_BASELINE
+  if (getenv("GUIACACHE_CONTRAST_ONLY")) {
+    // White/gold accents return dark ink; both focused labels need light ink.
+    limparConfirm = 1;
+    for (int ink = 18; ink <= 240; ink += 222) {
+      focusInk = ink;
+      for (int f = 0; f < 2; f++) {
+        limparFoco = f; desenharLimpar(1.0f);
+        assert(clearInk >= 180 && cancelInk >= 180);
+      }
+    }
+    puts("PASS: confirmation labels remain readable with light/dark accents");
+    return 0;
+  }
+#endif
   dados_iniciar(argv[1]);
   bases[0] = "https://a.example"; bases[1] = "https://b.example";
   nAddons = 2;
@@ -175,6 +192,26 @@ int main(int argc, char **argv) {
   assert(cacheLer() && nCanais == 3 && nLtvF == 2);
   assert(temCanal("Canal A1") && temCanal("Canal B1"));
 #ifndef GUIACACHE_BASELINE
+  // Disabling an installed source must preserve disk lists, EPG and favorites.
+  snprintf(fav[0].chave, sizeof fav[0].chave, "%s", chA);
+  snprintf(fav[0].id, sizeof fav[0].id, "%s", canais[0].id);
+  nFav = favLido = 1; favGravar();
+  snprintf(nome, sizeof nome, "epg-x-%s-p1.bin", chA); dados_gravar(nome, "saved EPG");
+  addonDisabled = 1;
+  resetPublished();
+  cacheLer();
+  assert(nFav == 1 && !strcmp(fav[0].chave, chA));
+  assert(dados_caminho(caminho, sizeof caminho, nome) && access(caminho, F_OK) == 0);
+  cacheNomeFonte(chA, nome, sizeof nome);
+  assert(dados_caminho(caminho, sizeof caminho, nome) && access(caminho, F_OK) == 0);
+  assert(!temCanal("Canal A1"));
+  addonDisabled = 0;
+  resetPublished();
+  assert(cacheLer() && temCanal("Canal A1") && nFav == 1);
+  stagingZerar(); sTeto = 30000;
+  fonteVaziaRecupera(LTV_ADDON, bases[0], "A", bases[0]);
+  assert(sNCanais == 2 && sLtvF[0].deCache);
+  stagingZerar();
   // Remove first source in memory: B's channel and category indices must move.
   guia_fonte_esquecer(chA);
   assert(nCanais == 1 && nLtvF == 1 && canais[0].fonte == 0 && cats[0].fonte == 0);
@@ -224,6 +261,7 @@ int main(int argc, char **argv) {
   fonteVaziaRecupera(LTV_M3U, "https://m.example/list.m3u", "M3U", "https://m.example/list.m3u");
   assert(sNCanais == 1 && sLtvF[0].deCache);
   stagingZerar();
+#ifndef GUIACACHE_BASELINE
   // Enabled add-ons without live channels must not crowd out native sources.
   for (int i = 0; i < 128; i++) bases[i] = "https://addon.example";
   nAddons = 128; xtOk = stOk = 1;
@@ -237,6 +275,7 @@ int main(int argc, char **argv) {
   limparConfirm = 1; limparFoco = 0;
   desenharLimpar(1.0f);
   assert(pointerLayers == 1 && pointerTargets == 2);
+#endif
   puts("PASS: source removal, Spotlight M3U/offline/favorites, 128 add-ons, confirmation pointer isolation");
   return 0;
 }

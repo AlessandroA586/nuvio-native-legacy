@@ -24,3 +24,15 @@ cc ${flags[@]+"${flags[@]}"} tests/guiacache.c \
   -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -O1 -g -Wno-macro-redefined -o "$work/test"
 NUVIO_DADOS="$work/dados" "$work/test" "$work/dados"
+if [ "${GUIACACHE_BASELINE:-0}" != 1 ]; then
+  GUIACACHE_CONTRAST_ONLY=1 "$work/test" "$work/dados"
+  # The historical baseline must compile, then fail on retained removed channels.
+  rc=0
+  GUIACACHE_BASELINE=1 bash tests/guiacache.sh > "$work/baseline.log" 2>&1 || rc=$?
+  if [ "$rc" != 134 ] || ! rg -q 'Assertion failed: \(nCanais == 1 && nLtvF == 1\)' "$work/baseline.log"; then
+    printf 'FAIL: baseline must reach the removed-source assertion (rc=%s)\n' "$rc"
+    printf '%s\n' "$(< "$work/baseline.log")"
+    exit 1
+  fi
+  printf 'PASS: baseline compiled and reached the removed-source assertion (rc=134)\n'
+fi
