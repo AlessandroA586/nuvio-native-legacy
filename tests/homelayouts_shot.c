@@ -518,7 +518,7 @@ int main(int argc, char **argv) {
   // 1920*0.85). Exits 1 when a row band stays flat there.
   if (getenv("NV_CORTE")) {
     int r, mal = 0;
-    setenv("NV_AJ", "escalaTextoLocal 0", 1);
+    setenv("NV_AJ", "escalaTextoLocal 0\nescalaTextoVersaoLocal 1", 1);
     ajusta(0, 1);
     gfx_escala_txt_definir(ajustes_escala_texto());
     assert(gfx_escala_txt() == 0.85f);

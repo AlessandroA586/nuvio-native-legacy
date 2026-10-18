@@ -113,7 +113,8 @@ int   ajustes_logo_addon(void)             { return 0; }
 int   ajustes_tmdb_basico(void)            { return fakeTmdbBasico; }
 static int fakeTmdbArte;
 int   ajustes_tmdb_arte(void)              { return fakeTmdbArte; }
-int   ajustes_tmdb_elenco(void)            { return 0; }
+static int fakeTmdbElenco;
+int   ajustes_tmdb_elenco(void)            { return fakeTmdbElenco; }
 int   ajustes_tmdb_cw(void)                { return 0; }
 static const char *fakeIdioma = "pt-BR";
 const char *ajustes_tmdb_idioma(void)      { return fakeIdioma; }

@@ -318,3 +318,4 @@
   1, /* title page row spacing: Normal */
   1, /* accent focus: Off (gray plate) */
   0, /* Modern Stage background: Black */
+  0, 0, 0, 0, /* URL lists and guides (Guia de TV, M9): choice (none) and three actions */

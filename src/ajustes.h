@@ -713,16 +713,10 @@ void ajustes_perfil_esquecer(void);
 // escritos por cima. Devolve quantas chaves foram reescritas; 0 quando nao havia
 // nada a mudar, e nesse caso *saida fica NULL. Quem chama libera com free().
 //
-// O QUE ELA NAO FAZ, e e o ponto: nao INVENTA chave. So o que ja existe no blob
-// e reescrito, e so o valor. Remontar o objeto aqui mandaria de volta um blob
-// com apenas as chaves que este app conhece — e o servidor guarda o que vier,
-// entao a TV apagaria da conta tudo que so o app web usa.
-//
-// Nao sobem os ajustes de APARELHO (superficie 4K, teto de memoria de imagem,
-// qualidade da arte, idioma da interface, animacoes reduzidas, envio de
-// registro, limite/ordem de fileiras, reset de foco, borda do foco, fonte
-// manual, destino dos salvos): eles descrevem esta TV, nao o gosto da pessoa, e
-// a conta e uma so para a TV da sala e a do quarto. Ver somenteDesteAparelho.
+// Existing web fields keep their types and unknown features survive. Portable
+// C settings, including appearance, language, subtitles and row/addon order,
+// live under c_settings_v1. Device/display/decoder budgets, local endpoints
+// and credentials are excluded; see ajustePortavel in ajustes_sync.inc.
 int ajustes_mesclar_blob(const char *base, char **saida);
 // #187: uma linha "[tmdb] idioma dos metadados: ..." com o que a TV pede ao
 // TMDB, de onde vem (ajuste desta TV) e o tmdb_language cru da conta.

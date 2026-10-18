@@ -103,6 +103,7 @@ static void avisarCascaAberto(int v) { (void)v; tex_pressao_reproducao(v); }
 #include "pausao.h"
 #include "relogiofim.h"
 #include "aovivo.h"
+#include "ltv.h"
 #include "botoes.h"
 #include "velocidade.h"
 #include "recomenda.h"
@@ -580,6 +581,8 @@ const char *player_id_canal(void) { return canalSessao ? itemCanal.imdb : ""; }
 // que o chama por quadro, pode nem estar aberto com o canal em tela cheia.
 static int pAgora(int epgIdx, time_t t, EpgProg *p) {
   const char *id = player_id_canal();
+  // O guia primeiro: cascata de casamento + fuso da fonte (M6).
+  if (guia_programa_agora(id, t, p)) return 1;
   if (epgIdx >= 0) return epg_agora(epgIdx, t, p);
   if (!xtream_e_id(id)) return 0;
   xtepg_querer(id);
@@ -588,6 +591,7 @@ static int pAgora(int epgIdx, time_t t, EpgProg *p) {
 }
 static int pProximo(int epgIdx, time_t t, int k, EpgProg *p) {
   const char *id = player_id_canal();
+  if (guia_programa_proximo(id, t, k, p)) return 1;
   if (epgIdx >= 0) return epg_proximo(epgIdx, t, k, p);
   return xtream_e_id(id) && xtepg_proximo(id, t, k, p);
 }
@@ -707,7 +711,9 @@ static int pedGuia, pedZap, pedGuiaCheio;   // pedidos de canal: overlay do guia
 // -2), 0 = nenhum. `pedRecarregar` refaz a busca de fonte do mesmo canal.
 static AoVivoZap zapEst;
 static float bannerAV;         // 0..1, a entrada do banner do zapping
-static int botaoAV, infoAV, pedRecarregar;
+static int botaoAV, infoAV, pedRecarregar, pedUltimo;
+static LtvDigitos digitosCanal;   // numero digitado na Live TV (M7)
+static int pedNumero;
 static int avErroFoco;   // o botao em foco no modal do erro do canal
 // ATRAS DO AO VIVO (29/09/2026). Canal com janela de tempo (DVR do provedor)
 // pausa; quem pausa fica atras da transmissao, e o OSD diz quanto e oferece
@@ -774,6 +780,9 @@ int  player_pediu_guia(void) { int v = pedGuia; pedGuia = 0; return v; }
 int  player_pediu_guia_cheio(void) { int v = pedGuiaCheio; pedGuiaCheio = 0; return v; }
 int  player_pediu_zap(void)  { int v = pedZap;  pedZap  = 0; return v; }
 int  player_pediu_recarregar(void) { int v = pedRecarregar; pedRecarregar = 0; return v; }
+int  player_pediu_ultimo(void) { int v = pedUltimo; pedUltimo = 0; return v; }
+int  player_pediu_numero(void) { int v = pedNumero; pedNumero = 0; return v; }
+const char *player_titulo_canal(void) { return itemCanal.titulo; }
 void player_episodio_atual(int *t, int *e) { *t = epT; *e = epE; }
 // O dono avancou na mao (Comecar agora): lembra quanto faltava (credaprende.h).
 void player_aprender_creditos(void) {
@@ -1253,7 +1262,7 @@ VideoLegendaEstilo *player_leg_estilo(void) { return &legEstilo; }
 void player_leg_estilo_carregar(void) { if (!prefsLidas) prefsLer(); }
 void player_leg_estilo_mudou(void) {
   video_legenda_estilo(&legEstilo);
-  prefsGravar();
+  if (prefsGravar()) sync_proteger_ajustes_locais();
 }
 const VideoLegendaEstilo *player_leg_estilo_padrao(void) {
   static const VideoLegendaEstilo padrao = {120, 0, 0, 3, 1, 0, 0, TXT_FAMILIA_INTER, 0, 0};
@@ -1696,7 +1705,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   cine.calado = 1;
   erroTitulo[0] = erroDica[0] = 0;
   pedGuia = pedZap = pedGuiaCheio = 0;
-  memset(&zapEst, 0, sizeof zapEst); bannerAV = 0.0f; botaoAV = 0; infoAV = 0; pedRecarregar = 0;
+  memset(&zapEst, 0, sizeof zapEst); bannerAV = 0.0f; botaoAV = 0; infoAV = 0; pedRecarregar = 0; pedUltimo = 0; pedNumero = 0; ltv_dig_limpar(&digitosCanal);
   avLat0 = -1.0; avAtraso = 0.0; avPausaDesde = 0;
   retomadaAplicada=0; semRetomada=0; retomarFonteSeg = -1.0; baseT = baseE = -1;
   abertoEm = SDL_GetTicks(); medirAbertura = 1; tocouMedido = 0; loadEm = 0;
@@ -1725,7 +1734,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   toastAte = 0; toastTexto[0] = 0; avisouAudio = 0;
   // Reconexao so no filme/episodio: canal ao vivo tem o watchdog de app.c.
   video_definir_reconexao(!ehCanal());
-  video_definir_modo_live(ehCanal() ? ajustes_livetv_modo() : 0);
+  video_definir_modo_live(ehCanal() ? guia_modo_do_canal(player_id_canal(), ajustes_livetv_modo()) : 0);
   // F07: seek cache for this open (live channels never; the backend also
   // refuses HLS/DASH). Arms only the next video_tocar: trailers stay uncached.
   cacheboost_backend_cache(ehCanal() ? 0 : ajustes_cache_seek_mb());
@@ -1920,7 +1929,7 @@ static void tocarFonteInterno(const char *url) {
   marco("abrir: url ao pipeline");
   loadEm = SDL_GetTicks();   // #202: do pipeline ao primeiro quadro ("[player] load->1o quadro")
   video_definir_reconexao(!ehCanal());
-  video_definir_modo_live(ehCanal() ? ajustes_livetv_modo() : 0);
+  video_definir_modo_live(ehCanal() ? guia_modo_do_canal(player_id_canal(), ajustes_livetv_modo()) : 0);
   cacheboost_backend_cache(ehCanal() ? 0 : ajustes_cache_seek_mb());   // F07, ver player_abrir
   armarTituloGuardado();
   memlog_evento("load"); memQuadroPendente = 1;
@@ -3395,6 +3404,7 @@ static int avBotoes(int *ids) {
   ids[n++] = AV_B_INFO;
   ids[n++] = AV_B_RECARREGAR;
   ids[n++] = AV_B_FONTE;
+  ids[n++] = AV_B_ULTIMO;
   ids[n++] = AV_B_ASPECTO;   // no fim, como no mockup do Glass UI
   return n;
 }
@@ -3420,6 +3430,7 @@ static void avAtivar(int b) {
     case AV_B_LEGENDA: pedFaixas = 2; break;
     case AV_B_INFO: infoAV = !infoAV; break;
     case AV_B_RECARREGAR: pedRecarregar = 1; break;
+    case AV_B_ULTIMO: pedUltimo = 1; break;
     case AV_B_FONTE: pedFontes = 1; break;
   }
 }
@@ -3447,7 +3458,10 @@ static void avMontarOsd(AoVivoOsd *o) {
     if (epgIdx < 0) epgIdx = -2;
   }
   if (id[0] && xtream_e_id(id)) { xtepg_querer(id); xtepg_passo(); }
-  aovivo_epg_montar(epgIdx, id, time(NULL), &o->epg);
+  { EpgProg fx[40]; time_t agT = time(NULL);
+    int nf = guia_programa_faixa(id, agT - 4 * 3600, agT + 12 * 3600, fx, 40);
+    if (nf < 1 || !aovivo_epg_de_faixa(fx, nf, agT, &o->epg))
+      aovivo_epg_montar(epgIdx, id, agT, &o->epg); }
 #ifdef NV_SHOT_HOOKS
   if (shotEpgOk) { o->epg = shotEpg; o->numero = shotNumero; }
 #endif
@@ -3727,6 +3741,29 @@ void player_evento(const SDL_Event *e) {
   // away. Called before any handler returns.
   pausao_activity();
 
+  // DIGITAR O NUMERO DO CANAL (M7): 1-9 (e o 0 com digitacao em curso) montam o
+  // numero; 1,5 s sem tecla ou OK confirma; Voltar cancela so o numero.
+  if (ehCanal() && !erroFonte) {
+    int d = (k >= SDLK_0 && k <= SDLK_9) ? (int)(k - SDLK_0)
+          : (k >= SDLK_KP_1 && k <= SDLK_KP_9) ? (int)(k - SDLK_KP_1) + 1
+          : (k == SDLK_KP_0) ? 0 : -1;
+    Uint32 ag = SDL_GetTicks();
+    if (d >= 0 && (d > 0 || ltv_dig_ativo(&digitosCanal))) {
+      ltv_dig_apertar(&digitosCanal, d, ag);
+      return;
+    }
+    if (ltv_dig_ativo(&digitosCanal)) {
+      int n;
+      if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
+        if (ltv_dig_confirmar(&digitosCanal, &n)) pedNumero = n;
+        return;
+      }
+      if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE || k == SDLK_DELETE) {
+        ltv_dig_limpar(&digitosCanal);
+        return;
+      }
+    }
+  }
   if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE ||
       k == SDLK_DELETE) {
 #ifdef NV_ANDROID
@@ -3794,6 +3831,10 @@ void player_evento(const SDL_Event *e) {
   // um cursor que aqui nao existe. Numa TV o gesto tem que ser um toque, e o
   // aviso que sobe na troca ja diz em que modo se entrou, entao a tecla nem
   // precisa da interface aberta. O 0 e a tecla livre no controle da LG.
+  // NA LIVE TV o "0" e o ULTIMO CANAL (decisao 5 do dono, plano do guia M7): e
+  // o atalho mais usado de TV paga. A proporcao do canal fica no botao do OSD.
+  // No filme continua a proporcao.
+  if ((k == SDLK_0 || k == SDLK_KP_0) && ehCanal()) { pedUltimo = 1; return; }
   if (k == SDLK_0 || k == SDLK_KP_0) { player_aspecto_ciclar(); return; }
 
   // CANAL AO VIVO: OSD proprio (aovivo.h) e teclas proprias. BAIXO e o botao
@@ -4011,6 +4052,7 @@ void player_atualizar(float dt, Uint32 agora) {
     int off = 0;
     bannerAV = anim_mola(bannerAV, zapEst.pend ? 1.0f : 0.0f, dt, NV_MOLA_FOCO);
     if (aovivo_zap_pronto(&zapEst, agora, &off)) pedZap = off;
+    { int n; if (ltv_dig_pronto(&digitosCanal, agora, &n)) pedNumero = n; }
     avRelogioAoVivo(agora);
   } else {
     bannerAV = 0.0f;
@@ -6138,6 +6180,18 @@ void player_desenhar(Uint32 agora) {
   // CANAL AO VIVO: banner do zapping (sobrepoe tudo enquanto a troca espera o
   // debounce) e o OSD proprio no lugar dos controles de filme.
   if (ehCanal()) {
+    if (ltv_dig_ativo(&digitosCanal)) {
+      CatItem alvo;
+      char fonte[64], sp[2 * LTV_DIG_MAX + 2];
+      const char *d = digitosCanal.d;
+      size_t i, u = 0;
+      for (i = 0; d[i] && u + 2 < sizeof sp; i++) { sp[u++] = d[i]; if (d[i + 1]) sp[u++] = ' '; }
+      sp[u] = 0;
+      if (guia_numero_canal(atoi(d), &alvo, fonte, sizeof fonte, 0))
+        aovivo_numero_desenhar(sp, alvo.titulo, fonte, entrada);
+      else
+        aovivo_numero_desenhar(sp, NULL, "", entrada);
+    }
     if (zapEst.pend && bannerAV > 0.004f) {
       CatItem alvo;
       AoVivoBanner bn;
