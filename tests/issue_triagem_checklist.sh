@@ -18,6 +18,8 @@ assert len(checks) == 1, 'missing checkboxes field "checks"'
 checks = checks[0]
 labels = ' '.join(o['label'] for o in checks['attributes']['options'])
 assert checks['validations']['required'] is True, 'checks not required'
+for o in checks['attributes']['options']:
+    assert o.get('required') is True, f'option not required: {o["label"][:40]}'
 for term in ('Stremio', 'cached', 'speed test', 'This TV',
              'smaller than the recommended size', '6-character code'):
     assert term.lower() in labels.lower(), f'checklist missing: {term}'
