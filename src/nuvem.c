@@ -162,8 +162,10 @@ char *nuvem_addon_alternar(const char *consulta, int ativo, const char *bearer, 
   char completo[52000], cabApi[1300], cabAut[3100];
   const char *cab[5];
   const char *body = ativo ? "{\"enabled\":true}" : "{\"enabled\":false}";
+#ifndef __EMSCRIPTEN__
   RedePedido p = {0};
   RedeResposta r = {0};
+#endif
   if (status) *status = 0;
   if (!nuvem_pronta() || !bearer || !*bearer) return NULL;
   snprintf(completo, sizeof completo, "%s/rest/v1/addons?%s", url, consulta);
@@ -171,6 +173,9 @@ char *nuvem_addon_alternar(const char *consulta, int ativo, const char *bearer, 
   snprintf(cabAut, sizeof cabAut, "Authorization: Bearer %s", bearer);
   cab[0] = cabApi; cab[1] = cabAut; cab[2] = "Content-Type: application/json";
   cab[3] = "Prefer: return=representation"; cab[4] = NULL;
+#ifdef __EMSCRIPTEN__
+  return rede_patch_st(completo, 25, cab, body, status);
+#else
   p.metodo = "PATCH"; p.url = completo; p.cabecalhos = cab;
   p.corpo = body; p.n_corpo = strlen(body); p.prazo_ms = 25000;
   rede_pedir(&p, &r);
@@ -178,6 +183,7 @@ char *nuvem_addon_alternar(const char *consulta, int ativo, const char *bearer, 
   char *out = r.corpo; r.corpo = NULL;
   rede_resposta_limpar(&r);
   return out;
+#endif
 }
 
 int nuvem_erro_ausente(const char *corpoErro) {

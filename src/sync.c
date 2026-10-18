@@ -1936,17 +1936,19 @@ void sync_sujar_addons(void) {
   for (int i = 0; i < n; i++) {
     char key[NV_ADDON_URL_MAX], other[NV_ADDON_URL_MAX];
     nv_addon_chave(local[i].url, key, sizeof key);
-    for (int j = 0; j < nb; j++) {
+    int j;
+    for (j = 0; j < nb; j++) {
       nv_addon_chave(before[j].url, other, sizeof other);
-      if (strcmp(key, other) || local[i].ativo == before[j].ativo) continue;
-      int k;
-      for (k = 0; k < np; k++) {
-        nv_addon_chave(pend[k].url, other, sizeof other);
-        if (!strcmp(key, other)) break;
-      }
-      if (k < SY_ADD_MAX) { pend[k] = local[i]; if (k == np) np++; }
-      break;
+      if (!strcmp(key, other)) break;
     }
+    // Without a baseline, preserve explicit OFF for the first account pull.
+    if (j < nb ? local[i].ativo == before[j].ativo : local[i].ativo) continue;
+    int k;
+    for (k = 0; k < np; k++) {
+      nv_addon_chave(pend[k].url, other, sizeof other);
+      if (!strcmp(key, other)) break;
+    }
+    if (k < SY_ADD_MAX) { pend[k] = local[i]; if (k == np) np++; }
   }
   addonsGuardar(CC_ADDONS_TOGGLES, pend, np, perfil, usuario, geracao);
   addonsGuardar(CC_ADDONS_APLICADOS, local, n, perfil, usuario, geracao);

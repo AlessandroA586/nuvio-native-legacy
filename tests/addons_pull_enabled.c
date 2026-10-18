@@ -127,6 +127,20 @@ int main(void) {
   confere("failed patch does not claim success", puxarAddons() == 1 && !strcmp(conta, "ABZ"));
   patchStatus = 200;
   confere("failed flag retried", puxarAddons() == 1 && !strcmp(conta, "aBZ"));
+  // No account snapshot exists when the first local disable is made.
+  dados_apagar("conta-" CC_ADDONS_APLICADOS "-p1.json");
+  contacache_gravar_geracao(CC_ADDONS_TOGGLES, 1, usuarioDoCiclo,
+                            "[]", contacache_geracao());
+  nTv = 0;
+  tvAcrescentar('A'); tvAcrescentar('B');
+  tv[0].ativo = 0;
+  snprintf(conta, sizeof conta, "ABZ");
+  int priorPatches = patches;
+  sync_sujar_addons();
+  confere("disable before first applied snapshot reaches account",
+          puxarAddons() == 1 && !strcmp(conta, "aBZ") && patches == priorPatches + 1);
+  addonsAplicar();
+  expect("first pull preserves disabled state and remote membership", "aBZ");
   assert(!falhas);
   puts("PASS: production addon pull preserves local toggles and remote membership/order");
   return 0;

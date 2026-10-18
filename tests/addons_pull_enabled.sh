@@ -9,4 +9,5 @@ cc -O1 -g -Isrc -pthread -ffunction-sections -fdata-sections -Wl,-dead_strip -I/
   -Wall -Wno-deprecated-declarations -Wno-macro-redefined \
   tests/addons_pull_enabled.c tests/stub_contapend.c src/catordem.c \
   src/catordemcache.c src/contacache.c src/js.c src/jsw.c -o "$bin"
+python3 tests/addons_patch_transport.py
 NV_T_DIR="$dir" "$bin"
