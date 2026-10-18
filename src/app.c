@@ -5048,7 +5048,7 @@ void app_atualizar(float dt, Uint32 agora) {
         // Tipo incerto ("anime" do AIOMetadata) tambem: e o /meta que diz se
         // e serie, mesmo quando o catalogo ja trouxe elenco.
         if (!strcmp(ci->tipo, "series") || strcmp(ci->tipo, "movie") ||
-            ci->nElenco == 0) desc_episodios(i, 0);
+            ci->nElenco == 0 || desc_elenco_precisa_pessoas(ci)) desc_episodios(i, 0);
         { stream_definir_alvo(alvo); addons_buscar(alvo, ci->tipo); }
         aquecerAoAbrirTitulo();
         // Legendas do OpenSubtitles junto: sao dezenas por titulo e a busca

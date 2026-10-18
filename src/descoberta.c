@@ -658,8 +658,13 @@ static void fotosDoElenco(CatItem *d, const char *imdbSerie, int serie, int mant
   }
 
   // Elenco com foto e `tmdb_use_credits`. O `free` mora DENTRO do if porque o
-  // watch/providers logo abaixo nao depende dele.
-  if (ajustes_tmdb_elenco() && d->nElenco > 0) {
+  // watch/providers logo abaixo nao depende dele. E necessario tambem quando
+  // os nomes ja vieram do catalogo em memoria mas SEM os ids de pessoa: sem o
+  // casamento o OK num ator nao abre a filmografia (o log do dono no #205).
+  int elencoSemPessoa = 0;
+  for (int e2 = 0; e2 < d->nElenco; e2++)
+    if (d->elenco[e2].tmdb <= 0) { elencoSemPessoa = 1; break; }
+  if (ajustes_tmdb_elenco() && d->nElenco > 0 && elencoSemPessoa) {
     // language= tambem aqui: o nome do PERSONAGEM (`character`) vem localizado
     // quando o TMDB tem (o mesmo pedido, so um parametro a mais).
     snprintf(url, sizeof url, "%s/%s/%ld/credits?api_key=%s&language=%s",
@@ -674,7 +679,8 @@ static void fotosDoElenco(CatItem *d, const char *imdbSerie, int serie, int mant
     fflush(stdout);
   } else {
     printf("[desc] elenco %s: sem fotos (%s)\n", imdbSerie,
-           !ajustes_tmdb_elenco() ? "\"Elenco do TMDB\" desligado nos ajustes" : "a ficha veio sem nomes");
+           !ajustes_tmdb_elenco() ? "\"Elenco do TMDB\" desligado nos ajustes" :
+           d->nElenco > 0 ? "elenco ja casado com o TMDB" : "a ficha veio sem nomes");
     fflush(stdout);
   }
 
@@ -9310,6 +9316,18 @@ void desc_episodios(int indiceItem, int temporada) {
   } else pthread_detach(fioEp);
 }
 
+// Elenco com nomes mas sem id de pessoa do TMDB em ninguem: veio de catalogo
+// em memoria (o elenco.txt so tem nome~papel~foto) e nunca passou pelo
+// casamento de /credits — o OK num ator nao abre nada (#205).
+static int descElencoPrecisaPessoas(const CatItem *ci) {
+  int i;
+  if (!ci || !ci->nElenco) return 0;
+  for (i = 0; i < ci->nElenco; i++) if (ci->elenco[i].tmdb > 0) return 0;
+  return 1;
+}
+
+int desc_elenco_precisa_pessoas(const CatItem *ci) { return descElencoPrecisaPessoas(ci); }
+
 // Ponto unico das entradas (detalhe, player, retomada) e do roteador de app.c:
 // pede a lista de episodios do titulo se ela falta. Mesma regra e argumentos do
 // roteador: serie, tipo incerto, ou filme sem elenco (o fio traz o /meta).
@@ -9317,7 +9335,8 @@ void desc_episodios(int indiceItem, int temporada) {
 void desc_episodios_garantir(int indiceItem) {
   const CatItem *ci = cat_item(indiceItem);
   if (!ci || !ci->imdb[0]) return;
-  if (!(!strcmp(ci->tipo, "series") || strcmp(ci->tipo, "movie") || ci->nElenco == 0)) return;
+  if (!(!strcmp(ci->tipo, "series") || strcmp(ci->tipo, "movie") ||
+        ci->nElenco == 0 || descElencoPrecisaPessoas(ci))) return;
   if (desc_episodios_carregando(indiceItem)) return;
   desc_episodios(indiceItem, 0);
 }
@@ -9328,7 +9347,8 @@ void desc_episodios_garantir(int indiceItem) {
 int desc_episodios_precarregar(int indiceItem) {
   const CatItem *ci = cat_item(indiceItem);
   if (!ci || !ci->imdb[0]) return 0;
-  if (!(!strcmp(ci->tipo, "series") || strcmp(ci->tipo, "movie") || ci->nElenco == 0)) return 0;
+  if (!(!strcmp(ci->tipo, "series") || strcmp(ci->tipo, "movie") ||
+        ci->nElenco == 0 || descElencoPrecisaPessoas(ci))) return 0;
   if (cat_n_episodios(indiceItem) > 0 && !ci->epsParciais) return 0;
   if (fioEpVivo || pendItem >= 0) return -1;
   desc_episodios(indiceItem, 0);

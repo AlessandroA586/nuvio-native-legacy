@@ -113,7 +113,8 @@ int   ajustes_logo_addon(void)             { return 0; }
 int   ajustes_tmdb_basico(void)            { return fakeTmdbBasico; }
 static int fakeTmdbArte;
 int   ajustes_tmdb_arte(void)              { return fakeTmdbArte; }
-int   ajustes_tmdb_elenco(void)            { return 0; }
+static int fakeTmdbElenco;
+int   ajustes_tmdb_elenco(void)            { return fakeTmdbElenco; }
 int   ajustes_tmdb_cw(void)                { return 0; }
 static const char *fakeIdioma = "pt-BR";
 const char *ajustes_tmdb_idioma(void)      { return fakeIdioma; }
@@ -1313,6 +1314,38 @@ int main(void) {
     assert(cat_item(0)->temporadas[2] == 3);
     puts("ok  #372: cauda do fio velho nao repoe as abas que o fio novo trocou");
     nRotas = 0; limparCacheMeta(); }
+
+  // #205: filme com elenco so em memoria (nomes do catalogo, sem id de pessoa)
+  // ainda pede o casamento /credits do TMDB ao abrir.
+  { static const char *CREDITS =
+      "{\"cast\":[{\"id\":9001,\"name\":\"Rory Kinnear\",\"character\":\"X\"},"
+      "{\"id\":9002,\"name\":\"Jason Flemyng\",\"character\":\"Y\"}]}";
+    CatItem it;
+    limparCacheMeta(); nRotas = 0; nFake = 0; metaprov_zerar_pausa();
+    addonMeta = 0; fakeTmdbElenco = 1; fakeTmdbBasico = 0; fakeTmdbArte = 0;
+    snprintf(tmdbChave, sizeof tmdbChave, "%s", "01234567890123456789012345678901");
+    tmdbFind = "{\"movie_results\":[{\"id\":424242}]}";
+    rota("/meta/movie/tt28498219.json",
+         "{\"meta\":{\"id\":\"tt28498219\",\"type\":\"movie\",\"name\":\"Matchbox\",\"videos\":[]}}");
+    rota("themoviedb.org/3/movie/424242/credits", CREDITS);
+    rota("themoviedb.org/3/movie/424242/watch/providers", "{}");
+    memset(&it, 0, sizeof it);
+    snprintf(it.imdb, sizeof it.imdb, "%s", "tt28498219");
+    snprintf(it.tipo, sizeof it.tipo, "%s", "movie");
+    snprintf(it.titulo, sizeof it.titulo, "%s", "Matchbox the Movie");
+    it.nElenco = 2;
+    snprintf(it.elenco[0].nome, sizeof it.elenco[0].nome, "%s", "Rory Kinnear");
+    snprintf(it.elenco[1].nome, sizeof it.elenco[1].nome, "%s", "Jason Flemyng");
+    cat_definir_tudo(&it, 1, NULL, 0);
+    assert(desc_elenco_precisa_pessoas(cat_item(0)));
+    desc_episodios_garantir(0);
+    while (fioEpVivo) SDL_Delay(1);
+    assert(cat_item(0)->elenco[0].tmdb == 9001);
+    assert(cat_item(0)->elenco[1].tmdb == 9002);
+    assert(!desc_elenco_precisa_pessoas(cat_item(0)));
+    fakeTmdbElenco = 0; tmdbFind = NULL; tmdbChave[0] = 0; nRotas = 0;
+    limparCacheMeta();
+    puts("ok  #205: elenco do catalogo em memoria ganha id de pessoa pelo /credits"); }
 
   puts("detalheanime: tudo ok");
   return 0;

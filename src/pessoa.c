@@ -1,5 +1,7 @@
 #include "pessoa.h"
 #include "descoberta.h"
+#include "ajustes.h"
+#include "idbase.h"
 #include "rede.h"
 #include "js.h"
 #include <pthread.h>
@@ -27,9 +29,111 @@ static int nCred;
 static char nome[80], foto[200], bio[1400], area[24];
 static long idPedido, idEmCurso;
 static char nomeSemente[80], fotoSemente[200];
+static char ctxImdb[24], ctxTipo[16];
 static int  pronta, fioVivo;
 static pthread_t fio;
 static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
+
+void pessoa_contexto_titulo(const char *imdb, const char *tipo) {
+  snprintf(ctxImdb, sizeof ctxImdb, "%s", imdb ? imdb : "");
+  snprintf(ctxTipo, sizeof ctxTipo, "%s", tipo ? tipo : "");
+}
+
+static void codificar(const char *s, char *dst, size_t cap) {
+  size_t z = 0;
+  for (const unsigned char *c = (const unsigned char *)s; *c && z + 4 < cap; c++) {
+    if ((*c >= 'a' && *c <= 'z') || (*c >= 'A' && *c <= 'Z') || (*c >= '0' && *c <= '9'))
+      dst[z++] = *c;
+    else if (*c == ' ') dst[z++] = '+';
+    else { snprintf(dst + z, 4, "%%%02X", *c); z += 3; }
+  }
+  dst[z] = 0;
+}
+
+static char normDobra(unsigned char c) {
+  switch (c) {
+    case 0xA0: case 0xA1: return 'a'; case 0xA2: return 'a'; case 0xA3: return 'a';
+    case 0xA7: return 'c'; case 0xA9: return 'e'; case 0xAA: return 'e';
+    case 0xAD: return 'i'; case 0xB3: return 'o'; case 0xB5: return 'o';
+    case 0xBA: return 'u'; default: return 0;
+  }
+}
+
+static void normNome(const char *s, char *dst, size_t tam) {
+  const unsigned char *p = (const unsigned char *)(s ? s : "");
+  size_t k = 0;
+  while (*p && k + 1 < tam) {
+    unsigned char c = *p++;
+    char o = 0;
+    if (c >= 'A' && c <= 'Z') o = (char)(c + 32);
+    else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) o = (char)c;
+    else if (c == 0xC3 && *p && (o = normDobra(*p))) p++;
+    else if (c >= 0x80) { dst[k++] = (char)c; continue; }
+    if (o) dst[k++] = o;
+  }
+  dst[k] = 0;
+}
+
+static int mesmoNome(const char *a, const char *b) {
+  char na[64], nb[64];
+  if (!a[0] || !b[0]) return 0;
+  if (!strcmp(a, b)) return 1;
+  normNome(a, na, sizeof na);
+  normNome(b, nb, sizeof nb);
+  return na[0] && !strcmp(na, nb);
+}
+
+static long resolverId(const char *nomeAlvo) {
+  const char *chave = desc_chave_tmdb();
+  char url[700], enc[300], *corpo = NULL;
+  long idPessoa = 0, idTitulo = 0;
+  int serie = !strcmp(ctxTipo, "series");
+  if (!chave || !chave[0] || !ajustes_tmdb_elenco() || !nomeAlvo[0]) return 0;
+  if (idbase_e_imdb(ctxImdb)) {
+    snprintf(url, sizeof url, "%s/find/%s?api_key=%s&external_source=imdb_id",
+             TMDB, ctxImdb, chave);
+    corpo = rede_baixar(url, 20);
+    if (corpo) {
+      const char *p = js_array(corpo, NULL, serie ? "tv_results" : "movie_results");
+      if (p) idTitulo = (long)js_num(p, js_fim(p), "id", 0);
+      free(corpo);
+    }
+  }
+  if (idTitulo > 0) {
+    snprintf(url, sizeof url, "%s/%s/%ld/credits?api_key=%s&language=%s",
+             TMDB, serie ? "tv" : "movie", idTitulo, chave, desc_tmdb_idioma());
+    corpo = rede_baixar(url, 20);
+    if (corpo) {
+      const char *p = js_array(corpo, NULL, "cast");
+      while (p && !idPessoa) {
+        const char *f = js_fim(p);
+        char nome[96] = "";
+        js_texto(p, f, "name", nome, sizeof nome);
+        if (mesmoNome(nome, nomeAlvo)) idPessoa = (long)js_num(p, f, "id", 0);
+        p = js_prox(f);
+      }
+      free(corpo);
+    }
+  }
+  if (!idPessoa) {
+    codificar(nomeAlvo, enc, sizeof enc);
+    snprintf(url, sizeof url, "%s/search/person?api_key=%s&language=%s&query=%s",
+             TMDB, chave, desc_tmdb_idioma(), enc);
+    corpo = rede_baixar(url, 20);
+    if (corpo) {
+      const char *r = js_array(corpo, NULL, "results");
+      while (r && !idPessoa) {
+        const char *fr = js_fim(r);
+        char nome[96] = "";
+        js_texto(r, fr, "name", nome, sizeof nome);
+        if (mesmoNome(nome, nomeAlvo)) idPessoa = (long)js_num(r, fr, "id", 0);
+        r = js_prox(fr);
+      }
+      free(corpo);
+    }
+  }
+  return idPessoa;
+}
 
 // known_for_department vem em ingles do TMDB mesmo com language=pt-BR.
 static const char *traduzArea(const char *s) {
@@ -54,6 +158,17 @@ static void *buscar(void *arg) {
   if (!chave || !chave[0]) {
     pthread_mutex_lock(&trava); fioVivo = 0; pthread_mutex_unlock(&trava);
     return NULL;
+  }
+  if (id <= 0) {
+    id = resolverId(nomeSemente);
+    if (!id) {
+      pthread_mutex_lock(&trava); fioVivo = 0; pthread_mutex_unlock(&trava);
+      return NULL;
+    }
+    pthread_mutex_lock(&trava);
+    if (idPedido <= 0) idPedido = id;
+    idEmCurso = id;
+    pthread_mutex_unlock(&trava);
   }
 
   // O MESMO pedido do web (castDetailScreen.js:204): a ficha e os creditos
@@ -120,7 +235,7 @@ static void *buscar(void *arg) {
       } }
 
     pthread_mutex_lock(&trava);
-    if (id == idPedido) {
+    if (id > 0 && (id == idPedido || idPedido <= 0)) {
       int i;
       snprintf(nome, sizeof nome, "%s", n[0] ? n : nomeSemente);
       snprintf(foto, sizeof foto, "%s", f[0] ? f : fotoSemente);
@@ -149,9 +264,9 @@ static void *buscar(void *arg) {
 }
 
 void pessoa_pedir(long tmdbId, const char *nomeConhecido, const char *fotoConhecida) {
-  if (tmdbId <= 0) return;
+  if (tmdbId <= 0 && !(nomeConhecido && nomeConhecido[0])) return;
   pthread_mutex_lock(&trava);
-  if (idPedido == tmdbId) { pthread_mutex_unlock(&trava); return; }
+  if (tmdbId > 0 && idPedido == tmdbId) { pthread_mutex_unlock(&trava); return; }
   idPedido = tmdbId;
   nCred = 0; pronta = 0; bio[0] = 0; area[0] = 0;
   // O nome e a foto que o elenco ja tinha entram na hora, para a tela abrir

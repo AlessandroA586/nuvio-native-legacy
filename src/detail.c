@@ -1679,7 +1679,7 @@ void detail_fechar_seco(void) {
 
 void detail_mostrar_pessoa(long tmdb, const char *nome, const char *foto) {
   pediuRelogio = 0;
-  if (!aberto || tmdb <= 0) return;
+  if (!aberto || (tmdb <= 0 && !(nome && nome[0]))) return;
   pessoa_pedir(tmdb, nome ? nome : "", foto ? foto : "");
   pessoaAberta = 1;
   pessoaFoco = 0;
@@ -3070,10 +3070,17 @@ static void detail_evento_(const SDL_Event *e) {
         toquerol_limpar(&toquePessoa); toquePessoaOffset = 0;
 #endif
       } else if (ci && foco.coluna < ci->nElenco) {
-        // Sem id de pessoa (o TMDB nao respondeu, ou o titulo e novo demais):
-        // o OK nao pode ser um clique morto — diz por que e nao abre nada.
-        ilha_avisar("det-elenco-sem-pagina", ILHA_INFO, NULL,
-                    i18n("Esta pessoa não tem página ainda"), 4000u, 0);
+        // Sem id de pessoa: tenta resolver pelo TMDB (creditos deste titulo,
+        // depois /search/person). Sem chave ou com "Elenco do TMDB" desligado,
+        // o OK continua explicando por que nao abre.
+        if (desc_chave_tmdb()[0] && ajustes_tmdb_elenco()) {
+          pessoa_contexto_titulo(ci->imdb, ci->tipo);
+          detail_mostrar_pessoa(0, ci->elenco[foco.coluna].nome,
+                                ci->elenco[foco.coluna].foto);
+        } else {
+          ilha_avisar("det-elenco-sem-pagina", ILHA_INFO, NULL,
+                      i18n("Esta pessoa não tem página ainda"), 4000u, 0);
+        }
       }
     } else if (foco.fileira == SEC_ABAS_INFO) {
       abaInfo = foco.coluna;
