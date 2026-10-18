@@ -54,7 +54,7 @@ static char token[300], refresh[300];
 // 1 quando o carregar achou o access token vencido no papel mas com refresh
 // valido: a renovacao sai no primeiro passo, sem esperar o primeiro 401 e sem
 // gastar as chamadas do ciclo de descoberta com uma credencial morta.
-static int renovacaoPend;
+static int renovacaoPend, desconectado;
 static unsigned pollMs = TRA_POLL_PADRAO;
 static unsigned proximoPoll, comecouMs, limiteMs;
 static unsigned esperaMs, retomarEm, recuoMs = TRA_POLL_PADRAO;
@@ -112,6 +112,7 @@ static int mesmaConta(const char *usuario) {
 // The worker records a delay; the frame loop starts it after the response.
 static void esperar429(int segundos) {
   unsigned ms = segundos > 0 ? (unsigned)(segundos > 2147483 ? 2147483 : segundos) * 1000u : 0;
+  if (recuoMs < pollMs) recuoMs = pollMs;
   if (recuoMs < 60000u) recuoMs *= 2;
   if (recuoMs > 60000u) recuoMs = 60000u;
   esperaMs = ms > recuoMs ? ms : recuoMs;
@@ -212,7 +213,7 @@ static void zerarEstado(void) {
   expiraEm = 0;
   criadoEm = expiraSeg = 0;
   pushPendente = 0;
-  renovacaoPend = 0;
+  renovacaoPend = desconectado = 0;
   tokenNovo = 0;
   comecouMs = 0;
   pollMs = recuoMs = TRA_POLL_PADRAO;
@@ -228,6 +229,7 @@ int traktauth_carregar(void) {
   migrarLegado();
   b = dados_ler(arqToken(perfil).s);
   if (!b) goto fluxo;
+  if (!strcmp(b, "!")) { desconectado = 1; free(b); return 0; }
   { char *fim = b + strlen(b);
     while (fim > b && (fim[-1] == '\n' || fim[-1] == '\r')) *--fim = 0; }
   { int i; col[0] = b;
@@ -316,6 +318,19 @@ int traktauth_trocar_perfil(int p) {
 
 int traktauth_perfil(void) { return perfil; }
 
+int traktauth_desconectado(void) { return desconectado; }
+
+void traktauth_desconectar(void) {
+  pthread_mutex_lock(&trava);
+  geracao++;
+  zerarEstado();
+  desconectado = 1;
+  dados_gravar(arqToken(perfil).s, "!"); // Persist local opt-out from account sync.
+  dados_apagar(arqFluxo(perfil).s);
+  pthread_mutex_unlock(&trava);
+  trakt_esquecer();
+}
+
 void traktauth_esquecer(void) {
   int p;
   pthread_mutex_lock(&trava);
@@ -336,6 +351,12 @@ void traktauth_esquecer(void) {
 
 // 1 quando o fio ainda fala pelo perfil em vigor. Chamar com a trava.
 static int fioAtual(void) { return gerFio == geracao; }
+static int fioDesconectado(void) {
+  char *b = dados_ler(arqToken(perfilFio).s);
+  int saiu = !fioAtual() && b && !strcmp(b, "!");
+  free(b);
+  return saiu;
+}
 
 // ---------------------------------------------------------------- fluxo
 
@@ -432,6 +453,9 @@ static void *fioPoll(void *u) {
     free(r);
     fioPronto = 1;
     return NULL;
+  }
+  if (fioDesconectado()) {
+    pthread_mutex_unlock(&trava); free(r); fioPronto = 1; return NULL;
   }
   if (!fioAtual()) {
     // O perfil mudou com o poll no ar. Autorizado: o vinculo e do perfil que
@@ -549,6 +573,9 @@ static void *fioRenovar(void *u) {
     free(r);
     fioPronto = 1;
     return NULL;
+  }
+  if (fioDesconectado()) {
+    pthread_mutex_unlock(&trava); free(r); fioPronto = 1; return NULL;
   }
   if (!fioAtual()) {
     // Renovacao do perfil ANTERIOR. O refresh velho morreu nesta resposta, entao
@@ -687,6 +714,7 @@ void traktauth_passo(unsigned agoraMs) {
   // Aplicar o token no LACO PRINCIPAL, nunca no fio: trakt.c e lido pela UI.
   if (tokenNovo) {
     tokenNovo = 0;
+    desconectado = 0;
     renovacaoPend = 0;
     trakt_definir(token, nuvem_trakt_cliente());
     pushPendente = 1;

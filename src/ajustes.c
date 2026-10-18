@@ -48,6 +48,7 @@
 #include "ltv.h"
 #include "guia.h"
 #include "traktauth.h"
+#include "trakt.h"
 #include "simklauth.h"
 #include "discord.h"
 #include "simkl.h"
@@ -6538,8 +6539,9 @@ static const char *textoLeitura(int op) {
     }
   }
   if (op == AJ_TRAKT) {
+    if (traktauth_estado() == TRA_PARADO && trakt_ativo()) return i18n("conectado — OK desconecta");
     switch (traktauth_estado()) {
-      case TRA_LIGADO:     return i18n("conectado");
+      case TRA_LIGADO:     return i18n("conectado — OK desconecta");
       case TRA_PEDINDO:    return i18n("preparando…");
       case TRA_AGUARDANDO: return i18n("aguardando");
       case TRA_ERRO:       return i18n("falhou");
@@ -6560,7 +6562,7 @@ static const char *textoLeitura(int op) {
   }
   if (op == AJ_SIMKL) {
     switch (simklauth_estado()) {
-      case SMK_LIGADO:     return i18n("conectado");
+      case SMK_LIGADO:     return i18n("conectado — OK desconecta");
       case SMK_PEDINDO:    return i18n("preparando…");
       case SMK_AGUARDANDO: return i18n("aguardando");
       case SMK_ERRO:       return i18n("falhou");
@@ -7413,7 +7415,7 @@ static const char *efeitoOpcao(int op) {
       return "A lista desta TV recebe o título em todos os casos. Isto decide se ele também vai para o Trakt ou para o Simkl.";
     case AJ_TRAKT: case AJ_SIMKL:
       return (op == AJ_TRAKT ? traktauth_estado() == TRA_LIGADO : simklauth_estado() == SMK_LIGADO)
-        ? "OK abre o vínculo de novo, com QR e código. As setas laterais não fazem nada nesta linha."
+        ? "conectado — OK desconecta"
         : "OK abre o vínculo, com QR e código. As setas laterais não fazem nada nesta linha.";
     case AJ_ADDONS: case AJ_DISCORD: case AJ_PLUGINS:
       return "OK abre. As setas laterais não fazem nada nesta linha.";
@@ -9038,8 +9040,16 @@ static void eventoTela(const SDL_Event *e) {
       return;
     }
     if (debTesteServico(focoOp) >= 0) { adTesteIniciar(debTesteServico(focoOp)); return; }
-    if (focoOp == AJ_TRAKT) { traktauth_comecar(); return; }
-    if (focoOp == AJ_SIMKL) { simklauth_comecar(); return; }
+    if (focoOp == AJ_TRAKT) {
+      if (traktauth_estado() == TRA_LIGADO || (traktauth_estado() == TRA_PARADO && trakt_ativo())) { traktauth_desconectar(); desc_repetir(); }
+      else traktauth_comecar();
+      return;
+    }
+    if (focoOp == AJ_SIMKL) {
+      if (simklauth_token()[0]) { simklauth_desconectar(); simkl_esquecer(); desc_repetir(); }
+      else simklauth_comecar();
+      return;
+    }
     if (focoOp == AJ_DISCORD) {
       if (discord_estado() == DIS_LIGADO) discord_esquecer(); else discord_comecar();
       return;

@@ -63,6 +63,17 @@ int main(void) {
   traktauth_passo(580999); assert(pedidos == antes);
   traktauth_passo(581000); terminar(); traktauth_passo(582000);
   assert(traktauth_estado() == TRA_LIGADO && !strcmp(token, "RENOVADO-P1"));
-  puts("#610 auth: PASS (device-code, poll, refresh, Retry-After and backoff)");
+  traktauth_desconectar();
+  assert(traktauth_perfil() == 1 && !trakt_ativo() && traktauth_desconectado());
+  assert(!traktauth_carregar_perfil(1) && traktauth_desconectado());
+  // A response from the disconnected generation cannot recreate its token.
+  gerFio = geracao - 1; perfilFio = 1; usuarioCopiar(usuarioFio);
+  snprintf(refreshFio, sizeof refreshFio, "R1");
+  fioRenovar(NULL);
+  assert(contem("trakt-p1.txt", "!") && !token[0]);
+  traktauth_comecar(); terminar();
+  traktauth_passo(700000); terminar(); traktauth_passo(701000);
+  assert(traktauth_estado() == TRA_LIGADO && !traktauth_desconectado());
+  puts("#610 auth: PASS (Retry-After, backoff, profile disconnect, stale response, reconnect)");
   return 0;
 }
