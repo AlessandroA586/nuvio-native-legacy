@@ -426,6 +426,15 @@ static inline int ajustes_fonte_resolver(int escolha, int trakt, int simkl) {
   if (escolha == AJ_SALVOS_SIMKL) return simkl ? AJ_SALVOS_SIMKL : trakt ? AJ_SALVOS_TRAKT : AJ_SALVOS_LOCAL;
   return AJ_SALVOS_LOCAL;
 }
+// Escolha oferecida na linha: Nuvio sempre; Trakt/Simkl so vinculados. O valor
+// ja gravado e desvinculado continua lido (resolver acima), so nao e oferecido.
+static inline int ajustes_fonte_oferecida(int escolha, int trakt, int simkl) {
+  return escolha == AJ_SALVOS_TRAKT ? trakt : escolha == AJ_SALVOS_SIMKL ? simkl : 1;
+}
+// A Biblioteca mostra a lista do servico so quando ele e a fonte efetiva;
+// a conta Nuvio (contalib) so quando a fonte e a lista do Nuvio.
+static inline int ajustes_fonte_traz_trakt(int fonte)    { return fonte == AJ_SALVOS_TRAKT; }
+static inline int ajustes_fonte_traz_conta(int fonte)    { return fonte == AJ_SALVOS_LOCAL; }
 // Texto do selo da aba Salvos para a fonte efetiva; a local o chamador resolve.
 static inline const char *ajustes_fonte_selo(int fonte) {
   return fonte == AJ_SALVOS_TRAKT ? "TRAKT" : fonte == AJ_SALVOS_SIMKL ? "SIMKL" : "LOCAL";

@@ -8104,6 +8104,7 @@ static int passoAdiante(int op, int dir) {
     // Ao girar, pula o que esta TV nao suporta (o 512 numa TV de 160 so enganaria).
     for (k = 0; k < n; k++) {
       v = (v + (dir > 0 ? 1 : n - 1)) % n;
+      if (op == AJ_SALVOS_DEST && !ajustes_fonte_oferecida(v, trakt_ativo(), simkl_ativo())) continue;
       if (op != AJ_TEX_MB || !texAcima(v)) return v;
     }
     return 0; }
@@ -8703,6 +8704,7 @@ static int definirValorDireto(int op, int novo) {
   if (op < 0 || op >= AJ_N || !ajOpcaoDisponivel(op) ||
       (OPCOES[op].tipo != OP_ESCOLHA && OPCOES[op].tipo != OP_NUMERO)) return 0;
   novo = limita(op, novo);
+  if (op == AJ_SALVOS_DEST && !ajustes_fonte_oferecida(novo, trakt_ativo(), simkl_ativo())) return 0;
   if (ajLegendaPrincipal(op)) return ajLegendaDefinir(op, novo);
   if (ajFalhaBackend(op)) return ajFalhaDefinir(op, novo);
   if (op == AJ_SEEKR_LIGADO && novo == 0 && !seekrChave[0]) {

@@ -18,6 +18,20 @@ int main(void) {
   s = ajustes_fonte_selo(ajustes_fonte_resolver(AJ_SALVOS_TRAKT, 1, 1));
   assert(!strcmp(s, "TRAKT"));
   assert(!strcmp(ajustes_fonte_selo(ajustes_fonte_resolver(AJ_SALVOS_TRAKT, 0, 0)), "LOCAL"));
+  // Trakt conectado + escolha Nuvio: sem watchlist do Trakt, so Nuvio/conta.
+  assert(!ajustes_fonte_traz_trakt(ajustes_fonte_resolver(AJ_SALVOS_LOCAL, 1, 1)));
+  assert(ajustes_fonte_traz_conta(ajustes_fonte_resolver(AJ_SALVOS_LOCAL, 1, 1)));
+  // Escolha Trakt/Simkl: conta Nuvio fora do feed; so a escolhida entra.
+  assert(ajustes_fonte_traz_trakt(ajustes_fonte_resolver(AJ_SALVOS_TRAKT, 1, 1)));
+  assert(!ajustes_fonte_traz_conta(ajustes_fonte_resolver(AJ_SALVOS_TRAKT, 1, 1)));
+  assert(!ajustes_fonte_traz_trakt(ajustes_fonte_resolver(AJ_SALVOS_SIMKL, 1, 1)));
+  assert(!ajustes_fonte_traz_conta(ajustes_fonte_resolver(AJ_SALVOS_SIMKL, 1, 1)));
+  // So Trakt vinculado: Simkl nao e oferecido; Nuvio sempre.
+  assert(!ajustes_fonte_oferecida(AJ_SALVOS_SIMKL, 1, 0));
+  assert(ajustes_fonte_oferecida(AJ_SALVOS_TRAKT, 1, 0));
+  assert(ajustes_fonte_oferecida(AJ_SALVOS_LOCAL, 0, 0));
+  assert(!ajustes_fonte_oferecida(AJ_SALVOS_TRAKT, 0, 0));
+  assert(!strcmp(ajustes_fonte_selo(ajustes_fonte_resolver(AJ_SALVOS_SIMKL, 1, 0)), "TRAKT"));  // salvo e desvinculado
   puts("bibfonte: PASS");
   return 0;
 }

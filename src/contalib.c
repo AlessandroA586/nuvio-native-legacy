@@ -7,6 +7,7 @@
 #include "catalogo.h"
 #include "js.h"
 #include "idioma.h"
+#include "ajustes.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -360,6 +361,7 @@ int contalib_aplicar_catalogo(void) {
   int i, marcados = 0, nFaltam = 0, ultimo = -1;
 
   if (nItens < 1) return 0;
+  if (!ajustes_fonte_traz_conta(ajustes_fonte_biblioteca())) return 0;
   // Catalogo vazio nao aceita acrescimo (cat_acrescentar_lote recusa com n<1) e
   // nao tem onde marcar. Sair aqui, sem tocar na marca, faz a reconciliacao
   // tentar de novo assim que o catalogo existir.

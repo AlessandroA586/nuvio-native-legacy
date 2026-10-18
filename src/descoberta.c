@@ -4258,7 +4258,7 @@ static void *fioListas(void *u) {
   int nw = 0, nc = 0;
   CatItem *wl = NULL, *col = NULL;
   if (descSessaoVincular(j->sessao)) {
-    if (ajustes_fonte_biblioteca() != AJ_SALVOS_SIMKL) wl = listaBuscar("watchlist", &nw);
+    if (ajustes_fonte_traz_trakt(ajustes_fonte_biblioteca())) wl = listaBuscar("watchlist", &nw);
     if (descSessaoAtual()) col = listaBuscar("collection", &nc);
   }
   pthread_mutex_lock(&listasTrava);
@@ -5225,7 +5225,7 @@ static void *montar(void *u) {
     listas = NULL;
   } else {
     GARANTE(TRAKT_LISTA_MAX);
-    if (ajustes_fonte_biblioteca() != AJ_SALVOS_SIMKL) n += trakt_lista("watchlist",  lote + n, cap - n);
+    if (ajustes_fonte_traz_trakt(ajustes_fonte_biblioteca())) n += trakt_lista("watchlist",  lote + n, cap - n);
     GARANTE(TRAKT_LISTA_MAX);
     n += trakt_lista("collection", lote + n, cap - n);
   }
