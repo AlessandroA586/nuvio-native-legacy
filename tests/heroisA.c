@@ -5,6 +5,10 @@
 static float headingY;
 static GLuint headingTexture;
 static int overlayProbe;
+static int budgetBaseline;
+static int recordVeil(float fraction, float alpha) {
+  return budgetBaseline ? 0 : gfx_veu_card_por(fraction, alpha);
+}
 static const char *heading;
 static unsigned renderTime = 1000;
 static TxtLinha recordLine(TxtEstilo style, const char *s, int r, int g, int b, int a, float width) {
@@ -19,6 +23,18 @@ static void recordText(TxtLinha l, float x, float y) {
 static void recordRect(GfxRect r, GLuint tex, GfxModo mode, float focus,
                        float px, float py, float radius,
                        float red, float green, float blue, float alpha) {
+  if (budgetBaseline && r.x == 0 && r.y < 96 && r.w == 1920 &&
+      r.h <= 96 && (mode == GFX_VEU_CSS || mode == GFX_COR)) return;
+  if (budgetBaseline && mode == GFX_CARD && gfx_card_heroi_veu_atual[3] > 0) {
+    float alpha = gfx_card_heroi_veu_atual[3];
+    gfx_card_heroi_veu_atual[3] = 0;
+    gfx_rect(r, tex, mode, focus, px, py, radius, red, green, blue, 1);
+    gfx_rect(r, 0, GFX_VEU, 0, 1, 0, radius,
+             gfx_card_heroi_veu_atual[0], gfx_card_heroi_veu_atual[1],
+             gfx_card_heroi_veu_atual[2], alpha);
+    gfx_card_heroi_veu_atual[3] = alpha;
+    return;
+  }
   if (overlayProbe == 1 && r.x == 0 && r.y == 0 && r.h <= 96 &&
       (mode == GFX_VEU_CSS || mode == GFX_COR)) {
     gfx_cor((GfxRect){0, 0, r.w, 96}, 0, 1, 1, 1, 1);
@@ -27,20 +43,38 @@ static void recordRect(GfxRect r, GLuint tex, GfxModo mode, float focus,
   gfx_rect(r, tex, mode, focus, px, py, radius, red, green, blue, alpha);
 }
 static void recordColor(GfxRect r, float radius, float red, float green, float blue, float alpha) {
+  if (budgetBaseline && r.x == 0 && r.y < 96 && r.w == 1920 && r.h <= 96) return;
   if (overlayProbe == 1 && r.x == 0 && r.y == 0 && r.h <= 96) {
     gfx_cor((GfxRect){0,0,r.w,96},0,1,1,1,1); overlayProbe = 2;
   }
   gfx_cor(r,radius,red,green,blue,alpha);
 }
+static void recordClip(float x, float y, float w, float h) {
+  if (overlayProbe == 1 && x == 0 && y == 0 && h == 43.2f) {
+    gfx_sem_recorte();
+    gfx_cor((GfxRect){0, 0, w, 96}, 0, 1, 1, 1, 1);
+    overlayProbe = 2;
+  }
+  gfx_recorte(x, y, w, h);
+}
+static void recordClear(GLbitfield mask) {
+  if (!budgetBaseline) glClear(mask);
+}
+#define gfx_recorte recordClip
+#define glClear recordClear
 #define txt_linha_corta recordLine
 #define gfx_cor recordColor
 #define txt_desenhar recordText
 #define gfx_rect recordRect
+#define gfx_veu_card_por recordVeil
 #include "../src/home.c"
+#undef gfx_recorte
+#undef glClear
 #undef txt_linha_corta
 #undef gfx_cor
 #undef txt_desenhar
 #undef gfx_rect
+#undef gfx_veu_card_por
 #include "dados.h"
 #include <SDL2/SDL_image.h>
 #include <assert.h>
@@ -109,19 +143,18 @@ static void capture(const char *prefix, int split, int glass, float scale) {
       snprintf(path,sizeof path,"%s-%s%s.png",prefix,split?"heroidiv":"heroicard",glass?"":"-semvidro");
       assert(IMG_SavePNG(s,path)==0); SDL_FreeSurface(s); free(pixels);
       printf("PNG %s; rects=%d fill=%.3f gpu=%.3f\n",path,gfx_n_rect,gfx_fill,gfx_fill_gpu);
-      if (!split && scale == 1.0f) {
-        // Isolate the reviewed card from unrelated background/row submissions.
+      if (scale == 1.0f) {
+        int draws = gfx_n_rect;
+        double fill = gfx_fill, gpu = gfx_fill_gpu;
+        // Same complete Home frame, with pre-fusion artwork/veils and no top overlay.
+        budgetBaseline = 1;
         gfx_novo_quadro();
-        const CatItem *ci = cat_item(0);
-        GfxRect r = itemFoco.rect;
-        desenhaHeroiCard(ci,1,ci->sinopse,ci->backdrop,
-                        tex_obter_larg(ci->backdrop,r.w),1,
-                        r.x,r.y,r.w,r.h,raioDe(r.w,r.h),1,0);
-        double limit = 0.75; // Artwork + focus ring + copy; no separate veil area.
-        printf("GPU card glass=%d fill=%.3f limit=%.3f\n",glass,gfx_fill,limit);
-        if (gfx_fill > limit + 0.0005) {
-          fprintf(stderr, "FAIL wide hero GPU budget: glass=%d fill=%.3f limit=%.3f\n",
-                  glass, gfx_fill, limit);
+        renderHome(split, 0);
+        budgetBaseline = 0;
+        printf("GPU Home split=%d glass=%d draws=%d/%d fill=%.6f/%.6f gpu=%.6f/%.6f (current/baseline)\n",
+               split, glass, draws, gfx_n_rect, fill, gfx_fill, gpu, gfx_fill_gpu);
+        if (draws > gfx_n_rect || fill > gfx_fill + 0.000001 || gpu > gfx_fill_gpu + 0.000001) {
+          fprintf(stderr, "FAIL whole Home GPU budget: split=%d glass=%d\n", split, glass);
           budgetFailed = 1;
         }
       }
@@ -188,10 +221,10 @@ int main(int argc,char **argv) {
       for(int split=0;split<2;split++) capture(scaled,split,0,scales[i]);
     }
   }
-  if (argc == 1) for (int glass=0;glass<2;glass++)
-    capture(getenv("NUVIO_DADOS"),0,glass,1);
+  if (argc == 1) for (int split=0;split<2;split++) for (int glass=0;glass<2;glass++)
+    capture(getenv("NUVIO_DADOS"),split,glass,1);
   assert(!budgetFailed);
-  puts("PASS wide hero GPU budget: isolated card <=0.75 screens in both glass modes");
+  puts("PASS whole Home GPU budget: draws and fill <= unfused baseline, both Hero/glass modes");
   gfx_escala_txt_definir(1);
   setup(0,0);
   assert(fabsf(alturaFil(0)/larguraFil(0)-372.0f/1744)<0.0001f);

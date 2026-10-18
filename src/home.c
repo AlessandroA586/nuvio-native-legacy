@@ -6965,18 +6965,19 @@ static void desenhaHeroiCard(const CatItem *ci, int completo, const char *texto,
     gfx_card_heroi_veu_atual[1] = cg;
     gfx_card_heroi_veu_atual[2] = cb;
     gfx_card_heroi_veu_atual[3] = 0.95f;
-    if (t) gfx_veu_card_por(NV_HEROI_VEU_F, NV_HEROI_VEU_A);
   }
+  if (t) gfx_veu_card_por(completo ? NV_HEROI_VEU_F : 0.52f,
+                           completo ? NV_HEROI_VEU_A : 0.80f);
   desenhaArteCard(card, FILEIRA_HEROI, caminho, t, ci, f, raio, aArte, varre);
   gfx_card_heroi_veu_atual[3] = 0;
-  if (completo && t) gfx_veu_na_arte = 1;
+  if (t) gfx_veu_na_arte = 1;
   if (completo && !t)
     gfx_rect(card, 0, GFX_VEU, 0, 1, 0, raio,
              gfx_card_heroi_veu_atual[0], gfx_card_heroi_veu_atual[1],
              gfx_card_heroi_veu_atual[2], 0.95f);
   gfx_veu_base(card, raio, completo ? NV_HEROI_VEU_F : 0.52f,
                completo ? NV_HEROI_VEU_A : 0.80f);
-  if (completo) gfx_veu_card_limpar();
+  gfx_veu_card_limpar();
   float tw = fminf(760.0f, w - pad * 2.0f);
   float base = py + h - (completo ? 44.0f : 30.0f);
   if (completo) {
@@ -7998,13 +7999,14 @@ static void home_desenhar_(Uint32 agora) {
   }
 
   gfx_opacidade_grupo=1;
-  // Hero A hides outgoing copy above its heading without a blur or offscreen pass.
+  // Clear the solid band without a fragment pass; split artwork carries its caption veil.
   if (!focoHero && foco.fileira >= 0 && foco.fileira < nFileiras &&
       (fileiras[foco.fileira].tipo == FILEIRA_HEROI ||
        fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO)) {
+    gfx_recorte(0, 0, NV_TELA_W, 43.2f);
+    glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
     gfx_sem_recorte();
-    gfx_cor((GfxRect){0, 0, NV_TELA_W, 43.2f}, 0,
-            NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1);
     gfx_rect((GfxRect){0, 43.2f, NV_TELA_W, 52.8f}, 0, GFX_VEU_CSS, 0, 1, 1, 0,
              NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1);
   }
