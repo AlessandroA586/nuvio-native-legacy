@@ -1502,6 +1502,7 @@ static int chaveConfigurada(const char *ch) {
 static void focoValido(void);
 static void empacotar(void);
 static void epgExtrasMontar(void);
+static int gpAberto;
 
 // Apaga o arquivo de cache de UMA fonte deste perfil.
 static void cacheFonteApagar(const char *ch) {
@@ -1549,6 +1550,7 @@ void guia_fonte_esquecer(const char *chave) {
       nCanais = w;
       for (k = 0; k < nCanais; k++) if (canais[k].fonte > i) canais[k].fonte--;
       for (k = 0; k < nCats; k++) if (cats[k].fonte > i) cats[k].fonte--;
+      gpAberto = 0; // Source indices and group data are about to change.
       free(ltvF[i].gi); ltvF[i].gi = NULL;
       memmove(&ltvF[i], &ltvF[i + 1], sizeof ltvF[0] * (size_t)(nLtvF - i - 1));
       nLtvF--;
@@ -3039,7 +3041,7 @@ static void fopMudar(int dir) {
 // automatico: grupos inteiros na ordem do provedor. Marcar so e permitido
 // enquanto couber, para a conta da tela ser a do resultado.
 // Aplicar grava em ltv_pref (grupos) e recarrega; Voltar descarta.
-static int gpAberto, gpFonte, gpFoco, gpN, gpAviso;
+static int gpFonte, gpFoco, gpN, gpAviso;
 static unsigned char *gpMarca;
 static float gpRol;
 static Uint32 gpAbriuEm, gpAvisoEm;

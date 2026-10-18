@@ -212,8 +212,27 @@ int main(int argc, char **argv) {
   fonteVaziaRecupera(LTV_ADDON, bases[0], "A", bases[0]);
   assert(sNCanais == 2 && sLtvF[0].deCache);
   stagingZerar();
-  // Remove first source in memory: B's channel and category indices must move.
-  guia_fonte_esquecer(chA);
+  // Removal must close selectors bound to removed or shifted source indices.
+  for (int scenario = 0; scenario < 4; scenario++) {
+    semearFonteCache(bases[0], "Grupo A", a, 2);
+    semearFonteCache(bases[1], "Grupo B", b, 1);
+    cacheNomeIndice(nome, sizeof nome);
+    { char idx[128]; snprintf(idx, sizeof idx, "%s\n%s\n", chA, chB); dados_gravar(nome, idx); }
+    resetPublished();
+    assert(cacheLer() && nLtvF == 2);
+    if (scenario == 3) guia_fonte_esquecer(chA);
+    gpAbrir(scenario >= 2 ? 0 : 1);
+    assert(gpAberto && gpN > 0);
+    gpMarca[0] = 1;
+    gpFoco = 0; // Apply is focused when the source disappears.
+    guia_fonte_esquecer(scenario == 0 || scenario == 3 ? chB : chA);
+    assert(!gpAberto);
+    if (scenario == 3) assert(nLtvF == 0 && nCanais == 0);
+    else assert(nLtvF == 1 && ltvF[0].gi && ltvF[0].ngi == 1);
+  }
+  free(gpMarca); gpMarca = NULL;
+  semearFonteCache(bases[1], "Grupo B", b, 1);
+  // Removing the first source also moves B's channel and category indices.
   assert(nCanais == 1 && nLtvF == 1 && canais[0].fonte == 0 && cats[0].fonte == 0);
   assert(!strcmp(chaveDo(&canais[0]), chB));
   semearFonteCache(bases[0], "Grupo", a, 2);
