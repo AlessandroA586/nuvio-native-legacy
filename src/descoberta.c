@@ -661,10 +661,7 @@ static void fotosDoElenco(CatItem *d, const char *imdbSerie, int serie, int mant
   // watch/providers logo abaixo nao depende dele. E necessario tambem quando
   // os nomes ja vieram do catalogo em memoria mas SEM os ids de pessoa: sem o
   // casamento o OK num ator nao abre a filmografia (o log do dono no #205).
-  int elencoSemPessoa = 0;
-  for (int e2 = 0; e2 < d->nElenco; e2++)
-    if (d->elenco[e2].tmdb <= 0) { elencoSemPessoa = 1; break; }
-  if (ajustes_tmdb_elenco() && d->nElenco > 0 && elencoSemPessoa) {
+  if (ajustes_tmdb_elenco() && d->nElenco > 0) {
     // language= tambem aqui: o nome do PERSONAGEM (`character`) vem localizado
     // quando o TMDB tem (o mesmo pedido, so um parametro a mais).
     snprintf(url, sizeof url, "%s/%s/%ld/credits?api_key=%s&language=%s",
@@ -680,7 +677,7 @@ static void fotosDoElenco(CatItem *d, const char *imdbSerie, int serie, int mant
   } else {
     printf("[desc] elenco %s: sem fotos (%s)\n", imdbSerie,
            !ajustes_tmdb_elenco() ? "\"Elenco do TMDB\" desligado nos ajustes" :
-           d->nElenco > 0 ? "elenco ja casado com o TMDB" : "a ficha veio sem nomes");
+           "a ficha veio sem nomes");
     fflush(stdout);
   }
 
@@ -9321,7 +9318,7 @@ void desc_episodios(int indiceItem, int temporada) {
 // casamento de /credits — o OK num ator nao abre nada (#205).
 static int descElencoPrecisaPessoas(const CatItem *ci) {
   int i;
-  if (!ci || !ci->nElenco) return 0;
+  if (!ci || !ci->nElenco || !ajustes_tmdb_elenco() || !desc_chave_tmdb()[0]) return 0;
   for (i = 0; i < ci->nElenco; i++) if (ci->elenco[i].tmdb > 0) return 0;
   return 1;
 }

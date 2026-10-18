@@ -103,7 +103,8 @@ int prog_gravar_local(const char *imdb, int t, int e, double p, double d, int to
 
 void  SDL_Delay(Uint32 ms)                 { usleep(ms * 1000); }
 int   ajustes_cw_fonte(void)               { return 0; }
-int   ajustes_tmdb_ligado(void)            { return 1; }
+static int fakeTmdbLigado = 1;
+int   ajustes_tmdb_ligado(void)            { return fakeTmdbLigado; }
 static int fakeMetaExterno, fakeTmdbBasico;
 int   ajustes_meta_externo(void)           { return fakeMetaExterno; }
 static int fakeSoCinemeta;
@@ -1343,9 +1344,42 @@ int main(void) {
     assert(cat_item(0)->elenco[0].tmdb == 9001);
     assert(cat_item(0)->elenco[1].tmdb == 9002);
     assert(!desc_elenco_precisa_pessoas(cat_item(0)));
+    // Reopening can replace localized metadata while preserving every person ID.
+    it = *cat_item(0);
+    assert(desc_meta_elenco("{\"cast\":[{\"name\":\"Rory Kinnear\","
+                           "\"character\":\"Addon role\",\"photo\":\"https://addon.test/rory.jpg\"},"
+                           "{\"name\":\"Jason Flemyng\"}]}", &it, 0) == 2);
+    assert(it.elenco[0].tmdb == 9001 && it.elenco[1].tmdb == 9002);
+    assert(!strcmp(it.elenco[0].papel, "Addon role"));
+    nRotas = 0; nPedidos = 0;
+    rota("themoviedb.org/3/movie/424242/credits",
+         "{\"cast\":[{\"id\":9001,\"name\":\"Rory Kinnear\","
+         "\"character\":\"Papel localizado\",\"profile_path\":\"/rory.jpg\"},"
+         "{\"id\":9002,\"name\":\"Jason Flemyng\"},"
+         "{\"id\":9003,\"name\":\"Additional actor\"}]}");
+    fotosDoElenco(&it, it.imdb, 0, 0);
+    assert(pediu("/credits?"));
+    assert(!strcmp(it.elenco[0].papel, "Papel localizado"));
+    assert(!strcmp(it.elenco[0].foto, "https://image.tmdb.org/t/p/w185/rory.jpg"));
+    assert(it.nElenco == 3 && it.elenco[2].tmdb == 9003);
+
+    // Missing IDs alone must not schedule work when enrichment cannot run.
+    it.elenco[0].tmdb = it.elenco[1].tmdb = it.elenco[2].tmdb = 0;
+    for (int disabled = 0; disabled < 3; disabled++) {
+      fakeTmdbElenco = disabled != 0;
+      fakeTmdbLigado = disabled != 1;
+      tmdbChave[0] = disabled == 2 ? 0 : '0';
+      cat_definir_tudo(&it, 1, NULL, 0);
+      nPedidos = 0;
+      assert(!desc_elenco_precisa_pessoas(cat_item(0)));
+      desc_episodios_garantir(0);
+      assert(desc_episodios_precarregar(0) == 0);
+      assert(!fioEpVivo && nPedidos == 0);
+    }
+    fakeTmdbLigado = 1;
     fakeTmdbElenco = 0; tmdbFind = NULL; tmdbChave[0] = 0; nRotas = 0;
     limparCacheMeta();
-    puts("ok  #205: elenco do catalogo em memoria ganha id de pessoa pelo /credits"); }
+    puts("ok  #205: cast IDs, refresh after addon metadata, and integration scheduling gates"); }
 
   puts("detalheanime: tudo ok");
   return 0;
