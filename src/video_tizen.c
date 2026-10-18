@@ -94,7 +94,9 @@
 #include <SDL2/SDL.h>
 #include <emscripten.h>
 #include <emscripten/threading.h>
+#ifndef NV_UM_FIO
 #include <emscripten/proxying.h>
+#endif
 #include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -781,6 +783,7 @@ static int executarNoPrincipal(int p) {
 
 // Fila de proxy criada UMA VEZ: por chamada vazaria uma fila por operacao de
 // video, e duas threads chegando juntas na primeira criariam duas.
+#ifndef NV_UM_FIO
 static em_proxying_queue *filaPrincipal;
 static pthread_once_t filaUmaVez = PTHREAD_ONCE_INIT;
 static void criarFila(void) { filaPrincipal = em_proxying_queue_create(); }
@@ -789,6 +792,7 @@ static void criarFila(void) { filaPrincipal = em_proxying_queue_create(); }
 // nasceu para a assinatura EM_FUNC_SIG_II da API antiga. O resultado nao se
 // perde: sai em p.res, dentro do proprio Pedido.
 static void executarNoPrincipalV(void *arg) { (void)executarNoPrincipal((int)(uintptr_t)arg); }
+#endif
 
 
 static void logarErro(const char *onde);
@@ -803,6 +807,12 @@ static double avChamar(const char *cmd, const char *txt,
   if (emscripten_is_main_browser_thread()) {
     executarNoPrincipal((int)(uintptr_t)&p);
   } else {
+#ifdef NV_UM_FIO
+    // Single-thread asm.js/VIDAA-st: there is no proxying queue. Run the
+    // request inline on this fiber; the AVPlay calls are JS EM_JS stubs that
+    // complete synchronously and write p.res.
+    executarNoPrincipal((int)(uintptr_t)&p);
+#else
     // emscripten_sync_run_in_main_runtime_thread FOI REMOVIDA do runtime. Ela
     // ainda e DECLARADA em emscripten/threading_legacy.h, entao o compilador
     // aceita e so o wasm-ld reclama, com "undefined symbol:
@@ -814,6 +824,7 @@ static double avChamar(const char *cmd, const char *txt,
     emscripten_proxy_sync(filaPrincipal,
                           emscripten_main_runtime_thread_id(),
                           executarNoPrincipalV, &p);
+#endif
   }
   return p.res;
 }

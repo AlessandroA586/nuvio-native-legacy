@@ -56,15 +56,35 @@ fi
 # Ninguem provou ainda qual dos dois a VIDAA aceita — e por isso os dois.
 PLAT_VIDAA=0
 UM_FIO=0
+LEGADO=0
 for arg in "$@"; do
   case "$arg" in
     --vidaa) PLAT_VIDAA=1 ;;
     --um-fio) UM_FIO=1 ;;
+    --legado|--legacy) LEGADO=1 ;;
   esac
 done
-if [ "$UM_FIO" = "1" ] && [ "$PLAT_VIDAA" != "1" ]; then
-  echo "tizen.sh: --um-fio so existe junto de --vidaa" >&2
+# EXPERIMENTAL TIZEN 3: --legado needs the same cooperative fiber path as
+# --um-fio because M47 has no SharedArrayBuffer and cannot use pthread workers.
+[ "$LEGADO" = "1" ] && UM_FIO=1
+if [ "$UM_FIO" = "1" ] && [ "$PLAT_VIDAA" != "1" ] && [ "$LEGADO" != "1" ]; then
+  echo "tizen.sh: --um-fio so existe junto de --vidaa ou --legado" >&2
   exit 2
+fi
+if [ "$LEGADO" = "1" ] && [ "$PLAT_VIDAA" = "1" ]; then
+  echo "tizen.sh: --legado nao existe junto de --vidaa" >&2
+  exit 2
+fi
+if [ "$LEGADO" = "1" ]; then
+  # The app itself stays the Samsung branch: only the compilation target
+  # changes. NV_LEVE keeps the background worker jobs disabled; the other
+  # budget cuts are compile-time flags below.
+  export NUVIO_EXTRA_CFLAGS="${NUVIO_EXTRA_CFLAGS:-} -DNV_TIZEN3_LITE=1 -DNV_LEVE=1 -DNV_TEX_MB_FIXO=32 -DNV_UM_FIO=1"
+  export NUVIO_SAIDA="${NUVIO_SAIDA:-build/tizen3-lite}"
+  export NUVIO_WGT_NOME="${NUVIO_WGT_NOME:-NuvioTV003}"
+  export NUVIO_TIZEN_CONFIG="${NUVIO_TIZEN_CONFIG:-tools/tizen3-config.xml}"
+  export NUVIO_ASS_LIBASS=0
+  echo "tizen.sh: EXPERIMENTAL Tizen 3 lite (asm.js/um-fio) -> $NUVIO_SAIDA"
 fi
 if [ "$PLAT_VIDAA" = "1" ]; then
   VARIANTE="vidaa"
@@ -75,6 +95,9 @@ if [ "$PLAT_VIDAA" = "1" ]; then
   export NUVIO_SAIDA="${NUVIO_SAIDA:-build/vidaa/$MODO_VIDAA}"
   export NUVIO_TIZEN_SHELL="${NUVIO_TIZEN_SHELL:-tools/vidaa-shell.html}"
   echo "tizen.sh: alvo VIDAA ($MODO_VIDAA) -> $NUVIO_SAIDA"
+fi
+if [ "$LEGADO" = "1" ]; then
+  export NUVIO_TIZEN_SHELL="${NUVIO_TIZEN_SHELL:-tools/tizen3-lite-shell.html}"
 fi
 SAIDA="${NUVIO_SAIDA:-build/tizen}"
 mkdir -p "$SAIDA"
@@ -265,6 +288,10 @@ if [ "$UM_FIO" = "1" ]; then
   #
   # pthread keys belong to fibers (network state, collection snapshots, caches).
   # pthread_once remains native: key initialization never yields.
+  if [ "$LEGADO" = "1" ]; then
+    # The real symbol is absent without pthreads; fio1.c supplies it here.
+    LEGADO_FIO_REMOVE="-Wl,--wrap=emscripten_async_run_in_main_runtime_thread_"
+  fi
   FIO_FLAGS="${NUVIO_FIO_FLAGS:--sASYNCIFY_STACK_SIZE=131072 \
 -Wl,--wrap=pthread_create -Wl,--wrap=pthread_join -Wl,--wrap=pthread_detach \
 -Wl,--wrap=pthread_self -Wl,--wrap=pthread_equal \
@@ -283,6 +310,9 @@ if [ "$UM_FIO" = "1" ]; then
 -Wl,--wrap=SDL_CondSignal -Wl,--wrap=SDL_CondBroadcast -Wl,--wrap=SDL_CondWait \
 -Wl,--wrap=SDL_Delay \
 -Wl,--wrap=emscripten_async_run_in_main_runtime_thread_}"
+  if [ "$LEGADO" = "1" ]; then
+    FIO_FLAGS="${FIO_FLAGS/$LEGADO_FIO_REMOVE/}"
+  fi
   # O ULTIMO --wrap ACIMA NAO E DA FAMILIA pthread/SDL: webp.c usa
   # emscripten_async_run_in_main_runtime_thread (que expande para o simbolo
   # com "_" no fim) para pedir ao fio principal que rode algo quando NAO esta
@@ -306,6 +336,25 @@ else
   # 160 MiB) e poe o pool do degrau em Module.nvPool; $POOL limita a variante.
   FIO_FLAGS="-pthread -sPTHREAD_POOL_SIZE='Math.min(Module.nvPool||$POOL,$POOL)' -sPTHREAD_POOL_SIZE_STRICT=0"
   RUNTIME_EXPORTS="'[\"PThread\",\"ccall\"]'"
+fi
+WASM_FLAGS=""
+OPT_LEVEL=-O2
+# Default (#205): 160 MiB initial, import max 256 MiB; the shell supplies the real tier.
+MEM_FLAGS="-sINITIAL_MEMORY=167772160 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=268435456 -sABORTING_MALLOC=1 -sINCOMING_MODULE_JS_API='[\"arguments\",\"canvas\",\"noInitialRun\",\"preRun\",\"print\",\"printErr\",\"setStatus\",\"wasmMemory\"]'"
+STACK_FLAGS="-sSTACK_SIZE=8388608 -sDEFAULT_PTHREAD_STACK_SIZE=2097152"
+ASYNCIFY_STACK=32768
+if [ "$LEGADO" = "1" ]; then
+  # M47 has no WebAssembly and no SharedArrayBuffer. wasm2js is the only
+  # modern upstream path; LEGACY_VM_SUPPORT asks Emscripten to keep the
+  # browser-facing glue compatible with the oldest engines it supports.
+  WASM_FLAGS="-sWASM=0 -sLEGACY_VM_SUPPORT=1"
+  # ponytail: keep this whole-app spike build practical; tune speed only on a TV.
+  OPT_LEVEL=-O1
+  # 128 MiB is the first spike budget, not a measured TV ceiling: M47 device
+  # RAM plus browser/GPU pressure make the normal 256 MiB reservation risky.
+  MEM_FLAGS="-sINITIAL_MEMORY=134217728 -sALLOW_MEMORY_GROWTH=0 -sABORTING_MALLOC=1"
+  STACK_FLAGS="-sSTACK_SIZE=4194304"
+  ASYNCIFY_STACK=131072
 fi
 # WEBP ANIMADO (#141): a libwebp de tools/build-webp-wasm.sh liga NV_WEBP_ANIM
 # em src/gif.c. Sem ela o build segue e o WebP animado fica na foto parada,
@@ -332,22 +381,15 @@ fi
 # logo depois do emcc).
 FONTES_PRELOAD="--preload-file deploy/app/fonts@/app/fonts"
 [ "$PLAT_VIDAA" = "1" ] && FONTES_PRELOAD=""
-eval emcc $SOURCES ${EXTRA_SOURCES} -o "$SAIDA/index.html" -O2 "$ENV_D" ${NUVIO_EXTRA_CFLAGS:-} $ASS_CFLAGS $ASS_LIBS $WEBP_CFLAGS $WEBP_LIBS \
+eval emcc $SOURCES ${EXTRA_SOURCES} -o "$SAIDA/index.html" $OPT_LEVEL "$ENV_D" ${NUVIO_EXTRA_CFLAGS:-} $ASS_CFLAGS $ASS_LIBS $WEBP_CFLAGS $WEBP_LIBS \
   -sWASM_BIGINT=0 \
+  $WASM_FLAGS \
   -sUSE_SDL=2 -sUSE_SDL_IMAGE=2 -sUSE_SDL_TTF=2 -sUSE_LIBJPEG=1 \
   `# zlib do emscripten: epg.c infla o XMLTV .gz do epgshare01 com inflate.` \
   -sUSE_ZLIB=1 \
   -sSDL2_IMAGE_FORMATS='["png","jpg"]' \
   -sMAX_WEBGL_VERSION=1 \
-  `# HEAP MINIMO DE 160 MiB, NAO 256 (#205). INITIAL_MEMORY e tambem o minimo que` \
-  `# o wasm exige da memoria importada: com 256 a Samsung de 1 GB (Chromium 69)` \
-  `# nao arrancava ("WebAssembly.Memory(): could not allocate memory"). O heap` \
-  `# real vem do tizen-shell.html (Module.wasmMemory, 256 -> 192 -> 160 MiB), que` \
-  `# Enable the incoming memory API and a WASM import maximum covering all tiers.` \
-  `# Growth must be enabled for Emscripten to retain MAXIMUM_MEMORY; the shell` \
-  `# still supplies fixed-size memories, so each selected tier cannot grow.` \
-  -sINITIAL_MEMORY=167772160 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=268435456 -sABORTING_MALLOC=1 \
-  -sINCOMING_MODULE_JS_API='["arguments","canvas","noInitialRun","preRun","print","printErr","setStatus","wasmMemory"]' \
+  $MEM_FLAGS \
   `# PILHAS DE 8 MB, e nao o padrao de 64 KB do emscripten. Esta build estava` \
   `# SEM as duas linhas, sozinha entre as builds do projeto: a bancada de teste` \
   `# do AVPlay ja usava 8 MB nos dois. Pilha de fio pequena ja custou caro aqui` \
@@ -364,7 +406,7 @@ eval emcc $SOURCES ${EXTRA_SOURCES} -o "$SAIDA/index.html" -O2 "$ENV_D" ${NUVIO_
   `# FIO PRINCIPAL, que segue com 8. Worker daqui faz HTTP e decodifica imagem —` \
   `# 2 MB e o proprio padrao do emscripten e sobra. Libera ~72 MB, que e mais do` \
   `# que o app pedia quando morreu.` \
-  -sSTACK_SIZE=8388608 -sDEFAULT_PTHREAD_STACK_SIZE=2097152 \
+  $STACK_FLAGS \
   `# 32 KB de pilha do asyncify, o mesmo valor da bancada que roda. O laco de` \
   `# quadro desenrola por aqui a cada SwapWindow; 16 KB era aperto sem motivo.` \
   `# --profiling-funcs: so a secao de NOMES das funcoes no wasm (~5% do` \
@@ -374,7 +416,7 @@ eval emcc $SOURCES ${EXTRA_SOURCES} -o "$SAIDA/index.html" -O2 "$ENV_D" ${NUVIO_
   `# Bounded fetch waits can occur through any network caller, including pthreads.` \
   `# Network waits yield in workers and synchronous caller fallbacks (rede.c).` \
   `# Keep full Asyncify instrumentation; the old allowlist missed these stacks.` \
-  -sASYNCIFY -sASYNCIFY_STACK_SIZE=32768 \
+  -sASYNCIFY -sASYNCIFY_STACK_SIZE=$ASYNCIFY_STACK \
   `# POOL DE 12. Ja esteve em 4, por um palpite meu que a evidencia derrubou:` \
   `# cortei supondo que o arranque estava LENTO por causa dos doze workers, e os` \
   `# marcos de tempo mostraram depois que ele estava CONGELADO, no WASM_BIGINT.` \
@@ -416,6 +458,17 @@ eval emcc $SOURCES ${EXTRA_SOURCES} -o "$SAIDA/index.html" -O2 "$ENV_D" ${NUVIO_
 # VIDAA: as fontes saem num segundo pacote (fontes.data + fontes.js), carregado
 # por um <script> antes do index.js. Com a arte da 2.0 o index.data unico passou
 # de 25 MiB, o teto por arquivo do Workers Assets (ver FONTES_PRELOAD acima).
+if [ "$LEGADO" = "1" ]; then
+  # emcc 6.0.9 inlines wasm2js into index.js (no index.wasm, no side file).
+  if [ -f "$SAIDA/index.wasm" ]; then
+    echo "tizen.sh: ERRO — --legado ainda emitiu index.wasm" >&2
+    exit 1
+  fi
+  if ! grep -q wasm2js_trap "$SAIDA/index.js"; then
+    echo "tizen.sh: ERRO — wasm2js nao entrou em $SAIDA/index.js" >&2
+    exit 1
+  fi
+fi
 if [ "$PLAT_VIDAA" = "1" ]; then
   EMCC_DIR=$(dirname "$(command -v emcc)")
   ( cd "$SAIDA" && "$EMCC_DIR/tools/file_packager" fontes.data \
@@ -487,7 +540,10 @@ fi
 # A CONFERENCIA ABAIXO TAMBEM ESTAVA CURTA: ela contava so ?. ?? e ||=, que sao
 # sintaxe pos-M76, e por isso dizia "0" enquanto os class fields passavam. Agora
 # procura tambem campo de classe.
-if command -v npx >/dev/null 2>&1; then
+if [ "$LEGADO" = "1" ]; then
+  python3 tools/tizen3-es5.py "$SAIDA/index.js" "$SAIDA/index.es5.js"
+  mv "$SAIDA/index.es5.js" "$SAIDA/index.js"
+elif command -v npx >/dev/null 2>&1; then
   npx --yes esbuild@0.25.0 "$SAIDA/index.js" --target=chrome69 \
       --outfile="$SAIDA/index.chrome69.js" --log-level=warning
   mv "$SAIDA/index.chrome69.js" "$SAIDA/index.js"
@@ -562,6 +618,10 @@ fingerprint() {
   fi
 }
 CONFIG_FP=$(printf '%s' "$ENV_D" | fingerprint)
+if [ "$LEGADO" = "1" ]; then
+  echo "tizen.sh: experimental JS build complete: $SAIDA/index.html"
+  exit 0
+fi
 WASM_SHA=$(sha256 "$SAIDA/index.wasm")
 {
   printf 'format=1\n'
