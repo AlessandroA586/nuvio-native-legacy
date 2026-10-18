@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T17:49:08-03:00, HEAD `f2d7c9854`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T18:48:40-03:00, HEAD `e44d50b75`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -99,6 +99,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   is slow. All platforms. Refs #545 #551 #552 #504, `26b9c635b`, `1c9043ed0`, `455135df2`, `cbcf467f5`, `27988615e`.
 
 ### New
+
+- **Poster details follow your preference**: Disabling Hero genres also hides genres and synopsis on small and medium Poster cards. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-generocard`, merge `d4314f5ce`, `bfa2f9603`.
+
+- **Poster cards follow genre visibility**: Small and medium Poster cards hide genre and synopsis when the Home hero genre setting is disabled. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-generocard`, `bfa2f9603`, merge `d4314f5ce`.
 
 - **Choose the Stage backdrop**: Modern Home Stage rows can show Black, Current or Artwork only backgrounds, with the choice saved on this device. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-palcolimpo`, merge `0fa8979c6`, `c1e6553b7`.
 
@@ -203,6 +207,19 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Android card trailers reveal only when ready**: Posters cover moving or recovering video surfaces until the current native layout is acknowledged, preventing misplaced video holes. Platforms: Android. Refs owner request, `agente/205-trailercard`, merge `2237e56fa`, `4e60283fc`, `bd8b06af3`, `1313001ab`, `6521bf321`, `8655f6925`, `9b936193b`.
+- **Clear Live TV channels without losing sources**: Channel reset preserves configured sources, disabled add-ons and favorites while safely closing source options and group selection. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-guialimpa`, merge `b93f0fc71`, `5904cfd41`, `6b026330e`, `f599242b4`, `07aa30106`, `30f9f3b35`.
+- **Cast pages identify the right person**: Cast enrichment honors TMDB settings, refreshes metadata and rejects ambiguous name matches instead of opening the wrong person. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-elencoappletv`, merge `d64e32043`, `bf75b70ce`, `dea258fee`, `024ba39af`.
+- **Settings List headers stay readable**: Header reservations avoid overlap across UI scales and drawable resolutions. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-ajusteslista`, merge `840ba5c2e`, `ab203ad87`, `79f3437e5`.
+- **Samsung 1 GB startup uses a suitable heap**: Runtime memory selection reduces startup allocation failures, preserves worker limits and reports recovery failures instead of endlessly reloading. Platforms: Samsung .wgt (WASM). Refs owner request, `agente/205-wgtmem1g`, merge `505452eaf`, `2b62064b7`, `2342be938`, `2f02edd77`; Chrome 69 device validation remains pending.
+- **Redirect startup stays suppressed**: Redirected startup retains the runtime suppression flag. Platforms: Vidaa (WASM). Refs owner request, `1104d5083`.
+
+- **Stable trailers on low-memory Android boxes**: Card trailers wait for settled geometry and native layout acknowledgement, recover after surface changes, and cap quality at 720p on low-memory devices. Platforms: Android. Refs owner request, `agente/205-trailercard`, `195c34ec1`, `39fedcaad`, `4e60283fc`, `6521bf321`, `8655f6925`, `9b936193b`, merge `2237e56fa`.
+- **List settings stay below the header**: List settings no longer overlap the clock and badge at supported UI scales and rendering resolutions. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-ajusteslista`, `7b50de1aa`, merge `840ba5c2e`.
+- **Guide source removal keeps navigation consistent**: Removing a source resets focus and closes its group selector, preserves disabled-source caches and favorites, and offers a separate confirmed channel-list reset. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-guialimpa`, `5904cfd41`, `6b026330e`, `f599242b4`, `07aa30106`, `30f9f3b35`, merge `b93f0fc71`.
+- **Cast details stay with the selected person**: Rapid actor changes keep the latest selection, ambiguous name matches are rejected, metadata refresh respects TMDB settings, and failed lookups allow retry. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #205, `agente/205-elencoappletv`, `8304d5cd5`, `bf75b70ce`, `dea258fee`, `024ba39af`, merge `d64e32043`.
+- **Samsung startup adapts to limited memory**: The .wgt selects a smaller fixed WASM heap and worker pool on 1 GB TVs, with bounded fallback and a readable terminal error when recovery cannot persist. Platforms: Samsung .wgt/WASM. Refs owner request, `agente/205-wgtmem1g`, `2b62064b7`, `2342be938`, `2f02edd77`, merge `505452eaf`.
 
 - **TorBox cache labels match the source**: Explicit not-cached status takes priority over misleading names or descriptions, while confirmed cached sources remain playable. Platforms: webOS, Android, Samsung .tpk, WASM. Refs community report, `agente/205-torboxlg`, merge `f2d7c9854`, `70f756353`, `c8610436d`, `37b681acf`, `789323ed7`, `1ff87ff04`.
 - **Tizen video returns to full frame**: Ending zoom, entering picture-in-picture or opening another title restores video geometry and retries transient AVPlay reset failures. Platforms: Samsung .tpk. Refs owner request, `agente/205-tizenaspecto`, merge `39338ee31`, `d614812a1`, `acac6e9c4`, `c0b853d6b`.
@@ -416,6 +433,13 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Internal
 
+- **Tizen 3 lite experiment**: An unsigned opt-in wasm2js shell restores remote and text-input bridges; smoke evidence records a shipping no-go, so this remains experimental. Platforms: Samsung .wgt. Refs owner request, `agente/205-wgtlite3`, merge `4f4f93488`, `f475013e2`, `f2f2ff205`, `4de150e96`.
+
+- **Experimental Tizen 3 lite shell**: An unsigned opt-in wasm2js experiment restores remote and text-input bridges; recorded smoke evidence still marks shipping as no-go. Platforms: Samsung .wgt/WASM. Refs `agente/205-wgtlite3`, `f475013e2`, `f2f2ff205`, `4de150e96`, merge `4f4f93488`.
+- **List rendering regression coverage**: Resolution and header-overlap checks now exercise actual drawable, target and viewport sizes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `ab203ad87`, `79f3437e5`.
+- **VIDAA redirect startup guard**: Generated browser glue preserves startup suppression through ST redirects. Platforms: WASM/VIDAA. Refs `1104d5083`.
+- **Appearance row table alignment**: Integrated artwork and scene tables match the Rows settings block. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `d232b34fd`.
+
 - **Subtitle loader and browser contracts**: Checks cover Tizen compiler TLS regressions, Asyncify callers, AVPlay cleanup and URL probe boundaries. Platforms: Samsung .tpk, WASM. Refs #607, `ab3433f61`, `d775c555f`, `6f3c88792`.
 - **Guide metadata and tracking upkeep**: Catalog genre escape decoding, guide translations and release tracking remain documented. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `6b0f0659c`, `fa5cf5dce`, `d3b41452f`.
 
@@ -482,7 +506,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-Tracking snapshot: 24 branches have unmerged commits and no running job; 17 open issues have no mapped job or prompt. Newer fixes on `agente/205-addonweb`, `agente/205-elencoappletv`, `agente/205-episodioslento`, `agente/205-guialimpa`, `agente/205-notasep`, `agente/205-tpk60preta`, `agente/205-trailercard`, `agente/205-wgtlite3`, `agente/205-wgtmem1g`, `agente/p2p` need review and are not lost. Queued work and deferred 2.1 requests remain separate. Android installed at `cb7ece972`; C9 installation failed, so TV HEAD remains unconfirmed. Later integration merges through `f2d7c9854` await device confirmation.
+Tracking snapshot: 18 unmerged branches without running jobs; 18 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-addonweb`, `agente/205-episodioslento`, `agente/205-mp4oculto`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/205-tpk60preta`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
@@ -491,8 +515,8 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
 
 - **PR #487 v2 by @ghbarker** (add-on reported audio and subtitle languages; `e4fb8c08`) — `agente/205-pr487v2`, 3 commits out,
-  VEREDITO OK `j-rev-pr487-v2`, no commit after. **Needs final re-review.** Android, LG webOS.
-- **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out. Latest mapped review is **OK**; see `estado.md` for the current review log. Awaiting merge of the reviewed tip.
+  Newer fix postdates review. **Needs final re-review.** Android, LG webOS.
+- **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out. Latest fix postdates its review; review the newest tip before merging.
   Android, LG webOS.
 - **Deferred experiments and owner answers**: Homebrew, Tizenbrew, glass mockups and profile experiments remain deferred to 2.1; owner-answer tracking remains on an unmerged branch. Platforms: webOS, Android, Samsung .tpk, WASM; no confirmed release behavior. Refs `agente/205-homebrew`, `agente/205-tizenbrew`, `agente/205-glassmock`, `agente/205-mock21`, `agente/205-perfis21`, `agente/205-respostas`.
 - **Custom subtitle font** — the other half of #501, no branch. Android.

@@ -160,11 +160,11 @@ void notasui_planejar(NotasPlano *p, const int cru[EX_NFONTES], float disp,
   unsigned char manter[EX_NFONTES];
   memset(p, 0, sizeof *p);
   for (pos = 0; pos < EX_NFONTES; pos++) {
-    int f = nf_na_posicao(pos);
+    int f = ajustes_nota_fonte(pos);
     if (f < 0 || cru[f] <= 0) continue;
     if (querer ? !querer[f] : !ajustes_nota_titulo(f)) continue;
     fonte[n] = f;
-    prio[n] = nf_prioridade(f);
+    prio[n] = nf_prioridade_ord(f, 0);
     larg[n] = larguraItem(f, cru[f]);
     comVao[n] = larg[n] + VAO_ITEM;
     n++;

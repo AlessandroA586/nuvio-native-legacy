@@ -683,6 +683,8 @@ int         ajustes_seekr_ajuste_s(void);   // sincronia, em segundos (-60..60)
 int         ajustes_mdblist_fonte(int fonte);   // mdblist_show_*
 // A fonte (ExFonte) entra na linha do titulo? Escolha local + disponibilidade.
 int         ajustes_nota_titulo(int fonte);
+// Source at each title-line position, including the saved custom order.
+int         ajustes_nota_fonte(int pos);
 
 // --- AJUSTES QUE VEM DA CONTA ------------------------------------------------
 // Aplica o blob de `sync_pull_profile_settings_blob` (o objeto `settings_json`,
