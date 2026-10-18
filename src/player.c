@@ -36,6 +36,7 @@
 #include "linguas.h"
 #include "audioescolha.h"
 #include "idioma.h"
+#include "fontesonda.h"
 #include "posplay.h"
 #include "extras.h"
 #include "video.h"
@@ -888,6 +889,26 @@ void player_definir_tentativa(int n, int max) { tentativaN = n; tentativaM = max
 int video_tpk_convertendo(void);   // video_tpk.c
 int video_tpk_aviso_busca(void);   // video_tpk.c (mkvfix.h)
 #endif
+// DE QUEM E O PROBLEMA (#205). Sem motivo proprio, o cartao diz o que o erro do
+// player ja deixa saber: servidor da fonte recusou (add-on/debrid), a conexao
+// nao chegou, ou formato/decoder (esse sim pode ser app ou TV). Nunca a URL.
+static void erroCausaDoPlayer(void) {
+  int http = 0, causa = fontesonda_causa(video_erro_texto(), &http);
+  if (causa == FS_CAUSA_NENHUMA) return;
+  printf("[fonte] causa do erro: %d http=%d\n", causa, http);
+  fflush(stdout);
+  if (causa == FS_CAUSA_HTTP) {
+    if (http) snprintf(erroTitulo, sizeof erroTitulo, i18n("O servidor da fonte recusou o link (HTTP %d)."), http);
+    else snprintf(erroTitulo, sizeof erroTitulo, "%s", i18n("O servidor da fonte recusou o link."));
+    snprintf(erroDica, sizeof erroDica, "%s", i18n("O problema é do add-on ou do debrid, não do app. Abra Fontes e tente outra fonte."));
+  } else if (causa == FS_CAUSA_REDE) {
+    snprintf(erroTitulo, sizeof erroTitulo, "%s", i18n("Sua conexão não chegou até a fonte."));
+    snprintf(erroDica, sizeof erroDica, "%s", i18n("Confira a internet da TV e tente de novo, ou escolha outra fonte."));
+  } else {
+    snprintf(erroTitulo, sizeof erroTitulo, "%s", i18n("A TV não conseguiu tocar o formato desta fonte."));
+    snprintf(erroDica, sizeof erroDica, "%s", i18n("Pode ser a fonte, o app ou a TV. Tente outra fonte; se repetir, envie o registro em Ajustes."));
+  }
+}
 void player_erro_fonte(void) {
 #ifdef NV_TPK
   // O fluxo DTS/TrueHD convertido nao fica tocando atras do cartao de erro (e da
@@ -901,6 +922,7 @@ void player_erro_fonte(void) {
   esperandoFonte = 0; erroFonte = 1; visivel = 0; tocando = 0; soBarra = 0;
   erroBotao = 0;
   erroTitulo[0] = erroDica[0] = 0;   // erro sem motivo nao herda o do anterior
+  erroCausaDoPlayer();
 }
 void player_erro_fonte_motivo(const char *titulo, const char *dica) {
   player_erro_fonte();
@@ -1035,7 +1057,7 @@ void player_definir_episodio(int t, int e) {
   if (c->imdb[0]) {
     char alvo[64];
     cat_id_stream(idxAtual(), epT, epE, alvo, sizeof alvo);
-    if (!abrindoSessao && stream_n() > 0 && !stream_lista_do_alvo(alvo))
+    if (!abrindoSessao && !aberto && stream_n() > 0 && !stream_lista_do_alvo(alvo))
       stream_invalidar("episode changed");
   }
   // T/E vira S/E em ingles, e a frase montada nao casa com chave nenhuma:
@@ -4282,6 +4304,21 @@ void player_atualizar(float dt, Uint32 agora) {
   if (scrubbing && agora - scrubUltimo > salto_fim_ms(ajustes_seekr_ligado())) terminarSalto();
 
   medirAssistido();
+    { static Uint32 vodPosEm; static double vodPos; static int vodBuf;
+      unsigned agora = SDL_GetTicks(), buf = video_bufferando_ms();
+      double pos = video_pos();
+      if (!comVideo || !video_pronto() || ehCanal()) { vodPos = pos; vodPosEm = agora; vodBuf = 0; }
+      else if (pos > vodPos + 0.05) { vodPos = pos; vodPosEm = agora; vodBuf = buf > 0; }
+      else if (vodPosEm && (unsigned)(agora - vodPosEm) >= 8000u && (!vodBuf || buf == 0)) {
+        vodBuf = 1;
+        { int itens = 0; long bytes = 0; char mem[96] = "";
+          tex_estatisticas(&itens, NULL, &bytes, NULL, NULL);
+          memlog_amostra(mem, sizeof mem);
+          printf("[player] VOD parado pos=%.3f idade=%ums buffering=%u pronto=%d tocando=%d gpu-cache=%d %.1fMB%s quem=pipeline\n",
+                 pos, (unsigned)(agora - vodPosEm), buf, video_pronto(), video_tocando(),
+                 itens, bytes / 1048576.0, mem); }
+        fflush(stdout);
+      } }
   if (fontePrincipal() && video_ativo()) {
     double d = video_duracao();
     // AVANCANDO, a posicao e a que o dono escolheu. Ler video_pos() aqui era o

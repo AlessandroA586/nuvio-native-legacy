@@ -2006,7 +2006,7 @@ static void processarTorrentJob(void) {
     } else if (j->resultado == 0) {
       if (!player_id_canal()[0]) marcarFonteMorta(j->indice);
       player_erro_fonte_motivo(i18n("O serviço de debrid não abriu este torrent"),
-          i18n("Abra Fontes para escolher outra opção."));
+          i18n("O problema é do serviço de debrid, não do app. Abra Fontes e tente outra fonte."));
     } else {
       player_erro_fonte();
     }
@@ -2979,8 +2979,7 @@ static void vigiarAberturaManual(void) {
     sondarAposRecusa();
     fonteManualDesde = 0;
     marcarFonteMorta(stream_atual());
-    if (!player_fonte_falhou())
-      player_erro_fonte_motivo(i18n("Não foi possível abrir a fonte"), NULL);
+    if (!player_fonte_falhou()) player_erro_fonte();   // the cause comes from the player error
     return;
   }
   if (!fontevolta_abertura_vencida(&g, FONTE_MANUAL_PRAZO_MS) &&
@@ -3304,7 +3303,10 @@ static void tentarProximaFonteVOD(void) {
     printf("[fonte] automatico VOD sem proxima candidata (motivo=%d, %d de %d)\n",
            motivo, fonteVODTentativas, VOD_FONTE_MAX_TENTATIVAS);
     fonteVODAutomatica = 0;
-    if (motivo == 2) player_erro_fonte_motivo(i18n("A fonte não respondeu a tempo."), NULL);
+    // Stall / slow answer: point at the speed test before the user reports buffering.
+    if (motivo == 2 || motivo == 3)
+      player_erro_fonte_motivo(i18n(motivo == 2 ? "A fonte não respondeu a tempo." : "A fonte respondeu, mas não entregou dados suficientes."),
+          i18n("Confira Ajustes > Esta TV > Teste de velocidade e veja se o arquivo é menor que o tamanho recomendado antes de relatar um problema de travamento."));
     else player_erro_fonte();
     return;
   }

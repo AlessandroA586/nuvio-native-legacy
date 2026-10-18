@@ -70,7 +70,7 @@ static void consumirFolhaTocar(int *t,int *e) { *t=1; *e=1; }
 static void diagnostico_cancelar_vazao(void) {}
 static void player_abrir(int n,void *p) { (void)n; (void)p; }
 // Execute the production episode-list invalidation gate, rather than a recording-only setter.
-static int abrindoSessao;
+static int abrindoSessao, aberto=1;
 int stream_n(void) { return sourceCount; }
 int stream_lista_do_alvo(const char *a) { (void)a; return gotT==currentT && gotE==currentE; }
 static int idxAtual(void);
@@ -120,7 +120,7 @@ static int checkEof(int meio, int eSerie) {
   return saindo || pediuSair;
 }
 static Uint32 ticks, durFonteAcaoAte, toastAte, durFonteSkipEm;
-static int durFonteCurta, durFonteManter, pedProximaFonte, aberto=1, saindo;
+static int durFonteCurta, durFonteManter, pedProximaFonte, saindo;
 Uint32 SDL_GetTicks(void) { return ticks; }
 int player_parece_parte(void)''' + duration + r'''
 void player_confirmar_partes(void) {''' + confirm + r'''

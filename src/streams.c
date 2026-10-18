@@ -3830,26 +3830,33 @@ static void selosAgendar(int ini, int qtd) {
 }
 static int selosPacoteDa(Stream *s) {
   unsigned ver;
+  int nSelos = 0, daLista;
   // O modo colorido vale para a lista inteira: ligar/desligar nos Ajustes
   // sobe a versao do pacote e a lista e recalculada (no fio) na proxima olhada.
   selospacote_colorido(ajustes_selos_coloridos());
   if (selospacote_ativo() < 0 && !selospacote_embutidos_ok()) return 0;
   ver = selospacote_versao();
-  if (s->selosPacoteVer == ver) return s->nSelosPacote;
-  // Pacote trocado com a lista em memoria: pede a lista inteira, uma vez.
-  if (selosPedVer != ver || selosPedGer != listaGeracao) selosAgendar(0, n);
-  // COPIA de uma fonte (cartao do player, retrato da folha): pega o resultado
-  // da entrada da lista com a mesma url, se ja saiu.
-  if (s < lista || s >= lista + n) {
+  // verTrava: episode changed frees lista on the UI thread while this sheet
+  // still draws. The pointer check and the walk have to see the same block.
+  pthread_mutex_lock(&verTrava);
+  daLista = s >= lista && s < lista + n;
+  if (daLista && s->selosPacoteVer == ver) nSelos = s->nSelosPacote;
+  else if (daLista && (selosPedVer != ver || selosPedGer != listaGeracao)) {
+    pthread_mutex_unlock(&verTrava);
+    selosAgendar(0, n);
+    return 0;
+  } else if (!daLista) {
     int j;
     for (j = 0; j < n; j++)
       if (lista[j].selosPacoteVer == ver && !strcmp(lista[j].url, s->url) && !strcmp(lista[j].rotulo, s->rotulo)) {
         memcpy(s->selosPacote, lista[j].selosPacote, sizeof s->selosPacote);
         s->nSelosPacote = lista[j].nSelosPacote; s->selosPacoteVer = ver;
-        return s->nSelosPacote;
+        nSelos = s->nSelosPacote;
+        break;
       }
   }
-  return 0;
+  pthread_mutex_unlock(&verTrava);
+  return nSelos;
 }
 
 // Quantos selos do pacote a FILEIRA desenha: com os pacotes embutidos a

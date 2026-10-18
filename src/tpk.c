@@ -86,7 +86,8 @@ int tpk_egl_carregar(void) {
 #define PEGA(c, n) *(void **)&tpkEgl.c = dlsym(h, n)
   PEGA(GetCurrentDisplay, "eglGetCurrentDisplay"); PEGA(GetCurrentSurface, "eglGetCurrentSurface");
   PEGA(GetCurrentContext, "eglGetCurrentContext"); PEGA(GetError, "eglGetError");
-  PEGA(QueryContext, "eglQueryContext"); PEGA(ChooseConfig, "eglChooseConfig");
+  PEGA(QueryContext, "eglQueryContext"); PEGA(QuerySurface, "eglQuerySurface");
+  PEGA(ChooseConfig, "eglChooseConfig");
   PEGA(GetConfigAttrib, "eglGetConfigAttrib"); PEGA(GetDisplay, "eglGetDisplay");
   PEGA(Initialize, "eglInitialize"); PEGA(BindAPI, "eglBindAPI");
   PEGA(CreateWindowSurface, "eglCreateWindowSurface"); PEGA(CreateContext, "eglCreateContext");
@@ -240,6 +241,52 @@ int nv_tpk_quadro(void) {
     if (swapZero && tpkEgl.SwapInterval) tpkEgl.SwapInterval(dpy, 0);
     printf("[tpk] contexto do framework: dpy=%p sup=%p ctx=%p espera=%d swap0=%d\n",
            dpy, sup, ctx, esperaMs, swapZero);
+    // A linha do FURO: quantos bits de alfa o EGL entregou de fato nesta
+    // janela. A=0 -> o chuvisco do furo nao tem como virar transparencia e o
+    // plano de video nunca aparece (relato: "chuvisco" por cima do video na
+    // Tizen 4.0). E o atalho para a pergunta "o host pediu alfa?".
+    { EGLint id = 0;
+      EGLConfig cfg;
+      EGLint n = 0, pede[] = { EGL_CONFIG_ID, 0, EGL_NONE };
+      eglQueryContext(dpy, ctx, EGL_CONFIG_ID, &id);
+      pede[1] = id;
+      if (eglChooseConfig(dpy, pede, &cfg, 1, &n) && n == 1) {
+        EGLint R = -1, G = -1, B = -1, A = -1, surf = -1;
+        eglGetConfigAttrib(dpy, cfg, EGL_RED_SIZE, &R);
+        eglGetConfigAttrib(dpy, cfg, EGL_GREEN_SIZE, &G);
+        eglGetConfigAttrib(dpy, cfg, EGL_BLUE_SIZE, &B);
+        eglGetConfigAttrib(dpy, cfg, EGL_ALPHA_SIZE, &A);
+        eglGetConfigAttrib(dpy, cfg, EGL_SURFACE_TYPE, &surf);
+        printf("[tpk] egl config id=%d R%d G%d B%d A%d surf=0x%x%s\n",
+               (int)id, (int)R, (int)G, (int)B, (int)A, (int)surf,
+               A > 0 ? "" : "  <<< SEM ALFA: o furo nao revela o video");
+      } else printf("[tpk] egl config id=%d nao encontrada pelo ChooseConfig\n", (int)id);
+      { GLint ga = -1;
+        glGetIntegerv(GL_ALPHA_BITS, &ga);
+        printf("[tpk] framebuffer GL alpha bits=%d%s\n", (int)ga,
+               ga > 0 ? "" : "  <<< drawable sem alfa"); }
+      // O desenho do app cobre telaW x telaH (o que o host disse). Se a
+      // superficie real e MAIOR, o resto fica com o que o buffer trouxer — o
+      // "chuvisco" por cima do video da Tizen 4.0.
+      if (tpkEgl.QuerySurface) {
+        EGLint sw = 0, sh = 0;
+        eglQuerySurface(dpy, sup, EGL_WIDTH, &sw);
+        eglQuerySurface(dpy, sup, EGL_HEIGHT, &sh);
+        printf("[tpk] superficie %dx%d (app desenha %dx%d)%s\n",
+               (int)sw, (int)sh, telaW, telaH,
+               (sw != telaW || sh != telaH) ? "  <<< TAMANHO ERRADO" : "");
+        // O app ainda nao leu o tamanho (ele so ganha a vez depois deste
+        // quadro): adota o da superficie. Sem isto, numa superficie maior o
+        // app desenha so um canto e o resto mostra o que o buffer trouxe —
+        // o "chuvisco" por cima do video da Tizen 4.0. O plano de video e
+        // posicionado em pixels da superficie (video_escala_definir): errado
+        // tambem fica o retangulo dele.
+        if (sw > 0 && sh > 0 && ((int)sw != telaW || (int)sh != telaH)) {
+          telaW = (int)sw; telaH = (int)sh;
+          printf("[tpk] tela adotada da superficie: %dx%d\n", telaW, telaH);
+        }
+      } else printf("[tpk] eglQuerySurface indisponivel\n");
+    }
     fflush(stdout);
   }
   pthread_mutex_lock(&trava);
@@ -259,9 +306,16 @@ int nv_tpk_quadro(void) {
     // API8 swaps even on return 0. A black clear is not an app frame: keep
     // the host's first-frame watchdog armed until the app actually draws.
     if (esperaMs < 0) {
-      glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
 #ifdef NV_TPK40
+      // A janela GL do 4/5 e translucida e o plano do player pode ja estar no
+      // ar (o trailer da home sai antes do primeiro quadro do app): um clear
+      // opaco tamparia o video ate o app desenhar. Alfa 0: o que houver atras
+      // segue visivel, e nunca lixo do buffer velho (o "chuvisco").
+      glClearColor(0, 0, 0, 0);
+      glClear(GL_COLOR_BUFFER_BIT);
       return 1; // TVGLApplication stops callbacks on false (Tizen 4/5).
+#else
+      glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
 #endif
     }
     return 0;
