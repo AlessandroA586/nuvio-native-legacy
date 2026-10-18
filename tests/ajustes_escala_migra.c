@@ -1,4 +1,4 @@
-// Interface defaults to 85%; preserve saved scales and migrate settings sizes.
+// Interface defaults to 85%; migrate legacy defaults and preserve versioned choices.
 #include "../src/ajustes.c"
 #include "nvtmp.h"
 #include <assert.h>
@@ -31,9 +31,9 @@ int main(void) {
     valor[AJ_ESCALA_TEXTO] = v;
     assert(ajustes_escala_texto() == scales[v + 1]);
   }
-  escreve(dir, "escalaTextoLocal 2\n"); ajustes_dir(dir);
-  assert(ajustes_escala_texto() == 1.f);                       // ambiguous legacy 100% is preserved
-  ajustes_dir(dir); assert(ajustes_escala_texto() == 1.f);      // preservation persists
+  escreve(dir, "escalaTextoLocal 2\nvidroOpacLocal 1\n"); ajustes_dir(dir);
+  assert(ajustes_escala_texto() == .85f);                      // unrelated save persisted the legacy default
+  ajustes_dir(dir); assert(ajustes_escala_texto() == .85f);     // migration persists
   for (int v = 0; v < 6; v++) {
     assert(definirValorDireto(AJ_ESCALA_TEXTO, v));
     assert(gravar());
@@ -43,9 +43,9 @@ int main(void) {
     char linha[64];
     snprintf(linha, sizeof linha, "escalaTextoLocal %d\n", v);
     escreve(dir, linha); ajustes_dir(dir);
-    assert(valor[AJ_ESCALA_TEXTO] == (v >= 0 && v < 6 ? v : 0));
+    assert(valor[AJ_ESCALA_TEXTO] == (v >= 0 && v < 6 && v != 2 ? v : 0));
     ajustes_dir(dir);
-    assert(valor[AJ_ESCALA_TEXTO] == (v >= 0 && v < 6 ? v : 0));
+    assert(valor[AJ_ESCALA_TEXTO] == (v >= 0 && v < 6 && v != 2 ? v : 0));
   }
   escreve(dir, "escalaTextoVersaoLocal 1\nescalaTextoLocal 2\n"); ajustes_dir(dir);
   assert(ajustes_escala_texto() == 1.f);                       // key order does not matter

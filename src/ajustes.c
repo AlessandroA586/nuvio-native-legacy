@@ -4301,9 +4301,11 @@ void ajustes_dir(const char *dir) {
       break;
     }
   }
-  // Preserve valid saved scales, including unversioned 100%: historical
-  // explicit choices and factory defaults are indistinguishable.
-  // Missing or invalid values use the new 85% default.
+  // Prefer the new default for ambiguous legacy 100% records: old saves
+  // cannot distinguish factory defaults from explicit choices. Versioned
+  // choices, including 100%, and other valid legacy scales are preserved.
+  if (escalaVersao < 1 && valor[AJ_ESCALA_TEXTO] == 2)
+    valor[AJ_ESCALA_TEXTO] = valorPadrao[AJ_ESCALA_TEXTO];
   if (!viuSinopse) {
     if (sinopseQuatro >= 0) valor[AJ_HERO_SINOPSE_TAM] = sinopseQuatro > 0;
     else if (sinopseAntiga >= 0) valor[AJ_HERO_SINOPSE_TAM] = sinopseAntiga > 0;
