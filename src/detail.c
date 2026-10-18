@@ -1472,11 +1472,9 @@ static float suave(float x) {
 }
 static float fase2(void) { return suave((t - 0.45f) / 0.55f); }
 
-// Keep the existing call sites and use the weight selected by the text style.
+// Preserve the approved weight using the same cached glyph texture.
 static void txt_peso(TxtLinha l, float x, float y, float a, float grossura) {
-  (void)grossura;
-  // Font styles already select weight; submit each cached line once.
-  txt_desenhar_alpha(l, x, y, a);
+  txt_desenhar_peso(l, x, y, a, grossura);
 }
 
 // AUDITORIA (tools/auditoria-release.sh): uma linha quando o numero de

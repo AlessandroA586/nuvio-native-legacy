@@ -531,6 +531,42 @@ static void nosEpisodios(int col) {
   quadros(120);
 }
 
+// Compare the shared helper with the approved cached-line overdraw, including
+// pixel snapping at fractional positions and fades used by the detail tabs.
+static void checkTextWeight(void) {
+  unsigned char expected[512 * 128 * 4], actual[sizeof expected];
+  const float weights[] = {0, .5f, 1.0f, 1.1f, 1.4f};
+  const TxtEstilo styles[] = {TXT_CAPTION2, TXT_CALLOUT, TXT_CAPTION};
+  for (unsigned s = 0; s < sizeof styles / sizeof styles[0]; s++) {
+    TxtLinha line = txt_linha(styles[s], "EPISODE 9 / Season / Info", 245, 199, 77, 255);
+    assert(line.tex);
+    for (unsigned w = 0; w < sizeof weights / sizeof weights[0]; w++) {
+      for (int fade = 0; fade < 2; fade++) {
+        float a = fade ? .43f : 1, x = fade ? 10.4f : 10;
+        glClear(GL_COLOR_BUFFER_BIT);
+        txt_desenhar_alpha(line, x, 980, a);
+        if (weights[w] > .05f) txt_desenhar_alpha(line, x + weights[w] * .5f, 980, a);
+        if (weights[w] > .9f) txt_desenhar_alpha(line, x + weights[w], 980, a);
+        glReadPixels(0, 0, 512, 128, GL_RGBA, GL_UNSIGNED_BYTE, expected);
+        glClear(GL_COLOR_BUFFER_BIT);
+        txt_peso(line, x, 980, a, weights[w]);
+        glReadPixels(0, 0, 512, 128, GL_RGBA, GL_UNSIGNED_BYTE, actual);
+        int maxDelta = 0;
+        for (unsigned i = 0; i < sizeof expected; i++) {
+          int delta = abs((int)expected[i] - actual[i]);
+          if (delta > maxDelta) maxDelta = delta;
+        }
+        // Separate framebuffer blends round to 8 bits after each copy.
+        if (maxDelta > 2) {
+          fprintf(stderr, "Typography mismatch: style=%d weight=%.2f alpha=%.2f delta=%d\n", styles[s], weights[w], a, maxDelta);
+          assert(!"approved detail text weight changed");
+        }
+      }
+    }
+  }
+  puts("[detail-weight] approved pixels preserved across styles, weights and fades");
+}
+
 int main(int argc, char **argv) {
   const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-deteps");
   char nome[600];
@@ -638,6 +674,9 @@ int main(int argc, char **argv) {
           for (int frame = 0; frame < 128; frame++) {
             quadros(1);
             uploads += tex_upl_n; rasterizations += txt_rasterizadas;
+            if (gfx_n_rect > castRects || gfx_fill_gpu > castFill)
+              printf("[episode-over] zoom=%d pass=%d col=%d frame=%d rect=%d fill=%.3f\n",
+                     zoom, pass, col, frame, gfx_n_rect, gfx_fill_gpu);
             overBudget += gfx_n_rect > castRects || gfx_fill_gpu > castFill;
             checked++;
           }
@@ -657,6 +696,7 @@ int main(int argc, char **argv) {
     fflush(stdout);
     assert(churn == 0);
     assert(overBudget == 0);
+    checkTextWeight();
     return 0;
   }
   if (getenv("NV_APPLE_EP")) {

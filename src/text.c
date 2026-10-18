@@ -1997,6 +1997,22 @@ void txt_desenhar_alpha(TxtLinha l, float x, float y, float alpha) {
   txt_desenhar_tom(l, x, y, 1, 1, 1, alpha);
 }
 
+// Compose the approved snapped overdraw in one submission of the cached line.
+void txt_desenhar_peso(TxtLinha l, float x, float y, float alpha, float peso) {
+  if (!l.tex || alpha <= 0.0f) return;
+  camadaAtualizar();
+  float x0 = encaixa(x);
+  float d1 = peso > .05f ? encaixa(x + peso * .5f) - x0 : -1;
+  float d2 = peso > .9f ? encaixa(x + peso) - x0 : -1;
+  GfxRect r = {x0, encaixa(y), (float)l.w, (float)l.h};
+  if (camada && l.pw > 0) { r.w = (float)l.pw / ESC_T; r.h = (float)l.ph / ESC_T; }
+  float width = r.w;
+  r.w += d2 >= 0 ? d2 : (d1 >= 0 ? d1 : 0);
+  gfx_rect(r, l.tex, GFX_TEXTO, 0, -width / r.w,
+           d1 >= 0 ? d1 / width : -1, d2 >= 0 ? d2 / width : -1,
+           1, 1, 1, alpha);
+}
+
 // CONTORNO COMPOSTO, nao empilhado. As 8 estampas da borda se cobrem nas
 // bordas retas do glifo (uma coluna de 2 px e vista por 3 delas, um canto
 // por todas): estampar cada uma com o `alpha` do usuario compoe a cobertura
