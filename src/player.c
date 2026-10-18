@@ -36,6 +36,7 @@
 #include "linguas.h"
 #include "audioescolha.h"
 #include "idioma.h"
+#include "fontesonda.h"
 #include "posplay.h"
 #include "extras.h"
 #include "video.h"
@@ -876,6 +877,26 @@ void player_definir_tentativa(int n, int max) { tentativaN = n; tentativaM = max
 #ifdef NV_TPK
 int video_tpk_convertendo(void);   // video_tpk.c
 #endif
+// DE QUEM E O PROBLEMA (#205). Sem motivo proprio, o cartao diz o que o erro do
+// player ja deixa saber: servidor da fonte recusou (add-on/debrid), a conexao
+// nao chegou, ou formato/decoder (esse sim pode ser app ou TV). Nunca a URL.
+static void erroCausaDoPlayer(void) {
+  int http = 0, causa = fontesonda_causa(video_erro_texto(), &http);
+  if (causa == FS_CAUSA_NENHUMA) return;
+  printf("[fonte] causa do erro: %d http=%d\n", causa, http);
+  fflush(stdout);
+  if (causa == FS_CAUSA_HTTP) {
+    if (http) snprintf(erroTitulo, sizeof erroTitulo, i18n("O servidor da fonte recusou o link (HTTP %d)."), http);
+    else snprintf(erroTitulo, sizeof erroTitulo, "%s", i18n("O servidor da fonte recusou o link."));
+    snprintf(erroDica, sizeof erroDica, "%s", i18n("O problema é do add-on ou do debrid, não do app. Abra Fontes e tente outra fonte."));
+  } else if (causa == FS_CAUSA_REDE) {
+    snprintf(erroTitulo, sizeof erroTitulo, "%s", i18n("Sua conexão não chegou até a fonte."));
+    snprintf(erroDica, sizeof erroDica, "%s", i18n("Confira a internet da TV e tente de novo, ou escolha outra fonte."));
+  } else {
+    snprintf(erroTitulo, sizeof erroTitulo, "%s", i18n("A TV não conseguiu tocar o formato desta fonte."));
+    snprintf(erroDica, sizeof erroDica, "%s", i18n("Pode ser a fonte, o app ou a TV. Tente outra fonte; se repetir, envie o registro em Ajustes."));
+  }
+}
 void player_erro_fonte(void) {
 #ifdef NV_TPK
   // O fluxo DTS/TrueHD convertido nao fica tocando atras do cartao de erro (e da
@@ -889,6 +910,7 @@ void player_erro_fonte(void) {
   esperandoFonte = 0; erroFonte = 1; visivel = 0; tocando = 0; soBarra = 0;
   erroBotao = 0;
   erroTitulo[0] = erroDica[0] = 0;   // erro sem motivo nao herda o do anterior
+  erroCausaDoPlayer();
 }
 void player_erro_fonte_motivo(const char *titulo, const char *dica) {
   player_erro_fonte();
