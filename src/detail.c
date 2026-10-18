@@ -231,6 +231,19 @@ static int  nivel = 0;
 // Ficha da pessoa por cima da tela de titulo. Nao e um `nivel` a mais porque
 // nao e um estado da MESMA pagina: e outra tela, que aparece e sai inteira.
 static int  pessoaAberta;
+static unsigned pessoaGeracao;
+static struct PessoaBusca {
+  SDL_atomic_t pronta, refs;
+  unsigned geracao;
+  long titulo, id;
+  char imdb[96], tipo[16], nome[64], foto[512];
+} *pessoaBusca;
+static void pessoaBuscaCancelar(void) {
+  pessoaGeracao++;
+  struct PessoaBusca *b = pessoaBusca;
+  pessoaBusca = NULL;
+  if (b && SDL_AtomicDecRef(&b->refs)) free(b);
+}
 // SEGURAR OK NUMA LISTA DA PAGINA = o menu do cartaz (ctxlista.h): filmografia,
 // lista da saga e a fileira "Recomendações". Os retangulos sao os do ultimo
 // desenho do cartao em foco (antes do zoom do foco).
@@ -1498,6 +1511,7 @@ static void abrirInterno(const HomeItem *it) {
   pediuRelogio = 0;
   sinopse_fechar();
   pediuMenu = 0;
+  pessoaBuscaCancelar();
   audIdx = -1;
   marco("detail_abrir");
   // O TITULO ANTERIOR PODE TER DEIXADO FIO NO AR. Trocar de titulo por dentro
@@ -1657,6 +1671,7 @@ static void abrirInterno(const HomeItem *it) {
 }
 
 void detail_fechar(void) {
+  pessoaBuscaCancelar();
   pediuRelogio = 0;
   sinopse_fechar();
   if (!aberto || saindo) return;
@@ -1668,6 +1683,7 @@ void detail_fechar(void) {
 // SECO: o proximo detail_atualizar ja a encerra (o mesmo fim da mola de
 // saida, com o logo restaurado), sem a pagina recolher por cima da home.
 void detail_fechar_seco(void) {
+  pessoaBuscaCancelar();
   pediuRelogio = 0;
   sinopse_fechar();
   if (!aberto) return;
@@ -1680,6 +1696,7 @@ void detail_fechar_seco(void) {
 void detail_mostrar_pessoa(long tmdb, const char *nome, const char *foto) {
   pediuRelogio = 0;
   if (!aberto || tmdb <= 0) return;
+  pessoaBuscaCancelar();
   pessoa_pedir(tmdb, nome ? nome : "", foto ? foto : "");
   pessoaAberta = 1;
   pessoaFoco = 0;
@@ -1687,6 +1704,63 @@ void detail_mostrar_pessoa(long tmdb, const char *nome, const char *foto) {
 #ifdef NV_TOUCH_UI
   toquerol_limpar(&toquePessoa); toquePessoaOffset = 0;
 #endif
+}
+
+static int pessoaResolver(void *arg) {
+  struct PessoaBusca *b = arg;
+  b->id = desc_buscar_pessoa(b->nome, b->titulo,
+                            !strcmp(b->tipo, "movie") ? "movie" : "tv");
+  SDL_AtomicSet(&b->pronta, 1);
+  if (SDL_AtomicDecRef(&b->refs)) free(b);
+  return 0;
+}
+
+static void pessoaBuscaAtualizar(void) {
+  struct PessoaBusca *b = pessoaBusca;
+  if (!b) return;
+  const CatItem *ci = cat_item(idx);
+  int atual = aberto && !saindo && b->geracao == pessoaGeracao && ci &&
+              !strcmp(ci->imdb, b->imdb) && !strcmp(ci->tipo, b->tipo);
+  if (!SDL_AtomicGet(&b->pronta)) {
+    if (atual) ilha_atividade(i18n("Carregando…"), -1.0f);
+    return;
+  }
+  pessoaBusca = NULL;
+  if (atual) {
+    if (b->id > 0) {
+      if (cat_elenco_tmdb(idx, b->imdb, b->tipo, b->nome, b->id))
+        detail_mostrar_pessoa(b->id, b->nome, b->foto);
+    } else if (!b->id) {
+      ilha_avisar("det-elenco-sem-pagina", ILHA_INFO, NULL,
+                  i18n("Esta pessoa não tem página ainda"), 4000u, 0);
+    } else {
+      ilha_avisar("det-elenco-falha", ILHA_ERRO, NULL,
+                  i18n("Não foi possível agora. Tente novamente."), 4000u, 0);
+    }
+  }
+  if (SDL_AtomicDecRef(&b->refs)) free(b);
+}
+
+static void pessoaBuscar(const CatItem *ci, int coluna) {
+  if (pessoaBusca) return;
+  struct PessoaBusca *b = calloc(1, sizeof *b);
+  if (!b) return;
+  SDL_AtomicSet(&b->refs, 2); // Main thread and worker each own one reference.
+  b->geracao = pessoaGeracao;
+  b->titulo = ci->tmdb;
+  snprintf(b->imdb, sizeof b->imdb, "%s", ci->imdb);
+  snprintf(b->tipo, sizeof b->tipo, "%s", ci->tipo);
+  snprintf(b->nome, sizeof b->nome, "%s", ci->elenco[coluna].nome);
+  snprintf(b->foto, sizeof b->foto, "%s", ci->elenco[coluna].foto);
+  pessoaBusca = b;
+  ilha_atividade(i18n("Carregando…"), -1.0f);
+  SDL_Thread *fio = SDL_CreateThread(pessoaResolver, "nv-pessoa-busca", b);
+  if (fio) SDL_DetachThread(fio);
+  else {
+    b->id = -1;
+    SDL_AtomicSet(&b->pronta, 1);
+    SDL_AtomicDecRef(&b->refs);
+  }
 }
 
 void detail_abrir(const HomeItem *it) {
@@ -3057,21 +3131,12 @@ static void detail_evento_(const SDL_Event *e) {
       // OK num rosto abre a FILMOGRAFIA da pessoa. E o `openCastDetail` do web
       // (metaDetailsScreen.js:6165); aqui o OK no elenco nao fazia nada.
       const CatItem *ci = cat_item(idx);
-      if (ci && foco.coluna < ci->nElenco && ci->elenco[foco.coluna].tmdb > 0) {
-        pessoa_pedir(ci->elenco[foco.coluna].tmdb,
-                     ci->elenco[foco.coluna].nome,
-                     ci->elenco[foco.coluna].foto);
-        pessoaAberta = 1;
-        pessoaFoco = 0;
-        pessoaLinha = 0;
-#ifdef NV_TOUCH_UI
-        toquerol_limpar(&toquePessoa); toquePessoaOffset = 0;
-#endif
-      } else if (ci && foco.coluna < ci->nElenco) {
-        // Sem id de pessoa (o TMDB nao respondeu, ou o titulo e novo demais):
-        // o OK nao pode ser um clique morto — diz por que e nao abre nada.
-        ilha_avisar("det-elenco-sem-pagina", ILHA_INFO, NULL,
-                    i18n("Esta pessoa não tem página ainda"), 4000u, 0);
+      if (ci && foco.coluna >= 0 && foco.coluna < ci->nElenco) {
+        if (ci->elenco[foco.coluna].tmdb > 0)
+          detail_mostrar_pessoa(ci->elenco[foco.coluna].tmdb,
+                                ci->elenco[foco.coluna].nome,
+                                ci->elenco[foco.coluna].foto);
+        else pessoaBuscar(ci, foco.coluna);
       }
     } else if (foco.fileira == SEC_ABAS_INFO) {
       abaInfo = foco.coluna;
@@ -3188,6 +3253,7 @@ static void detail_evento_(const SDL_Event *e) {
 
   if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE ||
       k == SDLK_DELETE) {
+    pessoaBuscaCancelar();
     if (comPicando) comentariosVoltar();
     else if (acoesAgrupadas() && maisAcoes && nivel == 0) { maisAcoes = 0; botao = temInicio() ? 1 : 0; }
     else if (nivel > 0) nivel = 0;
@@ -3566,6 +3632,8 @@ static void toquePessoaFocar(int i, int b) { (void)b; pessoaFoco = i; }
 static float blocoAnt[3] = { -1.0f, -1.0f, -1.0f };   // Notas / Numeros / Progresso no quadro anterior
 
 static void detail_atualizar_(float dt, Uint32 agora) {
+  if (aberto) revalidarIdx();
+  pessoaBuscaAtualizar();
 #ifdef NV_TOUCH_UI
   toqueDetalheSincronizarModo();
 #endif
@@ -3601,7 +3669,6 @@ static void detail_atualizar_(float dt, Uint32 agora) {
 #endif
     colListaScroll = anim_mola2(&colListaVel, colListaScroll, alvo, dt, NV_MOLA2_SCROLL);
   }
-  revalidarIdx();
   trocaarte_atualizar(dt);
   // OK NA TELA DE ESCOLHA: a arte congelada na abertura (arteFixa/logoFixo)
   // e justamente a que a pessoa acabou de trocar. Solta e pede de novo — com a

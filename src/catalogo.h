@@ -514,6 +514,9 @@ void cat_definir_tudo(const CatItem *lista, int qtd,
 void cat_definir_episodios(int indiceItem, const CatEp *lista, int n);
 // So o bit da cena pos-creditos (TMDB 179430/179431), pelo id do titulo.
 void cat_marcar_pos_creditos(const char *imdb, int pos);
+// Cache a resolved cast ID only if title and person still match; no other edits.
+int cat_elenco_tmdb(int indice, const char *imdb, const char *tipo,
+                    const char *nome, long tmdb);
 
 // Substitui UM item, preservando o resto. Usado quando o detalhe abre e traz
 // elenco, direcao e temporadas que o catalogo da fileira nao tinha.
