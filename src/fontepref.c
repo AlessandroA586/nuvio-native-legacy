@@ -1233,16 +1233,14 @@ int fontepref_escolher_lista(const char *id, const Stream *fontes, int total,
 // So na RAM: o bingeGroup e o add-on da fonte que tocou de verdade agora.
 // Lido tambem pelo worker do proximo episodio, dai a trava.
 static pthread_mutex_t travaTocando = PTHREAD_MUTEX_INITIALIZER;
-static char tocandoBase[24], tocandoProv[96], tocandoBinge[FONTEPREF_BINGE];
+static FontePref tocandoPref;
 
 void fontepref_tocando(const char *id, const Stream *s) {
   char base[24];
   if (!id || !s) return;
   fontepref_id_base(id, base, sizeof base);
   pthread_mutex_lock(&travaTocando);
-  snprintf(tocandoBase, sizeof tocandoBase, "%s", base);
-  snprintf(tocandoProv, sizeof tocandoProv, "%s", s->provedor);
-  snprintf(tocandoBinge, sizeof tocandoBinge, "%s", s->bingeGroup);
+  montar(base, s, &tocandoPref);
   pthread_mutex_unlock(&travaTocando);
 }
 
@@ -1252,25 +1250,32 @@ int fontepref_tocando_de(const char *id, char *provedor, unsigned tamProv, char 
   if (!id || !cfgBinge) return 0;
   fontepref_id_base(id, base, sizeof base);
   pthread_mutex_lock(&travaTocando);
-  ok = base[0] && tocandoBinge[0] && !strcmp(base, tocandoBase);
-  if (ok && provedor) snprintf(provedor, tamProv, "%s", tocandoProv);
-  if (ok && binge) snprintf(binge, tamBinge, "%s", tocandoBinge);
+  ok = base[0] && tocandoPref.bingeGroup[0] && !strcmp(base, tocandoPref.id);
+  if (ok && provedor) snprintf(provedor, tamProv, "%s", tocandoPref.provedor);
+  if (ok && binge) snprintf(binge, tamBinge, "%s", tocandoPref.bingeGroup);
   pthread_mutex_unlock(&travaTocando);
   return ok;
 }
 
 static int bingeTocando(const char *id, int total, const Stream *(*item)(int, void *), void *ctx,
                         int (*podeTocar)(int, int, void *), void *ctxPode) {
-  char binge[FONTEPREF_BINGE];
-  int i;
-  if (!fontepref_tocando_de(id, NULL, 0, binge, sizeof binge)) return -1;
-  // A PRIMEIRA da lista com a etiqueta exata, como o Nuvio: a ordem e a do addon.
+  char base[24];
+  FontePref p;
+  int i, melhor = -1, melhorPts = -1;
+  if (!id || !cfgBinge) return -1;
+  fontepref_id_base(id, base, sizeof base);
+  pthread_mutex_lock(&travaTocando);
+  p = tocandoPref;
+  pthread_mutex_unlock(&travaTocando);
+  if (!base[0] || !p.bingeGroup[0] || strcmp(base, p.id)) return -1;
+  // Broad groups share releases: use the playing release/audio to break ties.
   for (i = 0; i < total; i++) {
     const Stream *s = item(i, ctx);
-    if (s && s->bingeGroup[0] && !strcmp(s->bingeGroup, binge) && (!podeTocar || podeTocar(i, 1, ctxPode)))
-      return i;
+    if (!s || strcmp(s->bingeGroup, p.bingeGroup) || (podeTocar && !podeTocar(i, 1, ctxPode))) continue;
+    int pts = casar(&p, s, NULL);
+    if (pts > melhorPts) { melhorPts = pts; melhor = i; }
   }
-  return -1;
+  return melhor;
 }
 
 int fontepref_binge_tocando(const char *id) {

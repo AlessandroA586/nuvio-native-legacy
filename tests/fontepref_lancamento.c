@@ -279,6 +279,30 @@ int main(void) {
   v[1].bingeGroup[0] = 0; v[2].bingeGroup[0] = 0;
   k = fontepref_escolher_lista_next("tt4000009:1:2", v, 3, NULL, NULL);
   CONFERE(k == 0, "next: no source with that bingeGroup falls back to the title memory (%d)", k);
+  // Shared groups must follow the playing release, independently of title memory.
+  n = lista(v, 1, ORDENS[0]);
+  fontepref_tocando("tt4000009:1:1", &v[1]); // FLUX plays; title memory below becomes NTb.
+  fontepref_guardar("tt4000009:1:1", &v[0]);
+  for (ep = 2; ep <= 4; ep++) {
+    n = lista(v, ep, ORDENS[ep - 1]);
+    k = fontepref_escolher_lista_next("tt4000009:1:2", v, n, soForte, NULL);
+    CONFERE(k == posDe(v, n, "FLUX"), "next: shared group keeps playing FLUX on E%d (%d)", ep, k);
+    stream_definir_lista(v, n);
+    CONFERE(fontepref_binge_tocando("tt4000009:1:2") == posDe(v, n, "FLUX"),
+            "next: installed shared group keeps FLUX on E%d", ep);
+  }
+  // Same release, different audio: the playing audio breaks the group tie.
+  fonte(&v[0], "AIOStreams", "aio|1080p", "The.Show.S01E01.1080p.WEB-DL.H.265-FLUX.mkv", 1080);
+  strcpy(v[0].descricao, "DUBLADO");
+  fontepref_tocando("tt4000009:1:1", &v[0]);
+  fonte(&v[0], "AIOStreams", "aio|1080p", "The.Show.S01E02.1080p.WEB-DL.H.265-FLUX.mkv", 1080);
+  v[1] = v[0]; strcpy(v[1].descricao, "DUBLADO");
+  CONFERE(fontepref_escolher_lista_next("tt4000009:1:2", v, 2, NULL, NULL) == 1,
+          "next: shared release keeps playing audio");
+  v[1] = v[0];
+  CONFERE(fontepref_escolher_lista_next("tt4000009:1:2", v, 2, NULL, NULL) == 0,
+          "next: equal identity keeps addon order");
+
   // the automatic memory: a bingeGroup match ignores the evidence rule (forte)
   fontepref_definir_perfil(7);
   fonte(&v[0], "AIOStreams", "aio|NTb", "The.Show.S01E01.1080p.WEB-DL.DDP5.1.H.264-NTb.mkv", 1080);

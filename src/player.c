@@ -3210,6 +3210,12 @@ static double duracaoFonteEsperada(void) {
            ? (antes + depois) / 2 : 0;
 }
 
+void player_confirmar_partes(void) {
+  // Confirmed parts are intentionally short; discard pending or queued rejection.
+  durFonteSkipEm = 0; durFonteManter = 0; pedProximaFonte = 0;
+  if (durFonteAcaoAte && durFonteAcaoAte == toastAte) toastAte = 0;
+  durFonteAcaoAte = 0;
+}
 int player_parece_parte(void) { return durFonteCurta && !ehCanal(); }
 int player_aviso_duracao_ativo(void) {
   return durFonteAcaoAte && (int)(SDL_GetTicks() - durFonteAcaoAte) < 0;

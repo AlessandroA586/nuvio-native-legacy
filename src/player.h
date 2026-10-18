@@ -28,6 +28,8 @@ int  player_sem_retomada(void);
 // O arquivo tocando e bem mais curto que o titulo (o aviso de duracao viu):
 // pode ser uma parte de um filme em partes (partes.h).
 int  player_parece_parte(void);
+// Cancel duration rejection after confirming the playing file's multipart session.
+void player_confirmar_partes(void);
 // O aviso de duracao com a acao "Manter esta fonte (OK)" ainda esta no ar.
 int  player_aviso_duracao_ativo(void);
 // Posicao confiavel para preparar o Android: registro com duracao conhecida,

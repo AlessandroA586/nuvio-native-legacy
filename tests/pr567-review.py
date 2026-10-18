@@ -16,6 +16,11 @@ pause = player.split('if (tocouS > 0.0f && cs', 1)[1].split(' {', 1)[0]
 # Keep the actual duration gate, with harmless preceding predicates removed.
 pause = pause[pause.index('duracaoSeg >='):].rstrip().removesuffix(')')
 eof = player.split('    int noFim = ', 1)[1].split('\n  }\n  // Com o painel', 1)[0]
+duration = player.split('int player_parece_parte(void)', 1)[1].split('// O titulo do aviso', 1)[0]
+countdown = player.split('static void durFonteContagem(', 1)[1].split('static void durFonteAtualizar(', 1)[0]
+# Compile the real confirmation hook when present; baseline has no cancellation.
+confirm = player.split('void player_confirmar_partes(void) {', 1)[1].split('\n}', 1)[0] if 'void player_confirmar_partes(void) {' in player else ''
+confirmation = app.split('        partes_sessao_iniciar(alvo, &l, l.atual);', 1)[1].split('        parteArqLista = l;', 1)[0]
 code = r'''
 #include <assert.h>
 #include <stdio.h>
@@ -76,15 +81,47 @@ static int checkEof(int meio, int eSerie) {
   int noFim = ''' + eof + r'''
   return saindo || pediuSair;
 }
+static Uint32 ticks, durFonteAcaoAte, toastAte, durFonteSkipEm;
+static int durFonteCurta, durFonteManter, pedProximaFonte, aberto=1, saindo;
+Uint32 SDL_GetTicks(void) { return ticks; }
+int player_parece_parte(void)''' + duration + r'''
+void player_confirmar_partes(void) {''' + confirm + r'''
+}
+static void durFonteContagem(''' + countdown + r'''
+static void confirmParts(void) {
+  const char *alvo="tt-duration";
+''' + confirmation + r'''
+}
 int main(void) {
   int failed=0;
+  // A 40-minute part of a 130-minute movie arms rejection at t=1 s.
+  PartesLista movie = {.n=3,.atual=0,.arq={
+    {.id=1,.tipo=PARTE_EP}, {.id=2,.tipo=PARTE_EP}, {.id=3,.tipo=PARTE_EP}}};
+  for (int expired=0; expired<2; expired++) {
+    partes_sessao_parar("reset duration case");
+    durFonteSkipEm=durFonteAcaoAte=toastAte=9000;
+    durFonteManter=1; pedProximaFonte=0; ticks=3000;
+    if (expired) durFonteContagem(9000); // queued rejection before app confirmation
+    partes_sessao_iniciar("tt-duration", &movie, 0);
+    confirmParts();
+    durFonteContagem(10000);
+    if (player_pediu_proxima_fonte() || durFonteSkipEm || durFonteManter || player_aviso_duracao_ativo()) {
+      puts("FAIL confirmed multipart retains duration rejection"); failed=1;
+    }
+  }
+  partes_sessao_parar("duration done");
+  durFonteSkipEm=9000; pedProximaFonte=0; durFonteContagem(10000);
+  assert(player_pediu_proxima_fonte()==2); // unconfirmed short sources still skip
+  if (!failed) puts("PASS multipart confirmation cancels pending and queued rejection");
   /* EOF stays latched while prefetch waits or retries, then final EOF exits. */
+  int eofFailed=0;
   for (int retry=0;retry<2;retry++) {
     for (clockEof=0;clockEof<=30;clockEof+=10)
-      if (checkEof(1,0)) failed=1;
+      if (checkEof(1,0)) eofFailed=1;
   }
-  if (failed) puts("FAIL intermediate multipart EOF exits while next link waits/retries");
+  if (eofFailed) puts("FAIL intermediate multipart EOF exits while next link waits/retries");
   else puts("PASS intermediate multipart EOF waits for transition");
+  failed |= eofFailed;
   assert(checkEof(0,0));
   hasNext=1; assert(!checkEof(0,1)); hasNext=0;
   static PartesLista pack;

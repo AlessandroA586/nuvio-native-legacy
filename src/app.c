@@ -2761,12 +2761,13 @@ static void vigiarPartes(void) {
         alvoPlayer(alvo, sizeof alvo);
         partes_sessao_iniciar(alvo, &l, l.atual);
         if (!partes_sessao_de(alvo)) return;
+        player_confirmar_partes();
         parteArqLista = l; parteArqK = l.atual; parteMp4 = nomeMp4(l.arq[l.atual].nome);
         partes_arquivo_definir(alvo, l.usenet, l.item, l.arq[l.atual].id);
         snprintf(parteUrl, sizeof parteUrl, "%s", video_url_atual());
         parteFase = PF_TOCANDO; parteGuardouEm = 0; parteRenovou = 0;
         parteProx = -1; parteProxFase = 0; parteProxUrl[0] = 0;
-        // Com a contagem "Manter esta fonte (OK)" no ar o aviso e dela.
+        // Confirmed multipart identity has canceled the duration warning.
         if (!player_aviso_duracao_ativo()) {
           char t[128];
           snprintf(t, sizeof t, i18n("Esta fonte tem %d partes: elas tocam em sequência"), partes_principais(&l));
