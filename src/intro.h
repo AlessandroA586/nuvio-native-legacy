@@ -1,23 +1,18 @@
 // MARCADORES DE ABERTURA, RESUMO E CREDITOS.
 //
-// A fonte e o TheIntroDB (api.theintrodb.org/v3/media), e a troca foi feita por
+// A fonte e o TheIntroDB (api.theintrodb.org/v4/media), e a troca foi feita por
 // uma razao concreta: o servico anterior (api.introdb.app) e indexado POR
 // EPISODIO — sem `season` e `episode` ele nao responde. Filme, portanto, nao
 // tinha marcador nenhum e caia na estimativa proporcional do posplay.c. O app
 // web tem a mesma limitacao, pelo mesmo motivo (skipIntroRepository.js exige os
 // dois numeros antes de chamar).
 //
-// O TheIntroDB aceita `imdb_id` sozinho e devolve marcador de FILME. Conferido
-// ao vivo antes de escrever este arquivo:
-//
-//   GET /v3/media?imdb_id=tt0111161
-//   {"tmdb_id":278,"type":"movie","credits":[{"start_ms":8300000,"end_ms":null}]}
-//
-// (Shawshank: creditos aos 8300 s de um filme de 8520 s.) Para serie, com
-// season/episode, vem tambem o `intro`:
-//
-//   {"type":"tv","intro":[{"start_ms":272500,"end_ms":366000}],
-//    "credits":[{"start_ms":3503000,"end_ms":null}]}
+// v4 accepts imdb_id or tmdb_id for lookup; responses carry tvdb_id only.
+// Movies need no season/episode. TV coordinates use the provider's numbering.
+// Example from the v4 OpenAPI (episode-media):
+//   {"tvdb_id":71663,"type":"tv","season":1,"episode":1,
+//    "intro":[{"start_ms":30000,"end_ms":90000},
+//             {"start_ms":120000,"end_ms":150000}]}
 //
 // SEM CHAVE e sem cadastro. Titulo desconhecido responde 404 com
 // {"error":"media not found"}, que aqui vira "zero marcadores".

@@ -9,6 +9,7 @@
 // teste nunca dispara.
 char *rede_baixar(const char *url, int segundos) { (void)url; (void)segundos; return NULL; }
 char *rede_baixar_bin(const char *url, int segundos, long *n) { (void)url; (void)segundos; (void)n; return NULL; }
+const char *i18n(const char *s) { return s; }
 
 static int falhas;
 #define OK(cond, ...) do { if (cond) printf("ok   " __VA_ARGS__); else { printf("FALHA " __VA_ARGS__); falhas++; } printf("\n"); } while (0)

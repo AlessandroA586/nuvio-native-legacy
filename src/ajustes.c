@@ -635,12 +635,14 @@ typedef enum {
   AJ_TRAILER_AUDIO,    // idioma do audio do trailer (local, append-only)
   AJ_PLAYER_ANIME,     // #205: Player so para anime (0 = Igual ao Player; local)
   AJ_ABERTURA_ESTILO,  // #205: tela de abertura, 0 = Centro (A3), 1 = Canto (B3); local, append-only
-  AJ_MENU_CARTAZ,      // Device-local, append-only: 0 Full, 1 Simple.
+  AJ_MENU_CARTAZ,      // Device-local, append-only: 0 On (default, enriched card), 1 Off (side list only).
   AJ_TITULO_FIL,       // #205: titulo das fileiras da Home, 0 Classico, 1 Ilha, 2 Editorial, 3 Acento; local, append-only
   AJ_VIDRO_QUALIDADE,  // glass quality: 0 Automatica (frost + governor), 1 Desempenho (smoked, no blur), 2 Alta (frost); local, append-only
   AJ_FUNDO_DIN,        // #205: fundo da Dinamica, 0 = Cinza (padrao), 1 = Cor, 2 = Imersivo; local, append-only
   AJ_FUNDO_DIN_COR,    // #205: a cor do fundo "Cor" (indice de FUNDO_DIN_TEMA); local, append-only
   AJ_ESCALA_TEXTO,     // text and component scale (gfx.h): 85/90/100/110/120/130%, default 100%; local, append-only
+  AJ_DET_ESPACO,       // title page row spacing (detail.h): 0 Compacto, 1 Normal (default), 2 Confortavel; local, append-only
+  AJ_FOCO_ACENTO,      // focus plate in the accent colour instead of gray (glass only); default off; local, append-only
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -665,7 +667,6 @@ static const char *V_FONTE_ORDEM_ADDON[] = { "Por qualidade", "Do addon" };
 static const char *V_TELA_ABERTURA[] = { "Cinema", "Detalhada" };
 static const char *V_ABERTURA_FUNDO[] = { "Desligado", "Arte", "Arte borrada" };
 static const char *V_ABERTURA_ESTILO[] = { "Centro", "Canto" };
-static const char *V_MENU_CARTAZ[] = { "Completo", "Simples" };
 static const char *V_TITULO_FIL[] = { "Clássico", "Ilha", "Editorial", "Acento" };
 static const char *V_VIDRO_QUALIDADE[] = { "Automática", "Desempenho", "Alta" };
 static const char *V_FUNDO_DIN[] = { "Cinza", "Cor", "Imersivo" };
@@ -758,6 +759,7 @@ static const char *V_TAMANHO_UI[] = { "100%", "120%", "130%", "150%", "80%", "85
 static const char *V_TAMANHO_AJUSTES[] = { "80%", "90%", "100%" };
 static const char *V_ESCALA_TEXTO[] = { "85%", "90%", "100%", "110%", "120%", "130%" };   // stored in escalaTextoLocal
 #define ESCALA_TEXTO_PADRAO 2
+static const char *V_DET_ESPACO[] = { "Compacto", "Normal", "Confortável" };   // stored in detEspacoLocal
 static const char *V_INTERFACE_MODO[] = { "TV", "Mobile", "Automático" };
 static const char *V_MENU_POS[] = { "Na lateral", "No topo" };   // #461
 static const char *V_ABAS_ESTILO[] = { "Chips", "Menu suspenso", "Barra central", "Páginas", "Menu no topo" };   // #205
@@ -1671,12 +1673,14 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Áudio do trailer", V_TRAUD, 2),   // n real em nValores
   ESC("Player para anime", V_PLAYER_EXTERNO, 3),        // n real em nValores; local: playerExternoAnimeLocal
   ESC("Estilo da tela de abertura", V_ABERTURA_ESTILO, 2),   // local: aberturaEstiloLocal
-  ESC("Menu do cartaz", V_MENU_CARTAZ, 2),              // local: menuCartazLocal
+  ESC("Menu de contexto enriquecido", V_LIGA, 2),              // local: menuCartazLocal
   ESC("Título das fileiras", V_TITULO_FIL, 4),   // local: rowTitleStyleLocal
   ESC("Qualidade do vidro", V_VIDRO_QUALIDADE, 3),   // local: vidroQualidadeLocal
   ESC("Fundo da Dinâmica", V_FUNDO_DIN, 3),                  // local: fundoDinamicaLocal
   ESC("Cor do fundo", V_FUNDO_DIN_COR, 17),                  // local: fundoDinamicaCorLocal
   ESC("Escala de texto e componentes", V_ESCALA_TEXTO, 6),   // local: escalaTextoLocal
+  ESC("Espaçamento das fileiras", V_DET_ESPACO, 3),          // local: detEspacoLocal
+  ESC("Foco na cor de destaque", V_LIGA, 2),   // local: focoAcentoLocal
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1973,6 +1977,8 @@ static const char *CHAVE[] = {
   "fundoDinamicaLocal",
   "fundoDinamicaCorLocal",
   "escalaTextoLocal",
+  "detEspacoLocal",
+  "focoAcentoLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2617,6 +2623,7 @@ int ajustes_fundo(void) { int v = valor[AJ_FUNDO]; return v >= 0 && v < 3 ? v : 
 int ajustes_vidro_contorno(void) { return lig(AJ_VIDRO_CONTORNO); }
 int ajustes_addons_do_principal(void) { return lig(AJ_ADDONS_PRINCIPAL); }
 #endif
+int ajustes_foco_acento(void) { return lig(AJ_FOCO_ACENTO) && ajustes_vidro(); }
 float ajustes_vidro_opacidade(void) {
   static const float F[] = { 0.60f, 0.70f, 0.78f, 0.86f, 0.92f };
   int v = valor[AJ_VIDRO_OPAC];
@@ -2665,6 +2672,7 @@ int ajustes_colecao_exibicao(void) {
   int v = valor[AJ_COLECAO_EXIBICAO];
   return v >= VT_LAY_AUTO && v < VT_LAY_N ? v : VT_LAY_AUTO;
 }
+int ajustes_det_espaco(void) { int v = valor[AJ_DET_ESPACO]; return v >= 0 && v <= 2 ? v : 1; }
 float ajustes_escala_texto(void) {
   static const float F[] = { 0.85f, 0.9f, 1.0f, 1.1f, 1.2f, 1.3f };
   int v = valor[AJ_ESCALA_TEXTO];
@@ -5385,6 +5393,8 @@ static int somenteDesteAparelho(int op) {
     case AJ_TAMANHO_UI:     /* o tamanho e desta tela, e o web nao tem */
     case AJ_TAMANHO_AJUSTES:
     case AJ_ESCALA_TEXTO:   /* text/component scale is this screen's, the web has none */
+    case AJ_DET_ESPACO:     /* title page spacing is this screen's too */
+    case AJ_FOCO_ACENTO:    /* look of this screen (depends on the local glass) */
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
     case AJ_INTERFACE_MODO: /* TV/Mobile follows this device, never the account */
     case AJ_MENU_TOPO:      /* #461: o web nao tem; por perfil (perfilLocal) */
@@ -6391,7 +6401,7 @@ static const char *textoLeitura(int op) {
 // de a linha sumir.
 static int inativa(int op) {
   switch (op) {
-    case AJ_VIDRO_CONTORNO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE: return !lig(AJ_VIDRO);
+    case AJ_VIDRO_CONTORNO: case AJ_FOCO_ACENTO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE: return !lig(AJ_VIDRO);
     case AJ_RAIL:         return ajustes_rail_moderna();
     case AJ_MENU_TOPO:    return ajustes_home_layout() == HOME_LAYOUT_DINAMICA;
     case AJ_RAIL_BLUR:    return !ajustes_rail_moderna();
@@ -6607,6 +6617,7 @@ static const char *ajudaOpcaoBase(int op) {
   if (op == AJ_ICONE_APP) return "Escolha uma marca alternativa para o Nuvio nesta TV. Um agradecimento a quem apoia o projeto.";
   if (inativa(op)) {
     if (op == AJ_VIDRO_CONTORNO) return "Ative a interface de vidro para ajustar o contorno.";
+    if (op == AJ_FOCO_ACENTO) return "Ative a interface de vidro para pintar o foco com a cor de destaque.";
     if (op == AJ_VIDRO_OPAC || op == AJ_VIDRO_FOSCO || op == AJ_VIDRO_QUALIDADE) return "Ative a interface de vidro para ajustar o vidro.";
     if (op == AJ_RAIL) return "Desative a barra lateral moderna para escolher entre recolhida e fixa.";
     if (op == AJ_MENU_TOPO) return "No layout Dinâmica o menu já fica no alto da tela.";
@@ -6889,6 +6900,8 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_TAMANHO_UI: return "Aumenta os controles do player, os painéis e os avisos. Os Ajustes têm um tamanho próprio.";
     case AJ_INTERFACE_MODO: return "Automático usa TV em aparelhos Android TV e Mobile nos demais aparelhos. TV mantém a interface do controle remoto; Mobile usa toque em retrato ou paisagem. A escolha fica salva só neste aparelho.";
     case AJ_TAMANHO_AJUSTES: return i18n("Muda só o tamanho dos Ajustes nesta TV. O padrão é 100%.");
+    case AJ_DET_ESPACO: return i18n("Margem lateral e vãos entre as fileiras e os cartões da página do título. Normal é o de sempre; Confortável dá folga em TVs com overscan. Vale só nesta TV.");
+    case AJ_FOCO_ACENTO: return "O item em foco ganha um vidro tingido com a cor de destaque, em vez da barra cinza. O texto e os ícones continuam legíveis em qualquer cor.";
     case AJ_ESCALA_TEXTO: return i18n("Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 100%.");
     case AJ_LAYOUT_AJUSTES: return "Painel mostra uma prévia ao lado das opções. Lista põe as categorias e as opções uma embaixo da outra, com a explicação logo abaixo da linha em foco.";
     case AJ_TEMA: return "Cor do botão em foco e das marcas de estado. Os claros levam texto escuro, os profundos texto branco — sempre a 4,5:1 ou mais.";
@@ -6989,7 +7002,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_FUNDO_DIN: return "O fundo do layout Dinâmica. Cinza (padrão): o cinza escuro da Apple TV, sempre o mesmo. Cor: uma cor sua, fixa. Imersivo: acompanha a arte do título, em tons suaves e com troca lenta. Vale só nesta TV.";
     case AJ_FUNDO_DIN_COR: return "A cor do fundo da Dinâmica, escurecida para o texto continuar legível. Vale só nesta TV.";
     case AJ_ABERTURA_ESTILO: return "Como a tela de abertura se organiza. Centro (padrão): o logo no meio e o anel de progresso embaixo dele. Canto: o logo no canto inferior esquerdo, com o anel pequeno embaixo dele. Vale só nesta TV.";
-    case AJ_MENU_CARTAZ: return "Completo (padrão): amplia o cartaz com logo, notas e sinopse. Simples: mantém o cartaz e só abre o menu ao lado. Vale só nesta TV.";
+    case AJ_MENU_CARTAZ: return "Ligado (padrão): o menu de contexto traz o cartaz ampliado com logo, notas e sinopse, e a Home continua atrás. Desligado: só a lista de ações ao lado do cartaz, sem ampliar. Vale só nesta TV.";
     case AJ_ABERTURA_FUNDO: return "O fundo da tela Cinema da abertura. Desligado: preto. Arte (padrão): o backdrop do título, nítido, com véu escuro. Arte borrada: o mesmo backdrop, desfocado e escurecido, como sempre. Vale só nesta TV.";
     case AJ_PLR_CLASSIF: return "Ligado (padrão): no começo do filme, a ilha mostra a classificação indicativa e os avisos do guia parental (violência, nudez, palavrões). Desligado: o player não mostra nada disso.";
     case AJ_RELOGIO_12H: return "Como a hora aparece no relógio, na tela de descanso, no fim do filme e no guia de TV: 18:30 ou 6:30 PM.";
@@ -7086,7 +7099,7 @@ static const char *ajudaOpcao(int op) {
     return b;
   }
   if (gpun_efeitos_automaticos() &&
-      (op == AJ_VIDRO || op == AJ_VIDRO_CONTORNO || op == AJ_VIDRO_OPAC ||
+      (op == AJ_VIDRO || op == AJ_VIDRO_CONTORNO || op == AJ_FOCO_ACENTO || op == AJ_VIDRO_OPAC ||
        op == AJ_VIDRO_FOSCO || op == AJ_VIDRO_QUALIDADE || (op >= AJ_PROF && op <= AJ_PROF_TRAILERS))) {
     const char *aviso = gpun_nivel() >= 2
       ? "Efeitos visuais está em mínimos nesta TV; a opção tem pouco efeito. Ajuste em Esta TV › Efeitos visuais."
@@ -9486,9 +9499,9 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_LARGURA_DP: case AJ_RAIO_DP:
       return AJPV_CARTAZ;
     case AJ_IDIOMA: case AJ_ANIM: case AJ_TEMA:
-    case AJ_COR_LOGO: case AJ_FONTE_UI: case AJ_VIDRO: case AJ_VIDRO_CONTORNO:
+    case AJ_COR_LOGO: case AJ_FONTE_UI: case AJ_VIDRO: case AJ_VIDRO_CONTORNO: case AJ_FOCO_ACENTO:
     case AJ_RELOGIO: case AJ_RELOGIO_POS: case AJ_SAIDA_PLAYER: case AJ_RELOGIO_12H:
-    case AJ_TAMANHO_UI: case AJ_ESCALA_TEXTO: case AJ_TAMANHO_AJUSTES: case AJ_LAYOUT_AJUSTES: case AJ_INTERFACE_MODO: case AJ_TECLADO_ANDROID: case AJ_FUNDO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE:
+    case AJ_TAMANHO_UI: case AJ_ESCALA_TEXTO: case AJ_DET_ESPACO: case AJ_TAMANHO_AJUSTES: case AJ_LAYOUT_AJUSTES: case AJ_INTERFACE_MODO: case AJ_TECLADO_ANDROID: case AJ_FUNDO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE:
     case AJ_AVANCADAS: case AJ_LOGO_APP: case AJ_ABERTURA:
     case AJ_ESMAECER: case AJ_BRILHO_PLAYER: case AJ_HDR_UI: case AJ_MANTER_VIDEO:
     case AJ_DESCANSO_ESTILO: case AJ_DESCANSO_FONTE:

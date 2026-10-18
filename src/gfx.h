@@ -261,7 +261,17 @@ typedef enum {
   // quando o fundo da Dinamica esta pendente e o destaque cobre o topo da tela
   // (ver gfx_fundo_din_desenhar). uDin = cor do topo e queda.
   GFX_VITRINE_DIN = 44,
-  GFX_NMODOS = 45
+  // GFX_HOLOFOTE — the Stage row spotlight in ONE full-screen pass: a tinted
+  // dark veil everywhere except a soft ellipse, plus a faint beam from the top
+  // edge down to the lit poster. No texture, no blur.
+  //   uPar     = ellipse centre (fraction of the rect)
+  //   uRaio    = ellipse x radius, uFoco = y radius (fractions of the HEIGHT)
+  //   uCor.a   = veil alpha outside the light
+  //   uCor.r   = poster floor y (fraction of height)
+  //   uCor.g   = beam x (fraction of width), uCor.b = floor pool radius
+  //              (fraction of height). uAcento = current app accent.
+  GFX_HOLOFOTE = 45,
+  GFX_NMODOS = 46
 } GfxModo;
 
 typedef struct {
@@ -762,6 +772,12 @@ void gfx_vidro_foco(GfxRect r, float raio, float foco, float a);
 // FOCO de um cartaz/cartao de arte: contorno na cor do realce (branco no padrao) de 3 px POR FORA, com 2 px
 // de vao — limpo, sem brilho colorido nem sombra.
 void gfx_vidro_cartao(GfxRect r, float raio, float foco, float a);
+// "Foco na cor de destaque": vidro tingido com o realce no lugar da barra cinza
+// de uma linha/pilula/aba. Devolve 1 se desenhou; 0 (nada desenhado) com o
+// ajuste desligado ou sem vidro — o chamador entao desenha o cinza de sempre.
+int gfx_foco_placa(GfxRect r, float raio, float foco, float a);
+// Alpha of the accent tint in that plate (lower for light accents, for text contrast).
+float gfx_foco_placa_alfa(float cr, float cg, float cb);
 // FOCO de botao de acao e item de menu: a pilula vira BRANCA cheia (a mola
 // interpola a opacidade), e o texto passa a escuro em foco >= 0,5 — quem chama
 // escolhe a tinta com gfx_vidro_tinta.

@@ -65,6 +65,9 @@ const char *home_arte(int i);
 const char *home_backdrop(int i);   // arte do titulo i do catalogo
 void home_evento(const SDL_Event *e);
 void home_atualizar(float dt, Uint32 agora);
+// Palco: o veu da tela inteira com a luz no titulo em foco; por cima de tudo
+// da home (barra inclusive), antes dos menus e da pagina do titulo.
+void home_holofote_desenhar(Uint32 agora);
 // Poe a home no topo (destaque, fileira 0, sem rolagem) e esquece a posicao
 // lembrada da sessao. Usado ao entrar num perfil novo.
 void home_ir_topo(void);

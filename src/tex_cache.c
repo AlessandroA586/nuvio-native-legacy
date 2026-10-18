@@ -756,7 +756,9 @@ static int slotLivre(void) {
       itens[i].lum = -1; itens[i].corR = -1;
       return i;
     }
-  return despejar(1);
+  // The picker keeps GLuints from update until draw. A new request must
+  // wait for a cold slot rather than invalidate artwork still in use.
+  return despejar(0);
 }
 
 // VITIMA LRU ENTRE OS PRONTOS, FRIOS PRIMEIRO. Devolve o slot ja limpo, ou -1.
@@ -767,9 +769,9 @@ static int slotLivre(void) {
 // (log de 16/09): texturas=152 a 95.9 MB de 96 em quase toda amostra de 3 s —
 // o cache VIVE no teto, e cada arte que entra despeja uma que esta la.
 //
-// `forcar` e so do slotLivre: sem vaga nenhuma, despejar um quente e menos
-// ruim que nunca carregar o card novo. podar() nunca forca — estourar o
-// orcamento por um quadro custa nada; despejar a tela custa o pisca.
+// Both slotLivre() and podar() preserve hot artwork. Requests retry when
+// a slot becomes cold; evicting a hot texture can invalidate a GLuint
+// already returned to the picker for the current draw.
 //
 // HEROIS FRIOS ALEM DESTES SAEM ANTES DE QUALQUER CARTAZ.
 //
@@ -3016,7 +3018,6 @@ static int threadDecode(void *arg) {
       if (conv) {
         itens[idx].estado = DECODIFICADO;
         itens[idx].filaUploadEm = SDL_GetTicks();
-        itens[idx].falhas = 0;
         // O QUE SAIU, e nao o que foi pedido: e este par que a promocao le.
         itens[idx].tetoUsado = limite;
         itens[idx].fonteW = srcW;
@@ -4264,9 +4265,38 @@ long   tex_upl_bytes;
 static Uint32 uplEm, uplGlMs, uplFila;
 static char uplPath[512];
 
+// A failed allocation/stripe/mipmap is not publishable. Keep the old artwork
+// on promotion; first uploads use the existing failure backoff.
+static int envioFalhou(int alvo, GLuint t, SDL_Surface *sup) {
+  GLenum erro = glGetError();
+  if (erro == GL_NO_ERROR) return 0;
+  printf("[tex] upload failed hash=%08lx GL=%#x; keeping previous artwork\n",
+         hashCaminho(itens[alvo].caminho), (unsigned)erro);
+  while (glGetError() != GL_NO_ERROR) { }
+  gfx_tex_esquecer(t);
+  gfx_tex_esquecer(0);  // upload binds bypass gfx_rect, including failed uploads
+  glDeleteTextures(1, &t);
+  if (uplIdx == alvo) {
+    uplTex = 0; uplIdx = -1; uplSup = NULL; uplY = 0; uplNiveis = 0;
+  }
+  SDL_LockMutex(mtx);
+  if (itens[alvo].sup == sup) itens[alvo].sup = NULL;
+  if (itens[alvo].tex) desistir(alvo);
+  else {
+    itens[alvo].estado = FALHOU;
+    itens[alvo].urgente = 0;
+    itens[alvo].falhas++;
+    itens[alvo].tentarEm = SDL_GetTicks() +
+        (itens[alvo].falhas == 1 ? 2000 : (itens[alvo].falhas == 2 ? 10000 : 60000));
+  }
+  SDL_UnlockMutex(mtx);
+  liberarSup(sup);
+  return 1;
+}
+
 // Publica a textura `t` (ja com todos os pixels) no item `alvo`. Chamada sem
 // a trava; `sup` ja saiu do item.
-static void publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
+static int publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
                           Uint32 glMs, Uint32 filaWait, const char *uploadPath) {
     // Mipmaps servem a duas coisas: reduzir o serrilhado quando a arte aparece
   // menor que o original, e — a razao de terem entrado agora — permitir o fundo
@@ -4307,6 +4337,7 @@ static void publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
     int ap = (sup->h > 0) && ((sup->h & (sup->h - 1)) == 0);
     if (!lp || !ap) comMip = 0; }
 #endif
+  if (envioFalhou(alvo, t, sup)) return 0;
   Uint32 mipEm = SDL_GetTicks();
   glBindTexture(GL_TEXTURE_2D, t);
   // Niveis montados na CPU (tex_piramide_cpu) ja subiram em tex_bombear: o
@@ -4322,7 +4353,9 @@ static void publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   gfx_tex_esquecer(0);  // o bind do upload passou por fora do gfx_rect
+  if (envioFalhou(alvo, t, sup)) return 0;
   gfx_tex_aquecer(t);
+  if (envioFalhou(alvo, t, sup)) return 0;
   glMs += SDL_GetTicks() - mipEm;
 
   SDL_LockMutex(mtx);
@@ -4347,6 +4380,7 @@ static void publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
   itens[alvo].mip = comMip;
   itens[alvo].estado = PRONTO;
   itens[alvo].urgente = 0;
+  itens[alvo].falhas = 0;
   bytesUsados += bytesTextura(&itens[alvo]);
   podar();
   SDL_UnlockMutex(mtx);
@@ -4357,6 +4391,7 @@ static void publicarEnvio(int alvo, GLuint t, SDL_Surface *sup, Uint32 uploadEm,
       printf("[tex-trace] upload-total hash=%08lx total_ms=%u gl_ms=%u bytes=%ld mip=%d queue=%u\n",
              hashCaminho(uploadPath), (unsigned)uploadMs, (unsigned)glMs,
              uploadBytes, comMip, (unsigned)filaWait); }
+  return 1;
 }
 
 // Custos iniciais conservadores da pesquisa plx (ms); o pior observado neste
@@ -4409,8 +4444,9 @@ int tex_bombear(int max_por_quadro) {
         int linhas = (int)(NV_TEX_FAIXA_BYTES / ((long)sup->w * 4));
         Uint32 em = SDL_GetTicks();
         if (linhas < 16) linhas = 16;
+        // Attribute errors to this upload, not the preceding render frame.
+        while (glGetError() != GL_NO_ERROR) { }
         glBindTexture(GL_TEXTURE_2D, uplTex);
-        gfx_vidro_sujar();   // a textura muda no lugar: o hash do vidro nao ve
         if (uplY < sup->h) {
           if (uplY + linhas > sup->h) linhas = sup->h - uplY;
           glTexSubImage2D(GL_TEXTURE_2D, 0, 0, uplY, sup->w, linhas, GL_RGBA, GL_UNSIGNED_BYTE,
@@ -4424,6 +4460,7 @@ int tex_bombear(int max_por_quadro) {
           tex_upl_bytes += subirNiveis(sup);
         }
         gfx_tex_esquecer(0);
+        if (envioFalhou(alvo, uplTex, sup)) { trabalhou = 1; break; }
         uplGlMs += SDL_GetTicks() - em;
         trabalhou = 1;
         if (uplY < sup->h) { medirEnvio(2, passoEm); break; }
@@ -4435,8 +4472,7 @@ int tex_bombear(int max_por_quadro) {
           SDL_UnlockMutex(mtx);
           uplTex = 0; uplIdx = -1; uplSup = NULL; uplY = 0; uplNiveis = 0;
           tex_upl_n++;
-          publicarEnvio(alvo, t, sup, uplEm, uplGlMs, uplFila, uplPath);
-          subiu++; }
+          subiu += publicarEnvio(alvo, t, sup, uplEm, uplGlMs, uplFila, uplPath); }
       }
       medirEnvio(2, passoEm);
       break;
@@ -4483,12 +4519,14 @@ int tex_bombear(int max_por_quadro) {
 
     Uint64 passoEm = SDL_GetPerformanceCounter();
     Uint32 uploadEm = SDL_GetTicks();
-    GLuint t; glGenTextures(1, &t); glBindTexture(GL_TEXTURE_2D, t);
+    while (glGetError() != GL_NO_ERROR) { }
+    GLuint t = 0; glGenTextures(1, &t); glBindTexture(GL_TEXTURE_2D, t);
     if ((long)sup->w * sup->h * 4 > NV_TEX_FAIXA_BYTES) {
       // So reserva; as faixas vem no passo 1 (deste quadro, se sobrar
       // orcamento, ou dos seguintes).
       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sup->w, sup->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
       gfx_tex_esquecer(0);
+      if (envioFalhou(alvo, t, sup)) { trabalhou = 1; break; }
       uplIdx = alvo; uplTex = t; uplSup = sup; uplY = 0; uplNiveis = 0;
       uplEm = uploadEm; uplGlMs = SDL_GetTicks() - uploadEm; uplFila = filaWait;
       snprintf(uplPath, sizeof uplPath, "%s", uploadPath);
@@ -4501,8 +4539,7 @@ int tex_bombear(int max_por_quadro) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sup->w, sup->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, sup->pixels);
     if (sup->userdata) tex_upl_bytes += subirNiveis(sup);
     trabalhou = 1;
-    publicarEnvio(alvo, t, sup, uploadEm, SDL_GetTicks() - uploadEm, filaWait, uploadPath);
-    subiu++;
+    subiu += publicarEnvio(alvo, t, sup, uploadEm, SDL_GetTicks() - uploadEm, filaWait, uploadPath);
     medirEnvio(classe, passoEm);
     porClasse[classe]++;
     if (classe == 2) break;

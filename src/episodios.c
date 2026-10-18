@@ -39,7 +39,7 @@
 #define EP_W     820.0f
 #define EP_PAD_X  18.0f
 #define EP_PAD_Y  22.0f
-#define EP_TIT_H  64.0f
+#define EP_TIT_H  42.0f
 #define EP_SEG_H  54.0f
 #define EP_ROW   160.0f
 // Linhas a vista: 4, ou menos quando a ilha nao cabe na altura da tela virtual
@@ -970,9 +970,8 @@ static void corpoIlha(GfxRect c, float a, void *u) {
     ponteiro_alvo(ilha.x, ilha.y, ilha.w, ilha.h, NULL, NULL, 0, 0);
   }
   // CABECALHO: kicker com a serie, "Episodios"; o fechar e um disco (grupo -1).
-  plrui_kicker(ci ? ci->titulo : "", x0 + 10.0f, y, 115, 115, 113, a);
-  txt_desenhar_alpha(txt_linha(TXT_ILHA_PERGUNTA, "Episódios", 243, 242, 239, 255), x0 + 10.0f, y + 22.0f, a);
-  { GfxRect d = { x0 + w - 10.0f - 56.0f, y + 4.0f, 56.0f, 56.0f };
+  txt_desenhar_alpha(txt_linha(TXT_ILHA_PERGUNTA, "Episódios", 243, 242, 239, 255), x0 + 10.0f, y, a);
+  { GfxRect d = { x0 + w - 10.0f - 56.0f, y - 7.0f, 56.0f, 56.0f };
     int f = grupo == -1;
     float k = f ? plrui_tinta() / 255.0f : 0.85f;
     if (f) plrui_pilula_foco(d, a); else plrui_botao_repouso(d, a);

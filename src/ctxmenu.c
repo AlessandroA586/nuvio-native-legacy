@@ -34,7 +34,6 @@
 #include "listas.h"
 #include "home.h"
 #include "ctxinfo.h"
-#include "fundo.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1365,7 +1364,7 @@ static void linhaCtxTinta(GfxRect r, const char *rot, const char *icone, float f
     lum = .80f + .20f * k;
     if (k > 0.01f) gfx_cor(r, 0.5f, tinta, tinta, tinta, .12f * k * a);
   } else if (k > 0.01f) {
-    if (ajustes_vidro()) gfx_cor(r, 0.5f, 1, 1, 1, .14f * k * a);
+    if (ajustes_vidro()) { if (!gfx_foco_placa(r, 0.5f, k, a)) gfx_cor(r, 0.5f, 1, 1, 1, .14f * k * a); }
     else gfx_cor(r, 0.5f, .19f, .195f, .215f, k * a);
   }
   if (icone && icone[0])
@@ -2038,12 +2037,9 @@ static void ctx_desenharCorpo_(Uint32 agora) {
   }
 
   infoOn = infoPossivel(ci);
-  { GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
-    // The enriched art must extend behind the action panel. The former 94%
-    // black veil made both menu sizes capture an almost uniform backdrop.
-    if (infoOn)
-      fundo_desenhar_modo(FUNDO_ARTE, tela, 0, ci->backdrop[0] ? ci->backdrop : cartazArte, a);
-    else gfx_cor(tela, 0.0f, 0, 0, 0, 0.55f * a); }
+  // The Home stays drawn underneath: one dim veil, and the glass panels frost
+  // what the rows show through it. No full-screen art or extra blur here.
+  gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0, 0.5f * a);
 
   est.salvo = tituloSalvo(ci);
   est.visto = historicoDe(ci);
