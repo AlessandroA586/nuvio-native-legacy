@@ -27,6 +27,8 @@
 #include <stdio.h>
 #include <locale.h>
 #include "video.h"
+#include "cdnlink.h"
+#include "streams.h"
 #include <stdlib.h>
 #include <string.h>
 #ifdef NV_TPK40
@@ -172,6 +174,11 @@ int nv_tpk_iniciar(const char *arte, const char *dados, int w, int h) {
     setenv("NUVIO_LOG_ANTERIOR", ant, 1); }
   setenv("NUVIO_DADOS", dados, 1);
   tpkdesp_iniciar(dados);   // saida pela TV != queda (tpkdesp.h)
+  // LINK DO CDN (cdnlink.h): o player da TV recebe o endereco final no CDN; a
+  // verificacao das fontes guarda o que ja resolveu.
+  { static const CdnlinkGanchos g = { cdnlink_origem_ok, cdnlink_recente, cdnlink_resolver, cdnlink_validade_ms };
+    video_tpk_cdn_ganchos(&g);
+    stream_cdn_lembrar = cdnlink_lembrar; }
   setenv("NUVIO_LOG", log, 1);
 #ifdef NV_TPK40
   snprintf(etapasArq, sizeof etapasArq, "%s/tpk-etapas.txt", dados);

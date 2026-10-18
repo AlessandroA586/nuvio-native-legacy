@@ -261,6 +261,8 @@ IGNORAR = {
     "ltv-fontes.txt", "ltv-fontes-p%d.txt",  # ltv.c: preference filenames, never UI labels
     "daqui em diante",  # episodios.c nomeModo: so no log [visto] menu, nunca rotulo
     "fechar",  # main.c: nome do evento de janela so no log "[ciclo] janela="
+    # PR #567: motivos so de log ([fonte] lembrada / auto / link guardado).
+    "lancamento sem grupo", "todos os add-ons permitidos responderam", "relogio para tras",
     # video_tpk.c: motivos de cartaoModo()/cartaoEncaixar(), so no log "[video] tpk cartao".
     "cover maior que o painel", "cover sem prova nesta familia", "recorte de fonte",
     # video_tpk.c: motivos de convIniciar/convSondar/convDesistir/convReabrir e o
@@ -564,6 +566,9 @@ IGNORAR = {
     "escolha manual: a folha abre com o que chegou", "fonte boa o bastante",
     "fonte lembrada deste titulo", "prazo de espera pelos add-ons",
     "outra fonte foi a escolhida",
+    # Log-only (autoMotivo, the converter probe reason, mkvfix state).
+    "todos os add-ons responderam", "cabecalho do MKV nao lido; a TV acusou NotSupportedAudioCodec",
+    "not a Matroska file: nothing to do",
     "interface em 1080p: mede de novo", "sem-acesso", "sem-dv", "nao-mkv", "temporada",
     # Nomes de arquivo e de pasta (addonstats.c, assrender.c): nunca tela.
     "fonte-latencia.txt", "%s/fontes",

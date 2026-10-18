@@ -645,8 +645,16 @@ typedef enum {
   AJ_FUNDO_DIN,        // #205: fundo da Dinamica, 0 = Cinza (padrao), 1 = Cor, 2 = Imersivo; local, append-only
   AJ_FUNDO_DIN_COR,    // #205: a cor do fundo "Cor" (indice de FUNDO_DIN_TEMA); local, append-only
   AJ_ESCALA_TEXTO,     // text and component scale (gfx.h): 85/90/100/110/120/130%, default 85%; local, append-only
+  // MEMORIA DA FONTE (dono, 15-16/10/2026). Prefer Binge Group (a escolha a
+  // mao valendo para o titulo inteiro E a memoria do automatico, fontepref.h)
+  // e Reuse Binge Group (o mesmo entre sessoes): Ligado, Ligado, o
+  // comportamento de antes. Reuse Last Link (fontevolta.h): Ligado, 24 h
+  // (dono: ligado de fabrica). LOCAIS. No fim: posicionais.
+  AJ_FONTE_GRUPO, AJ_FONTE_GRUPO_SESSOES,
+  AJ_LINK_REUSAR, AJ_LINK_PRAZO,
   AJ_DET_ESPACO,       // title page row spacing (detail.h): 0 Compacto, 1 Normal (default), 2 Confortavel; local, append-only
   AJ_FOCO_ACENTO,      // focus plate in the accent colour instead of gray (glass only); default off; local, append-only
+  AJ_ARTE_TOM,         // Device-local, append-only: 0 Vivid (unchanged), 1 Light.
   AJ_PALCO_FUNDO,      // Device-local, append-only: Black / Current / Artwork only.
   // FONTES POR URL (Guia de TV, M9, ltv.h): listas M3U e guias XMLTV deste
   // perfil. AJ_URL_LISTA escolhe uma das ja cadastradas (so o nome e o host na
@@ -682,6 +690,7 @@ static const char *V_FONTE_ORDEM_ADDON[] = { "Por qualidade", "Do addon" };
 static const char *V_TELA_ABERTURA[] = { "Cinema", "Detalhada" };
 static const char *V_ABERTURA_FUNDO[] = { "Desligado", "Arte", "Arte borrada" };
 static const char *V_ABERTURA_ESTILO[] = { "Centro", "Canto" };
+static const char *V_ARTE_TOM[] = { "Vívido", "Claro" };
 static const char *V_PALCO_FUNDO[] = { "Preto", "Como está", "Só arte" };
 static const char *V_TITULO_FIL[] = { "Clássico", "Ilha", "Editorial", "Acento" };
 static const char *V_VIDRO_QUALIDADE[] = { "Automática", "Desempenho", "Alta" };
@@ -976,6 +985,10 @@ static const char *V_TECLADO_AND[] = { "Automático", "Do app", "Do Android" };
 #else
 static const char *V_TECLADO_AND[] = { "Automático", "Do app", "Do sistema" };   // LG / Samsung
 #endif
+// "Validade do ultimo link": as opcoes do oficial (1 h a 7 dias). O indice e o
+// gravado em linkPrazoLocal; ajustes_link_prazo_s() devolve os segundos.
+static const char *V_LINK_PRAZO[] = { "1 h", "2 h", "3 h", "6 h", "12 h", "24 h", "48 h", "72 h", "7 dias" };
+static const int   LINK_PRAZO_H[] = { 1, 2, 3, 6, 12, 24, 48, 72, 168 };
 // O que o toque curto de OK faz num card da retomada (issue #93): abre o
 // episodio direto no player, ou abre a pagina do titulo como sempre fez.
 // Local, como cwFonteLocal — o app oficial nao tem esta escolha.
@@ -1695,8 +1708,13 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Fundo da Dinâmica", V_FUNDO_DIN, 3),                  // local: fundoDinamicaLocal
   ESC("Cor do fundo", V_FUNDO_DIN_COR, 17),                  // local: fundoDinamicaCorLocal
   ESC("Escala de texto e componentes", V_ESCALA_TEXTO, 6),   // local: escalaTextoLocal
+  ESC("Preferir o mesmo grupo de fonte", V_LIGA, 2),          // local: fonteGrupoLocal
+  ESC("Reusar o grupo entre sessões", V_LIGA, 2),             // local: fonteGrupoSessoesLocal
+  ESC("Reusar o último link", V_LIGA, 2),                     // local: linkReusarLocal
+  ESC("Validade do último link", V_LINK_PRAZO, 9),            // local: linkPrazoLocal
   ESC("Espaçamento das fileiras", V_DET_ESPACO, 3),          // local: detEspacoLocal
   ESC("Foco na cor de destaque", V_LIGA, 2),   // local: focoAcentoLocal
+  ESC("Tom da arte", V_ARTE_TOM, 2),                       // local: artToneLocal
   ESC("Fundo do Palco", V_PALCO_FUNDO, 3),
   ESC("Listas e guias por URL",          V_URL_LISTA, 9),     // por perfil: ltv-urls-p<N>.txt (tamanho dinamico)
   ACAO("Adicionar lista M3U"),
@@ -1998,8 +2016,11 @@ static const char *CHAVE[] = {
   "fundoDinamicaLocal",
   "fundoDinamicaCorLocal",
   "escalaTextoLocal",
+  "fonteGrupoLocal", "fonteGrupoSessoesLocal",
+  "linkReusarLocal", "linkPrazoLocal",
   "detEspacoLocal",
   "focoAcentoLocal",
+  "artToneLocal",
   "palcoFundoLocal",
   "-urlLista", "-urlM3uAdd", "-urlXmltvAdd", "-urlRem",
 };
@@ -2559,6 +2580,14 @@ int ajustes_fonte_tocar_conferindo(void) { return lig(AJ_FONTE_TOCAR_CONFERINDO)
 int ajustes_fonte_aquecer(void) { return lig(AJ_FONTE_AQUECER); }
 int ajustes_fonte_conferir_varias(void) { return lig(AJ_FONTE_CONFERIR_VARIAS); }
 int ajustes_fonte_preparar(void) { return lig(AJ_FONTE_PREPARAR); }
+int ajustes_fonte_grupo(void) { return lig(AJ_FONTE_GRUPO); }
+int ajustes_fonte_grupo_sessoes(void) { return lig(AJ_FONTE_GRUPO_SESSOES); }
+int ajustes_link_reusar(void) { return lig(AJ_LINK_REUSAR); }
+unsigned ajustes_link_prazo_s(void) {
+  int v = valor[AJ_LINK_PRAZO], n = (int)(sizeof LINK_PRAZO_H / sizeof *LINK_PRAZO_H);
+  if (v < 0 || v >= n) v = 5;
+  return (unsigned)LINK_PRAZO_H[v] * 3600u;
+}
 int ajustes_fonte_precarregar(void) {
 #ifdef NV_ANDROID
   return lig(AJ_FONTE_PRECARREGAR);
@@ -2626,7 +2655,7 @@ static int temaDinamico(void) { return temaEhDinamico(valor[AJ_TEMA]); }
 static int temaLocal(void) { return valor[AJ_TEMA] >= AJ_N_TEMAS && valor[AJ_TEMA] < AJ_N_TEMAS_OPC; }
 int ajustes_cor_viva(void) {
   if (SEGURO) return CORVIVA_DESLIGADA;   // qualquer tema dinamico: a cor viva anima a arte inteira
-  return valor[AJ_TEMA] == AJ_TEMA_DINAMICA   ? CORVIVA_SIMPLES
+  return valor[AJ_TEMA] == AJ_TEMA_DINAMICA   ? (valor[AJ_ARTE_TOM] == 1 ? CORVIVA_SIMPLES_CLARO : CORVIVA_SIMPLES)
        : valor[AJ_TEMA] == AJ_TEMA_ESTILIZADA ? CORVIVA_SIMPLES   // so ate o arranque migrar
        : valor[AJ_TEMA] == AJ_TEMA_GRADIENTE  ? CORVIVA_GRADIENTE
        : valor[AJ_TEMA] == AJ_TEMA_IMERSIVA   ? CORVIVA_IMERSIVA
@@ -2729,6 +2758,7 @@ float ajustes_tamanho_ajustes(void) {
 // The phone always uses List. Keep the stored TV preference unchanged.
 static int ajLayoutSelecionavel(void) { return !telefoneui_ativo(); }
 static int ajOpcaoDisponivel(int op) {
+  if (op == AJ_ARTE_TOM) return valor[AJ_TEMA] == AJ_TEMA_DINAMICA;
   if (op == AJ_FALHA_ADDON_LIMITE) return faAddonEditar[0] != 0;
 #ifndef NV_ANDROID
   if (op == AJ_FONTE_PRECARREGAR) return 0;
@@ -5423,6 +5453,8 @@ static int somenteDesteAparelho(int op) {
     case AJ_FONTE_CONFERIR_VARIAS:
     case AJ_FONTE_PREPARAR:
     case AJ_FONTE_PRECARREGAR:
+    case AJ_FONTE_GRUPO: case AJ_FONTE_GRUPO_SESSOES:
+    case AJ_LINK_REUSAR: case AJ_LINK_PRAZO:
     case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON:
     case AJ_SALVOS_DEST:
     case AJ_EPG_PAIS:       /* pais da grade: por aparelho, o web nao tem */
@@ -5492,6 +5524,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_TAMANHO_AJUSTES:
     case AJ_ESCALA_TEXTO:   /* text/component scale is this screen's, the web has none */
     case AJ_DET_ESPACO:     /* title page spacing is this screen's too */
+    case AJ_ARTE_TOM:       /* Art tone belongs to this device. */
     case AJ_FOCO_ACENTO:    /* look of this screen (depends on the local glass) */
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
     case AJ_INTERFACE_MODO: /* TV/Mobile follows this device, never the account */
@@ -6528,6 +6561,8 @@ static int inativa(int op) {
     case AJ_CW_BLUR_PROX: return !ajustes_cw_ligado() || !ajustes_cw_thumb_episodio();
     case AJ_EXPANDIR_ATRASO: return !ajustes_expandir_poster();
     case AJ_SEEKR_FITA: case AJ_SEEKR_AJUSTE: return !lig(AJ_SEEKR_LIGADO);
+    case AJ_FONTE_GRUPO_SESSOES: return !lig(AJ_FONTE_GRUPO);
+    case AJ_LINK_PRAZO: return !lig(AJ_LINK_REUSAR);
     // Remover so vale para o pacote escolhido que foi posto nesta TV.
     case AJ_SELOS_PACOTE_REM: return selospacote_ativo() < 0 || !selospacote_da_tv(selospacote_ativo());
     case AJ_URL_REM: return valor[AJ_URL_LISTA] < 1;
@@ -6845,6 +6880,10 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_FONTE_AQUECER: return "Ao abrir a página de um título e quando as fontes chegam, abre antes a conexão com o debrid e com os hosts das primeiras fontes, para o Play não gastar esse tempo. Não resolve nenhum link e não cria arquivo no debrid.";
     case AJ_FONTE_CONFERIR_VARIAS: return "Confere até 3 fontes já prontas no debrid ao mesmo tempo, em vez de uma por vez, e toca a melhor que servir. Fontes que ainda não estão prontas seguem uma por vez, sem baixar nada a mais. Só vale com a Fonte automática em Melhor fonte.";
     case AJ_FONTE_PREPARAR: return "Escolhe e verifica a fonte automática ao abrir o título. Não carrega vídeo. Pode adicionar o arquivo ao painel do debrid mesmo sem assistir.";
+    case AJ_FONTE_GRUPO: return "Em qualquer episódio, tenta primeiro a mesma fonte: a que você escolheu à mão neste título ou a que tocou (mesmo lançamento ou binge group do addon). Sem nada parecido, o Nuvio escolhe sozinho.";
+    case AJ_FONTE_GRUPO_SESSOES: return "Lembra a fonte escolhida e o grupo mesmo depois de fechar o app. Desligado, só vale enquanto o app está aberto.";
+    case AJ_LINK_REUSAR: return "Ao abrir de novo o mesmo filme ou episódio, toca direto o link que funcionou, sem buscar nos addons. Se ele não abrir, a busca normal assume. Os links ficam guardados nesta TV.";
+    case AJ_LINK_PRAZO: return "Por quanto tempo o link guardado vale. Links de debrid podem expirar antes; nesse caso a busca normal assume.";
     case AJ_FONTE_PRECARREGAR: return "Carrega alguns segundos de vídeo ao abrir um título e prepara o próximo episódio perto dos créditos. O Play reaproveita o buffer. Usa mais dados e pode adicionar arquivos ao debrid mesmo sem assistir. Não marca episódios como vistos.";
     case AJ_FONTE_REPOR: return "Quantas outras fontes o automático tenta quando a escolhida não abre. Cada tentativa pode adicionar um arquivo na sua conta de debrid.";
     case AJ_FALHA_PROVEDORES: return "Se o vídeo não iniciar a tempo ou der erro, tenta os provedores Debrid configurados na ordem escolhida. O limite de cada provedor conta links distintos de todos os add-ons, incluindo o primeiro. Parar ou Voltar cancela as tentativas.";
@@ -7066,6 +7105,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_PROVEDORES_ESCOPO: return "Compartilhada usa as mesmas contas de provedores neste aparelho. Separada guarda uma cópia para este perfil. Trocar de opção mantém as duas configurações.";
     case AJ_ADDONS_PRINCIPAL: return "Os outros perfis desta conta usam os addons do perfil principal. Desligado, cada perfil usa os seus — a não ser que a conta já diga para usar os do principal.";
     case AJ_VIDRO_CONTORNO: return "O contorno das linhas e dos cartões, inclusive o do foco. Desligado, o item em foco é marcado só por um fundo mais claro na cor de destaque.";
+    case AJ_ARTE_TOM: return "Vívido mantém as cores da arte. Claro usa tons pastel da mesma cor, com texto contrastante. Só nesta TV.";
     case AJ_COR_LOGO: return "Com um tema dinâmico, a cor sai do logo do título em vez da arte de fundo. Logo branco ou preto usa a arte.";
     case AJ_MANTER_VIDEO: return "Mantém o player pausado pelo tempo escolhido. Usa memória e decoder; o trailer espera. Desligado por padrão.";
     case AJ_RETOMADA_MORNA: return "Ligado por padrão: mesma fonte e posição, sem prender o player. Prepara a conexão ao focar Retomar. Disco e último quadro no Android.";
@@ -9585,6 +9625,8 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_LEG_FORCADA:
     case AJ_AUD_LINGUA: case AJ_AUD_LINGUA2: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_ABERTURA_ADDON: case AJ_ABERTURA_FUNDO: case AJ_ABERTURA_ESTILO: case AJ_FONTE_MANUAL:
     case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_SELOS_CORES: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR: case AJ_FONTE_PRECARREGAR:
+    case AJ_FONTE_GRUPO: case AJ_FONTE_GRUPO_SESSOES:
+    case AJ_LINK_REUSAR: case AJ_LINK_PRAZO:
     case AJ_FONTE_PRIORIDADE: case AJ_FONTE_HDR: case AJ_FONTE_IDIOMA_AUDIO:
     case AJ_SELOS_PACOTE:
     case AJ_REACAO_CREDITOS: case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PROXIMO_AUTO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_CONTAGEM:
@@ -9629,7 +9671,7 @@ static AjPreview familiaPreviaOpcao(int op) {
       return AJPV_PROFUNDIDADE;
     case AJ_LARGURA_DP: case AJ_RAIO_DP:
       return AJPV_CARTAZ;
-    case AJ_IDIOMA: case AJ_ANIM: case AJ_TEMA:
+    case AJ_IDIOMA: case AJ_ANIM: case AJ_TEMA: case AJ_ARTE_TOM:
     case AJ_COR_LOGO: case AJ_FONTE_UI: case AJ_VIDRO: case AJ_VIDRO_CONTORNO: case AJ_FOCO_ACENTO:
     case AJ_RELOGIO: case AJ_RELOGIO_POS: case AJ_SAIDA_PLAYER: case AJ_RELOGIO_12H:
     case AJ_TAMANHO_UI: case AJ_ESCALA_TEXTO: case AJ_DET_ESPACO: case AJ_TAMANHO_AJUSTES: case AJ_LAYOUT_AJUSTES: case AJ_INTERFACE_MODO: case AJ_TECLADO_ANDROID: case AJ_FUNDO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE:

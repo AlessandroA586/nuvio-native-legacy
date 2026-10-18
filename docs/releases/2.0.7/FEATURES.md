@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T15:50:00-03:00, HEAD `ba0639cf0`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T16:48:56-03:00, HEAD `af8c87d73`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -97,6 +97,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   is slow. All platforms. Refs #545 #551 #552 #504, `26b9c635b`, `1c9043ed0`, `455135df2`, `cbcf467f5`, `27988615e`.
 
 ### New
+
+- **Lighter artwork accents**: Choose Vivid or Light for the device-local “From the art” accent, with readable contrasting text and translations in all 29 languages. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `5897319c5`, `agente/205-artepastel`.
+
+- **Clearer playback help**: Source-opening errors explain whether to check the add-on/debrid service, internet connection or app/TV, while stall and timeout cards direct you to Settings > This TV > Speed test. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `e704faff5`, `ce4e53ba8`.
 
 - **Clearer title pages with adjustable spacing**: Tint-only cast, trailer and rating cards share the page backdrop, while Compact, Normal and Comfortable row spacing keeps ratings, seasons and cast aligned at different text sizes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `b8e94cf5c`, `5a3f41c11`, `83177ade2`, `79eca720f`, `e0c9ba77b`.
 
@@ -195,6 +199,16 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Safer episode source sheets**: Closing playback and discarding episode sources no longer frees the list while the source sheet reads it. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `67b588a0a`; previous-session player logs also help diagnose crashes.
+
+- **Clean Tizen 4 video overlays**: The overlay uses the actual EGL surface dimensions and clears startup frames transparently to prevent uninitialized pixels appearing over video. Platforms: Samsung .tpk (Tizen 4). Refs owner request, `8c45eb257`, merge `b01f47a64`.
+
+- **Stable release-card artwork**: Each 2.0.7 scene retains its own artwork during transitions, and cold cards stay flat until cached frost is available. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `f37fc0931`, `eeb95ee79`, `7bc00e0bf`.
+
+- **Resting Home actions retain frost**: Home hero buttons reuse cached frost with glass enabled or disabled while focused buttons retain the accent fill. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `a341bf956`, merge `1a04b92a3`.
+
+- **Live TV catalogs remain manageable**: Unselected Live TV catalogs remain visible in catalog management without creating unwanted Home rows. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `479ad3d77`.
 
 - **Quick-menu tiles frost with glass off**: focused quick-menu tiles reuse the shared frost material even
   when glass is disabled, keeping the active accent and tile geometry. All platforms. `507727870`, merge
@@ -386,6 +400,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Internal
 
+- **Playback report checklist**: Required checks ask for comparable playback, source alternatives, the speed-test file-size recommendation and a six-character log code before filing. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `bbd084ada`, `e65ea73cd`, `e5d2d0ad7`.
+
+- **Isolated discovery fixtures**: Server-only stubs preserve profile-provider ownership and restore Continue Watching regression linking. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `0476f8651`.
+
 - **Hero and timeline regression coverage**: Baseline-failure checks, whole-frame GPU comparisons including cold captions and scrolling, scale checks and hidden-window timeline capture support release verification. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `f10ae91d0`, `df65b38b6`, `8d84be9a1`, `2ac2c50d6`.
 
 - **C9 rendering and subtitle timing checks**: Regression checks cover glass-cache budgets and unchanged frost images, plus production readiness, the complete initial 12-second ASS window, and deterministic prefetch timeout checks. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `527c69cf3`, `5f29a8095`, `b12b8e11f`, `9e778e588`, `3934284c5`, `8e8a90415`, `0661e272d`.
@@ -445,7 +463,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-Tracking snapshot: 21 branches have unmerged commits and no running job; 17 open issues have no mapped job or prompt. Newer fixes on `agente/205-artepastel`, `agente/205-episodioslento`, `agente/205-issuetriagem`, `agente/205-pr567port`, `agente/205-whatsnew207`, `agente/p2p` need review and are not classified as lost. Queued jobs and deferred 2.1 work remain tracked separately. The C9 installation attempt at `cb7ece972` failed; later integration merges (up to `ba0639cf0`) have not been confirmed on TV.
+Tracking snapshot: 24 branches have unmerged commits and no running job; 17 open issues have no mapped job or prompt. Newer fixes on `agente/205-ajusteslista`, `agente/205-elencoappletv`, `agente/205-episodioslento`, `agente/205-issue607`, `agente/205-mp4oculto`, `agente/205-palcolimpo`, `agente/205-pr567port`, `agente/205-torboxlg`, `agente/205-tpk60preta`, `agente/205-trailercard`, `agente/p2p` need review and are not lost. Queued work and deferred 2.1 requests remain separate. Android installed at `cb7ece972`; C9 installation failed, so TV HEAD remains unconfirmed. Later integration merges through `af8c87d73` await device confirmation.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 

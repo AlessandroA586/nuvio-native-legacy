@@ -180,6 +180,14 @@ int ajustes_fonte_aquecer(void);
 int ajustes_fonte_conferir_varias(void);
 int ajustes_fonte_preparar(void);
 int ajustes_fonte_precarregar(void);
+// Memoria da fonte (fontepref.h, fontepref_configurar): Preferir o mesmo grupo
+// de fonte (a escolha a mao no titulo inteiro + a memoria do automatico) e
+// Reusar o grupo entre sessoes. Padrao: 1, 1 (o comportamento de antes).
+int ajustes_fonte_grupo(void);
+int ajustes_fonte_grupo_sessoes(void);
+// Reusar o ultimo link (fontevolta.h): 1 = ligado; e a validade em segundos.
+int ajustes_link_reusar(void);
+unsigned ajustes_link_prazo_s(void);
 int ajustes_fonte_escopo(void);
 int ajustes_fonte_regex_modo(void);
 // "Usar a ordem" dos add-ons (FR_ORDEM_*); 0 tambem quando nao ha ordem.
