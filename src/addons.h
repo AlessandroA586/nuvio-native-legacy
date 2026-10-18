@@ -252,11 +252,11 @@ int  addons_n_legendas(void);
 // memoria pode ser de outro titulo. Quem liga legenda sozinho (faixas.c, #129)
 // precisa dessa distincao; a folha nao, ela so mostra o que ha.
 int  addons_legendas_prontas(void);
+// Thread-local copy, valid until this thread calls addons_legenda() again.
 const Legenda *addons_legenda(int i);
 // ATOMIC SNAPSHOT of the subtitle list: copies up to `max` entries while the
-// list mutex is held, so a reader never sees a list being replaced (the
-// pointer from addons_legenda() is read after the unlock and can race the
-// worker). `geracao` (optional) receives the list generation; `prontas`
+// list mutex is held, so a reader never sees a list being replaced.
+// `geracao` (optional) receives the list generation; `prontas`
 // (optional) the same answer as addons_legendas_prontas(), from the same lock.
 // Returns how many entries were copied.
 int  addons_legendas_copiar(Legenda *dst, int max, unsigned *geracao, int *prontas);

@@ -1077,10 +1077,25 @@ int addons_legendas_prontas(void) {
   pthread_mutex_lock(&legTrava); r = !fioLegVivo && legId[0]; pthread_mutex_unlock(&legTrava);
   return r;
 }
+// Tizen 4/5's manual ELF loader cannot initialize compiler TLS.
+static pthread_key_t legCopiaChave;
+static pthread_once_t legCopiaUmaVez = PTHREAD_ONCE_INIT;
+static int legCopiaPronta;
+static void iniciarLegCopia(void) {
+  legCopiaPronta = pthread_key_create(&legCopiaChave, free) == 0;
+}
 const Legenda *addons_legenda(int i) {
+  pthread_once(&legCopiaUmaVez, iniciarLegCopia);
+  if (!legCopiaPronta) return NULL;
+  Legenda *copia = pthread_getspecific(legCopiaChave);
+  if (!copia) {
+    copia = malloc(sizeof *copia);
+    if (!copia) return NULL;
+    if (pthread_setspecific(legCopiaChave, copia)) { free(copia); return NULL; }
+  }
   const Legenda *r = NULL;
   pthread_mutex_lock(&legTrava);
-  if (i >= 0 && i < nLegs) r = &legs[i];
+  if (i >= 0 && i < nLegs) { *copia = legs[i]; r = copia; }
   pthread_mutex_unlock(&legTrava);
   return r;
 }
