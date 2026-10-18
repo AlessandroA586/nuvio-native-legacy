@@ -258,15 +258,31 @@ static int cmpArq(const void *x, const void *y) {
   return natural(a->caminho, b->caminho);
 }
 
+void partes_lista_limpar(PartesLista *l) {
+  free(l->arq);
+  memset(l, 0, sizeof *l);
+}
+int partes_lista_copiar(PartesLista *dst, const PartesLista *src) {
+  if (dst == src) return 1;
+  ParteArq *arq = src->n ? malloc((size_t)src->n * sizeof *arq) : NULL;
+  if (src->n && !arq) { partes_lista_limpar(dst); dst->estado = PARTES_ERRO; return 0; }
+  if (src->n) memcpy(arq, src->arq, (size_t)src->n * sizeof *arq);
+  partes_lista_limpar(dst);
+  *dst = *src;
+  dst->arq = arq;
+  return 1;
+}
+
 int partes_ler_item(const char *item, const char *fim, int usenet, PartesLista *l) {
-  static ArqTmp tmp[PARTES_MAX];   // so o fio de quem chama usa (um fio de partes por vez)
+  ArqTmp *tmp = NULL;
+  int cap = 0;
   static pthread_mutex_t tmpTrava = PTHREAD_MUTEX_INITIALIZER;
   const char *fa, *el;
   int n = 0;
   uint64_t maior = 0;
   if (!item || *item != '{' || !l) return 0;
   if (!fim) fim = js_fim(item);
-  memset(l, 0, sizeof *l);
+  partes_lista_limpar(l);
   l->atual = -1;
   l->usenet = usenet;
   l->item = (int)numRaiz(item, fim, "id", -1);
@@ -279,7 +295,7 @@ int partes_ler_item(const char *item, const char *fim, int usenet, PartesLista *
   pthread_mutex_lock(&tmpTrava);
   el = fa + 1;
   while (el < fim && isspace((unsigned char)*el)) el++;
-  for (; el && el < fim && *el == '{' && n < PARTES_MAX; el = js_prox(js_fim(el))) {
+  for (; el && el < fim && *el == '{'; el = js_prox(js_fim(el))) {
     const char *ef = js_fim(el);
     char nome[512] = "", curto[PARTES_NOME] = "";
     double tam, id;
@@ -290,6 +306,12 @@ int partes_ler_item(const char *item, const char *fim, int usenet, PartesLista *
     id = numRaiz(el, ef, "id", -1);
     if (id < 0) continue;
     tam = numRaiz(el, ef, "size", 0);
+    if (n == cap) {
+      int next = cap ? cap * 2 : 64;
+      ArqTmp *grown = realloc(tmp, (size_t)next * sizeof *tmp);
+      if (!grown) { free(tmp); pthread_mutex_unlock(&tmpTrava); return 0; }
+      tmp = grown; cap = next;
+    }
     memset(&tmp[n], 0, sizeof tmp[n]);
     tmp[n].a.id = (int)id;
     tmp[n].a.bytes = tam > 0 ? (uint64_t)tam : 0;
@@ -322,7 +344,10 @@ int partes_ler_item(const char *item, const char *fim, int usenet, PartesLista *
     }
     ordemPorTemporada = todosComTemporada; }
   qsort(tmp, (size_t)n, sizeof tmp[0], cmpArq);
+  l->arq = n ? malloc((size_t)n * sizeof *l->arq) : NULL;
+  if (n && !l->arq) { free(tmp); pthread_mutex_unlock(&tmpTrava); return 0; }
   for (int i = 0; i < n; i++) l->arq[i] = tmp[i].a;
+  free(tmp);
   pthread_mutex_unlock(&tmpTrava);
   l->n = n;
   return n > 0;
@@ -793,7 +818,7 @@ static struct { char chave[160]; unsigned conta; PartesLista l; } memo[PARTES_ME
 static int memoProx;
 static int memoPegarSemTrava(const char *ch, PartesLista *l) {
   for (int i = 0; i < PARTES_MEMO; i++)
-    if (memo[i].conta == debrid_tb_geracao() && memo[i].chave[0] && !strcmp(memo[i].chave, ch)) { if (l) *l = memo[i].l; return 1; }
+    if (memo[i].conta == debrid_tb_geracao() && memo[i].chave[0] && !strcmp(memo[i].chave, ch)) { if (l && !partes_lista_copiar(l, &memo[i].l)) return 0; return 1; }
   return 0;
 }
 static void memoGuardarSemTrava(const char *ch, const PartesLista *l, unsigned conta) {
@@ -801,7 +826,7 @@ static void memoGuardarSemTrava(const char *ch, const PartesLista *l, unsigned c
   for (i = 0; i < PARTES_MEMO; i++) if (!strcmp(memo[i].chave, ch)) break;
   if (i == PARTES_MEMO) { i = memoProx; memoProx = (memoProx + 1) % PARTES_MEMO; }
   snprintf(memo[i].chave, sizeof memo[i].chave, "%s", ch);
-  memo[i].l = *l;
+  if (!partes_lista_copiar(&memo[i].l, l)) { memo[i].chave[0] = 0; return; }
   memo[i].conta = conta;
 }
 
@@ -880,7 +905,7 @@ static void publicar(const PedidoLista *pd, const PartesLista *l) {
   pthread_mutex_lock(&trava);
   if (pd->conta == debrid_tb_geracao()) {
     if (l->estado == PARTES_PRONTO) memoGuardarSemTrava(pd->chave, l, pd->conta);
-    if (!pd->cedo && pd->geracao == geracaoLista) { ultima = *l; ultimaConta = pd->conta; }
+    if (!pd->cedo && pd->geracao == geracaoLista) { partes_lista_copiar(&ultima, l); ultimaConta = pd->conta; }
   }
   pthread_mutex_unlock(&trava);
 }
@@ -997,7 +1022,7 @@ static void logEstadoItem(const char *item, const char *porque) {
 static int acharLembrado(const char *corpo, char lembrado[][41], const PedidoLista *pd, uint64_t bytes, PartesLista *l) {
   static PartesLista t;   // fioTrava
   if (!partes_achar(corpo, 0, lembrado, 1, 0, NULL, 0, &t)) return 0;
-  *l = t;
+  if (!partes_lista_copiar(l, &t)) return 0;
   l->atual = arquivoDaFonte(l, pd->arquivo, bytes);
   l->exato = 0;
   snprintf(l->como, sizeof l->como, "remembered");
@@ -1010,7 +1035,7 @@ static void abrirItem(PedidoLista *pd, PartesLista *l) {
   unsigned t0 = msAgora();
   char *r = debrid_tb_mylist(0, pd->item, 0, 1, &st);
   const char *d = itemDoCorpo(r);
-  memset(l, 0, sizeof *l);
+  partes_lista_limpar(l);
   l->atual = -1;
   if (d && partes_ler_item(d, js_fim(d), 0, l)) {
     l->atual = arquivoDaFonte(l, pd->arquivo, pd->bytes);
@@ -1036,7 +1061,7 @@ static void *fioLista(void *u) {
   int nh = 0, confiavel = 0, disp;
   unsigned t0 = msAgora();
   pthread_mutex_lock(&fioTrava);
-  memset(&l, 0, sizeof l);
+  partes_lista_limpar(&l);
   l.atual = -1;
   if (pd->conta != debrid_tb_geracao()) goto fim;
   disp = debrid_tb_disponivel();
@@ -1198,7 +1223,7 @@ static void *fioLista(void *u) {
              "the add-on's file is %d (0 = not in it); %d other cop%s\n", msAgora() - t0, l.usenet ? "usenet" : "torrent", l.como,
              mem ? ", list from memory" : "", l.n, partes_principais(&l), l.atual + 1, l.nCopias, l.nCopias == 1 ? "y" : "ies");
     } else if (cop.nCopias > 0) {
-      memset(&l, 0, sizeof l);
+      partes_lista_limpar(&l);
       l.atual = -1;
       l.estado = PARTES_ESCOLHER;
       l.nCopias = cop.nCopias;
@@ -1261,7 +1286,7 @@ void partes_pedir(const Stream *s, const char *titulo) {
     return;
   }
   geracaoLista++;
-  memset(&ultima, 0, sizeof ultima);
+  partes_lista_limpar(&ultima);
   ultimaConta = debrid_tb_geracao();
   ultima.estado = PARTES_BUSCANDO;
   ultima.atual = -1;
@@ -1314,7 +1339,7 @@ void partes_pedir_item(const Stream *s, int item) {
   memcpy(pd->copias, ultima.copias, sizeof pd->copias);
   geracaoLista++;
   pd->geracao = geracaoLista;
-  memset(&ultima, 0, sizeof ultima);
+  partes_lista_limpar(&ultima);
   ultimaConta = pd->conta;
   ultima.estado = PARTES_BUSCANDO;
   ultima.atual = -1;
@@ -1341,7 +1366,7 @@ int partes_resultado_de(const Stream *s, PartesLista *l) {
   chaveFonte(s, ch, sizeof ch);
   pthread_mutex_lock(&trava);
   e = ultimaConta != debrid_tb_geracao() || strcmp(ch, chaveUltima) ? PARTES_VAZIO : ultima.estado;
-  if (e != PARTES_VAZIO && l) *l = ultima;
+  if (e != PARTES_VAZIO && l && !partes_lista_copiar(l, &ultima)) e = PARTES_ERRO;
   pthread_mutex_unlock(&trava);
   return e;
 }
@@ -1350,7 +1375,7 @@ int partes_resultado(PartesLista *l) {
   int e;
   pthread_mutex_lock(&trava);
   e = ultimaConta == debrid_tb_geracao() ? ultima.estado : PARTES_VAZIO;
-  if (l && e != PARTES_VAZIO) *l = ultima;
+  if (l && e != PARTES_VAZIO && !partes_lista_copiar(l, &ultima)) e = PARTES_ERRO;
   pthread_mutex_unlock(&trava);
   return e;
 }
@@ -1359,7 +1384,7 @@ void partes_cancelar(void) {
   pthread_mutex_lock(&trava);
   if (ultima.estado == PARTES_BUSCANDO) {
     geracaoLista++;
-    memset(&ultima, 0, sizeof ultima);
+    partes_lista_limpar(&ultima);
     chaveUltima[0] = 0;
   }
   pthread_mutex_unlock(&trava);
@@ -1380,7 +1405,7 @@ static void *fioLink(void *u) {
   static pthread_mutex_t fioTrava = PTHREAD_MUTEX_INITIALIZER;
   int ok = 1, st = 0;
   pthread_mutex_lock(&fioTrava);
-  memset(&l, 0, sizeof l);
+  partes_lista_limpar(&l);
   l.atual = -1;
   url[0] = 0;
   if (pd->comLista && pd->conta == debrid_tb_geracao()) {
@@ -1407,7 +1432,8 @@ static void *fioLink(void *u) {
   if (pd->geracao == geracaoLink && pd->conta == debrid_tb_geracao()) {
     linkEstado = ok ? 1 : -1;
     snprintf(linkUrl, sizeof linkUrl, "%s", ok ? url : "");
-    linkLista = l;
+    partes_lista_copiar(&linkLista, &l);
+    if (linkLista.estado == PARTES_ERRO) linkEstado = -1;
   }
   pthread_mutex_unlock(&trava);
   printf("[partes] link for file id %d of TorBox %s %d: %s\n", pd->arquivo,
@@ -1444,7 +1470,7 @@ int partes_link_estado(char *url, unsigned n, PartesLista *l) {
   e = linkConta == debrid_tb_geracao() ? linkEstado : -2;
   if (e == 1) {
     if (url && n) snprintf(url, n, "%s", linkUrl);
-    if (l) *l = linkLista;
+    if (l && !partes_lista_copiar(l, &linkLista)) e = -1;
   }
   if (e == 1 || e == -1) { linkEstado = -2; linkUrl[0] = 0; }
   pthread_mutex_unlock(&trava);
@@ -1471,7 +1497,7 @@ void partes_sessao_iniciar(const char *alvo, const PartesLista *l, int k) {
     return;
   }
   snprintf(sesAlvo, sizeof sesAlvo, "%s", alvo);
-  sesLista = *l;
+  if (!partes_lista_copiar(&sesLista, l)) { partes_sessao_parar("allocation failed"); return; }
   sesK = k;
   printf("[partes] parts session on: part %d of %d\n", partes_numero(l, k), partes_principais(l));
   fflush(stdout);

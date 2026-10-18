@@ -20,8 +20,8 @@ duration = player.split('int player_parece_parte(void)', 1)[1].split('// O titul
 countdown = player.split('static void durFonteContagem(', 1)[1].split('static void durFonteAtualizar(', 1)[0]
 # Compile the real confirmation hook when present; baseline has no cancellation.
 confirm = player.split('void player_confirmar_partes(void) {', 1)[1].split('\n}', 1)[0] if 'void player_confirmar_partes(void) {' in player else ''
-automatic = app.split('    { const Stream *fs = stream_atual()', 1)[1].split('        parteArqLista = l;', 1)[0]
-confirmation = app.split('        partes_sessao_iniciar(alvo, &l, l.atual);', 1)[1].split('        parteArqLista = l;', 1)[0]
+automatic = app.split('    { const Stream *fs = stream_atual()', 1)[1].split('        if (!partes_lista_copiar(&parteArqLista, &l))', 1)[0]
+confirmation = app.split('        partes_sessao_iniciar(alvo, &l, l.atual);', 1)[1].split('        if (!partes_lista_copiar(&parteArqLista, &l))', 1)[0]
 closing = player.split('  double cred = credEfetivo();\n  int duracaoContradita', 1)[1]
 closing = '  double cred = credEfetivo();\n  int duracaoContradita' + closing.split('  // Concluido e concluido:', 1)[0]
 trakt_close = next(line.strip() for line in player.splitlines() if 'if (!duracaoContradita) trakt_marcar(' in line)
@@ -146,7 +146,7 @@ static void parteFalhou(const char *reason) { (void)reason; openingErrors++; }
 #define partes_link_pedir requestNext
 #define partes_link_estado nextResult
 static void watchNext(void) {
-  PartesLista list={0};
+  PartesLista list={.n=2,.arq=(ParteArq[2]){{0}}};
   const PartesLista *sl=&list;
   int prox=1,r;
   double d=1800,pos=1800;
@@ -204,7 +204,7 @@ int main(void) {
   watchNext(); ticks+=30001; watchNext();
   assert(openingErrors==1 && requests==1);
   puts("PASS next-part pending request times out after 30 seconds");
-  PartesLista completionMovie = {.n=4,.atual=3,.arq={
+  PartesLista completionMovie = {.n=4,.atual=3,.arq=(ParteArq[]){
     {.id=1,.tipo=PARTE_EP}, {.id=2,.tipo=PARTE_EP},
     {.id=3,.tipo=PARTE_EP}, {.id=4,.tipo=PARTE_EP}}};
   partes_sessao_iniciar("tt-completion", &completionMovie, 3);
@@ -225,7 +225,7 @@ int main(void) {
   partes=0;
 
   // A 40-minute part of a 130-minute movie arms rejection at t=1 s.
-  PartesLista movie = {.n=3,.atual=0,.arq={
+  PartesLista movie = {.n=3,.atual=0,.arq=(ParteArq[]){
     {.id=1,.tipo=PARTE_EP}, {.id=2,.tipo=PARTE_EP}, {.id=3,.tipo=PARTE_EP}}};
   for (int expired=0; expired<2; expired++) {
     partes_sessao_parar("reset duration case");
@@ -324,7 +324,7 @@ int main(void) {
   assert(partes_ler_item("{\"id\":8,\"files\":[{\"id\":1,\"name\":\"Movie.CD1.mkv\",\"size\":300},{\"id\":2,\"name\":\"Movie.CD2.mkv\",\"size\":300}]}",NULL,0,&pack));
   assert(partes_principais(&pack)==2 && partes_seguinte(&pack,0)==1);
   assert(!pack.arq[0].temporadaZero);
-  PartesLista l = {.n=3,.atual=0,.arq={
+  PartesLista l = {.n=3,.atual=0,.arq=(ParteArq[]){
     {.temporada=1,.episodio=1,.tipo=PARTE_EP},
     {.temporada=1,.episodio=3,.tipo=PARTE_EP},
     {.tipo=PARTE_ESPECIAL,.extra=1}}};

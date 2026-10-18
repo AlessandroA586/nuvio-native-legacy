@@ -4224,8 +4224,8 @@ static PartesLista ptEscolhaL;
 // temporada / Especiais / Extras), ou a lista de copias do titulo.
 enum { PR_ESCOLHER = 0, PR_TEMPORADA, PR_ARQ, PR_COPIA };
 typedef struct { int tipo, idx; float y, h; } PtLinha;
-#define PT_LINHAS (PARTES_MAX + PARTES_COPIAS + 48)
-static PtLinha ptLinhas[PT_LINHAS];
+static PtLinha *ptLinhas;
+static int ptCapLinhas;
 static int ptNLinhas, ptAba, ptCopias, ptSemCopias;
 static int ptAbaTipos[3], ptNAbas;
 
@@ -4236,7 +4236,7 @@ static int linhaAceitaPartes(int i) {
 static void partesAbrirPainel(int i) {
   ptAberto = 1; ptFonte = i; ptFoco = 0; ptFocoPosto = 0; ptRol = ptRolAlvo = 0; ptDesde = SDL_GetTicks();
   ptAba = 0; ptCopias = 0; ptSemCopias = 0; ptNLinhas = 0;
-  memset(&ptL, 0, sizeof ptL);
+  partes_lista_limpar(&ptL);
   ptL.estado = PARTES_BUSCANDO; ptL.atual = -1;
   nv_limpar_texto(lista[i].provedor, ptProv, sizeof ptProv, NV_LIMPA_UMA_LINHA);
   // O que a busca tem para casar, sem URL: o arquivo da fonte, se o link traz
@@ -4277,8 +4277,14 @@ static void ptAbas(void) {
 static void ptMontar(void) {
   float y = 0;
   ptNLinhas = 0;
+  int needed = 2 * ptL.n + PARTES_COPIAS + 1;
+  if (needed > ptCapLinhas) {
+    PtLinha *rows = realloc(ptLinhas, (size_t)needed * sizeof *rows);
+    if (!rows) { ptL.estado = PARTES_ERRO; return; }
+    ptLinhas = rows; ptCapLinhas = needed;
+  }
   if (ptCopiasVisiveis()) {
-    for (int c = 0; c < ptL.nCopias && ptNLinhas < PT_LINHAS; c++) {
+    for (int c = 0; c < ptL.nCopias; c++) {
       ptLinhas[ptNLinhas] = (PtLinha){PR_COPIA, c, y, PT_LINHA_H}; y += PT_LINHA_H; ptNLinhas++;
     }
     return;
@@ -4291,7 +4297,7 @@ static void ptMontar(void) {
     if (tipo == PARTE_EP)
       for (int i = 0; i < ptL.n; i++)
         if (ptL.arq[i].tipo == PARTE_EP && ptL.arq[i].temporada != ult) { if (ptL.arq[i].temporada > 0) temps++; ult = ptL.arq[i].temporada; }
-    for (int i = 0; i < ptL.n && ptNLinhas < PT_LINHAS - 1; i++) {
+    for (int i = 0; i < ptL.n; i++) {
       if (ptL.arq[i].tipo != tipo) continue;
       if (temps >= 2 && ptL.arq[i].temporada != ultT) {
         ultT = ptL.arq[i].temporada;
@@ -4352,11 +4358,12 @@ static int partesEvento(const SDL_Event *e) {
         fflush(stdout);
         partes_pedir_item(&lista[ptFonte], c->item);
         ptCopias = 0; ptFocoPosto = 0; ptDesde = SDL_GetTicks(); ptAba = 0; ptRolAlvo = 0;
-        memset(&ptL, 0, sizeof ptL); ptL.estado = PARTES_BUSCANDO; ptL.atual = -1;
+        partes_lista_limpar(&ptL); ptL.estado = PARTES_BUSCANDO; ptL.atual = -1;
       }
     } else if (ln->tipo == PR_ARQ) {
       int f = ln->idx;
-      ptEscolhaFonte = ptFonte; ptEscolhaK = f; ptEscolhaL = ptL;
+      if (!partes_lista_copiar(&ptEscolhaL, &ptL)) return 1;
+      ptEscolhaFonte = ptFonte; ptEscolhaK = f;
       ptEscolhaGeracao = listaGeracao;
       printf("[partes] file %d of %d picked in the files list (%s)\n", f + 1, ptL.n,
              ptL.arq[f].tipo == PARTE_EP ? "part" : ptL.arq[f].tipo == PARTE_ESPECIAL ? "special" : "extra");
@@ -4377,7 +4384,7 @@ int stream_partes_escolheu(int *fonte, PartesLista *l, int *k) {
     return 0;
   }
   if (fonte) *fonte = ptEscolhaFonte;
-  if (l) *l = ptEscolhaL;
+  if (l && !partes_lista_copiar(l, &ptEscolhaL)) { ptEscolhaFonte = -1; return 0; }
   if (k) *k = ptEscolhaK;
   ptEscolhaFonte = -1;
   return 1;

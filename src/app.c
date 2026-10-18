@@ -2661,7 +2661,8 @@ static void abrirParte(int fonte, const PartesLista *l, int k) {
   else partes_sessao_iniciar(alvo, l, k);
   // Outro arquivo que o do ponto guardado: o ponto antigo nao vale mais.
   if (partePos < 0) partes_ponto_esquecer(alvo, sessao_usuario(), perfis_ativo());
-  parteArqLista = *l; parteArqK = k;
+  if (!partes_lista_copiar(&parteArqLista, l)) { parteZerar(); return; }
+  parteArqK = k;
   parteMp4 = nomeMp4(l->arq[k].nome);
   // O prazo de 30 s do link conta DAQUI. Sem isto ele contava de um relogio
   // velho e, minutos depois da primeira abertura, toda escolha "vencia" no
@@ -2763,7 +2764,8 @@ static void vigiarPartes(void) {
         partes_sessao_iniciar(alvo, &l, l.atual);
         if (!partes_sessao_de(alvo)) return;
         player_confirmar_partes();
-        parteArqLista = l; parteArqK = l.atual; parteMp4 = nomeMp4(l.arq[l.atual].nome);
+        if (!partes_lista_copiar(&parteArqLista, &l)) { parteFalhou("file list allocation failed"); return; }
+        parteArqK = l.atual; parteMp4 = nomeMp4(l.arq[l.atual].nome);
         partes_arquivo_definir(alvo, l.usenet, l.item, l.arq[l.atual].id);
         snprintf(parteUrl, sizeof parteUrl, "%s", video_url_atual());
         parteFase = PF_TOCANDO; parteGuardouEm = 0; parteRenovou = 0;
@@ -2805,7 +2807,8 @@ static void vigiarPartes(void) {
       player_episodio_atual(&rt, &re);
       if (!(ci && !strcmp(ci->tipo, "series")) && !(rt > 0 && re > 0))
         partes_sessao_iniciar(alvo, &l, l.atual);
-      parteArqLista = l; parteArqK = l.atual;
+      if (!partes_lista_copiar(&parteArqLista, &l)) { parteRecuar("file list allocation failed"); return; }
+      parteArqK = l.atual;
       parteMp4 = nomeMp4(l.arq[l.atual].nome);
     }
     parteTocar(url, partePos);

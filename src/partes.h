@@ -46,7 +46,6 @@
 #include <stdint.h>
 #include "streams.h"
 
-#define PARTES_MAX 160
 #define PARTES_COPIAS 12
 #define PARTES_CASA_ARQUIVO "partescasa.txt"
 #define PARTES_CASA_MAX 200
@@ -94,7 +93,7 @@ typedef struct {
   int usenet;              // 1 = item de usenet, 0 = torrent
   int item;                // id do item no TorBox
   int n;
-  ParteArq arq[PARTES_MAX];   // so videos, na ordem natural do caminho
+  ParteArq *arq;            // owned videos, in natural path order
   int atual;               // o arquivo que a fonte toca (-1 = nao se sabe)
   char como[24];           // "hash", "filename", "link hash", "added", "size", "remembered", "chosen"
   int exato;               // casou por hash: sem "Escolher outra copia"
@@ -102,6 +101,10 @@ typedef struct {
   int nCopias;
   ParteCopia copias[PARTES_COPIAS];   // as copias do titulo, melhor primeiro
 } PartesLista;
+
+// Lists must be zero-initialized; clear before discarding, copy instead of assignment.
+void partes_lista_limpar(PartesLista *l);
+int partes_lista_copiar(PartesLista *dst, const PartesLista *src);
 
 // ---- puro (testes) --------------------------------------------------------
 // Hashes de 40 hex soltos no texto, em minusculas. Devolve quantos.

@@ -41,6 +41,14 @@ int main(void) {
   fontevolta_definir_arquivo(ler, gravar, apagarArq);
   fontevolta_configurar(1, 24u * 3600u);
 
+  strcpy(a.audioIdiomas, "en");
+  strcpy(a.legendaIdiomas, "pt");
+  strcpy(a.descricao, "Structured metadata only");
+  a.filtroLido = 1;
+  a.filtro.valores[FONTEFILTRO_LINGUAS] = fontefiltro_valores(FONTEFILTRO_LINGUAS, "en");
+  a.filtro.tamanhoBytes = a.tamanhoBytes = 4404000000ULL;
+  strcpy(a.filtro.grupo, "StructuredGroup");
+
   // Uma por episodio, e todas valem ao mesmo tempo.
   fontevolta_guardar("tt9:1:1", "conta-a", 1, &a, 2000, t0);
   fontevolta_guardar("tt9:1:2", "conta-a", 1, &b, 0, t0);
@@ -59,7 +67,21 @@ int main(void) {
   assert(!strcmp(g.url, a.url) && !strcmp(g.cabecalhos, a.cabecalhos) && !strcmp(g.rotulo, a.rotulo));
   assert(!strcmp(g.arquivo, a.arquivo) && !strcmp(g.bingeGroup, a.bingeGroup) && !strcmp(g.provedor, a.provedor));
   assert(g.altura == 2160 && g.dolbyVision == 1 && g.fileIdx == 3 && g.tamanhoMB == 4200);
+  assert(g.filtroLido && !memcmp(&g.filtro, &a.filtro, sizeof a.filtro));
+  assert(!strcmp(g.audioIdiomas, "en") && !strcmp(g.legendaIdiomas, "pt"));
+  assert(g.tamanhoBytes == a.tamanhoBytes && !strcmp(g.descricao, a.descricao));
+  { FonteFiltroConfig excluded = {0};
+    excluded.excluir[FONTEFILTRO_LINGUAS] = fontefiltro_valores(FONTEFILTRO_LINGUAS, "en");
+    assert(!fontefiltro_permite(&excluded, &g.filtro));
+  }
   puts("ok sobrevive ao arranque, campos intactos");
+
+  // Legacy entries cannot recover structured metadata; force fresh lookup.
+  strstr(disco, "v2")[1] = '1';
+  arranqueFrio();
+  assert(!fontevolta_pegar("tt9:1:1", "conta-a", 1, t0, &g));
+  fontevolta_guardar("tt9:1:1", "conta-a", 1, &a, 0, t0);
+  fontevolta_guardar("tt9:1:2", "conta-a", 1, &b, 0, t0);
 
   // Outra conta / outro perfil nao veem, e nao apagam a entrada.
   assert(!fontevolta_pegar("tt9:1:1", "conta-b", 1, t0, &g));

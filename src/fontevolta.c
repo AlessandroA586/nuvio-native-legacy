@@ -85,10 +85,10 @@ static void gravarSemTrava(void) {
   int i;
   if (!persistir || !arqGravar) return;
   if (!nEnt) { if (arqApagar) arqApagar(ARQUIVO); return; }
-  cap = (size_t)nEnt * (2u * 4096u + 2u * 512u + 2048u) + 64u;
+  cap = (size_t)nEnt * (2u * sizeof(Stream) + 2048u) + 64u;
   buf = malloc(cap);
   if (!buf) return;
-  k += (size_t)snprintf(buf, cap, "# nuvio fonte guardada v1\n");
+  k += (size_t)snprintf(buf, cap, "# nuvio fonte guardada v2\n");
   for (i = 0; i < nEnt && k + 1 < cap; i++) {
     const Entrada *e = &ent[i];
     const Stream *s = &e->s;
@@ -97,7 +97,13 @@ static void gravarSemTrava(void) {
     CAMPO(e->alvo); CAMPO(e->conta); CAMPO(s->url); CAMPO(s->cabecalhos);
     CAMPO(s->rotulo); CAMPO(s->provedor); CAMPO(s->addonChave); CAMPO(s->arquivo);
     CAMPO(s->bingeGroup); CAMPO(s->infoHash);
+    CAMPO(s->audioIdiomas); CAMPO(s->legendaIdiomas); CAMPO(s->descricao);
+    CAMPO(s->filtro.grupo); CAMPO(s->hashTorrent); CAMPO(s->videoHash);
 #undef CAMPO
+    k += (size_t)snprintf(buf + k, cap - k, "%d\t%llu\t%llu\t", s->filtroLido,
+                          (unsigned long long)s->tamanhoBytes, (unsigned long long)s->filtro.tamanhoBytes);
+    for (int j = 0; j < FONTEFILTRO_N; j++)
+      k += (size_t)snprintf(buf + k, cap - k, "%llu\t", (unsigned long long)s->filtro.valores[j]);
     if (k + 1 < cap)
       k += (size_t)snprintf(buf + k, cap - k, "%d\t%d\t%d\t%d\t%d\t%ld\t%d\n", s->altura, s->dolbyVision,
                             s->dolbyAtmos, s->mp4, s->fileIdx, s->tamanhoMB, s->debridServico);
@@ -113,6 +119,8 @@ static void carregarSemTrava(void) {
   nEnt = 0;
   b = arqLer(ARQUIVO);
   if (!b) return;
+  // Older entries lack structured classification: fetch fresh sources instead.
+  if (strncmp(b, "# nuvio fonte guardada v2\n", 26)) { free(b); return; }
   for (linha = b; linha && *linha && nEnt < FONTEVOLTA_MAX; linha = prox) {
     char *fim = strchr(linha, '\n'), *p;
     Entrada *e = &ent[nEnt];
@@ -133,6 +141,18 @@ static void carregarSemTrava(void) {
     desesc(e->s.arquivo, sizeof e->s.arquivo, campo(&p));
     desesc(e->s.bingeGroup, sizeof e->s.bingeGroup, campo(&p));
     desesc(e->s.infoHash, sizeof e->s.infoHash, campo(&p));
+    desesc(e->s.audioIdiomas, sizeof e->s.audioIdiomas, campo(&p));
+    desesc(e->s.legendaIdiomas, sizeof e->s.legendaIdiomas, campo(&p));
+    desesc(e->s.descricao, sizeof e->s.descricao, campo(&p));
+    desesc(e->s.filtro.grupo, sizeof e->s.filtro.grupo, campo(&p));
+    desesc(e->s.hashTorrent, sizeof e->s.hashTorrent, campo(&p));
+    desesc(e->s.videoHash, sizeof e->s.videoHash, campo(&p));
+    e->s.filtroLido = atoi(campo(&p));
+    e->s.tamanhoBytes = strtoull(campo(&p), NULL, 10);
+    e->s.filtro.tamanhoBytes = strtoull(campo(&p), NULL, 10);
+    for (int j = 0; j < FONTEFILTRO_N; j++)
+      e->s.filtro.valores[j] = strtoull(campo(&p), NULL, 10);
+    if (!p) continue;
     e->s.altura = atoi(campo(&p));
     e->s.dolbyVision = atoi(campo(&p));
     e->s.dolbyAtmos = atoi(campo(&p));

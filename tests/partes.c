@@ -42,7 +42,7 @@ int main(void) {
   int n = partes_hashes_texto("magnet:?xt=urn:btih:" H1 "&dn=x", hs, 2);
   ok(n == 1 && !strcmp(hs[0], H1), "40-hex hash read from the add-on link");
 
-  memset(&l, 0, sizeof l);
+  partes_lista_limpar(&l);
   ok(partes_achar(corpo, 0, hs, 1, 1, "", 0, &l) == 1 && l.item == 7, "hash finds the source's item");
   ok(l.n == 4, "all four videos listed");
   ok(l.n == 4 && strstr(l.arq[0].nome, "01") && strstr(l.arq[1].nome, "02") && strstr(l.arq[2].nome, "03"),
@@ -57,14 +57,37 @@ int main(void) {
        "half of part 2 is the movie's middle");
     ok(!partes_conta_virtual(&l, 3, 10, 60, 5760, &vp, &vd), "an extra has no movie position"); }
 
-  memset(&l, 0, sizeof l);
+  partes_lista_limpar(&l);
   ok(partes_achar(corpo, 0, hs, 0, 0, "Kaguya-sama First Kiss - 02.mkv", 300000000, &l) == 1 && l.item == 7 &&
      l.atual >= 0 && strstr(l.arq[l.atual].nome, "02"), "file name finds the item and the playing file");
 
   { char outro[1][41] = { "cccccccccccccccccccccccccccccccccccccc3" "c" };
-    memset(&l, 0, sizeof l);
+    partes_lista_limpar(&l);
     ok(partes_achar(corpo, 0, outro, 1, 1, "Kaguya-sama First Kiss - 02.mkv", 300000000, &l) != 1,
        "an unknown explicit hash never falls back to another release's filename/size"); }
+
+  { char pack[65536];
+    size_t used = (size_t)snprintf(pack, sizeof pack, "{\"data\":[{\"id\":99,\"files\":[");
+    for (int i = 240; i > 0; i--)
+      used += (size_t)snprintf(pack + used, sizeof pack - used,
+        "{\"id\":%d,\"name\":\"Pack/Show - %03d.mkv\",\"size\":300000000},", i, i);
+    snprintf(pack + used, sizeof pack - used,
+      "{\"id\":241,\"name\":\"Pack/OVA 1.mkv\",\"size\":300000000},"
+      "{\"id\":242,\"name\":\"Pack/NCOP.mkv\",\"size\":10000000}]}]}");
+    ok(partes_achar(pack, 0, hs, 0, 0, "Show - 001.mkv", 0, &l), "large pack found");
+    ok(l.n == 242, "all 240 episodes and trailing special/extra survive parsing");
+    ok(l.atual >= 0 && l.arq[l.atual].id == 1, "current file beyond input entry 160 identified");
+    ok(l.n == 242 && l.arq[0].id == 1 && l.arq[239].id == 240 &&
+       l.arq[240].tipo == PARTE_ESPECIAL && l.arq[241].tipo == PARTE_EXTRA,
+       "full pack naturally sorted and trailing tabs retained");
+  }
+
+  { PartesLista copy = {0};
+    ok(partes_lista_copiar(&copy, &l), "large list copied");
+    partes_lista_limpar(&l);
+    ok(copy.n == 242 && copy.arq[241].id == 242, "copy survives source replacement");
+    partes_lista_limpar(&copy);
+  }
 
   printf(falhas ? "partes: %d FAIL\n" : "partes: ok\n", falhas);
   return falhas != 0;
