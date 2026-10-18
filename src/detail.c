@@ -2138,10 +2138,12 @@ static GfxRect epPlacaRect(GfxRect r, float thH, float ft) {
 }
 static float epPlacaA(float f) { return NV_DETP_EP_PLACA_A * anim_clamp(f, 0.0f, 1.0f); }
 // Glass cards tint the shared page backdrop, without a per-card material pass.
+// Moderna text rests on the cast tile tint (7%); focus doubles it.
 // Glass off keeps the existing white focus plate.
 static void epPlacaDesenha(GfxRect p, float f, float a) {
   if (ajustes_vidro())
-    gfx_cor(p, 24.0f / p.h, 1, 1, 1, 0.07f * anim_clamp(f, 0.0f, 1.0f) * a);
+    gfx_cor(p, 24.0f / p.h, 1, 1, 1,
+            0.07f * ((epModerna() ? 1.0f : 0.0f) + anim_clamp(f, 0.0f, 1.0f)) * a);
   else
     gfx_cor(p, 24.0f / p.h, 1, 1, 1, epPlacaA(f) * a);
 }
@@ -5455,8 +5457,17 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   // que nasce e cresce ~3% a partir do centro NA MOLA do foco — antes o card
   // so ganhava anel/zoom e o texto ficava parado. Nao muda a caixa (`r`), logo
   // nao move nenhum vizinho; some desfocando pelo mesmo caminho.
+  // Glass Moderna: the text rests on a tile in the card box (below); the plate
+  // grows out of that tile with the spring, so a fading card pays no margins.
+  const GfxRect epTile = { r.x, r.y + th.h, r.w, r.h - th.h };
+  const int epVidroTile = !epApple() && ajustes_vidro() && epModerna();
   if (!epApple() && f > 0.005f) {
-    epPlacaDesenha(epPlacaRect(r, th.h, ft), f, a);
+    GfxRect p = epPlacaRect(r, th.h, ft);
+    if (epVidroTile) {
+      p.x = epTile.x + (p.x - epTile.x) * ft; p.y = epTile.y + (p.y - epTile.y) * ft;
+      p.w = epTile.w + (p.w - epTile.w) * ft; p.h = epTile.h + (p.h - epTile.h) * ft;
+    }
+    epPlacaDesenha(p, f, a);
   }
   if (!epApple()) { foco_anel(th, raioTh, f, a); th = foco_zoom(th, f); }
 
@@ -5478,6 +5489,8 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     if (t3) { arte = reserva; t2 = t3; }
   }
   float aArte = (c >= 0 && c < DET_REV_EP) ? revela_arte(&revEp[c], t2 != 0, agora) : 1.0f;
+  // The rest tile arrives with the still, so loading cards add no fill.
+  if (epVidroTile && f <= 0.005f && t2) epPlacaDesenha(epTile, 0.0f, a * aArte);
   // DESFOCAR NAO ASSISTIDOS (blurUnwatchedEpisodes, #133). O ajuste existia na
   // tela e na conta e nada o lia — o card saia nitido em toda plataforma.
   // "Nao assistido" e tudo que o mapa NAO afirma como visto: inclusive o "nao

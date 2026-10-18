@@ -3294,14 +3294,18 @@ void gfx_anel(GfxRect r, float raio, float esp,
   if (r.h <= 0.0f || esp <= 0.0f) return;
   // A ring has no fill: past max(corner, stroke) + 2 px inside the rect the
   // shader writes alpha 0. Large rings draw only the four border strips (same
-  // rect, other uSub, so each fragment is identical to the whole draw).
-  { float m = (raio * r.h > esp ? raio * r.h : esp) + 2.0f;
+  // rect, other uSub, so each fragment is identical to the whole draw). Only
+  // the corners need the radius; between them the edges are stroke + 2 thick.
+  { float m = (raio * r.h > esp ? raio * r.h : esp) + 2.0f, e = esp + 2.0f;
     if (r.w * r.h >= 40000.0f && r.w > 4.0f * m && r.h > 4.0f * m && progs[GFX_ANEL].sub >= 0) {
       float x0 = m / r.w, x1 = 1.0f - x0, y0 = m / r.h, y1 = 1.0f - y0;
-      const float f[4][4] = { { 0, 0, 1, y0 }, { 0, y1, 1, 1 }, { 0, y0, x0, y1 }, { x1, y0, 1, y1 } };
+      float ex = e / r.w, ey = e / r.h;
+      const float f[8][4] = { { 0, 0, x0, y0 }, { x1, 0, 1, y0 }, { 0, y1, x0, 1 }, { x1, y1, 1, 1 },
+                              { x0, 0, x1, ey }, { x0, 1 - ey, x1, 1 },
+                              { 0, y0, ex, y1 }, { 1 - ex, y0, 1, y1 } };
       int k;
       if (ambPendente) gfx_ambiente_descarregar();   // keeps a deferred Dynamic background deferred
-      for (k = 0; k < 4; k++) {
+      for (k = 0; k < 8; k++) {
         memcpy(subAtual, f[k], sizeof subAtual);
         gfx_rect(r, 0, GFX_ANEL, 0, esp / r.h, 0, raio, cr, cg, cb, ca);
       }
