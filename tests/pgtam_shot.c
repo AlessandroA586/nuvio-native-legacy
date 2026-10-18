@@ -90,6 +90,7 @@ static void ajusta(void) {
   assert(a);
   fprintf(a, "idioma 1\nhomeLayoutLocal 0\nvidroLocal 1\n"
              "modernLandscapePostersEnabled 1\nselected_theme 0\n");
+  if (getenv("PGTAM_SEM_GENERO")) fprintf(a, "heroGeneroLocal 1\n");   // "Mostrar genero no destaque" desligado
   fclose(a);
   ajustes_dir(dirDados);
   artehero_fundo_addon(ajustes_fundo_addon());

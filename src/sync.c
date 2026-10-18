@@ -22,6 +22,7 @@ void servidores_esquecer_todos(void);   // servidores.c: wipe every profile's to
 #include "mapa.h"
 #include "recomenda.h"
 #include "fontepref.h"
+#include "fontevolta.h"
 #include "legmemoria.h"
 #include "audiomemoria.h"
 #include "buscasrec.h"
@@ -45,6 +46,7 @@ void servidores_esquecer_todos(void);   // servidores.c: wipe every profile's to
 #include "cachearte.h"
 #include "extras.h"
 #include "arteescolha.h"
+#include "guia.h"
 #include "js.h"
 #include "jsw.h"
 #include <stdio.h>
@@ -169,6 +171,8 @@ static unsigned ajustesBlobGeracao;
 static int ajustesBlobPerfil = -1;
 static int  temAjustesBlob;
 static int  aplicarAjustes = 1;
+// No local/default upload until the main thread has restored this login.
+static int ajustesRestaurando = 1;
 // Flag em disco: a pessoa ja mudou ajustes nesta TV depois do ultimo
 // sync_reaplicar_ajustes. Sem ela, CADA arranque comecava com aplicarAjustes=1
 // e o blob da conta (ainda sem as mudancas locais — a TV nao empurra layout)
@@ -183,6 +187,8 @@ static void carregarProtecaoAjustes(void) {
   t = dados_ler(SY_AJUSTES_LOCAIS);
   if (t && t[0] == '1') {
     aplicarAjustes = 0;
+    __atomic_store_n(&ajustesRestaurando, 0, __ATOMIC_RELEASE);
+    sujoAjustes = 1;
     printf("[sync] ajustes locais protegidos: blob da conta nao reaplica neste arranque\n");
     fflush(stdout);
   }
@@ -945,6 +951,27 @@ static int puxarAjustesPerfil(const char *corpo) {
       }
     }
   }
+  // A successful empty result is a new account, not a failed pull. It is
+  // safe to seed an empty base only after the server confirmed its absence.
+  const char *empty = r;
+  char raw[16];
+  while (*empty && (unsigned char)*empty <= ' ') empty++;
+  int noSettings = *empty == '[';
+  if (noSettings) {
+    empty++; while (*empty && (unsigned char)*empty <= ' ') empty++;
+    noSettings = *empty == ']';
+  }
+  if (!ok && (noSettings || (js_bruto(r, NULL, "settings_json", raw, sizeof raw) && !strcmp(raw, "null")))) {
+    if (nv_perfil_sessao_travar(sessaoDoCiclo)) {
+      free(ajustesBlob);
+      ajustesBlob = strdup("{}");
+      ajustesBlobPerfil = perfilDoCiclo;
+      ajustesBlobGeracao++;
+      temAjustesBlob = aplicarAjustes;
+      ok = ajustesBlob != NULL;
+      nv_perfil_sessao_destravar();
+    }
+  }
   free(r);
   return ok;
 }
@@ -963,7 +990,8 @@ static int puxarAjustesPerfil(const char *corpo) {
 //   2. DEPOIS DO PULL DESTE MESMO CICLO. A base e sempre a mais nova que o
 //      servidor deu, entao o que so o web mudou nao e sobrescrito por um blob
 //      velho guardado em memoria.
-//   3. SO CHAVE QUE JA EXISTE, so o valor dela (ajustes_mesclar_blob).
+//   3. Existing web keys keep their types; portable C preferences use
+//      c_settings_v1, including accounts with a confirmed empty blob.
 //
 // A base guardada e trocada pelo que foi ACEITO: sem isso, o ciclo seguinte
 // costuraria sobre um blob que o servidor ja nao tem mais e mandaria a mesma
@@ -972,7 +1000,8 @@ static void empurrarAjustes(void) {
   char *mesclado = NULL, *r;
   Jsw w;
   int st = 0;
-  if (!sujoAjustes) return;
+  if (!sujoAjustes || !temAjustesPerfil || temAjustesBlob ||
+      __atomic_load_n(&ajustesRestaurando, __ATOMIC_ACQUIRE)) return;
   if (jaAusente("sync_push_profile_settings_blob")) return;
   if (!nv_perfil_sessao_travar(sessaoDoCiclo)) return;
   if (!ajustesBlob) {
@@ -1711,6 +1740,7 @@ void sync_passo(unsigned agoraMs) {
     // e o logout.
     temAjustesBlob = 0;
     aplicarAjustes = 0;   // daqui para frente, o que a pessoa mudar na TV fica
+    __atomic_store_n(&ajustesRestaurando, 0, __ATOMIC_RELEASE);
   }
   // #187: uma linha por blob novo (aplicado ou protegido) dizendo qual idioma
   // a TV pede ao TMDB e o que a conta guarda. A geracao muda a cada blob.
@@ -1976,6 +2006,7 @@ void sync_reaplicar_ajustes(void) {
   // superfície publique em seguida o conjunto pertencente ao novo contexto.
   cachearte_limpar_referencias();
   aplicarAjustes = 1;
+  __atomic_store_n(&ajustesRestaurando, 1, __ATOMIC_RELEASE);
   // Conta manda de novo: a protecao local deixa de valer ate a pessoa mexer.
   dados_apagar(SY_AJUSTES_LOCAIS);
   // E A PENDENCIA DE SUBIDA CAI COM ELA. Esta funcao e chamada ao entrar e ao
@@ -2031,6 +2062,7 @@ void sync_trocar_perfil(int antes) {
   t = dados_ler(nome);
   if (t && t[0] == '1') {
     aplicarAjustes = 0;
+    __atomic_store_n(&ajustesRestaurando, 0, __ATOMIC_RELEASE);
     dados_gravar(SY_AJUSTES_LOCAIS, "1\n");
     sujoAjustes = 1;
     printf("[sync] perfil %d tinha ajustes desta TV sem subir: mantidos\n", depois);
@@ -2088,6 +2120,8 @@ int sync_home_fontes_prontas(void) {
 }
 
 void sync_proteger_ajustes_locais(void) {
+  // Cloud wins while a login/profile restore is pending, including retries.
+  if (sessao_logada() && __atomic_load_n(&ajustesRestaurando, __ATOMIC_ACQUIRE)) return;
   aplicarAjustes = 0;
   dados_gravar(SY_AJUSTES_LOCAIS, "1\n");
   // E MARCA PARA SUBIR (#85). As duas coisas andam juntas de proposito: a
@@ -2163,6 +2197,9 @@ void sync_esquecer_usuario(void) {
   // sobreviveria ao logout em disco e passaria a mandar na reproducao da
   // proxima pessoa.
   fontepref_esquecer();
+  // E OS LINKS GUARDADOS ("Reusar o ultimo link", fontevolta.h): no disco, e
+  // um link de debrid e credencial na pratica.
+  fontevolta_esquecer_tudo();
   // E A LEGENDA ESCOLHIDA A MAO (2.0.3): o idioma e os titulos de quem saiu.
   legmem_esquecer();
   // E A FAIXA DE AUDIO ESCOLHIDA A MAO (audiomemoria.h), pela mesma razao.
@@ -2190,6 +2227,9 @@ void sync_esquecer_usuario(void) {
   // pessoa para a proxima que logasse nesta TV.
   stalker_esquecer();
   xtream_esquecer();   // mesma razao: usuario e senha sao a assinatura de quem saiu
+  // E a lista em cache das duas sai junto — o relato do "lista limpa":
+  // conta removida e os canais dela ainda na tela.
+  guia_fonte_esquecer("st"); guia_fonte_esquecer("xt");
   servidores_esquecer_todos();   // personal-server tokens of every profile on this TV
   trakt_esquecer();
   // Os ajustes por perfil guardados nesta TV (e as pendencias deles) sao da
@@ -2228,6 +2268,7 @@ void sync_esquecer_usuario(void) {
   ajustesBlob = NULL;
   temAjustesBlob = 0;
   aplicarAjustes = 1;
+  __atomic_store_n(&ajustesRestaurando, 1, __ATOMIC_RELEASE);
   dados_apagar(SY_AJUSTES_LOCAIS);
   resumoFixo("sem conta");
   printf("[sync] dados do usuario apagados deste aparelho\n");

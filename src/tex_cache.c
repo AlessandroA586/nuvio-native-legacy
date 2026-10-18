@@ -74,12 +74,17 @@ typedef struct {
 } TexFetchTrace;
 // Teto de decodificacao das artes de CARD; a nota que justifica o 640 esta
 // mais abaixo, junto do teto do heroi.
+#ifdef NV_TIZEN3_LITE
+#define NV_TEX_LARG_MAX 320
+#define NV_TEX_HERO_LARG_MAX 640
+#else
 #define NV_TEX_LARG_MAX 640
 // Teto do heroi; a nota com as medidas (LG 1920, Tizen 1280) esta mais abaixo.
 #ifdef __EMSCRIPTEN__
 #define NV_TEX_HERO_LARG_MAX 1280
 #else
 #define NV_TEX_HERO_LARG_MAX 1920
+#endif
 #endif
 
 // FALHOU e um estado de verdade, nao a ausencia de um. Sem ele, um caminho que
@@ -1111,6 +1116,9 @@ static int tetoDoHeroi(void) {
   return tetoHeroiPerfil >= 640 && tetoHeroiPerfil < t ? tetoHeroiPerfil : t;
 }
 static int tetoDoHeroiQualidade(void) {
+#ifdef NV_TIZEN3_LITE
+  return NV_TEX_HERO_LARG_MAX;
+#endif
   if (qualidadeImg == 0) return 1280;
 #ifdef __EMSCRIPTEN__
   // SAMSUNG: 1280 e o teto de fabrica (heap fixo de 256 MiB, ver a nota das
@@ -3274,6 +3282,9 @@ static int orcamentoMB(void) {
 // RAM, sem aparelho aqui — o `rss=` do relatorio de FPS e quem confirma). No
 // Tizen o teto e o proprio automatico (medido: mais e mais lento, ver acima).
 static int tetoPermitidoMB(void) {
+#ifdef NV_TIZEN3_LITE
+  return 32;
+#endif
   return ptv_tex_teto_mb(ptv_plataforma(), orcMemTotal);
 }
 int tex_teto_ram_mb(void) { return tetoPermitidoMB(); }
@@ -3643,6 +3654,9 @@ static const char *artePacoteOuRemota(const char *caminho, char *buf, size_t tam
 
 static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
                                int passageiro) {
+#ifdef NV_TIZEN3_LITE
+  if (limite > NV_TEX_HERO_LARG_MAX) limite = NV_TEX_HERO_LARG_MAX;
+#endif
   if (!caminho || !*caminho || strlen(caminho) >= NV_TEX_URL_MAX) return 0;
 #ifdef NV_TPK
   char arteRemota[NV_TEX_URL_MAX];

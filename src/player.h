@@ -23,6 +23,15 @@ void player_abrir(int indiceCatalogo, const char *url);
 void player_morph_de(GfxRect logo, GfxRect play);
 void player_definir_episodio(int temporada, int episodio);
 void player_do_inicio(void);
+// 1 depois de player_do_inicio nesta abertura ("Do inicio"): sem ponto salvo.
+int  player_sem_retomada(void);
+// O arquivo tocando e bem mais curto que o titulo (o aviso de duracao viu):
+// pode ser uma parte de um filme em partes (partes.h).
+int  player_parece_parte(void);
+// Cancel duration rejection after confirming the playing file's multipart session.
+void player_confirmar_partes(void);
+// O aviso de duracao com a acao "Manter esta fonte (OK)" ainda esta no ar.
+int  player_aviso_duracao_ativo(void);
 // Posicao confiavel para preparar o Android: registro com duracao conhecida,
 // coerente com o percentual escolhido. Zero mantem a retomada normal depois
 // da duracao real; metadados/reservas nao servem para converter percentual.
@@ -180,6 +189,11 @@ int  player_pediu_recarregar(void);  // live OSD or current VOD source reload
 // Capture on Sources open. A changed source/session rejects the request.
 unsigned player_recarregar_contexto(void);
 int player_recarregar_fonte(unsigned contexto);
+// "0" ou o botao "Ultimo canal" na Live TV (decisao 5): voltar ao canal anterior.
+int  player_pediu_ultimo(void);
+// Numero digitado na Live TV (M7) ja confirmado (1,5 s ou OK); 0 = nada.
+int  player_pediu_numero(void);
+const char *player_titulo_canal(void);   // nome do canal no ar ("" sem canal)
 // Identidade do canal congelada na abertura: o indice do catalogo pode ser
 // remapeado por uma republicacao da descoberta em plena reproducao, e zap/foco
 // do guia nao podem depender dele. "" quando a sessao nao e de canal.

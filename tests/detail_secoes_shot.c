@@ -539,7 +539,7 @@ int main(int argc, char **argv) {
       if (vidro) fprintf(f, "vidroLocal 0\n");
       if (fonte) fprintf(f, "fonteInterface %d\n", atoi(fonte));
       if (semAnel) fprintf(f, "bordaFocoCartaz 1\n");   // R3: foco sem anel (V_LIGA: 1 = Desligado)
-      if (esc) fprintf(f, "escalaTextoLocal %d\n", atoi(esc));
+      if (esc) fprintf(f, "escalaTextoLocal %d\nescalaTextoVersaoLocal 1\n", atoi(esc));
       fclose(f);
       ajustes_dir(dd); } }
   ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_OPAC / _FOSCO
