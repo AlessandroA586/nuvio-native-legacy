@@ -983,7 +983,7 @@ EM_JS(int, nv_url_sonda, (const char *url, const char *cabs, char *dst,
   if (corpo) {
     // Pelo Content-Length, sem ler o corpo (nao copia midia para o JS).
     var cl = xhr.getResponseHeader("Content-Length");
-    var len = (xhr.status === 200 && cl !== null && /^\d+$/.test(cl.trim())) ? parseInt(cl, 10) : -1;
+    var len = (xhr.status === 200 && cl !== null && /^\\d+$/.test(cl.trim())) ? parseInt(cl, 10) : -1;
     HEAP32[corpo >> 2] = len > 64 ? -1 : len;
   }
   var finalUrl = xhr.responseURL || "";
