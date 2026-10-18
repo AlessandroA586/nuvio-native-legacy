@@ -89,6 +89,7 @@ object NvPlayer {
     private const val EV_PRIMEIRO_QUADRO = 8
     private const val EV_AUDIO_SEM_DECODER = 9
     private const val EV_SUPERFICIE_ESTAVEL = 10
+    private const val EV_LIVE_RECOVERY = 11
 
     private const val TELA_W = 1920   // coordenadas de layout do app
     private const val TELA_H = 1080
@@ -129,8 +130,7 @@ object NvPlayer {
     private var cabAtual = ""
     private var abriuEm = 0L
     private var retentou = false
-    private var atrasJanelaDesde = 0L
-    private var atrasJanelaN = 0
+    private var recuperacaoLive: LiveWindowRecovery? = null
     private var pronto = false
     private var duracaoEnviada = -1
     private var videoW = 0
@@ -1470,6 +1470,8 @@ object NvPlayer {
     // Sobe a sessao e solta tudo; qualquer callback pendente do player velho
     // morre na conferencia do numero.
     private fun liberar() {
+        recuperacaoLive?.cancel()
+        recuperacaoLive = null
         sessao++
         medidor.encerrar()
         val recursos = recursosAtuais
@@ -1909,6 +1911,15 @@ object NvPlayer {
     // --- eventos do player ----------------------------------------------------
 
     private fun ouvinte(minha: Int) = object : Player.Listener {
+        private val live = LiveWindowRecovery(
+            schedule = { tarefa, atraso -> principal.postDelayed(tarefa, atraso) },
+            unschedule = { tarefa -> principal.removeCallbacks(tarefa) },
+            active = { atual(minha) },
+            status = { recuperando ->
+                if (atual(minha)) ev(EV_LIVE_RECOVERY, if (recuperando) 8000 else 0, geracaoNative)
+            },
+        )
+        init { recuperacaoLive = live }
         override fun onPlaybackStateChanged(state: Int) {
             if (!atual(minha)) return
             val p = player ?: return
@@ -1916,6 +1927,7 @@ object NvPlayer {
             when (state) {
                 Player.STATE_BUFFERING -> ev(EV_BUFFER, 0)
                 Player.STATE_READY -> {
+                    if (live.ready()) Log.i(TAG, "[live] janela recuperada na mesma sessao=$minha")
                     ev(EV_BUFFER, 100)
                     relatarAudio(minha, "pronto volume=${p.volume} playWhenReady=${p.playWhenReady} suppression=${p.playbackSuppressionReason}")
                     if (!pronto) {
@@ -2020,6 +2032,15 @@ object NvPlayer {
             if (!atual(minha)) return
             val exo = error as? ExoPlaybackException
             val p = player
+            if (p != null && live.recover(p, error.errorCode, SystemClock.elapsedRealtime()) {
+                    Log.w(TAG, "[live] recuperacao excedeu 8000 ms sessao=$minha; seguindo erro normal")
+                    try { nativeErroTexto("ERROR_CODE_BEHIND_LIVE_WINDOW (1002): recovery timeout") } catch (_: Throwable) {}
+                    ev(EV_ERRO, PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW, C.TRACK_TYPE_UNKNOWN)
+                }) {
+                Log.i(TAG, "[live] atras da janela; buscando posicao ao vivo sem trocar URL sessao=$minha")
+                return
+            }
+            live.cancel()
             val timeout = generateSequence(error.cause) { it.cause }
                 .filterIsInstance<androidx.media3.exoplayer.ExoTimeoutException>().firstOrNull()
             if (p != null && RecriaHdr.timeoutRecuperavel(error.errorCode,
@@ -2050,19 +2071,6 @@ object NvPlayer {
             val diagnostico = "${error.errorCodeName} (${error.errorCode}) renderer=$renderer erro=${camposErroCausa(error)} causa=$causa"
             Log.w(TAG, "[player] onPlayerError loadMs=${SystemClock.elapsedRealtime() - abriuEm} $diagnostico")
             try { nativeErroTexto(diagnostico) } catch (_: Throwable) {}
-            // AO VIVO ATRAS DA JANELA (1002, visto nos logs 2.0.x): o player ficou
-            // para tras do que o servidor ainda guarda (rede lenta, pausa longa).
-            // Nao e erro do canal: volta para a borda ao vivo e prepara de novo,
-            // ate 3 vezes por minuto para nao virar laco num fluxo quebrado.
-            if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
-                val agora = SystemClock.elapsedRealtime()
-                if (agora - atrasJanelaDesde > 60_000L) { atrasJanelaDesde = agora; atrasJanelaN = 0 }
-                if (atrasJanelaN < 3) {
-                    atrasJanelaN++
-                    player?.let { it.seekToDefaultPosition(); it.prepare() }
-                    return
-                }
-            }
             // Decoder que falha nos primeiros 5 s: o recurso pode estar sendo
             // solto por outro app (ResourceConflict do Tizen); reabre uma vez.
             val cedo = SystemClock.elapsedRealtime() - abriuEm < RETRY_DECODER_MS

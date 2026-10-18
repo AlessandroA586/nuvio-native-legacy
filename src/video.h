@@ -125,6 +125,10 @@ double video_buffer_fim(void); // ate onde o buffer cobre (s); 0 se desconhecido
 // congelada e video_falhou() em 0 para sempre. Quem vigia fonte de canal
 // (app.c) precisa deste numero para saber que a fonte morreu sem dizer.
 unsigned video_bufferando_ms(void);
+#ifdef NV_ANDROID
+// Same-player live-window repair, scoped to this open and bounded to 8 seconds.
+int video_recuperando_live(void);
+#endif
 // Afirmacao de Dolby Vision da FONTE escolhida (o addon descreve o arquivo).
 // Chamar ANTES de video_tocar/definir_fonte: e o que decide o hdrType que o
 // ACB descreve ao tv.display.

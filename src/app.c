@@ -4609,6 +4609,22 @@ static void atualizarFolha(float dt, Uint32 agora) {
   if (!stream_folha_aberta()) gravarFolhaTocar(0, 0, 0);
 }
 
+// Android's live buffer end is unknown (zero). READY video that is actually
+// playing again also proves recovery; audio alone or continued buffering does not.
+static void recuperarErroFonte(void) {
+  if ((player_aberto() || player_mini_ativo()) && player_fonte_falhou() &&
+      player_tem_video() && !video_falhou() &&
+      (video_buffer_fim() > 0.5 ||
+       (player_id_canal()[0] && video_tocando() && !video_bufferando_ms())) &&
+      video_pronto()) {
+    printf("[player] a fonte voltou a entregar (buffer %.1fs): tirando o erro da tela\n",
+           video_buffer_fim());
+    fflush(stdout);
+    player_limpar_erro_fonte();
+    canalFonteDesde = SDL_GetTicks();
+  }
+}
+
 void app_atualizar(float dt, Uint32 agora) {
   relogioFocoValidar();
   { static int morno = -1; int ligado = ajustes_retomada_morna();
@@ -5970,16 +5986,11 @@ void app_atualizar(float dt, Uint32 agora) {
   // com "buffer 9.0s" numa fonte que nunca chegou ao loadCompleted: o buffer
   // enchia, o decoder nao comecava, e o cartao era tirado para uma tela
   // preta. O caso que motivou o conserto (18/09) tinha loadCompleted.
-  if ((player_aberto() || player_mini_ativo()) && player_fonte_falhou() &&
-      player_tem_video() && video_buffer_fim() > 0.5 && !video_falhou() &&
-      video_pronto()) {
-    printf("[player] a fonte voltou a entregar (buffer %.1fs): tirando o erro da tela\n",
-           video_buffer_fim());
-    fflush(stdout);
-    player_limpar_erro_fonte();
-    canalFonteDesde = SDL_GetTicks();
-  }
+  recuperarErroFonte();
   if (canalFonteIdx >= 0 && (player_aberto() || player_mini_ativo()) &&
+#ifdef NV_ANDROID
+      !video_recuperando_live() &&
+#endif
       !player_quer_sair() && player_id_canal()[0]) {
     // TRAVOU DEPOIS DE ABRIR conta como morta, e sem isto nao contava.
     //
