@@ -1658,84 +1658,96 @@ static GLuint compila(GLenum tipo, const char *src) {
   return s;
 }
 
+// Monta o programa de um modo. Quase todos nascem em gfx_iniciar; o vidro
+// (o fragment shader mais pesado) so no primeiro desenho dele, porque numa
+// Mali-G52 sem cache o link de todos juntos segurava a tela preta por 12 s e
+// quem desligou o vidro (o padrao) nunca o desenha.
+static GLuint vsProg;
+static int progMontar(int m) {
+  GLuint vs = vsProg;
+  char fonte[12000];   // cabeca + sdf/cover + corpo; o maior (camadas) passa de 6000
+  snprintf(fonte, sizeof fonte, "%s%s%s%s%s",
+           FS_CABECA, m == GFX_CARD_HERO ? "#define HERO_CARD\n" : "",
+           PRECISA[m].sdf ? FS_SDF : "", PRECISA[m].cover ? FS_COVER : "",
+           FS_CORPO[m == GFX_CARD_HERO ? GFX_CARD : m]);
+  GLuint p = glCreateProgram();
+  glAttachShader(p, vs);
+  glAttachShader(p, compila(GL_FRAGMENT_SHADER, fonte));
+  glBindAttribLocation(p, 0, "aPos");
+  glLinkProgram(p);
+  GLint ok = 0; glGetProgramiv(p, GL_LINK_STATUS, &ok);
+  if (!ok) { char log[700]; glGetProgramInfoLog(p, 700, NULL, log);
+             printf("gfx link modo %d: %s\n", m, log); return 0; }
+  progs[m].prog = p;
+  progs[m].rect = glGetUniformLocation(p, "uRect");
+  progs[m].tela = glGetUniformLocation(p, "uTela");
+  progs[m].tex  = glGetUniformLocation(p, "uTex");
+  progs[m].foco = glGetUniformLocation(p, "uFoco");
+  progs[m].reflexo = glGetUniformLocation(p, "uReflexo");
+  progs[m].par  = glGetUniformLocation(p, "uPar");
+  progs[m].raio = glGetUniformLocation(p, "uRaio");
+  progs[m].cor  = glGetUniformLocation(p, "uCor");
+  progs[m].asp  = glGetUniformLocation(p, "uAspect");
+  progs[m].texAsp = glGetUniformLocation(p, "uTexAsp");
+  progs[m].forcarCover = glGetUniformLocation(p, "uForceCover");
+  progs[m].veuTela = glGetUniformLocation(p, "uVeuTela");
+  progs[m].heroiVeu = glGetUniformLocation(p, "uHeroiVeu");
+  progs[m].borda  = glGetUniformLocation(p, "uBorda");
+  progs[m].varre  = glGetUniformLocation(p, "uVarre");
+  progs[m].veu    = glGetUniformLocation(p, "uVeu");
+  progs[m].desl   = glGetUniformLocation(p, "uDesliza");
+  progs[m].fundo  = glGetUniformLocation(p, "uFundo");
+  progs[m].acento = glGetUniformLocation(p, "uAcento");
+  progs[m].grad0  = glGetUniformLocation(p, "uGrad0");
+  progs[m].grad1  = glGetUniformLocation(p, "uGrad1");
+  progs[m].grad2  = glGetUniformLocation(p, "uGrad2");
+  progs[m].tempo  = glGetUniformLocation(p, "uTempo");
+  progs[m].reg0   = glGetUniformLocation(p, "uReg0");
+  progs[m].reg1   = glGetUniformLocation(p, "uReg1");
+  progs[m].reg2   = glGetUniformLocation(p, "uReg2");
+  progs[m].reg3   = glGetUniformLocation(p, "uReg3");
+  progs[m].vaza   = glGetUniformLocation(p, "uVaza");
+  progs[m].amb    = glGetUniformLocation(p, "uAmb");
+  progs[m].ambOn  = glGetUniformLocation(p, "uAmbOn");
+  progs[m].texB   = glGetUniformLocation(p, "uTexB");
+  progs[m].texAspB = glGetUniformLocation(p, "uTexAspB");
+  progs[m].alfaB  = glGetUniformLocation(p, "uAlfaB");
+  progs[m].alt    = glGetUniformLocation(p, "uAlt");
+  progs[m].margem = glGetUniformLocation(p, "uMargem");
+  progs[m].leve   = glGetUniformLocation(p, "uLeve");
+  progs[m].jan    = glGetUniformLocation(p, "uJan");
+  progs[m].sub    = glGetUniformLocation(p, "uSub");
+  progs[m].giro   = glGetUniformLocation(p, "uGiro");
+  progs[m].din    = glGetUniformLocation(p, "uDin");
+  for (int v = 0; v < VID_NU; v++) progs[m].vid[v] = glGetUniformLocation(p, VID_NOMES[v]);
+  progs[m].altAtual = -1.0f;
+  progs[m].telaAtual[0] = NV_TELA_W; progs[m].telaAtual[1] = NV_TELA_H;
+  progs[m].margemAtual = 0.0f;   // o default de um uniform recem-linkado e 0
+  progs[m].leveAtual = 0.0f;
+  glUseProgram(p);
+  glUniform2f(progs[m].tela, NV_TELA_W, NV_TELA_H);
+  // O default de um uniform recem-linkado e 0: o pedaco tem de nascer inteiro.
+  if (progs[m].sub >= 0) glUniform4f(progs[m].sub, 0.0f, 0.0f, 1.0f, 1.0f);
+  progs[m].subAtual[0] = progs[m].subAtual[1] = 0.0f;
+  progs[m].subAtual[2] = progs[m].subAtual[3] = 1.0f;
+  if (progs[m].giro >= 0) glUniform4f(progs[m].giro, 1.0f, 0.0f, 0.0f, 0.0f);
+  progs[m].giroAtual[0] = 1.0f;
+  progs[m].giroAtual[1] = progs[m].giroAtual[2] = progs[m].giroAtual[3] = 0.0f;
+  glUniform1i(progs[m].tex, 0);
+  if (progs[m].amb >= 0) glUniform1i(progs[m].amb, 1);
+  if (progs[m].texB >= 0) glUniform1i(progs[m].texB, 2);
+  if (progs[m].vid[VID_RUIDO] >= 0) glUniform1i(progs[m].vid[VID_RUIDO], 3);
+  return 1;
+}
+
 int gfx_iniciar(void) {
-  GLuint vs = compila(GL_VERTEX_SHADER, VS);
+  vsProg = compila(GL_VERTEX_SHADER, VS);
   // Capturas (tests/*_shot): NUVIO_TAMANHO_UI=1.2 liga o "Tamanho da
   // interface" sem passar por Ajustes. No app quem define e ajustes.c.
   { const char *t = getenv("NUVIO_TAMANHO_UI"); if (t && *t) { gfx_escala_ui_definir((float)atof(t)); escUiFixa = 1; } }
-  char fonte[12000];   // cabeca + sdf/cover + corpo; o maior (camadas) passa de 6000
   for (int m = 0; m < GFX_NMODOS; m++) {
-    snprintf(fonte, sizeof fonte, "%s%s%s%s%s",
-             FS_CABECA, m == GFX_CARD_HERO ? "#define HERO_CARD\n" : "",
-             PRECISA[m].sdf ? FS_SDF : "", PRECISA[m].cover ? FS_COVER : "",
-             FS_CORPO[m == GFX_CARD_HERO ? GFX_CARD : m]);
-    GLuint p = glCreateProgram();
-    glAttachShader(p, vs);
-    glAttachShader(p, compila(GL_FRAGMENT_SHADER, fonte));
-    glBindAttribLocation(p, 0, "aPos");
-    glLinkProgram(p);
-    GLint ok = 0; glGetProgramiv(p, GL_LINK_STATUS, &ok);
-    if (!ok) { char log[700]; glGetProgramInfoLog(p, 700, NULL, log);
-               printf("gfx link modo %d: %s\n", m, log); return 0; }
-    progs[m].prog = p;
-    progs[m].rect = glGetUniformLocation(p, "uRect");
-    progs[m].tela = glGetUniformLocation(p, "uTela");
-    progs[m].tex  = glGetUniformLocation(p, "uTex");
-    progs[m].foco = glGetUniformLocation(p, "uFoco");
-    progs[m].reflexo = glGetUniformLocation(p, "uReflexo");
-    progs[m].par  = glGetUniformLocation(p, "uPar");
-    progs[m].raio = glGetUniformLocation(p, "uRaio");
-    progs[m].cor  = glGetUniformLocation(p, "uCor");
-    progs[m].asp  = glGetUniformLocation(p, "uAspect");
-    progs[m].texAsp = glGetUniformLocation(p, "uTexAsp");
-    progs[m].forcarCover = glGetUniformLocation(p, "uForceCover");
-    progs[m].veuTela = glGetUniformLocation(p, "uVeuTela");
-    progs[m].heroiVeu = glGetUniformLocation(p, "uHeroiVeu");
-    progs[m].borda  = glGetUniformLocation(p, "uBorda");
-    progs[m].varre  = glGetUniformLocation(p, "uVarre");
-    progs[m].veu    = glGetUniformLocation(p, "uVeu");
-    progs[m].desl   = glGetUniformLocation(p, "uDesliza");
-    progs[m].fundo  = glGetUniformLocation(p, "uFundo");
-    progs[m].acento = glGetUniformLocation(p, "uAcento");
-    progs[m].grad0  = glGetUniformLocation(p, "uGrad0");
-    progs[m].grad1  = glGetUniformLocation(p, "uGrad1");
-    progs[m].grad2  = glGetUniformLocation(p, "uGrad2");
-    progs[m].tempo  = glGetUniformLocation(p, "uTempo");
-    progs[m].reg0   = glGetUniformLocation(p, "uReg0");
-    progs[m].reg1   = glGetUniformLocation(p, "uReg1");
-    progs[m].reg2   = glGetUniformLocation(p, "uReg2");
-    progs[m].reg3   = glGetUniformLocation(p, "uReg3");
-    progs[m].vaza   = glGetUniformLocation(p, "uVaza");
-    progs[m].amb    = glGetUniformLocation(p, "uAmb");
-    progs[m].ambOn  = glGetUniformLocation(p, "uAmbOn");
-    progs[m].texB   = glGetUniformLocation(p, "uTexB");
-    progs[m].texAspB = glGetUniformLocation(p, "uTexAspB");
-    progs[m].alfaB  = glGetUniformLocation(p, "uAlfaB");
-    progs[m].alt    = glGetUniformLocation(p, "uAlt");
-    progs[m].margem = glGetUniformLocation(p, "uMargem");
-    progs[m].leve   = glGetUniformLocation(p, "uLeve");
-    progs[m].jan    = glGetUniformLocation(p, "uJan");
-    progs[m].sub    = glGetUniformLocation(p, "uSub");
-    progs[m].giro   = glGetUniformLocation(p, "uGiro");
-    progs[m].din    = glGetUniformLocation(p, "uDin");
-    for (int v = 0; v < VID_NU; v++) progs[m].vid[v] = glGetUniformLocation(p, VID_NOMES[v]);
-    progs[m].altAtual = -1.0f;
-    progs[m].telaAtual[0] = NV_TELA_W; progs[m].telaAtual[1] = NV_TELA_H;
-    progs[m].margemAtual = 0.0f;   // o default de um uniform recem-linkado e 0
-    progs[m].leveAtual = 0.0f;
-    glUseProgram(p);
-    glUniform2f(progs[m].tela, NV_TELA_W, NV_TELA_H);
-    // O default de um uniform recem-linkado e 0: o pedaco tem de nascer inteiro.
-    if (progs[m].sub >= 0) glUniform4f(progs[m].sub, 0.0f, 0.0f, 1.0f, 1.0f);
-    progs[m].subAtual[0] = progs[m].subAtual[1] = 0.0f;
-    progs[m].subAtual[2] = progs[m].subAtual[3] = 1.0f;
-    if (progs[m].giro >= 0) glUniform4f(progs[m].giro, 1.0f, 0.0f, 0.0f, 0.0f);
-    progs[m].giroAtual[0] = 1.0f;
-    progs[m].giroAtual[1] = progs[m].giroAtual[2] = progs[m].giroAtual[3] = 0.0f;
-    glUniform1i(progs[m].tex, 0);
-    if (progs[m].amb >= 0) glUniform1i(progs[m].amb, 1);
-    if (progs[m].texB >= 0) glUniform1i(progs[m].texB, 2);
-    if (progs[m].vid[VID_RUIDO] >= 0) glUniform1i(progs[m].vid[VID_RUIDO], 3);
+    if (m == GFX_VIDRO) continue;   // sob demanda: progMontar em gfx_rect
+    if (!progMontar(m)) return 0;
   }
   glUseProgram(progs[GFX_CARD].prog);
   progAtual = GFX_CARD;
@@ -2310,6 +2322,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
   int comAmb = 0, veuAmb = 0, opaco = 0, cheia, clearCor, duplo = 0;
   float din[4] = { 0.0f, 0.0f, 0.0f, 0.0f }, dinResto = -1.0f;
   if ((int)modo < 0 || (int)modo >= GFX_NMODOS) return;
+  if (modo == GFX_VIDRO && !progs[modo].prog) return;   // gfx_vidro so chega aqui com o programa pronto
   if (modo == GFX_CARD && gfx_card_heroi_veu_atual[3] > 0.0f) modo = GFX_CARD_HERO;
   // Grupo a 0 = "desenhar sem aparecer" (quem mede uma previa ou pede as
   // texturas de uma cena que ainda nao entrou): todo modo multiplica o alfa
@@ -3805,6 +3818,17 @@ static int vidroSobreVideo(const float tela[4]) {
   for (i = 0; !video && i < vidroNFuros; i++) video = vidroCruza(vidroFuros[i], tela);
   return video;
 }
+// O programa do vidro e montado aqui, a partir do 3o quadro: o link pesado nao
+// segura o primeiro quadro, e ate la (ou se o driver o recusar) o painel sai
+// no solido de gfx_chrome, nunca sem fundo.
+static int vidroPronto(void) {
+  static int falhou;
+  if (progs[GFX_VIDRO].prog) return 1;
+  if (falhou || gfx_quadro_n < 3) return 0;
+  if (progMontar(GFX_VIDRO)) { progAtual = -1; return 1; }   // o link deixou o programa do vidro em uso
+  falhou = 1;
+  return 0;
+}
 static GLuint vidroFonteFixa;
 GLuint gfx_vidro_fonte_fixa(GLuint tex) {
   GLuint anterior = vidroFonteFixa;
@@ -3816,6 +3840,11 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   float d = dens, tela[4];
   int chapado, video, fumaca, i, contorno = ajustes_vidro_contorno();
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
+  if (!vidroPronto()) {
+    gfx_cor(r, raio, 0x1a / 255.0f, 0x1c / 255.0f, 0x21 / 255.0f, 0.94f * a);
+    gfx_anel(r, raio, 1.0f, 1.0f, 1.0f, 1.0f, 0.22f * a);
+    return;
+  }
   GFX_TR_RECT(t.x, t.y, t.w, t.h);
   if (escAtiva != 1.0f) { t.x *= escAtiva; t.y *= escAtiva; t.w *= escAtiva; t.h *= escAtiva; }
   tela[0] = t.x; tela[1] = t.y; tela[2] = t.x + t.w; tela[3] = t.y + t.h;
