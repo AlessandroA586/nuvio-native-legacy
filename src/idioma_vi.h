@@ -2568,6 +2568,7 @@
   T("Ligar ou desligar", "Bật hoặc tắt"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Bật hoặc tắt một tiện ích ở đây áp dụng cho cả ứng dụng, không chỉ hướng dẫn."),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Bật P2P trong Cài đặt hoặc kết nối tài khoản debrid."),
+  T("Ligue o P2P em Ajustes.", "Bật P2P trong Cài đặt."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Bật Hồ sơ có thể tìm kiếm trong Hồ sơ của tôi để xem cộng đồng."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Bật Hồ sơ có thể tìm kiếm trong Hồ sơ của tôi để xem những người có gu tương tự."),
   T("Ligue o Perfil pesquisável para ver", "Bật Hồ sơ có thể tìm kiếm để xem"),

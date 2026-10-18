@@ -2568,6 +2568,7 @@
   T("Ligar ou desligar", "Slå av eller på"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Å slå en add-on av eller på her gjelder for hele appen, ikke bare guiden."),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Slå på P2P i Innstillinger eller koble til en debrid-konto."),
+  T("Ligue o P2P em Ajustes.", "Slå på P2P i Innstillinger."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Slå på Søkbar profil under Min profil for å se fellesskapet."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Slå på Søkbar profil under Min profil for å se personer med lik smak."),
   T("Ligue o Perfil pesquisável para ver", "Slå på Søkbar profil for å se"),

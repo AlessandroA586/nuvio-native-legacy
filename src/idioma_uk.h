@@ -2567,6 +2567,7 @@
   T("Ligar ou desligar", "Увімкнути або вимкнути"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Увімкнення чи вимкнення тут діє на весь застосунок, а не лише на гід."),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Увімкніть P2P у Налаштуваннях або підключіть акаунт debrid."),
+  T("Ligue o P2P em Ajustes.", "Увімкніть P2P у Налаштуваннях."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Увімкніть «Профіль у пошуку» в розділі «Мій профіль», щоб бачити спільноту."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Увімкніть Профіль у пошуку в Моєму профілі, щоб бачити людей зі схожими смаками."),
   T("Ligue o Perfil pesquisável para ver", "Увімкніть «Профіль у пошуку», щоб побачити"),

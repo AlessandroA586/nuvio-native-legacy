@@ -2568,6 +2568,7 @@
   T("Ligar ou desligar", "Включи или изключи"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Включването или изключването на добавка тук важи за цялото приложение, а не само за ръководството."),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Включете P2P в Настройки или свържете debrid акаунт."),
+  T("Ligue o P2P em Ajustes.", "Включете P2P в Настройки."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Включете „Профил за търсене“ в „Моят профил“, за да видите общността."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Включете Профил за търсене в Моят профил, за да видите хора със сходен вкус."),
   T("Ligue o Perfil pesquisável para ver", "Включете „Профил за търсене“, за да видите"),

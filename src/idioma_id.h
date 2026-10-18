@@ -2568,6 +2568,7 @@
   T("Ligar ou desligar", "Nyalakan atau matikan"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Menyalakan atau mematikan addon di sini berlaku untuk seluruh aplikasi, bukan hanya panduan."),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Aktifkan P2P di Pengaturan atau hubungkan akun debrid."),
+  T("Ligue o P2P em Ajustes.", "Aktifkan P2P di Pengaturan."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Aktifkan Profil yang bisa dicari di Profilku untuk melihat komunitas."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Nyalakan Profil yang bisa dicari di Profilku untuk melihat orang dengan selera mirip."),
   T("Ligue o Perfil pesquisável para ver", "Nyalakan Profil yang bisa dicari untuk melihat"),

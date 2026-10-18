@@ -2568,6 +2568,7 @@
   T("Ligar ou desligar", "開啟或關閉"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "在這裡開啟或關閉附加元件，會作用於整個應用程式，而不只是指南。"),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "請在設定中開啟 P2P，或連接 Debrid 帳號。"),
+  T("Ligue o P2P em Ajustes.", "請在設定中開啟 P2P。"),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "在「我的個人檔案」中開啟「可搜尋的個人檔案」即可查看社群。"),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "在「我的個人檔案」開啟「可搜尋的個人檔案」，即可看到品味相近的人。"),
   T("Ligue o Perfil pesquisável para ver", "開啟可搜尋的個人檔案後即可查看"),

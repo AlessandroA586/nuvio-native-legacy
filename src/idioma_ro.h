@@ -2567,6 +2567,7 @@
   T("Ligar ou desligar", "Pornește sau oprește"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Activarea sau dezactivarea de aici se aplică întregii aplicații, nu doar ghidului."),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Activați P2P în Setări sau conectați un cont debrid."),
+  T("Ligue o P2P em Ajustes.", "Activați P2P în Setări."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Activează Profilul căutabil în Profilul meu ca să vezi comunitatea."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Activează Profilul căutabil din Profilul meu ca să vezi persoane cu gusturi asemănătoare."),
   T("Ligue o Perfil pesquisável para ver", "Activează Profil căutabil pentru a vedea"),

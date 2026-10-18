@@ -2567,6 +2567,7 @@
   T("Ligar ou desligar", "Ein- oder ausschalten"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Ein- oder Ausschalten gilt hier für die ganze App, nicht nur für das Programm."),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Schalte P2P in den Einstellungen ein oder verbinde ein Debrid-Konto."),
+  T("Ligue o P2P em Ajustes.", "Schalte P2P in den Einstellungen ein."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Schalte Auffindbares Profil in Mein Profil ein, um die Community zu sehen."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Schalte Auffindbares Profil unter Mein Profil ein, um Personen mit ähnlichem Geschmack zu sehen."),
   T("Ligue o Perfil pesquisável para ver", "Schalte Auffindbares Profil ein, um das zu sehen"),

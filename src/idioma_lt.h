@@ -2568,6 +2568,7 @@
   T("Ligar ou desligar", "Įjungti arba išjungti"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Papildinio įjungimas ar išjungimas čia galioja visai programai, ne tik vadovui."),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Įjunkite P2P Nustatymuose arba prijunkite debrid paskyrą."),
+  T("Ligue o P2P em Ajustes.", "Įjunkite P2P Nustatymuose."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Įjunkite Ieškomą profilį skiltyje Mano profilis, kad matytumėte bendruomenę."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Įjunkite Ieškomą profilį skiltyje Mano profilis, kad pamatytumėte žmonių, turinčių panašų skonį."),
   T("Ligue o Perfil pesquisável para ver", "Įjunkite Ieškomą profilį, kad matytumėte"),

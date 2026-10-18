@@ -2568,6 +2568,7 @@
   T("Ligar ou desligar", "Be- vagy kikapcsolás"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Egy bővítmény itteni be- vagy kikapcsolása az egész appra érvényes, nem csak az útmutatóra."),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Kapcsold be a P2P-t a Beállításokban, vagy csatlakoztass egy debrid fiókot."),
+  T("Ligue o P2P em Ajustes.", "Kapcsold be a P2P-t a Beállításokban."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Kapcsold be a Kereshető profilt a Profilom alatt, hogy lásd a közösséget."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Kapcsold be a Kereshető profilt a Profilom oldalon, hogy lásd a hasonló ízlésű embereket."),
   T("Ligue o Perfil pesquisável para ver", "A megtekintéshez kapcsold be a Kereshető profilt"),

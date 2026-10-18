@@ -2568,6 +2568,7 @@
   T("Ligar ou desligar", "Aan- of uitzetten"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Een add-on hier aan- of uitzetten geldt voor de hele app, niet alleen voor de gids."),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Zet P2P aan in Instellingen of koppel een debrid-account."),
+  T("Ligue o P2P em Ajustes.", "Zet P2P aan in Instellingen."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Zet Doorzoekbaar profiel aan in Mijn profiel om de community te zien."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Zet Doorzoekbaar profiel aan in Mijn profiel om mensen met een vergelijkbare smaak te zien."),
   T("Ligue o Perfil pesquisável para ver", "Zet Doorzoekbaar profiel aan om dit te zien"),

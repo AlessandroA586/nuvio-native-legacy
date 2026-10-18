@@ -29,8 +29,6 @@ static void draw(SDL_Window *win, const char *png) {
   for (int frame = 0; frame < 80; frame++) {
     SDL_PumpEvents(); txt_novo_quadro(); tex_novo_quadro();
     stream_folha_atualizar(1.f / 60, SDL_GetTicks());
-    // Inspect the end of the sheet, where the footer belongs.
-    rolagem = fmaxf(0, alturaTotal - areaLista() + 40);
     glClearColor(.025f, .025f, .03f, 1); glClear(GL_COLOR_BUFFER_BIT);
     gfx_novo_quadro(); stream_folha_desenhar(SDL_GetTicks());
     if (frame == 79 && png) {
@@ -49,6 +47,7 @@ static void draw(SDL_Window *win, const char *png) {
 
 int main(int argc, char **argv) {
   char path[1024];
+  int failures = 0;
   assert(argc == 2);
   snprintf(path, sizeof path, "%s/ajustes.txt", getenv("NUVIO_DADOS"));
   FILE *settings = fopen(path, "w"); assert(settings);
@@ -80,6 +79,9 @@ int main(int argc, char **argv) {
   stream_definir_lista(v, 22);
   assert(n == 5);
   stream_folha_nome("Movie"); stream_folha_abrir();
+  SDL_Event down = { .type = SDL_KEYDOWN };
+  down.key.keysym.sym = SDLK_DOWN;
+  for (int i = 0; i < n + 2; i++) stream_folha_evento(&down);
   draw(win, argv[1]);
   if (!strstr(hint, "17") || !strstr(hint, "HdHub")) {
     fprintf(stderr, "FAIL: 5 URLs + 17 HdHub torrents: missing hidden-source hint: '%s'\n", hint);
@@ -105,7 +107,36 @@ int main(int argc, char **argv) {
   hint[0] = 0; draw(win, NULL); assert(!hint[0]);
   stream_definir_lista(v, 22); assert(n == 22);
   hint[0] = 0; draw(win, NULL); assert(!hint[0]);
+  // notWebReady sources require P2P even with debrid connected.
+  for (int i = 5; i < 22; i++) v[i].notWebReady = 1;
+  stream_definir_lista(v, 22); assert(n == 5);
+  hint[0] = 0; draw(win, NULL);
+#ifdef __EMSCRIPTEN__
+  assert(!hint[0]);
+#else
+  if (!strstr(hint, "P2P") || strstr(hint, "debrid")) {
+    fprintf(stderr, "FAIL: active-debrid P2P-only remedy: '%s'\n", hint);
+    failures++;
+  }
+#endif
+  if (!failures) puts("PASS: active-debrid P2P-only remedy");
   debrid_esquecer();
+  // Ten maximum-length addon names must not hide the remedy from the remote.
+  for (int i = 5; i < 22; i++) {
+    snprintf(v[i].provedor, sizeof v[i].provedor,
+      "Addon %d with a very long name repeated to fill the entire provider field xxxxxxxxxxxxxxxxxxxxxxxx", (i - 5) % 10);
+    v[i].notWebReady = 0;
+  }
+  stream_definir_lista(v, 22);
+  for (int i = 0; i < n + 2; i++) stream_folha_evento(&down);
+  hint[0] = 0; draw(win, argv[1]);
+  if (!strstr(hint, "17") || !strstr(hint, "debrid") ||
+      hintY < FOLHA_TOPO || hintY + hintH > folhaBase) {
+    fprintf(stderr, "FAIL: remote footer bounds %.1f..%.1f, viewport %.1f..%.1f\n",
+      hintY, hintY + hintH, FOLHA_TOPO, folhaBase);
+    failures++;
+  } else puts("PASS: long-addon footer reachable by remote");
+  if (failures) return 1;
   stream_definir_lista(v, 5);
   hint[0] = 0; draw(win, NULL); assert(!hint[0]);
   stream_definir_lista(v + 5, 17); assert(n == 0);

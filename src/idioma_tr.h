@@ -2568,6 +2568,7 @@
   T("Ligar ou desligar", "Aç veya kapat"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Burada bir eklentiyi açıp kapatmak yalnızca rehberi değil, tüm uygulamayı etkiler."),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Ayarlar'dan P2P'yi açın veya bir debrid hesabı bağlayın."),
+  T("Ligue o P2P em Ajustes.", "Ayarlar'dan P2P'yi açın."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Topluluğu görmek için Profilim'de Aranabilir profil'i aç."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Benzer zevkteki kişileri görmek için Profilim'de Aranabilir profil'i aç."),
   T("Ligue o Perfil pesquisável para ver", "Görmek için Aranabilir profili aç"),

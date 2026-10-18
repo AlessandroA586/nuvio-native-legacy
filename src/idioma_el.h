@@ -2568,6 +2568,7 @@
   T("Ligar ou desligar", "Ενεργοποίηση ή απενεργοποίηση"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Η ενεργοποίηση ή απενεργοποίηση ενός πρόσθετου εδώ ισχύει για ολόκληρη την εφαρμογή, όχι μόνο για τον οδηγό."),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Ενεργοποιήστε το P2P στις Ρυθμίσεις ή συνδέστε έναν λογαριασμό debrid."),
+  T("Ligue o P2P em Ajustes.", "Ενεργοποιήστε το P2P στις Ρυθμίσεις."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Ενεργοποίησε το Προφίλ με αναζήτηση στο Το προφίλ μου για να δεις την κοινότητα."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Ενεργοποίησε το Προφίλ με αναζήτηση στο Το προφίλ μου για να δεις άτομα με παρόμοιο γούστο."),
   T("Ligue o Perfil pesquisável para ver", "Ενεργοποίησε το Προφίλ με αναζήτηση για να το δεις"),

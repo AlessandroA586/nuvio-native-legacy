@@ -2568,6 +2568,7 @@
   T("Ligar ou desligar", "オン/オフ"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "ここでオン/オフを切り替えると、ガイドだけでなくアプリ全体に反映されます。"),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "設定で P2P をオンにするか、Debrid アカウントを接続してください。"),
+  T("Ligue o P2P em Ajustes.", "設定で P2P をオンにしてください。"),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "コミュニティを見るには、マイプロフィールで「検索可能なプロフィール」をオンにしてください。"),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "好みの近いユーザーを見るには、マイプロフィールで「検索可能なプロフィール」をオンにしてください。"),
   T("Ligue o Perfil pesquisável para ver", "見るには検索可能なプロフィールをオンに"),

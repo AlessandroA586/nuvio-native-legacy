@@ -2568,6 +2568,7 @@
   T("Ligar ou desligar", "Zapnúť alebo vypnúť"),
   T("Ligar ou desligar aqui vale para o app inteiro, não só para o guia.", "Zapnutie alebo vypnutie doplnku tu platí pre celú aplikáciu, nie len pre sprievodcu."),
   T("Ligue o P2P em Ajustes ou conecte uma conta de debrid.", "Zapnite P2P v Nastaveniach alebo pripojte účet debrid."),
+  T("Ligue o P2P em Ajustes.", "Zapnite P2P v Nastaveniach."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver a comunidade.", "Zapnite Vyhľadateľný profil v sekcii Môj profil, aby ste videli komunitu."),
   T("Ligue o Perfil pesquisável em Meu perfil para ver pessoas com gosto parecido.", "Zapnite Vyhľadateľný profil v Mojom profile a uvidíte ľudí s podobným vkusom."),
   T("Ligue o Perfil pesquisável para ver", "Na zobrazenie zapnite Vyhľadateľný profil"),
