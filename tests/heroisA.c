@@ -124,8 +124,13 @@ static void capture(const char *prefix, int split, int glass, float scale) {
     renderTime = 1000 + frame * 16;
     SDL_PumpEvents(); tex_bombear(8); tex_novo_quadro(); txt_novo_quadro(); gfx_novo_quadro();
     glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1); glClear(GL_COLOR_BUFFER_BIT);
+    gfx_rastro_grandes = getenv("NV_HEROIS_TRACE") && frame == 49;
     renderHome(split, 0);
+    gfx_rastro_grandes = 0;
     if(frame==49) {
+      if (getenv("NV_HEROIS_TRACE"))
+        printf("TRACE split=%d glass=%d captures=%d blur=%g copy=%g\n", split, glass,
+               gfx_vidro_capturas, gfx_vidro_fill, gfx_vidro_copia);
       unsigned char *pixels=malloc(1920*1080*4); assert(pixels);
       SDL_Surface *s=SDL_CreateRGBSurfaceWithFormat(0,1920,1080,32,SDL_PIXELFORMAT_RGBA32); assert(s);
       glReadPixels(0,0,1920,1080,GL_RGBA,GL_UNSIGNED_BYTE,pixels);

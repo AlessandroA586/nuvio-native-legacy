@@ -4104,7 +4104,11 @@ static void dinArteColecao(float dt) {
 }
 static void desenhaFundoDin(Uint32 agora) {
   float dt = dinPasso(agora, dinArteDaCor());
-  gfx_fundo_din_desenhar(dinCor, dinQueda);
+  // A flat background needs no gradient shader; gfx_cor clears opaque full screens.
+  if (dinQueda == 1.0f)
+    gfx_cor((GfxRect){0, 0, NV_TELA_W, NV_TELA_H}, 0, dinCor[0], dinCor[1], dinCor[2], 1);
+  else
+    gfx_fundo_din_desenhar(dinCor, dinQueda);
   dinArteColecao(dt);
 }
 
