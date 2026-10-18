@@ -99,6 +99,10 @@ static int lastNoCartao, rectCalls;
 void trailer_no_cartao(int sim) { lastNoCartao = sim; }
 void trailer_rect(GfxRect r) { lastRect = r; rectCalls++; }
 GfxRect trailer_retangulo(void) { return lastRect; }
+float gfx_escala_txt_entrar(void) { return 1.0f; }
+void gfx_escala_sair(float anterior) { (void)anterior; }
+static int fraco;
+int memlog_android_fraco(void) { return fraco; }
 void trailer_abrir(const char *source, GfxRect r, int som, int cheia) {
   (void)cheia; lastRect = r;
   lastSom = som;
@@ -542,6 +546,29 @@ int main(void) {
     home_trailer_passo(1,.016f,start+500);
     home_trailer_passo(1,.016f,start+500+NV_TRAILER_HERO_ESPERA_MS);
     rc|=check("no card asks for sound with the switch on",opened&&lastSom==1&&heroTrailerNoCartao&&lastNoCartao);
+
+
+    // Low-end Android (Onn): no window moves while the card still moves.
+    resetState("tt-card-fraco");fraco=1;
+    focoHero=0;posterSetting=AJ_TRAILER_CARTAZ_CARD;trailerSetting=0;nFileiras=1;foco.fileira=0;
+    layoutSetting=HOME_LAYOUT_MODERNA;trailercinema_zerar(&heroCinema);
+    fileiras[0].tipo=FILEIRA_NORMAL;heroPendente=heroAtual;heroPendenteEm=start;appleReady=1;
+    cartaoTrailerItem=heroAtual;cartaoTrailerRect=card;cartaoTrailerPode=1;
+    { Uint32 t=start+500+NV_TRAILER_HERO_ESPERA_MS;
+      cartaoTrailerServe=1;home_trailer_passo(1,.016f,start+500);
+      for (int q=0;q<10;q++) { cartaoTrailerRect.x+=10.0f;cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+q*16); }
+      rc|=check("low-end: card trailer waits while the card rect moves",!opened);
+      cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+144+NV_CARTAO_ASSENTA_MS-1);
+      rc|=check("low-end: still waiting just before the rect settles",!opened);
+      cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+144+NV_CARTAO_ASSENTA_MS);
+      rc|=check("low-end: opens once the card rect settled",opened&&lastRect.x==cartaoTrailerRect.x);
+      playing=1;rectCalls=0;cartaoTrailerRect.x+=40.0f;
+      for (int q=0;q<5;q++) { cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+500+q*16); }
+      rc|=check("low-end: plane holds while the card moves",rectCalls==0);
+      cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+500+80+NV_CARTAO_ASSENTA_MS);
+      rc|=check("low-end: plane follows once, after the card settled",rectCalls==1&&lastRect.x==cartaoTrailerRect.x);
+    }
+    fraco=0;
 
     // Card playback uses the focused title, even when the hero is hidden or
     // its artwork still belongs to another title. Fullscreen still needs it.

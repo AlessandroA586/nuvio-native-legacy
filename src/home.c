@@ -3,6 +3,7 @@
 // hero no topo, rail fixa à esquerda e fileiras horizontais de posters. A
 // infraestrutura nativa cuida de cache assíncrono, foco e transições.
 #include "home.h"
+#include "memlog.h"
 #include "perfis.h"
 #include "botoes.h"
 #include "cwretido.h"
@@ -582,6 +583,22 @@ static TrailerCinema heroCinema;
 static int     heroTrailerNoCartao;
 static int     cartaoTrailerItem = -1, cartaoTrailerPode, cartaoTrailerServe;
 static GfxRect cartaoTrailerRect;
+// Android fraco (Onn): the video window is a SurfaceView laid out apart from the
+// GL hole, so moving it every frame while the card expands or the row scrolls
+// flickers and stutters. Open and follow only once the card rect sat still.
+#define NV_CARTAO_ASSENTA_MS 300u
+static GfxRect cartaoAssentaRect;
+static Uint32  cartaoAssentaDesde;
+static int cartaoAssentado(Uint32 agora) {
+  if (!memlog_android_fraco()) return 1;
+  const GfxRect *r = &cartaoTrailerRect, *a = &cartaoAssentaRect;
+  if (fabsf(r->x - a->x) > 1.0f || fabsf(r->y - a->y) > 1.0f ||
+      fabsf(r->w - a->w) > 1.0f || fabsf(r->h - a->h) > 1.0f) {
+    cartaoAssentaRect = *r;
+    cartaoAssentaDesde = agora;
+  }
+  return agora - cartaoAssentaDesde >= NV_CARTAO_ASSENTA_MS;
+}
 // Proporcao minima (largura/altura) do cartaz que recebe o trailer: o 4:3
 // (1,33) entra, o 2:3 em pe (0,67) nao.
 #define NV_CARTAO_TRAILER_ASP 1.2f
@@ -5854,6 +5871,7 @@ static void home_trailer_passo_(int topo, float dt, Uint32 agora) {
                    agora - heroPendenteEm >= (Uint32)(ajustes_expandir_poster_atraso() * 1000.0f);
     // No card: the focused card drawn last frame must accept the video.
     if (destCartao) noCartaz = noCartaz && cartaoTrailerPode && itemAtual >= 0;
+    if (destCartao && !cartaoAssentado(agora)) cartaoTrailerServe = 0;
     pronto = topo && (noHero || noCartaz);
     if (!topo) motivo = HERO_GATE_OVERLAY;
     else if (!destCartao && !ajustes_hero_ligado()) motivo = HERO_GATE_DISABLED;
@@ -6070,8 +6088,9 @@ trailer_hero_fim:
       (!heroTrailerNoCartao || cartaoTrailerItem == heroTrailerItem)) {
     GfxRect alvoR = heroTrailerNoCartao ? cartaoVideoRect(cartaoTrailerRect) : heroArteRect;
     GfxRect atual = trailer_retangulo();
-    if (fabsf(alvoR.x - atual.x) > 1.0f || fabsf(alvoR.y - atual.y) > 1.0f ||
-        fabsf(alvoR.w - atual.w) > 1.0f || fabsf(alvoR.h - atual.h) > 1.0f)
+    if ((fabsf(alvoR.x - atual.x) > 1.0f || fabsf(alvoR.y - atual.y) > 1.0f ||
+         fabsf(alvoR.w - atual.w) > 1.0f || fabsf(alvoR.h - atual.h) > 1.0f) &&
+        (!heroTrailerNoCartao || cartaoAssentado(agora)))
       trailer_rect(alvoR);
   }
   { float alvo = (heroTrailerItem >= 0 && heroTrailerItem == itemAtual &&

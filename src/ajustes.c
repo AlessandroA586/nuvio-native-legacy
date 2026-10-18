@@ -20,6 +20,7 @@
 #include "xtream.h"
 #include "xtepg.h"
 #include "teclado.h"
+#include "memlog.h"
 #include "descoberta.h"
 #include "extras.h"
 #include "fileiras.h"
@@ -3233,7 +3234,13 @@ Uint32 ajustes_trailer_hero_espera_ms(void) {
 }
 float ajustes_trailer_zoom(void)      { static const float z[] = { 1.34f, 1.15f, 1.55f, 1.0f }; int v = valor[AJ_TRAILER_ASPECTO]; return (v >= 0 && v < 4) ? z[v] : 1.34f; }
 // Teto de definicao do trailer: 0 = a maior que houver.
-int   ajustes_trailer_qualidade(void) { static const int t[] = { 0, 1080, 720, 480 }; int v = valor[AJ_TRAILER_QUAL]; return (v >= 0 && v < 4) ? t[v] : 0; }
+// Android de pouca RAM nunca passa de 720p: o decodificador do box Onn engasga.
+int   ajustes_trailer_qualidade(void) {
+  static const int t[] = { 0, 1080, 720, 480 };
+  int v = valor[AJ_TRAILER_QUAL], q = (v >= 0 && v < 4) ? t[v] : 0;
+  if (memlog_android_fraco() && (q == 0 || q > 720)) q = 720;
+  return q;
+}
 // Fonte do trailer: o TRF_* de trailerfonte.h. Fora da lista le Automatico.
 const char *ajustes_trailer_audio(void) {
   int v = valor[AJ_TRAILER_AUDIO];
