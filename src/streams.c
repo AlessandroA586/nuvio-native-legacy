@@ -415,11 +415,19 @@ int stream_filtro_bloqueou(void) {
 // addon ("Meteor - Not configured", "Embed69 - {}", "... error"). Esses so ficam
 // na folha manual (#284: 75% Android / 60% Samsung / 41% LG falham quando o
 // automatico os escolhe, contra 6/14/9% das fontes com resolucao).
-static int foraDoAutoComFiltro(int i, const FonteFiltroConfig *filtro) {
-  return automaticaExcluida(i) || (i >= 0 && i < n &&
-      ((!canalFolha && (filtro ? !fontefiltro_permite(filtro, &lista[i].filtro) : !stream_filtro_permite(&lista[i]))) ||
-       lista[i].foraCache || ehInformativa(&lista[i]) || excedeDecoder(&lista[i]) || fontesmortas_idade(&lista[i]) >= 0));
+// Por que a fonte sai do automatico (0 = fica), na ordem em que o teste corre.
+enum { MOT_FICA, MOT_EXCLUIDA, MOT_FILTRO, MOT_FORA_CACHE, MOT_INFORMATIVA, MOT_DECODER, MOT_MORTA, MOT_N };
+static int motivoForaDoAuto(int i, const FonteFiltroConfig *filtro) {
+  if (automaticaExcluida(i)) return MOT_EXCLUIDA;
+  if (i < 0 || i >= n) return MOT_FICA;
+  if (!canalFolha && (filtro ? !fontefiltro_permite(filtro, &lista[i].filtro) : !stream_filtro_permite(&lista[i]))) return MOT_FILTRO;
+  if (lista[i].foraCache) return MOT_FORA_CACHE;
+  if (ehInformativa(&lista[i])) return MOT_INFORMATIVA;
+  if (excedeDecoder(&lista[i])) return MOT_DECODER;
+  if (fontesmortas_idade(&lista[i]) >= 0) return MOT_MORTA;
+  return MOT_FICA;
 }
+static int foraDoAutoComFiltro(int i, const FonteFiltroConfig *filtro) { return motivoForaDoAuto(i, filtro) != MOT_FICA; }
 static int foraDoAuto(int i) { return foraDoAutoComFiltro(i, NULL); }
 int stream_automatico_disponivel(int indice) { return indice >= 0 && indice < n && !foraDoAuto(indice); }
 long stream_vod_falhou_ha(int indice) { return indice >= 0 && indice < n ? fontesmortas_idade(&lista[indice]) : -1; }
@@ -2482,6 +2490,7 @@ int stream_falha_aplicar(int indice, unsigned geracao, int servico, const char *
 
 int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
   int fila[VER_MAX], nf, q, tocadas = 0, escolhida, total, pref, livres = 0, kk;
+  int motivos[MOT_N] = {0};
   int modo = ajustes_fonte_primeira() ? FONTEAUTO_PRIMEIRA : FONTEAUTO_MELHOR;
   long *pts;
   unsigned char *acima, *excl;
@@ -2529,7 +2538,9 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
       if (i == pref && fonteregra_no_escopo(&cfgEscopo, ehPlugin(&lista[i]))) posPref = q;
       pts[q] = pontos(&lista[i]);
       acima[q] = (unsigned char)!cabeNoTeto(&lista[i]);
-      excl[q] = (unsigned char)foraDoAutoComFiltro(i, &c.filtro);
+      int mot = motivoForaDoAuto(i, &c.filtro);
+      excl[q] = (unsigned char)(mot != MOT_FICA);
+      motivos[mot]++;
       grp[q] = (signed char)grupoDe(i);
       rk[q] = fonteregra_ordem_rank(lista[i].provedor);
       if (!excl[q]) livres++;
@@ -2542,6 +2553,11 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
     free(ordem); }
   free(pts); free(acima); free(excl); free(grp); free(rk);
   if (nf < 1) {
+    // Nenhuma candidata: dizer por que (so contagens, sem URL) para o log da TV.
+    if (livres == 0 && total > 0)
+      printf("[fonte] auto-play: 0 de %d candidata(s); fora do automatico: excluida=%d filtro=%d fora-de-cache=%d informativa=%d decoder=%d morta=%d\n",
+             total, motivos[MOT_EXCLUIDA], motivos[MOT_FILTRO], motivos[MOT_FORA_CACHE], motivos[MOT_INFORMATIVA],
+             motivos[MOT_DECODER], motivos[MOT_MORTA]);
     // Havia fonte, mas as regras de Ajustes nao deixam nenhuma (#202).
     if (livres > 0) {
       pthread_mutex_lock(&verTrava);
