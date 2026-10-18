@@ -2867,7 +2867,7 @@
   T("Mover para categoria", "Mover a categoría"),
   T("Movimento", "Movimiento"),
   T("Movimento e relógio", "Movimiento y reloj"),
-  T("Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 100%.", "Cambia el tamaño de textos, botones y componentes de Inicio, de la ficha del título y de la biblioteca. Los pósteres mantienen el tamaño elegido en las filas. El valor predeterminado es 100%."),
+  T("Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 85%.", "Cambia el tamaño de textos, botones y componentes de Inicio, de la ficha del título y de la biblioteca. Los pósteres mantienen el tamaño elegido en las filas. El valor predeterminado es 85%."),
   T("Muda só o tamanho dos Ajustes nesta TV. O padrão é 100%.", "Cambia solo el tamaño de los ajustes en este televisor. El valor predeterminado es 100%."),
   T("Mudar", "Cambiar"),
   T("Mude quando quiser", "Cámbialo cuando quieras"),

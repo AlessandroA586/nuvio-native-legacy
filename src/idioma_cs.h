@@ -2868,7 +2868,7 @@
   T("Mover para categoria", "Přesunout do kategorie"),
   T("Movimento", "Pohyb"),
   T("Movimento e relógio", "Pohyb a hodiny"),
-  T("Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 100%.", "Changes the size of text, buttons and components on Home, the title page and Library. Posters keep the size chosen in the rows. The default is 100%."),
+  T("Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 85%.", "Changes the size of text, buttons and components on Home, the title page and Library. Posters keep the size chosen in the rows. The default is 85%."),
   T("Muda só o tamanho dos Ajustes nesta TV. O padrão é 100%.", "Mění pouze velikost nastavení na této TV. Výchozí hodnota: 100%."),
   T("Mudar", "Změnit"),
   T("Mude quando quiser", "Změňte kdykoli"),

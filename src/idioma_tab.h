@@ -2867,7 +2867,7 @@
   { "Mover para categoria", "Move to category" },
   { "Movimento", "Motion" },
   { "Movimento e relógio", "Motion and clock" },
-  { "Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 100%.", "Changes the size of text, buttons and components on Home, the title page and Library. Posters keep the size chosen in the rows. The default is 100%." },
+  { "Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 85%.", "Changes the size of text, buttons and components on Home, the title page and Library. Posters keep the size chosen in the rows. The default is 85%." },
   { "Muda só o tamanho dos Ajustes nesta TV. O padrão é 100%.", "Changes only the size of Settings on this TV. The default is 100%." },
   { "Mudar", "Change" },
   { "Mude quando quiser", "Change it whenever" },
