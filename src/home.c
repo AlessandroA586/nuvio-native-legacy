@@ -5387,8 +5387,8 @@ static void desenhaHero(Uint32 agora, float saida) {
           int tb = botao_superficie(bt, 1.0f, aBtn);
           lb = txt_linha(TXT_DET_BOTAO, rot, tb, tb, tb, 255);
         }
-        else if (ajustes_vidro()) gfx_vidro_painel(bt, 0.5f, 0.55f, aBtn);
-        else gfx_cor(bt, 0.5f, 1.0f, 1.0f, 1.0f, 0.18f * aBtn);
+        // Resting actions share the cached frost sheet, including glass off.
+        else gfx_vidro_folha(bt, 0.5f, aBtn);
         // O TRIANGULO DE REPRODUZIR NAO ENTRA AQUI. Ele e a marca universal de
         // "comeca agora" e este botao nao comeca nada; desenha-lo seria a mesma
         // mentira do rotulo, so que em forma.
