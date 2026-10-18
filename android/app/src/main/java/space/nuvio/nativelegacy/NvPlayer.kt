@@ -1133,8 +1133,21 @@ object NvPlayer {
     @Volatile private var janelaAplicada = -1
     @Volatile private var janelaSuperficieAplicada: SurfaceView? = null
     private var janelaUltimoPedido: List<Any?>? = null
-    @JvmStatic fun janelaPronta(): Boolean = janelaAplicada == janelaPedido.get() &&
-        janelaSuperficieAplicada != null && janelaSuperficieAplicada === superficie
+    @JvmStatic fun janelaPronta(): Boolean {
+        val sv = superficie
+        if (sv == null || sv.isLayoutRequested || sv.visibility != View.VISIBLE ||
+            !sv.holder.surface.isValid || recriando || recriaAgendada) {
+            janelaSuperficieAplicada = null
+            return false
+        }
+        return janelaAplicada == janelaPedido.get() && janelaSuperficieAplicada === sv
+    }
+    private fun observarJanela(sv: SurfaceView) {
+        sv.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or2, ob ->
+            if (superficie === sv && (l != ol || t != ot || r != or2 || b != ob))
+                janelaSuperficieAplicada = null
+        }
+    }
     @Synchronized @JvmStatic fun janela(x: Int, y: Int, w: Int, h: Int, encaixa: Int) {
         val geometria = listOf(x, y, w, h, encaixa, superficie)
         // Crop retries still apply layout, but unchanged requests keep their acknowledgement.
@@ -1502,6 +1515,7 @@ object NvPlayer {
         sv.isFocusable = false
         sv.isFocusableInTouchMode = false
         sv.holder.addCallback(antesDoMedia3)
+        observarJanela(sv)
         c.addView(sv, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         superficie = sv
     }
@@ -1512,12 +1526,15 @@ object NvPlayer {
     private var destruirIni = 0L
     private val antesDoMedia3 = object : SurfaceHolder.Callback {
         override fun surfaceCreated(h: SurfaceHolder) {
+            if (h === superficie?.holder) janelaSuperficieAplicada = null
             Log.i(TAG, "[dvtrace] created sessao=$sessao holder=${System.identityHashCode(h)} atual=${h === superficie?.holder} hdr=$ultHdr frame=${h.surfaceFrame}")
         }
         override fun surfaceChanged(h: SurfaceHolder, f: Int, w: Int, a: Int) {
+            if (h === superficie?.holder) janelaSuperficieAplicada = null
             Log.i(TAG, "[dvtrace] changed sessao=$sessao holder=${System.identityHashCode(h)} atual=${h === superficie?.holder} tamanho=${w}x$a formato=$f hdr=$ultHdr")
         }
         override fun surfaceDestroyed(h: SurfaceHolder) {
+            if (h === superficie?.holder) janelaSuperficieAplicada = null
             destruirIni = SystemClock.elapsedRealtime()
             Log.i(TAG, "[dvtrace] destroyed sessao=$sessao holder=${System.identityHashCode(h)} atual=${h === superficie?.holder} hdr=$ultHdr")
         }

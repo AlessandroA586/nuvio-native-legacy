@@ -9,11 +9,21 @@ source = (root / 'android/app/src/main/java/space/nuvio/nativelegacy/NvPlayer.kt
 start = source.index('    private val janelaPedido =')
 end = source.index('    @JvmStatic fun escolher(', start)
 methods = source[start:end]
+callbacks = source[source.index('    private val antesDoMedia3 ='):source.index('    private val depoisDoMedia3 =')]
 fixture = '''
 import java.util.concurrent.atomic.AtomicInteger
-object View { const val VISIBLE = 0 }
+object View { const val VISIBLE = 0; const val GONE = 8 }
+object Log { fun i(tag: String, message: String) {} }
+object SystemClock { fun elapsedRealtime() = 0L }
 class Surface { var isValid = true }
-class Holder { val surface = Surface() }
+class SurfaceHolder {
+    val surface = Surface(); val surfaceFrame = "frame"
+    interface Callback {
+        fun surfaceCreated(h: SurfaceHolder)
+        fun surfaceChanged(h: SurfaceHolder, f: Int, w: Int, a: Int)
+        fun surfaceDestroyed(h: SurfaceHolder)
+    }
+}
 class Observer {
     interface OnPreDrawListener { fun onPreDraw(): Boolean }
     val listeners = mutableListOf<OnPreDrawListener>()
@@ -22,8 +32,11 @@ class Observer {
     fun draw() { listeners.toList().forEach { it.onPreDraw() } }
 }
 class SurfaceView {
-    val holder = Holder(); val viewTreeObserver = Observer()
+    val holder = SurfaceHolder(); val viewTreeObserver = Observer()
     var isLayoutRequested = false; var visibility = View.VISIBLE
+    var layoutListener: ((SurfaceView, Int, Int, Int, Int, Int, Int, Int, Int) -> Unit)? = null
+    fun addOnLayoutChangeListener(l: (SurfaceView, Int, Int, Int, Int, Int, Int, Int, Int) -> Unit) { layoutListener = l }
+    fun layout(changed: Boolean) { layoutListener?.invoke(this, 0, 0, 320, 180, 0, 0, if (changed) 300 else 320, 180) }
     fun invalidate() {}
 }
 class Queue {
@@ -36,7 +49,18 @@ object P {
     var player: Any? = Any()
     var recriando = false; var recriaAgendada = false
     val principal = Queue()
+    const val TAG = "test"; val sessao = 1; val ultHdr = "none"
+    var destruirIni = 0L
+    fun observeLayout() = observarJanela(superficie!!)
+    fun lifecycle(event: String, h: SurfaceHolder = superficie!!.holder) {
+        when (event) {
+            "destroyed" -> antesDoMedia3.surfaceDestroyed(h)
+            "created" -> antesDoMedia3.surfaceCreated(h)
+            "changed" -> antesDoMedia3.surfaceChanged(h, 0, 320, 180)
+        }
+    }
     fun definirJanela(x: Int, y: Int, w: Int, h: Int, encaixa: Boolean) {}
+CALLBACKS
 METHODS
 }
 fun main() {
@@ -59,9 +83,44 @@ fun main() {
     P.superficie = SurfaceView()
     check(!P.janelaPronta()) { "replacement surface inherited old acknowledgement" }
     request(12); check(!P.janelaPronta()); draw(); check(P.janelaPronta())
-    println("android_window_ready: unchanged retries stay visible; changed crop/surface await pre-draw")
+    fun recover() {
+        check(!P.janelaPronta()) { "recovery inherited stale acknowledgement" }
+        request(12); check(!P.janelaPronta()); draw(); check(P.janelaPronta())
+    }
+    P.superficie!!.holder.surface.isValid = false
+    check(!P.janelaPronta()) { "destroyed native surface still ready" }
+    P.superficie!!.holder.surface.isValid = true
+    recover()
+    // Lifecycle callbacks must invalidate even when SDL misses the invalid interval.
+    for (event in listOf("destroyed", "created", "changed")) {
+        P.lifecycle(event)
+        recover()
+    }
+    // Old holders cannot invalidate the currently acknowledged surface.
+    P.lifecycle("destroyed", SurfaceHolder()); check(P.janelaPronta())
+    P.superficie!!.visibility = View.GONE
+    check(!P.janelaPronta()) { "hidden surface still ready" }
+    P.superficie!!.visibility = View.VISIBLE
+    recover()
+    P.superficie!!.isLayoutRequested = true
+    check(!P.janelaPronta()) { "pending layout still ready" }
+    request(12); draw(); check(!P.janelaPronta())
+    P.superficie!!.isLayoutRequested = false
+    draw(); check(P.janelaPronta())
+    P.observeLayout()
+    P.superficie!!.layout(false); check(P.janelaPronta())
+    P.superficie!!.layout(true)
+    recover()
+    for (scheduled in listOf(false, true)) {
+        P.recriando = !scheduled; P.recriaAgendada = scheduled
+        check(!P.janelaPronta()) { "recovering surface still ready" }
+        request(12); draw(); check(!P.janelaPronta())
+        P.recriando = false; P.recriaAgendada = false
+        draw(); check(P.janelaPronta())
+    }
+    println("android_window_ready: valid retries preserved; lifecycle/layout recovery waits for pre-draw")
 }
-'''.replace('METHODS', methods).replace('android.view.ViewTreeObserver.OnPreDrawListener', 'Observer.OnPreDrawListener')
+'''.replace('METHODS', methods).replace('CALLBACKS', callbacks).replace('android.view.ViewTreeObserver.OnPreDrawListener', 'Observer.OnPreDrawListener')
 # Reuse the existing cached Kotlin compiler setup without running its fixture.
 setup = (root / 'tests/android_window_layout.py').read_text()
 setup = setup[setup.index('cache = Path.home()'):setup.index('with tempfile.TemporaryDirectory(')]
