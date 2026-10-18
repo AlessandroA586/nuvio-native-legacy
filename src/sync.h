@@ -85,9 +85,8 @@ const char *sync_resumo(void);   // uma linha para a tela de ajustes
 // Marca uma superficie como suja: o proximo ciclo empurra. Chamar quando o
 // usuario mexe em algo local.
 void sync_sujar_progresso(void);
-// No-op desde a mao unica dos addons (#360): a edicao local nao sobe mais.
-// Resta no cabecalho porque os pontos que mexem na lista (addonsui, guia) o
-// chamavam no mesmo gesto; apagar o simbolo nao muda comportamento nenhum.
+// Persist local flags immediately and queue changed flags for row-level sync.
+// Membership and order remain controlled by the account.
 void sync_sujar_addons(void);
 
 // Ultimo instante em que um ciclo terminou bem (SDL_GetTicks); 0 se nunca.

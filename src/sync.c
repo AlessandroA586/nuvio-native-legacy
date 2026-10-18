@@ -416,6 +416,72 @@ static int addonsListaIgual(const AddonRemoto *a, int na, const AddonRemoto *b, 
   }
   return 1;
 }
+static pthread_mutex_t addonsToggleTrava = PTHREAD_MUTEX_INITIALIZER;
+
+static void addonsGuardar(const char *superficie, const AddonRemoto *lista, int n,
+                          int perfil, const char *usuario, unsigned geracao) {
+  Jsw w;
+  jsw_iniciar(&w); jsw_arr_ini(&w);
+  for (int i = 0; i < n; i++) {
+    const char *longa = nv_longa_bruto(lista[i].url);
+    jsw_obj_ini(&w);
+    jsw_cs(&w, "url", longa ? longa : lista[i].url);
+    jsw_cs(&w, "name", lista[i].nome);
+    jsw_cb(&w, "enabled", lista[i].ativo);
+    jsw_obj_fim(&w);
+  }
+  jsw_arr_fim(&w);
+  const char *txt = jsw_texto_final(&w);
+  if (txt) contacache_gravar_geracao(superficie, perfil, usuario, txt, geracao);
+  jsw_livre(&w);
+}
+
+// Pending flags are durable, account/profile scoped, and never change membership.
+static void addonsEnviarToggles(void) {
+  AddonRemoto *pend = calloc(SY_ADD_MAX, sizeof *pend);
+  char *url = malloc(SY_URL_LEITURA);
+  char *saved;
+  int ok = 1;
+  if (!pend || !url) { free(pend); free(url); return; }
+  pthread_mutex_lock(&addonsToggleTrava);
+  saved = contacache_ler(CC_ADDONS_TOGGLES, addonsPerfilCiclo, usuarioDoCiclo, NULL);
+  pthread_mutex_unlock(&addonsToggleTrava);
+  int n = saved ? lerAddonsPara(saved, pend, url) : 0;
+  for (int i = 0; i < n && perfilDoCicloAtual(); i++) {
+    char key[NV_ADDON_URL_MAX], other[NV_ADDON_URL_MAX];
+    nv_addon_chave(pend[i].url, key, sizeof key);
+    for (int j = 0; j < nAddonsRem; j++) {
+      nv_addon_chave(addonsRem[j].url, other, sizeof other);
+      if (strcmp(key, other)) continue;
+      // Use the exact remote URL, quoted for PostgREST and URL escaped.
+      Jsw w;
+      char escaped[SY_URL_LEITURA * 3], dono[240], query[SY_URL_LEITURA * 3 + 400];
+      const char *longa = nv_longa_bruto(addonsRem[j].url);
+      jsw_iniciar(&w); jsw_str(&w, longa ? longa : addonsRem[j].url);
+      nuvem_url_escapar(jsw_texto_final(&w), escaped, sizeof escaped);
+      jsw_livre(&w);
+      nuvem_url_escapar(perfis_dono(), dono, sizeof dono);
+      snprintf(query, sizeof query, "user_id=eq.%s&profile_id=eq.%d&url=eq.%s",
+               dono, addonsPerfilCiclo, escaped);
+      int st = 0;
+      char *r = nuvem_addon_alternar(query, pend[i].ativo, tokenDoCiclo, &st);
+      if (!ok2xx(r, st) || !perfilDoCicloAtual() || !js_raiz_array(r) ||
+          !strchr(js_raiz_array(r), '{')) ok = 0;
+      else addonsRem[j].ativo = pend[i].ativo;
+      free(r);
+      break;
+    }
+  }
+  pthread_mutex_lock(&addonsToggleTrava);
+  char *current = contacache_ler(CC_ADDONS_TOGGLES, addonsPerfilCiclo, usuarioDoCiclo, NULL);
+  if (ok && saved && current && !strcmp(saved, current) && perfilDoCicloAtual())
+    contacache_gravar_geracao(CC_ADDONS_TOGGLES, addonsPerfilCiclo, usuarioDoCiclo,
+                              "[]", copiaGeracaoDoCiclo);
+  free(current);
+  pthread_mutex_unlock(&addonsToggleTrava);
+  free(saved); free(pend); free(url);
+}
+
 static int addonsAplicar(void) {
   static AddonRemoto local[SY_ADD_MAX];
   int n = addons_exportar(local, SY_ADD_MAX), mudou = 0, i;
@@ -538,6 +604,7 @@ static int puxarAddons(void) {
                                       r, copiaGeracaoDoCiclo);
   free(r);
   nAddonsRem = k;
+  addonsEnviarToggles();
   temAddonsRem = 1;
   // REGISTRA O PERFIL PEDIDO, e nao so o resultado. O defeito que levou a esta
   // linha (perfil secundario com "0 addons", relato do Mane155) era um pedido
@@ -1852,12 +1919,40 @@ const char *sync_resumo(void) {
 }
 unsigned    sync_ultimo_ok(void)   { return ultimoOk; }
 void        sync_sujar_progresso(void) { sujoProgresso = 1; }
-// #360 MAO UNICA: a edicao local de addons NAO sobe mais para a conta
-// (sync_push_addons deixou de existir — ela substituia a lista inteira do
-// perfil e era a origem das duplicatas e das remocoes cruzadas do relato).
-// Local toggles survive pulls; membership/order still follow the account.
-// The symbol remains a no-op for callers that used it after local toggles.
-void        sync_sujar_addons(void) { }
+void sync_sujar_addons(void) {
+  static AddonRemoto local[SY_ADD_MAX], before[SY_ADD_MAX], pend[SY_ADD_MAX];
+  static char url[SY_URL_LEITURA];
+  char usuario[80];
+  int perfil = perfis_ativo_addons();
+  unsigned geracao = contacache_geracao();
+  if (!sessao_logada()) return;
+  snprintf(usuario, sizeof usuario, "%s", sessao_usuario());
+  pthread_mutex_lock(&addonsToggleTrava);
+  int n = addons_exportar(local, SY_ADD_MAX);
+  char *old = contacache_ler(CC_ADDONS_APLICADOS, perfil, usuario, NULL);
+  char *pending = contacache_ler(CC_ADDONS_TOGGLES, perfil, usuario, NULL);
+  int nb = old ? lerAddonsPara(old, before, url) : 0;
+  int np = pending ? lerAddonsPara(pending, pend, url) : 0;
+  for (int i = 0; i < n; i++) {
+    char key[NV_ADDON_URL_MAX], other[NV_ADDON_URL_MAX];
+    nv_addon_chave(local[i].url, key, sizeof key);
+    for (int j = 0; j < nb; j++) {
+      nv_addon_chave(before[j].url, other, sizeof other);
+      if (strcmp(key, other) || local[i].ativo == before[j].ativo) continue;
+      int k;
+      for (k = 0; k < np; k++) {
+        nv_addon_chave(pend[k].url, other, sizeof other);
+        if (!strcmp(key, other)) break;
+      }
+      if (k < SY_ADD_MAX) { pend[k] = local[i]; if (k == np) np++; }
+      break;
+    }
+  }
+  addonsGuardar(CC_ADDONS_TOGGLES, pend, np, perfil, usuario, geracao);
+  addonsGuardar(CC_ADDONS_APLICADOS, local, n, perfil, usuario, geracao);
+  free(old); free(pending);
+  pthread_mutex_unlock(&addonsToggleTrava);
+}
 // Provedor que o servidor recusou com "Unsupported provider credential": o
 // servidor de hoje nao guarda trakt/simkl, e a resposta nao muda ate o app
 // reiniciar. Perguntar de novo a cada renovacao do token era um 400 no log por

@@ -6,6 +6,31 @@
 #include "../src/sync.c"
 #include <assert.h>
 
+int perfis_sessao_atual(uint64_t g) { return g == 0; }
+int sessao_identidade_local_copiar(char *u, size_t n, char *t, size_t m) {
+  snprintf(u, n, "%s", sessao_usuario()); snprintf(t, m, "fixture"); return 1;
+}
+void sessao_token_recusado(const char *t) { (void)t; }
+char *nuvem_tabela(const char *t, const char *q, const char *jwt, int *st) {
+  (void)jwt; return sessao_tabela(t, q, st);
+}
+char *nuvem_rpc_com(const char *f, const char *b, const char *jwt, int *st) {
+  (void)jwt; return sessao_rpc(f, b, st);
+}
+
+static int patches, patchStatus = 200;
+char *nuvem_addon_alternar(const char *q, int ativo, const char *jwt, int *st) {
+  (void)jwt;
+  assert(strstr(q, "user_id=eq.dono-a&profile_id=eq.1&url=eq."));
+  patches++;
+  *st = patchStatus;
+  if (*st != 200) return strdup("error");
+  char l = letra(strstr(q, "url=eq.") + 8);
+  for (int i = 0; conta[i]; i++)
+    if ((conta[i] | 0x20) == l) conta[i] = ativo ? l & ~0x20 : l;
+  return strdup("[{\"url\":\"updated\"}]");
+}
+
 static void pull(const char *json) {
   nAddonsRem = lerAddons(json);
   addonsAplicar();
@@ -73,6 +98,35 @@ int main(void) {
   pull("[{\"url\":\"https://a.exemplo/manifest.json\",\"enabled\":true},"
         "{\"url\":\"https://b.exemplo/manifest.json\",\"enabled\":false}]");
   expect("reinstall uses remote state; remaining ON stays ON", "AB");
+  // A toggle must reach the account without replacing its membership/order.
+  snprintf(conta, sizeof conta, "ABZ");
+  tv[0].ativo = 0;
+  sync_sujar_addons();
+  perfilDoCiclo = 1;
+  confere("toggle pull completes", puxarAddons() == 1);
+  confere("explicit disable reaches account; unrelated rows stay", !strcmp(conta, "aBZ"));
+  confere("no whole-list upload", pushes == 0);
+  // Seed the OFF snapshot, then enable and restart BEFORE another pull.
+  addonsAplicar();
+  tv[0].ativo = 1;
+  sync_sujar_addons();
+  nTv = 0;
+  addonsRestauradosPerfil = 0;
+  addonsRestaurar();
+  expect("restart immediately after enable", "ABZ");
+  pull("[{\"url\":\"https://a.exemplo/manifest.json\",\"enabled\":false},"
+        "{\"url\":\"https://b.exemplo/manifest.json\"},"
+        "{\"url\":\"https://z.exemplo/manifest.json\"}]");
+  expect("web false after immediate restart preserves enable", "ABZ");
+  confere("enable sync survives restart", puxarAddons() == 1 && !strcmp(conta, "ABZ"));
+  confere("only explicit flags patched", patches == 2);
+  // A failed request must remain durable until a later successful sync.
+  tv[0].ativo = 0;
+  sync_sujar_addons();
+  patchStatus = 503;
+  confere("failed patch does not claim success", puxarAddons() == 1 && !strcmp(conta, "ABZ"));
+  patchStatus = 200;
+  confere("failed flag retried", puxarAddons() == 1 && !strcmp(conta, "aBZ"));
   assert(!falhas);
   puts("PASS: production addon pull preserves local toggles and remote membership/order");
   return 0;
