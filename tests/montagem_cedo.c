@@ -46,12 +46,10 @@ int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
 int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le o ajuste
 int ajustes_ocultar_filmes_vistos(void) { return 0; }    // #366: descoberta.c le o ajuste
 #include "../src/descoberta.c"
-#ifndef MONTAGEM_PERFIS_REAIS
-#define NV_TEST_SESSAO_PROPRIA
-#endif
-#define NV_TEST_ADDONS_PROPRIOS
-#define NV_TEST_SOCIAL_PROPRIO
+// Session, addon and social functions belong to this fixture or real modules.
+#define NV_TEST_SERVIDORES_APENAS
 #include "jellyfin_stub.inc"
+#undef NV_TEST_SERVIDORES_APENAS
 #include "nvtmp.h"
 Uint32 SDL_GetTicks(void) { return 0; }
 
