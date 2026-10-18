@@ -1,0 +1,44 @@
+// The glass program is linked on its first draw, not in gfx_iniciar: a draw in
+// that mode must still work, and the program in use afterwards must be right.
+#include "gfx.h"
+#include <SDL2/SDL.h>
+#include <assert.h>
+#include <stdio.h>
+
+static void pixel(int x, int y, unsigned char out[4]) {
+  glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, out);
+}
+
+int main(void) {
+  SDL_Window *window;
+  SDL_GLContext context;
+  unsigned char px[4];
+  int failed = 0;
+  assert(SDL_Init(SDL_INIT_VIDEO) == 0);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+  window = SDL_CreateWindow("Glass lazy link", SDL_WINDOWPOS_UNDEFINED,
+                            SDL_WINDOWPOS_UNDEFINED, 1920, 1080,
+                            SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
+  assert(window);
+  context = SDL_GL_CreateContext(window);
+  assert(context);
+  glViewport(0, 0, 1920, 1080);
+  gfx_tamanho_alvo(1920, 1080);
+  assert(gfx_iniciar());
+  for (int pass = 0; pass < 2; pass++) {   // 1st draw links the glass, 2nd reuses it
+    glClearColor(0.6f, 0.5f, 0.4f, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+    gfx_rect((GfxRect){ 100, 100, 600, 400 }, 0, GFX_VIDRO, 0, 0, 0, 0.1f, 1, 1, 1, 1);
+    gfx_cor((GfxRect){ 1000, 100, 600, 400 }, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f);
+    pixel(1300, 1080 - 300, px);   // the solid red square drawn right after the glass
+    int ok = px[0] > 250 && px[1] < 5 && px[2] < 5 && glGetError() == GL_NO_ERROR;
+    printf("%s: pass %d, after-glass pixel=%d,%d,%d\n", ok ? "PASS" : "FAIL", pass, px[0], px[1], px[2]);
+    if (!ok) failed = 1;
+  }
+  gfx_encerrar();
+  SDL_GL_DeleteContext(context);
+  SDL_DestroyWindow(window);
+  SDL_Quit();
+  return failed;
+}
