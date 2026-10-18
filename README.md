@@ -268,7 +268,11 @@ connection, not this app. One minute of checks saves everyone time:
    debrid side.
 3. **Try another source, then another title**, and run the internet speed test
    on the TV: **Settings › Diagnostics › Speed test**.
-4. **Send the log and keep its code**: **Settings › About and help › Send
+4. **Buffering or stuttering only**: **Settings › This TV › Speed test** reports the
+   largest file your connection can handle. If the file you are playing is bigger
+   than that, the connection is the limit — pick a smaller source, that is not a
+   bug in this app.
+5. **Send the log and keep its code**: **Settings › About and help › Send
    log › Send**. When it finishes, the screen shows a **6-character code**
    (letters and digits, no I, L, O or U). That code is what we need in the issue.
 
@@ -277,7 +281,7 @@ to fix bugs. You can also turn on automatic log sending in Settings.
 
 ### File it
 
-1. Right after the problem happens, send the log (step 4 above).
+1. Right after the problem happens, send the log (step 5 above).
 2. Open an [issue](https://github.com/iqui27/nuvio-native-legacy/issues) and fill
    the **Bug report** form: platform, TV model and system version, app version,
    the 6-character log code, and what you did.

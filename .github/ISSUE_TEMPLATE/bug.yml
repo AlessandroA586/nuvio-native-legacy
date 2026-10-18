@@ -8,7 +8,7 @@ body:
         ## Before you file
 
         Playback problems are usually on the add-on or debrid side, not in this app.
-        Please do these four quick checks first — most of them take under a minute.
+        Please do these five quick checks first — most of them take under a minute.
 
         1. **Play the same title with the same source in another player**
            (Stremio, the official Nuvio app, VLC, Kodi). If it fails there too,
@@ -18,7 +18,11 @@ body:
            Nothing in this app can fix a source that no longer exists.
         3. **Try another source, then another title**, and run the internet
            speed test on the TV: **Settings › Diagnostics › Speed test**.
-        4. **Send the log** and keep the code it shows: **Settings › About and help
+        4. **Buffering or stuttering only**: **Settings › This TV › Speed test**
+           reports the largest file your connection can handle. If the file you
+           are playing is bigger than that, the connection is the limit — pick a
+           smaller source, that is not a bug in this app.
+        5. **Send the log** and keep the code it shows: **Settings › About and help
            › Send log**, then **Send**. When it finishes, the screen shows a
            **6-character code** — that is the one we need.
 
@@ -26,12 +30,13 @@ body:
   - type: checkboxes
     id: checks
     attributes:
-      label: Quick checks — tick all four
+      label: Quick checks — tick all five
       description: If any of these fails, the issue belongs to the add-on author or the debrid service.
       options:
         - label: I played the same title with the same source in another player (Stremio / official Nuvio / VLC) and it only breaks in Nuvio Legacy.
         - label: I tried another source, and then another title.
         - label: I ran the speed test on the TV.
+        - label: If the problem is buffering or stuttering, I ran **Settings › This TV › Speed test** and the file is smaller than the recommended size.
         - label: This is not "not cached", no sources, 404 or an expired link.
         - label: I sent the log from **Settings › About and help › Send log** and I have the 6-character code.
     validations:
