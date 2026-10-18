@@ -2311,6 +2311,9 @@ void gfx_rect_furos(GfxRect r, GLuint tex, GfxModo modo, float foco,
                     float parx, float pary, float raio, float cr, float cg,
                     float cb, float ca, const GfxRect *furos, int n) {
   float saved[4], y = r.y;
+  GfxRect t = r;   // as gfx_rect will draw it: group transform, then text scale
+  GFX_TR_RECT(t.x, t.y, t.w, t.h);
+  if (escAtiva != 1.0f) { t.x *= escAtiva; t.y *= escAtiva; t.w *= escAtiva; t.h *= escAtiva; }
   memcpy(saved, subAtual, sizeof saved);
   while (y < r.y + r.h) {
     float end = r.y + r.h, x = r.x;
@@ -2327,7 +2330,7 @@ void gfx_rect_furos(GfxRect r, GLuint tex, GfxModo modo, float foco,
       if (skip > x) { x = skip; continue; }
       subAtual[0] = (x-r.x)/r.w; subAtual[1] = (y-r.y)/r.h;
       subAtual[2] = (next-r.x)/r.w; subAtual[3] = (end-r.y)/r.h;
-      if (fillGpuArea(r, subAtual) > 0.0)
+      if (fillGpuArea(t, subAtual) > 0.0)
         gfx_rect(r, tex, modo, foco, parx, pary, raio, cr, cg, cb, ca);
       x = next;
     }

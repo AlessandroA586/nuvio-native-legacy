@@ -18,6 +18,9 @@ if re.search(r'(^|[^P] )vec2 (uv|p) =', bold) or 'uPar.y' in bold or 'uRaio' in 
     fails.append('faux-bold coords/offsets not highp')
 if 'nv_dither(cor' not in card: fails.append('merged episode veil not dithered')
 if 'gfx_opacidade_grupo' not in furos: fails.append('epFuros ignores row/group alpha')
+rf = block(g, 'void gfx_rect_furos(', '\nvoid gfx_rect(')
+if 'fillGpuArea(r,' in rf or 'GFX_TR_RECT' not in rf or 'escAtiva' not in rf:
+    fails.append('rect_furos visibility check uses unscaled coordinates')
 for f in fails: print('FAIL:', f)
 print('OK' if not fails else ''); sys.exit(1 if fails else 0)
 EOF
