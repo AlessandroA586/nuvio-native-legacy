@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T16:48:56-03:00, HEAD `af8c87d73`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T17:49:08-03:00, HEAD `f2d7c9854`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -16,6 +16,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 ## Release features (English)
 
 ### Highlights
+
+- **Browse files and keep the same release**: Hold OK on a source to browse its complete file pack, choose another copy, continue multipart movies in order, and keep the selected release across episodes with the binge-group preference. Platforms: Samsung .tpk; shared source selection on webOS, Android and WASM. Refs PR #567, `agente/205-pr567port`, merge `d8781e9a8`, `75cf75a13`, `e13dcdb1d`, `66b5094aa`, `e14174c73`, `80c053592`, `366e3df74`, `dd1498e42`, `8a2a29540`, `0cb7d7a47`, `d4c07b768`, `2d13b3b31`, `1e45ce7b3`, `afd16f39b`, `72f9080c6`, `f23d14de9`, `1b081dcac`, `e46711c45`, `64b375d2c`.
 
 - **A real Live TV guide on every platform** (owner request): Live TV and the guide now run on a
   per-source model — add-on, Stalker, Xtream and M3U lists each get their own groups in provider order,
@@ -97,6 +99,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   is slow. All platforms. Refs #545 #551 #552 #504, `26b9c635b`, `1c9043ed0`, `455135df2`, `cbcf467f5`, `27988615e`.
 
 ### New
+
+- **Choose the Stage backdrop**: Modern Home Stage rows can show Black, Current or Artwork only backgrounds, with the choice saved on this device. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-palcolimpo`, merge `0fa8979c6`, `c1e6553b7`.
 
 - **Lighter artwork accents**: Choose Vivid or Light for the device-local “From the art” accent, with readable contrasting text and translations in all 29 languages. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `5897319c5`, `agente/205-artepastel`.
 
@@ -199,6 +203,13 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **TorBox cache labels match the source**: Explicit not-cached status takes priority over misleading names or descriptions, while confirmed cached sources remain playable. Platforms: webOS, Android, Samsung .tpk, WASM. Refs community report, `agente/205-torboxlg`, merge `f2d7c9854`, `70f756353`, `c8610436d`, `37b681acf`, `789323ed7`, `1ff87ff04`.
+- **Tizen video returns to full frame**: Ending zoom, entering picture-in-picture or opening another title restores video geometry and retries transient AVPlay reset failures. Platforms: Samsung .tpk. Refs owner request, `agente/205-tizenaspecto`, merge `39338ee31`, `d614812a1`, `acac6e9c4`, `c0b853d6b`.
+- **Automatic subtitles retain their language**: Subtitle selection preserves add-on languages and copies subtitle entries safely while playback updates the list. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #607, `f117b8cd5`, `7ab455386`, `ab3433f61`, merge `da2f454b7`; loader compatibility also covers Tizen 4/5.
+- **Browser requests finish within limits**: Network deadlines and response-size limits prevent stuck or oversized requests, and fatal runtime failures expose diagnostics. Platforms: WASM. Refs #607, `37b3a3819`, `744fc18a8`, `4b01f2454`, `d775c555f`, `6f3c88792`.
+- **Selected TorBox files keep working**: Signed links refresh for the selected file, credentials and caches remain scoped to the account, and DTS-only files can open through conversion with MKV seeking preserved. Platforms: Samsung .tpk. Refs PR #567, `20795b880`, `822be941b`, `a37082f61`, `1078df905`, `643ac294f`, `97cb8e8a6`, `0b633743a`, `93ea28a87`, `48512295f`.
+- **Appearance rows retain their settings**: The merged art and scene tables remain aligned in the Rows block. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `d232b34fd`.
 
 - **Safer episode source sheets**: Closing playback and discarding episode sources no longer frees the list while the source sheet reads it. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `67b588a0a`; previous-session player logs also help diagnose crashes.
 
@@ -323,6 +334,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Performance
 
+- **Recover image workers after decoder failure**: Direct image jobs are reclaimed when their decoder channel fails, allowing subsequent artwork work to proceed. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #607, `93009d304`.
+- **Keep Hero and file-browser work bounded**: Hero A stays within its whole-frame baseline budget and idle file-browser rows are reused between updates. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `c3985174d`, `0b633743a`.
+
 - **Lower Hero rendering cost**: Hero artwork uses fused veils and a specialized shader, avoids shading flat backgrounds and draws split captions without extra render passes to reduce Home rendering work. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `4a7a56a1d`, `07ce4a2ff`, `4b2eb36c4`, `8d84be9a1`; target-device performance remains unconfirmed.
 
 - **Glass stays smooth when text caches change**: Retiring unrelated textures no longer rebuilds an unchanged glass backdrop, preserving the existing frost appearance. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `3e8becc0e`, `59efaef75`.
@@ -385,6 +399,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Community
 
+- **Source-file and playback improvements from @Namer03**: Selected PR #567 improvements bring file browsing, release continuity and more resilient playback into the integrated release. Platforms: Samsung .tpk; shared source logic on webOS, Android and WASM. Refs PR #567, `385b44106`, merge `d8781e9a8`.
+
 - **Automatic TV and Mobile mode on Android** — @community, PR #431 (`c305e6f7e`, `875d7f18f`).
 - **Series identity during lookup and playback** — PR #561 (`cdf5bdd88`, `2537db6a0`, `86d194462`).
 - **Continue Watching without blocking catalogs** — @ghbarker, PR #538 (`cfc15aeab`, `a748ebf32`).
@@ -399,6 +415,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   `f6618db6b`, `22f3d22bb`).
 
 ### Internal
+
+- **Subtitle loader and browser contracts**: Checks cover Tizen compiler TLS regressions, Asyncify callers, AVPlay cleanup and URL probe boundaries. Platforms: Samsung .tpk, WASM. Refs #607, `ab3433f61`, `d775c555f`, `6f3c88792`.
+- **Guide metadata and tracking upkeep**: Catalog genre escape decoding, guide translations and release tracking remain documented. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `6b0f0659c`, `fa5cf5dce`, `d3b41452f`.
 
 - **Playback report checklist**: Required checks ask for comparable playback, source alternatives, the speed-test file-size recommendation and a six-character log code before filing. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `bbd084ada`, `e65ea73cd`, `e5d2d0ad7`.
 
@@ -463,11 +482,11 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-Tracking snapshot: 24 branches have unmerged commits and no running job; 17 open issues have no mapped job or prompt. Newer fixes on `agente/205-ajusteslista`, `agente/205-elencoappletv`, `agente/205-episodioslento`, `agente/205-issue607`, `agente/205-mp4oculto`, `agente/205-palcolimpo`, `agente/205-pr567port`, `agente/205-torboxlg`, `agente/205-tpk60preta`, `agente/205-trailercard`, `agente/p2p` need review and are not lost. Queued work and deferred 2.1 requests remain separate. Android installed at `cb7ece972`; C9 installation failed, so TV HEAD remains unconfirmed. Later integration merges through `af8c87d73` await device confirmation.
+Tracking snapshot: 24 branches have unmerged commits and no running job; 17 open issues have no mapped job or prompt. Newer fixes on `agente/205-addonweb`, `agente/205-elencoappletv`, `agente/205-episodioslento`, `agente/205-guialimpa`, `agente/205-notasep`, `agente/205-tpk60preta`, `agente/205-trailercard`, `agente/205-wgtlite3`, `agente/205-wgtmem1g`, `agente/p2p` need review and are not lost. Queued work and deferred 2.1 requests remain separate. Android installed at `cb7ece972`; C9 installation failed, so TV HEAD remains unconfirmed. Later integration merges through `f2d7c9854` await device confirmation.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
-- **Selected PR #567 playback improvements**: Pending work ports source file selection, binge-source continuity, refreshed TorBox links, DTS fallback, wait-all source selection, MKVToolNix seeking and source-font preferences; the latest launch fixes need review before integration. Platforms: Samsung .tpk first; Android/webOS coverage pending. Refs @Namer03, PR #567, `agente/205-pr567port`, `385b44106`.
+
 
 
 
