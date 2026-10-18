@@ -1132,11 +1132,12 @@ int stream_extrair(const char *json, const char *provedor, Stream **saida) {
       // cuidado de token() com DVDRip — o mesmo cuidado ja se aplica aqui).
       s.av1 = token(texto, "av1") || contem(texto, "av01");
       s.foraCache = stream_texto_fora_de_cache(texto);
-      // Cached by the add-on's own mark (clientResolve.isCached:true or "⚡"):
-      // only the label can veto it. A "⏳" age, "download]" or "uncached" deep
+      // Cached by the add-on's own mark (clientResolve.isCached:true or "⚡" in
+      // the name): only the label can veto it. A mark found only in the
+      // description/title never overrides a negative status there. A "⏳" age, "download]" or "uncached" deep
       // in the description/filename (AIOStreams + TorBox) marked every cached
       // stream "not cached", and the verified auto pick dropped all of them.
-      if (s.foraCache && s.emCache && !stream_texto_fora_de_cache(s.rotulo)) s.foraCache = 0;
+      if (s.foraCache && (cache > 0 || textoEmCache(nomeFonte)) && !stream_texto_fora_de_cache(s.rotulo)) s.foraCache = 0;
       // AIOStreams: clientResolve.isCached e explicito; ausente nao e false.
       if (s.infoHash[0] && !s.url[0] && cache < 0) s.foraCache = 1;
       if (s.foraCache) s.emCache = 0;
