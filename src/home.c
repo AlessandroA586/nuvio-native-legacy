@@ -718,10 +718,10 @@ static float homeConteudoX(void) {
   // espelha sua reserva para centralizar sem desenhar por baixo dela.
   if (homeRetratoTelefone())
     return ajustes_rail_largura_fixa() > 0.0f ? fmaxf(48.0f, ajustes_conteudo_x()) : 48.0f;
-  return ajustes_conteudo_x();
+  return ANC(ajustes_conteudo_x());
 }
 static float homeMargemDireita(void) {
-  return homeRetratoTelefone() ? homeConteudoX() : NV_HOME_SAFE_RIGHT;
+  return homeRetratoTelefone() ? homeConteudoX() : ANC(NV_HOME_SAFE_RIGHT);
 }
 static float homeConteudoDireita(void) { return NV_TELA_W - homeMargemDireita(); }
 static float homeLarguraUtil(void) {
@@ -747,18 +747,18 @@ static int heroCompactoTelefone(void) {
 #endif
 }
 static float alturaTextoHeroDin(void) {
-  if (homeRetratoTelefone()) return 600.0f;
-  return NV_DIN_HERO_H * (heroCompactoTelefone() ? 0.75f : 1.0f);
+  if (homeRetratoTelefone()) return ANC(600.0f);
+  return ANC(NV_DIN_HERO_H) * (heroCompactoTelefone() ? 0.75f : 1.0f);
 }
 static float repousoFileirasDin(void) {
-  if (homeRetratoTelefone()) return 620.0f;
-  return NV_DIN_REPOUSO_FIL * (heroCompactoTelefone() ? 0.75f : 1.0f);
+  if (homeRetratoTelefone()) return ANC(620.0f);
+  return ANC(NV_DIN_REPOUSO_FIL) * (heroCompactoTelefone() ? 0.75f : 1.0f);
 }
 static float empurraHeroModerna(void) {
-  if (homeRetratoTelefone()) return 620.0f - NV_SHELF_TOP;
+  if (homeRetratoTelefone()) return 620.0f - ANC(NV_SHELF_TOP);
   return heroCompactoTelefone()
-       ? (NV_SHELF_TOP + NV_HOME_HERO_EMPURRA) * 0.75f - NV_SHELF_TOP
-       : NV_HOME_HERO_EMPURRA;
+       ? (ANC(NV_SHELF_TOP) + ANC(NV_HOME_HERO_EMPURRA)) * 0.75f - ANC(NV_SHELF_TOP)
+       : ANC(NV_HOME_HERO_EMPURRA);
 }
 static float heroVisivelToque(void) {
 #ifdef NV_TOUCH_UI
@@ -779,12 +779,12 @@ static float heroVisivelToque(void) {
 // esvanecer das de cima (o `fade` de home_desenhar).
 static float topoFileiras(void) {
   int heroOn = ajustes_hero_ligado();
-  if (homeRetratoTelefone() && !heroOn) return NV_DIN_TOPO_FIL;
+  if (homeRetratoTelefone() && !heroOn) return ANC(NV_DIN_TOPO_FIL);
   switch (layoutHome()) {
     case HOME_LAYOUT_PADRAO:
-      return heroOn ? NV_PAD_TOPO_FIL : NV_DIN_TOPO_FIL - 10.0f;
-    case HOME_LAYOUT_DINAMICA: return NV_DIN_TOPO_FIL;
-    default:                   return NV_SHELF_TOP;
+      return ANC(heroOn ? NV_PAD_TOPO_FIL : NV_DIN_TOPO_FIL - 10.0f);
+    case HOME_LAYOUT_DINAMICA: return ANC(NV_DIN_TOPO_FIL);
+    default:                   return ANC(NV_SHELF_TOP);
   }
 }
 // Acima disto nada de fileira se desenha (o gfx_recorte): a Moderna deixa as
@@ -797,16 +797,16 @@ static float corteFileiras(void) {
   if (heroCompactoTelefone() && toqueLivreY) {
     if (!ajustes_hero_ligado()) return 132.0f;
     if (layoutHome() == HOME_LAYOUT_PADRAO)
-      return fmaxf(132.0f, NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f - scrollY);
+      return fmaxf(132.0f, ANC(NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f) - scrollY);
     if (layoutHome() == HOME_LAYOUT_DINAMICA) return 132.0f;
-    return 132.0f + (NV_SHELF_TOP - 132.0f) * heroVisivelToque();
+    return 132.0f + (ANC(NV_SHELF_TOP) - 132.0f) * heroVisivelToque();
   }
 #endif
   switch (layoutHome()) {
     case HOME_LAYOUT_PADRAO:
-      return ajustes_hero_ligado() ? NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f : 0.0f;
+      return ajustes_hero_ligado() ? ANC(NV_PAD_BANNER_Y + NV_PAD_BANNER_H + 8.0f) : 0.0f;
     case HOME_LAYOUT_DINAMICA: return 0.0f;
-    default:                   return NV_SHELF_TOP - (heroCompactoTelefone() ? 0.0f : 96.0f);
+    default:                   return ANC(NV_SHELF_TOP - (heroCompactoTelefone() ? 0.0f : 96.0f));
   }
 }
 // Quanto as fileiras DESCEM com o foco no destaque (a rolagem vale menos isto).
@@ -818,7 +818,7 @@ static float empurraHero(void) {
   if (homeRetratoTelefone() && !heroOn) return 0.0f;
   switch (layoutHome()) {
     case HOME_LAYOUT_PADRAO:   return 0.0f;
-    case HOME_LAYOUT_DINAMICA: return heroOn ? repousoFileirasDin() - NV_DIN_TOPO_FIL : 0.0f;
+    case HOME_LAYOUT_DINAMICA: return heroOn ? repousoFileirasDin() - ANC(NV_DIN_TOPO_FIL) : 0.0f;
     default:                   return empurraHeroModerna();
   }
 }
@@ -829,11 +829,11 @@ static float dinHeroY(void) {
   return y > 0.0f ? 0.0f : y;
 }
 static GfxRect padBannerRect(void) {
-  float y = NV_PAD_BANNER_Y;
+  float y = ANC(NV_PAD_BANNER_Y);
 #ifdef NV_TOUCH_UI
   if (heroCompactoTelefone() && toqueLivreY) y -= scrollY;
 #endif
-  return (GfxRect){ 0.0f, y, NV_TELA_W, NV_PAD_BANNER_H };
+  return (GfxRect){ 0.0f, y, NV_TELA_W, ANC(NV_PAD_BANNER_H) };
 }
 // O numeral do Top 10 mora ANTES do cartaz: a fileira comeca deslocada por esta
 // faixa (e o passo dela ja a inclui, em gapDe).
@@ -1799,9 +1799,9 @@ static float dinRolagemCentrada(int r, float off) {
   if (r < 0 || r >= nFileiras) return off;
   for (i = 0; i < nFileiras; i++)
     total += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(i) + (i ? fileiraGap() : 0.0f);
-  s = NV_DIN_TOPO_FIL + off + 0.5f * (NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r))
-    - NV_DIN_CENTRO_FIL;
-  sMax = NV_DIN_TOPO_FIL + total - (NV_TELA_H - NV_DIN_FOLGA_BASE);
+  s = ANC(NV_DIN_TOPO_FIL) + off + 0.5f * (NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r))
+    - ANC(NV_DIN_CENTRO_FIL);
+  sMax = ANC(NV_DIN_TOPO_FIL) + total - (NV_TELA_H - ANC(NV_DIN_FOLGA_BASE));
   if (s > sMax) s = sMax;
   if (s < 0.0f) s = 0.0f;
   return s;
@@ -4195,16 +4195,19 @@ static HeroCopyLayout heroCopyLayout(float base, float hSin, int hasMeta,
                                      float slot, float friendsH) {
   HeroCopyLayout p;
   float s = slot < 0.0f ? 0.0f : slot > 1.0f ? 1.0f : slot;
-  float slotH = btnH + btnGap;
-  float gap = NV_HERO_COPY_LINHA;
+  // Keep the information slots in screen pixels; text grows into their gaps.
+  int fixed = !heroCompactoTelefone() && !homeRetratoTelefone();
+  float slotH = fixed ? ANC(btnH + btnGap) : btnH + btnGap;
+  float gap = fixed ? ANC(NV_HERO_COPY_LINHA) : NV_HERO_COPY_LINHA;
+  if (fixed) { btnGap = ANC(btnGap); friendsH = ANC(friendsH); captionH = ANC(captionH); }
   // A larger final synopsis line borrows decorative gaps in the compact
   // phone hero, keeping its logo, metadata and action inside the same area.
   if (heroCompactoTelefone())
     gap = fmaxf(0, gap - (sinopse_entrelinha(TXT_HERO_SIN, NV_LD_HERO_SIN) - NV_LD_HERO_SIN));
   p.synopsis = base - slotH * s - hSin;
   p.action = p.synopsis + hSin + btnGap;
-  p.secondary = p.synopsis - (hasSec ? (hSin > 0 ? gap : 0) + NV_LD_HERO_SEC : 0);
-  p.meta = p.secondary - (hasMeta ? ((hasSec || hSin > 0) ? gap : 0) + NV_LD_HERO_META : 0);
+  p.secondary = p.synopsis - (hasSec ? (hSin > 0 ? gap : 0) + (fixed ? ANC(NV_LD_HERO_SEC) : NV_LD_HERO_SEC) : 0);
+  p.meta = p.secondary - (hasMeta ? ((hasSec || hSin > 0) ? gap : 0) + (fixed ? ANC(NV_LD_HERO_META) : NV_LD_HERO_META) : 0);
   // A linha de AMIGOS (quem gostou / assistiu) fica logo acima da meta.
   p.friends = p.meta - (friendsH > 0 ? gap + friendsH : 0);
   p.caption = p.friends - (captionH > 0 ? gap + captionH : 0);
@@ -4478,9 +4481,11 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
   // space when every real information line exists, including a caption.
   float minTop = 24.0f;
   if (lay == HOME_LAYOUT_PADRAO)
-    minTop = base - (NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE) + 24.0f;
+    minTop = base - ANC(NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE) + 24.0f;
   else if (lay == HOME_LAYOUT_DINAMICA)
-    minTop = base - (NV_DIN_HERO_H - NV_DIN_TEXTO_BASE) + 54.0f;
+    minTop = base - ANC(NV_DIN_HERO_H - NV_DIN_TEXTO_BASE) + 54.0f;
+  if (!heroCompactoTelefone() && !homeRetratoTelefone() && sinopse[0])
+    hSin += txt_linha(heroSinEstilo(), "Ag", 255, 255, 255, 255).h - heroSinEntrelinha();
   AmigosTitulo amigos;
   int temAmigos = ci && ci->imdb[0] && amigostitulo_obter(ci->imdb, &amigos);
   float friendsH = temAmigos ? NV_AMIGOS_HERO_H : 0.0f;
@@ -4514,9 +4519,9 @@ static float desenhaCopiaHero(const CatItem *ci, int principal, float x,
     }
     minTop = 132.0f;
     if (lay == HOME_LAYOUT_PADRAO)
-      minTop += base - (NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE);
+      minTop += base - ANC(NV_PAD_BANNER_H - NV_PAD_TEXTO_BASE);
     else if (lay == HOME_LAYOUT_DINAMICA)
-      minTop += base - (alturaTextoHeroDin() - NV_DIN_TEXTO_BASE);
+      minTop += base - (alturaTextoHeroDin() - ANC(NV_DIN_TEXTO_BASE));
     copy = heroCopyTelefone(base, &hSin, metaLinha[0] != 0, temSec, &captionH,
                             logoH * 0.75f, btnH, btnGap, minTop, slot, &friendsH, minLogo);
     sinLinhas = hSin > 0.0f ? (int)ceilf(hSin / heroSinEntrelinha()) : 0;
@@ -4648,14 +4653,14 @@ static void ponteiroHero(int a, int b);
 static GfxRect heroArtworkRect(int lay, int cheio) {
   if (lay == HOME_LAYOUT_PADRAO) return padBannerRect();
   GfxRect r = lay == HOME_LAYOUT_DINAMICA
-            ? (GfxRect){0, dinHeroY(), NV_TELA_W, NV_DIN_ARTE_H}
-            : cheio ? (GfxRect){0, 0, NV_TELA_W, NV_HERO_CHEIO_H}
-                    : (GfxRect){NV_HERO_ARTE_X, 0, NV_HERO_ARTE_W, NV_HERO_ARTE_H};
+            ? (GfxRect){0, dinHeroY(), NV_TELA_W, ANC(NV_DIN_ARTE_H)}
+            : cheio ? (GfxRect){0, 0, NV_TELA_W, ANC(NV_HERO_CHEIO_H)}
+                    : (GfxRect){ANC(NV_HERO_ARTE_X), 0, ANC(NV_HERO_ARTE_W), ANC(NV_HERO_ARTE_H)};
 #ifdef NV_TOUCH_UI
   if (heroCompactoTelefone()) {
     if (lay == HOME_LAYOUT_DINAMICA) r.h = repousoFileirasDin() - 20.0f;
     else {
-      float repouso = NV_SHELF_TOP + empurraHeroModerna() - 20.0f;
+      float repouso = ANC(NV_SHELF_TOP) + empurraHeroModerna() - 20.0f;
       float primeira = topoFileiras() - scrollY - 20.0f;
       r.h = fminf(r.h, fminf(repouso, fmaxf(132.0f, primeira)));
       if (homeRetratoTelefone()) { r.x = 0.0f; r.w = NV_TELA_W; }
@@ -4685,9 +4690,9 @@ static GfxRect heroArtworkOverlayRect(GfxRect r, GfxRect hero) {
 }
 
 static float heroBaseCopia(int lay, GfxRect r, float empurra, float descida) {
-  if (lay == HOME_LAYOUT_PADRAO) return r.y + r.h - NV_PAD_TEXTO_BASE + descida;
-  if (lay == HOME_LAYOUT_DINAMICA) return r.y + alturaTextoHeroDin() - NV_DIN_TEXTO_BASE + descida;
-  return NV_SHELF_TOP - NV_HERO_COPY_GAP - 24.0f + empurra + descida;
+  if (lay == HOME_LAYOUT_PADRAO) return r.y + r.h - ANC(NV_PAD_TEXTO_BASE) + descida;
+  if (lay == HOME_LAYOUT_DINAMICA) return r.y + alturaTextoHeroDin() - ANC(NV_DIN_TEXTO_BASE) + descida;
+  return ANC(NV_SHELF_TOP - NV_HERO_COPY_GAP - 24.0f) + empurra + descida;
 }
 static GfxRect heroEditorialRect(int editorial, float aspect) {
   float largura = NV_TELA_W;
@@ -4970,7 +4975,7 @@ static void desenhaHero(Uint32 agora, float saida) {
           // O bloco comeca logo abaixo do nome e TERMINA antes do cabecalho da
           // fileira (NV_SHELF_TOP): o numero de linhas da bio e o que cede.
           // Largura 780: fica aquem do cartao da capa (que comeca em 1096).
-          float yy=fimTitulo+30,teto=NV_SHELF_TOP-30,larg=780;
+          float yy=fimTitulo+30,teto=ANC(NV_SHELF_TOP)-30,larg=780;
           const char *meta=diretor_meta(folder->title),*bio=diretor_bio(folder->title),*con=diretor_conhecido(folder->title);
           float fixo=(meta[0]?38:0)+(con[0]?38:0)+34;   // meta + conhecido + legenda
           int linhas=(int)((teto-yy-fixo-12)/31);if(linhas>3)linhas=3;
@@ -5279,7 +5284,7 @@ static void desenhaHero(Uint32 agora, float saida) {
   // Logo, actions, then the real information and compact synopsis. Keep
   // each layout's bottom boundary; use the measured copy for the action Y.
   float empurra = scrollY < 0.0f ? -scrollY : 0.0f;
-  float empurraMax = lay == HOME_LAYOUT_MODERNA ? empurraHero() : NV_HOME_HERO_EMPURRA;
+  float empurraMax = lay == HOME_LAYOUT_MODERNA ? empurraHero() : ANC(NV_HOME_HERO_EMPURRA);
   float aBotao = anim_clamp(empurra / empurraMax, 0.0f, 1.0f);
   float base = heroBaseCopia(lay, r, empurra, descidaCopy);
   // Padrao e Dinamica ancoram o bloco na BASE DO PROPRIO DESTAQUE (e o botao
@@ -5355,7 +5360,7 @@ static void desenhaHero(Uint32 agora, float saida) {
         // que botao_superficie devolve para este foco: antes era TXT_ILHA_NOME
         // 24/600 com ajustes_tinta_foco, mais pesado e fora da pilula do app.
         TxtLinha lb = txt_linha(TXT_DET_BOTAO, rot, 245, 245, 245, 255);
-        float bh = btnH;
+        float bh = (heroCompactoTelefone() || homeRetratoTelefone()) ? btnH : ANC(btnH);
         float bw = lb.w + 38.0f * 2;   // NV_DETW2_BTN_PADX, igual ao detalhe
         float by = actionY;
         GfxRect bt = { x, by, bw, bh };
@@ -5782,7 +5787,7 @@ static void shotTrailerPasso(int topo, float dt, Uint32 agora, int heroSetting, 
 }
 #endif
 
-void home_trailer_passo(int topo, float dt, Uint32 agora) {
+static void home_trailer_passo_(int topo, float dt, Uint32 agora) {
   const CatItem *ci = NULL;
   int pronto;
   Uint32 decorrido;
@@ -6466,7 +6471,7 @@ static void desenhaLinhaTempo(int r, float topoFil, float top, float passo, floa
   prog = 1.0f - (1.0f - prog) * (1.0f - prog) * (1.0f - prog);
   tempoCol[r] = anim_mola(tempoCol[r], (float)alvo, dt, NV_MOLA_FOCO);
   ajustes_acento(&ar, &ag, &ab);
-#define XCOL(k) (ajustes_conteudo_x() + (k) * passo - scrollX[r] + lw * 0.5f + bordaX(r))
+#define XCOL(k) (homeConteudoX() + (k) * passo - scrollX[r] + lw * 0.5f + bordaX(r))
   x0 = XCOL(0.0f); xN = XCOL((float)(fl->n - 1));
   if (fl->n == 1) xN = x0 + lw;
   { float xf = x0 + (xN - x0) * prog;
@@ -6510,7 +6515,7 @@ static void desenhaLinhaTempo(int r, float topoFil, float top, float passo, floa
       tempoAno[r] = anim_mola(tempoAno[r], (float)ano, dt, NV_MOLA_FOCO * 0.6f);
       snprintf(s, sizeof s, "%d", (int)(tempoAno[r] + 0.5f));
       t = txt_linha(TXT_ROW_TITULO, s, (int)(ar * 255), (int)(ag * 255), (int)(ab * 255), 255);
-      if (focada) txt_desenhar(t, NV_TELA_W - NV_HOME_SAFE_RIGHT - 150.0f - t.w, topoFil);
+      if (focada) txt_desenhar(t, NV_TELA_W - ANC(NV_HOME_SAFE_RIGHT) - 150.0f - t.w, topoFil);
     } }
 }
 
@@ -6838,7 +6843,7 @@ float home_vitrine_topo(float filH) {
   switch (home_vitrine_layout()) {
     case HOME_LAYOUT_PADRAO:   return NV_PAD_TOPO_FIL;
     case HOME_LAYOUT_DINAMICA: return NV_TELA_H - filH;
-    default:                   return NV_SHELF_TOP;
+    default:                   return ANC(NV_SHELF_TOP);
   }
 }
 void home_vitrine_medida(float *w, float *h, float *passo, float *rotH) {
@@ -6856,11 +6861,11 @@ int home_vitrine_arte_pronta(const CatItem *ci) {
 int home_vitrine_arte(const CatItem *ci, float alfa) {
   const char *a = ci ? arte_hero_do_item(ci) : NULL;
   int lay = home_vitrine_layout();
-  GfxRect r = { 0, 0, NV_TELA_W, NV_HERO_CHEIO_H };
+  GfxRect r = { 0, 0, NV_TELA_W, ANC(NV_HERO_CHEIO_H) };
   if (!a || !a[0] || alfa <= 0.004f) return 0;
   if (lay == HOME_LAYOUT_MODERNA) return desenhaArteHero(r, GFX_HERO_CHEIO, ci, a, alfa, 0.0f);
-  if (lay == HOME_LAYOUT_PADRAO) r = (GfxRect){ 0, NV_PAD_BANNER_Y, NV_TELA_W, NV_PAD_BANNER_H };
-  else r.h = NV_DIN_ARTE_H;
+  if (lay == HOME_LAYOUT_PADRAO) r = (GfxRect){ 0, ANC(NV_PAD_BANNER_Y), NV_TELA_W, ANC(NV_PAD_BANNER_H) };
+  else r.h = ANC(NV_DIN_ARTE_H);
   heroVeuLayout(lay, r.h);
   return desenhaArteHero(r, GFX_VITRINE, ci, a, alfa, 0.0f);
 }
@@ -8309,6 +8314,8 @@ void home_abrir_sessao(void) {
 static float homeUnidade(void) { return gfx_escala_txt(); }
 void home_evento(const SDL_Event *e) { TXT_INI(); home_evento_(e); TXT_FIM(); }
 void home_atualizar(float dt, Uint32 agora) { TXT_INI(); home_atualizar_(dt, agora); TXT_FIM(); }
+// heroArteRect is layer px: the trailer step runs in the same layer (#205).
+void home_trailer_passo(int topo, float dt, Uint32 agora) { TXT_INI(); home_trailer_passo_(topo, dt, agora); TXT_FIM(); }
 void home_desenhar(Uint32 agora) { TXT_INI(); home_desenhar_(agora); TXT_FIM(); }
 int home_cartao_foco_por_cima(int indice) {
   int r;

@@ -93,20 +93,19 @@ static int buRetratoTelefone(void) { return buRetrato() && buTelefone(); }
 static int buTecladoNativo(void) { return buTelefone() && st_ime_disponivel(); }
 static int buUmaColuna(void) { return buRetrato() || buTecladoNativo(); }
 static float buCampoH(void) { return buTecladoNativo() ? 104.0f : 76.0f; }
-static float buMargem(void) { return buTelefone() ? 48.0f : BU_MARG; }
-static float buX(void)   { return ajustes_rail_largura_fixa() + buMargem(); }
+static float buMargem(void) { return buTelefone() ? 48.0f : ANC(BU_MARG); }
+static float buX(void)   { return ANC(ajustes_rail_largura_fixa()) + buMargem(); }
 static float buDir(void) { return NV_TELA_W - (buRetratoTelefone() ? buX() : buMargem()); }
-static float buColW(void) { return buUmaColuna() ? buDir() - buX() : 520.0f; }
+static float buColW(void) { return buUmaColuna() ? buDir() - buX() : fminf(520.0f, ANC(520.0f)); }
 static float buResY(void);
 // A coluna da esquerda desce quando a pilula da Dinamica ocupa o canto. A
 // pilula vem em px REAIS e esta tela mede pela virtual (real / escala de
 // texto): sem a conversao o campo colava na pilula com texto menor que 100%.
 #define BU_TOPO_VAO 28.0f
 static float buTopoEsq(void) {
-  float px, py, pw, ph, t;
-  if (!menu_pilula_rect(&px, &py, &pw, &ph)) return 64.0f;
-  t = (py + ph) / gfx_escala_txt() + BU_TOPO_VAO;
-  return t > 64.0f ? t : 64.0f;
+  float px, py, pw, ph;
+  if (menu_pilula_rect(&px, &py, &pw, &ph)) return ANC(fmaxf(64.0f, py + ph + BU_TOPO_VAO));
+  return ANC(64.0f);
 }
 
 // --- Teclado -----------------------------------------------------------------
@@ -124,7 +123,7 @@ static float buTopoEsq(void) {
 #define BU_MAX_CONSULTA 48
 
 // --- Coluna da direita --------------------------------------------------------
-#define BU_RES_X       (buUmaColuna() ? buX() : buX() + BU_COL_W + BU_COL_GAP)
+#define BU_RES_X       (buUmaColuna() ? buX() : buX() + ANC(520.0f + BU_COL_GAP))
 #define BU_RES_Y       buResY()
 #define BU_DIR         buDir()
 #define BU_RES_AREA_H  (NV_TELA_H - 48.0f - BU_RES_Y)
@@ -289,7 +288,7 @@ static int  pagSim;                        // 1 = pagina de acentos e sinais (?!
 static int  KB_COLUNAS[BU_KB_MAX_FIL + 1] = { 6, 6, 6, 6, 6, 6, 3 };
 static float buResY(void) {
   if (buTecladoNativo()) return buTopoEsq() + BU_CAMPO_H + 44.0f;
-  if (!buRetrato()) return 64.0f;
+  if (!buRetrato()) return ANC(64.0f);
   return BU_KB_Y + 2.0f * BU_KB_PAD + (kbFil + 1) * BU_TECLA_W
        + kbFil * BU_TECLA_GAP + 92.0f;
 }
@@ -903,7 +902,8 @@ static void aplicarTecla(void) {
 static GfxRect retanguloTecla(int fileira, int coluna) {
   GfxRect r;
   // A grade de teclas fica centrada na ilha (o justify-content:center do mockup).
-  float gx = BU_KB_X + (BU_COL_W - BU_KB_W) * 0.5f;
+  float fit = fminf(1.0f, (BU_COL_W - 2.0f * BU_KB_PAD) / BU_KB_W);
+  float gx = BU_KB_X + (BU_COL_W - BU_KB_W * fit) * 0.5f;
   r.y = BU_KB_Y + BU_KB_PAD + fileira * BU_KB_PASSO;
   r.h = BU_TECLA_W;
   if (fileira < kbFil) {
@@ -914,6 +914,8 @@ static GfxRect retanguloTecla(int fileira, int coluna) {
     r.w = (BU_KB_W - (n - 1) * BU_TECLA_GAP) / (float)n;
     r.x = gx + coluna * (r.w + BU_TECLA_GAP);
   }
+  r.x = gx + (r.x - gx) * fit;
+  r.w *= fit;
   return r;
 }
 
@@ -1860,7 +1862,7 @@ static void desenhaResultados(Uint32 agora) {
     gfx_opacidade_grupo = grupo * revela_entra(filEntraEm[r], 0.0f, agora);
 
     // Rotulo da entrada: "Melhor resultado" ou o nome do catalogo (+ origem).
-    buCabecalho(r, ry + 4.0f, larg);
+    buCabecalho(r, ry + ANC(4.0f), larg);
     gfx_opacidade_grupo = grupo;
     float cy = ry + filKickH(r);
 
