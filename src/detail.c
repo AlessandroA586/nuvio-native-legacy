@@ -3582,6 +3582,11 @@ static void detail_atualizar_(float dt, Uint32 agora) {
   (void)agora;
   episodios_menu_atualizar(dt);   // as molas do menu de visto / painel da temporada
   if (!aberto) { blocoAnt[0] = blocoAnt[1] = blocoAnt[2] = -1.0f; return; }
+  if (pessoaAberta && pessoa_falhou()) {
+    pessoaAberta = 0;
+    ilha_avisar("det-elenco-sem-pagina", ILHA_INFO, NULL,
+                i18n("Esta pessoa não tem página ainda"), 4000u, 0);
+  }
 #ifdef NV_TOUCH_UI
   if (telefoneui_ativo()) trailerDetalheTela();
   if (detalheRetrato() && carro) {

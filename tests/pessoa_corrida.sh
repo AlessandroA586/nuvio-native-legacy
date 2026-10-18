@@ -1,8 +1,8 @@
 #!/bin/bash
 export TMPDIR="${TMPDIR:-/tmp}"
 TMPDIR="${TMPDIR%/}"
-# #205: OK duplo no elenco nao mistura semente do ator B com a ficha do ator A.
-set -eu
+# #205: latest actor wins; failed resolution/fetch can be retried.
+set -euo pipefail
 cd "$(dirname "$0")/.."
 flags=()
 if [ "${SANITIZE:-0}" = 1 ]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
