@@ -81,6 +81,7 @@
 #include "seekr.h"
 #include "selospacote.h"
 #include "fonteregra.h"
+#include <dirent.h>
 #include "fontefalha.h"
 #include "fontefiltro.h"
 #include <pthread.h>
@@ -5756,6 +5757,34 @@ int ajustes_perfil_restaurar(int perfil) {
   return 1;
 }
 
+// Arquivos privados por conta e perfil dos provedores (debrid, escopo, falhas e
+// fontes mortas): "<base>-<conta>-p<N>.txt". Quando o logout chega aqui a
+// sessao ja saiu, entao a conta nao da para montar o nome — varre a pasta pelo
+// prefixo e pelo sufixo "-pN.txt". Os compartilhados ("debrid.txt") nao tem o
+// hifen e ficam.
+static void provedoresPrivadosEsquecer(void) {
+  static const char *const base[] = { "debrid-", "provider-scope-", "fontefalha-", "fontesmortas-" };
+  const char *pasta = dados_dir();
+  struct dirent *e;
+  DIR *d;
+  if (!pasta || !*pasta || !(d = opendir(pasta))) return;
+  while ((e = readdir(d)) != NULL) {
+    const char *n = e->d_name, *p;
+    size_t b, len = strlen(n);
+    for (b = 0; b < sizeof base / sizeof *base; b++)
+      if (!strncmp(n, base[b], strlen(base[b]))) break;
+    if (b == sizeof base / sizeof *base) continue;
+    if (len > 4 && !strcmp(n + len - 4, ".tmp")) len -= 4;
+    if (len < 4 || strncmp(n + len - 4, ".txt", 4)) continue;
+    // "-p" + digitos imediatamente antes de ".txt".
+    p = n + len - 4;
+    while (p > n && p[-1] >= '0' && p[-1] <= '9') p--;
+    if (p == n + len - 4 || p - n < 2 || p[-1] != 'p' || p[-2] != '-') continue;
+    dados_apagar(n);
+  }
+  closedir(d);
+}
+
 void ajustes_perfil_esquecer(void) {
   char nome[32];
   int i;
@@ -5763,6 +5792,7 @@ void ajustes_perfil_esquecer(void) {
   // cobre com folga. Apagar arquivo que nao existe nao custa nada.
   for (i = 1; i <= 32; i++) { nomePerfil(nome, sizeof nome, i); dados_apagar(nome); }
   fonteregra_perfil_esquecer();
+  provedoresPrivadosEsquecer();
   if (valor[AJ_COLECAO_EXIBICAO] != 0) { valor[AJ_COLECAO_EXIBICAO] = 0; gravar(); }
 }
 
