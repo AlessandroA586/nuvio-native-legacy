@@ -8,7 +8,7 @@ python3 - "$tmp/upload.inc" <<'PY'
 from pathlib import Path
 import sys
 source = Path('src/avisos.c').read_text()
-start = source.index('  { const char *arq = manual ? registro_arquivo() : AV_LOG_ANTERIOR;')
+start = source.index('  { const char *arq = manual ? registro_arquivo()')
 end = source.index('\n#endif', start)
 Path(sys.argv[1]).write_text(source[start:end])
 PY

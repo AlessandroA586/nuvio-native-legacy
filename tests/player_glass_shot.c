@@ -14,6 +14,7 @@
 #include "catalogo.h"
 #include "nvtmp.h"
 #include "player.h"
+#include "idioma.h"
 #include "pausao.h"
 #include "ajustes.h"
 #include "faixas.h"
@@ -760,6 +761,20 @@ int main(int argc, char **argv) {
                              "Abra Fontes e escolha uma: o servi\xc3\xa7o come\xc3\xa7" "a a baixar.");
     quadros(120);
     salvar("erro");
+    player_limpar_erro_fonte();
+  }
+  if (quer(argc, argv, "erro-causa")) {   // #205: generico (antes) x causa dita (depois)
+    char t[160];
+    abrir(&filme); simular(3840, 1606, "", 1, 1);
+    quadros(10);
+    player_erro_fonte();
+    quadros(120);
+    salvar("erro-antes");
+    player_limpar_erro_fonte();
+    snprintf(t, sizeof t, i18n("O servidor da fonte recusou o link (HTTP %d)."), 404);
+    player_erro_fonte_motivo(t, i18n("O problema é do add-on ou do debrid, não do app. Abra Fontes e tente outra fonte."));
+    quadros(120);
+    salvar("erro-depois");
     player_limpar_erro_fonte();
   }
   if (quer(argc, argv, "seekr") || quer(argc, argv, "seekr-fita") || quer(argc, argv, "seekr-carregando")) {
