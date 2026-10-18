@@ -178,8 +178,17 @@ int main(void) {
   AJ_FUNDO_DIN == AJ_VIDRO_QUALIDADE + 1 &&         // #205: fundo da Dinamica
   AJ_FUNDO_DIN_COR == AJ_FUNDO_DIN + 1 &&
   AJ_ESCALA_TEXTO == AJ_FUNDO_DIN_COR + 1 &&   // text and component scale (local)
-  AJ_DET_ESPACO == AJ_ESCALA_TEXTO + 1 &&   // title page row spacing (local)
-  AJ_N == AJ_DET_ESPACO + 1);   // 2.0.6: master's #535 views appended after
+  AJ_FONTE_GRUPO == AJ_ESCALA_TEXTO + 1 &&      // source memory (local)
+  AJ_FONTE_GRUPO_SESSOES == AJ_FONTE_GRUPO + 1 &&
+  AJ_LINK_REUSAR == AJ_FONTE_GRUPO_SESSOES + 1 &&
+  AJ_LINK_PRAZO == AJ_LINK_REUSAR + 1 &&
+  AJ_DET_ESPACO == AJ_LINK_PRAZO + 1 &&   // title page row spacing (local)
+  AJ_FOCO_ACENTO == AJ_DET_ESPACO + 1 &&   // accent focus plate (local)
+  AJ_URL_LISTA == AJ_FOCO_ACENTO + 1 &&   // URL lists and guides (local)
+  AJ_URL_M3U_ADD == AJ_URL_LISTA + 1 &&
+  AJ_URL_XMLTV_ADD == AJ_URL_M3U_ADD + 1 &&
+  AJ_URL_REM == AJ_URL_XMLTV_ADD + 1 &&
+  AJ_N == AJ_URL_REM + 1);   // 2.0.6: master's #535 views appended after
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));

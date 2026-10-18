@@ -180,6 +180,14 @@ int ajustes_fonte_aquecer(void);
 int ajustes_fonte_conferir_varias(void);
 int ajustes_fonte_preparar(void);
 int ajustes_fonte_precarregar(void);
+// Memoria da fonte (fontepref.h, fontepref_configurar): Preferir o mesmo grupo
+// de fonte (a escolha a mao no titulo inteiro + a memoria do automatico) e
+// Reusar o grupo entre sessoes. Padrao: 1, 1 (o comportamento de antes).
+int ajustes_fonte_grupo(void);
+int ajustes_fonte_grupo_sessoes(void);
+// Reusar o ultimo link (fontevolta.h): 1 = ligado; e a validade em segundos.
+int ajustes_link_reusar(void);
+unsigned ajustes_link_prazo_s(void);
 int ajustes_fonte_escopo(void);
 int ajustes_fonte_regex_modo(void);
 // "Usar a ordem" dos add-ons (FR_ORDEM_*); 0 tambem quando nao ha ordem.
@@ -496,6 +504,8 @@ int   ajustes_abertura_addon(void);
 // #508: fundo da tela Cinema da abertura: 0 = Desligado, 1 = Arte (nitida com
 // veu escuro), 2 = Arte borrada (padrao).
 int   ajustes_abertura_fundo(void);
+// Modern Stage background: 0 Black (default), 1 Current, 2 Artwork only.
+int   ajustes_palco_fundo(void);
 int   ajustes_titulo_fil(void);        // 0 Classico, 1 Ilha, 2 Editorial, 3 Acento
 int   ajustes_abertura_estilo(void);   // 0 Centro (A3), 1 Canto (B3)
 int   ajustes_fundo_din(void);         // #205: fundo da Dinamica, 0 Cinza (padrao), 1 Cor, 2 Imersivo
@@ -711,16 +721,10 @@ void ajustes_perfil_esquecer(void);
 // escritos por cima. Devolve quantas chaves foram reescritas; 0 quando nao havia
 // nada a mudar, e nesse caso *saida fica NULL. Quem chama libera com free().
 //
-// O QUE ELA NAO FAZ, e e o ponto: nao INVENTA chave. So o que ja existe no blob
-// e reescrito, e so o valor. Remontar o objeto aqui mandaria de volta um blob
-// com apenas as chaves que este app conhece — e o servidor guarda o que vier,
-// entao a TV apagaria da conta tudo que so o app web usa.
-//
-// Nao sobem os ajustes de APARELHO (superficie 4K, teto de memoria de imagem,
-// qualidade da arte, idioma da interface, animacoes reduzidas, envio de
-// registro, limite/ordem de fileiras, reset de foco, borda do foco, fonte
-// manual, destino dos salvos): eles descrevem esta TV, nao o gosto da pessoa, e
-// a conta e uma so para a TV da sala e a do quarto. Ver somenteDesteAparelho.
+// Existing web fields keep their types and unknown features survive. Portable
+// C settings, including appearance, language, subtitles and row/addon order,
+// live under c_settings_v1. Device/display/decoder budgets, local endpoints
+// and credentials are excluded; see ajustePortavel in ajustes_sync.inc.
 int ajustes_mesclar_blob(const char *base, char **saida);
 // #187: uma linha "[tmdb] idioma dos metadados: ..." com o que a TV pede ao
 // TMDB, de onde vem (ajuste desta TV) e o tmdb_language cru da conta.

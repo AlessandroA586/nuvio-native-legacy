@@ -50,6 +50,8 @@
 #include "rolagemtoque.h"
 #include "player.h"
 #include "plrilha.h"
+#include "partes.h"
+#include "ctxlista.h"
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
 #include "escala.h"
 
@@ -413,11 +415,19 @@ int stream_filtro_bloqueou(void) {
 // addon ("Meteor - Not configured", "Embed69 - {}", "... error"). Esses so ficam
 // na folha manual (#284: 75% Android / 60% Samsung / 41% LG falham quando o
 // automatico os escolhe, contra 6/14/9% das fontes com resolucao).
-static int foraDoAutoComFiltro(int i, const FonteFiltroConfig *filtro) {
-  return automaticaExcluida(i) || (i >= 0 && i < n &&
-      ((!canalFolha && (filtro ? !fontefiltro_permite(filtro, &lista[i].filtro) : !stream_filtro_permite(&lista[i]))) ||
-       lista[i].foraCache || ehInformativa(&lista[i]) || excedeDecoder(&lista[i]) || fontesmortas_idade(&lista[i]) >= 0));
+// Por que a fonte sai do automatico (0 = fica), na ordem em que o teste corre.
+enum { MOT_FICA, MOT_EXCLUIDA, MOT_FILTRO, MOT_FORA_CACHE, MOT_INFORMATIVA, MOT_DECODER, MOT_MORTA, MOT_N };
+static int motivoForaDoAuto(int i, const FonteFiltroConfig *filtro) {
+  if (automaticaExcluida(i)) return MOT_EXCLUIDA;
+  if (i < 0 || i >= n) return MOT_FICA;
+  if (!canalFolha && (filtro ? !fontefiltro_permite(filtro, &lista[i].filtro) : !stream_filtro_permite(&lista[i]))) return MOT_FILTRO;
+  if (lista[i].foraCache) return MOT_FORA_CACHE;
+  if (ehInformativa(&lista[i])) return MOT_INFORMATIVA;
+  if (excedeDecoder(&lista[i])) return MOT_DECODER;
+  if (fontesmortas_idade(&lista[i]) >= 0) return MOT_MORTA;
+  return MOT_FICA;
 }
+static int foraDoAutoComFiltro(int i, const FonteFiltroConfig *filtro) { return motivoForaDoAuto(i, filtro) != MOT_FICA; }
 static int foraDoAuto(int i) { return foraDoAutoComFiltro(i, NULL); }
 int stream_automatico_disponivel(int indice) { return indice >= 0 && indice < n && !foraDoAuto(indice); }
 long stream_vod_falhou_ha(int indice) { return indice >= 0 && indice < n ? fontesmortas_idade(&lista[indice]) : -1; }
@@ -580,6 +590,22 @@ static int descartadosSemDebrid;
 // #505: subconjunto descartado por pedir P2P (notWebReady). Separado porque a
 // causa muda: debrid nao o oferece — ligar uma conta nao o traz de volta.
 static int descartadosP2P;
+static struct { char nome[96]; int total, p2p; } descartadosAddon[ADDONS_MAX];
+static int nDescartadosAddon;
+static void contarDescartada(const Stream *s) {
+  int p2p = pedeP2P(s), i;
+  descartadosSemDebrid++; descartadosP2P += p2p;
+  if (!s->provedor[0]) return;
+  for (i = 0; i < nDescartadosAddon; i++)
+    if (!strcmp(descartadosAddon[i].nome, s->provedor)) break;
+  if (i == nDescartadosAddon) {
+    if (i == ADDONS_MAX) return;
+    memset(&descartadosAddon[i], 0, sizeof descartadosAddon[i]);
+    snprintf(descartadosAddon[i].nome, sizeof descartadosAddon[i].nome, "%s", s->provedor);
+    nDescartadosAddon++;
+  }
+  descartadosAddon[i].total++; descartadosAddon[i].p2p += p2p;
+}
 // #486: a dica "ligue o P2P" so e dita quando este pacote tem P2P. Perguntar o
 // motor AQUI, no fio da tela, abriria a libnuvio_engine.so no .tpk (dlopen em
 // p2pmotor.c, carregamento adiado de proposito); o trabalhador confere antes
@@ -617,10 +643,11 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
   if (nova && qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
   descartadosSemDebrid = 0;
   descartadosP2P = 0;
+  nDescartadosAddon = 0;
   for (i = 0; i < qtd && nova; i++)
     // #505: tambem o notWebReady, que pede P2P — a folha vazia tem de dizer
     // "ligue o P2P", nunca fingir que o addon nao mandou nada.
-    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += pedeP2P(&l[i]); }
+    if (!fonteOferecida(&l[i])) contarDescartada(&l[i]);
   for (i = 0; i < k && nova; i++) { nova[i].selosPacoteVer = 0; filtroCompletar(&nova[i]); }   // os selos saem do fio de fundo (selosAgendar)
   pthread_mutex_lock(&verTrava);
   free(lista); lista = nova; n = nova ? k : 0; atual = -1;
@@ -688,7 +715,7 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
     if (fonteOferecida(&l[i])) nova[k++] = l[i];
   if (qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
   for (i = 0; i < qtd; i++)
-    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += pedeP2P(&l[i]); }   // #505: idem
+    if (!fonteOferecida(&l[i])) contarDescartada(&l[i]);   // #505: idem
   if (!k) { free(nova); return; }
   for (i = 0; i < k; i++) { nova[i].selosPacoteVer = 0; filtroCompletar(&nova[i]); }
   // O CARTAO EM FOCO E O QUE FICA PARADO. Guardado pelo indice da lista (que
@@ -1424,6 +1451,13 @@ static int pendenteRankCb(const char *nome, int plugin, void *u) {
   return fonteregra_ordem_rank(nome);
 }
 int  stream_cabe_no_teto(const Stream *s) { return s ? cabeNoTeto(s) : 1; }
+// O add-on `nome` pode dar fonte ao automatico ("Fontes do auto-play")? Para
+// app.c so esperar pela fonte lembrada quando ela poderia ser escolhida.
+int  stream_addon_no_escopo(const char *nome) {
+  FonteRegraCfg rc = regraCfg();
+  if (!nome || !nome[0]) return 0;
+  return fonteregra_grupo_pendente(&rc, nome, 0) >= 0 || fonteregra_grupo_pendente(&rc, nome, 1) >= 0;
+}
 
 // Endereco de aviso e nao de conteudo. Estes dois foram MEDIDOS no aparelho:
 // o AIOStreams manda para slate.m3u8/slate.mp4 ("This playback link couldn't be
@@ -1587,6 +1621,8 @@ static int resolverUrl(const char *url, const char *cabecalhos, int segundos,
   return 0;
 }
 
+void (*stream_cdn_lembrar)(const char *orig, const char *final, const char *cabecalhos, uint64_t sessao);
+
 static int verificarUma(int i, Conferencia *c) {
   char fim[4096], url[4096], cab[512], mime[96], addon[sizeof lista->provedor];
   int fileIdx, ok = 0;
@@ -1668,7 +1704,10 @@ static int verificarUma(int i, Conferencia *c) {
     } else if (!nv_perfil_sessao_atual(c->sessao)) { c->abortou = 1;
     } else if (playlistVazia(fim, cab)) {
       printf("[fonte] %d tem playlist vazia (canal fora do ar)\n", i);
-    } else ok = 1;
+    } else {
+      ok = 1;
+      if (stream_cdn_lembrar) stream_cdn_lembrar(url, fim, cab, c->sessao);
+    }
   }
   return ok;
 }
@@ -1678,6 +1717,7 @@ static int verificarUma(int i, Conferencia *c) {
 // aviso do debrid e a playlist sem segmento. 5 s e nao 10: quem chama ja esta
 // tocando a URL em paralelo e so quer saber cedo se ela morreu.
 int stream_url_serve(const char *url, const char *cabecalhos) {
+  uint64_t sessao = nv_perfil_sessao_ler();
   char fim[4096], mime[96];
   long corpo = -1;
   if (!url || !*url) return 0;
@@ -1685,6 +1725,7 @@ int stream_url_serve(const char *url, const char *cabecalhos) {
   if (naovideo_mime(mime, fim, corpo)) return 0;
   if (enderecoDeAviso(fim)) return 0;
   if (playlistVazia(fim, cabecalhos)) return 0;
+  if (stream_cdn_lembrar) stream_cdn_lembrar(url, fim, cabecalhos, sessao);
   return 1;
 }
 
@@ -1786,6 +1827,35 @@ int stream_torrents_para_p2p(void) {
 #else
   return (ajustes_p2p_url()[0] || atomic_load(&motorP2pParaDica)) ? p2p : 0;
 #endif
+}
+
+// #599: explain partial results without changing the empty-sheet diagnosis.
+static int dicaTorrents(char *texto, size_t tam) {
+  int p2p = stream_torrents_para_p2p();
+  int debrid = !debrid_ativo() ? descartadosSemDebrid - descartadosP2P : 0;
+  int qtd = p2p > 0 ? p2p : debrid;
+  // Keep the summary within the footer area reachable from the last source.
+  char nomes[192] = "";
+  if (!n || qtd <= 0) return 0;
+  for (int i = 0; i < nDescartadosAddon; i++) {
+    int total = debrid_ativo() ? descartadosAddon[i].p2p :
+      descartadosAddon[i].total - (p2p > 0 ? 0 : descartadosAddon[i].p2p);
+    size_t len = strlen(nomes);
+    if (total > 0 && len + sizeof descartadosAddon[i].nome + 24 < sizeof nomes)
+      snprintf(nomes + len, sizeof nomes - len, "%s%s: %d", len ? ", " : " (", descartadosAddon[i].nome, total);
+    else if (total > 0) {
+      strncat(nomes, ", …", sizeof nomes - len - 1);
+      break;
+    }
+  }
+  if (nomes[0]) strncat(nomes, ")", sizeof nomes - strlen(nomes) - 1);
+  int len = snprintf(texto, tam, i18n("%d fontes torrent ocultas%s."), qtd, nomes);
+  if (len >= 0 && (size_t)len < tam)
+    snprintf(texto + len, tam - (size_t)len, " %s", p2p > 0
+      ? (!debrid ? i18n("Ligue o P2P em Ajustes.")
+                        : i18n("Ligue o P2P em Ajustes ou conecte uma conta de debrid."))
+      : i18n("Conecte uma conta de debrid."));
+  return 1;
 }
 
 unsigned stream_lista_geracao(void) {
@@ -2208,18 +2278,18 @@ typedef struct {
   const unsigned char *excl;
   int n, melhor, lg;
 } PreparoQualidade;
-static int preparoGrupoSemPerda(int i, void *u) {
+static int preparoGrupoSemPerda(int i, int forte, void *u) {
   const PreparoQualidade *p = u;
-  int q, ga = -1;
+  int q;
   for (q = 0; q < p->n && p->ordem[q] != i; q++) {}
   if (q == p->n || p->excl[q] || p->grupo[q] < 0) return 0;
   if (p->melhor < 0 || p->melhor == i) return 1;
-  for (int j = 0; j < p->n; j++) if (p->ordem[j] == p->melhor) { ga = p->grupo[j]; break; }
+  // Como stream_grupo_sem_perda: resolucao nao conta; na mesma resolucao vale
+  // a regra de evidencia (Code Geass), menos para o mesmo bingeGroup (forte).
   const Stream *s = &p->fontes[i], *melhor = &p->fontes[p->melhor];
-  if (!ajustes_fonte_primeira() && ajustes_fonte_prioridade() != 2 && s->altura == melhor->altura &&
+  if (!forte && !ajustes_fonte_primeira() && ajustes_fonte_prioridade() != 2 && s->altura == melhor->altura &&
       notaComparavel(s) + STREAM_MEMORIA_MARGEM < notaComparavel(melhor)) return 0;
-  return p->grupo[q] <= ga && s->altura >= melhor->altura && s->dolbyVision >= melhor->dolbyVision &&
-         !(p->lg && s->altura == melhor->altura && stream_e_mp4(melhor) && !stream_e_mp4(s));
+  return !(p->lg && s->altura == melhor->altura && stream_e_mp4(melhor) && !stream_e_mp4(s));
 }
 void stream_preparo_definir_episodio(StreamPreparo *p, int t, int e) {
   if (p) { p->debrid.temporada = t; p->debrid.episodio = e; }
@@ -2282,7 +2352,9 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
   if (preferidaNext < 0 && alvo && alvo[0]) {
     PreparoQualidade qualidade = {fontes, ordem, grupo, excl, total,
                                  nc > 0 ? ordem[fila[0]] : -1, lgMp4Primeiro()};
-    int lembrada = fontepref_escolher_lista(alvo, fontes, total, preparoGrupoSemPerda, &qualidade);
+    // O preparo e sempre do PROXIMO episodio: primeiro o bingeGroup da fonte
+    // que esta tocando (fontepref.h, Next), depois a memoria do titulo.
+    int lembrada = fontepref_escolher_lista_next(alvo, fontes, total, preparoGrupoSemPerda, &qualidade);
     if (lembrada >= 0 && fonteregra_no_escopo(&escopo, ehPlugin(&fontes[lembrada]))) {
       for (int q = 0; q < total; q++) if (ordem[q] == lembrada) { pref = q; break; }
       // A politica de providers tambem recebe a preferida da lista propria.
@@ -2418,6 +2490,7 @@ int stream_falha_aplicar(int indice, unsigned geracao, int servico, const char *
 
 int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
   int fila[VER_MAX], nf, q, tocadas = 0, escolhida, total, pref, livres = 0, kk;
+  int motivos[MOT_N] = {0};
   int modo = ajustes_fonte_primeira() ? FONTEAUTO_PRIMEIRA : FONTEAUTO_MELHOR;
   long *pts;
   unsigned char *acima, *excl;
@@ -2465,7 +2538,9 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
       if (i == pref && fonteregra_no_escopo(&cfgEscopo, ehPlugin(&lista[i]))) posPref = q;
       pts[q] = pontos(&lista[i]);
       acima[q] = (unsigned char)!cabeNoTeto(&lista[i]);
-      excl[q] = (unsigned char)foraDoAutoComFiltro(i, &c.filtro);
+      int mot = motivoForaDoAuto(i, &c.filtro);
+      excl[q] = (unsigned char)(mot != MOT_FICA);
+      motivos[mot]++;
       grp[q] = (signed char)grupoDe(i);
       rk[q] = fonteregra_ordem_rank(lista[i].provedor);
       if (!excl[q]) livres++;
@@ -2478,6 +2553,11 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
     free(ordem); }
   free(pts); free(acima); free(excl); free(grp); free(rk);
   if (nf < 1) {
+    // Nenhuma candidata: dizer por que (so contagens, sem URL) para o log da TV.
+    if (livres == 0 && total > 0)
+      printf("[fonte] auto-play: 0 de %d candidata(s); fora do automatico: excluida=%d filtro=%d fora-de-cache=%d informativa=%d decoder=%d morta=%d\n",
+             total, motivos[MOT_EXCLUIDA], motivos[MOT_FILTRO], motivos[MOT_FORA_CACHE], motivos[MOT_INFORMATIVA],
+             motivos[MOT_DECODER], motivos[MOT_MORTA]);
     // Havia fonte, mas as regras de Ajustes nao deixam nenhuma (#202).
     if (livres > 0) {
       pthread_mutex_lock(&verTrava);
@@ -2643,13 +2723,20 @@ int stream_auto_pode_decidir(int preferida, int prefPendente, int prazoPassou, i
   pthread_mutex_unlock(&verTrava);
   p.modo = ajustes_fonte_primeira() ? FONTEAUTO_PRIMEIRA : FONTEAUTO_MELHOR;
   p.total = total; p.preferida = posPref; p.prefPendente = prefPendente;
-  p.prazoPassou = prazoPassou; p.algumPendente = addons_faltam_decisivos() > 0;
+  p.prazoPassou = prazoPassou;
   p.pontos = pts; p.acimaTeto = acima; p.excluida = excl; p.boa = boa;
   p.addon = ad; p.pendenteAntes = pendenteAntesCb;
   p.grupo = grp; p.instantaneo = instantaneo;
   p.pendenteGrupoMin = addons_pendente_grupo_min(pendenteGrupoCb, &rc);
+  // SO OS ADD-ONS QUE O AUTOMATICO PODE USAR seguram a decisao (dono, 16/10):
+  // um add-on fora de "Fontes do auto-play" ainda respondendo nao faz "Todos os
+  // add-ons" esperar — as fontes dele nunca seriam escolhidas. Sem regras de
+  // escopo, todo add-on conta, como antes. pendenteGrupoMin ja e o menor grupo
+  // entre os pendentes PERMITIDOS (99 = nenhum).
+  p.algumPendente = p.pendenteGrupoMin < 99;
   p.rank = rk; p.ordemUso = ajustes_fonte_ordem_uso();
   p.pendenteRankMin = p.ordemUso == FR_ORDEM_ESTRITA ? addons_pendente_grupo_min(pendenteRankCb, &rc) : 99;
+  p.esperaTodos = ajustes_fonte_prazo_ms() < 0;
   r = fonteauto_pode_decidir(&p);
   free(pts); free(acima); free(excl); free(boa); free(ad); free(grp); free(rk);
   return r;
@@ -3007,18 +3094,24 @@ int stream_verificar_proxima_vod(int atualIdx, int tentativas, int *conferidas) 
   return stream_verificar_proxima_vod_sessao(atualIdx, tentativas, conferidas, nv_perfil_sessao_ler());
 }
 
-int stream_grupo_sem_perda(int i) {
-  int a, gi, ga;
+// A FONTE QUE O AUTOMATICO JA TOCOU pode ser seguida aqui? (fontepref.c, a
+// memoria do automatico). A resolucao ja nao conta (dono, 16/10: o que provou
+// que toca manda, e uma "4K" de IA nao a tira). Recusa o que o automatico nao
+// pode tocar (excluida, aviso do addon, barrada pelas regras do dono), a regra
+// do MP4 da LG na mesma resolucao e, na MESMA resolucao, uma release com
+// evidencia claramente menor (a regra do Code Geass, abaixo).
+int stream_grupo_sem_perda(int i, int forte) {
+  int a, gi;
   if (i < 0 || i >= n || automaticaExcluida(i) || ehInformativa(&lista[i])) return 0;
   gi = grupoDe(i);
   if (gi < 0) return 0;
   a = automaticoCom(1);
   if (a < 0 || a == i) return 1;
-  ga = grupoDe(a);
-  if (gi > ga) return 0;
-  if (lista[i].altura < lista[a].altura || lista[i].dolbyVision < lista[a].dolbyVision) return 0;
   if (lgMp4Primeiro() && lista[i].altura == lista[a].altura &&
       stream_e_mp4(&lista[a]) && !stream_e_mp4(&lista[i])) return 0;
+  // O mesmo bingeGroup vem primeiro (dono, 16/10): a regra de evidencia nao o
+  // tira; a do MP4 da LG (compatibilidade) sim.
+  if (forte) return 1;
   // A MEMORIA DO AUTOMATICO NAO PRENDE UMA RELEASE PIOR (Code Geass, 14/10): o
   // WEB-DL de 2 Mbps escolhido num episodio voltava pelo bingeGroup no
   // seguinte, mesmo com um REMUX na lista, porque so resolucao e DV contavam
@@ -3753,26 +3846,33 @@ static void selosAgendar(int ini, int qtd) {
 }
 static int selosPacoteDa(Stream *s) {
   unsigned ver;
+  int nSelos = 0, daLista;
   // O modo colorido vale para a lista inteira: ligar/desligar nos Ajustes
   // sobe a versao do pacote e a lista e recalculada (no fio) na proxima olhada.
   selospacote_colorido(ajustes_selos_coloridos());
   if (selospacote_ativo() < 0 && !selospacote_embutidos_ok()) return 0;
   ver = selospacote_versao();
-  if (s->selosPacoteVer == ver) return s->nSelosPacote;
-  // Pacote trocado com a lista em memoria: pede a lista inteira, uma vez.
-  if (selosPedVer != ver || selosPedGer != listaGeracao) selosAgendar(0, n);
-  // COPIA de uma fonte (cartao do player, retrato da folha): pega o resultado
-  // da entrada da lista com a mesma url, se ja saiu.
-  if (s < lista || s >= lista + n) {
+  // verTrava: episode changed frees lista on the UI thread while this sheet
+  // still draws. The pointer check and the walk have to see the same block.
+  pthread_mutex_lock(&verTrava);
+  daLista = s >= lista && s < lista + n;
+  if (daLista && s->selosPacoteVer == ver) nSelos = s->nSelosPacote;
+  else if (daLista && (selosPedVer != ver || selosPedGer != listaGeracao)) {
+    pthread_mutex_unlock(&verTrava);
+    selosAgendar(0, n);
+    return 0;
+  } else if (!daLista) {
     int j;
     for (j = 0; j < n; j++)
       if (lista[j].selosPacoteVer == ver && !strcmp(lista[j].url, s->url) && !strcmp(lista[j].rotulo, s->rotulo)) {
         memcpy(s->selosPacote, lista[j].selosPacote, sizeof s->selosPacote);
         s->nSelosPacote = lista[j].nSelosPacote; s->selosPacoteVer = ver;
-        return s->nSelosPacote;
+        nSelos = s->nSelosPacote;
+        break;
       }
   }
-  return 0;
+  pthread_mutex_unlock(&verTrava);
+  return nSelos;
 }
 
 // Quantos selos do pacote a FILEIRA desenha: com os pacotes embutidos a
@@ -3882,6 +3982,15 @@ static long tamanhoOrdem(int i) { return lista[i].tamanhoMB > 0 ? lista[i].taman
 static int *grupoTmp;
 static int *grupoFitTmp;
 static int grupoTmpCap;
+static float dicaTorrentsAltura;
+static float medirDicaTorrents(void) {
+  char texto[1536];
+  dicaTorrentsAltura = 0;
+  if (filtro != -1 && nFiltrados() && dicaTorrents(texto, sizeof texto))
+    dicaTorrentsAltura = 12 + txt_bloco(TXT_PG_FIM, texto, 110,110,108,0,0,
+      FOLHA_W-FOLHA_PAD_E-FOLHA_PAD_D-2*FOLHA_TXT,28,0,0);
+  return dicaTorrentsAltura;
+}
 static void montar(int automatica) {
   float y = 0;
   int g, i, k, m = -1, nt;
@@ -3922,7 +4031,7 @@ static void montar(int automatica) {
       (void)grupoRes(&lista[i]);
       porLinha(i, &y, automatica);
     }
-    alturaTotal = y;
+    alturaTotal = y + medirDicaTorrents();
     return;
   }
   if (grupoTmpCap < n) {
@@ -3973,7 +4082,7 @@ static void montar(int automatica) {
     secN[g] = nt;
     for (k = 0; k < nt; k++) porLinha(grupoTmp[k], &y, automatica);
   }
-  alturaTotal = y;
+  alturaTotal = y + medirDicaTorrents();
 }
 static int filtrado(int linha) {
   return linha >= 0 && linha < nOrdem ? ordem[linha] : -1;
@@ -4058,6 +4167,8 @@ void stream_folha_abrir(void) {
   recarregarFonteConfirmacao = 0;
   recarregarFontePerfil = nv_perfil_sessao_ler();
   recarregarFonteContexto = canalFolha ? 0 : player_recarregar_contexto();
+  // Segurar OK numa fonte le a lista da conta TorBox: ela ja sai agora.
+  if (!canalFolha) partes_aquecer();
   folhaGeometria();
   atualizarProvedores();
   ondever_apps_atualizar();
@@ -4196,6 +4307,218 @@ static int detalheEvento(const SDL_Event *e) {
   return 1;
 }
 static void ponteiroDetalhe(int a, int b) { (void)a; (void)b; detAberto = 0; }
+
+// ARQUIVOS DESTA FONTE (partes.h, dono 16/10/2026): SEGURAR OK numa fonte abre
+// a lista dos videos do item dela no TorBox; o toque curto continua tocando a
+// fonte (no KEYUP, como em toda lista com menu de segurar — ctxlista.h). A
+// modal fica por cima da folha, como a de detalhes. Escolher um arquivo fecha
+// as duas e deixa o pedido para app.c (stream_partes_escolheu).
+static CtxHold folhaHold;
+static int   ptAberto, ptFonte = -1, ptFoco, ptFocoPosto;
+static Uint32 ptDesde;
+static float ptAnim, ptRol, ptRolAlvo;
+static PartesLista ptL;
+static char  ptProv[96];
+static int   ptEscolhaFonte = -1, ptEscolhaK = -1;
+static unsigned ptEscolhaGeracao;
+static PartesLista ptEscolhaL;
+#define PT_LINHA_H 84.0f
+#define PT_JAN_H   440.0f
+// AS LINHAS DA MODAL (dono, 16/10): "Escolher outra copia" no topo (menos num
+// casamento por hash), os arquivos da aba (Episodios com separador por
+// temporada / Especiais / Extras), ou a lista de copias do titulo.
+enum { PR_ESCOLHER = 0, PR_TEMPORADA, PR_ARQ, PR_COPIA };
+typedef struct { int tipo, idx; float y, h; } PtLinha;
+static PtLinha *ptLinhas;
+static int ptCapLinhas;
+static int ptNLinhas, ptAba, ptCopias, ptSemCopias;
+static int ptAbaTipos[3], ptNAbas;
+
+static int linhaAceitaPartes(int i) {
+  return partes_disponivel() && !canalFolha && i >= 0 && i < n &&
+         (!strncmp(lista[i].url, "http", 4) || lista[i].infoHash[0]);
+}
+static void partesAbrirPainel(int i) {
+  ptAberto = 1; ptFonte = i; ptFoco = 0; ptFocoPosto = 0; ptRol = ptRolAlvo = 0; ptDesde = SDL_GetTicks();
+  ptAba = 0; ptCopias = 0; ptSemCopias = 0; ptNLinhas = 0;
+  partes_lista_limpar(&ptL);
+  ptL.estado = PARTES_BUSCANDO; ptL.atual = -1;
+  nv_limpar_texto(lista[i].provedor, ptProv, sizeof ptProv, NV_LIMPA_UMA_LINHA);
+  // O que a busca tem para casar, sem URL: o arquivo da fonte, se o link traz
+  // um hash, e o titulo para o achado pelo nome.
+  { char hs[2][41];
+    const char *b = strrchr(lista[i].arquivo, '/');
+    int nh = partes_hashes_texto(lista[i].url, hs, 2);
+    printf("[partes] hold OK on source #%d (%s): asking TorBox for its files | file=%s | hash: %s | title=%s\n", i,
+           lista[i].provedor[0] ? lista[i].provedor : "-", b ? b + 1 : lista[i].arquivo[0] ? lista[i].arquivo : "-",
+           lista[i].hashTorrent[0] || lista[i].infoHash[0] ? "from the add-on" : nh ? "in the link" : "none",
+           nomeFolha[0] ? nomeFolha : "-");
+    fflush(stdout); }
+  partes_pedir(&lista[i], nomeFolha);
+}
+// Current file: multipart session, recorded standalone file, or source file.
+// Match TorBox item and transport before file ID; -1 if none.
+static int ptTocando(void) {
+  const PartesLista *sl = partes_sessao_lista();
+  if (ptL.estado != PARTES_PRONTO) return -1;
+  if (sl && sl->item == ptL.item && sl->usenet == ptL.usenet && player_aberto()) {
+    int k = partes_sessao_indice();
+    if (k >= 0 && k < sl->n)
+      for (int i = 0; i < ptL.n; i++) if (ptL.arq[i].id == sl->arq[k].id) return i;
+  }
+  if (player_aberto()) {
+    const CatItem *c = cat_item(player_indice());
+    char alvo[64];
+    int t, e;
+    PartesPonto p;
+    player_episodio_atual(&t, &e);
+    if (player_id_canal()[0]) snprintf(alvo, sizeof alvo, "%s", player_id_canal());
+    else if (!c) alvo[0] = 0;
+    else if (t >= 0 && e > 0) cat_id_stream(player_indice(), t, e, alvo, sizeof alvo);
+    else snprintf(alvo, sizeof alvo, "%s", c->imdb);
+    if (partes_arquivo_de(alvo, &p)) {
+      if (p.item == ptL.item && p.usenet == ptL.usenet)
+        for (int i = 0; i < ptL.n; i++) if (ptL.arq[i].id == p.arquivo) return i;
+      return -1;
+    }
+  }
+  return ptFonte == atual && player_aberto() ? ptL.atual : -1;
+}
+static int ptSelecionavel(int r) { return r >= 0 && r < ptNLinhas && ptLinhas[r].tipo != PR_TEMPORADA; }
+static int ptCopiasVisiveis(void) { return ptCopias || ptL.estado == PARTES_ESCOLHER; }
+// As abas que existem nesta lista (so as que tem arquivo).
+static void ptAbas(void) {
+  int tem[3] = {0, 0, 0};
+  ptNAbas = 0;
+  for (int i = 0; i < ptL.n; i++) if (ptL.arq[i].tipo >= 0 && ptL.arq[i].tipo < 3) tem[ptL.arq[i].tipo] = 1;
+  for (int t = 0; t < 3; t++) if (tem[t]) ptAbaTipos[ptNAbas++] = t;
+  if (ptAba >= ptNAbas) ptAba = ptNAbas > 0 ? ptNAbas - 1 : 0;
+}
+// Monta as linhas do que a modal mostra agora.
+static void ptMontar(void) {
+  float y = 0;
+  ptNLinhas = 0;
+  int needed = 2 * ptL.n + PARTES_COPIAS + 1;
+  if (needed > ptCapLinhas) {
+    PtLinha *rows = realloc(ptLinhas, (size_t)needed * sizeof *rows);
+    if (!rows) { ptL.estado = PARTES_ERRO; return; }
+    ptLinhas = rows; ptCapLinhas = needed;
+  }
+  if (ptCopiasVisiveis()) {
+    for (int c = 0; c < ptL.nCopias; c++) {
+      ptLinhas[ptNLinhas] = (PtLinha){PR_COPIA, c, y, PT_LINHA_H}; y += PT_LINHA_H; ptNLinhas++;
+    }
+    return;
+  }
+  if (ptL.estado != PARTES_PRONTO || ptL.n <= 0) return;
+  ptAbas();
+  if (!ptL.exato) { ptLinhas[ptNLinhas++] = (PtLinha){PR_ESCOLHER, 0, y, 64.0f}; y += 64.0f; }
+  { int tipo = ptNAbas ? ptAbaTipos[ptAba] : PARTE_EP, temps = 0, ult = -1, ultT = -999;
+    // Separador de temporada so com duas ou mais temporadas nos episodios.
+    if (tipo == PARTE_EP)
+      for (int i = 0; i < ptL.n; i++)
+        if (ptL.arq[i].tipo == PARTE_EP && ptL.arq[i].temporada != ult) { if (ptL.arq[i].temporada > 0) temps++; ult = ptL.arq[i].temporada; }
+    for (int i = 0; i < ptL.n; i++) {
+      if (ptL.arq[i].tipo != tipo) continue;
+      if (temps >= 2 && ptL.arq[i].temporada != ultT) {
+        ultT = ptL.arq[i].temporada;
+        ptLinhas[ptNLinhas++] = (PtLinha){PR_TEMPORADA, ultT, y, 46.0f}; y += 46.0f;
+      }
+      ptLinhas[ptNLinhas++] = (PtLinha){PR_ARQ, i, y, PT_LINHA_H}; y += PT_LINHA_H;
+    }
+  }
+}
+static int ptLinhaDoArquivo(int k) {
+  for (int r = 0; r < ptNLinhas; r++) if (ptLinhas[r].tipo == PR_ARQ && ptLinhas[r].idx == k) return r;
+  return -1;
+}
+static int ptPrimeira(void) { for (int r = 0; r < ptNLinhas; r++) if (ptSelecionavel(r)) return r; return 0; }
+static void ptIrAba(int d) {
+  if (ptNAbas < 2) return;
+  ptAba = (ptAba + d + ptNAbas) % ptNAbas;
+  ptMontar();
+  ptFoco = 0;
+  // Abre no primeiro arquivo da aba (a linha "Escolher outra copia" fica em cima).
+  for (int r = 0; r < ptNLinhas; r++) if (ptLinhas[r].tipo == PR_ARQ) { ptFoco = r; break; }
+  ptRolAlvo = 0;
+}
+static int partesEvento(const SDL_Event *e) {
+  SDL_Keycode k;
+  if (!ptAberto) return 0;
+  if (e->type != SDL_KEYDOWN) return 1;
+  k = e->key.keysym.sym;
+  if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE || k == SDLK_DELETE) {
+    // Nas copias abertas pela linha "Escolher outra copia": volta aos arquivos.
+    if (ptCopias && ptL.estado == PARTES_PRONTO) { ptCopias = 0; ptMontar(); ptFoco = ptPrimeira(); ptRolAlvo = 0; return 1; }
+    if (ptSemCopias) { ptSemCopias = 0; return 1; }
+    ptAberto = 0; partes_cancelar(); return 1;
+  }
+  // O OK segurado que abriu a modal continua repetindo: nao e escolha.
+  if (e->key.repeat && (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE)) return 1;
+  if (ptNLinhas <= 0) {
+    if (k == SDLK_RETURN || k == SDLK_KP_ENTER) { if (ptSemCopias) ptSemCopias = 0; else ptAberto = 0; }
+    return 1;
+  }
+  if (k == SDLK_UP) { int r = ptFoco - 1; while (r >= 0 && !ptSelecionavel(r)) r--; if (r >= 0) ptFoco = r; }
+  else if (k == SDLK_DOWN) { int r = ptFoco + 1; while (r < ptNLinhas && !ptSelecionavel(r)) r++; if (r < ptNLinhas) ptFoco = r; }
+  else if (k == SDLK_LEFT && !ptCopiasVisiveis()) ptIrAba(-1);
+  else if (k == SDLK_RIGHT && !ptCopiasVisiveis()) ptIrAba(1);
+  else if ((k == SDLK_RETURN || k == SDLK_KP_ENTER) && ptSelecionavel(ptFoco)) {
+    const PtLinha *ln = &ptLinhas[ptFoco];
+    if (ln->tipo == PR_ESCOLHER) {
+      if (ptL.nCopias <= 0) { ptSemCopias = 1; return 1; }
+      ptCopias = 1; ptMontar(); ptFoco = 0; ptRolAlvo = 0;
+      for (int c = 0; c < ptL.nCopias; c++) if (ptL.copias[c].item == ptL.item) { ptFoco = c; break; }
+      printf("[partes] Choose another copy: %d cop%s listed\n", ptL.nCopias, ptL.nCopias == 1 ? "y" : "ies");
+      fflush(stdout);
+    } else if (ln->tipo == PR_COPIA) {
+      const ParteCopia *c = &ptL.copias[ln->idx];
+      if (ptFonte >= 0 && ptFonte < n) {
+        printf("[partes] copy %d picked (%d pts): TorBox torrent %d\n", ln->idx + 1, c->pontos, c->item);
+        fflush(stdout);
+        partes_pedir_item(&lista[ptFonte], c->item);
+        ptCopias = 0; ptFocoPosto = 0; ptDesde = SDL_GetTicks(); ptAba = 0; ptRolAlvo = 0;
+        partes_lista_limpar(&ptL); ptL.estado = PARTES_BUSCANDO; ptL.atual = -1; ptNLinhas = 0;
+      }
+    } else if (ln->tipo == PR_ARQ) {
+      int f = ln->idx;
+      if (!partes_lista_copiar(&ptEscolhaL, &ptL)) return 1;
+      ptEscolhaFonte = ptFonte; ptEscolhaK = f;
+      ptEscolhaGeracao = listaGeracao;
+      printf("[partes] file %d of %d picked in the files list (%s)\n", f + 1, ptL.n,
+             ptL.arq[f].tipo == PARTE_EP ? "part" : ptL.arq[f].tipo == PARTE_ESPECIAL ? "special" : "extra");
+      fflush(stdout);
+      ptAberto = 0; aberta = 0;
+    }
+  }
+  return 1;
+}
+static void ponteiroPartesLinha(int row, int b) { (void)b; ptFoco = row; }
+static void ponteiroPartesFora(int a, int b) { (void)a; (void)b; ptAberto = 0; }
+int stream_partes_escolheu(int *fonte, PartesLista *l, int *k) {
+  if (ptEscolhaFonte < 0) return 0;
+  if (ptEscolhaGeracao != listaGeracao || ptEscolhaFonte >= n) {
+    ptEscolhaFonte = -1;
+    printf("[partes] the list changed under the pick; nothing to play\n");
+    fflush(stdout);
+    return 0;
+  }
+  if (fonte) *fonte = ptEscolhaFonte;
+  if (l && !partes_lista_copiar(l, &ptEscolhaL)) { ptEscolhaFonte = -1; return 0; }
+  if (k) *k = ptEscolhaK;
+  ptEscolhaFonte = -1;
+  return 1;
+}
+// O toque curto (ou o OK de sempre) numa linha da lista: a mesma acao de antes.
+static void okNaLinha(void) {
+  int i = filtrado(foco);
+  if (i >= 0) { escolha=i; escolhaGeracao=listaGeracao; aberta=0; }
+  else if (i <= -2) {
+    OndeVer o;
+    if (ondever_item(alvoPedido,-i-2,&o) && ondever_abrir(o.nome)!=ONDE_INFO) aberta=0;
+  }
+}
+
 void stream_folha_evento(const SDL_Event *e) {
   if (e->type == SDL_WINDOWEVENT && (e->window.event == SDL_WINDOWEVENT_FOCUS_LOST ||
       e->window.event == SDL_WINDOWEVENT_HIDDEN)) recarregarFonteConfirmacao = 0;
@@ -4209,6 +4532,25 @@ void stream_folha_evento(const SDL_Event *e) {
     return;
   }
   if(aberta && detalheEvento(e)) return;
+  if(aberta && partesEvento(e)) return;
+  // SEGURAR OK NUMA FONTE (so onde partes_disponivel): o OK arma no KEYDOWN e
+  // so age no KEYUP. Linha que nao aceita (canal, "Onde ver", cabecalho) segue
+  // o caminho de antes, com o OK no KEYDOWN.
+  if (aberta && grupo == 1 && (e->type == SDL_KEYDOWN || e->type == SDL_KEYUP)) {
+    switch (ctxhold_evento(&folhaHold, e, linhaAceitaPartes(filtrado(foco)))) {
+      case CTXH_CONSUMIDO:
+        // OK afundou numa fonte: a busca comeca ja, na lista da memoria, para a
+        // modal abrir pronta se o dedo segurar.
+        if (e->type == SDL_KEYDOWN && !e->key.repeat && folhaHold.armado) {
+          int i = filtrado(foco);
+          if (linhaAceitaPartes(i)) partes_pedir_cedo(&lista[i], nomeFolha);
+        }
+        return;
+      case CTXH_TOQUE: okNaLinha(); return;
+      case CTXH_LONGO: { int i = filtrado(foco); if (linhaAceitaPartes(i)) partesAbrirPainel(i); } return;
+      default: break;
+    }
+  }
 #ifdef NV_TOUCH_UI
   if (toquerol_navegacao(e)) { toquerol_limpar(&toqueFontes); toquerol_limpar(&toqueFontesAbas); }
 #endif
@@ -4274,23 +4616,54 @@ void stream_folha_evento(const SDL_Event *e) {
       }
     }
     else if(grupo==0) {grupo=1;foco=0;}
-    else {
-      int i = filtrado(foco);
-      if (i >= 0) { escolha=i; escolhaGeracao=listaGeracao; aberta=0; }
-      else if (i <= -2) {
-        OndeVer o;
-        if (ondever_item(alvoPedido,-i-2,&o) && ondever_abrir(o.nome)!=ONDE_INFO) aberta=0;
-      }
-    }
+    else okNaLinha();
   }
 }
 void stream_folha_atualizar(float dt, Uint32 agora) {
   int nf;
   medirCabecalho();
   folhaGeometria();
-  (void)agora;
   anim=anim_mola(anim,aberta?1:0,dt,NV_MOLA_TELA);
-  if(!aberta) detAberto=0;
+  if(!aberta) { detAberto=0; if (ptAberto) partes_cancelar(); ptAberto=0; ctxhold_cancelar(&folhaHold); }
+  ptAnim=anim_mola(ptAnim,ptAberto?1:0,dt,NV_MOLA_TELA);
+  if (ptAberto) {
+    int e = partes_resultado(NULL);
+    if (e != ptL.estado) {
+      if (e == PARTES_VAZIO) partes_lista_limpar(&ptL);
+      else e = partes_resultado(&ptL);
+      ptFocoPosto = 0;
+      ptMontar();
+    }
+    if (e == PARTES_PRONTO && !ptFocoPosto) {
+      // Abre na aba e na linha do arquivo que toca (ou o da fonte).
+      int t = ptTocando(), f = t >= 0 ? t : ptL.atual;
+      ptAba = 0; ptCopias = 0;
+      ptAbas();
+      if (f >= 0 && f < ptL.n) for (int a2 = 0; a2 < ptNAbas; a2++) if (ptAbaTipos[a2] == ptL.arq[f].tipo) ptAba = a2;
+      ptMontar();
+      ptFoco = f >= 0 ? ptLinhaDoArquivo(f) : -1;
+      if (ptFoco < 0) { ptFoco = ptPrimeira(); for (int r = 0; r < ptNLinhas; r++) if (ptLinhas[r].tipo == PR_ARQ) { ptFoco = r; break; } }
+      ptFocoPosto = 1;
+    } else if (e == PARTES_ESCOLHER && !ptFocoPosto) { ptFoco = 0; ptFocoPosto = 1; }
+    if (ptFoco >= ptNLinhas) ptFoco = ptNLinhas > 0 ? ptNLinhas - 1 : 0;
+    { float alvo = ptRolAlvo, jan = PT_JAN_H - 60.0f;
+      float topo = ptNLinhas ? ptLinhas[ptFoco].y : 0, lh = ptNLinhas ? ptLinhas[ptFoco].h : PT_LINHA_H;
+      // O separador logo acima da linha focada aparece junto.
+      if (ptFoco > 0 && ptLinhas[ptFoco - 1].tipo == PR_TEMPORADA) topo = ptLinhas[ptFoco - 1].y;
+      float fundo = ptNLinhas ? ptLinhas[ptFoco].y + lh : lh;
+      if (topo < alvo) alvo = topo;
+      if (fundo > alvo + jan) alvo = fundo - jan;
+      if (alvo < 0) alvo = 0;
+      ptRolAlvo = alvo;
+      float d = ptRolAlvo - ptRol;
+      ptRol = fabsf(d) < .5f ? ptRolAlvo : ptRol + d * (dt * 16 > 1 ? 1 : dt * 16); }
+  }
+  // O dedo ainda segura OK numa fonte: no limiar abre a lista de arquivos.
+  if (aberta && !ptAberto && grupo == 1 && ctxhold_passo(&folhaHold, agora, 1)) {
+    int i = filtrado(foco);
+    if (linhaAceitaPartes(i)) partesAbrirPainel(i);
+    ctxhold_cancelar(&folhaHold);
+  }
   detAnim=anim_mola(detAnim,detAberto?1:0,dt,NV_MOLA_TELA);
   { float max=detAlt>0?detAlt:0; if(detRolAlvo>max) detRolAlvo=max;
     float d=detRolAlvo-detRol; detRol = fabsf(d)<.5f ? detRolAlvo : detRol+d*(dt*16>1?1:dt*16); }
@@ -4692,6 +5065,159 @@ static void desenhaDetalhe(float x, float w, int ptr) {
   { const char *dica=detAlt>0?"↑ ↓ rola · OK ou Voltar fecha":"OK ou Voltar fecha";
     txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM,dica,120,120,118,255,iw),ix,cy+ch-pad-8,a); }
 }
+// A MODAL "ARQUIVOS DESTA FONTE": o mesmo cartao da de detalhes. Cada linha:
+// "PARTE 2" (ou "EXTRA") e a marca no acento em cima, o nome do arquivo
+// embaixo, o tamanho na coluna da direita.
+static const char *ptMensagem(void) {
+  if (ptSemCopias) return "Nenhuma outra cópia deste título no seu TorBox";
+  switch (ptL.estado) {
+    case PARTES_BUSCANDO:  // a busca segue no fundo; a modal nao espera para sempre
+      return SDL_GetTicks() - ptDesde > 45000u ? "O TorBox não respondeu. Tente de novo." : "Procurando os arquivos no TorBox…";
+    case PARTES_ADICIONANDO:
+      return SDL_GetTicks() - ptDesde > 60000u ? "O TorBox não respondeu. Tente de novo." : "Adicionando ao seu TorBox…";
+    case PARTES_SEM_CHAVE: return "Para ver os arquivos, adicione sua chave do TorBox em Ajustes > Integrações > Debrid";
+    case PARTES_SEM_PLANO: return "Sua conta TorBox não permite uso pela API";
+    case PARTES_NAO_ACHOU: return "Esta fonte não foi achada na sua conta TorBox";
+    case PARTES_ESCOLHER:  return ptL.nCopias > 0 ? NULL : "Esta fonte não foi achada na sua conta TorBox";
+    case PARTES_PRONTO:    return ptL.n > 0 || ptCopias ? NULL : "Esta fonte não foi achada na sua conta TorBox";
+    default:               return "O TorBox não respondeu. Tente de novo.";
+  }
+}
+// O tamanho em GB a direita da linha, como na folha.
+static void ptTamanho(uint64_t bytes, int sel, float ix, float iw, float ry, float a) {
+  TxtLinha lg, lu;
+  char gb[24];
+  int cg = sel ? 250 : 218;
+  if (!bytes) return;
+  snprintf(gb, sizeof gb, bytes >= (uint64_t)100 << 30 ? "%.0f" : "%.1f", (double)bytes / 1073741824.0);
+  plrui_decimal(gb);
+  lg = txt_linha(TXT_CW_TITULO, gb, cg, cg, cg - 2, 255);
+  lu = txt_linha(TXT_PG_FIM, "GB", 120, 120, 118, 255);
+  txt_desenhar_alpha(lu, ix + iw - lu.w, ry + 14 + (lg.h - lu.h) - 3, a);
+  txt_desenhar_alpha(lg, ix + iw - lu.w - 6 - lg.w, ry + 14, a);
+}
+static void desenhaPartes(float x, float w, int ptr, Uint32 agora) {
+  float a = ptAnim;
+  const char *msg;
+  int copias;
+  if (a < .01f) return;
+  float ar, ag, ab; ajustes_acento(&ar, &ag, &ab);
+  int ai = (int)(ar * 255.0f + .5f), agi = (int)(ag * 255), abi = (int)(ab * 255);
+  float cw = w - 96.0f, ch = PT_JAN_H + 150.0f;
+  float cx = x + (w - cw) * .5f, cy = (NV_TELA_H - ch) * .5f + (1.0f - a) * 16.0f;
+  float pad = 40.0f, ix = cx + pad, iw = cw - 2 * pad;
+  gfx_cor((GfxRect){x, 0, w, NV_TELA_H}, 0, 0, 0, 0, .55f * a);
+  ajustes_ui_ilha((GfxRect){cx, cy, cw, ch}, FOLHA_RAIO_IL * .8f, 1);
+  if (ptr) {
+    ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ponteiroPartesFora, 0, 0);
+    ponteiro_alvo(cx, cy, cw, ch, NULL, NULL, 0, 0);
+  }
+  copias = ptCopiasVisiveis();
+  msg = ptMensagem();
+  float y = cy + 34.0f;
+  plrui_kicker(copias ? "Escolha uma cópia" : "Arquivos desta fonte", ix, y, 243, 242, 239, a * .45f);
+  y += 34.0f;
+  // A linha de baixo do titulo: o addon; com abas, as abas (← → troca).
+  if (!msg && !copias && ptNAbas >= 2) {
+    float tx = ix;
+    int dois = 0;
+    for (const char *c = alvoPedido; *c; c++) dois += *c == ':';
+    for (int t = 0; t < ptNAbas; t++) {
+      int tipo = ptAbaTipos[t], sel = t == ptAba;
+      const char *nm = tipo == PARTE_EP ? (dois >= 2 ? "Episódios" : "Partes") : tipo == PARTE_ESPECIAL ? "Especiais" : "Extras";
+      TxtLinha tl = txt_linha(TXT_PAINEL_ITEM, nm, sel ? ai : 150, sel ? agi : 150, sel ? abi : 148, 255);
+      txt_desenhar_alpha(tl, tx, y, a);
+      if (sel) gfx_cor((GfxRect){tx, y + tl.h + 4, tl.w, 3}, .5f, ar, ag, ab, a);
+      tx += tl.w + 36;
+    }
+  } else if (copias && ptL.estado == PARTES_ESCOLHER) {
+    txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM, "Esta fonte não está no seu TorBox. Escolha uma das suas cópias:", 200, 200, 198, 255, iw), ix, y + 6, a);
+  } else if (ptProv[0])
+    txt_desenhar_alpha(txt_linha_corta(TXT_PAINEL_ITEM, ptProv, ai, agi, abi, 255, iw), ix, y, a);
+  y += 48.0f;
+  float jy = y, jh = PT_JAN_H - 60.0f;
+  if (msg) {
+    txt_bloco(TXT_PG_FIM, msg, 200, 200, 198, ix, jy, iw, DET_LD, a, 0);
+  } else {
+    int tocando = ptTocando(), dois = 0;
+    // EPISODIO (id com temporada e episodio): o pacote tem episodios, nao
+    // partes de um filme — sem "PARTE N" nas linhas.
+    for (const char *c = alvoPedido; *c; c++) dois += *c == ':';
+    gfx_recorte(ix - 16, jy, iw + 32, jh);
+    for (int r = 0; r < ptNLinhas; r++) {
+      const PtLinha *ln = &ptLinhas[r];
+      float ry = jy + ln->y - ptRol;
+      int sel = r == ptFoco;
+      if (ry + ln->h < jy || ry > jy + jh) continue;
+      if (ln->tipo == PR_TEMPORADA) {
+        char tt[48];
+        if (ln->idx > 0) snprintf(tt, sizeof tt, i18n("Temporada %d"), ln->idx);
+        else snprintf(tt, sizeof tt, "%s", i18n("Episódios"));
+        caixaAlta(tt, 150, 150, 148, ix, ry + 18, a);
+        gfx_cor((GfxRect){ix, ry + ln->h - 6, iw, 1}, 0, 1, 1, 1, .10f * a);
+        continue;
+      }
+      GfxRect rr = {ix - 14, ry, iw + 28, ln->h - 6};
+      if (sel) {
+        if (ajustes_vidro()) gfx_cor(rr, FOLHA_RAIO / rr.h, 1, 1, 1, .12f * a);
+        else gfx_cor(rr, FOLHA_RAIO / rr.h, .17f, .176f, .204f, a);
+      }
+      if (ptr) {
+        float t = ry < jy ? jy : ry, b = ry + rr.h > jy + jh ? jy + jh : ry + rr.h;
+        if (b > t) ponteiro_alvo(rr.x, t, rr.w, b - t, ponteiroPartesLinha, NULL, r, 0);
+      }
+      if (ln->tipo == PR_ESCOLHER) {
+        char cc[64];
+        txt_desenhar_alpha(txt_linha_corta(TXT_PAINEL_ITEM, "Escolher outra cópia", sel ? 250 : 220, sel ? 250 : 220, sel ? 248 : 218, 255, iw - 200),
+                           ix, ry + 16, a);
+        if (ptL.nCopias > 0) {
+          TxtLinha cl;
+          snprintf(cc, sizeof cc, i18n("%d cópias"), ptL.nCopias);
+          cl = txt_linha(TXT_PG_FIM, cc, 140, 140, 138, 255);
+          txt_desenhar_alpha(cl, ix + iw - cl.w, ry + 20, a);
+        }
+        continue;
+      }
+      if (ln->tipo == PR_COPIA) {
+        const ParteCopia *c = &ptL.copias[ln->idx];
+        char tg[200] = "";
+        float mx = ix;
+        ptTamanho(c->epBytes, sel, ix, iw, ry, a);
+        if (c->item == ptL.item && ptL.estado == PARTES_PRONTO)
+          mx += caixaAlta("Cópia atual", ai, agi, abi, mx, ry + 12, a) + 18;
+        if (c->tamanho == 2) mx += caixaAlta("Mesmo tamanho", ai, agi, abi, mx, ry + 12, a) + 18;
+        if (c->grupo) mx += caixaAlta("Mesmo grupo", ai, agi, abi, mx, ry + 12, a) + 18;
+        if (c->temporada > 0) { snprintf(tg, sizeof tg, i18n("Temporada %d"), c->temporada); mx += caixaAlta(tg, 150, 150, 148, mx, ry + 12, a) + 18; }
+        snprintf(tg, sizeof tg, "%s%s", c->porque, c->porque[0] ? " · " : "");
+        { size_t k = strlen(tg); snprintf(tg + k, sizeof tg - k, i18n("%d arquivos"), c->nArq); }
+        txt_desenhar_alpha(txt_linha_corta(TXT_MINI, tg, 150, 150, 148, 255, ix + iw - 140 - mx), mx, ry + 13, a);
+        txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM, c->nome, sel ? 250 : 205, sel ? 250 : 205, sel ? 248 : 203, 255,
+                                           iw - 140), ix, ry + 44, a);
+        continue;
+      }
+      { const ParteArq *f = &ptL.arq[ln->idx];
+        int num = partes_numero(&ptL, ln->idx);
+        char tag[48] = "";
+        float mx = ix;
+        ptTamanho(f->bytes, sel, ix, iw, ry, a);
+        if (num > 0 && dois < 2) snprintf(tag, sizeof tag, i18n("Parte %d"), num);
+        if (tag[0]) mx += caixaAlta(tag, ai, agi, abi, ix, ry + 12, a) + 18;
+        if (ln->idx == tocando) {
+          float w2 = caixaAlta("Reproduzindo agora", ai, agi, abi, mx, ry + 12, a);
+          desenharAudioBars(mx + w2 + 12, ry + 13, 14, a, agora);
+        } else if (ln->idx == ptL.atual) {
+          gfx_cor((GfxRect){mx, ry + 17, 7, 7}, .5f, ar, ag, ab, a);
+          caixaAlta("Arquivo do addon", 150, 150, 148, mx + 16, ry + 12, a);
+        }
+        txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM, f->nome, sel ? 250 : 205, sel ? 250 : 205, sel ? 248 : 203, 255,
+                                           iw - 140), ix, ry + (tag[0] || ln->idx == tocando || ln->idx == ptL.atual ? 44 : 30), a); }
+    }
+    gfx_sem_recorte();
+  }
+  { const char *dica = msg ? "OK ou Voltar fecha" : copias ? "OK abre · Voltar volta"
+                       : ptNAbas >= 2 ? "OK toca · ← → abas · Voltar fecha" : "OK toca · Voltar fecha";
+    txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM, dica, 120, 120, 118, 255, iw), ix, cy + ch - pad - 8, a); }
+}
 // Camada ampliada (escala.h): o corpo desenha na tela virtual.
 void stream_folha_desenhar(Uint32 agora) {
   ESCALA_INI();
@@ -4815,6 +5341,10 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     if (n > 0 && addons_ocupado() && rw-360-cw > 80) {
       if (cw > 0) gfx_cor((GfxRect){tx+cw-13.5f,oy+74+ch*.5f-2.5f,5,5},.5f,.5f,.5f,.49f,anim);
       txt_desenhar_alpha(txt_linha_corta(TXT_HERO_META,"Buscando mais fontes…",ai,(int)(ag*255),(int)(ab*255),255,rw-360-cw),tx+cw,oy+72,anim);
+    } else if (grupo == 1 && linhaAceitaPartes(filtrado(foco)) && rw-360-cw > 80) {
+      // O GESTO NAO SE ADIVINHA: a dica fica no lugar do "Buscando mais fontes".
+      if (cw > 0) gfx_cor((GfxRect){tx+cw-13.5f,oy+74+ch*.5f-2.5f,5,5},.5f,.5f,.5f,.49f,anim);
+      txt_desenhar_alpha(txt_linha_corta(TXT_HERO_META,"Segure OK: todos os arquivos",130,130,128,255,rw-360-cw),tx+cw,oy+72,anim);
     } }
   medirCabecalho();
   txt_desenhar_alpha(txt_linha_corta(TXT_ILHA_TITULO,"Fontes",243,242,239,255,titMaxCab),tx,oy+94,anim);
@@ -5212,6 +5742,12 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     const char *message=state==ONDE_BUSCANDO ? "Buscando onde assistir…" : state==ONDE_FALHOU ? "Não foi possível consultar a disponibilidade." : "Nenhum serviço informado para esta região.";
     txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM,message,160,164,172,255,rw),lx,FOLHA_TOPO+36,anim);
   }
+  if (nf && filtro != -1 && dicaTorrentsAltura > 0) {
+    char texto[1536];
+    if (dicaTorrents(texto, sizeof texto))
+      txt_bloco(TXT_PG_FIM,texto,110,110,108,tx,
+        FOLHA_TOPO+alturaTotal-dicaTorrentsAltura-rolagem+12,tr-tx,28,anim,0);
+  }
   if(!nFiltrados() && filtro != -1) {
     // A FOLHA VAZIA DIZ A CAUSA (B6/#107, D5). So quando a lista esta vazia
     // de verdade (n == 0): lista cheia com filtro de provedor que nao casa
@@ -5247,6 +5783,10 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
   else gfx_sem_recorte();
   if (detAnim > .01f) {
     desenhaDetalhe(x,w,ptr);
+    if (ilha) gfx_recorte(ilhaR.x,ilhaR.y,ilhaR.w,ilhaR.h);
+  }
+  if (ptAnim > .01f) {
+    desenhaPartes(x,w,ptr && ptAberto,agora);
     if (ilha) gfx_recorte(ilhaR.x,ilhaR.y,ilhaR.w,ilhaR.h);
   }
 }

@@ -567,6 +567,8 @@ static int mesmaFoto(const char *a, const char *b) {
   return mesmaImagem && mesmaImagem(a, b);
 }
 
+int artehero_mesma_foto(const char *a, const char *b) { return mesmaFoto(a, b); }
+
 // "FUNDO DO DESTAQUE DO ADDON" (ajuste local, desligado de fabrica). Ligado,
 // o `background` que o addon mandou no catalogo vence a fonte escolhida e o
 // "outra arte" — so a escolha a mao (#142) vem antes. Conta como fundo do

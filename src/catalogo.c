@@ -1979,6 +1979,24 @@ int cat_imdb_na_lista(const char *imdb) {
   return achou;
 }
 
+// Resolve only the selected person; preserve concurrent metadata updates.
+int cat_elenco_tmdb(int i, const char *imdb, const char *tipo,
+                    const char *nome, long tmdb) {
+  int ok = 0;
+  catTravar();
+  if (tmdb > 0 && itens && i >= 0 && i < n &&
+      !strcmp(itens[i].imdb, imdb) && !strcmp(itens[i].tipo, tipo)) {
+    for (int k = 0; k < itens[i].nElenco; k++) {
+      if (strcmp(itens[i].elenco[k].nome, nome)) continue;
+      if (!itens[i].elenco[k].tmdb) { itens[i].elenco[k].tmdb = tmdb; mudou(); }
+      ok = itens[i].elenco[k].tmdb == tmdb;
+      break;
+    }
+  }
+  pthread_mutex_unlock(&pubTrava);
+  return ok;
+}
+
 // O indice so e valido se ainda aponta ao titulo da resposta. Copiar a
 // resposta antes da trava tambem aceita um item pertencente ao bloco atual.
 void cat_atualizar_item(int i, const CatItem *item) {

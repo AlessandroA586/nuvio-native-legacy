@@ -509,8 +509,7 @@ static void fotosDoElenco(CatItem *d, const char *imdbSerie, int serie, int mant
   // SEM `if (!d->nElenco) return;`: esta funcao tambem traduz titulo e sinopse
   // (mais abaixo), e um /meta do Cinemeta sem elenco — comum em anime, em
   // titulo novo e em item raso — saia daqui antes de pedir o TMDB, deixando a
-  // sinopse em ingles num app em outro idioma. O elenco, que e o que precisa
-  // de nomes para casar, fica atras da propria guarda.
+  // sinopse em ingles num app em outro idioma.
   chave = desc_chave_tmdb();            // "" com a integracao desligada
   if (!chave[0]) {
     printf("[desc] elenco %s: sem chave do TMDB (integracao %s)\n", imdbSerie,
@@ -658,26 +657,37 @@ static void fotosDoElenco(CatItem *d, const char *imdbSerie, int serie, int mant
   }
 
   // Elenco com foto e `tmdb_use_credits`. O `free` mora DENTRO do if porque o
-  // watch/providers logo abaixo nao depende dele. E necessario tambem quando
-  // os nomes ja vieram do catalogo em memoria mas SEM os ids de pessoa: sem o
-  // casamento o OK num ator nao abre a filmografia (o log do dono no #205).
-  if (ajustes_tmdb_elenco() && d->nElenco > 0) {
+  // watch/providers logo abaixo nao depende dele.
+  if (ajustes_tmdb_elenco()) {
+    int semNomes = d->nElenco == 0;
+    const char *endpoint = "credits";
     // language= tambem aqui: o nome do PERSONAGEM (`character`) vem localizado
     // quando o TMDB tem (o mesmo pedido, so um parametro a mais).
     snprintf(url, sizeof url, "%s/%s/%ld/credits?api_key=%s&language=%s",
              TMDB, serie ? "tv" : "movie", idTmdb, chave, desc_tmdb_idioma());
     corpo = rede_baixar(url, 20);
-    if (corpo) {
-      int casados = tmdbElenco(corpo, d, (manter & DESC_MANTER_ELENCO) != 0), comFoto = 0, k;
-      for (k = 0; k < d->nElenco; k++) comFoto += d->elenco[k].foto[0] != 0;
-      printf("[desc] elenco %s: %d nome(s), %d casaram com o TMDB, %d com foto\n", imdbSerie, d->nElenco, casados, comFoto);
+    int casados = corpo ? tmdbElenco(corpo, d, (manter & DESC_MANTER_ELENCO) != 0) : 0;
+    // Anthologies can have cast only in the credits aggregated across episodes.
+    if (semNomes && serie && !d->nElenco) {
       free(corpo);
-    } else printf("[desc] elenco %s: /credits do TMDB nao respondeu\n", imdbSerie);
+      endpoint = "aggregate_credits";
+      snprintf(url, sizeof url, "%s/tv/%ld/aggregate_credits?api_key=%s&language=%s",
+               TMDB, idTmdb, chave, desc_tmdb_idioma());
+      corpo = rede_baixar(url, 20);
+      if (corpo) casados = tmdbElenco(corpo, d, (manter & DESC_MANTER_ELENCO) != 0);
+    }
+    if (corpo) {
+      int comFoto = 0, k;
+      for (k = 0; k < d->nElenco; k++) comFoto += d->elenco[k].foto[0] != 0;
+      if (semNomes)
+        printf("[desc] elenco %s: %d nome(s) do TMDB (/%s), %d com foto\n", imdbSerie, d->nElenco, endpoint, comFoto);
+      else
+        printf("[desc] elenco %s: %d nome(s), %d casaram com o TMDB, %d com foto\n", imdbSerie, d->nElenco, casados, comFoto);
+      free(corpo);
+    } else printf("[desc] elenco %s: /%s do TMDB nao respondeu\n", imdbSerie, endpoint);
     fflush(stdout);
   } else {
-    printf("[desc] elenco %s: sem fotos (%s)\n", imdbSerie,
-           !ajustes_tmdb_elenco() ? "\"Elenco do TMDB\" desligado nos ajustes" :
-           "a ficha veio sem nomes");
+    printf("[desc] elenco %s: sem fotos (\"Elenco do TMDB\" desligado nos ajustes)\n", imdbSerie);
     fflush(stdout);
   }
 
@@ -4718,6 +4728,8 @@ static void *montar(void *u) {
     { int r2, w2 = 0, canais = 0;
       for (r2 = 0; r2 < nDecl; r2++) {
         if (ehCanal(decls[r2].tipo) && fil_escolhida(decls[r2].chave) < 0) {
+          // Keep installed TV catalogs visible in management, outside Home.
+          foraCotaGuardar(&decls[r2]);
           canais++;
           continue;
         }
@@ -6830,6 +6842,8 @@ static void normElenco(const char *s, char *dst, size_t tam) {
     if (c >= 'A' && c <= 'Z') o = (char)(c + 32);
     else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) o = (char)c;
     else if (c == 0xC3 && *p && (o = normDobra(*p))) p++;
+    else if ((c == 0xCC && *p >= 0x80 && *p <= 0xBF) ||
+             (c == 0xCD && *p >= 0x80 && *p <= 0xAF)) { p++; continue; }
     else if (c >= 0x80) { dst[k++] = (char)c; continue; }
     if (o) dst[k++] = o;
   }
@@ -7009,19 +7023,25 @@ int desc_meta_elenco(const char *json, CatItem *d, int soVazios) {
 }
 
 static int tmdbElenco(const char *json, CatItem *d, int soVazios) {
-  enum { MAX_TMDB = 48 };
   struct { char nome[64], papel[64], foto[512]; long id; int usado; } *t;
   const char *p;
   int n = 0, i, k, casados = 0;
   if (!json || !d) return 0;
-  t = calloc(MAX_TMDB, sizeof *t);
+  for (p = js_array(json, NULL, "cast"); p; p = js_prox(js_fim(p))) n++;
+  if (!n) return 0;
+  t = calloc((size_t)n, sizeof *t);
   if (!t) return 0;
-  for (p = js_array(json, NULL, "cast"); p && n < MAX_TMDB; p = js_prox(js_fim(p))) {
+  n = 0;
+  for (p = js_array(json, NULL, "cast"); p; p = js_prox(js_fim(p))) {
     const char *f = js_fim(p);
     char caminhoFoto[128] = "";
     js_texto(p, f, "name", t[n].nome, sizeof t[n].nome);
     if (!t[n].nome[0]) continue;   // sem nome nao vira pessoa na fileira
-    js_texto(p, f, "character", t[n].papel, sizeof t[n].papel);
+    js_texto_raiz_em(p, f, "character", t[n].papel, sizeof t[n].papel);
+    if (!t[n].papel[0]) {
+      const char *papel = js_array(p, f, "roles");
+      if (papel) js_texto_raiz_em(papel, js_fim(papel), "character", t[n].papel, sizeof t[n].papel);
+    }
     t[n].id = (long)js_num(p, f, "id", 0.0);
     if (js_texto(p, f, "profile_path", caminhoFoto, sizeof caminhoFoto) &&
         caminhoFoto[0] == '/')
@@ -7056,6 +7076,50 @@ static int tmdbElenco(const char *json, CatItem *d, int soVazios) {
   }
   free(t);
   return casados;
+}
+
+// Blocking lookup for the detail worker. Never confuse transport errors with absence.
+long desc_buscar_pessoa(const char *nome, long titulo, const char *tipo) {
+  char termo[193], url[600];
+  const char *chave = desc_chave_tmdb(), *p, *resultados;
+  long melhor = 0;
+  int melhorTitulo = 0;
+  double popularidade = -1;
+  if (!nome || !nome[0] || !chave || !chave[0]) return -1;
+  urlEscapar(nome, termo, sizeof termo);
+  snprintf(url, sizeof url, "%s/search/person?api_key=%s&language=%s&query=%s",
+           TMDB, chave, desc_tmdb_idioma(), termo);
+  char *corpo = rede_baixar(url, 20);
+  if (!corpo) return -1;
+  resultados = elencoCampo(corpo, "results");
+  if (!resultados || *resultados != '[' || js_fim(resultados)[-1] != ']') {
+    free(corpo); return -1;
+  }
+  for (p = js_array(corpo, NULL, "results"); p; p = js_prox(js_fim(p))) {
+    const char *f = js_fim(p), *v = elencoCampo(p, "id");
+    long id = v ? strtol(v, NULL, 10) : 0;
+    char n[80] = "";
+    int mesmoTitulo = 0;
+    js_texto_raiz_em(p, f, "name", n, sizeof n);
+    const char *a = elencoCampo(p, "known_for");
+    for (const char *k = a && *a == '[' ? js_array(p, f, "known_for") : NULL;
+         k; k = js_prox(js_fim(k))) {
+      char media[16] = "";
+      const char *tid = elencoCampo(k, "id");
+      js_texto_raiz_em(k, js_fim(k), "media_type", media, sizeof media);
+      if (titulo > 0 && tid && strtol(tid, NULL, 10) == titulo && !strcmp(media, tipo))
+        mesmoTitulo = 1;
+    }
+    if (id <= 0 || (!mesmoTitulo && !elencoMesmoNome(nome, n))) continue;
+    v = elencoCampo(p, "popularity");
+    double pop = v ? strtod(v, NULL) : 0;
+    if (!melhor || mesmoTitulo > melhorTitulo ||
+        (mesmoTitulo == melhorTitulo && pop > popularidade)) {
+      melhor = id; melhorTitulo = mesmoTitulo; popularidade = pop;
+    }
+  }
+  free(corpo);
+  return melhor;
 }
 
 int desc_tmdb_elenco(const char *json, CatItem *d) {

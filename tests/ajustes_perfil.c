@@ -86,7 +86,7 @@ int main(void) {
   assert(ajustes_ocultar_filmes_vistos());
   { char *localBlob = NULL;
     ajustes_mesclar_blob("{}", &localBlob);
-    assert(!localBlob || !strstr(localBlob, "hideWatchedMoviesLocal"));
+    assert(localBlob && strstr(localBlob, "c_hideWatchedMoviesLocal"));
     free(localBlob); }
 
   // Perfil nunca usado aqui: nada muda.
