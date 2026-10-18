@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `3e9f77e5c` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-17T20:52:34-03:00. 493 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `e476d1707` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-18T02:48:06-03:00. 493 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -236,6 +236,7 @@ Notas:
 - **#344**: Triagem 2026-10-12: 35a742ee em v2.0.4; 3e3044eb em v2.0.4; 8dd273f3 em v2.0.4.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-rustmapa: merged; j-rev-205-rustmapa.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-rustmapa: merged; j-rev-205-rustmapa.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-rustmapa: merged; j-rev-205-rustmapa.log: OK.
 - **#372**: Triagem 2026-10-12: 21077ab5 em v2.0.4; 8eb5ce90 em v2.0.4; c2112b61 em v2.0.4.
 - **#378**: Triagem 2026-10-12: 04844fb9 em v2.0.4; 28aa5c4b em v2.0.4; 59733d54 em v2.0.4.
 - **#390**: Triagem 2026-10-12: a7bb794c em v2.0.4; a8fcd146 em v2.0.4; adfba576 em v2.0.4. Conserto inicial na 2.0.4; aliases e aviso imediato também na 2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]
@@ -245,6 +246,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/21-titulo: review-OK; j-rev5-21-titul
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
 - **#409**: Triagem 2026-10-12: 2051869e em v2.0.4; 5cd60adf em v2.0.4; 6d46e336 em v2.0.4. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).
 - **#411**: Triagem 2026-10-12: release-notes.md v2.0.4: - **Samsung Tizen 4 / 5: no more "Not Available" toast** on Play/Pause and other media keys (#411).. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).
 
@@ -316,6 +318,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 - **#412**: Log QHQRVE (S95C, .tpk): relógio do player congelado, UI com upd=120 ms por quadro, parar retorna 0 ms mas o player nativo segue tocando. Conserto em agente/204-tpkpreso412 (71c7d615): ASS deixa de segurar o quadro, recupera relógio congelado, parada confirmada antes de abrir outro player. Revisão Codex achou P1 (Voltar durante PrepareAsync encerraria o processo numa TV sã): rodada 2 em andamento. Aguarda log; sem conserto confirmado para este relato. Revisão 2026-10-12: Correção 2.0.4 não cobre a persistência após reinstalação; comentário de 11/10 descreve novo fix em progresso. Escrivão 14/10 14:47: integrada via tpk412b. [sync 2026-10-15: agente/205-tpk412b integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-tpk412b: merged; j-rev3-tpk412b.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-tpk412b: merged; j-rev3-tpk412b.log: OK.
@@ -328,11 +331,14 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpk412b: merged; j-rev3-tpk412b.l
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpk412b: merged; j-rev3-tpk412b.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpk412b: merged; j-rev3-tpk412b.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 - **#413**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 - **#414**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [sync 2026-10-15: agente/205-col414 integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-col414: merged; j-rev2-205-col414.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-col414: merged; j-rev2-205-col414.log: OK.
@@ -341,6 +347,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-col414: merged; j-rev2-205-col414
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-col414: merged; j-rev2-205-col414.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-col414: merged; j-rev2-205-col414.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-col414: merged; j-rev2-205-col414.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-col414: merged; j-rev2-205-col414.log: OK.
 - **#415**: [sync 2026-10-17 12:15] Diagnóstico via memlog; sem conserto confirmado. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivao 2026-10-15 11:48: commit em integracao/2.0.5 (5c6b8093d); status -> integrada
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-memg4: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-memg4: running; No mapped review verdict.
@@ -359,6 +366,9 @@ Snapshot 2026-10-17T20:49:37-03:00: pr/593: done-awaiting-review; No mapped revi
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-memg4: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-memg4: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
 - **#418**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [sync 2026-10-15: agente/205-login418 integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-login418: merged; j-rev-205-login418.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-login418: merged; j-rev-205-login418.log: OK.
@@ -367,6 +377,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-login418: merged; j-rev-205-login
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-login418: merged; j-rev-205-login418.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-login418: merged; j-rev-205-login418.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-login418: merged; j-rev-205-login418.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-login418: merged; j-rev-205-login418.log: OK.
 - **#423**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.
 - **#424**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais.
 - **#451**: QN74F Tizen 9, versão apenas Latest: Continue Watching tem uma série contra quatro em outros clientes; autor corrige título e confirma Nuvio sync, sem Trakt/Simkl. src/syncprog.c:syncprog_puxar já importa sync_pull_watch_progress do perfil ativo, normaliza milissegundos e descarta duração inválida; syncprog_aplicar mescla progresso e src/descoberta.c monta a união da conta/local. SUSPEITA: perfil, importação/normalização ou filtros de CW; não ausência geral de sync nem problema de legendas. Sem log nem conserto comprovado deste caso.
@@ -374,6 +385,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-novas: merged; No mapped r
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 - **#459**: LG 2.0.4, Simkl conectado diretamente: pede enviar progresso parcial ao pausar/sair para retomar em outros apps. src/simkl.c:simkl_ler_playback e simkl_continuar leem pausados; simkl_episodios_marcar/simkl_titulo_marcar enviam histórico de visto. src/player.c chama trakt_scrobble ao tocar/pausar; não há envio Simkl equivalente neste caminho. Leitura de playback e histórico existem, envio incremental Simkl não comprovado. Limite demonstrado do cliente, sem afirmar capacidade atual da API Simkl offline. Escrivão 14/10 14:47: integrada via simkl-scrobble.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr455: merged; j-rev-pr455.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-simkl-scrobble: merged; j-rev4-simkl.log: OK.
@@ -398,6 +410,11 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped r
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-mercado: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr455: merged; j-rev-pr455.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-simkl-scrobble: merged; j-rev4-simkl.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-b6simkl: merged; j-rev-205-b6simkl-2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-mercado: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr455: merged; j-rev-pr455.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-simkl-scrobble: merged; j-rev4-simkl.log: OK.
 - **#461**: Pede opção de toolbar no topo; mantenedor responde que hoje há menu lateral e relaciona #407. src/menu.c:desenhaBarra/geoEm implementam rail/painel lateral; src/detail.c roteia CIMA para área social e ESQUERDA para menu. Não há opção top toolbar comprovada; barra social no topo não é substituto da navegação principal. Sem bug ou causa a diagnosticar. Escrivão 14/10 14:47: integrada via menutopo.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
@@ -414,6 +431,9 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-menutopo: merged; j-rev3-menutopo
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-menuglass: merged; j-revc-menuglass.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-menuglass: merged; j-revc-menuglass.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
 - **#462**: Job i462sync done 20:07: 84095af auto sync rejection translated tracks; tests autosync.sh/legsync.sh rc 0. [sync 2026-10-15: agente/205-i18n462 integrada] [sync 2026-10-15: agente/205-i462sync integrada] Escrivao 10-15 22:49: merged via agente/205-i462sync (da9e686a7).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i18n462: merged; No mapped review verdict.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i462sync: merged; j-revg-i462sync-z.log: OK.
@@ -438,6 +458,11 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-i462sync: merged; j-revg-i462sync
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legajuste: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legsyncsemref: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i18n462: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i462sync: merged; j-revg-i462sync-z.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legajuste: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legsyncsemref: merged; No mapped review verdict.
 - **#468**: [sync 2026-10-16 22:40] Jobs j-homerefresh (b0e429762/c47a40788, 22:16) e review j-rev-homerefresh (VEREDITO OK, 22:21, tests/homerefresh+jellyfin rc 0). merged 08c98b017 (22:33). Pendencias do review: paginacao/duplicatas de UserViews e ordem das fileiras apos reiniciar so conferidas na TV. C5 webOS 26, 2.0.5: AIOMetadata via Jellyfin mostra cerca de quatro catálogos. src/jellyfin.c:jf_bibliotecas consulta UserViews; jf_ler_bibliotecas só aceita IDs hex limpos e CollectionType movies/tvshows. tarefaBibliotecas usa JF_FIL_MAX=6 (src/jellyfin.h) e pula biblioteca sem itens. Estes limites/filtros são comprovados no código, mas quatro visíveis não prova qual disparou. SUSPEITA: teto de seis, tipo/ID não convencional do servidor compatível ou fileira vazia. Nenhum conserto lançado para este relato. Sync 2026-10-16 22:51: merged 08c98b017 no HEAD ab0e9a597; review OK j-rev-homerefresh (22:21). [sync 2026-10-17 00:05] HEAD b280cd6; sai na 2.0.7. TV segue 168 merges atras (cb7ece972). Sync 2026-10-17 04:55: a Home tambem segue reordenar/desativar e novas fontes depois do merge f41a4e154 (hero dividido, sem review dedicado).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-homerefresh: merged; j-rev-homerefresh.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-homerefresh: merged; j-rev-homerefresh.log: OK.
@@ -453,11 +478,16 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-homerefresh: merged; j-rev-homere
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-homerefresh: merged; j-rev-homerefresh.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
 - **#469**: Q800T (GQ65Q800TGT, 2020, Tizen 5.5), 2.0.5. Nenhum modo de aspecto muda a imagem. 2.0.5 ja tem c4f344e8 (DisplayRoi + fallback 2.0.4, #426/#341) e 81d2152b (tpk 6+). Suspeita: Tizen 5.5 cai no caminho sem DisplayRoi. Pedir codigo do log e foto. | [sync 2026-10-16 22:55] issues.json 10-16: OPEN; segue precisa-log
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-i471: merged; j-rev7-i471.log: OK.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i471: merged; j-rev7-i471.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i471: merged; j-rev7-i471.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i471: merged; j-rev7-i471.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i471: merged; j-rev7-i471.log: OK.
 - **#471**: rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log QNHOK2 (registro 73399): "[trailer] tpk: plano visivel (sem recorte)" — trailer no cartao sem crop/fill no tpk. Relacionado a #469 (DisplayRoi/aspecto no tpk). Escrivão 14/10 14:47: integrada via i471. [sync 2026-10-15: agente/205-i471 integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i471: merged; j-rev7-i471.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i471: merged; j-rev7-i471.log: OK.
@@ -466,6 +496,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i471: merged; j-rev7-i471.log: OK
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i471: merged; j-rev7-i471.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i471: merged; j-rev7-i471.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i471: merged; j-rev7-i471.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i471: merged; j-rev7-i471.log: OK.
 - **#479**: LG C5 webOS 26, 2.0.5, log M8C717 (registro 73696): descer na lista de fontes no modo Formatter engasga; modo padrao liso. | Escrivao 10-15 08:50: job formatter479 review OK; ver fora_do_github dono-205-formatter479. [sync 2026-10-15: agente/205-formatter479 integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-formatter479: merged; j-rev-205-formatter479.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-formatter479: merged; j-rev-205-formatter479.log: OK.
@@ -474,6 +505,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-formatter479: merged; j-rev-205-f
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-formatter479: merged; j-rev-205-formatter479.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-formatter479: merged; j-rev-205-formatter479.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-formatter479: merged; j-rev-205-formatter479.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-formatter479: merged; j-rev-205-formatter479.log: OK.
 - **#492**: Review j-revg-retomamorna OK 17:06. Merge agente/205-retomamorna em integracao/2.0.5 (c624b273, 18:48); j-merge-205-retomamorna done 18:45. Sem acao remota. Escrivao 14/10 19:1x: merge 18:48. [sync 2026-10-15: agente/205-retomamorna integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-retomamorna: merged; j-revg-retomamorna.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-retomamorna: merged; j-revg-retomamorna.log: OK. Newer fix log requires review.
@@ -486,6 +518,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-androidsdl: merged; No mapped rev
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-retomamorna: merged; j-revg-retomamorna.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-androidsdl: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-retomamorna: merged; j-revg-retomamorna.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-androidsdl: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-retomamorna: merged; j-revg-retomamorna.log: OK. Newer fix log requires review.
 - **#494**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#496**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels sem label. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#500**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels bug. Sem triagem local. [sync 2026-10-15: agente/205-i500q integrada] Escrivao 10-15 22:49: merged via agente/205-i500q (bf9edb493). Escrivao 10-16 00:28: merge agente/205-herotrailer (85221cec4 ajustes/hero trailer veto row); review j-revg-herotrailer OK. Escrivao 10-16 01:50: merge agente/205-perffinal 4359b10f5; review j-revg-perffinal OK. | [sync 2026-10-16 21:00] trailer expandido merged ad3b042cb; review OK j-rev-trailerexp.
@@ -503,6 +537,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-herotrailer: merged; j-revg-herot
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i500q: merged; j-revg-i500q.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-herotrailer: merged; j-revg-herotrailer.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i500q: merged; j-revg-i500q.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-herotrailer: merged; j-revg-herotrailer.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i500q: merged; j-revg-i500q.log: OK.
 - **#501**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. | Escrivao 10-16 14:58: job extplayer done f954a272c (configuracao de player externo); sem review; PNG nao sai no host (sem NV_ANDROID). | [sync 2026-10-16 21:00] extplayer 161cdebd2 + playerext 281b4af37 merged; reviews OK j-rev-extplayer-r2/j-rev-playerext-r2; fix a04f2a820/276207fac | [sync 2026-10-16 22:55] merged 281b4af37 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged 281b4af37 nesta janela (HEAD ab0e9a597); review j-rev-extplayer-r2/j-rev-playerext-r2; player externo Android; falta a fonte de legenda custom; entra na 2.0.7
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-extplayer: merged; j-rev-extplayer-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-playerext: merged; j-rev-playerext-r2.log: OK.
@@ -521,6 +557,10 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-extplayer: merged; j-rev-extplaye
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-playerext: merged; j-rev-playerext-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-extplayer: merged; j-rev-extplayer-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-playerext: merged; j-rev-playerext-r2.log: OK.
 - **#503**: Snapshot 2026-10-14 10:15: mesmo conserto d3fc8e5e de #502 (agente/205-i502arte, RUNNING). OPEN no GitHub. Escrivão 14/10 14:47: integrada via i502arte. | Escrivão 2026-10-14 16:11: merge 20f1104f consta em log.txt da integracao. | [sync 2026-10-16 21:00] imgres merged 20d1518ad (ff1cd6dcd/44bf4884a).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
@@ -529,6 +569,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i502arte: merged; j-revg-i502arte
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
 - **#505**: Snapshot 2026-10-14 10:15: 3fc691d4 "fix(sources): count notWebReady P2P drops for empty-sheet hint (#505)" em agente/205-i505, nao ancestral de integracao/2.0.5. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i505. | Escrivão 2026-10-14 16:11: merge b576c7a9 consta em log.txt da integracao. Escrivao 10-15 07:10: mesmo relato do p2pusb; review v BLOQUEIA 06:49; branch agente/205-p2pusb 9 ahead. | Escrivao 10-15 08:50: liga ao dono P2P USB (agente/205-p2pusb); fix 07:52 sem review. | Escrivao 2026-10-15 11:48: prompt p-205-i505* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: escopo em agente/205-p2pusb | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-i505 integrada] [sync 2026-10-15: agente/205-p2pusb integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92). | [sync 2026-10-16 21:00] fix merged em integracao/2.0.5; review j-rev-205-p2p486-2 BLOQUEIA -> fixes -> 6d524f947 OK j-rev-pr559. | [sync 2026-10-16 22:55] merged 0d678eba5 no HEAD ab0e9a597
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i506: merged; No mapped review verdict.
@@ -556,6 +597,10 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-fonte552: merged; j-rev2-fonte552
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i506: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-fonte552: merged; j-rev2-fonte552.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK.
 - **#506**: Snapshot 2026-10-14 10:15: job j-205-i506 RUNNING (branch agente/205-i506, 0 commits fora de integracao/2.0.5). Suspeita de causa comum com #505. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i506. | Escrivão 2026-10-14 16:11: merge 0e567d1a (ancestral) consta em log.txt da integracao. | Escrivao 2026-10-15 11:48: prompt p-205-i506 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i506 integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
@@ -578,6 +623,9 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-i506: merged; No mapped review ve
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i506: merged; No mapped review verdict.
 - **#507**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#508**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. Escrivão 14/10 14:47: branch agente/205-i508fundo: review OK, merge pendente. | Escrivão 2026-10-14 16:11: i508fundo mergeada (d57b79e9); review j-revg-i508fundo OK. | Escrivao 2026-10-15 11:48: prompt p-205-i508fundo em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i508fundo integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-cineabre: merged; j-revg-cineabre.log: OK. Newer fix log requires review.
@@ -594,6 +642,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-cineabre: merged; j-revg-cineabre
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i508fundo: merged; j-revg-i508fundo.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cineabre: merged; j-revg-cineabre.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i508fundo: merged; j-revg-i508fundo.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cineabre: merged; j-revg-cineabre.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i508fundo: merged; j-revg-i508fundo.log: OK. Newer fix log requires review.
 - **#530**: Escrivao 10/15 13:48: novo no GitHub 2026-10-15 (Subtitle issues), sem prompt de job. [sync 2026-10-15: agente/205-i530q integrada] Escrivao 10-15 22:49: merged via agente/205-i530q (cbd542148). Escrivao 10-16 00:06: merge agente/205-legatraso (05c24b89c/ad03fedc5/8d14dd55e, migracao do valor salvo). BLOQUEIA (j-revg-legatraso: audsync) -> OK (j-revg2-legatraso). Escrivao 10-16 01:50: HEAD ab0e9a597; ainda nao instalado na TV.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i530q: merged; j-revg-i530q-2.log: OK.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-legatraso: merged; j-revg2-legatraso.log: OK.
@@ -609,6 +659,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-i530q: merged; j-revg-i530q-2.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-legatraso: merged; j-revg2-legatraso.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i530q: merged; j-revg-i530q-2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legatraso: merged; j-revg2-legatraso.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i530q: merged; j-revg-i530q-2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legatraso: merged; j-revg2-legatraso.log: OK.
 - **#539**: Escrivao 2026-10-15 20:48: novo no GitHub 2026-10-15, sem job. | [sync 2026-10-16 21:00] conserto entrou em integracao/2.0.5 (a4f220cd7): nuvio-legacy://, stremio:// e imdb.com abrem titulo/play/busca. | [sync 2026-10-16 22:55] merged a4f220cd7 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged a4f220cd7 nesta janela (HEAD ab0e9a597); review j-rev-deeplink-r4; deep links; BLOQUEIA r1-r3 antes do fix; entra na 2.0.7
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-deeplink: merged; j-rev-deeplink-r4.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-deeplink: merged; j-rev-deeplink-r4.log: OK. Newer fix log requires review.
@@ -617,6 +669,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-deeplink: merged; j-rev-deeplink-
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-deeplink: merged; j-rev-deeplink-r4.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-deeplink: merged; j-rev-deeplink-r4.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-deeplink: merged; j-rev-deeplink-r4.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-deeplink: merged; j-rev-deeplink-r4.log: OK. Newer fix log requires review.
 - **#545**: Nova em 2026-10-16 (issues.json, labels ['bug']). Sem job no snapshot. Escrivao 10-16 12:48: job home545 done (26b9c635b), 1 ahead de HEAD; review j-rev2-home545 BLOQUEIA. Distinto de #551 (descoberta nao reinicia apos PIN). | Escrivao 10-16 14:58: merged 9e2138f9d; review OK j-rev-home545-r4 depois dos fixes de cota/selecao explicita. | [sync 2026-10-16 21:00] merged 9e2138f9d; review OK j-rev-home545-r4 apos fixes de cota/selecao explicita; pos-merge BLOQUEIA j-revg-home545-posmerge 17:51 com fix j-fix-home545-posmerge | [sync 2026-10-16 22:55] agente/205-pfhome545 2 ahead (975638744/53b050753); VEREDITO BLOQUEIA j-revg-pfhome545 (18:47), fix 53b050753 sem review | [sync 2026-10-16 21:10] follow-up pfhome545 merged b03502f84; VEREDITO OK j-revg-pfhome545 (20:57) | Escrivão 2026-10-16 22:1x: merged b03502f84 (follow-up: fileira fora da cota atualiza ao adicionar); review OK j-revg-pfhome545 Sync 2026-10-17 04:55: 6a64c2e13 (pisca do fundo Dinamico antes do frost) entrou sem review dedicado; nada pendente de codigo.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-home545: merged; j-revg-home545-posmerge.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-pfhome545: merged; j-revg-pfhome545.log: OK.
@@ -641,6 +694,12 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pfhome545: merged; j-revg-pfhome545.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr543: merged; j-rev-pr543.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-catal551: merged; j-rev2-catal551.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-home545: merged; j-revg-home545-posmerge.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pfhome545: merged; j-revg-pfhome545.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr543: merged; j-rev-pr543.log: OK. Newer fix log requires review.
 - **#549**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivão 2026-10-16 22:1x: corrigido por agente/205-prs207 (4baf783fa Ver tudo em grade nas colecoes); merged 72ba10761; review OK j-rev-prs207
 - **#551**: Escrivao 10-16 12:48: job catal551 done; review BLOQUEIA j-rev-catal551 -> fix 1c9043ed0 -> OK j-rev2-catal551; merged e680776ed. Causa: sessao de perfil velha nao reiniciava a descoberta. | [sync 2026-10-16 21:00] merged e680776ed; review OK j-rev2-catal551 apos fix 1c9043ed0/a2e9daf91 | [sync 2026-10-16 22:55] merged e680776ed no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged e680776ed nesta janela (HEAD ab0e9a597); review j-rev2-catal551; sessao de perfil velha antes de tentar de novo; entra na 2.0.7
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-catal551: merged; j-rev2-catal551.log: OK.
@@ -654,6 +713,10 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-catal551: merged; j-rev2-catal551
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-home545: merged; j-revg-home545-posmerge.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-catal551: merged; j-rev2-catal551.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-home545: merged; j-revg-home545-posmerge.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
 - **#553**: [sync 2026-10-17 09:25] tres jobs novos apontam para o mesmo eixo: dono diz que a tela AINDA pisca na C9 com frost (j-pisca3 RUNNING, branch agente/205-pisca3), que o player perdeu o vidro depois de 6f1c61cb8 (j-playervidro done 08:35, ce33fe44a) e que o Trakt continua igual e sem ganho de FPS (j-traktvidro RUNNING). Nada disso esta no HEAD. Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | [sync 2026-10-16 21:00] perf glass merged (e9c809475 fosco-nova + 0c77460c1/5536ee8da/d7ec89975 fosco-perf) e 5ed6ddfaa (detail): 1 captura/quadro, 4->2 camadas cheias. Sync 2026-10-17 04:55: os tres merges de vidro/abertura desta janela entram aqui; ainda sem medicao de FPS na TV.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-dvabertura: merged; No mapped review verdict.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-foscoleve4: merged; No mapped review verdict.
@@ -676,6 +739,9 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-homepisca: merged; No mapped revi
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dvabertura: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-foscoleve4: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-homepisca: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dvabertura: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-foscoleve4: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-homepisca: merged; No mapped review verdict.
 - **#555**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | [sync 2026-10-16 21:00] merged 438423097 (eps555) + d5ae66d9e (busca555); reviews OK j-rev-eps555/j-rev-busca555 | [sync 2026-10-16 22:55] merged 438423097 + d5ae66d9e no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged 438423097 nesta janela (HEAD ab0e9a597); review j-rev-eps555/j-rev-busca555; busca555 (titulo exato) + eps555 (episodios pelo catalogo); entra na 2.0.7
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-busca555: merged; j-rev-busca555.log: OK.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-eps555: merged; j-rev-eps555.log: OK.
@@ -694,6 +760,10 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-busca555: merged; j-rev-busca555.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-eps555: merged; j-rev-eps555.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-busca555: merged; j-rev-busca555.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-eps555: merged; j-rev-eps555.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
 - **#557**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 Snapshot 2026-10-17T14:53:44-03:00: agente/205-i557: merged; No mapped review verdict.
 Snapshot 2026-10-17T15:50:00-03:00: merged 5cf77f08d (15:37); reply to issue drafted in job log, not posted.
@@ -704,6 +774,9 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-notas207b: merged; No mapped revi
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i557: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i557: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
 - **#558**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova, tela preta no lancamento num Q50A Tizen 6 2.0.6. Job j-tpk558 done (cc49341e6, tools/tpk.sh rc 0); sem review. | Escrivao 10-16 14:58: merged a1888d007 (adiar IME da Samsung e expor falha no boot); review OK j-rev-tpk558; spec docs/issues/558-tpk-startup.md. | [sync 2026-10-16 21:00] merged a1888d007; review OK j-rev-tpk558 | [sync 2026-10-16 22:55] merged a1888d007 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged a1888d007 nesta janela (HEAD ab0e9a597); review j-rev-tpk558; tela preta no lancamento .tpk; confirmar na TV do reporter; entra na 2.0.7
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-tpk558: merged; j-rev-tpk558.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-tpk558: merged; j-rev-tpk558.log: OK.
@@ -712,6 +785,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpk558: merged; j-rev-tpk558.log:
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tpk558: merged; j-rev-tpk558.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpk558: merged; j-rev-tpk558.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpk558: merged; j-rev-tpk558.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpk558: merged; j-rev-tpk558.log: OK.
 - **#564**: Nova em 2026-10-16 (issues.json, labels [enhancement]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova no snapshot 10-16 21:00 | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 - **#565**: [sync 2026-10-16 22:40] Jobs j-i565pengu (tests, 17:46) e j-rev-i565pengu (VEREDITO OK). merged 5aad21874. Os dois commits sao so fixtures/testes; o fix de produto (d25a3e513) ja estava integrado. Nova em 2026-10-16 (issues.json, labels [bug]). Sem job no snapshot. | Alvo anotado como proximo patch (2.0.7); mapa.py so aceita 2.0.6 no vocabulario de alvo. | [sync 2026-10-16 21:00] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures provam que a politica notWebReady esconde 27/27 streams https publicos; falta o fix de produto. | [sync 2026-10-16 22:55] job i565pengu merged 5aad21874 (review OK j-rev-i565pengu); fixtures merged, produto segue aberto
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i565pengu: merged; j-rev-i565pengu.log: OK.
@@ -724,17 +798,22 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-notas207b: merged; No mapped revi
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i565pengu: merged; j-rev-i565pengu.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i565pengu: merged; j-rev-i565pengu.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
 - **#566**: Nova em 2026-10-16 21:13 (issues.json, labels [bug]). Sem job no snapshot. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova em 2026-10-16 21:13 (issues.json, labels [bug]) | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 - **#570**: Nova em 2026-10-16 23:34 (issues.json, Tizen 9; trocar de fonte do episodio mostra o filme anterior e reseta a retomada). | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-triagem3: merged; No mapped review verdict.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-triagem3: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem3: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem3: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem3: merged; No mapped review verdict.
 - **#577**: [sync 2026-10-17 02:50] Nova em 2026-10-17 05:40 (issues.json). Regressao de desempenho relatada depois da 2.0.6; sem job, branch ou prompt no snapshot 10-17 02:46. Sync 2026-10-17 04:55: segue sem job. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-triagem3: merged; No mapped review verdict.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-triagem3: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem3: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem3: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem3: merged; No mapped review verdict.
 - **#578**: Sync 2026-10-17 04:55: issue nova (17/10 06:05), sem job. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 - **#579**: Sync 2026-10-17 04:55: issue nova (17/10 07:46), rotulo bug, sem job. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 - **#582**: Sync 2026-10-17 08:10: issue nova (createdAt 2026-10-17T10:26:52Z).
@@ -748,6 +827,9 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-notas207b: merged; No mapped revi
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i581: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i581: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
 - **#584**: [sync 2026-10-17 09:25] issue nova (createdAt 2026-10-17T11:47:33Z, label bug). Sem job nem branch.
 Snapshot 2026-10-17T14:53:44-03:00: agente/205-i584: merged; No mapped review verdict.
 Snapshot 2026-10-17T15:50:00-03:00: merged 2bc1ddb55 (15:37); reply to issue drafted in job log, not posted.
@@ -762,6 +844,10 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-i584: merged; No mapped review ve
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem3: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i584: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem3: merged; No mapped review verdict.
 - **#585**: Sync 2026-10-17 11:00: issue nova (createdAt 2026-10-17T11:48:21Z), sem job.
 - **#588**: Sync 2026-10-17 11:00: issue nova (createdAt 2026-10-17T13:15:04Z), sem job.
 
@@ -803,6 +889,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-novas: merged; No mapped r
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 - **#457**: Pede selos DV/HDR10, tamanho, áudio e release group da fonte pré-resolvida na ficha. src/app.c usa stream_antecipada para iniciar a fonte; src/streams.c:montar e src/streams.h já mantêm metadados e exibem fontes/selos na folha. src/detail.c:detail_desenhar desenha ficha do título, não uma opção de resumo de fonte pré-resolvida com todos esses campos. Funcionalidade relacionada existe na folha, não prova entrega do pedido na ficha.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T17:50:20-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
@@ -812,6 +899,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-novas: merged; No mapped r
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
 - **#458**: Relata fontes iguais entre add-ons, repetição no autoplay e aba All; pede deduplicação por prioridade e agregação por qualidade (corpo disponível é trecho). src/streams.c:mesmaFonte inclui provedor, URL, hash, arquivo e rótulo para manter foco entre atualizações, não dedup global; montar já organiza por qualidade ou preserva ordem do add-on. src/fontesmortas.c registra fontes mortas por provedor/identidade. SUSPEITA: tentativas repetidas entre provedores; não reproduzida. Agrupamento existe parcialmente, filtro transversal por prioridade não comprovado.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-b4addons: merged; j-revg-b4addons.log: OK.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-novas: merged; No mapped review verdict.
@@ -826,6 +915,10 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-b4addons: merged; j-revg-b4addons
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-mercado: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-b4addons: merged; j-revg-b4addons.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-mercado: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
 - **#509**: Criada 2026-10-14 (snapshot 14:46). Escrivão 14/10 14:47: integrada via i509trailer. | Escrivão 2026-10-14 16:11: conserto 13e13b92 ja em integracao/2.0.5; sem release ainda. | Escrivao 2026-10-15 11:48: prompt p-205-i509trailer* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i509trailer integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-cardexp: merged; j-revg-cardexp.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i509trailer: merged; j-revg-i509trailer-r2.log: OK. Newer fix log requires review.
@@ -842,6 +935,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-cardexp: merged; j-revg-cardexp.l
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i509trailer: merged; j-revg-i509trailer-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cardexp: merged; j-revg-cardexp.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i509trailer: merged; j-revg-i509trailer-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cardexp: merged; j-revg-cardexp.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i509trailer: merged; j-revg-i509trailer-r2.log: OK. Newer fix log requires review.
 - **#510**: Criada 2026-10-14 (snapshot 14:46). [sync 2026-10-15: agente/205-i510q integrada] Escrivao 10-15 22:49: merged via agente/205-i510q (abff3d67b).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i510q: merged; j-revg-i510q-2.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i510q: merged; j-revg-i510q-2.log: OK.
@@ -850,6 +945,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i510q: merged; j-revg-i510q-2.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i510q: merged; j-revg-i510q-2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i510q: merged; j-revg-i510q-2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i510q: merged; j-revg-i510q-2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i510q: merged; j-revg-i510q-2.log: OK.
 - **#514**: Issue nova 14/10 20:52 (rating de filme/episodio). Feature, nao 2.0.5.
 - **#521**: Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar. [sync 2026-10-15: agente/205-i521q em_job] [sync 2026-10-15 19:50: agente/205-i521q merged em integracao/2.0.5 (5184d0a1b); fix do BLOQUEIA incluso] Escrivao 10-15 22:49: merged via agente/205-i521q (5184d0a1b).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i521q: merged; j-revg-i521q-3.log: OK.
@@ -859,6 +955,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i521q: merged; j-revg-i521q-3.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i521q: merged; j-revg-i521q-3.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i521q: merged; j-revg-i521q-3.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i521q: merged; j-revg-i521q-3.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i521q: merged; j-revg-i521q-3.log: OK.
 - **#542**: Entered mapa 2026-10-15 from issues.json; feature request, not in 2.0.5 scope.
 - **#589**: [sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:19:12Z, label bug), sem job.
 Snapshot 2026-10-17T14:53:44-03:00: agente/205-i589: merged; No mapped review verdict.
@@ -874,6 +971,10 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-i589: merged; No mapped review ve
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem3: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i589: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem3: merged; No mapped review verdict.
 - **#590**: [sync 2026-10-17 12:15] issue nova (createdAt 2026-10-17T14:37:44Z, label bug); j-imdbnota done 11:50 (03a144294 normaliza IMDb 0-100 -> 0-10, testes/notasfontes.sh + imdbnota.sh rc=0), branch 1 ahead, sem merge e sem review.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-imdbnota: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-imdbnota: merged; No mapped review verdict.  Sync 2026-10-17 15:30: imdbnota merged eea9aac9d; IMDb normalized 0-100->0-10 at ingestion.
@@ -885,16 +986,21 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-notas207b: merged; No mapped revi
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-imdbnota: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-imdbnota: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
 - **#592**: Imported from local issues snapshot. Sync 2026-10-17 15:30: j-triagem3 needs-info.
 - **#591**: Imported from local issues snapshot. Sync 2026-10-17 15:30: j-triagem3 defer 2.1.
 - **#594**: Imported from local issues snapshot.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-intro4: merged; revn-intro4.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-intro4: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-intro4: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-intro4: merged; No mapped review verdict.
 - **#595**: Imported from local issues snapshot.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i595trakt: merged; revn-i595trakt.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i595trakt: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i595trakt: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i595trakt: merged; No mapped review verdict.
 
 ## Outras pendências
 
@@ -916,6 +1022,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i419recs: merged; j-revg-i419recs
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i419recs: merged; j-revg-i419recs-z.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i419recs: merged; j-revg-i419recs-z.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i419recs: merged; j-revg-i419recs-z.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i419recs: merged; j-revg-i419recs-z.log: OK.
 - **#495**: Review OK j-revg-i495ilha 19:55. Merged 9734ecc2b. Escrivao antigo dizia sem review: errado. [sync 2026-10-15: agente/205-i495ilha integrada] Escrivao 10-15 22:49: merged via agente/205-i495ilha (9734ecc2b).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i495ilha: merged; j-revg-i495ilha.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i495ilha: merged; j-revg-i495ilha.log: OK.
@@ -924,6 +1031,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i495ilha: merged; j-revg-i495ilha
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i495ilha: merged; j-revg-i495ilha.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i495ilha: merged; j-revg-i495ilha.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i495ilha: merged; j-revg-i495ilha.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i495ilha: merged; j-revg-i495ilha.log: OK.
 - **#512**: Review OK j-revg-i512temporada-r2 19:57. Merged 1b47d82f8. P2 aberto: episodio sem releaseDate nao marca CWO_SEM_DATA (trakt.c:616). | Escrivao 2026-10-15 11:48: prompt p-205-i512temporada* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i512temporada integrada] Escrivao 10-15 22:49: merged via agente/205-i512temporada (1b47d82f8).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i512temporada: merged; j-revg-i512temporada-r2.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i512temporada: merged; j-revg-i512temporada-r2.log: OK.
@@ -932,6 +1040,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i512temporada: merged; j-revg-i51
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i512temporada: merged; j-revg-i512temporada-r2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i512temporada: merged; j-revg-i512temporada-r2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i512temporada: merged; j-revg-i512temporada-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i512temporada: merged; j-revg-i512temporada-r2.log: OK.
 
 ## Já lançado
 
@@ -962,6 +1071,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vidro410: merged; No mapped revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vidro410: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidro410: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidro410: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidro410: merged; No mapped review verdict.
 - **#416**: Triagem 2026-10-12: 4b43829a em v2.0.5; 7f338254 em v2.0.5; 8b5ed6c0 em v2.0.5.
 - **#417**: Triagem 2026-10-12: e0bb1020 em v2.0.5; f219bc9d em v2.0.5; release-notes.md v2.0.5: - The title page shows one trailer card again (#417), and the screensaver waits while a trailer plays (#422)..
 - **#421**: Triagem 2026-10-12: aced3443 em v2.0.5; c8e8d983 em v2.0.5; release-notes.md v2.0.5: - Embedded text subtitles are drawn by the app on LG and Samsung (#421); on LG their size matches the preview..
@@ -970,6 +1080,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-descansocrash: merged; j-rev3-des
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK.
 - **#425**: Triagem 2026-10-12: 2b4119d5 em v2.0.5; 2c571ab6 em v2.0.5; 8b7468b0 em v2.0.5.
 - **#426**: Triagem 2026-10-12: 3ba2987a em v2.0.5; c4f344e8 em v2.0.5; release-notes.md v2.0.5: - Samsung aspect ratio: the picture stays where it belongs on Tizen 4 (#426, #341), an off-screen crop is refused instead of pushing the image away, and a refused or queued change gives the sound back and stays in its own video.. | 13/10 KeijoMika: zoom ok no Q80R Tizen 5 em 2.0.5, mas pausado so aplica ao retomar. Job agente/205-aspecto426.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-aspecto40: merged; j-rev-aspecto40.log: OK.
@@ -997,17 +1108,23 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-artevazia: merged; j-rev-205-arte
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-aspecto40: merged; j-rev-aspecto40.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-aspecto426: merged; j-rev-205-aspecto426.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-aspectob: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-artevazia: merged; j-rev-205-artevazia.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-aspecto40: merged; j-rev-aspecto40.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-aspecto426: merged; j-rev-205-aspecto426.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-aspectob: merged; No mapped review verdict.
 - **#433**: Triagem 2026-10-12: 7777e129 em v2.0.5; ea0c322a em v2.0.5; release-notes.md v2.0.5: - Metadata loads again when the main TMDB address is blocked or times out (#416, #419), and posters with very long addresses load again (#433).. Parcial: URL longa tem conserto; conferir formato do poster e Continue Watching.
 - **#439**: Pede limite de legenda de 250% para 300%, sem plataforma indicada. Já lançado: src/ajustes.c:ajustes_leg2_tamanho chega a 300; src/player.c:desenharLegendaPrincipal limita pelo TXT_LEG_PCT_MAX (src/text.h), compartilhado com legenda secundária/preview. 6ad103f3 e merge 2f1e2de1 contidos em v2.0.5; .triagem/release-notes.md explicita #439/#440. Não depende só do comentário de intenção.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 - **#440**: Relata texto menor ao ligar Bold; mantenedor identifica face árabe Noto Naskh Bold. src/text.c:corpoNegrito compara altura do glifo/ascensão, arabeBoldFace ajusta a face Bold à regular e fonteNegritoReal faz ajuste das famílias. Causa e compensação explícitas no código, não mera SUSPEITA. 6ad103f3 e 2f1e2de1 em v2.0.5 e nota de release #440 comprovam lançamento; não há prova física nesta triagem.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 
 ### Lançadas e fechadas (286)
 
@@ -1310,6 +1427,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vidroilhas: merged; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vidroilhas: merged; rev2-vidroilhas.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidroilhas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidroilhas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidroilhas: merged; No mapped review verdict.
 - **#2**: agente/205-vidromenu merged ab0e9a597 (08:11) durante o sync; detalheglass segue BLOQUEIA 06:51 dinfundo merged e3fdbe717 (07:49, review rev2 OK 06:48) e vidroilhas merged ab0e9a597 (07:54, review rev2 OK 06:48); detalheglass e vidromenu seguem abertos Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: mais menu do detalhe no vidro/frost compartilhado; 2 commits fora do HEAD. Sync 2026-10-17 04:55: fundo Cinza/Cor fixo no layout Dinamico (29 idiomas); 2 commits fora do HEAD. Sync 2026-10-17 04:55: frost da barra lateral e pilula de acento em vidro; 2 commits fora do HEAD. Sync 2026-10-17 07:05: vidromenu rev2 OK 06:49, dinfundo rev2 OK 06:48; detalheglass rev2 BLOQUEIA 06:51 (vidro esconde arte da colecao). Sync 2026-10-17 11:00: agente/205-detalheglass MERGED cc87bec32 (elenco/recomendacoes/trailers/menu "mais" no vidro compartilhado); review rev4 BLOQUEIA 09:20 foi ANTES do merge, falta revisar o resultado mesclado.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-detalheglass: merged; No mapped review verdict.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-dinfundo: merged; No mapped review verdict.
@@ -1339,6 +1457,10 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-detalheglass: merged; No mapped r
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dinfundo: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidroilhas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidromenu: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-detalheglass: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dinfundo: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidroilhas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidromenu: merged; No mapped review verdict.
 - **#3**: Triagem 2026-10-12: 04c37f87 em v1.0.7. Sync 2026-10-17 04:55: idiomas de audio/legenda declarados pelo add-on (PR #487); 3 commits fora do HEAD.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.
@@ -1354,6 +1476,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.
 - **#4**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
 - **#5**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
 - **#6**: Triagem 2026-10-12: 04c37f87 em v1.0.7.
@@ -1370,6 +1494,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr493: review-OK; j-revpr493-v3.l
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK.
 - **#13**: Triagem 2026-10-12: 7716f148 em v1.0.10.
 - **#14**: Triagem 2026-10-12: 7716f148 em v1.0.10.
 - **#16**: Triagem 2026-10-12: b28db878 em v1.0.11.
@@ -1448,6 +1573,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vistos2: merged; j-rev7-vistos2-k
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK.
 - **#101**: Triagem 2026-10-12: 876742e2 em v1.4.
 - **#102**: Triagem 2026-10-12: 876742e2 em v1.4.
 - **#103**: Triagem 2026-10-12: 876742e2 em v1.4.
@@ -1459,6 +1585,7 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-vistos2: merged; j-rev7-vistos2-k
 - **#110**: Triagem 2026-10-12: a00f2e23 em v1.4.2; ae51d9b0 em v1.4.2.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-cwperfil: merged; j-rev-cwperfil.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cwperfil: merged; j-rev-cwperfil.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cwperfil: merged; j-rev-cwperfil.log: OK.
 - **#111**: Triagem 2026-10-12: 6a3f3a05 em v1.4.2.
 - **#112**: Triagem 2026-10-12: 1c9f7c59 em v1.4.2.
 - **#113**: Triagem 2026-10-12: 10e4c3c0 em v1.4.3; 9cacb9c5 em v1.4.3.
@@ -1488,8 +1615,10 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-trailerlingua: merged; j-rev-trai
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-trailerlingua: merged; j-rev-trailerlingua-r6.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-trailerlingua: merged; j-rev-trailerlingua-r6.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-trailerlingua: merged; j-rev-trailerlingua-r6.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-trailerlingua: merged; j-rev-trailerlingua-r6.log: OK.
 - **#137**: Triagem 2026-10-12: 266dce13 em v1.5.4; 2f444a50 em v1.5.4; 4b2d3956 em v1.5.4.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr491: merged; j-rev2-205-pr491.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr491: merged; j-rev2-205-pr491.log: OK. Newer fix log requires review.
 - **#138**: Triagem 2026-10-12: release-notes.md v1.6.0: | Samsung 2018–2020 | Tizen 4.0 / 5.0 / 5.5 | `Nuvio-1.6.0-NuvioTpk40.tpk` (native) |.
 - **#141**: Triagem 2026-10-12: 0a315f7f em v1.5.0; 68521ca4 em v1.5.0.
 - **#142**: Triagem 2026-10-12: 86c5a1c9 em v1.5.0.
@@ -1512,6 +1641,7 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr491: merged; j-rev2-205-pr491.l
 - **#169**: Triagem 2026-10-12: release-notes.md v1.6.0: - **Sources**: AllDebrid, experimental P2P through a Stremio streaming server on your network, and a per-add-on speed test..
 - **#170**: Triagem 2026-10-12: release-notes.md v1.5.4: - **Tizen 8/9**: the native app now opens from the TV's app menu, not only from Apps2Samsung (#170)..
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr491: merged; j-rev2-205-pr491.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr491: merged; j-rev2-205-pr491.log: OK. Newer fix log requires review.
 - **#171**: Triagem 2026-10-12: 775f9db9 em v2.0.0.
 - **#172**: Triagem 2026-10-12: 414cd61e em v1.6.0; 4c2a6951 em v1.6.0; 65e3c8db em v1.6.0.
 - **#173**: Sem commit #173; versão 1.5.3 citada na nossa resposta. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
@@ -1544,6 +1674,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-estiloanim: merged; j-revg-estilo
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-estiloanim: merged; j-revg-estiloanim-posmerge.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-estiloanim: merged; j-revg-estiloanim-posmerge.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-estiloanim: merged; j-revg-estiloanim-posmerge.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-estiloanim: merged; j-revg-estiloanim-posmerge.log: OK.
 - **#202**: Triagem 2026-10-12: c522e1f2 em v1.7.0; release-notes.md v1.7.0: - **Smaller fixes**: first row style under the Spotlight (#201), accent text in Settings (#202), MKV track names (#206), custom poster language (#200), LG trailers and pointer (#204), collapsed sidebar name (#210)..
 - **#203**: Triagem 2026-10-12: 29342682 em v1.7.0.
 - **#204**: Triagem 2026-10-12: 1865cfa2 em v1.7.0; dcf0d8d7 em v1.7.0.
@@ -1564,6 +1695,11 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-cortefileira: merged; No mapped r
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-escalafixa: running; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmotivo-posmerge.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-catal551: merged; j-rev2-catal551.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cortefileira: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-escalafixa: running; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmotivo-posmerge.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK.
 - **#206**: Triagem 2026-10-12: 94690ba3 em v1.7.0; release-notes.md v1.7.0: - **Smaller fixes**: first row style under the Spotlight (#201), accent text in Settings (#202), MKV track names (#206), custom poster language (#200), LG trailers and pointer (#204), collapsed sidebar name (#210)..
 - **#208**: Triagem 2026-10-12: 39e4c794 em v1.7.0; release-notes.md v1.7.0: - **Resume from a row tile** (#208) and **disappearing Continue watching items** (#205)..
 - **#209**: Triagem 2026-10-12: 0da72c2a em v1.7.0; release-notes.md v1.7.0: - **Series in English with another language set** (#209)..
@@ -1624,6 +1760,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-legmemtpk: merged; j-rev3-legmemt
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-legmemtpk: merged; j-rev3-legmemtpk.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-legmemtpk: merged; j-rev3-legmemtpk.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legmemtpk: merged; j-rev3-legmemtpk.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legmemtpk: merged; j-rev3-legmemtpk.log: OK.
 - **#289**: Triagem 2026-10-12: 3eb5aef5 em v2.0.2; release-notes.md v2.0.2: - Home trailer fade matches the still art (#290), plus fixes for #294, #295 and #289..
 - **#290**: Triagem 2026-10-12: 4843e5b0 em v2.0.2; 66f19578 em v2.0.2; 75cee76f em v2.0.2.
 - **#293**: Triagem 2026-10-12: db1f5891 em v2.0.2; release-notes.md v2.0.2: - **Player:** audio codec shown (#293), forced subtitles (#287), resolution in the sources list, Arabic subtitles (#273).. [alvo antes: ja-lancada; fechada no GH 10-15]
@@ -1638,6 +1775,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vidrotabs: merged; No mapped revi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vidrotabs: merged; rev-vidrotabs.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidrotabs: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidrotabs: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidrotabs: merged; No mapped review verdict.
 - **#305**: Triagem 2026-10-12: 98bee79f em v2.0.3; release-notes.md v2.0.3: - **Player:** UP at the top of the controls hides them (#305); the Seekr time and preview follow the hold..
 - **#308**: Triagem 2026-10-12: 19ef3af8 em v2.0.3; 4151683c em v2.0.3; 6269f306 em v2.0.3.
 - **#310**: Triagem 2026-10-12: release-notes.md v2.0.2: - **Auto-play rules like official Nuvio:** allowed add-ons and plugins, regex filter, and an instant-wait option.. Parcial: cache de link e regex por tipo continuam propostos para 2.1. [alvo antes: ja-lancada; fechada no GH 10-15]
@@ -1647,6 +1785,8 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidrotabs: merged; No mapped revi
 - **#318**: Triagem 2026-10-12: 7e96e7e7 em v2.0.2; release-notes.md v2.0.2: - **MStar Android boxes:** no more flicker from the video surface switching, and the remote stays bound to the app (#318)..
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-loadtela: merged; j-rev-foscoleve3-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-loadtela: merged; j-rev-foscoleve3-r2.log: OK.
 - **#319**: Triagem 2026-10-12: c796ca7d em v2.0.2; release-notes.md v2.0.2: - **Home** drops rows of removed or disabled add-ons right away, and they no longer take Home slots (#319)..
 - **#320**: Triagem 2026-10-12: 22ecac46 em v2.0.3; 8ab3b78f em v2.0.3.
 - **#321**: Triagem 2026-10-12: b347004c em v2.0.3.
@@ -1664,6 +1804,9 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-p323: merged; No mapped review ve
 Snapshot 2026-10-17T20:52:34-03:00: agente/203-318-play: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/203-323: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-p323: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/203-318-play: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/203-323: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-p323: merged; No mapped review verdict.
 - **#326**: Triagem 2026-10-12: 1cc512dd em v2.0.5; 56868756 em v2.0.5; 95fc93c5 em v2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]
 - **#327**: Triagem 2026-10-12: 8ab1b19b em v2.0.3; d268b069 em v2.0.3; release-notes.md v2.0.3: - **Home:** switching profile no longer shows the previous profile's rows (#294); the hero no longer depends on a drawn row, and a catalog added from Not on Home is no longer swallowed by a collection (#327); rebuilds are spaced out so Home settles with many collections (#319, #280)..
 - **#328**: Triagem 2026-10-12: 7edab4b0 em v2.0.3; 9c5d0027 em v2.0.3; release-notes.md v2.0.3: - **Duplicate episodes** in the episode list (#328).. [alvo antes: ja-lancada; fechada no GH 10-15]
@@ -1686,6 +1829,9 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-s18medidor: merged; j-rev-205-s18
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-estatpainel: merged; j-revg-estatpainel2-c.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-estatvivo: merged; j-rev-205-estatvivo.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-s18medidor: merged; j-rev-205-s18medidor-2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-estatpainel: merged; j-revg-estatpainel2-c.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-estatvivo: merged; j-rev-205-estatvivo.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-s18medidor: merged; j-rev-205-s18medidor-2.log: OK.
 - **#339**: Triagem 2026-10-12: 30e13fa4 em v2.0.3; 7dc8cd71 em v2.0.3; b1b53000 em v2.0.3.
 - **#340**: Triagem 2026-10-12: bc63d8ca em v2.0.3; release-notes.md v2.0.3: - **Holding fast-forward** speeds up and crosses the whole file in about 10 s. A single press is still 10 s (#340)..
 - **#341**: Triagem 2026-10-12: release-notes.md v2.0.3: - **Samsung:** Pause and subtitle list errors (#269); aspect/zoom button on Tizen 4/5 (#341, probable fix, not yet confirmed on a TV); Arabic subtitles when an older install left old fonts. When the TV hides an audio track it can't play (DTS, TrueHD), the other tracks keep the names from the file instead of a generic one.. Aspecto tem conserto publicado; crop de barras embutidas é pedido separado aprovado para 2.1. [alvo antes: ja-lancada; fechada no GH 10-15]
@@ -1712,6 +1858,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-legmemtpk: merged; j-rev3-legmemt
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-legmemtpk: merged; j-rev3-legmemtpk.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-legmemtpk: merged; j-rev3-legmemtpk.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legmemtpk: merged; j-rev3-legmemtpk.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legmemtpk: merged; j-rev3-legmemtpk.log: OK.
 - **#384**: Triagem 2026-10-12: 3e7bbb62 em v2.0.3; 4151683c em v2.0.3; 9ee093ac em v2.0.3.
 - **#385**: Triagem 2026-10-12: 4151683c em v2.0.3; 9ee093ac em v2.0.3; release-notes.md v2.0.3: - **Video server refusing connections** (#385). When the server of the video refuses a connection (seen on Samsung .tpk with TorBox links), the embedded subtitle reader, the track probe and the chapter reader stop and wait 10 to 60 s before trying that server again, with one connection at a time, instead of retrying several times while the video opens. It does not make a refused source play: if the server also refuses the TV player, the source still fails.. [alvo antes: ja-lancada; fechada no GH 10-15]
 - **#387**: Triagem 2026-10-12: 03213598 em v2.0.5; 0f98379f em v2.0.5; c82fa422 em v2.0.5. [alvo antes: ja-lancada; fechada no GH 10-15]
@@ -1719,6 +1866,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-segurar: merged; No mapped review
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-segurar: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-segurar: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-segurar: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-segurar: merged; No mapped review verdict.
 - **#427**: Triagem 2026-10-12: 92ee6141 em v2.0.5. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). | [sync 2026-10-16 22:55] CLOSED no issues.json (10-16); 92ee6141 em v2.0.5
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-texteto: merged; j-rev2-texteto.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-texteto: merged; j-rev2-texteto.log: OK.
@@ -1727,6 +1875,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-texteto: merged; j-rev2-texteto.l
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-texteto: merged; j-rev2-texteto.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-texteto: merged; j-rev2-texteto.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-texteto: merged; j-rev2-texteto.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-texteto: merged; j-rev2-texteto.log: OK.
 - **#430**: Triagem 2026-10-12: 551edb43 em v2.0.5; a9c97b26 em v2.0.5; release-notes.md v2.0.5: - Auto-skip of credits only fires with a real start and end marker (#329, #331) and rewinding never skips them again; intro markers also cover anime opened from IMDb/TMDB, in any season (#430).. | Escrivão 2026-10-16 22:1x: issues.json 10-16 23:34 marca CLOSED; alvo removido (campo so vale para abertas).
 Snapshot 2026-10-17T17:50:20-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
@@ -1734,6 +1883,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-skip: merged; j-rev3-skip1.log: O
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-skip: merged; j-rev3-skip1.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-skip: merged; j-rev3-skip1.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
 
 ## Fechado sem conserto (por-desenho, fora-do-escopo, duplicada, respondida, sem resposta)
 
@@ -1898,6 +2049,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-playericones: done-awaiting-revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-playericones: merged; revn-playericones.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-playericones: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-playericones: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-playericones: merged; No mapped review verdict.
 - **#248**: Resposta diz que é comportamento da plataforma Tizen. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#252**: Opção já existe: Ajustes > Idiomas e legendas > Idioma do áudio. Alvo ja-lancada: a opção já existe. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#254**: Resposta: busca atualiza ao mudar add-ons na 2.0; a parte da Home não confirmada. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
@@ -1917,6 +2069,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-livetv: merged; j-rev-livetv.log:
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-livetv: merged; rev-livetv2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-livetv: merged; j-rev-livetv.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-livetv: merged; j-rev-livetv.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-livetv: merged; j-rev-livetv.log: OK. Newer fix log requires review.
 - **#304**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#306**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#307**: SUSPEITA de fora-do-escopo: pedido de .ipa, app é C/SDL para TVs. O dono decide. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: nao vamos fazer; fechada no GH 10-15]
@@ -1927,11 +2080,13 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 - **#316**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via livetv. [alvo antes: 2.0.6; fechada no GH 10-15]
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-livetv: merged; j-rev-livetv.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-livetv: merged; rev-livetv2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-livetv: merged; j-rev-livetv.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-livetv: merged; j-rev-livetv.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-livetv: merged; j-rev-livetv.log: OK. Newer fix log requires review.
 - **#324**: Relatório automático de triagem de logs (comentários nossos); não é bug. Alvo nao vamos fazer: não é bug nem pedido. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: nao vamos fazer; fechada no GH 10-15]
 - **#325**: Duplicata de #250/#260. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 - **#333**: Duplicata de #250 (Arabic). Comentário no commit c824675c (v1.0.1) é falso positivo. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
@@ -1939,6 +2094,7 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-livetv: merged; j-rev-livetv.log:
 - **#337**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-skip: merged; j-rev3-skip1.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-skip: merged; j-rev3-skip1.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-skip: merged; j-rev3-skip1.log: OK.
 - **#342**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#343**: AniSkip/TheIntroDB já na 2.0.1 (3a02817d); anime-skip.com "na atualização seguinte". Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-skip: merged; j-rev3-skip1.log: OK.
@@ -1955,6 +2111,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-skip: merged; j-rev3-skip1.log: O
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpk412b: merged; j-rev3-tpk412b.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-skip: merged; j-rev3-skip1.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpk412b: merged; j-rev3-tpk412b.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-skip: merged; j-rev3-skip1.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpk412b: merged; j-rev3-tpk412b.log: OK.
 - **#345**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. | 13/10 ghbarker: logs 6HMRKA (73567) e Cf4whk (73436), Android. Job agente/205-audio345. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar. [sync 2026-10-15: agente/205-audio345 integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-audio345: merged; j-rev-205-audio345.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-audio345: merged; j-rev-205-audio345.log: BLOQUEIA. Newer fix log requires review.
@@ -1971,11 +2129,15 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-audio345: merged; j-rev-205-audio
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-andbugs: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-artevazia: merged; j-rev-205-artevazia.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-audio345: merged; j-rev-205-audio345.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-andbugs: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-artevazia: merged; j-rev-205-artevazia.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-audio345: merged; j-rev-205-audio345.log: BLOQUEIA. Newer fix log requires review.
 - **#346**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-andbugs: merged; No mapped review verdict.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-andbugs: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-andbugs: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-andbugs: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-andbugs: merged; No mapped review verdict.
 - **#347**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#348**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#349**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
@@ -1983,6 +2145,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-notwebready: merged; j-rev3-205-n
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-notwebready: merged; j-rev3-205-notwebready.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-notwebready: merged; j-rev3-205-notwebready.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notwebready: merged; j-rev3-205-notwebready.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notwebready: merged; j-rev3-205-notwebready.log: OK.
 - **#353**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#354**: SUSPEITA: versão desktop está fora do escopo (app é para TVs). Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: nao vamos fazer; fechada no GH 10-15]
 - **#357**: Zidoo Z9X 8K (Android 11) fecha ao abrir; Ugoos AM9 Pro. Autor comentou que não achou o aparelho no relatório #324 e não consegue enviar log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: 2.0.6; fechada no GH 10-15]
@@ -1990,6 +2153,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-andbugs: merged; No mapped review
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-andbugs: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-andbugs: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-andbugs: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-andbugs: merged; No mapped review verdict.
 - **#365**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. suspeita: catálogos removidos persistem; #51 também relata isso, exigir reprodução atual; acompanhar #254. Escrivão 14/10 14:47: integrada via i504, tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-b4addons: merged; j-revg-b4addons.log: OK.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
@@ -2001,8 +2165,12 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: 
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-b4addons: merged; j-revg-b4addons.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-catal551: merged; j-rev2-catal551.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-b4addons: merged; j-revg-b4addons.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-catal551: merged; j-rev2-catal551.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 - **#366**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-home: review-OK; j-rev3-21-home.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-home: review-OK; j-rev3-21-home.log: OK.
 - **#367**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#373**: Revisão 2026-10-12: autor confirma UI resolvida em 2.0.4; mantenedor explica em 11/10 que Opening source é esperado por renovação dos links. Fechada no snapshot; sem commit de fix comprovado.
 - **#374**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Pedido é sync pela linha clicada e limite maior de atraso; AutoSync existente não atende ao recurso solicitado. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
@@ -2011,6 +2179,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 - **#382**: LG 50UT8050PSB, Nuvio 2.0.2 (.ipk). Relato: depois de ligar a TV a frio aparece "sem internet" mesmo com internet, some, volta várias vezes até parar de vez. O campo de log ficou sem código. SUSPEITA, sem prova: o aviso nasce do teste de rede do app (redesaude) logo após o boot, quando a rede da TV ainda sobe; não lido no código nem em log. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | 13/10 Mizikashi1: voltou ao abrir serie, log RSM044 (registro 73601). Job agente/205-net382. Escrivão 14/10 14:47: integrada via 382dns. [alvo antes: 2.0.6; fechada no GH 10-15] | Escrivao 2026-10-15 11:48: prompt p-205-382dns em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-382dns integrada] [sync 2026-10-15: agente/205-net382 integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-382dns: merged; j-revg-382dns.log: OK.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-net382: merged; j-rev-205-net382.log: BLOQUEIA. Newer fix log requires review.
@@ -2032,16 +2201,22 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-382dns: merged; j-revg-382dns.log
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-artevazia: merged; j-rev-205-artevazia.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-net382: merged; j-rev-205-net382.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-382dns: merged; j-revg-382dns.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-artevazia: merged; j-rev-205-artevazia.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-net382: merged; j-rev-205-net382.log: BLOQUEIA. Newer fix log requires review.
 - **#386**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkfim. [alvo antes: 2.0.6; fechada no GH 10-15]
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 - **#388**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 - **#389**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: futuro; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#391**: QN55Q60RAG, 2.0.3: só primeira temporada e episódios incompletos; log Z4HDY2 já fornecido. src/descoberta.c:parsearEpisodios, episodiosDoCatalogo e temporadasDosEps leem videos[], deduplicam (temporada, episódio), escolhem a lista de metadados e derivam as abas da lista publicada. A seleção descarta temporadas <= 0 e pode preferir outra lista quando a base parece lista de arquivos. SUSPEITA: cobertura/numeração ou escolha da lista de metadados; não prova duplicata de #372 nem resolução de #391. Há tratamento implementado, mas nenhum conserto estável especificamente comprovado para este relato. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15] | [sync 2026-10-16 21:10] merged c0dc799a3; fix 288e531ee (catálogos esparsos) + review OK j-rev-temporadas-r2
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-novas: merged; No mapped review verdict.
@@ -2052,6 +2227,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-novas: merged; No mapped r
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 - **#393**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#394**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#396**: Publicação informativa do mantenedor sobre C, Rust e roadmap; comentários pedem Discord. src/menu.c usa SDL/OpenGL e android/app/src/main/java/space/nuvio/nativelegacy/NvPlayer.kt contém o backend Media3: implementação C compartilhada com pontes de plataforma, não migração Rust. Não há bug reproduzível nem conserto a atribuir; o trecho do corpo é incompleto e não comprova entrega do piloto Rust. .triagem/release-notes.md v2.0.5 já anuncia o servidor comunitário Discord; o pedido de Discord tem evidência de atendimento, não de migração Rust. [alvo antes: futuro; fechada no GH 10-15]
@@ -2059,12 +2236,14 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-novas: merged; No mapped r
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 - **#397**: Pedido em quatro partes (formulário diz LG webOS / All; o texto fala de Android/Fire TV). Caminhos conferidos NO CÓDIGO (09/10), sem prova em TV. (a) HDR/Dolby Vision e passthrough: JÁ HÁ o que o app controla. Preferência de fonte em Ajustes › Reprodução › "Dolby Vision e HDR" (AJ_FONTE_HDR) e "Preferir som Dolby Atmos" (AJ_ATMOS, ajustes.c:4452-4453); "Dolby Vision em MKV (experimental)" só LG webOS 4+, desligado por padrão (AJ_DV_MKV, ajustes.c:5399): na 2.0.3 troca TrueHD por E-AC-3/AC-3 no idioma ouvido para manter o Dolby Vision (docs/releases/2.0.3/NOTAS.md:17). "Converter DTS para a TV ouvir" (AJ_DTS_AC3, ajustes.c:4464): só LG, converte o DTS em estéreo (AAC) ou 5.1 (Dolby Digital) via src/dts/; na Samsung o app só AVISA quando a TV recusa DTS/TrueHD (video_tpk.c:130-141, #313; esconder as faixas é 2.0.5, fase 1). LIMITADO PELA TV/PLATAFORMA, não dá para prometer: na LG e na Samsung quem decodifica HDR/DV e faz o passthrough é a TV (uMS / AVPlay / player .tpk), o app só escolhe a fonte e o caminho; no Android o Media3 usa o passthrough por AudioCapabilities (NvPlayer.kt:374-386; video_android.c:27) e com bitstream o app não mexe no áudio (sem reforço de volume, sem velocidade: video_android.c:260, 836-841). Não há "robustez garantida" a implementar sem um caso de TV com log. (b) Estilo da legenda na hora: JÁ EXISTE no player. Botão Legendas (PLR_CC, player.c:189) › aba "Estilo" (legendasui.c:824; faixas.c:1489, corpo faixas.c:533-600), com Tamanho (50% a 250%, de 10 em 10, padrão 120%, faixas.c:590), Fonte OpenSubtitles, Cor, Opacidade (100/75/50/25%), Fundo (Nenhum, Escuro 25/50/75/100%), Posição (1 a 8), Borda (Nenhuma/Contorno/Sombra), Atraso, Negrito (Ligado/Desligado) e Restaurar padrão; OK cicla o valor e aplica na hora. Ressalvas: com ASS desenhado pelo app, fonte/cor/fundo/posição/borda/negrito ficam "Preservado pelo ASS" (faixas.c:536-541) e o tamanho vira escala; o negrito vale só para legenda externa/OpenSubtitles, a faixa que a TV desenha segue o peso da TV (faixas.c:571-572). Os valores são cíclicos (sem slider). (c) Atraso: legenda JÁ EXISTE: Legendas › linha "Atraso" (LR_ATRASO, legendasui.c:671-676), régua de -10 s a +10 s, 0,1 s por toque e 0,5 s segurando a seta (legendasui.c:444-451); a legenda secundária tem o seu; e "Sincronização automática" (AutoSync, linha LR_SYNC) que acerta pelo áudio (Ajustes "Sincronizar pelo áudio", AJ_LEG_SYNC_AUDIO, só onde o player entrega PCM, hoje Android: audsync.h:1-6). ATRASO DO ÁUDIO NÃO EXISTE (sem backend nem linha: grep audio_atraso/audioDelay vazio). (d) Proporção JÁ EXISTE: botão Proporção (PLR_ASPECTO) ou tecla 0, 8 modos: Original, Recortar, Esticar, Zoom leve, Zoom cinema, Zoom ultra, Ajustar altura, Ajustar largura (player.c:877-881, player.h:218-226); padrão em Ajustes › Reprodução › "Proporção padrão" (AJ_PROPORCAO_PADRAO). Em TVs que não recortam a imagem os modos de zoom caem para Original (player.c:1173); o .wgt Samsung (AVPlay/WebAssembly) não tem o zoom que corta a barra preta. Velocidade JÁ EXISTE: folha de Áudio, linha "Velocidade" (faixas.c:1448; "Playback speed" no i18n), 0,75x 1x 1,25x 1,5x 1,75x 2x (velocidade.c:7), por vídeo; disponível na LG, no .tpk e no Android; AUSENTE na Samsung .wgt (AVPlay só tem trick play inteiro, video_tizen.c:1531-1539) e bloqueada no Android com áudio em passthrough ("Indisponível com áudio pelo receptor", faixas.c:1449, #202). Salto de QUADROS (frame step/skip) NÃO EXISTE (só saltos de 10/30/60/120 s); o pedido é ambíguo (passo de quadro ou pular quadros?). FALTA, sugestao: atraso do áudio na 2.1 (começar onde o backend deixa, Android/Media3; LG e Samsung podem não ter API, a confirmar); passo de quadro em futuro (precisa de pausa + avanço por quadro nos 4 backends, sem prova de que a TV deixa); faixa de velocidade mais larga (0,25x-3x) e slider de tamanho/opacidade da legenda em 2.0.5 se o dono quiser (pequeno). Alvo geral = o mais cedo entre as peças que faltam (atraso do áudio, 2.1). Origem: pedido do autor somprakashpathakoneplus-cell. Rascunho (EN): The subtitle style (size up to 250%, color, opacity, background, bold), the subtitle delay ruler (-10 s to +10 s) and AutoSync are already in the player under Subtitles, tab Style; aspect modes are on the Aspect ratio button (or key 0) and playback speed (0.75x-2x) is on the Audio sheet. Audio delay and frame stepping are not there yet and are on the roadmap, while HDR, Dolby Vision and passthrough depend on what each TV or player decodes, so we can only choose the source and path. Which device are you on, so we know which of these you are missing? Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: 2.1; fechada no GH 10-15]
 - **#398**: S95C, 2.0.3: transparência do contorno; pede opacidade em passos de 10 e redução de tamanho sem ciclo. Exemplos estão em issue externa não disponível offline; sem log. src/player.c:desenharLegendaPrincipal aplica alpha 1/.75/.5/.25 e passa borda ao PlainAssStyle; ASS autoral preserva estilo, texto simples recebe estilo do app. src/legendasui.c usa os mesmos quatro níveis. SUSPEITA: composição do contorno/alpha ou diferença de caminho ASS/texto, não comprovada. Tamanho já é limitado em 50–300% no código; isso não prova correção do contorno nem passos de 10% de opacidade. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 - **#399**: Ugoos SK2 ligado por HDMI à Sony HT-CT790: AC3 toca, TrueHD 7.1 congela vídeo; pede preferir decoder do app. android/app/src/main/java/space/nuvio/nativelegacy/NvPlayer.kt:abrirMain usa DefaultRenderersFactory com EXTENSION_RENDERER_MODE_ON e fallback: plataforma/passthrough primeiro, FFmpeg para codec não suportado. android/app/build.gradle.kts já inclui decoder FFmpeg (inclui TrueHD); presença do decoder não prova fallback quando passthrough anuncia suporte e trava. SUSPEITA: capacidades HDMI/passthrough/AudioSink, sem reprodução. Seletor explícito não está neste caminho. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-andbugs: merged; No mapped review verdict.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-novas: merged; No mapped review verdict.
@@ -2074,31 +2253,38 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-andbugs: merged; No mapped review
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-andbugs: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-andbugs: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 - **#401**: SUSPEITA nova (09/10, relato do autor: 'Updating 1%..99%' lento, instalação nova da 2.0.2 em segundos): dados do app dentro da pasta do app (.nuvio 359 MB/3980 arquivos na C9, incluindo cache.suspeito-1853 de 195 MB nunca apagado). LG C5 webOS 26, 2.0.32 para 2.0.3 pelo Homebrew Channel, 15+ min. NAO e regressao de tamanho (ipk 2.0.3 61,1 MB/1218 arquivos; 2.0.2 60,7 MB/1215). MEDIDO no ipk 2.0.4 (58,3 MB, 1190 arquivos, 99,5 MB descomprimido): o binário nuvio-proto tem 55,3 MB e VEM COM debug_info e símbolos (file: not stripped), 30,8 MB de seções .debug*/.symtab/.strtab que gzip reduz a 10,5 MB; a arte (art/) tem 39 MB em 1142 arquivos, já comprimida (JPG/PNG/WebP). Estimativa (nao medida): strip tira ~10 MB do ipk (58,3 para ~48 MB). O Homebrew Channel baixa o ipk inteiro para /tmp, confere sha256 e chama appInstallService/dev/install (services/service.ts); a barra de download usa o content-length do servidor, nao o ipkSize (tools/hb-repo.sh ja grava ipkSize). Onde estao os 15 min (download do GitHub pela TV, gravacao em /tmp, ou appInstallService instalando 1190 arquivos) NAO foi medido: SUSPEITA. Pedir ao autor a duracao de cada fase (a barra mostra Downloading/Verifying/Installing). Alvo 2.0.5. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. [alvo antes: 2.0.6; fechada no GH 10-15]
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 - **#402**: Namer03, S95C, .tpk 2.0.3. A imagem mostra, na aba NMR, o cabecalho do grupo "Other SDR" com fileiras cujo nome (formatter do addon) diz "FHD | REMUX | SDR" e "FHD | SDR"; so a ultima diz "N/A | SDR" (essa realmente nao declara resolucao). CAUSA (lida no codigo, sem teste ainda): o grupo vem de grupoRes (src/streams.c:2105) que usa s->altura ou os selos r-4k/r-1080/r-720; a altura sai de stream_parse.c:281-283, que so procura os numeros 2160/1440/1080/720/480 e 4k/uhd, e badges_detectar (badges.c:40-42) so tem 1080p/1080i/1080. A palavra FHD sozinha (comum em formatter de AIOStreams) nao casa, entao altura=0 e o grupo e Outras (GRUPO_NOME, streams.c:2072). O app ja conhece FHD para canal ao vivo (nv_res_do_texto, livetv_regras.h:38) mas nao usa no filme/serie. NAO e ordenacao (nivelHdr, MP4 primeiro da LG e perfil 5 nao entram: e a Samsung .tpk e o problema e o grupo, nao a ordem dentro dele). Nao e configuracao (fonteregra.h trata auto-play, nao grupos). Cuidado no conserto: nv_res_do_texto aceita "hd" solto como 720, o que casaria DTS-HD; copiar so fhd/fullhd/full hd. Candidato a 2.0.4 (muda so o parser, 2 linhas + teste), decisao do dono. SUSPEITA: o JSON bruto do autor pode ter a resolucao em outro campo; sem o log/JSON da fonte nao foi provado. Diagnóstico atualizado: torrents sem cache; sem conserto identificado. Revisão 2026-10-12: FHD corrigido parcialmente; autor reabriu com ordenação ainda errada em 2.0.4. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 - **#403**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.1; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 - **#404**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. [alvo antes: 2.0.6; fechada no GH 10-15] Escrivao 10-15: fechada no GH com status aberta sem evidencia; triar.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 - **#405**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivão 14/10 14:47: integrada via tpkui. [alvo antes: 2.0.6; fechada no GH 10-15]
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 - **#406**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13).
 - **#428**: Aguarda código/log para diagnóstico. Revisão 2026-10-12: status curado preservado; ausência de commit citando a issue não invalida o desfecho. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15).
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK.
 - **#429**: Job i429hbs done 20:00. Sem Makefile no worktree; testes linguas.sh/legauto.sh rc 0. Mapeamento locale->hr nao feito. | Escrivao 10-15 02:44: review y OK; z BLOQUEIA antes do fix. Escrivao 10-15 02:49: review y OK (j-revg-i429hbs-y 23:11) apos fixz 22:28; merge pendente, branch tip f59554839. Escrivao 10-15 07:10: review y OK (23:11) apos fixz 22:28; branch ainda 2 ahead, merge pendente. | Escrivao 2026-10-15 07:50: sem merge ainda; review OK y, branch nao mergeado | Escrivao 15/10 09:48: review OK ainda sem merge. | Escrivão 10/15 12:48: branch i429hbs ainda nao integrada (2 commits fora) | Escrivao 10-15 13:48: review y OK (j-revg-i429hbs-y 23:11), branch f59554839 ainda NAO mergeado. [sync 2026-10-15: agente/205-i429hbs integrada] Escrivao 10-15 22:49: merged via agente/205-i429hbs (e8d9086a4). | Snapshot 2026-10-16: issues.json diz CLOSED; mapa fechou e tirou o alvo. Confirmar conserto e versao antes de arquivar. | Snapshot 2026-10-16: issues.json diz CLOSED; conserto f59554839 merged em e8d9086a4, sem release ainda. Reabrir ou esperar 2.0.7 para fechar de vez. | [sync 2026-10-16 21:00] merged e8d9086a4 em integracao/2.0.5. | [sync 2026-10-16 22:55] CLOSED no issues.json; conserto merged e8d9086a4
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i429hbs: merged; j-revg-i429hbs-y.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i429hbs: merged; j-revg-i429hbs-y.log: OK.
@@ -2107,14 +2293,17 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i429hbs: merged; j-revg-i429hbs-y
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i429hbs: merged; j-revg-i429hbs-y.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i429hbs: merged; j-revg-i429hbs-y.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i429hbs: merged; j-revg-i429hbs-y.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i429hbs: merged; j-revg-i429hbs-y.log: OK.
 - **#434**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. Escrivao 10-16 12:48: CLOSED no issues.json (mapa dizia aberta). | [sync 2026-10-16 22:55] CLOSED no issues.json (10-16)
 - **#436**: Triagem 2026-10-12: sem conserto comprovado nos commits/notes locais. | [sync 2026-10-16 22:55] issues.json 10-16: CLOSED (sem mudanca)
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-resolver: review-OK; j-rev3-21-resolver.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-resolver: review-OK; j-rev3-21-resolver.log: OK.
 - **#460**: Pede botões recarregar fonte e próximo episódio. src/player.c:player_proximo_episodio e player_janela_proximo já suportam próxima mídia e oferta no fim; player_pediu_recarregar/avAtivar (AV_B_RECARREGAR) atendem Live TV, não provam botão VOD recarregar. Episódios/posplay existem; botões VOD sempre acessíveis são ampliação de UI, relacionada a #403. | [sync 2026-10-16 22:55] issues.json 10-16: CLOSED (sem mudanca)
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 - **#466**: Pede resource watch_state para addons receberem eventos incrementais e delegarem tracking a vários provedores. src/addons.c interpreta resources de metadados/fontes/legendas; src/player.c emite eventos Trakt e progresso local/Nuvio via src/syncprog.c, sem despachante watch_state. Referências externas não consultadas (offline). Infraestrutura de tracking existe, contrato/autorização/entrega de eventos ao addon não estão implementados nesse caminho. Escrivão 14/10 14:47: integrada via ws1. | Escrivão 2026-10-16 22:1x: issues.json 10-16 23:34 marca CLOSED; alvo removido (campo so vale para abertas).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-mercado: merged; No mapped review verdict.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-ws1: merged; j-rev7-ws1.log: OK.
@@ -2134,12 +2323,17 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-ws1: merged; j-rev7-ws1.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-mercado: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-ws1: merged; j-rev7-ws1.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-mercado: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-ws1: merged; j-rev7-ws1.log: OK.
 - **#467**: Pede tracking AniList, sem plataforma. src/artereserva.c:anilist consulta arte GraphQL e src/descoberta.c reconhece IDs anilist; isso é metadado/arte, não autenticação ou envio de histórico. src/visto.c:visto_titulo/visto_episodios distribuem visto para provedores existentes, sem destino AniList. Tracking não implementado no caminho lido; sem bug a reproduzir. | Escrivão 2026-10-16 22:1x: issues.json 10-16 23:34 marca CLOSED; alvo removido (campo so vale para abertas).
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-mercado: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-mercado: merged; No mapped review verdict.
 - **#470**: rawldon, AU7000 Tizen 6.0, .tpk 2.0.5, log B9RJZ8 (registro 73397): [posplay] creditos aceito (sobram 265s, janela 300s); cartao aparece nos creditos mas contagem so comeca no fim. Escrivão 14/10 14:47: integrada via i18nordem, i470. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-13). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). [sync 2026-10-15: agente/205-i470 integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i470: merged; j-rev-i470.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i470: merged; j-rev-i470.log: OK.
@@ -2154,6 +2348,9 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-legsyncprox: merged; j-rev-205-le
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i470: merged; j-rev-i470.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i470: merged; j-rev-i470.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK.
 - **#473**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta. | [sync 2026-10-16 22:55] issues.json 10-16: CLOSED (sem mudanca)
 - **#474**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; barra do topo, ver tambem #461 (agente/205-menutopo integrado). Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
@@ -2163,6 +2360,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-menutopo: merged; j-rev3-menutopo
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
 - **#475**: Pedido: cor do contorno da legenda. Escrivão 14/10 14:47: integrada via sinopse477.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-sinopse477: merged; j-rev-205-sinopse477.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-sinopse: merged; j-revg-sinopse.log: OK. Newer fix log requires review.
@@ -2178,6 +2376,9 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-sinopse477: merged; j-rev-205-sin
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-sinopse: merged; j-revg-sinopse.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-sinopse477: merged; j-rev-205-sinopse477.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-21-legux: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-sinopse: merged; j-revg-sinopse.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-sinopse477: merged; j-rev-205-sinopse477.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-21-legux: done-awaiting-review; No mapped review verdict.
 - **#476**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub; #382 tratada por b212cec1 ja em integracao/2.0.5. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta. | [sync 2026-10-16 22:55] issues.json 10-16: CLOSED (sem mudanca)
 - **#477**: Snapshot 2026-10-14 10:15: 1366561a "Restore the original hero synopsis size and add a Synopsis size setting" em agente/205-sinopse; j-205-sinopse done e j-revg-sinopse veredito OK. Escrivao 14/10 19:2x: 1366561a ancestral de integracao/2.0.5 (6a260e9b). [sync 2026-10-15: agente/205-sinopse477 integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-sinopse: merged; j-revg-sinopse.log: OK. Newer fix log requires review.
@@ -2194,6 +2395,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-sinopse: merged; j-revg-sinopse.l
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-sinopse477: merged; j-rev-205-sinopse477.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-sinopse: merged; j-revg-sinopse.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-sinopse477: merged; j-rev-205-sinopse477.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-sinopse: merged; j-revg-sinopse.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-sinopse477: merged; j-rev-205-sinopse477.log: OK.
 - **#480**: Snapshot 2026-10-14 10:15: estado CLOSED no snapshot do gh. fechada no GitHub sem conserto local identificado. Sem commit citando a issue. Escrivao 10-15: lancada sem tag era falso; volta a aberta.
 - **#481**: Snapshot 2026-10-14 10:15: "Sources: show declared audio and subtitle languages" (e4fb8c08) e o merge c9932635 "Merge PR #487 v2" existem so em agente/205-pr487v2, nao ancestral de integracao/2.0.5. OPEN no GitHub. | fechada no GH 2026-10-14 (CLOSED); alvo antigo 2.0.6 removido por regra do mapa.py; decidir com dono Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15: agente/205-pr487v2 (ac1ba9725) review OK j-rev-pr487-v2; nao mergeado; dono decide 2.0.6. | Escrivao 2026-10-15 11:48: GH fechada; branch 3 ahead, review OK, nao mergeado | Escrivão 10/15 12:48: GH #481 fechada; branch pr/487-v2 e agente/205-pr487v2 nao integrados | [sync 2026-10-16 22:55] agente/205-pr487v2 3 ahead (tip ac1ba9725); VEREDITO OK j-rev-pr487-v2, nenhum commit depois
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK.
@@ -2210,11 +2413,14 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.
 - **#482**: Flicker parcial (catalog wipe antes do discovery). Ligado a 067c0c35 e fix i488perfil-fix. Escrivao 10-15 22:49: merged via agente/205-i488perfil (f51aa3d76). | [sync 2026-10-16 22:55] snapshot 10-16: CLOSED no issues.json | Escrivão 2026-10-16 22:1x: agente/205-pr493 12 ahead; VEREDITO BLOQUEIA j-revg-pr493 depois dos OKs de 10-15; branch fora de integracao/2.0.5
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-i488perfil: merged; j-revg-i488perfil-z.log: OK.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i488perfil: merged; j-revg-i488perfil-z.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i488perfil: merged; j-revg-i488perfil-z.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i488perfil: merged; j-revg-i488perfil-z.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i488perfil: merged; j-revg-i488perfil-z.log: OK.
 - **#483**: Impl fd6d795d; j-revg-i483remux OK 16:52. Merge 251632be (18:01). fetch via SeekHead quando a sonda erra o layout REMUX. Escrivao 14/10 19:1x: merge 18:01. | Escrivao 2026-10-15 11:48: prompt p-205-i483remux em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i483remux integrada] Escrivao 10-16 12:48: agente/205-i483remux ja ancestral de HEAD; sem mudanca. | Escrivão 2026-10-16 22:1x: merged 251632be nesta janela (HEAD ab0e9a597); review j-revg-i483remux; fetch Tracks via SeekHead quando a sonda erra o REMUX; entra na 2.0.7 | Escrivão 2026-10-16 22:1x: issues.json 10-16 23:34 marca CLOSED; alvo removido (campo so vale para abertas).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i483remux: merged; j-revg-i483remux.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i483remux: merged; j-revg-i483remux.log: OK.
@@ -2223,6 +2429,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i483remux: merged; j-revg-i483rem
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i483remux: merged; j-revg-i483remux.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i483remux: merged; j-revg-i483remux.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i483remux: merged; j-revg-i483remux.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i483remux: merged; j-revg-i483remux.log: OK.
 - **#484**: LG OLED C1 webOS, 2.0.5: legenda de addon (OpenSubtitlesV3/AIOMetadata) some apos minutos sem tecla; embutida ok. Sem log. | Escrivão 2026-10-14 16:11: GitHub CLOSED no snapshot de issues.json (2026-10-14). | Escrivão 2026-10-14 16:11: conserto integrado via agente/205-leg484 (merge 027fd3c7); fechada no GitHub. Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). [sync 2026-10-15: agente/205-leg484 integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-leg484: merged; j-revg-leg484.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-leg484: merged; j-revg-leg484.log: OK.
@@ -2231,6 +2438,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-leg484: merged; j-revg-leg484.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-leg484: merged; j-revg-leg484.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-leg484: merged; j-revg-leg484.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-leg484: merged; j-revg-leg484.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-leg484: merged; j-revg-leg484.log: OK.
 - **#486**: [sync 2026-10-17 12:15] Snapshot 2026-10-14 10:15: tres commits (#486) de agente/205-p2p486 ja sao ancestrais de integracao/2.0.5. #505 (sources P2P somem no .tpk 2.0.5) pode ser o mesmo relato; job agente/205-i505 RUNNING investiga. OPEN no GitHub. | Escrivao 10-15 02:44: integrado mas review BLOQUEIA; status em_revisao. Escrivao 10-15 02:49: git: agente/205-p2p486 e ancestral de integracao/2.0.5; BLOQUEIA 01:17 -> fix 01:22 -> OK 01:42. Escrivao 10-15 07:10: 205-p2pusb review v BLOQUEIA 06:49 (j-revg-p2pusb-v, mount container como USB + rescan suprimido) apos fix w 05:51; branch 9 ahead. | Escrivao 10-15 08:50: branch agente/205-p2pusb (dono P2P USB) BLOQUEIA v 06:49, fix v 07:52 aguarda review. Review OK rev3 de 01:42 era do p2p486 antigo. | Escrivao 15/10 09:48: fix j-fix-p2pusb-w em curso. | Escrivao 2026-10-15 11:48: prompt p-205-p2p486 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: p2p486 merged, mas p2pusb (#486/#505) segue aberto | Escrivao 10-15 13:48: v4 BLOQUEIA (12:48); fix y em curso 13:47 sem review. [sync 2026-10-15: agente/205-p2p486 integrada] Escrivao 10-15 22:49: merged via agente/205-p2pusb (cdb45cb92). | [sync 2026-10-16 21:00] agente/205-p2pusb merged; j-rev-p2pusbtela OK (9b4f37efb ainda 1 ahead). d25a3e513/6d524f947 (#552/#505) merged via PR #559 review OK. | [sync 2026-10-16 22:55] merged 21f169226/bf160f720 no HEAD ab0e9a597
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-p2p486: merged; j-rev3-205-p2p486.log: OK.
@@ -2253,6 +2461,9 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-p2p486: merged; j-rev3-205-p2p486.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-p2p486: merged; j-rev3-205-p2p486.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK.
 - **#488**: pr493 (#488 extra) lost: 12 commits, ultimo BLOQUEIA, sem job. Testes desc_iniciar_corrida/montagem_cedo ja quebrados na branch. Escrivao 10-15 02:49: git: agente/205-i488perfil integrado; review z OK 21:46 apos fix 20:03; falta teste de troca de perfil no TCL. Escrivao 10-15 07:10: pr/493-fix review OK fix2; autor publicou head nova 5694694cc; fixes portados 65613c562 (pr/493-v3) e review OK 06:50 (j-revpr493-v3). Mergear pr/493-v3 para carregar #488 no PR. | Escrivao 10-15 08:50: pr/493-v3 (3 ahead, review OK 06:50, nao mergeado) substitui o pr/493 velho; #488 segue nele. | Escrivao 15/10 09:48: GitHub fechada (issues.json 10-15). Escrivao 10-15: reaberta no GH (OPEN no snapshot 10-15). Escrivao 10-15 10:50: reaberta no GH; pr/493-v3 review OK sem merge. | Escrivao 2026-10-15 11:48: prompt p-205-perfil488 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i488perfil integrada] [sync 2026-10-15: agente/205-perfil488 integrada] Escrivao 10-15 22:49: merged via agente/205-i488perfil (f51aa3d76). | [sync 2026-10-16 21:00] agente/205-pr493 continua 12 ahead com VEREDITO BLOQUEIA j-revg-pr493; pr/493-v3 review OK 06:50 mas commits 5694694cc/65613c562 ja estao em HEAD. | [sync 2026-10-16 22:55] agente/205-pr493 12 ahead (tip 71fbc7453); VEREDITO BLOQUEIA j-revg-pr493 mais novo que OK j-revpr493-v3 | Escrivão 2026-10-16 22:1x: agente/205-pr493 12 ahead; VEREDITO BLOQUEIA j-revg-pr493 depois dos OKs de 10-15; branch fora de integracao/2.0.5
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i488perfil: merged; j-revg-i488perfil-z.log: OK.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-perfil488: merged; No mapped review verdict.
@@ -2277,6 +2488,10 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-catal551: merged; j-rev2-catal551
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i488perfil: merged; j-revg-i488perfil-z.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-perfil488: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-catal551: merged; j-rev2-catal551.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i488perfil: merged; j-revg-i488perfil-z.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-perfil488: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK.
 - **#497**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 - **#499**: Snapshot 2026-10-14 10:15: aab8e18d "Mark debrid-cached sources with a lightning icon in the source list (#499)" e ancestral de integracao/2.0.5 (merge 57aee24f agente/205-499cache). Nenhum job j-revg-499cache: conserto integrado sem review registrado. OPEN no GitHub. [sync 2026-10-15: agente/205-499cache integrada] | [sync 2026-10-16 21:00] agente/205-debridprem review OK (j-rev-205-debridprem) ainda 1 ahead; nao merged.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-499cache: merged; j-revf-499cache.log: OK.
@@ -2288,6 +2503,7 @@ Snapshot 2026-10-17T19:49:50-03:00: agente/205-499cache: merged; j-revf-499cache
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-499cache: merged; j-revf-499cache.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: pr/531-fix2: needs review; j-revprn-537.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-499cache: merged; j-revf-499cache.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-499cache: merged; j-revf-499cache.log: OK.
 - **#502**: Snapshot 2026-10-14 10:15: d3fc8e5e "fix(detail): stop seeding list poster into backdrop for recommendations" cobre #502 e #503, so em agente/205-i502arte. Job RUNNING, sem validacao. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i502arte. [sync 2026-10-15: agente/205-i502arte integrada] | [sync 2026-10-16 21:00] imgres merged 20d1518ad (ff1cd6dcd w342->w500/w780, 44bf4884a metahub) — upgrade de arte em alta qualidade.
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
@@ -2296,6 +2512,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i502arte: merged; j-revg-i502arte
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i502arte: merged; j-revg-i502arte.log: OK.
 - **#504**: Snapshot 2026-10-14 10:15: conserto be7c0dee "fix(fileiras): drop untouched rows of removed add-ons when the sheet opens (#504)" so em agente/205-i504 (nao e ancestral de integracao/2.0.5). Job j-205-i504 RUNNING, sem log de validacao ainda. Issue ainda OPEN no GitHub. Escrivão 14/10 14:47: integrada via i504. | Escrivao 2026-10-15 11:48: prompt p-205-i504 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i504 integrada] | [sync 2026-10-16 21:00] merged via agente/205-i504 + 455135df2 (PR #543).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i504: merged; j-revg-i504.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i504: merged; j-revg-i504.log: OK.
@@ -2306,6 +2523,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-catal551: merged; j-rev2-catal551
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i504: merged; j-revg-i504.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-catal551: merged; j-rev2-catal551.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i504: merged; j-revg-i504.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-catal551: merged; j-rev2-catal551.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i504: merged; j-revg-i504.log: OK.
 - **#511**: Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: Fix 2e05dd94; j-revg-i511legnome-q OK 18:44; merge f0ab7c91 18:45. | Escrivao 2026-10-15 11:48: prompt p-205-i511legnome em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: GitHub closed] [sync 2026-10-15: agente/205-i511legnome integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i511legnome: merged; j-revg-i511legnome-q.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i511legnome: merged; j-revg-i511legnome-q.log: OK.
@@ -2316,6 +2535,7 @@ Snapshot 2026-10-17T19:49:50-03:00: agente/205-i511legnome: merged; j-revg-i511l
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i511legnome: merged; j-revg-i511legnome-q.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: pr/531-fix2: needs review; j-revprn-537.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i511legnome: merged; j-revg-i511legnome-q.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i511legnome: merged; j-revg-i511legnome-q.log: OK.
 - **#513**: review w BLOQUEIA 04:48 (j-revg-i513autoplay-w); fix x 03:59 antes de w; nenhum job rodando Escrivao 10-15 07:10: BLOQUEIA x->fix i513w 05:50 (adbaf0f9f)->review v OK 06:49; branch 6 ahead. | Escrivao 2026-10-15 07:50: merge 84add4581 em integracao/2.0.5 | Escrivao 10-15 08:50: BLOQUEIA w/x/y antes; v OK 06:49; merged. | Escrivao 15/10 09:48: Android 84add4581 Success; C9 rc=255 (TV nao confirmado). | Escrivao 2026-10-15 11:48: prompt p-205-i513autoplay* em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo | Escrivão 10/15 12:48: agente/205-i513autoplay integrado (84add4581, instalado Android) [sync 2026-10-15: GitHub closed] [sync 2026-10-15: agente/205-i513autoplay integrada] Escrivao 10-15 22:49: merged via agente/205-i513autoplay (84add4581).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i513autoplay: merged; j-revg-i513autoplay-v.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i513autoplay: merged; j-revg-i513autoplay-v.log: OK.
@@ -2326,6 +2546,7 @@ Snapshot 2026-10-17T19:49:50-03:00: agente/205-i513autoplay: merged; j-revg-i513
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i513autoplay: merged; j-revg-i513autoplay-v.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: pr/531-fix2: needs review; j-revprn-537.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i513autoplay: merged; j-revg-i513autoplay-v.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i513autoplay: merged; j-revg-i513autoplay-v.log: OK.
 - **#524**: [sync 2026-10-17 02:50] GitHub fechada em 2026-10-17 (issues.json 10-17 05:40): PR #561 (86d194462) resolveu o caso do reporter. [sync 2026-10-17 02:50] GitHub fechada em 2026-10-17 (issues.json 10-17 05:40). [sync 2026-10-17 01:52] PR #561 merged (86d194462): busca por tipo preserva a identidade da serie e o episodio pedido; review OK rev-pr561; entra na 2.0.7 Issue nova 2026-10-15 11:33 (issues.json, label bug). Sem triagem local. [sync 2026-10-15: agente/205-i524q integrada] Escrivao 10-15 22:49: merged via agente/205-i524q (e2fe84954).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i524q: merged; j-revg-i524q.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i524q: merged; j-revg-i524q.log: OK.
@@ -2334,6 +2555,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i524q: merged; j-revg-i524q.log: 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i524q: merged; j-revg-i524q.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i524q: merged; j-revg-i524q.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i524q: merged; j-revg-i524q.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i524q: merged; j-revg-i524q.log: OK.
 - **#528**: Escrivao 2026-10-15 11:48: item novo (issues.json), alvo 2.0.6 provisório [sync 2026-10-15: agente/205-i528q integrada] Escrivao 10-15 22:49: merged via agente/205-i528q (f5c785d4f).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i528q: merged; j-revg-i528q.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i528q: merged; j-revg-i528q.log: OK.
@@ -2342,6 +2564,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i528q: merged; j-revg-i528q.log: 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i528q: merged; j-revg-i528q.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i528q: merged; j-revg-i528q.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i528q: merged; j-revg-i528q.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i528q: merged; j-revg-i528q.log: OK.
 - **#529**: Escrivão 10/15 12:48: novo no GitHub 2026-10-15 (dubbing filter), sem prompt de job. [sync 2026-10-15: agente/205-i529q em_revisao] [sync 2026-10-15 19:50: agente/205-i529q merged em integracao/2.0.5 (f8fbd3bd3)] Escrivao 10-15 22:49: merged via agente/205-i529q (f8fbd3bd3). | Escrivão 2026-10-16 22:1x: merged f8fbd3bd3 nesta janela (HEAD ab0e9a597); review j-revg-i529q-r; preferencia de audio na fonte; entra na 2.0.7
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i529q: merged; j-revg-i529q-r.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i529q: merged; j-revg-i529q-r.log: OK.
@@ -2350,6 +2573,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i529q: merged; j-revg-i529q-r.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i529q: merged; j-revg-i529q-r.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i529q: merged; j-revg-i529q-r.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i529q: merged; j-revg-i529q-r.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i529q: merged; j-revg-i529q-r.log: OK.
 - **#548**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 12:48: sem job (sem prompt). | Escrivao 10-16 14:58: job vistos548 rodando (branch agente/205-vistos548 = HEAD, 0 ahead); log vivo; sem fix ainda. | [sync 2026-10-16 21:00] branch agente/205-vistos548 6 ahead; fixes 8330673a8 e 5b37cecd8 (weak defaults para fixtures isoladas) depois do ultimo review BLOQUEIA r4; review r5 rodando. | [sync 2026-10-16 22:55] branch agente/205-vistos548 8 ahead (tip b074d9fd5); VEREDITO BLOQUEIA j-rev-vistos548-r7 (19:48) | [sync 2026-10-16 21:10] merged 91da5935e em integracao/2.0.5; VEREDITO OK j-rev-vistos548-r9, nenhum commit depois; sai na 2.0.7 | Escrivão 2026-10-16 22:1x: merged 91da5935e (agente/205-vistos548, 12 commits); reviews OK j-rev-vistos548-r8/r9; entra na 2.0.7
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review.
@@ -2361,6 +2585,9 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-vistos548: merged; j-rev-vistos54
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review.
 - **#552**: Escrivao 10-16 12:48: job fonte552 done; review BLOQUEIA j-rev-fonte552 -> fix cbcf467f5 -> OK j-rev2-fonte552; merged 0d7821a01. Hostnames de stream passam a ser lidos antes de exigir P2P. | Escrivao 10-16 14:58: follow-up do reporter (addons de legenda nao aparecem): fix 27988615e em agente/205-legenda552, sem review. | [sync 2026-10-16 21:00] merged 0d7821a01 (fonte552) + b897be584 (legenda552) + d25a3e513/6d524f947 (#505/#552 PR #559); reviews OK j-rev2-fonte552/j-rev-legenda552/j-rev-pr559 | [sync 2026-10-16 22:55] merged 0d7821a01/b897be584 no HEAD ab0e9a597 | Escrivão 2026-10-16 22:1x: merged 0d7821a01 nesta janela (HEAD ab0e9a597); review j-rev2-fonte552/j-rev-legenda552; fonte552 + legenda552 + PR #559 (URL http sem P2P); entra na 2.0.7
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-fonte552: merged; j-rev2-fonte552.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-fonte552: merged; j-rev2-fonte552.log: OK.
@@ -2382,6 +2609,13 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr546: merged; j-rev-pr546.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr559: merged; j-rev-pr559.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-fonte552: merged; j-rev2-fonte552.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i565pengu: merged; j-rev-i565pengu.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legenda552: merged; j-rev-legenda552.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr546: merged; j-rev-pr546.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr559: merged; j-rev-pr559.log: OK.
 - **#556**: Nova em 2026-10-16 (issues.json). Escrivao 10-16 14:58: issue nova (issues.json); sem prompt/job. | Escrivão 2026-10-16 22:1x: merged 054ccef24 (port PR #569 de @ghbarker + fix 4a443422b); review OK j-rev-port569-r2; entra na 2.0.7
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-port569: merged; j-rev-port569-r2.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-port569: merged; j-rev-port569-r2.log: OK.
@@ -2394,6 +2628,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-port569: merged; j-rev-port569-r2
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-temporadas: merged; j-rev-temporadas-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-port569: merged; j-rev-port569-r2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-temporadas: merged; j-rev-temporadas-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-port569: merged; j-rev-port569-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-temporadas: merged; j-rev-temporadas-r2.log: OK. Newer fix log requires review.
 - **#562**: Sync 2026-10-17 04:55: #562 fechada no GitHub depois do merge do PR #574. Conserto em integracao/2.0.5, sai na 2.0.7.
 - **#580**: Sync 2026-10-17 07:05: issue nova (17/10 09:01), rotulo bug, sem job. Mesma familia de #545/#551. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00. Sync 2026-10-17 15:30: estado_github corrigido para fechada (gh #580 CLOSED).
 
@@ -2586,6 +2822,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/204-samsung-dts: done-awaiting-review
 Snapshot 2026-10-17T19:49:50-03:00: agente/204-samsung-dts: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/204-samsung-dts: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/204-samsung-dts: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/204-samsung-dts: done-awaiting-review; No mapped review verdict.
 
 ### Samsung: pacote de 80 GB
 
@@ -2618,6 +2855,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/204-conta-catalogos: merged; No mappe
 Snapshot 2026-10-17T20:49:37-03:00: agente/204-fileiras-android: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/204-conta-catalogos: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/204-fileiras-android: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/204-conta-catalogos: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/204-fileiras-android: merged; No mapped review verdict.
 
 ### Continuar com fonte Nuvio mostra 5-6 itens e depois 1; a conta tem 30 (hboinay item 3)
 
@@ -2661,6 +2900,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/204-biblioteca-visto: merged; No mapp
 Snapshot 2026-10-17T19:49:50-03:00: agente/204-biblioteca-visto: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/204-biblioteca-visto: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/204-biblioteca-visto: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/204-biblioteca-visto: merged; No mapped review verdict.
 
 ### Trailers do destaque e da ficha começam pequenos e depois enchem a tela (hboinay item 8)
 
@@ -2956,6 +3196,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-botoes: merged; j-revg-botoes-r3.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-botoes: merged; j-revg-botoes-r3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-botoes: merged; j-revg-botoes-r3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-botoes: merged; j-revg-botoes-r3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-botoes: merged; j-revg-botoes-r3.log: OK. Newer fix log requires review.
 
 ### Layout do Ranking de colecao + foco cortado no topo
 
@@ -3026,6 +3267,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-perfis21: review-OK; j-revg-perfi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-perfis21: review-OK; j-revg-perfis21.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-perfis21: review-OK; j-revg-perfis21.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-perfis21: review-OK; j-revg-perfis21.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-perfis21: review-OK; j-revg-perfis21.log: OK.
 
 ### Dicas de controle: tema/chips do rodape
 
@@ -3049,6 +3291,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-dicatoque: merged; j-revg-dicatoq
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dicatoque2: merged; j-revg-dicatoque2-r3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dicatoque: merged; j-revg-dicatoque.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dicatoque2: merged; j-revg-dicatoque2-r3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dicatoque: merged; j-revg-dicatoque.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dicatoque2: merged; j-revg-dicatoque2-r3.log: OK. Newer fix log requires review.
 
 ### Painel de estatisticas ao vivo (esquerda/direita)
 
@@ -3099,6 +3343,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx-pgs: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx-pgs: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx-pgs: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
 
 ### Opcao "Teclado" (do app/do sistema) tambem na webOS/Tizen
 
@@ -3115,6 +3361,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-tecladolg: merged; j-revg-teclado
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tecladolg: merged; j-revg-tecladolg-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tecladolg: merged; j-revg-tecladolg-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tecladolg: merged; j-revg-tecladolg-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tecladolg: merged; j-revg-tecladolg-r2.log: OK. Newer fix log requires review.
 
 ### Pesquisa: distribuir pela TizenBrew (Samsung)
 
@@ -3131,6 +3378,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-tizenbrew: done-awaiting-review; 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tizenbrew: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tizenbrew: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tizenbrew: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tizenbrew: done-awaiting-review; No mapped review verdict.
 
 ### Homebrew Channel webOS / mercado
 
@@ -3147,6 +3395,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-homebrew: done-awaiting-review; N
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-homebrew: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-homebrew: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-homebrew: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-homebrew: done-awaiting-review; No mapped review verdict.
 
 ### OK nos relacionados do player de filme nao fazia nada
 
@@ -3181,6 +3430,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-triagem-velhas: merged; j-revg-tr
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 
 ### Glass/top bar portados do plx (tambem em dono-205-topotam)
 
@@ -3197,6 +3447,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-topotam: merged; j-revg-topotam.l
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-topotam: merged; j-revg-topotam.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-topotam: merged; j-revg-topotam.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-topotam: merged; j-revg-topotam.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-topotam: merged; j-revg-topotam.log: OK. Newer fix log requires review.
 
 ### Merge integracao/2.0.5 into agente/205-205-teclado
 
@@ -3213,6 +3464,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-205-teclado: merged; j-rev-205-te
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-205-teclado: merged; j-rev-205-teclado3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-205-teclado: merged; j-rev-205-teclado3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-205-teclado: merged; j-rev-205-teclado3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-205-teclado: merged; j-rev-205-teclado3.log: OK. Newer fix log requires review.
 
 ### Merge integracao/2.0.5 into agente/205-abas
 
@@ -3229,6 +3481,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-abas: merged; j-rev-205-abas2.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-abas: merged; j-rev-205-abas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-abas: merged; j-rev-205-abas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-abas: merged; j-rev-205-abas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-abas: merged; j-rev-205-abas2.log: OK. Newer fix log requires review.
 
 ### Fix streaming collection tab strip: catalog order alignment, sliding focus, smooth brand ba
 
@@ -3252,6 +3505,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-abas: merged; j-rev-205-abas2.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-abastream: merged; j-revg-abastream-c3.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-abas: merged; j-rev-205-abas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-abastream: merged; j-revg-abastream-c3.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-abas: merged; j-rev-205-abas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-abastream: merged; j-revg-abastream-c3.log: OK.
 
 ### fix(gfx): require pixel-aligned opaque panel cores for clear
 
@@ -3295,6 +3550,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-cwinicio: merged; No mapped revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-cwinicio: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-cwinicio: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cwinicio: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cwinicio: merged; No mapped review verdict.
 
 ### aovivo: drive the OSD focus springs from the row draw + shot frame sequence
 
@@ -3311,6 +3567,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-animacoes: merged; j-revg-animaco
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-animacoes: merged; j-revg-animacoes-d.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-animacoes: merged; j-revg-animacoes-d.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-animacoes: merged; j-revg-animacoes-d.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-animacoes: merged; j-revg-animacoes-d.log: OK. Newer fix log requires review.
 
 ### fix(tex): count bytes from the Android reserve path and back off 0-byte art responses
 
@@ -3381,6 +3638,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-bench-mm: merged; j-revg-bench-mm
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-bench-mm: merged; j-revg-bench-mm.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-bench-mm: merged; j-revg-bench-mm.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-bench-mm: merged; j-revg-bench-mm.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-bench-mm: merged; j-revg-bench-mm.log: OK. Newer fix log requires review.
 
 ### detail: expanding "Play from beginning" pill reveals the label by fade, not clip (#205)
 
@@ -3469,6 +3727,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-colestilos: merged; j-revg-colest
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-colestilos: merged; j-revg-colestilos.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-colestilos: merged; j-revg-colestilos.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-colestilos: merged; j-revg-colestilos.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-colestilos: merged; j-revg-colestilos.log: OK. Newer fix log requires review.
 
 ### Merge agente/205-dicascontrole
 
@@ -3485,6 +3744,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-dicascontrole: merged; j-revg-dic
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
 
 ### ctxmenu: keep pending row style past the Order row; pointer click on Order cycles it
 
@@ -3510,6 +3770,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-colstreaming: merged; j-rev5-205-
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-colstreaming: merged; j-rev5-205-colstreaming.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-colstreaming: merged; j-rev5-205-colstreaming.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-colstreaming: merged; j-rev5-205-colstreaming.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-colstreaming: merged; j-rev5-205-colstreaming.log: OK. Newer fix log requires review.
 
 ### Polish collection Cover Flow: Home focus ring, flat depth stack, info below timeline
 
@@ -3542,6 +3803,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-coverflow: merged; j-revg-coverfl
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-coverflow2: merged; j-revg-coverflow2-r3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-coverflow: merged; j-revg-coverflow2-r3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-coverflow2: merged; j-revg-coverflow2-r3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-coverflow: merged; j-revg-coverflow2-r3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-coverflow2: merged; j-revg-coverflow2-r3.log: OK. Newer fix log requires review.
 
 ### Merge agente/205-ajustesperf
 
@@ -3558,6 +3821,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-ajustesperf: merged; j-revg-ajust
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-ajustesperf: merged; j-revg-ajustesperf.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-ajustesperf: merged; j-revg-ajustesperf.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-ajustesperf: merged; j-revg-ajustesperf.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-ajustesperf: merged; j-revg-ajustesperf.log: OK.
 
 ### test(cwinicio): pass tocou=-1 seed record for local CW baseline (#205)
 
@@ -3610,6 +3874,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-destaquegenero: merged; j-revf-de
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-destaquegenero: merged; j-revf-destaquegenero.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-destaquegenero: merged; j-revf-destaquegenero.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-destaquegenero: merged; j-revf-destaquegenero.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-destaquegenero: merged; j-revf-destaquegenero.log: OK. Newer fix log requires review.
 
 ### Comments picker reopens on the confirmed episode's season after browsing others
 
@@ -3635,6 +3900,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-dicascontrole: merged; j-revg-dic
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
 
 ### Merge agente/205-i18nordem
 
@@ -3651,6 +3917,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i18nordem: merged; j-rev-205-i18n
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review.
 
 ### Settings: the register-only footer replay must not paint
 
@@ -3674,6 +3941,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-dicatoque: merged; j-revg-dicatoq
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dicatoque2: merged; j-revg-dicatoque2-r3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dicatoque: merged; j-revg-dicatoque.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dicatoque2: merged; j-revg-dicatoque2-r3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dicatoque: merged; j-revg-dicatoque.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dicatoque2: merged; j-revg-dicatoque2-r3.log: OK. Newer fix log requires review.
 
 ### fix(directors): correct watched state, identity merging and portrait tint
 
@@ -3717,6 +3986,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-legsyncprox: merged; j-rev-205-le
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK.
 
 ### Merge integracao/2.0.5 into agente/205-epcard
 
@@ -3733,6 +4003,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-epcard: merged; j-revg-epcard.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-epcard: merged; j-revg-epcard.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-epcard: merged; j-revg-epcard.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-epcard: merged; j-revg-epcard.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-epcard: merged; j-revg-epcard.log: OK. Newer fix log requires review.
 
 ### feat(detail): modern episode cards put title and synopsis below the thumbnail
 
@@ -3765,6 +4036,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-epslista: merged; j-revg-epslista
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-notas0: merged; j-revg-notas0.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-epslista: merged; j-revg-epslista-r3.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas0: merged; j-revg-notas0.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-epslista: merged; j-revg-epslista-r3.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas0: merged; j-revg-notas0.log: OK. Newer fix log requires review.
 
 ### Merge integracao/2.0.5 into agente/205-epsrapido
 
@@ -3781,6 +4054,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-epsrapido: merged; j-rev2-205-eps
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-epsrapido: merged; j-rev2-205-epsrapido.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-epsrapido: merged; j-rev2-205-epsrapido.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-epsrapido: merged; j-rev2-205-epsrapido.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-epsrapido: merged; j-rev2-205-epsrapido.log: OK. Newer fix log requires review.
 
 ### fix(player): polish statistics margins, keycaps and meta line
 
@@ -3804,6 +4078,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-estatpainel: merged; j-revg-estat
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-estatpainel2: merged; j-revg-estatpainel2-c.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-estatpainel: merged; j-revg-estatpainel2-c.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-estatpainel2: merged; j-revg-estatpainel2-c.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-estatpainel: merged; j-revg-estatpainel2-c.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-estatpainel2: merged; j-revg-estatpainel2-c.log: OK. Newer fix log requires review.
 
 ### fix(player): keep live statistics open and add animated overlay sizes
 
@@ -3890,6 +4166,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-cardexp: merged; j-revg-cardexp.l
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-heroinfo: merged; j-revg-heroinfo-r3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cardexp: merged; j-revg-cardexp.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-heroinfo: merged; j-revg-heroinfo-r3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cardexp: merged; j-revg-cardexp.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-heroinfo: merged; j-revg-heroinfo-r3.log: OK. Newer fix log requires review.
 
 ### Merge integracao/2.0.5 into agente/205-homeqr
 
@@ -3906,6 +4184,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-homeqr: merged; j-rev-205-homeqr.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-homeqr: merged; j-rev-205-homeqr.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-homeqr: merged; j-rev-205-homeqr.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-homeqr: merged; j-rev-205-homeqr.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-homeqr: merged; j-rev-205-homeqr.log: OK. Newer fix log requires review.
 
 ### Merge integracao/2.0.5 into agente/205-i18n491: keep translated i18n entries
 
@@ -3922,6 +4201,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i18n491: merged; No mapped review
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i18n491: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i18n491: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i18n491: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i18n491: merged; No mapped review verdict.
 
 ### Add missing i18n keys for drawn subtitle/source labels
 
@@ -3947,6 +4227,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i18nordem: merged; j-rev-205-i18n
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i18nordem: merged; j-rev-205-i18nordem.log: OK. Newer fix log requires review.
 
 ### fix: start next episode countdown when the card appears
 
@@ -3999,6 +4280,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-triagem-velhas: merged; j-revg-tr
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 
 ### test(subtitles): make external-subtitle guards fast and portable
 
@@ -4069,6 +4351,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-menuglass: merged; j-revc-menugla
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-menuglass: merged; j-revc-menuglass.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-menuglass: merged; j-revc-menuglass.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-menuglass: merged; j-revc-menuglass.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-menuglass: merged; j-revc-menuglass.log: OK.
 
 ### Merge integracao/2.0.5 into agente/205-menutopo
 
@@ -4085,6 +4368,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-menutopo: merged; j-rev3-menutopo
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-menutopo: merged; j-rev3-menutopo.log: OK. Newer fix log requires review.
 
 ### docs: PLANO-MERCADO plan
 
@@ -4110,6 +4394,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-mock21: done-awaiting-review; No 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-mock21: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-mock21: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-mock21: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-mock21: done-awaiting-review; No mapped review verdict.
 
 ### fix(network): preserve offline detection across retries and allow DNS retransmission
 
@@ -4151,6 +4436,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-notas0: merged; j-revg-notas0.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-notas1: merged; j-revg-notas1-r3.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas0: merged; j-revg-notas0.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas1: merged; j-revg-notas1-r3.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas0: merged; j-revg-notas0.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas1: merged; j-revg-notas1-r3.log: OK.
 
 ### fix(tests): debrid parser expects externalUrl-only stream to be dropped
 
@@ -4192,6 +4479,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-p2pusbtela: merged; j-rev-p2pusbtela.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-p2pusbtela: merged; j-rev-p2pusbtela.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-p2pusbtela: merged; j-rev-p2pusbtela.log: OK.
 
 ### Merge agente/205-legsyncprox
 
@@ -4208,6 +4497,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-legsyncprox: merged; j-rev-205-le
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legsyncprox: merged; j-rev-205-legsyncprox.log: OK.
 
 ### painel: English public build, single future group, clean platform names
 
@@ -4251,6 +4541,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-paraleloloop: merged; j-revg-para
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-paraleloloop: merged; j-revg-paraleloloop-c3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-paraleloloop: merged; j-revg-paraleloloop-c3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-paraleloloop: merged; j-revg-paraleloloop-c3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-paraleloloop: merged; j-revg-paraleloloop-c3.log: OK. Newer fix log requires review.
 
 ### tests: plugin runner and Plugins screen / sources sheet captures
 
@@ -4348,6 +4639,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr489: merged; j-rev-205-pr489.lo
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr489: merged; j-rev-205-pr489.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr489: merged; j-rev-205-pr489.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr489: merged; j-rev-205-pr489.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr489: merged; j-rev-205-pr489.log: OK. Newer fix log requires review.
 
 ### Merge branch 'integracao/2.0.5' into agente/205-pr490
 
@@ -4370,6 +4662,7 @@ Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr490: merged; j-rev2-205-pr490.l
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr490: merged; j-rev2-205-pr490.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: pr/490-fix: review-OK; j-revpr490-v3.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr490: merged; j-rev2-205-pr490.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr490: merged; j-rev2-205-pr490.log: OK. Newer fix log requires review.
 
 ### ci: port PR #491 Tizen 6+ package builds and audit all commits
 
@@ -4472,6 +4765,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-loadtela: merged; j-rev-foscoleve
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-loadtela: merged; j-rev-foscoleve3-r2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-loadtela: merged; j-rev-foscoleve3-r2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-loadtela: merged; j-rev-foscoleve3-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-loadtela: merged; j-rev-foscoleve3-r2.log: OK.
 
 ### fix: restore test runner repository working directory
 
@@ -4522,6 +4816,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-shuffle: merged; j-revg-shuffle.l
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-shufflepos: merged; j-revg-shufflepos.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-shuffle: merged; j-revg-shuffle.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-shufflepos: merged; j-revg-shufflepos.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-shuffle: merged; j-revg-shuffle.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-shufflepos: merged; j-revg-shufflepos.log: OK.
 
 ### Merge branch 'integracao/2.0.5' into agente/205-sidebarfonte
 
@@ -4538,6 +4834,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-sidebarfonte: merged; j-revg-side
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-sidebarfonte: merged; j-revg-sidebarfonte.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-sidebarfonte: merged; j-revg-sidebarfonte.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-sidebarfonte: merged; j-revg-sidebarfonte.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-sidebarfonte: merged; j-revg-sidebarfonte.log: OK. Newer fix log requires review.
 
 ### fix(simkl): keep history fallback on original profile
 
@@ -4635,6 +4932,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-testestmp: merged; j-revc-testest
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-testestmp: merged; j-revc-testestmp.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-testestmp: merged; j-revc-testestmp.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-testestmp: merged; j-revc-testestmp.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-testestmp: merged; j-revc-testestmp.log: OK. Newer fix log requires review.
 
 ### fix(settings): absorb clicks on unavailable texture limits
 
@@ -4732,6 +5030,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-retomamorna: merged; j-revg-retom
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-retomamorna: merged; j-revg-retomamorna.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-retomamorna: merged; j-revg-retomamorna.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-retomamorna: merged; j-revg-retomamorna.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-retomamorna: merged; j-revg-retomamorna.log: OK. Newer fix log requires review.
 
 ### fix(android): SDLActivity.nativeLowMemory (urgente)
 
@@ -4748,6 +5047,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-androidsdl: merged; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-androidsdl: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-androidsdl: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-androidsdl: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-androidsdl: merged; No mapped review verdict.
 
 ### Vidro padrao: auditoria de superficies glass (PLX glass port)
 
@@ -4764,6 +5064,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vidropadrao: merged; j-revg-vidro
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vidropadrao: merged; j-revg-vidropadrao-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidropadrao: merged; j-revg-vidropadrao-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidropadrao: merged; j-revg-vidropadrao-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidropadrao: merged; j-revg-vidropadrao-z.log: OK. Newer fix log requires review.
 
 ### M3U misto: canal/catalogo pelo tipo declarado (bug)
 
@@ -4789,6 +5090,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-chdelay: merged; j-revg-chdelay-z
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-chdelay: merged; j-revg-chdelay-z.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-chdelay: merged; j-revg-chdelay-z.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-chdelay: merged; j-revg-chdelay-z.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-chdelay: merged; j-revg-chdelay-z.log: OK.
 
 ### Glass mockup: estudo de design (somente mockups)
 
@@ -4814,6 +5116,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-barra27: merged; j-revg-barra27-x
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-barra27: merged; j-revg-barra27-x.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-barra27: merged; j-revg-barra27-x.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-barra27: merged; j-revg-barra27-x.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-barra27: merged; j-revg-barra27-x.log: OK. Newer fix log requires review.
 
 ### Cabecalho colunas (agente/205-colhdr)
 
@@ -4830,6 +5133,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-colhdr: merged; j-revg-colhdr.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-colhdr: merged; j-revg-colhdr.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-colhdr: merged; j-revg-colhdr.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-colhdr: merged; j-revg-colhdr.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-colhdr: merged; j-revg-colhdr.log: OK.
 
 ### VIDAA (agente/205-vidaa)
 
@@ -4846,6 +5150,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vidaa: merged; j-revg-vidaa-6.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vidaa: merged; j-revg-vidaa-6.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidaa: merged; j-revg-vidaa-6.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidaa: merged; j-revg-vidaa-6.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidaa: merged; j-revg-vidaa-6.log: OK. Newer fix log requires review.
 
 ### PR #493 (ghbarker, ligado a #488)
 
@@ -4868,6 +5173,7 @@ Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr493: review-OK; j-revpr493-v3.l
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: pr/493-fix: review-OK; j-revpr493-v3.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr493: review-OK; j-revpr493-v3.log: OK.
 
 ### PR #498 limpo (pr/498-limpo)
 
@@ -4951,6 +5257,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vidrotodo: merged; j-revg-vidroto
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vidrotodo: merged; j-revg-vidrotodo.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidrotodo: merged; j-revg-vidrotodo.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidrotodo: merged; j-revg-vidrotodo.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidrotodo: merged; j-revg-vidrotodo.log: OK. Newer fix log requires review.
 
 ### Aspecto volta (agente/205-aspvolta)
 
@@ -4967,6 +5274,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-aspvolta: merged; j-revg-aspvolta
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-aspvolta: merged; j-revg-aspvolta.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-aspvolta: merged; j-revg-aspvolta.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-aspvolta: merged; j-revg-aspvolta.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-aspvolta: merged; j-revg-aspvolta.log: OK.
 
 ### Estilo 2 (agente/205-estilo2)
 
@@ -4983,6 +5291,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-estilo2: merged; j-revg-estilo4-2
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-estilo2: merged; j-revg-estilo4-2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-estilo2: merged; j-revg-estilo4-2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-estilo2: merged; j-revg-estilo4-2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-estilo2: merged; j-revg-estilo4-2.log: OK.
 
 ### PR #493 v3 (pr/493-v3) — head do autor + fixes portados
 
@@ -5008,6 +5317,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-master1015: merged; j-revg-master
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-master1015: merged; j-revg-master1015b.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-master1015: merged; j-revg-master1015b.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-master1015: merged; j-revg-master1015b.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-master1015: merged; j-revg-master1015b.log: OK.
 
 ### 2.1: avaliar filme/episodio apos assistir (pagina do titulo ou popup nos creditos finais)
 
@@ -5042,6 +5352,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-aniskipmap: merged; j-rev-205-ani
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-aniskipmap: merged; j-rev-205-aniskipmap.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-aniskipmap: merged; j-rev-205-aniskipmap.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-aniskipmap: merged; j-rev-205-aniskipmap.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-aniskipmap: merged; j-rev-205-aniskipmap.log: OK.
 
 ### Branch agente/205-apoio (sem issue)
 
@@ -5058,6 +5369,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-apoio: merged; No mapped review v
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-apoio: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-apoio: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-apoio: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-apoio: merged; No mapped review verdict.
 
 ### Branch agente/205-aspectob (sem issue)
 
@@ -5074,6 +5386,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-aspectob: merged; No mapped revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-aspectob: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-aspectob: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-aspectob: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-aspectob: merged; No mapped review verdict.
 
 ### Branch agente/205-auditoria (sem issue)
 
@@ -5090,6 +5403,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-auditoria: merged; No mapped revi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-auditoria: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-auditoria: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-auditoria: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-auditoria: merged; No mapped review verdict.
 
 ### Branch agente/205-autosync-ref (sem issue)
 
@@ -5106,6 +5420,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-autosync-ref: merged; No mapped r
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-autosync-ref: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-autosync-ref: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-autosync-ref: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-autosync-ref: merged; No mapped review verdict.
 
 ### Branch agente/205-cfrestaura (sem issue)
 
@@ -5122,6 +5437,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-cfrestaura: merged; j-revg-cfrest
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-cfrestaura: merged; j-revg-cfrestaura.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-cfrestaura: merged; j-revg-cfrestaura.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cfrestaura: merged; j-revg-cfrestaura.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cfrestaura: merged; j-revg-cfrestaura.log: OK. Newer fix log requires review.
 
 ### Branch agente/205-colhdrlinha (sem issue)
 
@@ -5145,6 +5461,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-colhdr: merged; j-revg-colhdr.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-colhdrlinha: merged; j-revg-colhdrlinha.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-colhdr: merged; j-revg-colhdr.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-colhdrlinha: merged; j-revg-colhdrlinha.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-colhdr: merged; j-revg-colhdr.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-colhdrlinha: merged; j-revg-colhdrlinha.log: OK. Newer fix log requires review.
 
 ### Branch agente/205-colposter (sem issue)
 
@@ -5161,6 +5479,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-colposter: merged; j-rev-205-colp
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-colposter: merged; j-rev-205-colposter2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-colposter: merged; j-rev-205-colposter2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-colposter: merged; j-rev-205-colposter2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-colposter: merged; j-rev-205-colposter2.log: OK.
 
 ### Branch agente/205-cw-progresso (sem issue)
 
@@ -5177,6 +5496,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-cw-progresso: merged; No mapped r
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-cw-progresso: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-cw-progresso: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cw-progresso: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cw-progresso: merged; No mapped review verdict.
 
 ### Branch agente/205-decisoes (sem issue)
 
@@ -5193,6 +5513,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-decisoes: merged; No mapped revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-decisoes: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-decisoes: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-decisoes: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-decisoes: merged; No mapped review verdict.
 
 ### Branch agente/205-detalhe-meta (sem issue)
 
@@ -5209,6 +5530,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-detalhe-meta: merged; No mapped r
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-detalhe-meta: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-detalhe-meta: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-detalhe-meta: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-detalhe-meta: merged; No mapped review verdict.
 
 ### Branch agente/205-dicasabrir (sem issue)
 
@@ -5225,6 +5547,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-dicasabrir: merged; j-revg-dicasa
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-dicasabrir: merged; j-revg-dicasabrir-3.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dicasabrir: merged; j-revg-dicasabrir-3.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dicasabrir: merged; j-revg-dicasabrir-3.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dicasabrir: merged; j-revg-dicasabrir-3.log: OK.
 
 ### Branch agente/205-diretorpol (sem issue)
 
@@ -5241,6 +5564,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-diretorpol: merged; j-revg-direto
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-diretorpol: merged; j-revg-diretorpol-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-diretorpol: merged; j-revg-diretorpol-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-diretorpol: merged; j-revg-diretorpol-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-diretorpol: merged; j-revg-diretorpol-z.log: OK. Newer fix log requires review.
 
 ### Branch agente/205-dirfoto (sem issue)
 
@@ -5257,6 +5581,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-dirfoto: merged; j-rev-205-dirfot
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-dirfoto: merged; j-rev-205-dirfoto.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dirfoto: merged; j-rev-205-dirfoto.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dirfoto: merged; j-rev-205-dirfoto.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dirfoto: merged; j-rev-205-dirfoto.log: OK.
 
 ### Branch agente/205-ecossistema (sem issue)
 
@@ -5273,6 +5598,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-ecossistema: merged; No mapped re
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-ecossistema: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-ecossistema: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-ecossistema: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-ecossistema: merged; No mapped review verdict.
 
 ### Branch agente/205-espaco (sem issue)
 
@@ -5289,6 +5615,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-espaco: merged; No mapped review 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-espaco: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-espaco: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-espaco: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-espaco: merged; No mapped review verdict.
 
 ### Branch agente/205-estatdicas (sem issue)
 
@@ -5305,6 +5632,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-estatdicas: merged; j-revg-estatd
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-estatdicas: merged; j-revg-estatdicas.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-estatdicas: merged; j-revg-estatdicas.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-estatdicas: merged; j-revg-estatdicas.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-estatdicas: merged; j-revg-estatdicas.log: OK. Newer fix log requires review.
 
 ### Branch agente/205-fileiraui (sem issue)
 
@@ -5321,6 +5649,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-fileiraui: merged; j-revg-fileira
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-fileiraui: merged; j-revg-fileiraui-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-fileiraui: merged; j-revg-fileiraui-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-fileiraui: merged; j-revg-fileiraui-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-fileiraui: merged; j-revg-fileiraui-z.log: OK. Newer fix log requires review.
 
 ### Branch agente/205-fontesmortas (sem issue)
 
@@ -5337,6 +5666,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-fontesmortas: merged; j-rev6k-fon
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-fontesmortas: merged; j-rev6k-fontesmortas.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-fontesmortas: merged; j-rev6k-fontesmortas.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-fontesmortas: merged; j-rev6k-fontesmortas.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-fontesmortas: merged; j-rev6k-fontesmortas.log: OK.
 
 ### Branch agente/205-junta-orfas (sem issue)
 
@@ -5353,6 +5683,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-junta-orfas: merged; No mapped re
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-junta-orfas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-junta-orfas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-junta-orfas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-junta-orfas: merged; No mapped review verdict.
 
 ### Branch agente/205-junta-sync (sem issue)
 
@@ -5369,6 +5700,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-junta-sync: merged; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-junta-sync: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-junta-sync: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-junta-sync: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-junta-sync: merged; No mapped review verdict.
 
 ### Branch agente/205-legmatch (sem issue)
 
@@ -5385,6 +5717,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-legmatch: merged; j-rev2-legmatch
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-legmatch: merged; j-rev2-legmatch.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-legmatch: merged; j-rev2-legmatch.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legmatch: merged; j-rev2-legmatch.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legmatch: merged; j-rev2-legmatch.log: OK.
 
 ### Branch agente/205-legref-tpk (sem issue)
 
@@ -5401,6 +5734,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-legref-tpk: merged; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-legref-tpk: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-legref-tpk: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legref-tpk: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legref-tpk: merged; No mapped review verdict.
 
 ### Branch agente/205-legsync-ep (sem issue)
 
@@ -5417,6 +5751,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-legsync-ep: merged; j-rev-205-leg
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-legsync-ep: merged; j-rev-205-legsync-ep.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-legsync-ep: merged; j-rev-205-legsync-ep.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legsync-ep: merged; j-rev-205-legsync-ep.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legsync-ep: merged; j-rev-205-legsync-ep.log: OK.
 
 ### Branch agente/205-legtempo (sem issue)
 
@@ -5433,6 +5768,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-legtempo: merged; No mapped revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-legtempo: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-legtempo: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legtempo: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legtempo: merged; No mapped review verdict.
 
 ### Branch agente/205-listaaddon (sem issue)
 
@@ -5449,6 +5785,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-listaaddon: merged; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-listaaddon: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-listaaddon: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-listaaddon: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-listaaddon: merged; No mapped review verdict.
 
 ### Branch agente/205-logorapido (sem issue)
 
@@ -5465,6 +5802,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-logorapido: merged; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-logorapido: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-logorapido: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-logorapido: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-logorapido: merged; No mapped review verdict.
 
 ### Branch agente/205-logos (sem issue)
 
@@ -5481,6 +5819,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-logos: merged; j-revg-logos-z.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-logos: merged; j-revg-logos-z.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-logos: merged; j-revg-logos-z.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-logos: merged; j-revg-logos-z.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-logos: merged; j-revg-logos-z.log: OK.
 
 ### Branch agente/205-master1015b (sem issue)
 
@@ -5504,6 +5843,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-master1015: merged; j-revg-master
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-master1015b: merged; j-revg-master1015b.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-master1015: merged; j-revg-master1015b.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-master1015b: merged; j-revg-master1015b.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-master1015: merged; j-revg-master1015b.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-master1015b: merged; j-revg-master1015b.log: OK.
 
 ### Branch agente/205-merge-master (sem issue)
 
@@ -5520,6 +5861,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-merge-master: merged; No mapped r
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-merge-master: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-merge-master: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-merge-master: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-merge-master: merged; No mapped review verdict.
 
 ### Branch agente/205-notas2 (sem issue)
 
@@ -5536,6 +5878,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-notas2: merged; j-revg-notas2.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 
 ### Branch agente/205-novidades-colecao (sem issue)
 
@@ -5559,6 +5902,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-novidades: merged; j-rev-novidade
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-novidades-colecao: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-novidades: merged; j-rev-novidades207-b.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-novidades-colecao: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-novidades: merged; j-rev-novidades207-b.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-novidades-colecao: merged; No mapped review verdict.
 
 ### Branch agente/205-palco2 (sem issue)
 
@@ -5582,6 +5927,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-palco: merged; j-revg-palco2-z.lo
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-palco2: merged; j-revg-palco2-z.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-palco: merged; j-revg-palco2-z.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-palco2: merged; j-revg-palco2-z.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-palco: merged; j-revg-palco2-z.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-palco2: merged; j-revg-palco2-z.log: OK.
 
 ### Branch agente/205-palcoveu (sem issue)
 
@@ -5605,6 +5952,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-palco: merged; j-revg-palco2-z.lo
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-palcoveu: merged; j-revg-palcoveu.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-palco: merged; j-revg-palco2-z.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-palcoveu: merged; j-revg-palcoveu.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-palco: merged; j-revg-palco2-z.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-palcoveu: merged; j-revg-palcoveu.log: OK.
 
 ### Branch agente/205-perfmedir (sem issue)
 
@@ -5621,6 +5970,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-perfmedir: merged; j-revg-perfmed
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-perfmedir: merged; j-revg-perfmedir-2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-perfmedir: merged; j-revg-perfmedir-2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-perfmedir: merged; j-revg-perfmedir-2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-perfmedir: merged; j-revg-perfmedir-2.log: OK.
 
 ### Branch agente/205-poscreditos (sem issue)
 
@@ -5637,6 +5987,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-poscreditos: merged; j-rev2-poscr
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-poscreditos: merged; j-rev2-poscreditos-magpie.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-poscreditos: merged; j-rev2-poscreditos-magpie.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-poscreditos: merged; j-rev2-poscreditos-magpie.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-poscreditos: merged; j-rev2-poscreditos-magpie.log: OK.
 
 ### Branch agente/205-pr431 (sem issue)
 
@@ -5653,6 +6004,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr431: merged; j-rev5-pr431.log: 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr431: merged; j-rev5-pr431.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr431: merged; j-rev5-pr431.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr431: merged; j-rev5-pr431.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr431: merged; j-rev5-pr431.log: OK. Newer fix log requires review.
 
 ### Branch agente/205-pr452 (sem issue)
 
@@ -5669,6 +6021,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr452: merged; j-rev3-pr452.log: 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr452: merged; j-rev3-pr452.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr452: merged; j-rev3-pr452.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr452: merged; j-rev3-pr452.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr452: merged; j-rev3-pr452.log: OK.
 
 ### Branch agente/205-pr454 (sem issue)
 
@@ -5685,6 +6038,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr454: merged; No mapped review v
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr454: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr454: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr454: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr454: merged; No mapped review verdict.
 
 ### Branch agente/205-pr455 (sem issue)
 
@@ -5701,6 +6055,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr455: merged; j-rev-pr455.log: O
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr455: merged; j-rev-pr455.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr455: merged; j-rev-pr455.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr455: merged; j-rev-pr455.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr455: merged; j-rev-pr455.log: OK. Newer fix log requires review.
 
 ### Branch agente/205-pr465 (sem issue)
 
@@ -5717,6 +6072,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr465: merged; j-rev3-pr465.log: 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr465: merged; j-rev3-pr465.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr465: merged; j-rev3-pr465.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr465: merged; j-rev3-pr465.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr465: merged; j-rev3-pr465.log: OK.
 
 ### Branch agente/205-pr491 (sem issue)
 
@@ -5733,6 +6089,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr491: merged; j-rev2-205-pr491.l
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr491: merged; j-rev2-205-pr491.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr491: merged; j-rev2-205-pr491.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr491: merged; j-rev2-205-pr491.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr491: merged; j-rev2-205-pr491.log: OK. Newer fix log requires review.
 
 ### Branch agente/205-prghbarker (sem issue)
 
@@ -5749,6 +6106,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-prghbarker: merged; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-prghbarker: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-prghbarker: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-prghbarker: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-prghbarker: merged; No mapped review verdict.
 
 ### Branch agente/205-prnovos (sem issue)
 
@@ -5765,6 +6123,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-prnovos: merged; j-rev3-prnovos.l
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-prnovos: merged; j-rev3-prnovos.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-prnovos: merged; j-rev3-prnovos.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-prnovos: merged; j-rev3-prnovos.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-prnovos: merged; j-rev3-prnovos.log: OK.
 
 ### Branch agente/205-roi6 (sem issue)
 
@@ -5781,6 +6140,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-roi6: merged; No mapped review ve
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-roi6: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-roi6: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-roi6: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-roi6: merged; No mapped review verdict.
 
 ### Branch agente/205-seekr-chave-propria (sem issue)
 
@@ -5797,6 +6157,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-seekr-chave-propria: merged; No m
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-seekr-chave-propria: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-seekr-chave-propria: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-seekr-chave-propria: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-seekr-chave-propria: merged; No mapped review verdict.
 
 ### Branch agente/205-segurar (sem issue)
 
@@ -5813,6 +6174,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-segurar: merged; No mapped review
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-segurar: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-segurar: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-segurar: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-segurar: merged; No mapped review verdict.
 
 ### Branch agente/205-semdica (sem issue)
 
@@ -5829,6 +6191,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-semdica: merged; No mapped review
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-semdica: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-semdica: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-semdica: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-semdica: merged; No mapped review verdict.
 
 ### Branch agente/205-sidebarfundo (sem issue)
 
@@ -5845,6 +6208,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-sidebarfundo: merged; j-rev-205-s
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-sidebarfundo: merged; j-rev-205-sidebarfundo2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-sidebarfundo: merged; j-rev-205-sidebarfundo2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-sidebarfundo: merged; j-rev-205-sidebarfundo2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-sidebarfundo: merged; j-rev-205-sidebarfundo2.log: OK.
 
 ### Branch agente/205-syncmao (sem issue)
 
@@ -5861,6 +6225,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-syncmao: merged; No mapped review
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-syncmao: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-syncmao: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-syncmao: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-syncmao: merged; No mapped review verdict.
 
 ### Branch agente/205-tmdbhost (sem issue)
 
@@ -5877,6 +6242,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-tmdbhost: merged; No mapped revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tmdbhost: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tmdbhost: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tmdbhost: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tmdbhost: merged; No mapped review verdict.
 
 ### Branch agente/205-tpkemu (sem issue)
 
@@ -5893,6 +6259,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpkemu: merged; No mapped review 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tpkemu: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkemu: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkemu: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkemu: merged; No mapped review verdict.
 
 ### Branch agente/205-urfix (sem issue)
 
@@ -5909,6 +6276,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-urfix: merged; No mapped review v
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-urfix: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-urfix: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-urfix: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-urfix: merged; No mapped review verdict.
 
 ### Branch agente/205-ursamsung (sem issue)
 
@@ -5925,6 +6293,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-ursamsung: merged; No mapped revi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-ursamsung: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-ursamsung: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-ursamsung: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-ursamsung: merged; No mapped review verdict.
 
 ### Branch agente/205-vidroperf (sem issue)
 
@@ -5941,6 +6310,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vidroperf: merged; No mapped revi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vidroperf: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidroperf: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidroperf: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidroperf: merged; No mapped review verdict.
 
 ### Branch agente/205-vistos2 (sem issue)
 
@@ -5957,6 +6327,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vistos2: merged; j-rev7-vistos2-k
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vistos2: merged; j-rev7-vistos2-kimi.log: OK.
 
 ### Branch agente/205-vitlogo1015 (sem issue)
 
@@ -5973,6 +6344,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vitlogo1015: merged; j-revg-vitlo
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vitlogo1015: merged; j-revg-vitlogo1015-2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vitlogo1015: merged; j-revg-vitlogo1015-2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vitlogo1015: merged; j-revg-vitlogo1015-2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vitlogo1015: merged; j-revg-vitlogo1015-2.log: OK. Newer fix log requires review.
 
 ### Branch fix/tpk-selo-hdr (sem issue)
 
@@ -6050,6 +6422,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr487: merged; j-rev-pr487-v2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr487v2: review-OK; j-rev-pr487-v2.log: OK.
 
 ### Branch pr/489-fix (sem issue)
 
@@ -6282,6 +6656,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-tclmem: merged; j-revg2-tclmem.lo
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tclmem: merged; j-revg2-tclmem.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tclmem: merged; j-revg2-tclmem.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tclmem: merged; j-revg2-tclmem.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tclmem: merged; j-revg2-tclmem.log: OK.
 
 ### webOS vidro lento em detalhes/busca/explorar/ajustes (C9)
 
@@ -6298,6 +6673,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vidrotelas: merged; j-revg-vidrot
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vidrotelas: merged; j-revg-vidrotelas.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidrotelas: merged; j-revg-vidrotelas.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidrotelas: merged; j-revg-vidrotelas.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidrotelas: merged; j-revg-vidrotelas.log: OK.
 
 ### Overdraw por tela (fill por frame) no webOS C9
 
@@ -6314,6 +6690,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-overdraw: merged; j-revg2-overdra
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-overdraw: merged; j-revg2-overdraw.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-overdraw: merged; j-revg2-overdraw.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-overdraw: merged; j-revg2-overdraw.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-overdraw: merged; j-revg2-overdraw.log: OK.
 
 ### Cartaz do card de amigos em paisagem + shell dos cards de pessoas
 
@@ -6337,6 +6714,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-amigos: merged; j-rev-205-amigos.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-amigoscapa: merged; j-revg-amigoscapa.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-amigos: merged; j-rev-205-amigos.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-amigoscapa: merged; j-revg-amigoscapa.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-amigos: merged; j-rev-205-amigos.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-amigoscapa: merged; j-revg-amigoscapa.log: OK.
 
 ### Cartoes ao vivo do painel de estatisticas e dicas de tecla na TV
 
@@ -6353,6 +6732,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-estatresp: merged; j-revg-estatre
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-estatresp: merged; j-revg-estatresp.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-estatresp: merged; j-revg-estatresp.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-estatresp: merged; j-revg-estatresp.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-estatresp: merged; j-revg-estatresp.log: OK.
 
 ### vidro/reuso de backdrop no webOS (vidroc9)
 
@@ -6369,6 +6749,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vidroc9: merged; j-revg-vidroc9-b
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vidroc9: merged; j-revg-vidroc9-b.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidroc9: merged; j-revg-vidroc9-b.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidroc9: merged; j-revg-vidroc9-b.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidroc9: merged; j-revg-vidroc9-b.log: OK. Newer fix log requires review.
 
 ### Merge do master 1015 + cards ao vivo (agente/205-mestre1015)
 
@@ -6385,6 +6766,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-mestre1015: merged; j-revg-mestre
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-mestre1015: merged; j-revg-mestre1015-d.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-mestre1015: merged; j-revg-mestre1015-d.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-mestre1015: merged; j-revg-mestre1015-d.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-mestre1015: merged; j-revg-mestre1015-d.log: OK. Newer fix log requires review.
 
 ### Ajustes: suites de teste depois do merge do master
 
@@ -6401,6 +6783,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-ajustestestes: merged; j-revg-aju
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-ajustestestes: merged; j-revg-ajustestestes.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-ajustestestes: merged; j-revg-ajustestestes.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-ajustestestes: merged; j-revg-ajustestestes.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-ajustestestes: merged; j-revg-ajustestestes.log: OK.
 
 ### Passada final de desempenho antes do lancamento (pedido do dono: "algo esta roubando muito FPS")
 
@@ -6417,6 +6800,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-perffinal: merged; j-revg-perffin
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-perffinal: merged; j-revg-perffinal.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-perffinal: merged; j-revg-perffinal.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-perffinal: merged; j-revg-perffinal.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-perffinal: merged; j-revg-perffinal.log: OK.
 
 ### Bump 2.0.5 -> 2.0.6 (owner aprovou o lancamento da 2.0.6)
 
@@ -6440,6 +6824,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-bump206: merged; j-revg-bump206.l
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-release207: merged; j-rev-release207.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-bump206: merged; j-revg-bump206.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-release207: merged; j-rev-release207.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-bump206: merged; j-revg-bump206.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-release207: merged; j-rev-release207.log: OK.
 
 ### Buffer do player configuravel (64/128/256 MiB) + clamp por RAM livre
 
@@ -6456,6 +6842,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-buffer: merged; j-revg-buffer-pos
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-buffer: merged; j-revg-buffer-posmerge.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-buffer: merged; j-revg-buffer-posmerge.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-buffer: merged; j-revg-buffer-posmerge.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-buffer: merged; j-revg-buffer-posmerge.log: OK.
 
 ### Preparar/formatar pendrive para o cache do P2P
 
@@ -6472,6 +6859,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-usbpreparo: merged; j-revg-usbpre
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-usbpreparo: merged; j-revg-usbpreparo.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-usbpreparo: merged; j-revg-usbpreparo.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-usbpreparo: merged; j-revg-usbpreparo.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-usbpreparo: merged; j-revg-usbpreparo.log: OK.
 
 ### Dizer porque o cache do P2P em USB e recusado
 
@@ -6495,6 +6883,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmoti
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-usbmotivo: merged; j-rev-usbmotivo.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmotivo-posmerge.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-usbmotivo: merged; j-rev-usbmotivo.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmotivo-posmerge.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-usbmotivo: merged; j-rev-usbmotivo.log: OK. Newer fix log requires review.
 
 ### Upload de registro deve manter o cabecalho de boot
 
@@ -6511,6 +6901,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-logcabeca: merged; j-rev-logcabec
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-logcabeca: merged; j-rev-logcabeca.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-logcabeca: merged; j-rev-logcabeca.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-logcabeca: merged; j-rev-logcabeca.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-logcabeca: merged; j-rev-logcabeca.log: OK.
 
 ### Ajuste manual de legenda estilo Stremio + auto-sync melhor
 
@@ -6527,6 +6918,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-legajuste: done-awaiting-review; 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-legajuste: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-legajuste: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legajuste: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legajuste: done-awaiting-review; No mapped review verdict.
 
 ### Home: destaque grande a esquerda + fileira rolavel a direita (Dynamic Split)
 
@@ -6543,6 +6935,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-herosplit: merged; j-rev-herospli
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-herosplit: merged; j-rev-herosplit-r3.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-herosplit: merged; j-rev-herosplit-r3.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-herosplit: merged; j-rev-herosplit-r3.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-herosplit: merged; j-rev-herosplit-r3.log: OK.
 
 ### Trailer na versão dublada / idioma de audio e legenda do trailer
 
@@ -6559,6 +6952,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-trailerlingua: merged; j-rev-trai
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-trailerlingua: merged; j-rev-trailerlingua-r6.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-trailerlingua: merged; j-rev-trailerlingua-r6.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-trailerlingua: merged; j-rev-trailerlingua-r6.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-trailerlingua: merged; j-rev-trailerlingua-r6.log: OK.
 
 ### Player caiu de ~40 fps para ~20 fps (overlay do .tpk)
 
@@ -6575,6 +6969,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-fpsplayer: merged; j-rev-fpsplaye
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-fpsplayer: merged; j-rev-fpsplayer-r2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-fpsplayer: merged; j-rev-fpsplayer-r2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-fpsplayer: merged; j-rev-fpsplayer-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-fpsplayer: merged; j-rev-fpsplayer-r2.log: OK.
 
 ### Animacao de abertura do seletor "Estilo da fileira"
 
@@ -6591,6 +6986,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-estiloanim: merged; j-revg-estilo
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-estiloanim: merged; j-revg-estiloanim-posmerge.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-estiloanim: merged; j-revg-estiloanim-posmerge.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-estiloanim: merged; j-revg-estiloanim-posmerge.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-estiloanim: merged; j-revg-estiloanim-posmerge.log: OK.
 
 ### Ajustes: dizer porque "Cache do P2P" fica indisponivel
 
@@ -6607,6 +7003,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmoti
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmotivo-posmerge.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmotivo-posmerge.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmotivo-posmerge.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-p2pmotivo: merged; j-revg-p2pmotivo-posmerge.log: OK.
 
 ### Cache do P2P em USB no Android (getExternalFilesDirs + teto FAT32)
 
@@ -6623,6 +7020,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-usbandroid: merged; j-rev-usbandr
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-usbandroid: merged; j-rev-usbandroid-r2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-usbandroid: merged; j-rev-usbandroid-r2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-usbandroid: merged; j-rev-usbandroid-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-usbandroid: merged; j-rev-usbandroid-r2.log: OK.
 
 ### PR #538 (ghbarker): priorizar Continuar assistindo sem travar os catalogos
 
@@ -6646,6 +7044,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr538: review-OK; j-rev-pr538v2.l
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr538b: merged; j-rev-pr538b.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr538: review-OK; j-rev-pr538v2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr538b: merged; j-rev-pr538b.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr538: review-OK; j-rev-pr538v2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr538b: merged; j-rev-pr538b.log: OK. Newer fix log requires review.
 
 ### PR #540 (ghbarker): manter retratos do elenco vindo do addon quando o TMDB falha
 
@@ -6669,6 +7069,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr540: merged; j-rev-pr540v2.log:
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr540b: merged; j-rev-pr540b.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr540: merged; j-rev-pr540v2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr540b: merged; j-rev-pr540b.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr540: merged; j-rev-pr540v2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr540b: merged; j-rev-pr540b.log: OK.
 
 ### PR #543 (ghbarker): tirar linhas de addon desinstalado e fontes de colecao propria
 
@@ -6685,6 +7087,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr543: merged; j-rev-pr543v2.log:
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr543: merged; j-rev-pr543.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr543: merged; j-rev-pr543.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr543: merged; j-rev-pr543.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr543: merged; j-rev-pr543.log: OK. Newer fix log requires review.
 
 ### PR #546 (ghbarker): backdrop completo do recomendado e respeitar a qualidade Alta
 
@@ -6701,6 +7104,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr546: merged; j-rev-pr546.log: O
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr546: merged; j-rev-pr546.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr546: merged; j-rev-pr546.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr546: merged; j-rev-pr546.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr546: merged; j-rev-pr546.log: OK.
 
 ### PR #547 (ghbarker): chegar no relogio e na ilha de retomada com Up
 
@@ -6717,6 +7121,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr547: merged; j-rev-pr547.log: O
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr547: merged; j-rev-pr547.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr547: merged; j-rev-pr547.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr547: merged; j-rev-pr547.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr547: merged; j-rev-pr547.log: OK.
 
 ### PR #550 (Tolu-Walop-E): lembrar a faixa de audio escolhida para a serie toda
 
@@ -6733,6 +7138,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr550: merged; j-rev-pr550-r2.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr550: merged; j-rev-pr550-r2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr550: merged; j-rev-pr550-r2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr550: merged; j-rev-pr550-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr550: merged; j-rev-pr550-r2.log: OK.
 
 ### PR #559 (mark-major): URL direta toca sem P2P; notWebReady nao pode esconder
 
@@ -6749,6 +7155,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr559: merged; j-rev-pr559.log: O
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr559: merged; j-rev-pr559.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr559: merged; j-rev-pr559.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr559: merged; j-rev-pr559.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr559: merged; j-rev-pr559.log: OK.
 
 ### Discord 2.0.6: busca abre o titulo anterior / fila travada + busca por voz
 
@@ -6765,6 +7172,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-buscafila: merged; j-rev-buscafil
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-buscafila: merged; j-rev-buscafila.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-buscafila: merged; j-rev-buscafila.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-buscafila: merged; j-rev-buscafila.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-buscafila: merged; j-rev-buscafila.log: OK. Newer fix log requires review.
 
 ### Follow-up #552: addons de legenda instalados nao sao consultados
 
@@ -6781,6 +7189,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-legenda552: merged; j-rev-legenda
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-legenda552: merged; j-rev-legenda552.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-legenda552: merged; j-rev-legenda552.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legenda552: merged; j-rev-legenda552.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legenda552: merged; j-rev-legenda552.log: OK.
 
 ### Top menu translucido com vidro ligado e frost desligado (LG C9)
 
@@ -6797,6 +7206,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-topvidro: merged; j-rev-topvidro.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-topvidro: merged; j-rev-topvidro.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-topvidro: merged; j-rev-topvidro.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-topvidro: merged; j-rev-topvidro.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-topvidro: merged; j-rev-topvidro.log: OK.
 
 ### Linha "Cache do P2P" no Android
 
@@ -6820,6 +7230,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-p2pusbtela: merged; j-rev-p2pusbtela.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-p2pusbtela: merged; j-rev-p2pusbtela.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-p2pusbtela: merged; j-rev-p2pusbtela.log: OK.
 
 ### Frost nos componentes do player (sobre video legivel)
 
@@ -6836,6 +7248,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-foscoplayer: merged; j-rev-foscop
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-foscoplayer: merged; j-rev-foscoplayer.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-foscoplayer: merged; j-rev-foscoplayer.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-foscoplayer: merged; j-rev-foscoplayer.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-foscoplayer: merged; j-rev-foscoplayer.log: OK.
 
 ### Frost em todas as superficies (menu rapido, guia parental)
 
@@ -6852,6 +7265,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-foscotudo: merged; j-rev-foscotud
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-foscotudo: merged; j-rev-foscotudo.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-foscotudo: merged; j-rev-foscotudo.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-foscotudo: merged; j-rev-foscotudo.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-foscotudo: merged; j-rev-foscotudo.log: OK.
 
 ### Frost barato igual ao aprovado na LG C9
 
@@ -6868,6 +7282,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-foscoleve3: merged; j-rev-foscole
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK.
 
 ### Temporadas/episodios fantasmas vindo do add-on
 
@@ -6884,6 +7299,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-temporadas: merged; j-rev-tempora
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-temporadas: merged; j-rev-temporadas-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-temporadas: merged; j-rev-temporadas-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-temporadas: merged; j-rev-temporadas-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-temporadas: merged; j-rev-temporadas-r2.log: OK. Newer fix log requires review.
 
 ### Triagem dos PRs abertos + port dos fixes sem branch
 
@@ -6900,6 +7316,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-prs207: merged; j-rev-prs207.log:
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-prs207: merged; j-rev-prs207.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-prs207: merged; j-rev-prs207.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-prs207: merged; j-rev-prs207.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-prs207: merged; j-rev-prs207.log: OK.
 
 ### Catalogo fora da cota nao atualiza depois de adicionar
 
@@ -6916,6 +7333,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pfhome545: merged; j-revg-pfhome5
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pfhome545: merged; j-revg-pfhome545.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pfhome545: merged; j-revg-pfhome545.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pfhome545: merged; j-revg-pfhome545.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pfhome545: merged; j-revg-pfhome545.log: OK.
 
 ### Perfil de visualizacoes (#548): marcar serie inteira
 
@@ -6932,6 +7350,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vistos548: merged; j-rev-vistos54
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review.
 
 ### release: bump 2.0.7 + NOTAS.md (release notes completas)
 
@@ -6948,6 +7367,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-release207: merged; j-rev-release
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-release207: merged; j-rev-release207.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-release207: merged; j-rev-release207.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-release207: merged; j-rev-release207.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-release207: merged; j-rev-release207.log: OK.
 
 ### Tirar o botao de voltar episodio do player
 
@@ -6964,6 +7384,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-semepanterior: merged; j-rev-seme
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-semepanterior: merged; j-rev-semepanterior.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-semepanterior: merged; j-rev-semepanterior.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-semepanterior: merged; j-rev-semepanterior.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-semepanterior: merged; j-rev-semepanterior.log: OK.
 
 ### Estilo da tela de abertura: Centro (A3) ou Canto (B3)
 
@@ -6987,6 +7408,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-loadtela: merged; j-rev-foscoleve
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-loadtelab: merged; j-rev-loadtelab.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-loadtela: merged; j-rev-foscoleve3-r2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-loadtelab: merged; j-rev-loadtelab.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-loadtela: merged; j-rev-foscoleve3-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-loadtelab: merged; j-rev-loadtelab.log: OK. Newer fix log requires review.
 
 ### Fileira Amigos polida em todos os estilos, sem "Ver todos"/"+ Adicionar" (pedido do dono)
 
@@ -7010,6 +7433,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-amigos: merged; j-rev-205-amigos.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-amigospolish: merged; j-rev-amigospolish-r2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-amigos: merged; j-rev-205-amigos.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-amigospolish: merged; j-rev-amigospolish-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-amigos: merged; j-rev-205-amigos.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-amigospolish: merged; j-rev-amigospolish-r2.log: OK.
 
 ### Fosco (frost) de captura de tela mais barato, com o mesmo visual
 
@@ -7026,6 +7451,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-foscoleve3: merged; j-rev-foscole
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-foscoleve3: merged; j-rev-foscoleve3-r2.log: OK.
 
 ### Abas da Biblioteca e do catalogo com vidro+frost de verdade
 
@@ -7042,6 +7468,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vidrotabs: merged; No mapped revi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vidrotabs: merged; rev-vidrotabs.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidrotabs: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidrotabs: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidrotabs: merged; No mapped review verdict.
 
 ### Escala dos Ajustes com padrao de fabrica 100%
 
@@ -7058,6 +7485,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-escala100: merged; No mapped revi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-escala100: merged; rev-escala100.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-escala100: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-escala100: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-escala100: merged; No mapped review verdict.
 
 ### PR #561 (comunidade): identidade da serie preservada na busca e na reproducao
 
@@ -7092,6 +7520,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-traktcoment: merged; No mapped re
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-traktcoment: merged; rev-traktcoment.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-traktcoment: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-traktcoment: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-traktcoment: merged; No mapped review verdict.
 
 ### Menu contextual grande e pequeno com vidro+frost, ajuste "Menu do cartaz"
 
@@ -7108,6 +7537,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-ctxgrande: merged; No mapped revi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-ctxgrande: merged; rev-ctxgrande.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-ctxgrande: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-ctxgrande: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-ctxgrande: merged; No mapped review verdict.
 
 ### Vidro no menu "mais" da pagina do titulo
 
@@ -7124,6 +7554,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-detalheglass: merged; No mapped r
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-detalheglass: merged; rev5-detalheglass.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-detalheglass: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-detalheglass: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-detalheglass: merged; No mapped review verdict.
 
 ### Frost da barra lateral e pilula de acento em vidro
 
@@ -7140,6 +7571,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vidromenu: merged; No mapped revi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vidromenu: merged; rev2-vidromenu.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidromenu: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidromenu: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidromenu: merged; No mapped review verdict.
 
 ### Fundo Cinza/Cor fixo no layout Dinamico
 
@@ -7156,6 +7588,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-dinfundo: merged; No mapped revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-dinfundo: merged; rev2-dinfundo.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dinfundo: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dinfundo: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dinfundo: merged; No mapped review verdict.
 
 ### Estilos de titulo da fileira (Classico/Ilha/Editorial/Acento)
 
@@ -7172,6 +7605,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-titulofil: merged; No mapped revi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-titulofil: merged; rev-titulofil.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-titulofil: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-titulofil: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-titulofil: merged; No mapped review verdict.
 
 ### Fileira de cartazes grandes em Pequeno/Medio/Grande
 
@@ -7188,6 +7622,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-fichatam: merged; No mapped revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-fichatam: merged; rev-fichatam.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-fichatam: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-fichatam: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-fichatam: merged; No mapped review verdict.
 
 ### Hero dividido sem repetir o titulo focado
 
@@ -7204,6 +7639,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-herodiv: merged; No mapped review
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-herodiv: merged; rev-herodiv.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-herodiv: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-herodiv: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-herodiv: merged; No mapped review verdict.
 
 ### Vidro defumado no player e nivel de qualidade do vidro
 
@@ -7220,6 +7656,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-foscoleve4: merged; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-foscoleve4: merged; rev-foscoleve4.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-foscoleve4: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-foscoleve4: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-foscoleve4: merged; No mapped review verdict.
 
 ### Abertura do Dolby Vision no estilo novo
 
@@ -7236,6 +7673,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-dvabertura: merged; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-dvabertura: merged; rev2-dvabertura.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dvabertura: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dvabertura: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dvabertura: merged; No mapped review verdict.
 
 ### Ilhas de frost sobre o vidro da barra lateral da Home
 
@@ -7252,6 +7690,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vidroilhas: merged; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vidroilhas: merged; rev2-vidroilhas.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidroilhas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidroilhas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidroilhas: merged; No mapped review verdict.
 
 ### Escala de texto e componentes (85-130%) - pedido do dono
 
@@ -7278,6 +7717,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-playervidro: merged; No mapped re
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-playervidro: merged; rev3-playervidro.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-playervidro: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-playervidro: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-playervidro: merged; No mapped review verdict.
 
 ### Fileira do Trakt continua sem vidro e sem ganho de FPS (pedido do dono)
 
@@ -7303,6 +7743,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pisca3: merged; No mapped review 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pisca3: merged; rev-pisca3.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pisca3: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pisca3: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pisca3: merged; No mapped review verdict.
 
 ### Caixa de texto do episodio focado maior, com margem e em vidro; lentidao titulo->abas de temporada; log do fontepref por quadro (pedido do dono)
 
@@ -7319,6 +7760,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-epfoco: merged; No mapped review 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-epfoco: merged; rev-epfoco.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-epfoco: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-epfoco: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-epfoco: merged; No mapped review verdict.
 
 ### PR #572 (Tolu-Walop-E): ParaleloDataSource Android — indice de fim de arquivo nas conexoes paralelas + destino lembrado do add-on com fallback
 
@@ -7348,6 +7790,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pisca4: done-awaiting-review; No 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pisca4: merged; revn-pisca4.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pisca4: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pisca4: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pisca4: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -7368,6 +7811,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/202-biblioteca: done-awaiting-review;
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/202-biblioteca: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/202-biblioteca: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-p323, branch agente/205-p323. Port the #323 fix from agente/203-323 (and the streams.c part of agente/203-318-play). src/streams.c ~1824: Conferencia c lives on the stack, c.rodada = fa_rodada_atual(), a
 
@@ -7394,6 +7839,9 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-p323: merged; No mapped review ve
 Snapshot 2026-10-17T20:52:34-03:00: agente/203-318-play: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/203-323: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-p323: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/203-318-play: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/203-323: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-p323: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -7414,6 +7862,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/203-perfilsel: done-awaiting-review; 
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/203-perfilsel: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/203-perfilsel: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas, branch agente/205-triagem-velhas (docs only). Fix the review findings below in the triage doc, keep it docs-only.
 
@@ -7434,6 +7884,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/2031-dvp5-hdr10: done-awaiting-review
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/2031-dvp5-hdr10: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/2031-dvp5-hdr10: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -7454,6 +7906,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/204-arabe370: done-awaiting-review; N
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/204-arabe370: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/204-arabe370: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -7474,6 +7928,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/204-pr381: done-awaiting-review; No m
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/204-pr381: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/204-pr381: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -7494,6 +7950,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/204-webos-versao: done-awaiting-revie
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/204-webos-versao: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/204-webos-versao: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-abastopo, branch agente/205-abastopo (from integracao/2.0.5).
 
@@ -7513,6 +7971,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-abas: merged; j-rev-205-abas2.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-abastopo: merged; j-revg-abastopo.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-abas: merged; j-rev-205-abas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-abastopo: merged; j-revg-abastopo.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-abas: merged; j-rev-205-abas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-abastopo: merged; j-revg-abastopo.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-ajperf, branch agente/205-ajperf, base integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/ajperf.diff. Owner: Settings has very low fps on LG C9 (webOS, GLES2). Fix d0d5b067:
 
@@ -7527,6 +7987,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-ajperf: merged; j-rev2-ajperf.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-ajperf: merged; j-rev2-ajperf.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-ajperf: merged; j-rev2-ajperf.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-ajperf: merged; j-rev2-ajperf.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-ajperf: merged; j-rev2-ajperf.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-ajsecoes, branch agente/205-ajsecoes, base integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/ajsecoes.diff. Claim: tests/ajustes_secoes was outdated after owner commit 4d5fcd
 
@@ -7541,6 +8002,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-ajsecoes: merged; j-rev-ajsecoes.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-ajsecoes: merged; j-rev-ajsecoes.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-ajsecoes: merged; j-rev-ajsecoes.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-ajsecoes: merged; j-rev-ajsecoes.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-ajsecoes: merged; j-rev-ajsecoes.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-amigosestilo, branch agente/205-amigosestilo (from integracao/2.0.5). Native C app (Nuvio Legacy TV).
 
@@ -7560,6 +8022,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-amigos: merged; j-rev-205-amigos.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-amigosestilo: merged; j-revg-amigosestilo.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-amigos: merged; j-rev-205-amigos.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-amigosestilo: merged; j-revg-amigosestilo.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-amigos: merged; j-rev-205-amigos.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-amigosestilo: merged; j-revg-amigosestilo.log: OK. Newer fix log requires review.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-andbugs, branch agente/205-andbugs (base integracao/2.0.5 = what will ship as 2.0.6). Nuvio Legacy native TV app (C, SDL/GL; webOS, Android TV, Samsung Tizen .tpk via tizen-tpk/*.cs).
 
@@ -7574,6 +8038,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-andbugs: merged; No mapped review
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-andbugs: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-andbugs: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-andbugs: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-andbugs: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-androidusb, branch agente/205-androidusb.
 
@@ -7588,6 +8053,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-androidusb: merged; j-rev-android
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-androidusb: merged; j-rev-androidusb.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-androidusb: merged; j-rev-androidusb.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-androidusb: merged; j-rev-androidusb.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-androidusb: merged; j-rev-androidusb.log: OK.
 
 ### Review only, do not edit. Diff: /Volumes/ExternalSSD/tmp/rev/205-artevazia.diff (branch agente/205-artevazia in worktree /Volumes/ExternalSSD/nv-205-artevazia; base integracao/2.0.5). Read code around changes as needed. Report findings P0-P
 
@@ -7602,6 +8068,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-artevazia: merged; j-rev-205-arte
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-artevazia: merged; j-rev-205-artevazia.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-artevazia: merged; j-rev-205-artevazia.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-artevazia: merged; j-rev-205-artevazia.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-artevazia: merged; j-rev-205-artevazia.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-b4addons (branch agente/205-b4addons, base integracao/2.0.5). C app in src/.
 
@@ -7616,6 +8083,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-b4addons: merged; j-revg-b4addons
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-b4addons: merged; j-revg-b4addons.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-b4addons: merged; j-revg-b4addons.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-b4addons: merged; j-revg-b4addons.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-b4addons: merged; j-revg-b4addons.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-b6simkl (branch agente/205-b6simkl, base integracao/2.0.5). C app in src/.
 
@@ -7630,6 +8098,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-b6simkl: merged; j-rev-205-b6simk
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-b6simkl: merged; j-rev-205-b6simkl-2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-b6simkl: merged; j-rev-205-b6simkl-2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-b6simkl: merged; j-rev-205-b6simkl-2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-b6simkl: merged; j-rev-205-b6simkl-2.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -7644,6 +8113,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-botaoinicio: merged; j-revg-botao
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-botaoinicio: merged; j-revg-botaoinicio.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-botaoinicio: merged; j-revg-botaoinicio.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-botaoinicio: merged; j-revg-botaoinicio.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-botaoinicio: merged; j-revg-botaoinicio.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -7658,6 +8128,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-c9poster: merged; j-revf-c9poster
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-c9poster: merged; j-revf-c9poster.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-c9poster: merged; j-revf-c9poster.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-c9poster: merged; j-revf-c9poster.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-c9poster: merged; j-revf-c9poster.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -7672,6 +8143,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-ccmax: merged; j-revg-ccmax.log: 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-ccmax: merged; j-revg-ccmax.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-ccmax: merged; j-revg-ccmax.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-ccmax: merged; j-revg-ccmax.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-ccmax: merged; j-revg-ccmax.log: OK.
 
 ### # Control Center title: smaller left margin
 
@@ -7686,6 +8158,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-cctitulo: merged; j-revg-cctitulo
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-cctitulo: merged; j-revg-cctitulo2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-cctitulo: merged; j-revg-cctitulo2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cctitulo: merged; j-revg-cctitulo2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cctitulo: merged; j-revg-cctitulo2.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -7705,6 +8178,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-cctitulo: merged; j-revg-cctitulo
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-cctitulo2: merged; j-revg-cctitulo2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cctitulo: merged; j-revg-cctitulo2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cctitulo2: merged; j-revg-cctitulo2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cctitulo: merged; j-revg-cctitulo2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cctitulo2: merged; j-revg-cctitulo2.log: OK.
 
 ### # Cinematic source opening: logo-coloured bar + soft start without player chrome
 
@@ -7719,6 +8194,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-cineaddon: merged; j-revf-cineadd
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-cineaddon: merged; j-revf-cineaddon.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-cineaddon: merged; j-revf-cineaddon.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cineaddon: merged; j-revf-cineaddon.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cineaddon: merged; j-revf-cineaddon.log: OK. Newer fix log requires review.
 
 ### Follow ponytail full. Repo: this worktree (branch agente/205-cineblur off integracao/2.0.5, Nuvio Legacy C/SDL2 + GLES2 TV app). Commit on this branch (English message ending with "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>").
 
@@ -7733,6 +8209,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-cineblur: merged; No mapped revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-cineblur: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-cineblur: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cineblur: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cineblur: merged; No mapped review verdict.
 
 ### # Perf bug: FPS drops only while collection rows are on screen
 
@@ -7747,6 +8224,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-colfps: merged; No mapped review 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-colfps: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-colfps: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-colfps: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-colfps: merged; No mapped review verdict.
 
 ### # Independent review (final, before merge)
 
@@ -7761,6 +8239,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-colordem: merged; j-revg-colordem
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-colordem: merged; j-revg-colordem-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-colordem: merged; j-revg-colordem-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-colordem: merged; j-revg-colordem-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-colordem: merged; j-revg-colordem-r2.log: OK. Newer fix log requires review.
 
 ### # Streaming pages: Ranking and Decades layouts still show the side poster — remove it
 
@@ -7775,6 +8254,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-colrank: merged; j-revg-colrank.l
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-colrank: merged; j-revg-colrank.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-colrank: merged; j-revg-colrank.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-colrank: merged; j-revg-colrank.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-colrank: merged; j-revg-colrank.log: OK. Newer fix log requires review.
 
 ### # Collection Cover Flow: bigger posters + focus navigation fixes
 
@@ -7794,6 +8274,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-coverflow: merged; j-revg-coverfl
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-coverflow3: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-coverflow: merged; j-revg-coverflow2-r3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-coverflow3: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-coverflow: merged; j-revg-coverflow2-r3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-coverflow3: merged; No mapped review verdict.
 
 ### # Independent review (final, before merge)
 
@@ -7808,6 +8290,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-cw12: merged; j-rev-cw12-r3.log: 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-cw12: merged; j-rev-cw12-r3.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-cw12: merged; j-rev-cw12-r3.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cw12: merged; j-rev-cw12-r3.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cw12: merged; j-rev-cw12-r3.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-cwperfil (branch agente/205-cwperfil, from integracao/2.0.5). Nuvio Legacy. Follow ponytail full. Never push, never deploy. Commit in English.
 
@@ -7822,6 +8305,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-cwperfil: merged; j-rev-cwperfil.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-cwperfil: merged; j-rev-cwperfil.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-cwperfil: merged; j-rev-cwperfil.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cwperfil: merged; j-rev-cwperfil.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cwperfil: merged; j-rev-cwperfil.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-cwtestlink, branch agente/205-cwtestlink. On integracao/2.0.5, `bash tests/cwordem.sh` and `bash tests/cwremover.sh` fail at link time on macOS (undefined ling_* and curadoria_* symbols in the *_home tes
 
@@ -7836,6 +8320,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-cwtestlink: merged; j-rev-cwtestl
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-cwtestlink: merged; j-rev-cwtestlink.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-cwtestlink: merged; j-rev-cwtestlink.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cwtestlink: merged; j-rev-cwtestlink.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cwtestlink: merged; j-rev-cwtestlink.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-debridprem, branch agente/205-debridprem vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/debridprem-rev.diff. Original task: /Volumes/ExternalSSD/tmp/rev/p-205-debridpre
 
@@ -7850,6 +8335,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-debridprem: merged; j-rev-205-deb
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-debridprem: merged; j-rev-205-debridprem.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-debridprem: merged; j-rev-205-debridprem.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-debridprem: merged; j-rev-205-debridprem.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-debridprem: merged; j-rev-205-debridprem.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-lgbugs, branch agente/205-lgbugs, base integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/lgbugs.diff. #428 webOS: 3d7f6d0c defers the screensaver reply from the Luna callback
 
@@ -7864,6 +8350,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-descansocrash: merged; j-rev3-des
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-descansocrash: merged; j-rev3-descansocrash.log: OK.
 
 ### # Vertical nav keeps column
 
@@ -7878,6 +8365,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-descecol: merged; j-revg-descecol
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-descecol: merged; j-revg-descecol.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-descecol: merged; j-revg-descecol.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-descecol: merged; j-revg-descecol.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-descecol: merged; j-revg-descecol.log: OK.
 
 ### Design task for release 2.1, round 2. No app code changes, no commits. Read-only repo: /Volumes/ExternalSSD/nv-205-detalhe21 (detail page today: src/detail.c, detmais.c, sinopse.c, temporadas_grafico.c, ilha*.c).
 
@@ -7892,6 +8380,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-detalhe21: merged; No mapped revi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-detalhe21: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-detalhe21: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-detalhe21: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-detalhe21: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-detfps, branch agente/205-detfps.
 
@@ -7906,6 +8395,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-detfps: merged; j-rev-detfps.log:
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-detfps: merged; j-rev-detfps.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-detfps: merged; j-rev-detfps.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-detfps: merged; j-rev-detfps.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-detfps: merged; j-rev-detfps.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-detnotas (branch agente/205-detnotas). Review only, do not edit. Diff vs integracao/2.0.5: /Volumes/ExternalSSD/tmp/rev/detnotas-r3.diff. Re-review after fix of P2 in /Volumes/ExternalSSD/tmp/rev/j-rev2-
 
@@ -7920,6 +8410,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-detnotas: merged; j-rev3-detnotas
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-detnotas: merged; j-rev3-detnotas.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-detnotas: merged; j-rev3-detnotas.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-detnotas: merged; j-rev3-detnotas.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-detnotas: merged; j-rev3-detnotas.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-dicasch, branch agente/205-dicasch.
 
@@ -7934,6 +8425,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-dicasch: merged; j-revg-dicasch.l
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-dicasch: merged; j-revg-dicasch.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dicasch: merged; j-revg-dicasch.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dicasch: merged; j-revg-dicasch.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dicasch: merged; j-revg-dicasch.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-dicatoque-large, branch agente/205-dicatoque-large (from integracao/2.0.5).
 
@@ -7953,6 +8445,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-dicatoque: merged; j-revg-dicatoq
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dicatoque-large: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dicatoque: merged; j-revg-dicatoque.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dicatoque-large: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dicatoque: merged; j-revg-dicatoque.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dicatoque-large: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-dirfoto, branch agente/205-dirfoto (from integracao/2.0.5). C app, GL renderer (src/).
 
@@ -7973,6 +8467,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-diretores: merged; j-rev-205-dire
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dirfoto: merged; j-rev-205-dirfoto.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-diretores: merged; j-rev-205-diretores3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dirfoto: merged; j-rev-205-dirfoto.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-diretores: merged; j-rev-205-diretores3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dirfoto: merged; j-rev-205-dirfoto.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -7987,6 +8483,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-dither: merged; j-revg-dither.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-dither: merged; j-revg-dither.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dither: merged; j-revg-dither.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dither: merged; j-revg-dither.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dither: merged; j-revg-dither.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-pfdvabre (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-dvabre.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes, one test
 
@@ -8001,6 +8498,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-dvabre: merged; j-revg-dvabre-r2.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-dvabre: merged; j-revg-dvabre-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dvabre: merged; j-revg-dvabre-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dvabre: merged; j-revg-dvabre-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dvabre: merged; j-revg-dvabre-r2.log: OK. Newer fix log requires review.
 
 ### # Cinematic source opening: logo-coloured bar + soft start without player chrome
 
@@ -8015,6 +8513,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-dvcinema: merged; j-revg-dvcinema
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-dvcinema: merged; j-revg-dvcinema.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dvcinema: merged; j-revg-dvcinema.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dvcinema: merged; j-revg-dvcinema.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dvcinema: merged; j-revg-dvcinema.log: OK. Newer fix log requires review.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-dvp5, branch agente/205-dvp5. Port agente/2031-dvp5-hdr10. src/streams.c ~856-860: on LG, Dolby Vision profile 5 in MP4 is demoted to level 4 without checking whether the same track has HDR10. Add the hd
 
@@ -8034,6 +8533,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/2031-dvp5-hdr10: done-awaiting-review
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-dvp5: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/2031-dvp5-hdr10: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-dvp5: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/2031-dvp5-hdr10: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dvp5: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-epcinza, branch agente/205-epcinza. Previous commit 5f3f33cf8 moved the focused episode gray plate to sit only behind the text block (title + synopsis). See /Volumes/ExternalSSD/tmp/rev/epcinza/depois/de
 
@@ -8048,6 +8549,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-epcinza: merged; j-revg-epcinza-3
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-epcinza: merged; j-revg-epcinza-3.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-epcinza: merged; j-revg-epcinza-3.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-epcinza: merged; j-revg-epcinza-3.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-epcinza: merged; j-revg-epcinza-3.log: OK.
 
 ### # Episode list, modern mode: title and description below the thumbnail
 
@@ -8062,6 +8564,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-episodiotexto: merged; j-rev-205-
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-episodiotexto: merged; j-rev-205-episodiotexto.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-episodiotexto: merged; j-rev-205-episodiotexto.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-episodiotexto: merged; j-rev-205-episodiotexto.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-episodiotexto: merged; j-rev-205-episodiotexto.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-epsdupstub, branch agente/205-epsdupstub. After merging agente/205-vistos548, tests/episodiosdup.sh fails to link: Undefined symbol _contapend_reenviar referenced from fioContinuar. Fix the test harness
 
@@ -8082,6 +8585,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-epsdupstub: merged; No mapped rev
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-epsdupstub: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-epsdupstub: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vistos548: merged; j-rev-vistos548-r9.log: OK. Newer fix log requires review.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-estatbotoes, branch agente/205-estatbotoes (from integracao/2.0.5).
 
@@ -8096,6 +8601,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-estatbotoes: merged; j-revg-estat
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-estatbotoes: merged; j-revg-estatbotoes.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-estatbotoes: merged; j-revg-estatbotoes.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-estatbotoes: merged; j-revg-estatbotoes.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-estatbotoes: merged; j-revg-estatbotoes.log: OK.
 
 ### # Live statistics (#338): open from the clock island + three sizes
 
@@ -8110,6 +8616,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-estatvivo: merged; j-rev-205-esta
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-estatvivo: merged; j-rev-205-estatvivo.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-estatvivo: merged; j-rev-205-estatvivo.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-estatvivo: merged; j-rev-205-estatvivo.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-estatvivo: merged; j-rev-205-estatvivo.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-farah, branch agente/205-farah vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/farah.diff.
 
@@ -8124,6 +8631,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-farah: merged; j-rev-205-farah.lo
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-farah: merged; j-rev-205-farah.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-farah: merged; j-rev-205-farah.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-farah: merged; j-rev-205-farah.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-farah: merged; j-rev-205-farah.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-filnav, branch agente/205-filnav (base integracao/2.0.5). Owner report on LG C9 (Portuguese, literal): "Não tem como chegar nesse botões apertando pro lado, eles só são acessíveis se eu for pro final da
 
@@ -8138,6 +8646,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-filnav: merged; j-rev-filnav.log:
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-filnav: merged; j-rev-filnav.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-filnav: merged; j-rev-filnav.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-filnav: merged; j-rev-filnav.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-filnav: merged; j-rev-filnav.log: BLOQUEIA. Newer fix log requires review.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-fimhighcache, branch agente/205-fimhighcache. Fix this review finding with one targeted test FAIL->PASS, then commit. Follow ponytail full. Never push, never deploy, never git stash. Commit in English. R
 
@@ -8152,6 +8661,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-fimhighcache: merged; j-rev3-fimh
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-fimhighcache: merged; j-rev3-fimhighcache.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-fimhighcache: merged; j-rev3-fimhighcache.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-fimhighcache: merged; j-rev3-fimhighcache.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-fimhighcache: merged; j-rev3-fimhighcache.log: OK. Newer fix log requires review.
 
 ### # Independent review (final, before merge)
 
@@ -8166,6 +8676,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-fingerpct: merged; j-revg-fingerp
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-fingerpct: merged; j-revg-fingerpct.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-fingerpct: merged; j-revg-fingerpct.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-fingerpct: merged; j-revg-fingerpct.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-fingerpct: merged; j-revg-fingerpct.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -8180,6 +8691,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-fontesrelogio: merged; j-rev-font
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-fontesrelogio: merged; j-rev-fontesrelogio.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-fontesrelogio: merged; j-rev-fontesrelogio.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-fontesrelogio: merged; j-rev-fontesrelogio.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-fontesrelogio: merged; j-rev-fontesrelogio.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -8194,6 +8706,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-fosco-nova: merged; j-rev-fosco-n
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-fosco-nova: merged; j-rev-fosco-nova.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-fosco-nova: merged; j-rev-fosco-nova.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-fosco-nova: merged; j-rev-fosco-nova.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-fosco-nova: merged; j-rev-fosco-nova.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-fosco-perf, branch agente/205-fosco-perf (from integracao/2.0.5).
 
@@ -8208,6 +8721,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-fosco-perf: merged; j-rev-fosco-p
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-fosco-perf: merged; j-rev-fosco-perf.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-fosco-perf: merged; j-rev-fosco-perf.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-fosco-perf: merged; j-rev-fosco-perf.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-fosco-perf: merged; j-rev-fosco-perf.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-foscoleve2, branch agente/205-foscoleve2. Owner, literal: "o frost ainda ta um pouco pesado, sera que ainda tem jeito?" (LG C9 / TCL). Owner APPROVED the current C9 frost LOOK: it must not change (compar
 
@@ -8222,6 +8736,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-foscoleve2: merged; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-foscoleve2: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-foscoleve2: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-foscoleve2: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-foscoleve2: merged; No mapped review verdict.
 
 ### # Independent review (final, before merge)
 
@@ -8236,6 +8751,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-foscovelho: merged; j-rev-foscove
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-foscovelho: merged; j-rev-foscovelho-r4.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-foscovelho: merged; j-rev-foscovelho-r4.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-foscovelho: merged; j-rev-foscovelho-r4.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-foscovelho: merged; j-rev-foscovelho-r4.log: OK. Newer fix log requires review.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-barra27, branch agente/205-barra27 (from integracao/2.0.5).
 
@@ -8255,6 +8771,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-barra27: merged; j-revg-barra27-x
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-glassmock: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-barra27: merged; j-revg-barra27-x.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-glassmock: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-barra27: merged; j-revg-barra27-x.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-glassmock: done-awaiting-review; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-guia-celular (branch agente/205-guia-celular). Owner approved (PLANO-ECOSSISTEMA.md Q8): a short English guide "Set it up on your phone, the TV follows" — AIOManager / Xperience / Nuvio Configurator writ
 
@@ -8269,6 +8787,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-guia-celular: merged; No mapped r
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-guia-celular: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-guia-celular: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-guia-celular: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-guia-celular: merged; No mapped review verdict.
 
 ### # New row type: single wide hero card (Apple TV style)
 
@@ -8283,6 +8802,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-herocard: merged; j-revg-herocard
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-herocard: merged; j-revg-herocard-r3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-herocard: merged; j-revg-herocard-r3.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-herocard: merged; j-revg-herocard-r3.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-herocard: merged; j-revg-herocard-r3.log: OK. Newer fix log requires review.
 
 ### Review only, do not edit. Diff: /Volumes/ExternalSSD/tmp/rev/205-herocat.diff (branch agente/205-herocat in worktree /Volumes/ExternalSSD/nv-205-herocat; base integracao/2.0.5). Read code around changes as needed. Report findings P0-P2 with
 
@@ -8297,6 +8817,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-herocat: merged; j-rev-205-heroca
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-herocat: merged; j-rev-205-herocat.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-herocat: merged; j-rev-205-herocat.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-herocat: merged; j-rev-205-herocat.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-herocat: merged; j-rev-205-herocat.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-vidroqual, branch agente/205-vidroqual, at 0940ae7bf (integration after merging agente/205-homelerdo [region-only backdrop capture, e70adbf7a] and agente/205-naskhbold). Before these merges (22f3d22bb) t
 
@@ -8323,6 +8844,9 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidroqual: merged; No mapped revi
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-homelerdo: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-naskhbold: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidroqual: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-homelerdo: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-naskhbold: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidroqual: merged; No mapped review verdict.
 
 ### # Add missing i18n keys
 
@@ -8337,6 +8861,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-i18nfix: merged; No mapped review
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-i18nfix: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-i18nfix: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-i18nfix: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i18nfix: merged; No mapped review verdict.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-iconeauto (branch agente/205-iconeauto, from integracao/2.0.5). Nuvio Legacy. Follow ponytail full. Never push, never deploy. Commit in English.
 
@@ -8351,6 +8876,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-iconeauto: merged; No mapped revi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-iconeauto: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-iconeauto: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-iconeauto: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-iconeauto: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-imgres, branch agente/205-imgres.
 
@@ -8365,6 +8891,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-imgres: merged; j-rev-imgres-r2.l
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-imgres: merged; j-rev-imgres-r2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-imgres: merged; j-rev-imgres-r2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-imgres: merged; j-rev-imgres-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-imgres: merged; j-rev-imgres-r2.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-issues-novas (branch agente/205-issues-novas, from integracao/2.0.5 after the triage merge). Work only there. No network, no commit. GitHub data snapshot in .triagem/github-issues.json (body excerpt + l
 
@@ -8379,6 +8906,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-novas: merged; No mapped r
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-novas: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-novas: merged; No mapped review verdict.
 
 ### Same worktree /Volumes/ExternalSSD/nv-205-issues-triagem, continuing your triage (uncommitted changes there). Data still in .triagem/. You cannot commit and have no network.
 
@@ -8393,6 +8921,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-issues-triagem: merged; No mapped
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-issues-triagem: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-issues-triagem: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-issues-triagem: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-issues-triagem: merged; No mapped review verdict.
 
 ### # Independent review (final, before merge)
 
@@ -8407,6 +8936,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-legcontorno: merged; j-rev-legcon
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-legcontorno: merged; j-rev-legcontorno-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-legcontorno: merged; j-rev-legcontorno-r2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legcontorno: merged; j-rev-legcontorno-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legcontorno: merged; j-rev-legcontorno-r2.log: OK. Newer fix log requires review.
 
 ### # Fix review findings
 
@@ -8421,6 +8951,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-legpre: merged; j-revg-legpre.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-legpre: merged; j-revg-legpre.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-legpre: merged; j-revg-legpre.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-legpre: merged; j-revg-legpre.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-legpre: merged; j-revg-legpre.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-livetv2, branch agente/205-livetv2 (from integracao/2.0.5).
 
@@ -8440,6 +8971,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-livetv: merged; j-rev-livetv.log:
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-livetv2: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-livetv: merged; j-rev-livetv.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-livetv2: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-livetv: merged; j-rev-livetv.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-livetv2: merged; No mapped review verdict.
 
 ### # Independent review (final, before merge)
 
@@ -8454,6 +8987,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-m3umisto: merged; j-revg-m3umisto
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-m3umisto: merged; j-revg-m3umisto-z.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-m3umisto: merged; j-revg-m3umisto-z.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-m3umisto: merged; j-revg-m3umisto-z.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-m3umisto: merged; j-revg-m3umisto-z.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-mergemaster, branch agente/205-mergemaster: merge of origin/master (external PRs #527 #533 #535 #536 #537) into integracao/2.0.5 for release 2.0.6, plus follow-up fix/test commi
 
@@ -8468,6 +9002,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-mergemaster: merged; j-revg3-merg
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-mergemaster: merged; j-revg3-mergemaster.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-mergemaster: merged; j-revg3-mergemaster.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-mergemaster: merged; j-revg3-mergemaster.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-mergemaster: merged; j-revg3-mergemaster.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-notwebready, branch agente/205-notwebready vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/notwebready-rev2.diff. Original task: /Volumes/ExternalSSD/tmp/rev/p-205-notwe
 
@@ -8482,6 +9017,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-notwebready: merged; j-rev3-205-n
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-notwebready: merged; j-rev3-205-notwebready.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-notwebready: merged; j-rev3-205-notwebready.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notwebready: merged; j-rev3-205-notwebready.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notwebready: merged; j-rev3-205-notwebready.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -8501,6 +9037,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-novidades: merged; j-rev-novidade
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-novidades207: merged; j-rev-novidades207-b.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-novidades: merged; j-rev-novidades207-b.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-novidades207: merged; j-rev-novidades207-b.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-novidades: merged; j-rev-novidades207-b.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-novidades207: merged; j-rev-novidades207-b.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-painel (branch agente/205-painel, based on integracao/2.0.5). Work only there.
 
@@ -8515,6 +9053,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-painel: merged; No mapped review 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-painel: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-painel: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-painel: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-painel: merged; No mapped review verdict.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-painel-ui (branch agente/205-painel-ui). Work only there. You cannot commit; the coordinator commits.
 
@@ -8534,6 +9073,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-painel: merged; No mapped review 
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-painel-ui: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-painel: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-painel-ui: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-painel: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-painel-ui: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-perf206, branch agente/205-perf206 (from integracao/2.0.5). Owner reports FPS dropped noticeably in 2.0.6 vs 2.0.5 on TVs (Home, rows, topbar, Settings, title page). Task: find what costs frame time per
 
@@ -8548,6 +9089,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-perf206: merged; No mapped review
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-perf206: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-perf206: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-perf206: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-perf206: merged; No mapped review verdict.
 
 ### # Profile picker: remove bar in light style
 
@@ -8562,6 +9104,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-perfilbarra: merged; j-revg-perfi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-perfilbarra: merged; j-revg-perfilbarra.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-perfilbarra: merged; j-revg-perfilbarra.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-perfilbarra: merged; j-revg-perfilbarra.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-perfilbarra: merged; j-revg-perfilbarra.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-pfbotoes (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-botoes.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes, one test
 
@@ -8576,6 +9119,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pfbotoes: merged; No mapped revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pfbotoes: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pfbotoes: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pfbotoes: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pfbotoes: merged; No mapped review verdict.
 
 ### # Independent review (final, before merge)
 
@@ -8590,6 +9134,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pfcolordem: merged; j-revg-pfcolo
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pfcolordem: merged; j-revg-pfcolordem.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pfcolordem: merged; j-revg-pfcolordem.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pfcolordem: merged; j-revg-pfcolordem.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pfcolordem: merged; j-revg-pfcolordem.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-pfcoverflow2 (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-coverflow2.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes, o
 
@@ -8604,6 +9149,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pfcoverflow2: merged; j-revg-pfco
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pfcoverflow2: merged; j-revg-pfcoverflow2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pfcoverflow2: merged; j-revg-pfcoverflow2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pfcoverflow2: merged; j-revg-pfcoverflow2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pfcoverflow2: merged; j-revg-pfcoverflow2.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-pfdicatoque2 (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-dicatoque2.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes, o
 
@@ -8618,6 +9164,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pfdicatoque2: merged; No mapped r
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pfdicatoque2: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pfdicatoque2: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pfdicatoque2: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pfdicatoque2: merged; No mapped review verdict.
 
 ### # Independent review (final, before merge)
 
@@ -8632,6 +9179,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pfdvabre: merged; j-revg-pfdvabre
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pfdvabre: merged; j-revg-pfdvabre.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pfdvabre: merged; j-revg-pfdvabre.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pfdvabre: merged; j-revg-pfdvabre.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pfdvabre: merged; j-revg-pfdvabre.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-pfherocard (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-herocard.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes, one t
 
@@ -8646,6 +9194,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pfherocard: merged; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pfherocard: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pfherocard: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pfherocard: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pfherocard: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-pfi505 (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-i505.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes, one test FAIL
 
@@ -8660,6 +9209,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pfi505: merged; No mapped review 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pfi505: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pfi505: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pfi505: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pfi505: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-pfi509trailer (current branch). Fix every P0/P1 finding (and cheap P2) from the review log /Volumes/ExternalSSD/tmp/rev/j-revg-i509trailer.log (read it; it ends with VEREDITO: BLOQUEIA). Minimal changes,
 
@@ -8674,6 +9224,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pfi509trailer: merged; No mapped 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pfi509trailer: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pfi509trailer: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pfi509trailer: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pfi509trailer: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-pluginsresto, branch agente/205-pluginsresto. Finish the port of agente/plugins (14 commits; 23 of 28 new files already in). Missing: src/plugin_rodar.c and the screenshot harnesses plugins_folha_shot /
 
@@ -8694,6 +9245,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-pluginsresto: merged; j-revg-plug
 Snapshot 2026-10-17T20:49:37-03:00: agente/plugins: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pluginsresto: merged; j-revg-pluginsresto.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/plugins: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pluginsresto: merged; j-revg-pluginsresto.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/plugins: done-awaiting-review; No mapped review verdict.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-plx-arte (branch agente/205-plx-arte, base integracao/2.0.5). C app in src/.
 
@@ -8713,6 +9266,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx-arte: merged; j-rev-205-plx-arte.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx-arte: merged; j-rev-205-plx-arte.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx-arte: merged; j-rev-205-plx-arte.log: OK. Newer fix log requires review.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-plx-fps (branch agente/205-plx-fps). First: export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp.
 
@@ -8732,6 +9287,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx-fps: merged; j-revg-plx-fps.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx-fps: merged; j-revg-plx-fps.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx-fps: merged; j-revg-plx-fps.log: OK. Newer fix log requires review.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-plx-hls (branch agente/205-plx-hls). First: export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp.
 
@@ -8751,6 +9308,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx-hls: merged; j-rev3-205-plx-hls.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx-hls: merged; j-rev3-205-plx-hls.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx-hls: merged; j-rev3-205-plx-hls.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-plx-input (branch agente/205-plx-input). First: export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp.
 
@@ -8770,6 +9329,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx-input: merged; j-rev-205-plx-input-2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx-input: merged; j-rev-205-plx-input-2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx-input: merged; j-rev-205-plx-input-2.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-plx-legenda (branch agente/205-plx-legenda, base integracao/2.0.5). C app in src/.
 
@@ -8789,6 +9350,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx-legenda: merged; j-rev-205-plx-legenda-2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx-legenda: merged; j-rev-205-plx-legenda-2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx-legenda: merged; j-rev-205-plx-legenda-2.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-plx-recusa, branch agente/205-plx-recusa. export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp. No network.
 
@@ -8808,6 +9371,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-plx-recusa: merged; j-revc-plx-recusa.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-plx-recusa: merged; j-revc-plx-recusa.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx: merged; j-revg-plx-pgs-z.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-plx-recusa: merged; j-revc-plx-recusa.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -8822,6 +9387,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-poster34: merged; j-revg-poster34
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-poster34: merged; j-revg-poster34.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-poster34: merged; j-revg-poster34.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-poster34: merged; j-revg-poster34.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-poster34: merged; j-revg-poster34.log: OK.
 
 ### # RESUME: previous run died (disk full) before committing. Uncommitted work exists in this worktree (src/biblioteca.c, home.c, tex_cache.c/.h, tests/posterfluido.c). Review it, finish, test, commit. Do not discard it.
 
@@ -8836,6 +9402,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-posterfluido: merged; j-revg-post
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-posterfluido: merged; j-revg-posterfluido-f.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-posterfluido: merged; j-revg-posterfluido-f.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-posterfluido: merged; j-revg-posterfluido-f.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-posterfluido: merged; j-revg-posterfluido-f.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -8850,6 +9417,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-posterurl: merged; j-rev-posterur
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-posterurl: merged; j-rev-posterurl-r2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-posterurl: merged; j-rev-posterurl-r2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-posterurl: merged; j-rev-posterurl-r2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-posterurl: merged; j-rev-posterurl-r2.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-pr431c, branch agente/205-pr431c (at integracao/2.0.5 tip).
 
@@ -8869,6 +9437,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr431: merged; j-rev5-pr431.log: 
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr431c: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr431: merged; j-rev5-pr431.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr431c: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr431: merged; j-rev5-pr431.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr431c: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-pr491resto, branch agente/205-pr491resto. PR #491 from contributor (local branch pr-491, 44 commits). Already in: VC-1/MPEG-2 stay original (src/dts/dts_remux.c:230). Go commit by commit (git log integra
 
@@ -8888,6 +9458,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr491: merged; j-rev2-205-pr491.l
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr491resto: merged; j-revf-pr491resto.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr491: merged; j-rev2-205-pr491.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr491resto: merged; j-revf-pr491resto.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr491: merged; j-rev2-205-pr491.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr491resto: merged; j-revf-pr491resto.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-pr540c, branch agente/205-pr540c (at integracao/2.0.5 tip).
 
@@ -8907,6 +9479,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr540: merged; j-rev-pr540v2.log:
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr540c: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr540: merged; j-rev-pr540v2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr540c: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr540: merged; j-rev-pr540v2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr540c: merged; No mapped review verdict.
 
 ### # Independent review (final, before merge)
 
@@ -8921,6 +9495,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr541: merged; j-rev-pr541.log: O
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr541: merged; j-rev-pr541.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr541: merged; j-rev-pr541.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr541: merged; j-rev-pr541.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr541: merged; j-rev-pr541.log: OK.
 
 ### # Resolve merge conflict
 
@@ -8940,6 +9515,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr543: merged; j-rev-pr543.log: O
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr543b: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr543: merged; j-rev-pr543.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr543b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr543: merged; j-rev-pr543.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr543b: merged; No mapped review verdict.
 
 ### # Streaming pages: Ranking and Decades layouts still show the side poster — remove it
 
@@ -8954,6 +9531,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-rankdecadas: merged; j-revg-rankd
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-rankdecadas: merged; j-revg-rankdecadas.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-rankdecadas: merged; j-revg-rankdecadas.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-rankdecadas: merged; j-revg-rankdecadas.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-rankdecadas: merged; j-revg-rankdecadas.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -8968,6 +9546,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-relacionados: merged; j-revg-rela
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-relacionados: merged; j-revg-relacionados.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-relacionados: merged; j-revg-relacionados.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-relacionados: merged; j-revg-relacionados.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-relacionados: merged; j-revg-relacionados.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-respostas (branch agente/205-respostas). Nuvio Legacy (repo iqui27/nuvio-native-legacy). Never post to GitHub, never push: DRAFTS ONLY. Issues are ALREADY downloaded: /Volumes/ExternalSSD/tmp/rev/issues
 
@@ -8982,6 +9561,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-respostas: done-awaiting-review; 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-respostas: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-respostas: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-respostas: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-respostas: done-awaiting-review; No mapped review verdict.
 
 ### # Independent review (final, before merge)
 
@@ -8996,6 +9576,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-retido: merged; j-revg-retido.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-retido: merged; j-revg-retido.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-retido: merged; j-revg-retido.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-retido: merged; j-revg-retido.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-retido: merged; j-revg-retido.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-rust-mkvcore (branch agente/205-rust-mkvcore) vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/205-rust-mkvcore-r.diff. Plan: docs/plans/rust-mapa.md (phase 1: single mkv
 
@@ -9010,6 +9591,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-rust-mkvcore: merged; j-rev-205-r
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-rust-mkvcore: merged; j-rev-205-rust-mkvcore.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-rust-mkvcore: merged; j-rev-205-rust-mkvcore.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-rust-mkvcore: merged; j-rev-205-rust-mkvcore.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-rust-mkvcore: merged; j-rev-205-rust-mkvcore.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -9024,6 +9606,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-rustbp: merged; j-revf-rustbp.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-rustbp: merged; j-revf-rustbp.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-rustbp: merged; j-revf-rustbp.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-rustbp: merged; j-revf-rustbp.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-rustbp: merged; j-revf-rustbp.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-rustliga, branch agente/205-rustliga. export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp. No network installs beyond what the Rust toolchain already has; never push, deploy or install on devices.
 
@@ -9038,6 +9621,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-rustliga: merged; j-revc-rustliga
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-rustliga: merged; j-revc-rustliga.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-rustliga: merged; j-revc-rustliga.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-rustliga: merged; j-revc-rustliga.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-rustliga: merged; j-revc-rustliga.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-rustmapa (branch agente/205-rustmapa). First: export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp.
 
@@ -9052,6 +9636,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-rustmapa: merged; j-rev-205-rustm
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-rustmapa: merged; j-rev-205-rustmapa.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-rustmapa: merged; j-rev-205-rustmapa.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-rustmapa: merged; j-rev-205-rustmapa.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-rustmapa: merged; j-rev-205-rustmapa.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-s18medidor (branch agente/205-s18medidor, base integracao/2.0.5). C app.
 
@@ -9066,6 +9651,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-s18medidor: merged; j-rev-205-s18
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-s18medidor: merged; j-rev-205-s18medidor-2.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-s18medidor: merged; j-rev-205-s18medidor-2.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-s18medidor: merged; j-rev-205-s18medidor-2.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-s18medidor: merged; j-rev-205-s18medidor-2.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-205-s5loading (branch agente/205-s5loading, base integracao/2.0.5). C app, TV UI.
 
@@ -9080,6 +9666,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-s5loading: merged; j-rev-205-s5lo
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-s5loading: merged; j-rev-205-s5loading.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-s5loading: merged; j-rev-205-s5loading.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-s5loading: merged; j-rev-205-s5loading.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-s5loading: merged; j-rev-205-s5loading.log: OK.
 
 ### # Fix review findings
 
@@ -9094,6 +9681,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-sanitizers: merged; j-revg-saniti
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-sanitizers: merged; j-revg-sanitizers.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-sanitizers: merged; j-revg-sanitizers.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-sanitizers: merged; j-revg-sanitizers.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-sanitizers: merged; j-revg-sanitizers.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -9113,6 +9701,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-segurar: merged; No mapped review
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-segurarcc: merged; j-revg-segurarcc.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-segurar: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-segurarcc: merged; j-revg-segurarcc.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-segurar: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-segurarcc: merged; j-revg-segurarcc.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-selovisto, branch agente/205-selovisto (from integracao/2.0.5).
 
@@ -9127,6 +9717,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-selovisto: merged; j-revg-selovis
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-selovisto: merged; j-revg-selovisto.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-selovisto: merged; j-revg-selovisto.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-selovisto: merged; j-revg-selovisto.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-selovisto: merged; j-revg-selovisto.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-semfosco, branch agente/205-semfosco (from integracao/2.0.5). Nuvio Legacy, C/SDL2/GLES2.
 
@@ -9141,6 +9732,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-semfosco: merged; No mapped revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-semfosco: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-semfosco: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-semfosco: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-semfosco: merged; No mapped review verdict.
 
 ### # Independent review (final, before merge)
 
@@ -9160,6 +9752,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-shuffle: merged; j-revg-shuffle.l
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-shuffledica: merged; j-rev-shuffledica.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-shuffle: merged; j-revg-shuffle.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-shuffledica: merged; j-rev-shuffledica.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-shuffle: merged; j-revg-shuffle.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-shuffledica: merged; j-rev-shuffledica.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -9174,6 +9768,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-sidebarat: merged; j-revg-sidebar
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-sidebarat: merged; j-revg-sidebarat.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-sidebarat: merged; j-revg-sidebarat.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-sidebarat: merged; j-revg-sidebarat.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-sidebarat: merged; j-revg-sidebarat.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-simklanime (branch agente/205-simklanime).
 
@@ -9188,6 +9783,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-simklanime: merged; j-rev-simklan
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-simklanime: merged; j-rev-simklanime.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-simklanime: merged; j-rev-simklanime.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-simklanime: merged; j-rev-simklanime.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-simklanime: merged; j-rev-simklanime.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-skip1 (branch agente/205-skip1), diff vs integracao/2.0.5 at /Volumes/ExternalSSD/tmp/rev/skip1-r.diff. Skip-intro coverage (fill missing marker types from next source, provenan
 
@@ -9207,6 +9803,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-skip: merged; j-rev3-skip1.log: O
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-skip1: merged; j-rev3-skip1.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-skip: merged; j-rev3-skip1.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-skip1: merged; j-rev3-skip1.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-skip: merged; j-rev3-skip1.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-skip1: merged; j-rev3-skip1.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-teclasch, branch agente/205-teclasch vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/teclasch-rev2.diff. Original task: /Volumes/ExternalSSD/tmp/rev/p-205-teclasch.md. E
 
@@ -9221,6 +9819,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-teclasch: merged; j-revc-teclasch
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-teclasch: merged; j-revc-teclasch.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-teclasch: merged; j-revc-teclasch.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-teclasch: merged; j-revc-teclasch.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-teclasch: merged; j-revc-teclasch.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-testbase, branch agente/205-testbase (base integracao/2.0.5). Nuvio Legacy native TV app (C).
 
@@ -9235,6 +9834,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-testbase: merged; j-rev-testbase.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-testbase: merged; j-rev-testbase.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-testbase: merged; j-rev-testbase.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-testbase: merged; j-rev-testbase.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-testbase: merged; j-rev-testbase.log: OK. Newer fix log requires review.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-testbase2, branch agente/205-testbase2 (base integracao/2.0.5). Nuvio Legacy native TV app (C).
 
@@ -9254,6 +9854,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-testbase: merged; j-rev-testbase.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-testbase2: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-testbase: merged; j-rev-testbase.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-testbase2: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-testbase: merged; j-rev-testbase.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-testbase2: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-testbase3, branch agente/205-testbase3 (base integracao/2.0.5). Nuvio Legacy native TV app (C).
 
@@ -9273,6 +9875,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-testbase: merged; j-rev-testbase.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-testbase3: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-testbase: merged; j-rev-testbase.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-testbase3: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-testbase: merged; j-rev-testbase.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-testbase3: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-testbase4, branch agente/205-testbase4 (from integracao/2.0.5). These tests fail on the integration branch: tests/cwdesmarcado.sh tests/cwdup244.sh tests/cwleg.sh tests/cwlocal.sh tests/cwordem.sh tests/
 
@@ -9292,6 +9896,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-testbase: merged; j-rev-testbase.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-testbase4: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-testbase: merged; j-rev-testbase.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-testbase4: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-testbase: merged; j-rev-testbase.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-testbase4: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-textoescala, branch agente/205-textoescala. Follow ponytail full. Fix these review findings (rev4), each with a FAIL->PASS test through the real drawing/runtime path. Reviewer tool limit is 60 s per comm
 
@@ -9307,6 +9913,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-textoescala: merged; No mapped re
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-textoescala: merged; rev8-textoescala.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-textoescala: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-textoescala: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-textoescala: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-tokvencido (branch agente/205-tokvencido). Follow ponytail full. No push. Commit English.
 
@@ -9321,6 +9928,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-tokvencido: merged; j-rev2-tokven
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tokvencido: merged; j-rev2-tokvencido.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tokvencido: merged; j-rev2-tokvencido.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tokvencido: merged; j-rev2-tokvencido.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tokvencido: merged; j-rev2-tokvencido.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-tpkfim, branch agente/205-tpkfim. Fix the review findings below (round 2 of review). Add a bounded wait: if the episode list request finished (failed, timeout, or empty) or a max deadline passes (e.g. 8
 
@@ -9335,6 +9943,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkfim: merged; j-rev3-tpkfim.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-tpkui, branch agente/205-tpkui, base integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/tpkui.diff. Fixes: #407 (UP at top of title page no longer opens Saved/Alerts panel), #
 
@@ -9349,6 +9958,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: 
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-tpkui: merged; j-rev5-tpkui.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -9363,6 +9973,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-trailerexp: merged; j-rev-trailer
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-trailerexp: merged; j-rev-trailerexp.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-trailerexp: merged; j-rev-trailerexp.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-trailerexp: merged; j-rev-trailerexp.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-trailerexp: merged; j-rev-trailerexp.log: OK.
 
 ### # Independent review (final, before merge)
 
@@ -9377,6 +9988,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-trailerleg: merged; j-rev-trailer
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-trailerleg: merged; j-rev-trailerleg.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-trailerleg: merged; j-rev-trailerleg.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-trailerleg: merged; j-rev-trailerleg.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-trailerleg: merged; j-rev-trailerleg.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-traktcw, branch agente/205-traktcw (from integracao/2.0.5).
 
@@ -9391,6 +10003,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-traktcw: merged; j-revf-traktcw.l
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-traktcw: merged; j-revf-traktcw.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-traktcw: merged; j-revf-traktcw.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-traktcw: merged; j-revf-traktcw.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-traktcw: merged; j-revf-traktcw.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-traktvidro, branch agente/205-traktvidro vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/traktvidro.diff. Original task prompt (owner request + constraints): /Volumes/Ex
 
@@ -9405,6 +10018,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-traktvidro: merged; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-traktvidro: merged; rev2-traktvidro.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-traktvidro: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-traktvidro: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-traktvidro: merged; No mapped review verdict.
 
 ### # Dynamic UI sizing: text and components look right on every screen size (all platforms)
 
@@ -9419,6 +10033,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-uidinamica: merged; j-revg-uidina
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-uidinamica: merged; j-revg-uidinamica.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-uidinamica: merged; j-revg-uidinamica.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-uidinamica: merged; j-revg-uidinamica.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-uidinamica: merged; j-revg-uidinamica.log: OK.
 
 ### # Resolve merge conflict
 
@@ -9433,6 +10048,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-usbmodal: merged; j-rev-usbmodal.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-usbmodal: merged; j-rev-usbmodal.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-usbmodal: merged; j-rev-usbmodal.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-usbmodal: merged; j-rev-usbmodal.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-usbmodal: merged; j-rev-usbmodal.log: OK. Newer fix log requires review.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-usbtizen, branch agente/205-usbtizen. P2P cache on USB drive: webOS and Android TV probe USB roots (src/p2pmotor.c usbBases includes /opt/media/USBDriveA1). Samsung .tpk manifests (tizen-tpk/*/tizen-mani
 
@@ -9447,6 +10063,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-usbtizen: merged; j-rev-usbtizen.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-usbtizen: merged; j-rev-usbtizen.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-usbtizen: merged; j-rev-usbtizen.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-usbtizen: merged; j-rev-usbtizen.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-usbtizen: merged; j-rev-usbtizen.log: OK.
 
 ### # Resolve merge conflict
 
@@ -9461,6 +10078,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-uxinteracao: merged; j-rev-uxinte
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-uxinteracao: merged; j-rev-uxinteracao.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-uxinteracao: merged; j-rev-uxinteracao.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-uxinteracao: merged; j-rev-uxinteracao.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-uxinteracao: merged; j-rev-uxinteracao.log: OK. Newer fix log requires review.
 
 ### # Independent review (final, before merge)
 
@@ -9475,6 +10093,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-vidrodetalhe: merged; j-rev-vidro
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-vidrodetalhe: merged; j-rev-vidrodetalhe.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidrodetalhe: merged; j-rev-vidrodetalhe.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidrodetalhe: merged; j-rev-vidrodetalhe.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidrodetalhe: merged; j-rev-vidrodetalhe.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-21-21-legux (branch: see `git branch --show-current`). Base: integracao/2.1.
 
@@ -9489,6 +10108,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/21-21-legux: done-awaiting-review; No
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-21-legux: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-21-legux: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-21-legux: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-21-legux: done-awaiting-review; No mapped review verdict.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-21-biblio, branch agente/21-biblio, base integracao/2.1. Diff: /Volumes/ExternalSSD/tmp/rev/21-biblio.diff. 2.1 screen: Library "Origem" filter (Todas/Trakt/Simkl/Conta Nuvio) per d
 
@@ -9503,6 +10123,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/21-biblio: review-OK; j-rev3-21-bibli
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-biblio: review-OK; j-rev3-21-biblio.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-biblio: review-OK; j-rev3-21-biblio.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-biblio: review-OK; j-rev3-21-biblio.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-biblio: review-OK; j-rev3-21-biblio.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-21-comecar, branch agente/21-comecar. Fix finding 2 below (webOS Back repeat). Do not rely on SDL repeat/timestamp for Back: either keep the real repeat flag/timestamp when main.c translates the LG Back scan
 
@@ -9517,6 +10138,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/21-comecar: review-OK; j-rev3-21-come
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-comecar: review-OK; j-rev3-21-comecar.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-comecar: review-OK; j-rev3-21-comecar.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-comecar: review-OK; j-rev3-21-comecar.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-comecar: review-OK; j-rev3-21-comecar.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-21-conquistas, branch agente/21-conquistas. Review only, do not edit any tracked file.
 
@@ -9531,6 +10153,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/21-conquistas: needs review; j-rev3-2
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-conquistas: needs review; j-rev3-21-conquistas.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-conquistas: needs review; j-rev3-21-conquistas.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-conquistas: needs review; j-rev3-21-conquistas.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-conquistas: needs review; j-rev3-21-conquistas.log: OK. Newer fix log requires review.
 
 ### Worktree: /Volumes/ExternalSSD/nv-21-filmo-impl (branch agente/21-filmo-impl, base integracao/2.1). C app in src/. TV UI (D-pad, focus, 10-foot).
 
@@ -9545,6 +10168,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/21-filmo-impl: running; j-rev-21-film
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-filmo-impl: running; j-rev-21-filmo-impl.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-filmo-impl: running; j-rev-21-filmo-impl.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-filmo-impl: running; j-rev-21-filmo-impl.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-filmo-impl: running; j-rev-21-filmo-impl.log: BLOQUEIA. Newer fix log requires review.
 
 ### Worktree: /Volumes/ExternalSSD/nv-21-filmo-impl (branch agente/21-filmo-impl, base integracao/2.1). C app in src/. TV UI (D-pad, focus, 10-foot).
 
@@ -9564,6 +10188,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/21-filmo-impl: running; j-rev-21-film
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-filmografia: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-filmo-impl: running; j-rev-21-filmo-impl.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-filmografia: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-filmo-impl: running; j-rev-21-filmo-impl.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-filmografia: done-awaiting-review; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-21-glance-impl, branch agente/21-glance-impl (target integracao/2.1). export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp. First merge integracao/2.1 into the branch (resolve, keep both sides). Fix every P0-P2 fin
 
@@ -9578,6 +10204,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/21-glance-impl: running; j-rev-21-gla
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-glance-impl: running; j-rev-21-glance-impl.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-glance-impl: running; j-rev-21-glance-impl.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-glance-impl: running; j-rev-21-glance-impl.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-glance-impl: running; j-rev-21-glance-impl.log: BLOQUEIA. Newer fix log requires review.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-21-home, branch agente/21-home, base integracao/2.1. Diff: /Volumes/ExternalSSD/tmp/rev/21-home.diff. 2.1 Home screen per design/2.1 mockup and NOTAS.md: Continue/Upcoming under the
 
@@ -9592,6 +10219,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/21-home: review-OK; j-rev3-21-home.lo
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-home: review-OK; j-rev3-21-home.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-home: review-OK; j-rev3-21-home.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-home: review-OK; j-rev3-21-home.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-home: review-OK; j-rev3-21-home.log: OK.
 
 ### # Resolve merge conflict
 
@@ -9606,6 +10234,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/21-listas: needs review; j-rev4-21-li
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-listas: needs review; j-rev4-21-listas.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-listas: needs review; j-rev4-21-listas.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-listas: needs review; j-rev4-21-listas.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-listas: needs review; j-rev4-21-listas.log: OK. Newer fix log requires review.
 
 ### Worktree /Volumes/ExternalSSD/nv-21-resolver, branch agente/21-resolver (base integracao/2.1). Nuvio Legacy native TV app (C, SDL/GL; webOS, Android TV, Samsung .tpk). This is the 2.1 redesign; it must NOT destabilize 2.0.6.
 
@@ -9620,6 +10249,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/21-resolver: review-OK; j-rev3-21-res
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-resolver: review-OK; j-rev3-21-resolver.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-resolver: review-OK; j-rev3-21-resolver.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-resolver: review-OK; j-rev3-21-resolver.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-resolver: review-OK; j-rev3-21-resolver.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-21-rewatch-impl (branch agente/21-rewatch-impl, base integracao/2.1). C app in src/. TV UI (D-pad, focus, 10-foot).
 
@@ -9634,6 +10264,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/21-rewatch-impl: running; j-rev-21-re
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-rewatch-impl: running; j-rev-21-rewatch-impl.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-rewatch-impl: running; j-rev-21-rewatch-impl.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-rewatch-impl: running; j-rev-21-rewatch-impl.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-rewatch-impl: running; j-rev-21-rewatch-impl.log: BLOQUEIA. Newer fix log requires review.
 
 ### Worktree /Volumes/ExternalSSD/nv-21-sync205, branch agente/21-sync205 (base integracao/2.1). integracao/2.1 is 89 commits behind integracao/2.0.5 (the 2.0.6 fixes). Task: git merge integracao/2.0.5 into this branch and resolve every conflic
 
@@ -9648,6 +10279,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/21-sync205: done-awaiting-review; No 
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-sync205: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-sync205: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-sync205: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-sync205: done-awaiting-review; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-21-titulo, branch agente/21-titulo. Round 4 review fix (round-3 fix 8907bcf4 accepted but over-resets). Finding:
 
@@ -9662,6 +10294,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/21-titulo: review-OK; j-rev5-21-titul
 Snapshot 2026-10-17T19:49:50-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-titulo: review-OK; j-rev5-21-titulo.log: OK.
 
 ### Worktree: /Volumes/ExternalSSD/nv-21-rewatch-impl (branch agente/21-rewatch-impl, base integracao/2.1). C app in src/. TV UI (D-pad, focus, 10-foot).
 
@@ -9681,6 +10314,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/21-rewatch-impl: running; j-rev-21-re
 Snapshot 2026-10-17T20:49:37-03:00: agente/21-trakt-ideias: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-rewatch-impl: running; j-rev-21-rewatch-impl.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/21-trakt-ideias: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-rewatch-impl: running; j-rev-21-rewatch-impl.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/21-trakt-ideias: done-awaiting-review; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -9700,6 +10335,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-tr
 Snapshot 2026-10-17T20:49:37-03:00: agente/ajustesvisual: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/ajustesvisual: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/ajustesvisual: done-awaiting-review; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -9719,6 +10356,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-tr
 Snapshot 2026-10-17T20:49:37-03:00: agente/biblioteca-ilimitada-plano: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/biblioteca-ilimitada-plano: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/biblioteca-ilimitada-plano: done-awaiting-review; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -9738,6 +10377,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-tr
 Snapshot 2026-10-17T20:49:37-03:00: agente/codex-contexto: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/codex-contexto: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/codex-contexto: done-awaiting-review; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -9757,6 +10398,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-tr
 Snapshot 2026-10-17T20:49:37-03:00: agente/guiaunicode: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/guiaunicode: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/guiaunicode: done-awaiting-review; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -9776,6 +10419,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-tr
 Snapshot 2026-10-17T20:49:37-03:00: agente/icones: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/icones: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/icones: done-awaiting-review; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -9795,6 +10440,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-tr
 Snapshot 2026-10-17T20:49:37-03:00: agente/p2p: needs review; j-rev3-205-p2p486.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/p2p: needs review; j-rev3-205-p2p486.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/p2p: needs review; j-rev3-205-p2p486.log: OK. Newer fix log requires review.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -9814,6 +10461,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-tr
 Snapshot 2026-10-17T20:49:37-03:00: agente/pr259-merge: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/pr259-merge: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/pr259-merge: done-awaiting-review; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -9833,6 +10482,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-tr
 Snapshot 2026-10-17T20:49:37-03:00: agente/rastreio: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/rastreio: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/rastreio: done-awaiting-review; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem-velhas (branch agente/205-triagem-velhas). Read-only triage: do NOT merge or cherry-pick anything, do not edit src. No network.
 
@@ -9852,6 +10503,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem-velhas: merged; j-revg-tr
 Snapshot 2026-10-17T20:49:37-03:00: agente/refatoracao-plano: done-awaiting-review; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
 Snapshot 2026-10-17T20:52:34-03:00: agente/refatoracao-plano: done-awaiting-review; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem-velhas: merged; j-revg-triagem-velhas-w.log: OK.
+Snapshot 2026-10-18T02:48:06-03:00: agente/refatoracao-plano: done-awaiting-review; No mapped review verdict.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-pr526-v3, branch pr/526-v3 = external PR #526 head plus our fix commits. Diff vs master: /Volumes/ExternalSSD/tmp/rev/prs/526-v3.diff. Previous blocking review: /Volumes/Externa
 
@@ -10058,6 +10711,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-triagem3: merged; No mapped revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-triagem3: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-triagem3: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-triagem3: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-triagem3: merged; No mapped review verdict.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-buscateclado, branch agente/205-buscateclado vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/buscateclado.diff. Original task prompt (owner request + constraints): /Volu
 
@@ -10071,6 +10725,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-buscateclado: merged; No mapped r
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-buscateclado: merged; rev-buscateclado.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-buscateclado: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-buscateclado: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-buscateclado: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-escalafixa, branch agente/205-escalafixa. TCL TV, Home, UI text scale 85%: /Volumes/ExternalSSD/tmp/rev/escala85-home.png.
 
@@ -10089,6 +10744,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-cortefileira: merged; No mapped r
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-escalafixa: running; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-cortefileira: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-escalafixa: running; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-cortefileira: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-escalafixa: running; No mapped review verdict.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-ctxbonito, branch agente/205-ctxbonito vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/ctxbonito.diff. Original task prompt (owner request + constraints): /Volumes/Exter
 
@@ -10102,19 +10759,21 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-ctxbonito: merged; No mapped revi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-ctxbonito: merged; rev-ctxbonito.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-ctxbonito: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-ctxbonito: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-ctxbonito: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-detalheb2, branch agente/205-detalheb2. Title detail page glass redesign, owner-approved mockup B2 + row margin setting.
 
 - Plataforma: See task prompt
-- Status: em_job
+- Status: integrada
 - Release: 2.0.7
-- Conserto: agente/205-detalheb2
-- Próximo passo: Wait for job; review latest commit.
+- Conserto: agente/205-detalheb2; agente/205-detalheb2 (merge e0c9ba77b)
+- Próximo passo: Verify merged result; build/install and check device.
 - Notas: Snapshot 2026-10-17T17:49:38-03:00: agente/205-detalheb2: merged; No mapped review verdict.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-detalheb2: merged; No mapped review verdict.
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-detalheb2: BLOQUEIA; revm-detalheb2.log: BLOQUEIA.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-detalheb2: running; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-detalheb2: running; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-detalheb2: merged; No mapped review verdict.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-epsubida, branch agente/205-epsubida vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/epsubida.diff. Original task prompt (owner request + constraints): /Volumes/External
 
@@ -10128,6 +10787,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-epsubida: merged; No mapped revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-epsubida: merged; rev-epsubida.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-epsubida: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-epsubida: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-epsubida: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-focoacento, branch agente/205-focoacento. Owner: "vamos colocar um toggle e testar a opcao do accent tb aparecer nos objetos em foco ao inves da barra cinza, mas tem que ser bonito e nao quebrar o compon
 
@@ -10141,6 +10801,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-focoacento: done-awaiting-review;
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-focoacento: merged; rev2-focoacento.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-focoacento: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-focoacento: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-focoacento: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-fontesombra, branch agente/205-fontesombra. Sources sidebar/sheet (title detail page and player "Sources", opens from the clock island since fbe06f5e7).
 
@@ -10154,13 +10815,14 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-fontesombra: done-awaiting-review
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-fontesombra: merged; revn-fontesombra.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-fontesombra: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-fontesombra: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-fontesombra: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-notas207b, branch agente/205-notas207b. docs/releases/2.0.7/NOTAS.md was written at e275de18a (16 Oct); since then 128 non-map commits and ~40 merges landed (git log --no-merges e275de18a..HEAD, git log
 
 - Plataforma: See task prompt
 - Status: integrada
 - Release: 2.0.7
-- Conserto: agente/205-notas207b (merge b89d485c1); agente/205-notas2
+- Conserto: agente/205-notas207b (merge b89d485c1); agente/205-notas2; agente/205-notas207b
 - Próximo passo: Verify merged result; build/install and check device.
 - Notas: Snapshot 2026-10-17T17:49:38-03:00: agente/205-notas207b: merged; No mapped review verdict.
 Snapshot 2026-10-17T17:50:20-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
@@ -10171,6 +10833,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-notas2: merged; j-revg-notas2.log
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-notas207b: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-notas207b: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-notas207b: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-painelleg, branch agente/205-painelleg. Player subtitle panel (top-right glass panel: header "Spider-Man: Into the Spider-Verse | 17:22 | ends at 19:18", then small caps title "SPIDER-MAN: INTO THE SPIDE
 
@@ -10188,6 +10852,8 @@ Snapshot 2026-10-17T20:49:37-03:00: agente/205-painel: merged; No mapped review 
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-painelleg: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-painel: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-painelleg: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-painel: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-painelleg: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-playericones, branch agente/205-playericones. Fix the review findings below. Owner wants ALL player buttons transparent glass (also pill buttons: posplay next-episode card, error island, PiP close) with
 
@@ -10201,6 +10867,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-playericones: done-awaiting-revie
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-playericones: merged; revn-playericones.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-playericones: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-playericones: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-playericones: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-pr567port, branch agente/205-pr567port (from integracao/2.0.5). PR #567 by Namer03 is fetched locally as branch pr/567 (merge-base with us: 0abdc40c3). It is too big to merge (360 files, +33k, old base,
 
@@ -10214,6 +10881,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-pr567port: running; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-pr567port: BLOQUEIA; revm-pr567port.log: BLOQUEIA.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-pr567port: running; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-pr567port: running; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-pr567port: running; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-rebuffer, branch agente/205-rebuffer. Android TV (TCL, Media3 player NvPlayer).
 
@@ -10227,6 +10895,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-rebuffer: done-awaiting-review; N
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-rebuffer: merged; rev2-rebuffer.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-rebuffer: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-rebuffer: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-rebuffer: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-stagefoco, branch agente/205-stagefoco. UI feature on the Home row style where the focused poster grows (the "Stage"/big-focus poster row; screenshot /Volumes/ExternalSSD/tmp/rev/stage-antes.png, row "La
 
@@ -10240,6 +10909,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-stagefoco: merged; No mapped revi
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-stagefoco: merged; rev-stagefoco.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-stagefoco: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-stagefoco: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-stagefoco: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-testesass, branch agente/205-testesass (from integracao/2.0.5).
 
@@ -10253,6 +10923,7 @@ Snapshot 2026-10-17T17:50:20-03:00: agente/205-testesass: running; No mapped rev
 Snapshot 2026-10-17T19:49:50-03:00: agente/205-testesass: review-OK; j-revg-testesass-r4.log: OK.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-testesass: merged; j-revg-testesass-r4.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-testesass: merged; j-revg-testesass-r4.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-testesass: merged; j-revg-testesass-r4.log: OK. Newer fix log requires review.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-pr586, branch pr/586 (community PR #586 by Tolu-Walop-E, "fix(android): seeking to the very end no longer loops connection dropped") vs integracao/2.0.5. Diff: /Volumes/External
 
@@ -10297,6 +10968,7 @@ Snapshot 2026-10-17T20:49:37-03:00: pr/593: done-awaiting-review; No mapped revi
 - Notas: Snapshot 2026-10-17T19:49:50-03:00: agente/205-heroisA: BLOQUEIA; revm-heroisA.log: BLOQUEIA.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-heroisA: running; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-heroisA: running; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-heroisA: running; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-stageb (branch agente/205-stageb). Implement variant B of the home Stage row redesign. The owner picked "B do mockup".
 
@@ -10308,6 +10980,7 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-heroisA: running; No mapped revie
 - Notas: Snapshot 2026-10-17T19:49:50-03:00: agente/205-stageb: BLOQUEIA; revm-stageb.log: BLOQUEIA.
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-stageb: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-stageb: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-stageb: merged; No mapped review verdict.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-frostpisca, branch agente/205-frostpisca (already contains agente/205-vidroc9, the C9 glass cache fix).
 
@@ -10320,6 +10993,8 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-stageb: merged; No mapped review 
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-vidroc9: merged; j-revg-vidroc9-b.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-frostpisca: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidroc9: merged; j-revg-vidroc9-b.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-frostpisca: running; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-vidroc9: merged; j-revg-vidroc9-b.log: OK. Newer fix log requires review.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-mkvass12f, branch agente/205-mkvass12f. tests/mkvass.sh is still flaky after agente/205-testesass: case [12f] 'servidor lento: o video sai no teto (4000 ms)' passes its two checks then the run ends FALHO
 
@@ -10332,3 +11007,14 @@ Snapshot 2026-10-17T20:52:34-03:00: agente/205-vidroc9: merged; j-revg-vidroc9-b
 Snapshot 2026-10-17T20:49:37-03:00: agente/205-testesass: merged; j-revg-testesass-r4.log: OK. Newer fix log requires review.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-mkvass12f: merged; No mapped review verdict.
 Snapshot 2026-10-17T20:52:34-03:00: agente/205-testesass: merged; j-revg-testesass-r4.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-mkvass12f: running; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-testesass: merged; j-revg-testesass-r4.log: OK. Newer fix log requires review.
+
+### Public Discord activity artwork
+
+- Plataforma: See task prompt
+- Status: integrada
+- Release: 2.0.7
+- Conserto: agente/205-discordarte (merge e476d1707)
+- Próximo passo: Verify merged result; build/install and check device.
+- Notas: Snapshot 2026-10-18T02:48:06-03:00: agente/205-discordarte: merged; No mapped review verdict.
