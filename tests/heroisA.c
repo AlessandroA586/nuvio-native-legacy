@@ -7,7 +7,11 @@ static GLuint headingTexture;
 static int overlayProbe;
 static float detailProgress;
 static float maskAlpha;
-static int maskClears;
+static int maskClears, captionPasses;
+static void recordMini(GfxMini *m, float x, float y, float scale) {
+  captionPasses++;
+  gfx_mini_comecar(m, x, y, scale);
+}
 static void recordClear(GLbitfield mask) { maskClears++; glClear(mask); }
 static float recordDetail(void) { return detailProgress; }
 static const char *heading;
@@ -52,6 +56,7 @@ static void recordClip(float x, float y, float w, float h) {
   }
   gfx_recorte(x, y, w, h);
 }
+#define gfx_mini_comecar recordMini
 #define glClear recordClear
 #define gfx_recorte recordClip
 #define txt_linha_corta recordLine
@@ -63,6 +68,7 @@ static void recordClip(float x, float y, float w, float h) {
 #define HOME_SOURCE "../src/home.c"
 #endif
 #include HOME_SOURCE
+#undef gfx_mini_comecar
 #undef glClear
 #undef gfx_recorte
 #undef txt_linha_corta
@@ -76,7 +82,7 @@ static void recordClip(float x, float y, float w, float h) {
 
 static SDL_Window *window;
 static CatItem items[12];
-static int budgetOnly;
+static int budgetOnly, budgetScroll;
 static void setup(int split, int glass) {
   char path[900];
   snprintf(path, sizeof path, "%s/ajustes.txt", getenv("NUVIO_DADOS"));
@@ -142,6 +148,11 @@ static void capture(const char *prefix, int split, int glass, float scale) {
   glGenQueries(1, &query);
   for (int frame = 0; frame < 80; frame++) {
     renderTime = 1000 + frame * 16;
+    if (budgetScroll) {
+      int phase=(frame/8)%8;
+      foco.coluna=phase <= 4 ? phase : 8-phase;
+      scrollX[0]+=(alvoScrollFil(0,foco.coluna,0,0)-scrollX[0])*0.35f;
+    }
     SDL_PumpEvents(); tex_bombear(8); tex_novo_quadro(); txt_novo_quadro(); gfx_novo_quadro();
     // Include clear, shared shaders, copies and blur passes in frame cost.
     glBeginQuery(GL_TIME_ELAPSED_EXT, query);
@@ -175,10 +186,10 @@ static void capture(const char *prefix, int split, int glass, float scale) {
     samples[j]=ns;
   }
   if (scale == 1.0f)
-    printf("BUDGET %d %d %d %.9f %.9f %.6f\n", split, glass, gfx_n_rect, gfx_fill, gfx_fill_gpu,
+    printf("BUDGET %d %d %d %d %.9f %.9f %.6f\n", split, glass, budgetScroll, gfx_n_rect, gfx_fill, gfx_fill_gpu,
            (samples[31]+samples[32])/2000000.0);
 #ifndef HERO_BASELINE
-  if (split) assert(gfx_n_rect <= 31);
+  assert(captionPasses == 0);
 #endif
   TXT_FIM();
 }
@@ -198,8 +209,8 @@ int main(int argc,char **argv) {
     snprintf(items[i].imdb,sizeof items[i].imdb,"tt900%04d",i);
     snprintf(items[i].tipo,sizeof items[i].tipo,"movie");
     snprintf(items[i].titulo,sizeof items[i].titulo,"The Further");
-    snprintf(items[i].meta,sizeof items[i].meta,"2025 · 1h 47min");
-    snprintf(items[i].genero,sizeof items[i].genero,"Horror, Mystery"); items[i].nota=68;
+    snprintf(items[i].meta,sizeof items[i].meta,"%d · 1h 47min",2025-i);
+    snprintf(items[i].genero,sizeof items[i].genero,"Horror, Mystery"); items[i].nota=68+i;
     snprintf(items[i].sinopse,sizeof items[i].sinopse,"Gemma, a young mother raising her daughter in the house she grew up in, discovers she can travel into The Further, where she possesses an ability to bring what lives there back to the real world.");
     snprintf(items[i].backdrop,sizeof items[i].backdrop,"deploy/app/art/%02d.jpg",i);
     snprintf(items[i].poster,sizeof items[i].poster,"deploy/app/art/poster/%02d.jpg",i);
@@ -218,10 +229,45 @@ int main(int argc,char **argv) {
     SDL_Delay(4);
   }
   assert(tex_obter_larg(items[0].backdrop,1744));
+#ifndef HERO_BASELINE
+  if (argc>1 && !strcmp(argv[1],"--captions")) {
+    setup(1,0); TXT_INI();
+    // Cold, distinct captions exceed the old four-slot cache in both directions.
+    for (int direction=0;direction<2;direction++) for (int i=0;i<12;i++) {
+      int col=direction ? 11-i : i;
+      snprintf(items[col].meta,sizeof items[col].meta,"%d · 1h 47min",1990+col);
+      items[col].nota=60+col;
+      desenhaRotuloCard(&items[col],FILEIRA_HEROI_DIVIDIDO,0,1,100,100,260,390,0);
+      assert(captionPasses == 0);
+      assert(glGetError() == GL_NO_ERROR);
+    }
+    TXT_FIM(); puts("PASS cold and scrolling captions: zero offscreen passes");
+    SDL_Quit(); return 0;
+  }
+  if (argc>1 && !strcmp(argv[1],"--card-shader")) {
+    GLint program;
+    gfx_card_heroi_veu_atual[3]=0;
+    gfx_rect((GfxRect){0,0,500,300},tex_obter_larg(items[0].backdrop,1744),
+             GFX_CARD,0,0,0,0.04f,0,0,0,1);
+    glGetIntegerv(GL_CURRENT_PROGRAM,&program);
+    assert(glGetUniformLocation(program,"uHeroiVeu") < 0);
+    gfx_card_heroi_veu_atual[3]=0.95f;
+    gfx_rect((GfxRect){0,0,500,300},tex_obter_larg(items[0].backdrop,1744),
+             GFX_CARD,0,0,0,0.04f,0,0,0,1);
+    glGetIntegerv(GL_CURRENT_PROGRAM,&program);
+    assert(glGetUniformLocation(program,"uHeroiVeu") >= 0);
+    puts("PASS Hero tint isolated from ordinary card shader"); SDL_Quit(); return 0;
+  }
+#endif
   if (argc>1 && !strcmp(argv[1],"--budget")) {
     budgetOnly=1;
-    for (int split=0;split<2;split++) for (int glass=0;glass<2;glass++)
-      capture(NULL,split,glass,1);
+    if (argc == 5) {
+      budgetScroll=atoi(argv[4]); capture(NULL,atoi(argv[2]),atoi(argv[3]),1);
+      SDL_Quit(); return 0;
+    }
+    for (budgetScroll=0;budgetScroll<2;budgetScroll++)
+      for (int split=0;split<2;split++) for (int glass=0;glass<2;glass++)
+        capture(NULL,split,glass,1);
     SDL_Quit(); return 0;
   }
 #ifndef HERO_BASELINE

@@ -272,7 +272,9 @@ typedef enum {
   //   uCor.g   = beam x (fraction of width), uCor.b = floor pool radius
   //              (fraction of height). uAcento = current app accent.
   GFX_HOLOFOTE = 45,
-  GFX_NMODOS = 46
+  // Selected internally for GFX_CARD while the Hero reading tint is active.
+  GFX_CARD_HERO = 46,
+  GFX_NMODOS = 47
 } GfxModo;
 
 typedef struct {

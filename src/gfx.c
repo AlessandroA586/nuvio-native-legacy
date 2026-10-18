@@ -462,7 +462,9 @@ static const char *FS_COVER =
 static const char *FS_CORPO[GFX_NMODOS] = {
   // GFX_CARD — arte inteira com cantos e especular no foco (sem zoom nem corte)
   "uniform float uReflexo;\n"
+  "#ifdef HERO_CARD\n"
   "uniform vec4 uHeroiVeu;\n"
+  "#endif\n"
   "void main(){\n"
   "  float d = sdf(vUv, uRaio, uAspect);\n"
   "  float m = borda(d);\n"
@@ -472,6 +474,9 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // retrato de sempre — cover num card 16:9 cortava ~60% da altura. Aqui
   // a amostragem abre no eixo oposto e a faixa recebe a cor do esqueleto,
   // a mesma do card vazio. Dentro de +/-25% de proporcao segue cover.
+  "#ifdef HERO_CARD\n"
+  "  vec3 cor = texture2D(uTex, clamp(cover(vUv), 0.0, 1.0)).rgb;\n"
+  "#else\n"
   "  float ra = uAspect / max(uTexAsp, 0.01);\n"
   "  float contem = (uForceCover < 0.5 && uTexAsp > 0.05 && (ra < 0.80 || ra > 1.25)) ? 1.0 : 0.0;\n"
   "  vec2 uv0 = cover(vUv);\n"
@@ -491,6 +496,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  vec3 cor = (contem > 0.5 && (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0))\n"
   "    ? vec3(0.173)\n"
   "    : texture2D(uTex, clamp(uv, 0.0, 1.0)).rgb;\n"
+  "#endif\n"
   "  if (uFoco > 0.004) {\n"
   // uVarre = a LUZ ENTRANDO (revela.h): a faixa nasce fora do canto
   // inferior esquerdo e desliza ate o repouso; em 0 e o especular de sempre.
@@ -510,6 +516,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // screen (vAmb.y counts from the bottom). Same pixel, two full-width passes
   // less per frame (0.59 screens). MEASURED on the TCL Smart TV Pro
   // (Mali-G52): the picker frame is fill-bound at ~7-8 ms per screen.
+  "#ifndef HERO_CARD\n"
   "  if (uVeuTela > 0.5) {\n"
   "    float sy = 1.0 - vAmb.y;\n"
   "    float vt = smoothstep(1.0, 0.15, sy / 0.3055556) * 0.92;\n"
@@ -517,6 +524,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "    float gb = tb * tb * (3.0 - 2.0 * tb); gb = gb * gb * 0.95;\n"
   "    cor *= (1.0 - vt) * (1.0 - gb);\n"
   "  }\n"
+  "#endif\n"
   // O VEU DA BASE NO MESMO FRAGMENTO DA ARTE (gfx_veu_card_atual). Desenhado
   // como passada separada, ele e a arte dividiam a MESMA cobertura de borda:
   // no pixel da borda a arte entra com m e o veu escurece so m dela, entao
@@ -524,11 +532,11 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // do card (fotos do dono, 01/10/2026). Aqui o veu escurece a arte inteira
   // e so depois a borda recorta. Mesma rampa do GFX_BRILHO_TOPO com
   // uPar = (1, 0.42) sobre um retangulo de `fracao` da altura.
-  // Hero A tint precedes the existing bottom veil, in the artwork draw.
-  "  if (uHeroiVeu.a > 0.0) {\n"
-  "    float a = (1.0-smoothstep(0.30,0.66,vUv.x))*uHeroiVeu.a;\n"
-  "    cor = mix(cor, uHeroiVeu.rgb, a);\n"
-  "  }\n"
+  // Compile the tint only for Hero artwork; ordinary cards keep their shader.
+  "#ifdef HERO_CARD\n"
+  "  float a = (1.0-smoothstep(0.30,0.66,vUv.x))*uHeroiVeu.a;\n"
+  "  cor = mix(cor, uHeroiVeu.rgb, a);\n"
+  "#endif\n"
   "  if (uVeu.y > 0.0 || uVeu.w > 0.0) {\n"
   "    float yb = 1.0 - vUv.y;\n"
   "    float t1 = 1.0 - smoothstep(0.42, 1.0, yb / max(uVeu.x, 0.001));\n"
@@ -1627,7 +1635,8 @@ static const struct { int sdf, cover; } PRECISA[GFX_NMODOS] = {
   {1,0},   /* GFX_TEXTURA — SDF dos cantos; o recorte vem pronto em uJan */
   {1,0},   /* GFX_VIDRO — SDF proprio em pixels; o {1,..} so liga a margem de 1 px do quad */
   {1,0},   /* GFX_VITRINE_DIN — o do GFX_VITRINE */
-  {0,0}    /* GFX_HOLOFOTE — procedural, tela cheia */
+  {0,0},   /* GFX_HOLOFOTE — procedural, tela cheia */
+  {1,1}    /* GFX_CARD_HERO — same artwork, compiled with the reading tint */
 };
 
 static GLuint compila(GLenum tipo, const char *src) {
@@ -1646,9 +1655,10 @@ int gfx_iniciar(void) {
   { const char *t = getenv("NUVIO_TAMANHO_UI"); if (t && *t) { gfx_escala_ui_definir((float)atof(t)); escUiFixa = 1; } }
   char fonte[12000];   // cabeca + sdf/cover + corpo; o maior (camadas) passa de 6000
   for (int m = 0; m < GFX_NMODOS; m++) {
-    snprintf(fonte, sizeof fonte, "%s%s%s%s", FS_CABECA,
+    snprintf(fonte, sizeof fonte, "%s%s%s%s%s",
+             FS_CABECA, m == GFX_CARD_HERO ? "#define HERO_CARD\n" : "",
              PRECISA[m].sdf ? FS_SDF : "", PRECISA[m].cover ? FS_COVER : "",
-             FS_CORPO[m]);
+             FS_CORPO[m == GFX_CARD_HERO ? GFX_CARD : m]);
     GLuint p = glCreateProgram();
     glAttachShader(p, vs);
     glAttachShader(p, compila(GL_FRAGMENT_SHADER, fonte));
@@ -2290,6 +2300,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
   int comAmb = 0, veuAmb = 0, opaco = 0, cheia, clearCor, duplo = 0;
   float din[4] = { 0.0f, 0.0f, 0.0f, 0.0f }, dinResto = -1.0f;
   if ((int)modo < 0 || (int)modo >= GFX_NMODOS) return;
+  if (modo == GFX_CARD && gfx_card_heroi_veu_atual[3] > 0.0f) modo = GFX_CARD_HERO;
   // Grupo a 0 = "desenhar sem aparecer" (quem mede uma previa ou pede as
   // texturas de uma cena que ainda nao entrou): todo modo multiplica o alfa
   // pelo grupo, entao nada chegaria a tela — nao gasta a GPU com isso.

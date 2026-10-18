@@ -22,7 +22,7 @@ export NUVIO_DADOS
 NUVIO_DADOS=$(mktemp -d "$TMPDIR/nuvio-heroisA.XXXXXX")
 trap 'rc=$?; rm -rf "$NUVIO_DADOS"; printf "Hero A runner: rc=%d, elapsed=%ds\n" "$rc" "$SECONDS"' EXIT
 # Compare the complete current integration renderer, including shaders and caches.
-base=integracao/2.0.5
+base=$(git rev-parse integracao/2.0.5)
 mkdir "$NUVIO_DADOS/base" "$NUVIO_DADOS/historical-src"
 git archive "$base" src | tar -x -C "$NUVIO_DADOS/base"
 # Historical geometry/badge failures are regression proof, not the GPU budget.
@@ -94,17 +94,21 @@ for case in geometry badge; do
   printf 'PASS %s: historical FAIL (rc=%d), current PASS\n' "$case" "$rc"
 done
 "$NUVIO_DADOS/test.bin" --transitions
+"$NUVIO_DADOS/test.bin" --card-shader
+"$NUVIO_DADOS/test.bin" --captions
 "$NUVIO_DADOS/baseline.bin" --badge
-"$NUVIO_DADOS/baseline.bin" --budget > "$NUVIO_DADOS/base.log" 2>&1
-"$NUVIO_DADOS/test.bin" --budget > "$NUVIO_DADOS/current.log" 2>&1
+for scroll in 0 1; do for split in 0 1; do for glass in 0 1; do
+  "$NUVIO_DADOS/baseline.bin" --budget "$split" "$glass" "$scroll" >> "$NUVIO_DADOS/base.log" 2>&1
+  "$NUVIO_DADOS/test.bin" --budget "$split" "$glass" "$scroll" >> "$NUVIO_DADOS/current.log" 2>&1
+done; done; done
 python3 - "$NUVIO_DADOS/base.log" "$NUVIO_DADOS/current.log" <<'PY'
 import sys
 
 def metrics(path):
-    return {tuple(p[1:3]): list(map(float, p[3:]))
+    return {tuple(p[1:4]): list(map(float, p[4:]))
             for line in open(path) if (p := line.split()) and p[0] == 'BUDGET'}
 base, current = map(metrics, sys.argv[1:])
-assert base.keys() == current.keys() and len(base) == 4, (base, current)
+assert base.keys() == current.keys() and len(base) == 8, (base, current)
 def within_budget(before, after):
     # Full-frame GPU median includes clear/pass/shader costs; fill is diagnostic.
     return all(0 < after[state][-1] <= before[state][-1] for state in before)

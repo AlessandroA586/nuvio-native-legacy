@@ -6657,14 +6657,6 @@ static void veusDoCard(const CatItem *cItem, TipoFileira tipo, int deitado, floa
 }
 
 // A legenda do cartaz (dentro do deitado, abaixo do cartaz em pe).
-static struct {
-  GfxMini alvo;
-  char label[64];
-  int nota, idioma;
-  TxtFamilia font;
-  float scale, textScale, width, height;
-} captions[4];
-static unsigned nextCaption;
 static void desenhaRotuloCard(const CatItem *cItem, TipoFileira tipo, int deitado,
                               int rotuloFora, float px, float py, float w, float h,
                               float raio) {
@@ -6712,46 +6704,9 @@ static void desenhaRotuloCard(const CatItem *cItem, TipoFileira tipo, int deitad
       float bw = badge_imdb_largura(nota), by = py + h + 18.0f;
       TxtLinha year = txt_linha_corta(TXT_CAPTION2, l, 218,222,232,255, fmaxf(0, w - bw - 8));
       float bh = fmaxf(34.0f, year.h);
-      // ponytail: four visible captions; reuse bounded targets instead of per-item textures.
-      float scale = gfx_px_por_unidade() * gfx_escala();
-      float width = year.w + (l[0] ? 8 : 0) + bw;
-      int slot = -1;
-      if (nota > 0 && bw <= w && year.tex && scale > 0 && gfx_escala() == 1.0f &&
-          !gfx_mini_ativo() && !gfx_snap_ativo() && gfx_hdr_ui == 1.0f && gfx_osd_mult == 1.0f) {
-        for (int i = 0; i < 4; i++)
-          if (captions[i].alvo.tex && captions[i].nota == nota &&
-              captions[i].idioma == ajustes_idioma() && !strcmp(captions[i].label, l) &&
-              captions[i].font == txt_fonte_interface() && captions[i].textScale == gfx_escala_txt() &&
-              captions[i].scale == scale && captions[i].width == width && captions[i].height == bh)
-            slot = i;
-        if (slot < 0) {
-          int i = nextCaption++ % 4;
-          if (gfx_mini_alvo(&captions[i].alvo, (int)ceilf(width * scale), (int)ceilf(bh * scale))) {
-            float group = gfx_opacidade_grupo;
-            int pending = txt_pendentes;
-            gfx_opacidade_grupo = 1;
-            gfx_mini_comecar(&captions[i].alvo, 0, 0, scale);
-            if (l[0]) txt_desenhar(year, 0, (bh - year.h) * 0.5f);
-            badge_imdb(l[0] ? year.w + 8 : 0, (bh - BADGE_H) * 0.5f, nota, 0, 1);
-            gfx_mini_terminar();
-            gfx_opacidade_grupo = group;
-            snprintf(captions[i].label, sizeof captions[i].label, "%s", l);
-            captions[i].nota = txt_pendentes == pending ? nota : 0;
-            captions[i].idioma = ajustes_idioma(); captions[i].font = txt_fonte_interface();
-            captions[i].textScale = gfx_escala_txt();
-            captions[i].scale = scale; captions[i].width = width; captions[i].height = bh;
-            slot = i;
-          }
-        }
-      }
-      if (slot >= 0)
-        gfx_mini_desenhar(&captions[slot].alvo,
-          (GfxRect){px, by, captions[slot].alvo.w / scale, captions[slot].alvo.h / scale}, 0, 1);
-      else {
-        if (l[0]) txt_desenhar(year, px, by + (bh - year.h) * 0.5f);
-        if (nota > 0 && bw <= w)
-          badge_imdb(px + (l[0] ? year.w + 8 : 0), by + (bh - BADGE_H) * 0.5f, nota, 0, 1);
-      }
+      if (l[0]) txt_desenhar(year, px, by + (bh - year.h) * 0.5f);
+      if (nota > 0 && bw <= w)
+        badge_imdb(px + (l[0] ? year.w + 8 : 0), by + (bh - BADGE_H) * 0.5f, nota, 0, 1);
     } else if (rotuloFora && nome) {
       float bx = px + NV_POSTER_COPY_PADX;
       float by = py + h + NV_POSTER_COPY_PADT;
@@ -8184,8 +8139,6 @@ static void home_desenhar_(Uint32 agora) {
 // caso em que a pessoa moveu o foco e saiu antes de completar o repouso.
 // Nada a gravar (#95): a posicao na home vive so enquanto o app esta aberto.
 void home_encerrar(void) {
-  for (int i = 0; i < 4; i++) gfx_mini_liberar(&captions[i].alvo);
-  memset(captions, 0, sizeof captions);
 }
 const char *home_perf_tag(void) {
   if (!focoHero && foco.fileira >= 0 && foco.fileira < nFileiras) {
