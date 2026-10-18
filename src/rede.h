@@ -313,6 +313,9 @@ char *rede_apagar(const char *url, int segundos, const char *const *cabecalhos,
                   int *status);
 char *rede_postar_st(const char *url, int segundos, const char *const *cabecalhos,
                      const char *corpo, int *status);
+// POST with the response Retry-After (same parsing as rede_baixar_st_retry).
+char *rede_postar_st_retry(const char *url, int segundos, const char *const *cabecalhos,
+                           const char *corpo, int *status, int *retryAfter);
 #ifdef __EMSCRIPTEN__
 // Authenticated JSON PATCH through the legacy WGT HTTP bridge.
 char *rede_patch_st(const char *url, int segundos, const char *const *cabecalhos,

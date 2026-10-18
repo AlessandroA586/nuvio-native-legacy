@@ -9,3 +9,7 @@ cc tests/trakt610_lista.c src/js.c -Isrc \
   -o "$dir/lista" -O1 -g -Wall -Wno-deprecated-declarations \
   -ffunction-sections -fdata-sections -Wl,-dead_strip -lpthread
 "$dir/lista"
+cc tests/trakt610_auth.c src/credfio.c src/js.c src/jsw.c -Isrc \
+  -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
+  -o "$dir/auth" -O1 -g -Wno-deprecated-declarations -Wno-macro-redefined -lpthread
+"$dir/auth"

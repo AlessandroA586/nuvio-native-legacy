@@ -873,14 +873,19 @@ char *rede_apagar(const char *url, int segundos, const char *const *cab,
 
 char *rede_postar_st(const char *url, int segundos, const char *const *cab,
                      const char *corpo, int *status) {
+  return rede_postar_st_retry(url, segundos, cab, corpo, status, NULL);
+}
+
+char *rede_postar_st_retry(const char *url, int segundos, const char *const *cab,
+                           const char *corpo, int *status, int *retryAfter) {
   int temCt = 0, k;
   char *r;
   // JSON e o padrao (Supabase, Trakt); quem manda o proprio Content-Type
   // (Real-Debrid quer form-urlencoded) nao recebe um segundo.
   for (k = 0; cab && cab[k]; k++)
     if (!strncasecmp(cab[k], "Content-Type:", 13)) temCt = 1;
-  r = pedir("POST", url, segundos, cab, temCt ? NULL : "Content-Type: application/json",
-            corpo ? corpo : "", NULL, status);
+  r = pedir2("POST", url, segundos, cab, temCt ? NULL : "Content-Type: application/json",
+             corpo ? corpo : "", NULL, status, NULL, 0, retryAfter);
   // Falha de TRANSPORTE continua sendo NULL; corpo de 4xx e devolvido. Um POST
   // que respondeu com corpo vazio devolve "" e nao NULL, como no outro caminho.
   if (!r && status && *status > 0) return strdup("");
@@ -2674,8 +2679,10 @@ void rede_discord_ca(const char *caminho) {
 #define OPT_CAINFO 10065
 
 static char *postarNativo(const char *url, int segundos, const char *const *cab,
-                          const char *corpo, int *status, int seguro) {
+                          const char *corpo, int *status, int seguro, int *retryAfter) {
   Balde b = {0};
+  CacaCab respostaCab = { NULL, 0, retryAfter };
+  if (retryAfter) *retryAfter = 0;
   void *c, *lista = NULL;
   int r;
   if (status) *status = 0;
@@ -2694,6 +2701,10 @@ static char *postarNativo(const char *url, int segundos, const char *const *cab,
     curl_setopt(c, OPT_SSL_VERIFYHOST, (long)2);
     if (discordCa[0]) curl_setopt(c, OPT_CAINFO, discordCa);
     curl_setopt(c, OPT_FOLLOWLOCATION, (long)0);
+  }
+  if (retryAfter) {
+    curl_setopt(c, OPT_HEADERFUNCTION, receberCab);
+    curl_setopt(c, OPT_HEADERDATA, &respostaCab);
   }
   curl_setopt(c, OPT_POST, (long)1);
   curl_setopt(c, OPT_POSTFIELDS, corpo ? corpo : "");
@@ -2737,7 +2748,7 @@ char *rede_postar_st(const char *url, int segundos, const char *const *cab,
     if (status) *status = st;
     return r;
   }
-  r = postarNativo(url, segundos, cab, corpo, &st, 0);
+  r = postarNativo(url, segundos, cab, corpo, &st, 0, NULL);
   if (status) *status = st;
   if (!r && st == 0) {
     r = androidDepois("POST", url, segundos, cab, corpo ? corpo : "", &st);
@@ -2745,15 +2756,20 @@ char *rede_postar_st(const char *url, int segundos, const char *const *cab,
   }
   return r;
 #else
-  return postarNativo(url, segundos, cab, corpo, status, 0);
+  return postarNativo(url, segundos, cab, corpo, status, 0, NULL);
 #endif
+}
+
+char *rede_postar_st_retry(const char *url, int segundos, const char *const *cab,
+                           const char *corpo, int *status, int *retryAfter) {
+  return postarNativo(url, segundos, cab, corpo, status, 0, retryAfter);
 }
 
 char *rede_postar_seguro_st(const char *url, int segundos, const char *const *cab,
                             const char *corpo, int *status) {
   if (status) *status = 0;
   if (!url || strncmp(url, "https://", 8)) return NULL;
-  return postarNativo(url, segundos, cab, corpo, status, 1);
+  return postarNativo(url, segundos, cab, corpo, status, 1, NULL);
 }
 
 // ------------------------------------------------------------ VAZAO (curl)
