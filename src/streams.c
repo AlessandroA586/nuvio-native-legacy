@@ -73,7 +73,7 @@
 // Sources grows from the clock island: plrilha in the player, ilha_corpo on
 // browsing pages. Without a visible clock, keep the right-edge sheet.
 // folhaOY places content below the clock header; folhaBase ends the list.
-static float folhaOY, folhaBase;
+static float folhaOY, folhaBase, folhaDica;
 // Tab change (add-on / filter tabs): the focus pill slides to the new tab and
 // the list slides in with a fade, 200 ms ease-out. Time based, no extra pass.
 #define FOLHA_TROCA_MS 200.0f
@@ -94,7 +94,8 @@ static int folhaRelogio; // Latched at opening, retained through closing.
 #define FOLHA_ABAS_Y   168.0f  // topo da faixa das abas
 #define FOLHA_ABAS_H    56.0f
 #define FOLHA_ABA_H     44.0f  // a pilula de cada aba, dentro da faixa
-#define FOLHA_TOPO     (FOLHA_ABAS_Y + FOLHA_ABAS_H + 24.0f + folhaOY)
+#define FOLHA_TOPO     (FOLHA_ABAS_Y + FOLHA_ABAS_H + 24.0f + folhaOY + folhaDica)
+#define FOLHA_DICA_H    46.0f  // linha "N fontes ocultas por ..." sob as abas (so com filtro rapido ocultando)
 static void medirCabecalho(void);
 #define FOLHA_LINHA_H  112.0f  // linha sem marca e sem arquivo
 #define FOLHA_MARCA_H   30.0f  // "SUA ESCOLHA ANTERIOR" / "REPRODUZINDO AGORA"
@@ -3175,12 +3176,52 @@ static int nProvedores;
 static int temAudioPreferido(const Stream *s);
 // Os chips (MP4, cache, dublado) valem para a lista E para a contagem de cada
 // aba; o addon so para a lista.
-static int passaChips(int i) {
-  if (!canalFolha && !stream_filtro_permite(&lista[i])) return 0;
+static int chipsOk(int i) {
   if (soMp4 && !lista[i].mp4) return 0;
   if (soCache && !cacheConfirmado(&lista[i])) return 0;
   if (soDub && !temAudioPreferido(&lista[i])) return 0;
   return 1;
+}
+static int passaChips(int i) {
+  if (!canalFolha && !stream_filtro_permite(&lista[i])) return 0;
+  return chipsOk(i);
+}
+// QUANTAS FONTES OS FILTROS RAPIDOS ESCONDEM na aba em vista, e quais. Sem isso
+// a pessoa liga "Só MP4", esquece, e conclui que so um addon respondeu (#205).
+// `nomes` recebe os filtros ligados, ex. "Só MP4, Em cache".
+static int chipsOcultos(char *nomes, size_t nn) {
+  int k = 0;
+  if (nomes && nn) nomes[0] = 0;
+  if (filtro < 0 || !(soMp4 || soCache || soDub)) return 0;
+  for (int i = 0; i < n; i++)
+    if ((canalFolha || stream_filtro_permite(&lista[i])) && !chipsOk(i) &&
+        (filtro <= 0 || filtro >= nProvedores || !strcmp(lista[i].provedor, provedores[filtro]))) k++;
+  if (k && nomes)
+    for (int b = 0; b < BT_N; b++)
+      if (botaoLigado(b)) {
+        size_t l = strlen(nomes);
+        snprintf(nomes + l, nn - l, "%s%s", l ? ", " : "", b == BT_DUB ? rotuloBotao(b) : i18n(rotuloBotao(b)));
+      }
+  return k;
+}
+// A linha de aviso dos filtros (grupo 2) e o OK nela: tira os tres filtros.
+static void limparChips(void) { soMp4 = soCache = soDub = 0; rolagem = 0; velRol = 0; grupo = 1; foco = 0; }
+static const char *fraseDicaChips(void) {
+  static char frase[256];
+  char nomes[128];
+  int k = chipsOcultos(nomes, sizeof nomes);
+  if (!k) return NULL;
+  snprintf(frase, sizeof frase, i18n("Fontes ocultas por %s: %d. Pressione para mostrar todas"), nomes, k);
+  return frase;
+}
+// Lista vazia por culpa dos filtros rapidos: diz isso, em vez de "sem fontes".
+static int nFiltrados(void);
+static const char *fraseVazioChips(void) {
+  static char frase[256];
+  char nomes[128];
+  if (!chipsOcultos(nomes, sizeof nomes) || nFiltrados()) return NULL;
+  snprintf(frase, sizeof frase, i18n("Os filtros ligados (%s) esconderam todas as fontes."), nomes);
+  return frase;
 }
 static int passaFiltro(int i) {
   if (filtro < 0) return 0;
@@ -4051,6 +4092,7 @@ static void folhaGeometria(void) {
     folhaOY = 0.0f;
     folhaBase = NV_TELA_H - FOLHA_MARGEM - 16.0f;
   }
+  folhaDica = chipsOcultos(NULL, 0) ? FOLHA_DICA_H : 0.0f;
 }
 static float areaLista(void) { return folhaBase - FOLHA_TOPO; }
 // A linha em foco no meio da area; a primeira de um grupo leva o cabecalho
@@ -4289,12 +4331,14 @@ void stream_folha_evento(const SDL_Event *e) {
   // grupo ele recomeca, senao descer do quarto botao caia na quarta linha.
   if(k==SDLK_UP) {
     if(grupo==1 && foco>0) foco--;
-    else if(grupo==1) grupo=0;
+    else if(grupo==1) grupo=chipsOcultos(NULL,0)?2:0;
+    else if(grupo==2) grupo=0;
     else if(grupo==0) {grupo=-1;foco=nBotoes()-1;}
   }
   if(k==SDLK_DOWN) {
     if(grupo==-1) grupo=0;
-    else if(grupo==0) {grupo=1;foco=0;}
+    else if(grupo==0) {grupo=chipsOcultos(NULL,0)?2:1;foco=0;}
+    else if(grupo==2) {grupo=1;foco=0;}
     else if(foco<nf-1) foco++;
   }
   // ESQUERDA/DIREITA NUMA FONTE TROCAM A ABA DE ADDON (dono, 02/10), como no
@@ -4329,6 +4373,7 @@ void stream_folha_evento(const SDL_Event *e) {
       }
     }
     else if(grupo==0) {grupo=1;foco=0;}
+    else if(grupo==2) limparChips();
     else {
       int i = filtrado(foco);
       if (i >= 0) { escolha=i; escolhaGeracao=listaGeracao; aberta=0; }
@@ -4370,6 +4415,7 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
   atualizarProvedores();
   montar(automaticaDaFolha());
   nf=nOrdem;
+  if(grupo==2 && !chipsOcultos(NULL,0)) grupo=0;
   if(grupo==1 && foco>=nf) foco=nf>0?nf-1:0;
   {
     int linha = grupo==1 ? foco : -1;
@@ -4414,6 +4460,7 @@ int stream_folha_escolheu(int *out) {
 // provedor so troca no CLIQUE — trocar ao passar por cima mudaria a lista
 // debaixo da mao. Clicar fora do painel fecha, como o Voltar.
 static void ponteiroFolhaBotao(int i, int b) { (void)b; grupo = -1; foco = i; }
+static void ponteiroFolhaDica(int i, int b) { (void)i; (void)b; grupo = 2; }
 static void ponteiroFolhaLinha(int row, int b) { (void)b; grupo = 1; foco = row; }
 static void ponteiroFolhaFiltro(int i, int b) {
 #ifdef NV_TOUCH_UI
@@ -4951,6 +4998,15 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
       txt_desenhar_alpha(nome[qidx],r.x+22,r.y+(FOLHA_ABA_H-nome[qidx].h)*.5f,anim);
       txt_desenhar_alpha(num[qidx],r.x+22+nome[qidx].w+10,r.y+(FOLHA_ABA_H-num[qidx].h)*.5f+1,anim);
       sx+=iw[qidx]+6.0f; } }
+  // AVISO DOS FILTROS RAPIDOS, sob as abas: quantas fontes eles escondem. OK
+  // (ou toque) tira todos. Reserva FOLHA_DICA_H so enquanto houver o que avisar.
+  { const char *dica = fraseDicaChips();
+    if (dica) {
+      float tw = (float)txt_linha(TXT_HERO_META, dica, 255, 255, 255, 255).w;
+      GfxRect r = {lx-2.0f, FOLHA_ABAS_Y+oy+FOLHA_ABAS_H+6.0f, fminf(tw+48.0f, rw+4.0f), FOLHA_DICA_H-6.0f};
+      if (ptr) ponteiro_alvo(r.x, r.y, r.w, r.h, ponteiroFolhaDica, NULL, 0, 0);
+      chipFolha(r, dica, r.w-48.0f, NULL, grupo==2, 1, anim);
+    } }
   // The list comes in from the side the new tab is on, fading up.
   const float animLista=anim, dxLista=trocaDir*28.0f*(1-trocaEase(agora));
   { float e=trocaEase(agora); anim*=.3f+.7f*e; lx+=dxLista; tx+=dxLista; tr+=dxLista; }
@@ -5283,6 +5339,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     const char *s=addons_estado()==ADD_BUSCANDO?"Buscando fontes nos addons…":"Nenhuma fonte direta disponível. Use Recarregar para tentar novamente.";
     if (!canalFolha && addons_estado()!=ADD_BUSCANDO && stream_filtro_bloqueou())
       s = "Nenhuma fonte passa pelos filtros";
+    if (addons_estado()!=ADD_BUSCANDO && fraseVazioChips()) s = fraseVazioChips();
     if (addons_estado()!=ADD_BUSCANDO && n==0) {
       int tem = 0, p2p = stream_torrents_para_p2p();
       // #505: o descarte que pede P2P (o notWebReady do .tpk) nao e falta de
