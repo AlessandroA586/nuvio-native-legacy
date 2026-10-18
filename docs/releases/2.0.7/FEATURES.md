@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T09:51:51-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T10:47:45-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -422,12 +422,12 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
   map). Triage, not lost.
 
 
-- **Hero A layout polish**: Wide hero cards and focus rendering receive layout and draw-budget fixes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-heroisA, `c3985174d`. Latest fix is complete; queued review work and device checks remain before integration.
+- **Hero A layout polish**: Wide hero cards and focus rendering receive layout and draw-budget fixes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-heroisA, `c3985174d`. The latest fix postdates the last review; review the newest tip and check devices before integration.
 
 
 
 
-- **PR #567 port follow-ups**: Source-font preference and launch behavior receive follow-up fixes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-pr567port, `385b44106`. Latest fix is complete; queued review work and device checks remain before integration.
+- **PR #567 port follow-ups**: Source-font preference and launch behavior receive follow-up fixes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-pr567port, `385b44106`. The latest fix postdates the last review; review the newest tip and check devices before integration.
 
 ### Previously pending, now integrated
 
