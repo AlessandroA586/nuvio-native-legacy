@@ -1421,6 +1421,7 @@ int detail_arte_titulo(const CatItem *titulo, char *saida, size_t tam, int *post
   return 1;
 }
 
+static int epFuros(GfxRect *holes);
 static void desenhaArteDetalhe(GfxRect alvo, GLuint tex, const char *arte,
                                int poster, float alpha, float pg) {
   if (!tex) {
@@ -1443,8 +1444,11 @@ static void desenhaArteDetalhe(GfxRect alvo, GLuint tex, const char *arte,
       // No modo cinema o bloco de texto saiu: o veu sai junto (fica 15%,
       // para o logo pequeno do canto nao flutuar sobre uma cena clara).
       gfx_rect(alvo, 0, GFX_DETALHE, veu * (1.0f - 0.85f * trailercinema_t(&trailerCinema)), 1.0f, 0, 0.0f, 0, 0, 0, alpha * trailerFade);
-    } else
-      gfx_rect(alvo, tex, GFX_DETALHE, veu, 0, 0, 0.0f, 0, 0, 0, alpha);
+    } else {
+      GfxRect holes[N_ITENS * 2];
+      int n = epFuros(holes);
+      gfx_rect_furos(alvo, tex, GFX_DETALHE, veu, 0, 0, 0, 0, 0, 0, alpha, holes, n);
+    }
   } else {
     float ap = gfx_tex_aspect_atual > 0.05f ? gfx_tex_aspect_atual : (2.0f / 3.0f);
     float h = alvo.h * 0.90f, w = h * ap, maxW = alvo.w * 0.42f;
@@ -1468,15 +1472,11 @@ static float suave(float x) {
 }
 static float fase2(void) { return suave((t - 0.45f) / 0.55f); }
 
-// A Inter embarcada so tem Regular, Medium e Bold, e a pagina pede 500, 600 e
-// 800 em corpos (32, 26, 21) que so existem em Regular na tabela de text.c —
-// que e arquivo de outro agente nesta sessao. Engrossar redesenhando a mesma
-// linha com deslocamentos sub-pixel e o que sobra, e e o que os rasterizadores
-// chamam de "faux bold": custa uma textura so, porque a linha vem do cache.
+// Keep the existing call sites and use the weight selected by the text style.
 static void txt_peso(TxtLinha l, float x, float y, float a, float grossura) {
+  (void)grossura;
+  // Font styles already select weight; submit each cached line once.
   txt_desenhar_alpha(l, x, y, a);
-  if (grossura > 0.05f) txt_desenhar_alpha(l, x + grossura * 0.5f, y, a);
-  if (grossura > 0.9f)  txt_desenhar_alpha(l, x + grossura, y, a);
 }
 
 // AUDITORIA (tools/auditoria-release.sh): uma linha quando o numero de
@@ -5495,22 +5495,30 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     if (tb) t2 = tb;
     else { t2 = 0; arte = NULL; }
   }
+  const int watched = ep && serie && serie->imdb[0] &&
+      vistoep_estado(serie->imdb, ep->temporada, ep->episodio) == 1;
+  const int mergedVeil = t2 && a * gfx_opacidade_grupo >= .999f;
+  if (mergedVeil) {
+    gfx_veu_card_atual[0] = -1.0f;
+    gfx_veu_card_atual[1] = aArte;
+    gfx_veu_card_atual[2] = watched ? .12f : 0.0f;
+  }
   if (t2) {
-    if (aArte < 0.999f) gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
+    if (!mergedVeil && aArte < 0.999f) gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
     gfx_tex_aspect_atual = tex_aspecto(arte);
-    gfx_rect(th, t2, GFX_CARD, f, 0, 0, raioTh, 0, 0, 0, a * aArte);
+    gfx_rect(th, t2, GFX_CARD, f, 0, 0, raioTh, 0, 0, 0, mergedVeil ? a : a * aArte);
     gfx_tex_aspect_atual = 0.0f;
   } else if (arte && !tex_falhou(arte))
     gfx_esqueleto(th, raioTh, 0.133f, 0.133f, 0.133f, a);
   else gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
-  veuEpisodio(th, a);
+  if (mergedVeil) gfx_veu_card_limpar();
+  else veuEpisodio(th, a);
   if (ajustes_vidro()) gfx_vidro_aro(th, raioTh, 1.5f, 1, 1, 1, 0.14f * a);   // vidro: aro fino na miniatura
 
   // A mesma fonte que o menu modifica: desconhecido (-1) nao recebe selo.
   // A lavagem e leve para preservar a arte; texto e estado sao desenhados depois.
-  if (ep && serie && serie->imdb[0] &&
-      vistoep_estado(serie->imdb, ep->temporada, ep->episodio) == 1) {
-    gfx_cor(th, raioTh, 0, 0, 0, .12f * a);
+  if (watched) {
+    if (!mergedVeil) gfx_cor(th, raioTh, 0, 0, 0, .12f * a);
     desenhaAssistidoEpisodio(th, a);
   }
   th = thLayout;   // o texto abaixo segue a caixa de repouso
@@ -7268,7 +7276,11 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
       case SEC_EPISODIOS: {
         GfxRect b = { x, y, epCardW(), epCardH() };
         if (foco.fileira == r && c == foco.coluna) { menuOrigem = b; menuOrigemCol = c; menuOrigemF = f; menuOrigemA = a; }
-        desenhaEpisodio(b, c, f, a, agora); break;
+        int clip = gfx_cortar_invisiveis;
+        gfx_cortar_invisiveis = 1;
+        desenhaEpisodio(b, c, f, a, agora);
+        gfx_cortar_invisiveis = clip;
+        break;
       }
       case SEC_ABAS_INFO: {
         desenhaAbaInfo(x, y, c, f, a);
@@ -7637,6 +7649,25 @@ static void reacaoPendente(float s) {
 // juntarem, a troca e AQUI e em mais lugar nenhum. O conteudo da pagina nao
 // depende da arte nitida para ter contraste — o veu de leitura do heroi
 // (veuLeitura) e desenhado por cima, fora desta funcao.
+static int epFuros(GfxRect *holes) {
+  int n = 0;
+  if (!epModerna() || corpoSobArte() || corpoOculto(ehSerie()) ||
+      fase2() < .999f || trocaarte_visivel() > .001f ||
+      trailercinema_t(&trailerCinema) > .001f || ajustes_desfocar_nao_assistidos()) return 0;
+  for (int c = 0; c < epVisiveis() && c < N_ITENS && c < DET_REV_EP; c++) {
+    const CatEp *ep = cat_episodio(idx, epAbsoluto(c));
+    float x = xItem(SEC_EPISODIOS, c) - scrollSec[SEC_EPISODIOS];
+    if (x > NV_TELA_W || x + epCardW() < 0 || !ep || !ep->thumb[0]) continue;
+    if (!tex_obter_larg(ep->thumb, epCardW() * (ajustes_borda_foco() ? 1 : 1 + FOCO_ZOOM))) continue;
+    GfxRect th = foco_zoom((GfxRect){x, epRowY()-scrollY, epCardW(), epThumbH()}, animFoco[SEC_EPISODIOS][c]);
+    // Keep corners and their antialias fringe; only the solid interior occludes.
+    float inset = NV_DETP_EP_RAIO + 2;
+    holes[n++] = (GfxRect){th.x+inset, th.y+2, th.w-2*inset, th.h-4};
+    holes[n++] = (GfxRect){th.x+2, th.y+inset, th.w-4, th.h-2*inset};
+  }
+  return n;
+}
+
 static void detalheFundo(float s) {
   if (!detail_cobre_tela() && !carDesenhaFundo()) {
     GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
@@ -7931,4 +7962,10 @@ int detail_sob_menu_ativo(void) { return sobMenu; }
 // de texto; o corpo mede NV_TELA_W/H na tela virtual dela.
 void detail_evento(const SDL_Event *e) { TXT_INI(); detail_evento_(e); TXT_FIM(); }
 void detail_atualizar(float dt, Uint32 agora) { TXT_INI(); detail_atualizar_(dt, agora); TXT_FIM(); }
-void detail_desenhar(Uint32 agora) { TXT_INI(); detail_desenhar_(agora); TXT_FIM(); }
+void detail_desenhar(Uint32 agora) {
+  int clip = gfx_cortar_invisiveis;
+  if (epModerna() && nivel >= 1 && foco.fileira == SEC_EPISODIOS)
+    gfx_cortar_invisiveis = 1;
+  TXT_INI(); detail_desenhar_(agora); TXT_FIM();
+  gfx_cortar_invisiveis = clip;
+}

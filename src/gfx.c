@@ -522,7 +522,15 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // do card (fotos do dono, 01/10/2026). Aqui o veu escurece a arte inteira
   // e so depois a borda recorta. Mesma rampa do GFX_BRILHO_TOPO com
   // uPar = (1, 0.42) sobre um retangulo de `fracao` da altura.
-  "  if (uVeu.y > 0.0 || uVeu.w > 0.0) {\n"
+  // Opaque episode art carries its black veil and watched tint in one pass.
+  "  if (uVeu.x < 0.0) {\n"
+  "    float t = clamp(vUv.y, 0.0, 1.0);\n"
+  "    float g = mix(0.06, 0.18, smoothstep(0.00, 0.22, t));\n"
+  "    g = mix(g, 0.62, smoothstep(0.22, 0.52, t));\n"
+  "    g = mix(g, 0.86, smoothstep(0.52, 0.82, t));\n"
+  "    g = mix(g, 0.95, smoothstep(0.82, 1.00, t));\n"
+  "    cor = mix(vec3(0.133), cor, uVeu.y) * (1.0 - g) * (1.0 - uVeu.z);\n"
+  "  } else if (uVeu.y > 0.0 || uVeu.w > 0.0) {\n"
   "    float yb = 1.0 - vUv.y;\n"
   "    float t1 = 1.0 - smoothstep(0.42, 1.0, yb / max(uVeu.x, 0.001));\n"
   "    float t2 = 1.0 - smoothstep(0.42, 1.0, yb / max(uVeu.z, 0.001));\n"
@@ -2273,6 +2281,36 @@ void gfx_ambiente_descarregar_fora(const GfxRect *furos, int n) {
 static void ambPintarVeu(float cr, float cg, float cb, float va);
 
 
+int gfx_cortar_invisiveis;
+void gfx_rect_furos(GfxRect r, GLuint tex, GfxModo modo, float foco,
+                    float parx, float pary, float raio, float cr, float cg,
+                    float cb, float ca, const GfxRect *furos, int n) {
+  float saved[4], y = r.y;
+  memcpy(saved, subAtual, sizeof saved);
+  while (y < r.y + r.h) {
+    float end = r.y + r.h, x = r.x;
+    for (int i = 0; i < n; i++) {
+      if (furos[i].y > y) end = fminf(end, furos[i].y);
+      if (furos[i].y + furos[i].h > y) end = fminf(end, furos[i].y + furos[i].h);
+    }
+    while (x < r.x + r.w) {
+      float next = r.x + r.w, skip = x;
+      for (int i = 0; i < n; i++) if (furos[i].y <= y && furos[i].y + furos[i].h >= end) {
+        if (furos[i].x <= x) skip = fmaxf(skip, furos[i].x + furos[i].w);
+        else next = fminf(next, furos[i].x);
+      }
+      if (skip > x) { x = skip; continue; }
+      subAtual[0] = (x-r.x)/r.w; subAtual[1] = (y-r.y)/r.h;
+      subAtual[2] = (next-r.x)/r.w; subAtual[3] = (end-r.y)/r.h;
+      if (fillGpuArea(r, subAtual) > 0.0)
+        gfx_rect(r, tex, modo, foco, parx, pary, raio, cr, cg, cb, ca);
+      x = next;
+    }
+    y = end;
+  }
+  memcpy(subAtual, saved, sizeof saved);
+}
+
 void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
               float parx, float pary, float raio,
               float cr, float cg, float cb, float ca) {
@@ -2295,6 +2333,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
     esmaecer_cor_hdr(gfx_hdr_ui, &cr, &cg, &cb, &ca);
   GFX_TR_RECT(r.x, r.y, r.w, r.h);
   if (escAtiva != 1.0f) { r.x *= escAtiva; r.y *= escAtiva; r.w *= escAtiva; r.h *= escAtiva; }
+  if (gfx_cortar_invisiveis && !giroOn && !miniAtiva && fillGpuArea(r, subAtual) == 0.0) return;
   // A COR DO DESTAQUE E A ASSINATURA. Com o degrade ligado, todo retangulo ou
   // anel pintado EXATAMENTE com o destaque vivo (os tres floats que
   // ajustes_acento devolveu, sem conta no meio) e superficie de destaque, e
