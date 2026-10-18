@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T11:47:54-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T12:48:43-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -401,9 +401,11 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-Tracking snapshot: 22 branches have unmerged commits and no running job; 13 open issues have no mapped job or prompt. Newer fixes on `agente/205-heroisA`, `agente/205-pr567port` and `agente/p2p` need review and are not classified as lost. Queued jobs and deferred 2.1 work remain tracked separately. The C9 installation attempt at `cb7ece972` failed; later integration merges have not been confirmed on TV.
+Tracking snapshot: 22 branches have unmerged commits and no running job; 12 open issues have no mapped job or prompt. Newer fixes on `agente/205-heroisA`, `agente/205-pr567port`, `agente/205-torrentdica` and `agente/p2p` need review and are not classified as lost. Queued jobs and deferred 2.1 work remain tracked separately. The C9 installation attempt at `cb7ece972` failed; later integration merges have not been confirmed on TV.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
+
+- **Explanation for hidden torrent sources**: Mixed source lists explain why torrent sources are hidden, helping users understand which playback options are available; the newest fix still needs review. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-torrentdica`, `35ff5195c`.
 
 - **Variant A Hero layouts**: Wide Hero cards and split Hero rows follow the owner-selected artwork and metadata layout, with focus and draw-budget fixes awaiting review of the newest tip and device validation. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-heroisA`, `c3985174d`.
 
