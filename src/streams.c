@@ -580,6 +580,22 @@ static int descartadosSemDebrid;
 // #505: subconjunto descartado por pedir P2P (notWebReady). Separado porque a
 // causa muda: debrid nao o oferece — ligar uma conta nao o traz de volta.
 static int descartadosP2P;
+static struct { char nome[96]; int total, p2p; } descartadosAddon[ADDONS_MAX];
+static int nDescartadosAddon;
+static void contarDescartada(const Stream *s) {
+  int p2p = pedeP2P(s), i;
+  descartadosSemDebrid++; descartadosP2P += p2p;
+  if (!s->provedor[0]) return;
+  for (i = 0; i < nDescartadosAddon; i++)
+    if (!strcmp(descartadosAddon[i].nome, s->provedor)) break;
+  if (i == nDescartadosAddon) {
+    if (i == ADDONS_MAX) return;
+    memset(&descartadosAddon[i], 0, sizeof descartadosAddon[i]);
+    snprintf(descartadosAddon[i].nome, sizeof descartadosAddon[i].nome, "%s", s->provedor);
+    nDescartadosAddon++;
+  }
+  descartadosAddon[i].total++; descartadosAddon[i].p2p += p2p;
+}
 // #486: a dica "ligue o P2P" so e dita quando este pacote tem P2P. Perguntar o
 // motor AQUI, no fio da tela, abriria a libnuvio_engine.so no .tpk (dlopen em
 // p2pmotor.c, carregamento adiado de proposito); o trabalhador confere antes
@@ -617,10 +633,11 @@ void stream_definir_lista_idade(const Stream *l, int qtd, Uint32 idade) {
   if (nova && qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
   descartadosSemDebrid = 0;
   descartadosP2P = 0;
+  nDescartadosAddon = 0;
   for (i = 0; i < qtd && nova; i++)
     // #505: tambem o notWebReady, que pede P2P — a folha vazia tem de dizer
     // "ligue o P2P", nunca fingir que o addon nao mandou nada.
-    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += pedeP2P(&l[i]); }
+    if (!fonteOferecida(&l[i])) contarDescartada(&l[i]);
   for (i = 0; i < k && nova; i++) { nova[i].selosPacoteVer = 0; filtroCompletar(&nova[i]); }   // os selos saem do fio de fundo (selosAgendar)
   pthread_mutex_lock(&verTrava);
   free(lista); lista = nova; n = nova ? k : 0; atual = -1;
@@ -688,7 +705,7 @@ void stream_lista_acrescentar(const Stream *l, int qtd, int ordemAddon) {
     if (fonteOferecida(&l[i])) nova[k++] = l[i];
   if (qtd - k) printf("[fonte] %d fontes indisponiveis descartadas\n", qtd - k);
   for (i = 0; i < qtd; i++)
-    if (!fonteOferecida(&l[i])) { descartadosSemDebrid++; descartadosP2P += pedeP2P(&l[i]); }   // #505: idem
+    if (!fonteOferecida(&l[i])) contarDescartada(&l[i]);   // #505: idem
   if (!k) { free(nova); return; }
   for (i = 0; i < k; i++) { nova[i].selosPacoteVer = 0; filtroCompletar(&nova[i]); }
   // O CARTAO EM FOCO E O QUE FICA PARADO. Guardado pelo indice da lista (que
@@ -1786,6 +1803,27 @@ int stream_torrents_para_p2p(void) {
 #else
   return (ajustes_p2p_url()[0] || atomic_load(&motorP2pParaDica)) ? p2p : 0;
 #endif
+}
+
+// #599: explain partial results without changing the empty-sheet diagnosis.
+static int dicaTorrents(char *texto, size_t tam) {
+  int p2p = stream_torrents_para_p2p();
+  int qtd = !debrid_ativo() ? descartadosSemDebrid : p2p;
+  char nomes[1024] = "";
+  if (!n || qtd <= 0) return 0;
+  for (int i = 0; i < nDescartadosAddon; i++) {
+    int total = debrid_ativo() ? descartadosAddon[i].p2p : descartadosAddon[i].total;
+    size_t len = strlen(nomes);
+    if (total > 0 && len + sizeof descartadosAddon[i].nome + 24 < sizeof nomes)
+      snprintf(nomes + len, sizeof nomes - len, "%s%s: %d", len ? ", " : " (", descartadosAddon[i].nome, total);
+  }
+  if (nomes[0]) strncat(nomes, ")", sizeof nomes - strlen(nomes) - 1);
+  int len = snprintf(texto, tam, i18n("%d fontes torrent ocultas%s."), qtd, nomes);
+  if (len >= 0 && (size_t)len < tam)
+    snprintf(texto + len, tam - (size_t)len, " %s", p2p > 0
+      ? i18n("Ligue o P2P em Ajustes ou conecte uma conta de debrid.")
+      : i18n("Conecte uma conta de debrid."));
+  return 1;
 }
 
 unsigned stream_lista_geracao(void) {
@@ -3882,6 +3920,15 @@ static long tamanhoOrdem(int i) { return lista[i].tamanhoMB > 0 ? lista[i].taman
 static int *grupoTmp;
 static int *grupoFitTmp;
 static int grupoTmpCap;
+static float dicaTorrentsAltura;
+static float medirDicaTorrents(void) {
+  char texto[1536];
+  dicaTorrentsAltura = 0;
+  if (filtro != -1 && nFiltrados() && dicaTorrents(texto, sizeof texto))
+    dicaTorrentsAltura = 12 + txt_bloco(TXT_PG_FIM, texto, 110,110,108,0,0,
+      FOLHA_W-FOLHA_PAD_E-FOLHA_PAD_D-2*FOLHA_TXT,28,0,0);
+  return dicaTorrentsAltura;
+}
 static void montar(int automatica) {
   float y = 0;
   int g, i, k, m = -1, nt;
@@ -3922,7 +3969,7 @@ static void montar(int automatica) {
       (void)grupoRes(&lista[i]);
       porLinha(i, &y, automatica);
     }
-    alturaTotal = y;
+    alturaTotal = y + medirDicaTorrents();
     return;
   }
   if (grupoTmpCap < n) {
@@ -3973,7 +4020,7 @@ static void montar(int automatica) {
     secN[g] = nt;
     for (k = 0; k < nt; k++) porLinha(grupoTmp[k], &y, automatica);
   }
-  alturaTotal = y;
+  alturaTotal = y + medirDicaTorrents();
 }
 static int filtrado(int linha) {
   return linha >= 0 && linha < nOrdem ? ordem[linha] : -1;
@@ -5211,6 +5258,12 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     const int state=ondever_status(alvoPedido);
     const char *message=state==ONDE_BUSCANDO ? "Buscando onde assistir…" : state==ONDE_FALHOU ? "Não foi possível consultar a disponibilidade." : "Nenhum serviço informado para esta região.";
     txt_desenhar_alpha(txt_linha_corta(TXT_PG_FIM,message,160,164,172,255,rw),lx,FOLHA_TOPO+36,anim);
+  }
+  if (nf && filtro != -1 && dicaTorrentsAltura > 0) {
+    char texto[1536];
+    if (dicaTorrents(texto, sizeof texto))
+      txt_bloco(TXT_PG_FIM,texto,110,110,108,tx,
+        FOLHA_TOPO+alturaTotal-dicaTorrentsAltura-rolagem+12,tr-tx,28,anim,0);
   }
   if(!nFiltrados() && filtro != -1) {
     // A FOLHA VAZIA DIZ A CAUSA (B6/#107, D5). So quando a lista esta vazia
