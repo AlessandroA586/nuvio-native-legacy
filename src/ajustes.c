@@ -41,6 +41,8 @@
 #include "sessao.h"
 #include "sync.h"
 #include "perfis.h"
+#include "ltv.h"
+#include "guia.h"
 #include "traktauth.h"
 #include "simklauth.h"
 #include "discord.h"
@@ -643,6 +645,12 @@ typedef enum {
   AJ_ESCALA_TEXTO,     // text and component scale (gfx.h): 85/90/100/110/120/130%, default 100%; local, append-only
   AJ_DET_ESPACO,       // title page row spacing (detail.h): 0 Compacto, 1 Normal (default), 2 Confortavel; local, append-only
   AJ_FOCO_ACENTO,      // focus plate in the accent colour instead of gray (glass only); default off; local, append-only
+  // FONTES POR URL (Guia de TV, M9, ltv.h): listas M3U e guias XMLTV deste
+  // perfil. AJ_URL_LISTA escolhe uma das ja cadastradas (so o nome e o host na
+  // tela, nunca a URL: ela pode levar usuario e senha), os dois ADD abrem o
+  // teclado (TV ou celular) e REM remove a escolhida. Estado em
+  // ltv-urls-p<N>.txt, nunca em ajustes.txt. No fim: valor[]/CHAVE[] posicionais.
+  AJ_URL_LISTA, AJ_URL_M3U_ADD, AJ_URL_XMLTV_ADD, AJ_URL_REM,
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -659,6 +667,10 @@ static const char *V_SELOS_PACOTE[] = { "Do Nuvio", "Pacote 1", "Pacote 2", "Pac
 // 1 = Desligado continua), entao o que ja foi gravado nao precisa migrar.
 static const char *V_EP_TAMANHO[] = { "Pequeno", "Médio", "Grande" };
 static const char *V_SELO_VISTO[] = { "Ícone", "Desligado", "Escrito" };
+// "Listas e guias por URL": so o TAMANHO importa (nenhuma + LTV_URLS_MAX); o texto
+// de cada valor vem de urlTextoValor.
+static const char *V_URL_LISTA[] = { "Nenhuma", "1", "2", "3", "4", "5", "6", "7", "8" };
+
 static const char *V_ICONE_APP[ICONEAPP_N] = {
   "Original", "Fênix", "N verde-água", "TV laranja", "N pixel",
   "Play tricolor", "Arco", "TV viva", "Clube retrô", "Arcade N",
@@ -1681,6 +1693,10 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Escala de texto e componentes", V_ESCALA_TEXTO, 6),   // local: escalaTextoLocal
   ESC("Espaçamento das fileiras", V_DET_ESPACO, 3),          // local: detEspacoLocal
   ESC("Foco na cor de destaque", V_LIGA, 2),   // local: focoAcentoLocal
+  ESC("Listas e guias por URL",          V_URL_LISTA, 9),     // por perfil: ltv-urls-p<N>.txt (tamanho dinamico)
+  ACAO("Adicionar lista M3U"),
+  ACAO("Adicionar guia XMLTV"),
+  ACAO("Remover a escolhida"),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1979,6 +1995,7 @@ static const char *CHAVE[] = {
   "escalaTextoLocal",
   "detEspacoLocal",
   "focoAcentoLocal",
+  "-urlLista", "-urlM3uAdd", "-urlXmltvAdd", "-urlRem",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -4162,6 +4179,66 @@ static void memoriaMigrar(void) {
 }
 #endif
 
+// --- LISTAS E GUIAS POR URL (M9) --------------------------------------------------
+// M3U e XMLTV deste perfil (ltv.h). A tela mostra "M3U · host", nunca a URL.
+// Cache local da lista (o desenho chama textoValor varias vezes por quadro) e a
+// escolha da linha; adicionar/remover manda o Guia recarregar.
+static LtvUrl urlV[LTV_URLS_MAX];
+static int urlN, urlPerfil = -1, urlResultado = -1;   // -1 nada; 1 adicionada; 2 invalida; 3 lista cheia; 4 repetida
+static void urlEspelhar(void) {
+  if (urlPerfil != perfis_ativo()) { urlPerfil = perfis_ativo(); ltv_urls_carregar(urlPerfil); }
+  urlN = ltv_urls_copiar(urlV, LTV_URLS_MAX);
+  if (valor[AJ_URL_LISTA] > urlN) valor[AJ_URL_LISTA] = urlN;
+  if (valor[AJ_URL_LISTA] < 0) valor[AJ_URL_LISTA] = 0;
+}
+static void urlAdicionar(int tipo, const char *url) {
+  char t[1024], host[96];
+  size_t n;
+  int i;
+  snprintf(t, sizeof t, "%s", url ? url : "");
+  n = strlen(t);
+  while (n && (t[n - 1] == ' ' || t[n - 1] == '\n')) t[--n] = 0;
+  if (!n) return;
+  if (strncmp(t, "http://", 7) && strncmp(t, "https://", 8)) { urlResultado = 2; return; }
+  urlEspelhar();
+  if (urlN >= LTV_URLS_MAX) { urlResultado = 3; return; }
+  for (i = 0; i < urlN; i++) if (urlV[i].tipo == tipo && !strcmp(urlV[i].url, t)) { urlResultado = 4; return; }
+  ltv_url_host(t, host, sizeof host);
+  if (ltv_urls_adicionar(tipo, host, t) < 0) { urlResultado = 2; return; }
+  urlResultado = 1;
+  urlEspelhar();
+  valor[AJ_URL_LISTA] = urlN;
+  guia_fontes_mudaram();
+  printf("[ltv] url adicionada: %s %s\n", tipo == LTV_URL_M3U ? "m3u" : "xmltv", host); fflush(stdout);
+}
+static void urlRemover(void) {
+  int v = valor[AJ_URL_LISTA];
+  if (v < 1 || v > urlN) return;
+  ltv_urls_remover(v - 1);
+  urlResultado = -1;
+  urlEspelhar();
+  guia_fontes_mudaram();
+}
+static const char *urlNomeValor(int v) {
+  static char b[160];
+  char host[96];
+  if (v < 1 || v > urlN) return "Nenhuma";
+  ltv_url_host(urlV[v - 1].url, host, sizeof host);
+  snprintf(b, sizeof b, "%s \xc2\xb7 %s", urlV[v - 1].tipo == LTV_URL_M3U ? "M3U" : "XMLTV", host[0] ? host : urlV[v - 1].nome);
+  return b;
+}
+static const char *urlAddTexto(void) {
+  switch (urlResultado) {
+    case 1: return i18n("adicionada");
+    case 2: return i18n("o endereço precisa começar com http");
+    case 3: return i18n("limite de 8 listas e guias");
+    case 4: return i18n("já está na lista");
+    default: return i18n("OK adiciona");
+  }
+}
+static const char *URL_ALFA =
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:/.-_?=&%#+~@!,;|";
+
 void ajustes_dir(const char *dir) {
   FILE *f;
   char caminho[600], linha[96];
@@ -5354,6 +5431,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_COL_ARTE_CONTA: /* arte do addon: o web nao tem estas escolhas */
     case AJ_SELOS_CORES:    /* no web a cor vem do pacote de selos importado */
     case AJ_SELOS_PACOTE: case AJ_SELOS_PACOTE_ADD: case AJ_SELOS_PACOTE_REM: /* a escolha e por perfil, em selospacote.c */
+    case AJ_URL_LISTA: case AJ_URL_M3U_ADD: case AJ_URL_XMLTV_ADD: case AJ_URL_REM: /* por perfil, em ltv-urls-p<N>.txt */
     case AJ_LIVETV_RES: case AJ_LIVETV_FORMATO: case AJ_LIVETV_ESPERA:
     case AJ_LIVETV_DIAG: case AJ_LIVETV_MODO: case AJ_LIVETV_PROXY: /* rede e provedor desta casa: o web nao tem */
     case AJ_HOME_LAYOUT:    /* a Dinamica nao tem par na conta (selected_layout) */
@@ -6215,6 +6293,8 @@ static const char *textoLeitura(int op) {
   if (op == AJ_SEEKR_CHAVE) return seekrMascarada();
   if (op == AJ_SEEKR_TESTAR) return skTesteTexto();
   if (op == AJ_SELOS_PACOTE_ADD) return spAddTexto();
+  if (op == AJ_URL_M3U_ADD || op == AJ_URL_XMLTV_ADD) return urlAddTexto();
+  if (op == AJ_URL_REM) return valor[AJ_URL_LISTA] > 0 ? i18n("OK remove") : i18n("nenhuma lista escolhida");
   if (op == AJ_SELOS_PACOTE_REM) {
     int a = selospacote_ativo();
     if (a < 0) return i18n("nenhum pacote escolhido");
@@ -6427,6 +6507,7 @@ static int inativa(int op) {
     case AJ_SEEKR_FITA: case AJ_SEEKR_AJUSTE: return !lig(AJ_SEEKR_LIGADO);
     // Remover so vale para o pacote escolhido que foi posto nesta TV.
     case AJ_SELOS_PACOTE_REM: return selospacote_ativo() < 0 || !selospacote_da_tv(selospacote_ativo());
+    case AJ_URL_REM: return valor[AJ_URL_LISTA] < 1;
     // Sem o relogio nao ha ilha para onde minimizar: sai para a pagina, como antes.
     case AJ_SAIDA_PLAYER: return !lig(AJ_RELOGIO);
     // So existe sessao para manter quando a saida vai para a ilha.
@@ -6668,6 +6749,8 @@ static const char *ajudaOpcaoBase(int op) {
       return "Ative Miniaturas na barra de tempo para ajustar as miniaturas.";
     if (op == AJ_SELOS_PACOTE_REM)
       return "Só dá para remover um pacote que foi adicionado nesta TV.";
+    if (op == AJ_URL_REM)
+      return "Escolha antes uma lista ou guia.";
     if (op == AJ_SAIDA_PLAYER)
       return "Ative Relógio na tela: sem ele o player não tem para onde minimizar.";
     if (op == AJ_MANTER_VIDEO)
@@ -6778,6 +6861,10 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_SELOS_CORES: return "Na lista de fontes, cada selo (4K, HDR, Dolby, codec, serviço) ganha a cor do seu tipo, como no pacote de selos do Nuvio. Desligado, os selos ficam brancos.";
     case AJ_SELOS_PACOTE: return "Qual pacote de selos desenha a lista de fontes. Do Nuvio é o pacote que vem no app; os outros são os pacotes da sua conta (importados no Nuvio web) e os que você adiciona aqui. Vale para este perfil. Se nenhum selo do pacote combinar com a fonte, ela usa os selos do app.";
     case AJ_SELOS_PACOTE_ADD: return "Adiciona um pacote de selos pelo link do JSON dele (no máximo 3 no total, contando os da conta). O pacote entra já escolhido.";
+    case AJ_URL_LISTA: return "Listas M3U e guias XMLTV deste perfil. Cada lista M3U vira uma fonte do Guia; cada guia XMLTV serve a programação de todas. Aqui aparece só o servidor; a URL inteira fica só nesta TV.";
+    case AJ_URL_M3U_ADD: return "Adiciona uma lista de canais M3U pela URL. Digite no teclado da TV ou pelo celular.";
+    case AJ_URL_XMLTV_ADD: return "Adiciona um guia de programação XMLTV pela URL (pode ser .gz).";
+    case AJ_URL_REM: return "Tira do Guia a lista ou o guia escolhido.";
     case AJ_SELOS_PACOTE_REM: return "Tira desta TV o pacote escolhido. Pacote que veio da conta só se remove na conta, no Nuvio web.";
     case AJ_COL_ARTE_CONTA: return "As pastas de coleção que o app já traz com arte própria passam a usar a capa, o fundo e o logo que estão na sua conta (editor de coleções do site). O que a conta não tiver continua com a arte do app.";
     case AJ_HERO_TRANSICAO: return "Deslizar: quando o destaque troca de título, a arte e o texto saem para o lado e o próximo entra colado, como num carrossel. Esmaecer: a arte apaga e a nova aparece no lugar. Com Animações reduzidas a troca é sempre sem movimento.";
@@ -8721,6 +8808,14 @@ static void eventoTela(const SDL_Event *e) {
                         200, SP_ALFA_URL, NULL);
       return;
     }
+    if (focoOp == AJ_URL_M3U_ADD || focoOp == AJ_URL_XMLTV_ADD) {
+      stCampo = focoOp;
+      teclado_abrir_com(focoOp == AJ_URL_M3U_ADD ? "Endereço da lista M3U" : "Endereço do guia XMLTV",
+                        "O link completo, com http:// ou https://.",
+                        400, URL_ALFA, NULL);
+      return;
+    }
+    if (focoOp == AJ_URL_REM) { urlRemover(); return; }
     if (focoOp == AJ_SELOS_PACOTE_REM) {
       int a = selospacote_ativo();
       if (a >= 0 && selospacote_da_tv(a)) { selospacote_remover(a); spResultado = -1; spEspelhar(); }
@@ -8814,6 +8909,7 @@ void ajustes_atualizar(float dt, Uint32 agora) {
   adTesteRecolher();
   skTesteRecolher();
   spRecolher();
+  urlEspelhar();
   // "Procurar atualização" achou versao nova: abre o cartao por cima dos
   // Ajustes, como o OK em "Atualizar o aplicativo" ja fazia.
   if (atualizacao_busca_achou() && !atualizacao_aberta()) atualizacao_abrir();
@@ -8832,6 +8928,8 @@ void ajustes_atualizar(float dt, Uint32 agora) {
       else if (stCampo == AJ_FANART_CHAVE)    fanartDefinir(teclado_texto());
       else if (stCampo == AJ_SEEKR_CHAVE)     { seekrDefinir(teclado_texto()); atomic_store_explicit(&skTeste, 0, memory_order_release); }
       else if (stCampo == AJ_SELOS_PACOTE_ADD) spAdicionar(teclado_texto());
+      else if (stCampo == AJ_URL_M3U_ADD || stCampo == AJ_URL_XMLTV_ADD)
+        urlAdicionar(stCampo == AJ_URL_M3U_ADD ? LTV_URL_M3U : LTV_URL_XMLTV, teclado_texto());
       else if (stCampo == AJ_P2P_URL)         ajustes_definir_p2p_url(teclado_texto());
       else if (stCampo == AJ_CURADORIA_URL) {
         int e = curadoria_definir_url(teclado_texto());
@@ -8974,6 +9072,7 @@ static int nValores(int op) {
   if (op == AJ_SELOS_PACOTE) return 1 + selospacote_n();
   if (op == AJ_PLAYER_EXTERNO) return 3 + ppN();
   if (op == AJ_PLAYER_ANIME) return 4 + ppN();
+  if (op == AJ_URL_LISTA) return 1 + urlN;
 #ifndef __EMSCRIPTEN__
   // "YouTube" (o 4o valor) so toca no .wgt da Samsung (trailerfonte.c, existe).
   // Aqui ele era escolhivel e deixava a TV sem trailer nenhum: sem trailer no
@@ -9032,6 +9131,7 @@ static const char *textoValor(int op) {
     int v = valor[op];
     return v > 0 && v <= selospacote_n() ? selospacote_nome(v - 1) : "Do Nuvio";
   }
+  if (op == AJ_URL_LISTA) return urlNomeValor(valor[op]);
   // FORA DO INTERVALO NAO LE FORA DO VETOR.
   //
   // Esta linha era `return o->valores[valor[op]]`, sem conferir nada, e foi o
@@ -9539,6 +9639,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_XTREAM_SENHA: case AJ_XTREAM_LIMPAR: case AJ_FANART_CHAVE:
     case AJ_SEEKR_CHAVE: case AJ_SEEKR_TESTAR:
     case AJ_SELOS_PACOTE_ADD: case AJ_SELOS_PACOTE_REM:
+    case AJ_URL_LISTA: case AJ_URL_M3U_ADD: case AJ_URL_XMLTV_ADD: case AJ_URL_REM:
     case AJ_XTREAM_CONTA:
     case AJ_DIAGNOSTICO: case AJ_VELOCIDADE: case AJ_LIVETV_DIAG:
     case AJ_P2P_URL: case AJ_P2P_TESTAR:

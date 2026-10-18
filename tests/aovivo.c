@@ -14,6 +14,8 @@
 
 // dubles do que epg.c e aovivo.c referenciam e o teste nao exercita
 char *rede_baixar_bin(const char *u, int s, long *n) { (void)u; (void)s; (void)n; return 0; }
+int rede_baixar_fluxo(const char *u, int s, const char *const *c, int (*cb)(const char *, size_t, void *), void *x,
+                      long long m, int *st, long long *b) { (void)u; (void)s; (void)c; (void)cb; (void)x; (void)m; (void)st; (void)b; return 0; }
 char *rede_baixar_bin_medido_controle(const char *url, int segundos, const char *const *cab,
                                       const RedeControle *c, long *tam, RedeMedida *m) {
   (void)url; (void)segundos; (void)cab; (void)c; (void)tam;

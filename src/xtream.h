@@ -53,6 +53,18 @@ typedef struct {
   char epgId[64];     // epg_channel_id do servidor, quando ha
 } XtreamCanal;
 
+// A mesma lista EM FLUXO (guia de TV): `cat` recebe as categorias na ordem do
+// painel com a contagem de cada uma (antes de qualquer canal), `cb` cada canal
+// (0 = parar). Sem vetor intermediario. Devolve o total do painel.
+typedef struct {
+  const char *id, *nome, *logo, *categoria, *epgId;
+  int num;           // "num" do painel (0 = nao veio)
+  int catOrdem;      // posicao da categoria na lista do painel
+  int arquivo, arquivoDias;   // tv_archive (catch-up, v2)
+} XtreamItem;
+typedef int (*XtreamCb)(const XtreamItem *c, void *u);
+int xtream_canais_cb(void (*cat)(const char *nome, int ordem, int n, void *u),
+                     XtreamCb cb, void *u, int *total);
 // Baixa categorias + canais ao vivo e preenche `saida`. Devolve quantos; 0 sem
 // cadastro ou sem resposta. BLOQUEIA: e do fio do guia.
 int xtream_canais(XtreamCanal *saida, int max);
