@@ -21,10 +21,13 @@ export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp
 export NUVIO_DADOS
 NUVIO_DADOS=$(mktemp -d "$TMPDIR/nuvio-heroisA.XXXXXX")
 trap 'rc=$?; rm -rf "$NUVIO_DADOS"; printf "Hero A runner: rc=%d, elapsed=%ds\n" "$rc" "$SECONDS"' EXIT
-# Freeze the complete integration renderer, including shared shaders and badges.
-base=0d464c26252ff9e0afef07fe55322da21ce6ce07
-mkdir "$NUVIO_DADOS/base"
+# Compare the complete current integration renderer, including shaders and caches.
+base=integracao/2.0.5
+mkdir "$NUVIO_DADOS/base" "$NUVIO_DADOS/historical-src"
 git archive "$base" src | tar -x -C "$NUVIO_DADOS/base"
+# Historical geometry/badge failures are regression proof, not the GPU budget.
+git archive 0d464c26252ff9e0afef07fe55322da21ce6ce07 src | tar -x -C "$NUVIO_DADOS/historical-src"
+printf 'GPU baseline: %s (%s)\n' "$base" "$(git rev-parse "$base")"
 # Freeze the reviewed mask so its pixel regression must fail before the fix.
 git show f10ae91d0:src/home.c > "$NUVIO_DADOS/reviewed-home.c"
 python3 - "$NUVIO_DADOS" <<'PY'
@@ -36,7 +39,8 @@ out = Path(sys.argv[1])
 flags = ['-O1', '-I/opt/homebrew/include', '-I/opt/homebrew/include/SDL2',
          '-Wno-deprecated-declarations']
 jobs, objects = [], {}
-for name, source in [('test', root), ('baseline', out/'base'), ('reviewed', root)]:
+for name, source in [('test', root), ('baseline', out/'base'),
+                     ('historical', out/'historical-src'), ('reviewed', root)]:
     target = out/name
     target.mkdir()
     objects[name] = []
@@ -44,7 +48,7 @@ for name, source in [('test', root), ('baseline', out/'base'), ('reviewed', root
         if path.name in ('main.c', 'home.c'):
             continue
         obj = target/(path.stem + '.o')
-        if name == 'reviewed' or (name == 'baseline' and path.read_bytes() == (root/path.relative_to(source)).read_bytes()):
+        if name == 'reviewed' or (name in ('baseline', 'historical') and path.read_bytes() == (root/path.relative_to(source)).read_bytes()):
             objects[name].append(str(out/'test'/(path.stem+'.o')))
             continue
         objects[name].append(str(obj))
@@ -52,7 +56,7 @@ for name, source in [('test', root), ('baseline', out/'base'), ('reviewed', root
     obj = target/'fixture.o'
     objects[name].append(str(obj))
     jobs.append(['cc', *flags, '-I'+str(source/'src'),
-                 *(['-DHERO_BASELINE', '-DHOME_SOURCE="'+str(source/'src/home.c')+'"'] if name == 'baseline' else
+                 *(['-DHERO_BASELINE', '-DHOME_SOURCE="'+str(source/'src/home.c')+'"'] if name in ('baseline', 'historical') else
                    ['-DHOME_SOURCE="'+str(out/'reviewed-home.c')+'"'] if name == 'reviewed' else []),
                  '-c', 'tests/heroisA.c', '-o', str(obj)])
 def compile(command):
@@ -74,10 +78,10 @@ set -e
 grep -F 'fabsf(pixel[channel]-expected) <= 2' "$NUVIO_DADOS/mask.log"
 "$NUVIO_DADOS/test.bin" --fade
 printf 'PASS background mask: reviewed FAIL (rc=%d), current PASS\n' "$rc"
-# Identical acceptance assertions must fail for the expected reason on integration.
+# Identical assertions must fail for the expected reason on the historical renderer.
 for case in geometry badge; do
   set +e
-  "$NUVIO_DADOS/baseline.bin" "--$case" > "$NUVIO_DADOS/$case.log" 2>&1
+  "$NUVIO_DADOS/historical.bin" "--$case" > "$NUVIO_DADOS/$case.log" 2>&1
   rc=$?
   set -e
   [ "$rc" -eq 134 ]
@@ -87,9 +91,10 @@ for case in geometry badge; do
     grep -F 'badge_imdb_largura(68)>=mark.w+14+BADGE_IMDB_GAP+score.w' "$NUVIO_DADOS/$case.log"
   fi
   "$NUVIO_DADOS/test.bin" "--$case"
-  printf 'PASS %s: integration FAIL (rc=%d), current PASS\n' "$case" "$rc"
+  printf 'PASS %s: historical FAIL (rc=%d), current PASS\n' "$case" "$rc"
 done
 "$NUVIO_DADOS/test.bin" --transitions
+"$NUVIO_DADOS/baseline.bin" --badge
 "$NUVIO_DADOS/baseline.bin" --budget > "$NUVIO_DADOS/base.log" 2>&1
 "$NUVIO_DADOS/test.bin" --budget > "$NUVIO_DADOS/current.log" 2>&1
 python3 - "$NUVIO_DADOS/base.log" "$NUVIO_DADOS/current.log" <<'PY'
