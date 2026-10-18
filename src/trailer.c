@@ -263,7 +263,13 @@ EM_JS(int, trailer_js_pausado, (), {
   if (!T || !T.f) return 0;
   return T.ehVideo ? (T.f.paused ? 1 : 0) : (T.estado === 2 ? 1 : 0);
 });
-int trailer_suportado(void) { return 1; }
+int trailer_suportado(void) {
+#ifdef NV_TIZEN3_LITE
+  return 0;
+#else
+  return 1;
+#endif
+}
 #else
 // LG (e Mac, onde video_iniciar devolve 0 e nada disto acontece): o trailer
 // e um MP4 no plano de video da TV. O volume so pode ser mexido depois de o

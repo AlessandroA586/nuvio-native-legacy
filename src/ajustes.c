@@ -2485,7 +2485,11 @@ static void interfaceAplicar(void) {
 // Uma variavel daqui (e nao seguro_perfil_ativo()) para os acessores nao puxarem
 // seguro.c: varios testes compilam ajustes.c com uma lista curta de fontes.
 static int perfilSeguro;
+#ifdef NV_TIZEN3_LITE
+#define SEGURO 1  // Experimental lite always uses existing low-cost rendering limits.
+#else
 #define SEGURO perfilSeguro
+#endif
 int ajustes_4k(void)                  { return valor[AJ_RESOLUCAO] == RES_4K && !SEGURO; }
 int ajustes_res_auto(void)            { return valor[AJ_RESOLUCAO] == RES_AUTO && !SEGURO; }
 int ajustes_720p(void)                { return valor[AJ_RESOLUCAO] == RES_720 && !SEGURO; }
@@ -2619,7 +2623,13 @@ int ajustes_cor_logo(void) { return lig(AJ_COR_LOGO); }
 int ajustes_vidro(void) { return 1; }
 #else
 int ajustes_vidro(void) { return lig(AJ_VIDRO) && !SEGURO; }
-int ajustes_fundo(void) { int v = valor[AJ_FUNDO]; return v >= 0 && v < 3 ? v : 0; }
+int ajustes_fundo(void) {
+#ifdef NV_TIZEN3_LITE
+  return 0;  // No frost background in the experimental 2017 build.
+#else
+  int v = valor[AJ_FUNDO]; return v >= 0 && v < 3 ? v : 0;
+#endif
+}
 int ajustes_vidro_contorno(void) { return lig(AJ_VIDRO_CONTORNO); }
 int ajustes_addons_do_principal(void) { return lig(AJ_ADDONS_PRINCIPAL); }
 #endif
@@ -3175,7 +3185,13 @@ void ajustes_definir_salvos_destino(int destino) {
 }
 int ajustes_data_completa(void)       { return lig(AJ_DET_DATA_CHEIA); }
 float ajustes_detalhe_veu(void)       { int v = valor[AJ_DET_VEU]; return (v < 0 ? 0 : v > 100 ? 100 : v) / 100.0f; }
-int   ajustes_trailer_auto(void)      { return lig(AJ_DET_TRAILER_AUTO); }
+int   ajustes_trailer_auto(void)      {
+#ifdef NV_TIZEN3_LITE
+  return 0;
+#else
+  return lig(AJ_DET_TRAILER_AUTO);
+#endif
+}
 // TRAILER AUTOMATICO DA HOME VETADO PELA GPU. Utgard (Mali-400/450/470) roda
 // a home a 8-24 fps ja no nivel 2 de efeitos (gpunivel.c); o video tocando
 // por baixo do furo do destaque so tira mais quadro. Vale para a sessao e nao
