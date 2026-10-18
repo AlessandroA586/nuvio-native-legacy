@@ -113,11 +113,18 @@ static void videoServidor(int aberto) {
 
 // O player segurando o video: espera a pre-busca acabar ou o teto vencer.
 // Devolve os ms ate o video ser "solto".
-static long esperarPrebusca(void) {
-  long t0 = agoraMs();
-  while (mkvass_prebusca_fase() == 1 && agoraMs() - t0 < MKVASS_PREBUSCA_MS) usleep(5 * 1000);
-  return agoraMs() - t0;
+static long esperarPrebuscaRelogio(long (*agora)(void), void (*passo)(void)) {
+  long t0 = agora();
+  while (mkvass_prebusca_fase() == 1 && agora() - t0 < MKVASS_PREBUSCA_MS) passo();
+  return agora() - t0;
 }
+static void esperarQuadro(void) { usleep(5 * 1000); }
+static long esperarPrebusca(void) {
+  return esperarPrebuscaRelogio(agoraMs, esperarQuadro);
+}
+static long relogioPrebusca;
+static long agoraPrebusca(void) { return relogioPrebusca; }
+static void avancarPrebusca(void) { relogioPrebusca++; }
 
 static void zerarServidor(void) {
   char url[600]; char *r;
@@ -155,16 +162,16 @@ static void nomeSidecar(const char *url, int faixa, char *dst, size_t tam) {
 #define MKVASS_TESTE_ESCALA 1.0
 #endif
 static int rodarAte(double fator, long timeoutMs, double posIni) {
-  long t0 = agoraMs(), ultSeg = -1, ultPed = 0; int maxSeg = 0, noSeg = 0;
+  long t0 = agoraMs();
   for (;;) {
-    long ag = agoraMs(), ped; int e = mkvass_estado();
+    long ag = agoraMs(); int e = mkvass_estado();
     double pos = posIni + (ag - t0) / 1000.0 * fator;
     mkvass_passo(pos);
-    mkvass_estatisticas(&ped, NULL, NULL, NULL);
-    if (ag / 1000 != ultSeg) { ultSeg = ag / 1000; noSeg = 0; }
-    noSeg += (int)(ped - ultPed); ultPed = ped;
-    if (noSeg > maxSeg) maxSeg = noSeg;
-    if (e == MKVASS_COMPLETO || e >= MKVASS_NOGO) return maxSeg;
+    // Count actual request arrivals, not deltas sampled across scheduler gaps.
+    if (e == MKVASS_COMPLETO || e >= MKVASS_NOGO) {
+      esperarFio();
+      return (int)contagemDe("picosegundo");
+    }
     if (ag - t0 > timeoutMs) return -1;
     usleep(20 * 1000);
   }
@@ -1101,21 +1108,31 @@ int main(int argc, char **argv) {
       ok(ms < 1000 && contagemServidor() <= 2, "nenhuma legenda no idioma: so o cabecalho e o video sai");
       (void)t0; }
 
-    // O TETO: servidor de 1,2 s por Range (o medido na C9). O video sai no
-    // teto com o que chegou, e o fio segue em segundo plano.
+    // Hold bodies after Header/Cues. Advance only the player's injected clock:
+    // release must occur exactly at the cap while prefetch remains unfinished.
     printf("\n[12f] servidor lento: o video sai no teto (%d ms) com o indice lido\n", MKVASS_PREBUSCA_MS);
-    snprintf(urlP, sizeof urlP, "http://localhost:%s/lento/%s", strrchr(base, ':') + 1, argv[2]);
+    snprintf(urlP, sizeof urlP, "http://localhost:%s/lentocontrolado/%s", strrchr(base, ':') + 1, argv[2]);
     nomeSidecar(urlP, -1, scP, sizeof scP); dados_apagar(scP);
     mkvass_parar(); esperarFio(); legenda_desligar();
     zerarServidor();
-    mkvass_prebuscar(urlP, escolherPrimeira, 0.0);
-    ms = esperarPrebusca();
+    ok(mkvass_prebuscar(urlP, escolherPrimeira, 0.0), "pre-busca lenta comecou");
+    { long t0 = agoraMs();
+      do {
+        mkvass_estatisticas(NULL, NULL, NULL, &tot);
+        if (tot == nEsp || mkvass_nogo()) break;
+        esperarQuadro();
+      } while (agoraMs() - t0 < 30000); } // Watchdog only; no timing assertion.
+    relogioPrebusca = 0;
+    ms = esperarPrebuscaRelogio(agoraPrebusca, avancarPrebusca);
     mkvass_estatisticas(&pedAntes, NULL, &col, &tot);
-    printf("    video solto em %ld ms (fase %d): %d/%d blocos, %ld Ranges\n", ms, mkvass_prebusca_fase(),
+    printf("    video solto em %ld ms virtuais (fase %d): %d/%d blocos, %ld Ranges\n", ms, mkvass_prebusca_fase(),
            col, tot, pedAntes);
-    ok(ms >= MKVASS_PREBUSCA_MS - 50 && ms <= MKVASS_PREBUSCA_MS + 250, "o video sai no teto, nao depois");
+    ok(ms == MKVASS_PREBUSCA_MS && mkvass_prebusca_fase() == 1 && col == 0,
+       "o video sai no teto, com a pre-busca ainda bloqueada");
     ok(tot == nEsp, "cabecalho e Cues chegaram antes do teto");
-    mkvass_parar(); esperarFio(); }
+    mkvass_parar();
+    ok(contagemDe("liberarlento") == 1, "libera os pedidos pendentes depois do video");
+    esperarFio(); }
 
   mkvass_parar(); esperarFio();
   free(esp);

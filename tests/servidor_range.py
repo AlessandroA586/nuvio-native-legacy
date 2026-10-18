@@ -60,6 +60,8 @@ recusasResto = 0
 cortadosEm = set()          # (arquivo, byte onde um corte do /rdN parou)
 trava = threading.Lock()
 anexosCache = {}
+inicios = []
+liberarLento = threading.Event()
 
 def _vint(b, o, mascara):
     p = b[o]; w = 1
@@ -100,6 +102,8 @@ class H(http.server.BaseHTTPRequestHandler):
         if semRange: nome = nome[len("norange/"):]
         self.limite1 = nome.startswith("limite1/")
         if self.limite1: nome = nome[len("limite1/"):]
+        self.lentoControlado = nome.startswith("lentocontrolado/")
+        if self.lentoControlado: nome = nome[len("lentocontrolado/"):]
         lento = nome.startswith("lento/")
         if lento: nome = nome[len("lento/"):]
         curtoCues = nome.startswith("curtocues/")
@@ -163,6 +167,16 @@ class H(http.server.BaseHTTPRequestHandler):
 
     def _get(self):
         global contagem, cabecalhos, curtoPedidos, recusas429, redirs, cortes, recusasResto, videoAberto
+        if self.path == "/liberarlento":
+            liberarLento.set()
+            self._texto(1); return
+        if self.path == "/picosegundo":
+            with trava:
+                segundos = {}
+                for inicio in inicios:
+                    segundos[inicio] = segundos.get(inicio, 0) + 1
+                v = max(segundos.values(), default=0)
+            self._texto(v); return
         if self.path == "/contagem":
             with trava: v = contagem
             self._texto(v); return
@@ -187,6 +201,8 @@ class H(http.server.BaseHTTPRequestHandler):
         if self.path == "/zerar":
             with trava:
                 contagem = 0
+                inicios.clear()
+                liberarLento.clear()
                 cabecalhos = 0
                 curtoPedidos = 0
                 recusas429 = 0
@@ -199,6 +215,8 @@ class H(http.server.BaseHTTPRequestHandler):
         cam, semRange, lento, curto, curtoCues = self._arquivo()
         if not os.path.isfile(cam): self.send_error(404); return
         with trava:
+            import time
+            inicios.append(int(time.monotonic()))
             contagem += 1
             if curto:
                 curtoPedidos += 1
@@ -232,6 +250,9 @@ class H(http.server.BaseHTTPRequestHandler):
         if curto and os.environ.get("NUVIO_RANGE_TRACE") == "1":
             print("range-trace curto #%d %s bytes=%d-%d" %
                   (curtoN, self.path, ini, fim), file=sys.stderr, flush=True)
+        # Header and Cues arrive; subsequent bodies wait for the test event.
+        if self.lentoControlado and k > 2:
+            liberarLento.wait()
         if lento:
             import time
             time.sleep(1.2)
