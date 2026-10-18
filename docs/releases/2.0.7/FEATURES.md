@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T12:48:43-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T13:47:59-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -16,6 +16,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 ## Release features (English)
 
 ### Highlights
+
+- **Variant A Hero layouts**: Wide Hero cards and split Hero rows use the approved artwork and metadata anchors, keep posters visible while scrolling and match the active Dynamic background through transitions. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-heroisA`, `50455c6f9`, `77aa7f216`, `13a5f3bab`, `4ec7e93ee`, `d61e03956`, `124895d8c`, merge `8ff0623e9`; TV validation remains pending.
 
 - **Stage rows show details beside the poster**: Focused Stage posters reveal genres, ratings, synopsis and cast beside the artwork, with an optional spotlight that follows focus. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `a7d5ccb51`, `2dc2e5dc2`, `0749d883e`, `f59c70b50`, `96457c78a`. Stage now includes anchored headlines, timed focus motion and editorial lighting; touch scrolling and viewport bounds remain aligned.
 
@@ -180,6 +182,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Fixes
 
+- **Timeline text stays clear of artwork**: The text column keeps a 24-pixel gap from scaled artwork across form factors, preventing overlap. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-timelinetexto`, `2ac2c50d6`, merge `99c40f3c0`.
+
 - **Stable layouts at every text size (#205)**: Home, title pages, Search and Settings preserve poster sizes, trailer coverage and fixed screen anchors, while upcoming episode descriptions leave room for release dates and status. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #205, `15e810e9f`, `1ae9bf582`, `ccfb08bac`, `9c94e014a`, `6626d68d6`, `f8b4d650a`, `c2954cf49`, `d3fff84c9`, `dc59d2c72`, merge `cb398fc2f`.
 
 - **Smooth immersive background changes**: Immersive backgrounds blend into frosted glass without abrupt threshold jumps. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `a933eb0fe`, merge `ddc51a964`.
@@ -269,6 +273,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Performance
 
+- **Lower Hero rendering cost**: Hero artwork uses fused veils and a specialized shader, avoids shading flat backgrounds and draws split captions without extra render passes to reduce Home rendering work. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `4a7a56a1d`, `07ce4a2ff`, `4b2eb36c4`, `8d84be9a1`; target-device performance remains unconfirmed.
+
 - **Glass stays smooth when text caches change**: Retiring unrelated textures no longer rebuilds an unchanged glass backdrop, preserving the existing frost appearance. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `3e8becc0e`, `59efaef75`.
 
 - **Playback buffers adapt to demanding streams**: Android sizes buffers to bitrate within memory limits and can try another available source after sustained throughput problems, with corrected policy handoff and prepared buffers. Platforms: Android. Refs `0d3e01a5f`, `c91106066`.
@@ -344,6 +350,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Internal
 
+- **Hero and timeline regression coverage**: Baseline-failure checks, whole-frame GPU comparisons including cold captions and scrolling, scale checks and hidden-window timeline capture support release verification. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `f10ae91d0`, `df65b38b6`, `8d84be9a1`, `2ac2c50d6`.
+
 - **C9 rendering and subtitle timing checks**: Regression checks cover glass-cache budgets and unchanged frost images, plus production readiness, the complete initial 12-second ASS window, and deterministic prefetch timeout checks. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `527c69cf3`, `5f29a8095`, `b12b8e11f`, `9e778e588`, `3934284c5`, `8e8a90415`, `0661e272d`.
 
 - **Broader visual regression coverage**: Sources shadows, profile-cache pressure and deterministic text-scale fixtures cover more UI states. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `45aef45f9`, `915e360a4`, `d6b0c2363`, `cff9c7e1b`, `15903519f`, `0c0c80d58`, `0d5d0d735`, `04ed0d150`, `207e0a283`.
@@ -401,13 +409,11 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-Tracking snapshot: 22 branches have unmerged commits and no running job; 12 open issues have no mapped job or prompt. Newer fixes on `agente/205-heroisA`, `agente/205-pr567port`, `agente/205-torrentdica` and `agente/p2p` need review and are not classified as lost. Queued jobs and deferred 2.1 work remain tracked separately. The C9 installation attempt at `cb7ece972` failed; later integration merges have not been confirmed on TV.
+Tracking snapshot: 22 branches have unmerged commits and no running job; 16 open issues have no mapped job or prompt. Newer fixes on `agente/205-ajustessync`, `agente/205-episodioslento`, `agente/205-escala85`, `agente/205-pessoapagina`, `agente/205-pr567port`, `agente/205-torrentdica`, `agente/p2p` need review and are not classified as lost. Queued jobs and deferred 2.1 work remain tracked separately. The C9 installation attempt at `cb7ece972` failed; later integration merges have not been confirmed on TV.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
 - **Explanation for hidden torrent sources**: Mixed source lists explain why torrent sources are hidden, helping users understand which playback options are available; the newest fix still needs review. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-torrentdica`, `35ff5195c`.
-
-- **Variant A Hero layouts**: Wide Hero cards and split Hero rows follow the owner-selected artwork and metadata layout, with focus and draw-budget fixes awaiting review of the newest tip and device validation. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-heroisA`, `c3985174d`.
 
 - **Selected PR #567 playback improvements**: Pending work ports source file selection, binge-source continuity, refreshed TorBox links, DTS fallback, wait-all source selection, MKVToolNix seeking and source-font preferences; the latest launch fixes need review before integration. Platforms: Samsung .tpk first; Android/webOS coverage pending. Refs @Namer03, PR #567, `agente/205-pr567port`, `385b44106`.
 
