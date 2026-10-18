@@ -3955,7 +3955,8 @@ static void home_atualizar_(float dt, Uint32 agora) {
 #ifdef NV_TOUCH_UI
     if (toqueLivreX[r]) scrollX[r] = anim_clamp(scrollX[r], 0.0f, toqueHomeMaxX(r));
 #endif
-    if (r == foco.fileira
+    // Finish an interrupted row's spring; stale velocity also blocks idle prefetch (#579).
+    if ((r == foco.fileira || velX[r] != 0.0f)
 #ifdef NV_TOUCH_UI
         && !toqueLivreX[r]
 #endif
@@ -3969,8 +3970,9 @@ static void home_atualizar_(float dt, Uint32 agora) {
       // `expAbre` so vale para a coluna que esta aberta: o alvo acompanha a
       // abertura enquanto ela acontece, e a fileira desliza junto em vez de
       // deixar o card crescer para fora da tela.
-      float abre = (r == expFileira && foco.coluna == expColuna) ? expAbre : 0.0f;
-      float alvo = alvoScrollFil(r, foco.coluna, scrollX[r], abre);
+      int col = r == foco.fileira ? foco.coluna : foco.colunaLembrada[r];
+      float abre = (r == expFileira && col == expColuna) ? expAbre : 0.0f;
+      float alvo = alvoScrollFil(r, col, scrollX[r], abre);
       if (fileiras[r].tipo != FILEIRA_PALCO)
         scrollX[r] = anim_mola2_reduzida(&velX[r], scrollX[r], alvo, dt,
                                        NV_MOLA2_SCROLL, motionReduzido);
