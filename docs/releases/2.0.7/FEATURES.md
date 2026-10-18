@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T05:48:14-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T06:48:15-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -412,13 +412,13 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
   map). Triage, not lost.
 
 
-- **Hero A layout polish**: Wide hero cards and focus rendering receive layout and draw-budget fixes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-heroisA, `c3985174d`. Queued/running work remains; review newest fix before integration.
+- **Hero A layout polish**: Wide hero cards and focus rendering receive layout and draw-budget fixes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-heroisA, `c3985174d`. Latest fix is complete; queued review work and device checks remain before integration.
 
-- **Frost recovery**: Glass recovery receives fixes for texture-upload failures and memory pressure. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-frostpisca, `67dc816cc`. Queued/running work remains; review newest fix before integration.
+- **Frost recovery**: Glass recovery receives fixes for texture-upload failures and memory pressure. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-frostpisca, `67dc816cc`. Latest fix is complete; queued review work and device checks remain before integration.
 
-- **Fixed poster sizes with text scaling**: Text-scale follow-ups preserve poster dimensions and improve row anchors. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-escalafixa, `c2954cf49`. Queued/running work remains; review newest fix before integration.
+- **Fixed poster sizes with text scaling**: Text-scale follow-ups preserve poster dimensions and improve row anchors. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-escalafixa, `d3fff84c9`. Latest fix is complete; queued review work and device checks remain before integration.
 
-- **PR #567 port follow-ups**: Source-font preference and launch behavior receive follow-up fixes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-pr567port, `385b44106`. Queued/running work remains; review newest fix before integration.
+- **PR #567 port follow-ups**: Source-font preference and launch behavior receive follow-up fixes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-pr567port, `385b44106`. Latest fix is complete; queued review work and device checks remain before integration.
 
 ### Previously pending, now integrated
 
