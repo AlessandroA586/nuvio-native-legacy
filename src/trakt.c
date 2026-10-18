@@ -2199,6 +2199,7 @@ static int listaNucleo(const char *qual, CatItem **pv, int *cap, int cresce,
         while (*p && (unsigned char)*p <= ' ') p++;
         if (*p != '{') break;
         f = js_fim(p);
+        lidos++;   // Pagination counts server entries, including titles without IMDb.
         bloco = strstr(p, passo ? "\"show\"" : "\"movie\"");
         if (bloco && bloco < f) {
           const char *fb = js_fim(strchr(bloco, '{'));
@@ -2206,7 +2207,7 @@ static int listaNucleo(const char *qual, CatItem **pv, int *cap, int cresce,
           js_texto(bloco, fb, "imdb", imdb, sizeof imdb);
         }
         if (imdb[0]) {
-          lidos++; visto++;
+          visto++;
           if (n < max) {
             CatItem *d;
             if (cresce && n >= *cap) {
