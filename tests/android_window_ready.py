@@ -83,9 +83,11 @@ fun main() {
     P.superficie = SurfaceView()
     check(!P.janelaPronta()) { "replacement surface inherited old acknowledgement" }
     request(12); check(!P.janelaPronta()); draw(); check(P.janelaPronta())
-    fun recover() {
+    fun recover(requestAgain: Boolean = true) {
         check(!P.janelaPronta()) { "recovery inherited stale acknowledgement" }
-        request(12); check(!P.janelaPronta()); draw(); check(P.janelaPronta())
+        if (requestAgain) request(12)
+        check(!P.janelaPronta()); draw()
+        check(P.janelaPronta()) { "recovery without a fresh crop request stayed hidden" }
     }
     P.superficie!!.holder.surface.isValid = false
     check(!P.janelaPronta()) { "destroyed native surface still ready" }
@@ -94,7 +96,7 @@ fun main() {
     // Lifecycle callbacks must invalidate even when SDL misses the invalid interval.
     for (event in listOf("destroyed", "created", "changed")) {
         P.lifecycle(event)
-        recover()
+        recover(requestAgain = false)
     }
     // Old holders cannot invalidate the currently acknowledged surface.
     P.lifecycle("destroyed", SurfaceHolder()); check(P.janelaPronta())
@@ -110,7 +112,7 @@ fun main() {
     P.observeLayout()
     P.superficie!!.layout(false); check(P.janelaPronta())
     P.superficie!!.layout(true)
-    recover()
+    recover(requestAgain = false)
     for (scheduled in listOf(false, true)) {
         P.recriando = !scheduled; P.recriaAgendada = scheduled
         check(!P.janelaPronta()) { "recovering surface still ready" }

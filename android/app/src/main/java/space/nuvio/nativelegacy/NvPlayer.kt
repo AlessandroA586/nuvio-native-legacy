@@ -1145,8 +1145,31 @@ object NvPlayer {
     private fun observarJanela(sv: SurfaceView) {
         sv.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or2, ob ->
             if (superficie === sv && (l != ol || t != ot || r != or2 || b != ob))
-                janelaSuperficieAplicada = null
+                recuperarJanela(sv)
         }
+    }
+    private fun recuperarJanela(sv: SurfaceView) {
+        janelaSuperficieAplicada = null
+        val pedido = janelaPedido.get()
+        if (janelaAplicada == pedido) confirmarJanela(sv, pedido)
+    }
+    private fun confirmarJanela(sv: SurfaceView, pedido: Int) {
+        // A queued request is not a laid-out SurfaceView. Acknowledge only
+        // after traversal, and never let an old request acknowledge a new one.
+        sv.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                if (pedido != janelaPedido.get() || superficie !== sv || player == null) {
+                    sv.viewTreeObserver.removeOnPreDrawListener(this)
+                } else if (!sv.isLayoutRequested && sv.visibility == View.VISIBLE &&
+                           sv.holder.surface.isValid && !recriando && !recriaAgendada) {
+                    janelaSuperficieAplicada = sv
+                    janelaAplicada = pedido
+                    sv.viewTreeObserver.removeOnPreDrawListener(this)
+                }
+                return true
+            }
+        })
+        sv.invalidate()
     }
     @Synchronized @JvmStatic fun janela(x: Int, y: Int, w: Int, h: Int, encaixa: Int) {
         val geometria = listOf(x, y, w, h, encaixa, superficie)
@@ -1158,22 +1181,7 @@ object NvPlayer {
         principal.post {
             definirJanela(x, y, w, h, encaixa != 0)
             val sv = superficie ?: return@post
-            // A queued request is not a laid-out SurfaceView. Acknowledge only
-            // after traversal, and never let an old request acknowledge a new one.
-            sv.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
-                override fun onPreDraw(): Boolean {
-                    if (pedido != janelaPedido.get() || superficie !== sv || player == null) {
-                        sv.viewTreeObserver.removeOnPreDrawListener(this)
-                    } else if (!sv.isLayoutRequested && sv.visibility == View.VISIBLE &&
-                               sv.holder.surface.isValid && !recriando && !recriaAgendada) {
-                        janelaSuperficieAplicada = sv
-                        janelaAplicada = pedido
-                        sv.viewTreeObserver.removeOnPreDrawListener(this)
-                    }
-                    return true
-                }
-            })
-            sv.invalidate()
+            confirmarJanela(sv, pedido)
         }
     }
     @JvmStatic fun escolher(tipo: Int, idx: Int) { principal.post { escolherMain(tipo, idx) } }
@@ -1526,15 +1534,15 @@ object NvPlayer {
     private var destruirIni = 0L
     private val antesDoMedia3 = object : SurfaceHolder.Callback {
         override fun surfaceCreated(h: SurfaceHolder) {
-            if (h === superficie?.holder) janelaSuperficieAplicada = null
+            superficie?.let { if (h === it.holder) recuperarJanela(it) }
             Log.i(TAG, "[dvtrace] created sessao=$sessao holder=${System.identityHashCode(h)} atual=${h === superficie?.holder} hdr=$ultHdr frame=${h.surfaceFrame}")
         }
         override fun surfaceChanged(h: SurfaceHolder, f: Int, w: Int, a: Int) {
-            if (h === superficie?.holder) janelaSuperficieAplicada = null
+            superficie?.let { if (h === it.holder) recuperarJanela(it) }
             Log.i(TAG, "[dvtrace] changed sessao=$sessao holder=${System.identityHashCode(h)} atual=${h === superficie?.holder} tamanho=${w}x$a formato=$f hdr=$ultHdr")
         }
         override fun surfaceDestroyed(h: SurfaceHolder) {
-            if (h === superficie?.holder) janelaSuperficieAplicada = null
+            superficie?.let { if (h === it.holder) recuperarJanela(it) }
             destruirIni = SystemClock.elapsedRealtime()
             Log.i(TAG, "[dvtrace] destroyed sessao=$sessao holder=${System.identityHashCode(h)} atual=${h === superficie?.holder} hdr=$ultHdr")
         }
