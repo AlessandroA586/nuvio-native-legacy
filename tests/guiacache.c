@@ -20,7 +20,7 @@
 
 // --- dubles: a "configuracao atual" mora aqui --------------------------------
 static int nAddons;
-static const char *bases[8];
+static const char *bases[128];
 static int xtOk, stOk;
 int perfis_ativo(void) { return 1; }
 int addons_n(void) { return nAddons; }
@@ -48,6 +48,8 @@ const char *ajustes_tmdb_idioma(void) { return "pt-BR"; }
 int xtream_e_id(const char *id) { (void)id; return 0; }
 Uint32 SDL_GetTicks(void) { static Uint32 t = 1000; return t += 16; }
 int xtream_configurado(void) { return xtOk; }
+int xtream_ultima_falha(void) { return 0; }
+int xtream_ultimo_http(void) { return 0; }
 int stalker_configurado(void) { return stOk; }
 int xtream_url_xmltv(char *d, unsigned n) { (void)d; (void)n; return 0; }
 int xtream_conta(XtreamConta *c) { (void)c; return 0; }
@@ -85,12 +87,42 @@ void tex_orcamento_info(int *mb, long *memTotal, int *fixo, int *slots) {
 }
 PtvPlataforma ptv_plataforma(void) { return PTV_LG; }
 
+// Drawing stubs keep the real confirmation's pointer registration executable.
+static int pointerTargets, pointerLayers;
+void ponteiro_camada(void) { pointerTargets = 0; pointerLayers++; }
+void ponteiro_alvo(float x, float y, float w, float h, PonteiroFn foco,
+                   PonteiroFn ativar, int a, int b) {
+  (void)x; (void)y; (void)w; (void)h; (void)foco; (void)ativar; (void)a; (void)b;
+  pointerTargets++;
+}
+int ajustes_vidro(void) { return 0; }
+int ajustes_tinta_foco(void) { return 20; }
+void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco, float px, float py,
+              float raio, float cr, float cg, float cb, float ca) {
+  (void)r; (void)tex; (void)modo; (void)foco; (void)px; (void)py;
+  (void)raio; (void)cr; (void)cg; (void)cb; (void)ca;
+}
+void gfx_cor(GfxRect r, float raio, float cr, float cg, float cb, float ca) {
+  (void)r; (void)raio; (void)cr; (void)cg; (void)cb; (void)ca;
+}
+void gfx_vidro_folha(GfxRect r, float raio, float a) { (void)r; (void)raio; (void)a; }
+void plrui_linha_foco(GfxRect r, float raio, float a) { (void)r; (void)raio; (void)a; }
+TxtLinha txt_linha(TxtEstilo e, const char *s, int r, int g, int b, int a) {
+  (void)e; (void)s; (void)r; (void)g; (void)b; (void)a; return (TxtLinha){0};
+}
+void txt_desenhar_alpha(TxtLinha t, float x, float y, float a) { (void)t; (void)x; (void)y; (void)a; }
+float txt_bloco(TxtEstilo e, const char *s, int r, int g, int b, float x, float y,
+                float w, float leading, float a, int max) {
+  (void)e; (void)s; (void)r; (void)g; (void)b; (void)x; (void)y;
+  (void)w; (void)leading; (void)a; (void)max; return 0;
+}
+
 // --- semeia o cache no disco pelo caminho de verdade -------------------------
-static void semearFonteCache(const char *base, const char *grupo, const char **nomes, int n) {
+static void semearFonteCacheTipo(int tipo, const char *base, const char *grupo, const char **nomes, int n) {
   int i, fl;
   stagingZerar();
   sTeto = 30000;
-  fl = sFonte(LTV_ADDON, base, base, base);
+  fl = sFonte(tipo, base, base, tipo == LTV_ADDON ? base : "");
   assert(fl >= 0);
   for (i = 0; i < n; i++) {
     char id[32];
@@ -106,6 +138,10 @@ static void semearFonteCache(const char *base, const char *grupo, const char **n
   }
   adotarStaging();          // staging -> publicado (canais/ltvF)
   cacheGravar();            // grava ltv-<chave>-p1.bin + indice
+}
+
+static void semearFonteCache(const char *base, const char *grupo, const char **nomes, int n) {
+  semearFonteCacheTipo(LTV_ADDON, base, grupo, nomes, n);
 }
 
 static int temCanal(const char *nome) {
@@ -169,6 +205,38 @@ int main(int argc, char **argv) {
   assert(access(caminho, F_OK) != 0);
   fioVivo = 0;
 #endif
-  puts("PASS: removed A absent; configured B survives network failure; explicit reset clears cache");
+  // Cold Spotlight must load this profile's URLs before validating disk caches.
+  ltv_urls_carregar(1);
+  assert(ltv_urls_adicionar(LTV_URL_M3U, "Saved playlist", "https://m.example/list.m3u") >= 0);
+  semearFonteCacheTipo(LTV_M3U, "https://m.example/list.m3u", "Grupo", b, 1);
+  ltv_chave_fonte(LTV_M3U, "https://m.example/list.m3u", chB, sizeof chB);
+  snprintf(fav[0].chave, sizeof fav[0].chave, "%s", chB);
+  snprintf(fav[0].id, sizeof fav[0].id, "%s", canais[0].id);
+  nFav = 1; favGravar();
+  ltv_urls_carregar(2); // Simulate URLs not loaded for the active profile.
+  resetPublished(); cacheLido = favLido = nFav = 0; estado = G_PARADO;
+  guia_preparar_busca();
+  assert(nCanais == 1 && nLtvF == 1 && temCanal("Canal B1"));
+  assert(nFav == 1 && !strcmp(fav[0].chave, chB));
+  cacheNomeFonte(chB, nome, sizeof nome);
+  assert(dados_caminho(caminho, sizeof caminho, nome) && access(caminho, F_OK) == 0);
+  stagingZerar(); sTeto = 30000;
+  fonteVaziaRecupera(LTV_M3U, "https://m.example/list.m3u", "M3U", "https://m.example/list.m3u");
+  assert(sNCanais == 1 && sLtvF[0].deCache);
+  stagingZerar();
+  // Enabled add-ons without live channels must not crowd out native sources.
+  for (int i = 0; i < 128; i++) bases[i] = "https://addon.example";
+  nAddons = 128; xtOk = stOk = 1;
+  assert(chaveConfigurada(chB));
+  assert(chaveConfigurada("xt") && chaveConfigurada("st"));
+  resetPublished();
+  assert(cacheLer() && nCanais == 1 && nFav == 1);
+  pointerTargets = 3; limparConfirm = 0;
+  desenharLimpar(1.0f);
+  assert(pointerTargets == 3 && pointerLayers == 0);
+  limparConfirm = 1; limparFoco = 0;
+  desenharLimpar(1.0f);
+  assert(pointerLayers == 1 && pointerTargets == 2);
+  puts("PASS: source removal, Spotlight M3U/offline/favorites, 128 add-ons, confirmation pointer isolation");
   return 0;
 }

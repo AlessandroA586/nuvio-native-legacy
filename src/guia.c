@@ -1477,30 +1477,25 @@ static void cacheGravar(void) {
   fflush(stdout);
 }
 
-// As chaves de fonte que a configuracao ATUAL do perfil justifica: addons
-// ligados, Stalker/Xtream so quando configurados, e cada M3U por URL. O
-// cache no disco e lido so para chave desta lista — a fonte removida nao
-// volta pela porta do cache (a que so falha a rede esta aqui: configurada
-// continua).
-static int fontesChavesAtuais(char chaves[][LTV_CHAVE], int max) {
-  LtvUrl us[LTV_URLS_MAX];
-  int i, n = 0, nu;
-  for (i = 0; i < addons_n() && n < max; i++) {
-    const char *b = addons_base(i);
-    if (b && b[0] && addons_ativo(i))
-      ltv_chave_fonte(LTV_ADDON, b, chaves[n++], LTV_CHAVE);
-  }
-  if (stalker_configurado() && n < max) ltv_chave_fonte(LTV_STALKER, "", chaves[n++], LTV_CHAVE);
-  if (xtream_configurado() && n < max)  ltv_chave_fonte(LTV_XTREAM,  "", chaves[n++], LTV_CHAVE);
-  nu = ltv_urls_copiar(us, LTV_URLS_MAX);
-  for (i = 0; i < nu && n < max; i++)
-    if (us[i].tipo == LTV_URL_M3U) ltv_chave_fonte(LTV_M3U, us[i].url, chaves[n++], LTV_CHAVE);
-  return n;
-}
+// Check the requested key directly: enabled add-ons cannot crowd out native sources.
 static int chaveConfigurada(const char *ch) {
-  char chaves[64][LTV_CHAVE];
-  int i, n = fontesChavesAtuais(chaves, 64);
-  for (i = 0; i < n; i++) if (!strcmp(chaves[i], ch)) return 1;
+  LtvUrl us[LTV_URLS_MAX];
+  char atual[LTV_CHAVE];
+  int i, nu;
+  if (!strcmp(ch, "st")) return stalker_configurado();
+  if (!strcmp(ch, "xt")) return xtream_configurado();
+  for (i = 0; i < addons_n(); i++) {
+    const char *b = addons_base(i);
+    if (!b || !b[0] || !addons_ativo(i)) continue;
+    ltv_chave_fonte(LTV_ADDON, b, atual, sizeof atual);
+    if (!strcmp(atual, ch)) return 1;
+  }
+  nu = ltv_urls_copiar(us, LTV_URLS_MAX);
+  for (i = 0; i < nu; i++) {
+    if (us[i].tipo != LTV_URL_M3U) continue;
+    ltv_chave_fonte(LTV_M3U, us[i].url, atual, sizeof atual);
+    if (!strcmp(atual, ch)) return 1;
+  }
   return 0;
 }
 
@@ -1771,6 +1766,8 @@ static void adotarStaging(void) {
 static int cacheLer(void) {
   char nome[48], *t, *p;
   if (fioVivo) return 0;
+  // Spotlight can reach the cache before Guide loads the active profile's URLs.
+  ltv_urls_carregar(perfis_ativo());
   cacheNomeIndice(nome, sizeof nome);
   t = dados_ler(nome);
   if (!t) return 0;
@@ -4875,6 +4872,7 @@ static void desenharLimpar(float a) {
   // acao apaga cache E a lista da tela — sem ela, um toque errado no chip
   // esvaziava o guia e a pessoa nao sabia como voltar atras.
   if (limparConfirm) {
+    ponteiro_camada();
     GfxRect c = { (NV_TELA_W - 640.0f) * 0.5f, (NV_TELA_H - 300.0f) * 0.5f, 640.0f, 300.0f };
     TxtLinha t;
     int tf2 = ajustes_tinta_foco();
