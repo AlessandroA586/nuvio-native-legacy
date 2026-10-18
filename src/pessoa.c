@@ -160,7 +160,11 @@ static void *buscar(void *arg) {
     return NULL;
   }
   if (id <= 0) {
-    id = resolverId(nomeSemente);
+    char semente[80];
+    pthread_mutex_lock(&trava);
+    snprintf(semente, sizeof semente, "%s", nomeSemente);
+    pthread_mutex_unlock(&trava);
+    id = resolverId(semente);
     if (!id) {
       pthread_mutex_lock(&trava); fioVivo = 0; pthread_mutex_unlock(&trava);
       return NULL;
@@ -266,6 +270,9 @@ static void *buscar(void *arg) {
 void pessoa_pedir(long tmdbId, const char *nomeConhecido, const char *fotoConhecida) {
   if (tmdbId <= 0 && !(nomeConhecido && nomeConhecido[0])) return;
   pthread_mutex_lock(&trava);
+  // Pedido em curso vence: largar o novo aqui evita que sementes/idPedido
+  // de um ator B sobrescrevam o que o fio do ator A ainda vai gravar.
+  if (fioVivo) { pthread_mutex_unlock(&trava); return; }
   if (tmdbId > 0 && idPedido == tmdbId) { pthread_mutex_unlock(&trava); return; }
   idPedido = tmdbId;
   nCred = 0; pronta = 0; bio[0] = 0; area[0] = 0;
@@ -275,7 +282,6 @@ void pessoa_pedir(long tmdbId, const char *nomeConhecido, const char *fotoConhec
   snprintf(fotoSemente, sizeof fotoSemente, "%s", fotoConhecida ? fotoConhecida : "");
   snprintf(nome, sizeof nome, "%s", nomeSemente);
   snprintf(foto, sizeof foto, "%s", fotoSemente);
-  if (fioVivo) { pthread_mutex_unlock(&trava); return; }
   idEmCurso = tmdbId;
   fioVivo = 1;
   pthread_mutex_unlock(&trava);

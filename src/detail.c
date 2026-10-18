@@ -3058,8 +3058,6 @@ static void detail_evento_(const SDL_Event *e) {
       // (metaDetailsScreen.js:6165); aqui o OK no elenco nao fazia nada.
       const CatItem *ci = cat_item(idx);
       if (ci && foco.coluna < ci->nElenco && ci->elenco[foco.coluna].tmdb > 0) {
-        printf("[elenco] ok id=%d layout=%d\n", (int)ci->elenco[foco.coluna].tmdb, ajustes_home_layout());
-        fflush(stdout);
         pessoa_pedir(ci->elenco[foco.coluna].tmdb,
                      ci->elenco[foco.coluna].nome,
                      ci->elenco[foco.coluna].foto);
