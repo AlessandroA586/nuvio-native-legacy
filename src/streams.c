@@ -4387,7 +4387,6 @@ void stream_folha_evento(const SDL_Event *e) {
 void stream_folha_atualizar(float dt, Uint32 agora) {
   int nf;
   medirCabecalho();
-  folhaGeometria();
   (void)agora;
   anim=anim_mola(anim,aberta?1:0,dt,NV_MOLA_TELA);
   if(!aberta) detAberto=0;
@@ -4402,6 +4401,7 @@ void stream_folha_atualizar(float dt, Uint32 agora) {
   // por conta propria; o foco pedido com a folha fechada era sobrescrito ao
   // abrir, entao sai daqui tambem.
   if (!aberta && anim < .005f) { focoFixo = -1; folhaRelogio = 0; return; }
+  folhaGeometria();
   // #205: a carta em foco que um fio de conferencia acabou de achar fora do
   // cache deixa o grupo por um lugar atras dos cached do seu grupo. Prender o
   // foco pelo indice ANTES do montar, com o Y da linha como ela esta agora —

@@ -1,5 +1,6 @@
 #include "../src/streams.c"
 #include <assert.h>
+#include <sys/mman.h>
 
 // #205: quick filters (MP4 only, Cached, Dubbed) must say how many sources they hide.
 static void fonte(Stream *s, const char *prov, int mp4) {
@@ -26,6 +27,17 @@ int main(void) {
   assert(fraseVazioChips() && strstr(fraseVazioChips(), "MP4") && "empty state names the filters");
   soMp4 = 0;
   assert(!chipsOcultos(NULL, 0) && !fraseVazioChips());
+  // A closed sheet must not inspect retained sources, with any quick filters enabled.
+  void *guard = mmap(NULL, sizeof v, PROT_NONE, MAP_PRIVATE | MAP_ANON, -1, 0);
+  assert(guard != MAP_FAILED);
+  lista = guard; filtro = 0; aberta = 0; anim = 0;
+  for (int chips = 1; chips < 8; chips++) {
+    soMp4 = chips & 1; soCache = chips & 2; soDub = chips & 4;
+    stream_folha_atualizar(1.0f / 60, 0);
+    assert(!aberta && anim == 0);
+  }
+  lista = v;
+  assert(munmap(guard, sizeof v) == 0);
   puts("fontes chips ocultos: ok");
   return 0;
 }
