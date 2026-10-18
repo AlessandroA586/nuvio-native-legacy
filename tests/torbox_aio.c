@@ -27,9 +27,15 @@ int main(void) {
     "\"description\":\"[TB download] Not cached | Movie.\xe2\x9a\xa1.1080p.mkv\"},"
     // 6: stale "⚡" name + URL, but clientResolve.isCached:false -> explicit status wins
     "{\"name\":\"[TB\xe2\x9a\xa1] AIO 1080p\",\"url\":\"https://aio.invalid/p/6\",\"description\":\"Not cached\","
-    "\"clientResolve\":{\"service\":\"torbox\",\"isCached\":false}}"
+    "\"clientResolve\":{\"service\":\"torbox\",\"isCached\":false}},"
+    // 7: negative name status beyond the display label's 191-byte limit wins
+    "{\"name\":\"[TB+] "
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    " Not cached\",\"url\":\"https://aio.invalid/p/7\",\"description\":\"Not cached\"}"
     "]}", "AIO | TB Instant", &v);
-  assert(n == 7);
+  assert(n == 8);
   assert(v[0].emCache && !v[0].foraCache);
   assert(v[1].emCache && !v[1].foraCache);
   assert(!v[2].emCache && v[2].foraCache);
@@ -37,6 +43,7 @@ int main(void) {
   assert(!v[4].emCache && v[4].foraCache);
   assert(!v[5].emCache && v[5].foraCache);
   assert(!v[6].emCache && v[6].foraCache && v[6].cacheNegado);
+  assert(!v[7].emCache && v[7].foraCache);
   free(v);
   puts("torbox_aio: cached marks beat stray description text");
   return 0;
