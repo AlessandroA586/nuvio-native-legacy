@@ -1648,11 +1648,14 @@ static GLuint compila(GLenum tipo, const char *src) {
   return s;
 }
 
-// Build programs only during initialization. Cold driver compilation/linking
-// must never block an interactive draw, including the first glass draw.
+// Link only modes actually used. TPK keeps the flat glass fallback: a cold
+// glass link can block its render callback for seconds even when successful.
 static GLuint vsProg;
+static unsigned char progTentado[GFX_NMODOS];
 static int progMontar(int m) {
   GLuint vs = vsProg;
+  progTentado[m] = 1;
+  progAtual = -1;   // linking initializes uniforms and changes the current program
   char fonte[12000];   // cabeca + sdf/cover + corpo; o maior (camadas) passa de 6000
   snprintf(fonte, sizeof fonte, "%s%s%s%s%s",
            FS_CABECA, m == GFX_CARD_HERO ? "#define HERO_CARD\n" : "",
@@ -1660,12 +1663,15 @@ static int progMontar(int m) {
            FS_CORPO[m == GFX_CARD_HERO ? GFX_CARD : m]);
   GLuint p = glCreateProgram();
   glAttachShader(p, vs);
-  glAttachShader(p, compila(GL_FRAGMENT_SHADER, fonte));
+  GLuint fs = compila(GL_FRAGMENT_SHADER, fonte);
+  glAttachShader(p, fs);
   glBindAttribLocation(p, 0, "aPos");
   glLinkProgram(p);
+  glDetachShader(p, fs);
+  glDeleteShader(fs);
   GLint ok = 0; glGetProgramiv(p, GL_LINK_STATUS, &ok);
   if (!ok) { char log[700]; glGetProgramInfoLog(p, 700, NULL, log);
-             printf("gfx link modo %d: %s\n", m, log); return 0; }
+             printf("gfx link modo %d: %s\n", m, log); glDeleteProgram(p); return 0; }
   progs[m].prog = p;
   progs[m].rect = glGetUniformLocation(p, "uRect");
   progs[m].tela = glGetUniformLocation(p, "uTela");
@@ -1733,11 +1739,9 @@ int gfx_iniciar(void) {
   // Capturas (tests/*_shot): NUVIO_TAMANHO_UI=1.2 liga o "Tamanho da
   // interface" sem passar por Ajustes. No app quem define e ajustes.c.
   { const char *t = getenv("NUVIO_TAMANHO_UI"); if (t && *t) { gfx_escala_ui_definir((float)atof(t)); escUiFixa = 1; } }
-  for (int m = 0; m < GFX_NMODOS; m++) {
-    if (!progMontar(m) && m != GFX_VIDRO) return 0;
-  }
-  glUseProgram(progs[GFX_CARD].prog);
-  progAtual = GFX_CARD;
+  memset(progTentado, 0, sizeof progTentado);
+  if (!progMontar(GFX_COR)) return 0;
+  progAtual = GFX_COR;
 
   // O quad vai num BUFFER, nao num ponteiro para memoria do processo.
   //
@@ -1786,6 +1790,7 @@ void gfx_encerrar(void) {
   vidLiberar();
   for (int m = 0; m < GFX_NMODOS; m++)
     if (progs[m].prog) { glDeleteProgram(progs[m].prog); progs[m].prog = 0; }
+  if (vsProg) { glDeleteShader(vsProg); vsProg = 0; }
   progAtual = -1;
 }
 
@@ -1907,6 +1912,7 @@ int gfx_arte_veu(GfxRect r, GLuint tex, float base, float aEsq, float aDir, floa
   if (!tex || !gfx_arte_opaca_atual || gfx_opacidade_grupo < 0.999f || a < 0.999f ||
       gfx_desliza_atual != 0.0f || snapAtivo || base <= 0.002f || base >= 1.0f) return 0;
   if (!(r.x <= 0.0f && r.y <= 0.0f && r.x + r.w >= NV_TELA_W && r.y + r.h >= NV_TELA_H)) return 0;
+  if (!progs[GFX_ARTE].prog && !progMontar(GFX_ARTE)) return 0;
   if (progs[GFX_ARTE].foco < 0 || progs[GFX_ARTE].par < 0) return 0;
   gfx_rect(r, tex, GFX_ARTE, base, aEsq, aDir, 0.0f, 1, 1, 1, 1.0f);
   return 1;
@@ -2520,6 +2526,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
     gfx_fill_gpu += ag;
     if (blendLigado && !comAmb && !opaco) gfx_fill_gpu_mist += ag;
   }
+  if (!progs[modo].prog && (progTentado[modo] || !progMontar(modo))) return;
   Programa *P = &progs[modo];
   if (progAtual != (int)modo) { glUseProgram(P->prog); progAtual = (int)modo; gfx_n_prog++; }
   // Uniform que o shader do modo nao declara volta como -1 do link; passar -1
@@ -3810,7 +3817,10 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   float d = dens, tela[4];
   int chapado, video, fumaca, i, contorno = ajustes_vidro_contorno();
   if (r.w <= 0.0f || r.h <= 0.0f || a <= 0.001f) return;
-  // A rejected glass program uses the flat panel without retrying in a draw.
+#ifndef NV_TPK
+  if (!progs[GFX_VIDRO].prog && !progTentado[GFX_VIDRO]) progMontar(GFX_VIDRO);
+#endif
+  // TPK and rejected glass programs use the flat panel without retrying.
   if (!progs[GFX_VIDRO].prog) {
     gfx_cor(r, raio, 0x1a / 255.0f, 0x1c / 255.0f, 0x21 / 255.0f, 0.94f * a);
     gfx_anel(r, raio, 1.0f, 1.0f, 1.0f, 1.0f, 0.22f * a);
