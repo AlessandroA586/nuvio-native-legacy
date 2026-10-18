@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T08:47:57-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T08:48:35-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -401,11 +401,15 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
+- **Variant A Hero layouts**: Wide Hero cards and split Hero rows follow the owner-selected artwork and metadata layout; integration and device validation remain pending. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-heroisA`.
+- **Fixed layout anchors across text sizes**: Home, title pages, Search and Settings keep margins and anchor positions while text size changes; latest open-branch follow-ups still need integration. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, #205, `agente/205-escalafixa`.
+- **Selected PR #567 playback improvements**: Pending work ports source file selection, binge-source continuity, refreshed TorBox links, DTS fallback, wait-all source selection and MKVToolNix seeking; these requests are not confirmed release behavior. Platforms: Samsung .tpk first; Android/webOS coverage pending. Refs @Namer03, PR #567, `agente/205-pr567port`.
+
+
 
 - **PR #487 v2 by @ghbarker** (add-on reported audio and subtitle languages; `e4fb8c08`) — `agente/205-pr487v2`, 3 commits out,
   VEREDITO OK `j-rev-pr487-v2`, no commit after. **Needs final re-review.** Android, LG webOS.
-- **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out. VEREDITO **BLOQUEIA**
-  `j-revg-pr493` (newer); the OK `j-revpr493-v3` came before. Needs a new fix + review.
+- **PR #493 v2 / v3** (profile and session) — `agente/205-pr493`, 12 commits out. Latest mapped review is **OK**; see `estado.md` for the current review log. Awaiting merge of the reviewed tip.
   Android, LG webOS.
 - **Tizen/homebrew, glassmock, mock21, perfis21, owner answers** — branches with a finished job and no review
   (`agente/205-homebrew`, `agente/205-tizenbrew`, `agente/205-glassmock`, `agente/205-mock21`,
