@@ -1,6 +1,10 @@
 // User-facing release summary, checked against v2.0.6..HEAD.
 // Existing translated copy is shared with Settings and the release notes.
-static void visual207(GfxRect p, float t, float a);
+static void visual207(GfxRect p, float t, float a, int c);
+static void visual207a(GfxRect p, float t, float a) { visual207(p, t, a, 0); }
+static void visual207b(GfxRect p, float t, float a) { visual207(p, t, a, 1); }
+static void visual207c(GfxRect p, float t, float a) { visual207(p, t, a, 2); }
+static void visual207d(GfxRect p, float t, float a) { visual207(p, t, a, 3); }
 static const NovItem ITENS_207[] = {
   { .grupo = "Destaques", .icone = "aj_layout-dashboard", .nome = "Palco",
     .frase = "O título em foco aparece grande à esquerda, com arte, nota, sinopse e elenco; os cartazes da fileira correm à direita.", .linhas = 5 },
@@ -59,10 +63,10 @@ static const NovItem ITENS_207[] = {
     .plataformas = NOV_TPK | NOV_OUTRAS },
 };
 static const NovCena CENAS_207[] = {
-  { "Destaques", "Palco", visual207, 5.5f, 0 },
-  { "Destaques", "Trailer dublado", visual207, 5.5f, 0 },
-  { "Destaques", "Continuar assistindo", visual207, 5.5f, 0 },
-  { "Destaques", "Vidro fosco", visual207, 5.5f, 0 },
+  { "Destaques", "Palco", visual207a, 5.5f, 0 },
+  { "Destaques", "Trailer dublado", visual207b, 5.5f, 0 },
+  { "Destaques", "Continuar assistindo", visual207c, 5.5f, 0 },
+  { "Destaques", "Vidro fosco", visual207d, 5.5f, 0 },
 };
 static const int ARTES_207[] = { 2, 4, 7, 9 };
 static const NovConteudo NOV_ATUAL = {
@@ -74,8 +78,7 @@ static const NovConteudo NOV_ATUAL = {
 };
 
 // Small, static feature mockups. Only their entrance moves; no live video.
-static void visual207(GfxRect p, float t, float a) {
-  int c = (int)(relogio / 5.5f) % 4;
+static void visual207(GfxRect p, float t, float a, int c) {
   float e = ajustes_animacoes_reduzidas() ? 1 : sai3(t / .45f);
   float x = p.x + 40, y = p.y + 100 + (1 - e) * 16;
   float w = p.w - 80;
