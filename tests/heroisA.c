@@ -24,8 +24,13 @@ static void recordText(TxtLinha l, float x, float y) {
 static void recordRect(GfxRect r, GLuint tex, GfxModo mode, float focus,
                        float px, float py, float radius,
                        float red, float green, float blue, float alpha) {
-  if (r.x == 0 && r.y == 43.2f && mode == GFX_VEU_CSS)
+  if ((r.x == 0 && r.y == 43.2f && mode == GFX_VEU_CSS) ||
+      (mode == GFX_FUNDO_DIN && px > 0 && py > px))
     maskAlpha = alpha * gfx_opacidade_grupo;
+  if (overlayProbe == 1 && mode == GFX_FUNDO_DIN && px > 0 && py > px) {
+    gfx_cor((GfxRect){0, 0, r.w, 96}, 0, 1, 1, 1, 1);
+    overlayProbe = 2;
+  }
   if (overlayProbe == 1 && r.x == 0 && r.y == 0 && r.h <= 96 &&
       (mode == GFX_VEU_CSS || mode == GFX_COR)) {
     gfx_cor((GfxRect){0, 0, r.w, 96}, 0, 1, 1, 1, 1);
@@ -76,8 +81,9 @@ static void setup(int split, int glass) {
   char path[900];
   snprintf(path, sizeof path, "%s/ajustes.txt", getenv("NUVIO_DADOS"));
   FILE *f = fopen(path, "w"); assert(f);
-  fprintf(f, "idioma 1\nhomeLayoutLocal 2\nmodernLandscapePostersEnabled 1\nbordaFocoCartaz 0\nvidroLocal %d\nselected_theme %d\n", glass ? 0 : 1,
-          getenv("NV_HEROIS_TEMA") ? atoi(getenv("NV_HEROIS_TEMA")) : 0);
+  fprintf(f, "idioma 1\nhomeLayoutLocal 2\nmodernLandscapePostersEnabled 1\nbordaFocoCartaz 0\nvidroLocal %d\nselected_theme %d\nfundoDinamicaLocal %d\nfundoDinamicaCorLocal 5\n", glass ? 0 : 1,
+          getenv("NV_HEROIS_TEMA") ? atoi(getenv("NV_HEROIS_TEMA")) : 0,
+          getenv("NV_HEROIS_BACKGROUND") ? atoi(getenv("NV_HEROIS_BACKGROUND")) : 0);
   fclose(f); ajustes_dir(getenv("NUVIO_DADOS"));
   assert(ajustes_borda_foco());
   memset(fileiras, 0, sizeof fileiras);
@@ -100,15 +106,24 @@ static void renderHome(int split, int probe) {
   headingY = -1; overlayProbe = probe;
   home_desenhar(renderTime);
   if (probe) {
-    unsigned char pixel[4];
-    glReadPixels(10,1080-35,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
+    const int ys[] = {2, 20, 35, 43, 71, 95, 96};
     assert(overlayProbe == 2);
-    assert(abs(pixel[0]-(int)(NV_COR_FUNDO_R*255)) <= 2);
-    glReadPixels(10,1080-71,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
-    assert(pixel[0] > NV_COR_FUNDO_R*255+20 && pixel[0] < 245);
-    glReadPixels(10,1080-96,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
-    assert(pixel[0] > 245);
-    puts("PASS top overlay: solid through 45%, then fades to 96px");
+    for (int i = 0; i < 7; i++) {
+      unsigned char pixel[4];
+      float y = ys[i] - 0.5f, t = y / NV_TELA_H;
+      float shade = 1 + (dinQueda - 1) * t * t * (3 - 2*t);
+      float fade = fminf(fmaxf((y - 43.2f) / 52.8f, 0), 1);
+      fade = fade * fade * (3 - 2*fade);
+      glReadPixels(10,1080-ys[i],1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
+      for (int channel = 0; channel < 3; channel++) {
+        float expected = 255 * (dinCor[channel] * shade * (1-fade) + fade);
+        if (fabsf(pixel[channel]-expected) > 2)
+          fprintf(stderr,"background=%d split=%d y=%g channel=%d pixel=%d expected=%g\n",
+                  ajustes_fundo_din(),split,y,channel,pixel[channel],expected);
+        assert(fabsf(pixel[channel]-expected) <= 2);
+      }
+    }
+    puts("PASS top overlay: active background through 45%, then fades to 96px");
   } else if (!budgetOnly) {
     if (fabsf(headingY-(split ? 78 : 98))>=0.01f)
       fprintf(stderr,"heading=%g split=%d row=%d layout=%d scroll=%g\n",headingY,split,foco.fileira,layoutHome(),scrollY);
@@ -209,10 +224,12 @@ int main(int argc,char **argv) {
 #ifndef HERO_BASELINE
   if (!(argc>1 && !strcmp(argv[1],"--badge"))) {
   if(argc>1 && !strcmp(argv[1],"--transitions")) {
-    for (int split=0;split<2;split++) {
+    for (int mode=0;mode<3;mode++) for (int split=0;split<2;split++) {
+      const char *modes[] = {"0", "1", "2"};
+      setenv("NV_HEROIS_BACKGROUND",modes[mode],1);
       const float values[] = {0, 0.5f, 1};
       for (int kind=0;kind<2;kind++) for (int i=0;i<3;i++) {
-        setup(split,0); heroCinema.v = kind == 0 ? values[i] : 0;
+        setup(split,0); dinUlt = 0; heroCinema.v = kind == 0 ? values[i] : 0;
         detailProgress = kind == 1 ? values[i] : 0;
         maskAlpha = 0; maskClears = 0;
         glClearColor(1,1,1,1); glClear(GL_COLOR_BUFFER_BIT);
@@ -227,7 +244,19 @@ int main(int argc,char **argv) {
     puts("PASS top mask cinema/detail transitions"); SDL_Quit(); return 0;
   }
   if(argc>1 && !strcmp(argv[1],"--fade")) {
-    setup(0,0); renderHome(0,1); SDL_Quit(); return 0;
+    for (int mode=0; mode<3; mode++) for (int split=0; split<2; split++) {
+      const char *modes[] = {"0", "1", "2"};
+      setenv("NV_HEROIS_BACKGROUND",modes[mode],1);
+      setup(split,0);
+      dinUlt = 0;
+      if (mode == 2) {
+        const float tint[] = {0.18f, 0.10f, 0.23f};
+        memcpy(dinCor,tint,sizeof tint); memcpy(dinAlvo,tint,sizeof tint);
+        dinQueda = DIN_QUEDA; dinUlt = renderTime;
+      }
+      renderHome(split,1);
+    }
+    SDL_Quit(); return 0;
   }
   for(int split=0;split<2;split++) {
     setup(split,0); renderHome(split,0);
@@ -239,7 +268,7 @@ int main(int argc,char **argv) {
     scrollY = dinRolagemCentrada(1,NV_LEGACY_ROW_HEAD_H+alturaTotalFil(0)+fileiraGap());
     renderHome(split,0);
   }
-  setup(0,0); renderHome(0,1);
+  setup(0,0); dinUlt = 0; renderHome(0,1);
   if(argc>1 && argv[1][0]!='-') {
     for(int split=0;split<(argc>2 ? 1 : 2);split++) for(int glass=0;glass<2;glass++) capture(argv[1],split,glass,1);
     if(argc==2) for(int i=0;i<2;i++) {

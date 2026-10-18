@@ -1264,7 +1264,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "void main(){\n"
   "  vec3 c = uCor.rgb * mix(1.0, uFoco, smoothstep(0.0, 1.0, vUv.y));\n"
   "  float a = uCor.a;\n"
-  "  if (uPar.x > 0.0) a *= 1.0 - smoothstep(uPar.x, 1.0, vUv.y);\n"
+  "  if (uPar.x > 0.0) a *= 1.0 - smoothstep(uPar.x, uPar.y > uPar.x ? uPar.y : 1.0, vUv.y);\n"
   "  gl_FragColor = nv_dither(c, a);\n"
   "}\n",
 

@@ -8009,18 +8009,28 @@ static void home_desenhar_(Uint32 agora) {
       (fileiras[foco.fileira].tipo == FILEIRA_HEROI ||
        fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO)) {
     float alpha = (1.0f - pd) * (1.0f - cinema);
+    float cor[3] = { NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B };
+    int dinamica = layoutHome() == HOME_LAYOUT_DINAMICA;
+    if (dinamica) memcpy(cor, dinCor, sizeof cor);
     gfx_recorte(0, corte, NV_TELA_W, 96.0f - corte);
-    if (alpha == 1.0f) {
-      gfx_recorte(0, corte, NV_TELA_W, fmaxf(0, 43.2f - corte));
-      glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1);
-      glClear(GL_COLOR_BUFFER_BIT);
-      gfx_recorte(0, corte, NV_TELA_W, 96.0f - corte);
+    if (dinamica && dinQueda != 1.0f) {
+      // Preserve the full-screen background gradient inside the mask viewport.
+      gfx_rect((GfxRect){0, 0, NV_TELA_W, NV_TELA_H}, 0, GFX_FUNDO_DIN,
+               dinQueda, 43.2f / NV_TELA_H, 96.0f / NV_TELA_H, 0,
+               cor[0], cor[1], cor[2], alpha);
     } else {
-      gfx_cor((GfxRect){0, 0, NV_TELA_W, 43.2f}, 0,
-              NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, alpha);
+      if (alpha == 1.0f) {
+        gfx_recorte(0, corte, NV_TELA_W, fmaxf(0, 43.2f - corte));
+        glClearColor(cor[0], cor[1], cor[2], 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+        gfx_recorte(0, corte, NV_TELA_W, 96.0f - corte);
+      } else {
+        gfx_cor((GfxRect){0, 0, NV_TELA_W, 43.2f}, 0,
+                cor[0], cor[1], cor[2], alpha);
+      }
+      gfx_rect((GfxRect){0, 43.2f, NV_TELA_W, 52.8f}, 0, GFX_VEU_CSS, 0, 1, 1, 0,
+               cor[0], cor[1], cor[2], alpha);
     }
-    gfx_rect((GfxRect){0, 43.2f, NV_TELA_W, 52.8f}, 0, GFX_VEU_CSS, 0, 1, 1, 0,
-             NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, alpha);
   }
   // DEVOLVE O REBORDO ao sair: a variavel e global e o detalhe, a busca e a
   // biblioteca desenham GFX_CARD tambem. O ajuste e "na Home", entao ele nao
