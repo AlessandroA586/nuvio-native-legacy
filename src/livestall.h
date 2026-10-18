@@ -102,6 +102,10 @@ static inline int nv_ls_passo_buf(NvLiveStall *s, unsigned agora, double pos, in
   if (pronto && s->andou && s->fim > 0.5 && pos <= s->fim &&
       s->fim - pos <= NV_LS_RESERVA_S && (unsigned)(agora - s->fimEm) >= NV_LS_SEMDADO_MS)
     seco = 1;
+  // A sliding live window (or a seek) changes the position's origin. Rebase
+  // the comparison, but only subsequent FORWARD motion can refresh movEm.
+  // A backward clock alone must not hide a genuinely frozen stream.
+  if (pronto && pos < s->pos - 0.05) s->pos = pos;
   if (pronto && pos > s->pos + 0.05) {
     if (!s->movDesde) s->movDesde = agora;
     s->pos = pos; s->movEm = agora; s->andou = 1;
