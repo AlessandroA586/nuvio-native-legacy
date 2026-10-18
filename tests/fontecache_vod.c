@@ -234,3 +234,6 @@ int main(void) {
   puts("fontecache VOD: PASS (HTTP, TTL, conta/perfil/episodio/config, respostas tardias, memoria)");
   return 0;
 }
+
+// This fixture simulates account sync; the new owner marks add-on toggles dirty.
+void sync_sujar_addons(const char *url) { (void)url; }

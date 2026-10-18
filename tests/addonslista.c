@@ -538,3 +538,6 @@ int main(void) {
   printf("addonslista: ok\n");
   return 0;
 }
+
+// This fixture simulates account sync; the new owner marks add-on toggles dirty.
+void sync_sujar_addons(const char *url) { (void)url; }
