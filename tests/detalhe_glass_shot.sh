@@ -17,11 +17,13 @@ if [ -n "${NUVIO_DETAIL_TIER:-}" ]; then
   exit 2
 fi
 OBJ=${OBJ:-${TMPDIR:-/tmp}/nuvio-detglass-obj}
+if [ $# -eq 0 ]; then set -- "$TMPDIR/nuvio-detglass-shots"; fi
 mkdir -p "$OBJ" "$1"
 NUVIO_DADOS=$(mktemp -d ${TMPDIR:-/tmp}/nuvio-detglass-dados.XXXXXX)
 export NUVIO_DADOS
 trap 'rm -rf "$NUVIO_DADOS"' EXIT
 FL="-O1 -g -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -Wall -Wextra -Wno-deprecated-declarations -Wno-macro-redefined"
+if [ -n "${NUVIO_C9_CACHE:-}" ]; then FL="$FL -DNV_SHOT_HOOKS"; fi
 objs=()
 pids=()
 for s in src/*.c src/dts/*.c; do
