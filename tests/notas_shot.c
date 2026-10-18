@@ -271,6 +271,8 @@ static void montarCatalogo(void) {
   // 8 episodios na T1 e 13 na T2 — a mesma contagem que o duble de extras diz.
   for (i = 0; i < 8; i++) {
     episodios[n].temporada = 1; episodios[n].episodio = i + 1;
+    episodios[n].notaImdb = 92;
+    episodios[n].nota = 76;
     snprintf(episodios[n].nome, sizeof episodios[n].nome,
              "Episódio de ensaio %d", i + 1);
     snprintf(episodios[n].duracao, sizeof episodios[n].duracao, "47 min");
@@ -278,6 +280,8 @@ static void montarCatalogo(void) {
   }
   for (i = 0; i < N_T2; i++) {
     episodios[n].temporada = 2; episodios[n].episodio = i + 1;
+    episodios[n].notaImdb = 92;
+    episodios[n].nota = 76;
     snprintf(episodios[n].nome, sizeof episodios[n].nome,
              "Episódio de ensaio %d", i + 1);
     snprintf(episodios[n].duracao, sizeof episodios[n].duracao, "47 min");
@@ -486,7 +490,7 @@ int main(int argc, char **argv) {
     }
     snprintf(nome, sizeof nome, "%s-order.png", saida); gravar(nome);
     e.key.keysym.sym = SDLK_ESCAPE; ajustes_evento(&e);
-    escolher("notaTituloImdb 0\nnotaTituloTrakt 1\n");
+    escolher("notaTituloImdb 0\nnotaTituloTrakt 1\nnotaTituloTmdb 1\n");
     assert(ajustes_nota_titulo(EX_IMDB) && !ajustes_nota_titulo(EX_TRAKT));
     secaoFoco(0, SEC_EPISODIOS);
     snprintf(nome, sizeof nome, "%s-episode.png", saida); gravar(nome);

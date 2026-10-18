@@ -5791,6 +5791,8 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
         }
       break;
     }
+    if (ep && ep->notaImdb > 0 && ajustes_nota_titulo(EX_IMDB))
+      x += desenhaNotaEpisodio(x, y - 4, EX_IMDB, ep->notaImdb, a);
     if (nota > 0 && ajustes_nota_titulo(EX_TRAKT))
       x += desenhaNotaEpisodio(x, y - 4, EX_TRAKT, nota, a);
     // O voto do TMDB entra AO LADO do do Trakt, no mesmo selo compacto

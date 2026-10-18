@@ -4,7 +4,6 @@ TMPDIR="${TMPDIR%/}"
 # Title-line order + Letterboxd survives a late load.
 set -eu
 cd "$(dirname "$0")/.."
-python3 tests/notaepisodio.py
 cc tests/notaordem.c -Isrc -o ${TMPDIR:-/tmp}/nuvio-notaordem -Wall -Wextra
 ${TMPDIR:-/tmp}/nuvio-notaordem
 
@@ -20,4 +19,6 @@ cc -DAJUSTES_TESTE "${sources[@]}" tests/notas_shot.c -Isrc -o "${TMPDIR}/nuvio-
   -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \
   -Wno-deprecated-declarations -Wno-macro-redefined
 mkdir -p /Volumes/ExternalSSD/tmp/rev/notasep
-NUVIO_NOTAORDEM_TEST=1 "${TMPDIR}/nuvio-notaordem-ui" /Volumes/ExternalSSD/tmp/rev/notasep/after
+NUVIO_NOTAORDEM_TEST=1 "${TMPDIR}/nuvio-notaordem-ui" "${1:-/Volumes/ExternalSSD/tmp/rev/notasep/after}"
+python3 tests/notaepisodio.py
+bash tests/cateps.sh

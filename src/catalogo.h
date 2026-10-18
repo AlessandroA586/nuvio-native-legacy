@@ -179,6 +179,7 @@ typedef struct {
   // cache nenhum: o unico dump binario e o do CatItem (catalogo-rede.bin) e
   // episodios.txt e texto, campo a campo — ambos leem o que sabem ler.
   int  nota;
+  int  notaImdb;       // Episode IMDb rating x10; 0 = unknown, separate from TMDB.
   // O ID DO VIDEO como o /meta o publicou ("kitsu:41370:5", "tt123:1:2"). E com
   // ele que se pede fonte (/stream/series/<id>.json): o addon de anime tem id
   // proprio por episodio, e montar "<titulo>:<T>:<E>" na mao so acerta no IMDb.
