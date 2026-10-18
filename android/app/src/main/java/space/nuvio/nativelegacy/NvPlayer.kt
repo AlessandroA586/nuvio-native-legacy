@@ -1129,7 +1129,31 @@ object NvPlayer {
         val v = centesimos.coerceIn(25, 400) / 100f
         principal.post { player?.setPlaybackSpeed(v) }
     }
-    @JvmStatic fun janela(x: Int, y: Int, w: Int, h: Int, encaixa: Int) { principal.post { definirJanela(x, y, w, h, encaixa != 0) } }
+    private val janelaPedido = AtomicInteger()
+    @Volatile private var janelaAplicada = -1
+    @JvmStatic fun janelaPronta(): Boolean = janelaAplicada == janelaPedido.get()
+    @JvmStatic fun janela(x: Int, y: Int, w: Int, h: Int, encaixa: Int) {
+        val pedido = janelaPedido.incrementAndGet()
+        principal.post {
+            definirJanela(x, y, w, h, encaixa != 0)
+            val sv = superficie ?: return@post
+            // A queued request is not a laid-out SurfaceView. Acknowledge only
+            // after traversal, and never let an old request acknowledge a new one.
+            sv.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    if (pedido != janelaPedido.get() || superficie !== sv || player == null) {
+                        sv.viewTreeObserver.removeOnPreDrawListener(this)
+                    } else if (!sv.isLayoutRequested && sv.visibility == View.VISIBLE &&
+                               sv.holder.surface.isValid && !recriando && !recriaAgendada) {
+                        janelaAplicada = pedido
+                        sv.viewTreeObserver.removeOnPreDrawListener(this)
+                    }
+                    return true
+                }
+            })
+            sv.invalidate()
+        }
+    }
     @JvmStatic fun escolher(tipo: Int, idx: Int) { principal.post { escolherMain(tipo, idx) } }
 
     // --- abrir / liberar ------------------------------------------------------

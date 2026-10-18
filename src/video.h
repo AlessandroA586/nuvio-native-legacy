@@ -176,6 +176,7 @@ int    video_tocando(void);
 int    video_pausa_confirmada(void);
 int    video_pronto(void);   // 1 depois do loadCompleted
 #ifdef NV_ANDROID
+int    video_janela_pronta(void);   // latest native window request completed layout
 int    video_superficie_estavel(void);   // 1 depois da ultima recriacao da Surface (HDR/DV)
 int    video_quadro_visto(void);   // 1 depois do primeiro quadro desenhado (antes do "pronto")
 int    video_rede_lenta(void);   // !=0: download below the declared bitrate or repeated rebuffers (redefit.h)

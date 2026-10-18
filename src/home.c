@@ -604,7 +604,7 @@ static float cartaoTrailerAlpha(int item, Uint32 agora) {
       trailer_dono() != TRAILER_DONO_DETALHE) {
     // Draw publishes current geometry after the trailer step used the previous
     // frame. Close the hole before exposing a still-unmoved Android surface.
-    if (!cartaoAssentado(agora)) heroTrailerFade = 0.0f;
+    if (!cartaoAssentado(agora) || (memlog_android_fraco() && !trailer_mostra_video())) heroTrailerFade = 0.0f;
     return heroTrailerFade;
   }
   return 0.0f;

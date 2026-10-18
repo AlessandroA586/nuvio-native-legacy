@@ -74,7 +74,8 @@ int trailer_suportado(void) { return 1; }
 int trailer_aberto(void) { return opened; }
 int trailer_cheia(void) { return 0; }
 int trailer_tocando(void) { return opened && playing; }
-int trailer_mostra_video(void) { return 1; }   // .tpk: 0 ate o recorte assentar
+static int geometryReady = 1, asyncGeometry;
+int trailer_mostra_video(void) { return geometryReady; }
 static int donoTrailer;
 void trailer_marcar_dono(int dono, const char *imdb) { (void)imdb; donoTrailer = dono; }
 int trailer_dono(void) { return opened ? donoTrailer : 0; }
@@ -97,7 +98,7 @@ void video_tpk_cartao_destino(float x,float y,float w,float h,float *ox,float *o
 #endif
 static int lastNoCartao, rectCalls;
 void trailer_no_cartao(int sim) { lastNoCartao = sim; }
-void trailer_rect(GfxRect r) { lastRect = r; rectCalls++; }
+void trailer_rect(GfxRect r) { lastRect = r; rectCalls++; if (asyncGeometry) geometryReady = 0; }
 GfxRect trailer_retangulo(void) { return lastRect; }
 float gfx_escala_txt_entrar(void) { return 1.0f; }
 void gfx_escala_sair(float anterior) { (void)anterior; }
@@ -579,8 +580,15 @@ int main(void) {
       for (int q=1;q<5;q++) { cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+500+NV_CARTAO_ASSENTA_MS+1000+q*16); }
       rc|=check("low-end: plane holds while the card moves",rectCalls==0);
       rc|=check("low-end: poster returns (no hole) while the card moves",heroTrailerFade<0.01f);
+      asyncGeometry=1;
       cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+500+NV_CARTAO_ASSENTA_MS+1000+80+NV_CARTAO_ASSENTA_MS);
       rc|=check("low-end: plane follows once, after the card settled",rectCalls==1&&lastRect.x==cartaoTrailerRect.x);
+      for (int q=0;q<60;q++) { cartaoTrailerServe=1;home_trailer_passo(1,.016f,movingAt+500+q*16); }
+      rc|=check("low-end: no hole while Android geometry acknowledgement is delayed",
+                heroTrailerFade==0.0f&&cartaoTrailerAlpha(heroAtual,movingAt+1500)==0.0f&&rectCalls==1);
+      heroTrailerFade=0.9f;
+      rc|=check("low-end: draw rejects pending native geometry",cartaoTrailerAlpha(heroAtual,movingAt+1500)==0.0f);
+      geometryReady=1;asyncGeometry=0;
       for (int q=0;q<60;q++) { cartaoTrailerServe=1;home_trailer_passo(1,.016f,t+700+1000+80+2*NV_CARTAO_ASSENTA_MS+q*16); }
       rc|=check("low-end: video fades back in once settled",heroTrailerFade>0.9f);
     }
