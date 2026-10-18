@@ -4728,6 +4728,8 @@ static void *montar(void *u) {
     { int r2, w2 = 0, canais = 0;
       for (r2 = 0; r2 < nDecl; r2++) {
         if (ehCanal(decls[r2].tipo) && fil_escolhida(decls[r2].chave) < 0) {
+          // Keep installed TV catalogs visible in management, outside Home.
+          foraCotaGuardar(&decls[r2]);
           canais++;
           continue;
         }

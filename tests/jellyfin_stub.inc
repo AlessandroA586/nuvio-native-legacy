@@ -18,6 +18,7 @@ int servidores_passo(void) { return 0; }
 // Isolated discovery fixtures do not retry account writes; real modules override.
 __attribute__((weak)) int contapend_reenviar(void) { return 0; }
 
+#ifndef NV_TEST_SERVIDORES_APENAS
 // Mach-O weak_import em descoberta.c: fixtures isolados precisam de definicoes
 // fortes para linkar no macOS (ver perfisessao.h).
 #ifndef NV_TEST_SESSAO_PROPRIA
@@ -45,5 +46,6 @@ int recomenda_social_mesclar_sessao(CatItem *i, int nTrakt, int max, uint64_t se
   (void)sessao;
   return recomenda_social_mesclar ? recomenda_social_mesclar(i, nTrakt, max) : nTrakt;
 }
+#endif
 #endif
 #endif
