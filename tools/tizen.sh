@@ -348,7 +348,7 @@ eval emcc $SOURCES ${EXTRA_SOURCES} -o "$SAIDA/index.html" -O2 "$ENV_D" ${NUVIO_
   `# Growth must be enabled for Emscripten to retain MAXIMUM_MEMORY; the shell` \
   `# still supplies fixed-size memories, so each selected tier cannot grow.` \
   -sINITIAL_MEMORY=167772160 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=268435456 -sABORTING_MALLOC=1 \
-  -sINCOMING_MODULE_JS_API='["arguments","canvas","preRun","print","printErr","setStatus","wasmMemory"]' \
+  -sINCOMING_MODULE_JS_API='["arguments","canvas","noInitialRun","preRun","print","printErr","setStatus","wasmMemory"]' \
   `# PILHAS DE 8 MB, e nao o padrao de 64 KB do emscripten. Esta build estava` \
   `# SEM as duas linhas, sozinha entre as builds do projeto: a bancada de teste` \
   `# do AVPlay ja usava 8 MB nos dois. Pilha de fio pequena ja custou caro aqui` \

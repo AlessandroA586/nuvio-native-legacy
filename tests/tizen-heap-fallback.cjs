@@ -109,6 +109,27 @@ try {
     path.join(tmp, 'main.c'), '-o', path.join(tmp, 'index.js'), '-pthread', '-O0', '-sASSERTIONS=0', ...flags],
     { stdio: 'inherit' });
   const glue = fs.readFileSync(path.join(tmp, 'index.js'), 'utf8');
+  // VIDAA redirects MT to ST before navigation completes; glue must suppress main.
+  const vidaa = fs.readFileSync(__dirname + '/../tools/vidaa-shell.html', 'utf8');
+  const redirect = vidaa.slice(vidaa.indexOf('  var NV_MODO ='), vidaa.indexOf('  // DIAGNOSTICO DE ARRANQUE'));
+  const noInitialRun = glue.match(/var noInitialRun = [^;]+;/)[0];
+  for (const [mode, sab, isolated, suppressed] of [
+    ['mt', false, true, true], ['mt', true, false, true],
+    ['mt', true, true, false], ['st', false, false, false]
+  ]) {
+    const redirects = [];
+    const ctx = {
+      window: {}, self: { crossOriginIsolated: isolated }, Module: {},
+      SharedArrayBuffer: sab ? SharedArrayBuffer : undefined,
+      location: { pathname: '/vidaa/mt/index.html', search: '?test=1',
+        replace(url) { redirects.push(url); } },
+      localStorage: { setItem() {} }, console: { log() {} }
+    };
+    vm.runInNewContext(redirect.replace('@NUVIO_MODO@', mode) + '\n' + noInitialRun, ctx);
+    assert.strictEqual(!!ctx.noInitialRun, suppressed,
+      `VIDAA ${mode}: SAB=${sab}, isolated=${isolated} must preserve startup suppression`);
+    assert.deepStrictEqual(redirects, suppressed ? ['/vidaa/st/index.html?test=1'] : []);
+  }
   const init = glue.match(/function initMemory\(\) \{[\s\S]*?\n\}/)[0];
   const wasm = new WebAssembly.Module(fs.readFileSync(path.join(tmp, 'index.wasm')));
   for (const mib of [256, 192, 160]) {
