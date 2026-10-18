@@ -8,17 +8,20 @@
 static void vc_frame(int screen, int frame) {
   Uint32 now = 30000u + (Uint32)frame * 16u;
   corviva_quadro(1.0f / 60, ajustes_cor_viva(), ajustes_cor_logo(), ajustes_animacoes_reduzidas());
-  txt_novo_quadro(); tex_novo_quadro(); tex_bombear(16); gfx_novo_quadro();
+  txt_novo_quadro(); tex_bombear(16);
+  // Match main.c: updates may warm invisible text before draw accounting
+  // resets. Counting those warmups closes the backdrop before it is painted.
+  if (screen == 0) {
+    home_atualizar(1.0f / 60, now);
+    menu_pilula_mostrar(1); menu_atualizar(1.0f / 60, now);
+  } else if (screen == 1) detail_atualizar(1.0f / 60, now);
+  else ajustes_atualizar(1.0f / 60, now);
+  gfx_novo_quadro(); tex_novo_quadro();
   glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1);
   glClear(GL_COLOR_BUFFER_BIT);
-  if (screen == 0) {
-    home_atualizar(1.0f / 60, now); home_desenhar(now);
-    menu_pilula_mostrar(1); menu_atualizar(1.0f / 60, now); menu_desenhar(now);
-  } else if (screen == 1) {
-    detail_atualizar(1.0f / 60, now); detail_desenhar(now);
-  } else {
-    ajustes_atualizar(1.0f / 60, now); ajustes_desenhar(now);
-  }
+  if (screen == 0) { home_desenhar(now); menu_desenhar(now); }
+  else if (screen == 1) detail_desenhar(now);
+  else ajustes_desenhar(now);
   ilha_desenhar(now);
 }
 static int vc_run(void) {
