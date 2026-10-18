@@ -1,5 +1,5 @@
 {
- "atualizado_em": "2026-10-18T07:47:39-03:00",
+ "atualizado_em": "2026-10-18T07:48:29-03:00",
  "base": "4821d35d3",
  "nota": "Local snapshot sync 2026-10-18T07:47:39-03:00, HEAD 4821d35d3. Added 0 issues. Device validation remains pending; see external estado.md. Previous history retained in item notes.",
  "itens": [
@@ -10375,11 +10375,11 @@
     "ultimo_comentario_por": null,
     "ultima_nossa": null
    },
-   "proximo_passo": "triagem; sem job ainda",
-   "notas": "Issue nova 14/10 20:52 (rating de filme/episodio). Feature, nao 2.0.5.",
+   "proximo_passo": "Deferred to 2.1: rating a movie or episode after watching; see backlog-21.txt.",
+   "notas": "Issue nova 14/10 20:52 (rating de filme/episodio). Feature, nao 2.0.5.\nLocal backlog-21.txt explicitly defers post-watch rating to 2.1.",
    "url": "https://github.com/iqui27/nuvio-native-legacy/issues/514",
    "criada_em": "2026-10-14",
-   "alvo": "futuro"
+   "alvo": "2.1"
   },
   {
    "numero": 521,

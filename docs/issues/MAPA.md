@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `4821d35d3` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-18T07:47:39-03:00. 494 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `4821d35d3` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-18T07:48:29-03:00. 494 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -121,9 +121,9 @@ Plano de refatoração: `docs/plans/refatoracao-geral.md` (branch `agente/refato
 | 2.0.4 | 0 |  |
 | 2.0.5 | 2 | #495, #512 |
 | 2.0.6 | 47 | #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #479, #492, #494, #496, #500, #501, #503, #505, #506, #507, #508, #530, #539, #545, #549, #551, #553, #555, #557, #558, #564, #565, #566, #570, #577, #578, #579, #581, #582, #584, #585, #588 |
-| 2.1 | 6 | #420, #457, #458, #589, #590, #591 |
+| 2.1 | 7 | #420, #457, #458, #514, #589, #590, #591 |
 | 2.2 | 0 |  |
-| futuro | 11 | #437, #438, #450, #509, #510, #514, #521, #542, #594, #595, #599 |
+| futuro | 10 | #437, #438, #450, #509, #510, #521, #542, #594, #595, #599 |
 | nao vamos fazer | 0 |  |
 | ja-lancada | 11 | #410, #416, #417, #419, #421, #422, #425, #426, #433, #439, #440 |
 
@@ -1315,7 +1315,7 @@ Snapshot 2026-10-18T07:47:39-03:00: agente/205-triagem3: merged; No mapped revie
 | [#458](https://github.com/iqui27/nuvio-native-legacy/issues/458) | Check for duplicate sources | all | feature | integrada | 2.0.7 | 2.1 | agente/205-b4addons, agente/205-issues-novas, agente/21-titulo | autor 10-12 | Deferred to 2.1; retain tracking. |
 | [#509](https://github.com/iqui27/nuvio-native-legacy/issues/509) | Expanded poster trailer | ? | enhancement | integrada | 2.0.7 | futuro | 13e13b92, 13e13b92a, agente/205-cardexp | sem comentários | Latest fix postdates review; review newest tip after queued/running work finishes. |
 | [#510](https://github.com/iqui27/nuvio-native-legacy/issues/510) | Subtitles list not the same as nuvio in phone applications l | ? | bug | integrada | 2.0.7 | futuro | abff3d67b, agente/205-i510q | sem comentários | Verify merged result; build/install and check device. |
-| [#514](https://github.com/iqui27/nuvio-native-legacy/issues/514) | Ability to rate a movie or an episode | ? | ? | aberta |  | futuro | - | sem comentários | triagem; sem job ainda |
+| [#514](https://github.com/iqui27/nuvio-native-legacy/issues/514) | Ability to rate a movie or an episode | ? | ? | aberta |  | 2.1 | - | sem comentários | Deferred to 2.1: rating a movie or episode after watching; see backlog-21.txt. |
 | [#521](https://github.com/iqui27/nuvio-native-legacy/issues/521) | Layout | ? | bug | integrada | 2.0.7 | futuro | 5184d0a1b, agente/205-i521q | sem comentários | Verify merged result; build/install and check device. |
 | [#542](https://github.com/iqui27/nuvio-native-legacy/issues/542) | Torbox cloud library | ? | feature | aberta | - | futuro | - | sem comentários | triar; sem job |
 | [#589](https://github.com/iqui27/nuvio-native-legacy/issues/589) | Not all GIFs are animated | ? | bug | integrada | 2.0.7 | 2.1 | b2aa59ada, agente/205-i589, agente/205-triagem3 | sem comentários | Verify merged result; build/install and check device. |
@@ -1461,6 +1461,7 @@ Snapshot 2026-10-18T05:47:47-03:00: agente/205-i510q: merged; j-revg-i510q-2.log
 Snapshot 2026-10-18T06:47:51-03:00: agente/205-i510q: merged; j-revg-i510q-2.log: OK.
 Snapshot 2026-10-18T07:47:39-03:00: agente/205-i510q: merged; j-revg-i510q-2.log: OK.
 - **#514**: Issue nova 14/10 20:52 (rating de filme/episodio). Feature, nao 2.0.5.
+Local backlog-21.txt explicitly defers post-watch rating to 2.1.
 - **#521**: Issue nova 2026-10-15 06:48 (issues.json). Sem descrição de contexto; triar. [sync 2026-10-15: agente/205-i521q em_job] [sync 2026-10-15 19:50: agente/205-i521q merged em integracao/2.0.5 (5184d0a1b); fix do BLOQUEIA incluso] Escrivao 10-15 22:49: merged via agente/205-i521q (5184d0a1b).
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i521q: merged; j-revg-i521q-3.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i521q: merged; j-revg-i521q-3.log: OK.
