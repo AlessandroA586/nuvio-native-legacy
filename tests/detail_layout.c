@@ -21,6 +21,7 @@ static long pessoaId;
 static char avisoChave[40];
 static const char *searchResponse;
 static SDL_atomic_t searchEntered, searchRelease;
+static SDL_atomic_t searchHold, searchHeld, searchResume;
 static int searches, loading;
 void capturar_carga(const char *text, float progress) {
   assert(text && text[0] && progress == -1.0f);
@@ -29,11 +30,16 @@ void capturar_carga(const char *text, float progress) {
 char *buscar_fixture(const char *url, int seconds) {
   (void)seconds;
   assert(strstr(url, "/search/person?"));
-  assert(strstr(url, "query=Fulana%20Jr."));
+  assert(strstr(url, "query=Fulana%20Jr.") || strstr(url, "query=Fulana%20Other"));
   searches++;
   SDL_AtomicSet(&searchEntered, 1);
+  char *response = searchResponse ? strdup(searchResponse) : NULL;
+  if (SDL_AtomicCAS(&searchHold, 1, 0)) {
+    SDL_AtomicSet(&searchHeld, 1);
+    while (!SDL_AtomicGet(&searchResume)) SDL_Delay(1);
+  }
   while (!SDL_AtomicGet(&searchRelease)) SDL_Delay(1);
-  return searchResponse ? strdup(searchResponse) : NULL;
+  return response;
 }
 static void waitSearch(void) {
   Uint32 start = SDL_GetTicks();
@@ -290,21 +296,58 @@ int main(void) {
     e.type = SDL_KEYDOWN; detail_evento(&e); e.type = SDL_KEYUP; detail_evento(&e);
     waitSearch();
     assert(!pessoaAberta && !strcmp(avisoChave, "det-elenco-falha"));
+    // A catalog refresh moves the same title before its lookup is consumed.
+    searchResponse = "{\"results\":[{\"id\":222,\"name\":\"Fulana Jr\"}]}";
+    avisoChave[0] = 0;
+    snprintf(idxImdb, sizeof idxImdb, "%s", m.imdb);
+    SDL_AtomicSet(&searchRelease, 0);
+    e.type = SDL_KEYDOWN; detail_evento(&e); e.type = SDL_KEYUP; detail_evento(&e);
+    CatItem reordered[2] = {{0}, m};
+    strcpy(reordered[0].imdb, "tt9999999");
+    cat_definir_tudo(reordered, 2, NULL, 0);
+    SDL_AtomicSet(&searchRelease, 1);
+    start = SDL_GetTicks();
+    while (!SDL_AtomicGet(&pessoaBusca->pronta) && SDL_GetTicks() - start < 3000) SDL_Delay(1);
+    assert(SDL_AtomicGet(&pessoaBusca->pronta));
+    waitSearch();
+    assert(idx == 1 && pessoaAberta && pessoaId == 222);
+    assert(cat_item(1)->elenco[0].tmdb == 222 && !cat_item(0)->elenco[0].tmdb);
+    cat_definir_tudo(&m, 1, NULL, 0); idx = 0;
+    pessoaAberta = 0; pessoaId = 0;
     // Back while resolving must discard the result without opening or caching it.
     searchResponse = "{\"results\":[{\"id\":222,\"name\":\"Fulana Jr\"}]}";
     avisoChave[0] = 0;
-    SDL_AtomicSet(&searchEntered, 0); SDL_AtomicSet(&searchRelease, 0);
+    SDL_AtomicSet(&searchEntered, 0); SDL_AtomicSet(&searchRelease, 1);
+    SDL_AtomicSet(&searchHold, 1);
     e.type = SDL_KEYDOWN; detail_evento(&e); e.type = SDL_KEYUP; detail_evento(&e);
     start = SDL_GetTicks();
     while (!SDL_AtomicGet(&searchEntered) && SDL_GetTicks() - start < 3000) SDL_Delay(1);
     assert(SDL_AtomicGet(&searchEntered));
-    e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_ESCAPE; detail_evento(&e);
-    SDL_AtomicSet(&searchRelease, 1);
     start = SDL_GetTicks();
-    while (pessoaBusca && SDL_GetTicks() - start < 3000) {
-      detail_atualizar(0, SDL_GetTicks()); SDL_Delay(1);
-    }
+    while (!SDL_AtomicGet(&searchHeld) && SDL_GetTicks() - start < 3000) SDL_Delay(1);
+    assert(SDL_AtomicGet(&searchHeld));
+    struct PessoaBusca *cancelled = pessoaBusca;
+    SDL_AtomicIncRef(&cancelled->refs); // Keep the cancelled worker observable until completion.
+    e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_ESCAPE; detail_evento(&e);
     assert(!pessoaBusca && !pessoaAberta && !cat_item(0)->elenco[0].tmdb && !avisoChave[0]);
+    // Another missing-ID cast click must work while the cancelled request is blocked.
+    m.nElenco = 2; m.elenco[1] = m.elenco[0];
+    strcpy(m.elenco[1].nome, "Fulana Other");
+    cat_definir_tudo(&m, 1, NULL, 0);
+    nivel = 1; foco.fileira = SEC_ELENCO; foco.coluna = 1;
+    searchResponse = "{\"results\":[{\"id\":333,\"name\":\"Fulana Other\"}]}";
+    e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RETURN; detail_evento(&e);
+    e.type = SDL_KEYUP; detail_evento(&e);
+    waitSearch();
+    assert(pessoaAberta && pessoaId == 333 && !SDL_AtomicGet(&cancelled->pronta));
+    SDL_AtomicSet(&searchResume, 1);
+    start = SDL_GetTicks();
+    while (SDL_AtomicGet(&cancelled->refs) != 1 && SDL_GetTicks() - start < 3000) SDL_Delay(1);
+    assert(SDL_AtomicGet(&cancelled->pronta) && SDL_AtomicGet(&cancelled->refs) == 1);
+    if (SDL_AtomicDecRef(&cancelled->refs)) free(cancelled);
+    detail_atualizar(0, SDL_GetTicks());
+    assert(!pessoaBusca && pessoaAberta && pessoaId == 333 && !avisoChave[0]);
+    assert(!cat_item(0)->elenco[0].tmdb && cat_item(0)->elenco[1].tmdb == 333);
     // Existing matcher covers punctuation and composed accents; decomposed must too.
     CatItem names = {0}; names.nElenco = 3;
     strcpy(names.elenco[0].nome, "José");
