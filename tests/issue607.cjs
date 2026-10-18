@@ -114,7 +114,30 @@ int main(void) {
   console.log('PASS: decoder death fails active jobs; GC frees abandoned jobs');
 }
 
-const cases = {probe, avplay, decoder};
+function fatal() {
+  for (const file of ['tools/tizen-shell.html','tools/vidaa-shell.html']) {
+    const source = fs.readFileSync(file,'utf8');
+    const block = source.slice(source.indexOf('    window.addEventListener("error"'),source.indexOf('    setTimeout(function ()',source.indexOf('    window.addEventListener("error"')));
+    const functions = source.match(/    function fatal\([\s\S]*?\n    \}/);
+    const listeners = {}, lines = [], panel = {hidden:true};
+    let paints = 0;
+    vm.runInNewContext((functions ? functions[0] : '') + block, {
+      window:{addEventListener:(event,fn)=>listeners[event]=fn}, console:{log(){}},
+      mostrar:text=>lines.push(text), painel:panel, pintar:()=>paints++,
+      document:{getElementById:()=>panel}
+    });
+    for (const event of ['error','unhandledrejection']) {
+      panel.hidden = true;
+      listeners[event]({message:'fatal failure',reason:Error('fatal rejection')});
+      assert.equal(panel.hidden,false,file + ': ' + event);
+      assert.match(lines.join('\n'),/reopen|restart|reload/i);
+    }
+    assert(paints >= 2);
+  }
+  console.log('PASS: both web shells reveal fatal errors with recovery guidance');
+}
+
+const cases = {probe, avplay, decoder, fatal};
 (async () => {
   const selected = process.argv.slice(2);
   for (const name of selected.length ? selected : Object.keys(cases)) await cases[name]();
