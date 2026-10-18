@@ -1078,9 +1078,10 @@ int addons_legendas_prontas(void) {
   return r;
 }
 const Legenda *addons_legenda(int i) {
+  static _Thread_local Legenda copia;
   const Legenda *r = NULL;
   pthread_mutex_lock(&legTrava);
-  if (i >= 0 && i < nLegs) r = &legs[i];
+  if (i >= 0 && i < nLegs) { copia = legs[i]; r = &copia; }
   pthread_mutex_unlock(&legTrava);
   return r;
 }
