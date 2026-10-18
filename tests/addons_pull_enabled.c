@@ -33,11 +33,20 @@ char *nuvem_rpc_com(const char *f, const char *b, const char *jwt, int *st) {
   (void)jwt; return sessao_rpc(f, b, st);
 }
 
-static int patches, patchStatus = 200;
+static int patches, patchStatus = 200, checkEarlyPublication;
 char *nuvem_addon_alternar(const char *q, int ativo, const char *jwt, int *st) {
   (void)jwt;
   assert(strstr(q, "user_id=eq.dono-a&profile_id=eq.1&url=eq."));
   patches++;
+  if (checkEarlyPublication) {
+    confere("membership published before pending PATCH", PRONTO_LER(addonsCedo));
+    if (PRONTO_LER(addonsCedo)) {
+      addonsAplicar();
+      temAddonsRem = 0;
+      PRONTO_PUBLICAR(addonsCedo, 0);
+      checkEarlyPublication = 0;
+    }
+  }
   *st = patchStatus;
   if (*st != 200) return strdup("error");
   char l = letra(strstr(q, "url=eq.") + 8);
@@ -58,7 +67,7 @@ static void expect(const char *label, const char *letters) {
     exit(1);
   }
 }
-int main(void) {
+int main(int argc, char **argv) {
   // Synthetic account-table rows, with only placeholder identities/endpoints.
   // enabled:false reproduces the suspected web-default failure; other shapes exercise
   // compatibility. This is not a captured response from the reporter's account.
@@ -72,6 +81,45 @@ int main(void) {
   snprintf(usuarioDoCiclo, sizeof usuarioDoCiclo, "conta-a");
   addonsPerfilCiclo = 1;
   copiaGeracaoDoCiclo = contacache_geracao();
+  perfilDoCiclo = 1;
+  if (argc > 1) {
+    if (!strcmp(argv[1], "first-enable")) {
+      listProfile = 0; // Production starts with package/local ownership.
+      tvAcrescentar('A');
+      tv[0].ativo = 0;
+      tv[0].ativo = 1;
+      sync_sujar_addons();
+      char *pending = contacache_ler(CC_ADDONS_TOGGLES, 1, usuarioDoCiclo, NULL);
+      confere("first enable queued without baseline", pending && strstr(pending, "true"));
+      free(pending);
+      pull("[{\"url\":\"https://a.exemplo/manifest.json\",\"enabled\":false}]");
+      expect("first pull preserves local enable with owner zero", "A");
+    } else if (!strcmp(argv[1], "switch-toggle")) {
+      tvAcrescentar('A'); tvAcrescentar('B');
+      activeProfile = addonProfile = addonsPerfilCiclo = perfilDoCiclo = 2;
+      addonsRestaurar();
+      tv[0].ativo = 0;
+      sync_sujar_addons();
+      char *pending = contacache_ler(CC_ADDONS_TOGGLES, 2, usuarioDoCiclo, NULL);
+      char *applied = contacache_ler(CC_ADDONS_APLICADOS, 2, usuarioDoCiclo, NULL);
+      confere("foreign list cannot queue flags", !pending);
+      confere("foreign list cannot seed applied cache", !applied);
+      free(pending); free(applied);
+    } else if (!strcmp(argv[1], "early-publish")) {
+      tvAcrescentar('A');
+      tv[0].ativo = 0;
+      sync_sujar_addons();
+      nTv = 0;
+      addonsRestaurar();
+      snprintf(conta, sizeof conta, "ABC");
+      checkEarlyPublication = 1;
+      confere("pending pull completes", puxarAddons() == 1);
+      confere("pending PATCH exercised", patches == 1);
+      expect("membership available during PATCH", "aBC");
+      confere("pending disable reaches account", !strcmp(conta, "aBC"));
+    } else return 2;
+    return falhas ? 1 : 0;
+  }
   tvAcrescentar('A'); tvAcrescentar('B'); tvAcrescentar('C');
   tvAcrescentar('D'); tvAcrescentar('X');
   // Production export returns normalized bases, not manifest endpoints.
@@ -153,7 +201,7 @@ int main(void) {
   int priorPatches = patches;
   sync_sujar_addons();
   confere("disable before first applied snapshot reaches account",
-          puxarAddons() == 1 && !strcmp(conta, "aBZ") && patches == priorPatches + 1);
+          puxarAddons() == 1 && !strcmp(conta, "aBZ") && patches == priorPatches + 2);
   addonsAplicar();
   expect("first pull preserves disabled state and remote membership", "aBZ");
   // Switch to an independent profile without an applied snapshot. Restoration

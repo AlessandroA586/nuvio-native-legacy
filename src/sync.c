@@ -437,7 +437,7 @@ static void addonsGuardar(const char *superficie, const AddonRemoto *lista, int 
 }
 
 // Pending flags are durable, account/profile scoped, and never change membership.
-static void addonsEnviarToggles(void) {
+static void addonsEnviarToggles(const AddonRemoto *remotos, int nr) {
   AddonRemoto *pend = calloc(SY_ADD_MAX, sizeof *pend);
   char *url = malloc(SY_URL_LEITURA);
   char *saved;
@@ -450,14 +450,14 @@ static void addonsEnviarToggles(void) {
   for (int i = 0; i < n && perfilDoCicloAtual(); i++) {
     char key[NV_ADDON_URL_MAX], other[NV_ADDON_URL_MAX];
     nv_addon_chave(pend[i].url, key, sizeof key);
-    for (int j = 0; j < nAddonsRem; j++) {
-      nv_addon_chave(addonsRem[j].url, other, sizeof other);
+    for (int j = 0; j < nr; j++) {
+      nv_addon_chave(remotos[j].url, other, sizeof other);
       if (strcmp(key, other)) continue;
       // Use the exact remote URL, quoted for PostgREST and URL escaped.
       Jsw w;
       char escaped[SY_URL_LEITURA * 3], dono[240], query[SY_URL_LEITURA * 3 + 400];
-      const char *longa = nv_longa_bruto(addonsRem[j].url);
-      jsw_iniciar(&w); jsw_str(&w, longa ? longa : addonsRem[j].url);
+      const char *longa = nv_longa_bruto(remotos[j].url);
+      jsw_iniciar(&w); jsw_str(&w, longa ? longa : remotos[j].url);
       nuvem_url_escapar(jsw_texto_final(&w), escaped, sizeof escaped);
       jsw_livre(&w);
       nuvem_url_escapar(perfis_dono(), dono, sizeof dono);
@@ -467,7 +467,6 @@ static void addonsEnviarToggles(void) {
       char *r = nuvem_addon_alternar(query, pend[i].ativo, tokenDoCiclo, &st);
       if (!ok2xx(r, st) || !perfilDoCicloAtual() || !js_raiz_array(r) ||
           !strchr(js_raiz_array(r), '{')) ok = 0;
-      else addonsRem[j].ativo = pend[i].ativo;
       free(r);
       break;
     }
@@ -495,7 +494,8 @@ static int addonsAplicar(void) {
   // addon toggles belong to this app; only membership/order come from pull.
   // List ownership tracks the active profile, even with primary-profile addons.
   // Never inherit flags from a previous profile left in memory without a cache.
-  int preservarFlags = addons_perfil_da_lista() == perfis_ativo();
+  int donoLista = addons_perfil_da_lista();
+  int preservarFlags = !donoLista || donoLista == perfis_ativo();
   // Match normalized identity before replacing any slots (reorders/removals).
   for (i = 0; preservarFlags && i < nAddonsRem; i++) {
     char key[NV_ADDON_URL_MAX], localKey[NV_ADDON_URL_MAX];
@@ -607,8 +607,13 @@ static int puxarAddons(void) {
                                       r, copiaGeracaoDoCiclo);
   free(r);
   nAddonsRem = k;
-  addonsEnviarToggles();
+  // The main thread may merge/consume addonsRem as soon as it is published.
+  // PATCHes use a worker-owned snapshot and never mutate that mailbox.
+  static AddonRemoto paraToggles[SY_ADD_MAX];
+  memcpy(paraToggles, addonsRem, (size_t)k * sizeof *paraToggles);
   temAddonsRem = 1;
+  PRONTO_PUBLICAR(addonsCedo, 1);
+  addonsEnviarToggles(paraToggles, k);
   // REGISTRA O PERFIL PEDIDO, e nao so o resultado. O defeito que levou a esta
   // linha (perfil secundario com "0 addons", relato do Mane155) era um pedido
   // BEM FORMADO para o perfil errado: o PostgREST responde 200 com array vazio,
@@ -1323,7 +1328,6 @@ static void *rodar(void *u) {
   // Publicando aqui, o remontar acontece com ~1,5 s de trabalho jogado fora em
   // vez de 27 s.
   //
-  if (temAddonsRem) PRONTO_PUBLICAR(addonsCedo, 1);
   // Retomar larga primeiro, mas nao e uma barreira para credenciais,
   // colecoes ou ordem. O pedido tem perfil/sessao proprios e a caixa continua
   // sendo aplicada no principal pelas regras de recencia de syncprog.
@@ -1929,6 +1933,8 @@ void sync_sujar_addons(void) {
   int perfil = perfis_ativo_addons();
   unsigned geracao = contacache_geracao();
   if (!sessao_logada()) return;
+  int donoLista = addons_perfil_da_lista();
+  if (donoLista && donoLista != perfis_ativo()) return;
   snprintf(usuario, sizeof usuario, "%s", sessao_usuario());
   pthread_mutex_lock(&addonsToggleTrava);
   int n = addons_exportar(local, SY_ADD_MAX);
@@ -1944,8 +1950,8 @@ void sync_sujar_addons(void) {
       nv_addon_chave(before[j].url, other, sizeof other);
       if (!strcmp(key, other)) break;
     }
-    // Without a baseline, preserve explicit OFF for the first account pull.
-    if (j < nb ? local[i].ativo == before[j].ativo : local[i].ativo) continue;
+    // Without a baseline, retain both ON and OFF before the first pull.
+    if (j < nb && local[i].ativo == before[j].ativo) continue;
     int k;
     for (k = 0; k < np; k++) {
       nv_addon_chave(pend[k].url, other, sizeof other);

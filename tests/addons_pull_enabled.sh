@@ -10,4 +10,10 @@ cc -O1 -g -Isrc -pthread -ffunction-sections -fdata-sections -Wl,-dead_strip -I/
   tests/addons_pull_enabled.c tests/stub_contapend.c src/catordem.c \
   src/catordemcache.c src/contacache.c src/js.c src/jsw.c -o "$bin"
 python3 tests/addons_patch_transport.py
-NV_T_DIR="$dir" "$bin"
+rc=0
+for scenario in first-enable switch-toggle early-publish; do
+  mkdir "$dir/$scenario"
+  NV_T_DIR="$dir/$scenario" "$bin" "$scenario" || rc=1
+done
+NV_T_DIR="$dir" "$bin" || rc=1
+exit "$rc"
