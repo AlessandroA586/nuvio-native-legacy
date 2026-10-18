@@ -1,8 +1,8 @@
 #!/bin/bash
 export TMPDIR="${TMPDIR:-/tmp}"
 TMPDIR="${TMPDIR%/}"
-# Inline editor and Fileiras touch UI are Mobile only; no network. The footer
-# frames run the real draw in a hidden GL window (like tests/ajustes_shot.sh).
+# Mobile List overlap matrix; real badge geometry and clock draw, no network.
+# Uses a hidden GL window (like tests/ajustes_shot.sh).
 #   bash tests/ajustes_lista_cabecalho.sh
 set -eu
 cd "$(dirname "$0")/.."
