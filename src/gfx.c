@@ -3795,6 +3795,12 @@ static int vidroSobreVideo(const float tela[4]) {
   for (i = 0; !video && i < vidroNFuros; i++) video = vidroCruza(vidroFuros[i], tela);
   return video;
 }
+static GLuint vidroFonteFixa;
+GLuint gfx_vidro_fonte_fixa(GLuint tex) {
+  GLuint anterior = vidroFonteFixa;
+  vidroFonteFixa = tex;
+  return anterior;
+}
 void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a) {
   GfxRect t = r;
   float d = dens, tela[4];
@@ -3824,7 +3830,8 @@ void gfx_vidro(GfxRect r, float raio, int tipo, float cinza, float dens, float a
   memset(&vidPend, 0, sizeof vidPend);
   vidPend.tipo = tipo; vidPend.raio = raio;
   vidRuidoPreparar();   // o dither vale tambem no chapado
-  if (!chapado) {
+  if (vidroFonteFixa) vidPend.fonte = vidroFonteFixa;
+  else if (!chapado) {
     gfx_ambiente_descarregar();   // a luz e o fundo pendentes ficam ATRAS do vidro
     vidPend.fonte = vidroFonte(t);
   }
