@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T13:47:59-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T14:48:50-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -181,6 +181,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Cast pages always open, even right after a search** (owner request): person IDs that the title credits never returned are resolved on demand off the UI thread, cancelled lookups no longer block the cast row, and reordered results keep their order. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `2cf7bfc0c`, `7559ce4ef`, merge `310f3aa3d` (`agente/205-pessoapagina`).
+
+- **Sources sheet explains hidden torrent sources**: when P2P is off or an add-on's summary is truncated, a muted footer in the sources sheet says how many torrent sources were hidden per add-on, and the advice now matches the actual stream requirements. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `35ff5195c`, `95d1b97a4`, `7a0e5073e`, merge `f246d8e91` (`agente/205-torrentdica`).
 
 - **Timeline text stays clear of artwork**: The text column keeps a 24-pixel gap from scaled artwork across form factors, preventing overlap. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-timelinetexto`, `2ac2c50d6`, merge `99c40f3c0`.
 
@@ -409,11 +413,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-Tracking snapshot: 22 branches have unmerged commits and no running job; 16 open issues have no mapped job or prompt. Newer fixes on `agente/205-ajustessync`, `agente/205-episodioslento`, `agente/205-escala85`, `agente/205-pessoapagina`, `agente/205-pr567port`, `agente/205-torrentdica`, `agente/p2p` need review and are not classified as lost. Queued jobs and deferred 2.1 work remain tracked separately. The C9 installation attempt at `cb7ece972` failed; later integration merges have not been confirmed on TV.
+Tracking snapshot: 30 branches have unmerged commits and no running job; 16 open issues have no mapped job or prompt. Newer fixes on `agente/205-elencovazio`, `agente/205-episodioslento`, `agente/205-escala85`, `agente/205-whatsnew207`, `agente/p2p` need review and are not classified as lost. Queued jobs and deferred 2.1 work remain tracked separately. The C9 installation attempt at `cb7ece972` failed; later integration merges (up to `f246d8e91`) have not been confirmed on TV.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
-
-- **Explanation for hidden torrent sources**: Mixed source lists explain why torrent sources are hidden, helping users understand which playback options are available; the newest fix still needs review. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-torrentdica`, `35ff5195c`.
 
 - **Selected PR #567 playback improvements**: Pending work ports source file selection, binge-source continuity, refreshed TorBox links, DTS fallback, wait-all source selection, MKVToolNix seeking and source-font preferences; the latest launch fixes need review before integration. Platforms: Samsung .tpk first; Android/webOS coverage pending. Refs @Namer03, PR #567, `agente/205-pr567port`, `385b44106`.
 
@@ -498,7 +500,12 @@ Landing in 2.0.7, already in the sections above:
   **text/component scale merge** (`9f0588a80`, `302d2bf4f`, `b0c947387`), the **#557 seek warning**
   (`5cf77f08d`, `d034960e8`), the **#581 audio-focus fix** (`5b0d2a35d`, `4a0b3408d`), the
   **#584 720p Auto trailers** (`2bc1ddb55`, `b89ddc139`) and the **#589 slow-motion GIF**
-  (`5ab9fc44c`, `b2aa59ada`).
+  (`5ab9fc44c`, `b2aa59ada`), the **B2 detail cards and C9 glass cache** (`e0c9ba77b`, `59efaef75`,
+  `3cf9a95af`), the **editorial Stage rows** (`8fe7cc0e0`), the **Discord artwork fallback**
+  (`e476d1707`), the **MKV ASS 12 s prefetch** (`918dd51c9`), the **frost crossfade/artwork fixes**
+  (`ddc51a964`), the **text-scale anchor set** (`cb398fc2f`, `f0143a81c`), the **Hero A performance and
+  top-mask set** (`8ff0623e9`, `e4e86c3f2`), the **timeline text gap** (`99c40f3c0`), the
+  **cast-person lookups** (`310f3aa3d`) and the **hidden-torrent explanation** (`f246d8e91`).
 
 ### Frost performance (to fill before tagging)
 
@@ -543,7 +550,12 @@ Landing in 2.0.7, already in the sections above:
   **text/component scale merge** (`9f0588a80`, `302d2bf4f`, `b0c947387`), the **#557 seek warning**
   (`5cf77f08d`, `d034960e8`), the **#581 audio-focus fix** (`5b0d2a35d`, `4a0b3408d`), the
   **#584 720p Auto trailers** (`2bc1ddb55`, `b89ddc139`) and the **#589 slow-motion GIF**
-  (`5ab9fc44c`, `b2aa59ada`).
+  (`5ab9fc44c`, `b2aa59ada`), the **B2 detail cards and C9 glass cache** (`e0c9ba77b`, `59efaef75`,
+  `3cf9a95af`), the **editorial Stage rows** (`8fe7cc0e0`), the **Discord artwork fallback**
+  (`e476d1707`), the **MKV ASS 12 s prefetch** (`918dd51c9`), the **frost crossfade/artwork fixes**
+  (`ddc51a964`), the **text-scale anchor set** (`cb398fc2f`, `f0143a81c`), the **Hero A performance and
+  top-mask set** (`8ff0623e9`, `e4e86c3f2`), the **timeline text gap** (`99c40f3c0`), the
+  **cast-person lookups** (`310f3aa3d`) and the **hidden-torrent explanation** (`f246d8e91`).
 
 ### Frost performance (to fill before tagging)
 

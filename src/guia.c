@@ -81,6 +81,8 @@
 #include "livetv_regras.h" /* variantes FHD/HD/SD do mesmo canal */
 #include "teclado.h"       /* a busca do guia */
 #include "buscanorm.h"     /* guia_buscar_canais (Spotlight) */
+#include "ltv.h"           /* modelo por fonte: arena, teto, numeracao, M3U */
+#include "perfiltv.h"      /* ptv_plataforma: o teto de canais da TV */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -89,15 +91,6 @@
 #include <stdatomic.h>
 #include <time.h>
 
-// Tetos: ver guiacorte.h (TV 900/48, Android TV 3000/128 e a conta de memoria).
-#define G_MAX_CANAL  GUIACORTE_MAX_CANAL
-#define G_MAX_CAT    GUIACORTE_MAX_CAT
-#define G_MAX_FAV    400
-// Cada addon pode declarar VARIOS catalogos de canal no manifesto; 8 so
-// bastava para um FrostView.
-#define G_MAX_FONTE   24
-#define G_PAGINA     100
-#define G_COTA_MIN   150   // piso da cota por catalogo (ver fioGuia)
 
 // --- layout ---------------------------------------------------------------
 // DESDE 25/09/2026 O GUIA E UM HEROI "AGORA" EM CIMA E A GRADE EMBAIXO, na
@@ -246,45 +239,89 @@ static void gTopoDistribuir(const float *larguras) {
 #define G_PA_ROW_REC 118.0f
 #define G_MAX_REC    12
 
+
+// --- O MODELO POR FONTE (plano do guia de TV, M1/M2) ----------------------------
+//
+// ANTES: tres vetores fixos de 900 GCanal de ~2,4 KB (char[600] por campo) e 48
+// categorias fundidas por nome entre todas as fontes, em ordem A-Z. Xtream de
+// 16 mil canais virava 900 sem aviso, e o canal da 49a categoria sumia.
+//
+// AGORA:
+//   - GCanal tem PONTEIROS para uma arena de strings (ltv.h) e a FONTE dele.
+//     30 mil canais custam ~9 MB, nao 72.
+//   - FONTE (GFonteLtv) = addon (por base), Stalker, Xtream, M3U por URL. Tem
+//     chave estavel, saude, contas, os grupos TODOS (mesmo os que nao couberam)
+//     e o cache proprio em disco: uma fonte que falha nao apaga as outras.
+//   - GRUPO (GCat) e da fonte: "Esportes" do addon e do Xtream sao dois grupos
+//     (decisao 2 do dono). Ordem do provedor, A-Z opcional por fonte (decisao 3).
+//   - TETO por plataforma (ltv_teto_canais) somando as fontes; passou, entram
+//     grupos inteiros na ordem do provedor ou os escolhidos pela pessoa, e a
+//     fonte fica marcada `cortada` para a tela dizer (nunca mais em silencio).
+#define G_MAX_FAV    400
+// Cada addon pode declarar VARIOS catalogos de canal no manifesto.
+#define G_MAX_FONTE   24
+#define G_MAX_LTV     14     // fontes da barra (addons + Stalker + Xtream + M3U)
+#define G_PAGINA     100
+
 typedef struct {
-  char id[80];
-  char nome[140];
-  char logo[480];
-  char desc[600];
-  // DE QUE ADDON ESTE CANAL VEIO. Sem isto o player perguntava a fonte a TODOS
-  // os addons — e um addon quebrado (FrostView com 408 o dia inteiro) segurava
-  // o canal de OUTRO addon ate o timeout dele. Medido na C9 em 18/09: com o
-  // FrostView desligado, 1,6 s da tecla ate a fonte; ligado, dezenas de
-  // segundos e "nao foi possivel abrir a fonte" num canal que ele nem fornece.
-  //
-  // FICA EM 600, e nao em NV_ADDON_URL_MAX (#201). Sao tres vetores de
-  // G_MAX_CANAL (canais, sCanais e o tmp de empacotar): com 2048 o guia
-  // custaria 3,9 MB a mais — CONTA, do tamanho dos simbolos, nao medicao em TV.
-  // A base aqui e so o ATALHO "pergunte a este addon": quando a do addon nao
-  // cabe, o canal fica com ela VAZIA (ver lerPagina), que e o caso "pergunta a
-  // todos" de sempre. Mais lento para esse addon, nunca uma URL cortada. Todo
-  // mundo que recebe a base de um canal (lembrete, fontecache, spotlight,
-  // diagnostico da Live TV) herda este teto, e por isso continua em 600.
-  char base[600];
-  // TIPO DECLARADO do catalogo de onde o canal saiu ("tv", "channel",
-  // "channels", "live", "iptv"). E o nome de tipo que vai no pedido de
-  // stream: um manifesto MISTO (filme+serie+canal, como o do M3U Mux e de
-  // qualquer addon de IPTV caseiro) declara cada catalogo com o tipo dele e o
-  // /stream/<tipo>/ so responde pelo declarado. Vazio = nao se sabe.
-  char tipo[16];
-  int  cat;      // indice em cats[]
-  int  epg;      // -1 = ainda nao resolvido; -2 = sem grade real
-  char epgId[64];  // id do canal no XMLTV do provedor (Xtream), quando ha
-  int  fav;      // espelho do arquivo, para o desenho nao varrer a lista
+  const char *id, *nome, *logo, *desc;
+  // DE QUE ADDON ESTE CANAL VEIO (so addon): o player pergunta a fonte so a
+  // ele. Aponta para a base da fonte (uma copia por fonte, nao por canal).
+  const char *base;
+  const char *tipo;
+  const char *epgId;    // tvg-id / epg_channel_id
+  const char *tvgNome;  // tvg-name (M3U)
+  const char *url;      // M3U: a URL do canal (nunca em log)
+  const char *ua, *ref; // M3U: cabecalhos do canal
+  int  cat;             // indice em cats[]
+  int  epg;             // -1 = ainda nao resolvido; -2 = sem grade real
+  int  fav;             // espelho do arquivo, para o desenho nao varrer a lista
+  int  numero;          // do provedor (tvg-chno, num) ou a posicao na fonte
+  short fonte;          // indice em ltvF[]
+  short epgMetodo;      // EPG_M_* do casamento
 } GCanal;
 
+typedef struct {
+  const char *nome;
+  short fonte;
+  int   ordem;          // ordem do provedor dentro da fonte
+} GCat;
+
+// Todos os grupos que a fonte ofereceu, inclusive os que nao couberam no teto:
+// e a lista do "Escolher grupos".
+typedef struct { const char *nome; int n; unsigned char entra; } GGrupoInfo;
+
+typedef struct {
+  char chave[LTV_CHAVE];
+  char nome[64];
+  int  tipo;                    // LTV_*
+  const char *base;             // addon: a base (arena); "" nos outros
+  int  saude;                   // LTV_SAUDE_*
+  int  nCanais, nGrupos;        // retidos
+  int  total;                   // o que a fonte ofereceu
+  int  cortada;                 // passou do teto: so parte entrou
+  int  deCache;                 // a rede falhou e a lista e a do disco
+  long long atualizada;         // epoch da lista
+  int  erro;                    // XT_* (Xtream) ou 1 = nao respondeu
+  int  ngi; GGrupoInfo *gi;     // malloc, nomes na arena da lista
+  // EPG (M5): canais resolvidos e com grade, por metodo
+  int  epgResolvidos, epgCom, epgPor[EPG_M_MANUAL + 1];
+  char urlTvg[1024];            // M3U: url-tvg do cabecalho (nunca em log)
+  int  fusoS;                   // deslocamento da grade (M6), das prefs
+} GFonteLtv;
+
 // Publicados (so o fio de desenho le).
-static GCanal canais[G_MAX_CANAL];   static int nCanais;
-static char   cats[G_MAX_CAT][64];   static int nCats;
-static int    catIni[G_MAX_CAT], catN[G_MAX_CAT];
+static GCanal *canais;   static int nCanais, capCanais;
+static GCat   *cats;     static int nCats, capCats;
+static int    *catIni, *catN;
+static GFonteLtv ltvF[G_MAX_LTV]; static int nLtvF;
+static LtvArena arena;
 // Staging (so o fio de carga escreve).
-static GCanal sCanais[G_MAX_CANAL];  static int sNCanais;
-static char   sCats[G_MAX_CAT][64];  static int sNCats;
+static GCanal *sCanais;  static int sNCanais, sCapCanais;
+static GCat   *sCats;    static int sNCats, sCapCats;
+static GFonteLtv sLtvF[G_MAX_LTV]; static int sNLtvF;
+static LtvArena sArena;
+static int sTeto, sRetidos;   // teto da carga e quanto ja entrou
 
 enum { G_PARADO, G_BAIXANDO, G_PRONTO, G_FALHOU };
 static int estado = G_PARADO;
@@ -298,18 +335,143 @@ static atomic_int pendPronto;   // release no fio de carga, acquire no desenho
 static char focoPend[80];
 
 // Catalogos de canal descobertos na home (tipo "channel"/"tv").
-// `nome` e o nome do catalogo no manifesto (ou o titulo da fileira): vira a
-// categoria do canal que nao traz genero nenhum — ver lerPagina.
 typedef struct { char base[NV_ADDON_URL_MAX], tipo[16], id[96], nome[96]; } GFonte;
 static GFonte fontes[G_MAX_FONTE]; static int nFontes, fontesOk;
-// Copia de trabalho do fio: as fileiras sao so o caminho rapido. O manifesto
-// de cada addon ativo declara TODOS os catalogos de canal, montados na home
-// ou nao — sem a sonda o guia ficava limitado ao que coube nas fileiras.
 static GFonte sFontes[G_MAX_FONTE]; static int sNFontes;
 
-// --- favoritos --------------------------------------------------------------
-static char fav[G_MAX_FAV][80]; static int nFav, favLido;
-static int  favOrd[G_MAX_FAV];  static int nFavOrd;   // indices em canais[]
+static void fontesLtvSoltar(GFonteLtv *f, int n) {
+  int i;
+  for (i = 0; i < n; i++) { free(f[i].gi); f[i].gi = NULL; f[i].ngi = 0; }
+}
+
+// --- staging ---------------------------------------------------------------------
+static void stagingZerar(void) {
+  fontesLtvSoltar(sLtvF, sNLtvF);
+  ltv_arena_soltar(&sArena);
+  free(sCanais); sCanais = NULL; sNCanais = sCapCanais = 0;
+  free(sCats); sCats = NULL; sNCats = sCapCats = 0;
+  memset(sLtvF, 0, sizeof sLtvF); sNLtvF = 0;
+  sRetidos = 0;
+}
+
+static int sFonteChave(const char *ch, int tipo, const char *nome, const char *base) {
+  int i;
+  for (i = 0; i < sNLtvF; i++) if (!strcmp(sLtvF[i].chave, ch)) return i;
+  if (sNLtvF >= G_MAX_LTV) return -1;
+  i = sNLtvF++;
+  memset(&sLtvF[i], 0, sizeof sLtvF[i]);
+  snprintf(sLtvF[i].chave, sizeof sLtvF[i].chave, "%s", ch);
+  snprintf(sLtvF[i].nome, sizeof sLtvF[i].nome, "%s", nome && nome[0] ? nome : ltv_tipo_nome(tipo));
+  sLtvF[i].tipo = tipo;
+  sLtvF[i].base = ltv_dup(&sArena, base ? base : "");
+  sLtvF[i].saude = LTV_SAUDE_OK;
+  sLtvF[i].atualizada = (long long)time(NULL);
+  return i;
+}
+static int sFonte(int tipo, const char *ref, const char *nome, const char *base) {
+  char ch[LTV_CHAVE];
+  ltv_chave_fonte(tipo, ref, ch, sizeof ch);
+  return sFonteChave(ch, tipo, nome, base);
+}
+
+// Grupo (com a contagem do que a fonte ofereceu) na lista completa da fonte.
+static int sGrupoInfo(int f, const char *nome, int somar) {
+  GFonteLtv *F = &sLtvF[f];
+  int i;
+  for (i = F->ngi - 1; i >= 0; i--) if (!strcmp(F->gi[i].nome, nome)) break;
+  if (i < 0) {
+    GGrupoInfo *no;
+    if (F->ngi % 64 == 0) {
+      no = realloc(F->gi, sizeof *no * (size_t)(F->ngi + 64));
+      if (!no) return -1;
+      F->gi = no;
+    }
+    i = F->ngi++;
+    F->gi[i].nome = ltv_dup(&sArena, nome);
+    F->gi[i].n = 0; F->gi[i].entra = 1;
+  }
+  F->gi[i].n += somar;
+  return i;
+}
+
+// Grupo retido (linha do guia) da fonte `f`. A ultima consulta fica lembrada:
+// canais do mesmo grupo vem em sequencia em toda lista medida.
+static int sCatDe(int f, const char *nome) {
+  static int ult = -1;
+  int i;
+  if (ult >= 0 && ult < sNCats && sCats[ult].fonte == f && !strcmp(sCats[ult].nome, nome)) return ult;
+  for (i = sNCats - 1; i >= 0; i--)
+    if (sCats[i].fonte == f && !strcmp(sCats[i].nome, nome)) return ult = i;
+  if (sNCats >= sCapCats) {
+    int cap = sCapCats ? sCapCats * 2 : 128;
+    GCat *no = realloc(sCats, sizeof *no * (size_t)cap);
+    if (!no) return -1;
+    sCats = no; sCapCats = cap;
+  }
+  i = sNCats++;
+  sCats[i].nome = ltv_dup(&sArena, nome);
+  sCats[i].fonte = (short)f;
+  sCats[i].ordem = sLtvF[f].nGrupos++;
+  return ult = i;
+}
+
+static int sCanalPorId(int f, const char *id) {
+  int i;
+  for (i = sNCanais - 1; i >= 0; i--)
+    if (sCanais[i].fonte == f && !strcmp(sCanais[i].id, id)) return i;
+  return -1;
+}
+
+// Um canal em texto cru (do JSON, da M3U, do cache) para o staging. 0 = nao
+// entrou (teto, grupo nao escolhido, memoria).
+typedef struct {
+  const char *id, *nome, *logo, *desc, *epgId, *tvgNome, *url, *ua, *ref, *grupo, *tipo;
+  int numero;
+} GCru;
+static int sCanalAdd(int f, const GCru *c) {
+  GCanal *g;
+  int cat;
+  if (sRetidos >= sTeto) { sLtvF[f].cortada = 1; return 0; }
+  cat = sCatDe(f, c->grupo && c->grupo[0] ? c->grupo : "Outros");
+  if (cat < 0) return 0;
+  if (sNCanais >= sCapCanais) {
+    int cap = sCapCanais ? sCapCanais * 2 : 512;
+    GCanal *no = realloc(sCanais, sizeof *no * (size_t)cap);
+    if (!no) return 0;
+    sCanais = no; sCapCanais = cap;
+  }
+  g = &sCanais[sNCanais];
+  memset(g, 0, sizeof *g);
+  g->id = ltv_dup(&sArena, c->id);
+  g->nome = ltv_dup(&sArena, c->nome);
+  g->logo = ltv_dup(&sArena, c->logo);
+  g->desc = ltv_dup(&sArena, c->desc);
+  g->epgId = ltv_dup(&sArena, c->epgId);
+  g->tvgNome = ltv_dup(&sArena, c->tvgNome);
+  g->url = ltv_dup(&sArena, c->url);
+  g->ua = ltv_dup(&sArena, c->ua);
+  g->ref = ltv_dup(&sArena, c->ref);
+  g->base = sLtvF[f].base;
+  g->tipo = ltv_dup(&sArena, c->tipo);
+  g->cat = cat;
+  g->epg = -1;
+  g->fonte = (short)f;
+  sLtvF[f].nCanais++;
+  g->numero = c->numero > 0 ? c->numero : sLtvF[f].nCanais;
+  sNCanais++; sRetidos++;
+  return 1;
+}
+
+// Os grupos que a pessoa escolheu para esta fonte (ltv_pref). 0 = sem escolha.
+static int sGruposEscolhidos(int f, const char **v, int max) {
+  LtvPref *p = ltv_pref(sLtvF[f].chave, 0);
+  return p ? ltv_pref_grupos(p, v, max) : 0;
+}
+static int nomeNaLista(const char *nome, const char *const *v, int n) {
+  int i;
+  for (i = 0; i < n; i++) if (!strcmp(v[i], nome)) return 1;
+  return 0;
+}
 
 static void arquivoPerfil(const char *tipo, char *nome, size_t tam) {
   int p = perfis_ativo();
@@ -331,54 +493,105 @@ static char *lerPerfil(const char *tipo) {
   return t;
 }
 
+// --- favoritos --------------------------------------------------------------
+// ID ESTAVEL "fonte:id" (M1): o mesmo id pode existir em duas fontes, e o
+// favorito e de UMA. Arquivo novo ltv-fav.txt, "chave TAB id" por linha; o
+// antigo guia-fav.txt (so o id) e lido na primeira vez e cada linha dele vale
+// para qualquer fonte ate a primeira lista publicada dizer de qual fonte o canal
+// e — ai o arquivo novo e gravado com a chave (favMigrar). O antigo fica no
+// disco por duas versoes (volta de versao nao perde favorito).
+typedef struct { char chave[LTV_CHAVE]; char id[80]; } GFav;
+static GFav fav[G_MAX_FAV]; static int nFav, favLido, favLegado;
+static int  favOrd[G_MAX_FAV];  static int nFavOrd;   // indices em canais[]
+
+static const char *chaveDo(const GCanal *c) {
+  return c->fonte >= 0 && c->fonte < nLtvF ? ltvF[c->fonte].chave : "";
+}
+static int favIndiceCanal(const GCanal *c) {
+  int i;
+  const char *ch = chaveDo(c);
+  for (i = 0; i < nFav; i++)
+    if (!strcmp(fav[i].id, c->id) && (!fav[i].chave[0] || !strcmp(fav[i].chave, ch))) return i;
+  return -1;
+}
 static int favIndice(const char *id) {
-  for (int i = 0; i < nFav; i++) if (!strcmp(fav[i], id)) return i;
+  for (int i = 0; i < nFav; i++) if (!strcmp(fav[i].id, id)) return i;
   return -1;
 }
 
-static void favLer(void) {
-  char *t = lerPerfil("fav"), *p, *q;
-  nFav = 0;
-  if (!t) { favLido = 1; return; }
-  p = t;
-  while (*p && nFav < G_MAX_FAV) {
-    while (*p == '\n' || *p == '\r' || *p == ' ') p++;
-    if (!*p) break;
-    q = p; while (*q && *q != '\n' && *q != '\r') q++;
-    if (q - p < 80) { memcpy(fav[nFav], p, (size_t)(q - p)); fav[nFav][q - p] = 0; nFav++; }
-    p = q;
+static void favLerTexto(const char *t) {
+  while (t && *t && nFav < G_MAX_FAV) {
+    const char *fim = t + strcspn(t, "\n");
+    char linha[200];
+    size_t k = (size_t)(fim - t);
+    if (k < sizeof linha) {
+      memcpy(linha, t, k); linha[k] = 0;
+      if (ltv_fav_linha(linha, fav[nFav].chave, sizeof fav[nFav].chave, fav[nFav].id, sizeof fav[nFav].id))
+        nFav++;
+    }
+    t = *fim ? fim + 1 : fim;
   }
-  free(t);
+}
+static void favLer(void) {
+  char nome[48];
+  arquivoPerfil("ltv-fav", nome, sizeof nome);
+  char *t = dados_ler(nome);
   favLido = 1;
+  if (t) { favLerTexto(t); free(t); return; }
+  t = lerPerfil("fav");
+  if (t) { favLerTexto(t); free(t); favLegado = nFav > 0; }
 }
 
 static void favGravar(void) {
-  // O arquivo e pequeno (um id por linha); montar em memoria e gravar de uma
-  // vez com dados_gravar, que ja e atomico.
-  char buf[G_MAX_FAV * 82], nome[48]; size_t n = 0;
-  for (int i = 0; i < nFav && n + 82 < sizeof buf; i++)
-    n += (size_t)snprintf(buf + n, sizeof buf - n, "%s\n", fav[i]);
+  char buf[G_MAX_FAV * 110]; size_t n = 0;
+  for (int i = 0; i < nFav && n + 110 < sizeof buf; i++)
+    n += (size_t)snprintf(buf + n, sizeof buf - n, "%s\t%s\n", fav[i].chave, fav[i].id);
   buf[n] = 0;
-  arquivoPerfil("fav", nome, sizeof nome);
+  char nome[48];
+  arquivoPerfil("ltv-fav", nome, sizeof nome);
   dados_gravar(nome, buf);
 }
 
-// Marca o espelho `fav` de cada canal. Chamado depois de publicar a lista e a
-// cada alternancia.
-static void favAplicar(void) {
-  for (int i = 0; i < nCanais; i++)
-    canais[i].fav = favIndice(canais[i].id) >= 0;
+// MIGRACAO: favorito sem fonte ganha a do primeiro canal com aquele id. So
+// grava quando alguma linha mudou.
+static void favMigrar(void) {
+  int i, j, mudou = 0;
+  for (i = 0; i < nFav; i++) {
+    if (fav[i].chave[0]) continue;
+    for (j = 0; j < nCanais; j++)
+      if (!strcmp(canais[j].id, fav[i].id)) {
+        snprintf(fav[i].chave, sizeof fav[i].chave, "%s", chaveDo(&canais[j]));
+        mudou = 1;
+        break;
+      }
+  }
+  if (mudou || favLegado) {
+    favLegado = 0;
+    favGravar();
+    printf("[guia] favoritos com fonte: %d\n", nFav);
+    fflush(stdout);
+  }
 }
 
+static void favAplicar(void) {
+  for (int i = 0; i < nCanais; i++)
+    canais[i].fav = favIndiceCanal(&canais[i]) >= 0;
+}
+
+static void vistaMontar(void);
 static void favAlternar(GCanal *c) {
-  int i = favIndice(c->id);
-  if (i >= 0) { memmove(fav[i], fav[i + 1], (size_t)(nFav - i - 1) * 80); nFav--; c->fav = 0; }
-  else if (nFav < G_MAX_FAV) { snprintf(fav[nFav++], 80, "%s", c->id); c->fav = 1; }
+  int i = favIndiceCanal(c);
+  if (i >= 0) { memmove(&fav[i], &fav[i + 1], (size_t)(nFav - i - 1) * sizeof fav[0]); nFav--; c->fav = 0; }
+  else if (nFav < G_MAX_FAV) {
+    snprintf(fav[nFav].chave, sizeof fav[nFav].chave, "%s", chaveDo(c));
+    snprintf(fav[nFav].id, sizeof fav[nFav].id, "%s", c->id);
+    nFav++; c->fav = 1;
+  }
   favGravar();
-  // A fileira "Favoritos" muda de tamanho aqui — remontar as janelas.
   nFavOrd = 0;
   for (i = 0; i < nCanais && nFavOrd < G_MAX_FAV; i++)
     if (canais[i].fav) favOrd[nFavOrd++] = i;
+  vistaMontar();
 }
 
 // --- modo de exibicao ------------------------------------------------------------
@@ -448,6 +661,7 @@ typedef struct {
 static GAddonCarga *addonsCarga;
 static int nAddonsCarga;
 static NvPerfilSessao cargaSessao;
+static LtvUrl cargaUrls[LTV_URLS_MAX]; static int nCargaUrls;
 static volatile int cargaCancelada;
 
 static int cargaAtual(void) {
@@ -592,27 +806,81 @@ static int recInstalado(const GRec *r) {
   return 0;
 }
 
-// --- linhas -------------------------------------------------------------------
-// Linha 0 = Favoritos (quando ha algum); as demais sao as categorias com canal.
-static int nLinhas(void) { return nCats + (nFavOrd > 0 ? 1 : 0); }
-static int linhaEhFav(int l) { return nFavOrd > 0 && l == 0; }
+
+// --- linhas e a VISTA (barra de fontes, M3) ------------------------------------
+// FILTRO de fonte da barra: -1 "Todas" (o padrao a cada abertura do app,
+// decisao 1), -2 "Favoritos", k = so a fonte k. Guardado so na sessao.
+#define G_FILTRO_TODAS (-1)
+#define G_FILTRO_FAV   (-2)
+static int filtro = G_FILTRO_TODAS;
+static int focoLin, focoCol;           // definidos de novo no estado de tela
+static char filtroChave[LTV_CHAVE];   // a fonte do filtro sobrevive a republicacao
+// Os grupos visiveis (indices em cats[]) e a ORDEM DE ZAP da vista: CH+/-, o
+// numero digitado e a faixa do mini guia andam dentro do que a tela mostra.
+static int *vis;  static int nVis, capVis;
+static int *zapL; static int nZapL, capZapL;
+
+static int mostraFav(void) {
+  return nFavOrd > 0 && (filtro == G_FILTRO_TODAS || filtro == G_FILTRO_FAV);
+}
+static int nLinhas(void) { return nVis + (mostraFav() ? 1 : 0); }
+static int linhaEhFav(int l) { return mostraFav() && l == 0; }
+static int linhaCatDe(int l) {  // indice em cats[], -1 = favoritos
+  return linhaEhFav(l) ? -1 : vis[l - (mostraFav() ? 1 : 0)];
+}
 static int linhaN(int l) {
   if (l < 0 || l >= nLinhas()) return 0;
-  return linhaEhFav(l) ? nFavOrd : catN[l - (nFavOrd > 0 ? 1 : 0)];
+  return linhaEhFav(l) ? nFavOrd : catN[linhaCatDe(l)];
 }
+// "Esportes · Xtream" em Todas quando ha mais de uma fonte (decisao 2: grupos
+// de mesmo nome de fontes diferentes sao linhas diferentes, e a tela diz qual).
 static const char *linhaNome(int l) {
+  static char buf[200];
+  int c;
   if (linhaEhFav(l)) return i18n("Favoritos");
-  // As secoes de categoriaPorNome sao chaves da tabela; genero vindo do
-  // addon nao e, e i18n devolve o texto como veio.
-  return i18n(cats[l - (nFavOrd > 0 ? 1 : 0)]);
+  c = linhaCatDe(l);
+  if (filtro == G_FILTRO_TODAS && nLtvF > 1 && cats[c].fonte >= 0 && cats[c].fonte < nLtvF) {
+    snprintf(buf, sizeof buf, "%s  \xc2\xb7  %s", i18n(cats[c].nome), ltvF[cats[c].fonte].nome);
+    return buf;
+  }
+  return i18n(cats[c].nome);
 }
 static GCanal *linhaItem(int l, int c) {
   if (c < 0 || c >= linhaN(l)) return NULL;
   if (linhaEhFav(l)) return &canais[favOrd[c]];
-  return &canais[catIni[l - (nFavOrd > 0 ? 1 : 0)] + c];
+  return &canais[catIni[linhaCatDe(l)] + c];
 }
-static int linhaCatDe(int l) {  // indice em cats[], -1 = favoritos
-  return linhaEhFav(l) ? -1 : l - (nFavOrd > 0 ? 1 : 0);
+
+static int vetorCabe(int **v, int *cap, int n) {
+  if (n <= *cap) return 1;
+  { int *no = realloc(*v, sizeof(int) * (size_t)(n + 64));
+    if (!no) return 0;
+    *v = no; *cap = n + 64; }
+  return 1;
+}
+
+static void vistaMontar(void) {
+  int i;
+  if (filtro >= 0) {
+    // A fonte do filtro pela CHAVE: a republicacao pode mudar o indice.
+    for (i = 0; i < nLtvF && strcmp(ltvF[i].chave, filtroChave); i++) {}
+    filtro = i < nLtvF ? i : G_FILTRO_TODAS;
+  }
+  nVis = 0; nZapL = 0;
+  if (!vetorCabe(&vis, &capVis, nCats) || !vetorCabe(&zapL, &capZapL, nCanais)) return;
+  if (filtro != G_FILTRO_FAV)
+    for (i = 0; i < nCats; i++)
+      if (catN[i] > 0 && (filtro < 0 || cats[i].fonte == filtro)) vis[nVis++] = i;
+  if (filtro == G_FILTRO_FAV) for (i = 0; i < nFavOrd; i++) zapL[nZapL++] = favOrd[i];
+  else
+    for (i = 0; i < nCanais; i++)
+      if (filtro < 0 || canais[i].fonte == filtro) zapL[nZapL++] = i;
+}
+
+static void filtroDefinir(int f) {
+  filtro = f;
+  if (f >= 0 && f < nLtvF) snprintf(filtroChave, sizeof filtroChave, "%s", ltvF[f].chave);
+  vistaMontar();
 }
 
 // --- carga --------------------------------------------------------------------
@@ -709,12 +977,6 @@ static const char *categoriaPorNome(const char *nome) {
   return NULL;
 }
 
-static int sCatDe(const char *nome) {
-  for (int i = 0; i < sNCats; i++) if (!strcmp(sCats[i], nome)) return i;
-  if (sNCats >= G_MAX_CAT) return -1;
-  snprintf(sCats[sNCats], 64, "%s", nome);
-  return sNCats++;
-}
 
 // Primeiro elemento de texto de um array JSON ("genre":["X"] -> "X"). Pelo
 // js_cadeia, e nao copia crua: addon em Python (json.dumps) escapa todo
@@ -725,102 +987,6 @@ static int lerStrEl(const char *p, char *dst, int tam) {
   return js_cadeia(p, dst, (size_t)tam);
 }
 
-static int sCanalPorId(const char *id) {
-  for (int i = 0; i < sNCanais; i++) if (!strcmp(sCanais[i].id, id)) return i;
-  return -1;
-}
-
-// Uma pagina de catalogo. Devolve quantos METAS a pagina trouxe — nao quantos
-// entraram: uma fonte pode repetir canais de outra, e contar so os novos
-// encerraria a pagina uma rodada cedo, deixando os exclusivos de tras.
-// `teto` e o maximo de canais que ESTE catalogo pode somar a sCanais (ver o
-// laco em fioGuia). Devolve quantos metas a pagina trouxe; `novos` recebe
-// quantos entraram de fato — a diferenca e o que separa "acabou" de
-// "catalogo que ignora skip e repete a mesma pagina".
-static int lerPagina(const GFonte *f, int skip, int teto, int *novos) {
-  char url[NV_ADDON_PEDIDO_MAX];
-  char *corpo;
-  const char *p;
-  int n = 0, w, semBase = 0;
-  if (skip > 0)
-    w = nv_addon_url(url, sizeof url, f->base, "/catalog/%s/%s/skip=%d.json",
-                     f->tipo, f->id, skip);
-  else
-    w = nv_addon_url(url, sizeof url, f->base, "/catalog/%s/%s.json", f->tipo, f->id);
-  *novos = 0;
-  if (!cargaAtual() || !cargaBaseLigada(f->base)) return 0;
-  // Pedido cortado nao sai (addonurl.h); o log leva o nome do catalogo.
-  if (!nv_addon_pedido_coube(f->nome, w, sizeof url)) return 0;
-  corpo = cargaBaixar(url);
-  if (!corpo || !cargaAtual()) { free(corpo); return 0; }
-  p = js_array(corpo, NULL, "metas");
-  while (p && sNCanais < G_MAX_CANAL && *novos < teto) {
-    const char *fim = js_fim(p);
-    GCanal c;
-    char gen[64] = "", idLongo[IDCANAL_LONGO_MAX + 1];
-    memset(&c, 0, sizeof c);
-    c.epg = -1; c.cat = -1;
-    n++;
-    // Id longo (CNCVerse: "cnc:<base64>") vira apelido curto; ver idcanal.h.
-    idLongo[0] = 0;
-    if (js_texto(p, fim, "id", idLongo, sizeof idLongo) &&
-        idcanal_curto(idLongo, c.id, sizeof c.id) &&
-        js_texto(p, fim, "name", c.nome, sizeof c.nome) &&
-        sCanalPorId(c.id) < 0) {
-      char mtipo[16] = "";
-      // O catalogo se declara de canal, mas um meta que se diz filme/serie
-      // nao entra — protege o guia de catalogo mal declarado.
-      if (js_texto(p, fim, "type", mtipo, sizeof mtipo) &&
-          mtipo[0] && !ehCanal(mtipo)) { p = js_prox(fim); continue; }
-      // O tipo DO ITEM quando ele declara um de canal ("tv" dentro de um
-      // catalogo "channel", por exemplo); sem declaracao vale o do catalogo.
-      // E este nome que vai ao /stream/, e nao um adivinhado pelo app.
-      snprintf(c.tipo, sizeof c.tipo, "%s", mtipo[0] ? mtipo : f->tipo);
-      if (!js_texto(p, fim, "poster", c.logo, sizeof c.logo))
-        js_texto(p, fim, "logo", c.logo, sizeof c.logo);
-      js_texto(p, fim, "description", c.desc, sizeof c.desc);
-      { const char *g = js_array(p, fim, "genre");
-        if (!g) g = js_array(p, fim, "genres");
-        lerStrEl(g, gen, sizeof gen); }
-      // SEM GENERO: primeiro o nome do canal (categoriaPorNome), depois o
-      // nome do catalogo de onde ele veio ("Meu Futebol"), que e a
-      // classificacao que o proprio addon deu. Meu Futebol manda 68 canais
-      // sem `genres` nenhum (medido em 18/09/2026) e todos caiam em "Outros"
-      // — que do sofa se le como "o app nao classificou". "Outros" fica so
-      // para catalogo sem nome, que nao devia existir.
-      if (!gen[0]) {
-        const char *h = categoriaPorNome(c.nome);
-        if (h) snprintf(gen, sizeof gen, "%s", h);
-      }
-      c.cat = sCatDe(gen[0] ? gen : f->nome[0] ? f->nome : "Outros");
-      // Base que nao cabe fica VAZIA, nunca cortada (ver GCanal.base).
-      if (strlen(f->base) < sizeof c.base) snprintf(c.base, sizeof c.base, "%s", f->base);
-      else { c.base[0] = 0; semBase++; }
-      if (c.cat >= 0) { sCanais[sNCanais++] = c; (*novos)++; }
-      else sCorte.porCats++;
-    }
-    p = js_prox(fim);
-  }
-  // Teto cheio com canais ainda na pagina: contam como perdidos (so o que esta
-  // nesta pagina; o que viria nas proximas o addon nao diz).
-  while (p && *p && sNCanais >= G_MAX_CANAL) {
-    const char *fim = js_fim(p);
-    char id[8];
-    if (!fim) break;
-    if (js_texto(p, fim, "id", id, sizeof id) || js_texto(p, fim, "name", id, sizeof id)) sCorte.porCanais++;
-    p = js_prox(fim);
-  }
-  free(corpo);
-  // Dito uma vez por pagina, com o nome do catalogo e o tamanho — nunca a URL.
-  if (semBase) {
-    printf("[guia] %s: base do addon com %lu caracteres nao cabe no canal (maximo %lu): "
-           "%d canal(is) perguntam a fonte a todos os addons\n",
-           f->nome, (unsigned long)strlen(f->base),
-           (unsigned long)sizeof(((GCanal *)0)->base) - 1, semBase);
-    fflush(stdout);
-  }
-  return n;
-}
 
 static int fonteJa(const char *base, const char *id) {   // indice ou -1
   for (int i = 0; i < sNFontes; i++)
@@ -954,241 +1120,267 @@ static void sondaManifestos(void) {
   }
 }
 
-static void *fioGuia(void *u) {
-  int ok = 0;
-  (void)u;
-  sNCanais = 0; sNCats = 0; sFalhas = 0; sXtFalha = XT_OK;
-  memset(&sCorte, 0, sizeof sCorte);
-  // Fontes das fileiras (descobertas no fio de desenho) primeiro — zero rede
-  // extra. A sonda de manifestos completa com o que a home nao montou.
-  // ADDON DESLIGADO NAO ENTRA POR AQUI TAMBEM. As fileiras da home so sao
-  // refeitas pelo desc_repetir (~20 s), entao logo depois de desligar um addon
-  // no painel elas ainda listam o catalogo dele — e sem esta guarda a recarga
-  // "na hora" do painel trazia de volta exatamente o que a pessoa acabou de
-  // tirar.
-  sondaManifestos();
-  // COTA POR CATALOGO. O Pluto TV devolve 1.523 canais numa pagina so;
-  // instalado, ele enchia os 900 lugares sozinho e o Meu Futebol (68 canais,
-  // o que a pessoa realmente assiste) nem era lido — "instalei um addon e o
-  // meu sumiu". MEDIDO na C9 em 18/09. A cota divide o teto entre os
-  // catalogos que ha, com um piso para o catalogo grande nao virar amostra
-  // quando sao muitos; catalogo pequeno nao usa a cota e sobra para os outros
-  // porque a conta e sobre o que ainda cabe, catalogo a catalogo.
-  for (int i = 0; cargaAtual() && i < sNFontes; i++) {
-    int restantes = sNFontes - i;
-    int cota = (G_MAX_CANAL - sNCanais) / (restantes > 0 ? restantes : 1);
-    int lidos = 0;
-    if (cota < G_COTA_MIN) cota = G_COTA_MIN;
-    for (int skip = 0; cargaAtual() && sNCanais < G_MAX_CANAL && lidos < cota; skip += G_PAGINA) {
-      int novos = 0;
-      int n = lerPagina(&sFontes[i], skip, cota - lidos, &novos);
-      if (n <= 0) break;
-      ok = 1;
-      lidos += novos;
-      // Pagina cheia que nao trouxe nada novo e catalogo que ignora `skip`:
-      // pedir a proxima e receber a mesma de novo, para sempre.
-      if (n < G_PAGINA || novos == 0) break;
-    }
-  }
-  // PORTAL STALKER, quando houver um configurado neste perfil. Entra DEPOIS
-  // dos addons de proposito: quem tem as duas coisas espera ver primeiro o que
-  // ja via, e a ordem das categorias no guia e a ordem de chegada.
-  //
-  // Nao mexe em sFalhas: portal ausente nao e falha, e portal que nao responde
-  // ja se anuncia pela ausencia das categorias dele. Somar aqui faria a
-  // mensagem "nenhum catalogo de canais" aparecer para quem tem addons bons e
-  // um portal errado.
-  if (cargaAtual() && stalker_configurado()) {
-    // MALLOC e nao `static`: sao ~670 KB que so servem durante a carga. Como
-    // vetor estatico eles ficariam residentes para sempre, inclusive em quem
-    // nunca configurou portal nenhum — e este app ja disputa memoria com o
-    // cache de texturas numa TV de 2016.
-    StalkerCanal *st = malloc(sizeof *st * G_MAX_CANAL);
-    int n = st ? stalker_canais_sessao(st, G_MAX_CANAL, cargaSessao) : 0, i;
-    for (i = 0; i < n && sNCanais < G_MAX_CANAL; i++) {
-      GCanal c;
-      if (sCanalPorId(st[i].id) >= 0) continue;
-      memset(&c, 0, sizeof c);
-      c.epg = -1;
-      snprintf(c.id,   sizeof c.id,   "%s", st[i].id);
-      snprintf(c.nome, sizeof c.nome, "%s", st[i].nome);
-      snprintf(c.logo, sizeof c.logo, "%s", st[i].logo);
-      c.cat = sCatDe(st[i].categoria[0] ? st[i].categoria : "Outros");
-      if (c.cat >= 0) { sCanais[sNCanais++] = c; ok = 1; }
-    }
-    free(st);
-  }
-  // XTREAM, pela mesma porta e pelas mesmas razoes (ver xtream.h). O epg_id
-  // que o servidor manda casa com o XMLTV do proprio provedor, que o EPG baixa
-  // como sexta fonte (#158, ver epg_fonte_extra); sem ele, o nome.
-  if (cargaAtual() && xtream_configurado()) {
-    XtreamCanal *xt = malloc(sizeof *xt * G_MAX_CANAL);
-    int n = xt ? xtream_canais_sessao(xt, G_MAX_CANAL, cargaSessao) : 0, i;
-    if (xt) { sXtFalha = xtream_ultima_falha(); sXtHttp = xtream_ultimo_http(); }
-    for (i = 0; i < n; i++) {
-      GCanal c;
-      if (sCanalPorId(xt[i].id) >= 0) continue;
-      memset(&c, 0, sizeof c);
-      c.epg = -1;
-      snprintf(c.id,   sizeof c.id,   "%s", xt[i].id);
-      snprintf(c.nome, sizeof c.nome, "%s", xt[i].nome);
-      snprintf(c.logo, sizeof c.logo, "%s", xt[i].logo);
-      snprintf(c.epgId, sizeof c.epgId, "%s", xt[i].epgId);
-      c.cat = sNCanais < G_MAX_CANAL ? sCatDe(xt[i].categoria[0] ? xt[i].categoria : "Outros") : 0;
-      if (guiacorte_entra(&sCorte, sNCanais, c.cat >= 0)) { sCanais[sNCanais++] = c; ok = 1; }
-    }
-    // O que o servidor tem alem do pedido (xtream_canais devolve ate `max`).
-    guiacorte_perdeu_canais(&sCorte, xtream_ultimo_total() - n);
-    free(xt);
-  }
-  // FONTE ACHADA E NENHUMA PAGINA RESPONDEU tambem e "nao respondeu", e nao
-  // "nao existe": e o caso do catalogo de canais que estoura o prazo com o
-  // manifesto tendo vindo 200.
-  if (sNFontes > 0 && !ok) sFalhas++;
-  sOk = ok;
-  free(addonsCarga); addonsCarga = NULL; nAddonsCarga = 0;
-  atomic_store_explicit(&pendPronto, 1, memory_order_release);
-  return NULL;
-}
 
-// Ordena os canais por categoria (estavel na ordem de chegada) para que cada
-// fileira seja uma janela contigua — o mesmo desenho de CatFileira — e refaz
-// a fileira de favoritos. Roda ao publicar uma carga e ao desligar um addon no
-// painel (que tira canais de `canais[]` sem esperar o fio).
-static void empacotar(void) {
-  int i, w;
-  // Canal de addon desligado nao fica. Cobre a janela em que o painel desliga
-  // um addon com o fio ja no ar: a carga que estava a caminho foi montada com
-  // ele ligado e chegaria inteira; a recarga seguinte (recarregarPend) e que
-  // corrige a lista de fontes, mas a tela nao precisa esperar por ela.
-  for (i = 0, w = 0; i < nCanais; i++)
-    if (!canais[i].base[0] || (baseLigada(canais[i].base) && !baseOculta(canais[i].base)))
-      canais[w++] = canais[i];
-  nCanais = w;
-  // Categoria que ficou sem canal sai da lista — senao vira uma fileira so
-  // de cabecalho, com o foco caindo nela.
-  { int mapa[G_MAX_CAT], k;
-    for (i = 0; i < nCats; i++) catN[i] = 0;
-    for (i = 0; i < nCanais; i++) if (canais[i].cat >= 0) catN[canais[i].cat]++;
-    for (i = 0, k = 0; i < nCats; i++) {
-      mapa[i] = catN[i] ? k : -1;
-      if (catN[i]) { if (k != i) memcpy(cats[k], cats[i], sizeof cats[k]); k++; }
-    }
-    for (i = 0; i < nCanais; i++) if (canais[i].cat >= 0) canais[i].cat = mapa[canais[i].cat];
-    nCats = k; }
-  // ORDEM ALFABETICA DAS SECOES, pedido do dono (18/09): a ordem de chegada
-  // muda conforme qual addon respondeu primeiro, e "segurar para pular
-  // secao" sem uma ordem previsivel e pular no escuro. Insercao: sao ate 48
-  // nomes, uma vez por carga.
-  { int a, b, mapa[G_MAX_CAT];
-    for (a = 0; a < nCats; a++) mapa[a] = a;
-    for (a = 1; a < nCats; a++) {
-      char tmpN[64]; int tmpM = mapa[a];
-      memcpy(tmpN, cats[a], sizeof tmpN);
-      for (b = a - 1; b >= 0 && strcasecmp(cats[b], tmpN) > 0; b--) {
-        memcpy(cats[b + 1], cats[b], sizeof cats[b]); mapa[b + 1] = mapa[b];
+// Uma pagina de catalogo de addon para a fonte `fl`. Devolve quantos METAS a
+// pagina trouxe — nao quantos entraram: uma fonte pode repetir canais de outra,
+// e contar so os novos encerraria a pagina uma rodada cedo. `novos` recebe
+// quantos entraram de fato — a diferenca e o que separa "acabou" de "catalogo
+// que ignora skip e repete a mesma pagina".
+static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
+  char url[NV_ADDON_PEDIDO_MAX];
+  char *corpo;
+  const char *p, *sel[256];
+  int n = 0, w, nsel = sGruposEscolhidos(fl, sel, 256);
+  if (skip > 0)
+    w = nv_addon_url(url, sizeof url, f->base, "/catalog/%s/%s/skip=%d.json",
+                     f->tipo, f->id, skip);
+  else
+    w = nv_addon_url(url, sizeof url, f->base, "/catalog/%s/%s.json", f->tipo, f->id);
+  *novos = 0;
+  // Pedido cortado nao sai (addonurl.h); o log leva o nome do catalogo.
+  if (!nv_addon_pedido_coube(f->nome, w, sizeof url)) return 0;
+  if (!cargaAtual() || !cargaBaseLigada(f->base)) return 0;
+  corpo = cargaBaixar(url);
+  if (!corpo || !cargaAtual()) { free(corpo); return 0; }
+  p = js_array(corpo, NULL, "metas");
+  while (p) {
+    const char *fim = js_fim(p);
+    char id[80], idLongo[IDCANAL_LONGO_MAX + 1], nome[200], logo[600], desc[600], gen[64] = "", mtipo[16] = "";
+    n++;
+    if (js_texto(p, fim, "id", idLongo, sizeof idLongo) &&
+        idcanal_curto(idLongo, id, sizeof id) &&
+        js_texto(p, fim, "name", nome, sizeof nome) && sCanalPorId(fl, id) < 0) {
+      GCru c;
+      // O catalogo se declara de canal, mas um meta que se diz filme/serie
+      // nao entra — protege o guia de catalogo mal declarado.
+      if (js_texto(p, fim, "type", mtipo, sizeof mtipo) &&
+          mtipo[0] && !ehCanal(mtipo)) { p = js_prox(fim); continue; }
+      logo[0] = desc[0] = 0;
+      if (!js_texto(p, fim, "poster", logo, sizeof logo))
+        js_texto(p, fim, "logo", logo, sizeof logo);
+      js_texto(p, fim, "description", desc, sizeof desc);
+      { const char *g = js_array(p, fim, "genre");
+        if (!g) g = js_array(p, fim, "genres");
+        lerStrEl(g, gen, sizeof gen); }
+      // SEM GENERO: primeiro o nome do canal (categoriaPorNome), depois o
+      // nome do catalogo de onde ele veio ("Meu Futebol"). "Outros" fica so
+      // para catalogo sem nome.
+      if (!gen[0]) {
+        const char *h = categoriaPorNome(nome);
+        if (h) snprintf(gen, sizeof gen, "%s", h);
       }
-      memcpy(cats[b + 1], tmpN, sizeof tmpN); mapa[b + 1] = tmpM;
+      if (!gen[0]) snprintf(gen, sizeof gen, "%s", f->nome[0] ? f->nome : "Outros");
+      memset(&c, 0, sizeof c);
+      c.id = id; c.nome = nome; c.logo = logo; c.desc = desc; c.grupo = gen;
+      c.tipo = mtipo[0] ? mtipo : f->tipo;
+      c.epgId = c.tvgNome = c.url = c.ua = c.ref = "";
+      sLtvF[fl].total++;
+      { int gi = sGrupoInfo(fl, gen, 1);
+        if (nsel && !nomeNaLista(gen, sel, nsel)) { if (gi >= 0) sLtvF[fl].gi[gi].entra = 0; }
+        else if (sCanalAdd(fl, &c)) (*novos)++;
+        else if (gi >= 0 && sRetidos >= sTeto) sLtvF[fl].gi[gi].entra = 0; }
     }
-    // mapa[nova] = antiga; o canal precisa do inverso.
-    { int inv[G_MAX_CAT];
-      for (a = 0; a < nCats; a++) inv[mapa[a]] = a;
-      for (i = 0; i < nCanais; i++) if (canais[i].cat >= 0) canais[i].cat = inv[canais[i].cat]; } }
-  // `tmp` e estatico: sao ~2 MB (900 canais x ~2,4 KB). Na pilha estourava o
-  // fio do SDL no Android (1 MB por padrao) e e grande demais para qualquer
-  // pilha. So o fio principal chama empacotar().
-  { static GCanal tmp[G_MAX_CANAL];
-    int pos[G_MAX_CAT];
-    for (i = 0; i < nCats; i++) catN[i] = 0;
-    for (i = 0; i < nCanais; i++) if (canais[i].cat >= 0) catN[canais[i].cat]++;
-    catIni[0] = 0;
-    for (i = 1; i < nCats; i++) catIni[i] = catIni[i - 1] + catN[i - 1];
-    memcpy(pos, catIni, sizeof pos);
-    for (i = 0; i < nCanais; i++)
-      if (canais[i].cat >= 0) tmp[pos[canais[i].cat]++] = canais[i];
-    memcpy(canais, tmp, sizeof(GCanal) * (size_t)nCanais); }
-  favAplicar();
-  nFavOrd = 0;
-  for (i = 0; i < nCanais && nFavOrd < G_MAX_FAV; i++)
-    if (canais[i].fav) favOrd[nFavOrd++] = i;
+    p = js_prox(fim);
+  }
+  free(corpo);
+  return n;
 }
 
+// --- Stalker, Xtream e M3U para o staging ---------------------------------------
+#define ST_MAX_GUIA 1200   /* a tabela de cmd do stalker.c (ST_MAX_CANAL) */
+static int stalkerCarregar(void) {
+  int fl = sFonte(LTV_STALKER, "", "Stalker", ""), cota = sTeto - sRetidos, n, i, nsel;
+  const char *sel[256];
+  StalkerCanal *st;
+  if (fl < 0) return 0;
+  if (cota > ST_MAX_GUIA) cota = ST_MAX_GUIA;
+  if (cota < 1) { sLtvF[fl].cortada = 1; return 0; }
+  nsel = sGruposEscolhidos(fl, sel, 256);
+  // MALLOC e nao `static`: so serve durante a carga.
+  st = malloc(sizeof *st * (size_t)cota);
+  n = st ? stalker_canais_sessao(st, cota, cargaSessao) : 0;
+  for (i = 0; i < n; i++) {
+    GCru c;
+    const char *g = st[i].categoria[0] ? st[i].categoria : "Outros";
+    int gi = sGrupoInfo(fl, g, 1);
+    sLtvF[fl].total++;
+    if (sCanalPorId(fl, st[i].id) >= 0) continue;
+    if (nsel && !nomeNaLista(g, sel, nsel)) { if (gi >= 0) sLtvF[fl].gi[gi].entra = 0; continue; }
+    memset(&c, 0, sizeof c);
+    c.id = st[i].id; c.nome = st[i].nome; c.logo = st[i].logo; c.grupo = g;
+    c.desc = c.epgId = c.tvgNome = c.url = c.ua = c.ref = "";
+    sCanalAdd(fl, &c);
+  }
+  if (n >= cota) sLtvF[fl].cortada = 1;
+  free(st);
+  return n;
+}
 
-// --- CACHE DO GUIA EM DISCO ---------------------------------------------------
-//
-// POR QUE: o guia so existia depois de UMA volta completa pela rede — um GET
-// por catalogo de canal (o Pluto responde 1.500 canais numa pagina), mais
-// Stalker/Xtream — a cada arranque do app. "Sempre demora muito" (dono,
-// 19/09). A lista muda pouco: os canais de ontem sao os de hoje. Entao a
-// ultima lista publicada fica em disco e e o que a tela mostra NA HORA; a
-// volta pela rede continua, em fundo, e so republica se a lista mudou — a
-// mesma regra da home (cat_assinatura).
-//
-// O arquivo e por perfil (os addons sao por perfil) e carrega o tamanho das
-// structs no cabecalho: uma build que mude GCanal ignora o cache antigo em
-// vez de ler lixo.
-#define GC_MAGIA  0x31474e56u   /* "NVG1" */
-#define GC_VERSAO 1u
 typedef struct {
-  unsigned magia, versao, tamCanal, tamFonte, tamSabe;
-  int nCanais, nCats, nFontes, nSabe, perfil;
-} GCacheCab;
+  int fl, decidido, nsel;
+  const char *sel[256];
+  int *giDe;            // ordem do painel -> indice em gi
+  int nOrd;
+} XtCtx;
+static void xtCat(const char *nome, int ordem, int n, void *u) {
+  XtCtx *x = u;
+  if (ordem >= x->nOrd) {
+    int *no = realloc(x->giDe, sizeof(int) * (size_t)(ordem + 64));
+    if (!no) return;
+    x->giDe = no; x->nOrd = ordem + 64;
+  }
+  x->giDe[ordem] = sGrupoInfo(x->fl, nome, n);
+  sLtvF[x->fl].total += n;
+}
+static int xtCanal(const XtreamItem *it, void *u) {
+  XtCtx *x = u;
+  GFonteLtv *F = &sLtvF[x->fl];
+  int gi;
+  GCru c;
+  if (!x->decidido) {
+    // GRUPOS INTEIROS, na ordem do painel (ou os escolhidos), ate o que sobra
+    // do teto. Decidido antes do primeiro canal: as contagens ja vieram.
+    int *conta = malloc(sizeof(int) * (size_t)(F->ngi ? F->ngi : 1)), i;
+    const char **nomes = malloc(sizeof(char *) * (size_t)(F->ngi ? F->ngi : 1));
+    unsigned char *entra = malloc((size_t)(F->ngi ? F->ngi : 1));
+    x->decidido = 1;
+    if (conta && nomes && entra) {
+      for (i = 0; i < F->ngi; i++) { conta[i] = F->gi[i].n; nomes[i] = F->gi[i].nome; }
+      ltv_grupos_admitir(conta, nomes, F->ngi, x->sel, x->nsel, sTeto - sRetidos, entra);
+      for (i = 0; i < F->ngi; i++) F->gi[i].entra = entra[i];
+    }
+    free(conta); free(nomes); free(entra);
+  }
+  gi = it->catOrdem >= 0 && it->catOrdem < x->nOrd ? x->giDe[it->catOrdem] : -1;
+  if (gi >= 0 && !F->gi[gi].entra) { F->cortada = 1; return 1; }
+  memset(&c, 0, sizeof c);
+  c.id = it->id; c.nome = it->nome; c.logo = it->logo; c.epgId = it->epgId;
+  c.grupo = it->categoria; c.numero = it->num;
+  c.desc = c.tvgNome = c.url = c.ua = c.ref = "";
+  if (!sCanalAdd(x->fl, &c) && gi >= 0) F->gi[gi].entra = 0;
+  return 1;
+}
+static int xtreamCarregar(void) {
+  XtCtx x;
+  int total = 0;
+  memset(&x, 0, sizeof x);
+  x.fl = sFonte(LTV_XTREAM, "", "Xtream", "");
+  if (x.fl < 0) return 0;
+  x.nsel = sGruposEscolhidos(x.fl, x.sel, 256);
+  xtream_canais_cb_sessao(xtCat, xtCanal, &x, &total, cargaSessao);
+  sXtFalha = xtream_ultima_falha(); sXtHttp = xtream_ultimo_http();
+  sLtvF[x.fl].erro = sXtFalha;
+  free(x.giDe);
+  return sLtvF[x.fl].nCanais;
+}
+
+// M3U POR URL (M9), em fluxo: a lista de 20 mil canais nunca existe inteira.
+// Grupos na ordem em que aparecem; passou do teto, o resto conta mas nao entra.
+typedef struct { int fl, nsel; const char *sel[256]; int nIdDup; } M3uCtx;
+static int m3uCanal(const LtvM3uCanal *m, void *u) {
+  M3uCtx *x = u;
+  char id[64], chave[300];
+  const char *g = m->grupo && m->grupo[0] ? m->grupo : "Outros";
+  int gi = sGrupoInfo(x->fl, g, 1);
+  GCru c;
+  sLtvF[x->fl].total++;
+  if (x->nsel && !nomeNaLista(g, x->sel, x->nsel)) { if (gi >= 0) sLtvF[x->fl].gi[gi].entra = 0; return 1; }
+  if (sRetidos >= sTeto) { sLtvF[x->fl].cortada = 1; if (gi >= 0) sLtvF[x->fl].gi[gi].entra = 0; return 1; }
+  // ID ESTAVEL sem a URL (que pode ter token que muda e credencial): tvg-id,
+  // nome e grupo. Repetido exato e o mesmo canal duas vezes na lista.
+  snprintf(chave, sizeof chave, "%s|%s|%s", m->tvgId, m->nome, g);
+  snprintf(id, sizeof id, "m3u:%s:%08lx", sLtvF[x->fl].chave, ltv_hash(chave));
+  memset(&c, 0, sizeof c);
+  c.id = id; c.nome = m->nome; c.logo = m->logo; c.epgId = m->tvgId; c.tvgNome = m->tvgNome;
+  c.url = m->url; c.ua = m->ua; c.ref = m->referer; c.grupo = g; c.numero = m->chno;
+  c.desc = "";
+  sCanalAdd(x->fl, &c);
+  return 1;
+}
+static int alimentarM3u(const char *d, size_t n, void *u) { return cargaAtual() && ltv_m3u_alimentar((LtvM3u *)u, d, n); }
+static int m3uCarregar(const LtvUrl *u) {
+  static LtvM3u p;     // ~10 KB: fora da pilha do fio
+  M3uCtx x;
+  int st = 0, ok;
+  long long bytes = 0;
+  memset(&x, 0, sizeof x);
+  x.fl = sFonte(LTV_M3U, u->url, u->nome, "");
+  if (x.fl < 0) return 0;
+  x.nsel = sGruposEscolhidos(x.fl, x.sel, 256);
+  ltv_m3u_iniciar(&p, m3uCanal, &x);
+  ok = rede_baixar_fluxo(u->url, 120, NULL, alimentarM3u, &p, 200LL << 20, &st, &bytes);
+  ltv_m3u_fim(&p);
+  snprintf(sLtvF[x.fl].urlTvg, sizeof sLtvF[x.fl].urlTvg, "%s", p.urlTvg);
+  // A chave da fonte e o tamanho; nunca a URL.
+  printf("[ltv] m3u %s: %s, %lld KB, %d canais na lista, %d retidos%s\n", sLtvF[x.fl].chave,
+         ok ? "ok" : "falhou", bytes / 1024, p.nCanais, sLtvF[x.fl].nCanais,
+         p.urlTvg[0] ? ", com url-tvg" : "");
+  if (!ok && st) printf("[ltv] m3u %s: HTTP %d\n", sLtvF[x.fl].chave, st);
+  fflush(stdout);
+  if (!ok && !sLtvF[x.fl].nCanais) sLtvF[x.fl].erro = 1;
+  return sLtvF[x.fl].nCanais;
+}
+
+// --- CACHE POR FONTE EM DISCO (M1) -----------------------------------------------
+//
+// POR QUE: o guia so existia depois de UMA volta completa pela rede. A ultima
+// lista de cada fonte fica em disco e e o que a tela mostra NA HORA; a volta pela
+// rede continua em fundo. POR FONTE (e nao um arquivo so): a fonte que falha
+// hoje mostra a lista de ontem dela, sem apagar nem segurar as outras.
+//
+// ltv-<chave>-p<perfil>.bin com as strings em comprimento+bytes (nada de
+// struct crua: uma build que mude GCanal le o mesmo arquivo), e
+// ltv-indice-p<perfil>.txt com as chaves na ordem da barra.
+#define GC_MAGIA  0x324c564eu   /* "NVL2" */
+#define GC_VERSAO 2u
 static int cacheLido;          // ja tentou ler nesta sessao
 static unsigned long assinaturaPublicada;
 
-static const char *cacheNome(void) {
-  static char nome[48];
+static void cacheNomeFonte(const char *chave, char *d, size_t n) {
   int p = perfis_ativo();
-  if (p <= 0) snprintf(nome, sizeof nome, "guia-cache.bin");
-  else        snprintf(nome, sizeof nome, "guia-cache-p%d.bin", p);
-  return nome;
+  if (p <= 0) snprintf(d, n, "ltv-%s.bin", chave);
+  else        snprintf(d, n, "ltv-%s-p%d.bin", chave, p);
+}
+static void cacheNomeIndice(char *d, size_t n) {
+  int p = perfis_ativo();
+  if (p <= 0) snprintf(d, n, "ltv-indice.txt");
+  else        snprintf(d, n, "ltv-indice-p%d.txt", p);
 }
 
-// Assinatura INDEPENDENTE DA ORDEM (soma de hashes por canal): a copia de
-// trabalho chega na ordem de chegada e a publicada sai ordenada por
-// categoria, e as duas precisam bater quando o conteudo e o mesmo.
-static unsigned long assinaturaDe(const GCanal *c, int n, char cs[][64]) {
-  unsigned long soma = 0;
-  int i;
-  for (i = 0; i < n; i++) {
-    unsigned long h = 2166136261UL;
-    const char *p;
-    for (p = c[i].id; *p; p++) { h ^= (unsigned char)*p; h *= 16777619UL; }
-    // Mesmo id com outro cadastro/addon nao e a mesma lista. Preservar a
-    // base antiga aqui fazia o cache continuar usando a credencial anterior.
-    for (p = c[i].base; *p; p++) { h ^= (unsigned char)*p; h *= 16777619UL; }
-    for (p = c[i].epgId; *p; p++) { h ^= (unsigned char)*p; h *= 16777619UL; }
-    if (c[i].cat >= 0) for (p = cs[c[i].cat]; *p; p++) { h ^= (unsigned char)*p; h *= 16777619UL; }
-    soma += h;
-  }
-  return soma ^ (unsigned long)n;
+static int cStr(FILE *f, const char *s) {
+  size_t k = s ? strlen(s) : 0;
+  unsigned short m = (unsigned short)(k > 65535 ? 65535 : k);
+  return fwrite(&m, 2, 1, f) == 1 && (!m || fwrite(s, 1, m, f) == m);
 }
+static int cInt(FILE *f, long long v) { return fwrite(&v, sizeof v, 1, f) == 1; }
 
-static void cacheGravar(void) {
-  char caminho[600], tmp[620];
-  GCacheCab cab;
-  FILE *f;
-  if (!dados_caminho(caminho, sizeof caminho, cacheNome())) return;
+static void cacheFonteGravar(int f) {
+  char nome[64], caminho[600], tmp[620];
+  const GFonteLtv *F = &ltvF[f];
+  FILE *fp;
+  int ok, i;
+  cacheNomeFonte(F->chave, nome, sizeof nome);
+  if (!dados_caminho(caminho, sizeof caminho, nome)) return;
   snprintf(tmp, sizeof tmp, "%s.tmp", caminho);
-  memset(&cab, 0, sizeof cab);
-  cab.magia = GC_MAGIA; cab.versao = GC_VERSAO;
-  cab.tamCanal = (unsigned)sizeof(GCanal); cab.tamFonte = (unsigned)sizeof(GFonte);
-  cab.tamSabe = (unsigned)sizeof(GSabe);
-  cab.nCanais = nCanais; cab.nCats = nCats; cab.nFontes = nFontes; cab.nSabe = nSabe;
-  cab.perfil = perfis_ativo();
 #ifdef __EMSCRIPTEN__
   dados_fs_travar();
 #endif
-  f = fopen(tmp, "wb");
-  if (f) {
-    int ok = fwrite(&cab, sizeof cab, 1, f) == 1 &&
-             fwrite(canais, sizeof(GCanal), (size_t)nCanais, f) == (size_t)nCanais &&
-             fwrite(cats, sizeof cats[0], (size_t)nCats, f) == (size_t)nCats &&
-             fwrite(fontes, sizeof(GFonte), (size_t)nFontes, f) == (size_t)nFontes &&
-             fwrite(sabe, sizeof(GSabe), (size_t)nSabe, f) == (size_t)nSabe;
-    ok = (fclose(f) == 0) && ok;
+  fp = fopen(tmp, "wb");
+  if (fp) {
+    ok = cInt(fp, GC_MAGIA) && cInt(fp, GC_VERSAO) && cInt(fp, F->tipo) && cInt(fp, F->nCanais) &&
+         cInt(fp, F->ngi) && cInt(fp, F->total) && cInt(fp, F->cortada) && cInt(fp, F->atualizada) &&
+         cStr(fp, F->nome) && cStr(fp, F->base) && cStr(fp, F->urlTvg);
+    for (i = 0; ok && i < F->ngi; i++)
+      ok = cStr(fp, F->gi[i].nome) && cInt(fp, F->gi[i].n) && cInt(fp, F->gi[i].entra);
+    for (i = 0; ok && i < nCanais; i++) {
+      const GCanal *c = &canais[i];
+      if (c->fonte != f) continue;
+      ok = cStr(fp, cats[c->cat].nome) && cInt(fp, c->numero) && cStr(fp, c->id) && cStr(fp, c->nome) &&
+           cStr(fp, c->logo) && cStr(fp, c->desc) && cStr(fp, c->epgId) && cStr(fp, c->tvgNome) &&
+           cStr(fp, c->url) && cStr(fp, c->ua) && cStr(fp, c->ref) && cStr(fp, c->tipo);
+    }
+    ok = (fclose(fp) == 0) && ok;
     if (!ok || rename(tmp, caminho) != 0) remove(tmp);
-    else { printf("[guia] cache gravado: %d canais\n", nCanais); fflush(stdout); }
   }
 #ifdef __EMSCRIPTEN__
   dados_fs_liberar();
@@ -1196,110 +1388,434 @@ static void cacheGravar(void) {
 #endif
 }
 
-// Le o cache direto para os vetores PUBLICADOS (roda no fio de desenho, antes
-// de qualquer fio de carga existir). 1 se a tela ja tem lista.
-static int cacheLer(void) {
-  char caminho[600];
-  GCacheCab cab;
-  FILE *f;
-  int ok;
-  if (!dados_caminho(caminho, sizeof caminho, cacheNome())) return 0;
-  f = fopen(caminho, "rb");
-  if (!f) return 0;
-  ok = fread(&cab, sizeof cab, 1, f) == 1 &&
-       cab.magia == GC_MAGIA && cab.versao == GC_VERSAO &&
-       cab.tamCanal == sizeof(GCanal) && cab.tamFonte == sizeof(GFonte) &&
-       cab.tamSabe == sizeof(GSabe) && cab.perfil == perfis_ativo() &&
-       cab.nCanais > 0 && cab.nCanais <= G_MAX_CANAL && cab.nCats > 0 && cab.nCats <= G_MAX_CAT &&
-       cab.nFontes >= 0 && cab.nFontes <= G_MAX_FONTE && cab.nSabe >= 0 && cab.nSabe <= G_MAX_SABE;
-  if (ok) ok = fread(canais, sizeof(GCanal), (size_t)cab.nCanais, f) == (size_t)cab.nCanais &&
-               fread(cats, sizeof cats[0], (size_t)cab.nCats, f) == (size_t)cab.nCats &&
-               fread(fontes, sizeof(GFonte), (size_t)cab.nFontes, f) == (size_t)cab.nFontes &&
-               fread(sabe, sizeof(GSabe), (size_t)cab.nSabe, f) == (size_t)cab.nSabe;
-  fclose(f);
-  if (!ok) { nCanais = nCats = 0; return 0; }
-  nCanais = cab.nCanais; nCats = cab.nCats; nFontes = cab.nFontes; nSabe = cab.nSabe;
-  // Strings vindas do disco terminam em NUL por conta propria.
-  { int i;
-    for (i = 0; i < nCanais; i++) { canais[i].id[sizeof canais[i].id - 1] = 0; canais[i].nome[sizeof canais[i].nome - 1] = 0;
-      canais[i].logo[sizeof canais[i].logo - 1] = 0; canais[i].base[sizeof canais[i].base - 1] = 0;
-      canais[i].epgId[sizeof canais[i].epgId - 1] = 0;
-      canais[i].epg = -1;
-      if (canais[i].cat < -1 || canais[i].cat >= nCats) canais[i].cat = -1; }
-    for (i = 0; i < nCats; i++) cats[i][sizeof cats[i] - 1] = 0; }
+typedef struct { const char *p, *fim; int ok; } CLeitor;
+static long long lInt(CLeitor *l) {
+  long long v = 0;
+  if (!l->ok || l->p + sizeof v > l->fim) { l->ok = 0; return 0; }
+  memcpy(&v, l->p, sizeof v); l->p += sizeof v;
+  return v;
+}
+static const char *lStr(CLeitor *l, char *buf, size_t n) {
+  unsigned short m;
+  if (!l->ok || l->p + 2 > l->fim) { l->ok = 0; return ""; }
+  memcpy(&m, l->p, 2); l->p += 2;
+  if (l->p + m > l->fim) { l->ok = 0; return ""; }
+  { size_t k = m < n - 1 ? m : n - 1; memcpy(buf, l->p, k); buf[k] = 0; }
+  l->p += m;
+  return buf;
+}
+
+// Le a fonte `chave` do disco PARA O STAGING (do fio, ou do arranque com o fio
+// parado). Devolve quantos canais entraram, -1 sem cache que sirva.
+static int cacheFonteLer(const char *chave) {
+  char nome[64], caminho[600], *b = NULL;
+  long n = 0;
+  FILE *fp;
+  CLeitor l;
+  int tipo, nc, ngi, i, fl, total, cortada, antes = sRetidos;
+  long long quando;
+  static char s1[1024], s2[1024], s3[1024];
+  cacheNomeFonte(chave, nome, sizeof nome);
+  if (!dados_caminho(caminho, sizeof caminho, nome)) return -1;
+#ifdef __EMSCRIPTEN__
+  dados_fs_travar();
+#endif
+  fp = fopen(caminho, "rb");
+  if (fp) {
+    fseek(fp, 0, SEEK_END); n = ftell(fp); fseek(fp, 0, SEEK_SET);
+    if (n > 0 && (b = malloc((size_t)n)) != NULL && (long)fread(b, 1, (size_t)n, fp) != n) { free(b); b = NULL; }
+    fclose(fp);
+  }
+#ifdef __EMSCRIPTEN__
+  dados_fs_liberar();
+#endif
+  if (!b) return -1;
+  l.p = b; l.fim = b + n; l.ok = 1;
+  if (lInt(&l) != GC_MAGIA || lInt(&l) != GC_VERSAO) { free(b); return -1; }
+  tipo = (int)lInt(&l); nc = (int)lInt(&l); ngi = (int)lInt(&l);
+  total = (int)lInt(&l); cortada = (int)lInt(&l); quando = lInt(&l);
+  lStr(&l, s1, sizeof s1); lStr(&l, s2, sizeof s2); lStr(&l, s3, sizeof s3);
+  if (!l.ok || nc < 0 || ngi < 0) { free(b); return -1; }
+  // A chave vem do nome do arquivo; o tipo e o nome de exibicao, de dentro.
+  fl = sFonteChave(chave, tipo, s1, s2);
+  if (fl < 0) { free(b); return -1; }
+  sLtvF[fl].atualizada = quando;
+  sLtvF[fl].deCache = 1;
+  snprintf(sLtvF[fl].urlTvg, sizeof sLtvF[fl].urlTvg, "%s", s3);
+  for (i = 0; i < ngi && l.ok; i++) {
+    int gi = sGrupoInfo(fl, lStr(&l, s1, sizeof s1), 0), cnt = (int)lInt(&l), en = (int)lInt(&l);
+    if (gi >= 0) { sLtvF[fl].gi[gi].n = cnt; sLtvF[fl].gi[gi].entra = (unsigned char)en; }
+  }
+  for (i = 0; i < nc && l.ok; i++) {
+    static char g[256], id[256], nm[256], lg[1024], ds[1024], ei[256], tn[256], ur[4096], ua[512], rf[512];
+    GCru c;
+    memset(&c, 0, sizeof c);
+    c.grupo = lStr(&l, g, sizeof g); c.numero = (int)lInt(&l);
+    c.id = lStr(&l, id, sizeof id); c.nome = lStr(&l, nm, sizeof nm); c.logo = lStr(&l, lg, sizeof lg);
+    c.desc = lStr(&l, ds, sizeof ds); c.epgId = lStr(&l, ei, sizeof ei); c.tvgNome = lStr(&l, tn, sizeof tn);
+    c.url = lStr(&l, ur, sizeof ur); c.ua = lStr(&l, ua, sizeof ua); c.ref = lStr(&l, rf, sizeof rf);
+    char tipoCanal[16]; c.tipo = lStr(&l, tipoCanal, sizeof tipoCanal);
+    if (l.ok) sCanalAdd(fl, &c);
+  }
+  sLtvF[fl].total = total > sLtvF[fl].nCanais ? total : sLtvF[fl].nCanais;
+  sLtvF[fl].cortada = cortada || sLtvF[fl].cortada;
+  free(b);
+  return sRetidos - antes;
+}
+
+static void cacheGravar(void) {
+  char nome[48], buf[G_MAX_LTV * 32];
+  size_t u = 0;
+  int i;
+  for (i = 0; i < nLtvF; i++) {
+    if (!ltvF[i].deCache && ltvF[i].nCanais > 0) cacheFonteGravar(i);
+    u += (size_t)snprintf(buf + u, sizeof buf - u, "%s\n", ltvF[i].chave);
+  }
+  buf[u] = 0;
+  cacheNomeIndice(nome, sizeof nome);
+  dados_gravar(nome, buf);
+  printf("[guia] cache gravado: %d canais em %d fonte(s)\n", nCanais, nLtvF);
+  fflush(stdout);
+}
+
+// Assinatura INDEPENDENTE DA ORDEM (soma de hashes por canal).
+static unsigned long assinaturaDe(const GCanal *c, int n, const GCat *cs, const GFonteLtv *fs) {
+  unsigned long soma = 0;
+  int i;
+  for (i = 0; i < n; i++) {
+    unsigned long h = ltv_hash(c[i].id) ^ (ltv_hash(fs[c[i].fonte].chave) * 31UL);
+    if (c[i].cat >= 0) h ^= ltv_hash(cs[c[i].cat].nome) * 7UL;
+    soma += h & 0xffffffffUL;
+  }
+  return soma ^ (unsigned long)n;
+}
+
+// --- o fio de carga ----------------------------------------------------------------
+static int tetoCarga = 30000;
+static char sNomeAddon[64];
+static const char *nomeDoAddon(const char *base) {
+  int i;
+  for (i = 0; i < addons_n(); i++)
+    if (addons_base(i) && !strcmp(addons_base(i), base)) {
+      snprintf(sNomeAddon, sizeof sNomeAddon, "%s", addons_nome(i));
+      return sNomeAddon;
+    }
+  return "";
+}
+
+// Fonte que veio vazia da rede: a lista de ontem dela, do disco. Fica
+// "degradada"; sem cache, "fora".
+static void fonteVaziaRecupera(int tipo, const char *ref, const char *nome, const char *base) {
+  char ch[LTV_CHAVE];
+  int i, r;
+  ltv_chave_fonte(tipo, ref, ch, sizeof ch);
+  for (i = 0; i < sNLtvF && strcmp(sLtvF[i].chave, ch); i++) {}
+  if (i < sNLtvF && sLtvF[i].nCanais > 0) return;
+  r = cacheFonteLer(ch);
+  for (i = 0; i < sNLtvF && strcmp(sLtvF[i].chave, ch); i++) {}
+  if (i == sNLtvF) i = sFonte(tipo, ref, nome, base);
+  if (i < 0) return;
+  if (r > 0) {
+    sLtvF[i].saude = LTV_SAUDE_DEGRADADA;
+    printf("[ltv] fonte %s (%s) nao respondeu: fica a lista do cache, %d canais\n",
+           ch, ltv_tipo_nome(tipo), r);
+  } else {
+    sLtvF[i].saude = LTV_SAUDE_FORA;
+    if (!sLtvF[i].erro) sLtvF[i].erro = 1;
+    printf("[ltv] fonte %s (%s) nao respondeu e nao ha cache\n", ch, ltv_tipo_nome(tipo));
+  }
+  fflush(stdout);
+}
+
+static void *fioGuia(void *u) {
+  int ok = 0, i, nu;
+  LtvUrl urls[LTV_URLS_MAX];
+  (void)u;
+  stagingZerar();
+  sTeto = tetoCarga;
+  sFalhas = 0; sXtFalha = XT_OK; sXtHttp = 0;
+  // Fontes das fileiras primeiro — zero rede extra. A sonda de manifestos
+  // completa com o que a home nao montou. ADDON DESLIGADO NAO ENTRA.
+  sondaManifestos();
+  // ADDONS: uma fonte da barra por addon (base), com todos os catalogos dele.
+  for (i = 0; cargaAtual() && i < sNFontes; i++) {
+    int fl = sFonte(LTV_ADDON, sFontes[i].base, nomeDoAddon(sFontes[i].base), sFontes[i].base);
+    int skip, okC = 0;
+    if (fl < 0) continue;
+    for (skip = 0; cargaAtual() && sRetidos < sTeto; skip += G_PAGINA) {
+      int novos = 0, n = lerPagina(&sFontes[i], fl, skip, &novos);
+      if (n <= 0) break;
+      okC = 1;
+      // Pagina cheia que nao trouxe nada novo e catalogo que ignora `skip`.
+      if (n < G_PAGINA || novos == 0) break;
+    }
+    if (sRetidos >= sTeto) sLtvF[fl].cortada = 1;
+    if (okC) ok = 1;
+  }
+  // Fonte de addon sem canal nenhum (todos os catalogos falharam): o cache.
+  for (i = 0; i < sNFontes; i++) {
+    int fl = sFonte(LTV_ADDON, sFontes[i].base, "", sFontes[i].base);
+    if (fl >= 0 && !sLtvF[fl].nCanais) fonteVaziaRecupera(LTV_ADDON, sFontes[i].base, sLtvF[fl].nome, sFontes[i].base);
+  }
+  // PORTAL STALKER e XTREAM entram DEPOIS dos addons de proposito: quem tem as
+  // duas coisas espera ver primeiro o que ja via. Nao mexem em sFalhas.
+  if (cargaAtual() && stalker_configurado()) {
+    if (stalkerCarregar() > 0) ok = 1;
+    else fonteVaziaRecupera(LTV_STALKER, "", "Stalker", "");
+  }
+  if (cargaAtual() && xtream_configurado()) {
+    if (xtreamCarregar() > 0) ok = 1;
+    else fonteVaziaRecupera(LTV_XTREAM, "", "Xtream", "");
+  }
+  nu = nCargaUrls; memcpy(urls, cargaUrls, sizeof urls);
+  for (i = 0; cargaAtual() && i < nu; i++) {
+    if (urls[i].tipo != LTV_URL_M3U) continue;
+    if (m3uCarregar(&urls[i]) > 0) ok = 1;
+    else fonteVaziaRecupera(LTV_M3U, urls[i].url, urls[i].nome, "");
+  }
+  for (i = 0; i < sNLtvF; i++) if (sLtvF[i].nCanais > 0) ok = 1;
+  // FONTE ACHADA E NENHUMA PAGINA RESPONDEU tambem e "nao respondeu".
+  if (sNFontes > 0 && !ok) sFalhas++;
+  sOk = ok;
+  free(addonsCarga); addonsCarga = NULL; nAddonsCarga = 0;
+  atomic_store_explicit(&pendPronto, 1, memory_order_release);
+  return NULL;
+}
+
+// Ordem das linhas: FONTE na ordem da barra, e dentro dela a do provedor (ou
+// A-Z quando a pessoa pediu para aquela fonte, decisao 3).
+static int *ordAz;   // por fonte: 1 = A-Z
+static int cmpCat(const void *a, const void *b) {
+  const GCat *x = &cats[*(const int *)a], *y = &cats[*(const int *)b];
+  if (x->fonte != y->fonte) return x->fonte - y->fonte;
+  if (ordAz && ordAz[x->fonte]) {
+    int c = strcasecmp(x->nome, y->nome);
+    if (c) return c;
+  }
+  return x->ordem - y->ordem;
+}
+
+// Ordena os canais por grupo (estavel na ordem de chegada) para que cada
+// linha seja uma janela contigua, e refaz Favoritos, contas e a vista. Roda ao
+// publicar e ao desligar um addon no painel (que tira canais sem esperar o fio).
+static void empacotar(void) {
+  int i, w, *ordem = NULL, *mapa = NULL, *pos = NULL;
+  int az[G_MAX_LTV];
+  GCanal *tmp;
+  // Canal de addon desligado nao fica.
+  for (i = 0, w = 0; i < nCanais; i++)
+    if (!canais[i].base[0] || (baseLigada(canais[i].base) && !baseOculta(canais[i].base))) canais[w++] = canais[i];
+  nCanais = w;
+  for (i = 0; i < nLtvF; i++) {
+    LtvPref *p = ltv_pref(ltvF[i].chave, 0);
+    az[i] = p ? p->az : 0;
+    ltvF[i].fusoS = p ? p->fusoMin * 60 : 0;
+    ltvF[i].nCanais = 0; ltvF[i].nGrupos = 0;
+  }
+  ordAz = az;
+  { int *no = realloc(catN, sizeof(int) * (size_t)(nCats + 1)), *no2;
+    if (no) catN = no;
+    no2 = realloc(catIni, sizeof(int) * (size_t)(nCats + 1));
+    if (no2) catIni = no2; }
+  ordem = malloc(sizeof(int) * (size_t)(nCats + 1));
+  mapa = malloc(sizeof(int) * (size_t)(nCats + 1));
+  pos = malloc(sizeof(int) * (size_t)(nCats + 1));
+  tmp = malloc(sizeof(GCanal) * (size_t)(nCanais + 1));
+  if (!catN || !catIni || !ordem || !mapa || !pos || !tmp) {
+    free(ordem); free(mapa); free(pos); free(tmp); ordAz = NULL; return;
+  }
+  // Grupo sem canal sai; os outros em ordem.
+  for (i = 0; i < nCats; i++) catN[i] = 0;
+  for (i = 0; i < nCanais; i++) if (canais[i].cat >= 0) catN[canais[i].cat]++;
+  for (i = 0, w = 0; i < nCats; i++) if (catN[i]) ordem[w++] = i;
+  qsort(ordem, (size_t)w, sizeof(int), cmpCat);
+  ordAz = NULL;
+  for (i = 0; i < nCats; i++) mapa[i] = -1;
+  for (i = 0; i < w; i++) mapa[ordem[i]] = i;
+  { GCat *nc = malloc(sizeof(GCat) * (size_t)(w + 1));
+    if (!nc) { free(ordem); free(mapa); free(pos); free(tmp); return; }
+    for (i = 0; i < w; i++) nc[i] = cats[ordem[i]];
+    free(cats); cats = nc; nCats = w; capCats = w + 1; }
+  for (i = 0; i < nCanais; i++) canais[i].cat = canais[i].cat >= 0 ? mapa[canais[i].cat] : -1;
+  for (i = 0; i < nCats; i++) catN[i] = 0;
+  for (i = 0; i < nCanais; i++) if (canais[i].cat >= 0) catN[canais[i].cat]++;
+  if (nCats) catIni[0] = 0;
+  for (i = 1; i < nCats; i++) catIni[i] = catIni[i - 1] + catN[i - 1];
+  memcpy(pos, catIni, sizeof(int) * (size_t)nCats);
+  for (i = 0, w = 0; i < nCanais; i++)
+    if (canais[i].cat >= 0) { tmp[pos[canais[i].cat]++] = canais[i]; w++; }
+  memcpy(canais, tmp, sizeof(GCanal) * (size_t)w);
+  nCanais = w;
+  free(ordem); free(mapa); free(pos); free(tmp);
+  for (i = 0; i < nCanais; i++) if (canais[i].fonte >= 0 && canais[i].fonte < nLtvF) ltvF[canais[i].fonte].nCanais++;
+  for (i = 0; i < nCats; i++) if (cats[i].fonte >= 0 && cats[i].fonte < nLtvF) ltvF[cats[i].fonte].nGrupos++;
+  favAplicar();
+  nFavOrd = 0;
+  for (i = 0; i < nCanais && nFavOrd < G_MAX_FAV; i++)
+    if (canais[i].fav) favOrd[nFavOrd++] = i;
+  vistaMontar();
+}
+
+// O staging vira a lista publicada (fio parado). O que era publicado e solto.
+static void adotarStaging(void) {
+  fontesLtvSoltar(ltvF, nLtvF);
+  ltv_arena_soltar(&arena);
+  free(canais); free(cats);
+  canais = sCanais; nCanais = sNCanais; capCanais = sCapCanais;
+  cats = sCats; nCats = sNCats; capCats = sCapCats;
+  memcpy(ltvF, sLtvF, sizeof sLtvF); nLtvF = sNLtvF;
+  arena = sArena;
+  sCanais = NULL; sNCanais = sCapCanais = 0;
+  sCats = NULL; sNCats = sCapCats = 0;
+  memset(sLtvF, 0, sizeof sLtvF); sNLtvF = 0;
+  memset(&sArena, 0, sizeof sArena);
+  sRetidos = 0;
   empacotar();
-  assinaturaPublicada = assinaturaDe(canais, nCanais, cats);
-  printf("[guia] cache lido: %d canais em %d categorias\n", nCanais, nCats);
+}
+
+// Le o cache do disco direto para a lista publicada (fio de desenho, antes de
+// qualquer fio de carga). 1 se a tela ja tem lista.
+static int cacheLer(void) {
+  char nome[48], *t, *p;
+  if (fioVivo) return 0;
+  cacheNomeIndice(nome, sizeof nome);
+  t = dados_ler(nome);
+  if (!t) return 0;
+  stagingZerar();
+  sTeto = tetoCarga;
+  for (p = t; *p; ) {
+    char ch[LTV_CHAVE];
+    size_t k = strcspn(p, "\r\n");
+    if (k && k < sizeof ch) { memcpy(ch, p, k); ch[k] = 0; cacheFonteLer(ch); }
+    p += k; while (*p == '\r' || *p == '\n') p++;
+  }
+  free(t);
+  if (!sNCanais) { stagingZerar(); return 0; }
+  adotarStaging();
+  assinaturaPublicada = assinaturaDe(canais, nCanais, cats, ltvF);
+  printf("[guia] cache lido: %d canais em %d grupos, %d fonte(s)\n", nCanais, nCats, nLtvF);
   fflush(stdout);
   marco("guia: lista do cache na tela");
   return 1;
 }
 
+// As grades de cada fonte (M4/M9): o xmltv.php do Xtream, o url-tvg de cada
+// M3U e os XMLTV por URL dos Ajustes, cada uma com o filtro dos canais dela (a
+// por URL vale para todas). O epg.c so recarrega se URL ou fonte mudaram.
+static void epgExtrasMontar(void) {
+  EpgExtra x[EPG_MAX_EXTRAS];
+  LtvUrl us[LTV_URLS_MAX];
+  static char urlXt[1100];
+  const char **ids, **nomes;
+  int nx = 0, f, i, nu, ni = 0, nn = 0;
+  ids = malloc(sizeof(char *) * (size_t)(nCanais + 1));
+  nomes = malloc(sizeof(char *) * (size_t)(2 * nCanais + 1));
+  if (!ids || !nomes) { free(ids); free(nomes); return; }
+  for (f = 0; f < nLtvF && nx < EPG_MAX_EXTRAS; f++) {
+    const char *url = NULL;
+    int i0 = ni, n0 = nn;
+    if (ltvF[f].tipo == LTV_XTREAM && xtream_url_xmltv(urlXt, sizeof urlXt)) url = urlXt;
+    else if (ltvF[f].tipo == LTV_M3U && ltvF[f].urlTvg[0]) url = ltvF[f].urlTvg;
+    if (!url) continue;
+    for (i = 0; i < nCanais; i++) {
+      if (canais[i].fonte != f) continue;
+      if (canais[i].epgId[0]) ids[ni++] = canais[i].epgId;
+      nomes[nn++] = canais[i].nome;
+      if (canais[i].tvgNome[0] && strcmp(canais[i].tvgNome, canais[i].nome)) nomes[nn++] = canais[i].tvgNome;
+    }
+    memset(&x[nx], 0, sizeof x[nx]);
+    x[nx].chave = ltvF[f].chave; x[nx].url = url;
+    x[nx].ids = ids + i0; x[nx].nIds = ni - i0;
+    x[nx].nomes = nomes + n0; x[nx].nNomes = nn - n0;
+    nx++;
+  }
+  nu = ltv_urls_copiar(us, LTV_URLS_MAX);
+  { static char chaves[LTV_URLS_MAX][LTV_CHAVE];
+    const char **todosIds = NULL, **todosNomes = NULL;
+    int nti = 0, ntn = 0;
+    for (i = 0; i < nu && nx < EPG_MAX_EXTRAS; i++) {
+      if (us[i].tipo != LTV_URL_XMLTV) continue;
+      if (!todosIds) {
+        todosIds = malloc(sizeof(char *) * (size_t)(nCanais + 1));
+        todosNomes = malloc(sizeof(char *) * (size_t)(nCanais + 1));
+        if (!todosIds || !todosNomes) break;
+        for (f = 0; f < nCanais; f++) {
+          if (canais[f].epgId[0]) todosIds[nti++] = canais[f].epgId;
+          todosNomes[ntn++] = canais[f].nome;
+        }
+      }
+      snprintf(chaves[i], sizeof chaves[i], "x%08lx", ltv_hash(us[i].url));
+      memset(&x[nx], 0, sizeof x[nx]);
+      x[nx].chave = chaves[i]; x[nx].url = us[i].url;
+      x[nx].ids = todosIds; x[nx].nIds = nti; x[nx].nomes = todosNomes; x[nx].nNomes = ntn;
+      nx++;
+    }
+    epg_extras_definir(x, nx);
+    free(todosIds); free(todosNomes); }
+  free(ids); free(nomes);
+}
+
+static void epgCoberturaZerar(void);
 static void publicar(void) {
-  int i, w;
-  // A MESMA LISTA QUE JA ESTA NA TELA (vinda do cache) nao e republicada:
-  // trocar o vetor reordena e zera foco e rolagem para mostrar o que ja se
-  // mostrava. So o veredito da sonda (`sabe`, para o painel) e as falhas
-  // atualizam.
-  // REDE VAZIA NAO APAGA A LISTA QUE HA: sem resposta nenhuma (todos os addons
-  // fora), a lista de ontem continua valendo mais que uma tela vazia.
+  char idFoco[80] = "";
+  unsigned long nova;
+  int i, igual;
+  // REDE VAZIA NAO APAGA A LISTA QUE HA: sem resposta nenhuma (todos fora), a
+  // lista de ontem continua valendo mais que uma tela vazia.
   if (sNCanais == 0 && nCanais > 0) {
     falhas = sFalhas; xtFalha = sXtFalha; xtHttp = sXtHttp;
     memcpy(sabe, sSabe, sizeof sSabe); nSabe = sNSabe;
+    stagingZerar();
     printf("[guia] rede sem canal nenhum: fica a lista que estava\n");
     fflush(stdout);
     return;
   }
-  { unsigned long nova = assinaturaDe(sCanais, sNCanais, sCats);
-    if (nCanais > 0 && nova == assinaturaPublicada) {
-      memcpy(sabe, sSabe, sizeof sSabe); nSabe = sNSabe;
-      memcpy(fontes, sFontes, sizeof sFontes); nFontes = sNFontes;
-      falhas = sFalhas; xtFalha = sXtFalha; xtHttp = sXtHttp;
-      corte = sCorte;
-      printf("[guia] lista da rede igual a da tela: nao republicada\n");
-      fflush(stdout);
-      marco("guia: rede igual ao cache");
-      return;
-    }
-    assinaturaPublicada = nova; }
-  corte = sCorte;
-  memcpy(canais, sCanais, sizeof(GCanal) * (size_t)sNCanais);
-  memcpy(cats, sCats, sizeof sCats);
-  nCanais = sNCanais; nCats = sNCats;
-  // As fontes efetivas sao as do fio — fileiras + manifestos. Sem a copia, a
-  // mensagem "Nenhum catalogo de canais" e o loop de re-tentativa liam a
-  // contagem das fileiras apenas.
-  memcpy(fontes, sFontes, sizeof sFontes);
-  nFontes = sNFontes;
+  nova = assinaturaDe(sCanais, sNCanais, sCats, sLtvF);
+  igual = nCanais > 0 && nova == assinaturaPublicada;
+  { GCanal *f = linhaItem(focoLin, focoCol);
+    if (f) snprintf(idFoco, sizeof idFoco, "%s", f->id); }
+  memcpy(fontes, sFontes, sizeof sFontes); nFontes = sNFontes;
   falhas = sFalhas; xtFalha = sXtFalha; xtHttp = sXtHttp;
-  memcpy(sabe, sSabe, sizeof sSabe);
-  nSabe = sNSabe;
-  (void)w;
-  empacotar();
-  // Foco pedido com a lista vazia (o overlay aberto pelo player, por exemplo)
-  // so encontra o canal agora.
+  memcpy(sabe, sSabe, sizeof sSabe); nSabe = sNSabe;
+  adotarStaging();
+  assinaturaPublicada = nova;
+  favMigrar();
+  favAplicar();
+  // O FOCO FICA NO CANAL: a lista nova (ou a mesma, recarregada) reordena por
+  // dentro e o foco por indice cairia em outro canal.
   if (focoPend[0]) {
     char id[80];
     snprintf(id, sizeof id, "%s", focoPend);
     focoPend[0] = 0;
     guia_focar_id(id);
-  }
-  printf("[guia] %d canais em %d categorias (%d favoritos)\n",
-         nCanais, nCats, nFavOrd);
+    focoPend[0] = 0;
+  } else if (idFoco[0]) { guia_focar_id(idFoco); focoPend[0] = 0; }
+  printf("[guia] %d canais em %d grupos, %d fonte(s), teto %d (%d favoritos)%s\n",
+         nCanais, nCats, nLtvF, tetoCarga, nFavOrd, igual ? ", igual a da tela" : "");
+  // Uma linha por fonte: chave e contas, nunca URL nem credencial (M6).
+  for (i = 0; i < nLtvF; i++)
+    printf("[ltv] fonte=%s tipo=%s canais=%d/%d grupos=%d%s%s%s\n", ltvF[i].chave,
+           ltv_tipo_nome(ltvF[i].tipo), ltvF[i].nCanais, ltvF[i].total, ltvF[i].nGrupos,
+           ltvF[i].cortada ? " cortada=sim" : "", ltvF[i].deCache ? " lista=cache" : "",
+           ltvF[i].saude == LTV_SAUDE_FORA ? " estado=fora" : "");
+  printf("[ltv] memoria da lista: %lu KB de texto + %lu KB de canais\n",
+         (unsigned long)(ltv_arena_bytes(&arena) / 1024),
+         (unsigned long)(sizeof(GCanal) * (size_t)capCanais / 1024));
   fflush(stdout);
   if (guiacorte_cortou(&corte))
     printf("[canais] n=%d de %d (corte: %s)\n", nCanais, guiacorte_total(&corte, nCanais),
            guiacorte_motivo(&corte));
   fflush(stdout);
   marco("guia: lista da rede publicada");
-  if (nCanais > 0) cacheGravar();
-  // A lista nova pode trazer a dica de pais que faltava (#158).
+  if (nCanais > 0 && !igual) cacheGravar();
+  else if (nCanais > 0) {   // o indice da barra pode ter mudado mesmo com a lista igual
+    char nome[48], buf[G_MAX_LTV * 32]; size_t u = 0;
+    for (i = 0; i < nLtvF; i++) u += (size_t)snprintf(buf + u, sizeof buf - u, "%s\n", ltvF[i].chave);
+    cacheNomeIndice(nome, sizeof nome); dados_gravar(nome, buf);
+  }
   epgPaisesEscolher();
-  // Da grade do provedor so interessam os canais desta lista (#158).
-  { static const char *ids[G_MAX_CANAL];
-    int k = 0;
-    for (i = 0; i < nCanais; i++) if (canais[i].epgId[0]) ids[k++] = canais[i].epgId;
-    epg_fonte_extra_ids(ids, k); }
+  epgExtrasMontar();
+  epgCoberturaZerar();
 }
 
 static void iniciarCarga(void) {
@@ -1310,6 +1826,7 @@ static void iniciarCarga(void) {
   // Copia no desenho: nenhum pedido relera as URLs ou os manifestos do
   // perfil novo enquanto a resposta do anterior ainda estiver em voo.
   cargaSessao = nv_perfil_sessao_ler(); cargaCancelada = 0;
+  nCargaUrls = ltv_urls_copiar(cargaUrls, LTV_URLS_MAX);
   nAddonsCarga = addons_n();
   addonsCarga = nAddonsCarga > 0 ? calloc((size_t)nAddonsCarga, sizeof *addonsCarga) : NULL;
   if (nAddonsCarga > 0 && !addonsCarga) { nAddonsCarga = 0; estado = G_FALHOU; return; }
@@ -1335,10 +1852,20 @@ static void iniciarCarga(void) {
 // A parte "carregar" da abertura, sem a parte "mostrar". O zap por CH+/-
 // funciona com o guia nunca aberto: o primeiro toque dispara a carga e nao
 // troca nada (a lista nao existe ainda), o seguinte ja troca.
+static int perfilPrefs = -999;
 void guia_carregar(void) {
+  if (perfilPrefs != perfis_ativo()) {
+    perfilPrefs = perfis_ativo();
+    ltv_pref_carregar(perfilPrefs);
+    ltv_urls_carregar(perfilPrefs);
+  }
   if (!favLido) favLer();
   if (!modoLido) modoLer();
   if (!previewLido) previewLer();
+  // O TETO DA TV (M2): pela plataforma e pela RAM que o tex_cache ja mediu.
+  { long mem = 0;
+    tex_orcamento_info(NULL, &mem, NULL, NULL);
+    tetoCarga = ltv_teto_canais((int)ptv_plataforma(), mem); }
   // Sem fonte achada, tenta de novo a cada chamada: a descoberta da home pode
   // nao ter montado as fileiras ainda quando o primeiro CH+/- chega.
   if (!fontesOk) descobrirFontes();
@@ -1348,14 +1875,9 @@ void guia_carregar(void) {
     if (fioVivo) recarregarPend = 1;
     else iniciarCarga();
   }
-  // A grade do proprio provedor Xtream (#158), ANTES da primeira carga do EPG
-  // para nao carregar duas vezes. Sem cadastro, "" (tira a de um cadastro que
-  // saiu). Nao vai a rede: e so o cadastro.
-  { char u[1100];
-    if (!xtream_url_xmltv(u, sizeof u)) u[0] = 0;
-    epg_fonte_extra(u); }
-  // Os paises da grade tambem ANTES da primeira carga (#158): com a lista do
-  // cache ja na tela, a dica do Xtream existe desde o primeiro quadro.
+  // As grades das fontes (Xtream, url-tvg, XMLTV por URL) ANTES da primeira
+  // carga do EPG, com a lista do cache ja na tela: a grade nao carrega duas vezes.
+  if (nCanais > 0) epgExtrasMontar();
   epgPaisesEscolher();
   epg_iniciar();
 }
@@ -1364,7 +1886,21 @@ void guia_carregar(void) {
 static int   aberta, overlay, querSair;
 static int   focoLin, focoCol;
 static float rolY, velY;
-static float rolX[G_MAX_CAT + 1];     // por linha (0 = favoritos)
+// Rolagem horizontal por linha (modo cartoes). Cresce com as linhas: com o teto
+// de grupos por fonte nao ha mais um numero fixo de linhas.
+static float *rolXv; static int capRolX;
+static float *rolXde(int l) {
+  static float zero;
+  if (l < 0) return &zero;
+  if (l >= capRolX) {
+    int cap = l + 64, i;
+    float *no = realloc(rolXv, sizeof(float) * (size_t)cap);
+    if (!no) { zero = 0.0f; return &zero; }
+    for (i = capRolX; i < cap; i++) no[i] = 0.0f;
+    rolXv = no; capRolX = cap;
+  }
+  return &rolXv[l];
+}
 static float entrada;
 static int   pediuCanal; static CatItem pedido;
 // PAINEL DE CATEGORIAS (gaveta da esquerda). 0 = fechado; 1 = aberto por
@@ -1454,7 +1990,19 @@ static float paRol, paVelRol;
 #ifdef NV_TOUCH_UI
 static ToqueRolagem toqueGradeY, toqueLista, toqueTempo, toqueCat, toqueAddon, toqueBusca, toqueVazio;
 static float rolVazio;
-static ToqueRolagem toqueGradeX[G_MAX_CAT + 1];
+static ToqueRolagem *toqueGradeX; static int capToqueGrade;
+static ToqueRolagem *toqueXde(int l) {
+  static ToqueRolagem vazio;
+  if (l < 0) return &vazio;
+  if (l >= capToqueGrade) {
+    int cap = l + 64;
+    ToqueRolagem *v = realloc(toqueGradeX, sizeof *v * (size_t)cap);
+    if (!v) return &vazio;
+    memset(v + capToqueGrade, 0, sizeof *v * (size_t)(cap - capToqueGrade));
+    toqueGradeX = v; capToqueGrade = cap;
+  }
+  return &toqueGradeX[l];
+}
 static int toqueLinha = -1;
 static float toqueTempoMin, toquePpm;
 static ToqueRolagem *toqueAtual;
@@ -1467,7 +2015,7 @@ static void toqueLimpar(void) {
   toquerol_limpar(&toqueGradeY); toquerol_limpar(&toqueLista); toquerol_limpar(&toqueTempo);
   toquerol_limpar(&toqueCat); toquerol_limpar(&toqueAddon); toquerol_limpar(&toqueBusca);
   toquerol_limpar(&toqueVazio);
-  for (int l = 0; l <= G_MAX_CAT; l++) toquerol_limpar(&toqueGradeX[l]);
+  for (int l = 0; l < capToqueGrade; l++) toquerol_limpar(&toqueGradeX[l]);
   toqueLinha = -1;
   toqueAtual = NULL;
 }
@@ -1533,6 +2081,19 @@ static GCanal *canalPorId(const char *id) {
   for (i = 0; i < nCanais; i++) if (!strcmp(canais[i].id, id)) return &canais[i];
   return NULL;
 }
+// O MESMO id pode existir em duas fontes (M1): o lembrete e o Spotlight guardam
+// a base do addon, que diz qual. Base vazia ou que nao casa: o primeiro.
+static GCanal *canalPorIdBase(const char *id, const char *base) {
+  int i;
+  GCanal *primeiro = NULL;
+  if (!id || !id[0]) return NULL;
+  for (i = 0; i < nCanais; i++)
+    if (!strcmp(canais[i].id, id)) {
+      if (!base || !base[0] || !strcmp(canais[i].base, base)) return &canais[i];
+      if (!primeiro) primeiro = &canais[i];
+    }
+  return primeiro;
+}
 // VARIANTES DO MESMO CANAL (Live TV > Resolucao principal). No Xtream cada
 // resolucao e um canal da lista ("RO| CINEMAX FHD", "RO| CINEMAX HD"); o
 // nome-base (livetv_regras.h) junta os que sao o mesmo canal. O proprio canal
@@ -1561,25 +2122,68 @@ int guia_variantes(const char *id, GuiaVariante *out, int max) {
   return n;
 }
 
-// OS CANAIS DO TESTE do diagnostico da Live TV: a fileira em foco (que pode
-// ser a de Favoritos), a partir do canal focado; sem foco valido, a primeira.
+// OS CANAIS DO TESTE do diagnostico da Live TV (M8). Nos logs 2.0.x, 20 de 40
+// recomendacoes nao mediram nada: a fileira em foco estava vazia ou era curta.
+// Agora: a fileira em foco a partir do canal focado e, se ela tiver menos que
+// `max`, o resto vem da MESMA FONTE do canal focado, um de cada grupo (grupos
+// diferentes costumam ser servidores diferentes). Sem foco valido, a primeira
+// fonte com canal.
 int guia_canais_para_teste(GuiaVariante *out, char bases[][600], int max, char *grupo, size_t ng) {
-  int l = focoLin, c0 = focoCol, n = 0, k, total;
+  int l = focoLin, c0 = focoCol, n = 0, k, total, f = -1, g;
+  GCanal *foco;
   if (l < 0 || l >= nLinhas()) l = 0;
   total = linhaN(l);
   if (c0 < 0 || c0 >= total) c0 = 0;
+  foco = linhaItem(l, c0);
+  if (foco) f = foco->fonte;
+  else if (nCanais) f = canais[0].fonte;
   if (grupo && ng) snprintf(grupo, ng, "%s", nLinhas() ? linhaNome(l) : "");
-  for (k = 0; k < total && n < max; k++) {
-    GCanal *g = linhaItem(l, (c0 + k) % total);
-    if (!g) continue;
-    snprintf(out[n].id, sizeof out[n].id, "%s", g->id);
-    snprintf(out[n].nome, sizeof out[n].nome, "%s", g->nome);
-    out[n].altura = nv_res_do_texto(g->nome);
-    if (bases) snprintf(bases[n], 600, "%s", g->base);
-    n++;
+  #define POE(g_) do { GCanal *g2 = (g_); int j_, ja_ = 0;                          \
+      for (j_ = 0; j_ < n; j_++) if (!strcmp(out[j_].id, g2->id)) ja_ = 1;          \
+      if (!ja_) { snprintf(out[n].id, sizeof out[n].id, "%s", g2->id);              \
+        snprintf(out[n].nome, sizeof out[n].nome, "%s", g2->nome);                  \
+        out[n].altura = nv_res_do_texto(g2->nome);                                  \
+        if (bases) snprintf(bases[n], 600, "%s", g2->base); n++; } } while (0)
+  for (k = 0; k < total && n < max && n < 3; k++) {
+    GCanal *g1 = linhaItem(l, (c0 + k) % total);
+    if (g1) POE(g1);
   }
+  for (g = 0; g < nCats && n < max && f >= 0; g++)
+    if (cats[g].fonte == f && catN[g] > 0) POE(&canais[catIni[g]]);
+  for (k = 3; k < total && n < max; k++) {
+    GCanal *g1 = linhaItem(l, (c0 + k) % total);
+    if (g1) POE(g1);
+  }
+  #undef POE
+  if (grupo && ng && f >= 0 && f < nLtvF && n > total)
+    snprintf(grupo, ng, "%s", ltvF[f].nome);
   return n;
 }
+
+// O diagnostico grava o que mediu NA FONTE (M8), e nao so nos Ajustes globais:
+// cada provedor pede um formato/modo diferente (#158).
+int guia_fonte_do_canal(const char *id, char *chave, size_t n) {
+  GCanal *c = canalPorId(id);
+  if (!c || c->fonte < 0 || c->fonte >= nLtvF) return 0;
+  snprintf(chave, n, "%s", ltvF[c->fonte].chave);
+  return 1;
+}
+void guia_fonte_gravar_diag(const char *id, int formato, int modo, int proxy) {
+  char ch[LTV_CHAVE];
+  LtvPref *p;
+  if (!guia_fonte_do_canal(id, ch, sizeof ch) || !(p = ltv_pref(ch, 1))) return;
+  p->formato = formato; p->modo = modo; p->proxy = proxy;
+  ltv_pref_gravar();
+  printf("[ltv] fonte=%s diagnostico gravado: formato=%d modo=%d proxy=%d\n", ch, formato, modo, proxy);
+  fflush(stdout);
+}
+int guia_modo_do_canal(const char *id, int padrao) {
+  char ch[LTV_CHAVE];
+  LtvPref *p;
+  if (!guia_fonte_do_canal(id, ch, sizeof ch) || !(p = ltv_pref(ch, 0)) || p->modo < 0) return padrao;
+  return p->modo;
+}
+
 static int pedLivetvDiag;
 int guia_pediu_livetv_diag(void) { int v = pedLivetvDiag; pedLivetvDiag = 0; return v; }
 
@@ -1716,12 +2320,18 @@ int guia_foco_topo(void) { return focoTopo ? topoCol : -1; }
 // publicar() aplica assim que os canais chegam — o overlay aberto pelo
 // player foca o canal que esta no ar mesmo se a carga so terminou depois.
 void guia_focar_id(const char *id) {
-  int l, c;
+  int l, c, volta;
   if (!id || !*id) return;
   snprintf(focoPend, sizeof focoPend, "%s", id);
-  for (l = 0; l < nLinhas(); l++)
-    for (c = 0; c < linhaN(l); c++)
-      if (!strcmp(linhaItem(l, c)->id, id)) { focoLin = l; focoCol = c; return; }
+  // Canal fora da fonte filtrada (o overlay focando o canal no ar, que veio de
+  // outra fonte): o filtro volta para Todas e o foco acha o canal.
+  for (volta = 0; volta < 2; volta++) {
+    for (l = 0; l < nLinhas(); l++)
+      for (c = 0; c < linhaN(l); c++)
+        if (!strcmp(linhaItem(l, c)->id, id)) { focoLin = l; focoCol = c; return; }
+    if (filtro == G_FILTRO_TODAS || !canalPorId(id)) return;
+    filtroDefinir(G_FILTRO_TODAS);
+  }
 }
 
 const char *guia_id_focado(void) {
@@ -1751,7 +2361,7 @@ static void canalParaItem(const GCanal *c, CatItem *dst) {
   snprintf(dst->backdrop,sizeof dst->backdrop,"%s", c->logo);
   snprintf(dst->sinopse, sizeof dst->sinopse, "%s", c->desc);
   snprintf(dst->genero,  sizeof dst->genero,  "%s · %s",
-           i18n("Canal"), c->cat >= 0 ? cats[c->cat] : "");
+           i18n("Canal"), c->cat >= 0 ? cats[c->cat].nome : "");
 }
 
 // A origem do ULTIMO canal pedido, lida por app.c junto com o CatItem. Fica
@@ -1767,6 +2377,8 @@ static time_t janelaIni(time_t agoraT);
 static time_t instanteFoco(time_t agoraT);
 static int epgDo(GCanal *c);
 static int gAgora(GCanal *c, time_t t, EpgProg *p);   // ver a definicao (#158)
+static int gProximo(GCanal *c, time_t t, int k, EpgProg *p);
+static int gFaixa(GCanal *c, time_t de, time_t ate, EpgProg *out, int cap);
 static void pedirCanal(GCanal *c);
 static void buscaAbrir(void);
 static int buscaEvento(const SDL_Event *e);
@@ -1812,9 +2424,8 @@ static void acaoOk(void) {
 // O CANAL DE UM LEMBRETE, para o "Assistir" do cartao: o CatItem do guia
 // quando a lista ja esta carregada; senao so a identidade guardada.
 int guia_item_do_canal(const char *id, const char *nome, const char *base, CatItem *it) {
-  GCanal *c = canalPorId(id);
-  if (c) { canalParaItem(c, it); snprintf(pedidoBase, sizeof pedidoBase, "%s", c->base);
-           snprintf(pedidoTipo, sizeof pedidoTipo, "%s", c->tipo); return 1; }
+  GCanal *c = canalPorIdBase(id, base);
+  if (c) { canalParaItem(c, it); snprintf(pedidoBase, sizeof pedidoBase, "%s", c->base); snprintf(pedidoTipo, sizeof pedidoTipo, "%s", c->tipo); return 1; }
   if (!id || !id[0]) return 0;
   memset(it, 0, sizeof *it);
   snprintf(it->imdb, sizeof it->imdb, "%s", id);
@@ -1850,20 +2461,27 @@ static void pedirCanal(GCanal *c) {
 // que o addon os declara), entao o CH+/− percorre exatamente o que se ve na
 // tela. Da volta nas pontas: de "premiere" para "globo" direto e o jeito
 // antigo de zapear, nao um erro de foco.
+// ZAP DENTRO DA VISTA (M3): com uma fonte filtrada na barra, CH+/- anda nos
+// canais dela; em Favoritos, nos favoritos; em Todas, na lista inteira. Canal
+// no ar fora da vista (veio de outra fonte): o zap anda na lista inteira.
 static int zapAlvo(const char *idAtual, int dir, CatItem *saida, int aplicar) {
-  int i, alvo = 0;
+  int i, alvo = -1, n = nZapL, inteira = 0, idx;
   if (!saida || estado != G_PRONTO || nCanais < 1) return 0;
-  for (i = 0; i < nCanais; i++)
-    if (!strcmp(canais[i].id, idAtual ? idAtual : "")) { alvo = i; break; }
+  for (i = 0; i < n; i++)
+    if (!strcmp(canais[zapL[i]].id, idAtual ? idAtual : "")) { alvo = i; break; }
+  if (alvo < 0 || n < 1) {
+    inteira = 1; n = nCanais; alvo = 0;
+    for (i = 0; i < nCanais; i++)
+      if (!strcmp(canais[i].id, idAtual ? idAtual : "")) { alvo = i; break; }
+  }
   // `dir` pode ser um deslocamento maior que 1 (o zapping com debounce soma os
   // toques) e 0 devolve o proprio canal (recarregar a fonte).
-  alvo = aovivo_ordem(nCanais, alvo, dir);
-  canalParaItem(&canais[alvo], saida);
+  alvo = aovivo_ordem(n, alvo, dir);
+  idx = inteira ? alvo : zapL[alvo];
+  canalParaItem(&canais[idx], saida);
   // A origem so muda quando o zap VAI tocar; o banner do zapping so espia.
-  if (aplicar) {
-    snprintf(pedidoBase, sizeof pedidoBase, "%s", canais[alvo].base);
-    snprintf(pedidoTipo, sizeof pedidoTipo, "%s", canais[alvo].tipo);
-  }
+  if (aplicar) { snprintf(pedidoBase, sizeof pedidoBase, "%s", canais[idx].base);
+    snprintf(pedidoTipo, sizeof pedidoTipo, "%s", canais[idx].tipo); }
   return 1;
 }
 int guia_zap(const char *idAtual, int dir, CatItem *saida) {
@@ -1873,6 +2491,66 @@ int guia_zap_ver(const char *idAtual, int dir, CatItem *saida) {
   return zapAlvo(idAtual, dir, saida, 0);
 }
 
+
+// CANAL DE LISTA M3U (M9): o id e "m3u:<chave da fonte>:<hash>" e a URL, o
+// User-Agent e o Referer ficam no canal (arena), nunca no log. 1 = achou.
+int guia_e_m3u(const char *id) {
+  const GCanal *c = id && !strncmp(id, "m3u:", 4) ? canalPorId(id) : NULL;
+  return c && c->url && c->url[0];
+}
+int guia_m3u_canal(const char *id, char *url, size_t nu, char *ua, size_t nua, char *ref, size_t nr) {
+  const GCanal *c = guia_e_m3u(id) ? canalPorId(id) : NULL;
+  if (url && nu) url[0] = 0;
+  if (ua && nua) ua[0] = 0;
+  if (ref && nr) ref[0] = 0;
+  if (!c || !c->url || !c->url[0]) return 0;
+  if (url && nu) snprintf(url, nu, "%s", c->url);
+  if (ua && nua) snprintf(ua, nua, "%s", c->ua ? c->ua : "");
+  if (ref && nr) snprintf(ref, nr, "%s", c->ref ? c->ref : "");
+  return 1;
+}
+
+// DIGITAR O NUMERO (M7, decisao 7): o canal que o numero digitado leva, pela
+// regra do ltv.h (fonte filtrada: so ela; "Todas": favoritos primeiro, depois
+// as fontes na ordem da barra). `aplicar` 0 so espia (o selo do player chama a
+// cada quadro: o resultado fica em cache ate o numero, o filtro ou a lista
+// mudarem). `fonte` recebe o nome da fonte quando o mesmo numero existe em mais
+// de uma ("Fonte · 101" na tela). 0 = nao ha canal com esse numero.
+int guia_numero_canal(int numero, CatItem *saida, char *fonte, size_t nf, int aplicar) {
+  static int cNum = -1, cFiltro = -9, cN = -1, cIdx = -1, cAmb;
+  static const GCanal *cLista;
+  static LtvNum *buf; static int capBuf;
+  int idx, amb = 0;
+  if (fonte && nf) fonte[0] = 0;
+  if (estado != G_PRONTO || nCanais < 1 || numero <= 0) return 0;
+  if (numero == cNum && filtro == cFiltro && nCanais == cN && canais == cLista) { idx = cIdx; amb = cAmb; }
+  else {
+    int i, f = filtro >= 0 ? filtro : -1;
+    if (nCanais > capBuf) {
+      LtvNum *no = realloc(buf, sizeof *no * (size_t)nCanais);
+      if (!no) return 0;
+      buf = no; capBuf = nCanais;
+    }
+    for (i = 0; i < nCanais; i++) {
+      buf[i].fonte = canais[i].fonte; buf[i].numero = canais[i].numero;
+      buf[i].fav = canais[i].fav; buf[i].ordemFonte = canais[i].fonte;
+    }
+    idx = ltv_numero_achar(buf, nCanais, numero, f, &amb);
+    cNum = numero; cFiltro = filtro; cN = nCanais; cLista = canais; cIdx = idx; cAmb = amb;
+  }
+  if (idx < 0) return 0;
+  if (fonte && nf && amb && canais[idx].fonte >= 0 && canais[idx].fonte < nLtvF)
+    snprintf(fonte, nf, "%s", ltvF[canais[idx].fonte].nome);
+  if (saida) {
+    canalParaItem(&canais[idx], saida);
+    if (aplicar) {
+    snprintf(pedidoBase, sizeof pedidoBase, "%s", canais[idx].base);
+    snprintf(pedidoTipo, sizeof pedidoTipo, "%s", canais[idx].tipo);
+  }
+  }
+  return 1;
+}
+
 // Onde o canal esta na ordem do guia e de que categoria e: o numero que o OSD
 // do player mostra. 0 com a lista ainda nao carregada ou canal fora dela.
 int guia_info_canal(const char *id, int *numero, int *total, char *cat, size_t n) {
@@ -1880,9 +2558,11 @@ int guia_info_canal(const char *id, int *numero, int *total, char *cat, size_t n
   if (estado != G_PRONTO || nCanais < 1 || !id || !id[0]) return 0;
   for (i = 0; i < nCanais; i++) if (!strcmp(canais[i].id, id)) break;
   if (i >= nCanais) return 0;
-  if (numero) *numero = i + 1;
-  if (total) *total = nCanais;
-  if (cat && n) snprintf(cat, n, "%s", canais[i].cat >= 0 ? cats[canais[i].cat] : "");
+  // O NUMERO DO PROVEDOR (decisao 7): tvg-chno / num do Xtream, ou a posicao
+  // na fonte. O total e o da fonte.
+  if (numero) *numero = canais[i].numero;
+  if (total) *total = canais[i].fonte >= 0 && canais[i].fonte < nLtvF ? ltvF[canais[i].fonte].nCanais : nCanais;
+  if (cat && n) snprintf(cat, n, "%s", canais[i].cat >= 0 ? cats[canais[i].cat].nome : "");
   return 1;
 }
 
@@ -1903,6 +2583,16 @@ void guia_alternar_favorito(const char *id) {
 int guia_programa_agora(const char *id, time_t t, EpgProg *p) {
   GCanal *c = canalPorId(id);
   return c && p && gAgora(c, t, p);
+}
+
+// A faixa de programas do canal pela MESMA cascata e o MESMO fuso do guia (M6).
+int guia_programa_faixa(const char *id, time_t de, time_t ate, EpgProg *out, int cap) {
+  GCanal *c = canalPorId(id);
+  return c && out ? gFaixa(c, de, ate, out, cap) : 0;
+}
+int guia_programa_proximo(const char *id, time_t t, int k, EpgProg *p) {
+  GCanal *c = canalPorId(id);
+  return c && p && gProximo(c, t, k, p);
 }
 
 static void moverVertical(int dir) {
@@ -2168,6 +2858,188 @@ static void sair(void) {
   catAberto = 0; dirSeg = 0; okDesde = 0; focoTopo = 0;
 }
 
+// --- BARRA DE FONTES (M3) -----------------------------------------------------------
+// "★ Favoritos · Todas · <addon> · Xtream · <M3U>" no alto da ficha do heroi.
+// Cada chip de fonte tem um PONTO DE SAUDE (verde ok, ambar lista do cache ou
+// grade fraca, vermelho fora) e a contagem. Foco num chip mostra a linha da
+// fonte (canais, grupos, grade em %, atualizada ha quanto, e o aviso de corte).
+// OK filtra (a escolha vale so na sessao, decisao 1); segurar OK abre as opcoes
+// da fonte: ordem dos grupos (provedor / A-Z) e o horario da grade (M6).
+#define G_FONTES_H 56.0f
+static int focoFontes, fontesCol;
+static Uint32 fontesOkDesde; static int fontesOkLongo;
+static int fopAberto, fopFoco;            // opcoes da fonte
+// OPCOES DO CANAL (segurar OK numa linha, M5/M7): Favorito e "Escolher grade
+// deste canal". fopModo 0 = fonte, 1 = canal, 2 = lista de grades.
+enum { FOP_FONTE = 0, FOP_CANAL, FOP_GRADE };
+static int fopModo;
+#define G_SUG 8
+static int sugN, sug[G_SUG];
+static GCanal *fopCanal;
+static void mapaDefinir(GCanal *c, const char *gf, const char *gid);
+static float fontesRol;
+static int barraVisivel(void) { return nLtvF > 0 && !overlay; }
+static int fontesN(void) { return 2 + nLtvF; }
+static int filtroDoChip(int i) { return i == 0 ? G_FILTRO_FAV : i == 1 ? G_FILTRO_TODAS : i - 2; }
+static int chipDoFiltro(void) { return filtro == G_FILTRO_FAV ? 0 : filtro == G_FILTRO_TODAS ? 1 : filtro + 2; }
+static void fontesEntrar(void) { focoFontes = 1; focoTopo = 0; fontesCol = chipDoFiltro(); fopAberto = 0; }
+static void fontesEscolher(int i) {
+  filtroDefinir(filtroDoChip(i));
+  focoLin = 0; focoCol = 0; focoValido();
+  printf("[ltv] filtro: %s\n", i == 0 ? "favoritos" : i == 1 ? "todas" : ltvF[i - 2].chave);
+  fflush(stdout);
+}
+enum { FOP_AZ, FOP_GRUPOS, FOP_FUSO, FOP_RECARREGAR, FOP_N };
+static void gpAbrir(int f);
+static void fopCanalAbrir(GCanal *c) { fopAberto = 1; fopModo = FOP_CANAL; fopFoco = 0; fopCanal = c; }
+static int fopItens(void) { return fopModo == FOP_CANAL ? 2 : fopModo == FOP_GRADE ? 2 + sugN : FOP_N; }
+static void fopCanalOk(void) {
+  GCanal *c = fopCanal;
+  if (!c) { fopAberto = 0; return; }
+  if (fopModo == FOP_CANAL) {
+    if (fopFoco == 0) { favAlternar(c); fopAberto = 0; return; }
+    // As sugestoes: as grades com programa mais parecidas com o nome (fuzzy so
+    // SUGERE, nunca casa sozinho), e a atual primeiro quando ha.
+    sugN = epg_sugerir(c->tvgNome[0] ? c->tvgNome : c->nome, sug, G_SUG);
+    fopModo = FOP_GRADE; fopFoco = 0;
+    return;
+  }
+  if (fopFoco == 0) mapaDefinir(c, NULL, NULL);
+  else if (fopFoco == 1) mapaDefinir(c, "", "-");
+  else mapaDefinir(c, epg_canal_fonte(sug[fopFoco - 2]), epg_canal_id(sug[fopFoco - 2]));
+  epgCoberturaZerar();
+  fopAberto = 0;
+}
+static void fopMudar(int dir) {
+  int f = fontesCol - 2;
+  LtvPref *p;
+  if (fopModo != FOP_FONTE) { if (dir == 0) fopCanalOk(); return; }
+  if (f < 0 || f >= nLtvF || !(p = ltv_pref(ltvF[f].chave, 1))) return;
+  if (fopFoco == FOP_AZ) { p->az = !p->az; ltv_pref_gravar(); empacotar(); focoValido(); }
+  else if (fopFoco == FOP_GRUPOS) { if (dir == 0) gpAbrir(f); }
+  else if (fopFoco == FOP_FUSO) {
+    p->fusoMin += dir * 30;
+    if (p->fusoMin < -720) p->fusoMin = -720;
+    if (p->fusoMin > 840) p->fusoMin = 840;
+    ltvF[f].fusoS = p->fusoMin * 60;
+    ltv_pref_gravar();
+    printf("[ltv] fonte=%s fuso=%+dmin\n", ltvF[f].chave, p->fusoMin); fflush(stdout);
+  } else if (fopFoco == FOP_RECARREGAR && dir == 0) {
+    fopAberto = 0;
+    if (fioVivo) recarregarPend = 1;
+    else { estado = G_PARADO; ultTentativa = 0; iniciarCarga(); }
+  }
+}
+// --- ESCOLHER GRUPOS (M2) ---------------------------------------------------------
+// Uma fonte que passa do teto da TV mostra so parte dos canais; aqui a pessoa
+// marca os grupos que quer, vendo "N de M canais" ao vivo (M = o teto da
+// plataforma menos o que as OUTRAS fontes ja ocupam). Sem nada marcado vale o
+// automatico: grupos inteiros na ordem do provedor. Marcar so e permitido
+// enquanto couber, para a conta da tela ser a do resultado.
+// Aplicar grava em ltv_pref (grupos) e recarrega; Voltar descarta.
+static int gpAberto, gpFonte, gpFoco, gpN, gpAviso;
+static unsigned char *gpMarca;
+static float gpRol;
+static Uint32 gpAbriuEm, gpAvisoEm;
+static int gpCota(void) {
+  int j, usado = 0;
+  for (j = 0; j < nLtvF; j++) if (j != gpFonte) usado += ltvF[j].nCanais;
+  return tetoCarga - usado > 0 ? tetoCarga - usado : 0;
+}
+// Canais que entram com a marcacao atual (automatico = a regra do provedor).
+static int gpConta(int *auto_) {
+  const GFonteLtv *F = &ltvF[gpFonte];
+  int i, soma = 0, marcados = 0;
+  for (i = 0; i < gpN; i++) if (gpMarca[i]) { soma += F->gi[i].n; marcados++; }
+  if (auto_) *auto_ = !marcados;
+  if (marcados) return soma;
+  { int *c = malloc(sizeof(int) * (size_t)(gpN ? gpN : 1));
+    const char **nm = malloc(sizeof(char *) * (size_t)(gpN ? gpN : 1));
+    unsigned char *en = malloc((size_t)(gpN ? gpN : 1));
+    if (c && nm && en) {
+      for (i = 0; i < gpN; i++) { c[i] = F->gi[i].n; nm[i] = F->gi[i].nome; }
+      soma = ltv_grupos_admitir(c, nm, gpN, NULL, 0, gpCota(), en);
+    }
+    free(c); free(nm); free(en); }
+  return soma;
+}
+static void gpAbrir(int f) {
+  const GFonteLtv *F = &ltvF[f];
+  LtvPref *p = ltv_pref(F->chave, 0);
+  const char *sel[256];
+  int i, ns = p ? ltv_pref_grupos(p, sel, 256) : 0;
+  if (F->ngi <= 0) return;
+  free(gpMarca);
+  gpMarca = calloc((size_t)F->ngi, 1);
+  if (!gpMarca) return;
+  gpFonte = f; gpN = F->ngi; gpFoco = 2; gpRol = 0.0f; gpAviso = 0;
+  // Ja havia escolha: ela. Senao o que esta na tela agora (quando a fonte foi
+  // cortada) ou nada (cabe tudo: automatico).
+  for (i = 0; i < gpN; i++)
+    gpMarca[i] = ns > 0 ? (unsigned char)nomeNaLista(F->gi[i].nome, sel, ns)
+                        : (unsigned char)(F->cortada && F->gi[i].entra);
+  fopAberto = 0; gpAberto = 1; gpAbriuEm = SDL_GetTicks();
+}
+static void gpAplicar(void) {
+  const GFonteLtv *F = &ltvF[gpFonte];
+  LtvPref *p = ltv_pref(F->chave, 1);
+  const char **v = malloc(sizeof(char *) * (size_t)(gpN ? gpN : 1));
+  int i, n = 0;
+  if (p && v) {
+    for (i = 0; i < gpN; i++) if (gpMarca[i]) v[n++] = F->gi[i].nome;
+    ltv_pref_definir_grupos(p, v, n);
+    ltv_pref_gravar();
+    printf("[ltv] fonte=%s grupos escolhidos=%d\n", F->chave, n); fflush(stdout);
+    if (fioVivo) recarregarPend = 1;
+    else { estado = G_PARADO; ultTentativa = 0; iniciarCarga(); }
+  }
+  free(v);
+  gpAberto = 0; focoFontes = 0;
+}
+// Teclas do seletor; sempre consome.
+static void gpEvento(SDL_Keycode k, int repete, Uint32 agora) {
+  int n = 2 + gpN;
+  if (k == SDLK_UP)   { if (gpFoco > 0) gpFoco--; return; }
+  if (k == SDLK_DOWN) { if (gpFoco + 1 < n) gpFoco++; return; }
+  if (k == SDLK_PAGEUP) { gpFoco = gpFoco > 8 ? gpFoco - 8 : 0; return; }
+  if (k == SDLK_PAGEDOWN) { gpFoco = gpFoco + 8 < n ? gpFoco + 8 : n - 1; return; }
+  if ((k == SDLK_RETURN || k == SDLK_KP_ENTER) && !repete && agora - gpAbriuEm > 350u) {
+    if (gpFoco == 0) {
+      int au; (void)gpConta(&au);
+      gpAplicar();
+    } else if (gpFoco == 1) memset(gpMarca, 0, (size_t)gpN);
+    else {
+      int i = gpFoco - 2;
+      if (gpMarca[i]) gpMarca[i] = 0;
+      else {
+        int au, antes = gpConta(&au);
+        int livre = au ? 0 : antes;   // o automatico some ao marcar: conta de zero
+        if (livre + ltvF[gpFonte].gi[i].n <= gpCota()) gpMarca[i] = 1;
+        else { gpAviso = 1; gpAvisoEm = agora; }
+      }
+    }
+  }
+}
+// Teclas da barra. 1 = consumiu.
+static int fontesEvento(SDL_Keycode k, Uint32 agora) {
+  if (fopAberto) {
+    if (k == SDLK_UP)   { if (fopFoco > 0) fopFoco--; return 1; }
+    if (k == SDLK_DOWN) { if (fopFoco + 1 < fopItens()) fopFoco++; return 1; }
+    if (k == SDLK_LEFT || k == SDLK_RIGHT) { fopMudar(k == SDLK_RIGHT ? 1 : -1); return 1; }
+    if (k == SDLK_RETURN || k == SDLK_KP_ENTER) { fopMudar(0); return 1; }
+    return 1;
+  }
+  if (k == SDLK_LEFT)  { if (fontesCol > 0) fontesCol--; return 1; }
+  if (k == SDLK_RIGHT) { if (fontesCol + 1 < fontesN()) fontesCol++; return 1; }
+  if (k == SDLK_UP)    { focoFontes = 0; focoTopo = 1; topoCol = modoLista ? G_TOPO_LISTA : G_TOPO_CARTOES; return 1; }
+  if (k == SDLK_DOWN)  { focoFontes = 0; focoValido(); return 1; }
+  if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
+    if (!fontesOkDesde) { fontesOkDesde = agora ? agora : 1; fontesOkLongo = 0; }
+    return 1;
+  }
+  return 0;
+}
+
 void guia_evento(const SDL_Event *e) {
   if (!guia_visivel()) return;
 #ifdef NV_TOUCH_UI
@@ -2188,6 +3060,12 @@ void guia_evento(const SDL_Event *e) {
         else acaoOk();
       }
       okDesde = 0; okLongo = 0;
+      if (fontesOkDesde && !fontesOkLongo && focoFontes && !fopAberto) {
+        int ch = fontesCol;
+        fontesEscolher(ch);
+        focoFontes = 0;
+      }
+      fontesOkDesde = 0; fontesOkLongo = 0;
     }
     return;
   }
@@ -2197,8 +3075,16 @@ void guia_evento(const SDL_Event *e) {
   // A dica sai na primeira tecla; a tecla segue valendo.
   dicaDesde = 0;
 
+  if (gpAberto) {
+    if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE ||
+        k == SDLK_DELETE || e->key.keysym.scancode == NV_SCANCODE_BACK) { gpAberto = 0; return; }
+    gpEvento(k, e->key.repeat, agora);
+    return;
+  }
   if (k == SDLK_AC_BACK || k == SDLK_ESCAPE || k == SDLK_BACKSPACE ||
       k == SDLK_DELETE || e->key.keysym.scancode == NV_SCANCODE_BACK) {
+    if (fopAberto) { fopAberto = 0; return; }
+    if (focoFontes && !painel && !catAberto) { focoFontes = 0; return; }
     sair(); return;
   }
   // NA FAIXA, AZUL ABRE O GUIA COMPLETO (o canal no ar encolhe para o
@@ -2279,13 +3165,17 @@ void guia_evento(const SDL_Event *e) {
     return;
   }
 
+  if (fopAberto) { dirSeg = 0; fontesEvento(k, agora); return; }
+  if (focoFontes && barraVisivel()) { dirSeg = 0; if (fontesEvento(k, agora)) return; }
+  else focoFontes = 0;
+
   // Foco no cabecalho: ESQUERDA/DIREITA entre os tres controles, BAIXO volta
-  // as linhas, OK age. CIMA nao faz nada — nao ha nada acima.
+  // a barra de fontes (ou as linhas), OK age. CIMA nao faz nada.
   if (focoTopo) {
     dirSeg = 0;
     if (k == SDLK_LEFT)  { if (topoCol > 0) topoCol--; return; }
     if (k == SDLK_RIGHT) { if (topoCol + 1 < G_TOPO_N) topoCol++; return; }
-    if (k == SDLK_DOWN)  { focoTopo = 0; return; }
+    if (k == SDLK_DOWN)  { focoTopo = 0; if (barraVisivel()) fontesEntrar(); return; }
     if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
       if (topoCol == G_TOPO_BUSCAR) buscaAbrir();
       else if (topoCol == G_TOPO_CATEGORIAS) catAbrir(2, 0);
@@ -2309,7 +3199,8 @@ void guia_evento(const SDL_Event *e) {
     // CIMA na primeira linha sobe ao cabecalho — so num toque FRESCO: quem
     // esta segurando CIMA quer o modo salta-categoria, nao o controle.
     if (dir < 0 && fresco && focoLin == 0 && (!modoLista || focoCol == 0)) {
-      focoTopo = 1; topoCol = modoLista ? G_TOPO_LISTA : G_TOPO_CARTOES;
+      if (barraVisivel()) fontesEntrar();
+      else { focoTopo = 1; topoCol = modoLista ? G_TOPO_LISTA : G_TOPO_CARTOES; }
       dirSeg = 0;
       return;
     }
@@ -2339,11 +3230,11 @@ void guia_evento(const SDL_Event *e) {
   // toda". BAIXO no cabecalho volta para a linha em que estava.
   if (modoLista) {
     if (k == SDLK_LEFT)  { if (janelaDesl > 0) janelaDesl -= G_L_PASSO_MIN;
-                           else { focoTopo = 1; topoCol = G_TOPO_LISTA; dicaUsou(); } return; }
+                           else { if (barraVisivel()) fontesEntrar(); else { focoTopo = 1; topoCol = G_TOPO_LISTA; } dicaUsou(); } return; }
     if (k == SDLK_RIGHT) { if (janelaDesl < G_L_DESL_MAX) janelaDesl += G_L_PASSO_MIN; return; }
   } else {
     if (k == SDLK_LEFT)  { if (focoCol > 0) focoCol--;
-                           else { focoTopo = 1; topoCol = G_TOPO_CARTOES; dicaUsou(); } return; }
+                           else { if (barraVisivel()) fontesEntrar(); else { focoTopo = 1; topoCol = G_TOPO_CARTOES; } dicaUsou(); } return; }
     if (k == SDLK_RIGHT) { if (focoCol + 1 < linhaN(focoLin)) focoCol++; return; }
   }
   if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
@@ -2431,7 +3322,7 @@ static void epgPaisesEscolher(void) {
       if (!xtream_e_id(canais[i].id)) continue;
       nXt++;
       p = paisDoTexto(canais[i].nome, b);
-      if (!p && canais[i].cat >= 0 && canais[i].cat < nCats) p = paisDoTexto(cats[canais[i].cat], b);
+      if (!p && canais[i].cat >= 0 && canais[i].cat < nCats) p = paisDoTexto(cats[canais[i].cat].nome, b);
       if (!p) continue;
       for (j = 0; j < nc && strcmp(cod[j], p); j++) {}
       if (j == nc) { if (nc == 8) continue; snprintf(cod[nc], 3, "%s", p); cont[nc++] = 0; }
@@ -2457,40 +3348,130 @@ static void epgPaisesEscolher(void) {
   epg_paises_definir(lista);
 }
 
-// --- EPG por canal ---------------------------------------------------------------
-// Resolve e cacheia o indice da grade. -2 marca "sem grade real" para nao
+// --- EPG por canal (M5: cascata, manual e cobertura; M6: fuso) --------------------
+// A ESCOLHA MANUAL ("Escolher grade deste canal") vale por FONTE:CANAL e fica em
+// ltv-epgmapa-p<N>.txt: "chave TAB id TAB fonteDaGrade TAB idDaGrade" ("-" =
+// sem grade). E a ultima palavra: vence o id e o nome.
+#define G_MAX_MAPA 600
+typedef struct { char chave[LTV_CHAVE]; char id[80]; char gf[LTV_CHAVE]; char gid[96]; } GMapa;
+static GMapa mapa[G_MAX_MAPA]; static int nMapa, mapaPerfil = -999;
+static void mapaNome(char *d, size_t n) {
+  int p = perfis_ativo();
+  if (p <= 0) snprintf(d, n, "ltv-epgmapa.txt"); else snprintf(d, n, "ltv-epgmapa-p%d.txt", p);
+}
+static void mapaLer(void) {
+  char nome[48], *t, *q;
+  if (mapaPerfil == perfis_ativo()) return;
+  mapaPerfil = perfis_ativo();
+  nMapa = 0;
+  mapaNome(nome, sizeof nome);
+  t = dados_ler(nome);
+  for (q = t; q && *q && nMapa < G_MAX_MAPA; ) {
+    char *fim = q + strcspn(q, "\n"), *c[4];
+    int k = 0;
+    if (*fim) *fim++ = 0;
+    c[0] = q;
+    while (k < 3 && (c[k + 1] = strchr(c[k], '\t'))) { *c[k + 1]++ = 0; k++; }
+    if (k == 3) {
+      snprintf(mapa[nMapa].chave, sizeof mapa[0].chave, "%s", c[0]);
+      snprintf(mapa[nMapa].id, sizeof mapa[0].id, "%s", c[1]);
+      snprintf(mapa[nMapa].gf, sizeof mapa[0].gf, "%s", c[2]);
+      snprintf(mapa[nMapa].gid, sizeof mapa[0].gid, "%s", c[3]);
+      nMapa++;
+    }
+    q = fim;
+  }
+  free(t);
+}
+static void mapaGravar(void) {
+  static char buf[G_MAX_MAPA * 240];
+  char nome[48];
+  size_t u = 0;
+  int i;
+  for (i = 0; i < nMapa && u + 240 < sizeof buf; i++)
+    u += (size_t)snprintf(buf + u, sizeof buf - u, "%s\t%s\t%s\t%s\n", mapa[i].chave, mapa[i].id,
+                          mapa[i].gf, mapa[i].gid);
+  buf[u] = 0;
+  mapaNome(nome, sizeof nome);
+  dados_gravar(nome, buf);
+}
+static GMapa *mapaDe(const GCanal *c) {
+  int i;
+  mapaLer();
+  for (i = 0; i < nMapa; i++)
+    if (!strcmp(mapa[i].id, c->id) && !strcmp(mapa[i].chave, chaveDo(c))) return &mapa[i];
+  return NULL;
+}
+// gid NULL = volta ao automatico; "-" = sem grade; senao o canal da grade.
+static void mapaDefinir(GCanal *c, const char *gf, const char *gid) {
+  GMapa *m = mapaDe(c);
+  if (!gid) {
+    if (m) { int i = (int)(m - mapa); memmove(&mapa[i], &mapa[i + 1], sizeof mapa[0] * (size_t)(nMapa - i - 1)); nMapa--; }
+  } else {
+    if (!m) {
+      if (nMapa >= G_MAX_MAPA) { memmove(mapa, mapa + 1, sizeof mapa[0] * (G_MAX_MAPA - 1)); nMapa--; }
+      m = &mapa[nMapa++];
+      snprintf(m->chave, sizeof m->chave, "%s", chaveDo(c));
+      snprintf(m->id, sizeof m->id, "%s", c->id);
+    }
+    snprintf(m->gf, sizeof m->gf, "%s", gf ? gf : "");
+    snprintf(m->gid, sizeof m->gid, "%s", gid);
+  }
+  mapaGravar();
+  c->epg = -1;
+  printf("[ltv] grade de um canal da fonte %s: %s\n", chaveDo(c),
+         !gid ? "automatica" : !strcmp(gid, "-") ? "nenhuma (escolha)" : "escolhida a mao");
+  fflush(stdout);
+}
+
+// Resolve e guarda o indice da grade. -2 marca "sem grade real" para nao
 // consultar de novo a cada quadro.
 static int epgDo(GCanal *c) {
   if (c->epg == -1) {
+    GMapa *m;
+    int met = EPG_M_NENHUM;
     if (epg_estado() == EPG_FALHOU) return -2;
     if (epg_estado() != EPG_PRONTO) return -1;
-    c->epg = c->epgId[0] ? epg_match_id(c->epgId) : -1;
-    if (c->epg < 0) c->epg = epg_match(c->nome);
+    m = mapaDe(c);
+    if (m && !strcmp(m->gid, "-")) { c->epg = -2; c->epgMetodo = EPG_M_MANUAL; return -2; }
+    if (m && (c->epg = epg_achar(m->gf, m->gid)) >= 0) { c->epgMetodo = EPG_M_MANUAL; return c->epg; }
+    c->epg = epg_casar(chaveDo(c), c->epgId, c->tvgNome, c->nome, &met);
+    c->epgMetodo = (short)met;
     if (c->epg < 0) c->epg = -2;
   }
   return c->epg;
 }
 
+// O FUSO DA FONTE (M6): grade de provedor com hora deslocada (o classico "tudo
+// 1 h adiantado", ou 5-8 h num painel de outro continente). A pessoa acerta por
+// fonte nas opcoes da fonte; a grade guarda epoch e o deslocamento entra na
+// consulta e na resposta.
+static int fusoDe(const GCanal *c) {
+  return c->fonte >= 0 && c->fonte < nLtvF ? ltvF[c->fonte].fusoS : 0;
+}
+static void fusoAplicar(EpgProg *p, int off) { if (off) { p->ini += off; p->fim += off; } }
+
 // A GRADE DE UM CANAL, venha de onde vier (#158): primeiro a XMLTV (epg.c:
 // provedor, epgshare01 do pais), e, para canal Xtream que nao casou nela, a
-// grade curta do proprio painel (xtepg.c). Pedir e barato e so acontece para
-// o canal que esta sendo desenhado. Sem grade ainda (-1, EPG carregando) o
-// pedido tambem sai: a XMLTV pode demorar um minuto, a curta vem em um
-// segundo, e quando a XMLTV casar ela passa na frente.
+// grade curta do proprio painel (xtepg.c).
 static int xtCurta(GCanal *c) {
   if (!xtream_e_id(c->id)) return 0;
   xtepg_querer(c->id);
   return 1;
 }
 static int gAgora(GCanal *c, time_t t, EpgProg *p) {
-  int epg = epgDo(c);
-  if (epg >= 0) return epg_agora(epg, t, p);
-  return xtCurta(c) && xtepg_agora(c->id, t, p);
+  int epg = epgDo(c), off = fusoDe(c), r;
+  if (epg >= 0) r = epg_agora(epg, t - off, p);
+  else r = xtCurta(c) && xtepg_agora(c->id, t - off, p);
+  if (r) fusoAplicar(p, off);
+  return r;
 }
 static int gProximo(GCanal *c, time_t t, int k, EpgProg *p) {
-  int epg = epgDo(c);
-  if (epg >= 0) return epg_proximo(epg, t, k, p);
-  return xtCurta(c) && xtepg_proximo(c->id, t, k, p);
+  int epg = epgDo(c), off = fusoDe(c), r;
+  if (epg >= 0) r = epg_proximo(epg, t - off, k, p);
+  else r = xtCurta(c) && xtepg_proximo(c->id, t - off, k, p);
+  if (r) fusoAplicar(p, off);
+  return r;
 }
 // 0 = grade disponivel, -1 = pedido pendente, -2 = sem grade.
 static int gEstadoGrade(GCanal *c) {
@@ -2503,12 +3484,72 @@ static int gEstadoGrade(GCanal *c) {
   return epg;
 }
 static int gFaixaDesde(GCanal *c, time_t de, time_t ate, int pular, EpgProg *out, int cap) {
-  int epg = epgDo(c);
-  if (epg >= 0) return epg_faixa_desde(epg, de, ate, pular, out, cap);
-  return xtCurta(c) ? xtepg_faixa_desde(c->id, de, ate, pular, out, cap) : 0;
+  int epg = epgDo(c), off = fusoDe(c), n;
+  if (epg >= 0) n = epg_faixa_desde(epg, de - off, ate - off, pular, out, cap);
+  else n = xtCurta(c) ? xtepg_faixa_desde(c->id, de - off, ate - off, pular, out, cap) : 0;
+  for (int i = 0; out && i < n && i < cap; i++) fusoAplicar(&out[i], off);
+  return n;
 }
 static int gFaixa(GCanal *c, time_t de, time_t ate, EpgProg *out, int cap) {
-  return gFaixaDesde(c, de, ate, 0, out, cap);
+  int epg = epgDo(c), off = fusoDe(c), n, i;
+  if (epg >= 0) n = epg_faixa(epg, de - off, ate - off, out, cap);
+  else n = xtCurta(c) ? xtepg_faixa(c->id, de - off, ate - off, out, cap) : 0;
+  for (i = 0; out && i < n && i < cap; i++) fusoAplicar(&out[i], off);
+  return n;
+}
+
+// COBERTURA DA GRADE POR FONTE (M5/M6): em fundo, alguns canais por quadro (as
+// regras de prefixo varrem a grade inteira), ate a lista toda estar resolvida.
+// Ai sai UMA linha [ltv] por fonte: canais, grade em %, por metodo, idade da
+// grade, fuso. E o numero que mede as mudancas do plano.
+static int cobCursor, cobFeita;
+static void epgCoberturaZerar(void) {
+  int i, k;
+  cobCursor = 0; cobFeita = 0;
+  for (i = 0; i < nLtvF; i++) {
+    ltvF[i].epgResolvidos = ltvF[i].epgCom = 0;
+    for (k = 0; k <= EPG_M_MANUAL; k++) ltvF[i].epgPor[k] = 0;
+  }
+}
+static void epgCoberturaPasso(Uint32 orcamentoMs) {
+  Uint32 t0;
+  int i;
+  if (cobFeita || epg_estado() != EPG_PRONTO || estado != G_PRONTO || !nCanais) return;
+  t0 = SDL_GetTicks();
+  while (cobCursor < nCanais && SDL_GetTicks() - t0 < orcamentoMs) {
+    GCanal *c = &canais[cobCursor++];
+    int e = epgDo(c);
+    if (c->fonte < 0 || c->fonte >= nLtvF) continue;
+    ltvF[c->fonte].epgResolvidos++;
+    if (e >= 0 && epg_total(e) > 0) {
+      ltvF[c->fonte].epgCom++;
+      if (c->epgMetodo >= 0 && c->epgMetodo <= EPG_M_MANUAL) ltvF[c->fonte].epgPor[c->epgMetodo]++;
+    }
+  }
+  if (cobCursor < nCanais) return;
+  cobFeita = 1;
+  { EpgFonteInfo inf[EPG_MAX_EXTRAS];
+    int ni = epg_fontes_info(inf, EPG_MAX_EXTRAS);
+    for (i = 0; i < nLtvF; i++) {
+      GFonteLtv *F = &ltvF[i];
+      int pct = F->nCanais ? F->epgCom * 100 / F->nCanais : 0, k;
+      const char *grade = "epgshare01";
+      long idade = -1;
+      for (k = 0; k < ni; k++)
+        if (!strcmp(inf[k].chave, F->chave)) {
+          grade = inf[k].ok ? (inf[k].deCache ? "provedor(cache)" : "provedor") : "provedor(falhou)";
+          idade = inf[k].idadeS;
+        }
+      // Saude: lista do cache ou grade quase vazia num provedor com grade = ambar.
+      if (F->saude == LTV_SAUDE_OK && (F->deCache || (strncmp(grade, "epgshare", 8) && pct < 20)))
+        F->saude = LTV_SAUDE_DEGRADADA;
+      printf("[ltv] fonte=%s tipo=%s canais=%d grupos=%d grade=%d%% (id %d, nome %d, apelido %d, manual %d) "
+             "fonte_grade=%s idade=%ldh fuso=%+dmin%s\n",
+             F->chave, ltv_tipo_nome(F->tipo), F->nCanais, F->nGrupos, pct, F->epgPor[EPG_M_ID],
+             F->epgPor[EPG_M_NOME], F->epgPor[EPG_M_ALIAS], F->epgPor[EPG_M_MANUAL], grade,
+             idade >= 0 ? idade / 3600 : 0, F->fusoS / 60, F->cortada ? " cortada" : "");
+    }
+    fflush(stdout); }
 }
 
 // Quando a grade EPG e (re)publicada, os indices guardados morrem — a troca
@@ -2528,8 +3569,10 @@ static void epgPasso(void) {
   if (pronto && !epgEraPronto) {
     epgRev++;
     for (int i = 0; i < nCanais; i++) canais[i].epg = -1;
+    epgCoberturaZerar();
   }
   epgEraPronto = pronto;
+  epgCoberturaPasso(3);
 }
 
 // Posicao vertical (antes da rolagem) do canal `c` da linha `l` no modo
@@ -2556,6 +3599,16 @@ static float paItemY(int i) {
   return 36.0f + (float)n * G_PA_ROW + 28.0f + 36.0f + 60.0f + (float)(i - n) * G_PA_ROW_REC;
 }
 #define G_PA_LISTA_Y 200.0f
+
+// Ajustes mexeu nas listas M3U / guias XMLTV por URL (M9): o que ja esta na
+// tela recarrega para a fonte nova entrar (ou a removida sair). Sem lista
+// carregada nao ha o que refazer: a proxima carga ja le as URLs.
+void guia_fontes_mudaram(void) {
+  ltv_urls_carregar(perfis_ativo());
+  if (nCanais <= 0 && estado == G_PARADO) return;
+  if (fioVivo) recarregarPend = 1;
+  else { estado = G_PARADO; ultTentativa = 0; iniciarCarga(); }
+}
 
 int guia_atualizando_lista(void) {
   return recargaDoPainel && !painel && (fioVivo || recarregarPend);
@@ -2703,9 +3756,17 @@ void guia_atualizar(float dt, Uint32 agora) {
   }
 
   // OK segurado = favorito.
+  // OK segurado num chip de fonte: as opcoes da fonte (Todas/Favoritos nao tem).
+  if (fontesOkDesde && !fontesOkLongo && agora - fontesOkDesde >= NV_HOLD_MS) {
+    fontesOkLongo = 1;
+    if (focoFontes && fontesCol >= 2) { fopAberto = 1; fopModo = FOP_FONTE; fopFoco = 0; }
+  }
   if (!okLongo && segurar_venceu(agora, okDesde, "guia")) {
     GCanal *c = linhaItem(focoLin, focoCol);
-    if (c) favAlternar(c);
+    // Na faixa sobre o video o OK segurado continua sendo o favorito; no guia
+    // completo abre as opcoes do canal (Favorito, Escolher grade).
+    if (c && overlay) favAlternar(c);
+    else if (c) fopCanalAbrir(c);
     okLongo = 1;
   }
 
@@ -2728,9 +3789,9 @@ void guia_atualizar(float dt, Uint32 agora) {
     float alvo = (float)focoCol * passo - G_AREA_W * 0.5f + G_CARD_W * 0.5f;
     if (alvo < 0.0f) alvo = 0.0f;
 #ifdef NV_TOUCH_UI
-    if (!toquerol_livre(&toqueGradeX[l]))
+    if (!toquerol_livre(toqueXde(l)))
 #endif
-      rolX[l] = anim_mola(rolX[l], alvo, dt, 14.0f); }
+      *rolXde(l) = anim_mola(*rolXde(l), alvo, dt, 14.0f); }
 }
 
 // --- desenho ---------------------------------------------------------------------
@@ -3163,8 +4224,8 @@ static void desenharHero(float a, time_t agoraT, time_t tFoco) {
     char num[16], cat[96];
     float tx = x + 132.0f, tw = w - 132.0f, ey;
     TxtLinha n;
-    snprintf(num, sizeof num, "%d", (int)(c - canais) + 1);
-    snprintf(cat, sizeof cat, "%s", c->cat >= 0 ? i18n(cats[c->cat]) : "");
+    snprintf(num, sizeof num, "%d", c->numero);
+    snprintf(cat, sizeof cat, "%s", c->cat >= 0 ? i18n(cats[c->cat].nome) : "");
     logoNaCaixa(c, lx, 112.0f, 60.0f, G_LOGO_CLARO, ha);
     n = txt_linha(TXT_DET_META2, num, 150, 153, 162, 255);
     if (tem) {
@@ -3514,6 +4575,224 @@ static void desenharDuasPortas(float x, float y, float a) {
                          a * 0.95f); } }
 }
 
+
+// O "atualizado ha" curto da fonte.
+static void haQuanto(long long quando, char *d, size_t n) {
+  long s = (long)((long long)time(NULL) - quando);
+  if (quando <= 0 || s < 0) { d[0] = 0; return; }
+  if (s < 120) snprintf(d, n, "%s", i18n("agora"));
+  else if (s < 7200) snprintf(d, n, i18n("há %d min"), (int)(s / 60));
+  else if (s < 2 * 86400) snprintf(d, n, i18n("há %d h"), (int)(s / 3600));
+  else snprintf(d, n, i18n("há %d dias"), (int)(s / 86400));
+}
+
+static void desenharFontes(float a) {
+  float x0 = G_INFO_X, xm = G_INFO_X + G_INFO_W, y = G_HERO_Y + G_INFO_H - 112.0f, h = 40.0f, x, alvo, xf = 0, wf = 0;
+  float xs[2 + G_MAX_LTV], ws[2 + G_MAX_LTV];
+  char rot[2 + G_MAX_LTV][96];
+  int i, n = fontesN(), sel = chipDoFiltro(), tf = ajustes_tinta_foco();
+  if (!barraVisivel()) return;
+  for (i = 0; i < n; i++) {
+    if (i == 0) snprintf(rot[i], sizeof rot[i], "\xe2\x98\x85 %s", i18n("Favoritos"));
+    else if (i == 1) snprintf(rot[i], sizeof rot[i], "%s", i18n("Todas"));
+    else snprintf(rot[i], sizeof rot[i], "%s  %d", ltvF[i - 2].nome, ltvF[i - 2].nCanais);
+    ws[i] = (float)txt_linha(TXT_PG_ROTULO, rot[i], 255, 255, 255, 255).w + 2.0f * G_CHIP_PAD + (i >= 2 ? 18.0f : 0.0f);
+  }
+  for (i = 0, x = 0.0f; i < n; i++) { xs[i] = x; x += ws[i] + 10.0f; }
+  // A barra rola para o chip em foco (ou o escolhido) ficar a vista.
+  { int k = focoFontes ? fontesCol : sel;
+    alvo = fontesRol;
+    if (xs[k] - fontesRol < 0.0f) alvo = xs[k];
+    if (xs[k] + ws[k] - fontesRol > xm - x0) alvo = xs[k] + ws[k] - (xm - x0);
+    fontesRol = alvo; }
+  gfx_recorte(x0 - 4.0f, y - 6.0f, xm - x0 + 8.0f, h + 12.0f);
+  for (i = 0; i < n; i++) {
+    GfxRect r = { x0 + xs[i] - fontesRol, y, ws[i], h };
+    int foc = focoFontes && fontesCol == i, ct;
+    float tx;
+    if (r.x + r.w < x0 - 4.0f || r.x > xm + 4.0f) continue;
+    if (foc) { plrui_pilula_foco(r, a); xf = r.x; wf = r.w; }
+    else if (i == sel) { if (ajustes_vidro()) gfx_cor(r, 0.5f, 1, 1, 1, 0.14f * a); else gfx_cor(r, 0.5f, 0.204f, 0.212f, 0.243f, a); }
+    else plrui_botao_repouso(r, a);
+    ct = foc ? tf : i == sel ? 245 : 168;
+    tx = r.x + G_CHIP_PAD;
+    if (i >= 2) {
+      // Ponto de saude: verde, ambar, vermelho.
+      int sd = ltvF[i - 2].saude;
+      GfxRect d = { tx, r.y + (h - 10.0f) * 0.5f, 10.0f, 10.0f };
+      if (sd == LTV_SAUDE_FORA) gfx_cor(d, 0.5f, 0.92f, 0.33f, 0.31f, a);
+      else if (sd == LTV_SAUDE_DEGRADADA) gfx_cor(d, 0.5f, 0.98f, 0.73f, 0.26f, a);
+      else gfx_cor(d, 0.5f, 0.30f, 0.84f, 0.46f, a);
+      tx += 18.0f;
+    }
+    { TxtLinha t = txt_linha(TXT_PG_ROTULO, rot[i], ct, ct < 255 ? ct + 1 : 255, ct + 5 > 255 ? 255 : ct + 5, 255);
+      txt_desenhar_alpha(t, tx, r.y + (h - (float)t.h) * 0.5f, a); }
+  }
+  gfx_sem_recorte();
+  // A LINHA DA FONTE em foco: o que ela tem, de quando e o aviso de corte.
+  if (focoFontes && fontesCol >= 2 && !fopAberto) {
+    const GFonteLtv *F = &ltvF[fontesCol - 2];
+    char linha[320], quando[64], grade[64] = "";
+    haQuanto(F->atualizada, quando, sizeof quando);
+    if (F->epgResolvidos && F->nCanais)
+      snprintf(grade, sizeof grade, i18n("grade em %d%%"), F->epgCom * 100 / F->nCanais);
+    if (F->saude == LTV_SAUDE_FORA)
+      snprintf(linha, sizeof linha, "%s", i18n("Fora do ar agora · sem lista guardada · segure OK para recarregar"));
+    else {
+      size_t u;
+      if (F->cortada) snprintf(linha, sizeof linha, i18n("Mostrando %d de %d canais (o que cabe nesta TV)"),
+                               F->nCanais, F->total);
+      else snprintf(linha, sizeof linha, i18n("%d canais · %d grupos"), F->nCanais, F->nGrupos);
+      u = strlen(linha);
+      if (grade[0]) u += (size_t)snprintf(linha + u, sizeof linha - u, " \xc2\xb7 %s", grade);
+      snprintf(linha + u, sizeof linha - u, " \xc2\xb7 %s", F->deCache ? i18n("lista guardada") : quando);
+    }
+    { TxtLinha t = txt_linha_corta(TXT_CAPTION, linha, 196, 198, 206, 255, G_INFO_W);
+      GfxRect p = { x0, y - 44.0f, (float)t.w + 28.0f, 36.0f };
+      gfx_cor(p, 0.5f, 0.08f, 0.085f, 0.10f, 0.94f * a);
+      txt_desenhar_alpha(t, p.x + 14.0f, p.y + (p.h - (float)t.h) * 0.5f, a); }
+  }
+  if (fopAberto && fopModo != FOP_FONTE && fopCanal) {
+    static char it[2 + G_SUG][160];
+    int nIt = fopItens(), k, tf2 = ajustes_tinta_foco();
+    GfxRect c = { x0, G_HERO_Y + G_FONTES_H + 20.0f, 760.0f, 60.0f + (float)nIt * 58.0f };
+    const char *tit = fopModo == FOP_CANAL ? fopCanal->nome : i18n("Escolher grade deste canal");
+    if (fopModo == FOP_CANAL) {
+      snprintf(it[0], sizeof it[0], "%s%s", fopCanal->fav ? "\xe2\x98\x85 " : "", i18n("Favorito"));
+      snprintf(it[1], sizeof it[1], "%s", i18n("Escolher grade deste canal"));
+    } else {
+      int e = epgDo(fopCanal);
+      snprintf(it[0], sizeof it[0], "%s%s%s", i18n("Automática"), e >= 0 ? " \xc2\xb7 " : "",
+               e >= 0 ? epg_canal_nome(e) : "");
+      snprintf(it[1], sizeof it[1], "%s", i18n("Sem grade de programação"));
+      for (k = 0; k < sugN; k++)
+        snprintf(it[2 + k], sizeof it[0], "%s%s%s", epg_canal_nome(sug[k]),
+                 epg_canal_fonte(sug[k])[0] ? "  \xc2\xb7  " : "", epg_canal_fonte(sug[k]));
+    }
+    materialPainelGuia(c, 22.0f, a);
+    gfx_cor(c, 22.0f / c.h, 0.071f, 0.075f, 0.086f, 0.92f * a);   // o heroi nao vaza pelo vidro
+    { TxtLinha t = txt_linha_corta(TXT_PG_ROTULO, tit, 150, 153, 162, 255, c.w - 40.0f);
+      txt_desenhar_alpha(t, c.x + 24.0f, c.y + 18.0f, a); }
+    for (k = 0; k < nIt; k++) {
+      GfxRect r = { c.x + 12.0f, c.y + 52.0f + (float)k * 58.0f, c.w - 24.0f, 50.0f };
+      int foc = k == fopFoco, cc = foc ? tf2 : 225;
+      TxtLinha t;
+      if (foc) plrui_linha_foco(r, 18.0f, a);
+      t = txt_linha_corta(TXT_BODY, it[k], cc, cc, cc, 255, r.w - 28.0f);
+      txt_desenhar_alpha(t, r.x + 14.0f, r.y + (r.h - (float)t.h) * 0.5f, a);
+    }
+  }
+  // AS OPCOES DA FONTE (segurar OK): um cartao sob o chip.
+  if (fopAberto && fopModo == FOP_FONTE && fontesCol >= 2) {
+    const GFonteLtv *F = &ltvF[fontesCol - 2];
+    LtvPref *p = ltv_pref(F->chave, 0);
+    char it[FOP_N][120];
+    GfxRect c = { xf > 0 ? xf : x0, y + h + 10.0f, 560.0f, 52.0f + FOP_N * 58.0f };
+    int k;
+    snprintf(it[FOP_AZ], sizeof it[0], "%s: %s", i18n("Ordem dos grupos"),
+             p && p->az ? "A\xe2\x80\x93Z" : i18n("do provedor"));
+    { size_t u = (size_t)snprintf(it[FOP_FUSO], sizeof it[0], i18n("Horário da grade: %+.1f h"),
+                                  (p ? p->fusoMin : 0) / 60.0);
+      snprintf(it[FOP_FUSO] + u, sizeof it[0] - u, "  \xe2\x97\x82\xe2\x96\xb8"); }
+    snprintf(it[FOP_GRUPOS], sizeof it[0], "%s", i18n("Escolher grupos"));
+    snprintf(it[FOP_RECARREGAR], sizeof it[0], "%s", i18n("Recarregar"));
+    if (c.x + c.w > xm) c.x = xm - c.w;
+    (void)wf;
+    materialPainelGuia(c, 22.0f, a);
+    gfx_cor(c, 22.0f / c.h, 0.071f, 0.075f, 0.086f, 0.92f * a);   // o heroi nao vaza pelo vidro
+    { TxtLinha t = txt_linha_corta(TXT_PG_ROTULO, F->nome, 150, 153, 162, 255, c.w - 40.0f);
+      txt_desenhar_alpha(t, c.x + 24.0f, c.y + 16.0f, a); }
+    for (k = 0; k < FOP_N; k++) {
+      GfxRect r = { c.x + 12.0f, c.y + 48.0f + (float)k * 58.0f, c.w - 24.0f, 50.0f };
+      int foc = k == fopFoco, cc = foc ? tf : 225;
+      TxtLinha t;
+      if (foc) plrui_linha_foco(r, 18.0f, a);
+      t = txt_linha_corta(TXT_BODY, it[k], cc, cc, cc, 255, r.w - 28.0f);
+      txt_desenhar_alpha(t, r.x + 14.0f, r.y + (r.h - (float)t.h) * 0.5f, a);
+    }
+  }
+}
+
+// O SELETOR DE GRUPOS (M2): folha central de vidro, uma linha por grupo da
+// fonte com caixa de marcar e a contagem; o contador "N de M canais" no alto
+// fica vermelho se a escolha nao couber (a marcacao que estouraria e recusada).
+static void desenharGrupos(float a) {
+  const GFonteLtv *F;
+  float W = 980.0f, H = 840.0f, rowH = 52.0f, listaY, listaH, ar, ag, ab;
+  GfxRect c;
+  int i, n, vis, au, tf = ajustes_tinta_foco(), cota, conta;
+  char tmp[200];
+  if (!gpAberto || gpFonte >= nLtvF) return;
+  F = &ltvF[gpFonte];
+  n = 2 + gpN;
+  c = (GfxRect){ (NV_TELA_W - W) * 0.5f, (NV_TELA_H - H) * 0.5f, W, H };
+  ajustes_acento(&ar, &ag, &ab);
+  gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0, 0, 0, 0, 0.62f * a);
+  materialPainelGuia(c, 26.0f, a);
+  gfx_cor(c, 26.0f / c.h, 0.071f, 0.075f, 0.086f, 0.94f * a);
+  conta = gpConta(&au); cota = gpCota();
+  // Cabecalho: titulo, fonte e o contador.
+  { TxtLinha t = txt_linha(TXT_CALLOUT, i18n("Escolher grupos"), 240, 241, 246, 255);
+    txt_desenhar_alpha(t, c.x + 36.0f, c.y + 26.0f, a); }
+  { TxtLinha t = txt_linha_corta(TXT_CAPTION, F->nome, 150, 153, 162, 255, W * 0.4f);
+    txt_desenhar_alpha(t, c.x + 36.0f, c.y + 70.0f, a); }
+  { int estoura = conta > cota;
+    snprintf(tmp, sizeof tmp, i18n("%d de %d"), conta, cota);
+    { TxtLinha t = txt_linha(TXT_BODY, tmp, estoura ? 240 : 236, estoura ? 110 : 237, estoura ? 100 : 242, 255);
+      GfxRect pl = { c.x + c.w - 36.0f - (float)t.w - 32.0f, c.y + 30.0f, (float)t.w + 32.0f, 44.0f };
+      gfx_cor(pl, 0.5f, 1, 1, 1, 0.08f * a);
+      txt_desenhar_alpha(t, pl.x + 16.0f, pl.y + (pl.h - (float)t.h) * 0.5f, a); }
+    if (au) { TxtLinha t = txt_linha(TXT_CAPTION, i18n("Automático: a ordem do provedor, até onde cabe"), 150, 153, 162, 255);
+      txt_desenhar_alpha(t, c.x + c.w - 36.0f - (float)t.w, c.y + 82.0f, a); } }
+  // Linhas: 0 Aplicar, 1 Automatico, depois os grupos.
+  listaY = c.y + 124.0f; listaH = c.h - 124.0f - 64.0f;
+  vis = (int)(listaH / rowH);
+  { float alvo = gpRol;
+    if ((float)gpFoco < alvo) alvo = (float)gpFoco;
+    if ((float)(gpFoco + 1) > alvo + (float)vis) alvo = (float)(gpFoco + 1 - vis);
+    if (alvo < 0.0f) alvo = 0.0f;
+    gpRol += (alvo - gpRol) * 0.35f;
+    if (alvo - gpRol < 0.01f && gpRol - alvo < 0.01f) gpRol = alvo; }
+  gfx_recorte(c.x, listaY - 4.0f, c.w, listaH + 8.0f);
+  for (i = 0; i < n; i++) {
+    GfxRect r = { c.x + 16.0f, listaY + ((float)i - gpRol) * rowH, c.w - 32.0f, rowH - 4.0f };
+    int foc = i == gpFoco, cc = foc ? tf : 225;
+    TxtLinha t;
+    float tx = r.x + 18.0f;
+    if (r.y + r.h < listaY - 4.0f || r.y > listaY + listaH + 4.0f) continue;
+    if (foc) plrui_linha_foco(r, 18.0f, a);
+    if (i == 0) {
+      t = txt_linha_corta(TXT_BODY, i18n("Aplicar e recarregar"), cc, cc, cc, 255, r.w - 40.0f);
+      txt_desenhar_alpha(t, tx, r.y + (r.h - (float)t.h) * 0.5f, a);
+    } else if (i == 1) {
+      t = txt_linha_corta(TXT_BODY, i18n("Automático (ordem do provedor)"), cc, cc, cc, 255, r.w - 40.0f);
+      txt_desenhar_alpha(t, tx, r.y + (r.h - (float)t.h) * 0.5f, a);
+    } else {
+      int g = i - 2, m = gpMarca[g];
+      GfxRect b = { tx, r.y + (r.h - 26.0f) * 0.5f, 26.0f, 26.0f };
+      if (m) gfx_cor(b, 0.28f, foc ? 0.10f : ar, foc ? 0.10f : ag, foc ? 0.10f : ab, a);
+      else {
+        gfx_cor(b, 0.28f, foc ? 0.0f : 1.0f, foc ? 0.0f : 1.0f, foc ? 0.0f : 1.0f, (foc ? 0.45f : 0.30f) * a);
+        gfx_cor((GfxRect){ b.x + 2.0f, b.y + 2.0f, b.w - 4.0f, b.h - 4.0f }, 0.26f, 0.071f, 0.075f, 0.086f, 0.96f * a);
+      }
+      if (m) gfx_cor((GfxRect){ b.x + 7.0f, b.y + 7.0f, 12.0f, 12.0f }, 0.2f, foc ? 1.0f : 0.07f, foc ? 1.0f : 0.07f, foc ? 1.0f : 0.08f, a);
+      snprintf(tmp, sizeof tmp, "%d", F->gi[g].n);
+      { TxtLinha q = txt_linha(TXT_CAPTION, tmp, foc ? cc : 150, foc ? cc : 153, foc ? cc : 162, 255);
+        txt_desenhar_alpha(q, r.x + r.w - 18.0f - (float)q.w, r.y + (r.h - (float)q.h) * 0.5f, a);
+        t = txt_linha_corta(TXT_BODY, F->gi[g].nome, cc, cc, cc, 255, r.w - 130.0f - (float)q.w);
+        txt_desenhar_alpha(t, tx + 44.0f, r.y + (r.h - (float)t.h) * 0.5f, a); }
+    }
+  }
+  gfx_sem_recorte();
+  // Rodape: dica, ou o aviso de que nao cabe.
+  { int aviso = gpAviso && SDL_GetTicks() - gpAvisoEm < 2500u;
+    TxtLinha t = txt_linha_corta(TXT_CAPTION,
+        aviso ? i18n("Esse grupo não cabe nesta TV. Desmarque outro antes.")
+              : i18n("OK marca  ·  Voltar descarta"),
+        aviso ? 240 : 128, aviso ? 130 : 130, aviso ? 110 : 138, 255, c.w - 72.0f);
+    txt_desenhar_alpha(t, c.x + 36.0f, c.y + c.h - 46.0f, a); }
+}
+
 // --- cabecalho: [Cartoes | Lista]  [Addons]  [Preview]  relogio -------------
 // CHIPS: vidro translucido em repouso, um degrau mais claro quando e o
 // selecionado (modo atual, preview ligado), e o FOCO e um anel na cor de
@@ -3608,7 +4887,7 @@ static void ponteiroCanal(int l, int i) {
   if (guiaCamadaAberta() || l < 0 || l >= nLinhas() || i < 0 || i >= linhaN(l)) return;
 #ifdef NV_TOUCH_UI
   toquerol_limpar(&toqueGradeY); toquerol_limpar(&toqueLista);
-  toquerol_limpar(&toqueGradeX[l]);
+  toquerol_limpar(toqueXde(l));
 #endif
   focoTopo = 0; focoLin = l; focoCol = i;
 }
@@ -3905,7 +5184,7 @@ static void desenharLinhaLista(GCanal *c, float y, int focada, float a,
   } else {
     char num[16];
     TxtLinha n;
-    snprintf(num, sizeof num, "%d", (int)(c - canais) + 1);
+    snprintf(num, sizeof num, "%d", c->numero);
     n = txt_linha(textoRetrato ? TXT_DET_META2 : TXT_ILHA_HORA, num, 115, 114, 113, 255);
     { GfxRect cx = { G_AREA_X + 14.0f, y + (h - 44.0f) * 0.5f, 84.0f, 44.0f };
       logoNaCaixa(c, cx, 76.0f, 36.0f, G_LOGO_CLARO, a); }
@@ -4425,7 +5704,7 @@ static void buscaFazer(const char *q) {
   for (p = agulha; *p; p++) if (*p < '0' || *p > '9') soDigito = 0;
   if (soDigito) numero = atoi(agulha);
   for (i = 0; i < nCanais && buscaNC < G_BUSCA_CANAIS; i++)
-    if ((numero && i + 1 == numero) || nv_contem_dobrado(canais[i].nome, agulha))
+    if ((numero && canais[i].numero == numero) || nv_contem_dobrado(canais[i].nome, agulha))
       buscaCanal[buscaNC++] = i;
   // PROGRAMAS: a grade de cada canal entre agora e G_BUSCA_HORAS a frente. Os
   // que estao no ar primeiro; depois por horario.
@@ -4646,7 +5925,7 @@ static int toqueGuiaRolar(const PonteiroRolagem *e) {
     } else if (e->eixoY) toqueAtual = &toqueGradeY;
     else {
       for (int l = 0; l < nLinhas(); l++)
-        if (toquerol_evento(&toqueGradeX[l], e)) { toqueLinha = l; toqueAtual = &toqueGradeX[l]; break; }
+        if (toquerol_evento(toqueXde(l), e)) { toqueLinha = l; toqueAtual = toqueXde(l); break; }
       if (!toqueAtual) return 0;
     }
   }
@@ -4731,7 +6010,7 @@ static void toqueGuiaRetomar(void) {
   }
   if (toqueLinha >= 0 && toqueLinha < nLinhas() && toquerol_livre(&toqueGradeX[toqueLinha])) {
     focoLin = toqueLinha;
-    focoCol = (int)((rolX[focoLin] + toqueGradeX[focoLin].regiao.w * 0.35f) / (G_CARD_W + G_GAP_X));
+    focoCol = (int)((*rolXde(focoLin) + toqueGradeX[focoLin].regiao.w * 0.35f) / (G_CARD_W + G_GAP_X));
     if (focoCol >= linhaN(focoLin)) focoCol = linhaN(focoLin) - 1;
     if (focoCol < 0) focoCol = 0;
     focoTopo = 0;
@@ -4764,7 +6043,7 @@ void guia_desenhar(Uint32 agora) {
       toquerol_vincular(&toqueTempo, (GfxRect){ G_L_FAIXA_X, G_TOPO, G_L_FAIXA_W, G_L_BASE - G_TOPO }, gfx_escala(), 0.0f, G_L_DESL_MAX, 0, &toqueTempoMin);
     } else {
       toquerol_vincular(&toqueGradeY, (GfxRect){ G_AREA_X, G_TOPO, G_AREA_W, area }, gfx_escala(), 0.0f, fmaxf(0.0f, nLinhas() * G_PASSO_Y - area), 1, &rolY);
-      for (int k = 0; k <= G_MAX_CAT; k++) toqueGradeX[k].offset = NULL;
+      for (int k = 0; k < capToqueGrade; k++) toqueGradeX[k].offset = NULL;
     }
     ponteiro_rolagem(toqueGuiaRolar);
   }
@@ -4805,7 +6084,7 @@ void guia_desenhar(Uint32 agora) {
                : xtFalha == XT_PAGINA
                ? i18n("O Xtream devolveu uma página da web em vez da lista.")
                : i18n("A lista do Xtream não respondeu."));
-    else if (estado == G_FALHOU || (fontesOk && !nFontes))
+    else if (estado == G_FALHOU || (fontesOk && !nFontes && !nCanais))
       snprintf(sub, sizeof sub, "%s",
                i18n("Nenhum canal: sem addon de canais e sem portal IPTV."));
     // A falha do Xtream toma o lugar da contagem simples, e so ela: os canais
@@ -4960,8 +6239,8 @@ void guia_desenhar(Uint32 agora) {
       if (y > G_L_BASE || y + G_PASSO_Y < G_TOPO - 8.0f) continue;
 #ifdef NV_TOUCH_UI
       { float topo = fmaxf(y + G_HEAD_H, G_TOPO), base = fminf(y + G_HEAD_H + G_CARD_H, G_L_BASE);
-        toquerol_vincular(&toqueGradeX[l], (GfxRect){ G_AREA_X, topo, G_AREA_W, fmaxf(0.0f, base - topo) }, gfx_escala(), 0.0f,
-                          fmaxf(0.0f, (n - 1) * (G_CARD_W + G_GAP_X) + G_CARD_W - G_AREA_W), 0, &rolX[l]); }
+        toquerol_vincular(toqueXde(l), (GfxRect){ G_AREA_X, topo, G_AREA_W, fmaxf(0.0f, base - topo) }, gfx_escala(), 0.0f,
+                          fmaxf(0.0f, (n - 1) * (G_CARD_W + G_GAP_X) + G_CARD_W - G_AREA_W), 0, rolXde(l)); }
 #endif
       { char cab[140];
         snprintf(cab, sizeof cab, "%s  \xc2\xb7  %d", linhaNome(l), n);
@@ -4969,7 +6248,7 @@ void guia_desenhar(Uint32 agora) {
                                    220, 221, 224, 255,
                                    G_AREA_W);
         txt_desenhar_alpha(t, G_AREA_X, y, a * dim); }
-      { float x = G_AREA_X - rolX[l];
+      { float x = G_AREA_X - *rolXde(l);
         for (i = 0; i < n; i++, x += G_CARD_W + G_GAP_X) {
 #ifdef NV_TOUCH_UI
           if (telefoneui_ativo()) {
@@ -4989,7 +6268,7 @@ void guia_desenhar(Uint32 agora) {
     }
     gfx_sem_recorte();
 
-  } else if (estado == G_FALHOU || (fontesOk && !nFontes && estado != G_BAIXANDO)) {
+  } else if (estado == G_FALHOU || (fontesOk && !nFontes && !nCanais && estado != G_BAIXANDO)) {
     // DUAS FRASES, e a diferenca entre elas e a diferenca entre acusar a
     // pessoa e contar o que houve. `falhas` diz que alguem foi tentado e nao
     // respondeu; sem ele, a lista vazia e mesmo falta de addon.
@@ -5055,10 +6334,10 @@ void guia_desenhar(Uint32 agora) {
   { const char *dica = modoLista
       ? (overlay
          ? GUIA_FECHA_L
-         : i18n("OK assiste  ·  segure OK = favorito  ·  \xe2\x86\x90\xe2\x86\x92 adianta a grade  ·  segure \xe2\x86\x91\xe2\x86\x93 pula seção  ·  Voltar sai"))
+         : i18n("OK assiste  ·  segure OK = opções  ·  \xe2\x86\x90\xe2\x86\x92 adianta a grade  ·  \xe2\x86\x91 fontes  ·  Voltar sai"))
       : (overlay
          ? GUIA_FECHA_G
-         : i18n("OK assiste  ·  segure OK = favorito  ·  segure \xe2\x86\x91\xe2\x86\x93 pula seção  ·  Voltar sai"));
+         : i18n("OK assiste  ·  segure OK = opções  ·  \xe2\x86\x91 fontes  ·  segure \xe2\x86\x91\xe2\x86\x93 pula seção  ·  Voltar sai"));
     TxtLinha t = txt_linha_corta(TXT_CAPTION, dica, 128, 130, 138, 255,
                                  G_AREA_W);
     txt_desenhar_alpha(t, G_AREA_X, NV_TELA_H - 48.0f, a);
@@ -5074,10 +6353,19 @@ void guia_desenhar(Uint32 agora) {
 #endif
     }
 
+  if ((estado == G_PRONTO || estado == G_BAIXANDO) && nLtvF > 0) {
+    desenharFontes(a);
+    if (filtro == G_FILTRO_FAV && !nFavOrd) {
+      TxtLinha t = txt_linha_corta(TXT_BODY, i18n("Nenhum favorito ainda. Segure OK num canal para marcar."),
+                                   200, 202, 210, 255, G_INFO_W);
+      txt_desenhar_alpha(t, G_INFO_X, G_HERO_Y + G_FONTES_H + 80.0f, a);
+    }
+  }
   desenharDica();
   desenharPainelCategorias(a);
   buscaDesenhar(agora);
   if (painel) desenharPainelAddons(a);
+  desenharGrupos(a);
   // O CANAL NO AR ENCOLHENDO para o preview: o furo segue o degrau da janela
   // do player por cima de tudo, e o video "pousa" no preview.
   { float x, y, w, h;
@@ -5120,7 +6408,7 @@ int guia_canal_campos(int i, const char **id, const char **nome, const char **lo
   if (id) *id = canais[i].id;
   if (nome) *nome = canais[i].nome;
   if (logo) *logo = canais[i].logo;
-  if (cat) *cat = canais[i].cat >= 0 ? cats[canais[i].cat] : "";
+  if (cat) *cat = canais[i].cat >= 0 ? cats[canais[i].cat].nome : "";
   if (base) *base = canais[i].base;
   return 1;
 }
@@ -5140,7 +6428,10 @@ void guia_abrir_sessao(void) {
   aberta = overlay = querSair = pediuCanal = 0;
   focoLin = focoCol = focoTopo = topoCol = 0;
   rolY = velY = rolL = velL = entrada = 0.0f;
-  memset(rolX, 0, sizeof rolX); memset(animTopo, 0, sizeof animTopo);
+  free(rolXv); rolXv = NULL; capRolX = 0;
+  memset(animTopo, 0, sizeof animTopo);
+  nLtvF = nVis = nZapL = 0; filtro = G_FILTRO_TODAS; filtroChave[0] = 0;
+  focoFontes = fontesCol = fopAberto = gpAberto = 0; perfilPrefs = -999;
   catAberto = catFoco = dirSeg = okLongo = 0;
   catUlt = dirDesde = dirTick = ultNavCat = okDesde = 0;
   catAnim = catRol = catVelRol = 0.0f;

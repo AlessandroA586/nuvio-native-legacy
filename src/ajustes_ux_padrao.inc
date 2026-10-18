@@ -314,7 +314,8 @@
   0, /* glass quality: Automatica */
   0, /* Dynamic layout background (#205): Gray */
   12, /* Dynamic layout background colour (#205): Ocean */
-  2, /* text and component scale: 100% */
+  0, /* text and component scale: 85% */
   1, /* title page row spacing: Normal */
   1, /* accent focus: Off (gray plate) */
   0, /* art tone: Vivid, identical to existing art colors */
+  0, 0, 0, 0, /* URL lists and guides (Guia de TV, M9): choice (none) and three actions */

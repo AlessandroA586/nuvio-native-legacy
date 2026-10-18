@@ -3,6 +3,8 @@
 // cancela. A lista mostra valor e chevron, a ficha explica alcance e padrao.
 // IDs, chaves persistidas e indices de valores continuam os legados.
 #include "ajustes.h"
+#include "jsw.h"
+#include <limits.h>
 #include "player.h"
 #include "legenda.h"
 #include "legenda2.h"
@@ -41,6 +43,8 @@
 #include "sessao.h"
 #include "sync.h"
 #include "perfis.h"
+#include "ltv.h"
+#include "guia.h"
 #include "traktauth.h"
 #include "simklauth.h"
 #include "discord.h"
@@ -640,10 +644,16 @@ typedef enum {
   AJ_VIDRO_QUALIDADE,  // glass quality: 0 Automatica (frost + governor), 1 Desempenho (smoked, no blur), 2 Alta (frost); local, append-only
   AJ_FUNDO_DIN,        // #205: fundo da Dinamica, 0 = Cinza (padrao), 1 = Cor, 2 = Imersivo; local, append-only
   AJ_FUNDO_DIN_COR,    // #205: a cor do fundo "Cor" (indice de FUNDO_DIN_TEMA); local, append-only
-  AJ_ESCALA_TEXTO,     // text and component scale (gfx.h): 85/90/100/110/120/130%, default 100%; local, append-only
+  AJ_ESCALA_TEXTO,     // text and component scale (gfx.h): 85/90/100/110/120/130%, default 85%; local, append-only
   AJ_DET_ESPACO,       // title page row spacing (detail.h): 0 Compacto, 1 Normal (default), 2 Confortavel; local, append-only
   AJ_FOCO_ACENTO,      // focus plate in the accent colour instead of gray (glass only); default off; local, append-only
   AJ_ARTE_TOM,         // Device-local, append-only: 0 Vivid (unchanged), 1 Light.
+  // FONTES POR URL (Guia de TV, M9, ltv.h): listas M3U e guias XMLTV deste
+  // perfil. AJ_URL_LISTA escolhe uma das ja cadastradas (so o nome e o host na
+  // tela, nunca a URL: ela pode levar usuario e senha), os dois ADD abrem o
+  // teclado (TV ou celular) e REM remove a escolhida. Estado em
+  // ltv-urls-p<N>.txt, nunca em ajustes.txt. No fim: valor[]/CHAVE[] posicionais.
+  AJ_URL_LISTA, AJ_URL_M3U_ADD, AJ_URL_XMLTV_ADD, AJ_URL_REM,
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -660,6 +670,10 @@ static const char *V_SELOS_PACOTE[] = { "Do Nuvio", "Pacote 1", "Pacote 2", "Pac
 // 1 = Desligado continua), entao o que ja foi gravado nao precisa migrar.
 static const char *V_EP_TAMANHO[] = { "Pequeno", "Médio", "Grande" };
 static const char *V_SELO_VISTO[] = { "Ícone", "Desligado", "Escrito" };
+// "Listas e guias por URL": so o TAMANHO importa (nenhuma + LTV_URLS_MAX); o texto
+// de cada valor vem de urlTextoValor.
+static const char *V_URL_LISTA[] = { "Nenhuma", "1", "2", "3", "4", "5", "6", "7", "8" };
+
 static const char *V_ICONE_APP[ICONEAPP_N] = {
   "Original", "Fênix", "N verde-água", "TV laranja", "N pixel",
   "Play tricolor", "Arco", "TV viva", "Clube retrô", "Arcade N",
@@ -1684,6 +1698,10 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Espaçamento das fileiras", V_DET_ESPACO, 3),          // local: detEspacoLocal
   ESC("Foco na cor de destaque", V_LIGA, 2),   // local: focoAcentoLocal
   ESC("Tom da arte", V_ARTE_TOM, 2),                       // local: artToneLocal
+  ESC("Listas e guias por URL",          V_URL_LISTA, 9),     // por perfil: ltv-urls-p<N>.txt (tamanho dinamico)
+  ACAO("Adicionar lista M3U"),
+  ACAO("Adicionar guia XMLTV"),
+  ACAO("Remover a escolhida"),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -1983,6 +2001,7 @@ static const char *CHAVE[] = {
   "detEspacoLocal",
   "focoAcentoLocal",
   "artToneLocal",
+  "-urlLista", "-urlM3uAdd", "-urlXmltvAdd", "-urlRem",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2158,7 +2177,7 @@ static int ajFalhaDefinir(int op, int novo) {
   else if (op >= AJ_FALHA_RD_LIMITE && op <= AJ_FALHA_AD_LIMITE)
     ok = fontefalha_provedor_definir_limite(op - AJ_FALHA_RD_LIMITE, novo);
   else ok = faAddonEditar[0] && fontefalha_addon_definir_limite(faAddonEditar, novo);
-  if (ok) ajFalhaEspelhar();
+  if (ok) { ajFalhaEspelhar(); sync_proteger_ajustes_locais(); }
   return ok;
 }
 // These rows are views of player.txt, not independent Settings values.
@@ -2203,7 +2222,7 @@ static int ajLegendaDefinir(int op, int v) {
     default: return 0;
   }
   int ok = player_leg_estilo_definir(&e, tocou);
-  if (ok) ajLegendaEspelhar();
+  if (ok) { ajLegendaEspelhar(); sync_proteger_ajustes_locais(); }
   return ok;
 }
 
@@ -2680,7 +2699,7 @@ int ajustes_det_espaco(void) { int v = valor[AJ_DET_ESPACO]; return v >= 0 && v 
 float ajustes_escala_texto(void) {
   static const float F[] = { 0.85f, 0.9f, 1.0f, 1.1f, 1.2f, 1.3f };
   int v = valor[AJ_ESCALA_TEXTO];
-  return v >= 0 && v < 6 ? F[v] : 1.0f;
+  return v >= 0 && v < 6 ? F[v] : 0.85f;
 }
 float ajustes_tamanho_ui(void) {
   int v = valor[AJ_TAMANHO_UI];
@@ -4167,16 +4186,78 @@ static void memoriaMigrar(void) {
 }
 #endif
 
+// --- LISTAS E GUIAS POR URL (M9) --------------------------------------------------
+// M3U e XMLTV deste perfil (ltv.h). A tela mostra "M3U · host", nunca a URL.
+// Cache local da lista (o desenho chama textoValor varias vezes por quadro) e a
+// escolha da linha; adicionar/remover manda o Guia recarregar.
+static LtvUrl urlV[LTV_URLS_MAX];
+static int urlN, urlPerfil = -1, urlResultado = -1;   // -1 nada; 1 adicionada; 2 invalida; 3 lista cheia; 4 repetida
+static void urlEspelhar(void) {
+  if (urlPerfil != perfis_ativo()) { urlPerfil = perfis_ativo(); ltv_urls_carregar(urlPerfil); }
+  urlN = ltv_urls_copiar(urlV, LTV_URLS_MAX);
+  if (valor[AJ_URL_LISTA] > urlN) valor[AJ_URL_LISTA] = urlN;
+  if (valor[AJ_URL_LISTA] < 0) valor[AJ_URL_LISTA] = 0;
+}
+static void urlAdicionar(int tipo, const char *url) {
+  char t[1024], host[96];
+  size_t n;
+  int i;
+  snprintf(t, sizeof t, "%s", url ? url : "");
+  n = strlen(t);
+  while (n && (t[n - 1] == ' ' || t[n - 1] == '\n')) t[--n] = 0;
+  if (!n) return;
+  if (strncmp(t, "http://", 7) && strncmp(t, "https://", 8)) { urlResultado = 2; return; }
+  urlEspelhar();
+  if (urlN >= LTV_URLS_MAX) { urlResultado = 3; return; }
+  for (i = 0; i < urlN; i++) if (urlV[i].tipo == tipo && !strcmp(urlV[i].url, t)) { urlResultado = 4; return; }
+  ltv_url_host(t, host, sizeof host);
+  if (ltv_urls_adicionar(tipo, host, t) < 0) { urlResultado = 2; return; }
+  urlResultado = 1;
+  urlEspelhar();
+  valor[AJ_URL_LISTA] = urlN;
+  guia_fontes_mudaram();
+  printf("[ltv] url adicionada: %s %s\n", tipo == LTV_URL_M3U ? "m3u" : "xmltv", host); fflush(stdout);
+}
+static void urlRemover(void) {
+  int v = valor[AJ_URL_LISTA];
+  if (v < 1 || v > urlN) return;
+  ltv_urls_remover(v - 1);
+  urlResultado = -1;
+  urlEspelhar();
+  guia_fontes_mudaram();
+}
+static const char *urlNomeValor(int v) {
+  static char b[160];
+  char host[96];
+  if (v < 1 || v > urlN) return "Nenhuma";
+  ltv_url_host(urlV[v - 1].url, host, sizeof host);
+  snprintf(b, sizeof b, "%s \xc2\xb7 %s", urlV[v - 1].tipo == LTV_URL_M3U ? "M3U" : "XMLTV", host[0] ? host : urlV[v - 1].nome);
+  return b;
+}
+static const char *urlAddTexto(void) {
+  switch (urlResultado) {
+    case 1: return i18n("adicionada");
+    case 2: return i18n("o endereço precisa começar com http");
+    case 3: return i18n("limite de 8 listas e guias");
+    case 4: return i18n("já está na lista");
+    default: return i18n("OK adiciona");
+  }
+}
+static const char *URL_ALFA =
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:/.-_?=&%#+~@!,;|";
+
 void ajustes_dir(const char *dir) {
   FILE *f;
   char caminho[600], linha[96];
   int viuLingua[3] = { 0, 0, 0 };
+  int escalaVersao = 0;
   /* viuLingua: [AJ_LEG_LINGUA, AJ_LEG_LINGUA2, AJ_AUD_LINGUA] vistos no
      ajustes.txt — a migracao idiomas-206 so pode tocar o que o arquivo
      trouxe, nunca o padrao de valor[] */
   if (!dir || !*dir) return;
   snprintf(dirAjustes, sizeof dirAjustes, "%s", dir);
   memoriaEscolhida = 0;
+  valor[AJ_ESCALA_TEXTO] = valorPadrao[AJ_ESCALA_TEXTO];
   valor[AJ_TAMANHO_UI] = UI_SIZE_AUTO;
   fonteregra_carregar();
   fanartCarregar();
@@ -4249,6 +4330,7 @@ void ajustes_dir(const char *dir) {
     }
     if (!strcmp(chave, "idiomaAutoLocal")) { autoGravado = v == 1; viuAuto = 1; continue; }
     if (!strcmp(chave, "texturasEscolhaLocal")) { memoriaEscolhida = v == 1; continue; }
+    if (!strcmp(chave, "escalaTextoVersaoLocal")) { escalaVersao = v; continue; }
     // "resolucao_ui" (ate a 2.0.1) virou "resolucaoUi" com Automatica na
     // frente: ver res_migrar. A chave nova, quando existe, vence.
     if (!strcmp(chave, "resolucao_ui")) { resAntiga = v; continue; }
@@ -4303,6 +4385,11 @@ void ajustes_dir(const char *dir) {
       break;
     }
   }
+  // Prefer the new default for ambiguous legacy 100% records: old saves
+  // cannot distinguish factory defaults from explicit choices. Versioned
+  // choices, including 100%, and other valid legacy scales are preserved.
+  if (escalaVersao < 1 && valor[AJ_ESCALA_TEXTO] == 2)
+    valor[AJ_ESCALA_TEXTO] = valorPadrao[AJ_ESCALA_TEXTO];
   if (!viuSinopse) {
     if (sinopseQuatro >= 0) valor[AJ_HERO_SINOPSE_TAM] = sinopseQuatro > 0;
     else if (sinopseAntiga >= 0) valor[AJ_HERO_SINOPSE_TAM] = sinopseAntiga > 0;
@@ -4359,6 +4446,7 @@ void ajustes_dir(const char *dir) {
   }
   }
   fclose(f);
+  if (escalaVersao < 1) gravar();
   // "DINAMICA ESTILIZADA" SAIU (03/10/2026): a base tingida virou o Fundo
   // Frost, que vale para qualquer acento. Quem a tinha abre em Da arte + Frost
   // — a mesma cor viva, o mesmo fundo de um matiz so — e o arquivo e regravado.
@@ -4568,6 +4656,7 @@ static int gravar(void) {
     }
     fprintf(f, "%s %d\n", CHAVE[i], valor[i]);
   }
+  fprintf(f, "escalaTextoVersaoLocal 1\n");
   if (memoriaEscolhida) fprintf(f, "texturasEscolhaLocal 1\n");
   { int erro = ferror(f);
     if (fclose(f)) erro = 1;
@@ -4581,6 +4670,7 @@ static int gravar(void) {
   // onde voltava ao padrao. Na LG o disco e real e nada disto acontecia.
   dados_marcar_sujo(0);
   ajLogDiff();
+  if (ajOrigem) sync_proteger_ajustes_locais();
   legenda2_atualizar_offset_manual(ajustes_leg2_atraso());
   // Provedor de poster ou idioma da interface mudaram? So reconfigura se a
   // configuracao final for outra (reconfigurar zera a memoria de falhas).
@@ -5158,6 +5248,8 @@ static const char *chaveConta(int i) {
   return i == AJ_FOCO_TRAILER ? "focusedPosterBackdropTrailerEnabled" : CHAVE[i];
 }
 
+static int ajustesExtrasAplicar(const char *json);
+
 int ajustes_aplicar_blob(const char *json) {
   const char *fim;
   int i, mudou = 0, reconhecidas = 0;
@@ -5275,7 +5367,7 @@ int ajustes_aplicar_blob(const char *json) {
   // na primeira verificacao na TV.
   printf("[ajustes] blob da conta: %d chave(s) reconhecida(s), %d mudou(aram)\n",
          reconhecidas, mudou);
-  return mudou;
+  return mudou + ajustesExtrasAplicar(json);
 }
 
 // ---------------------------------------------------------------- subir (#85)
@@ -5359,6 +5451,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_COL_ARTE_CONTA: /* arte do addon: o web nao tem estas escolhas */
     case AJ_SELOS_CORES:    /* no web a cor vem do pacote de selos importado */
     case AJ_SELOS_PACOTE: case AJ_SELOS_PACOTE_ADD: case AJ_SELOS_PACOTE_REM: /* a escolha e por perfil, em selospacote.c */
+    case AJ_URL_LISTA: case AJ_URL_M3U_ADD: case AJ_URL_XMLTV_ADD: case AJ_URL_REM: /* por perfil, em ltv-urls-p<N>.txt */
     case AJ_LIVETV_RES: case AJ_LIVETV_FORMATO: case AJ_LIVETV_ESPERA:
     case AJ_LIVETV_DIAG: case AJ_LIVETV_MODO: case AJ_LIVETV_PROXY: /* rede e provedor desta casa: o web nao tem */
     case AJ_HOME_LAYOUT:    /* a Dinamica nao tem par na conta (selected_layout) */
@@ -5671,7 +5764,7 @@ static int textoDoValor(int op, const char *vi, const char *vf,
 
 typedef struct { const char *vi, *vf; char texto[160]; } Troca;
 
-int ajustes_mesclar_blob(const char *base, char **saida) {
+static int ajustesMesclarWeb(const char *base, char **saida) {
   Troca troca[AJ_N];
   int n = 0, i, j;
   const char *fim, *p;
@@ -5745,6 +5838,8 @@ int ajustes_mesclar_blob(const char *base, char **saida) {
   printf("[ajustes] %d ajuste(s) desta TV entram no blob da conta\n", n);
   return n;
 }
+
+#include "ajustes_sync.inc"
 
 // TODA OPCAO APARECE NA TELA, E UMA VEZ SO. Nao da para exigir isso do
 // compilador (TELA e uma lista de itens, nao um vetor indexado pelo enum),
@@ -6221,6 +6316,8 @@ static const char *textoLeitura(int op) {
   if (op == AJ_SEEKR_CHAVE) return seekrMascarada();
   if (op == AJ_SEEKR_TESTAR) return skTesteTexto();
   if (op == AJ_SELOS_PACOTE_ADD) return spAddTexto();
+  if (op == AJ_URL_M3U_ADD || op == AJ_URL_XMLTV_ADD) return urlAddTexto();
+  if (op == AJ_URL_REM) return valor[AJ_URL_LISTA] > 0 ? i18n("OK remove") : i18n("nenhuma lista escolhida");
   if (op == AJ_SELOS_PACOTE_REM) {
     int a = selospacote_ativo();
     if (a < 0) return i18n("nenhum pacote escolhido");
@@ -6433,6 +6530,7 @@ static int inativa(int op) {
     case AJ_SEEKR_FITA: case AJ_SEEKR_AJUSTE: return !lig(AJ_SEEKR_LIGADO);
     // Remover so vale para o pacote escolhido que foi posto nesta TV.
     case AJ_SELOS_PACOTE_REM: return selospacote_ativo() < 0 || !selospacote_da_tv(selospacote_ativo());
+    case AJ_URL_REM: return valor[AJ_URL_LISTA] < 1;
     // Sem o relogio nao ha ilha para onde minimizar: sai para a pagina, como antes.
     case AJ_SAIDA_PLAYER: return !lig(AJ_RELOGIO);
     // So existe sessao para manter quando a saida vai para a ilha.
@@ -6674,6 +6772,8 @@ static const char *ajudaOpcaoBase(int op) {
       return "Ative Miniaturas na barra de tempo para ajustar as miniaturas.";
     if (op == AJ_SELOS_PACOTE_REM)
       return "Só dá para remover um pacote que foi adicionado nesta TV.";
+    if (op == AJ_URL_REM)
+      return "Escolha antes uma lista ou guia.";
     if (op == AJ_SAIDA_PLAYER)
       return "Ative Relógio na tela: sem ele o player não tem para onde minimizar.";
     if (op == AJ_MANTER_VIDEO)
@@ -6784,6 +6884,10 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_SELOS_CORES: return "Na lista de fontes, cada selo (4K, HDR, Dolby, codec, serviço) ganha a cor do seu tipo, como no pacote de selos do Nuvio. Desligado, os selos ficam brancos.";
     case AJ_SELOS_PACOTE: return "Qual pacote de selos desenha a lista de fontes. Do Nuvio é o pacote que vem no app; os outros são os pacotes da sua conta (importados no Nuvio web) e os que você adiciona aqui. Vale para este perfil. Se nenhum selo do pacote combinar com a fonte, ela usa os selos do app.";
     case AJ_SELOS_PACOTE_ADD: return "Adiciona um pacote de selos pelo link do JSON dele (no máximo 3 no total, contando os da conta). O pacote entra já escolhido.";
+    case AJ_URL_LISTA: return "Listas M3U e guias XMLTV deste perfil. Cada lista M3U vira uma fonte do Guia; cada guia XMLTV serve a programação de todas. Aqui aparece só o servidor; a URL inteira fica só nesta TV.";
+    case AJ_URL_M3U_ADD: return "Adiciona uma lista de canais M3U pela URL. Digite no teclado da TV ou pelo celular.";
+    case AJ_URL_XMLTV_ADD: return "Adiciona um guia de programação XMLTV pela URL (pode ser .gz).";
+    case AJ_URL_REM: return "Tira do Guia a lista ou o guia escolhido.";
     case AJ_SELOS_PACOTE_REM: return "Tira desta TV o pacote escolhido. Pacote que veio da conta só se remove na conta, no Nuvio web.";
     case AJ_COL_ARTE_CONTA: return "As pastas de coleção que o app já traz com arte própria passam a usar a capa, o fundo e o logo que estão na sua conta (editor de coleções do site). O que a conta não tiver continua com a arte do app.";
     case AJ_HERO_TRANSICAO: return "Deslizar: quando o destaque troca de título, a arte e o texto saem para o lado e o próximo entra colado, como num carrossel. Esmaecer: a arte apaga e a nova aparece no lugar. Com Animações reduzidas a troca é sempre sem movimento.";
@@ -6908,7 +7012,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_TAMANHO_AJUSTES: return i18n("Muda só o tamanho dos Ajustes nesta TV. O padrão é 100%.");
     case AJ_DET_ESPACO: return i18n("Margem lateral e vãos entre as fileiras e os cartões da página do título. Normal é o de sempre; Confortável dá folga em TVs com overscan. Vale só nesta TV.");
     case AJ_FOCO_ACENTO: return "O item em foco ganha um vidro tingido com a cor de destaque, em vez da barra cinza. O texto e os ícones continuam legíveis em qualquer cor.";
-    case AJ_ESCALA_TEXTO: return i18n("Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 100%.");
+    case AJ_ESCALA_TEXTO: return i18n("Muda o tamanho dos textos, botões e componentes da home, do título e da biblioteca. Os pôsteres mantêm o tamanho escolhido nas fileiras. O padrão é 85%.");
     case AJ_LAYOUT_AJUSTES: return "Painel mostra uma prévia ao lado das opções. Lista põe as categorias e as opções uma embaixo da outra, com a explicação logo abaixo da linha em foco.";
     case AJ_TEMA: return "Cor do botão em foco e das marcas de estado. Os claros levam texto escuro, os profundos texto branco — sempre a 4,5:1 ou mais.";
     case AJ_VIDRO_OPAC: return "Teste: quanto os painéis de vidro deixam a arte aparecer. O valor do meio é o de hoje; menos é mais transparente, mais é mais escuro e fácil de ler.";
@@ -7333,6 +7437,7 @@ static float alturaFoco(int i) { return TELA[i].tipo == IT_GRP ? AJ_GRUPO_H : TE
 //    Scan every row: fixed rows shift raw indices beyond the catalog quota.
 //    Only chosen catalog positions below the limit need a network cycle.
 static void fileirasReagir(void) {
+  sync_proteger_ajustes_locais();
   int i, teto = fil_limite(), n = fil_n();
   desc_remontar_fileiras();
   for (i = 0; i < n; i++)
@@ -7497,6 +7602,7 @@ static void heroFonteCiclar(int dir) {
   if (atual < 0) atual = n - 1;
   if (atual >= n) atual = 0;
   fil_definir_hero_fonte(ops[atual]);
+  sync_proteger_ajustes_locais();
 }
 
 // Pula para a primeira linha da letra vizinha (a regua A-Z da aba Fora).
@@ -7682,7 +7788,7 @@ static void eventoFileiras(SDL_Keycode k) {
               if (filFoco >= filListaN) filFoco = filListaN > 0 ? filListaN - 1 : 0;
               break;
       case 2: if (fil_aceita_tipo(idx)) { fil_ciclar_tipo(idx); fileirasReagir(); } break;
-      default: fil_ciclar_tam(idx); break;
+      default: fil_ciclar_tam(idx); sync_proteger_ajustes_locais(); break;
     }
   }
 }
@@ -7991,6 +8097,7 @@ static void faMover(int i, int delta) {
   int ok = item.servico >= 0 ? fontefalha_provedor_mover(item.servico, delta)
                            : fontefalha_addon_mover(item.chave, distancia);
   if (!ok) { uxNotificar("Não foi possível salvar. O valor anterior foi mantido."); return; }
+  sync_proteger_ajustes_locais();
   faMontar();
   for (int k = 0; k < faN; k++) if ((item.servico >= 0 && faItem[k].servico == item.servico) ||
                                   (item.servico < 0 && !strcmp(faItem[k].chave, item.chave))) faFoco = k;
@@ -8079,6 +8186,7 @@ static void ffGruposDefinir(const char *texto) {
   if (!fontefalha_filtro_definir(&cfg)) {
     uxNotificar("Não foi possível salvar. O valor anterior foi mantido."); return;
   }
+  sync_proteger_ajustes_locais();
   uxNotificar("Ajuste salvo nesta TV.");
 }
 static void ffEscolher(void) {
@@ -8090,7 +8198,7 @@ static void ffEscolher(void) {
     cfg.excluir[ffCategoria] ^= bit;
     if (!fontefalha_filtro_definir(&cfg))
       uxNotificar("Não foi possível salvar. O valor anterior foi mantido.");
-    else uxNotificar("Ajuste salvo nesta TV.");
+    else { sync_proteger_ajustes_locais(); uxNotificar("Ajuste salvo nesta TV."); }
     return;
   }
   if (ffFoco == 2) {
@@ -8304,6 +8412,7 @@ static void hcEscolher(int i) {
   }
   if (hcL[i].tipo == HC_FIXA) fil_definir_hero_fonte(hcL[i].idx ? "*" : "");
   else fil_definir_hero_fonte(fil_chave(hcL[i].idx));
+  sync_proteger_ajustes_locais();
   hcAberta = 0;
 }
 static void hcEvento(SDL_Keycode k) {
@@ -8665,12 +8774,13 @@ static void eventoTela(const SDL_Event *e) {
       int ok;
       if (focoOp == AJ_LEG1_RESTAURAR) {
         ok = player_leg_estilo_definir(player_leg_estilo_padrao(), PLR_LEG_NADA);
-        if (ok) ajLegendaEspelhar();
+        if (ok) { ajLegendaEspelhar(); sync_proteger_ajustes_locais(); }
       } else {
         int salvo[AJ_N]; memcpy(salvo, valor, sizeof salvo);
         for (int op = 0; op < AJ_N; op++) if (ajLegendaSecundaria(op)) valor[op] = valorPadrao[op];
         ok = gravar();
         if (!ok) memcpy(valor, salvo, sizeof salvo);
+        else sync_proteger_ajustes_locais();
       }
       uxNotificar(ok ? "Ajuste salvo nesta TV." : "Não foi possível salvar. O valor anterior foi mantido.");
       return;
@@ -8728,6 +8838,14 @@ static void eventoTela(const SDL_Event *e) {
                         200, SP_ALFA_URL, NULL);
       return;
     }
+    if (focoOp == AJ_URL_M3U_ADD || focoOp == AJ_URL_XMLTV_ADD) {
+      stCampo = focoOp;
+      teclado_abrir_com(focoOp == AJ_URL_M3U_ADD ? "Endereço da lista M3U" : "Endereço do guia XMLTV",
+                        "O link completo, com http:// ou https://.",
+                        400, URL_ALFA, NULL);
+      return;
+    }
+    if (focoOp == AJ_URL_REM) { urlRemover(); return; }
     if (focoOp == AJ_SELOS_PACOTE_REM) {
       int a = selospacote_ativo();
       if (a >= 0 && selospacote_da_tv(a)) { selospacote_remover(a); spResultado = -1; spEspelhar(); }
@@ -8821,6 +8939,7 @@ void ajustes_atualizar(float dt, Uint32 agora) {
   adTesteRecolher();
   skTesteRecolher();
   spRecolher();
+  urlEspelhar();
   // "Procurar atualização" achou versao nova: abre o cartao por cima dos
   // Ajustes, como o OK em "Atualizar o aplicativo" ja fazia.
   if (atualizacao_busca_achou() && !atualizacao_aberta()) atualizacao_abrir();
@@ -8839,6 +8958,8 @@ void ajustes_atualizar(float dt, Uint32 agora) {
       else if (stCampo == AJ_FANART_CHAVE)    fanartDefinir(teclado_texto());
       else if (stCampo == AJ_SEEKR_CHAVE)     { seekrDefinir(teclado_texto()); atomic_store_explicit(&skTeste, 0, memory_order_release); }
       else if (stCampo == AJ_SELOS_PACOTE_ADD) spAdicionar(teclado_texto());
+      else if (stCampo == AJ_URL_M3U_ADD || stCampo == AJ_URL_XMLTV_ADD)
+        urlAdicionar(stCampo == AJ_URL_M3U_ADD ? LTV_URL_M3U : LTV_URL_XMLTV, teclado_texto());
       else if (stCampo == AJ_P2P_URL)         ajustes_definir_p2p_url(teclado_texto());
       else if (stCampo == AJ_CURADORIA_URL) {
         int e = curadoria_definir_url(teclado_texto());
@@ -8981,6 +9102,7 @@ static int nValores(int op) {
   if (op == AJ_SELOS_PACOTE) return 1 + selospacote_n();
   if (op == AJ_PLAYER_EXTERNO) return 3 + ppN();
   if (op == AJ_PLAYER_ANIME) return 4 + ppN();
+  if (op == AJ_URL_LISTA) return 1 + urlN;
 #ifndef __EMSCRIPTEN__
   // "YouTube" (o 4o valor) so toca no .wgt da Samsung (trailerfonte.c, existe).
   // Aqui ele era escolhivel e deixava a TV sem trailer nenhum: sem trailer no
@@ -9039,6 +9161,7 @@ static const char *textoValor(int op) {
     int v = valor[op];
     return v > 0 && v <= selospacote_n() ? selospacote_nome(v - 1) : "Do Nuvio";
   }
+  if (op == AJ_URL_LISTA) return urlNomeValor(valor[op]);
   // FORA DO INTERVALO NAO LE FORA DO VETOR.
   //
   // Esta linha era `return o->valores[valor[op]]`, sem conferir nada, e foi o
@@ -9546,6 +9669,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_XTREAM_SENHA: case AJ_XTREAM_LIMPAR: case AJ_FANART_CHAVE:
     case AJ_SEEKR_CHAVE: case AJ_SEEKR_TESTAR:
     case AJ_SELOS_PACOTE_ADD: case AJ_SELOS_PACOTE_REM:
+    case AJ_URL_LISTA: case AJ_URL_M3U_ADD: case AJ_URL_XMLTV_ADD: case AJ_URL_REM:
     case AJ_XTREAM_CONTA:
     case AJ_DIAGNOSTICO: case AJ_VELOCIDADE: case AJ_LIVETV_DIAG:
     case AJ_P2P_URL: case AJ_P2P_TESTAR:
