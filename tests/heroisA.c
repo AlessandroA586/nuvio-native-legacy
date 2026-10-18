@@ -1,7 +1,7 @@
 // Native Mac renderer fixture: actual Home geometry, text metrics and drawing.
 #include <string.h>
-#include "../src/gfx.h"
-#include "../src/text.h"
+#include "gfx.h"
+#include "text.h"
 static float headingY;
 static GLuint headingTexture;
 static int overlayProbe;
@@ -71,6 +71,7 @@ static void recordClip(float x, float y, float w, float h) {
 
 static SDL_Window *window;
 static CatItem items[12];
+static int budgetOnly;
 static void setup(int split, int glass) {
   char path[900];
   snprintf(path, sizeof path, "%s/ajustes.txt", getenv("NUVIO_DADOS"));
@@ -108,7 +109,7 @@ static void renderHome(int split, int probe) {
     glReadPixels(10,1080-96,1,1,GL_RGBA,GL_UNSIGNED_BYTE,pixel);
     assert(pixel[0] > 245);
     puts("PASS top overlay: solid through 45%, then fades to 96px");
-  } else if (!getenv("NV_HEROIS_BASELINE")) {
+  } else if (!budgetOnly) {
     if (fabsf(headingY-(split ? 78 : 98))>=0.01f)
       fprintf(stderr,"heading=%g split=%d row=%d layout=%d scroll=%g\n",headingY,split,foco.fileira,layoutHome(),scrollY);
     assert(fabsf(headingY-(split ? 78 : 98))<0.01f);
@@ -120,14 +121,25 @@ static void capture(const char *prefix, int split, int glass, float scale) {
   setup(split, glass); gfx_escala_txt_definir(scale); TXT_INI();
   scrollX[0] = alvoScrollFil(0, 0, 0, 0);
 
-  for (int frame = 0; frame < 50; frame++) {
+  GLuint query;
+  GLuint64EXT samples[64];
+  assert(SDL_GL_ExtensionSupported("GL_EXT_timer_query"));
+  glGenQueries(1, &query);
+  for (int frame = 0; frame < 80; frame++) {
     renderTime = 1000 + frame * 16;
     SDL_PumpEvents(); tex_bombear(8); tex_novo_quadro(); txt_novo_quadro(); gfx_novo_quadro();
+    // Include clear, shared shaders, copies and blur passes in frame cost.
+    glBeginQuery(GL_TIME_ELAPSED_EXT, query);
     glClearColor(NV_COR_FUNDO_R, NV_COR_FUNDO_G, NV_COR_FUNDO_B, 1); glClear(GL_COLOR_BUFFER_BIT);
-    gfx_rastro_grandes = getenv("NV_HEROIS_TRACE") && frame == 49;
+    gfx_rastro_grandes = getenv("NV_HEROIS_TRACE") && frame == 79;
     renderHome(split, 0);
     gfx_rastro_grandes = 0;
-    if(frame==49) {
+    glEndQuery(GL_TIME_ELAPSED_EXT);
+    GLuint64EXT ns = 0;
+    glGetQueryObjectui64vEXT(query, GL_QUERY_RESULT, &ns);
+    assert(ns > 0 && ns < 1000000000ULL && glGetError() == GL_NO_ERROR);
+    if (frame >= 16) samples[frame-16] = ns;
+    if(frame==79 && prefix) {
       if (getenv("NV_HEROIS_TRACE"))
         printf("TRACE split=%d glass=%d captures=%d blur=%g copy=%g\n", split, glass,
                gfx_vidro_capturas, gfx_vidro_fill, gfx_vidro_copia);
@@ -138,11 +150,18 @@ static void capture(const char *prefix, int split, int glass, float scale) {
       snprintf(path,sizeof path,"%s-%s%s.png",prefix,split?"heroidiv":"heroicard",glass?"":"-semvidro");
       assert(IMG_SavePNG(s,path)==0); SDL_FreeSurface(s); free(pixels);
       printf("PNG %s; rects=%d fill=%.3f gpu=%.3f\n",path,gfx_n_rect,gfx_fill,gfx_fill_gpu);
-      if (scale == 1.0f)
-        printf("BUDGET %d %d %d %.9f %.9f\n", split, glass, gfx_n_rect, gfx_fill, gfx_fill_gpu);
     }
     SDL_GL_SwapWindow(window); SDL_Delay(4);
   }
+  glDeleteQueries(1, &query);
+  for (int i=1;i<64;i++) {
+    GLuint64EXT ns=samples[i]; int j=i;
+    while (j>0 && samples[j-1]>ns) { samples[j]=samples[j-1]; j--; }
+    samples[j]=ns;
+  }
+  if (scale == 1.0f)
+    printf("BUDGET %d %d %d %.9f %.9f %.6f\n", split, glass, gfx_n_rect, gfx_fill, gfx_fill_gpu,
+           (samples[31]+samples[32])/2000000.0);
   TXT_FIM();
 }
 int main(int argc,char **argv) {
@@ -181,12 +200,14 @@ int main(int argc,char **argv) {
     SDL_Delay(4);
   }
   assert(tex_obter_larg(items[0].backdrop,1744));
-  if (getenv("NV_HEROIS_BASELINE")) {
+  if (argc>1 && !strcmp(argv[1],"--budget")) {
+    budgetOnly=1;
     for (int split=0;split<2;split++) for (int glass=0;glass<2;glass++)
-      capture(getenv("NUVIO_DADOS"),split,glass,1);
+      capture(NULL,split,glass,1);
     SDL_Quit(); return 0;
   }
 #ifndef HERO_BASELINE
+  if (!(argc>1 && !strcmp(argv[1],"--badge"))) {
   if(argc>1 && !strcmp(argv[1],"--transitions")) {
     for (int split=0;split<2;split++) {
       const float values[] = {0, 0.5f, 1};
@@ -228,9 +249,12 @@ int main(int argc,char **argv) {
     }
   }
   if (argc == 1) for (int split=0;split<2;split++) for (int glass=0;glass<2;glass++)
-    capture(getenv("NUVIO_DADOS"),split,glass,1);
-
+    capture(NULL,split,glass,1);
+  }
+#endif
+  int badgeOnly=argc>1 && !strcmp(argv[1],"--badge");
   gfx_escala_txt_definir(1);
+  if (!badgeOnly) {
   setup(0,0);
   assert(fabsf(alturaFil(0)/larguraFil(0)-372.0f/1744)<0.0001f);
   assert(fabsf(larguraFil(0)-1712)<1);
@@ -242,12 +266,14 @@ int main(int argc,char **argv) {
   assert(fabsf(w/h-2.0f/3)<0.001f);
   assert(fabsf(gapDe(FILEIRA_HEROI_DIVIDIDO)-24)<0.01f);
   assert(fabsf(alturaTotalFil(0)-h-150)<0.01f);
+  }
   for(int theme=0;theme<2;theme++) for(int i=0;i<3;i++) {
     const float scales[]={0.8f,1,1.15f};
     setenv("NV_HEROIS_TEMA",theme ? "2" : "0",1);
     setup(1,0); gfx_escala_txt_definir(scales[i]); TXT_INI();
     assert(fabsf(gfx_escala_tela_txt()-scales[i])<0.001f);
     float sw=larguraFil(0),sh=alturaFil(0);
+    if (!badgeOnly) {
     for(int col=0;col<5;col++) {
       foco.coluna=col; scrollX[0]=alvoScrollFil(0,col,0,0);
       for(int c=col+1;c<=col+4;c++) {
@@ -276,15 +302,18 @@ int main(int argc,char **argv) {
       }
     }
     assert(fabsf(sw/sh-2.0f/3)<0.001f);
+    }
     TxtLinha mark=txt_linha(TXT_MINI,"IMDb",10,10,10,255),score=txt_linha(TXT_CAPTION2,"6.8",235,235,235,255);
     assert(badge_imdb_largura(68)>=mark.w+14+BADGE_IMDB_GAP+score.w);
     assert(fabsf(badge_imdb(0,0,68,0,0)-badge_imdb_largura(68))<0.01f);
+#ifndef HERO_BASELINE
     float mh=heroiMeta(&items[0],104,600,divPainelW());
     float synopsis=sinopse_bloco_corta(TXT_DET_SIN,items[0].sinopse,243,242,239,104,650,divPainelW(),36,0,2);
     assert(18+mh+14+synopsis<=NV_DIV_META_H);
+#endif
     TXT_FIM();
   }
-  puts("PASS hero A: card aspect, three flush posters, shared 150px meta band, measured IMDb padding; scales 80/100/115%");
-#endif
+  puts(badgeOnly ? "PASS IMDb padding at scales 80/100/115%" :
+       "PASS hero A: card aspect, three flush posters, shared 150px meta band, measured IMDb padding; scales 80/100/115%");
   SDL_Quit(); return 0;
 }

@@ -1,38 +1,87 @@
 #!/bin/bash
-# One native geometry regression and optional before/after PNGs; no network.
+# Native acceptance and complete-renderer comparison; optional PNG prefix.
 set -eu
 cd "$(dirname "$0")/.."
+if [ "${NV_HEROIS_TIMED:-}" != 1 ]; then
+  exec python3 - "$@" <<'PY'
+import os, signal, subprocess, sys
+p = subprocess.Popen(['bash', 'tests/heroisA.sh', *sys.argv[1:]],
+                     env=dict(os.environ, NV_HEROIS_TIMED='1'), start_new_session=True)
+try:
+    sys.exit(p.wait(timeout=59))
+except subprocess.TimeoutExpired:
+    os.killpg(p.pid, signal.SIGTERM)
+    p.wait()
+    sys.exit(124)
+PY
+fi
+SECONDS=0
+ulimit -c 0
 export TMPDIR=/Volumes/ExternalSSD/tmp/jobtmp
 export NUVIO_DADOS
 NUVIO_DADOS=$(mktemp -d "$TMPDIR/nuvio-heroisA.XXXXXX")
-trap 'rm -rf "$NUVIO_DADOS"' EXIT
-sources=()
-for source in src/*.c src/dts/*.c; do
-  case "$source" in src/main.c|src/home.c) continue;; esac
-  sources+=("$source")
-done
-cc "${sources[@]}" tests/heroisA.c -Isrc -o "$NUVIO_DADOS/test" -O1 -g \
-  -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -L/opt/homebrew/lib \
-  -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL -Wno-deprecated-declarations \
-  >"$NUVIO_DADOS/build.log" 2>&1 || { tail -45 "$NUVIO_DADOS/build.log"; exit 1; }
-# Freeze the integration ancestor that preceded Hero A; never use a synthetic renderer.
+trap 'rc=$?; rm -rf "$NUVIO_DADOS"; printf "Hero A runner: rc=%d, elapsed=%ds\n" "$rc" "$SECONDS"' EXIT
+# Freeze the complete integration renderer, including shared shaders and badges.
 base=0d464c26252ff9e0afef07fe55322da21ce6ce07
-git show "$base:src/home.c" > "$NUVIO_DADOS/home.c"
-git show "$base:src/layout.h" > "$NUVIO_DADOS/layout.h"
-cc "${sources[@]}" tests/heroisA.c -Isrc -o "$NUVIO_DADOS/baseline" -O1 -g \
-  -DHERO_BASELINE -DHOME_SOURCE=\""$NUVIO_DADOS/home.c"\" -include "$NUVIO_DADOS/layout.h" \
-  -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -L/opt/homebrew/lib \
-  -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL -Wno-deprecated-declarations \
-  >"$NUVIO_DADOS/base-build.log" 2>&1 || { tail -45 "$NUVIO_DADOS/base-build.log"; exit 1; }
-NV_HEROIS_BASELINE=1 "$NUVIO_DADOS/baseline" > "$NUVIO_DADOS/base.log" 2>&1
-set +e
-"$NUVIO_DADOS/test" --transitions
-transition_rc=$?
-"$NUVIO_DADOS/test" --fade
-fade_rc=$?
-"$NUVIO_DADOS/test" "$@" > "$NUVIO_DADOS/current.log" 2>&1
-layout_rc=$?
-cat "$NUVIO_DADOS/current.log"
+mkdir "$NUVIO_DADOS/base"
+git archive "$base" src | tar -x -C "$NUVIO_DADOS/base"
+python3 - "$NUVIO_DADOS" <<'PY'
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+import subprocess, sys
+root = Path.cwd()
+out = Path(sys.argv[1])
+flags = ['-O1', '-I/opt/homebrew/include', '-I/opt/homebrew/include/SDL2',
+         '-Wno-deprecated-declarations']
+jobs, objects = [], {}
+for name, source in [('test', root), ('baseline', out/'base')]:
+    target = out/name
+    target.mkdir()
+    objects[name] = []
+    for path in sorted((source/'src').glob('*.c')) + sorted((source/'src/dts').glob('*.c')):
+        if path.name in ('main.c', 'home.c'):
+            continue
+        obj = target/(path.stem + '.o')
+        if name == 'baseline' and path.read_bytes() == (root/path.relative_to(source)).read_bytes():
+            objects[name].append(str(out/'test'/(path.stem+'.o')))
+            continue
+        objects[name].append(str(obj))
+        jobs.append(['cc', *flags, '-I'+str(source/'src'), '-c', str(path), '-o', str(obj)])
+    obj = target/'fixture.o'
+    objects[name].append(str(obj))
+    jobs.append(['cc', *flags, '-I'+str(source/'src'),
+                 *(['-DHERO_BASELINE', '-DHOME_SOURCE="'+str(source/'src/home.c')+'"'] if name == 'baseline' else []),
+                 '-c', 'tests/heroisA.c', '-o', str(obj)])
+def compile(command):
+    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if result.returncode:
+        sys.stderr.buffer.write(result.stdout)
+        raise RuntimeError('compilation failed')
+with ThreadPoolExecutor(max_workers=8) as pool:
+    list(pool.map(compile, jobs))
+for name, paths in objects.items():
+    subprocess.run(['cc', *paths, '-o', str(out/(name+'.bin')), '-L/opt/homebrew/lib',
+                    '-lSDL2', '-lSDL2_image', '-lSDL2_ttf', '-lz', '-framework', 'OpenGL'], check=True)
+PY
+# Identical acceptance assertions must fail for the expected reason on integration.
+for case in geometry badge; do
+  set +e
+  "$NUVIO_DADOS/baseline.bin" "--$case" > "$NUVIO_DADOS/$case.log" 2>&1
+  rc=$?
+  set -e
+  [ "$rc" -eq 134 ]
+  if [ "$case" = geometry ]; then
+    grep -F '372.0f/1744' "$NUVIO_DADOS/$case.log"
+  else
+    grep -F 'badge_imdb_largura(68)>=mark.w+14+BADGE_IMDB_GAP+score.w' "$NUVIO_DADOS/$case.log"
+  fi
+  "$NUVIO_DADOS/test.bin" "--$case"
+  printf 'PASS %s: integration FAIL (rc=%d), current PASS\n' "$case" "$rc"
+done
+"$NUVIO_DADOS/test.bin" --transitions
+"$NUVIO_DADOS/test.bin" --fade
+"$NUVIO_DADOS/baseline.bin" --budget > "$NUVIO_DADOS/base.log" 2>&1
+"$NUVIO_DADOS/test.bin" --budget > "$NUVIO_DADOS/current.log" 2>&1
 python3 - "$NUVIO_DADOS/base.log" "$NUVIO_DADOS/current.log" <<'PY'
 import sys
 
@@ -40,12 +89,19 @@ def metrics(path):
     return {tuple(p[1:3]): list(map(float, p[3:]))
             for line in open(path) if (p := line.split()) and p[0] == 'BUDGET'}
 base, current = map(metrics, sys.argv[1:])
-assert len(base) == len(current) == 4, (base, current)
+assert base.keys() == current.keys() and len(base) == 4, (base, current)
+def within_budget(before, after):
+    # Full-frame GPU median includes clear/pass/shader costs; fill is diagnostic.
+    return all(0 < after[state][-1] <= before[state][-1] for state in before)
+# A clear/pass regression must fail even with unchanged rasterized-fill counters.
+regression = {state: values[:-1] + [values[-1]*2] for state, values in base.items()}
+assert not within_budget(base, regression)
+print('PASS budget guard: added frame cost rejected with unchanged fill')
 for state, values in current.items():
-    print('GPU current/integration', state, values, base[state])
-    # Draw count is diagnostic; the GPU budget is rasterized fill.
-    assert values[2] <= base[state][2] + 0.000001, state
+    print('GPU Mac current/integration (rects, fill, raster fill, frame ms)', state, values, base[state])
+assert within_budget(base, current), 'whole-frame GPU budget exceeded'
 PY
-budget_rc=$?
-printf 'transitions rc=%d; fade rc=%d; layout rc=%d; budget rc=%d\n' "$transition_rc" "$fade_rc" "$layout_rc" "$budget_rc"
-[ "$transition_rc" -eq 0 ] && [ "$fade_rc" -eq 0 ] && [ "$layout_rc" -eq 0 ] && [ "$budget_rc" -eq 0 ]
+if [ "$#" -gt 0 ]; then
+  "$NUVIO_DADOS/test.bin" "$@"
+fi
+printf 'PASS Hero A (target-device timings not measured)\n'
