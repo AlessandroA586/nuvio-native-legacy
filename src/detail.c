@@ -1695,7 +1695,7 @@ void detail_fechar_seco(void) {
 
 void detail_mostrar_pessoa(long tmdb, const char *nome, const char *foto) {
   pediuRelogio = 0;
-  if (!aberto || tmdb <= 0) return;
+  if (!aberto || (tmdb <= 0 && !(nome && nome[0]))) return;
   pessoaBuscaCancelar();
   pessoa_pedir(tmdb, nome ? nome : "", foto ? foto : "");
   pessoaAberta = 1;
@@ -3643,6 +3643,11 @@ static void detail_atualizar_(float dt, Uint32 agora) {
   (void)agora;
   episodios_menu_atualizar(dt);   // as molas do menu de visto / painel da temporada
   if (!aberto) { blocoAnt[0] = blocoAnt[1] = blocoAnt[2] = -1.0f; return; }
+  if (pessoaAberta && pessoa_falhou()) {
+    pessoaAberta = 0;
+    ilha_avisar("det-elenco-sem-pagina", ILHA_INFO, NULL,
+                i18n("Esta pessoa não tem página ainda"), 4000u, 0);
+  }
 #ifdef NV_TOUCH_UI
   if (telefoneui_ativo()) trailerDetalheTela();
   if (detalheRetrato() && carro) {

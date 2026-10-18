@@ -992,7 +992,7 @@ static void legendaAutomatica(Uint32 agora) {
   const VideoFaixa *fa;
   const CatItem *ci;
   const LegMem *mt;
-  char tit[64];
+  char tit[64], addIdiomas[LEG_MAX][sizeof ((Legenda *)0)->idioma];
   int tipos[NV_FAIXA_MAX];
   int nEmb, nAdd = 0, embFechado, addFechado = 1, i, r, soForcada, origem, forcadaAuto;
   Uint32 passou;
@@ -1043,7 +1043,11 @@ static void legendaAutomatica(Uint32 agora) {
   if (ci && ci->imdb[0]) {
     nAdd = addons_n_legendas();
     if (nAdd > LEG_MAX) nAdd = LEG_MAX;
-    for (i = 0; i < nAdd; i++) { const Legenda *l = addons_legenda(i); add[i] = l ? l->idioma : ""; }
+    for (i = 0; i < nAdd; i++) {
+      const Legenda *l = addons_legenda(i);
+      snprintf(addIdiomas[i], sizeof addIdiomas[i], "%s", l ? l->idioma : "");
+      add[i] = addIdiomas[i];
+    }
     addFechado = addons_legendas_prontas();
   }
   if (passou >= FX_AUTO_FIM_MS) embFechado = addFechado = 1;

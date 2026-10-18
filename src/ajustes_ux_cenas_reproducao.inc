@@ -428,6 +428,30 @@ static void rPreparar(int op) {   // o arquivo ja escolhido e posto no debrid an
   ajc_icone("aj_zap", 565, 215, 22, vid * 0.9f);
   ajcChaveCanto(k);
 }
+// MEMORIA DA FONTE: tres episodios, tres fontes cada. Ligado, a mesma linha
+// (a lembrada / o mesmo grupo) e a escolhida em todos; desligado, cada episodio
+// cai numa diferente. As linhas filhas mostram o estado da mae.
+static void rMemoria(int op) {
+  static const int SOLTA[3] = { 0, 2, 1 };
+  int mae = op == AJ_FONTE_GRUPO_SESSOES ? AJ_FONTE_GRUPO : op == AJ_LINK_PRAZO ? AJ_LINK_REUSAR : op;
+  float k = ajcLig(mae);
+  int s = ajc_passo(1.2f, 3), e, i;
+  const char *ic = op == AJ_LINK_REUSAR ? "aj_link"
+                 : op == AJ_LINK_PRAZO ? "aj_clock"
+                 : op == AJ_FONTE_GRUPO ? "aj_layers" : "aj_rotate-ccw-clock";
+  char b[8];
+  for (e = 0; e < 3; e++) {
+    float x = 24 + e * 196, al = e <= s ? 1.0f : 0.35f;
+    int alvo = k > 0.5f ? 1 : SOLTA[e];
+    snprintf(b, sizeof b, "E%d", e + 1);
+    ajcSelo(b, x, 34, 12, e == s ? 1.0f : 0.0f, al);
+    for (i = 0; i < 3; i++) rLinha(x, 76 + i * 62, 180, 50, i == 1 ? "1080p" : "4K", NULL, i + 1, al);
+    if (e <= s) ajc_foco(x, 76 + alvo * 62, 180, 50, 12, al);
+  }
+  ajc_ladrilho(ic, 40, 300, 40, k > 0.5f, 1);
+  if (op == AJ_LINK_PRAZO) ajcTexto(textoValor(op), 16, 1, 72, 290, 0.9f);
+  else ajcChaveCanto(ajcLig(op));
+}
 static void rOrdemFontes(void) {
   int addon = rInt(AJ_FONTE_ORDEM_ADDON, 1);
   const char *res[] = { "720p", "4K", "1080p" };
@@ -821,6 +845,9 @@ static int ajcNovaReproducao(int sec, int op) {
     case AJ_FONTE_AQUECER: rAquecer(op); return 1;
     case AJ_FONTE_PREPARAR: rPreparar(op); return 1;
     case AJ_FONTE_PRECARREGAR: rPreparar(op); return 1;
+    case AJ_FONTE_GRUPO: case AJ_FONTE_GRUPO_SESSOES:
+    case AJ_LINK_REUSAR: case AJ_LINK_PRAZO:
+      rMemoria(op); return 1;
     case AJ_FONTE_ORDEM_ADDON: rOrdemFontes(); return 1;
     case AJ_FONTE_TEXTO: rTexto(); return 1;
     case AJ_SELOS_CORES: rSelosCores(op); return 1;

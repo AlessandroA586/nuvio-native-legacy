@@ -85,6 +85,7 @@ void gfx_escala_sair(float a) { testeAtiva = a; }
 // Duble do desenho do card editorial: sem GL, so o que o teste do genero conta.
 float gfx_tex_aspect_atual;
 void gfx_veu_base(GfxRect c, float r, float f, float a) { (void)c; (void)r; (void)f; (void)a; }
+static int nSinopse;
 static int nHolofote, stageTitleDraws, stageTextDraws;
 static GfxRect stageTitleRect, stageGenreRect;
 static float stageBadgeWidth;
@@ -96,6 +97,9 @@ void gfx_cor(GfxRect r, float raio, float cr, float cg, float cb, float a) {
   gfx_rect(r, 0, GFX_COR, 0, 0, 0, raio, cr, cg, cb, a);
 }
 GLuint tex_obter_logo_larg(const char *c, float l) { (void)c; (void)l; return 0; }
+GLuint tex_obter_logo_larg_qualquer(const char *c, float l) { (void)c; (void)l; return 0; }
+void tex_publicar_paleta(const char *c) { (void)c; }
+const char *logotitulo_url(const CatItem *ci, float w) { (void)ci; (void)w; return NULL; }
 int  tex_marca_escura(const char *c) { (void)c; return 0; }
 TxtLinha txt_linha_corta(TxtEstilo e, const char *s, int r, int g, int b, int a, float w) {
   (void)e; (void)s; (void)r; (void)g; (void)b; (void)a; (void)w; return (TxtLinha){ 1, 10, 10, 0, 0 }; }
@@ -116,6 +120,7 @@ TxtLinha txt_linha(TxtEstilo e, const char *s, int r, int g, int b, int a) {
 float txt_bloco_corta(TxtEstilo e, const char *s, int r, int g, int b,
                        float x, float y, float w, float leading, float a, int max) {
   (void)s; (void)r; (void)g; (void)b;
+  if (e == TXT_HERO_SIN) nSinopse++;
   if (e == TXT_TITULO3 && a > 0) {
     stageTitleDraws++;
     stageTitleRect = (GfxRect){x, y, w, leading * max};
@@ -159,10 +164,10 @@ int main(void) {
     }
     // O passo e o de um cartaz, nao o do painel; a altura reserva a ficha.
     assert(passoFil(1) < larguraFil(1) + 60.0f);
-    assert(alturaTotalFil(1) > alturaFil(1) + 150.0f);
+    assert(alturaTotalFil(1) >= alturaFil(1) + 150.0f);
     // Ano/nota embaixo do poster: o rotulo existe e a altura dele esta reservada.
     assert(temRotulo(FILEIRA_HEROI_DIVIDIDO));
-    assert(alturaTotalFil(1) == alturaFil(1) + NV_POSTER_COPY_H + NV_DIV_META_H);
+    assert(alturaTotalFil(1) == alturaFil(1) + NV_DIV_META_H);
     memset(scrollX, 0, sizeof scrollX);
   }
   // HEROI DIVIDIDO sem repeticao: com 5 itens, em CADA foco o titulo do painel
@@ -832,6 +837,24 @@ int main(void) {
       desenhaEditorialCard(&it, outras[k], 0, 0, 640, 360, 8);
       off = nTxtDesenhado; offB = nBadge;
       assert(on == off && onB == offB && onB == 1);
+    }
+    testeGenero = 1; }
+
+  // O mesmo ajuste no POSTER P/M/G: desligado, sem sinopse nem linha de
+  // genero (so arte e logo/nome); ligado, tudo como sempre.
+  { CatItem it = {0}; float fatores[3] = { 0.8f, 1.0f, 1.25f };
+    snprintf(it.titulo, sizeof it.titulo, "Titulo");
+    snprintf(it.genero, sizeof it.genero, "Terror");
+    snprintf(it.sinopse, sizeof it.sinopse, "Uma sinopse.");
+    for (int k = 0; k < 3; k++) {
+      int on, onS, off, offS;
+      testeGenero = 1; stageTextDraws = 0; nSinopse = 0;
+      desenhaPosterGrande(&it, NULL, 0, 0, 480, 640, 8, 1.0f, fatores[k]);
+      on = stageTextDraws; onS = nSinopse;
+      testeGenero = 0; stageTextDraws = 0; nSinopse = 0;
+      desenhaPosterGrande(&it, NULL, 0, 0, 480, 640, 8, 1.0f, fatores[k]);
+      off = stageTextDraws; offS = nSinopse;
+      assert(onS == 1 && offS == 0 && on == off + 1);
     }
     testeGenero = 1; }
 

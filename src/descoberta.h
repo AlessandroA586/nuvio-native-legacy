@@ -346,6 +346,8 @@ long desc_buscar_pessoa(const char *nome, long titulo, const char *tipo);
 // Preserva a ordem da raiz e casa fotos/papeis por nome; soVazios completa
 // lacunas sem trocar campos da fonte primaria. Devolve o numero de pessoas.
 int  desc_meta_elenco(const char *json, CatItem *d, int soVazios);
+// 1 quando o elenco tem nomes mas ninguem tem id de pessoa do TMDB ainda.
+int  desc_elenco_precisa_pessoas(const CatItem *c);
 // Tipo(s) em que perguntar o /meta do Cinemeta, na ordem (1 ou 2). Tipo
 // incerto ("anime" etc.) tenta serie e depois filme. Puras.
 int  desc_meta_tipos(const char *tipo, const char *saida[2]);

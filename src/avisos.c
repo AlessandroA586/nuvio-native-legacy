@@ -500,16 +500,37 @@ static void *enviarRegistro(void *u) {
   int status = 0;
   int manual = (u == &ATUAL || u == &AUTO_ATUAL);
   int automatico = (u == &AUTO_ATUAL || u == &AUTO_ANTERIOR);
+  int comAnterior = (u == &ATUAL);
 #ifdef __EMSCRIPTEN__
   { const char *fonte = manual ? logAtual : logAnterior;
     if (fonte) { texto = strdup(fonte); if (texto) nTexto = strlen(texto); } }
 #else
-  { const char *arq = manual ? registro_arquivo() : AV_LOG_ANTERIOR;
-    FILE *f = arq ? fopen(arq, "rb") : NULL;
+  { const char *arq = manual ? registro_arquivo() : (AV_LOG_ANTERIOR && AV_LOG_ANTERIOR[0] ? AV_LOG_ANTERIOR : "");
+    FILE *f = (arq && arq[0]) ? fopen(arq, "rb") : NULL;
     if (f) {
       size_t max = automatico ? AV_REGISTRO_AUTO_MAX : AV_REGISTRO_MAX;
-      texto = malloc(max + 1);
+      FILE *ant = NULL;
+      char *cauda = NULL;
+      size_t nCauda = 0;
+      if (comAnterior) ant = fopen(AV_LOG_ANTERIOR, "rb");
+      if (ant) {
+        cauda = malloc(max / 4 + 1);
+        if (cauda) nCauda = lerRegistroCabecaCauda(ant, cauda, max / 4);
+        fclose(ant);
+        if (nCauda && !strstr(cauda, "[player]") && !strstr(cauda, "[video]") &&
+            !strstr(cauda, "[queda]")) { free(cauda); cauda = NULL; nCauda = 0; }
+      }
+      texto = malloc(max + nCauda + 64);
       if (texto) nTexto = lerRegistroCabecaCauda(f, texto, max);
+      if (texto && nCauda && nTexto + 32 + nCauda < max + nCauda + 64) {
+        int m = snprintf(texto + nTexto, 48, "\n--- sessao anterior ---\n");
+        if (m > 0) {
+          memcpy(texto + nTexto + m, cauda, nCauda);
+          nTexto += (size_t)m + nCauda;
+          texto[nTexto] = 0;
+        }
+      }
+      free(cauda);
       fclose(f);
     } }
 #endif
