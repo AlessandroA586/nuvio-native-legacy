@@ -1137,7 +1137,7 @@ int stream_extrair(const char *json, const char *provedor, Stream **saida) {
       // description/title never overrides a negative status there. A "⏳" age, "download]" or "uncached" deep
       // in the description/filename (AIOStreams + TorBox) marked every cached
       // stream "not cached", and the verified auto pick dropped all of them.
-      if (s.foraCache && (cache > 0 || textoEmCache(nomeFonte)) && !stream_texto_fora_de_cache(s.rotulo)) s.foraCache = 0;
+      if (s.foraCache && (cache > 0 || (cache == 0 && textoEmCache(nomeFonte))) && !stream_texto_fora_de_cache(s.rotulo)) s.foraCache = 0;
       // AIOStreams: clientResolve.isCached e explicito; ausente nao e false.
       if (s.infoHash[0] && !s.url[0] && cache < 0) s.foraCache = 1;
       if (s.foraCache) s.emCache = 0;

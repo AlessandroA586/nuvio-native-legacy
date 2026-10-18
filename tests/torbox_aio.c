@@ -24,15 +24,19 @@ int main(void) {
     "{\"name\":\"\xe2\x8f\xb3 TB\",\"description\":\"\xe2\x9a\xa1 seeds\",\"url\":\"https://aio.invalid/p/4\"},"
     // 5: neutral label, description says "Not cached" and "⚡" only in the filename -> not cached
     "{\"name\":\"AIOStreams 1080p\",\"url\":\"https://aio.invalid/p/5\","
-    "\"description\":\"[TB download] Not cached | Movie.\xe2\x9a\xa1.1080p.mkv\"}"
+    "\"description\":\"[TB download] Not cached | Movie.\xe2\x9a\xa1.1080p.mkv\"},"
+    // 6: stale "⚡" name + URL, but clientResolve.isCached:false -> explicit status wins
+    "{\"name\":\"[TB\xe2\x9a\xa1] AIO 1080p\",\"url\":\"https://aio.invalid/p/6\",\"description\":\"Not cached\","
+    "\"clientResolve\":{\"service\":\"torbox\",\"isCached\":false}}"
     "]}", "AIO | TB Instant", &v);
-  assert(n == 6);
+  assert(n == 7);
   assert(v[0].emCache && !v[0].foraCache);
   assert(v[1].emCache && !v[1].foraCache);
   assert(!v[2].emCache && v[2].foraCache);
   assert(!v[3].emCache && v[3].foraCache && v[3].cacheNegado);
   assert(!v[4].emCache && v[4].foraCache);
   assert(!v[5].emCache && v[5].foraCache);
+  assert(!v[6].emCache && v[6].foraCache && v[6].cacheNegado);
   free(v);
   puts("torbox_aio: cached marks beat stray description text");
   return 0;
