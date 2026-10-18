@@ -23,3 +23,4 @@ cc -DNV_ANDROID -O1 -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -Wl,-dead_strip,-undefined,dynamic_lookup -o ${TMPDIR:-/tmp}/nuvio-trailer-android-geometry
 ${TMPDIR:-/tmp}/nuvio-trailer-android-geometry
 bash tests/video_android_janela.sh
+python3 tests/android_window_ready.py

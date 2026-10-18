@@ -1131,9 +1131,17 @@ object NvPlayer {
     }
     private val janelaPedido = AtomicInteger()
     @Volatile private var janelaAplicada = -1
-    @JvmStatic fun janelaPronta(): Boolean = janelaAplicada == janelaPedido.get()
-    @JvmStatic fun janela(x: Int, y: Int, w: Int, h: Int, encaixa: Int) {
-        val pedido = janelaPedido.incrementAndGet()
+    @Volatile private var janelaSuperficieAplicada: SurfaceView? = null
+    private var janelaUltimoPedido: List<Any?>? = null
+    @JvmStatic fun janelaPronta(): Boolean = janelaAplicada == janelaPedido.get() &&
+        janelaSuperficieAplicada != null && janelaSuperficieAplicada === superficie
+    @Synchronized @JvmStatic fun janela(x: Int, y: Int, w: Int, h: Int, encaixa: Int) {
+        val geometria = listOf(x, y, w, h, encaixa, superficie)
+        // Crop retries still apply layout, but unchanged requests keep their acknowledgement.
+        val pedido = if (geometria == janelaUltimoPedido) janelaPedido.get() else {
+            janelaUltimoPedido = geometria
+            janelaPedido.incrementAndGet()
+        }
         principal.post {
             definirJanela(x, y, w, h, encaixa != 0)
             val sv = superficie ?: return@post
@@ -1145,6 +1153,7 @@ object NvPlayer {
                         sv.viewTreeObserver.removeOnPreDrawListener(this)
                     } else if (!sv.isLayoutRequested && sv.visibility == View.VISIBLE &&
                                sv.holder.surface.isValid && !recriando && !recriaAgendada) {
+                        janelaSuperficieAplicada = sv
                         janelaAplicada = pedido
                         sv.viewTreeObserver.removeOnPreDrawListener(this)
                     }
