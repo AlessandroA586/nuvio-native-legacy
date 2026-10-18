@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T06:48:15-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T07:47:59-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -179,6 +179,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Artwork survives failed GPU uploads**: Existing artwork stays visible when allocation, upload, mip generation or warmup fails, while bounded retries allow recovery without repeated glass invalidation. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `47a43e9e1`, `67dc816cc`, merge `ddc51a964` (`agente/205-frostpisca`).
 
 - **Discord activity keeps public artwork**: Unsupported poster URLs are converted to public Discord artwork URLs so shared activity can display its image. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `115220cef`, `e476d1707`.
 
@@ -414,7 +416,6 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
 - **Hero A layout polish**: Wide hero cards and focus rendering receive layout and draw-budget fixes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-heroisA, `c3985174d`. Latest fix is complete; queued review work and device checks remain before integration.
 
-- **Frost recovery**: Glass recovery receives fixes for texture-upload failures and memory pressure. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-frostpisca, `67dc816cc`. Latest fix is complete; queued review work and device checks remain before integration.
 
 - **Fixed poster sizes with text scaling**: Text-scale follow-ups preserve poster dimensions and improve row anchors. Platforms: webOS, Android, Samsung .tpk, WASM. Refs agente/205-escalafixa, `d3fff84c9`. Latest fix is complete; queued review work and device checks remain before integration.
 
