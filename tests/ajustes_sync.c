@@ -3,6 +3,7 @@
 #include "nvtmp.h"
 #include <assert.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #define main conta_ajustes_main
 #include "conta_ajustes.c"
@@ -74,8 +75,14 @@ int main(int argc, char **argv) {
     dados_gravar("aparencia-20.txt", "1\n");
     return conta_ajustes_main();
   }
-  ajustes_dir(argv[1]); login();
-  if (!strcmp(argv[2], "roundtrip") || !strcmp(argv[2], "empty")) {
+  ajustes_dir(argv[1]); fil_definir_perfil(1);
+  if (!strcmp(argv[2], "quota-restart")) {
+    check(fil_limite_gravado() == 3, "custom row quota survives process restart");
+    return 0;
+  }
+  login();
+  int webEdit = !strcmp(argv[2], "webedit"), quota = !strcmp(argv[2], "quota");
+  if (!strcmp(argv[2], "roundtrip") || !strcmp(argv[2], "empty") || webEdit || quota) {
     if (strcmp(argv[2], "empty")) cloud = strdup("{\"version\":1,\"features\":{\"layout_settings\":{\"hero_section_enabled\":{\"type\":\"boolean\",\"value\":true}},\"future\":{\"untouched\":42}}}");
     cycle();
     valor[AJ_TEMA] = 22; valor[AJ_HOME_LAYOUT] = 2; valor[AJ_IDIOMA] = 4;
@@ -102,6 +109,12 @@ int main(int argc, char **argv) {
     check(pushes == 1, "settings saved, including first blob for empty account");
     check(strstr(cloud, "untouched\":42") || !strcmp(argv[2], "empty"), "unknown cloud feature preserved");
     check(!strstr(cloud, "SECRET-") && !strstr(cloud, "5345435245542d") && !strstr(cloud, "c_resolucaoUi"), "credentials and display override excluded");
+    if (webEdit) {
+      // Simulate web edits after the TV uploaded its C snapshot.
+      char *updated = malloc(strlen(cloud) + 256); assert(updated);
+      sprintf(updated, "{\"selected_theme\":\"JADE\",\"hero_section_enabled\":true,%s", cloud + 1);
+      free(cloud); cloud = updated;
+    }
     char *saved = strdup(cloud);
     sessao_sair(); sync_esquecer_usuario();
     memcpy(valor, valorPadrao, sizeof valor);
@@ -109,11 +122,23 @@ int main(int argc, char **argv) {
     fonteregra_perfil_restaurar(1);
     fontefalha_definir_provedores(0); fontefalha_provedor_definir_limite(0, 3);
     check(!strcmp(saved, cloud), "logout leaves cloud intact");
+    if (quota) {
+      fil_definir_limite(3);
+      ajustes_aplicar_blob(cloud);
+      pid_t child = fork(); assert(child >= 0);
+      if (!child) { execl(argv[0], argv[0], argv[1], "quota-restart", (char *)NULL); _exit(127); }
+      int status; assert(waitpid(child, &status, 0) == child);
+      check(WIFEXITED(status) && WEXITSTATUS(status) == 0, "row quota persisted before any row save");
+    }
+    if (webEdit) {
+      valor[AJ_TEMA] = 0; // A fixed local theme accepts account theme edits.
+      expected[AJ_TEMA] = 8; expected[AJ_HERO] = 0;
+    }
     login(); cycle();
     for (int i = 0; i < AJ_N; i++) if (ajustePortavel(i) && !ajLegendaPrincipal(i))
       check(valor[i] == expected[i], CHAVE[i]);
-    check(valor[AJ_TEMA] == 22 && valor[AJ_HOME_LAYOUT] == 2 && valor[AJ_IDIOMA] == 4, "appearance/layout/language restored");
-    check(valor[AJ_HERO] == 1 && valor[AJ_PULAR_ABERTURA] == 0, "player/home settings restored");
+    check(valor[AJ_TEMA] == expected[AJ_TEMA] && valor[AJ_HOME_LAYOUT] == expected[AJ_HOME_LAYOUT] && valor[AJ_IDIOMA] == 4, "appearance/layout/language restored");
+    check(valor[AJ_HERO] == expected[AJ_HERO] && valor[AJ_PULAR_ABERTURA] == 0, "player/home settings restored");
     check(valor[AJ_LEG_LINGUA] == 3 && valor[AJ_LEG2_COR] == 2 && player_leg_estilo()->tamanho == 160, "subtitle languages and both styles restored");
     check(valor[AJ_FONTE_UI] == 1, "interface font restored");
     check(valor[AJ_RESOLUCAO] == valorPadrao[AJ_RESOLUCAO], "device display setting not restored");
@@ -121,8 +146,13 @@ int main(int argc, char **argv) {
     char first[FR_NOME_MAX]; fonteregra_ordem_nome(0, first, sizeof first);
     check(fonteregra_ordem_n() == 2 && !strcmp(first, "Addon B"), "addon order restored");
     check(!strcmp(fil_chave(0), "org.test_series_new"), "home row order restored");
-    check(fil_limite_gravado() == FIL_LIMITE_PADRAO, "home row quota remains device-local");
+    check(fil_limite_gravado() == (quota ? 3 : FIL_LIMITE_PADRAO), "home row quota remains device-local");
     check(pushes == 1 && !strcmp(saved, cloud), "login restores without default push");
+    if (webEdit) {
+      sync_proteger_ajustes_locais(); cycle();
+      check(strstr(cloud, "\"selected_theme\":\"JADE\"") &&
+            strstr(cloud, "\"hero_section_enabled\":true"), "next TV upload preserves later web edits");
+    }
     free(saved);
   } else {
     cloud = strdup("{\"features\":{\"layout_settings\":{\"hero_section_enabled\":{\"type\":\"boolean\",\"value\":false}}}}");

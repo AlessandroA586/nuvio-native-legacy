@@ -89,7 +89,14 @@ static int ajustesExtrasAplicar(const char *json) {
       !acharValor(a, b, "values", &v, &f) || *v != '{') return 0;
   for (int i = 0; i < AJ_N; i++) if (ajustePortavel(i)) {
     const char *p, *end;
-    char key[96]; snprintf(key, sizeof key, "c_%s", CHAVE[i]);
+    char key[96];
+    // Web edits do not update the C snapshot. Existing web keys win.
+    if (!somenteDesteAparelho(i)) {
+      camelParaSnake(chaveConta(i), key, sizeof key);
+      if (acharValor(json, json + strlen(json), key, &p, &end) ||
+          acharValor(json, json + strlen(json), chaveConta(i), &p, &end)) continue;
+    }
+    snprintf(key, sizeof key, "c_%s", CHAVE[i]);
     if (!acharValor(v, f, key, &p, &end) || p == end) continue;
     char *tail; long num = strtol(p, &tail, 10);
     if (tail != end || num < INT_MIN || num > INT_MAX) continue;
@@ -102,7 +109,7 @@ static int ajustesExtrasAplicar(const char *json) {
     snprintf(key, sizeof key, "store%d", k);
     if (!acharValor(a, b, key, &v, &f) || *v != '"') continue;
     // An escaped string never decodes to more bytes than its JSON input.
-    char *t = malloc((size_t)(f - v) + 1);
+    char *t = malloc((size_t)(f - v) + 32);
     if (!t) continue;
     if (f - v < 2 || f[-1] != '"') continue;
     size_t len = (size_t)(f - v) - 2;
@@ -118,6 +125,8 @@ static int ajustesExtrasAplicar(const char *json) {
     }
     if (valid) {
       ajustesArquivoSync(k, nome, sizeof nome);
+      // Persist the device budget in the same atomic write as portable rows.
+      if (k == 1) snprintf(t + len / 2, 32, "\nlimite %d\n", fil_limite_gravado());
       if (nome[0] && dados_gravar(nome, t)) {
         if (k == 0) fonteregra_carregar();
         else if (k == 1) fil_recarregar();
