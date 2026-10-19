@@ -84,13 +84,15 @@ float gfx_escala_txt_entrar(void) { float a = testeAtiva; testeAtiva = testeTxt;
 void gfx_escala_sair(float a) { testeAtiva = a; }
 // Duble do desenho do card editorial: sem GL, so o que o teste do genero conta.
 float gfx_tex_aspect_atual;
+void gfx_recorte(float x, float y, float w, float h) { (void)x; (void)y; (void)w; (void)h; }
+void gfx_sem_recorte(void) {}
 void gfx_veu_base(GfxRect c, float r, float f, float a) { (void)c; (void)r; (void)f; (void)a; }
 static int nSinopse;
 static int nHolofote, stageTitleDraws, stageTextDraws;
 static GfxRect stageTitleRect, stageGenreRect;
 static float stageBadgeWidth;
 void gfx_rect(GfxRect r, GLuint t, GfxModo m, float f, float a, float b, float c, float d, float e, float g, float h) {
-  if (m == GFX_HOLOFOTE) nHolofote++;
+  if (m == GFX_HOLOFOTE || m == GFX_PALCO_CHAO) nHolofote++;
   if (m == GFX_COR && d > 0.9f && e > 0.7f && g < 0.2f) stageBadgeWidth = r.w;
   (void)r; (void)t; (void)m; (void)f; (void)a; (void)b; (void)c; (void)d; (void)e; (void)g; (void)h; }
 void gfx_cor(GfxRect r, float raio, float cr, float cg, float cb, float a) {
