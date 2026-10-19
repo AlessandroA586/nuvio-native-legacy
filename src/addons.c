@@ -3097,9 +3097,13 @@ int addons_consulta_filme(const AddonsConsulta *c, const char *id,
     if (gasto >= 15000u) return -1;
     int restante = (int)((15000u - gasto) / 1000u);
     if (restante <= 0) return -1;
-    char *corpo = rede_baixar(url, restante < 5 ? restante : 5);
+    // Background check: a huge add-on answer is cut off (and rejected as an
+    // incomplete array) instead of growing memory during playback.
+    RedeControle teto = { 2L * 1024 * 1024, NULL };
+    RedeMedida medida;
+    char *corpo = rede_baixar_medido_controle(url, restante < 5 ? restante : 5, NULL, &teto, &medida);
     if (!nv_perfil_sessao_atual(c->sessao) || (cancelado && cancelado(ctx))) { free(corpo); return -1; }
-    if (!arrayDeFontesCompleto(corpo)) { free(corpo); resultado = -1; continue; }
+    if (medida.limitado || !arrayDeFontesCompleto(corpo)) { free(corpo); resultado = -1; continue; }
     Stream *fontes = NULL;
     debrid_contexto_entrar(&c->debrid);
     int n = stream_extrair(corpo, a->nome, &fontes), disponivel = 0;
