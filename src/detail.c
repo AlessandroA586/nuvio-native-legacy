@@ -770,6 +770,8 @@ static const char *COM_ROT[2];
 static const char *rotuloPilulaCom(int k);
 static int   nPilulasCom(void);
 static int   nCartoesCom(void);
+static int comLeitorIndice;
+static void abrirComentario(int i);
 static float larguraPilulaCom(const char *rot);
 static int  secaoN(int r);
 static float alturaSecao(int r);
@@ -2828,7 +2830,13 @@ static void executarMais(int dm) {
 
 static void detail_evento_(const SDL_Event *e) {
   pediuRelogio = 0;
-  if (sinopse_aberta()) { sinopse_evento(e); return; }
+  if (sinopse_aberta()) {
+    if (sinopse_comentario_aberto() && e->type == SDL_KEYDOWN &&
+        (e->key.keysym.sym == SDLK_LEFT || e->key.keysym.sym == SDLK_RIGHT))
+      abrirComentario(comLeitorIndice + (e->key.keysym.sym == SDLK_RIGHT ? 1 : -1));
+    else sinopse_evento(e);
+    return;
+  }
 #ifdef NV_TOUCH_UI
   toqueDetalheSincronizarModo();
 #endif
@@ -3149,6 +3157,8 @@ static void detail_evento_(const SDL_Event *e) {
       // Segurar OK em "Episódio": escolher temporada e episodio nas proprias
       // fileiras da pagina; o OK de la devolve o foco para ca.
       if (comentEp && dur >= NV_HOLD_MS) comentariosEscolher();
+    } else if (foco.fileira == SEC_COMENTARIOS && dur < NV_HOLD_MS) {
+      abrirComentario(foco.coluna - nPilulasCom());
     } else if (foco.fileira == SEC_TRAILERS) {
       // OK num trailer. Onde ha pagina (Samsung), o trailer toca AQUI, em
       // tela cheia e com som, atras do canvas (trailer.h) — era o #82: o
@@ -6969,6 +6979,20 @@ static void cartaoComentario(GfxRect card, float raio, float a) {
   cartaoVidro(card, 0, a);
 }
 
+static void abrirComentario(int i) {
+  int ep = ehSerie() && comentEp;
+  int n = ep ? extras_n_comentarios_ep() : extras_n_comentarios();
+  if (i < 0 || i >= n) return;
+  char data[64];
+  desc_data_extenso(extras_comentario_data(ep, i), data, sizeof data);
+  sinopse_comentario(ep ? extras_comentario_ep_usuario(i) : extras_comentario_usuario(i),
+                    ep ? extras_comentario_ep_texto(i) : extras_comentario_texto(i), data,
+                    ep ? extras_comentario_ep_nota(i) : extras_comentario_nota(i),
+                    ep ? extras_comentario_ep_curtidas(i) : extras_comentario_curtidas(i),
+                    extras_comentario_respostas(ep, i), extras_comentario_spoiler(ep, i), i + 1, n);
+  comLeitorIndice = i;
+}
+
 static void desenhaComentarios(float x, float y, float a) {
   int daSerie = !(ehSerie() && comentEp);
   int n = daSerie ? extras_n_comentarios() : extras_n_comentarios_ep();
@@ -7046,8 +7070,9 @@ static void desenhaComentarios(float x, float y, float a) {
     // O texto para ANTES do rodape: sem o teto de linhas ele passava por cima
     // das curtidas. 6 linhas de 30 terminam em 246; o rodape comeca em 288.
     // Reuse Agenda's cached wrapping; focus colors do not change line breaks.
-    agendaui_sinopse(TXT_DET_META2, daSerie ? extras_comentario_texto(i)
-                                         : extras_comentario_ep_texto(i),
+    agendaui_sinopse(TXT_DET_META2, extras_comentario_spoiler(!daSerie, i)
+                       ? i18n("Spoiler — OK para revelar")
+                       : daSerie ? extras_comentario_texto(i) : extras_comentario_ep_texto(i),
                      px, y + COM_PAD + 42.0f, larg, 30.0f, 6,
                      focCor ? (tintaEsc ? 45 : 235) : 190,
                      focCor ? (tintaEsc ? 47 : 236) : 195,
