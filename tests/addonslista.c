@@ -25,6 +25,7 @@ void ondever_pedir(const char *id, int series, long tmdb) {
 }
 
 int dados_gravar_leve(const char *nome, const char *conteudo) { (void)nome; (void)conteudo; return 1; }
+void sync_sujar_addons(const char *url) { (void)url; }
 
 // ---------------------------------------------------------------- duble
 //
@@ -47,6 +48,11 @@ static char pedidosCanal[200];
 // series + catalogo "live") e /stream/ so responde por "live".
 static const char *respCanalLive;
 static char pedidosLive[64];
+// #588: custom catalog/item types must reach the stream endpoint unchanged.
+static char pedidosSport[256];
+static const char *tipoSport = "sport";
+static int sportVazio;
+
 // lento.test (#182): as primeiras `falhasLento` requisicoes NAO respondem (o
 // timeout do AIOStreams frio); as seguintes respondem com uma fonte.
 static int pedidosDesligado, pedidosLigado;
@@ -80,6 +86,18 @@ char *rede_baixar(const char *url, int s) {
     if (chamadasLento < 2) prazoLento[chamadasLento] = s;
     if (++chamadasLento <= falhasLento) return NULL;
     return strdup("{\"streams\":[{\"url\":\"https://x/l.mp4\"}]}");
+  }
+  if (strstr(url, "sport.test")) {
+    const char *p = strstr(url, "/stream/");
+    if (!p) return NULL;
+    p += strlen("/stream/");
+    const char *fim = strchr(p, '/');
+    if (!fim) return NULL;
+    snprintf(pedidosSport + strlen(pedidosSport), sizeof pedidosSport - strlen(pedidosSport),
+             "%.*s,", (int)(fim - p), p);
+    if ((size_t)(fim - p) == strlen(tipoSport) && !strncmp(p, tipoSport, strlen(tipoSport)))
+      return strdup("{\"streams\":[{\"url\":\"https://x/sport.m3u8\"}]}");
+    return sportVazio ? strdup("{\"streams\":[]}") : NULL;
   }
   if (strstr(url, "live.test")) {
     int live = strstr(url, "/stream/live/") != NULL;
@@ -265,8 +283,7 @@ int main(void) {
   while (addons_estado() == ADD_BUSCANDO) usleep(1000);
   conferir("tv vazio -> channel traz a fonte", addons_estado(), ADD_PRONTO);
   conferirTexto("ordem sem manifesto", pedidosCanal, "tv,channel,");
-  // 8) Com o manifesto do FrostView (catalogo "channel"), "channel" vai
-  //    primeiro e sozinho: uma viagem por canal, nao duas.
+  // 8) The requested type stays first; the manifest type follows it.
   addons_manifesto_lido(3,
     "{\"id\":\"com.frostview\",\"name\":\"Canal TV\","
     "\"resources\":[\"catalog\",\"meta\",\"stream\"],\"types\":[\"channel\"],"
@@ -277,7 +294,7 @@ int main(void) {
   addons_definir_origem(NULL);
   while (addons_estado() == ADD_BUSCANDO) usleep(1000);
   conferir("channel declarado traz a fonte", addons_estado(), ADD_PRONTO);
-  conferirTexto("ordem com manifesto", pedidosCanal, "channel,");
+  conferirTexto("ordem com manifesto", pedidosCanal, "tv,channel,");
   // 9) Os dois nomes vazios: a causa fala de CANAL, e nao de titulo.
   respCanalChannel = "{\"streams\":[]}";
   addons_definir_origem("https://canal.test");
@@ -328,6 +345,28 @@ int main(void) {
   while (addons_estado() == ADD_BUSCANDO) usleep(1000);
   conferir("tv sem fonte -> declarado live traz", addons_estado(), ADD_PRONTO);
   conferirTexto("ordem tv->live", pedidosLive, "tv,live,");
+
+  // #588: fake manifest and transport; no network, real stream lookup worker.
+  conferir("sport addon added", addons_adicionar("Live Sport", "https://sport.test/manifest.json"), 1);
+  addons_manifesto_lido(addons_n() - 1,
+    "{\"id\":\"org.sport\",\"resources\":[\"stream\",\"catalog\"],"
+    "\"catalogs\":[{\"id\":\"events\",\"type\":\"sport\"}]}");
+  {
+    const char *requested[] = { "tv", "sport", "event", "event", "movie" };
+    const char *served[] = { "sport", "sport", "event", "iptv", "sport" };
+    const char *expected[] = { "tv,sport,", "sport,", "event,",
+                              "event,sport,channel,tv,channels,live,iptv,", "movie,movie," };
+    for (int k = 0; k < 5; k++) {
+      Stream *sources = NULL;
+      tipoSport = served[k]; sportVazio = k == 3; pedidosSport[0] = 0;
+      int count = addons_consultar("sport:event-1", requested[k], "https://sport.test", 1,
+                                  NULL, NULL, &sources);
+      conferir("sport source received", count, k == 4 ? 0 : 1);
+      conferir("sport source allocated", sources != NULL, k != 4);
+      conferirTexto("exact item, catalog, then legacy types", pedidosSport, expected[k]);
+      free(sources);
+    }
+  }
 
   // ---- #182: addon lento aparece sozinho, sem recarregar a mao
   conferir("addon lento entrou", addons_adicionar("Lento", "https://lento.test/manifest.json"), 1);
