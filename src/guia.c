@@ -3233,8 +3233,8 @@ void guia_evento(const SDL_Event *e) {
     if (k == SDLK_LEFT)  { if (janelaDesl > 0) janelaDesl -= G_L_PASSO_MIN; return; }
     if (k == SDLK_RIGHT) { if (janelaDesl < G_L_DESL_MAX) janelaDesl += G_L_PASSO_MIN; return; }
     if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
-      // A repeticao do OK que ABRIU a faixa nao vale como o segundo OK.
-      if (agora - overlayDesde < G_OVERLAY_REP_MS) return;
+      // Require a fresh press: the opening OK may repeat past the time guard.
+      if (e->key.repeat || agora - overlayDesde < G_OVERLAY_REP_MS) return;
       if (!okDesde) { okDesde = agora; okLongo = 0; }
       return;
     }

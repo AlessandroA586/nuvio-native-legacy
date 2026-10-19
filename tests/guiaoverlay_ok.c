@@ -136,7 +136,28 @@ int main(int argc, char **argv) {
   assert(guia_overlay_aberta() && !strcmp(guia_id_focado(), id));
   tecla(SDLK_RETURN, 0);
   assert(guia_overlay_aberta() && !guia_pediu_guia_cheio() && !guia_pediu_canal(&it));
-  overlayDesde -= 1000;
+  // Holding the opening OK past 400 ms must never arm short/long OK.
+  for (int key = 0; key < 2; key++) {
+    SDL_Keycode ok = key ? SDLK_KP_ENTER : SDLK_RETURN;
+    guia_overlay_abrir(); guia_focar_id(id);
+    e.type = SDL_KEYDOWN; e.key.keysym.sym = ok; e.key.repeat = 1;
+    app_evento(&e); // Repeat inside the opening suppression window.
+    overlayDesde -= 1000;
+    app_evento(&e); // Firmware repeats continue after the window expires.
+    assert(!okDesde && !okLongo);
+    e.type = SDL_KEYUP; app_evento(&e);
+    assert(guia_overlay_aberta() && !guia_pediu_guia_cheio() && !guia_pediu_canal(&it));
+    assert(!canais[2].fav);
+
+    // A fresh press still arms OK; its repeats must not cancel that press.
+    e.type = SDL_KEYDOWN; e.key.repeat = 0; app_evento(&e);
+    assert(okDesde && !okLongo);
+    e.key.repeat = 1; app_evento(&e);
+    e.type = SDL_KEYUP; app_evento(&e);
+    assert(!guia_overlay_aberta() && guia_pediu_guia_cheio() && !guia_pediu_canal(&it));
+  }
+  e.key.repeat = 0;
+  abrirFaixa();
   // BAIXO/CIMA andam sem zapear.
   tecla(SDLK_DOWN, 0);
   assert(guia_overlay_aberta() && strcmp(guia_id_focado(), id) && !guia_pediu_canal(&it));
