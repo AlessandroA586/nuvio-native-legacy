@@ -112,7 +112,7 @@ static int fxTrailerVivo;
 static int fx_trailer_aberto(void) { return fxTrailerVivo; }
 #define trailer_aberto fx_trailer_aberto
 static Uint32 fxTick;
-static Uint32 fx_ticks(void) { return getenv("NV_EP_PERF") || getenv("NV_EP_MATERIAL_SHOTS") ? fxTick : SDL_GetTicks(); }
+static Uint32 fx_ticks(void) { return getenv("NV_EP_PERF") || getenv("NV_EP_FINAL_SHOTS") ? fxTick : SDL_GetTicks(); }
 #define SDL_GetTicks fx_ticks
 #include "../src/detail.c"
 #undef SDL_GetTicks
@@ -583,12 +583,12 @@ static void checkTextWeight(void) {
   puts("[detail-weight] approved pixels preserved across styles, weights and fades");
 }
 
-// Freeze the same Detail fixture for baseline and all material candidates.
-static void materialShots(const char *out) {
-  const char *names[] = {"antes", "A", "B", "C"};
-  unsigned char *baseline = malloc(1920 * 1080 * 4);
+// Freeze identical fixtures for the approved Modern and restored Standard cards.
+static void episodeShots(const char *out) {
+  unsigned char *rest = malloc(1920 * 1080 * 4);
   unsigned char *pixels = malloc(1920 * 1080 * 4);
-  assert(baseline && pixels);
+  assert(rest && pixels);
+  extras_carregar("deploy/app/art");
   dados_gravar("aparencia-20.txt", "1\n");
   for (int layout = 0; layout < 2; layout++) {
     char settings[700];
@@ -621,57 +621,37 @@ static void materialShots(const char *out) {
     for (int i = 0; i < 40; i++) { SDL_Delay(10); fxTick += 16; quadros(1); }
     parado = 1; fxTick = 10000;
     GfxRect card = {100, 100, epCardW(), epCardH()};
-    float widths[] = {epCardW(), epCardH(), epThumbH(), epCardPasso()};
-    for (int variant = 0; variant < 4; variant++) {
-      assert(setenv("NUVIO_EP_MATERIAL", variant ? names[variant] : "", 1) == 0);
-      assert(epMaterial() == (variant ? names[variant][0] : 0));
-      assert(epCardW() == widths[0] && epCardH() == widths[1] &&
-             epThumbH() == widths[2] && epCardPasso() == widths[3]);
-      GfxRect holes[N_ITENS * 2];
-      int n = epFuros(holes);
-      assert(layout == HOME_LAYOUT_MODERNA ? n > 0 : n == 0);
-      for (int i = 0; i < n; i++) if (layout == HOME_LAYOUT_MODERNA)
-        assert(holes[i].h <= (variant >= 2 ? epThumbH() : epCardH()));
-      for (int focused = 0; focused < 2; focused++) {
-        memset(animFoco, 0, sizeof animFoco);
-        animFoco[SEC_EPISODIOS][0] = focused;
-        // Compare the actual still pixels against baseline, independently of page.
-        // A intentionally blends only its bottom 32%; Standard art stays intact.
-        for (int warm = 0; warm < 3; warm++) {
-          gfx_novo_quadro(); txt_novo_quadro(); gfx_sem_recorte();
-          glClearColor(.02f, .02f, .025f, 1); glClear(GL_COLOR_BUFFER_BIT);
-          desenhaEpisodio(card, 0, focused, 1, fxTick);
-          assert(gfx_n_cheio == 0);
-        }
-        glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-        // Capture the baseline at this focus level before testing each candidate.
-        if (variant) {
-          assert(setenv("NUVIO_EP_MATERIAL", "", 1) == 0);
-          gfx_novo_quadro(); txt_novo_quadro(); gfx_sem_recorte();
-          glClearColor(.02f, .02f, .025f, 1); glClear(GL_COLOR_BUFFER_BIT);
-          desenhaEpisodio(card, 0, focused, 1, fxTick);
-          glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, baseline);
-          assert(setenv("NUVIO_EP_MATERIAL", names[variant], 1) == 0);
-          int bottom = (int)(card.y + epThumbH() * (layout == 0 && variant == 1 ? .68f : .90f));
-          for (int y = 140; y < bottom; y++) for (int x = 150; x < 690; x++)
-            for (int channel = 0; channel < 4; channel++) {
-              int p = ((1079 - y) * 1920 + x) * 4 + channel;
-              assert(abs(pixels[p] - baseline[p]) <= 1);
-            }
-        }
-        // Rest keeps the same scroll and card column; only the focus value changes.
-        quadros(3);
-        char path[900];
-        snprintf(path, sizeof path, "%s/%s-%s-%s.png", out, names[variant],
-                 layout ? "standard" : "modern", focused ? "foco" : "rest");
-        gravar(path);
-        assert(glGetError() == GL_NO_ERROR);
+    GfxRect holes[N_ITENS * 2];
+    int n = epFuros(holes);
+    assert(layout == HOME_LAYOUT_MODERNA ? n > 0 : n == 0);
+    for (int i = 0; i < n; i++) assert(holes[i].h <= epThumbH());
+    for (int focused = 0; focused < 2; focused++) {
+      memset(animFoco, 0, sizeof animFoco);
+      animFoco[SEC_EPISODIOS][0] = focused;
+      for (int warm = 0; warm < 3; warm++) {
+        gfx_novo_quadro(); txt_novo_quadro(); gfx_sem_recorte();
+        glClearColor(.02f, .02f, .025f, 1); glClear(GL_COLOR_BUFFER_BIT);
+        desenhaEpisodio(card, 0, focused, 1, fxTick);
+        assert(gfx_n_cheio == 0);
       }
+      glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, focused ? pixels : rest);
+      if (focused && layout == HOME_LAYOUT_MODERNA) {
+        for (int y = 140; y < 420; y++) for (int x = 150; x < 690; x++)
+          for (int channel = 0; channel < 4; channel++) {
+            int p = ((1079 - y) * 1920 + x) * 4 + channel;
+            assert(abs(rest[p] - pixels[p]) <= 1);
+          }
+      }
+      quadros(3);
+      char path[900];
+      snprintf(path, sizeof path, "%s/final-%s-%s.png", out,
+               layout ? "standard" : "modern", focused ? "foco" : "rest");
+      gravar(path);
+      assert(glGetError() == GL_NO_ERROR);
     }
   }
-  unsetenv("NUVIO_EP_MATERIAL");
-  free(baseline); free(pixels);
-  puts("PASS: material PNGs, unchanged geometry/still pixels, translucent panel backdrop");
+  free(rest); free(pixels);
+  puts("PASS: episode PNGs, fixed Modern still pixels and thumbnail-only culling");
 }
 
 int main(int argc, char **argv) {
@@ -728,7 +708,7 @@ int main(int argc, char **argv) {
     ajustes_dir(dados_dir()); }
 
   montarCatalogo();
-  if (getenv("NV_EP_MATERIAL_SHOTS")) { materialShots(saida); return 0; }
+  if (getenv("NV_EP_FINAL_SHOTS")) { episodeShots(saida); return 0; }
   if (getenv("NV_EP_PERF")) {
     assert(ajustes_home_layout() == HOME_LAYOUT_MODERNA && ajustes_vidro());
     semear(1, T1_N, 3);

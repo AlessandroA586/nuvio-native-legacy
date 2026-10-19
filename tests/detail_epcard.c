@@ -129,41 +129,32 @@ int main(void) {
     assert(epTituloEstilo() == TXT_CALLOUT && epSinLinhas() == 5);
   }
 
-  // Standard retains its overlaid text geometry.
-  gravar("homeLayoutLocal 1\n");
-  assert(ajustes_home_layout() == HOME_LAYOUT_PADRAO);
-  assert(epCardH() == epThumbH());
-
-  // Temporary materials never alter card metrics in either geometry.
-  const char *materials[] = {"", "A", "B", "C", "invalid"};
-  for (int layout = 0; layout < 2; layout++) for (v = 0; v < 3; v++) {
+  // Standard restores the old Apple TV metrics regardless of Modern card size.
+  for (v = 0; v < 3; v++) {
     char settings[80];
-    snprintf(settings, sizeof settings, "homeLayoutLocal %d\nepTamanhoLocal %d\n", layout, v);
+    snprintf(settings, sizeof settings, "homeLayoutLocal 1\nepTamanhoLocal %d\n", v);
     gravar(settings);
-    float before[] = {epCardW(), epCardH(), epThumbH(), epCardPasso(), epRowY()};
-    for (unsigned m = 0; m < sizeof materials / sizeof materials[0]; m++) {
-      assert(setenv("NUVIO_EP_MATERIAL", materials[m], 1) == 0);
-      assert(epMaterial() == (m >= 1 && m <= 3 ? materials[m][0] : 0));
-      assert(epCardW() == before[0] && epCardH() == before[1] &&
-             epThumbH() == before[2] && epCardPasso() == before[3] && epRowY() == before[4]);
+    assert(ajustes_home_layout() == HOME_LAYOUT_PADRAO);
+    assert(epCardW() == 420 && epThumbH() == 236 && epCardH() == 500);
+    assert(epCardPasso() == 420 + NV_DETP_EP_GAP);
+    assert(epRowY() == ANC(NV_DETP_EP_Y));
+    assert(epSinLinhas() == 4 && epTituloEstilo() == TXT_DET_META2);
+    assert(alturaSecao(SEC_EPISODIOS) == epCardH());
+    assert(epCardH() - epThumbH() == 264);
+    aberto = 1; saindo = 0; nivel = 1;
+    foco.fileira = SEC_EPISODIOS; foco.coluna = 0;
+    for (i = 0; i < 30; i++) detail_atualizar(1.0f / 60.0f, 2000 + i * 16);
+    for (i = 1; i < 6; i++) {
+      e.key.keysym.sym = SDLK_RIGHT; detail_evento(&e);
+      assert(foco.fileira == SEC_EPISODIOS && foco.coluna == i);
+      assert(fabsf(xItem(SEC_EPISODIOS, i) - xItem(SEC_EPISODIOS, i - 1)
+                   - epCardPasso()) < .01f);
     }
+    e.key.keysym.sym = SDLK_DOWN; detail_evento(&e);
+    assert(foco.fileira != SEC_EPISODIOS);
+    e.key.keysym.sym = SDLK_UP; detail_evento(&e);
+    assert(foco.fileira == SEC_EPISODIOS);
   }
-  // Palette tint is bounded even for saturated source art; no hue from HDR state.
-  CorvivaPaleta palette = {0}; palette.ok = 1; palette.acento[0] = 1;
-  corviva_anotar("episode-material-test", &palette);
-  float tint[3], hdrTint[3], fallback[3];
-  epMaterialCor("episode-material-test", tint);
-  epMaterialCor(NULL, fallback);
-  assert(tint[0] > tint[1] && tint[1] == tint[2]);
-  for (i = 0; i < 3; i++) assert(tint[i] >= .055f && tint[i] <= .14f);
-  for (int mode = 0; mode <= 5; mode++) {
-    gfx_hdr_output = mode;
-    epMaterialCor("episode-material-test", hdrTint);
-    assert(memcmp(tint, hdrTint, sizeof tint) == 0);
-  }
-  gfx_hdr_output = 0;
-  assert(fallback[0] == .071f && fallback[1] == .075f && fallback[2] == .086f);
-  unsetenv("NUVIO_EP_MATERIAL");
-  puts("detail_epcard: geometry/navigation unchanged; A/B/C switch, palette bounds and HDR-independent tint passed");
+  puts("detail_epcard: Modern/Refined metrics and navigation preserved; Standard Apple TV cards restored");
   return 0;
 }

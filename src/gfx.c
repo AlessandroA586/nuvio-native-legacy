@@ -478,7 +478,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "uniform vec4 uHeroiVeu;\n"
   "#endif\n"
   "void main(){\n"
-  // Modern episode images join the opaque panel with square lower corners.
+  // Modern episode images keep square lower corners above the text panel.
   "  float d = sdf(vUv, uVeu.x < -1.5 && vUv.y > 0.5 ? 0.0 : uRaio, uAspect);\n"
   "  float m = borda(d);\n"
   "  if (m <= 0.001) discard;\n"
@@ -559,9 +559,6 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "    g = mix(g, 0.95, smoothstep(0.82, 1.00, t));\n"
   "    if (uVeu.x < -1.5) g = smoothstep(0.55, 1.0, t) * 0.65;\n"
   "    cor = mix(vec3(0.133), cor, uVeu.y) * (1.0 - g) * (1.0 - uVeu.z);\n"
-  // Episode material A: finish in the panel's sRGB tint, before shared HDR output.
-  // Existing art draw and dither; no extra gradient pass or framebuffer fetch.
-  "    if (uVeu.x < -2.5) cor = mix(cor, uCor.rgb, smoothstep(0.68, 1.0, t));\n"
   "  } else if (uVeu.y > 0.0 || uVeu.w > 0.0) {\n"
   "    float yb = 1.0 - vUv.y;\n"
   "    float t1 = 1.0 - smoothstep(0.42, 1.0, yb / max(uVeu.x, 0.001));\n"
