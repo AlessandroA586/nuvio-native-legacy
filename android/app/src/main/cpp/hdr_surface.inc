@@ -4,6 +4,7 @@
         const char *ext = _this->egl_data->eglQueryString(_this->egl_data->egl_display, EGL_EXTENSIONS);
         const SDL_bool pq = SDL_EGL_HasExtension(_this, SDL_EGL_DISPLAY_EXTENSION, "EGL_EXT_gl_colorspace_bt2020_pq");
         EGLint r = 0, g = 0, b = 0, a = 0, component = 0;
+        PFNEGLQUERYSURFACEPROC querySurface = (PFNEGLQUERYSURFACEPROC)SDL_EGL_GetProcAddress(_this, "eglQuerySurface");
         int i, first, count;
         const struct { int32_t space; const char *name; } attempts[] = {
             { ADATASPACE_BT2020_PQ, "pq" },
@@ -14,6 +15,7 @@
         };
         SDL_Log("[hdr-ui] EGL extensions: %s", ext ? ext : "none");
         SDL_SetHint("NUVIO_HDR_EGL", "none");
+        SDL_SetHint("NUVIO_HDR_CONFIG", "unknown");
         nvHdrWindow = NULL;
         _this->egl_data->eglGetConfigAttrib(_this->egl_data->egl_display, _this->egl_data->egl_config, EGL_RED_SIZE, &r);
         _this->egl_data->eglGetConfigAttrib(_this->egl_data->egl_display, _this->egl_data->egl_config, EGL_GREEN_SIZE, &g);
@@ -51,7 +53,16 @@
                 SDL_Log("[hdr-ui] attempt=%s stage=create egl=0x%04x", attempts[i].name, error);
                 continue;
             }
-            SDL_Log("[hdr-ui] attempt=%s stage=create egl=ok colorspace=%s", attempts[i].name, usePq ? "pq" : "default");
+            /* Verify that the created surface belongs to the config we inspected. */
+            EGLint surfaceConfig = 0, selectedConfig = 0;
+            if (!querySurface || !querySurface(_this->egl_data->egl_display, surface, EGL_CONFIG_ID, &surfaceConfig) ||
+                !_this->egl_data->eglGetConfigAttrib(_this->egl_data->egl_display, _this->egl_data->egl_config, EGL_CONFIG_ID, &selectedConfig) ||
+                surfaceConfig != selectedConfig) {
+                _this->egl_data->eglDestroySurface(_this->egl_data->egl_display, surface);
+                continue;
+            }
+            SDL_Log("[hdr-ui] attempt=%s stage=create egl=ok colorspace=%s config=%d/%d/%d/%d component=0x%x id=%d",
+                    attempts[i].name, usePq ? "pq" : "default", r, g, b, a, component, surfaceConfig);
             if (nvHdrTag(nw, attempts[i].space, attempts[i].name, "after-create") == 0) {
                 nvHdrWindow = nw;
                 nvHdrSurface = surface;
@@ -60,6 +71,7 @@
                 nvHdrFirstSwap = 0;
                 format_got = ANativeWindow_getFormat(nw);
                 Android_SetFormat(format_wanted, format_got);
+                SDL_SetHint("NUVIO_HDR_CONFIG", first == 0 ? "1010102" : "FP16");
                 SDL_SetHint("NUVIO_HDR_EGL", attempts[i].name);
                 return surface;
             }

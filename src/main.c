@@ -1215,6 +1215,7 @@ int main(int argc, char **argv) {
   int hdrColor = hdrPedido && android_hdr_interface(1);
   SDL_SetHint("NUVIO_HDR_REQUESTED", hdrPedido ? "1" : "0");
   SDL_SetHint("NUVIO_HDR_EGL", "none");
+  SDL_SetHint("NUVIO_HDR_CONFIG", "unknown");
   SDL_SetHint("NUVIO_HDR_UI", hdrColor ? "1" : "0");
   if (hdrColor) {
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 10);
@@ -1412,8 +1413,12 @@ int main(int argc, char **argv) {
     int r = 0, g = 0, b = 0, a = 0;
     SDL_GL_GetAttribute(SDL_GL_RED_SIZE, &r); SDL_GL_GetAttribute(SDL_GL_GREEN_SIZE, &g);
     SDL_GL_GetAttribute(SDL_GL_BLUE_SIZE, &b); SDL_GL_GetAttribute(SDL_GL_ALPHA_SIZE, &a);
-    int ten = r == 10 && g == 10 && b == 10 && a == 2;
-    int fp16 = r == 16 && g == 16 && b == 16 && a == 16;
+    /* SDL_GL_GetAttribute queries GL framebuffer bits, not the EGL config.
+       The synchronous surface hook publishes only verified HDR configs. */
+    const char *config = SDL_GetHint("NUVIO_HDR_CONFIG");
+    int ten = config && !strcmp(config, "1010102");
+    int fp16 = config && !strcmp(config, "FP16");
+    gfx_hdr_output = 0;
     if (hdrColor && SDL_GetHintBoolean("NUVIO_HDR_UI", SDL_FALSE) && space) {
       if (ten) {
         if (!strcmp(space, "pq")) gfx_hdr_output = 1;
@@ -1426,9 +1431,10 @@ int main(int argc, char **argv) {
     }
     if (hdrPedido) {
       if (!gfx_hdr_output) android_hdr_interface(0);
-      printf("[hdr-ui] pedido=on colormode=%s egl=%s config=%s resultado=%s\n",
-             hdrColor ? "ok" : "unsupported", gfx_hdr_output ? space : "none",
-             ten ? "1010102" : fp16 ? "FP16" : "8888", gfx_hdr_output ? "hdr" : "sdr");
+      printf("[hdr-ui] pedido=on colormode=%s egl=%s config=%s resultado=%s dataspace=%s gl=%d/%d/%d/%d blit=%d white=203\n",
+             hdrColor ? "ok" : "unsupported", gfx_hdr_output ? "dataspace" : "none",
+             gfx_hdr_output ? config : "8888", gfx_hdr_output ? "hdr" : "sdr",
+             gfx_hdr_output ? space : "none", r, g, b, a, gfx_hdr_output);
       fflush(stdout);
     }
   }

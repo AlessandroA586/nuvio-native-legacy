@@ -39,12 +39,14 @@ static int nvHdrLoad(void)
 static int nvHdrTag(ANativeWindow *window, int32_t space, const char *name, const char *stage)
 {
     int result, savedErrno;
-    int32_t before = nvGetDataspace ? nvGetDataspace(window) : -1;
+    int32_t before = nvGetDataspace ? nvGetDataspace(window) : -1, after;
     errno = 0;
     result = nvSetDataspace(window, space);
     savedErrno = errno;
+    after = nvGetDataspace ? nvGetDataspace(window) : -1;
+    if (!result && nvGetDataspace && after != space) result = -EINVAL;
     SDL_Log("[hdr-ui] attempt=%s stage=%s dataspace=%d before=%d after=%d rc=%d errno=%d",
-            name, stage, space, before, nvGetDataspace ? nvGetDataspace(window) : -1, result, savedErrno);
+            name, stage, space, before, after, result, savedErrno);
     return result;
 }
 
