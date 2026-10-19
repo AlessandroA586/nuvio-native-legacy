@@ -17,6 +17,11 @@ float gfx_tex_aspect_atual;
 float gfx_card_forcar_cover_atual;
 int txt_pendentes;
 int anim_politica_reduzida;
+// Control Center hold fill (central.c), sem segurar aqui.
+float central_segurar_progresso(Uint32 a) { (void)a; return 0.0f; }
+void  central_segurar_desenhar(GfxRect r, float ra, float a, Uint32 ag) {
+  (void)r; (void)ra; (void)a; (void)ag;
+}
 static float escalaUi = 1.0f;
 float gfx_escala_ui(void) { return escalaUi; }
 static int medidor = 0;

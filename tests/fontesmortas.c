@@ -3,7 +3,9 @@
 #include "streams.h"
 #include "selospacote.h"
 #include "fonteregra.h"
+#include "stub_perfisessao.h"
 #include "../src/streams.c"
+#include "stub_player_source_actions.h"
 #include <errno.h>
 #include <assert.h>
 #include <stdio.h>

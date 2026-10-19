@@ -31,6 +31,7 @@
 //    a lista de exclusao ja deixou vazar um segredo uma vez.
 #ifndef NV_STALKER_H
 #define NV_STALKER_H
+#include <stdint.h>
 
 // ---------------------------------------------------------------- cadastro
 
@@ -81,6 +82,12 @@ typedef struct {
 // o que stalker_resolver() precisa depois. Por isso a lista tem de ser baixada
 // pelo menos uma vez antes de tocar qualquer canal — o que o guia ja faz.
 int stalker_canais(StalkerCanal *saida, int max);
+int stalker_canais_sessao(StalkerCanal *saida, int max, uint64_t sessao);
+
+// Stream every page before Guide selection. Return 0 from cb to stop.
+// Commands use a bounded cache; playback reloads an evicted command on demand.
+typedef int (*StalkerCb)(const StalkerCanal *canal, void *u);
+int stalker_canais_cb_sessao(StalkerCb cb, void *u, uint64_t sessao);
 
 // ------------------------------------------------------------ reproducao
 
@@ -94,5 +101,6 @@ int stalker_e_id(const char *id);
 // Chamar A CADA reproducao, inclusive ao trocar de fonte depois de um
 // travamento. Guardar o resultado e o unico erro que este modulo nao perdoa.
 int stalker_resolver(const char *id, char *url, unsigned n);
+int stalker_resolver_sessao(const char *id, char *url, unsigned n, uint64_t sessao);
 
 #endif

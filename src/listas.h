@@ -61,6 +61,7 @@ typedef struct {
 // Le as fixadas do perfil ATIVO (perfis_ativo()) e reaplica as que vao para a
 // Home. Idempotente; chamar ao abrir a Biblioteca.
 void lst_iniciar(void);
+void lst_abrir_sessao(void); // cancela resultados antigos e recarrega fixadas sem apagar arquivos
 // Solta o que esta em MEMORIA, sem tocar em arquivo. A proxima leitura recarrega
 // do disco — e o par lst_esquecer/lst_iniciar e exatamente o que um reinicio do
 // app faz, que e como o teste o usa.
@@ -143,8 +144,8 @@ enum { LST_JS_MINHAS = 0,   // /users/me/lists -> [ {lista} ]
        LST_JS_ENVELOPE };   // /search/list, /lists/trending -> [ {"list":{...}} ]
 // Substitui a tabela pelo que houver em `json`. Devolve quantas entraram.
 int lst_ler_trakt(const char *json, int envelope);
-// Itens de /sync/all-items/<tipo>/<estado> do Simkl para `dst`. `serie` escolhe
-// entre o vetor "shows" e o "movies". Devolve quantos.
+// Itens de /sync/all-items/<tipo>/<estado> do Simkl para `dst`. `serie` = 0 le
+// o vetor "movies"; 1 le "shows" e "anime" (o terceiro tipo do Simkl). Devolve quantos.
 int lst_ler_simkl_itens(const char *json, int serie, CatItem *dst, int max);
 
 // Nome do arquivo de fixadas do perfil ativo. Exposto para o teste provar ONDE

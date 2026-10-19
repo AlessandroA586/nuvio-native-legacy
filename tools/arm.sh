@@ -82,6 +82,14 @@ echo "==> compilando para ARM"
 LIXO=""
 limpar() { [ -n "$LIXO" ] && rm -rf $LIXO; }
 trap limpar EXIT
+# All ARM modes share the soft-float Rust core; =0 retains the C parser.
+RUST_MKVCORE="${NUVIO_RUST_MKVCORE:-1}"
+RUST_VOL=()
+if [ "$RUST_MKVCORE" = 1 ]; then
+  RUST_LIB=$(CARGO_NET_OFFLINE=true bash tools/rust-mkvcore.sh armv7-unknown-linux-gnueabi)
+  RUST_VOL=(-v "$RUST_LIB:/tmp/libmkvcore.a:ro")
+  export NUVIO_EXTRA_CFLAGS="${NUVIO_EXTRA_CFLAGS:-} -DNV_RUST_MKVCORE"
+fi
 ENVF=$(mktemp "${TMPDIR:-/tmp}/nuvio-arm-env.XXXXXXXX"); LIXO="$LIXO $ENVF"
 tools/env.sh --env-file "$ENVF"
 # NUVIO_EXTRA_CFLAGS: bandeiras a mais para uma build de teste, sem tocar no
@@ -106,6 +114,7 @@ if [ -n "${NUVIO_DTS_ROOT:-}" ]; then DTS_ENV=(-e "NUVIO_DTS_ROOT=$NUVIO_DTS_ROO
 "$CONTAINER_RUNTIME" run --rm --platform "$BUILD_PLATFORM" --env-file "$ENVF" \
   -e NUVIO_P2P_MOTOR="${NV_P2P_DIR:+1}" $P2P_VOL \
   -e NUVIO_BUILD_JOBS="${NUVIO_BUILD_JOBS:-3}" \
+  -e NUVIO_RUST_MKVCORE="$RUST_MKVCORE" "${RUST_VOL[@]}" \
   -e NUVIO_SDK_ID="$("$CONTAINER_RUNTIME" image inspect --format '{{.Id}}' "$SDK_IMAGE"):$NV_P2P_DIR" \
   -e CCACHE_DIR=/work/build/ccache-arm \
   -e NUVIO_EXTRA_CFLAGS="${NUVIO_EXTRA_CFLAGS:-}" \
@@ -115,6 +124,8 @@ if [ -n "${NUVIO_DTS_ROOT:-}" ]; then DTS_ENV=(-e "NUVIO_DTS_ROOT=$NUVIO_DTS_ROO
   -v "$PWD":/work:z "$SDK_IMAGE" bash -c '
   set -e
   SR=$NUVIO_SYSROOT
+  RUST_LIBS=""
+  if [ "$NUVIO_RUST_MKVCORE" = 1 ]; then RUST_LIBS=/tmp/libmkvcore.a; fi
   ASS=$NUVIO_ASS_ROOT
   ASS_CFLAGS=""
   ASS_LIBS=""
@@ -185,7 +196,7 @@ if [ -n "${NUVIO_DTS_ROOT:-}" ]; then DTS_ENV=(-e "NUVIO_DTS_ROOT=$NUVIO_DTS_ROO
     -DNV_DISCORD_CLIENT_ID="\"${NV_DISCORD_CLIENT_ID:-}\"" \
     -DNV_VERSAO="\"$NV_VERSAO\"" \
     -I$SR/usr/include -I$SR/usr/include/SDL2 \
-    -lSDL2 -lSDL2_image -lSDL2_ttf -lGLESv2 -lEGL $P2P_LIBS -ldl -lpthread -lz -lm $ASS_LIBS $DTS_LIBS \
+    $RUST_LIBS -lSDL2 -lSDL2_image -lSDL2_ttf -lGLESv2 -lEGL $P2P_LIBS -ldl -lpthread -lz -lm $ASS_LIBS $DTS_LIBS \
     -Wl,--export-dynamic-symbol=pthread_create -Wl,--exclude-libs,ALL
   # #317: --exclude-libs,ALL tira da tabela dinamica tudo o que vem de arquivo
   # .a (FreeType/harfbuzz do libass, libstdc++ do P2P, FFmpeg). Sem ele o ld
@@ -268,7 +279,7 @@ ARQ_DE_PESSOA="trakt.txt addons.txt tmdb.txt mdblist.txt ajustes.txt
 # trakt-p*/trakt-fluxo*/simkl*: o vinculo do Trakt e do Simkl passou a ser um
 # arquivo POR PERFIL (traktauth.c, simklauth.c) — o trakt.txt da lista de nomes
 # acima deixou de alcancar o token quando a pasta de dados cai na da arte.
-GLOB_DE_PESSOA="stalker-p*.txt xtream-p*.txt listas-p*.txt trakt-p*.txt trakt-fluxo*.txt simkl*.txt conta-*.txt conta-*.txt.tmp discord-p*.txt discord-p*.txt.tmp jellyfin-p*.txt jellyfin-p*.txt.tmp emby-p*.txt emby-p*.txt.tmp plex-p*.txt plex-p*.txt.tmp"
+GLOB_DE_PESSOA="stalker-p*.txt xtream-p*.txt listas-p*.txt trakt-p*.txt trakt-fluxo*.txt simkl*.txt conta-*.txt conta-*.txt.tmp discord-p*.txt discord-p*.txt.tmp jellyfin-p*.txt jellyfin-p*.txt.tmp emby-p*.txt emby-p*.txt.tmp plex-p*.txt plex-p*.txt.tmp debrid-*.txt provider-scope-*.txt fontefalha*.txt* fontesmortas-*.txt catalogo-*.bin catalogo-*.bin.tmp* guia-*-p*.txt* guia-cache*.bin* epg-extra.* epg-extra-p*.* recomendacoes*.txt recomendacoes*.json amigos-vistos*.txt"
 
 # O ACERVO DE QUEM EMPACOTOU, que nao e credencial de login e vaza igual.
 #
@@ -368,6 +379,7 @@ if [ "$1" = "--ipk" ]; then
     printf '%s\n' "$LISTA" | grep -qE "art/$pre[0-9]+\.txt$" && VAZOU="$VAZOU $pre*.txt"
   done
   printf '%s\n' "$LISTA" | grep -qE "art/(trakt-fluxo|simkl)\.txt$" && VAZOU="$VAZOU trakt-fluxo.txt/simkl.txt"
+  printf '%s\n' "$LISTA" | grep -qE '(^|/)(debrid|provider-scope|fontefalha|fontesmortas|catalogo-|guia-(fav|modo|preview|cache|addons|lembretes)|epg-extra|recomendacoes|amigos-vistos)[^/]*\.(txt|json|bin|ts|id)(\.tmp[^/]*)?$' && VAZOU="$VAZOU private profile files"
   printf '%s\n' "$LISTA" | grep -qE '(^|/)conta-[^/]*\.txt(\.tmp)?$' && VAZOU="$VAZOU conta-*.txt/conta-*.txt.tmp"
   printf '%s\n' "$LISTA" | grep -qE '(^|/)discord-p[^/]*\.txt(\.tmp)?$' && VAZOU="$VAZOU discord profile tokens"
   printf '%s\n' "$LISTA" | grep -qE '(^|/)(jellyfin|emby|plex)-p[^/]*\.txt(\.tmp)?$' && VAZOU="$VAZOU media-server profile tokens"

@@ -3,6 +3,7 @@
 #include "ajustes.h"
 #include "gfx.h"
 #include "text.h"
+#include "sinopse.h"
 #include "anim.h"
 #include "layout.h"
 #include "telefoneui.h"
@@ -100,11 +101,7 @@ int pausao_evento(const SDL_Event *e) {
   if (!visivel || !e || e->type != SDL_KEYDOWN) return PAUSAO_LIVRE;
   k = e->key.keysym.sym;
 
-  // O Back NAO e tratado aqui, e essa e uma divergencia deliberada do web. La
-  // (:22138) o Back derruba o painel e ainda segue para a regra seguinte;
-  // aqui o Back e a unica saida da reproducao, e roubar o primeiro toque para
-  // fechar um painel informativo faria a pessoa apertar duas vezes para sair de
-  // um filme. Quem quer sair, sai.
+  // player_evento dismisses this panel on Back before reaching this handler.
   if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE ||
       k == SDLK_DELETE) return PAUSAO_LIVRE;
 
@@ -224,7 +221,7 @@ static void pausao_desenharCorpo_(Uint32 agora, const PausaoCena *cena) {
   }
   if (c->meta[0]) { hMeta = 25.0f; alt += 12.0f + hMeta; }
   if (c->sinopse[0]) {
-    hSin = txt_bloco_corta(TXT_DET_META2, c->sinopse, 0, 0, 0, -1.0f, 0.0f,
+    hSin = sinopse_bloco_corta(TXT_DET_META2, c->sinopse, 0, 0, 0, -1.0f, 0.0f,
                            PAUSAO_LARG, PAUSAO_LD_SIN, 0.0f, PAUSAO_SIN_LINHAS);
     alt += 16.0f + hSin;
   }
@@ -246,7 +243,7 @@ static void pausao_desenharCorpo_(Uint32 agora, const PausaoCena *cena) {
   if (hMeta > 0.0f) { y += 12.0f; metaPontos(c->meta, PAUSAO_X, y, PAUSAO_LARG, a); y += hMeta; }
   if (hSin > 0.0f) {
     y += 16.0f;
-    txt_bloco_corta(TXT_DET_META2, c->sinopse, 243, 242, 239, PAUSAO_X, y, PAUSAO_LARG,
+    sinopse_bloco_corta(TXT_DET_META2, c->sinopse, 243, 242, 239, PAUSAO_X, y, PAUSAO_LARG,
                     PAUSAO_LD_SIN, a * 0.78f, PAUSAO_SIN_LINHAS);
     y += hSin;
   }

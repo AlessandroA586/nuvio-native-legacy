@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#include <pthread.h>
 struct DtsEngine;
 /* Output mode for the NEXT open: 0 = stereo AAC (default, the proven path),
  * 1 = AC3 5.1 at 640 kbps (falls back to AAC when the encoder is absent). */
@@ -13,6 +14,17 @@ void dts_engine_set_ac3(int on) { g_surround_ac3 = on ? 1 : 0; }
  * 32 by default; the .tpk asks for 16 on Tizen 6/6.5/7 (less RAM). */
 static volatile int g_fx_cap_mib = 32;
 void dts_engine_set_ring_mib(int mib) { g_fx_cap_mib = mib >= 8 && mib <= 32 ? mib : 32; }
+static volatile int g_ahead_mib;
+void dts_engine_set_ahead_mib(int mib) { g_ahead_mib = mib > 0 && mib <= 256 ? mib : 0; }
+/* Rings alive (read_fluxo allocates, fx_close frees): the .tpk memory line. */
+static pthread_mutex_t g_rings_lock = PTHREAD_MUTEX_INITIALIZER;
+static DtsEngineRings g_rings;
+void dts_engine_rings(DtsEngineRings *out, int reset_peak) {
+  pthread_mutex_lock(&g_rings_lock);
+  if (out) *out = g_rings;
+  if (reset_peak) { g_rings.peak = g_rings.alive; g_rings.peak_bytes = g_rings.bytes; }
+  pthread_mutex_unlock(&g_rings_lock);
+}
 #ifndef NV_DTS_FFMPEG
 struct DtsEngine { DtsMediaInfo info; };
 DtsEngine *dts_engine_create(void) { return calloc(1, sizeof(DtsEngine)); }
@@ -28,7 +40,6 @@ const void *dts_engine_subtitle_parameters(DtsEngine *e,int i) { (void)e;(void)i
 int dts_engine_next(DtsEngine *e,DtsFrame *f) { (void)e;(void)f; return -1; }
 int dts_engine_seek(DtsEngine *e,double s) { (void)e;(void)s; return -1; }
 void dts_engine_cancel(DtsEngine *e) { (void)e; }
-void dts_engine_set_cancel(DtsEngine *e, volatile int *flag) { (void)e; (void)flag; }
 void dts_engine_destroy(DtsEngine *e) { free(e); }
 const char *dts_engine_error(DtsEngine *e) { (void)e; return "DTS conversion not built"; }
 int dts_engine_open_demux(DtsEngine *e,const char *u,const char *h) { (void)e;(void)u;(void)h; return -1; }
@@ -58,6 +69,7 @@ void dts_engine_interrupt(DtsEngine *e,int on) { (void)e; (void)on; }
 #define RANGE_WORKERS 4
 #endif
 #define RANGE_SLOTS 32
+#define RANGE_SLOTS_MAX 64       /* 256 MiB of 4 MiB ranges (dts_engine_set_ahead_mib) */
 typedef struct {
   pthread_t thread;
   struct DtsEngine *engine;
@@ -80,7 +92,7 @@ struct DtsEngine {
   volatile int cancelled;
   pthread_mutex_t range_lock;
   pthread_cond_t range_wake;
-  DtsRangeJob ranges[RANGE_SLOTS];
+  DtsRangeJob ranges[RANGE_SLOTS_MAX];
   DtsRangeWorker workers[RANGE_WORKERS];
   int range_threads, range_stop;
   int64_t range_next;
@@ -94,8 +106,6 @@ struct DtsEngine {
    * range while the player already gave up on that segment). Cleared by the
    * caller before the next run; the demuxer state is then reset by a seek. */
   volatile int interrupt;
-  /* Owner's stop flag (read only), set before any I/O; see dts_engine_set_cancel. */
-  volatile int *ext_cancel;
   /* Remux: ONE sequential connection (rede_fluxo64) into a ring buffer, like
    * the TV's player reads, instead of 4 MiB requests on 4 lanes (TorBox
    * throttled and then refused those at 60+ Mbit/s). Guarded by range_lock. */
@@ -142,12 +152,7 @@ static int fail(DtsEngine *e,const char *msg,int code) {
   return -1;
 }
 static int cancelled(void *opaque) {
-  DtsEngine *e=opaque;
-  /* Latch the owner's stop permanently. The streaming transport also polls
-   * ext_cancel directly, including while the reader is waiting for bytes. */
-  if(e->ext_cancel && __atomic_load_n((volatile int *)e->ext_cancel,__ATOMIC_RELAXED))
-    __atomic_store_n(&e->cancelled,1,__ATOMIC_RELAXED);
-  return __atomic_load_n(&e->cancelled,__ATOMIC_RELAXED);
+  return __atomic_load_n(&((DtsEngine *)opaque)->cancelled,__ATOMIC_RELAXED);
 }
 /* Persistent HTTP lanes retain independent curl connection caches. The bounded
  * queue keeps fetching while native playback backpressures the demux consumer,
@@ -161,7 +166,7 @@ static void *range_worker(void *opaque) {
     DtsRangeJob *job=NULL;
     while(!e->range_stop) {
       if(!cancelled(e)) {
-        for(int i=0;i<RANGE_SLOTS;i++) {
+        for(int i=0;i<RANGE_SLOTS_MAX;i++) {
           DtsRangeJob *candidate=&e->ranges[i];
           if(candidate->state==1 && (!job || candidate->start<job->start)) job=candidate;
         }
@@ -226,12 +231,12 @@ static void *range_worker(void *opaque) {
 }
 static void clear_ranges(DtsEngine *e) {
   pthread_mutex_lock(&e->range_lock);
-  for(int i=0;i<RANGE_SLOTS;i++) {
+  for(int i=0;i<RANGE_SLOTS_MAX;i++) {
     DtsRangeJob *job=&e->ranges[i];
     __atomic_store_n(&job->cancel,1,__ATOMIC_RELAXED);
     if(job->state==1) job->state=0;
   }
-  for(int i=0;i<RANGE_SLOTS;i++) {
+  for(int i=0;i<RANGE_SLOTS_MAX;i++) {
     DtsRangeJob *job=&e->ranges[i];
     while(job->state==2) pthread_cond_wait(&e->range_wake,&e->range_lock);
     free(job->data); job->data=NULL; job->state=0;
@@ -264,6 +269,13 @@ static void queue_ranges(DtsEngine *e) {
     e->range_next=job->end==INT64_MAX?INT64_MAX:job->end+1;
   }
   pthread_cond_broadcast(&e->range_wake);
+}
+static void rings_add(long long bytes) {
+  pthread_mutex_lock(&g_rings_lock);
+  g_rings.alive += bytes > 0 ? 1 : -1; g_rings.bytes += bytes;
+  if (g_rings.alive > g_rings.peak) g_rings.peak = g_rings.alive;
+  if (g_rings.bytes > g_rings.peak_bytes) g_rings.peak_bytes = g_rings.bytes;
+  pthread_mutex_unlock(&g_rings_lock);
 }
 #define FX_CAP (e->fx_cap)             /* ring: read-ahead plus history (dts_engine_set_ring_mib) */
 #define FX_HIST (2 * 1024 * 1024)      /* kept behind the reader (small backward seeks) */
@@ -328,7 +340,7 @@ static void *fx_worker(void *opaque) {
     int strip=direct&&e->final_cross;
     pthread_mutex_unlock(&e->range_lock);
     uint64_t t0=fx_now_ms();
-    int r=rede_fluxo64(target,strip?"":e->headers,at,fx_sink,e,&total,&status,&e->cancelled,e->ext_cancel,fin,&cross,FX_STALL_MS,&got);
+    int r=rede_fluxo64(target,strip?"":e->headers,at,fx_sink,e,&total,&status,&e->cancelled,fin,&cross,FX_STALL_MS,&got);
     uint64_t ms=fx_now_ms()-t0;
     pthread_mutex_lock(&e->range_lock);
     e->metrics.range_requests++;
@@ -378,7 +390,7 @@ static int read_fluxo(void *opaque,uint8_t *dst,int n) {
   uint64_t wait_started=0;
   pthread_mutex_lock(&e->range_lock);
   if(!e->fx_thread_ok && !e->fx_stop) {
-    if(!e->fx_buf) { e->fx_cap=(int64_t)g_fx_cap_mib*1024*1024; e->fx_buf=malloc((size_t)e->fx_cap); }
+    if(!e->fx_buf) { e->fx_cap=(int64_t)g_fx_cap_mib*1024*1024; e->fx_buf=malloc((size_t)e->fx_cap); if(e->fx_buf) rings_add(e->fx_cap); }
     if(!e->fx_buf) { pthread_mutex_unlock(&e->range_lock); return AVERROR(ENOMEM); }
     e->fx_req=e->pos;
     if(pthread_create(&e->fx_thread,NULL,fx_worker,e)) { pthread_mutex_unlock(&e->range_lock); return AVERROR(ENOMEM); }
@@ -424,6 +436,7 @@ static void fx_close(DtsEngine *e) {
   pthread_mutex_unlock(&e->range_lock);
   if(e->fx_thread_ok) pthread_join(e->fx_thread,NULL);
   e->fx_thread_ok=0; e->fx_stop=0; e->fx_req=-1; e->fx_eof=e->fx_err=0; e->fx_lo=e->fx_hi=0;
+  if(e->fx_buf) rings_add(-e->fx_cap);
   free(e->fx_buf); e->fx_buf=NULL;
 }
 static int read_range(void *opaque,uint8_t *dst,int n) {
@@ -435,7 +448,7 @@ static int read_range(void *opaque,uint8_t *dst,int n) {
     if(!start_ranges(e)) return AVERROR(ENOMEM);
     pthread_mutex_lock(&e->range_lock);
     DtsRangeJob *job=NULL;
-    for(int i=0;i<RANGE_SLOTS;i++)
+    for(int i=0;i<RANGE_SLOTS_MAX;i++)
       if(e->ranges[i].state && e->ranges[i].start==e->pos) job=&e->ranges[i];
     if(!job) {
       pthread_mutex_unlock(&e->range_lock);
@@ -443,7 +456,7 @@ static int read_range(void *opaque,uint8_t *dst,int n) {
        * at the exact next byte. Never jump over a short response's tail. */
       clear_ranges(e);
       pthread_mutex_lock(&e->range_lock); queue_ranges(e);
-      for(int i=0;i<RANGE_SLOTS;i++)
+      for(int i=0;i<RANGE_SLOTS_MAX;i++)
         if(e->ranges[i].state && e->ranges[i].start==e->pos) job=&e->ranges[i];
     }
     if(!job) { pthread_mutex_unlock(&e->range_lock); return AVERROR_EXIT; }
@@ -470,7 +483,7 @@ static int read_range(void *opaque,uint8_t *dst,int n) {
     if(total>=0) {
       e->total=total;
       /* The first response discovers EOF after the initial speculative queue. */
-      for(int i=0;i<RANGE_SLOTS;i++)
+      for(int i=0;i<RANGE_SLOTS_MAX;i++)
         if(e->ranges[i].state==1 && e->ranges[i].start>=total) e->ranges[i].state=0;
     }
     queue_ranges(e);
@@ -511,11 +524,11 @@ static void close_media(DtsEngine *e) {
   fx_close(e);
   pthread_mutex_lock(&e->range_lock);
   e->range_stop=1;
-  for(int i=0;i<RANGE_SLOTS;i++) __atomic_store_n(&e->ranges[i].cancel,1,__ATOMIC_RELAXED);
+  for(int i=0;i<RANGE_SLOTS_MAX;i++) __atomic_store_n(&e->ranges[i].cancel,1,__ATOMIC_RELAXED);
   pthread_cond_broadcast(&e->range_wake);
   pthread_mutex_unlock(&e->range_lock);
   for(int i=0;i<e->range_threads;i++) pthread_join(e->workers[i].thread,NULL);
-  for(int i=0;i<RANGE_SLOTS;i++) free(e->ranges[i].data);
+  for(int i=0;i<RANGE_SLOTS_MAX;i++) free(e->ranges[i].data);
   pthread_mutex_lock(&e->range_lock);
   memset(e->ranges,0,sizeof e->ranges); e->range_threads=0; e->range_stop=0;
   pthread_mutex_unlock(&e->range_lock);
@@ -547,12 +560,11 @@ const void *dts_engine_subtitle_parameters(DtsEngine *e,int i) {
   return p->codec_type==AVMEDIA_TYPE_SUBTITLE?p:NULL;
 }
 const char *dts_engine_error(DtsEngine *e) { return e?e->error:"No DTS engine"; }
-void dts_engine_set_cancel(DtsEngine *e, volatile int *flag) { if(e) e->ext_cancel=flag; }
 void dts_engine_cancel(DtsEngine *e) {
   if(!e) return;
   __atomic_store_n(&e->cancelled,1,__ATOMIC_RELAXED);
   pthread_mutex_lock(&e->range_lock);
-  for(int i=0;i<RANGE_SLOTS;i++) __atomic_store_n(&e->ranges[i].cancel,1,__ATOMIC_RELAXED);
+  for(int i=0;i<RANGE_SLOTS_MAX;i++) __atomic_store_n(&e->ranges[i].cancel,1,__ATOMIC_RELAXED);
   pthread_cond_broadcast(&e->range_wake); pthread_mutex_unlock(&e->range_lock);
 }
 void dts_engine_destroy(DtsEngine *e) {
@@ -583,6 +595,7 @@ int dts_engine_open(DtsEngine *e,const char *url,const char *headers,int audio,i
 #endif
   e->pos=0; e->total=-1; e->cache_size=0; e->has_core=0;
   e->range_bytes=e->dv?RANGE_BYTES_DV:RANGE_BYTES; e->range_slots=e->dv?RANGE_SLOTS_DV:RANGE_SLOTS;
+  if(g_ahead_mib>0) { e->range_bytes=RANGE_BYTES_DV; e->range_slots=(g_ahead_mib+3)/4; }
   e->final_url[0]=0; e->final_cross=0; e->passthrough=0; e->remux=0;
   e->demux_eof=e->decoder_eof=e->resampler_eof=e->encoder_sent_eof=e->timeline=0;
   if (cancelled(e)) return fail(e,"Cancelled",0);
@@ -944,7 +957,7 @@ int dts_engine_next(DtsEngine *e,DtsFrame *f) {
       int ready=0, active=0, queued=0;
       uint64_t buffered=0;
       pthread_mutex_lock(&e->range_lock);
-      for(int i=0;i<RANGE_SLOTS;i++) {
+      for(int i=0;i<RANGE_SLOTS_MAX;i++) {
         DtsRangeJob *job=&e->ranges[i];
         if(job->state==1) queued++;
         if(job->state==2) active++;

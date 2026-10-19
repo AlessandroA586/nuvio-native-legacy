@@ -6,11 +6,9 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 source = (root / 'src/streams.c').read_text()
-# Compile unchanged helpers separately: the worktree intentionally retains its
-# git-apply conflict. These probes do not claim the integrated UI builds.
-helpers = source[source.index('static int faixaIdiomaInformado('):source.index('static float desenharFaixas(')]
-text_helpers = source[source.index('static int temPalavra('):source.index('// Somente os idiomas DECLARADOS')]
-filter_helpers = source[source.index('static int audioDeclaradoPt('):source.index('// O TITULO DA LINHA')]
+# Compile the current formatting and declared-audio helpers under sanitizers.
+helpers = source[source.index('static int faixaIdiomaInformado(const char *raw, size_t n) {'):source.index('static float desenharFaixas(')]
+filter_helpers = source[source.index('static int audioDeclaradoEm('):source.index('// O IDIOMA nao tem logo')]
 probe = r'''
 #include "streams.h"
 #include "linguas.h"
@@ -22,7 +20,6 @@ probe = r'''
 #include <ctype.h>
 static const char *i18n(const char *s) { return s; }
 HELPERS
-TEXT_HELPERS
 FILTER_HELPERS
 static int failures;
 static void check(const char *label, const char *json, const char *audio,
@@ -34,8 +31,8 @@ static void check(const char *label, const char *json, const char *audio,
   stream_faixas_texto(v, 0, a, sizeof a);
   stream_faixas_texto(v, 1, s, sizeof s);
   printf("%s: raw audio=[%s], raw subtitles=[%s], displayed audio=[%s], PT filter=%d\n",
-         label, v->audioIdiomas, v->legendaIdiomas, a, temAudioPt(v));
-  if (strcmp(a, audio) || strcmp(s, subs) || (portuguese >= 0 && temAudioPt(v) != portuguese)) {
+         label, v->audioIdiomas, v->legendaIdiomas, a, audioDeclaradoEm(v, "pt"));
+  if (strcmp(a, audio) || strcmp(s, subs) || (portuguese >= 0 && audioDeclaradoEm(v, "pt") != portuguese)) {
     printf("FAIL %s: expected audio=[%s], subtitles=[%s], PT filter=%d\n", label, audio, subs, portuguese);
     failures++;
   }
@@ -107,12 +104,12 @@ int main(void) {
   puts("Truncation/Unicode/large-value/depth probes completed under ASan/UBSan.");
   return failures ? 1 : 0;
 }
-'''.replace('HELPERS', helpers, 1).replace('TEXT_HELPERS', text_helpers, 1).replace('FILTER_HELPERS', filter_helpers, 1)
+'''.replace('HELPERS', helpers, 1).replace('FILTER_HELPERS', filter_helpers, 1)
 with tempfile.TemporaryDirectory(prefix='pr487-review-') as temp:
     cfile = Path(temp) / 'probe.c'
     binary = Path(temp) / 'probe'
     cfile.write_text(probe)
-    subprocess.run(['cc', str(cfile), 'src/stream_parse.c', 'src/js.c', 'src/badges.c', 'src/linguas.c',
+    subprocess.run(['cc', str(cfile), 'src/stream_parse.c', 'src/js.c', 'src/badges.c', 'src/linguas.c', 'src/fontefiltro.c',
                     '-Isrc', '-I/opt/homebrew/include', '-O1', '-g', '-ffunction-sections',
                     '-fdata-sections', '-Wl,-dead_strip', '-fsanitize=address,undefined,float-cast-overflow',
                     '-fno-omit-frame-pointer', '-fno-sanitize-recover=all', '-o', str(binary)], cwd=root, check=True)

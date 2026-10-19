@@ -1294,6 +1294,7 @@ static int cinemetaLer(AgBusca *b, const char *corpo, const char *hoje) {
   if (b->duracao <= 0) {
     if (js_texto_raiz_em(m, fim, "runtime", s, sizeof s)) b->duracao = atoi(s);
   }
+  if (js_videos_temporadas_falsas(m)) return achouAlgo || b->status[0];
   for (v = js_array(m, fim, "videos"); v && v < fim; ) {
     const char *vf = js_fim(v);
     char rel[40] = "", dia[12];
@@ -1515,7 +1516,7 @@ static int lerVideos(const char *corpo, AgEp *saida, int max) {
   const char *m = corpo ? strstr(corpo, "\"meta\"") : NULL;
   const char *fim, *v;
   int n = 0, i, j;
-  if (!m || !(m = strchr(m, '{'))) return 0;
+  if (!m || !(m = strchr(m, '{')) || js_videos_temporadas_falsas(m)) return 0;
   fim = js_fim(m);
   for (v = js_array(m, fim, "videos"); v && v < fim && n < max; ) {
     const char *vf = js_fim(v);

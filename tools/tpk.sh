@@ -95,7 +95,7 @@ if [ ! -f "$CACHE/prefix/lib/libSDL2.a" ] || [ ! -f "$CACHE/prefix/lib/libSDL2_t
   docker run --rm --platform linux/arm/v5 -v "$CACHE:/w" nuvio-tpk-sdk sh /w/deps.sh
 fi
 
-# DTS/TrueHD -> Dolby Digital 5.1: FFmpeg 7.1.5
+# DTS/TrueHD -> Dolby Digital 5.1 (docs/features/dts/README.md): FFmpeg 7.1.5
 # estatico, LGPL, com os componentes do tools/build-dts-ffmpeg.sh (alvo tpk). Entra SO na
 # libnuvio.so dos hosts 6+; o NuvioTpk40 continua sem (la a .so nao pode ter TLS e o alvo da
 # conversao e o NuvioTpk). O tarball e baixado e conferido AQUI (o container nao tem curl) e

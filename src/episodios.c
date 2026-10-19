@@ -8,6 +8,7 @@
 #include "gfx.h"
 #include "tex_cache.h"
 #include "text.h"
+#include "sinopse.h"
 #include "layout.h"
 #include "anim.h"
 #include "vistoep.h"
@@ -24,6 +25,7 @@
 #include "progresso.h"
 #include "plrilha.h"
 #include "ctxmenu.h"
+#include "epcoment.h"
 #include "movimento.h"
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
 #include "escala.h"
@@ -38,7 +40,7 @@
 #define EP_W     820.0f
 #define EP_PAD_X  18.0f
 #define EP_PAD_Y  22.0f
-#define EP_TIT_H  64.0f
+#define EP_TIT_H  42.0f
 #define EP_SEG_H  54.0f
 #define EP_ROW   160.0f
 // Linhas a vista: 4, ou menos quando a ilha nao cabe na altura da tela virtual
@@ -56,6 +58,26 @@ static int pedidoT, pedidoE;
 static float anim, scroll;
 // Velocidade da rolagem de 2a ordem (anim_mola2): partida macia, como na home.
 static float velScroll;
+// O REALCE DA LINHA E O FOCO DOS CHIPS DE TEMPORADA em mola: o dono diz que
+// salta e "duro". A linha que ganha foco acende em ~120 ms (NV_MOLA_FOCO) e a
+// que perde deixa um pos-brilho curto; a pilula do segmentado esmaece ao
+// entrar/sair da fileira de chips em vez de acender num quadro. So DOIS
+// floats (linha atual + anterior): o custo por quadro nao depende do tamanho
+// da lista — TV, nao workstation.
+static float focoLin, focoLinAnt, segFoc;
+static int focoLinIdx = -1, focoLinAntIdx = -1;
+static void focoLinhaPasso(float dt) {
+  int alvo = (grupo == 1 && aberto) ? foco : -1, red = ajustes_animacoes_reduzidas();
+  if (alvo != focoLinIdx) { focoLinAntIdx = focoLinIdx; focoLinAnt = focoLin; focoLinIdx = alvo; focoLin = 0.0f; }
+  focoLin = red ? (alvo >= 0 ? 1.0f : 0.0f)
+                : anim_mola(focoLin, alvo >= 0 ? 1.0f : 0.0f, dt, NV_MOLA_FOCO);
+  if (focoLinAntIdx >= 0) {
+    focoLinAnt = red ? 0.0f : anim_mola(focoLinAnt, 0.0f, dt, NV_MOLA_DESFOCO);
+    if (focoLinAnt < 0.005f) focoLinAntIdx = -1;
+  }
+  segFoc = red ? (grupo == 0 ? 1.0f : 0.0f)
+               : anim_mola(segFoc, grupo == 0 ? 1.0f : 0.0f, dt, NV_MOLA_FOCO);
+}
 #ifdef NV_TOUCH_UI
 static ToqueRolagem toqueEp, toqueEpTemporadas;
 static float toqueEpTemporadasOffset;
@@ -91,7 +113,7 @@ static int semMolaScroll;
 // este menu, entao ele precisa carregar a porta que tomou. Dentro da folha de
 // episodios a opcao nao existe — quem abriu a folha veio do player e ja tem
 // fonte tocando; oferece-la ali seria uma linha que nao leva a lugar nenhum.
-enum { VM_ESTE = 0, VM_ATE, VM_TEMP, VM_FONTES, VM_DAQUI, VM_N };
+enum { VM_ESTE = 0, VM_ATE, VM_TEMP, VM_FONTES, VM_DAQUI, VM_SINOPSE, VM_COMENT, VM_N };
 static int vmAcoes[VM_N], vmN; // linhas visiveis -> gesto (daqui em diante e opcional)
 // O MENU DA TEMPORADA (issue #108, "Pressing 'Season' brings up option to mark
 // all as watched"): o mesmo cartao, aberto pela ABA e nao por um episodio, com
@@ -119,7 +141,7 @@ static int vmFeito, vmFeitoN, vmFeitoVisto; static Uint32 vmFeitoAte;
 // desta tela —, e por isso so podia existir dentro dela. Guardando o alvo o
 // menu passa a servir tambem a pagina de detalhe, onde a folha nem esta aberta.
 static int  vmIdx = -1, vmT, vmE;
-static char vmNome[96];
+static char vmNome[96], vmSinopse[420];
 // O TITULO, e nao so a posicao (#190). `titulo` e `vmIdx` sao indices no
 // catalogo, e o catalogo e refeito com a folha aberta — a refacao de
 // "Continuar assistindo" roda com o player tocando. A mesma posicao passava a
@@ -149,6 +171,8 @@ static int  vmFontesPed; // consumido por episodios_menu_pediu_fontes()
 // o texto so muda quando o menu abre ou a acao termina.
 static char     vmRot[VM_N][120], vmCab[160], vmMsg[120];
 static CtxLinha vmLin[VM_N];
+static int vmComentEstado;
+static char vmComentContagem[24];
 static float    vmLarg;
 static float    vmAnim, vmAnimV, vmFocoAnim[VM_N];
 // DE ONDE O MENU SAIU, na tela virtual: o card do episodio (a ilha nasce ao
@@ -189,6 +213,12 @@ static void montarRotulos(void) {
     } else if (modo == VM_TEMP) {
       snprintf(vmRot[i], sizeof vmRot[i], quantos == 1 ? i18n("Temporada inteira (%d episódio)") : i18n("Temporada inteira (%d episódios)"), quantos);
       ic = "aj_list-video";
+    } else if (modo == VM_COMENT) {
+      snprintf(vmRot[i], sizeof vmRot[i], "%s", i18n("Comentários"));
+      ic = "aj_message-square";
+    } else if (modo == VM_SINOPSE) {
+      snprintf(vmRot[i], sizeof vmRot[i], "%s", i18n("Ler sinopse"));
+      ic = "aj_file-text";
     } else {
       snprintf(vmRot[i], sizeof vmRot[i], "%s", i18n("Fontes deste episódio"));
       ic = "aj_layers";
@@ -206,6 +236,8 @@ static void menuAbrir(int idx, int t, int e, const char *nome, int so) {
   const CatItem *ci = cat_item(idx);
   if (!ci || !ci->imdb[0]) return;
   vmIdx = idx; vmT = t; vmE = e; vmSo = so; vmModoTemp = 0;
+  vmComentEstado = -2;
+  if (so && e > 0) epcoment_abrir(ci->imdb, t, e);
   guardarId(vmId, sizeof vmId, idx);
   snprintf(vmNome, sizeof vmNome, "%s", nome ? nome : "");
   vmTemAncora = 0;
@@ -239,6 +271,16 @@ static void menuAbrir(int idx, int t, int e, const char *nome, int so) {
   }
   vmAcoes[vmN++] = VM_TEMP;
   if (so) vmAcoes[vmN++] = VM_FONTES;
+  vmSinopse[0] = 0;
+  if (e > 0) {
+    for (int i = 0; i < cat_n_episodios(idx); i++) {
+      const CatEp *ep = cat_episodio(idx, i);
+      if (ep && ep->temporada == t && ep->episodio == e) {
+        snprintf(vmSinopse, sizeof vmSinopse, "%s", ep->sinopse); break;
+      }
+    }
+    if (vmSinopse[0]) vmAcoes[vmN++] = VM_SINOPSE;
+  }
   // Abre do zero: a mola de um menu que acabou de fechar nao e a deste.
   vmAnim = vmAnimV = 0.0f;
   memset(vmFocoAnim, 0, sizeof vmFocoAnim);
@@ -383,6 +425,7 @@ void episodios_abrir(int idx, int t, int e) {
   titulo = idx; atualT = t; atualE = e; aberto = 1;
   guardarId(idTitulo, sizeof idTitulo, idx);
   temporada = foco = 0; grupo = 1; pedidoE = 0; scroll = 0;
+  focoLinIdx = focoLinAntIdx = -1; focoLin = focoLinAnt = 0.0f; segFoc = 0.0f;
   vmAberto = 0; vmSegurando = 0; vmConsumir = 0;
   localizarAtual = 1; alvoE = e; semMolaScroll = 1;
   for (int i = 0; i < nTemporadas(); i++) if (numTemporada(i) == t) temporada = i;
@@ -393,7 +436,7 @@ int episodios_aberto(void) { return aberto; }
 float episodios_anim(void) { return anim; }
 int   episodios_foco_linha(void) { return foco; }
 float episodios_rolagem(void) { return scroll; }
-void episodios_fechar(void) { aberto = 0; }
+void episodios_fechar(void) { aberto = 0; sinopse_fechar(); }
 int  episodios_titulo(void) { revalidar(); return titulo; }
 int episodios_escolheu(int *t, int *e) {
   if (!pedidoE) return 0;
@@ -409,7 +452,7 @@ int episodios_escolheu(int *t, int *e) {
 // caixa e a tela inteira. A altura sai do numero de opcoes, que muda com isso.
 // PONTEIRO (#99) no menu de visto: opcao sob o cursor ganha o foco (vmFoco,
 // o mesmo de cima/baixo), clique e o OK, clique fora fecha o menu.
-static void ponteiroVmOpcao(int i, int b) { (void)b; if (i >= 0 && i < vmOpcoes()) vmFoco = i; }
+static void ponteiroVmOpcao(int i, int b) { (void)b; if (i >= 0 && i < vmOpcoes()) { vmFoco = i; epcoment_menu(); } }
 static void ponteiroVmFora(int a, int b) { (void)a; (void)b; vmAberto = 0; }
 
 // O MENU DE VISTO (segurar OK) E A ILHA DO MENU DO CARTAZ (ctxmenu.c): o nome
@@ -433,6 +476,19 @@ static float menuLargura(float cabe) { return vmLarg < cabe ? vmLarg : cabe; }
 // pouco, o texto nao —; o menu comum, na das telas, como o do cartaz.
 static void menuAtualizar(float dt) {
   int i, red = ajustes_animacoes_reduzidas();
+  if (vmAberto && vmSo && !vmModoTemp) {
+    epcoment_atualizar(dt);
+    int n = epcoment_quantidade();
+    if (n != vmComentEstado) {
+      if (vmN && vmAcoes[vmN - 1] == VM_COMENT) vmN--;
+      if (n != 0) vmAcoes[vmN++] = VM_COMENT;
+      if (vmFoco >= vmN) vmFoco = vmN - 1;
+      vmComentEstado = n;
+      if (n < 0) snprintf(vmComentContagem, sizeof vmComentContagem, "%s", "…");
+      else snprintf(vmComentContagem, sizeof vmComentContagem, "%d", n);
+      montarRotulos();
+    }
+  }
   float alvo = vmAberto ? 1.0f : 0.0f;
   if (red) { vmAnim = alvo; vmAnimV = 0.0f; }
   else if (vmPainel()) {
@@ -539,6 +595,16 @@ static void menuDesenhar(GfxRect area, float a0) {
       m.x += (1.0f - a) * (m.x < vmAncora.x ? 16.0f : -16.0f);
     }
   }
+  GfxRect comentarios = {0};
+  if (vmSo && !vmModoTemp) {
+    // Keep panel on the right even when the anchor sits at the screen edge.
+    float pw = 676.0f, ph = 624.0f;
+    if (pw + MW + 24 > NV_TELA_W - 2 * VM_BORDA) pw = NV_TELA_W - 2 * VM_BORDA - MW - 24;
+    if (ph > NV_TELA_H - 2 * VM_BORDA) ph = NV_TELA_H - 2 * VM_BORDA;
+    if (m.x + MW + 24 + pw > NV_TELA_W - VM_BORDA) m.x = NV_TELA_W - VM_BORDA - MW - 24 - pw;
+    if (m.y + ph > NV_TELA_H - VM_BORDA) m.y = NV_TELA_H - VM_BORDA - ph;
+    comentarios = (GfxRect){m.x + MW + 24, m.y, pw, ph};
+  }
   if (vmAberto && ponteiro_ativo() && a > .5f) {
     ponteiro_camada();
     if (!vmFeito) ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ponteiroVmFora, 0, 0);
@@ -551,9 +617,19 @@ static void menuDesenhar(GfxRect area, float a0) {
   else gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0, 0, 0, 0, 0.55f * a);
   if (vmFeito) meta = vmMsg;
   else if (vmModoTemp) { const CatItem *ci = cat_item(vmIdx); meta = ci ? ci->titulo : ""; }
+  else if (vmAcoes[vmFoco] == VM_COMENT) meta = "Comentários do Trakt";
+  else if (vmAcoes[vmFoco] == VM_SINOPSE) meta = "Ler sinopse";
   else meta = vmAcoes[vmFoco] != VM_DAQUI && vmVisto ? "Marcar como assistido" : "Desmarcar como assistido";
   ctx_menu_desenhar(m, vmCab, meta, vmFeito ? 0.8f : 0.5f, vmLin, vmOpcoes(), vmFocoAnim,
                     vmFeito ? 0.35f : 1.0f, a, vmAberto && !vmFeito ? ponteiroVmOpcao : NULL);
+  if (comentarios.w > 0) {
+    if (vmN && vmAcoes[vmN - 1] == VM_COMENT) {
+      TxtLinha v = txt_linha(TXT_G18R, vmComentContagem, 180, 181, 187, 255);
+      txt_desenhar_alpha(v, m.x + m.w - 34 - v.w, m.y + 14 + 75 + 4 + (vmN - 1) * ctx_menu_passo() + (60 - v.h) * .5f, a);
+    }
+    if (vmAberto && ponteiro_ativo()) ponteiro_alvo(comentarios.x, comentarios.y, comentarios.w, comentarios.h, NULL, NULL, 0, 0);
+    epcoment_desenhar(comentarios, a);
+  }
 }
 
 // A frase da confirmacao, montada quando a acao termina.
@@ -571,6 +647,14 @@ static void menuEvento(const SDL_Event *ev) {
   if (ev->type == SDL_KEYUP && ehOk) { vmConsumir = 0; return; }
   if (ev->type != SDL_KEYDOWN) return;
   if (ehOk && (ev->key.repeat || vmConsumir)) return;
+  if (vmSo && !vmModoTemp && !vmFeito) {
+    if (epcoment_evento(ev)) return;
+    if (ko == SDLK_RIGHT) {
+      if (epcoment_entrar()) for (int i = 0; i < vmN; i++) if (vmAcoes[i] == VM_COMENT) vmFoco = i;
+      return;
+    }
+    if (ko == SDLK_LEFT) return;
+  }
   if (ko == SDLK_UP)   { if (vmFoco > 0) vmFoco--; return; }
   if (ko == SDLK_DOWN) { if (vmFoco < vmOpcoes() - 1) vmFoco++; return; }
   if (vmFeito) { vmAberto = 0; vmFeito = 0; return; }   // qualquer tecla encerra a confirmacao
@@ -581,7 +665,9 @@ static void menuEvento(const SDL_Event *ev) {
       return;
     }
     int modo = vmAcoes[vmFoco], v = modo == VM_DAQUI ? 0 : vmVisto;
+    if (modo == VM_COMENT) { epcoment_entrar(); return; }
     if (modo == VM_FONTES) { vmFontesPed = 1; vmAberto = 0; return; }
+    if (modo == VM_SINOPSE) { sinopse_abrir(vmNome, vmSinopse); vmAberto = 0; return; }
     menuFeito(aplicarVisto(modo, v), v);
     return;
   }
@@ -594,6 +680,7 @@ void episodios_evento(const SDL_Event *ev) {
 #endif
   if (!aberto) return;
   revalidar();
+  if (sinopse_aberta()) { sinopse_evento(ev); return; }
   { SDL_Keycode ko = ev->key.keysym.sym;
     int ehOk = (ko == SDLK_RETURN || ko == SDLK_KP_ENTER || ko == SDLK_SPACE);
 
@@ -730,7 +817,7 @@ void episodios_atualizar(float dt) {
     // ve de onde veio e o que vem, e o foco fica na segunda linha.
     localizarAtual = 0; semMolaScroll = 1;
 #ifdef NV_TOUCH_UI
-    if (!toqueEp.livre)
+    if (!toquerol_livre(&toqueEp))
 #endif
     scroll = foco > 0 ? (float)(foco - 1) * EP_ROW : 0.0f;
   }
@@ -746,12 +833,13 @@ void episodios_atualizar(float dt) {
   if (alvo > max) alvo = max;
   if (alvo < 0) alvo = 0;
   #ifdef NV_TOUCH_UI
-  if (toqueEp.livre) { scroll = toquerol_clamp(scroll, 0.0f, max > 0 ? max : 0); velScroll = 0.0f; }
+  if (toquerol_livre(&toqueEp)) { scroll = toquerol_clamp(scroll, 0.0f, max > 0 ? max : 0); velScroll = 0.0f; }
   else
   #endif
   if (semMolaScroll) { scroll = alvo; velScroll = 0.0f; }
   else scroll = anim_mola2(&velScroll, scroll, alvo, dt, NV_MOLA2_SCROLL);
   semMolaScroll = 0;
+  focoLinhaPasso(dt);
 }
 // PONTEIRO (#99) na folha: linha e "Fechar" focam como as setas; a aba de
 // temporada troca so no CLIQUE (trocar ao passar por cima recarregaria a lista
@@ -801,7 +889,11 @@ static float alturaCorpo(void) {
 static void linhaEp(int i, const CatItem *ci, float lx, float lw, float y, float topo, float base,
                     int ptr, float a) {
   const CatEp *ep = epLinha(i);
-  int sel = grupo == 1 && i == foco, vid = ajustes_vidro();
+  // REALCE EM MOLA: a linha em foco acende, a anterior apaga (pos-brilho);
+  // cores de texto trocam no ponto medio (rasterizado nao recolore por quadro).
+  float selF = (i == focoLinIdx) ? focoLin : (i == focoLinAntIdx ? focoLinAnt : 0.0f);
+  int sel = selF > 0.5f;
+  int vid = ajustes_vidro();
   GfxRect row = { lx, y, lw, EP_ROW - 4.0f };
   // A LISTA SOME NA BASE (mask-image do mockup): as linhas que entram no
   // rodape apagam nos ultimos 70 px em vez de cortar seco.
@@ -812,7 +904,7 @@ static void linhaEp(int i, const CatItem *ci, float lx, float lw, float y, float
     float b = y + row.h > base ? base : y + row.h;
     if (b > t) ponteiro_alvo(row.x, t, row.w, b - t, ponteiroEpLinha, NULL, i, 0);
   }
-  if (sel) plrui_linha_foco(row, 22.0f, ra);
+  if (selF > 0.005f) plrui_linha_foco(row, 22.0f, ra * selF);
   const char *arte = ep->thumb[0] ? ep->thumb : (ci ? ci->backdrop : "");
   GLuint tex = tex_obter_larg(arte, 240);
   // Still que nao existe (nem metahub nem TMDB): o fundo da serie.
@@ -844,7 +936,7 @@ static void linhaEp(int i, const CatItem *ci, float lx, float lw, float y, float
   // O ASSISTIDO e um disco com o check sobre a still.
   if (visto == 1) {
     GfxRect d = { tr.x + tr.w - 44.0f, tr.y + 10.0f, 34.0f, 34.0f };
-    if (vid) gfx_cor(d, 0.5f, 0.055f, 0.059f, 0.071f, 0.78f * ra);
+    if (vid) gfx_vidro_chip(d, 0.5f, 0.78f, ra);
     else gfx_cor(d, 0.5f, 0.082f, 0.086f, 0.102f, ra);
     gfx_icone((GfxRect){ d.x + 8.0f, d.y + 8.0f, 18.0f, 18.0f }, "pl_check", 1, 1, 1, ra);
   }
@@ -867,8 +959,8 @@ static void linhaEp(int i, const CatItem *ci, float lx, float lw, float y, float
       txt_desenhar_alpha(txt_linha_corta(TXT_ILHA_APOIO, estado, 243, 242, 239, 128, w), tx, ty, ra);
     }
     ty += 20.0f + 8.0f;
-    if (sel && ep->sinopse[0])
-      txt_bloco_corta(TXT_ILHA_APOIO, ep->sinopse, 243, 242, 239, tx, ty, w, 23.0f, ra * 0.5f, 2);
+    if (selF > 0.02f && ep->sinopse[0])
+      sinopse_bloco_corta(TXT_ILHA_APOIO, ep->sinopse, 243, 242, 239, tx, ty, w, 23.0f, ra * 0.5f * selF, 2);
   }
 }
 
@@ -927,9 +1019,8 @@ static void corpoIlha(GfxRect c, float a, void *u) {
     ponteiro_alvo(ilha.x, ilha.y, ilha.w, ilha.h, NULL, NULL, 0, 0);
   }
   // CABECALHO: kicker com a serie, "Episodios"; o fechar e um disco (grupo -1).
-  plrui_kicker(ci ? ci->titulo : "", x0 + 10.0f, y, 115, 115, 113, a);
-  txt_desenhar_alpha(txt_linha(TXT_ILHA_PERGUNTA, "Episódios", 243, 242, 239, 255), x0 + 10.0f, y + 22.0f, a);
-  { GfxRect d = { x0 + w - 10.0f - 56.0f, y + 4.0f, 56.0f, 56.0f };
+  txt_desenhar_alpha(txt_linha(TXT_ILHA_PERGUNTA, "Episódios", 243, 242, 239, 255), x0 + 10.0f, y, a);
+  { GfxRect d = { x0 + w - 10.0f - 56.0f, y - 7.0f, 56.0f, 56.0f };
     int f = grupo == -1;
     float k = f ? plrui_tinta() / 255.0f : 0.85f;
     if (f) plrui_pilula_foco(d, a); else plrui_botao_repouso(d, a);
@@ -946,7 +1037,7 @@ static void corpoIlha(GfxRect c, float a, void *u) {
       if (i == temporada) selecionada = total;
       total += toqueEpTemporada(i, 0, 0, 0, a) + 4;
     }
-    if (!toqueEpTemporadas.livre) toqueEpTemporadasOffset = fminf(selecionada, fmaxf(0, total - vista));
+    if (!toquerol_livre(&toqueEpTemporadas)) toqueEpTemporadasOffset = fminf(selecionada, fmaxf(0, total - vista));
     toquerol_vincular(&toqueEpTemporadas, regiao, gfx_escala(), 0, total - vista, 0, &toqueEpTemporadasOffset);
     gfx_recorte(sx, y, vista, EP_SEG_H);
     sx -= toqueEpTemporadasOffset;
@@ -975,7 +1066,7 @@ static void corpoIlha(GfxRect c, float a, void *u) {
       ns++;
     }
     { float sx = x0 + 10.0f, xx = sx + 5.0f;
-      plrui_seg(rot, cont, ns, temporada - ini, grupo == 0, sx, y, a);
+      plrui_seg(rot, cont, ns, (float)(temporada - ini), segFoc, sx, y, a);
       if (ptr) for (i = 0; i < ns; i++) {
         float sw = plrui_seg(&rot[i], &cont[i], 1, -1, 0, -1.0f, 0, a) - 10.0f;
         ponteiro_alvo(xx, y + 5.0f, sw, 44.0f, NULL, ponteiroEpTemporada, ini + i, 0);
@@ -1086,6 +1177,15 @@ static void episodios_menu_desenharCorpo_(void) {
   if (vmSo) menuDesenhar((GfxRect){ 0.0f, 0.0f, (float)NV_TELA_W, (float)NV_TELA_H }, 1.0f);
 }
 int  episodios_menu_pediu_fontes(void) { int v = vmFontesPed; vmFontesPed = 0; return v; }
+// O EPISODIO QUE O MENU ALMOFAVA quando "Fontes deste episodio" foi pedido.
+// A folha abre por cima da pagina e rouba o foco do teclado: quando a pessoa
+// escolhe, detail_ep_foco ja nao ve o card — sem esta entrega o player
+// montava o alvo do episodio em ANDAMENTO, nao do escolhido (#513).
+int  episodios_menu_fontes(int *temporada, int *episodio) {
+  if (temporada) *temporada = vmT;
+  if (episodio)  *episodio = vmE;
+  return vmT >= 0 && vmE > 0;
+}
 
 #ifdef NV_SHOT_HOOKS
 // Capturas: o menu de visto do episodio em foco, como a pressao longa abre.

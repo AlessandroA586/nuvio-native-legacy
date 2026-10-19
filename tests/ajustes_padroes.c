@@ -11,11 +11,17 @@
 #include <assert.h>
 
 int main(void) {
-  // #439: keep persisted indices 0..6, then every 10% up to 300%.
-  assert(OPCOES[AJ_LEG2_TAMANHO].n == 21);
-  for (int i = 0; i < 21; i++) {
+  // Merge regression: both appended settings keep their parallel table entries.
+  assert(valor[AJ_XTREAM_CONEXOES] == 0 && valor[AJ_AMPLIAR_UI] == 1);
+  assert(!strcmp(CHAVE[AJ_XTREAM_CONEXOES], "-xtreamConexoes"));
+  assert(!strcmp(CHAVE[AJ_AMPLIAR_UI], "ampliarUiLocal"));
+  assert(OPCOES[AJ_XTREAM_CONEXOES].n == 3 && OPCOES[AJ_AMPLIAR_UI].n == 2);
+  // c2e07fe41: 0 = follow the primary, then 50%..300% every 10%; the #439
+  // indices saved by 2.0.5 are migrated on load (viuLeg2Escala).
+  assert(OPCOES[AJ_LEG2_TAMANHO].n == 27);
+  for (int i = 0; i < 27; i++) {
     valor[AJ_LEG2_TAMANHO] = i;
-    assert(ajustes_leg2_tamanho() == (i == 0 ? 0 : i <= 6 ? 40 + i * 20 : 100 + i * 10));
+    assert(ajustes_leg2_tamanho() == (i == 0 ? 0 : TXT_LEG_PCT_MIN + (i - 1) * 10));
   }
   valor[AJ_LEG2_TAMANHO] = 0;
   // TCL: opção ligada de fábrica, local, antes da sincronia por áudio.
@@ -46,6 +52,15 @@ int main(void) {
     assert(!ajustes_abertura_detalhada());
     valor[ab] = 1; assert(ajustes_abertura_detalhada()); valor[ab] = 0;
     assert(ajCenaSecao(ab) == AJC_REP_DURANTE); }
+  assert(!ajustes_hero_sinopse_grande());
+  assert(!strcmp(CHAVE[AJ_HERO_SINOPSE_TAM], "heroSynopsisSizeLocal"));
+  assert(somenteDesteAparelho(AJ_HERO_SINOPSE_TAM));
+  assert(!strcmp(OPCOES[AJ_HERO_SINOPSE_TAM].rotulo, "Tamanho da sinopse"));
+  assert(!strcmp(V_HERO_SINOPSE[0], "Normal"));
+  assert(!strcmp(V_HERO_SINOPSE[1], "Grande"));
+  valor[AJ_HERO_SINOPSE_TAM] = 1;
+  assert(ajustes_hero_sinopse_grande());
+  valor[AJ_HERO_SINOPSE_TAM] = 0;
   // Home: layout e arte do destaque.
   assert(valor[AJ_HERO_FUNDO] == 0);          // Automatico
   assert(valor[AJ_HERO_ARTE_DIF] == 1);       // Desligado: mesma foto do card
@@ -152,12 +167,134 @@ int main(void) {
   assert(AJ_INTERFACE_MODO == AJ_PROXIMO_CONTAGEM + 1);
   assert(AJ_MIC_BUSCA == AJ_INTERFACE_MODO + 1);
   assert(AJ_MENU_TOPO == AJ_MIC_BUSCA + 1 && AJ_ABAS_ESTILO == AJ_MENU_TOPO + 1 && AJ_TECLADO_ANDROID == AJ_ABAS_ESTILO + 1 && AJ_LEG_CONTORNO_COR == AJ_TECLADO_ANDROID + 1);
-  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_ESTAT_TAMANHO == AJ_FALHA_ADDON_LIMITE + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_DICASCONTROLE == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_HERO_GENERO == AJ_DICASCONTROLE + 1 && AJ_ABERTURA_ADDON == AJ_HERO_GENERO + 1 && AJ_N == AJ_ABERTURA_ADDON + 1);
+  assert(AJ_FALHA_PROVEDORES == AJ_LEG_CONTORNO_COR + 1 && AJ_RETOMADA_MORNA == AJ_FALHA_ADDON_LIMITE + 1 && AJ_MANTER_PRAZO == AJ_RETOMADA_MORNA + 1 && AJ_ESTAT_TAMANHO == AJ_MANTER_PRAZO + 1 && AJ_OCULTAR_FILMES_VISTOS == AJ_ESTAT_TAMANHO + 1 && AJ_ESTAT_LADO == AJ_OCULTAR_FILMES_VISTOS + 1 && AJ_DICASCONTROLE == AJ_ESTAT_LADO + 1 && AJ_HERO_GENERO == AJ_DICASCONTROLE + 1 && AJ_ABERTURA_ADDON == AJ_HERO_GENERO + 1 && AJ_HERO_SINOPSE == AJ_ABERTURA_ADDON + 1 && AJ_HERO_NOTAS == AJ_HERO_SINOPSE + 1 && AJ_HERO_ANO == AJ_HERO_NOTAS + 1 && AJ_HERO_DURACAO == AJ_HERO_ANO + 1 && AJ_CURADORIA_URL == AJ_HERO_DURACAO + 1 && AJ_ABERTURA_FUNDO == AJ_CURADORIA_URL + 1 && AJ_HERO_SINOPSE_TAM == AJ_ABERTURA_FUNDO + 1 && AJ_EP_TAMANHO == AJ_HERO_SINOPSE_TAM + 1 && AJ_AMIGOS_ESTILO == AJ_MURAL_TITULOS + 1 && AJ_FONTE_IDIOMA_AUDIO == AJ_AMIGOS_ESTILO + 1 &&
+  AJ_AUD_LINGUA2 == AJ_FONTE_IDIOMA_AUDIO + 1 &&
+#ifdef NV_ANDROID
+  AJ_BAIXAR_REGISTRO == AJ_AUD_LINGUA2 + 1 && AJ_FILTROS_FONTES == AJ_BAIXAR_REGISTRO + 1 &&
+#else
+  AJ_FILTROS_FONTES == AJ_AUD_LINGUA2 + 1 &&
+#endif
+  AJ_PLAYER_EXTERNO == AJ_COLECAO_EXIBICAO + 1 &&   // #501: player externo depois
+  AJ_TRAILER_AUDIO == AJ_PLAYER_EXTERNO + 1 &&      // idioma do audio do trailer
+  AJ_PLAYER_ANIME == AJ_TRAILER_AUDIO + 1 &&        // #205: player so para anime
+  AJ_ABERTURA_ESTILO == AJ_PLAYER_ANIME + 1 &&      // #205: estilo da abertura (B3)
+  AJ_MENU_CARTAZ == AJ_ABERTURA_ESTILO + 1 && AJ_TITULO_FIL == AJ_MENU_CARTAZ + 1 &&        // #205: titulo das fileiras
+  AJ_VIDRO_QUALIDADE == AJ_TITULO_FIL + 1 &&   // glass quality (local)
+  AJ_FUNDO_DIN == AJ_VIDRO_QUALIDADE + 1 &&         // #205: fundo da Dinamica
+  AJ_FUNDO_DIN_COR == AJ_FUNDO_DIN + 1 &&
+  AJ_ESCALA_TEXTO == AJ_FUNDO_DIN_COR + 1 &&   // text and component scale (local)
+  AJ_FONTE_GRUPO == AJ_ESCALA_TEXTO + 1 &&      // source memory (local)
+  AJ_FONTE_GRUPO_SESSOES == AJ_FONTE_GRUPO + 1 &&
+  AJ_LINK_REUSAR == AJ_FONTE_GRUPO_SESSOES + 1 &&
+  AJ_LINK_PRAZO == AJ_LINK_REUSAR + 1 &&
+  AJ_DET_ESPACO == AJ_LINK_PRAZO + 1 &&   // title page row spacing (local)
+  AJ_FOCO_ACENTO == AJ_DET_ESPACO + 1 &&   // accent focus plate (local)
+  AJ_NT_ORDEM == AJ_FOCO_ACENTO + 1 &&
+  AJ_ARTE_TOM == AJ_NT_ORDEM + 1 &&
+  AJ_PALCO_FUNDO == AJ_ARTE_TOM + 1 &&
+  AJ_URL_LISTA == AJ_PALCO_FUNDO + 1 &&   // URL lists and guides (local)
+  AJ_URL_M3U_ADD == AJ_URL_LISTA + 1 &&
+  AJ_URL_XMLTV_ADD == AJ_URL_M3U_ADD + 1 &&
+  AJ_URL_REM == AJ_URL_XMLTV_ADD + 1 &&
+  AJ_NT_EP == AJ_URL_REM + 1 &&
+  AJ_LIVETV_SUGERIR == AJ_NT_EP + 1 &&
+  AJ_AUDIO_OFFSET == AJ_LIVETV_SUGERIR + 1 &&
+  AJ_XTREAM_CONEXOES == AJ_AUDIO_OFFSET + 1 &&
+  AJ_AMPLIAR_UI == AJ_XTREAM_CONEXOES + 1 &&
+  AJ_N == AJ_AMPLIAR_UI + 1);
+  // #492: retomada morna e o prazo do video pronto
+  assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
+  assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));
+  assert(valorPadrao[AJ_RETOMADA_MORNA] == 0 && ajustes_manter_video_ms() == 120000u);   // 2 min
+  valor[AJ_MANTER_PRAZO] = 0; assert(ajustes_manter_video_ms() == 120000u);
+  valor[AJ_MANTER_PRAZO] = 4; assert(ajustes_manter_video_ms() == 0u);
+  valor[AJ_MANTER_PRAZO] = 99; assert(ajustes_manter_video_ms() == 120000u);
+  valor[AJ_MANTER_PRAZO] = 2; assert(ajustes_manter_video_ms() == 600000u);
   assert(valor[AJ_HERO_GENERO] == 0 && ajustes_hero_genero());   // Ligado: o visual de sempre
   assert(!strcmp(CHAVE[AJ_HERO_GENERO], "heroGeneroLocal") && somenteDesteAparelho(AJ_HERO_GENERO));
+  // #205: sinopse, notas, ano e duracao do destaque, cada um no seu ajuste,
+  // LIGADOS de fabrica (o visual de sempre), locais como o genero.
+  assert(valor[AJ_HERO_SINOPSE] == 0 && valor[AJ_HERO_NOTAS] == 0 && valor[AJ_HERO_ANO] == 0 && valor[AJ_HERO_DURACAO] == 0);
+  assert(ajustes_hero_sinopse() && ajustes_hero_notas() && ajustes_hero_ano() && ajustes_hero_duracao());
+  assert(!strcmp(CHAVE[AJ_HERO_SINOPSE], "heroSinopseLocal") && somenteDesteAparelho(AJ_HERO_SINOPSE));
+  assert(!strcmp(CHAVE[AJ_HERO_NOTAS], "heroNotasLocal") && somenteDesteAparelho(AJ_HERO_NOTAS));
+  assert(!strcmp(CHAVE[AJ_HERO_ANO], "heroAnoLocal") && somenteDesteAparelho(AJ_HERO_ANO));
+  assert(!strcmp(CHAVE[AJ_HERO_DURACAO], "heroDuracaoLocal") && somenteDesteAparelho(AJ_HERO_DURACAO));
+  valor[AJ_HERO_SINOPSE] = 1; assert(!ajustes_hero_sinopse()); valor[AJ_HERO_SINOPSE] = 0;
+  valor[AJ_HERO_NOTAS] = 1; assert(!ajustes_hero_notas()); valor[AJ_HERO_NOTAS] = 0;
+  valor[AJ_HERO_ANO] = 1; assert(!ajustes_hero_ano()); valor[AJ_HERO_ANO] = 0;
+  valor[AJ_HERO_DURACAO] = 1; assert(!ajustes_hero_duracao()); valor[AJ_HERO_DURACAO] = 0;
+  assert(!strcmp(i18n(OPCOES[AJ_HERO_SINOPSE].rotulo), "Show synopsis on hero"));
+  assert(!strcmp(i18n(OPCOES[AJ_HERO_NOTAS].rotulo), "Show ratings on hero"));
+  assert(!strcmp(i18n(OPCOES[AJ_HERO_ANO].rotulo), "Show year on hero"));
+  assert(!strcmp(i18n(OPCOES[AJ_HERO_DURACAO].rotulo), "Show runtime on hero"));
   assert(valor[AJ_ABERTURA_ADDON] == 1 && !ajustes_abertura_addon());
   assert(!strcmp(CHAVE[AJ_ABERTURA_ADDON], "aberturaAddonLocal") && somenteDesteAparelho(AJ_ABERTURA_ADDON));
   valor[AJ_ABERTURA_ADDON] = 0; assert(ajustes_abertura_addon()); valor[AJ_ABERTURA_ADDON] = 1;
+  // #508: o fundo da tela Cinema da abertura: Arte borrada por padrao (o de
+  // sempre), local, com os valores na ordem Desligado/Arte/Arte borrada.
+  assert(valor[AJ_ABERTURA_FUNDO] == 1 && ajustes_abertura_fundo() == 1);   // A3: sharp + veil
+  assert(!strcmp(CHAVE[AJ_ABERTURA_FUNDO], "aberturaFundoLocal") && somenteDesteAparelho(AJ_ABERTURA_FUNDO));
+  valor[AJ_ABERTURA_FUNDO] = 0; assert(ajustes_abertura_fundo() == 0);
+  valor[AJ_ABERTURA_FUNDO] = 1; assert(ajustes_abertura_fundo() == 1);
+  valor[AJ_ABERTURA_FUNDO] = 2; assert(ajustes_abertura_fundo() == 2);
+  valor[AJ_ABERTURA_FUNDO] = 7; assert(ajustes_abertura_fundo() == 1);   // fora da lista: o padrao
+  valor[AJ_ABERTURA_FUNDO] = 1;
+  assert(OPCOES[AJ_ABERTURA_FUNDO].n == 3 && !strcmp(OPCOES[AJ_ABERTURA_FUNDO].valores[0], "Desligado") &&
+         !strcmp(OPCOES[AJ_ABERTURA_FUNDO].valores[1], "Arte") && !strcmp(OPCOES[AJ_ABERTURA_FUNDO].valores[2], "Arte borrada"));
+  // #205: estilo da tela de abertura: Centro (A3) por padrao, Canto (B3), local.
+  assert(valor[AJ_ABERTURA_ESTILO] == 0 && ajustes_abertura_estilo() == 0);
+  assert(!strcmp(CHAVE[AJ_ABERTURA_ESTILO], "aberturaEstiloLocal") && somenteDesteAparelho(AJ_ABERTURA_ESTILO) && !dePerfil(AJ_ABERTURA_ESTILO));
+  valor[AJ_ABERTURA_ESTILO] = 1; assert(ajustes_abertura_estilo() == 1);
+  valor[AJ_ABERTURA_ESTILO] = 0; assert(ajustes_abertura_estilo() == 0);
+  assert(valor[AJ_VIDRO_QUALIDADE] == 0 && ajustes_vidro_qualidade() == 0 && OPCOES[AJ_VIDRO_QUALIDADE].n == 3);
+  assert(!strcmp(CHAVE[AJ_VIDRO_QUALIDADE], "vidroQualidadeLocal") && somenteDesteAparelho(AJ_VIDRO_QUALIDADE) && !dePerfil(AJ_VIDRO_QUALIDADE));
+  valor[AJ_VIDRO_QUALIDADE] = 1; assert(ajustes_vidro_qualidade() == 1);
+  valor[AJ_VIDRO_QUALIDADE] = 2; assert(ajustes_vidro_qualidade() == 2);
+  valor[AJ_VIDRO_QUALIDADE] = 0;
+  assert(OPCOES[AJ_ABERTURA_ESTILO].n == 2 && !strcmp(OPCOES[AJ_ABERTURA_ESTILO].valores[0], "Centro") &&
+         !strcmp(OPCOES[AJ_ABERTURA_ESTILO].valores[1], "Canto"));
+  assert(!strcmp(i18n(OPCOES[AJ_ABERTURA_ESTILO].rotulo), "Opening screen style"));
+  // #205: titulo das fileiras: Classico por padrao (nada muda ate escolher), local, 4 valores.
+  assert(valor[AJ_TITULO_FIL] == 0 && ajustes_titulo_fil() == 0);
+  assert(!strcmp(CHAVE[AJ_TITULO_FIL], "rowTitleStyleLocal") && somenteDesteAparelho(AJ_TITULO_FIL) && !dePerfil(AJ_TITULO_FIL));
+  valor[AJ_TITULO_FIL] = 3; assert(ajustes_titulo_fil() == 3);
+  valor[AJ_TITULO_FIL] = 9; assert(ajustes_titulo_fil() == 0);   // arquivo torto volta ao Classico
+  valor[AJ_TITULO_FIL] = 0;
+  assert(OPCOES[AJ_TITULO_FIL].n == 4 && !strcmp(OPCOES[AJ_TITULO_FIL].valores[0], "Clássico") &&
+         !strcmp(OPCOES[AJ_TITULO_FIL].valores[1], "Ilha") && !strcmp(OPCOES[AJ_TITULO_FIL].valores[2], "Editorial") &&
+         !strcmp(OPCOES[AJ_TITULO_FIL].valores[3], "Acento"));
+  assert(!strcmp(i18n(OPCOES[AJ_TITULO_FIL].rotulo), "Row titles"));
+  // #205: fundo da Dinamica: Cinza por padrao, depois Cor e Imersivo; a cor e local.
+  assert(valor[AJ_FUNDO_DIN] == 0 && ajustes_fundo_din() == 0);
+  assert(!strcmp(CHAVE[AJ_FUNDO_DIN], "fundoDinamicaLocal") && somenteDesteAparelho(AJ_FUNDO_DIN) && !dePerfil(AJ_FUNDO_DIN));
+  assert(!strcmp(CHAVE[AJ_FUNDO_DIN_COR], "fundoDinamicaCorLocal") && somenteDesteAparelho(AJ_FUNDO_DIN_COR) && !dePerfil(AJ_FUNDO_DIN_COR));
+  valor[AJ_FUNDO_DIN] = 2; assert(ajustes_fundo_din() == 2);
+  valor[AJ_FUNDO_DIN] = 3; assert(ajustes_fundo_din() == 3);
+  valor[AJ_FUNDO_DIN] = 9; assert(ajustes_fundo_din() == 0);   // arquivo de outra versao
+  valor[AJ_FUNDO_DIN] = 0;
+  assert(OPCOES[AJ_FUNDO_DIN].n == 4 && !strcmp(OPCOES[AJ_FUNDO_DIN].valores[0], "Cinza") &&
+         !strcmp(OPCOES[AJ_FUNDO_DIN].valores[1], "Cor") && !strcmp(OPCOES[AJ_FUNDO_DIN].valores[2], "Imersivo") &&
+         !strcmp(OPCOES[AJ_FUNDO_DIN].valores[3], "Cinza escuro"));
+  assert(!strcmp(i18n(OPCOES[AJ_FUNDO_DIN].rotulo), "Dynamic layout background"));
+  assert(!strcmp(i18n(OPCOES[AJ_FUNDO_DIN].valores[0]), "Gray") && !strcmp(i18n(OPCOES[AJ_FUNDO_DIN].valores[2]), "Immersive"));
+  assert(OPCOES[AJ_FUNDO_DIN_COR].n == 17 && !strcmp(OPCOES[AJ_FUNDO_DIN_COR].valores[valor[AJ_FUNDO_DIN_COR]], "Oceano"));
+  { float a[3], b[3];   // a cor segue a paleta do acento e o padrao e Oceano (#1276CE)
+    ajustes_fundo_din_cor(a);
+    assert(fabsf(a[0] - 0x12 / 255.0f) < 1e-3f && fabsf(a[2] - 0xce / 255.0f) < 1e-3f);
+    valor[AJ_FUNDO_DIN_COR] = 99; ajustes_fundo_din_cor(b);   // fora da lista: volta ao padrao
+    assert(!memcmp(a, b, sizeof a)); valor[AJ_FUNDO_DIN_COR] = 12; }
+  // #205: o tamanho dos cards de episodio da Moderna — Medio de fabrica, local,
+  // na secao da pagina do titulo, com tres valores.
+  assert(!strcmp(CHAVE[AJ_EP_TAMANHO], "epTamanhoLocal"));
+  assert(valor[AJ_EP_TAMANHO] == 1 && ajustes_ep_tamanho() == 1);
+  assert(somenteDesteAparelho(AJ_EP_TAMANHO) && !dePerfil(AJ_EP_TAMANHO));
+  assert(OPCOES[AJ_EP_TAMANHO].n == 3 && !strcmp(V_EP_TAMANHO[1], "Médio"));
+  assert(!strcmp(i18n(OPCOES[AJ_EP_TAMANHO].rotulo), "Episode card size"));
+  valor[AJ_EP_TAMANHO] = 0; assert(ajustes_ep_tamanho() == 0);
+  valor[AJ_EP_TAMANHO] = 2; assert(ajustes_ep_tamanho() == 2);
+  valor[AJ_EP_TAMANHO] = 7; assert(ajustes_ep_tamanho() == 1);   // fora da faixa: o medio
+  valor[AJ_EP_TAMANHO] = 1;
   for (int i = 0; i < AJ_N; i++) assert(strcmp(CHAVE[i], "autoCreditosLocal"));
   // #338: o tamanho das estatisticas ao vivo: "Lembrar o ultimo" por padrao, local,
   // em Reproducao, com Lembrar + Completo/Compacto/Minimo.
@@ -167,6 +304,9 @@ int main(void) {
   valor[AJ_ESTAT_TAMANHO] = 1; assert(ajustes_estat_tamanho() == 0);
   valor[AJ_ESTAT_TAMANHO] = 3; assert(ajustes_estat_tamanho() == 2);
   valor[AJ_ESTAT_TAMANHO] = 0;
+  assert(!strcmp(CHAVE[AJ_ESTAT_LADO], "estatLadoLocal") && somenteDesteAparelho(AJ_ESTAT_LADO) && OPCOES[AJ_ESTAT_LADO].n == 2);
+  assert(valor[AJ_ESTAT_LADO] == 0 && ajustes_estat_lado() == 0);
+  valor[AJ_ESTAT_LADO] = 1; assert(ajustes_estat_lado() == 1); valor[AJ_ESTAT_LADO] = 0;
   // 13/10: o layout "Apple TV" se chama Dinamica; o valor gravado nao muda.
   assert(HOME_LAYOUT_DINAMICA == 2 && OPCOES[AJ_HOME_LAYOUT].n == 3);
   assert(!strcmp(V_HOME_LAYOUT[HOME_LAYOUT_DINAMICA], "Dinâmica"));

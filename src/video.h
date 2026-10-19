@@ -44,6 +44,16 @@ int  video_tocar_posicao(const char *url, double segundos);
 // sobre a duracao do container ANTES do primeiro quadro; mesmo ack/estado.
 int  video_tocar_retomada(const char *url, double segundos, double pct);
 int  video_retomada_inicial_estado(void);
+// Fonte preparada na pagina do titulo: player pausado, sem imagem, audio ou
+// eventos da sessao de reproducao. Token identifica o dono; zero cancela todos.
+int  video_precarregar(const char *url, const char *cabecalhos, double segundos,
+                      double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio, int kbps);
+int  video_precarregar_proximo(const char *url, const char *cabecalhos, double segundos,
+                              double pct, int buffer, int cacheMb, unsigned token, const char *idiomaAudio, int kbps);
+// 0 ausente, 1 preparando, 2 pronto, -1 falhou. Nao muda video_pronto().
+int  video_precarregar_estado(unsigned token);
+void video_precarregar_cancelar(unsigned token);
+void video_precarregar_adotar(unsigned token);
 #endif
 
 // Chamar UMA VEZ POR QUADRO. Hoje serve ao prazo do recuo de Dolby Vision
@@ -115,10 +125,21 @@ double video_buffer_fim(void); // ate onde o buffer cobre (s); 0 se desconhecido
 // congelada e video_falhou() em 0 para sempre. Quem vigia fonte de canal
 // (app.c) precisa deste numero para saber que a fonte morreu sem dizer.
 unsigned video_bufferando_ms(void);
+#ifdef NV_ANDROID
+// Atomic live-window sample for the watchdog; signed position, same-origin buffer edge.
+// Returns zero without modifying outputs when this open has no live sample.
+int video_live_progresso(double *pos, double *fim);
+// Same-player live-window repair, scoped to this open and bounded to 60 seconds.
+int video_recuperando_live(void);
+// HLS target duration for this live session; zero for VOD/unknown.
+unsigned video_live_segmento_ms(void);
+#endif
 // Afirmacao de Dolby Vision da FONTE escolhida (o addon descreve o arquivo).
 // Chamar ANTES de video_tocar/definir_fonte: e o que decide o hdrType que o
 // ACB descreve ao tv.display.
 void video_definir_dv(int dv);
+// Explicit Settings off-to-on retry of the shared Dolby Vision/DTS crash guard.
+void video_dv_guard_reiniciar(void);
 
 // CABECALHOS QUE O ADDON EXIGE (behaviorHints.proxyHeaders), uma linha
 // "Nome: valor" por cabecalho. Chamar ANTES de video_tocar, junto com
@@ -146,6 +167,10 @@ void video_definir_mp4(int ehMp4);
 // (video_tocar consome). Quem nao pede — trailer, canal ao vivo, que tem o
 // watchdog proprio em app.c — segue caindo em video_falhou na hora.
 void video_definir_reconexao(int sim);
+// Reabre somente a fonte VOD corrente, sem resolver outra URL nem reiniciar
+// o limite de reconexao. Preserva o ponto informado pelo backend, faixas,
+// velocidade e pausa. 1 = pedido aceito; 0 = indisponivel neste estado/alvo.
+int  video_recarregar(void);
 // MODO DO LOAD para o PROXIMO video_tocar (#158, LG C4: dado chega, VDEC
 // concedido, decoder nunca anuncia). 0 = o de sempre; 1 = sem o selectTrack
 // de video logo depois do load; 2 = o 1 e mais o payload enxuto de live
@@ -162,8 +187,10 @@ int    video_tocando(void);
 int    video_pausa_confirmada(void);
 int    video_pronto(void);   // 1 depois do loadCompleted
 #ifdef NV_ANDROID
+int    video_janela_pronta(void);   // latest native window request completed layout
 int    video_superficie_estavel(void);   // 1 depois da ultima recriacao da Surface (HDR/DV)
 int    video_quadro_visto(void);   // 1 depois do primeiro quadro desenhado (antes do "pronto")
+int    video_rede_lenta(void);   // !=0: download below the declared bitrate or repeated rebuffers (redefit.h)
 #endif
 int    video_ativo(void);    // 1 assim que ha mediaId — e o que abre o furo
 int    video_falhou(void);   // 1 depois de um errorText real na fonte atual
@@ -324,7 +351,19 @@ typedef struct {
   int canais;        // original audio channels, 0 unknown
   int stream_index;  // source demux index for DTS sessions, -1 in native webOS
   int stream_id;     // original container track ID, -1 when unknown
+  // Nome ORIGINAL da legenda, quando o container/player informa. Separado do
+  // rotulo para a folha mostra-lo abaixo do idioma sem mudar a memoria da faixa.
+  char nome[128];
 } VideoFaixa;
+
+// Identity used by candidates and manual audio memory, separate from selectTrack.
+static inline int video_audio_numero_memoria(const VideoFaixa *f) {
+#ifdef NV_TPK
+  // MKV TrackNumber occupies a separate namespace from native player indices.
+  if (f->numero < 0 && f->stream_id > 0) return 0x40000000 | f->stream_id;
+#endif
+  return f->numero;
+}
 
 int  video_n_audio(void);
 int  video_n_legenda(void);
@@ -396,9 +435,17 @@ typedef struct {
   int opacidade;  // 0..3 = texto 100/75/50/25%
   int familia;    // TxtFamilia; aplicada ao overlay externo (OpenSubtitles)
   int negrito;    // 1 = peso negrito no overlay (so o que o app desenha)
+  int corBorda;   // -1 unset (legacy outline); 0 Black, 1 White, 2 Yellow, 3 Green, 4 Blue, 5 Red
 } VideoLegendaEstilo;
 
 #define VIDEO_LEG_NCORES 6
+// A borda tem preto puro como padrao; as demais amostras usam a paleta do texto.
+static inline unsigned video_legenda_borda_rgb(int indice) {
+  static const unsigned cores[VIDEO_LEG_NCORES] = {
+    0x000000u, 0xffffffu, 0xffde30u, 0x40e070u, 0x4e9cffu, 0xff5050u
+  };
+  return cores[indice >= 0 && indice < VIDEO_LEG_NCORES ? indice : 0];
+}
 // Nomes que o uMS aceita em charColor. Expostos porque a folha desenha os
 // rotulos e precisa da mesma ordem.
 extern const char *const VIDEO_LEG_CORES[VIDEO_LEG_NCORES];

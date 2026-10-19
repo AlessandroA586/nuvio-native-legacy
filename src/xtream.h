@@ -28,6 +28,7 @@
 #define NV_XTREAM_H
 
 #include <time.h>
+#include <stdint.h>
 
 // ---------------------------------------------------------------- cadastro
 void xtream_carregar(void);
@@ -43,6 +44,12 @@ const char *xtream_servidor_curto(void);
 const char *xtream_usuario(void);
 const char *xtream_senha_mascarada(void);
 
+// Per-account connection policy: 0 Auto, 1 On, 2 Off. Unknown limits stay Off.
+int xtream_conexoes_modo(void);
+void xtream_definir_conexoes_modo(int modo);
+int xtream_conexoes_limitadas(void);
+int xtream_url_limitada(const char *url);
+
 // ----------------------------------------------------------------- canais
 typedef struct {
   char id[80];        // "xtream:<stream_id>"
@@ -52,9 +59,26 @@ typedef struct {
   char epgId[64];     // epg_channel_id do servidor, quando ha
 } XtreamCanal;
 
+// A mesma lista EM FLUXO (guia de TV): `cat` recebe as categorias na ordem do
+// painel com a contagem de cada uma (antes de qualquer canal), `cb` cada canal
+// (0 = parar). Sem vetor intermediario. Devolve o total do painel.
+typedef struct {
+  const char *id, *nome, *logo, *categoria, *epgId;
+  int num;           // "num" do painel (0 = nao veio)
+  int catOrdem;      // posicao da categoria na lista do painel
+  int semCategoria;  // category id absent/unknown; preserve a real provider group named Outros
+  int arquivo, arquivoDias;   // tv_archive (catch-up, v2)
+} XtreamItem;
+typedef int (*XtreamCb)(const XtreamItem *c, void *u);
+int xtream_canais_cb(void (*cat)(const char *nome, int ordem, int n, void *u),
+                     XtreamCb cb, void *u, int *total);
+int xtream_canais_cb_sessao(void (*cat)(const char *, int, int, void *),
+                     XtreamCb cb, void *u, int *total, uint64_t sessao);
 // Baixa categorias + canais ao vivo e preenche `saida`. Devolve quantos; 0 sem
 // cadastro ou sem resposta. BLOQUEIA: e do fio do guia.
 int xtream_canais(XtreamCanal *saida, int max);
+// Mesmo pedido, com a abertura do guia capturada antes de criar o worker.
+int xtream_canais_sessao(XtreamCanal *saida, int max, uint64_t sessao);
 // Por que a ULTIMA xtream_canais devolveu 0 (issue #112): XT_OK (respondeu,
 // mesmo vazia, ou sem cadastro), XT_SEM_RESPOSTA, XT_RECUSOU (auth 0). O guia
 // diz isso na tela; antes o "0" do Xtream sumia no meio dos canais dos addons

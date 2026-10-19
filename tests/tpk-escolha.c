@@ -19,10 +19,18 @@
 #include <unistd.h>
 #include "nvtmp.h"
 
+// These fixtures never resolve a TorBox file link. Fail closed if requested.
+int debrid_tb_link(int usenet, int item, int file, char *dst, unsigned n) {
+  (void)usenet; (void)item; (void)file;
+  if (n) dst[0] = 0;
+  return 0;
+}
 const char *i18n(const char *s) { return s; }
 const char *ling_nome(const char *c) { return c; }
 int ling_casa(const char *c, const char *p) { (void)c; (void)p; return 0; }
 const char *ling_audio(void) { return ""; }
+const char *ling_audio2(void) { return ""; }
+const char *ling_original(void) { return ""; }
 int ling_tipo_legenda(const char *s, int f, int d) { (void)s; (void)f; (void)d; return 0; }
 const char *ling_tipo_legenda_rotulo(int t) { (void)t; return ""; }
 
@@ -32,6 +40,7 @@ const char *ling_tipo_legenda_rotulo(int t) { (void)t; return ""; }
 const char *ling_do_nome(const char *nome) { (void)nome; return NULL; }
 int ling_letreiro(const char *nome, int forcado) { (void)nome; (void)forcado; return 0; }
 void mkvass_aceitar_texto(int sim) { (void)sim; }
+void mkvass_aceitar_imagem(int sim) { (void)sim; }
 
 void nv_tpk_video_registrar(void (*)(const char *, const char *), void (*)(void), void (*)(int),
                             void (*)(int), void (*)(int), void (*)(int, int, int, int), int (*)(void));
