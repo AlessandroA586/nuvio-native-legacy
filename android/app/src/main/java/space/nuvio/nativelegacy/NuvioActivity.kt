@@ -452,7 +452,7 @@ class NuvioActivity : SDLActivity() {
     // Reserva da libcurl do APK para pedidos simples (conta, login, Supabase):
     // em Shield/BRAVIA a init da libcurl nao voltava e o login esperava 20 s
     // para falhar. Chamado de fios de rede do C (nunca do fio de UI). Volta
-    // [status 4 bytes big-endian][corpo]; status 0 = falha, corpo = motivo.
+    // [status 4 bytes big-endian][Retry-After seconds 4 bytes][body].
     fun httpPedir(metodo: String, url: String, cabs: String, corpo: ByteArray?, prazoMs: Int): ByteArray {
         var con: java.net.HttpURLConnection? = null
         return try {
@@ -476,15 +476,24 @@ class NuvioActivity : SDLActivity() {
             val st = con.responseCode
             val ent = if (st >= 400) con.errorStream else con.inputStream
             val dados = ent?.use { it.readBytes() } ?: ByteArray(0)
-            val r = ByteArray(4 + dados.size)
+            val raw = con.getHeaderField("Retry-After")?.trim().orEmpty()
+            val retry = if (raw.isNotEmpty() && raw.all { it in '0'..'9' }) {
+                (raw.toLongOrNull() ?: Long.MAX_VALUE).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            } else {
+                val until = con.getHeaderFieldDate("Retry-After", 0)
+                ((until - System.currentTimeMillis() + 999) / 1000).coerceIn(0, Int.MAX_VALUE.toLong()).toInt()
+            }
+            val r = ByteArray(8 + dados.size)
             r[0] = (st ushr 24).toByte(); r[1] = (st ushr 16).toByte()
             r[2] = (st ushr 8).toByte(); r[3] = st.toByte()
-            System.arraycopy(dados, 0, r, 4, dados.size)
+            r[4] = (retry ushr 24).toByte(); r[5] = (retry ushr 16).toByte()
+            r[6] = (retry ushr 8).toByte(); r[7] = retry.toByte()
+            System.arraycopy(dados, 0, r, 8, dados.size)
             r
         } catch (e: Throwable) {
             val m = (e.javaClass.simpleName + ": " + (e.message ?: "")).take(180).toByteArray()
-            val r = ByteArray(4 + m.size)
-            System.arraycopy(m, 0, r, 4, m.size)
+            val r = ByteArray(8 + m.size)
+            System.arraycopy(m, 0, r, 8, m.size)
             r
         } finally {
             try { con?.disconnect() } catch (_: Throwable) {}

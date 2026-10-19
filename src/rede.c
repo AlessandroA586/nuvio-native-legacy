@@ -2036,7 +2036,7 @@ static int abrir(void) { return abrirAte(20000); }
 static int curlRuim;
 static char *viaAndroid(const char *verbo, const char *url, int segundos,
                         const char *const *cab, const char *corpo, int *status,
-                        long *tam, const char *porque) {
+                        long *tam, int *retryAfter, const char *porque) {
   char *cabs, *r, erro[200], h[96];
   size_t n = 1;
   int k, st = 0, temCt = 0;
@@ -2058,10 +2058,10 @@ static char *viaAndroid(const char *verbo, const char *url, int segundos,
   if (corpo && !temCt) strcat(cabs, "Content-Type: application/json\n");
   char *alias = __atomic_load_n(&tmdbAlternativo, __ATOMIC_ACQUIRE) ? tmdbUrl(url) : NULL;
   r = android_http(verbo, alias ? alias : url, cabs, corpo, (segundos > 0 ? segundos : 20) * 1000,
-                   &st, &bytes, erro, sizeof erro);
+                   &st, retryAfter, &bytes, erro, sizeof erro);
   if (!r && !st && !alias && !redeCancelouLocal && (alias = tmdbUrl(url))) {
     r = android_http(verbo, alias, cabs, corpo, (segundos > 0 ? segundos : 20) * 1000,
-                     &st, &bytes, erro, sizeof erro);
+                     &st, retryAfter, &bytes, erro, sizeof erro);
     if (r) tmdbLigou();
   }
   free(alias); free(cabs);
@@ -2095,10 +2095,10 @@ static int androidPrimeiro(void) {
 }
 // Falha de TRANSPORTE da libcurl num pedido simples: tenta o Android uma vez.
 static char *androidDepois(const char *verbo, const char *url, int segundos,
-                           const char *const *cab, const char *corpo, int *status) {
+                           const char *const *cab, const char *corpo, int *status, int *retryAfter) {
   char *r;
   if (redeCancelouLocal || (redeCancelLocal && *redeCancelLocal)) return NULL;
-  r = viaAndroid(verbo, url, segundos, cab, corpo, status, NULL, "curl falhou");
+  r = viaAndroid(verbo, url, segundos, cab, corpo, status, NULL, retryAfter, "curl falhou");
   if (r && !__atomic_exchange_n(&curlRuim, 1, __ATOMIC_ACQ_REL)) {
     printf("[rede] libcurl falhou onde o Android respondeu: pedidos simples ficam pelo Android nesta sessao\n");
     fflush(stdout);
@@ -2180,14 +2180,14 @@ char *rede_baixar_st(const char *url, int segundos, const char *const *cab,
   int st = 0;
   if (!url || !*url) { if (status) *status = 0; return NULL; }
   if (androidPrimeiro()) {   // st local: com status NULL o 4xx tambem volta com corpo, como no curl
-    r = viaAndroid("GET", url, segundos, cab, NULL, &st, NULL, "libcurl fora");
+    r = viaAndroid("GET", url, segundos, cab, NULL, &st, NULL, NULL, "libcurl fora");
     if (status) *status = st;
     return r;
   }
   r = rede_baixar_interno2(url, segundos, NULL, cab, &st, NULL, 0);
   if (status) *status = st;
   if (!r && st == 0) {
-    r = androidDepois("GET", url, segundos, cab, NULL, &st);
+    r = androidDepois("GET", url, segundos, cab, NULL, &st, NULL);
     if (status) *status = st;
   }
   return r;
@@ -2258,7 +2258,7 @@ static char *rede_baixar_interno3(const char *url, int segundos, long *tam,
   if (!status && negcache_barra(url, (long)time(NULL))) return NULL;
 #ifdef NV_ANDROID
   // libcurl nunca ficou pronta: GET simples (catalogo, imagem) pelo Android.
-  if (!abrir()) return viaAndroid("GET", url, segundos, cab, NULL, status, tam, "libcurl fora");
+  if (!abrir()) return viaAndroid("GET", url, segundos, cab, NULL, status, tam, retry, "libcurl fora");
 #else
   if (!abrir()) return NULL;
 #endif
@@ -2747,17 +2747,17 @@ char *rede_postar_st_retry(const char *url, int segundos, const char *const *cab
 #ifdef NV_ANDROID
   char *r;
   int st = 0;
-  if (retryAfter) *retryAfter = 0;   // o caminho Java nao expoe Retry-After
+  if (retryAfter) *retryAfter = 0;
   if (!url || !*url) { if (status) *status = 0; return NULL; }
   if (androidPrimeiro()) {   // st local: com status NULL o 4xx tambem volta com corpo, como no curl
-    r = viaAndroid("POST", url, segundos, cab, corpo ? corpo : "", &st, NULL, "libcurl fora");
+    r = viaAndroid("POST", url, segundos, cab, corpo ? corpo : "", &st, NULL, retryAfter, "libcurl fora");
     if (status) *status = st;
     return r;
   }
   r = postarNativo(url, segundos, cab, corpo, &st, 0, retryAfter);
   if (status) *status = st;
   if (!r && st == 0) {
-    r = androidDepois("POST", url, segundos, cab, corpo ? corpo : "", &st);
+    r = androidDepois("POST", url, segundos, cab, corpo ? corpo : "", &st, retryAfter);
     if (status) *status = st;
   }
   return r;

@@ -323,6 +323,7 @@ int traktauth_desconectado(void) { return desconectado; }
 void traktauth_desconectar(void) {
   pthread_mutex_lock(&trava);
   geracao++;
+  pushGeracaoAtual++;
   zerarEstado();
   desconectado = 1;
   dados_gravar(arqToken(perfil).s, "!"); // Persist local opt-out from account sync.
