@@ -42,7 +42,9 @@ static void screenshots(const char *base) {
   trakt_definir("test-token", "test-client");
   if (strstr(base, "settings-review")) {
     valor[AJ_SALVOS_DEST] = AJ_SALVOS_TRAKT;
+#ifndef BIBFONTE_BASELINE
     bibliotecaFonteEscolhida = 0;
+#endif
     assert(contalib_ler_biblioteca("[{\"content_id\":\"tt7654321\",\"content_type\":\"series\",\"name\":\"Account series\"}]") == 1);
     focarOpcao(AJ_SALVOS_DEST);
     shotSave(win, base, "legacy-source", 1);
