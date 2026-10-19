@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T10:57:30-03:00, HEAD `19cb1c982`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T11:48:55-03:00, HEAD `abf3c0fa8`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -235,7 +235,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 - **Skip buttons wait until playback is ready**: Intro and credit skip actions stay hidden until video playback is active and remain available across pause or scrubbing until the source changes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-skipcarga`, merge `116f60053`, `5eda5fa1a`, `f518b8b1a`.
 
-- **Samsung live streams ignore premature completion events**: Tizen playback checks native pipeline state before acting on completion callbacks, preventing early stops on redirected or segmented streams. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-tpklive302`, merge `26240ab80`, `9ac30c587`.
+- **Samsung live streams ignore premature completion events**: Tizen playback checks native pipeline state before acting on completion callbacks, preventing early stops on redirected or segmented streams. Platforms: Samsung .tpk. Refs owner request, `agente/205-tpklive302`, merge `26240ab80`, `9ac30c587`.
 
 - **Profile picker keeps movie artwork at minimal GPU effects**: Automatic GPU adaptation preserves the selected profile picker movie backdrop even when effects drop to Minimal. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-perfilfundo`, merge `bb446d679`, `f809c7fe7`.
 
@@ -527,6 +527,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Community
 
+- **Source audio and subtitle language labels**: Sources display their declared audio and subtitle languages to help choose the right release. Platforms: webOS, Android, Samsung .tpk, WASM. Refs @ghbarker, PR #487, `e4fb8c085`, `agente/205-pr487v2`, merge `abf3c0fa8`.
+
 - **Live playback and source controls from @ghbarker**: Live sources gain filter overrides and Android HLS stall recovery. Platforms: webOS, Android, Samsung .tpk, WASM; HLS recovery on Android. Refs PR #587, PR #597, `957a5040e`, `3c8664c62`, merges `8f1328be0`, `f22d70933`.
 
 - **Source-file and playback improvements from @Namer03**: Selected PR #567 improvements bring file browsing, release continuity and more resilient playback into the integrated release. Platforms: Samsung .tpk; shared source logic on webOS, Android and WASM. Refs PR #567, `385b44106`, merge `d8781e9a8`.
@@ -648,7 +650,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 
 
-Tracking snapshot: 19 unmerged branches without running jobs; 11 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-livepr2`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
+Tracking snapshot: 24 unmerged branches without running jobs; 11 open issues without mapped jobs or prompts. Newer fixes need review on `agente/p2p`. Queued jobs and deferred work are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
@@ -657,11 +659,9 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
 
 - **Live TV account limits, EPG search and shared XMLTV matching**: Ported PR #596/#601/#602 account and large-guide improvements with shared XMLTV schedule matching are under review on `agente/205-livepr2` (`db0cfe7c2`, `6d2fe5a66`, `d88561af4`, `71a96a9b2`, `dd8827fc8`). Platforms: webOS, Android, Samsung .tpk, WASM.
-- **Remaining PR #487 v2 branch by @ghbarker** (the missing language probes were ported through `agente/205-port487`, merge `24f78dbda`; original branch `e4fb8c08`) — `agente/205-pr487v2`, 3 commits out,
-  Newer fix postdates review. **Needs final re-review.** Android, LG webOS.
-- **Remaining PR #493 v2 / v3 branch** (profile/session cleanup was ported through `agente/205-port493`, merge `415544539`; original branch still unmerged) — `agente/205-pr493`, 12 commits out. Latest fix postdates its review; review the newest tip before merging.
+- **Remaining PR #493 v2 / v3 branch** (profile/session cleanup was ported through `agente/205-port493`, merge `415544539`; original branch still unmerged) — `agente/205-pr493`, 12 commits out. Latest mapped review blocks integration; fix findings and review the newest tip before merging.
   Android, LG webOS.
-- **Deferred experiments and owner answers**: Homebrew, Tizenbrew, glass mockups and profile experiments remain deferred to 2.1; owner-answer tracking remains on an unmerged branch. Platforms: webOS, Android, Samsung .tpk, WASM; no confirmed release behavior. Refs `agente/205-homebrew`, `agente/205-tizenbrew`, `agente/205-glassmock`, `agente/205-mock21`, `agente/205-perfis21`, `agente/205-respostas`.
+- **Deferred experiments and owner answers**: Homebrew and Tizenbrew remain deferred until the owner resumes them; glass mockups and profile experiments remain deferred; owner-answer tracking remains on an unmerged branch. Platforms: webOS, Android, Samsung .tpk, WASM; no confirmed release behavior. Refs `agente/205-homebrew`, `agente/205-tizenbrew`, `agente/205-glassmock`, `agente/205-mock21`, `agente/205-perfis21`, `agente/205-respostas`.
 - **Custom subtitle font** — the other half of #501, no branch. Android.
 - **Manual subtitle sync** — `agente/205-legajuste`, spec only. Deferred to 2.1.
 - **Open PRs with no local branch**: #456/#457/#466/#467/#468/#469/#478/#482 (out-of-scope ones stay in the
