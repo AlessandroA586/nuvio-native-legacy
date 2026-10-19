@@ -260,7 +260,8 @@ int main(int argc, char **argv) {
   relogio++; assert(!video_recuperando_live());
   Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_LIVE_RECOVERY, INT_MAX, (int)liveSessao);
   assert(video_recuperando_live());
-  relogio += 8000; assert(!video_recuperando_live());
+  relogio += 59999; assert(video_recuperando_live());
+  relogio++; assert(!video_recuperando_live());
   Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_LIVE_RECOVERY, 8000, (int)liveSessao);
   Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_LIVE_RECOVERY, 0, (int)liveSessao);
   assert(!video_recuperando_live());
