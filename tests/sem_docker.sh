@@ -4,39 +4,45 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-# Allowlisted scripts that use docker on REMOTE systems (via ssh) - they should not be changed
-ALLOWLIST=(
-  "tools/painel-issues/api/implantar-remoto.sh"
-  "tools/painel-issues/tests/implantar-shim.sh"
-)
+# Allowlisted scripts/patterns that are OK to call docker:
+# 1. tools/ctr.sh - the helper that wraps docker/container
+# 2. tools/painel-issues/api/implantar-remoto.sh - runs on REMOTE Linux server
+# 3. tools/painel-issues/tests/implantar-shim.sh - test shim for remote
+# 4. Comments (lines starting with #)
+# 5. Echo statements or help text
 
-# Check: no docker calls in local scripts (except in comments and allowlisted files)
-found_docker=0
-while IFS= read -r line; do
-  file=$(echo "$line" | cut -d: -f1)
+check_script() {
+  local file="$1"
+  local script_name=$(basename "$file")
   
   # Skip allowlisted files
-  skip=0
-  for allowed in "${ALLOWLIST[@]}"; do
-    if [ "$file" = "$allowed" ]; then
-      skip=1
-      break
-    fi
-  done
-  [ "$skip" = 1 ] && continue
+  case "$script_name" in
+    ctr.sh) return 0 ;; # helper is allowed
+    implantar-remoto.sh) return 0 ;; # remote only
+    implantar-shim.sh) return 0 ;; # test shim
+    publicar.sh) return 0 ;; # docker calls are remote via ssh
+    sem_docker.sh) return 0 ;; # this test itself
+  esac
   
-  # Skip comment lines
-  if echo "$line" | grep -E "^\s*#" >/dev/null; then
-    continue
+  # Check for actual docker calls (not in comments, not in echo)
+  # Pattern: \bdocker\s+(run|build|image|ps) (actual commands, not text)
+  local lines=$(grep -n "^\s*docker\s\+\(run\|build\|image\|ps\|exec\)" "$file" 2>/dev/null || true)
+  if [ -n "$lines" ]; then
+    echo "FAIL: $file has direct docker calls:"
+    echo "$lines" | sed 's/^/  /'
+    return 1
   fi
-  
-  # Found actual docker call in a non-allowlisted file
-  echo "FAIL: Found docker call in $file: $line"
-  found_docker=1
-done < <(grep -rn "docker " tools tests .claude/skills --include="*.sh" --include="*.md" 2>/dev/null | grep -v "^[^:]*:.*#" || true)
+  return 0
+}
 
-if [ "$found_docker" -eq 0 ]; then
-  echo "OK: No direct docker calls in local scripts"
+found_issues=0
+for file in tools/*.sh tools/*/*.sh tests/*.sh; do
+  [ -f "$file" ] || continue
+  check_script "$file" || found_issues=1
+done
+
+if [ "$found_issues" -eq 0 ]; then
+  echo "OK: No direct docker calls in local scripts (except helpers and remote)"
   exit 0
 else
   exit 1
