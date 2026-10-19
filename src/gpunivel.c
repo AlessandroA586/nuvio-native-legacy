@@ -528,6 +528,7 @@ static int intPreparar(void) {
   if (intFbo) return 1;
   if (intFalhou) return 0;
   if (alvo1080) { intW = (int)NV_TELA_W; intH = (int)NV_TELA_H; }
+  else if (gfx_hdr_output && !forca720) { intW = telaW; intH = telaH; }
   else { intW = 1280; intH = 720; }
   st = alvoCriar(&intFbo, &intTex, intW, intH);
   if (st != GL_FRAMEBUFFER_COMPLETE) {
@@ -547,8 +548,8 @@ static int intPreparar(void) {
 void gpun_quadro_inicio(void) {
   intLigado = 0;
   // A granted 720p drawable is already scaled by the platform compositor.
-  if (forca720 && telaW <= 1280 && telaH <= 720) return;
-  if ((!forca720 && !alvo1080) || !intPreparar()) return;
+  if (!gfx_hdr_output && forca720 && telaW <= 1280 && telaH <= 720) return;
+  if ((!gfx_hdr_output && !forca720 && !alvo1080) || !intPreparar()) return;
   glBindFramebuffer(GL_FRAMEBUFFER, intFbo);
   glViewport(0, 0, intW, intH);
   gfx_tamanho_alvo(intW, intH);
@@ -603,6 +604,19 @@ void gpun_quadro_fim(void) {
       gfx_rect(tela, rcasTex, GFX_RCAS, upNitidez / 4.0f,
                1.0f / telaW, 1.0f / telaH, 0.0f, 1, 1, 1, 1);
     }
+    // Fractional scaling uses SGSR; integer factors keep Sharp-Bilinear.
+    if (gfx_hdr_output)
+      gfx_rect(tela, intTex, GFX_HDR_OUTPUT, (float)gfx_hdr_output, 0, 0, 0, 1, 1, 1, 1);
+    else if (upscaleNitido() && (telaW % intW || telaH % intH))
+      gfx_rect(tela, intTex, GFX_COPIA, 0,
+               (float)intW, (float)intH, 0.0f, 1, 1, 1, 1);
+    else if (upscaleNitido())
+      gfx_rect(tela, intTex, GFX_COPIA_NITIDA, (float)telaW / intW,
+               1.0f / intW, 1.0f / intH, 0.0f, 1, 1, 1, 1);
+    else
+      gfx_rect(tela, intTex, GFX_COPIA, 0,
+               0.0f, 1.0f,
+               0.0f, 1, 1, 1, 1);
     // Solta a textura do alvo: no quadro seguinte ela volta a ser o alvo de
     // desenho, e ficar ligada para leitura ao mesmo tempo e o laco de
     // realimentacao que o GLES deixa indefinido.

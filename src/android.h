@@ -27,6 +27,7 @@ void android_player_tela_cheia(int ativa);
 // tem o tamanho da superficie, nao o pedido. Usado pelo ajuste 4K. Devolve 1
 // se a superficie veio nesse tamanho.
 int android_pedir_superficie(int w, int h);
+int android_hdr_interface(int ativa);
 // Entrega o APK em `caminho` ao instalador do sistema (NuvioActivity.instalarApk,
 // FileProvider). 1 = instalador aberto, 2 = falta a permissao de instalar apps
 // desta fonte (a tela dela foi aberta), 0 = falhou. Chamar do fio do SDL.

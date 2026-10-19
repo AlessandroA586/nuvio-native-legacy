@@ -19,6 +19,7 @@ const char *gpun_teste_upscale(int sw, int sh, int iw, int ih, int app);
 
 // --- dubles ------------------------------------------------------------------
 float gfx_tex_aspect_atual, gfx_opacidade_grupo = 1.0f;
+int gfx_hdr_output;
 static int leves = -1;
 void gfx_definir_efeitos_leves(int l) { leves = l; }
 static int minimos = -1;

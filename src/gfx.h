@@ -5,6 +5,7 @@
 #ifndef NV_GFX_H
 #define NV_GFX_H
 #include "gl_compat.h"
+extern int gfx_hdr_output; // 0 SDR, 1 PQ, 2 linear scRGB, 3 HLG, 4 linear BT.2020, 5 limited PQ.
 
 typedef enum {
   GFX_CARD   = 0,  // textura com cantos, parallax e especular
@@ -286,13 +287,13 @@ typedef enum {
   // Integer prescale with a bilinear transition. uPar=inverse source size,
   // uFoco=integer scale; alpha remains the original bilinear sample.
   GFX_COPIA_NITIDA = 49,
-  // Opt-in upscalers (Settings > This TV > Upscaling algorithm), compiled on
-  // first use. Source = internal FBO: uPar = source size in texels.
+// Opt-in upscalers (Settings > This TV > Upscaling algorithm), compiled on demand
+  // on first use. Source = internal FBO: uPar = source size in texels.
   GFX_COPIA_EASU = 50,     // FSR 1 EASU
-  GFX_COPIA_LANCZOS = 51,  // Lanczos-2, 4x4 taps
-  // FSR 1 RCAS over the upscaled FBO: uPar = inverse size, uFoco = sharpness 0..1.
-  GFX_RCAS = 52,
-  GFX_NMODOS = 53
+  GFX_COPIA_LANCZOS = 51,  // Lanczos3
+  GFX_RCAS = 52,           // FSR 1 RCAS (sharpening after upscale)
+  GFX_HDR_OUTPUT = 53,     // Final SDR UI to HDR conversion; preserves all color accuracy
+  GFX_NMODOS = 54
 } GfxModo;
 
 typedef struct {

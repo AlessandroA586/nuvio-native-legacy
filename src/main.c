@@ -1210,6 +1210,21 @@ int main(int argc, char **argv) {
 #ifdef NV_LINUX_DESKTOP
   windowTitle = "Nuvio - Linux UI preview";
 #endif
+#ifdef NV_ANDROID
+  int hdrPedido = ajustes_hdr_interface();
+  int hdrColor = hdrPedido && android_hdr_interface(1);
+  SDL_SetHint("NUVIO_HDR_REQUESTED", hdrPedido ? "1" : "0");
+  SDL_SetHint("NUVIO_HDR_EGL", "none");
+  SDL_SetHint("NUVIO_HDR_CONFIG", "unknown");
+  SDL_SetHint("NUVIO_HDR_UI", hdrColor ? "1" : "0");
+  if (hdrColor) {
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 10);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 10);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 10);
+    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 2);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
+  }
+#endif
   NV_ETAPA("SDL_CreateWindow");
   arranque_etapa("SDL_CreateWindow");
   win = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED,
@@ -1235,6 +1250,21 @@ int main(int argc, char **argv) {
       { 5, 6, 5, 0, 0, "RGB565" },
     };
     size_t i;
+    if (!win && hdrColor) {
+      printf("[hdr-ui] config=1010102 failed=%s; trying FP16\n", SDL_GetError());
+      SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 16);
+      SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 16);
+      SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 16);
+      SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 16);
+      SDL_GL_SetAttribute(SDL_GL_FLOATBUFFERS, 1);
+      win = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                             pedeW, pedeH, flags);
+      if (!win) {
+        printf("[hdr-ui] config=FP16 failed=%s; trying SDR\n", SDL_GetError());
+        SDL_GL_SetAttribute(SDL_GL_FLOATBUFFERS, 0);
+        SDL_SetHint("NUVIO_HDR_UI", "0"); android_hdr_interface(0);
+      }
+    }
     for (i = 0; !win && i < sizeof reserva / sizeof reserva[0]; i++) {
       printf("[android] janela falhou (%s); tentando EGL %s\n", SDL_GetError(), reserva[i].nome);
       fflush(stdout);
@@ -1361,13 +1391,15 @@ int main(int argc, char **argv) {
   if (!ctx) {
     // A janela ja existe com a config escolhida; recriar janela e contexto
     // numa config mais simples (o contexto ES2 e o mesmo pedido em todas).
-    printf("[android] sem contexto GL: %s; tentando RGB565 sem profundidade\n", SDL_GetError());
+    printf("[android] sem contexto GL: %s; tentando RGBA8888 sem profundidade\n", SDL_GetError());
     fflush(stdout);
     SDL_DestroyWindow(win);
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 6);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 0);
+    SDL_SetHint("NUVIO_HDR_UI", "0");
+    if (hdrColor) { SDL_GL_SetAttribute(SDL_GL_FLOATBUFFERS, 0); android_hdr_interface(0); }
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
     win = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -1375,6 +1407,38 @@ int main(int argc, char **argv) {
     ctx = win ? SDL_GL_CreateContext(win) : NULL;
   }
   if (!ctx) { printf("[android] sem contexto GL: %s\n", SDL_GetError()); SDL_Quit(); return 2; }
+#endif
+#ifdef NV_ANDROID
+  { const char *space = SDL_GetHint("NUVIO_HDR_EGL");
+    int r = 0, g = 0, b = 0, a = 0;
+    SDL_GL_GetAttribute(SDL_GL_RED_SIZE, &r); SDL_GL_GetAttribute(SDL_GL_GREEN_SIZE, &g);
+    SDL_GL_GetAttribute(SDL_GL_BLUE_SIZE, &b); SDL_GL_GetAttribute(SDL_GL_ALPHA_SIZE, &a);
+    /* SDL_GL_GetAttribute queries GL framebuffer bits, not the EGL config.
+       The synchronous surface hook publishes only verified HDR configs. */
+    const char *config = SDL_GetHint("NUVIO_HDR_CONFIG");
+    int ten = config && !strcmp(config, "1010102");
+    int fp16 = config && !strcmp(config, "FP16");
+    gfx_hdr_output = 0;
+    if (hdrColor && SDL_GetHintBoolean("NUVIO_HDR_UI", SDL_FALSE) && space) {
+      if (ten) {
+        if (!strcmp(space, "pq")) gfx_hdr_output = 1;
+        else if (!strcmp(space, "pq-limited")) gfx_hdr_output = 5;
+        else if (!strcmp(space, "hlg")) gfx_hdr_output = 3;
+      } else if (fp16) {
+        if (!strcmp(space, "scrgb-linear")) gfx_hdr_output = 2;
+        else if (!strcmp(space, "bt2020-linear")) gfx_hdr_output = 4;
+      }
+    }
+    if (hdrPedido) {
+      if (!gfx_hdr_output) android_hdr_interface(0);
+      printf("[hdr-ui] pedido=on colormode=%s egl=%s config=%s resultado=%s dataspace=%s gl=%d/%d/%d/%d blit=%d white=203\n",
+             hdrColor ? "ok" : "unsupported",
+             !gfx_hdr_output ? "none" : gfx_hdr_output == 3 ? "hlg" : fp16 ? "scrgb" : "pq",
+             gfx_hdr_output ? config : "8888", gfx_hdr_output ? "hdr" : "sdr",
+             gfx_hdr_output ? space : "none", r, g, b, a, gfx_hdr_output);
+      fflush(stdout);
+    }
+  }
 #endif
   // Capability is known only after creating the GL context. A saved app choice
   // must not leave a weak GPU paying for a 4K drawable.
