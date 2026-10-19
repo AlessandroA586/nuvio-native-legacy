@@ -57,9 +57,11 @@
 #include "text.h"
 static int espRotuloFonte;        // txt_linha("Trakt" | "TMDB") vindos da pagina
 static int espNotaEstilo = -1;    // estilo em que a nota de ensaio saiu
+static int espImdb;
 static const char *espNota;       // a nota que se procura ("7,4")
 static TxtLinha fx_txt_linha(TxtEstilo estilo, const char *s, int r, int g, int b, int a) {
   if (s && (!strcmp(s, "Trakt") || !strcmp(s, "TMDB"))) espRotuloFonte++;
+  if (s && !strcmp(s, "IMDb")) espImdb++;
   if (s && espNota && !strcmp(s, espNota)) espNotaEstilo = (int)estilo;
   return txt_linha(estilo, s, r, g, b, a);
 }
@@ -73,10 +75,18 @@ static TxtLinha fx_txt_linha(TxtEstilo estilo, const char *s, int r, int g, int 
 #ifdef NV_TEST_EPCOMENT
 #include "js.h"
 #include "epcoment.h"
-static int epRequests, epRatings, epEmpty;
+static int epRequests, epRatings, epEmpty, epImdbLabels, epImdbScores;
+TxtLinha epreview_texto(TxtEstilo estilo, const char *s, int r, int g, int b, int a) {
+  if (s && !strcmp(s, "IMDb")) epImdbLabels++;
+  if (s && (!strcmp(s, "8,7") || !strcmp(s, "8.7"))) epImdbScores++;
+  return txt_linha(estilo, s, r, g, b, a);
+}
 static SDL_atomic_t epRelease;
 int epcoment_cabecalhos(const char **cab, char *aut, size_t na, char *chave, size_t nc) {
-  (void)aut; (void)na; (void)chave; (void)nc; cab[0] = NULL; return 1;
+  (void)aut; (void)na; (void)chave; (void)nc; cab[0] = NULL; return 0; // No linked Trakt account.
+}
+int epcoment_publicos(const char **cab, char *chave, size_t nc) {
+  (void)chave; (void)nc; cab[0] = "trakt-api-version: 2"; cab[1] = NULL; return 1;
 }
 char *epcoment_baixar(const char *url, int segundos, const char *const *cab) {
   (void)segundos; (void)cab;
@@ -309,6 +319,9 @@ int main(int argc, char **argv) {
     snprintf(cam, sizeof cam, "%s/ajustes.txt", dados_dir());
     fa = fopen(cam, "w"); assert(fa);
     fprintf(fa, "idioma %d\n", id ? atoi(id) : 0);
+#ifdef NV_TEST_EPCOMENT
+    fprintf(fa, "notaEpisodio 1\n");
+#endif
     if (f && *f) fprintf(fa, "fonteInterface %d\n", atoi(f));
     fclose(fa); }
   setenv("NUVIO_TAMANHO_UI", "1", 1); // Geometry assertions use 1080p layout units.
@@ -396,6 +409,26 @@ int main(int argc, char **argv) {
   gravar("no-comments");
   CONFERE(alvosDoMenu(&caixa, lin) == 5 && epcoment_quantidade() == 0, "empty episode omits Comments row");
   CONFERE(epRequests == 2 && epRatings == 2, "one comments/ratings fetch per opened episode");
+  voltar(); quadros(60);
+  CONFERE(ajustes_nota_episodio(EX_IMDB) && !ajustes_nota_episodio(EX_TRAKT) &&
+          !ajustes_nota_episodio(EX_TMDB), "notaEpisodio=1 selects only IMDb badges");
+  CatEp scored = *cat_episodio(0, 5);
+  scored.notaImdb = 87;
+  cat_definir_episodios(0, &scored, 1);
+  espImdb = 0; espNota = "8,7"; espNotaEstilo = -1;
+  desenhaEpisodio((GfxRect){96, 350, 560, 580}, 0, 1, 1, SDL_GetTicks());
+  CONFERE(espImdb && espNotaEstilo >= 0, "selected IMDb episode badge appears on card");
+  espNota = NULL;
+  epcoment_abrir(IMDB_SERIE, scored.temporada, scored.episodio);
+  epImdbLabels = epImdbScores = 0;
+  epcoment_desenhar((GfxRect){1000, 350, 676, 624}, 1);
+  CONFERE(epImdbLabels && epImdbScores, "selected IMDb episode score appears in review panel");
+  scored.notaImdb = 0;
+  cat_definir_episodios(0, &scored, 1);
+  epcoment_abrir(IMDB_SERIE, scored.temporada, scored.episodio);
+  epImdbLabels = epImdbScores = 0;
+  epcoment_desenhar((GfxRect){1000, 350, 676, 624}, 1);
+  CONFERE(!epImdbLabels && !epImdbScores, "missing IMDb episode score never borrows show rating");
   voltar(); quadros(60);
   printf("epcoment: %d failures\n", falhas);
   return falhas ? 1 : 0;

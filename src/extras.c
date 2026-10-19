@@ -1786,7 +1786,7 @@ int extras_comentario_curtidas(int i) {
 
 static void *buscarEpComent(void *arg) {
   const char *cab[4];
-  char aut[200], chave[140], url[260], show[24];
+  char chave[140], url[260], show[24];
   char *corpo;
   int t, e;
   NvPerfilSessao sessao;
@@ -1799,7 +1799,8 @@ static void *buscarEpComent(void *arg) {
   pthread_mutex_unlock(&trava);
 
   if (!nv_perfil_sessao_atual(sessao) ||
-      !trakt_cabecalhos(cab, aut, sizeof aut, chave, sizeof chave)) {
+      !trakt_cabecalhos_publicos(cab, chave, sizeof chave)) {
+    printf("[nuvio] episode reviews %s S%dE%d: stale session or missing public Trakt key\n", show, t, e);
     pthread_mutex_lock(&trava); epFioVivo = 0; pthread_mutex_unlock(&trava);
     return NULL;
   }
@@ -1807,6 +1808,7 @@ static void *buscarEpComent(void *arg) {
            "https://api.trakt.tv/shows/%s/seasons/%d/episodes/%d/comments/likes?limit=%d",
            show, t, e, EX_COMENT_MAX);
   corpo = rede_baixar_com(url, 12, cab);
+  int commentsOk = corpo != NULL;
   if (corpo) {
     ComentAchado achado[EX_COMENT_MAX];
     int n = 0;
@@ -1847,8 +1849,9 @@ static void *buscarEpComent(void *arg) {
   // Same headers, worker, session guard and episode cache as comments.
   snprintf(url, sizeof url, "https://api.trakt.tv/shows/%s/seasons/%d/episodes/%d/ratings", show, t, e);
   corpo = rede_baixar_com(url, 12, cab);
+  ExEpNotas notas = {0};
+  int ratingsOk = corpo != NULL;
   if (corpo) {
-    ExEpNotas notas = {0};
     const char *dist = strstr(corpo, "\"distribution\"");
     notas.nota = (int)(js_num(corpo, NULL, "rating", 0) * 10 + .5);
     notas.votos = (int)js_num(corpo, NULL, "votes", 0);
@@ -1861,6 +1864,10 @@ static void *buscarEpComent(void *arg) {
     pthread_mutex_unlock(&trava);
     free(corpo);
   }
+  printf("[nuvio] episode reviews %s S%dE%d: comments=%s ratings=%s score=%d votes=%d\n",
+         show, t, e, commentsOk ? "ok" : "failed",
+         ratingsOk ? "ok" : "failed", notas.nota, notas.votos);
+  fflush(stdout);
   pthread_mutex_lock(&trava); epFioVivo = 0; pthread_mutex_unlock(&trava);
   return NULL;
 }
