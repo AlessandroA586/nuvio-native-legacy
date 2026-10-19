@@ -15,8 +15,8 @@
 #include <string.h>
 
 typedef struct {
-  char u[40], t[16384], l[4], data[40];
-  int c, nota, respostas, spoiler;
+  char u[40]; char *t; int c, nota; char l[4];
+  char data[40]; int spoiler, respostas;
 } ComentAchado;
 
 // 1 = `lingua` (do Trakt, pode ser "" ou "pt-br") e o idioma `iso` da interface.

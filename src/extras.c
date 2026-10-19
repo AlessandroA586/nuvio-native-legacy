@@ -142,7 +142,45 @@ const char *extras_caminho_marca_nome(const char *nome) {
 // `nota` e o user_rating do Trakt (0..10); 0 quando quem comentou nao avaliou.
 // A referencia mostra "10/10  17 curtidas" no rodape do cartao, e sem a nota o
 // rodape ficava so com o numero de curtidas — metade da informacao.
-static struct { char user[40]; char texto[420]; int curtidas; int nota; char lingua[4]; } coment[EX_COMENT_MAX];
+typedef struct {
+  char user[40], lingua[4], data[40];
+  char *texto;
+  int curtidas, nota, spoiler, respostas;
+} ExComentario;
+static ExComentario coment[EX_COMENT_MAX];
+
+static void comentariosLimpar(ExComentario *v) {
+  for (int i = 0; i < EX_COMENT_MAX; i++) { free(v[i].texto); memset(&v[i], 0, sizeof v[i]); }
+}
+static void comentarioPublicar(ExComentario *dst, ComentAchado *src) {
+  snprintf(dst->user, sizeof dst->user, "%s", src->u);
+  free(dst->texto); dst->texto = src->t; src->t = NULL;
+  dst->curtidas = src->c; dst->nota = src->nota;
+  snprintf(dst->lingua, sizeof dst->lingua, "%s", src->l);
+  snprintf(dst->data, sizeof dst->data, "%s", src->data);
+  dst->spoiler = src->spoiler; dst->respostas = src->respostas;
+}
+static int comentarioLer(ComentAchado *a, const char *p, const char *f) {
+  char cru[8] = "";
+  memset(a, 0, sizeof *a);
+  // Decoded UTF-8 cannot exceed the JSON object's byte length.
+  size_t cap = (size_t)(f - p) + 1;
+  a->t = malloc(cap);
+  if (!a->t) return 0;
+  a->t[0] = 0;
+  js_texto_linhas(p, f, "comment", a->t, cap);
+  js_texto(p, f, "username", a->u, sizeof a->u);
+  js_texto(p, f, "created_at", a->data, sizeof a->data);
+  js_bruto(p, f, "spoiler", cru, sizeof cru);
+  a->spoiler = !strcmp(cru, "true");
+  a->respostas = (int)js_num(p, f, "replies", 0);
+  a->c = (int)js_num(p, f, "likes", 0);
+  a->nota = (int)js_num(p, f, "user_rating", 0);
+  char lg[12] = ""; js_texto(p, f, "language", lg, sizeof lg);
+  if (lg[0] && lg[1]) { a->l[0] = lg[0] | 32; a->l[1] = lg[1] | 32; }
+  if (!a->t[0]) { free(a->t); a->t = NULL; return 0; }
+  return 1;
+}
 
 // COMENTARIOS DO EPISODIO, o outro lado do seletor "Série | Episódio" que a
 // referencia poe acima dos cartoes. Sao uma consulta DIFERENTE
@@ -152,10 +190,7 @@ static struct { char user[40]; char texto[420]; int curtidas; int nota; char lin
 //
 // Vem sob demanda — so quando o dono escolhe "Episódio" —, porque o custo e uma
 // viagem por episodio e a maioria das visitas nunca troca de aba.
-static struct {
-  char user[40], texto[16384], lingua[4], data[40];
-  int curtidas, nota, respostas, spoiler;
-} comentEp[EX_COMENT_MAX];
+static ExComentario comentEp[EX_COMENT_MAX];
 static ExEpNotas epNotas;
 static int  nComentEp;
 static int  epTempAtual, epNumAtual;    // de que episodio a lista acima e
@@ -932,24 +967,7 @@ static void *buscar(void *arg) {
     while (p && *p && (unsigned char)*p <= ' ') p++;
     while (p && *p == '{' && n < EX_COMENT_MAX) {
       const char *f = js_fim(p);
-      achado[n].u[0] = achado[n].t[0] = 0;
-      js_texto(p, f, "comment", achado[n].t, sizeof achado[n].t);
-      // "username" esta dentro do objeto `user`; js_texto varre a faixa toda e
-      // a unica ocorrencia dessa chave no item e essa.
-      js_texto(p, f, "username", achado[n].u, sizeof achado[n].u);
-      achado[n].c = (int)js_num(p, f, "likes", 0.0);
-      achado[n].nota = (int)js_num(p, f, "user_rating", 0.0);
-      // `language` do Trakt ("en", "pt"). Guardado em minusculo e so as duas
-      // primeiras letras: e o que coment_ordenar e a etiqueta do cartao usam.
-      achado[n].l[0] = 0;
-      { char lg[12] = "";
-        js_texto(p, f, "language", lg, sizeof lg);
-        if (lg[0] && lg[1]) {
-          achado[n].l[0] = (char)(lg[0] | 32); achado[n].l[1] = (char)(lg[1] | 32);
-          achado[n].l[2] = 0;
-        } }
-      numaLinha(achado[n].t);
-      if (achado[n].t[0]) n++;
+      if (comentarioLer(&achado[n], p, f)) n++;
       p = js_prox(f);
     }
     free(corpo);
@@ -959,16 +977,12 @@ static void *buscar(void *arg) {
     pthread_mutex_lock(&trava);
     if (!strcmp(id, idPedido) && sessaoDoFioAtual()) {
       int k;
-      for (k = 0; k < n; k++) {
-        snprintf(coment[k].user, sizeof coment[k].user, "%s", achado[k].u);
-        snprintf(coment[k].texto, sizeof coment[k].texto, "%s", achado[k].t);
-        coment[k].curtidas = achado[k].c;
-        coment[k].nota = achado[k].nota;
-        snprintf(coment[k].lingua, sizeof coment[k].lingua, "%s", achado[k].l);
-      }
+      comentariosLimpar(coment);
+      for (k = 0; k < n; k++) comentarioPublicar(&coment[k], &achado[k]);
       nComent = n;
     }
     pthread_mutex_unlock(&trava);
+    for (int k = 0; k < n; k++) free(achado[k].t);
   }
   }
 
@@ -1643,6 +1657,7 @@ static void *lacoParte(void *arg) {
 // ZERA O QUE A TELA MOSTRA, com a trava. E o que cada pedido novo faz antes
 // de buscar — e o que um pedido que NAO VAI BUSCAR tambem tem de fazer.
 static void zerarPublicado(void) {
+  comentariosLimpar(coment);
   notaTrakt = votosTrakt = nComent = nRel = nTemps = nCol = 0;
   colNome[0] = colCapa[0] = colFundo[0] = colSinopse[0] = 0;
   nTrailer = fichaDur = nEstudio = 0;
@@ -1737,9 +1752,23 @@ int extras_n_comentarios(void) { return nComent; }
 const char *extras_comentario_usuario(int i) {
   return (i >= 0 && i < nComent) ? coment[i].user : "";
 }
-const char *extras_comentario_texto(int i) {
-  return (i >= 0 && i < nComent) ? coment[i].texto : "";
+// UI snapshots outlive worker publication/replacement of the heap text.
+static const char *comentarioTexto(int ep, int i) {
+  static char *copia[2][EX_COMENT_MAX];
+  if (i < 0 || i >= EX_COMENT_MAX) return "";
+  pthread_mutex_lock(&trava);
+  const char *src = i < (ep ? nComentEp : nComent) ? (ep ? comentEp[i].texto : coment[i].texto) : NULL;
+  if (!src) src = "";
+  char **dst = &copia[ep][i];
+  if (!*dst || strcmp(*dst, src)) {
+    char *nova = strdup(src);
+    if (!nova) { pthread_mutex_unlock(&trava); return ""; }
+    free(*dst); *dst = nova;
+  }
+  pthread_mutex_unlock(&trava);
+  return *dst;
 }
+const char *extras_comentario_texto(int i) { return comentarioTexto(0, i); }
 int extras_comentario_curtidas(int i) {
   return (i >= 0 && i < nComent) ? coment[i].curtidas : 0;
 }
@@ -1777,26 +1806,7 @@ static void *buscarEpComent(void *arg) {
     while (p && *p && (unsigned char)*p <= ' ') p++;
     while (p && *p == '{' && n < EX_COMENT_MAX) {
       const char *f = js_fim(p);
-      memset(&achado[n], 0, sizeof achado[n]);
-      js_texto_linhas(p, f, "comment", achado[n].t, sizeof achado[n].t);
-      js_texto(p, f, "created_at", achado[n].data, sizeof achado[n].data);
-      achado[n].respostas = (int)js_num(p, f, "replies", 0);
-      { char spoiler[12] = "";
-        js_bruto(p, f, "spoiler", spoiler, sizeof spoiler);
-        achado[n].spoiler = !strcmp(spoiler, "true"); }
-      js_texto(p, f, "username", achado[n].u, sizeof achado[n].u);
-      achado[n].c = (int)js_num(p, f, "likes", 0.0);
-      achado[n].nota = (int)js_num(p, f, "user_rating", 0.0);
-      // `language` do Trakt ("en", "pt"). Guardado em minusculo e so as duas
-      // primeiras letras: e o que coment_ordenar e a etiqueta do cartao usam.
-      achado[n].l[0] = 0;
-      { char lg[12] = "";
-        js_texto(p, f, "language", lg, sizeof lg);
-        if (lg[0] && lg[1]) {
-          achado[n].l[0] = (char)(lg[0] | 32); achado[n].l[1] = (char)(lg[1] | 32);
-          achado[n].l[2] = 0;
-        } }
-      if (achado[n].t[0]) n++;
+      if (comentarioLer(&achado[n], p, f)) n++;
       p = js_prox(f);
     }
     free(corpo);
@@ -1809,20 +1819,13 @@ static void *buscarEpComent(void *arg) {
     if (nv_perfil_sessao_atual(sessao) && !strcmp(show, epShow) &&
         t == epPedTemp && e == epPedNum) {
       int k;
-      for (k = 0; k < n; k++) {
-        snprintf(comentEp[k].user, sizeof comentEp[k].user, "%s", achado[k].u);
-        snprintf(comentEp[k].texto, sizeof comentEp[k].texto, "%s", achado[k].t);
-        comentEp[k].curtidas = achado[k].c;
-        comentEp[k].nota = achado[k].nota;
-        comentEp[k].respostas = achado[k].respostas;
-        comentEp[k].spoiler = achado[k].spoiler;
-        snprintf(comentEp[k].data, sizeof comentEp[k].data, "%s", achado[k].data);
-        snprintf(comentEp[k].lingua, sizeof comentEp[k].lingua, "%s", achado[k].l);
-      }
+      comentariosLimpar(comentEp);
+      for (k = 0; k < n; k++) comentarioPublicar(&comentEp[k], &achado[k]);
       nComentEp = n;
       epTempAtual = t; epNumAtual = e;
     }
     pthread_mutex_unlock(&trava);
+    for (int k = 0; k < n; k++) free(achado[k].t);
   } else {
     // Falhou: marca o episodio como respondido (lista vazia) pelo mesmo
     // motivo do teste em extras_pedir_comentarios_ep — senao seria um pedido
@@ -1877,6 +1880,7 @@ void extras_pedir_comentarios_ep(const char *imdbSerie, int temporada, int episo
     if (dp) *(char *)dp = 0; }
   epPedTemp = temporada; epPedNum = episodio;
   epComentSessao = nv_perfil_sessao_ler();
+  comentariosLimpar(comentEp);
   nComentEp = 0;                 // limpa: a lista velha e de outro episodio
   memset(&epNotas, 0, sizeof epNotas);
   epTempAtual = epNumAtual = 0;
@@ -1920,9 +1924,7 @@ int extras_carregando(void) {
 const char *extras_comentario_ep_usuario(int i) {
   return (i >= 0 && i < nComentEp) ? comentEp[i].user : "";
 }
-const char *extras_comentario_ep_texto(int i) {
-  return (i >= 0 && i < nComentEp) ? comentEp[i].texto : "";
-}
+const char *extras_comentario_ep_texto(int i) { return comentarioTexto(1, i); }
 int extras_comentario_ep_curtidas(int i) {
   return (i >= 0 && i < nComentEp) ? comentEp[i].curtidas : 0;
 }
@@ -1939,6 +1941,15 @@ const char *extras_comentario_lingua(int i) {
 const char *extras_comentario_ep_lingua(int i) {
   return (i >= 0 && i < nComentEp && !coment_mesmo_idioma(comentEp[i].lingua,
           idioma_iso(ajustes_idioma()))) ? comentEp[i].lingua : "";
+}
+const char *extras_comentario_data(int ep, int i) {
+  return i >= 0 && i < (ep ? nComentEp : nComent) ? (ep ? comentEp[i].data : coment[i].data) : "";
+}
+int extras_comentario_spoiler(int ep, int i) {
+  return i >= 0 && i < (ep ? nComentEp : nComent) ? (ep ? comentEp[i].spoiler : coment[i].spoiler) : 0;
+}
+int extras_comentario_respostas(int ep, int i) {
+  return i >= 0 && i < (ep ? nComentEp : nComent) ? (ep ? comentEp[i].respostas : coment[i].respostas) : 0;
 }
 int extras_comentario_nota(int i) {
   return (i >= 0 && i < nComent) ? coment[i].nota : 0;
@@ -2610,6 +2621,7 @@ void extras_abrir_sessao(void) {
   zerarPublicado();
   epShow[0] = 0;
   memset(&epNotas, 0, sizeof epNotas);
+  comentariosLimpar(comentEp);
   nComentEp = epTempAtual = epNumAtual = epPedTemp = epPedNum = 0;
   pthread_mutex_unlock(&trava);
   pthread_mutex_lock(&heroTrailerTrava);

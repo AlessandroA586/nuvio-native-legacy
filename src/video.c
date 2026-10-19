@@ -2097,7 +2097,7 @@ static void *lerMkv(void *arg) {
         snprintf(dvAudioCodec[na++], sizeof dvAudioCodec[0], "%s", fx[j].codec);
       }
     }
-    dvAudios = na; dvSondado = 1; }
+    dvAudios = na; }
 
   // DIAGNOSTICO DO DV (203-dvrpu). "Sem [dv] file:" tinha tres causas possiveis
   // e o log nao separava: o arquivo nao tem dvcC; o Tracks nao coube; ou o DV
@@ -2120,6 +2120,17 @@ static void *lerMkv(void *arg) {
       int r = mkv_rpu_alem(url, fx[j].nalTam, 4L * 1024 * 1024);
       printf("[dv] sonda: rpu_banda pelo 1o quadro (%lld bytes em %lld): %s rpu_tipo=%d vdr_rpu_profile=%d\n",
              q, d->blocoIni, r == 1 ? "sim" : r == 0 ? "nao" : "indeciso", d->rpuTipo, d->rpuPerfil);
+    }
+    // C9 firmware dereferences a null HEVC timing context in the DV demuxer
+    // on this input. A profile 8.1 declaration alone is not proof of safe
+    // samples; keep its HDR10 base layer when the probe cannot confirm RPU.
+    // ponytail: conservative probe gate; inspect actual startup packets before
+    // admitting unprobed files (see docs/reviews/c9-dv-crash-2.md).
+    if (fx[j].dvPerfil == 8 && fx[j].dvCompat == 1 &&
+        (d->rpu != 1 || d->quadros < 1)) {
+      dvMkvRpu = 0;
+      printf("[dv] HDR10: profile 8.1 in-band RPU unconfirmed (rpu=%d frames=%d)\n",
+             d->rpu, d->quadros);
     }
     fflush(stdout);
     break;
@@ -2232,6 +2243,8 @@ static void *lerMkv(void *arg) {
     marco(m); }
   printf("[mkv] %d legendas ganharam idioma\n", casou);
   fflush(stdout);
+  // Publish only after the DV admission check; the main thread may pump now.
+  dvSondado = 1;
   fioMkvVivo = 0;
   return NULL;
 }

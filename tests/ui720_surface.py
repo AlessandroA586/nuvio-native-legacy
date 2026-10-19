@@ -1,0 +1,76 @@
+"""Compile production startup choices against the integration baseline, without SDL."""
+from pathlib import Path
+import subprocess
+import tempfile
+
+main = Path('src/main.c').read_text()
+base = subprocess.check_output(['git', 'show', 'integracao/2.0.5:src/main.c'], text=True)
+
+def decision(source):
+    start = source.index('{ int quer4k =')
+    end = source.index('  const char *windowTitle', start)
+    return source[start:end].replace('  SDL_Window *win;', '')
+
+prefix = r'''
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#define NV_TELA_W 1920
+#define NV_TELA_H 1080
+#define NV_VERSAO "test"
+#define RES_ARQ_RECUO "fallback"
+#define RES_ARQ_AUTO "automatic"
+#define RES_AUTO_1080 2
+#define RES_AUTO_4K 1
+typedef struct { int w, h; } SDL_DisplayMode;
+static int choice, app, desktop, tv=1, surfaceW, surfaceH;
+static int resolucaoDaTv(void) { return tv; }
+static int ajustes_4k(void) { return choice==2; }
+static int ajustes_1080p(void) { return choice==1; }
+static int ajustes_720p(void) { return choice==3; }
+static int ajustes_res_auto(void) { return choice==0; }
+static int ajustes_ampliar_app(void) { return app && desktop>=3840; }
+static int SDL_GetDesktopDisplayMode(int d, SDL_DisplayMode *m) {
+  (void)d; m->w=desktop; m->h=desktop*9/16; return 0;
+}
+static char *dados_ler(const char *p) { (void)p; return NULL; }
+static int res_auto_ler(const char *p,const char *v) { (void)p;(void)v;return 0; }
+static int android_pedir_superficie(int w,int h) { surfaceW=w;surfaceH=h;return 1; }
+'''
+body = r'''
+int main(void) {
+ for(int d=0;d<3;d++) for(tv=0;tv<2;tv++) for(choice=0;choice<4;choice++) {
+  desktop=d==0?1280:d==1?1920:3840;
+  int oldW,oldH,oldSW,oldSH;
+  {int pedeW=0,pedeH=0,pediu4k=0,autoEst=0,autoPediu=0;
+   surfaceW=surfaceH=0;
+BASE
+   oldW=pedeW;oldH=pedeH;oldSW=surfaceW;oldSH=surfaceH;
+  }
+  for(app=0;app<2;app++) {
+   int pedeW=0,pedeH=0,pediu4k=0,autoEst=0,autoPediu=0;
+   surfaceW=surfaceH=0;
+CURRENT
+   if(app && desktop==3840 && tv && (choice==1 || choice==3)) {
+    assert(pedeW==3840 && pedeH==2160);
+#ifdef NV_ANDROID
+    assert(surfaceW==3840 && surfaceH==2160);
+#endif
+   } else if(pedeW!=oldW || pedeH!=oldH || surfaceW!=oldSW || surfaceH!=oldSH) {
+    fprintf(stderr,"FAIL baseline: desktop=%d TV=%d resolution=%d app=%d: %dx%d vs %dx%d; Android %dx%d vs %dx%d\n",
+      desktop,tv,choice,app,pedeW,pedeH,oldW,oldH,surfaceW,surfaceH,oldSW,oldSH);
+    return 1;
+   }
+  }
+ }
+ puts("PASS startup baseline and opt-in 4K: all resolutions, panel sizes, TV/desktop");
+}
+'''.replace('BASE', decision(base)).replace('CURRENT', decision(main))
+with tempfile.TemporaryDirectory(prefix='ui720-surface-') as work:
+    source = Path(work) / 'surface.c'
+    source.write_text(prefix + body)
+    for platform in ('NV_WEBOS', 'NV_TPK', 'NV_ANDROID'):
+        binary = Path(work) / platform
+        subprocess.run(['cc', '-D' + platform, str(source), '-o', str(binary)], check=True)
+        subprocess.run([str(binary)], check=True, stdout=subprocess.DEVNULL)
+        print('PASS', platform, 'integration drawable parity; opt-in 720/1080 -> 2160')

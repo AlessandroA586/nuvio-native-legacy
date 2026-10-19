@@ -374,8 +374,16 @@ int main(int argc, char **argv) {
   gravar("next");
   CONFERE(epcoment_foco() == 1, "Down focuses next comment");
   tecla(SDL_KEYDOWN, SDLK_RETURN); tecla(SDL_KEYUP, SDLK_RETURN); quadros(2);
+  CONFERE(!sinopse_aberta(), "first OK reveals spoiler in card");
   tecla(SDL_KEYDOWN, SDLK_RETURN); tecla(SDL_KEYUP, SDLK_RETURN); quadros(2);
+  CONFERE(sinopse_comentario_aberto(), "second OK opens shared full comment reader");
   gravar("expanded");
+  tecla(SDL_KEYDOWN, SDLK_LEFT); tecla(SDL_KEYUP, SDLK_LEFT); quadros(2);
+  CONFERE(sinopse_comentario_aberto() && epcoment_foco() == 1,
+          "reader does not navigate unrelated detail comments");
+  voltar(); quadros(2);
+  CONFERE(!sinopse_aberta() && episodios_menu_aberto() && epcoment_foco() == 1,
+          "Back closes reader and preserves episode menu focus");
   tecla(SDL_KEYDOWN, SDLK_LEFT); tecla(SDL_KEYUP, SDLK_LEFT); quadros(2);
   CONFERE(epcoment_foco() == -1 && episodios_menu_aberto(), "Left returns to menu");
   tecla(SDL_KEYDOWN, SDLK_RIGHT); tecla(SDL_KEYUP, SDLK_RIGHT);

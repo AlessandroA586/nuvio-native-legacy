@@ -1,5 +1,7 @@
 #include "epcoment.h"
 #include "extras.h"
+#include "sinopse.h"
+#include "descoberta.h"
 #include "text.h"
 #include "idioma.h"
 #include "ajustes.h"
@@ -12,7 +14,7 @@
 #include <time.h>
 
 static char show[64];
-static int temp, episodio, foco, dentro, inteiro, linha, quantidade, visiveis = 9;
+static int temp, episodio, foco, dentro, quantidade;
 static float scroll;
 // Byte ranges survive texture eviction. Rewrap only on content/font/width changes.
 static struct {
@@ -26,7 +28,7 @@ static struct {
 
 void epcoment_abrir(const char *imdb, int t, int e) {
   snprintf(show, sizeof show, "%s", imdb);
-  temp = t; episodio = e; foco = dentro = inteiro = linha = 0;
+  temp = t; episodio = e; foco = dentro = 0;
   quantidade = -2; scroll = 0;
   memset(cards, 0, sizeof cards);
   extras_pedir_comentarios_ep(show, temp, episodio);
@@ -42,11 +44,16 @@ void epcoment_atualizar(float dt) {
   scroll = ajustes_animacoes_reduzidas() ? foco * 280.0f : anim_mola(scroll, foco * 280.0f, dt, NV_MOLA_TELA);
 }
 int epcoment_foco(void) { return dentro ? foco : -1; }
-void epcoment_menu(void) { dentro = inteiro = 0; }
+void epcoment_menu(void) { dentro = 0; }
 int epcoment_entrar(void) { if (epcoment_quantidade() <= 0) return 0; dentro = 1; return 1; }
 void comentario_abrir_inteiro(int indice) {
   if (indice < 0 || indice >= epcoment_quantidade()) return;
-  foco = indice; inteiro = 1; linha = 0;
+  char data[64];
+  foco = indice;
+  desc_data_extenso(extras_comentario_ep_data(indice), data, sizeof data);
+  sinopse_comentario(extras_comentario_ep_usuario(indice), extras_comentario_ep_texto(indice), data,
+                    extras_comentario_ep_nota(indice), extras_comentario_ep_curtidas(indice),
+                    extras_comentario_ep_respostas(indice), 0, indice + 1, epcoment_quantidade());
 }
 int epcoment_evento(const SDL_Event *e) {
   SDL_Keycode k;
@@ -54,16 +61,9 @@ int epcoment_evento(const SDL_Event *e) {
   k = e->key.keysym.sym;
   if (k == SDLK_LEFT) { epcoment_menu(); return 1; }
   if (k == SDLK_UP || k == SDLK_DOWN) {
-    if (inteiro) {
-      linha += k == SDLK_DOWN ? 1 : -1;
-      int max = cards[foco].n - visiveis;
-      if (linha > max) linha = max;
-      if (linha < 0) linha = 0;
-    } else {
-      foco += k == SDLK_DOWN ? 1 : -1;
-      if (foco >= epcoment_quantidade()) foco = epcoment_quantidade() - 1;
-      if (foco < 0) foco = 0;
-    }
+    foco += k == SDLK_DOWN ? 1 : -1;
+    if (foco >= epcoment_quantidade()) foco = epcoment_quantidade() - 1;
+    if (foco < 0) foco = 0;
     return 1;
   }
   if (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE) {
@@ -114,7 +114,7 @@ static void preparar(int i, float w) {
   if (dias > 0) snprintf(cards[i].data, sizeof cards[i].data, i18n("há %d dias"), dias);
   else snprintf(cards[i].data, sizeof cards[i].data, "%s", i18n("Agora"));
 }
-static void focar(int i, int b) { (void)b; if (i >= 0 && i < epcoment_quantidade()) { foco = i; dentro = 1; inteiro = 0; } }
+static void focar(int i, int b) { (void)b; if (i >= 0 && i < epcoment_quantidade()) { foco = i; dentro = 1; } }
 static void ativar(int i, int b) {
   (void)b; focar(i, 0);
   if (extras_comentario_ep_spoiler(i) && !cards[i].revelado) cards[i].revelado = 1;
@@ -152,9 +152,8 @@ void epcoment_desenhar(GfxRect r, float a) {
   if (quantidade != n) { quantidade = n; if (foco >= n) foco = 0; }
   gfx_recorte(x - 4, top - 4, w + 8, r.h - 210);
   for (int i = 0; i < n; i++) {
-    if (inteiro && i != foco) continue;
-    float y = inteiro ? top : top + i * 280 - scroll;
-    float h = inteiro ? r.h - 218 : 280;
+    float y = top + i * 280 - scroll;
+    float h = 280;
     if (y + h < top || y > r.y + r.h) continue;
     preparar(i, w - 44);
     int ativo = dentro && foco == i;
@@ -179,15 +178,11 @@ void epcoment_desenhar(GfxRect r, float a) {
       txt_desenhar_alpha(txt_linha(TXT_G21B, buf, 255, 78, 108, 255), x + w - 105, y + 40, ca);
     }
     int hidden = extras_comentario_ep_spoiler(i) && !cards[i].revelado;
-    visiveis = (int)((r.h - 218 - 144) / 31);
-    if (visiveis < 1) visiveis = 1;
-    int first = inteiro ? linha : 0, count = inteiro ? visiveis : 4;
-    if (count < 1) count = 1;
-    for (int j = first; j < cards[i].n && j < first + count; j++) {
+    for (int j = 0; j < cards[i].n && j < 4; j++) {
       char l[16384]; int len = cards[i].tamanho[j];
       memcpy(l, cards[i].texto + cards[i].inicio[j], len); l[len] = 0;
-      if (!inteiro && j == 3 && j + 1 < cards[i].n) snprintf(l + len, sizeof l - len, "…");
-      float ty = y + 94 + (j - first) * 31;
+      if (j == 3 && j + 1 < cards[i].n) snprintf(l + len, sizeof l - len, "…");
+      float ty = y + 94 + j * 31;
       // Conceal every glyph with soft overlapping strokes; no spoiler texture is exposed.
       if (hidden) {
         float width = cards[i].comprimentos[j];
@@ -202,8 +197,7 @@ void epcoment_desenhar(GfxRect r, float a) {
   }
   gfx_sem_recorte();
   float track = r.h - 218, thumb = track / n;
-  if (inteiro) thumb = track * visiveis / (cards[foco].n > visiveis ? cards[foco].n : visiveis);
   gfx_cor((GfxRect){r.x + r.w - 16, top, 4, track}, 2 / track, 1, 1, 1, .14f * a);
-  float pos = inteiro ? (cards[foco].n > visiveis ? linha / (float)(cards[foco].n - visiveis) : 0) : (n > 1 ? foco / (float)(n - 1) : 0);
+  float pos = n > 1 ? foco / (float)(n - 1) : 0;
   gfx_cor((GfxRect){r.x + r.w - 16, top + pos * (track - thumb), 4, thumb}, 2 / thumb, 1, 1, 1, .9f * a);
 }
