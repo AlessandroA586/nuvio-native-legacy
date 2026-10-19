@@ -35,6 +35,33 @@ static void ajustesArquivoSync(int k, char *nome, size_t tam) {
   else ajustes_provedores_arquivo(nome, (unsigned)tam, "fontefalha");
 }
 
+// Detect local edits without hex encoding, JSON serialization or merging.
+// Include file contents (not mtimes: several edits can happen in one tick).
+static void ajustesHashBytes(unsigned long long *h, const void *data, size_t n) {
+  const unsigned char *p = data;
+  for (size_t i = 0; i < n; i++) { *h ^= p[i]; *h *= 1099511628211ULL; }
+}
+unsigned long long ajustes_sync_hash(void) {
+  unsigned long long h = 1469598103934665603ULL;
+  for (int i = 0; i < AJ_N; i++) if (ajustePortavel(i) || ajusteAparelho(i)) {
+    int v = ajLegendaPrincipal(i) ? ajLegendaValor(i) : valor[i];
+    ajustesHashBytes(&h, &v, sizeof v);
+  }
+  ajustesHashBytes(&h, notaFontes, sizeof notaFontes);
+  int extra[] = {memoriaEscolhida, bibliotecaFonteEscolhida, idiomaFonteGravada};
+  ajustesHashBytes(&h, extra, sizeof extra);
+  for (int k = 0; k < 3 + AJ_DEVICE_FILES; k++) {
+    char name[128] = "";
+    if (k < 3) ajustesArquivoSync(k, name, sizeof name);
+    else ajusteDeviceFile(k - 3, name, sizeof name);
+    char *s = *name ? dados_ler(name) : NULL;
+    int present = s != NULL;
+    ajustesHashBytes(&h, &present, sizeof present);
+    if (s) { ajustesHashBytes(&h, s, strlen(s)); free(s); }
+  }
+  return h;
+}
+
 static char *ajustesExtras(void) {
   Jsw w;
   jsw_iniciar(&w); jsw_obj_ini(&w);
@@ -72,12 +99,7 @@ static char *ajustesExtras(void) {
       *out = 0;
     }
     // Hex keeps newlines/tabs exact with the shared display-text JSON reader.
-    size_t len = t ? strlen(t) : 0;
-    char *hex = malloc(len * 2 + 1);
-    if (!hex) { free(t); jsw_livre(&w); return NULL; }
-    for (size_t j = 0; j < len; j++) sprintf(hex + 2 * j, "%02x", (unsigned char)t[j]);
-    hex[len * 2] = 0;
-    jsw_cs(&w, key, hex); free(hex); free(t);
+    ajusteHex(&w, key, t ? t : ""); free(t);
   }
   jsw_obj_fim(&w);
   const char *json = jsw_texto_final(&w);
@@ -85,8 +107,9 @@ static char *ajustesExtras(void) {
   jsw_livre(&w); return out;
 }
 
-static int ajustesExtrasAplicar(const char *json) {
+static int ajustesExtrasAplicar(const char *json, const char *web) {
   const char *a, *b, *v, *f;
+  const char *webEnd = web + strlen(web);
   // Resolve device fields and provider scope before choosing shared filenames.
   int mudou = ajustesDeviceAplicar(json);
   if (!acharValor(json, json + strlen(json), "c_settings_v1", &a, &b) || *a != '{' ||
@@ -103,8 +126,8 @@ static int ajustesExtrasAplicar(const char *json) {
     if (!somenteDesteAparelho(i) &&
         !(i == AJ_TEMA && num >= AJ_N_TEMAS && num < AJ_N_TEMAS_OPC)) {
       camelParaSnake(chaveConta(i), key, sizeof key);
-      if (acharValor(json, json + strlen(json), key, &p, &end) ||
-          acharValor(json, json + strlen(json), chaveConta(i), &p, &end)) continue;
+      if (acharValor(web, webEnd, key, &p, &end) ||
+          acharValor(web, webEnd, chaveConta(i), &p, &end)) continue;
     }
     int novo = limita(i, (int)num);
     if (ajLegendaPrincipal(i)) { if (novo != ajLegendaValor(i)) mudou += ajLegendaDefinir(i, novo); }
@@ -114,22 +137,8 @@ static int ajustesExtrasAplicar(const char *json) {
     char key[24], nome[128] = "";
     snprintf(key, sizeof key, "store%d", k);
     if (!acharValor(a, b, key, &v, &f) || *v != '"') continue;
-    // An escaped string never decodes to more bytes than its JSON input.
-    char *t = malloc((size_t)(f - v) + 32);
-    if (!t) continue;
-    if (f - v < 2 || f[-1] != '"') { free(t); continue; }
-    size_t len = (size_t)(f - v) - 2;
-    int valid = len % 2 == 0;
-    for (size_t j = 0; valid && j < len; j++)
-      if (!strchr("0123456789abcdef", v[1 + j])) valid = 0;
-    if (valid) {
-      for (size_t j = 0; j < len / 2; j++) {
-        unsigned byte; sscanf(v + 1 + j * 2, "%2x", &byte); t[j] = (char)byte;
-        if (!byte) valid = 0;
-      }
-      t[len / 2] = 0;
-    }
-    if (valid) {
+    char *t = ajusteUnhex(v, f);
+    if (t) {
       ajustesArquivoSync(k, nome, sizeof nome);
       // Overlay only device fields, never replace newer shared rows.
       if (k == 1) {
@@ -137,7 +146,10 @@ static int ajustesExtrasAplicar(const char *json) {
         free(device); free(t); t = merged;
         if (!t) continue;
       }
-      if (nome[0] && dados_gravar(nome, t)) {
+      char *old = nome[0] ? dados_ler(nome) : NULL;
+      int changed = !old || strcmp(old, t);
+      free(old);
+      if (nome[0] && changed && dados_gravar(nome, t)) {
         if (k == 0) fonteregra_carregar();
         else if (k == 1) fil_recarregar();
         else fontefalha_config_ler();

@@ -5414,12 +5414,17 @@ static const char *chaveConta(int i) {
   return i == AJ_FOCO_TRAILER ? "focusedPosterBackdropTrailerEnabled" : CHAVE[i];
 }
 
-static int ajustesExtrasAplicar(const char *json);
+static int ajustesExtrasAplicar(const char *json, const char *web);
 
+static char *ajustesWebBlob(const char *json);
 int ajustes_aplicar_blob(const char *json) {
   const char *fim;
   int i, mudou = 0, reconhecidas = 0;
   if (!json || !*json) return 0;
+  const char *original = json;
+  char *web = ajustesWebBlob(json);
+  if (!web) return 0;
+  json = web;
   // Os pacotes de selos da conta (features.stream_badge_settings) vivem em
   // selospacote.c, que guarda por perfil; nao sao uma opcao desta tabela.
   selospacote_conta_do_blob(json);
@@ -5523,7 +5528,9 @@ int ajustes_aplicar_blob(const char *json) {
   // na primeira verificacao na TV.
   printf("[ajustes] blob da conta: %d chave(s) reconhecida(s), %d mudou(aram)\n",
          reconhecidas, mudou);
-  return mudou + ajustesExtrasAplicar(json);
+  mudou += ajustesExtrasAplicar(original, web);
+  free(web);
+  return mudou;
 }
 
 // ---------------------------------------------------------------- subir (#85)
@@ -5888,7 +5895,8 @@ static int acharValor(const char *ini, const char *fim, const char *chave,
   size_t n;
   n = (size_t)snprintf(alvo, sizeof alvo, "\"%s\"", chave);
   if (n >= sizeof alvo) return 0;
-  for (p = ini; p && (p = strstr(p, alvo)) != NULL && p < fim; p += n) {
+  for (p = ini; p < fim && (p = memchr(p, '"', (size_t)(fim - p))) != NULL; p++) {
+    if ((size_t)(fim - p) < n || memcmp(p, alvo, n)) continue;
     const char *v = p + n;
     while (v < fim && (unsigned char)*v <= ' ') v++;
     if (v >= fim || *v != ':') continue;

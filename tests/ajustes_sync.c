@@ -71,6 +71,7 @@ static void check(int ok, const char *name) {
   if (!ok) { fprintf(stderr, "FAIL: %s\n", name); exit(1); }
 }
 #include "ajustes_nuvem.c"
+#ifndef SYNCJANK_TEST
 int main(int argc, char **argv) {
   assert(argc == 3);
   if (!strcmp(argv[2], "device")) return recovery(argv[0], argv[1]);
@@ -182,3 +183,4 @@ int main(int argc, char **argv) {
   }
   printf("PASS: %s\n", argv[2]); free(cloud); return 0;
 }
+#endif
