@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T17:48:14-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T18:48:01-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -238,6 +238,12 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Clear posters and reliable scaling on C9**: Artwork requests match output pixels, while corrected shader slots prevent grey output and preserve video transparency across scaling filters. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `366f2d0b4`, `041ae37a1`, merges `952b13d49`, `0e980dd9e`.
+
+- **Complete profile and session cleanup**: The remaining PR #493 branch is now integrated alongside the earlier scoped-session port. Platforms: Android, webOS. Refs PR #493, merge `17c56dbbd`, earlier merge `415544539`.
+
+- **Live TV account limits, EPG search and shared XMLTV matching**: Ported PR #596/#601/#602 account and large-guide improvements with shared XMLTV schedule matching are integrated from `agente/205-livepr2` (`db0cfe7c2`, `6d2fe5a66`, `d88561af4`, `71a96a9b2`, `dd8827fc8`). Platforms: webOS, Android, Samsung .tpk, WASM. Integrated by merge `9538948c2`.
 
 - **HDR playback keeps controls visible**: Android keeps the interface above video when experimental HDR output is enabled. Platforms: Android. Refs b11dc487a.
 - **Playback speed keeps audio working**: Audio is decoded to PCM for playback speed changes. Platforms: Android. Refs #591, 5f6436ecd.
@@ -670,7 +676,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 
 
-Tracking snapshot: 20 unmerged branches without running jobs; 8 open issues without mapped jobs or prompts. Newer fixes need review on `agente/p2p`. Android installation succeeded at `cb7ece972`; C9 installation failed and installed TV HEAD is unconfirmed.
+Tracking snapshot: 19 unmerged branches without running jobs; 8 open issues without mapped jobs or prompts. Newer fixes need review on `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android installation succeeded at `cb7ece972`; C9 installation failed and installed TV HEAD is unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
@@ -678,9 +684,6 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
 
 
-- **Live TV account limits, EPG search and shared XMLTV matching**: Ported PR #596/#601/#602 account and large-guide improvements with shared XMLTV schedule matching are under review on `agente/205-livepr2` (`db0cfe7c2`, `6d2fe5a66`, `d88561af4`, `71a96a9b2`, `dd8827fc8`). Platforms: webOS, Android, Samsung .tpk, WASM.
-- **Remaining PR #493 v2 / v3 branch** (profile/session cleanup was ported through `agente/205-port493`, merge `415544539`; original branch still unmerged) — `agente/205-pr493`, 12 commits out. Latest mapped review blocks integration; fix findings and review the newest tip before merging.
-  Android, LG webOS.
 - **Deferred experiments and owner answers**: Homebrew and Tizenbrew remain deferred until the owner resumes them; glass mockups and profile experiments remain deferred; owner-answer tracking remains on an unmerged branch. Platforms: webOS, Android, Samsung .tpk, WASM; no confirmed release behavior. Refs `agente/205-homebrew`, `agente/205-tizenbrew`, `agente/205-glassmock`, `agente/205-mock21`, `agente/205-perfis21`, `agente/205-respostas`.
 - **Custom subtitle font** — the other half of #501, no branch. Android.
 - **Manual subtitle sync** — `agente/205-legajuste`, spec only. Deferred to 2.1.
