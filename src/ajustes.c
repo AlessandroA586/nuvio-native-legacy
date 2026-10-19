@@ -667,6 +667,7 @@ typedef enum {
   // teclado (TV ou celular) e REM remove a escolhida. Estado em
   // ltv-urls-p<N>.txt, nunca em ajustes.txt. No fim: valor[]/CHAVE[] posicionais.
   AJ_URL_LISTA, AJ_URL_M3U_ADD, AJ_URL_XMLTV_ADD, AJ_URL_REM,
+  AJ_NT_EP,            // episode card rating: 0 Follow title line, 1 IMDb, 2 TMDB, 3 Both, 4 Off; local, append-only
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -696,6 +697,7 @@ static const char *V_TELA_ABERTURA[] = { "Cinema", "Detalhada" };
 static const char *V_ABERTURA_FUNDO[] = { "Desligado", "Arte", "Arte borrada" };
 static const char *V_ABERTURA_ESTILO[] = { "Centro", "Canto" };
 static const char *V_ARTE_TOM[] = { "Vívido", "Claro" };
+static const char *V_NT_EP[]    = { "Como na linha do título", "IMDb", "TMDB", "IMDb + TMDB", "Desligado" };
 static const char *V_PALCO_FUNDO[] = { "Preto", "Como está", "Só arte" };
 static const char *V_TITULO_FIL[] = { "Clássico", "Ilha", "Editorial", "Acento" };
 static const char *V_VIDRO_QUALIDADE[] = { "Automática", "Desempenho", "Alta" };
@@ -1726,6 +1728,7 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Adicionar lista M3U"),
   ACAO("Adicionar guia XMLTV"),
   ACAO("Remover a escolhida"),
+  ESC("Nota nos episódios", V_NT_EP, 5),   // local: notaEpisodio
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -2030,6 +2033,7 @@ static const char *CHAVE[] = {
   "artToneLocal",
   "palcoFundoLocal",
   "-urlLista", "-urlM3uAdd", "-urlXmltvAdd", "-urlRem",
+  "notaEpisodio",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -3601,6 +3605,15 @@ int ajustes_nota_titulo(int fonte) {
   if (fonte < 0 || fonte >= EX_NFONTES) return 0;
   return lig(OP[fonte]) && ajustes_mdblist_fonte(fonte);
 }
+
+// Which rating(s) the EPISODE cards show. 0 follows the title-line toggles
+// (Trakt included); 1-4 pick IMDb / TMDB / both / none, the only per-episode sources.
+int ajustes_nota_episodio(int fonte) {
+  int m = valor[AJ_NT_EP];
+  if (m <= 0 || m > 4) return ajustes_nota_titulo(fonte);
+  return (fonte == EX_IMDB && (m == 1 || m == 3)) || (fonte == EX_TMDB && (m == 2 || m == 3));
+}
+int ajustes_teste_op_nota_ep(void) { return AJ_NT_EP; }
 
 // Onde os ajustes ficam. Ate a versao anterior nada era gravado: mexer numa
 // opcao valia so enquanto o app estivesse aberto, e voltar depois mostrava tudo
@@ -5583,6 +5596,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_ESCALA_TEXTO:   /* text/component scale is this screen's, the web has none */
     case AJ_DET_ESPACO:     /* title page spacing is this screen's too */
     case AJ_NT_ORDEM:       /* the web has no title rating line */
+    case AJ_NT_EP:          /* nor episode cards with rating sources */
     case AJ_ARTE_TOM:       /* Art tone belongs to this device. */
     case AJ_FOCO_ACENTO:    /* look of this screen (depends on the local glass) */
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
@@ -7194,6 +7208,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_PROVEDORES_ESCOPO: return "Compartilhada usa as mesmas contas de provedores neste aparelho. Separada guarda uma cópia para este perfil. Trocar de opção mantém as duas configurações.";
     case AJ_ADDONS_PRINCIPAL: return "Os outros perfis desta conta usam os addons do perfil principal. Desligado, cada perfil usa os seus — a não ser que a conta já diga para usar os do principal.";
     case AJ_VIDRO_CONTORNO: return "O contorno das linhas e dos cartões, inclusive o do foco. Desligado, o item em foco é marcado só por um fundo mais claro na cor de destaque.";
+    case AJ_NT_EP: return "Qual nota aparece nos cartões de episódio. Como na linha do título segue os interruptores de Notas (IMDb, Trakt, TMDB). Só nesta TV.";
     case AJ_ARTE_TOM: return "Vívido mantém as cores da arte. Claro usa tons pastel da mesma cor, com texto contrastante. Só nesta TV.";
     case AJ_COR_LOGO: return "Com um tema dinâmico, a cor sai do logo do título em vez da arte de fundo. Logo branco ou preto usa a arte.";
     case AJ_MANTER_VIDEO: return "Mantém o player pausado pelo tempo escolhido. Usa memória e decoder; o trailer espera. Desligado por padrão.";
@@ -9810,7 +9825,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_MDB_MAL:
     case AJ_NT_IMDB: case AJ_NT_TOMATES: case AJ_NT_AUDIENCIA: case AJ_NT_META:
     case AJ_NT_METAUSER: case AJ_NT_TRAKT: case AJ_NT_TMDB: case AJ_NT_LETTER:
-    case AJ_NT_MAL: case AJ_NT_EBERT: case AJ_NT_SCORE: case AJ_NT_ORDEM:
+    case AJ_NT_MAL: case AJ_NT_EBERT: case AJ_NT_SCORE: case AJ_NT_ORDEM: case AJ_NT_EP:
       return AJPV_MDB;
     case AJ_RESOLUCAO: case AJ_QUALIDADE_IMG: case AJ_TEX_MB:
     case AJ_ESPACO:

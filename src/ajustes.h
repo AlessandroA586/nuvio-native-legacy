@@ -683,6 +683,8 @@ int         ajustes_seekr_ajuste_s(void);   // sincronia, em segundos (-60..60)
 int         ajustes_mdblist_fonte(int fonte);   // mdblist_show_*
 // A fonte (ExFonte) entra na linha do titulo? Escolha local + disponibilidade.
 int         ajustes_nota_titulo(int fonte);
+// A fonte aparece no cartao de EPISODIO? 0 = segue a linha do titulo; so IMDb/TMDB/Trakt tem nota por episodio.
+int         ajustes_nota_episodio(int fonte);
 // Source at each title-line position, including the saved custom order.
 int         ajustes_nota_fonte(int pos);
 
