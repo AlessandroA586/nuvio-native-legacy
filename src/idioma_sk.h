@@ -1680,6 +1680,7 @@
   T("Do título", "Z titulu"),
   T("Documentário", "Dokument"),
   T("Documentários", "Dokumenty"),
+  T("Dolby Vision desligado: o app fechou 2 vezes com ele. Religue em Ajustes para tentar de novo.", "Dolby Vision vypnuté: aplikácia sa pri jeho zapnutí 2-krát zatvorila. Zapnite ho znova v Nastaveniach a skúste to znovu."),
   T("Dolby Vision e HDR", "Dolby Vision a HDR"),
   T("Dolby Vision em MKV", "Dolby Vision v MKV"),
   T("Dolby Vision em MKV (experimental)", "Dolby Vision v MKV (experimentálne)"),

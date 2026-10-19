@@ -1680,6 +1680,7 @@
   T("Do título", "作品から"),
   T("Documentário", "ドキュメンタリー"),
   T("Documentários", "ドキュメンタリー"),
+  T("Dolby Vision desligado: o app fechou 2 vezes com ele. Religue em Ajustes para tentar de novo.", "Dolby Visionをオフにしました。有効中にアプリが2回終了しました。再試行するには設定でオンに戻してください。"),
   T("Dolby Vision e HDR", "Dolby Vision と HDR"),
   T("Dolby Vision em MKV", "MKV の Dolby Vision"),
   T("Dolby Vision em MKV (experimental)", "MKVでDolby Vision (試験的)"),

@@ -1680,6 +1680,7 @@
   T("Do título", "Yapımdan"),
   T("Documentário", "Belgesel"),
   T("Documentários", "Belgeseller"),
+  T("Dolby Vision desligado: o app fechou 2 vezes com ele. Religue em Ajustes para tentar de novo.", "Dolby Vision kapatıldı: etkinken uygulama 2 kez kapandı. Yeniden denemek için Ayarlar’dan tekrar açın."),
   T("Dolby Vision e HDR", "Dolby Vision ve HDR"),
   T("Dolby Vision em MKV", "MKV'de Dolby Vision"),
   T("Dolby Vision em MKV (experimental)", "MKV'de Dolby Vision (deneysel)"),

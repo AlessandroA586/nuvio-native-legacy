@@ -1680,6 +1680,7 @@
   T("Do título", "Από τον τίτλο"),
   T("Documentário", "Ντοκιμαντέρ"),
   T("Documentários", "Ντοκιμαντέρ"),
+  T("Dolby Vision desligado: o app fechou 2 vezes com ele. Religue em Ajustes para tentar de novo.", "Το Dolby Vision απενεργοποιήθηκε: η εφαρμογή έκλεισε 2 φορές με αυτό ενεργό. Ενεργοποιήστε το ξανά στις Ρυθμίσεις για νέα προσπάθεια."),
   T("Dolby Vision e HDR", "Dolby Vision και HDR"),
   T("Dolby Vision em MKV", "Dolby Vision σε MKV"),
   T("Dolby Vision em MKV (experimental)", "Dolby Vision σε MKV (πειραματικό)"),

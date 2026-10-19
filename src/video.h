@@ -129,6 +129,8 @@ unsigned video_bufferando_ms(void);
 // Chamar ANTES de video_tocar/definir_fonte: e o que decide o hdrType que o
 // ACB descreve ao tv.display.
 void video_definir_dv(int dv);
+// Explicit Settings off-to-on retry of the shared Dolby Vision/DTS crash guard.
+void video_dv_guard_reiniciar(void);
 
 // CABECALHOS QUE O ADDON EXIGE (behaviorHints.proxyHeaders), uma linha
 // "Nome: valor" por cabecalho. Chamar ANTES de video_tocar, junto com

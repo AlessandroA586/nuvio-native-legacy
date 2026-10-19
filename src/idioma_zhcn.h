@@ -1680,6 +1680,7 @@
   T("Do título", "取自作品"),
   T("Documentário", "纪录片"),
   T("Documentários", "纪录片"),
+  T("Dolby Vision desligado: o app fechou 2 vezes com ele. Religue em Ajustes para tentar de novo.", "Dolby Vision 已关闭：启用时应用已退出 2 次。请在设置中重新开启以重试。"),
   T("Dolby Vision e HDR", "杜比视界和 HDR"),
   T("Dolby Vision em MKV", "MKV 中的杜比视界"),
   T("Dolby Vision em MKV (experimental)", "MKV 中的杜比视界 (实验性)"),

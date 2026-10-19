@@ -1680,6 +1680,7 @@
   T("Do título", "Iš pavadinimo"),
   T("Documentário", "Dokumentinis"),
   T("Documentários", "Dokumentiniai filmai"),
+  T("Dolby Vision desligado: o app fechou 2 vezes com ele. Religue em Ajustes para tentar de novo.", "Dolby Vision išjungtas: jam veikiant programa užsidarė 2 kartus. Norėdami bandyti dar kartą, vėl įjunkite jį Nustatymuose."),
   T("Dolby Vision e HDR", "Dolby Vision ir HDR"),
   T("Dolby Vision em MKV", "Dolby Vision MKV faile"),
   T("Dolby Vision em MKV (experimental)", "Dolby Vision MKV failuose (eksperimentinė)"),

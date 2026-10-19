@@ -1680,6 +1680,7 @@
   T("Do título", "A címből"),
   T("Documentário", "Dokumentum"),
   T("Documentários", "Dokumentumfilmek"),
+  T("Dolby Vision desligado: o app fechou 2 vezes com ele. Religue em Ajustes para tentar de novo.", "Dolby Vision kikapcsolva: az alkalmazás 2 alkalommal bezárult, amikor be volt kapcsolva. Az újrapróbálkozáshoz kapcsolja be újra a Beállításokban."),
   T("Dolby Vision e HDR", "Dolby Vision és HDR"),
   T("Dolby Vision em MKV", "Dolby Vision MKV-ben"),
   T("Dolby Vision em MKV (experimental)", "Dolby Vision MKV-ben (kísérleti)"),

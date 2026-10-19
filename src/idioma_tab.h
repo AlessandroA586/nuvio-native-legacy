@@ -1679,6 +1679,7 @@
   { "Do título", "From the title" },
   { "Documentário", "Documentary" },
   { "Documentários", "Documentaries" },
+  { "Dolby Vision desligado: o app fechou 2 vezes com ele. Religue em Ajustes para tentar de novo.", "Dolby Vision disabled: the app closed twice with it enabled. Turn it back on in Settings to try again." },
   { "Dolby Vision e HDR", "Dolby Vision and HDR" },
   { "Dolby Vision em MKV", "Dolby Vision in MKV" },
   { "Dolby Vision em MKV (experimental)", "Dolby Vision in MKV (experimental)" },
