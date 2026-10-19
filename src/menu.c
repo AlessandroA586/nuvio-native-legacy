@@ -42,8 +42,12 @@
 // As medidas dos layouts classicos sao as do mockup NA TELA: cada uma entra
 // aqui dividida pelo fator (MK), e o que o usuario ve e o px do CSS.
 #define NV_MENU_ESCALA_BASE 0.9f
+// Apple TV sidebar: 20% larger at UI scale <= 90%; 100% and up unchanged.
+static float tvAumento(void) {
+  return ajustes_home_layout() == HOME_LAYOUT_DINAMICA && gfx_escala_ui_base() <= 0.9f + 0.001f ? 1.2f : 1.0f;
+}
 static float menuEscala(void) {
-  return NV_MENU_ESCALA_BASE * (ajustes_home_layout() == HOME_LAYOUT_MODERNA ? NV_MENU_MODERNA_AUMENTO : 1.0f) * fminf(gfx_escala_ui_base(), 1.0f) * gfx_escala_txt();
+  return NV_MENU_ESCALA_BASE * (ajustes_home_layout() == HOME_LAYOUT_MODERNA ? NV_MENU_MODERNA_AUMENTO : 1.0f) * tvAumento() * fminf(gfx_escala_ui_base(), 1.0f) * gfx_escala_txt();
 }
 #define NV_MENU_ESCALA (menuEscala())
 #define MK(v) ((v) / NV_MENU_ESCALA_BASE)
@@ -470,6 +474,7 @@ const char *menu_rotulo(int d) {
 // barra nao "cancela" ao sair pela direita — o item destacado e o que o usuario
 // esta olhando, e desfazer a escolha no caminho de volta seria surpresa.
 static int tvPastaDoFoco(int foco);
+static int tvPastasTotal(const int **v);
 static void escolher(void) {
   escolheu = 1;
   if (linha >= MENU_ST0) {
@@ -541,6 +546,7 @@ void menu_evento(const SDL_Event *e) {
     int lista[NV_MENU_FOCOS_TV], n = tvOrdem(lista), p = 0, i;
     for (i = 0; i < n; i++) if (lista[i] == linha) p = i;
     if (k == SDLK_DOWN && p + 1 < n) linha = lista[p + 1];
+    else if (k == SDLK_DOWN && linha < MENU_ST0 && tvPastasTotal(NULL)) linha = MENU_ST0;   // opens Streaming
     else if (k == SDLK_UP && p > 0) linha = lista[p - 1];
     return;
   }
@@ -896,13 +902,20 @@ static const char *tvRotulo(int d) { return menu_rotulo(d); }
 // Focos na ordem de navegacao: cabecalho (trocar de usuario) e os visiveis.
 // PASTAS DE STREAMING (home_streaming_barra): a fileira "Streaming" que o
 // layout Dinamica tira da home. Indices de col_folder, na ordem da fileira.
-static int tvPastas(const int **v) {
-  int n = home_streaming_barra(v);
+static int tvPastasTotal(const int **v) {
+  const int *t;
+  int n = home_streaming_barra(&t);
+  if (v) *v = t;
   return n > NV_MENU_ST_MAX ? NV_MENU_ST_MAX : (n < 0 ? 0 : n);
+}
+// Streaming stays collapsed until focus goes down past Settings into it.
+static int tvPastas(const int **v) {
+  int n = tvPastasTotal(v);
+  return linha >= MENU_ST0 ? n : 0;
 }
 static int tvPastaDoFoco(int foco) {
   const int *v;
-  int n = tvPastas(&v), k = foco - MENU_ST0;
+  int n = tvPastasTotal(&v), k = foco - MENU_ST0;
   return (k >= 0 && k < n) ? v[k] : -1;
 }
 static int tvOrdem(int *lista) {
