@@ -32,6 +32,13 @@ int main(void) {
   assert(ajustes_fonte_oferecida(AJ_SALVOS_LOCAL, 0, 0));
   assert(!ajustes_fonte_oferecida(AJ_SALVOS_TRAKT, 0, 0));
   assert(!strcmp(ajustes_fonte_selo(ajustes_fonte_resolver(AJ_SALVOS_SIMKL, 1, 0)), "TRAKT"));  // salvo e desvinculado
+
+  // Os Salvos locais so pertencem a fonte LOCAL/NUVIO. Com a fonte efetiva em
+  // Trakt ou Simkl eles nao podem marcar nem entrar na aba (senao um item da
+  // conta Nuvio aparecia com o selo TRAKT depois de trocar a fonte).
+  assert(ajustes_fonte_traz_locais(ajustes_fonte_resolver(AJ_SALVOS_LOCAL, 1, 1)));
+  assert(!ajustes_fonte_traz_locais(ajustes_fonte_resolver(AJ_SALVOS_TRAKT, 1, 1)));
+  assert(!ajustes_fonte_traz_locais(ajustes_fonte_resolver(AJ_SALVOS_SIMKL, 1, 1)));
   puts("bibfonte: PASS");
   return 0;
 }

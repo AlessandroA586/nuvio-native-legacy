@@ -435,6 +435,9 @@ static inline int ajustes_fonte_oferecida(int escolha, int trakt, int simkl) {
 // a conta Nuvio (contalib) so quando a fonte e a lista do Nuvio.
 static inline int ajustes_fonte_traz_trakt(int fonte)    { return fonte == AJ_SALVOS_TRAKT; }
 static inline int ajustes_fonte_traz_conta(int fonte)    { return fonte == AJ_SALVOS_LOCAL; }
+// So LOCAL traz os salvos locais desta TV: eles sao o feed Nuvio, nao um
+// terco extra de Trakt ou Simkl.
+static inline int ajustes_fonte_traz_locais(int fonte)   { return fonte == AJ_SALVOS_LOCAL; }
 // Texto do selo da aba Salvos para a fonte efetiva; a local o chamador resolve.
 static inline const char *ajustes_fonte_selo(int fonte) {
   return fonte == AJ_SALVOS_TRAKT ? "TRAKT" : fonte == AJ_SALVOS_SIMKL ? "SIMKL" : "LOCAL";

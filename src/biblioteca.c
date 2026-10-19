@@ -685,7 +685,7 @@ static int contarModo(int m) {
     if (nContados < CAT_MAX) contados[nContados++] = i;
     total++;
   }
-  if (m == MODO_SALVOS)
+  if (m == MODO_SALVOS && ajustes_fonte_traz_locais(ajustes_fonte_biblioteca()))
     for (int k = salvos_n() - 1; k >= 0; k--) {
       const SalvoItem *sv = salvos_item(k);
       if (sv && sv->id[0] && cat_indice_por_imdb(sv->id) < 0) total++;
@@ -747,7 +747,7 @@ static void reconstruir(void) {
   // agora nao aparece" (issue do Owlphibia29). O painel de Salvos ja desenhava
   // da lista local; a Biblioteca agora tambem. Os mais novos primeiro: a lista
   // local e na ordem de insercao, e quem acabou de salvar procura o que salvou.
-  if (modo == MODO_SALVOS) {
+  if (modo == MODO_SALVOS && ajustes_fonte_traz_locais(ajustes_fonte_biblioteca())) {
     for (int k = salvos_n() - 1; k >= 0 && nFiltro < (int)(sizeof filtro / sizeof filtro[0]); k--) {
       const SalvoItem *s = salvos_item(k);
       if (!s || !s->id[0] || cat_indice_por_imdb(s->id) >= 0) continue;

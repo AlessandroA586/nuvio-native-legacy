@@ -2,6 +2,7 @@
 // ela existe (sem Trakt, o "+" nao guardava nada) e por que ela nao e uma
 // quarta superficie de biblioteca.
 #include "salvos.h"
+#include "ajustes.h"
 #include "dados.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -327,6 +328,10 @@ int salvos_definir(const CatItem *ci, int salvo) {
 int salvos_aplicar_catalogo(void) {
   int i, marcados = 0, ultimo = -1;
   if (nItens < 1) return 0;
+  // A lista local e o feed Nuvio: so a fonte LOCAL pode apontar os itens dela
+  // no catalogo. Com Trakt/Simkl efetivos a marca viria acompanhada de um selo
+  // remoto errado (ver a nota da lista local em biblioteca.c).
+  if (!ajustes_fonte_traz_locais(ajustes_fonte_biblioteca())) return 0;
   // Catalogo vazio nao tem onde marcar. Sair sem tocar na marca faz a
   // reconciliacao tentar de novo assim que o catalogo existir.
   if (cat_n() < 1) return 0;
@@ -356,6 +361,7 @@ int salvos_aplicar_catalogo(void) {
 
 void salvos_reconciliar(void) {
   const CatItem *c;
+  if (!ajustes_fonte_traz_locais(ajustes_fonte_biblioteca())) return;
   if (nItens < 1 || cat_n() < 1) return;
   if (cat_n() != marcaCatN) { salvos_aplicar_catalogo(); return; }
   if (marcaIdx < 0 || marcaIdx >= cat_n()) return;

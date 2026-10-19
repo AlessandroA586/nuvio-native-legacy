@@ -12,6 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include "nvtmp.h"
+#include "ajustes.h"
+
+// A fonte LOCAL neste harness: a lista local so marca a biblioteca Nuvio.
+static int fonteBib = AJ_SALVOS_LOCAL;
+int ajustes_fonte_biblioteca(void) { return fonteBib; }
 
 static int falhas;
 static void confere(const char *o_que, int obtido, int esperado) {
@@ -345,6 +350,25 @@ int main(void) {
     confere("sair apaga todos os perfis e a marca",
             !arq("salvos-p1.txt") && !arq("salvos-p2.txt") && !arq("salvos-migracao.txt"), 1);
     salvos_perfil(1); }
+
+  printf("\na marca no catalogo segue a fonte efetiva:\n");
+  { int k;
+    salvos_esquecer(); salvos_iniciar();
+    nCat = 0;
+    poeNoCatalogo("tt6000001", "Local so", 0, 0, 0, 0);
+    salvos_definir(comId("tt6000001", "Local so"), 1);
+    fonteBib = AJ_SALVOS_TRAKT;
+    confere("Trakt efetivo: salvar local nao marca o catalogo",
+            salvos_aplicar_catalogo(), 0);
+    confere("e o item segue sem marca", cat[0].naLista, 0);
+    k = 0;
+    salvos_reconciliar();   // idem na passada continua
+    confere("reconciliar tambem nao marca", cat[0].naLista, 0);
+    fonteBib = AJ_SALVOS_LOCAL;
+    confere("de volta ao LOCAL marca", salvos_aplicar_catalogo(), 1);
+    confere("e a marca ficou", cat[0].naLista, 1);
+    (void)k;
+  }
 
   printf("\n%s\n", falhas ? "FALHOU" : "PASSOU");
   return falhas ? 1 : 0;
