@@ -3854,6 +3854,15 @@ static int ativarBotao(int i, int repetiu) {
 }
 
 void player_evento(const SDL_Event *e) {
+  static int backRetido;
+  if ((e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) &&
+      (e->key.keysym.sym == SDLK_ESCAPE || e->key.keysym.sym == SDLK_AC_BACK ||
+       e->key.keysym.sym == SDLK_BACKSPACE || e->key.keysym.sym == SDLK_DELETE)) {
+    if (e->type == SDL_KEYUP) { backRetido = 0; return; }
+    // One physical press must never dismiss a layer and then exit playback.
+    if (backRetido) return;
+    if (aberto && !saindo) backRetido = 1;
+  }
   if (e->type == SDL_KEYUP && (e->key.keysym.sym == SDLK_RETURN ||
       e->key.keysym.sym == SDLK_KP_ENTER || e->key.keysym.sym == SDLK_SPACE))
     confirmacaoTransporteRetida = 0;

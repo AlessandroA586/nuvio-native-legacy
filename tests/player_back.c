@@ -9,6 +9,9 @@ static unsigned testBuffering(void) { return buffering; }
 #include <assert.h>
 
 static void reset(void) {
+  SDL_Event release = {0};
+  release.type = SDL_KEYUP; release.key.keysym.sym = SDLK_ESCAPE;
+  player_evento(&release);
   aberto = visivel = 1; anim = 1.0f;
   saindo = pediuSair = esperandoFonte = erroFonte = comVideo = 0;
   canalSessao = skipFoco = barraFoco = scrubbing = 0;
@@ -25,7 +28,14 @@ int main(void) {
     reset();
     player_evento(&e);
     assert(!visivel && !saindo && !pediuSair);
-    player_evento(&e);
+    e.key.repeat = 1;
+    for (int repeat = 0; repeat < 3; ++repeat) player_evento(&e);
+    assert(!visivel && !saindo && !pediuSair);
+    e.key.repeat = 0;
+    player_evento(&e); // Some TV remotes repeat without SDL's repeat flag.
+    assert(!visivel && !saindo && !pediuSair);
+    e.type = SDL_KEYUP; player_evento(&e);
+    e.type = SDL_KEYDOWN; player_evento(&e);
     assert(saindo && pediuSair);
 
     reset(); visivel = 0; anim = .4f;
@@ -79,9 +89,10 @@ int main(void) {
   player_evento(&e);
   assert(!trechoPulavel(NULL) && !saindo);
   assert(!intro_botao(20, monoSeg(), 0, 0, NULL, NULL));
-  player_evento(&e);
+  e.type = SDL_KEYUP; player_evento(&e);
+  e.type = SDL_KEYDOWN; player_evento(&e);
   assert(saindo && pediuSair);
   SDL_Quit();
-  puts("PASS: Back dismisses one layer; fade consumes Back; pure video/loading exit");
+  puts("PASS: Back dismisses one layer; held Back stays; release/new press exits; pure video/loading exit");
   return 0;
 }
