@@ -8769,6 +8769,7 @@ void desc_pedir_titulo_semente(const char *imdb, long tmdb, const char *tipo,
   { size_t k = dp ? (size_t)(dp - imdb) : strlen(imdb);
     if (k >= sizeof id) k = sizeof id - 1;
     memcpy(id, imdb, k); id[k] = 0; }
+  sobSessao = nv_perfil_sessao_ler();
   { int j = cat_indice_por_imdb(id);
     if (j >= 0) { sobIndice = j; return; } }
   snprintf(s.imdb, sizeof s.imdb, "%s", id);

@@ -15,11 +15,22 @@
 //
 //   bash tests/abrirtitulo.sh
 static int cinemetaLig = 1;
+void addons_lista_travar(void) {}
+void addons_lista_destravar(void) {}
 int ajustes_social(void) { return 1; }
 int ajustes_hist_conta(void) { return 1; }
 int ajustes_busca_cinemeta(void) { return cinemetaLig; }
 int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
 int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le o ajuste
+// Use live, nonzero epochs: the optional fixture defaults accept only epoch 0.
+#define NV_PERFISESSAO_H
+#include <stdint.h>
+typedef uint64_t NvPerfilSessao;
+static NvPerfilSessao testeSessao;
+static NvPerfilSessao nv_perfil_sessao_ler(void) { return testeSessao; }
+static int nv_perfil_sessao_atual(NvPerfilSessao s) { return s == testeSessao; }
+static int nv_perfil_sessao_travar(NvPerfilSessao s) { return nv_perfil_sessao_atual(s); }
+static void nv_perfil_sessao_destravar(void) {}
 #include "../src/descoberta.c"
 Uint32 SDL_GetTicks(void) { return 0; }
 #include "../src/progresso.h"
@@ -379,6 +390,7 @@ int main(void) {
   rota("/meta/series/tt0000999.json",
        "{\"meta\":{\"id\":\"tt0000999\",\"type\":\"series\",\"name\":\"Titulo Y\","
        "\"poster\":\"https://p.test/y.jpg\",\"description\":\"Sinopse Y.\",\"cast\":[\"Ator Y\"],\"videos\":[{\"season\":1,\"episode\":1,\"name\":\"Ep\"}]}}");
+  testeSessao = epSessao = 1;
   nPedidos = 0;
   desc_pedir_titulo_semente("tt0000999", 0, "series", "Titulo Y", "2020", "https://p.test/y.jpg");
   { int k = desc_titulo_pronto();
@@ -420,6 +432,24 @@ int main(void) {
     k = desc_titulo_pronto();
     assert(k >= 0 && nMeta() >= 1); }
   puts("ok  sem cartaz: cai no caminho antigo (espera o /meta)");
+
+  // A new visit must stamp both existing and newly inserted IMDb seeds.
+  // buscarEps ran inline above; restore the UI thread's unbound context.
+  free(pthread_getspecific(descSessaoChave));
+  pthread_setspecific(descSessaoChave, NULL);
+  testeSessao++;
+  nPedidos = 0;
+  desc_pedir_titulo_semente("tt0000999:1:1", 0, "series", "Titulo Y", "2020", "https://p.test/y.jpg");
+  assert(desc_titulo_pronto() == cat_indice_por_imdb("tt0000999"));
+  assert(desc_titulo_pronto() == -1);       // consumed exactly once
+  desc_pedir_titulo_semente("tt0000996", 0, "movie", "New seed", "2022", "https://p.test/new.jpg");
+  { int k = desc_titulo_pronto();
+    assert(k >= 0 && !strcmp(cat_item(k)->imdb, "tt0000996")); }
+  desc_pedir_titulo_semente("tt0000996", 0, "movie", "New seed", "2022", "https://p.test/new.jpg");
+  testeSessao++;                          // profile changes before consumption
+  assert(desc_titulo_pronto() == -1);
+  assert(nPedidos == 0);
+  puts("ok  IMDb seeds: current visit opens, stale publication is rejected");
 #endif
   puts("abrirtitulo: ok");
   return 0;
