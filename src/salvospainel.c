@@ -611,12 +611,12 @@ static int ehSerie(const char *tipo, int nTemporadas) {
 // quadro e comparar dois inteiros, e a reconstrucao so acontece quando ha o
 // que mostrar de diferente (tests/salvospainel.sh conta quantas vezes).
 static unsigned marcaRevCat, marcaRevSalvos, marcaRevOrg, marcaRevRet;
-static int reconstrucoes, fundosPintados;
+static int reconstrucoes, fundosPintados, marcaFonte = -1;
 int spainel_n_reconstrucoes(void) { return reconstrucoes; }
 int spainel_n_fundos(void) { return fundosPintados; }
 static int listaVelha(void) {
   sorg_carregar();   // troca de perfil sobe a revisao da organizacao
-  return marcaCatN < 0 || sorg_revisao() != marcaRevOrg || cat_revisao_itens() != marcaRevCat ||
+  return marcaFonte != ajustes_fonte_biblioteca() || marcaCatN < 0 || sorg_revisao() != marcaRevOrg || cat_revisao_itens() != marcaRevCat ||
          salvos_revisao() != marcaRevSalvos || cat_n() != marcaCatN ||
          cw_retido_rev() != marcaRevRet;
 }
@@ -759,6 +759,7 @@ static void reconstruir(void) {
   marcaCatN = catN;
   marcaRevCat = revCat;
   marcaRevSalvos = revSalvos;
+  marcaFonte = ajustes_fonte_biblioteca();
   marcaRevRet = cw_retido_rev();
   // O FOCO DAS ABAS (-1) NAO E UM FOCO FORA DA FAIXA. Sem esta guarda, uma
   // reconstrucao com a lista vazia jogaria o foco de volta para a linha 0, que

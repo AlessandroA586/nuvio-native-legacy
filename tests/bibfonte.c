@@ -124,6 +124,25 @@ int main(int argc, char **argv) {
   CHECK("Detail remove reaches Simkl", simklWrites == 0);
   CHECK("Simkl remove preserves Trakt membership", cat_item(0)->naLista && !biblioteca_na_lista(0));
   CHECK("menu offers save after Simkl remove", !strcmp(bibfonte_menu_label(0), "Salvar"));
+  // Saved sidebar must offer only titles removable from its selected source.
+  SalvosEntrada sidebar[8];
+  cat_definir_tudo(&ci, 1, NULL, 0);
+  ajustes_definir_salvos_destino(AJ_SALVOS_LOCAL);
+  salvos_definir(&ci, 1);
+  CHECK("sidebar includes local save under Nuvio", salvos_uniao(sidebar, 8) == 1);
+  ajustes_definir_salvos_destino(AJ_SALVOS_TRAKT);
+  CHECK("sidebar excludes local-only save under Trakt", salvos_uniao(sidebar, 8) == 0);
+  ajustes_definir_salvos_destino(AJ_SALVOS_SIMKL);
+  CHECK("sidebar excludes local-only save under Simkl", salvos_uniao(sidebar, 8) == 0);
+  cat_definir_tudo(&remote, 1, NULL, 0);
+  CHECK("sidebar excludes Trakt-only title under Simkl", salvos_uniao(sidebar, 8) == 0);
+  ajustes_definir_salvos_destino(AJ_SALVOS_TRAKT);
+  CHECK("sidebar includes selected remote title", salvos_uniao(sidebar, 8) == 1 && sidebar[0].local == -1);
+  CHECK("sidebar remote title offers remove", !strcmp(bibfonte_menu_label(0), "Remover dos Salvos"));
+  ajustes_definir_salvos_destino(AJ_SALVOS_LOCAL);
+  CHECK("sidebar preserves local save after source switches", salvos_uniao(sidebar, 8) == 1 && salvos_tem(ci.imdb));
+  salvos_definir(&ci, 0);
+  cat_definir_tudo(&remote, 1, NULL, 0);
   // Upgraded profiles share a legacy write preference, not an explicit source.
   dados_gravar("ajustes.txt", "salvosDestino 1\n");
   dados_gravar("ajustes-p1.txt", "salvosDestino 1\n");

@@ -2,6 +2,7 @@
 #include "../src/biblioteca.h"
 #include "../src/extras.h"
 #include "../src/gfx.h"
+#include "../src/salvospainel.h"
 #include <SDL2/SDL_image.h>
 void bibfonte_library_shot(void);
 void bibfonte_detail_shot(void);
@@ -11,7 +12,9 @@ static void shotFrame(int settings) {
   if (settings == 1) {
     ajustes_atualizar(1.0f / 60, SDL_GetTicks()); ajustes_desenhar(SDL_GetTicks());
   } else if (settings == 0) bibfonte_library_shot();
-  else bibfonte_detail_shot();
+  else if (settings == 3) {
+    spainel_atualizar(1.0f / 60, SDL_GetTicks()); spainel_desenhar(SDL_GetTicks());
+  } else bibfonte_detail_shot();
 }
 static void shotSave(SDL_Window *win, const char *base, const char *name, int settings) {
   char path[1200];
@@ -37,6 +40,16 @@ static void screenshots(const char *base) {
   tex_iniciar(64); gfx_icones_dir("deploy/app/art"); extras_carregar("deploy/app/art");
   valor[AJ_IDIOMA] = IDIOMA_EN + 1; ajustes_iniciar();
   trakt_definir("test-token", "test-client");
+  if (strstr(base, "sidebar")) {
+    CatItem local = *cat_item(0);
+    ajustes_definir_salvos_destino(AJ_SALVOS_LOCAL);
+    salvos_definir(&local, 1);
+    ajustes_definir_salvos_destino(AJ_SALVOS_TRAKT);
+    spainel_abrir(); spainel_ir_aba(0);
+    shotSave(win, base, "local-only-trakt", 3);
+    SDL_GL_DeleteContext(gl); SDL_DestroyWindow(win); SDL_Quit();
+    return;
+  }
   const char *names[] = {"nuvio", "trakt", "simkl"};
   for (int i = 0; i < 3; i++) {
     char name[80];

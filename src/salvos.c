@@ -426,6 +426,7 @@ static int tabAchar(const SalvosEntrada *out, unsigned h, const char *chave,
 
 int salvos_uniao(SalvosEntrada *out, int cap) {
   int i, k = 0, n = cat_n();
+  int fonte = ajustes_fonte_biblioteca();
   unsigned precisa = 16;
   char chave[64];
   if (!out || cap < 1) return 0;
@@ -444,7 +445,7 @@ int salvos_uniao(SalvosEntrada *out, int cap) {
   }
   memset(tabU, 0, sizeof *tabU * capTabU);
 
-  for (i = 0; i < nItens && k < cap; i++) {
+  for (i = 0; ajustes_fonte_traz_locais(fonte) && i < nItens && k < cap; i++) {
     unsigned vaga, h = hashTitulo(itens[i].id, chave, sizeof chave);
     // Arquivo antigo pode ter o mesmo titulo duas vezes; acharLocal acha o
     // primeiro, e e o primeiro que responde pelo titulo.
@@ -462,6 +463,9 @@ int salvos_uniao(SalvosEntrada *out, int cap) {
     unsigned vaga, h;
     int j;
     if (!c || !c->imdb[0]) continue;
+    // Local copies may supply metadata; remote rows must belong to this source.
+    if (!ajustes_fonte_traz_locais(fonte) &&
+        (!c->naLista || !(c->listaFontes & (1u << fonte)))) continue;
     h = hashTitulo(c->imdb, chave, sizeof chave);
     j = tabAchar(out, h, chave, &vaga);
     if (j >= 0) {
@@ -477,7 +481,7 @@ int salvos_uniao(SalvosEntrada *out, int cap) {
       }
       continue;
     }
-    if (!c->naLista || k >= cap) continue;
+    if (!c->naLista || !(c->listaFontes & (1u << fonte)) || k >= cap) continue;
     out[k].local = -1; out[k].cat = i; progU[k] = c->progresso > 0;
     tabU[vaga].h = h; tabU[vaga].ent = k;
     k++;
