@@ -238,6 +238,62 @@ static void variantsRegression(void) {
   assert(guia_variantes("xtream:4", v, 3) == 3);
   assert(!strcmp(v[1].nome, "X HD") && !strcmp(v[2].nome, "X SD"));
 }
+static void siblingVisibilityRegression(void) {
+  const char *ids[] = {"xtream:1", "xtream:2", "xtream:3"};
+  const char *names[] = {"X 4K", "X FHD", "X HD"};
+  // Literal winners: [quality mode][arrival order][disabled resolution].
+  const int winners[GF_MODOS][2][3] = {
+    {{2, 1, 1}, {3, 3, 2}},
+    {{0, 1, 1}, {0, 1, 1}},
+    {{2, 1, 1}, {2, 1, 1}}
+  };
+  for (int mode = 0; mode < GF_MODOS; mode++)
+    for (int split = 0; split < 2; split++)
+      for (int reverse = 0; reverse < 2; reverse++)
+        for (int hidden = 2; hidden >= 0; hidden--) {
+          const char *groups[] = {split ? "UHD" : "Sports", "Sports", split ? "HD" : "Sports"};
+          int fl = begin(mode, 1), winner = winners[mode][reverse][hidden];
+          for (int i = 0; i < 3; i++) {
+            int k = reverse ? 2 - i : i;
+            channel(fl, groups[k], ids[k], names[k]);
+          }
+          adotarStaging(); cacheGravar();
+          // Use the actual per-ID switch, then reload its persisted profile rules.
+          filtrosAbrir(); fNivel = 1;
+          snprintf(fCatNome, sizeof fCatNome, "%s", groups[hidden]);
+          fMontarCanais(fCatNome);
+          for (paFoco = 0; paFoco < fN && strcmp(fIt[paFoco].id, ids[hidden]); paFoco++) {}
+          assert(paFoco < fN && !fIt[paFoco].oculto);
+          filtrosOk();
+          fioVivo = 1; painelFechar(); fioVivo = 0;
+          fltPerfil = -1; fltGarantir();
+          assert(fltLive.nCan == 1 && guiafiltro_canal_oculto(&fltLive, ids[hidden]));
+          // Online admission and offline replay must select the same enabled ID.
+          for (int offline = 0; offline < 2; offline++) {
+            stagingZerar(); sTeto = 1; sFltLive = fltLive;
+            if (offline) assert(cacheFonteLer("xt") == (winner != 0));
+            else {
+              fl = sFonte(LTV_XTREAM, "", "Fixture", "");
+              for (int i = 0; i < 3; i++) {
+                int k = reverse ? 2 - i : i;
+                channel(fl, groups[k], ids[k], names[k]);
+              }
+            }
+            assert(sNCanais == (winner != 0));
+            if (winner) assert(!strcmp(sCanais[0].id, ids[winner - 1]));
+            adotarStaging(); cacheGravar();
+            if (winner) {
+              GuiaVariante variants[3];
+              int n = guia_variantes(ids[winner - 1], variants, 3);
+              assert(n == (mode == GF_PREFERIR_4K ? 2 : 1));
+              for (int i = 0; i < n; i++) assert(strcmp(variants[i].id, ids[hidden]));
+            }
+          }
+          // Hidden and collapsed candidates remain recoverable from the raw cache.
+          begin(GF_TODAS, 3);
+          assert(cacheFonteLer("xt") == 3);
+        }
+}
 static void categoriesRegression(void) {
   int fl = begin(GF_PREFERIR_4K, 1);
   channel(fl, "Sports", "xtream:1", "X FHD");
@@ -452,6 +508,7 @@ int main(int argc, char **argv) {
                               strstr(regression, "hidden") != NULL, strstr(regression, "retry") != NULL);
     else if (!strcmp(regression, "visibility")) visibilityRegression();
     else if (!strcmp(regression, "variants")) variantsRegression();
+    else if (!strcmp(regression, "sibling-visibility")) siblingVisibilityRegression();
     else if (!strcmp(regression, "categories")) categoriesRegression();
     else if (!strcmp(regression, "inventory")) inventoryRegression();
     else if (!strcmp(regression, "late-inventory")) lateInventoryRegression();

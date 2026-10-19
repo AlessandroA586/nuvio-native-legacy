@@ -5,6 +5,9 @@
 // livetv_regras.h dentro da mesma fonte, inclusive entre grupos. Categoria e canal
 // escondidos ficam por perfil, como os add-ons escondidos (guiaaddons.h).
 //
+// Channel visibility uses exact IDs in every quality mode; names and categories
+// stored with hidden IDs are panel metadata, never sibling visibility rules.
+//
 // Modulo sem rede nem tela: o guia chama guiafiltro_avaliar ANTES do teto de
 // canais, entao o que sai por aqui nao gasta vaga.
 #ifndef NV_GUIAFILTRO_H

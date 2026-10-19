@@ -4,20 +4,42 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 work=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-guiafiltro.XXXXXX")
 trap 'rm -rf "$work"' EXIT
-cc src/guiafiltro.c tests/guiafiltro.c -Isrc -o "$work/rules" -O1 -g -Wall -Wextra
-"$work/rules"
 flags=(-ffunction-sections -fdata-sections)
 if [ "$(uname -s)" = Darwin ]; then flags+=(-Wl,-dead_strip); else flags+=(-Wl,--gc-sections); fi
 sources=(tests/guiafiltro_loader.c src/ltv.c src/js.c src/idcanal.c src/dados.c src/marco.c
   src/guiaaddons.c src/guiafiltro.c src/epg.c src/xtepg.c src/lembrete.c src/guialembrete.c
   src/fontecache.c src/cachearte.c src/cachedisco.c src/xmltv.c)
 common=(-Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -O1 -g -Wno-macro-redefined -lz)
+cc "${flags[@]}" "${sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST -DGUIAFILTRO_RESET_TEST -o "$work/loader"
+git show d497c3673:src/guiafiltro.c > "$work/sibling-review.c"
+sibling_sources=("${sources[@]}")
+for i in "${!sibling_sources[@]}"; do
+  if [ "${sibling_sources[$i]}" = src/guiafiltro.c ]; then sibling_sources[$i]="$work/sibling-review.c"; fi
+done
+cc "${flags[@]}" "${sibling_sources[@]}" "${common[@]}" -o "$work/sibling-review"
+for version in sibling-review loader; do
+  rc=0
+  GUIAFILTRO_CASE=sibling-visibility NUVIO_DADOS="$work/$version-data" \
+    "$work/$version" "$work/$version-data" > "$work/$version.log" 2>&1 || rc=$?
+  if [ "$version" = sibling-review ] && [ "$rc" = 134 ] && \
+    rg -q -F 'Assertion failed: (sNCanais == (winner != 0))' "$work/$version.log"; then
+    printf 'PASS: reviewed revision fails sibling-visibility (rc=134)\n'
+  elif [ "$version" = loader ] && [ "$rc" = 0 ]; then
+    printf 'PASS: sibling-visibility regression\n'
+  else
+    printf 'FAIL: %s sibling-visibility (rc=%s)\n' "$version" "$rc"
+    tail -n 3 "$work/$version.log"
+    exit 1
+  fi
+done
+if [ "${1:-}" = sibling-visibility ]; then exit 0; fi
+cc src/guiafiltro.c tests/guiafiltro.c -Isrc -o "$work/rules" -O1 -g -Wall -Wextra
+"$work/rules"
 git show 5dddb0955:src/guia.c > "$work/guia.c"
 git show 2e8eb26cd:src/guia.c > "$work/review.c"
 git show 701a6e6eb:src/guia.c > "$work/empty-review.c"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
   "-DGUIACACHE_SOURCE=\"$work/guia.c\"" -o "$work/baseline"
-cc "${flags[@]}" "${sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST -DGUIAFILTRO_RESET_TEST -o "$work/loader"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
   "-DGUIACACHE_SOURCE=\"$work/review.c\"" -o "$work/review"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \

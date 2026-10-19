@@ -116,14 +116,6 @@ int guiafiltro_avaliar(const GuiaFiltro *f, GuiaFiltroDup *d, int fonte, const c
   GuiaFiltroSlot *s;
   if (guiafiltro_cat_oculta(f, grupo) || guiafiltro_canal_oculto(f, id)) return GF_FORA;
   if (f->modo == GF_TODAS) return GF_ENTRA;
-  if (f->modo == GF_PREFERIR_4K) {
-    nv_nome_base(nome, base, sizeof base);
-    for (int i = 0; i < f->nCan; i++) if (!strcmp(f->can[i].cat, grupo)) {
-      char oculta[160];
-      nv_nome_base(f->can[i].nome, oculta, sizeof oculta);
-      if (base[0] && !strcmp(base, oculta)) return GF_FORA;
-    }
-  }
   res = nv_res_do_texto(nome);
   if (!res) res = nv_res_do_texto(origem);
   if (f->modo == GF_SO_4K) return res >= 2160 ? GF_ENTRA : GF_FORA;
