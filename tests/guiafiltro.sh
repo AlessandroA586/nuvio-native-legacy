@@ -17,7 +17,7 @@ git show 2e8eb26cd:src/guia.c > "$work/review.c"
 git show 701a6e6eb:src/guia.c > "$work/empty-review.c"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
   "-DGUIACACHE_SOURCE=\"$work/guia.c\"" -o "$work/baseline"
-cc "${flags[@]}" "${sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST -o "$work/loader"
+cc "${flags[@]}" "${sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST -DGUIAFILTRO_RESET_TEST -o "$work/loader"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
   "-DGUIACACHE_SOURCE=\"$work/review.c\"" -o "$work/review"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
@@ -33,7 +33,30 @@ cc "${flags[@]}" "${latest_sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST \
 git show f11f3a8af:src/guia.c > "$work/overflow-review.c"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
   "-DGUIACACHE_SOURCE=\"$work/overflow-review.c\"" -o "$work/overflow-review"
+git show 6ad003585:src/guia.c > "$work/cache-reset-review.c"
+cc "${flags[@]}" "${sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST -DGUIAFILTRO_RESET_TEST \
+  "-DGUIACACHE_SOURCE=\"$work/cache-reset-review.c\"" -o "$work/cache-reset-review"
 failed=0
+for regression in raw-offline session-inventory; do
+  for version in cache-reset-review loader; do
+    rc=0
+    GUIAFILTRO_CASE="$regression" NUVIO_DADOS="$work/$version-$regression" \
+      "$work/$version" "$work/$version-$regression" > "$work/$version-$regression.log" 2>&1 || rc=$?
+    case "$regression" in
+      raw-offline) expected='Assertion failed: (cacheFonteLer("xt") == 1)' ;;
+      session-inventory) expected='Assertion failed: (fN == 0)' ;;
+    esac
+    if [ "$version" = cache-reset-review ] && [ "$rc" = 134 ] && rg -q -F "$expected" "$work/$version-$regression.log"; then
+      printf 'PASS: reviewed revision fails %s (rc=134)\n' "$regression"
+    elif [ "$version" = loader ] && [ "$rc" = 0 ]; then
+      printf 'PASS: %s regression\n' "$regression"
+    else
+      printf 'FAIL: %s %s (rc=%s)\n' "$version" "$regression" "$rc"
+      tail -n 3 "$work/$version-$regression.log"
+      failed=1
+    fi
+  done
+done
 git show 4a009af28:src/guia.c > "$work/category-cap-review.c"
 for platform in tv android; do
   platform_flags=()

@@ -335,7 +335,7 @@ static GInventario *inventario, *sInventario;
 static int nInventario, sNInventario;
 
 static FILE *sCache[G_MAX_LTV];
-static int sCacheN[G_MAX_LTV], sCacheErro[G_MAX_LTV];
+static int sCacheN[G_MAX_LTV], sCacheErro[G_MAX_LTV], sCacheCortada[G_MAX_LTV];
 
 enum { G_PARADO, G_BAIXANDO, G_PRONTO, G_FALHOU };
 static int estado = G_PARADO;
@@ -393,7 +393,7 @@ static void fltGravar(void) {
 static void stagingZerar(void) {
   for (int i = 0; i < G_MAX_LTV; i++) {
     if (sCache[i]) fclose(sCache[i]);
-    sCache[i] = NULL; sCacheN[i] = sCacheErro[i] = 0;
+    sCache[i] = NULL; sCacheN[i] = sCacheErro[i] = sCacheCortada[i] = 0;
   }
   sCacheBytes = 0;
   free(sInventario); sInventario = NULL; sNInventario = 0;
@@ -1486,7 +1486,10 @@ static void cacheCru(int f, const char *grupo, const GCru *c) {
     size_t n = fields[i] ? strlen(fields[i]) : 0;
     bytes += n > 65535 ? 65535 : n;
   }
-  if (bytes > G_RAW_BYTES_MAX - sCacheBytes) { sLtvF[f].cortada = 1; return; }
+  if (bytes > G_RAW_BYTES_MAX - sCacheBytes) {
+    sCacheCortada[f] = sLtvF[f].cortada = 1;
+    return;
+  }
   if (!sCache[f]) sCache[f] = tmpfile();
   FILE *fp = sCache[f];
   if (!fp || !(cStr(fp, grupo) && cInt(fp, c->numero) && cStr(fp, c->id) &&
@@ -1505,7 +1508,8 @@ static void cacheFonteGravar(int f) {
   const GFonteLtv *F = &ltvF[f];
   FILE *fp;
   int ok, i;
-  int raw = sCache[f] != NULL;
+  // A truncated raw prefix may omit admitted channels; save the displayed list instead.
+  int raw = sCache[f] != NULL && !sCacheCortada[f];
   if (sCacheErro[f]) return;
   cacheNomeFonte(F->chave, nome, sizeof nome);
   if (!dados_caminho(caminho, sizeof caminho, nome)) return;
@@ -1624,8 +1628,7 @@ static void cacheGravar(void) {
   size_t u = 0;
   int i;
   for (i = 0; i < nLtvF; i++) {
-    if (!ltvF[i].deCache && (sCacheN[i] > 0 ||
-        (sFltLive.modo == GF_TODAS && !sFltLive.nCat && !sFltLive.nCan && ltvF[i].nCanais > 0)))
+    if (!ltvF[i].deCache && (sCacheN[i] > 0 || ltvF[i].nCanais > 0))
       cacheFonteGravar(i);
     if (sCache[i]) { fclose(sCache[i]); sCache[i] = NULL; }
     sCacheN[i] = 0;
@@ -7074,6 +7077,7 @@ void guia_abrir_sessao(void) {
   fltPerfil = -1;
   free(fIt); fIt = NULL; fN = fNivel = fSujo = paModo = 0;
   free(alts); alts = NULL; nAlts = 0;
+  free(inventario); inventario = NULL; nInventario = 0;
   focoPend[0] = pedidoBase[0] = previewId[0] = heroId[0] = 0;
   aberta = overlay = querSair = pediuCanal = 0;
   focoLin = focoCol = focoTopo = topoCol = 0;

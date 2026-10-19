@@ -381,6 +381,60 @@ static void rawBudgetRegression(void) {
   assert(sCache[fl] == NULL);
 #endif
 }
+static void rawOfflineRegression(void) {
+#ifdef GUIAFILTRO_RESET_TEST
+  char description[4096];
+  memset(description, 'x', sizeof description - 1); description[sizeof description - 1] = 0;
+  for (int mode = GF_TODAS; mode < GF_MODOS; mode++) {
+    int fl = begin(mode, 5);
+    if (mode == GF_TODAS) guiafiltro_cat_alternar(&sFltLive, "Sports");
+    GCru c = {0};
+    c.id = "xtream:1"; c.nome = "X HD"; c.grupo = "Sports"; c.desc = description;
+    sGrupoInfo(fl, c.grupo, 1);
+    for (int i = 0; i < 600; i++) sCanalAdd(fl, &c);
+    c.id = "xtream:2"; c.nome = "X 4K"; c.grupo = "UHD";
+    sGrupoInfo(fl, c.grupo, 1); sCanalAdd(fl, &c);
+    int other = sFonte(LTV_M3U, "https://fixture.invalid/overflow.m3u", "Other", "");
+    char key[LTV_CHAVE]; snprintf(key, sizeof key, "%s", sLtvF[other].chave);
+    c.id = "m3u:late"; c.nome = "Y 4K";
+    sGrupoInfo(other, c.grupo, 1); sCanalAdd(other, &c);
+    assert(sCache[fl] && sCacheBytes <= 2 * 1024 * 1024);
+    fltLive = sFltLive; adotarStaging(); cacheGravar();
+    assert(nCanais == 2);
+    // Restart offline with the same rules, including a source after the shared budget fills.
+    stagingZerar(); sTeto = 5; sFltLive = fltLive;
+    assert(cacheFonteLer("xt") == 1);
+    assert(cacheFonteLer(key) == 1);
+    adotarStaging();
+    assert(nCanais == 2 && !strcmp(canais[0].id, "xtream:2"));
+    assert(!strcmp(canais[0].nome, "X 4K") && !strcmp(cats[canais[0].cat].nome, "UHD"));
+    assert(!strcmp(canais[1].id, "m3u:late"));
+  }
+#endif
+}
+static void sessionInventoryRegression(void) {
+#ifdef GUIAFILTRO_RESET_TEST
+  perfilAtivo = fltPerfil = 2;
+  memset(&fltLive, 0, sizeof fltLive);
+  guiafiltro_cat_alternar(&fltLive, "Sports"); fltGravar();
+  perfilAtivo = fltPerfil = 1;
+  int fl = begin(GF_TODAS, 5);
+  channel(fl, "Sports", "xtream:private", "Previous profile HD");
+  adotarStaging();
+  assert(nInventario == 1);
+  fl = begin(GF_TODAS, 5);
+  channel(fl, "Sports", "xtream:pending", "Pending HD");
+  GInventario *pending = sInventario;
+  perfilAtivo = 2;
+  guia_abrir_sessao();
+  assert(sInventario == pending && sNInventario == 1);
+  filtrosAbrir();
+  assert(guiafiltro_cat_oculta(&fltLive, "Sports"));
+  fMontarCanais("Sports");
+  assert(fN == 0);
+  assert(inventario == NULL && nInventario == 0);
+#endif
+}
 int main(int argc, char **argv) {
   int fl;
   assert(argc == 2); dados_iniciar(argv[1]);
@@ -404,6 +458,8 @@ int main(int argc, char **argv) {
     else if (!strcmp(regression, "replacement-metadata")) replacementMetadataRegression();
     else if (!strcmp(regression, "replacement-category-cap")) replacementCategoryCapRegression();
     else if (!strcmp(regression, "raw-budget")) rawBudgetRegression();
+    else if (!strcmp(regression, "raw-offline")) rawOfflineRegression();
+    else if (!strcmp(regression, "session-inventory")) sessionInventoryRegression();
     else assert(0);
     printf("PASS: %s regression\n", regression);
     return 0;
