@@ -52,6 +52,7 @@ static void cicloTeste(void) {
   perfilTeste = perfilDoCiclo = 1;
   usuario = "conta-a";
   snprintf(usuarioDoCiclo, sizeof usuarioDoCiclo, "%s", usuario);
+  snprintf(tokenDoCiclo, sizeof tokenDoCiclo, "token-a");
   copiaGeracaoDoCiclo = contacache_geracao();
   foraCiclo = copiaCiclo = 0;
   temAddonsRem = 0;

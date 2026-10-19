@@ -101,6 +101,20 @@ int stream_primeira_boa(int n) { (void)n; legadas++; assert(!"VOD policy must by
 int stream_verificar_proxima_vod(int i, int n, int *conferidas) {
   (void)i; (void)n; (void)conferidas; legadas++; assert(!"VOD policy must bypass legacy fallback"); return -1;
 }
+// Profile/debrid session boundaries: one fixed session; *_sessao forward to the guards above.
+uint64_t perfis_sessao_geracao(void) { return 0; }
+int perfis_sessao_atual(uint64_t g) { return g == 0; }
+void debrid_contexto_capturar(DebridContexto *c) { memset(c, 0, sizeof *c); }
+void debrid_contexto_entrar(const DebridContexto *c) { (void)c; }
+void debrid_contexto_sair(void) {}
+int stalker_resolver_sessao(const char *id, char *url, unsigned n, uint64_t s) {
+  (void)s; return stalker_resolver(id, url, n);
+}
+int stream_canal_primeira_viva_sessao(int n, uint64_t s) { (void)s; return stream_canal_primeira_viva(n); }
+int stream_primeira_boa_sessao(int n, uint64_t s) { (void)s; return stream_primeira_boa(n); }
+int stream_verificar_proxima_vod_sessao(int i, int n, int *conferidas, uint64_t s) {
+  (void)s; return stream_verificar_proxima_vod(i, n, conferidas);
+}
 int rede_url_final_tipo(const char *url, int seg, const char *const *cab,
                         char *fim, unsigned tam, int *status,
                         char *mime, unsigned mimeTam, long *corpo) {
@@ -133,6 +147,9 @@ int stream_falha_aplicar(int idx, unsigned ger, int serv, const char *url) {
   assert(ger == lista); assert(idx >= 0 && idx < 2); assert(url && *url);
   aplicacoes++; memmove(fontes[idx].url, url, strlen(url) + 1);
   fontes[idx].debridServico = serv + 1; return 1;
+}
+int stream_falha_aplicar_sessao(int idx, unsigned ger, int serv, const char *url, uint64_t s) {
+  (void)s; return stream_falha_aplicar(idx, ger, serv, url);
 }
 void stream_falha_identidade(const Stream *s, char *dst, unsigned tam) {
   assert(s == &fontes[0] || s == &fontes[1]);

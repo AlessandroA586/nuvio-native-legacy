@@ -13,6 +13,12 @@ char *rede_baixar(const char *url, int segundos) {
   assert(!strcmp(url, "https://addon.example/catalog/tv/canais.json?v=1.4.0&probe=1"));
   return strdup(corpo);
 }
+char *rede_baixar_medido_controle(const char *url, int segundos,
+                                  const char *const *cab,
+                                  const RedeControle *ctl, RedeMedida *m) {
+  (void)cab; (void)ctl; (void)m;
+  return rede_baixar(url, segundos);
+}
 int addons_base_desligada(const char *base) { (void)base; return 0; }
 int main(void) {
   GFonte f = {0};
