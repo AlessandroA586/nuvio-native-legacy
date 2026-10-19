@@ -512,6 +512,58 @@ static void categoryChannelCapRegression(void) {
   assert(canalPorId("xtream:better") && !canalPorId("xtream:cat0"));
   assert(!canalPorId("xtream:extra"));
 }
+static void rawCandidateCapRegression(void) {
+  int fl = begin(GF_PREFERIR_4K, 900);
+  for (int i = 0; i < 30000; i++) {
+    char id[32], name[40];
+    snprintf(id, sizeof id, "xtream:%d", i);
+    snprintf(name, sizeof name, "Station %d HD", i % 100);
+    channel(fl, "Sports", id, name);
+  }
+  channel(fl, "News", "xtream:late", "Late HD");
+  channel(fl, "UHD", "xtream:better", "Station 0 4K");
+  adotarStaging();
+  assert(nCanais == 101 && canalPorId("xtream:late"));
+  assert(canalPorId("xtream:better") && !canalPorId("xtream:0"));
+  GuiaVariante variants[3];
+  assert(guia_variantes("xtream:better", variants, 3) == 3);
+  assert(!strcmp(variants[0].nome, "Station 0 4K"));
+  // Even a full unique-channel budget must accept an existing channel's upgrade.
+  fl = begin(GF_PREFERIR_4K, 900);
+  for (int i = 0; i < 30000; i++) {
+    char id[32], name[40];
+    snprintf(id, sizeof id, "xtream:%d", i);
+    snprintf(name, sizeof name, "Station %d HD", i);
+    channel(fl, "Sports", id, name);
+  }
+  channel(fl, "UHD", "xtream:better", "Station 0 4K");
+  adotarStaging();
+  assert(nCanais == 900 && canalPorId("xtream:better"));
+}
+static void publicationStorageRegression(void) {
+  for (int pass = 0; pass < 2; pass++) {
+    int fl = begin(GF_TODAS, 900);
+    for (int i = 0; i < 30000; i++) {
+      char id[32], name[40], description[1024];
+      snprintf(id, sizeof id, "xtream:%d", i);
+      snprintf(name, sizeof name, "Station %d HD", i);
+      memset(description, 'x', sizeof description - 1);
+      description[sizeof description - 1] = 0;
+      GCru c = {0};
+      c.id = id; c.nome = name; c.grupo = "Sports";
+      c.desc = i < 900 ? "Kept description" : description;
+      sGrupoInfo(fl, c.grupo, 1); sCanalAdd(fl, &c);
+    }
+    adotarStaging();
+    assert(nCanais == 900 && capCanais == 900);
+    assert(ltv_arena_bytes(&arena) <= 2 * LTV_BLOCO);
+    assert(!sCanais && !sArena.prim);
+    assert(!strcmp(canais[899].id, "xtream:899"));
+    assert(!strcmp(canais[899].desc, "Kept description"));
+    assert(!strcmp(cats[canais[899].cat].nome, "Sports"));
+    assert(ltvF[0].ngi == 1 && ltvF[0].gi[0].n == 30000);
+  }
+}
 static void rawBudgetRegression(void) {
 #ifdef GUIAFILTRO_RAW_TEST
   int fl = begin(GF_SO_4K, 1);
@@ -600,6 +652,8 @@ int main(int argc, char **argv) {
     else if (!strcmp(regression, "replacement-category-cap")) replacementCategoryCapRegression();
     else if (!strcmp(regression, "collapsed-category-cap")) collapsedCategoryCapRegression();
     else if (!strcmp(regression, "category-channel-cap")) categoryChannelCapRegression();
+    else if (!strcmp(regression, "raw-candidate-cap")) rawCandidateCapRegression();
+    else if (!strcmp(regression, "publication-storage")) publicationStorageRegression();
     else if (!strcmp(regression, "raw-budget")) rawBudgetRegression();
     else if (!strcmp(regression, "raw-offline")) rawOfflineRegression();
     else if (!strcmp(regression, "session-inventory")) sessionInventoryRegression();

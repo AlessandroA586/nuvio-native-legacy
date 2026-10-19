@@ -370,6 +370,7 @@ static void fontesLtvSoltar(GFonteLtv *f, int n) {
 // edita; a carga le a COPIA `sFltLive` tirada em iniciarCarga, entao mexer no
 // painel no meio de uma recarga nao muda a lista pela metade.
 static GuiaFiltro fltLive, sFltLive;
+static GuiaFiltroDup sDup;
 static int fltPerfil = -1;
 static int sFiltrados;
 // Outras resolucoes do mesmo canal que o modo "Preferir 4K" escondeu: viram
@@ -404,6 +405,7 @@ static void stagingZerar(void) {
   sCacheBytes = 0;
   free(sInventario); sInventario = NULL; sNInventario = 0;
   sFiltrados = 0;
+  guiafiltro_dup_zerar(&sDup);
   free(sAlts); sAlts = NULL; sNAlts = 0;
   fontesLtvSoltar(sLtvF, sNLtvF);
   ltv_arena_soltar(&sArena);
@@ -529,11 +531,15 @@ static int sCanalAdd(int f, const GCru *c) {
       (sFltLive.modo != GF_TODAS || sFltLive.nCat || sFltLive.nCan)) cacheCru(f, original, c);
   if (ns && !pendente && !nomeNaLista(grupo, sel, ns)) return 0;
   // Skip known invisible entries without spending the bounded candidate budget.
-  GuiaFiltroDup dup = {0};
-  if (guiafiltro_avaliar(&sFltLive, &dup, f, grupo, c->id, c->nome, sLtvF[f].nome, NULL) == GF_FORA) {
-    sFiltrados++; return 0;
+  int velho = -1;
+  int quem = guiafiltro_avaliar(&sFltLive, &sDup, f, grupo, c->id, c->nome, sLtvF[f].nome, &velho);
+  if (quem == GF_FORA) { sFiltrados++; return 0; }
+  if (quem == GF_FORA_DUP) {
+    if (velho >= 0) sAltAdd(sCanais[velho].id, c->id, c->nome);
+    return 0;
   }
-  if (sNCanais >= G_CANDIDATOS_MAX || (pendente && sPendentes >= G_MAX_PENDENTES)) {
+  if (quem != GF_TROCA &&
+      (sNCanais >= G_CANDIDATOS_MAX || (pendente && sPendentes >= G_MAX_PENDENTES))) {
     sLtvF[f].cortada = 1; return 0;
   }
   cat = sCatDe(f, grupo);
@@ -544,7 +550,9 @@ static int sCanalAdd(int f, const GCru *c) {
     if (!no) return 0;
     sCanais = no; sCapCanais = cap;
   }
-  g = &sCanais[sNCanais];
+  g = &sCanais[quem == GF_TROCA ? velho : sNCanais];
+  const char *antigo = quem == GF_TROCA ? g->id : NULL;
+  if (antigo) sAltAdd(antigo, antigo, g->nome);
   memset(g, 0, sizeof *g);
   g->id = ltv_dup(&sArena, c->id);
   g->nome = ltv_dup(&sArena, c->nome);
@@ -562,9 +570,14 @@ static int sCanalAdd(int f, const GCru *c) {
   g->grupoOriginal = sec ? ltv_dup(&sArena, original) : sCats[cat].nome;
   g->epg = -1;
   g->fonte = (short)f;
-  sLtvF[f].nCanais++;
+  if (antigo) {
+    for (int k = 0; k < sNAlts; k++) if (sAlts[k].dono == antigo) sAlts[k].dono = g->id;
+  } else {
+    guiafiltro_dup_registrar(&sFltLive, &sDup, f, grupo, c->nome, sLtvF[f].nome, sNCanais);
+    sLtvF[f].nCanais++;
+    sNCanais++; if (pendente) sPendentes++;
+  }
   g->numero = c->numero > 0 ? c->numero : sLtvF[f].nCanais;
-  sNCanais++; if (pendente) sPendentes++;
   return 1;
 }
 
@@ -2046,9 +2059,8 @@ static void empacotar(void) {
   vistaMontar();
 }
 
-// Resolve visibility and variants before spending either visible-list quota.
+// Resolve final sections before spending either visible-list quota.
 static void selecionarSecoes(void) {
-  GuiaFiltroDup dup = {0};
   int w = 0, nc = 0, visiveis[GUIACORTE_MAX_CAT];
   for (int f = 0; f < sNLtvF; f++) {
     const char *sel[256];
@@ -2061,27 +2073,11 @@ static void selecionarSecoes(void) {
     const char *sel[256];
     int ns = sGruposEscolhidos(g->fonte, sel, 256);
     if (ns && !nomeNaLista(sCats[g->cat].nome, sel, ns)) continue;
-    int velho = -1;
-    int quem = guiafiltro_avaliar(&sFltLive, &dup, g->fonte, sCats[g->cat].nome,
-                                g->id, g->nome, sLtvF[g->fonte].nome, &velho);
-    if (quem == GF_FORA) { sFiltrados++; continue; }
-    if (quem == GF_FORA_DUP) {
-      if (velho >= 0) sAltAdd(sCanais[velho].id, g->id, g->nome);
-      continue;
-    }
-    if (quem == GF_TROCA && velho >= 0) {
-      GCanal *v = &sCanais[velho];
-      const char *antigo = v->id;
-      for (int k = 0; k < sNAlts; k++) if (sAlts[k].dono == antigo) sAlts[k].dono = g->id;
-      sAltAdd(g->id, antigo, v->nome);
-      *v = *g;
-      continue;
-    }
-    guiafiltro_dup_registrar(&sFltLive, &dup, g->fonte, sCats[g->cat].nome,
-                            g->nome, sLtvF[g->fonte].nome, w);
+    if (guiafiltro_cat_oculta(&sFltLive, sCats[g->cat].nome) ||
+        guiafiltro_canal_oculto(&sFltLive, g->id)) { sFiltrados++; continue; }
     sCanais[w++] = *g;
   }
-  guiafiltro_dup_zerar(&dup);
+  guiafiltro_dup_zerar(&sDup);
   sNCanais = w; w = 0;
   // One admission pass over final winners: category cap, then channel cap.
   for (int i = 0, j; i < sNCanais; i++) {
@@ -2096,9 +2092,81 @@ static void selecionarSecoes(void) {
   sNCanais = w;
 }
 
+// Copy only admitted channels, their fallbacks and source/group controls.
+// Keep staging intact on allocation failure so the previous list can survive.
+static int compactarStaging(void) {
+  LtvArena texto = {0};
+  GFonteLtv fontesNovas[G_MAX_LTV];
+  int nc = 0, na = 0, keptAlts = 0;
+  for (int k = 0; k < sNAlts; k++)
+    for (int i = 0; i < sNCanais; i++)
+      if (sAlts[k].dono == sCanais[i].id) { keptAlts++; break; }
+  int *mapa = malloc(sizeof *mapa * (size_t)(sNCats + 1));
+  GCanal *cs = malloc(sizeof *cs * (size_t)(sNCanais ? sNCanais : 1));
+  GCat *ct = malloc(sizeof *ct * (size_t)(sNCanais + 1));
+  GAlt *as = malloc(sizeof *as * (size_t)(keptAlts ? keptAlts : 1));
+  memcpy(fontesNovas, sLtvF, sizeof fontesNovas);
+  for (int f = 0; f < sNLtvF; f++) fontesNovas[f].gi = NULL;
+  if (!mapa || !cs || !ct || !as) goto falhou;
+#define COPY_TEXT(dst, src) do { \
+    const char *old = (src); \
+    (dst) = ltv_dup(&texto, old); \
+    if (old && old[0] && !(dst)[0]) goto falhou; \
+  } while (0)
+  for (int f = 0; f < sNLtvF; f++) {
+    GFonteLtv *F = &fontesNovas[f];
+    COPY_TEXT(F->base, sLtvF[f].base);
+    if (!F->ngi) continue;
+    F->gi = malloc(sizeof *F->gi * (size_t)F->ngi);
+    if (!F->gi) goto falhou;
+    memcpy(F->gi, sLtvF[f].gi, sizeof *F->gi * (size_t)F->ngi);
+    for (int i = 0; i < F->ngi; i++) COPY_TEXT(F->gi[i].nome, sLtvF[f].gi[i].nome);
+  }
+  for (int i = 0; i < sNCats; i++) mapa[i] = -1;
+  for (int i = 0; i < sNCanais; i++) {
+    const GCanal *g = &sCanais[i];
+    cs[i] = *g;
+    if (mapa[g->cat] < 0) {
+      mapa[g->cat] = nc;
+      ct[nc] = sCats[g->cat];
+      COPY_TEXT(ct[nc].nome, sCats[g->cat].nome);
+      nc++;
+    }
+    cs[i].cat = mapa[g->cat];
+    cs[i].base = fontesNovas[g->fonte].base;
+#define CHANNEL_TEXT(field) COPY_TEXT(cs[i].field, g->field)
+    CHANNEL_TEXT(id); CHANNEL_TEXT(nome); CHANNEL_TEXT(logo); CHANNEL_TEXT(desc);
+    CHANNEL_TEXT(epgId); CHANNEL_TEXT(tvgNome); CHANNEL_TEXT(url);
+    CHANNEL_TEXT(ua); CHANNEL_TEXT(ref); CHANNEL_TEXT(tipo); CHANNEL_TEXT(grupoOriginal);
+#undef CHANNEL_TEXT
+    for (int k = 0; k < sNAlts; k++) {
+      if (sAlts[k].dono != g->id) continue;
+      as[na].dono = cs[i].id;
+      COPY_TEXT(as[na].id, sAlts[k].id);
+      COPY_TEXT(as[na].nome, sAlts[k].nome);
+      na++;
+    }
+  }
+#undef COPY_TEXT
+  free(mapa);
+  free(sCanais); sCanais = cs; sCapCanais = sNCanais;
+  free(sCats); sCats = ct; sNCats = nc; sCapCats = sNCanais + 1;
+  free(sAlts); sAlts = as; sNAlts = na;
+  fontesLtvSoltar(sLtvF, sNLtvF);
+  memcpy(sLtvF, fontesNovas, sizeof sLtvF);
+  ltv_arena_soltar(&sArena); sArena = texto;
+  return 1;
+falhou:
+  free(mapa); free(cs); free(ct); free(as);
+  fontesLtvSoltar(fontesNovas, sNLtvF);
+  ltv_arena_soltar(&texto);
+  return 0;
+}
+
 // O staging vira a lista publicada (fio parado). O que era publicado e solto.
 static void adotarStaging(void) {
   selecionarSecoes();
+  if (!compactarStaging()) { stagingZerar(); return; }
   fontesLtvSoltar(ltvF, nLtvF);
   ltv_arena_soltar(&arena);
   free(canais); free(cats); free(alts);
