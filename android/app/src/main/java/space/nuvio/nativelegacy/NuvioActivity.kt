@@ -1166,8 +1166,9 @@ class NuvioActivity : SDLActivity() {
             KeyEvent.KEYCODE_MEDIA_STOP -> KeyEvent.KEYCODE_BACK
             KeyEvent.KEYCODE_MEDIA_FAST_FORWARD, KeyEvent.KEYCODE_MEDIA_NEXT -> KeyEvent.KEYCODE_DPAD_RIGHT
             KeyEvent.KEYCODE_MEDIA_REWIND, KeyEvent.KEYCODE_MEDIA_PREVIOUS -> KeyEvent.KEYCODE_DPAD_LEFT
-            // MENU e BOOKMARK (controles sem tecla colorida) abrem o mesmo painel de Salvos/Avisos.
-            KeyEvent.KEYCODE_PROG_BLUE, KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_BOOKMARK -> KeyEvent.KEYCODE_S
+            // Guide/Menu open the full TV guide, including during live playback.
+            KeyEvent.KEYCODE_GUIDE, KeyEvent.KEYCODE_MENU -> KeyEvent.KEYCODE_F10
+            KeyEvent.KEYCODE_PROG_BLUE, KeyEvent.KEYCODE_BOOKMARK -> KeyEvent.KEYCODE_S
             // Info (i) = registro (enviar o log), como a vermelha/verde.
             KeyEvent.KEYCODE_PROG_RED, KeyEvent.KEYCODE_PROG_GREEN,
             KeyEvent.KEYCODE_INFO -> KeyEvent.KEYCODE_F9

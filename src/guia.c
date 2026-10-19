@@ -2467,6 +2467,7 @@ void guia_overlay_abrir(void) {
   guia_carregar();
   overlay = 1; entrada = 0.0f;
   overlayDesde = bandaUlt = SDL_GetTicks();
+  okDesde = 0; okLongo = 0;
   focoTopo = 0; painel = 0; catAberto = 0;
   janelaDesl = 0; focoAnelOk = 0;
   focoValido();
@@ -2606,7 +2607,10 @@ static void pedirCanal(GCanal *c) {
   // de sempre — o player_abrir da sessao nova solta o preview.
   if (!strcmp(c->id, player_id_canal()) &&
       (player_mini_no_guia_ativo() || player_aberto())) {
+    // Na faixa, o segundo OK (no canal que toca) abre o guia completo, como o
+    // AZUL — o caminho de quem nao tem tecla colorida.
     if (player_mini_no_guia_ativo()) pedRestaurar = 1;
+    else if (overlay) pedGuiaCheio = 1;
     overlay = 0;
     return;
   }
@@ -3266,13 +3270,16 @@ void guia_evento(const SDL_Event *e) {
   // preview; quem faz e o app, por guia_pediu_guia_cheio). O repouso de
   // G_OVERLAY_REP_MS ignora a repeticao do firmware do botao que ABRIU a
   // faixa, senao segurar o azul pulava direto para o guia completo.
+  if (overlay && (k == SDLK_F10 || k == SDLK_MENU)) {
+    overlay = 0; pedGuiaCheio = 1; return;
+  }
   if (overlay && (k == SDLK_s || e->key.keysym.scancode == NV_SCANCODE_BLUE)) {
     if (agora - overlayDesde < G_OVERLAY_REP_MS) return;
     overlay = 0; pedGuiaCheio = 1; return;
   }
   // O resto da faixa: CIMA/BAIXO andam de canal em canal (atravessando as
-  // categorias), ESQUERDA/DIREITA andam o tempo, OK troca de canal (no mesmo
-  // canal so fecha — ver pedirCanal). Toda tecla adia o sumico.
+  // categorias), ESQUERDA/DIREITA andam o tempo. OK tunes another channel
+  // or opens the full guide on the playing channel. Every key delays hiding.
   if (overlay) {
     bandaUlt = agora;
     if (k == SDLK_UP || k == SDLK_DOWN) {
@@ -3283,6 +3290,8 @@ void guia_evento(const SDL_Event *e) {
     if (k == SDLK_LEFT)  { if (janelaDesl > 0) janelaDesl -= G_L_PASSO_MIN; return; }
     if (k == SDLK_RIGHT) { if (janelaDesl < G_L_DESL_MAX) janelaDesl += G_L_PASSO_MIN; return; }
     if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
+      // Require a fresh press: the opening OK may repeat past the time guard.
+      if (e->key.repeat || agora - overlayDesde < G_OVERLAY_REP_MS) return;
       if (!okDesde) { okDesde = agora; okLongo = 0; }
       return;
     }
@@ -5854,13 +5863,8 @@ static void desenharBanda(float a, Uint32 agora) {
     } }
 
   { TxtLinha t = txt_linha(TXT_G30B, "Guia de canais", 243, 242, 239, 255);
-    const char *k[3] = { "OK",
-#ifdef NV_ANDROID
-      "CH+",
-#else
-      "Azul",
-#endif
-      "Voltar" }, *r[3] = { "Troca de canal", "Guia completo", "Fechar" };
+    const char *k[3] = { "OK", "OK", "Voltar" },
+      *r[3] = { "Troca de canal", "Guia completo", "Fechar" };
     txt_desenhar_alpha(t, G_AREA_X, topo - 2.0f, a);
     plrui_dicas(k, r, 3, G_AREA_DIR, topo - 2.0f + (float)t.h * 0.5f, 1, a); }
   desenharReguaEm(a, ini, yR);

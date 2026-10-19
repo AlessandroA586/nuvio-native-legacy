@@ -178,11 +178,11 @@ void player_voltar_a_esperar(void);
 
 int  player_aberto(void);   // 1 enquanto a tela existe, inclusive durante o fade de saida
 // Pedidos que so existem com um CANAL no ar (tipo "channel"/"tv"):
-// `player_pediu_guia` — BAIXO ou a tecla azul pediram o overlay do guia.
+// Live OK without controls, DOWN or BLUE requested the mini guide.
 // `player_pediu_zap` — CH+/CH- (NV_SCANCODE_CH_UP/DOWN), PgUp/PgDn e os botoes
 //   do OSD, somados por um debounce de 600 ms (aovivo.h): o deslocamento total.
 int  player_pediu_guia(void);
-// O botao "Guia" do OSD do canal: o guia COMPLETO com o canal no preview.
+// Guide/Menu or the live OSD Guide button: full guide with channel preview.
 int  player_pediu_guia_cheio(void);
 int  player_pediu_zap(void);        // deslocamento em canais (+3, -1...), 0 = nenhum
 int  player_pediu_recarregar(void);  // live OSD or current VOD source reload
