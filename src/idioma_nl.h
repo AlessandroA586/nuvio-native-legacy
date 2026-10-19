@@ -3875,7 +3875,7 @@
   T("Paisagem média", "Liggend middel"),
   T("Paisagem pequena", "Klein liggend"),
   T("Palco", "Podium"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Podium in Modern: Zwart (standaard), alleen posters en informatie ernaast; Zoals nu, volledige uitlichting; Alleen beeld, andere achtergrond dan de poster, zonder tekst bovenaan. Zonder aparte achtergrond wordt Zwart gebruikt. Alleen dit apparaat."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Podium in Modern en Dynamisch (Apple TV): Zwart (standaard), alleen posters en informatie ernaast; Zoals nu, volledige uitlichting; Alleen beeld, andere achtergrond dan de poster, zonder tekst bovenaan. Zonder aparte achtergrond wordt Zwart gebruikt. Alleen dit apparaat."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "Voor %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Voor OLED-tv's: voorkomt dat het logo stil op het scherm blijft staan terwijl de trailer speelt."),

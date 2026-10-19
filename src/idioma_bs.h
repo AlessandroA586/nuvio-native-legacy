@@ -3875,7 +3875,7 @@
   T("Paisagem média", "Srednje položeno"),
   T("Paisagem pequena", "Malo pejzažno"),
   T("Palco", "Scena"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Pozornica u Modernom: Crno (zadano), samo posteri i podaci pored; Kao sada, puni prikaz; Samo slika, pozadina različita od postera, bez teksta na vrhu. Bez posebne pozadine koristi Crno. Samo na ovom uređaju."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Pozornica u Modernom i Dinamičnom (Apple TV): Crno (zadano), samo posteri i podaci pored; Kao sada, puni prikaz; Samo slika, pozadina različita od postera, bez teksta na vrhu. Bez posebne pozadine koristi Crno. Samo na ovom uređaju."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "Za %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Za OLED TV: logotip ne ostaje nepomičan na ekranu dok se trejler reproducira."),

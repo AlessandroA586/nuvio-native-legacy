@@ -3875,7 +3875,7 @@
   T("Paisagem média", "横長（中）"),
   T("Paisagem pequena", "小さい横長"),
   T("Palco", "ステージ"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "モダンのステージ：黒（既定）はポスターと横の情報のみ。現在のままは紹介全体。画像のみはポスターと異なる背景を表示し、上部の文字を非表示にします。別の背景がなければ黒になります。この端末のみ。"),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "モダンとダイナミック（Apple TV）のステージ：黒（既定）はポスターと横の情報のみ。現在のままは紹介全体。画像のみはポスターと異なる背景を表示し、上部の文字を非表示にします。別の背景がなければ黒になります。この端末のみ。"),
   T("Paquistão", "パキスタン"),
   T("Para %s", "%s へ"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "OLEDテレビ向け: トレーラーの再生中、ロゴが画面に固定されたままになりません。"),

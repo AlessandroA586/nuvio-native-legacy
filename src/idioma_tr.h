@@ -3875,7 +3875,7 @@
   T("Paisagem média", "Orta yatay"),
   T("Paisagem pequena", "Küçük yatay"),
   T("Palco", "Sahne"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Modern düzende Sahne: Siyah (varsayılan), yalnızca afişler ve yan bilgiler; Şimdiki gibi, tam tanıtım; Yalnızca görsel, afişten farklı arka plan, üstte metin yok. Ayrı arka plan yoksa Siyah kullanılır. Yalnızca bu cihazda."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Modern ve Dinamik düzende Sahne (Apple TV): Siyah (varsayılan), yalnızca afişler ve yan bilgiler; Şimdiki gibi, tam tanıtım; Yalnızca görsel, afişten farklı arka plan, üstte metin yok. Ayrı arka plan yoksa Siyah kullanılır. Yalnızca bu cihazda."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "%s için"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "OLED TV'ler için: fragman oynarken logonun ekranda sabit kalmasını önler."),

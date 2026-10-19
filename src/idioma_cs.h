@@ -3875,7 +3875,7 @@
   T("Paisagem média", "Na šířku střední"),
   T("Paisagem pequena", "Malé na šířku"),
   T("Palco", "Jeviště"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Pódium v Moderním: Černá (výchozí), pouze plakáty a informace vedle; Jako nyní, úplná prezentace; Pouze obrázek, jiné pozadí než plakát, bez textu nahoře. Bez samostatného pozadí se použije Černá. Jen toto zařízení."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Pódium v Moderním a Dynamickém (Apple TV): Černá (výchozí), pouze plakáty a informace vedle; Jako nyní, úplná prezentace; Pouze obrázek, jiné pozadí než plakát, bez textu nahoře. Bez samostatného pozadí se použije Černá. Jen toto zařízení."),
   T("Paquistão", "Pákistán"),
   T("Para %s", "Pro %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Pro OLED televize: logo nezůstává nehybně na obrazovce, když hraje trailer."),

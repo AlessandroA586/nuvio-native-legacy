@@ -3875,7 +3875,7 @@
   T("Paisagem média", "Οριζόντιο μεσαίο"),
   T("Paisagem pequena", "Μικρό οριζόντιο"),
   T("Palco", "Σκηνή"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Σκηνή στη Μοντέρνα: Μαύρο (προεπιλογή), μόνο αφίσες και πληροφορίες δίπλα· Όπως τώρα, πλήρης προβολή· Μόνο εικόνα, φόντο διαφορετικό από την αφίσα, χωρίς κείμενο επάνω. Χωρίς ξεχωριστό φόντο χρησιμοποιεί Μαύρο. Μόνο σε αυτή τη συσκευή."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Σκηνή στη Μοντέρνα και στη Δυναμική (Apple TV): Μαύρο (προεπιλογή), μόνο αφίσες και πληροφορίες δίπλα· Όπως τώρα, πλήρης προβολή· Μόνο εικόνα, φόντο διαφορετικό από την αφίσα, χωρίς κείμενο επάνω. Χωρίς ξεχωριστό φόντο χρησιμοποιεί Μαύρο. Μόνο σε αυτή τη συσκευή."),
   T("Paquistão", "Πακιστάν"),
   T("Para %s", "Για %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Για τηλεοράσεις OLED: το λογότυπο δεν μένει ακίνητο στην οθόνη ενώ παίζει το τρέιλερ."),
