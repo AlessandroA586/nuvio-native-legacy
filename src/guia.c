@@ -331,6 +331,7 @@ static GCat   *cats;     static int nCats, capCats;
 static int    *catIni, *catN;
 static GFonteLtv ltvF[G_MAX_LTV]; static int nLtvF;
 static LtvArena arena;
+static unsigned canaisRevisao;
 // Staging (so o fio de carga escreve).
 static GCanal *sCanais;  static int sNCanais, sCapCanais;
 static GCat   *sCats;    static int sNCats, sCapCats;
@@ -2193,6 +2194,7 @@ static void logosEmprestar(void) {
 // linha seja uma janela contigua, e refaz Favoritos, contas e a vista. Roda ao
 // publicar e ao desligar um addon no painel (que tira canais sem esperar o fio).
 static void empacotar(void) {
+  canaisRevisao++;
   grupoNContas = iptv_contas(grupoContas, IPTV_MAX_CONTAS);
   for(int f=0;f<nLtvF;f++)grupoOrdFonte[f]=fonteOrdem(f);
   int i, w, *ordem = NULL, *mapa = NULL, *pos = NULL;
@@ -6998,7 +7000,20 @@ static int buscaEstado;        // 0 fechada, 1 teclado, 2 resultado
 static char buscaTexto[TECLADO_MAX + 1];
 static int buscaNC, buscaNP, buscaFoco;
 static int buscaCanal[G_BUSCA_CANAIS];
-static struct { int canal; time_t ini, fim; char titulo[112]; } buscaProg[G_BUSCA_PROGS];
+typedef struct { int canal; time_t ini, fim; char titulo[112]; } GBuscaProg;
+static GBuscaProg buscaProg[G_BUSCA_PROGS];
+// A varredura continua no fio do guia: os titulos do EPG sao emprestados ate
+// epg_passo. Lotes pequenos deixam o teclado fechar e o painel aparecer sem
+// bloquear a entrada por segundos em listas grandes. Publica os programas
+// juntos, ja ordenados, para nao trocar a linha sob o dedo ou o foco.
+static struct {
+  int ativa, canal, vistos, rodada, n, teto;
+  unsigned canaisRev, epgRev;
+  Uint32 inicio;
+  time_t de, ate;
+  char agulha[TECLADO_MAX + 1];
+  GBuscaProg progs[G_BUSCA_PROGS];
+} buscaPendente;
 static float buscaRol, buscaAnim;
 
 static void buscaAbrir(void) {
@@ -7019,19 +7034,41 @@ static void ponteiroBuscaItem(int i, int b) {
   buscaFoco = i;
 }
 
+static void buscaConcluir(void) {
+  time_t agoraT = buscaPendente.de;
+  buscaNP = buscaPendente.n;
+  memcpy(buscaProg, buscaPendente.progs, (size_t)buscaNP * sizeof *buscaProg);
+  { int a, b;   // ordem: no ar antes, depois o que comeca primeiro
+    for (a = 1; a < buscaNP; a++)
+      for (b = a; b > 0; b--) {
+        int vivoA = buscaProg[b - 1].ini <= agoraT, vivoB = buscaProg[b].ini <= agoraT;
+        if (vivoA > vivoB || (vivoA == vivoB && buscaProg[b - 1].ini <= buscaProg[b].ini)) break;
+        { GBuscaProg t = buscaProg[b]; buscaProg[b] = buscaProg[b - 1]; buscaProg[b - 1] = t; }
+      } }
+  buscaPendente.ativa = 0;
+  printf("[guia] busca: %d canal(is), %d programa(s), %u ms\n",
+         buscaNC, buscaNP, (unsigned)(SDL_GetTicks() - buscaPendente.inicio));
+  fflush(stdout);
+}
+
 static void buscaFazer(const char *q) {
   char agulha[TECLADO_MAX + 1];
-  int i, numero = 0, soDigito = 1, teto = 0;
-  time_t agoraT = time(NULL);
+  int i, numero = 0, soDigito = 1;
   const char *p;
-  snprintf(buscaTexto, sizeof buscaTexto, "%s", q ? q : "");
+  if (q != buscaTexto) snprintf(buscaTexto, sizeof buscaTexto, "%s", q ? q : "");
   nv_dobrar(buscaTexto, agulha, sizeof agulha);
-  // Espacos das pontas fora.
   { size_t n = strlen(agulha), k = 0;
     while (n && agulha[n - 1] == ' ') agulha[--n] = 0;
     while (agulha[k] == ' ') k++;
     if (k) memmove(agulha, agulha + k, strlen(agulha + k) + 1); }
   buscaNC = buscaNP = 0; buscaFoco = 0; buscaRol = 0.0f;
+  memset(&buscaPendente, 0, sizeof buscaPendente);
+  buscaPendente.canaisRev = canaisRevisao;
+  buscaPendente.epgRev = epg_revisao();
+  buscaPendente.inicio = SDL_GetTicks();
+  buscaPendente.de = time(NULL);
+  buscaPendente.ate = buscaPendente.de + G_BUSCA_HORAS * 3600;
+  snprintf(buscaPendente.agulha, sizeof buscaPendente.agulha, "%s", agulha);
 #ifdef NV_TOUCH_UI
   toquerol_limpar(&toqueBusca);
 #endif
@@ -7039,50 +7076,47 @@ static void buscaFazer(const char *q) {
   for (p = agulha; *p; p++) if (*p < '0' || *p > '9') soDigito = 0;
   if (soDigito) numero = atoi(agulha);
   for (i = 0; i < nCanais && buscaNC < G_BUSCA_CANAIS; i++)
-    if ((numero && canais[i].numero == numero) || nv_contem_dobrado(canais[i].nome, agulha))
+    if (fonteVisivel(canais[i].fonte) && !categoriaOculta(canais[i].cat) &&
+        ((numero && canais[i].numero == numero) || nv_contem_dobrado(canais[i].nome, agulha)))
       buscaCanal[buscaNC++] = i;
-  // PROGRAMAS: a grade de cada canal entre agora e G_BUSCA_HORAS a frente. Os
-  // que estao no ar primeiro; depois por horario.
-  if (!soDigito || strlen(agulha) > 3)
-    for (i = 0; i < nCanais && buscaNP < G_BUSCA_PROGS; i++) {
-      EpgProg ps[24];
-      time_t ate = agoraT + G_BUSCA_HORAS * 3600;
-      int rodada, vistos = 0;
-      // #344: gFaixa devolve no maximo o tamanho de ps. Um canal com mais
-      // programas na janela vem em lotes, paginados por POSICAO (`vistos`): o
-      // fim dos programas nao e monotono quando a grade se sobrepoe.
-      for (rodada = 0; rodada < G_BUSCA_RODADAS && buscaNP < G_BUSCA_PROGS; rodada++) {
-        int n = gFaixaDesde(&canais[i], agoraT, ate, vistos, ps, (int)(sizeof ps / sizeof ps[0])), k;
-        if (n > (int)(sizeof ps / sizeof ps[0])) n = (int)(sizeof ps / sizeof ps[0]);
-        for (k = 0; k < n && buscaNP < G_BUSCA_PROGS; k++) {
-          if (!ps[k].titulo || !nv_contem_dobrado(ps[k].titulo, agulha)) continue;
-          buscaProg[buscaNP].canal = i;
-          buscaProg[buscaNP].ini = ps[k].ini; buscaProg[buscaNP].fim = ps[k].fim;
-          snprintf(buscaProg[buscaNP].titulo, sizeof buscaProg[buscaNP].titulo, "%s", ps[k].titulo);
-          buscaNP++;
-        }
-        if (n < (int)(sizeof ps / sizeof ps[0])) break;
-        vistos += n;
-        if (rodada == G_BUSCA_RODADAS - 1 && !teto) {
-          teto = 1;
-          printf("[guia] busca: canal com %d programas ou mais na janela; o resto fica de fora\n",
-                 G_BUSCA_RODADAS * (int)(sizeof ps / sizeof ps[0]));
-          fflush(stdout);
-        }
-      }
-    }
-  { int a, b;   // ordem: no ar antes, depois o que comeca primeiro
-    for (a = 1; a < buscaNP; a++)
-      for (b = a; b > 0; b--) {
-        int vivoA = buscaProg[b - 1].ini <= agoraT, vivoB = buscaProg[b].ini <= agoraT;
-        if (vivoA > vivoB || (vivoA == vivoB && buscaProg[b - 1].ini <= buscaProg[b].ini)) break;
-        { __typeof__(buscaProg[0]) t = buscaProg[b]; buscaProg[b] = buscaProg[b - 1]; buscaProg[b - 1] = t; }
-      } }
-  printf("[guia] busca: %d canal(is), %d programa(s)\n", buscaNC, buscaNP);
-  fflush(stdout);
+  buscaPendente.ativa = nCanais > 0 && (!soDigito || strlen(agulha) > 3);
+  if (!buscaPendente.ativa) buscaConcluir();
 }
 
-static void buscaFechar(void) { buscaEstado = 0; }
+static void buscaPasso(void) {
+  Uint32 inicio = SDL_GetTicks();
+  // Limite de tempo E de paginas: relogios de baixa resolucao tambem cedem.
+  for (int paginas = 0; buscaPendente.ativa && paginas < 256; paginas++) {
+    EpgProg ps[24];
+    int i = buscaPendente.canal;
+    if (i >= nCanais || buscaPendente.n >= G_BUSCA_PROGS) { buscaConcluir(); break; }
+    if(!fonteVisivel(canais[i].fonte) || categoriaOculta(canais[i].cat)) {
+      buscaPendente.canal++;buscaPendente.vistos=buscaPendente.rodada=0;continue;
+    }
+    int n = gFaixaDesde(&canais[i], buscaPendente.de, buscaPendente.ate,
+                        buscaPendente.vistos, ps, (int)(sizeof ps / sizeof ps[0]));
+    if (n > (int)(sizeof ps / sizeof ps[0])) n = (int)(sizeof ps / sizeof ps[0]);
+    for (int k = 0; k < n && buscaPendente.n < G_BUSCA_PROGS; k++) {
+      if (!ps[k].titulo || !nv_contem_dobrado(ps[k].titulo, buscaPendente.agulha)) continue;
+      GBuscaProg *p = &buscaPendente.progs[buscaPendente.n++];
+      p->canal = i; p->ini = ps[k].ini; p->fim = ps[k].fim;
+      snprintf(p->titulo, sizeof p->titulo, "%s", ps[k].titulo);
+    }
+    buscaPendente.rodada++;
+    if (n < (int)(sizeof ps / sizeof ps[0]) || buscaPendente.rodada >= G_BUSCA_RODADAS) {
+      if (buscaPendente.rodada == G_BUSCA_RODADAS && !buscaPendente.teto) {
+        buscaPendente.teto = 1;
+        printf("[guia] busca: canal com %d programas ou mais na janela; o resto fica de fora\n",
+               G_BUSCA_RODADAS * (int)(sizeof ps / sizeof ps[0]));
+      }
+      buscaPendente.canal++; buscaPendente.vistos = buscaPendente.rodada = 0;
+    } else buscaPendente.vistos += n;
+    if (buscaPendente.canal >= nCanais || buscaPendente.n >= G_BUSCA_PROGS) buscaConcluir();
+    if (SDL_GetTicks() - inicio >= 4) break;
+  }
+}
+
+static void buscaFechar(void) { buscaEstado = 0; buscaPendente.ativa = 0; }
 
 // OK num resultado.
 static void buscaAgir(void) {
@@ -7134,9 +7168,13 @@ static void buscaAtualizar(float dt, Uint32 agora) {
     teclado_atualizar(dt, agora);
     r = teclado_resultado();
     if (r == TECLADO_PRONTO) { buscaFazer(teclado_texto()); buscaEstado = 2; }
-    else if (r == TECLADO_CANCELOU) buscaEstado = buscaN() ? 2 : 0;
+    else if (r == TECLADO_CANCELOU) buscaEstado = (buscaN() || buscaPendente.ativa) ? 2 : 0;
   }
   if (buscaEstado == 2) {
+    // Uma publicacao pode reordenar os canais sem mudar sua quantidade.
+    if (buscaPendente.canaisRev != canaisRevisao || buscaPendente.epgRev != epg_revisao())
+      buscaFazer(buscaTexto);
+    buscaPasso();
     // A linha em foco fica a vista: a lista rola por ela.
     float y = (float)(buscaFoco + 1) * G_BUSCA_ROW + (buscaFoco >= buscaNC ? 56.0f : 0.0f);
     float area = NV_TELA_H - 300.0f;
@@ -7155,9 +7193,14 @@ static void buscaDesenhar(Uint32 agora) {
   time_t agoraT = time(NULL);
   char b[200];
   (void)tf;
-  if (buscaEstado == 1) teclado_desenhar(agora);
+  if (buscaEstado == 1) { teclado_desenhar(agora); return; }
+  if (buscaEstado == 2) {
+    // Mesmo no primeiro quadro (alpha zero), nao deixar um toque chegar ao
+    // guia nem virar OK na lista vazia enquanto os alvos ainda aparecem.
+    ponteiro_camada();
+    ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, NULL, 0, 0);
+  }
   if (ea < 0.01f) return;
-  if (buscaEstado == 2) ponteiro_camada();
 #ifdef NV_TOUCH_UI
   if (buscaEstado == 2) {
     float area = NV_TELA_H - 230.0f;
@@ -7173,9 +7216,6 @@ static void buscaDesenhar(Uint32 agora) {
     if (!ajustes_vidro()) gfx_luz_canto(p, 28.0f / p.h, p.w * 0.30f, -p.w * 0.25f, p.w * 1.45f, ar, ag, ab, 0.06f * ea); }
   snprintf(b, sizeof b, i18n("Busca: “%s”"), buscaTexto);
   txt_desenhar_alpha(txt_linha_corta(TXT_HEADLINE, b, 242, 243, 247, 255, G_BUSCA_W), x0, 72.0f, ea);
-  if (!buscaN())
-    txt_desenhar_alpha(txt_linha_corta(TXT_BODY, i18n("Nada encontrado nos canais nem na grade das próximas horas."),
-                                       180, 184, 194, 255, G_BUSCA_W), x0, 136.0f, ea);
   gfx_recorte(x0 - 20.0f, 130.0f, G_BUSCA_W + 40.0f, NV_TELA_H - 230.0f);
   y = 140.0f - buscaRol;
   // "Nova busca": foco -1.
@@ -7243,8 +7283,12 @@ static void buscaDesenhar(Uint32 agora) {
     }
     y += G_BUSCA_ROW;
   }
+  if (!buscaPendente.ativa && !buscaN())
+    txt_desenhar_alpha(txt_linha_corta(TXT_BODY,
+        i18n("Nada encontrado nos canais nem na grade das próximas horas."),
+        180, 184, 194, 255, G_BUSCA_W), x0, y + 20.0f, ea);
   gfx_sem_recorte();
-  txt_desenhar_alpha(txt_linha(TXT_CAPTION, i18n("OK abre  ·  ↑↓ escolhe  ·  Voltar fecha"), 128, 130, 138, 255),
+  txt_desenhar_alpha(txt_linha(TXT_CAPTION, buscaPendente.ativa ? i18n("Carregando programação…") : i18n("OK abre  ·  ↑↓ escolhe  ·  Voltar fecha"), 128, 130, 138, 255),
                      x0, NV_TELA_H - 84.0f, ea);
 }
 
