@@ -18,6 +18,7 @@
 #include "teclado.h"
 #include "ponteiro.h"
 #include "app.h"
+#include "teclavoltar.h"
 #include "deeplink.h"
 #include "telefoneui.h"
 #include "descanso.h"
@@ -4036,6 +4037,20 @@ static int relogioPedidoPagina(void) {
 }
 
 void app_evento(const SDL_Event *e) {
+  static int backRetido;
+  static Uint32 backUltimo;
+  // Guard before any sheet/panel consumes Back. Repeats refresh the timeout;
+  // silence recovers from a lost keyup without latching Back forever.
+  if ((e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) && nv_tecla_voltar(e)) {
+    Uint32 agora = SDL_GetTicks();
+    if (e->type == SDL_KEYUP || !player_aberto()) backRetido = 0;
+    else {
+      int retido = backRetido && agora - backUltimo < 400u;
+      backRetido = 1;
+      backUltimo = agora;
+      if (retido) return;
+    }
+  }
   // Measurement anchors: only with perf enabled and an authenticated profile.
   // D-pad scrolling still follows the real screen handlers.
   if (perftv_enabled && e->type == SDL_KEYDOWN && !e->key.repeat &&

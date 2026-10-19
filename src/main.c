@@ -1836,10 +1836,8 @@ int main(int argc, char **argv) {
       // de cursor do webOS ficam la; o que ele traduz em tecla chega a
       // app_evento como se viesse do D-pad.
       if (ponteiro_evento(&e, app_evento)) continue;
-      // O BACK do webOS chega com scancode proprio (482), nao como AC_BACK, e
-      // com KEYDOWN e KEYUP quase juntos — so o KEYDOWN conta. Isto ja tinha
-      // sido resolvido uma vez e voltou a quebrar quando limpei os remendos
-      // antigos: o tratamento saiu junto.
+      // webOS Back uses scancode 482, sym 0. Normalize both edges below so
+      // the player Back guard sees the physical release too.
 #if defined(__EMSCRIPTEN__) || defined(NV_LINUX_DESKTOP)
       // TIZEN: o Return do controle Samsung e o keyCode 10009 (XF86Back), que
       // nao existe na tabela do SDL. tizen-shell.html o traduz em Escape, e
@@ -1886,12 +1884,9 @@ int main(int argc, char **argv) {
           fflush(stdout);
         }
       }
-      if (e.type == SDL_KEYDOWN && e.key.keysym.scancode == NV_SCANCODE_BACK) {
-        SDL_Event back; SDL_zero(back);
-        back.type = SDL_KEYDOWN;
-        back.key.keysym.sym = SDLK_AC_BACK;
-        app_evento(&back);
-        continue;
+      if ((e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) &&
+          e.key.keysym.scancode == NV_SCANCODE_BACK) {
+        e.key.keysym.sym = SDLK_AC_BACK;
       }
       app_evento(&e);
     }
