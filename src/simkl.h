@@ -64,6 +64,7 @@
 
 // 1 quando ha token do Simkl nesta TV (vinculo feito em Ajustes).
 int simkl_ativo(void);
+int simkl_aguardando(void);
 
 // Snapshot mensal da tela Perfil e Stats. A leitura de JSON e separada da
 // rede para os testes cobrirem a forma oficial de /users/settings e

@@ -47,7 +47,8 @@ static void terminar(void) {
 }
 int main(void) {
   traktauth_comecar(); terminar();
-  assert(traktauth_estado() == TRA_PEDINDO && !traktauth_erro()[0]);
+  assert(traktauth_estado() == TRA_PEDINDO && traktauth_aguardando());
+  assert(strstr(traktauth_erro(), "Tente novamente"));
   traktauth_passo(1000);
   traktauth_passo(90999); assert(pedidos == 1);
   traktauth_passo(91000); terminar();

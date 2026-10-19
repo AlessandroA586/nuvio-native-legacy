@@ -16,7 +16,7 @@
 // ao ar (hasAired === false, que resolveNextUpReleaseState tira da data de
 // estreia: `released <= Date.now()`; sem data, conta como exibido).
 //
-//   default          -> pausados primeiro, depois sugestoes; recencia por grupo.
+//   default          -> most recently watched first, across both groups (#610).
 //   streaming_style  -> pausados, sugestoes exibidas e futuros, nessa ordem;
 //                       recencia dentro de cada grupo.
 //   split_upcoming   -> a mesma lista, mas os futuros saem da fileira e viram

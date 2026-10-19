@@ -32,9 +32,9 @@ int main(void) {
 
   p = cwo_ordenar(v, 6, CWO_PADRAO, AGORA, perm);
   assert(p == 6);
-  { static const int esperado[] = {0, 5, 1, 2, 3, 4};
+  { static const int esperado[] = {0, 1, 2, 3, 4, 5};
     for (i = 0; i < 6; i++) assert(perm[i] == esperado[i]); }
-  puts("ok  padrao: pausados primeiro, recencia dentro de cada grupo");
+  puts("ok  default: last-watched order across paused and next-up items");
 
   { static const int esperado[6] = { 0, 5, 2, 4, 1, 3 };
     p = cwo_ordenar(v, 6, CWO_STREAMING, AGORA, perm);

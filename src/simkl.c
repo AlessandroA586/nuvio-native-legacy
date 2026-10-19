@@ -20,6 +20,7 @@
 #include <math.h>
 #include <time.h>
 #include <unistd.h>
+#include "provedorhttp.h"
 
 // Optional imports belong to consumers: public declarations keep producers strong.
 extern int trakt_enfeitar_lote_sessao(CatItem *, int, uint64_t) NV_PERFIL_OPCIONAL;
@@ -33,6 +34,7 @@ extern int trakt_enfeitar_lote_sessao(CatItem *, int, uint64_t) NV_PERFIL_OPCION
 #define SMK_PTW_MAX 400
 
 int simkl_ativo(void) { return simklauth_token()[0] != 0; }
+int simkl_aguardando(void) { return provedorEspera(); }
 
 const char *simkl_aviso_sem_vinculo(int querSimkl) {
   return (querSimkl && !simkl_ativo()) ? SIMKL_VINCULE : NULL;
@@ -380,7 +382,7 @@ static char *pedirComToken(char metodo, const char *caminho, const char *consult
   cab[2] = NULL;
   if (metodo == 'P')      r = rede_postar_st(url, 20, cab, corpo ? corpo : "", st);
   else if (metodo == 'D') r = rede_apagar(url, 20, cab, st);
-  else                    r = rede_baixar_st(url, 25, cab, st);
+  else                    r = provedorBaixarSt(url, 25, cab, st);
   return r;
 }
 
@@ -429,7 +431,39 @@ static char *pedir(SmkPedido pedido, char metodo, const char *caminho, const cha
   cab[2] = NULL;
   if (metodo == 'P')      r = rede_postar_st(url, 20, cab, corpo ? corpo : "", st);
   else if (metodo == 'D') r = rede_apagar(url, 20, cab, st);
-  else                    r = rede_baixar_st(url, 25, cab, st);
+  else {
+    int next = -1;
+    r = provedorGet(url, 25, cab, st, &next, 1);
+    // Simkl normally returns all items. Follow explicit pagination if present.
+    if (r && strstr(caminho, "/plantowatch")) {
+      char *all = r;
+      int page = 1;
+      while (next > page && page < 64 && pedidoAtual(pedido)) {
+        char paged[720]; page = next;
+        snprintf(paged, sizeof paged, "%s&page=%d&limit=500", url, page);
+        char *part = provedorGet(paged, 25, cab, st, &next, page);
+        char *a = strchr(all, '['), *b = part ? strchr(part, '[') : NULL;
+        if (!a || !b || *st < 200 || *st >= 300) { free(all); free(part); return NULL; }
+        const char *ae = js_fim(a), *be = js_fim(b);
+        if (ae <= a + 1 || ae[-1] != ']' || be <= b + 1 || be[-1] != ']') {
+          free(all); free(part); return NULL;
+        }
+        size_t prefix = (size_t)(ae - all - 1), items = (size_t)(be - b - 2);
+        size_t suffix = strlen(ae - 1);
+        int comma = prefix > (size_t)(a - all + 1) && items > 0;
+        if (prefix + items + suffix + 2 > REDE_CORPO_MAXIMO) { free(all); free(part); return NULL; }
+        char *joined = malloc(prefix + items + suffix + 2);
+        if (!joined) { free(all); free(part); return NULL; }
+        memcpy(joined, all, prefix);
+        if (comma) joined[prefix++] = ',';
+        memcpy(joined + prefix, b + 1, items);
+        strcpy(joined + prefix + items, ae - 1);
+        free(all); free(part); all = joined;
+      }
+      if (next > page) { free(all); return NULL; }
+      r = all;
+    }
+  }
   return r;
 }
 
@@ -773,10 +807,8 @@ int simkl_continuar(CatItem *saida, int max) {
   { int a, b;
     for (a = 1; a < n; a++) {
       CatItem t = saida[a];
-      for (b = a - 1; b >= 0 &&
-           ((saida[b].progresso == 0 && t.progresso > 0) ||
-            ((saida[b].progresso == 0) == (t.progresso == 0) &&
-             saida[b].retomadoMs < t.retomadoMs)); b--) saida[b + 1] = saida[b];
+      for (b = a - 1; b >= 0 && saida[b].retomadoMs < t.retomadoMs; b--)
+        saida[b + 1] = saida[b];
       saida[b + 1] = t;
     }
   }
