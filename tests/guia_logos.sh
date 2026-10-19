@@ -13,19 +13,35 @@ sources=(src/ltv.c src/js.c src/idcanal.c src/dados.c src/marco.c src/guiaaddons
   src/gfx.c src/text.c src/dobra.c src/bidi.c src/layout.c
   src/corviva.c src/gpunivel.c src/esmaecer.c)
 compile() {
-  cc "${flags[@]}" "$@" tests/guia_logos.c "${sources[@]}" \
-    -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -L/opt/homebrew/lib \
+  local root=$1
+  shift
+  cc "${flags[@]}" "$@" tests/guia_logos.c "${sources[@]/#/$root/}" \
+    -I"$root/src" -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -L/opt/homebrew/lib \
     -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL -O1 -g \
     -Wno-deprecated-declarations -Wno-macro-redefined -o "$work/test"
 }
-# Fixed parent preserves a reproducible pre-fix reference after commits.
+expect_failure() {
+  local name=$1
+  shift
+  local rc=0
+  NUVIO_DADOS="$work/$name" "$work/test" "$work/$name" "$out/$name.png" > "$work/$name.log" 2>&1 || rc=$?
+  cat "$work/$name.log"
+  if [ "$rc" != 1 ]; then echo "Expected $name assertion failure (rc=1), got $rc"; exit 1; fi
+  local check
+  for check in "$@"; do
+    grep -F "FAIL grid: $check (" "$work/$name.log" > /dev/null
+  done
+}
+# Original regression uses matching guide, Xtream, EPG, XMLTV and headers.
+base=$(git merge-base integracao/2.0.5 HEAD)
+mkdir "$work/baseline"
+git archive "$base" src | tar -x -C "$work/baseline"
+compile "$work/baseline" "-DGUIA_LOGOS_SOURCE=\"$work/baseline/src/guia.c\""
+expect_failure before "ESPN SD" "Globo RJ" "Whitespace" "Invalid"
+# Keep independent proof of the later donor-download failure regression.
 git show 65107e6fc2a492d32b058e72ed337c8204d1ae6f:src/guia.c > "$work/guia.c"
-compile "-DGUIA_LOGOS_SOURCE=\"$work/guia.c\""
-set +e
-NUVIO_DADOS="$work/before" "$work/test" "$work/before" "$out/before.png"
-rc=$?
-set -e
-if [ "$rc" != 1 ]; then echo "Expected baseline assertion failure (rc=1), got $rc"; exit 1; fi
-compile
+compile . "-DGUIA_LOGOS_SOURCE=\"$work/guia.c\""
+expect_failure donor-before "ESPN SD" "Canal M3U HD" "By ID"
+compile .
 NUVIO_DADOS="$work/after" "$work/test" "$work/after" "$out/after.png"
-echo "PASS: baseline rc=1; fixed rc=0; guide grid PNGs: $out"
+echo "PASS: integration baseline ($base) rc=1; donor baseline rc=1; fixed rc=0; guide grid PNGs: $out"
