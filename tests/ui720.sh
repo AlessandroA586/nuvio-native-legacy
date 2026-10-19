@@ -29,10 +29,14 @@ for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/gfx.c|src/gpunivel.c|src/ajustes.c) continue;; esac
   sources+=("$source")
 done
-cc "${sources[@]}" tests/ui720.c tests/ui720_settings.c -DAJUSTES_TESTE -Isrc -o "$work/test" -O1 \
-  -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -L/opt/homebrew/lib \
-  -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \
-  -Wno-deprecated-declarations -Wno-macro-redefined
+# Compile independent translation units in parallel; no optimization benchmark needed.
+mkdir -p "$work/src/dts" "$work/tests"
+printf '%s\0' "${sources[@]}" tests/ui720.c tests/ui720_settings.c |
+  xargs -0 -P 8 -I '{}' cc '{}' -c -o "$work/{}.o" -DAJUSTES_TESTE -Isrc -O0 \
+    -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
+    -Wno-deprecated-declarations -Wno-macro-redefined
+cc "$work"/src/*.o "$work"/src/dts/*.o "$work"/tests/*.o -o "$work/test" \
+  -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL
 ui_rc=0
 NUVIO_DADOS="$work/data" "$work/test" "$out" > "$out/results.txt" 2>&1 || ui_rc=$?
 rg '^(GPU |METRIC |BLIT |FRAME |CHOICE |PASS |FAIL |\[gpu-nivel\] ampliar=)' "$out/results.txt"

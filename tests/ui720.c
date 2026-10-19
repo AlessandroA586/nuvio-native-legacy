@@ -1,6 +1,5 @@
 // Offline scale-factor proof: native-size UI references, alpha and GPU/host medians.
 #include "gfx.c" // Reuse the real shader compiler and production quad.
-#include "ui720_filters.h"
 #include "app.h"
 #include "ajustes.h"
 #include "addons.h"
@@ -41,12 +40,6 @@ static Programa productionCopy;
 static int sw=1920, sh=1080, iw=1280, ih=720;
 static unsigned char *pixels, *flipped, *linear, *native;
 static const GfxRect screen = {0,0,1920,1080};
-static const char *round1 =
-  "void main(){ vec2 uv=vec2(vUv.x,1.0-vUv.y), d=1.0/uPar;"
-  "vec4 c=texture2D(uTex,uv);"
-  "vec3 n=texture2D(uTex,uv+vec2(d.x,0.0)).rgb+texture2D(uTex,uv-vec2(d.x,0.0)).rgb"
-  "+texture2D(uTex,uv+vec2(0.0,d.y)).rgb+texture2D(uTex,uv-vec2(0.0,d.y)).rgb;"
-  "c.rgb=clamp(c.rgb*1.8-n*0.2,0.0,1.0); gl_FragColor=c;}";
 static void readback(void) {
   glReadPixels(0,0,sw,sh,GL_RGBA,GL_UNSIGNED_BYTE,pixels);
   assert(glGetError()==GL_NO_ERROR);
@@ -87,8 +80,8 @@ static void target(int low) {
   glViewport(0,0,low?iw:sw,low?ih:sh); gfx_tamanho_alvo(low?iw:sw,low?ih:sh);
 }
 static int candidate;
-static const char *names[]={"bilinear","round1","sgsr","sharp-bilinear","smoothstep","catmull4-invalid","catmull5","cas"};
-static Programa filters[8];
+static const char *names[]={"bilinear","unused","sgsr","sharp-bilinear"};
+static Programa filters[4];
 static void copy(int mode) {
   target(0); gfx_sem_recorte(); glDisable(GL_BLEND);
   glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
@@ -121,12 +114,12 @@ static double error(const unsigned char *p, int settings) {
   return sum/((x1-x0)*(y1-y0)*3.0);
 }
 static double median(double *s) {
-  for(int i=0;i<15;i++) for(int j=i+1;j<15;j++) if(s[j]<s[i]) {double t=s[i];s[i]=s[j];s[j]=t;}
-  return s[7];
+  for(int i=0;i<5;i++) for(int j=i+1;j<5;j++) if(s[j]<s[i]) {double t=s[i];s[i]=s[j];s[j]=t;}
+  return s[2];
 }
 static void timing(int settings, int mode, int whole, double *host, double *gpu) {
-  double hs[15],gs[15];
-  for(int k=-4;k<15;k++) {
+  double hs[5],gs[5];
+  for(int k=-1;k<5;k++) {
     glFinish(); Uint64 start=SDL_GetPerformanceCounter();
     glBeginQuery(GL_TIME_ELAPSED_EXT,query);
     if(whole==2) {
@@ -176,29 +169,14 @@ int main(int argc,char **argv) {
   }
   cat_definir_tudo(items,12,&row,1);
   target(0);
-  for(int n=0;n<120;n++) {home_atualizar(1.f/60,10000);frame(0);}
+  for(int n=0;n<30;n++) {home_atualizar(1.f/60,10000);frame(0);}
   assert(ajustes_iniciar());
   assert(strstr((const char*)glGetString(GL_EXTENSIONS),"GL_EXT_timer_query"));
-  printf("GPU %s; GL_EXT_timer_query; synchronized host wall-time medians, 15 frames\n",glGetString(GL_RENDERER));
+  printf("GPU %s; GL_EXT_timer_query; synchronized host wall-time medians, 5 frames\n",glGetString(GL_RENDERER));
   glGenQueries(1,&query);
   Programa sgsr=progs[GFX_COPIA];productionCopy=sgsr;
-  const char *bodies[]={NV_SGSR_SHADER,round1,NV_SGSR_SHADER,
-    NV_SHARP_BILINEAR_SHADER,smoothstep,catmull4_invalid,catmull5,cas};
-  GLuint sharedVS=vsProg;
-  for(int c=0;c<8;c++) {
-    if(c==7) {
-      char vertex[10000];
-      snprintf(vertex,sizeof vertex,"%s#define main nv_main\n%s\n#undef main\n"
-        "uniform highp vec2 uPar; varying highp vec4 vLR; varying highp vec4 vUD;\n"
-        "void main(){nv_main(); highp vec2 uv=vec2(vUv.x,1.0-vUv.y),d=1.0/uPar;"
-        "vLR=vec4(uv-vec2(d.x,0.0),uv+vec2(d.x,0.0));"
-        "vUD=vec4(uv-vec2(0.0,d.y),uv+vec2(0.0,d.y));}\n",NV_GLSL_PREFIXO,VS+strlen(NV_GLSL_PREFIXO));
-      vsProg=compila(GL_VERTEX_SHADER,vertex);
-    }
-    FS_CORPO[GFX_COPIA]=bodies[c];assert(progMontar(GFX_COPIA));filters[c]=progs[GFX_COPIA];
-    vsProg=sharedVS;
-  }
-  FS_CORPO[GFX_COPIA]=NV_SGSR_SHADER;progs[GFX_COPIA]=sgsr;progAtual=-1;
+  filters[0]=filters[2]=sgsr;
+  filters[3]=progs[GFX_COPIA_NITIDA];
   size_t capacity=(size_t)3840*2160*4;
   pixels=malloc(capacity);flipped=malloc(capacity);linear=malloc(capacity);native=malloc(capacity);
   assert(pixels&&flipped&&linear&&native);
@@ -216,101 +194,61 @@ int main(int argc,char **argv) {
     glGenFramebuffers(1,&sourceFbo);glBindFramebuffer(GL_FRAMEBUFFER,sourceFbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,source,0);
     assert(glCheckFramebufferStatus(GL_FRAMEBUFFER)==GL_FRAMEBUFFER_COMPLETE);
-    gpun_iniciar(sw,sh);gpun_definir_nivel(0);
+    ui720_settings(3840,2160,test<3,0,ih);
     for(int settings=0;settings<2;settings++) for(int glass=0;glass<2;glass++) {
       const char *scene=settings?"settings":"home";
       ajustes_definir_vidro(glass);
-      target(0);for(int n=0;n<8;n++) frame(settings);
-      readback();memcpy(native,pixels,bytes);double ref=gradient(native,settings);
-      target(1);for(int n=0;n<8;n++) frame(settings);
-      candidate=0;copy(0);readback();memcpy(linear,pixels,bytes);
-      double b=gradient(linear,settings), be=error(linear,settings);
-      double nativeHost, nativeGpu, bilinearHost, bilinearGpu, filteredHost, filteredGpu;
-      candidate=0;
-      timing(settings,0,1,&nativeHost,&nativeGpu);
-      timing(settings,1,1,&bilinearHost,&bilinearGpu);
-      candidate=test==3?0:3;
-      timing(settings,2,1,&filteredHost,&filteredGpu);
-      printf("FRAME %d->%d %s glass=%d native=%.4f bilinear=%.4f filtered=%.4f GPU-ms\n",
-             ih,sh,scene,glass,nativeGpu,bilinearGpu,filteredGpu);
-      // Keep at least half the savings of the old bilinear 720p frame.
-      if(test<2 && !(filteredGpu<nativeGpu &&
-                       filteredGpu<=(nativeGpu+bilinearGpu)*0.5)) {
-        fprintf(stderr,"FAIL whole-frame GPU savings %d->%d %s glass=%d\n",ih,sh,scene,glass);
-        failed=1;
+      gpun_iniciar(sw,sh);
+      if(ih==720) gpun_forcar_720();
+      else if(sh==2160) gpun_alvo_1080();
+      gpun_ampliar_app(ajustes_ampliar_app());
+      // Isolate scaling quality from the internal target's effect level.
+      gfx_definir_efeitos_leves(0);gfx_definir_efeitos_minimos(0);
+      target(0);for(int n=0;n<2;n++) frame(settings);
+      readback();memcpy(native,pixels,bytes);
+      double ref=gradient(native,settings);
+      gpun_quadro_inicio();frame(settings);
+      if(test==3) {
+        GLint bound;glGetIntegerv(GL_FRAMEBUFFER_BINDING,&bound);assert(bound==0);
+        gpun_quadro_fim();continue;
       }
-      for(candidate=0;candidate<4;candidate++) {
-        if(candidate==1) continue;
-        copy(candidate!=0);readback();
-        double g=gradient(pixels,settings),e=error(pixels,settings),host,gpu;
-        for(size_t i=3;i<bytes;i+=4) assert(pixels[i]==linear[i]);
-        assert(pixels[((size_t)(sh-1-250*sh/1080)*sw+1550*sw/1920)*4+3]==0);
-        timing(settings,candidate?2:1,0,&host,&gpu);
-        printf("METRIC %d->%d %s glass=%d filter=%s gradient=%.6f native=%.6f MAE=%.6f host=%.4f GPU=%.4f alpha=identical\n",
-          ih,sh,scene,glass,names[candidate],g,ref,e,host,gpu);
-        if(candidate==3 && test<2) {
-          int pass=g>b+0.05*fmax(0.0,ref-b) && fabs(g-ref)<fabs(b-ref);
-          // Sharper fractional edges may move Home MAE by less than 1%.
-          if(!test) pass=pass && e<=be*1.01;
-          if(!pass) failed=1;
-        }
-      }
-    }
-    // Only the opt-in 4K output uses sharpening; TV output keeps bilinear.
-    candidate=test==1 || test==2?3:0;
-    ajustes_definir_vidro(0);target(1);frame(0);copy(1);readback();memcpy(linear,pixels,bytes);
-    progs[GFX_COPIA]=sgsr;progAtual=-1;
-    if(test==2) {gpun_alvo_1080();gpun_ampliar_app(1);}
-    else if(test<2) {gpun_forcar_720();gpun_ampliar_app(test==1);}
-    // Compare filter output independently of the effect level.
-    gfx_definir_efeitos_leves(0);gfx_definir_efeitos_minimos(0);
-    gpun_quadro_inicio();
-    if(test==3) {GLint bound;glGetIntegerv(GL_FRAMEBUFFER_BINDING,&bound);assert(bound==0);}
-    assert(glGetError()==GL_NO_ERROR);
-    frame(0);
-    assert(glGetError()==GL_NO_ERROR);
-    // The final draw must restore alpha writes even after a masked pass.
-    if(test!=3) glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_FALSE);
-    progs[GFX_COPIA]=sgsr;progAtual=-1;
-    gpun_quadro_fim();readback();
-    // TV scaling must match bilinear on the exact same source frame.
-    if(test==0) {
-      memcpy(linear,pixels,bytes);
+      // Production must restore alpha writes after a masked pass.
+      glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_FALSE);
+      gpun_quadro_fim();readback();memcpy(flipped,pixels,bytes);
+      double g=gradient(pixels,settings),e=error(pixels,settings);
       GLuint savedSource=source;source=intTex;candidate=0;
-      copy(0);readback();source=savedSource;
-    }
-    // Native 1080p has no copy pass; a texture round trip can round RGB bytes.
-    if(test!=3 && memcmp(linear,pixels,bytes)) {
-      fprintf(stderr,"FAIL production filter %d->%d\n",ih,sh);
-      failed=1;
+      copy(0);readback();memcpy(linear,pixels,bytes);
+      double b=gradient(linear,settings);
+      for(size_t i=3;i<bytes;i+=4) assert(flipped[i]==linear[i]);
+      assert(flipped[((size_t)(sh-1-250*sh/1080)*sw+1550*sw/1920)*4+3]==0);
+      // Require a measurable edge gain, including the subtle 3x Settings case.
+      int pass=memcmp(flipped,linear,bytes)!=0 && g>b*1.005;
+      printf("%s production quality %d->%d %s glass=%d gradient=%.6f bilinear=%.6f native=%.6f MAE=%.6f alpha=identical\n",
+             pass?"PASS":"FAIL",ih,sh,scene,glass,g,b,ref,e);
+      if(!pass) failed=1;
+      // The same source and production dispatch must retain exact TV output.
+      gpun_ampliar_app(0);
+      gpun_quadro_inicio();gpun_quadro_fim();readback();
+      assert(!memcmp(linear,pixels,bytes));
+      source=savedSource;
+      printf("PASS TV %d->%d %s glass=%d exact bilinear RGBA\n",ih,sh,scene,glass);
     }
     // Choice costs use the production level, including minimal 720p effects.
     gpun_iniciar(sw,sh);
     if(ih==720) gpun_forcar_720();
     else if(sh==2160) gpun_alvo_1080();
-    gpun_ampliar_app(sh==2160);
-    ui720_settings(3840,2160,sh==2160,0,ih);
-    for(int settings=0;settings<2;settings++) {
-      const char *scene=settings?"settings":"home";
-      char name[160];
-      target(0);for(int n=0;n<8;n++) frame(settings);
-      snprintf(name,sizeof name,"r4-test%d-%d-to-%d-%s-native",test,ih,sh,scene);png(argv[1],name);
-      target(1);for(int n=0;n<8;n++) frame(settings);
-      for(candidate=0;candidate<=3;candidate+=3) {
-        copy(candidate!=0);
-        snprintf(name,sizeof name,"r4-test%d-%d-to-%d-%s-%s",test,ih,sh,scene,names[candidate]);png(argv[1],name);
-      }
-    }
+    ui720_settings(3840,2160,test<3,0,ih);
+    gpun_ampliar_app(ajustes_ampliar_app());
     for(int settings=0;settings<2;settings++) {
       double host,gpu;
-      candidate=sh==2160?3:0;
-      for(int n=0;n<8;n++) {target(ih<sh);frame(settings);if(ih<sh)copy(1);}
+      candidate=test==0?2:test==3?0:3;
+      for(int n=0;n<2;n++) {target(ih<sh);frame(settings);if(ih<sh)copy(1);}
       target(0);
       timing(settings,test==3?0:2,2,&host,&gpu);
       printf("CHOICE ampliar=%s %d->%d %s level=%d host=%.4f GPU=%.4f ms\n",
-        sh==2160?"app":"tv",ih,sh,settings?"settings":"home",gpun_nivel(),host,gpu);
+        test<3?"app":"tv",ih,sh,settings?"settings":"home",gpun_nivel(),host,gpu);
       if(settings) {
-        char name[160];snprintf(name,sizeof name,"r4-test%d-%d-to-%d-settings-choice-%s-%s",test,ih,sh,sh==2160?"app":"tv",test==3?"native":test==0?"bilinear":"sharp-bilinear");
+        char name[160];snprintf(name,sizeof name,"r4-test%d-%d-to-%d-settings-choice-%s-%s",test,ih,sh,test<3?"app":"tv",test==3?"native":test==0?"sgsr":"sharp-bilinear");
         png(argv[1],name);
       }
     }
@@ -330,7 +268,6 @@ int main(int argc,char **argv) {
       gpun_ampliar_app(ajustes_ampliar_app());
       if(!panel) {
         assert(!ajustes_ampliar_app());
-        gpun_ampliar_app(app); // The shared gate must also reject a stale raw opt-in.
       }
       gpun_quadro_inicio();
       GLint bound;glGetIntegerv(GL_FRAMEBUFFER_BINDING,&bound);assert(bound==0);

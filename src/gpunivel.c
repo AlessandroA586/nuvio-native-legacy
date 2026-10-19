@@ -232,8 +232,9 @@ int gpun_upscale_suportado(void) {
 void gpun_ampliar_app(int app) {
   // Owner scope (#205): app scaling covers 720->1080, 720->4K and 1080->4K.
   // Automatic/4K falling back to a 1080 target is the same opt-in 1080->4K path.
-  // TV scaling, non-4K output and Mali-4xx/no-highp keep the original bilinear pass.
-  ampliarApp = app && telaW >= 3840 && telaH >= 2160 && upscaleSgsr;
+  // The caller supplies panel eligibility via ajustes_ampliar_app(). A 4K panel
+  // may grant only 1080p (C9); drawable size must not veto its 720p upscaler.
+  ampliarApp = app && upscaleSgsr;
   if ((!forca720 && !alvo1080) || (forca720 && telaW <= 1280 && telaH <= 720))
     printf("[gpu-nivel] ampliar=%s upscale=bilinear %dx%d -> %dx%d\n",
            ampliarApp ? "app" : "tv", telaW, telaH, telaW, telaH);
@@ -482,7 +483,8 @@ static int intPreparar(void) {
     return 0;
   }
   printf("[gpu-nivel] ampliar=%s upscale=%s %dx%d -> %dx%d\n",
-         ampliarApp ? "app" : "tv", upscaleNitido() ? "sharp-bilinear" : "bilinear",
+         ampliarApp ? "app" : "tv", !upscaleNitido() ? "bilinear" :
+         telaW % intW || telaH % intH ? "sgsr" : "sharp-bilinear",
          intW, intH, telaW, telaH);
   fflush(stdout);
   return 1;
@@ -518,8 +520,11 @@ void gpun_quadro_fim(void) {
     gfx_tex_aspect_atual = 0.0f;
     gfx_opacidade_grupo = 1.0f;
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    // RGB sharpening and unchanged alpha require two reads.
-    if (upscaleNitido())
+    // Fractional scaling uses SGSR; integer factors keep Sharp-Bilinear.
+    if (upscaleNitido() && (telaW % intW || telaH % intH))
+      gfx_rect(tela, intTex, GFX_COPIA, 0,
+               (float)intW, (float)intH, 0.0f, 1, 1, 1, 1);
+    else if (upscaleNitido())
       gfx_rect(tela, intTex, GFX_COPIA_NITIDA, (float)telaW / intW,
                1.0f / intW, 1.0f / intH, 0.0f, 1, 1, 1, 1);
     else

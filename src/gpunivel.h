@@ -65,8 +65,9 @@
 void gpun_iniciar(int w, int h);
 // Query with the current GL context; Mali-4xx/no fragment highp use bilinear.
 int gpun_upscale_suportado(void);
-// Output choice, independent of the internal resolution/effects. The shared
-// gate requires app opt-in, a 4K drawable and a supported GPU (not Mali-4xx).
+// Output choice, independent of drawable size and internal resolution/effects.
+// Pass panel eligibility + opt-in from ajustes_ampliar_app(); this gate rejects
+// unsupported GPUs (Mali-4xx/no-highp), even on an eligible 4K panel.
 void gpun_ampliar_app(int app);
 // Preview resize: keep the selected GPU level and rebuild its internal target.
 // Called on the drawing thread before beginning the next frame; other builds ignore it.
