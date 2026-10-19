@@ -38,6 +38,11 @@ printf '%s\0' "${sources[@]}" tests/ui720.c tests/ui720_settings.c |
 cc "$work"/src/*.o "$work"/src/dts/*.o "$work"/tests/*.o -o "$work/test" \
   -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL
 ui_rc=0
-NUVIO_DADOS="$work/data" "$work/test" "$out" > "$out/results.txt" 2>&1 || ui_rc=$?
+NUVIO_DADOS="$work/data" "$work/test" "$out" "${@:2}" > "$out/results.txt" 2>&1 || ui_rc=$?
 rg '^(GPU |METRIC |BLIT |FRAME |CHOICE |PASS |FAIL |\[gpu-nivel\] ampliar=)' "$out/results.txt"
 [ "$ui_rc" -eq 0 ]
+if [ "$#" -lt 2 ]; then
+  NUVIO_DADOS="$work/data" "$work/test" "$out" contracts > "$out/contracts.txt" 2>&1 || ui_rc=$?
+  rg '^(PASS |FAIL )' "$out/contracts.txt"
+  [ "$ui_rc" -eq 0 ]
+fi
