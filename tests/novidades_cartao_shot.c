@@ -231,9 +231,12 @@ int main(int argc, char **argv) {
           snprintf(nome, sizeof nome, "showoff-100-highlight-%d", c + 1);
           captura(saida, nome, novcartao_teste_inicio_cena(c) + 1.2f, 0);
         }
-        for (int p = 1; p < novcartao_paginas(); p++) {
-          snprintf(nome, sizeof nome, "showoff-100-page-%d", p + 1);
-          captura(saida, nome, 1.2f, p);
+        for (int idi = 0; idi < 2; idi++) {
+          ajustesDeTeste(idi, 0, 2);
+          for (int p = 0; p < novcartao_paginas(); p++) {
+            snprintf(nome, sizeof nome, "showoff-100-%s-page-%d", idioma_iso(idi), p + 1);
+            captura(saida, nome, 1.2f, p);
+          }
         }
       }
     }
