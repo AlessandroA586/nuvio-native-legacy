@@ -189,9 +189,18 @@ int main(int argc, char **argv) {
     setting(layout, glass, mode); quadros(90, NULL);
     tecla(SDLK_DOWN); quadros(90, NULL);
     capture(dir, phase, mode, layout == 1 ? "standard" : "dynamic");
-    assert(palcoFundoDestino() == 1 && palcoFundoAlpha == 1.0f);
-    if (!mode) { otherInfo[layout] = heroInfo; otherBackdrops[layout] = stageArtwork; }
-    else assert(heroInfo == otherInfo[layout] && stageArtwork == otherBackdrops[layout]);
+    if (layout == 2) {
+      assert(palcoFundoDestino() == mode);
+      if (mode == 0) {
+        assert(palcoFundoAlpha == 0 && heroInfo == 0 && heroBackdrops == 0 && stageArtwork == 0);
+        blankHero();
+      } else if (mode == 1) assert(heroInfo > 0 && heroBackdrops > 0);
+      else assert(heroInfo == 0 && heroBackdrops == 0 && stageArtwork == 1);
+    } else {
+      assert(palcoFundoDestino() == 1 && palcoFundoAlpha == 1.0f);
+      if (!mode) { otherInfo[layout] = heroInfo; otherBackdrops[layout] = stageArtwork; }
+      else assert(heroInfo == otherInfo[layout] && stageArtwork == otherBackdrops[layout]);
+    }
     tecla(SDLK_UP); quadros(90, NULL);
   }
   tex_encerrar(); txt_encerrar();

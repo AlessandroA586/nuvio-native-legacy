@@ -465,7 +465,8 @@ int main(int argc, char **argv) {
           assert(palcoFundoModo == expected);
           assert(expected == 0 ? palcoFundoAlpha == 0 : palcoFundoAlpha > .99f);
           const CatItem *focused = cat_item_exato(fileiraItemIndice(&fileiras[foco.fileira], foco.coluna));
-          assert(focused && palcoArte(focused) && tex_obter_hero(palcoArte(focused)));
+          assert(focused && palcoArte(focused));
+          if (expected == 2) assert(tex_obter_hero(palcoArte(focused)));
           assert(ajustes_fundo_din() == (getenv("NV_DINPALCO_BACKGROUND") ?
                  atoi(getenv("NV_DINPALCO_BACKGROUND")) : 0));
           assert(!home_topo_fracao());
