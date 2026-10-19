@@ -1,8 +1,6 @@
-// Sources sheet: (1) no drop shadow around it on any entry point (detail with
-// the clock island, player island, standalone); (2) a tab change animates, the
-// focus pill slides through intermediate positions. Writes a settled frame and
-// a 3-frame tab strip.
-//   bash tests/fontes_sombra.sh <dir> [git-ref-for-old-streams.c]
+// Sources sheet: compare rendered list pixels with the matching panel-only
+// frame, checking the removed fade and text clipping while scrolling.
+//   bash tests/fontes_cabecalho.sh <dir> [git-ref-for-old-streams.c]
 #include "catalogo.h"
 #include "nvtmp.h"
 #include "ajustes.h"
@@ -29,11 +27,8 @@ enum { LW = 1920, LH = 1080 };
 static Uint32 relogio = 100000;
 static SDL_Surface *strip;
 static int noPlayer, semRelogio;
-#ifndef NV_BASELINE
-float stream_folha_pilula_x(void);
-float stream_folha_topo(void);
-float stream_folha_recorte_y(void);
-#endif
+static int medir, topo, painelX, painelW;
+static double piorFade, piorClip;
 
 static unsigned char q[LW * LH * 3];
 static void salvar(const char *pre, int n) {
@@ -88,6 +83,36 @@ static double banda(const unsigned char *b, int x0, int x1, int y0, int y1) {
     for (int x = x0; x < x1; x++) { const unsigned char *p = b + ((size_t)(LH - 1 - y) * LW + x) * 3;
       t += p[0] * .30 + p[1] * .59 + p[2] * .11; }
   return t;
+}
+
+// Called immediately before list drawing in either revision, after the panel
+// and header have rendered. Convert virtual UI coordinates to framebuffer pixels.
+void fontes_painel(float top, float x, float w) {
+  float scale = gfx_escala();
+  topo = (int)ceilf(top * scale); painelX = (int)(x * scale); painelW = (int)(w * scale);
+  if (medir) ler(qa);
+}
+
+void fontes_conferir(void) {
+  if (!medir) return;
+  ler(q);
+  // Fade starts at top-8 but the fixed scissor cuts it at top. Test the
+  // remaining 26 px too, so restoring only the fade cannot escape detection.
+  for (int r = topo; r < topo + 26; r++) {
+    double ref = banda(qa, painelX + 6, painelX + 16, r, r + 1);
+    double diff = fabs(ref - banda(q, painelX + 6, painelX + 16, r, r + 1));
+    if (ref > 0 && diff / ref > piorFade) piorFade = diff / ref;
+  }
+  // Pixel-by-pixel comparison across the text columns catches glyph slivers
+  // even if their summed luma happens to match the background.
+  for (int r = topo - 8; r < topo; r++)
+    for (int x = painelX + 32; x < painelX + painelW - 32; x++) {
+      size_t i = ((size_t)(LH - 1 - r) * LW + x) * 3;
+      for (int c = 0; c < 3; c++) {
+        double diff = abs((int)q[i+c] - qa[i+c]);
+        if (diff > piorClip) piorClip = diff;
+      }
+    }
 }
 
 static const char *JSON =
@@ -179,25 +204,17 @@ int main(int argc, char **argv) {
   else { w = 820; x = LW - w - 40; y = 40; h = LH - 80; }
   assert(w > 780 && h > 700);
 
+  medir = 1;
   // Scroll the list down so rows slide under the header.
   { SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_DOWN;
     for (int k = 0; k < 14; k++) { stream_folha_evento(&e); for (int i = 0; i < 6; i++) quadro(); }
     for (int i = 0; i < 60; i++) quadro(); }
-  // Clip: scrolled, rows are cut at the list top itself; the 8 px above it
-  // (kept only at rest) would show a sliver of a half-hidden row.
-  assert(stream_folha_recorte_y() >= stream_folha_topo() && "scrolled list clipped above the list top");
-  salvar(pre, 1); ler(q);
-  { int top = (int)stream_folha_topo();
-    // Left panel gutter (no cards): luma per row must stay flat, a dark band shows as a dip.
-    double ref = 0, worst = 0; int wr = 0;
-    int c0 = (int)x + 6, c1 = (int)x + 16;
-    for (int r = top - 12; r < top - 2; r++) ref += banda(q, c0, c1, r, r + 1);
-    ref /= 10;
-    for (int r = top - 48; r < top - 26; r++) {
-      double d = ref - banda(q, c0, c1, r, r + 1);
-      if (d > worst) { worst = d; wr = r; } }
-    printf("%s: top %d ref %.0f worst dip %.0f at row %d (of %d px)\n", mode, top, ref, worst, wr, c1 - c0);
-    assert(worst < ref * .03 && "dark band under the sheet header"); }
+  salvar(pre, 1);
+  printf("%s: top %d fade difference %.3f, clipped pixel difference %.0f\n",
+         mode, topo, piorFade, piorClip);
+  fflush(stdout);
+  assert(piorFade < .03 && "dark band under the sheet header");
+  assert(piorClip <= 1 && "rendered text leaks above the list top");
   printf("PASS: %s header band gone\n", mode);
   return 0;
 }
