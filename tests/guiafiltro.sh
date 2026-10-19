@@ -10,6 +10,18 @@ sources=(tests/guiafiltro_loader.c src/ltv.c src/js.c src/idcanal.c src/dados.c 
   src/guiaaddons.c src/guiafiltro.c src/livecat.c src/epg.c src/xtepg.c src/lembrete.c src/guialembrete.c
   src/fontecache.c src/cachearte.c src/cachedisco.c src/xmltv.c)
 common=(-Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -O1 -g -Wno-macro-redefined -lz)
+# Focused review fixes; use the same callbacks and storage as the full suite.
+if [ "${1:-}" = review-fixes ]; then
+  cc "${flags[@]}" "${sources[@]}" "${common[@]}" -o "$work/loader"
+  failed=0
+  for regression in admission-storage source-removal-inventory; do
+    rc=0
+    GUIAFILTRO_CASE="$regression" NUVIO_DADOS="$work/$regression-data" \
+      "$work/loader" "$work/$regression-data" || rc=$?
+    if [ "$rc" != 0 ]; then failed=1; fi
+  done
+  exit "$failed"
+fi
 # Stalker and addon source caps: real ingestion, reviewed FAIL/current PASS.
 git show e35ee7ac6:src/guia.c > "$work/source-cap-review.c"
 git show e35ee7ac6:src/stalker.c > "$work/stalker-review.c"
@@ -132,7 +144,7 @@ if [ "${1:-}" = raw-storage ]; then
   done
   exit "$failed"
 fi
-for regression in raw-candidate-cap publication-storage; do
+for regression in raw-candidate-cap publication-storage admission-storage source-removal-inventory; do
   GUIAFILTRO_CASE="$regression" NUVIO_DADOS="$work/$regression-data" \
     "$work/loader" "$work/$regression-data"
 done

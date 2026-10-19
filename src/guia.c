@@ -353,6 +353,7 @@ static int sCacheN[G_MAX_LTV], sCacheErro[G_MAX_LTV], sCacheCortada[G_MAX_LTV];
 #define G_MAX_PENDENTES 1200  // One load's suggestion budget.
 #define G_CANDIDATOS_MAX 30000 // Bounded input; visible caps apply only in selecionarSecoes().
 static int sPendentes;
+static size_t sTextoSubstituido;
 
 enum { G_PARADO, G_BAIXANDO, G_PRONTO, G_FALHOU };
 static int estado = G_PARADO;
@@ -425,7 +426,7 @@ static void stagingZerar(void) {
   free(sCanais); sCanais = NULL; sNCanais = sCapCanais = 0;
   free(sCats); sCats = NULL; sNCats = sCapCats = 0;
   memset(sLtvF, 0, sizeof sLtvF); sNLtvF = 0;
-  sPendentes = 0;
+  sPendentes = 0; sTextoSubstituido = 0;
 }
 
 static int sFonteChave(const char *ch, int tipo, const char *nome, const char *base) {
@@ -506,6 +507,7 @@ static int sGruposEscolhidos(int f, const char **v, int max);
 static int nomeNaLista(const char *nome, const char *const *v, int n);
 static void cacheCru(int f, const char *grupo, const GCru *c);
 static int sCotaCompleta(void);
+static int compactarStaging(void);
 // Uma versao escondida pelo "Preferir 4K" vira reserva do canal que ficou.
 static void sAltAdd(const char *dono, const char *id, const char *nome) {
   if (!xtream_e_id(id) || sNAlts >= G_ALT_MAX) return;
@@ -608,6 +610,18 @@ static int sCanalAdd(int f, const GCru *c) {
       (sCotaCompleta() || sNCanais >= G_CANDIDATOS_MAX || (pendente && sPendentes >= G_MAX_PENDENTES))) {
     sLtvF[f].cortada = 1; return 0;
   }
+  // Stable rows cannot free slots later. Keep scanning for inventory and filters.
+  if (quem != GF_TROCA && sFltLive.modo != GF_PREFERIR_4K && !ajustes_livetv_sugerir()) {
+    int nc = 0, found = 0;
+    for (int i = 0; i < sNCats; i++) {
+      nc++;
+      if (sCats[i].fonte == f && !strcmp(sCats[i].nome, grupo)) found = 1;
+    }
+    if (sNCanais >= sTeto || sNCanais >= GUIACORTE_MAX_CANAL ||
+        (!found && nc >= GUIACORTE_MAX_CAT)) {
+      sLtvF[f].cortada = 1; return 0;
+    }
+  }
   cat = sCatDe(f, grupo);
   if (cat < 0) return 0;
   if (sNCanais >= sCapCanais) {
@@ -618,12 +632,22 @@ static int sCanalAdd(int f, const GCru *c) {
   }
   g = &sCanais[quem == GF_TROCA ? velho : sNCanais];
   const char *antigo = quem == GF_TROCA ? g->id : NULL;
-  if (antigo) sAltAdd(antigo, antigo, g->nome);
+  if (antigo) {
+    sAltAdd(antigo, antigo, g->nome);
+    const char *fields[] = {g->id, g->nome, g->logo, g->desc, g->epgId, g->tvgNome,
+                            g->url, g->ua, g->ref, g->tipo, g->grupoOriginal};
+    for (size_t i = 0; i < sizeof fields / sizeof fields[0]; i++)
+      sTextoSubstituido += strlen(fields[i]) + 1;
+  }
   memset(g, 0, sizeof *g);
   g->id = ltv_dup(&sArena, c->id);
   g->nome = ltv_dup(&sArena, c->nome);
   g->logo = ltv_dup(&sArena, c->logo);
-  g->desc = ltv_dup(&sArena, c->desc);
+  // Full descriptions belong to display slots, not the 30000-candidate scan.
+  // Overflow winners retain playback metadata and may publish without a description.
+  int slot = quem == GF_TROCA ? velho : sNCanais;
+  g->desc = slot < sTeto && slot < GUIACORTE_MAX_CANAL ?
+    ltv_dupn(&sArena, c->desc, c->desc ? strnlen(c->desc, 1024) : 0) : "";
   g->epgId = ltv_dup(&sArena, c->epgId);
   g->tvgNome = ltv_dup(&sArena, c->tvgNome);
   g->url = ltv_dup(&sArena, c->url);
@@ -644,6 +668,8 @@ static int sCanalAdd(int f, const GCru *c) {
     sNCanais++; if (pendente) sPendentes++;
   }
   g->numero = c->numero > 0 ? c->numero : sLtvF[f].nCanais;
+  // Replacements leave dead arena strings; reclaim them during the scan.
+  if (sTextoSubstituido >= 1024 * 1024 && compactarStaging()) sTextoSubstituido = 0;
   return 1;
 }
 
@@ -1849,6 +1875,13 @@ void guia_fonte_esquecer(const char *chave) {
       gpAberto = fopAberto = focoFontes = fontesCol = 0;
       fontesOkDesde = fontesOkLongo = 0;
       fopCanal = NULL;
+      // Spool records contain source/group indexes from the old source array.
+      if (inventarioDisco) fclose(inventarioDisco);
+      inventarioDisco = NULL; inventarioCortado = 0;
+      fInventarioCat[0] = 0;
+      for (k = 0, w = 0; k < nInventario; k++)
+        if (strcmp(inventario[k].fonte, chave)) inventario[w++] = inventario[k];
+      nInventario = w;
       for (k = 0, w = 0; k < nCanais; k++)
         if (canais[k].fonte != i) canais[w++] = canais[k];
       nCanais = w;
@@ -2182,7 +2215,7 @@ static int compactarStaging(void) {
   int *mapa = malloc(sizeof *mapa * (size_t)(sNCats + 1));
   GCanal *cs = malloc(sizeof *cs * (size_t)(sNCanais ? sNCanais : 1));
   GCat *ct = malloc(sizeof *ct * (size_t)(sNCanais + 1));
-  GAlt *as = malloc(sizeof *as * (size_t)(keptAlts ? keptAlts : 1));
+  GAlt *as = malloc(sizeof *as * (size_t)(keptAlts ? (keptAlts + 255) / 256 * 256 : 1));
   memcpy(fontesNovas, sLtvF, sizeof fontesNovas);
   for (int f = 0; f < sNLtvF; f++) fontesNovas[f].gi = NULL;
   if (!mapa || !cs || !ct || !as) goto falhou;
@@ -2195,7 +2228,7 @@ static int compactarStaging(void) {
     GFonteLtv *F = &fontesNovas[f];
     COPY_TEXT(F->base, sLtvF[f].base);
     if (!F->ngi) continue;
-    F->gi = malloc(sizeof *F->gi * (size_t)F->ngi);
+    F->gi = malloc(sizeof *F->gi * (size_t)((F->ngi + 63) / 64 * 64));
     if (!F->gi) goto falhou;
     memcpy(F->gi, sLtvF[f].gi, sizeof *F->gi * (size_t)F->ngi);
     for (int i = 0; i < F->ngi; i++) COPY_TEXT(F->gi[i].nome, sLtvF[f].gi[i].nome);

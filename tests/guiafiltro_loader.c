@@ -839,6 +839,86 @@ static void rawCandidateCapRegression(void) {
   adotarStaging();
   assert(nCanais == 900 && canalPorId("xtream:better"));
 }
+#ifdef G_INVENTARIO_BLOCO
+// Catch admission-time growth, including refresh storage, before publication frees it.
+static void admissionStorageRegression(void) {
+  for (int mode = GF_TODAS; mode < GF_MODOS; mode++) {
+    int fl = begin(mode, 900);
+    guiafiltro_cat_alternar(&sFltLive, "Unused");
+    char description[1025];
+    memset(description, 'x', sizeof description - 1); description[1024] = 0;
+    size_t peak = 0;
+    for (int i = 0; i < 30000; i++) {
+      char id[32], name[40];
+      snprintf(id, sizeof id, "xtream:%d", i);
+      snprintf(name, sizeof name, "Station n%d %s", i, mode == GF_SO_4K ? "4K" : "FHD");
+      GCru c = {.id = id, .nome = name, .grupo = "Sports", .desc = description};
+      sGrupoInfo(fl, c.grupo, 1); sCanalAdd(fl, &c);
+      size_t bytes = ltv_arena_bytes(&sArena) + (size_t)sCapCanais * sizeof *sCanais +
+        (size_t)sCapCats * sizeof *sCats + (size_t)sNInventario * sizeof *sInventario +
+        (size_t)sNAlts * sizeof *sAlts + (size_t)sDup.cap * sizeof *sDup.t +
+        sCacheBytes + inventorySpoolBytes(sInventarioDisco) +
+        ltv_arena_bytes(&arena) + (size_t)capCanais * sizeof *canais +
+        (size_t)nInventario * sizeof *inventario + inventorySpoolBytes(inventarioDisco);
+      if (bytes > peak) peak = bytes;
+    }
+    printf("admission mode=%d peak=%zu bytes (budget 16 MiB)\n", mode, peak); fflush(stdout);
+    assert(peak <= 16 * 1024 * 1024);
+    channel(fl, "UHD", "xtream:better", "Station n0 4K");
+    adotarStaging();
+    assert(nCanais == 900 && canalPorId("xtream:899"));
+    assert(strlen(canalPorId("xtream:899")->desc) == 1024);
+    if (mode == GF_PREFERIR_4K) assert(canalPorId("xtream:better"));
+  }
+  // Repeated upgrades must reclaim dead arena strings without losing duplicate indexes.
+  int fl = begin(GF_PREFERIR_4K, 900);
+  char description[1025];
+  memset(description, 'x', 1024); description[1024] = 0;
+  const char *qualities[] = {"SD", "HD", "FHD", "4K"};
+  for (int quality = 0; quality < 4; quality++)
+    for (int i = 0; i < 900; i++) {
+      char id[32], name[40];
+      snprintf(id, sizeof id, "xtream:%d-%d", quality, i);
+      snprintf(name, sizeof name, "Station n%d %s", i, qualities[quality]);
+      GCru c = {.id = id, .nome = name, .grupo = "Sports", .desc = description};
+      sGrupoInfo(fl, c.grupo, 1); sCanalAdd(fl, &c);
+      assert(ltv_arena_bytes(&sArena) < 3 * 1024 * 1024);
+    }
+  channel(fl, "Overflow", "xtream:extra", "Extra HD");
+  adotarStaging();
+  assert(nCanais == 900 && canalPorId("xtream:3-899"));
+  GuiaVariante variants[4];
+  assert(guia_variantes("xtream:3-899", variants, 4) == 4);
+}
+static void sourceRemovalInventoryRegression(void) {
+  nAddons = 2; bases[0] = "https://a.invalid"; bases[1] = "https://b.invalid";
+  begin(GF_TODAS, 900);
+  int a = sFonte(LTV_ADDON, bases[0], "A", bases[0]);
+  int b = sFonte(LTV_ADDON, bases[1], "B", bases[1]);
+  for (int i = 0; i < 80; i++) {
+    char id[32], name[40];
+    snprintf(id, sizeof id, "tv:%d", i);
+    snprintf(name, sizeof name, "A station %d", i);
+    channel(a, "Sports", id, name);
+  }
+  channel(b, "Sports", "tv:79", "B station");
+  adotarStaging(); cacheGravar();
+  char removed[LTV_CHAVE], remaining[LTV_CHAVE];
+  ltv_chave_fonte(LTV_ADDON, bases[0], removed, sizeof removed);
+  ltv_chave_fonte(LTV_ADDON, bases[1], remaining, sizeof remaining);
+  fioVivo = 1; // Settings/sync removal while refresh is still running.
+  guia_fonte_esquecer(removed);
+  filtrosAbrir(); fMontarCanais("Sports");
+  for (int i = 0; i < fN; i++) {
+    assert(strcmp(fIt[i].fonte, removed));
+    assert(strcmp(fIt[i].fonte, remaining) || strncmp(fIt[i].nome, "A station", 9));
+  }
+  assert(fN == 1 && !strcmp(fIt[0].nome, "B station") && !fIt[0].oculto);
+  assert(!guiafiltro_canal_oculto_fonte(&fltLive, remaining, "tv:79"));
+  assert(nCanais == 1 && !strcmp(canais[0].nome, "B station"));
+  fioVivo = cargaCancelada = recarregarPend = 0;
+}
+#endif
 static void publicationStorageRegression(void) {
   for (int pass = 0; pass < 2; pass++) {
     int fl = begin(GF_TODAS, 900);
@@ -963,6 +1043,10 @@ int main(int argc, char **argv) {
     else if (!strcmp(regression, "category-channel-cap")) categoryChannelCapRegression();
     else if (!strcmp(regression, "raw-candidate-cap")) rawCandidateCapRegression();
     else if (!strcmp(regression, "publication-storage")) publicationStorageRegression();
+#ifdef G_INVENTARIO_BLOCO
+    else if (!strcmp(regression, "admission-storage")) admissionStorageRegression();
+    else if (!strcmp(regression, "source-removal-inventory")) sourceRemovalInventoryRegression();
+#endif
     else if (!strcmp(regression, "raw-budget")) rawBudgetRegression();
     else if (!strcmp(regression, "raw-offline")) rawOfflineRegression();
     else if (!strcmp(regression, "session-inventory")) sessionInventoryRegression();
