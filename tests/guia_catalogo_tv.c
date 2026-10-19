@@ -60,7 +60,7 @@ int main(void) {
   strcpy(carga.base, f.base); carga.ativo = 1; addonsCarga = &carga; nAddonsCarga = 1;
   int fl = sFonte(LTV_ADDON, f.base, f.nome, f.base);
   assert(fl >= 0);
-  assert(lerPagina(&f, fl, 0, &novos) == 3);
+  assert(lerPagina(&f, fl, 0, &novos, NULL) == 3);
   assert(novos == 2 && sNCanais == 2);
   assert(!strcmp(sCanais[0].id, "m3u:canaisabertos:0"));
   assert(!strcmp(sCanais[1].id, "ec:aee"));
@@ -80,7 +80,7 @@ int main(void) {
   strcpy(carga.base, f.base);
   fl = sFonte(LTV_ADDON, f.base, f.nome, f.base);
   assert(fl >= 0);
-  assert(lerPagina(&f, fl, 0, &novos) == 4);
+  assert(lerPagina(&f, fl, 0, &novos, NULL) == 4);
   assert(novos == 3 && sNCanais == 5);
   assert(!strcmp(sCanais[2].id, "m3u-live-1") && !strcmp(sCanais[2].tipo, "channel"));
   assert(!strcmp(sCanais[3].id, "m3u-live-2") && !strcmp(sCanais[3].tipo, "channel")); // do catalogo

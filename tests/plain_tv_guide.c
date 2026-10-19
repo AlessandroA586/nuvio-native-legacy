@@ -54,7 +54,7 @@ int main(void) {
     sondaManifestos();
     assert(sNFontes == 1 && sNSabe == 1 && sSabe[0].canal == 1);
     int added = 0;
-    assert(lerPagina(&sFontes[0], 0, 10, &added) == 3);
+    assert(lerPagina(&sFontes[0], 0, 10, &added, NULL) == 3);
     assert(added == 3 && sNCanais == 3);
     cats = sCats;
     for (int i = 0; i < 3; i++) {

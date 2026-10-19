@@ -1,13 +1,6 @@
 // Exercise the real staging, Xtream/M3U callbacks, cache and fallback paths.
 #include "guiafiltro.h"
-#ifdef GUIAFILTRO_BASELINE
-static int baseline_avaliar(const GuiaFiltro *f, GuiaFiltroDup *d, int fonte,
-    const char *grupo, const char *id, const char *nome, const char *origem, int *idx) {
-  (void)f; (void)d; (void)fonte; (void)grupo; (void)id; (void)nome; (void)origem; (void)idx;
-  return GF_ENTRA;
-}
-#define guiafiltro_avaliar baseline_avaliar
-#endif
+static char *filtroResposta(const char *url);
 #define GUIAFILTRO_LOADER
 #define main cache_test_main
 #include "guiacache.c"
@@ -27,10 +20,101 @@ static void channel(int fl, const char *cat, const char *id, const char *nome) {
   sGrupoInfo(fl, cat, 1);
   sCanalAdd(fl, &c);
 }
+void desc_remontar_fileiras(void) {}
+void desc_repetir(void) {}
+static int pageRequests, pageScenario;
+static char *filtroResposta(const char *url) {
+  char body[24000];
+  size_t used = 0;
+  if (!pageScenario) return NULL;
+  assert(strstr(url, "/catalog/tv/channels"));
+  pageRequests++;
+  used += (size_t)snprintf(body + used, sizeof body - used, "{\"metas\":[");
+  int offset = pageScenario == 2 && pageRequests > 1 ? 100 : 0;
+  int count = pageScenario == 2 && pageRequests > 1 ? 1 : 100;
+  for (int i = 0; i < count; i++)
+    used += (size_t)snprintf(body + used, sizeof body - used,
+      "%s{\"id\":\"channel:%d\",\"name\":\"X %s\",\"genre\":[\"%s\"]}",
+      i ? "," : "", offset + i, offset ? "4K" : "HD", i == 0 ? "Hidden" : "Sports");
+  snprintf(body + used, sizeof body - used, "]}");
+  return strdup(body);
+}
+static void paginationRegression(int mode) {
+  memset(&fltLive, 0, sizeof fltLive); fltLive.modo = mode; sFltLive = fltLive;
+  guiafiltro_cat_alternar(&sFltLive, "Hidden");
+  sNFontes = nAddonsCarga = 1; nCargaUrls = 0;
+  addonsCarga = calloc(1, sizeof *addonsCarga);
+  strcpy(addonsCarga[0].base, "https://fixture.invalid"); addonsCarga[0].ativo = 1;
+  memset(sFontes, 0, sizeof sFontes);
+  strcpy(sFontes[0].base, addonsCarga[0].base);
+  strcpy(sFontes[0].id, "channels"); strcpy(sFontes[0].tipo, "tv");
+  pageRequests = 0; pageScenario = 1; cargaCancelada = 0;
+  fioGuia(NULL);
+  printf("pagination mode=%d requests=%d (expected 2)\n", mode, pageRequests); fflush(stdout);
+  assert(pageRequests == 2);
+  // A full filtered page must not hide a later, distinct 4K page.
+  if (mode == GF_SO_4K) {
+    sFltLive.nCat = 0;
+    nAddonsCarga = 1; addonsCarga = calloc(1, sizeof *addonsCarga);
+    strcpy(addonsCarga[0].base, sFontes[0].base); addonsCarga[0].ativo = 1;
+    pageRequests = 0; pageScenario = 2;
+    fioGuia(NULL);
+    assert(pageRequests == 2 && sNCanais == 1 && !strcmp(sCanais[0].nome, "X 4K"));
+  }
+  pageScenario = 0;
+}
+static void visibilityRegression(void) {
+  int fl = begin(GF_PREFERIR_4K, 5);
+  channel(fl, "Sports", "xtream:1", "X 4K");
+  channel(fl, "News", "xtream:2", "Y 4K");
+  channel(fl, "News", "xtream:3", "Z 4K");
+  adotarStaging(); cacheGravar();
+  char name[64]; cacheNomeFonte("xt", name, sizeof name);
+  char *cached = dados_ler(name); assert(!cached); free(cached);
+  filtrosAbrir();
+  guiafiltro_cat_alternar(&fltLive, "Sports");
+  guiafiltro_canal_alternar(&fltLive, "xtream:2", "Y 4K", "News");
+  fSujo = 1; fioVivo = 1; // Exercise cancellation without starting a thread.
+  painelFechar(); fioVivo = 0;
+  assert(nCanais == 1 && !strcmp(canais[0].id, "xtream:3"));
+  assert(nCats == 1 && nZapL == 1 && ltvF[0].nCanais == 1);
+  sNFontes = nAddonsCarga = nCargaUrls = 0; cargaCancelada = 0;
+  sFltLive = fltLive; fioGuia(NULL); publicar();
+  assert(nCanais == 1 && !strcmp(canais[0].id, "xtream:3"));
+  filtrosAbrir(); guiafiltro_cat_alternar(&fltLive, "News");
+  fSujo = 1; fioVivo = 1; painelFechar(); fioVivo = 0;
+  assert(nCanais == 0 && nCats == 0 && nZapL == 0);
+}
+static void variantsRegression(void) {
+  int fl = begin(GF_PREFERIR_4K, 5);
+  channel(fl, "Sports", "xtream:1", "X SD");
+  channel(fl, "Sports", "xtream:2", "X HD");
+  channel(fl, "Sports", "xtream:3", "X FHD");
+  channel(fl, "Sports", "xtream:4", "X 4K");
+  adotarStaging();
+  GuiaVariante v[5];
+  assert(guia_variantes("xtream:4", v, 3) == 3);
+  assert(!strcmp(v[0].nome, "X 4K") && !strcmp(v[1].nome, "X FHD") && !strcmp(v[2].nome, "X HD"));
+  assert(guia_variantes("xtream:4", v, 1) == 1 && !strcmp(v[0].nome, "X 4K"));
+  guiafiltro_canal_alternar(&fltLive, "xtream:3", "X FHD", "Sports");
+  assert(guia_variantes("xtream:4", v, 3) == 3);
+  assert(!strcmp(v[1].nome, "X HD") && !strcmp(v[2].nome, "X SD"));
+}
 int main(int argc, char **argv) {
   int fl;
   assert(argc == 2); dados_iniciar(argv[1]);
   fltPerfil = 1;
+  const char *regression = getenv("GUIAFILTRO_CASE");
+  if (regression) {
+    if (!strncmp(regression, "pagination", 10))
+      paginationRegression(!strcmp(regression, "pagination-4k") ? GF_SO_4K :
+                           !strcmp(regression, "pagination-prefer") ? GF_PREFERIR_4K : GF_TODAS);
+    else if (!strcmp(regression, "visibility")) visibilityRegression();
+    else if (!strcmp(regression, "variants")) variantsRegression();
+    else assert(0);
+    printf("PASS: %s regression\n", regression);
+    return 0;
+  }
   for (int modo = 0; modo < GF_MODOS; modo++) {
     fl = begin(modo, 5);
     channel(fl, "Sports", "xtream:1", "X 4K");

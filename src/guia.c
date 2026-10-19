@@ -1196,9 +1196,8 @@ static void sondaManifestos(void) {
 // Uma pagina de catalogo de addon para a fonte `fl`. Devolve quantos METAS a
 // pagina trouxe — nao quantos entraram: uma fonte pode repetir canais de outra,
 // e contar so os novos encerraria a pagina uma rodada cedo. `novos` recebe
-// quantos entraram de fato — a diferenca e o que separa "acabou" de "catalogo
-// que ignora skip e repete a mesma pagina".
-static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
+// quantos entraram de fato. The page ID fingerprint is independent of filters.
+static int lerPagina(const GFonte *f, int fl, int skip, int *novos, unsigned long *pagina) {
   char url[NV_ADDON_PEDIDO_MAX];
   char *corpo;
   const char *p, *sel[256];
@@ -1214,13 +1213,15 @@ static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
   if (!cargaAtual() || !cargaBaseLigada(f->base)) return 0;
   corpo = cargaBaixar(url);
   if (!corpo || !cargaAtual()) { free(corpo); return 0; }
+  if (pagina) *pagina = 0;
   p = js_array(corpo, NULL, "metas");
   while (p) {
     const char *fim = js_fim(p);
     char id[80], idLongo[IDCANAL_LONGO_MAX + 1], nome[200], logo[600], desc[600], gen[64] = "", mtipo[16] = "";
+    int temId = js_texto(p, fim, "id", idLongo, sizeof idLongo);
     n++;
-    if (js_texto(p, fim, "id", idLongo, sizeof idLongo) &&
-        idcanal_curto(idLongo, id, sizeof id) &&
+    if (pagina && temId) *pagina += ltv_hash(idLongo);
+    if (temId && idcanal_curto(idLongo, id, sizeof id) &&
         js_texto(p, fim, "name", nome, sizeof nome) && sCanalPorId(fl, id) < 0) {
       GCru c;
       // O catalogo se declara de canal, mas um meta que se diz filme/serie
@@ -1711,13 +1712,16 @@ static void *fioGuia(void *u) {
   for (i = 0; cargaAtual() && i < sNFontes; i++) {
     int fl = sFonte(LTV_ADDON, sFontes[i].base, nomeDoAddon(sFontes[i].base), sFontes[i].base);
     int skip, okC = 0;
+    unsigned long anterior = 0;
     if (fl < 0) continue;
     for (skip = 0; cargaAtual() && skip < 100000; skip += G_PAGINA) {
-      int novos = 0, n = lerPagina(&sFontes[i], fl, skip, &novos);
+      unsigned long pagina = 0;
+      int novos = 0, n = lerPagina(&sFontes[i], fl, skip, &novos, &pagina);
       if (n <= 0) break;
       okC = 1;
-      // Pagina cheia que nao trouxe nada novo e catalogo que ignora `skip`.
-      if (n < G_PAGINA || (novos == 0 && !sFiltrados && sFltLive.modo == GF_TODAS)) break;
+      // Detect ignored offsets even when filtering admits no new channels.
+      if (n < G_PAGINA || (skip > 0 && pagina == anterior)) break;
+      anterior = pagina;
     }
     if (sRetidos >= sTeto) sLtvF[fl].cortada = 1;
     if (okC) ok = 1;
@@ -1772,9 +1776,12 @@ static void empacotar(void) {
   int i, w, *ordem = NULL, *mapa = NULL, *pos = NULL;
   int az[G_MAX_LTV];
   GCanal *tmp;
-  // Canal de addon desligado nao fica.
+  // Apply current visibility rules even when an offline refresh keeps this list.
   for (i = 0, w = 0; i < nCanais; i++)
-    if (!canais[i].base[0] || (baseLigada(canais[i].base) && !baseOculta(canais[i].base))) canais[w++] = canais[i];
+    if ((!canais[i].base[0] || (baseLigada(canais[i].base) && !baseOculta(canais[i].base))) &&
+        !guiafiltro_canal_oculto(&fltLive, canais[i].id) &&
+        !(canais[i].cat >= 0 && guiafiltro_cat_oculta(&fltLive, cats[canais[i].cat].nome)))
+      canais[w++] = canais[i];
   nCanais = w;
   for (i = 0; i < nLtvF; i++) {
     LtvPref *p = ltv_pref(ltvF[i].chave, 0);
@@ -2313,17 +2320,18 @@ int guia_variantes(const char *id, GuiaVariante *out, int max) {
     n++;
   }
   // Reservas que o filtro "Preferir 4K" escondeu, da maior para a menor.
-  for (i = 0, k = n; i < nAlts && n < max; i++) {
-    if (strcmp(alts[i].dono, c->id)) continue;
-    snprintf(out[n].id, sizeof out[n].id, "%s", alts[i].id);
-    snprintf(out[n].nome, sizeof out[n].nome, "%s", alts[i].nome);
-    out[n].altura = nv_res_do_texto(alts[i].nome);
-    n++;
-  }
-  for (i = k + 1; i < n; i++) {
-    GuiaVariante t = out[i];
-    for (j = i - 1; j >= k && out[j].altura < t.altura; j--) out[j + 1] = out[j];
-    out[j + 1] = t;
+  for (i = 0, k = n; i < nAlts; i++) {
+    int altura;
+    if (strcmp(alts[i].dono, c->id) || guiafiltro_canal_oculto(&fltLive, alts[i].id)) continue;
+    altura = nv_res_do_texto(alts[i].nome);
+    // Keep the best reserves while scanning, before applying the caller's cap.
+    for (j = k; j < n && out[j].altura >= altura; j++) {}
+    if (j >= max) continue;
+    if (n < max) n++;
+    memmove(&out[j + 1], &out[j], sizeof *out * (size_t)(n - j - 1));
+    snprintf(out[j].id, sizeof out[j].id, "%s", alts[i].id);
+    snprintf(out[j].nome, sizeof out[j].nome, "%s", alts[i].nome);
+    out[j].altura = altura;
   }
   return n;
 }
@@ -3023,6 +3031,8 @@ static void filtrosFechar(void) {
   free(fIt); fIt = NULL; fN = 0; fNivel = 0; paModo = 0;
   if (!fSujo) return;
   fSujo = 0;
+  empacotar();
+  focoValido();
   assinaturaPublicada = 0;
   if (fioVivo) { cargaCancelada = 1; recarregarPend = 1; }
   else { estado = G_PARADO; ultTentativa = 0; iniciarCarga(); }

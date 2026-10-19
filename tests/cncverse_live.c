@@ -60,7 +60,7 @@ int main(void) {
   strcpy(carga.base, f.base); carga.ativo = 1; addonsCarga = &carga; nAddonsCarga = 1;
   int fl = sFonte(LTV_ADDON, f.base, f.nome, f.base);
   assert(fl >= 0);
-  assert(lerPagina(&f, fl, 0, &novos) == 3);
+  assert(lerPagina(&f, fl, 0, &novos, NULL) == 3);
   assert(novos == 3 && sNCanais == 3);
   for (int k = 0; k < 3; k++) {
     CatItem it;

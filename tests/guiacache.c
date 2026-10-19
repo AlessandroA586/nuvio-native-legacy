@@ -70,7 +70,12 @@ const char *i18n(const char *s) { return s; }
 char *rede_baixar(const char *u, int s) { (void)u; (void)s; return NULL; }
 char *rede_baixar_medido_controle(const char *u, int s, const char *const *c,
                                   const RedeControle *ct, RedeMedida *m) {
-  (void)u; (void)s; (void)c; (void)ct; (void)m; return NULL;
+  (void)s; (void)c; (void)ct; (void)m;
+#ifdef GUIAFILTRO_LOADER
+  return filtroResposta(u);
+#else
+  (void)u; return NULL;
+#endif
 }
 int rede_baixar_fluxo(const char *u, int s, const char *const *c,
                       int (*cb)(const char *, size_t, void *), void *x,
