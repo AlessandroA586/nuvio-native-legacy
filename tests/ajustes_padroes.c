@@ -257,10 +257,12 @@ int main(void) {
   assert(!strcmp(CHAVE[AJ_FUNDO_DIN], "fundoDinamicaLocal") && somenteDesteAparelho(AJ_FUNDO_DIN) && !dePerfil(AJ_FUNDO_DIN));
   assert(!strcmp(CHAVE[AJ_FUNDO_DIN_COR], "fundoDinamicaCorLocal") && somenteDesteAparelho(AJ_FUNDO_DIN_COR) && !dePerfil(AJ_FUNDO_DIN_COR));
   valor[AJ_FUNDO_DIN] = 2; assert(ajustes_fundo_din() == 2);
+  valor[AJ_FUNDO_DIN] = 3; assert(ajustes_fundo_din() == 3);
   valor[AJ_FUNDO_DIN] = 9; assert(ajustes_fundo_din() == 0);   // arquivo de outra versao
   valor[AJ_FUNDO_DIN] = 0;
-  assert(OPCOES[AJ_FUNDO_DIN].n == 3 && !strcmp(OPCOES[AJ_FUNDO_DIN].valores[0], "Cinza") &&
-         !strcmp(OPCOES[AJ_FUNDO_DIN].valores[1], "Cor") && !strcmp(OPCOES[AJ_FUNDO_DIN].valores[2], "Imersivo"));
+  assert(OPCOES[AJ_FUNDO_DIN].n == 4 && !strcmp(OPCOES[AJ_FUNDO_DIN].valores[0], "Cinza") &&
+         !strcmp(OPCOES[AJ_FUNDO_DIN].valores[1], "Cor") && !strcmp(OPCOES[AJ_FUNDO_DIN].valores[2], "Imersivo") &&
+         !strcmp(OPCOES[AJ_FUNDO_DIN].valores[3], "Cinza escuro"));
   assert(!strcmp(i18n(OPCOES[AJ_FUNDO_DIN].rotulo), "Dynamic layout background"));
   assert(!strcmp(i18n(OPCOES[AJ_FUNDO_DIN].valores[0]), "Gray") && !strcmp(i18n(OPCOES[AJ_FUNDO_DIN].valores[2]), "Immersive"));
   assert(OPCOES[AJ_FUNDO_DIN_COR].n == 17 && !strcmp(OPCOES[AJ_FUNDO_DIN_COR].valores[valor[AJ_FUNDO_DIN_COR]], "Oceano"));
