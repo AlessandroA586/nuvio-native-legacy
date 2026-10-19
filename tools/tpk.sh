@@ -34,7 +34,7 @@ set -euo pipefail
 if [ "${NUVIO_TPK_ARCH:-}" = x86_64 ]; then
   exec bash "$(dirname "$0")/tpk/x64.sh"
 fi
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." && source tools/ctr.sh
 RAIZ="$PWD"
 CACHE="${NUVIO_TPK_CACHE:-$HOME/.cache/nuvio-tpk}"
 SAIDA="build/tpk"
@@ -67,9 +67,9 @@ if [ -n "$CANARIO" ]; then
   echo "[canario] nivel de GPU forcado em $NV_TPK_NIVEL ($CANARIO)"
 fi
 
-docker info >/dev/null 2>&1 || { echo "Docker parado: abra o Docker/OrbStack" >&2; exit 1; }
-docker image inspect nuvio-tpk-sdk >/dev/null 2>&1 ||
-  docker build --platform linux/arm/v5 -t nuvio-tpk-sdk tools/tpk/
+ctr_check_system || { echo "Apple Container not running: run 'container system start'" >&2; exit 1; }
+ctr_image_exists nuvio-tpk-sdk ||
+  ctr_build --platform linux/arm/v5 -t nuvio-tpk-sdk -f tools/tpk/Dockerfile tools/tpk/
 
 if [ ! -f "$CACHE/prefix/lib/libSDL2.a" ] || [ ! -f "$CACHE/prefix/lib/libSDL2_ttf.a" ] ||
    [ ! -f "$CACHE/prefix/lib/libwebp.a" ] || [ ! -f "$CACHE/prefix/lib/.sdlimage-webp" ] ||
@@ -92,7 +92,7 @@ if [ ! -f "$CACHE/prefix/lib/libSDL2.a" ] || [ ! -f "$CACHE/prefix/lib/libSDL2_t
     [ -d "$d" ] || curl -fsSL "$u" | tar xJ -C "$CACHE/src"
   done
   cp tools/tpk/deps.sh "$CACHE/deps.sh"
-  docker run --rm --platform linux/arm/v5 -v "$CACHE:/w" nuvio-tpk-sdk sh /w/deps.sh
+  ctr_run --rm --platform linux/arm/v5 -v "$CACHE:/w" nuvio-tpk-sdk sh /w/deps.sh
 fi
 
 # DTS/TrueHD -> Dolby Digital 5.1 (docs/features/dts/README.md): FFmpeg 7.1.5
@@ -125,7 +125,7 @@ if [ "${NV_TPK_SEM_DTS:-}" != 1 ]; then
     # O container roda como root e o prefixo e dele: num host Linux (o CI do
     # GitHub) o usuario do host nao apaga nem escreve la. Apagar o velho e gravar
     # o carimbo (por ultimo: so build completo vale) ficam dentro do container.
-    docker run --rm --platform linux/arm/v5 -v "$CACHE:/w" \
+    ctr_run --rm --platform linux/arm/v5 -v "$CACHE:/w" \
       -e NUVIO_DTS_TARGET=tpk -e NUVIO_DTS_SRC="/w/src/ffmpeg-$DTS_VER" -e NUVIO_DTS_ROOT=/w/prefix-dts \
       -e NUVIO_DTS_BUILD=/tmp/nuvio-dts-build -e NUVIO_DTS_JOBS="${NUVIO_BUILD_JOBS:-6}" \
       -e NUVIO_DTS_CARIMBO="$DTS_CARIMBO" \
@@ -146,9 +146,9 @@ tools/env.sh --env-file "$ENVF"
 nv_p2p_resolver tpk
 P2P_VOL=""
 [ -n "$NV_P2P_DIR" ] && P2P_VOL="-v $NV_P2P_DIR:/p2p"
-docker run --rm --platform linux/arm/v5 --env-file "$ENVF" $P2P_VOL $DTS_VOL \
+ctr_run --rm --platform linux/arm/v5 --env-file "$ENVF" $P2P_VOL $DTS_VOL \
   -e NUVIO_BUILD_JOBS="${NUVIO_BUILD_JOBS:-6}" \
-  -e NUVIO_SDK_ID="$(docker image inspect --format '{{.Id}}' nuvio-tpk-sdk):$CACHE:$NV_P2P_DIR" \
+  -e NUVIO_SDK_ID="$(ctr_image_inspect nuvio-tpk-sdk):$CACHE:$NV_P2P_DIR" \
   -e NUVIO_P2P_MOTOR="${NV_P2P_DIR:+1}" \
   -e NUVIO_EXTRA_CFLAGS="${NUVIO_EXTRA_CFLAGS:-}" -e NV_TPK_SEM_ASS="${NV_TPK_SEM_ASS:-}" \
   -v "$RAIZ":/work -v "$CACHE/prefix":/deps -w /work nuvio-tpk-sdk sh -c '

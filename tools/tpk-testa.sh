@@ -6,13 +6,13 @@
 #
 #   bash tools/tpk-testa.sh [quadros]
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." && source tools/ctr.sh
 Q="${1:-900}"
 # The command string expands this value before its inner conditional runs.
 : "${NV_HOST_LOCALE:=}"
 mkdir -p build/tpk/teste
 rm -f build/tpk/teste/*
-docker run --rm --platform linux/arm/v5 -v "$PWD":/work -w /work nuvio-tpk-sdk sh -c "
+ctr_run --rm --platform linux/arm/v5 -v "$PWD":/work -w /work nuvio-tpk-sdk sh -c "
   set -e
   apt-get -qq update >/dev/null 2>&1; apt-get -qq install -y libcurl4 libgl1-mesa-dri libegl-mesa0 xvfb locales >/dev/null 2>&1; Xvfb :9 -screen 0 1920x1080x24 >/dev/null 2>&1 & sleep 3
   if [ -n \"${NV_HOST_LOCALE:-}\" ]; then localedef -i \"${NV_HOST_LOCALE%%.*}\" -f UTF-8 \"${NV_HOST_LOCALE:-}\" 2>/dev/null || true; fi
