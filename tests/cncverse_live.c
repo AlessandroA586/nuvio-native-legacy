@@ -40,6 +40,7 @@ int addons_base_desligada(const char *base) { (void)base; return 0; }
 char *dados_ler(const char *n) { (void)n; return NULL; }
 int dados_gravar(const char *n, const char *v) { (void)n; (void)v; return 1; }
 const char *i18n(const char *s) { return s; }
+int xtream_e_id(const char *id) { return id && !strncmp(id, "xtream:", 7); }
 
 int main(void) {
   GFonte f = {0};
@@ -55,6 +56,8 @@ int main(void) {
   free(cat);
 
   // ---- aba ao vivo: os 3 canais entram, nenhum some por tamanho de id
+  GAddonCarga carga = {0};
+  strcpy(carga.base, f.base); carga.ativo = 1; addonsCarga = &carga; nAddonsCarga = 1;
   int fl = sFonte(LTV_ADDON, f.base, f.nome, f.base);
   assert(fl >= 0);
   assert(lerPagina(&f, fl, 0, &novos) == 3);

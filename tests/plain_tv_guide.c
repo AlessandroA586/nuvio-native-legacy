@@ -19,7 +19,7 @@ char *rede_baixar_medido_controle(const char *url, int seconds,
                                 const RedeControle *control, RedeMedida *measurement) {
   (void)seconds; (void)headers; (void)control; (void)measurement;
   if (!strcmp(url, BASE "/manifest.json")) { manifests++; return fixture("manifest"); }
-  assert(!strcmp(url, BASE "/catalog/tv/x.json"));
+  assert(!strcmp(url, BASE "/catalog/tv/x/skip=10.json"));
   catalogs++; return fixture("catalog");
 }
 const char *rede_url_publica(const char *url, char *out, unsigned size) {
@@ -29,6 +29,7 @@ void fontecache_vod_limpar(void) {}
 const char *sessao_usuario(void) { return ""; }
 int perfis_ativo(void) { return 1; }
 const char *i18n(const char *text) { return text; }
+int xtream_e_id(const char *id) { return id && !strncmp(id, "xtream:", 7); }
 
 int main(void) {
   assert(addons_adicionar("Plain TV", BASE "/manifest.json"));
@@ -47,12 +48,15 @@ int main(void) {
   // Both startup paths: cached manifest and direct manifest probing, no Home rows.
   for (int cached = 1; cached >= 0; cached--) {
     addon.nCatalogos = cached ? 1 : -1;
-    sNFontes = sNCanais = sNCats = 0;
+    cats = NULL;
+    stagingZerar(); sTeto = GUIACORTE_MAX_CANAL; sNFontes = 0;
+    assert(sFonte(LTV_ADDON, BASE, "Plain TV", BASE) == 0);
     sondaManifestos();
     assert(sNFontes == 1 && sNSabe == 1 && sSabe[0].canal == 1);
     int added = 0;
     assert(lerPagina(&sFontes[0], 0, 10, &added) == 3);
     assert(added == 3 && sNCanais == 3);
+    cats = sCats;
     for (int i = 0; i < 3; i++) {
       CatItem item;
       canalParaItem(&sCanais[i], &item);
