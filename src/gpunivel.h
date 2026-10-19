@@ -9,26 +9,26 @@
 // janela. HIPOTESE, nao prova: a GPU nao termina o quadro anterior a tempo
 // (preenchimento/ALU por pixel). O mesmo app na Tizen 6 roda a 60 fps.
 //
-// QUATRO NIVEIS, um degrau por vez:
+// THREE EFFECT LEVELS, independent of the interface resolution:
 //   0 = como sempre (1080p nativo, efeitos cheios).
 //   1 = EFEITOS LEVES (gfx_definir_efeitos_leves): dither Bayer barato no lugar do highp dos
 //       degrades e sem os realces decorativos (brilho no alto do card, luz de
-//       canto, a luz do chao da escolha de perfil). Resolucao nativa.
+//       canto, a luz do chao da escolha de perfil). One Kawase blur pass
+//       instead of two, retaining frosted glass. Native resolution.
 //   2 = EFEITOS MINIMOS (gfx_definir_efeitos_minimos): nivel 1 + sem a luz de
-//       tela cheia do tema imersivo e sem sombra/halo. Resolucao nativa. So
-//       quando o 1 ainda fica abaixo de 25 fps (Mali-400, registro 9859).
-//   3 = nivel 2 + DESENHO INTERNO EM 1280x720, ampliado para a janela numa
-//       unica passada (GFX_COPIA, filtro linear). 2,25x menos pixels por
-//       quadro. SO FORCADO: nas Tizen 5.0 o texto ficou borrado demais.
+//       tela cheia do tema imersivo e sem sombra/halo. Existing flat-glass
+//       rule remains. Tried if level 1 is still GPU-bound below 45 fps.
+//   720p is selected separately: any effects level, never automatic.
 //
 // COMO O NIVEL E ESCOLHIDO (.tpk, Android e LG webOS):
 //   - -DNV_TPK_NIVEL_FORCADO=N (tools/tpk.sh com NV_TPK_NIVEL=N): fixo, sem
 //     medir. E o canario de comparacao; a release nao usa.
-//   - senao ADAPTATIVO: nos primeiros ~20 s de home cheia mede FPS e quanto do
+//   - senao ADAPTATIVO: in full Home or Settings, measures FPS and how much of the
 //     quadro e ESPERA (clr+swap) contra CPU (ev+bomb+upd+des). FPS < 45 com a
 //     espera dominando = GPU presa: desce UM nivel, espera assentar, mede de
 //     novo. So conserva a reducao com ganho >=15% E >=5 fps; caso contrario
-//     volta ao nivel anterior e bloqueia novas descidas para essa chave.
+//     returns to the previous level and blocks retries only for this workload
+//     in this session. Scene/layout/glass/color changes start a fresh baseline.
 //     Compara antes de aceitar FPS bom ou CPU dominante no candidato.
 //     gpu-nivel.txt mantem versao=1/nivel para leitores antigos e acrescenta
 //     avaliacao=1, bloqueado e fps0/1/2. Nivel legado >0 e comparado uma vez
@@ -38,7 +38,8 @@
 //     Tres descartes >1 s na tentativa, mesmo intercalados, com Home cheia e
 //     espera de GPU dominante: GPU fraca fica no 2 so nesta sessao, sem gravar.
 //     Janela completa ou perda dessas condicoes zera a contagem.
-//   - Sair da Home, perder as artes ou suspender cancela o candidato e volta
+//   - Changing the measured scene, losing Home artwork, or suspending cancels
+//     the candidate and returns
 //     ao nivel anterior; a proxima comparacao mede uma referencia nova e
 //     preserva a reavaliacao pendente do legado ate concluir a comparacao.
 //   - a chave ganha "4k" com superficie acima de 1080p: o nivel aprendido em
@@ -75,11 +76,12 @@ int  gpun_nivel(void);
 int  gpun_efeitos_automaticos(void);
 // Troca o nivel na hora, sem medir nem gravar (captura de teste).
 void gpun_definir_nivel(int n);
-// Ajuste "Efeitos visuais" do .tpk: 0 automatico, 1 completos, 2 leves.
+// Effects preference, all platforms: 0 automatic, 1 full, 2 light, 3 minimal.
+// Stored preference values are positional; new values must be appended.
 void gpun_preferencia(int p);
 
-// Ajuste "Resolucao da interface = 720p": fixa o nivel 3 (desenho interno em
-// 1280x720) e desliga a medida e o "Efeitos visuais" ate o fim da sessao.
+// Explicit 720p resolution: internal 1280x720 target, independent of effects.
+// Does not disable adaptation or override a manual effects preference.
 void gpun_forcar_720(void);
 
 // 4K that did not hold (resolucao.h): from the next frame on, the interface is
@@ -90,14 +92,14 @@ void gpun_alvo_1080(void);
 int  gpun_alvo_1080_ativo(void);
 
 // Laco de quadro: _inicio ANTES do glClear da tela (liga o alvo interno no
-// nivel 2), _fim depois do ultimo desenho e antes do swap (amplia e descarta).
+// explicit 720p or 4K fallback), _fim after drawing and before swap.
 void gpun_quadro_inicio(void);
 void gpun_quadro_fim(void);
 
-// Uma medida por quadro, com as fases do quadro ANTERIOR (main.c). `naHome`
-// = a home e a tela de frente, sem detalhe nem player; `cheia` = com artes na
-// tela (a home vazia roda a 60 e nao diz nada).
-void gpun_medir(double dtms, double espera, double cpu, int naHome, int cheia);
+// Previous frame phases. `cena` is a nonzero stable workload identity for
+// full Home/Settings (0 = ineligible); changed identity cancels comparison.
+// `cheia` requires artwork only on Home; Settings is eligible without it.
+void gpun_medir(double dtms, double espera, double cpu, int cena, int cheia);
 
 // Descarta a COR do alvo ligado agora, que vai ser sobrescrito inteiro.
 // `padrao` = 1 se o ligado e a janela (FBO 0). No-op sem ES3/extensao.

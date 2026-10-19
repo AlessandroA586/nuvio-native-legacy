@@ -55,7 +55,7 @@ enum { AJ_TRAILER_CARTAZ_DESLIGADO = 0, AJ_TRAILER_CARTAZ_CHEIA = 1, AJ_TRAILER_
 int  ajustes_trailer_cartaz(void);
 // "Itens por fileira" da Home (#163): 12, 18 ou 24. Padrao 12.
 int  ajustes_itens_fileira(void);
-// Efeitos visuais do .tpk: 0 automatico, 1 completos (nivel 0), 2 leves (nivel 1).
+// Effects, all platforms/resolutions: 0 automatic, 1 full, 2 light, 3 minimal.
 int  ajustes_gpu_efeitos(void);
 // A proxima abertura da tela (ajustes_iniciar) pousa o foco em "Cor de
 // destaque" em vez da primeira linha. E o "Experimentar a cor viva" do cartao

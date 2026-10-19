@@ -2005,7 +2005,13 @@ int main(int argc, char **argv) {
         int it = 0, pe = 0, qu = 0; long b = 0, bq = 0;
         tex_estatisticas(&it, &pe, &b, &qu, &bq);
         cheia = qu >= 8; cheiaEm = agora; }
-      gpun_medir(dtms, fClr + fSwap, fEv + fBomb + fUpd + fDes + fAux, app_na_home(), cheia); }
+      int home = app_na_home(), settings = !strcmp(app_tela_nome(), "ajustes");
+      int cena = home ? 1 : settings ? 2 : 0;
+      // A scene/effect change invalidates the FPS comparison, including a
+      // previously rejected trial. Settings needs no Home artwork cache.
+      if (cena) cena += 4 * (ajustes_home_layout() + 4 * (ajustes_vidro() +
+        2 * (ajustes_cor_viva() + 16 * (ajustes_vidro_fosco() + 2 * ajustes_vidro_qualidade()))));
+      gpun_medir(dtms, fClr + fSwap, fEv + fBomb + fUpd + fDes + fAux, cena, settings || cheia); }
 #endif
     // zera os contadores do quadro que comeca agora; o que foi medido acima
     // pertence ao quadro anterior, que e o que acabou de custar dtms
@@ -2090,7 +2096,7 @@ int main(int argc, char **argv) {
     fPrep = NV_DT(t0);
     gfx_ambiente_preparar();
     fPrep = NV_DT(t0) - fPrep;
-    // Nivel 3 (so com "720p" escolhido) ou 4K que nao aguentou: o quadro
+    // Explicit 720p or 4K fallback: the frame
     // inteiro vai para o alvo interno (o clear abaixo ja limpa ele);
     // gpun_quadro_fim amplia para a janela.
     // Mudou "Efeitos visuais" nos Ajustes: aplica no proximo quadro.
