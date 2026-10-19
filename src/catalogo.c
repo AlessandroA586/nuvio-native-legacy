@@ -1943,7 +1943,8 @@ int ajustes_fonte_biblioteca(void);
 static void definir_na_lista(int i, int naLista) {
   if (!itens || n <= 0 || i < 0 || i >= n) return;
   unsigned bit = 1u << ajustes_fonte_biblioteca();
-  unsigned fontes = naLista ? itens[i].listaFontes | bit : itens[i].listaFontes & ~bit;
+  // Removal also deletes the local save; retain only unrelated remote sources.
+  unsigned fontes = naLista ? itens[i].listaFontes | bit : itens[i].listaFontes & ~(bit | 1u);
   int marcada = fontes != 0;
   if (itens[i].naLista == marcada && itens[i].listaFontes == fontes) return;
   itens[i].listaFontes = fontes;

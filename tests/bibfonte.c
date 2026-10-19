@@ -114,14 +114,15 @@ int main(int argc, char **argv) {
   CHECK("Trakt series remains in Agenda", found);
 #ifndef BIBFONTE_BASELINE
   // Merge must preserve membership even when the shared mark was already set.
-  CatItem shared = *cat_item(1); shared.listaFontes = 1u << AJ_SALVOS_TRAKT;
+  CatItem shared = *cat_item(1);
+  shared.listaFontes = (1u << AJ_SALVOS_TRAKT) | (1u << AJ_SALVOS_SIMKL);
   cat_mesclar_listas(&shared, 1);
   ajustes_definir_salvos_destino(AJ_SALVOS_TRAKT);
   CHECK("merge retains overlapping sources", bibfonte_library_count() == 2);
   cat_definir_na_lista(1, 0);
-  CHECK("remove preserves other source and Agenda mark", cat_item(1)->naLista && cat_item(1)->listaFontes == 1u);
+  CHECK("remove preserves unrelated remote source and Agenda mark", cat_item(1)->naLista && cat_item(1)->listaFontes == (1u << AJ_SALVOS_SIMKL));
   ajustes_definir_salvos_destino(AJ_SALVOS_LOCAL);
-  CHECK("account item remains after remote removal", bibfonte_library_count() == 1);
+  CHECK("Nuvio item disappears after remote removal", bibfonte_library_count() == 0);
 #endif
   // Both services connected; union membership must not decide the action.
   remote.naLista = 1;
@@ -205,6 +206,29 @@ int main(int argc, char **argv) {
   ajustes_definir_salvos_destino(AJ_SALVOS_TRAKT);
   assert(!ajustes_perfil_restaurar(3));
   CHECK("missing profile does not inherit explicit source", ajustes_fonte_biblioteca() == AJ_SALVOS_LOCAL);
+  // Remote removal also deletes the local save; switching back must not revive it.
+  contalib_esquecer();
+  for (int source = AJ_SALVOS_TRAKT; source <= AJ_SALVOS_SIMKL; source++) {
+    CatItem copies[2] = {ci, ci};
+    copies[0].naLista = copies[1].naLista = 1;
+    copies[0].listaFontes = copies[1].listaFontes = 7u;
+    cat_definir_tudo(copies, 2, NULL, 0);
+    ajustes_definir_salvos_destino(AJ_SALVOS_LOCAL);
+    salvos_definir(&ci, 1);
+    CHECK("Nuvio title exists before remote removal", biblioteca_na_lista(0) && salvos_tem(ci.imdb));
+    ajustes_definir_salvos_destino(source);
+    ilhasalvar_executar(cat_item(0), 0);
+    CHECK("remote removal deletes local save", !salvos_tem(ci.imdb));
+    CHECK("remote removal clears selected source", !biblioteca_na_lista(0) && !biblioteca_na_lista(1));
+    ajustes_definir_salvos_destino(AJ_SALVOS_LOCAL);
+    salvos_reconciliar(); contalib_reconciliar();
+    CHECK("remote removal leaves Nuvio Library empty", bibfonte_library_count() == 0);
+    CHECK("remote removal leaves Nuvio sidebar empty", salvos_uniao(sidebar, 8) == 0);
+    CHECK("remote removal clears Nuvio detail checkmark", !biblioteca_na_lista(0) && !biblioteca_na_lista(1) && !cat_imdb_na_lista_fonte(ci.imdb));
+    CHECK("remote removal offers save under Nuvio", !strcmp(bibfonte_menu_label(0), "Salvar"));
+    ajustes_definir_salvos_destino(source == AJ_SALVOS_TRAKT ? AJ_SALVOS_SIMKL : AJ_SALVOS_TRAKT);
+    CHECK("remote removal preserves unrelated source on every copy", biblioteca_na_lista(0) && biblioteca_na_lista(1) && cat_imdb_na_lista(ci.imdb));
+  }
 #endif
   SDL_Quit();
   printf("bibfonte: %d failure(s)\n", failures);
