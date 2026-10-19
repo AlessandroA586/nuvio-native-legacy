@@ -70,6 +70,29 @@ static TxtLinha fx_txt_linha(TxtEstilo estilo, const char *s, int r, int g, int 
 #include "dados.h"
 #include "ponteiro.h"
 
+#ifdef NV_TEST_EPCOMENT
+#include "js.h"
+#include "epcoment.h"
+static int epRequests, epRatings, epEmpty;
+static SDL_atomic_t epRelease;
+int epcoment_cabecalhos(const char **cab, char *aut, size_t na, char *chave, size_t nc) {
+  (void)aut; (void)na; (void)chave; (void)nc; cab[0] = NULL; return 1;
+}
+char *epcoment_baixar(const char *url, int segundos, const char *const *cab) {
+  (void)segundos; (void)cab;
+  if (!strstr(url, "/seasons/1/episodes/")) return NULL;
+  if (strstr(url, "/ratings")) {
+    epRatings++;
+    return strdup("{\"rating\":8.4,\"votes\":1284,\"distribution\":{\"10\":600,\"9\":410,\"8\":267,\"7\":141,\"6\":95,\"5\":62}}");
+  }
+  if (!strstr(url, "/comments/")) return NULL;
+  epRequests++;
+  while (!SDL_AtomicGet(&epRelease)) SDL_Delay(1);
+  if (epEmpty) return strdup("[]");
+  return strdup("[{\"comment\":\"Episode that changes the tone of the season. The dinner scene is uncomfortable in the best sense, and the soundtrack carries everything without needing dialogue. Best direction of the series so far. I kept thinking about her last look at her brother. A long review continues here with enough text to prove that the focused card expands and scrolls all the way through the ending.\",\"user\":{\"username\":\"Marina R.\"},\"created_at\":\"2026-01-01T00:00:00Z\",\"likes\":212,\"replies\":18,\"user_rating\":9,\"spoiler\":false},{\"comment\":\"Starts slowly and takes time to get going. The final scene changes everything.\",\"user\":{\"username\":\"jpdacosta\"},\"created_at\":\"2025-12-29T00:00:00Z\",\"likes\":88,\"replies\":6,\"user_rating\":7,\"spoiler\":true}]");
+}
+#endif
+
 #define IMDB_SERIE "tt0903747"
 static const int TEMP_N[3] = { 10, 12, 8 };
 void fx_pedir(const char *imdb, int serie, long tmdbId) { (void)imdb; (void)serie; (void)tmdbId; }
@@ -254,7 +277,7 @@ static int alvosDoMenu(GfxRect *caixa, GfxRect *lin) {
   if (v[fora + 1].focar || v[fora + 1].ativar) return -1;
   *caixa = (GfxRect){ v[fora + 1].x, v[fora + 1].y, v[fora + 1].w, v[fora + 1].h };
   for (i = fora + 2; i < n && k < LIN_MAX; i++)
-    if (v[i].focar) lin[k++] = (GfxRect){ v[i].x, v[i].y, v[i].w, v[i].h };
+    if (v[i].focar && v[i].h <= 64.0f) lin[k++] = (GfxRect){ v[i].x, v[i].y, v[i].w, v[i].h };
   return k;
 }
 static int perto(float a, float b) { return fabsf(a - b) < 1.5f; }
@@ -288,6 +311,7 @@ int main(int argc, char **argv) {
     fprintf(fa, "idioma %d\n", id ? atoi(id) : 0);
     if (f && *f) fprintf(fa, "fonteInterface %d\n", atoi(f));
     fclose(fa); }
+  setenv("NUVIO_TAMANHO_UI", "1", 1); // Geometry assertions use 1080p layout units.
   SDL_SetHint("SDL_MAC_BACKGROUND_APP", "1");
   assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
   IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
@@ -308,11 +332,12 @@ int main(int argc, char **argv) {
   gfx_tamanho_alvo(1920, 1080);
   assert(gfx_iniciar());
   assert(txt_iniciar("deploy/app", 1));
-  tex_iniciar(32);
+  tex_iniciar(128);
   gfx_icones_dir("deploy/app/art");
   extras_carregar("deploy/app/art");
   ajustes_iniciar();
   ajustes_dir(dados_dir());
+  gfx_escala_txt_definir(1.0f);
   ponteiro_teste_relogio(agoraFn);
   ponteiro_teste_janela(1920, 1080);
   ponteiro_teste_toque(0);
@@ -327,6 +352,47 @@ int main(int argc, char **argv) {
   quadros(120);
   acordar(); quadros(2);
 
+#ifdef NV_TEST_EPCOMENT
+  CONFERE(epRequests == 0 && epRatings == 0, "plain focus makes no episode requests");
+  segurarOk(); quadros(10);
+  CONFERE(extras_comentarios_ep_carregando(), "opening menu starts lazy fetch");
+  gravar("loading");
+  SDL_AtomicSet(&epRelease, 1);
+  for (int wait = 0; extras_comentarios_ep_carregando() && wait < 500; wait++) SDL_Delay(2);
+  quadros(90); acordar(); quadros(2);
+  n = alvosDoMenu(&caixa, lin);
+  CONFERE(n == 6 && epcoment_quantidade() == 2, "Comments row added with episode count 2");
+  ExEpNotas ratings; extras_notas_ep(&ratings);
+  CONFERE(ratings.nota == 84 && ratings.votos == 1284 && ratings.distribuicao[10] == 600,
+          "episode ratings and distribution parsed from Trakt");
+  CONFERE(extras_comentario_ep_respostas(0) == 18 && extras_comentario_ep_spoiler(1),
+          "reply count and spoiler metadata retained");
+  tecla(SDL_KEYDOWN, SDLK_RIGHT); tecla(SDL_KEYUP, SDLK_RIGHT); quadros(90);
+  gravar("focused");
+  CONFERE(episodios_menu_aberto() && epcoment_foco() == 0, "Right enters first comment");
+  tecla(SDL_KEYDOWN, SDLK_DOWN); tecla(SDL_KEYUP, SDLK_DOWN); quadros(90);
+  gravar("next");
+  CONFERE(epcoment_foco() == 1, "Down focuses next comment");
+  tecla(SDL_KEYDOWN, SDLK_RETURN); tecla(SDL_KEYUP, SDLK_RETURN); quadros(2);
+  tecla(SDL_KEYDOWN, SDLK_RETURN); tecla(SDL_KEYUP, SDLK_RETURN); quadros(2);
+  gravar("expanded");
+  tecla(SDL_KEYDOWN, SDLK_LEFT); tecla(SDL_KEYUP, SDLK_LEFT); quadros(2);
+  CONFERE(epcoment_foco() == -1 && episodios_menu_aberto(), "Left returns to menu");
+  tecla(SDL_KEYDOWN, SDLK_RIGHT); tecla(SDL_KEYUP, SDLK_RIGHT);
+  voltar(); quadros(60);
+  CONFERE(!episodios_menu_aberto(), "Back closes entire menu from comment list");
+  epEmpty = 1;
+  focar(SEC_EPISODIOS, 6); segurarOk();
+  for (int wait = 0; extras_comentarios_ep_carregando() && wait < 500; wait++) SDL_Delay(2);
+  quadros(90); acordar(); quadros(2);
+  gravar("no-comments");
+  CONFERE(alvosDoMenu(&caixa, lin) == 5 && epcoment_quantidade() == 0, "empty episode omits Comments row");
+  CONFERE(epRequests == 2 && epRatings == 2, "one comments/ratings fetch per opened episode");
+  voltar(); quadros(60);
+  printf("epcoment: %d failures\n", falhas);
+  return falhas ? 1 : 0;
+#endif
+
   // --- C. O SELO DE NOTA ---------------------------------------------------
   // T1E6 no ensaio: Trakt 74 + (5*3 % 16) = 8,9. Portugues: virgula.
   espNota = "8,9"; espRotuloFonte = 0; espNotaEstilo = -1;
@@ -334,6 +400,12 @@ int main(int argc, char **argv) {
   gravar("1-cards-notas");
   CONFERE(espRotuloFonte == 0, "nota do episodio: a pagina nao escreve mais \"Trakt\"/\"TMDB\" por extenso");
   CONFERE(espNotaEstilo == (int)TXT_G21B, "nota do episodio: o numero sai em negrito (TXT_G21B, 21/700)");
+  for (int wait = 0; wait < 200; wait++) {
+    tex_obter(extras_caminho_marca_nome("trakt"));
+    tex_obter(extras_caminho_marca_nome("tmdb"));
+    quadros(1); SDL_Delay(2);
+    if (tex_aspecto(extras_caminho_marca_nome("trakt")) > 0 && tex_aspecto(extras_caminho_marca_nome("tmdb")) > 0) break;
+  }
   CONFERE(tex_aspecto(extras_caminho_marca_nome("trakt")) > 0.0f &&
           tex_aspecto(extras_caminho_marca_nome("tmdb")) > 0.0f,
           "nota do episodio: os logos do Trakt e do TMDB (art/marcas) foram carregados");
@@ -345,9 +417,10 @@ int main(int argc, char **argv) {
   CONFERE(episodios_menu_aberto() && !episodios_menu_modo_temporada(), "episodio: segurar OK abre o menu de visto");
   quadros(4);  gravar("2-menu-episodio-abrindo");
   quadros(90); gravar("2-menu-episodio");
+  acordar(); quadros(2);
   n = alvosDoMenu(&caixa, lin);
-  CONFERE(n == 4, "episodio: quatro linhas, todas alvos do ponteiro");
-  if (n == 4) {
+  CONFERE(n == 5 || n == 6, "episode: five actions plus optional loading Comments row");
+  if (n == 5 || n == 6) {
     CONFERE(perto(lin[0].h, 60.0f) && perto(lin[1].y - lin[0].y, 64.0f) && perto(lin[3].y - lin[2].y, 64.0f),
             "episodio: linhas de 60 a cada 64, as do menu do cartaz");
     CONFERE(caixa.w >= 419.0f && caixa.w <= 601.0f, "episodio: a ilha tem de 420 a 600 de largura");
@@ -386,6 +459,8 @@ int main(int argc, char **argv) {
   tecla(SDL_KEYDOWN, SDLK_LEFT);  tecla(SDL_KEYUP, SDLK_LEFT);
   quadros(60);
   gravar("3-temporada-fechado");
+  acordar(); quadros(2);
+  CONFERE(alvoDaPagina(SEC_TEMPORADAS, 2, &aba), "season anchor after navigation settles");
   { unsigned char antes[3], depois[3];
     pixel(1700, 1000, antes);
     segurarOk();

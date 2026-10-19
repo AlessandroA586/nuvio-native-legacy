@@ -101,6 +101,13 @@ const char *extras_comentario_ep_usuario(int i);
 const char *extras_comentario_ep_texto(int i);
 int  extras_comentario_ep_curtidas(int i);
 int  extras_comentario_ep_nota(int i);
+const char *extras_comentario_ep_data(int i);
+int extras_comentario_ep_respostas(int i);
+int extras_comentario_ep_spoiler(int i);
+// Lazy episode cache, shared by the comments tab and the context panel.
+int extras_comentarios_ep_do(const char *imdb, int temporada, int episodio);
+typedef struct { int nota, votos, distribuicao[11]; } ExEpNotas;
+void extras_notas_ep(ExEpNotas *saida);
 
 // NOTAS POR EPISODIO, para o painel que o web mostra em SERIE no lugar dos
 // cartoes (renderSeriesRatingsPanel, metaDetailsScreen.js:3843): uma fileira de

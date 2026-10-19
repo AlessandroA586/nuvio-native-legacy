@@ -25,6 +25,7 @@
 #include "progresso.h"
 #include "plrilha.h"
 #include "ctxmenu.h"
+#include "epcoment.h"
 #include "movimento.h"
 #define NV_ESCALA_TELA   // o arquivo inteiro mede pela tela virtual (escala.h)
 #include "escala.h"
@@ -112,7 +113,7 @@ static int semMolaScroll;
 // este menu, entao ele precisa carregar a porta que tomou. Dentro da folha de
 // episodios a opcao nao existe — quem abriu a folha veio do player e ja tem
 // fonte tocando; oferece-la ali seria uma linha que nao leva a lugar nenhum.
-enum { VM_ESTE = 0, VM_ATE, VM_TEMP, VM_FONTES, VM_DAQUI, VM_SINOPSE, VM_N };
+enum { VM_ESTE = 0, VM_ATE, VM_TEMP, VM_FONTES, VM_DAQUI, VM_SINOPSE, VM_COMENT, VM_N };
 static int vmAcoes[VM_N], vmN; // linhas visiveis -> gesto (daqui em diante e opcional)
 // O MENU DA TEMPORADA (issue #108, "Pressing 'Season' brings up option to mark
 // all as watched"): o mesmo cartao, aberto pela ABA e nao por um episodio, com
@@ -170,6 +171,8 @@ static int  vmFontesPed; // consumido por episodios_menu_pediu_fontes()
 // o texto so muda quando o menu abre ou a acao termina.
 static char     vmRot[VM_N][120], vmCab[160], vmMsg[120];
 static CtxLinha vmLin[VM_N];
+static int vmComentEstado;
+static char vmComentContagem[24];
 static float    vmLarg;
 static float    vmAnim, vmAnimV, vmFocoAnim[VM_N];
 // DE ONDE O MENU SAIU, na tela virtual: o card do episodio (a ilha nasce ao
@@ -210,6 +213,9 @@ static void montarRotulos(void) {
     } else if (modo == VM_TEMP) {
       snprintf(vmRot[i], sizeof vmRot[i], quantos == 1 ? i18n("Temporada inteira (%d episódio)") : i18n("Temporada inteira (%d episódios)"), quantos);
       ic = "aj_list-video";
+    } else if (modo == VM_COMENT) {
+      snprintf(vmRot[i], sizeof vmRot[i], "%s", i18n("Comentários"));
+      ic = "aj_message-square";
     } else if (modo == VM_SINOPSE) {
       snprintf(vmRot[i], sizeof vmRot[i], "%s", i18n("Ler sinopse"));
       ic = "aj_file-text";
@@ -230,6 +236,8 @@ static void menuAbrir(int idx, int t, int e, const char *nome, int so) {
   const CatItem *ci = cat_item(idx);
   if (!ci || !ci->imdb[0]) return;
   vmIdx = idx; vmT = t; vmE = e; vmSo = so; vmModoTemp = 0;
+  vmComentEstado = -2;
+  if (so && e > 0) epcoment_abrir(ci->imdb, t, e);
   guardarId(vmId, sizeof vmId, idx);
   snprintf(vmNome, sizeof vmNome, "%s", nome ? nome : "");
   vmTemAncora = 0;
@@ -444,7 +452,7 @@ int episodios_escolheu(int *t, int *e) {
 // caixa e a tela inteira. A altura sai do numero de opcoes, que muda com isso.
 // PONTEIRO (#99) no menu de visto: opcao sob o cursor ganha o foco (vmFoco,
 // o mesmo de cima/baixo), clique e o OK, clique fora fecha o menu.
-static void ponteiroVmOpcao(int i, int b) { (void)b; if (i >= 0 && i < vmOpcoes()) vmFoco = i; }
+static void ponteiroVmOpcao(int i, int b) { (void)b; if (i >= 0 && i < vmOpcoes()) { vmFoco = i; epcoment_menu(); } }
 static void ponteiroVmFora(int a, int b) { (void)a; (void)b; vmAberto = 0; }
 
 // O MENU DE VISTO (segurar OK) E A ILHA DO MENU DO CARTAZ (ctxmenu.c): o nome
@@ -468,6 +476,19 @@ static float menuLargura(float cabe) { return vmLarg < cabe ? vmLarg : cabe; }
 // pouco, o texto nao —; o menu comum, na das telas, como o do cartaz.
 static void menuAtualizar(float dt) {
   int i, red = ajustes_animacoes_reduzidas();
+  if (vmAberto && vmSo && !vmModoTemp) {
+    epcoment_atualizar(dt);
+    int n = epcoment_quantidade();
+    if (n != vmComentEstado) {
+      if (vmN && vmAcoes[vmN - 1] == VM_COMENT) vmN--;
+      if (n != 0) vmAcoes[vmN++] = VM_COMENT;
+      if (vmFoco >= vmN) vmFoco = vmN - 1;
+      vmComentEstado = n;
+      if (n < 0) snprintf(vmComentContagem, sizeof vmComentContagem, "%s", "…");
+      else snprintf(vmComentContagem, sizeof vmComentContagem, "%d", n);
+      montarRotulos();
+    }
+  }
   float alvo = vmAberto ? 1.0f : 0.0f;
   if (red) { vmAnim = alvo; vmAnimV = 0.0f; }
   else if (vmPainel()) {
@@ -574,6 +595,16 @@ static void menuDesenhar(GfxRect area, float a0) {
       m.x += (1.0f - a) * (m.x < vmAncora.x ? 16.0f : -16.0f);
     }
   }
+  GfxRect comentarios = {0};
+  if (vmSo && !vmModoTemp) {
+    // Keep panel on the right even when the anchor sits at the screen edge.
+    float pw = 676.0f, ph = 624.0f;
+    if (pw + MW + 24 > NV_TELA_W - 2 * VM_BORDA) pw = NV_TELA_W - 2 * VM_BORDA - MW - 24;
+    if (ph > NV_TELA_H - 2 * VM_BORDA) ph = NV_TELA_H - 2 * VM_BORDA;
+    if (m.x + MW + 24 + pw > NV_TELA_W - VM_BORDA) m.x = NV_TELA_W - VM_BORDA - MW - 24 - pw;
+    if (m.y + ph > NV_TELA_H - VM_BORDA) m.y = NV_TELA_H - VM_BORDA - ph;
+    comentarios = (GfxRect){m.x + MW + 24, m.y, pw, ph};
+  }
   if (vmAberto && ponteiro_ativo() && a > .5f) {
     ponteiro_camada();
     if (!vmFeito) ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ponteiroVmFora, 0, 0);
@@ -586,10 +617,19 @@ static void menuDesenhar(GfxRect area, float a0) {
   else gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0, 0, 0, 0, 0.55f * a);
   if (vmFeito) meta = vmMsg;
   else if (vmModoTemp) { const CatItem *ci = cat_item(vmIdx); meta = ci ? ci->titulo : ""; }
+  else if (vmAcoes[vmFoco] == VM_COMENT) meta = "Comentários do Trakt";
   else if (vmAcoes[vmFoco] == VM_SINOPSE) meta = "Ler sinopse";
   else meta = vmAcoes[vmFoco] != VM_DAQUI && vmVisto ? "Marcar como assistido" : "Desmarcar como assistido";
   ctx_menu_desenhar(m, vmCab, meta, vmFeito ? 0.8f : 0.5f, vmLin, vmOpcoes(), vmFocoAnim,
                     vmFeito ? 0.35f : 1.0f, a, vmAberto && !vmFeito ? ponteiroVmOpcao : NULL);
+  if (comentarios.w > 0) {
+    if (vmN && vmAcoes[vmN - 1] == VM_COMENT) {
+      TxtLinha v = txt_linha(TXT_G18R, vmComentContagem, 180, 181, 187, 255);
+      txt_desenhar_alpha(v, m.x + m.w - 34 - v.w, m.y + 14 + 75 + 4 + (vmN - 1) * ctx_menu_passo() + (60 - v.h) * .5f, a);
+    }
+    if (vmAberto && ponteiro_ativo()) ponteiro_alvo(comentarios.x, comentarios.y, comentarios.w, comentarios.h, NULL, NULL, 0, 0);
+    epcoment_desenhar(comentarios, a);
+  }
 }
 
 // A frase da confirmacao, montada quando a acao termina.
@@ -607,6 +647,14 @@ static void menuEvento(const SDL_Event *ev) {
   if (ev->type == SDL_KEYUP && ehOk) { vmConsumir = 0; return; }
   if (ev->type != SDL_KEYDOWN) return;
   if (ehOk && (ev->key.repeat || vmConsumir)) return;
+  if (vmSo && !vmModoTemp && !vmFeito) {
+    if (epcoment_evento(ev)) return;
+    if (ko == SDLK_RIGHT) {
+      if (epcoment_entrar()) for (int i = 0; i < vmN; i++) if (vmAcoes[i] == VM_COMENT) vmFoco = i;
+      return;
+    }
+    if (ko == SDLK_LEFT) return;
+  }
   if (ko == SDLK_UP)   { if (vmFoco > 0) vmFoco--; return; }
   if (ko == SDLK_DOWN) { if (vmFoco < vmOpcoes() - 1) vmFoco++; return; }
   if (vmFeito) { vmAberto = 0; vmFeito = 0; return; }   // qualquer tecla encerra a confirmacao
@@ -617,6 +665,7 @@ static void menuEvento(const SDL_Event *ev) {
       return;
     }
     int modo = vmAcoes[vmFoco], v = modo == VM_DAQUI ? 0 : vmVisto;
+    if (modo == VM_COMENT) { epcoment_entrar(); return; }
     if (modo == VM_FONTES) { vmFontesPed = 1; vmAberto = 0; return; }
     if (modo == VM_SINOPSE) { sinopse_abrir(vmNome, vmSinopse); vmAberto = 0; return; }
     menuFeito(aplicarVisto(modo, v), v);

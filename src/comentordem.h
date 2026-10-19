@@ -14,7 +14,10 @@
 
 #include <string.h>
 
-typedef struct { char u[40]; char t[420]; int c; int nota; char l[4]; } ComentAchado;
+typedef struct {
+  char u[40], t[16384], l[4], data[40];
+  int c, nota, respostas, spoiler;
+} ComentAchado;
 
 // 1 = `lingua` (do Trakt, pode ser "" ou "pt-br") e o idioma `iso` da interface.
 static inline int coment_mesmo_idioma(const char *lingua, const char *iso) {
