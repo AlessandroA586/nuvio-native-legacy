@@ -4039,13 +4039,13 @@ static int relogioPedidoPagina(void) {
 void app_evento(const SDL_Event *e) {
   static int backRetido;
   static Uint32 backUltimo;
-  // Guard before any sheet/panel consumes Back. Repeats refresh the timeout;
-  // silence recovers from a lost keyup without latching Back forever.
+  // Guard before any sheet/panel consumes Back. Flagged repeats are always held;
+  // only a non-repeat after 1.5 s of silence recovers from a lost keyup.
   if ((e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) && nv_tecla_voltar(e)) {
     Uint32 agora = SDL_GetTicks();
     if (e->type == SDL_KEYUP || !player_aberto()) backRetido = 0;
     else {
-      int retido = backRetido && agora - backUltimo < 400u;
+      int retido = e->key.repeat || (backRetido && agora - backUltimo < 1500u);
       backRetido = 1;
       backUltimo = agora;
       if (retido) return;

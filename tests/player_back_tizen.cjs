@@ -2,9 +2,11 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const html = fs.readFileSync('tools/tizen-shell.html', 'utf8');
-const start = html.indexOf('// TECLA RETURN DO CONTROLE SAMSUNG');
-const end = html.indexOf('// TECLAS DE MIDIA DO CONTROLE SAMSUNG', start);
+const shell = process.argv[2] || 'tools/tizen-shell.html';
+const html = fs.readFileSync(shell, 'utf8');
+const start = html.indexOf('  function imeAberto()');
+const end = html.indexOf(shell.includes('lite') ? '  var MEDIA_TECLA' :
+  '// TECLAS DE MIDIA DO CONTROLE SAMSUNG', start);
 assert(start >= 0 && end > start);
 const listeners = {};
 const events = [];

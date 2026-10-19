@@ -30,6 +30,8 @@ NUVIO_DADOS="$work/dados" "$work/test" || rc=1
 for scenario in webos sheets timeout; do
   NUVIO_DADOS="$work/dados" "$work/test" "$scenario" || rc=1
 done
-node tests/player_back_tizen.cjs > "$work/tizen-events" || rc=1
-NUVIO_DADOS="$work/dados" "$work/test" tizen < "$work/tizen-events" || rc=1
+for shell in tools/tizen-shell.html tools/tizen3-lite-shell.html; do
+  node tests/player_back_tizen.cjs "$shell" > "$work/tizen-events" || rc=1
+  NUVIO_DADOS="$work/dados" "$work/test" tizen < "$work/tizen-events" || rc=1
+done
 exit "$rc"

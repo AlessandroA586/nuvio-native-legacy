@@ -31,6 +31,10 @@ int main(int argc, char **argv) {
       e.key.keysym.scancode = (SDL_Scancode)482;
       dispatchNative(e);
       assert(!visivel && !saindo);
+      SDL_Delay(500);
+      e.key.repeat = 1; dispatchNative(e);
+      assert(!visivel && !saindo && !pediuSair);
+      e.key.repeat = 0;
       e.type = SDL_KEYUP; dispatchNative(e);
       e.type = SDL_KEYDOWN; dispatchNative(e);
       assert(saindo && pediuSair);
@@ -53,12 +57,29 @@ int main(int argc, char **argv) {
       }
     } else if (!strcmp(argv[1], "timeout")) {
       app_evento(&e);
-      for (int repeat = 0; repeat < 4; ++repeat) {
-        SDL_Delay(150);
+      assert(!visivel && !saindo && !pediuSair);
+      e.key.repeat = 1;
+      // Initial repeat delay and delayed delivery must never become new presses.
+      int delays[] = {500, 1600, 150, 150};
+      for (unsigned i = 0; i < sizeof delays / sizeof delays[0]; ++i) {
+        SDL_Delay(delays[i]);
         app_evento(&e);
-        assert(!saindo && !pediuSair);
+        assert(!visivel && !saindo && !pediuSair);
       }
-      SDL_Delay(410);
+      e.type = SDL_KEYUP; app_evento(&e);
+      e.type = SDL_KEYDOWN; e.key.repeat = 0; app_evento(&e);
+      assert(saindo && pediuSair);
+
+      reset(); visivel = 0; anim = 0;
+      e.key.repeat = 1; app_evento(&e);
+      assert(!saindo && !pediuSair); // Even an orphan repeat is still held.
+
+      reset(); e.key.repeat = 0;
+      app_evento(&e);
+      SDL_Delay(500);
+      app_evento(&e);
+      assert(!visivel && !saindo && !pediuSair);
+      SDL_Delay(1510); // Explicit recovery for a lost keyup, non-repeat only.
       app_evento(&e);
       assert(saindo && pediuSair);
     } else if (!strcmp(argv[1], "tizen")) {
