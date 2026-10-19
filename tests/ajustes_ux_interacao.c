@@ -96,7 +96,7 @@ int main(void) {
       ponteiro_quadro(SDL_GetTicks());
       ajPontEditor = 1;
       gfx_opacidade_grupo = 0;  // register real editor targets without a GL context
-      GfxRect painel = aj2EditorR(); painel.w = 1100;  // compact layout, no GPU preview
+      GfxRect painel = aj2EditorR(); painel.w = 1100; painel.h = 1400;  // all RAM rows visible, no GPU preview
       aj2EditorEscolha(painel);
       ponteiro_desenhar();
       gfx_opacidade_grupo = 1;

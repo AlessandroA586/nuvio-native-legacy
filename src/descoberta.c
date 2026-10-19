@@ -4258,7 +4258,7 @@ static void *fioListas(void *u) {
   int nw = 0, nc = 0;
   CatItem *wl = NULL, *col = NULL;
   if (descSessaoVincular(j->sessao)) {
-    if (ajustes_fonte_traz_trakt(ajustes_fonte_biblioteca())) wl = listaBuscar("watchlist", &nw);
+    wl = listaBuscar("watchlist", &nw);
     if (descSessaoAtual()) col = listaBuscar("collection", &nc);
   }
   pthread_mutex_lock(&listasTrava);
@@ -5225,7 +5225,7 @@ static void *montar(void *u) {
     listas = NULL;
   } else {
     GARANTE(TRAKT_LISTA_MAX);
-    if (ajustes_fonte_traz_trakt(ajustes_fonte_biblioteca())) n += trakt_lista("watchlist",  lote + n, cap - n);
+    n += trakt_lista("watchlist",  lote + n, cap - n);
     GARANTE(TRAKT_LISTA_MAX);
     n += trakt_lista("collection", lote + n, cap - n);
   }
@@ -5248,7 +5248,9 @@ static void *montar(void *u) {
     for (k = n, w = n; k < n + np; k++) {
       int jj, ja = 0;
       for (jj = 0; jj < n; jj++)
-        if (!strcmp(lote[jj].imdb, lote[k].imdb)) { lote[jj].naLista = 1; ja = 1; break; }
+        if (!strcmp(lote[jj].imdb, lote[k].imdb)) {
+          lote[jj].naLista = 1; lote[jj].listaFontes |= lote[k].listaFontes; ja = 1; break;
+        }
       if (ja) continue;
       if (w != k) lote[w] = lote[k];
       w++;

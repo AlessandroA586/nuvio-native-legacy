@@ -75,6 +75,7 @@ int main(void) {
     snprintf(catalogoTeste[i].imdb, sizeof catalogoTeste[i].imdb, "tt%07d", i);
     snprintf(catalogoTeste[i].tipo, sizeof catalogoTeste[i].tipo, "%s", i < 8 ? "movie" : "series");
     catalogoTeste[i].naLista = 1;
+    catalogoTeste[i].listaFontes = 7; // Fixture belongs to all three sources.
     catalogoTeste[i].naColecao = 1;
     if (i < 7) strcpy(catalogoTeste[i].meta, "2020");
   }

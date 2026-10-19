@@ -366,7 +366,7 @@ void salvos_reconciliar(void) {
   if (cat_n() != marcaCatN) { salvos_aplicar_catalogo(); return; }
   if (marcaIdx < 0 || marcaIdx >= cat_n()) return;
   c = cat_item(marcaIdx);
-  if (c && !strcmp(c->imdb, marcaId) && c->naLista) return;
+  if (c && !strcmp(c->imdb, marcaId) && (c->listaFontes & (1u << AJ_SALVOS_LOCAL))) return;
   salvos_aplicar_catalogo();
 }
 

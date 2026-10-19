@@ -673,6 +673,10 @@ static int jaNoFiltro(const char *id) {
 // segmentado ("Salvos 14"). A MESMA regra de entrada e de "um cartaz por
 // titulo" de reconstruir — contar diferente do que a grade mostra seria o
 // numero mentindo. Usa `contados` como rascunho; reconstruir zera depois.
+static int salvoNaFonte(const CatItem *ci) {
+  return ci->naLista && (ci->listaFontes & (1u << ajustes_fonte_biblioteca()));
+}
+
 static int contarModo(int m) {
   int n = cat_n(), total = 0;
   if (n > CAT_MAX) n = CAT_MAX;
@@ -680,7 +684,7 @@ static int contarModo(int m) {
   for (int i = 0; i < n; i++) {
     const CatItem *ci = cat_item(i);
     if (!ci) continue;
-    if (!(m == MODO_SALVOS ? ci->naLista : (ci->naColecao || comprado[i]))) continue;
+    if (!(m == MODO_SALVOS ? salvoNaFonte(ci) : (ci->naColecao || comprado[i]))) continue;
     if (jaNoFiltro(ci->imdb)) continue;
     if (nContados < CAT_MAX) contados[nContados++] = i;
     total++;
@@ -724,7 +728,7 @@ static void reconstruir(void) {
     // vetor era um erro conhecido e documentado: o catalogo e RECONSTRUIDO da
     // rede a cada descoberta, entao a posicao 3 de hoje e outro titulo amanha —
     // a marca "salvo" migrava sozinha para um filme que ninguem salvou.
-    int entra = (modo == MODO_SALVOS) ? ci->naLista
+    int entra = (modo == MODO_SALVOS) ? salvoNaFonte(ci)
                                       : (ci->naColecao || comprado[i]);
     if (!entra) continue;
     // UM CARTAZ POR TITULO. O mesmo titulo vive em varias fileiras, cada uma
@@ -844,7 +848,7 @@ int biblioteca_na_lista(int i) {
   // Trakt. O vetor por indice que respondia aqui apontava para outro titulo
   // assim que o catalogo era reconstruido.
   const CatItem *c = cat_item(i);
-  return c ? c->naLista : 0;
+  return c ? salvoNaFonte(c) : 0;
 }
 int biblioteca_comprado(int i) { return (i >= 0 && i < CAT_MAX) ? comprado[i] : 0; }
 void biblioteca_alternar_lista(int i) {

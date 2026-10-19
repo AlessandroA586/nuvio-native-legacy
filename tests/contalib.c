@@ -33,6 +33,7 @@ int contapend_estado(const char *i, const char *tipo, int t, int e, long long ms
 int contapend_reenviar(void) { return 0; }
 void contapend_reenviar_com(int (*f)(const char *, const char *, const VistoPar *, int, int, int, const int *, int)) { (void)f; }
 
+int ajustes_fonte_biblioteca(void) { return 0; }
 static int falhas;
 
 static void confere(const char *o_que, int obtido, int esperado) {

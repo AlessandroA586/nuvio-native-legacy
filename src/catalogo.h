@@ -115,6 +115,7 @@ typedef struct {
   // reconstruido da rede — uma tabela por indice apontaria para outro titulo
   // depois da primeira atualizacao.
   int  naLista, naColecao;
+  unsigned listaFontes; // AJ_SALVOS_* bits; naLista remains shared with Agenda.
   // 64 E NAO 16. O campo nasceu para "tt11280740", e 16 bastava. O id de um
   // addon de canal e "cs:channel:globo-tv-integracao-ituiutaba" — 16 bytes
   // cortavam TODO canal da Globo em "cs:channel:glob": todos viravam o mesmo

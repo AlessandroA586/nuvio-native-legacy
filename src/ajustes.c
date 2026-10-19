@@ -43,6 +43,7 @@
 #include "anim.h"
 #include "layout.h"
 #include "sessao.h"
+#include "contalib.h"
 #include "sync.h"
 #include "perfis.h"
 #include "ltv.h"
@@ -2169,6 +2170,9 @@ static float legendaEspera;
 // `valor[AJ_N]` a inicializacao parcial passava em silencio e as ultimas
 // opcoes ficavam no zero. Foi o que aconteceu com as sete linhas do Stalker e
 // do Xtream (#149, ver a nota delas abaixo).
+// Legacy salvosDestino controlled writes only; retain account precedence until
+// the user explicitly chooses a Library source. Persist separately from value.
+static int bibliotecaFonteEscolhida;
 static int valor[] = {
 #include "ajustes_ux_padrao.inc"
 };
@@ -3235,20 +3239,23 @@ void ajustes_definir_ocultar_nao_lancados(int ligado) {
 }
 // 1 = o "+" tambem publica na watchlist do Trakt. A lista LOCAL e escrita nos
 // dois casos; ver a nota de V_SALVOS e a de abertura de salvos.h.
-int ajustes_salvos_no_trakt(void)     { return valor[AJ_SALVOS_DEST] == AJ_SALVOS_TRAKT; }
-int ajustes_salvos_no_simkl(void)     { return valor[AJ_SALVOS_DEST] == AJ_SALVOS_SIMKL; }
+int ajustes_salvos_no_trakt(void)     { return ajustes_fonte_biblioteca() == AJ_SALVOS_TRAKT; }
+int ajustes_salvos_no_simkl(void)     { return ajustes_fonte_biblioteca() == AJ_SALVOS_SIMKL; }
 // Setter para o explicador de primeira vez (salvosintro.c), que faz esta
 // pergunta antes de a pessoa chegar em Ajustes. Grava na hora: quem respondeu e
 // desligou a TV nao deve ser perguntado de novo.
 void ajustes_definir_salvos_no_trakt(int noTrakt) {
+  bibliotecaFonteEscolhida = 1;
   valor[AJ_SALVOS_DEST] = noTrakt ? 1 : 0;
   AJ_COM_ORIGEM(AJLOG_PRIMEIRA, gravar());
 }
 int ajustes_fonte_biblioteca(void) {
+  if (!bibliotecaFonteEscolhida && contalib_tem_conta()) return AJ_SALVOS_LOCAL;
   return ajustes_fonte_resolver(valor[AJ_SALVOS_DEST], trakt_ativo(), simkl_ativo());
 }
 void ajustes_definir_salvos_destino(int destino) {
   if (destino < AJ_SALVOS_LOCAL || destino > AJ_SALVOS_SIMKL) return;
+  bibliotecaFonteEscolhida = 1;
   valor[AJ_SALVOS_DEST] = destino;
   AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar());
   desc_repetir();   // o mesmo que a linha de Ajustes faz ao mudar
@@ -4332,6 +4339,7 @@ void ajustes_dir(const char *dir) {
   if (!dir || !*dir) return;
   snprintf(dirAjustes, sizeof dirAjustes, "%s", dir);
   memoriaEscolhida = 0;
+  bibliotecaFonteEscolhida = 0;
   valor[AJ_ESCALA_TEXTO] = valorPadrao[AJ_ESCALA_TEXTO];
   valor[AJ_TAMANHO_UI] = UI_SIZE_AUTO;
   fonteregra_carregar();
@@ -4418,6 +4426,7 @@ void ajustes_dir(const char *dir) {
       continue;
     }
     if (!strcmp(chave, "idiomaAutoLocal")) { autoGravado = v == 1; viuAuto = 1; continue; }
+    if (!strcmp(chave, "bibliotecaFonteEscolhidaLocal")) { bibliotecaFonteEscolhida = v == 1; continue; }
     if (!strcmp(chave, "texturasEscolhaLocal")) { memoriaEscolhida = v == 1; continue; }
     if (!strcmp(chave, "escalaTextoVersaoLocal")) { escalaVersao = v; continue; }
     // "resolucao_ui" (ate a 2.0.1) virou "resolucaoUi" com Automatica na
@@ -4750,6 +4759,7 @@ static int gravar(void) {
   fprintf(f, "\n");
   fprintf(f, "escalaTextoVersaoLocal 1\n");
   if (memoriaEscolhida) fprintf(f, "texturasEscolhaLocal 1\n");
+  if (bibliotecaFonteEscolhida) fprintf(f, "bibliotecaFonteEscolhidaLocal 1\n");
   { int erro = ferror(f);
     if (fclose(f)) erro = 1;
     if (erro || rename(tmp, caminho)) { remove(tmp); return 0; } }
@@ -7412,8 +7422,6 @@ static const char *efeitoOpcao(int op) {
     case AJ_SAIR:
       return "Pede o OK duas vezes. Para voltar é preciso entrar de novo pelo QR.";
     case AJ_SALVOS_DEST:
-      if (valor[op] == AJ_SALVOS_SIMKL && !simklauth_token()[0])
-        return "Vincule o Simkl em Ajustes: sem o vínculo, o + guarda só na lista desta TV.";
       return "Escolhe de onde vem a Biblioteca e para onde o + também publica. A lista desta TV recebe o título em todos os casos.";
     case AJ_TRAKT: case AJ_SIMKL:
       return (op == AJ_TRAKT ? traktauth_estado() == TRA_LIGADO : simklauth_estado() == SMK_LIGADO)
@@ -8700,7 +8708,7 @@ static void notaLigarPar(int op) {
 }
 static int ajOrigemDireto = AJLOG_AJUSTES;   // quem chamou: a tela, ou a Central via ajustes_rapido_passo
 static int definirValorDireto(int op, int novo) {
-  int antes, memoriaAntes = memoriaEscolhida;
+  int antes, memoriaAntes = memoriaEscolhida, bibliotecaAntes = bibliotecaFonteEscolhida;
   if (op < 0 || op >= AJ_N || !ajOpcaoDisponivel(op) ||
       (OPCOES[op].tipo != OP_ESCOLHA && OPCOES[op].tipo != OP_NUMERO)) return 0;
   novo = limita(op, novo);
@@ -8723,13 +8731,15 @@ static int definirValorDireto(int op, int novo) {
   int posicaoAntes = valor[AJ_LEG2_POSICAO];
   if (op == AJ_LEG2_POS) valor[AJ_LEG2_POSICAO] = 0;
   antes = valor[op];
-  if (novo == antes && !(op == AJ_LEG2_POS && posicaoAntes != 0) && (op != AJ_TEX_MB || memoriaEscolhida)) return 1;
+  if (novo == antes && !(op == AJ_LEG2_POS && posicaoAntes != 0) &&
+      (op != AJ_TEX_MB || memoriaEscolhida) && (op != AJ_SALVOS_DEST || bibliotecaFonteEscolhida)) return 1;
   if (op == AJ_TEX_MB && texAcima(novo)) return 0;
   if (op == AJ_TEX_MB) memoriaEscolhida = 1;
+  if (op == AJ_SALVOS_DEST) bibliotecaFonteEscolhida = 1;
   valor[op] = novo;
   if (novo == 0) notaLigarPar(op);
   { int ok; ajOrigem = ajOrigemDireto; ok = gravar(); ajOrigem = 0;
-    if (!ok) { valor[op] = antes; valor[AJ_LEG2_POSICAO] = posicaoAntes; memoriaEscolhida = memoriaAntes; return 0; } }
+    if (!ok) { valor[op] = antes; valor[AJ_LEG2_POSICAO] = posicaoAntes; memoriaEscolhida = memoriaAntes; bibliotecaFonteEscolhida = bibliotecaAntes; return 0; } }
   if (op == AJ_FIL_LIMITE) {
     fil_ajustar_limite(novo);
     valor[op] = fil_limite_gravado();

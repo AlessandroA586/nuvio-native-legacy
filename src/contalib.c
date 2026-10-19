@@ -330,6 +330,7 @@ static void montarItem(CatItem *d, const ContaLibItem *s) {
   snprintf(d->meta, sizeof d->meta, "%s", s->meta);
   d->nota = s->nota;
   d->naLista = 1;
+  d->listaFontes = 1u << AJ_SALVOS_LOCAL;
   if (s->poster[0]) snprintf(d->poster, sizeof d->poster, "%s", s->poster);
   if (s->backdrop[0]) snprintf(d->backdrop, sizeof d->backdrop, "%s", s->backdrop);
   snprintf(d->backdropCatalogo, sizeof d->backdropCatalogo, "%s", d->backdrop);
@@ -419,7 +420,7 @@ void contalib_reconciliar(void) {
   // os acrescentados ficam no fim do vetor.
   if (marcaIdx < 0 || marcaIdx >= cat_n()) return;
   c = cat_item(marcaIdx);
-  if (c && !strcmp(c->imdb, marcaId) && c->naLista) return;
+  if (c && !strcmp(c->imdb, marcaId) && (c->listaFontes & (1u << AJ_SALVOS_LOCAL))) return;
   contalib_aplicar_catalogo();
 }
 
