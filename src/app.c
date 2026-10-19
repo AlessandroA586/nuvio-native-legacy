@@ -3219,7 +3219,7 @@ static void tentarProximaFonteVOD(void) {
   else if (!fonteFalha && video_bufferando_ms() > VOD_FONTE_BUFFER_MS) {
 #ifdef NV_ANDROID
     // Segura a troca so enquanto o fim do buffer ANDA (bufavanco.h), por fonte.
-    // No Android video_buffer_fim() e 0: a borda vem de VideoStats.bufferSeg.
+    // Para VOD no Android, a borda vem de VideoStats.bufferSeg.
     { static BufAvanco av; VideoStats vs;
       video_estatisticas(&vs);
       if (bufavanco_segura(&av, fonteVODDesde, video_bufferando_ms(), SDL_GetTicks(),
@@ -4610,6 +4610,22 @@ static void atualizarFolha(float dt, Uint32 agora) {
   if (!stream_folha_aberta()) gravarFolhaTocar(0, 0, 0);
 }
 
+// Android's live buffer end is unknown (zero). READY video that is actually
+// playing again also proves recovery; audio alone or continued buffering does not.
+static void recuperarErroFonte(void) {
+  if ((player_aberto() || player_mini_ativo()) && player_fonte_falhou() &&
+      player_tem_video() && !video_falhou() &&
+      (video_buffer_fim() > 0.5 ||
+       (player_id_canal()[0] && video_tocando() && !video_bufferando_ms())) &&
+      video_pronto()) {
+    printf("[player] a fonte voltou a entregar (buffer %.1fs): tirando o erro da tela\n",
+           video_buffer_fim());
+    fflush(stdout);
+    player_limpar_erro_fonte();
+    canalFonteDesde = SDL_GetTicks();
+  }
+}
+
 void app_atualizar(float dt, Uint32 agora) {
   relogioFocoValidar();
   { static int morno = -1; int ligado = ajustes_retomada_morna();
@@ -5971,16 +5987,11 @@ void app_atualizar(float dt, Uint32 agora) {
   // com "buffer 9.0s" numa fonte que nunca chegou ao loadCompleted: o buffer
   // enchia, o decoder nao comecava, e o cartao era tirado para uma tela
   // preta. O caso que motivou o conserto (18/09) tinha loadCompleted.
-  if ((player_aberto() || player_mini_ativo()) && player_fonte_falhou() &&
-      player_tem_video() && video_buffer_fim() > 0.5 && !video_falhou() &&
-      video_pronto()) {
-    printf("[player] a fonte voltou a entregar (buffer %.1fs): tirando o erro da tela\n",
-           video_buffer_fim());
-    fflush(stdout);
-    player_limpar_erro_fonte();
-    canalFonteDesde = SDL_GetTicks();
-  }
+  recuperarErroFonte();
   if (canalFonteIdx >= 0 && (player_aberto() || player_mini_ativo()) &&
+#ifdef NV_ANDROID
+      !video_recuperando_live() &&
+#endif
       !player_quer_sair() && player_id_canal()[0]) {
     // TRAVOU DEPOIS DE ABRIR conta como morta, e sem isto nao contava.
     //
@@ -6014,12 +6025,22 @@ void app_atualizar(float dt, Uint32 agora) {
     Uint32 teto = espera > CANAL_ABRE_TETO_MS ? espera : CANAL_ABRE_TETO_MS;
     int semDecoder = (xt || canalViaProxy) && player_carregando() && desde > semDecMs &&
         video_buffer_fim() > 0.5 && !video_decoder_anunciou();
+    unsigned bufferMs = video_bufferando_ms();
+    unsigned travaMs = CANAL_TRAVA_MS, paradoMs = NV_LS_PARADO_MS;
+#ifdef NV_ANDROID
+    if (bufferMs) {
+      paradoMs = nv_ls_buffer_prazo(video_live_segmento_ms());
+      // Give the same-source watchdog its normal four-second lead over failover.
+      if (paradoMs > NV_LS_PARADO_MS) travaMs = paradoMs + 4000u;
+    }
+#endif
     int morta = player_fonte_falhou() || video_falhou() ||
         (player_carregando() && desde > prazo && video_buffer_fim() <= 0.5) ||
         (player_carregando() && desde > teto) ||
-        video_bufferando_ms() > CANAL_TRAVA_MS || semDecoder;
+        bufferMs > travaMs || semDecoder;
     // CANAL QUE PAROU DEPOIS DE TOCAR (#302): fim de fluxo, posicao parada ou
-    // buffering por 8 s. EOF de live TPK com progresso reabre imediatamente
+    // buffering por 8 s (HLS Android usa o prazo limitado do segmento).
+    // EOF de live TPK com progresso reabre imediatamente
     // sem gastar tentativa; as demais quedas reabrem a MESMA fonte, ate
     // NV_LS_MAX vezes (livestall.h); esgotou, cai no caminho de sempre (proxima
     // fonte). Pausa da pessoa nunca entra. No webOS o fim do buffer parado
@@ -6034,15 +6055,23 @@ void app_atualizar(float dt, Uint32 agora) {
         lsIdx = canalFonteIdx;
         snprintf(lsId, sizeof lsId, "%s", player_id_canal());
       }
-      ls = nv_ls_passo_buf(&liveStall, SDL_GetTicks(), video_pronto() ? video_pos() : 0.0,
+      double livePos = video_pronto() ? video_pos() : 0.0, liveFim = video_buffer_fim();
+#ifdef NV_ANDROID
+      if (video_pronto()) video_live_progresso(&livePos, &liveFim);
+#endif
+      int estavaPendente = liveStall.pendente;
+      ls = nv_ls_passo_buf_prazo(&liveStall, SDL_GetTicks(), livePos,
                            video_pronto(), player_pausa_pessoa(), video_terminou(),
-                           video_bufferando_ms(), video_buffer_fim());
+                           bufferMs, liveFim, paradoMs);
       if (morta) {
         nv_ls_zerar(&liveStall);
+      } else if (estavaPendente && !liveStall.pendente && ls == NV_LS_NADA) {
+        printf("[canal] reproducao recuperou: reabertura pendente cancelada (fonte %d)\n", canalFonteIdx);
+        fflush(stdout);
       } else if (ls == NV_LS_AGENDOU) {
         printf("[canal] parou de tocar (fim de fluxo=%d, posicao %.1fs, buffering %u ms): "
                "reabrindo a fonte %d, tentativa %d/%d em %u ms\n", video_terminou(),
-               video_pos(), video_bufferando_ms(), canalFonteIdx, liveStall.tentativa,
+               livePos, video_bufferando_ms(), canalFonteIdx, liveStall.tentativa,
                NV_LS_MAX, nv_ls_espera_ms(liveStall.tentativa));
         fflush(stdout);
         player_toast_ex(i18n("Conexão caiu, reconectando…"), 4000, "aj_wifi-off", 1);
