@@ -564,6 +564,9 @@ static int temporada = 0;            // temporada ESCOLHIDA (nao a focada)
 // antes a troca de temporada arrastava o FOCO para o episodio, e com isso o
 // D-pad saia da fileira de abas: nao dava para passar da segunda temporada.
 static int    epAncora = 0;
+static CatEp menuEpAnterior;
+static int menuTemAnterior;
+static const CatEp *menuEpDesenho;
 // Comentarios: 0 = da SERIE, 1 = do EPISODIO. E o seletor que a referencia poe
 // sob "Avaliações do Trakt". Em filme nao existe e fica cravado em 0.
 static int comentEp = 0;
@@ -3616,6 +3619,25 @@ static void detail_atualizar_(float dt, Uint32 agora) {
   // telas e app.c chama todas do mesmo jeito.
   (void)agora;
   episodios_menu_atualizar(dt);   // as molas do menu de visto / painel da temporada
+  int menuT,menuE;
+  if (aberto && episodios_menu_trocou(&menuT,&menuE)) {
+    const CatEp *previous=cat_episodio(idx,epAbsoluto(foco.coluna));
+    menuTemAnterior=previous!=NULL; if (previous) menuEpAnterior=*previous;
+    const CatItem *ci=cat_item(idx);
+    for (int i=0;ci && i<ci->nTemporadas;i++) if (ci->temporadas[i]==menuT) {
+      if (temporada!=i) irParaTemporada(i,0);
+      temporada=i; break;
+    }
+    for (int c=0;c<epVisiveis();c++) {
+      const CatEp *ep=cat_episodio(idx,epAbsoluto(c));
+      if (ep && ep->temporada==menuT && ep->episodio==menuE) {
+        foco.fileira=SEC_EPISODIOS; foco.coluna=epAncora=c;
+        foco.colunaLembrada[SEC_EPISODIOS]=c;
+        foco.nColunas[SEC_EPISODIOS]=epVisiveis();
+        comEpT=menuT; comEpE=menuE; break;
+      }
+    }
+  }
   if (!aberto) { blocoAnt[0] = blocoAnt[1] = blocoAnt[2] = -1.0f; return; }
   if (pessoaAberta && pessoa_falhou()) {
     pessoaAberta = 0;
@@ -5520,7 +5542,7 @@ static void desenhaAssistidoEpisodio(GfxRect th, float a) {
 }
 
 static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
-  const CatEp *ep = cat_episodio(idx, epAbsoluto(c));
+  const CatEp *ep = menuEpDesenho ? menuEpDesenho : cat_episodio(idx, epAbsoluto(c));
   GfxRect th = { r.x, r.y, r.w, epThumbH() };
   float raioTh = NV_DETP_EP_RAIO / epThumbH();
 
@@ -7195,8 +7217,17 @@ static void menuDeVisto(Uint32 agora) {
   episodios_menu_desenhar();
   if (menuOrigem.w <= 8.0f) return;
   if (episodios_menu_painel()) desenhaTemporada(menuOrigem, menuOrigemCol, menuOrigemF, menuOrigemA);
-  else if (foco.fileira == SEC_EPISODIOS)
-    desenhaEpisodio(menuOrigem, menuOrigemCol, menuOrigemF, menuOrigemA * anim_clamp(episodios_menu_anim(), 0.0f, 1.0f), agora);
+  else if (foco.fileira == SEC_EPISODIOS) {
+    int dir; float t=episodios_menu_transicao(&dir), ease=1-(1-t)*(1-t)*(1-t);
+    if (menuTemAnterior && t<1 && !ajustes_animacoes_reduzidas()) {
+      GfxRect old=menuOrigem; old.x-=dir*28*ease;
+      menuEpDesenho=&menuEpAnterior;
+      desenhaEpisodio(old,menuOrigemCol,menuOrigemF,menuOrigemA*(1-ease),agora);
+      menuEpDesenho=NULL;
+    }
+    GfxRect moved=menuOrigem; moved.x+=dir*28*(1-ease);
+    desenhaEpisodio(moved, menuOrigemCol, menuOrigemF, menuOrigemA * anim_clamp(episodios_menu_anim(), 0.0f, 1.0f)*ease, agora);
+  }
   menuOrigem.w = 0.0f;   // so vale a caixa do quadro em que a peca foi desenhada
 }
 

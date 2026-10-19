@@ -194,7 +194,17 @@ static int comentarioLer(ComentAchado *a, const char *p, const char *f) {
 //
 // Vem sob demanda — so quando o dono escolhe "Episódio" —, porque o custo e uma
 // viagem por episodio e a maioria das visitas nunca troca de aba.
-static ExComentario comentEp[EX_COMENT_MAX];
+static ExComentario *comentEp;
+static int epCap, epPagina, epMais, epTmdb;
+#define EP_PAGINA 8
+static RedeGrupo *epGrupo;
+typedef struct {
+  char show[24], chaveTmdb[160];
+  int t, e, pagina, tmdb, serie;
+  long idTmdb;
+  NvPerfilSessao sessao;
+  RedeJob *job;
+} EpPedido;
 static ExEpNotas epNotas;
 static int  nComentEp;
 static int  epTempAtual, epNumAtual;    // de que episodio a lista acima e
@@ -1763,12 +1773,20 @@ const char *extras_comentario_usuario(int i) {
 }
 // UI snapshots outlive worker publication/replacement of the heap text.
 static const char *comentarioTexto(int ep, int i) {
-  static char *copia[2][EX_COMENT_MAX];
-  if (i < 0 || i >= EX_COMENT_MAX) return "";
+  static char *copia[EX_COMENT_MAX], **copiaEp;
+  static int capEp;
+  if (i < 0 || (!ep && i >= EX_COMENT_MAX)) return "";
   pthread_mutex_lock(&trava);
+  if (ep && i >= capEp) {
+    int cap = i + 16;
+    char **v = realloc(copiaEp, cap * sizeof *v);
+    if (!v) { pthread_mutex_unlock(&trava); return ""; }
+    memset(v + capEp, 0, (cap - capEp) * sizeof *v);
+    copiaEp = v; capEp = cap;
+  }
   const char *src = i < (ep ? nComentEp : nComent) ? (ep ? comentEp[i].texto : coment[i].texto) : NULL;
   if (!src) src = "";
-  char **dst = &copia[ep][i];
+  char **dst = ep ? &copiaEp[i] : &copia[i];
   if (!*dst || strcmp(*dst, src)) {
     char *nova = strdup(src);
     if (!nova) { pthread_mutex_unlock(&trava); return ""; }
@@ -1784,130 +1802,169 @@ int extras_comentario_curtidas(int i) {
 
 // --- comentarios do EPISODIO --------------------------------------------------
 
+static int epAtual(const EpPedido *p) {
+  return rede_job_estado(p->job) == REDE_OK && nv_perfil_sessao_atual(p->sessao) &&
+    !strcmp(p->show, epShow) && p->t == epPedTemp && p->e == epPedNum;
+}
+static char *epBaixar(EpPedido *p, const char *url, const char *const *cab) {
+  RedeResposta r = {0};
+  RedePedido q = {.url=url, .cabecalhos=cab, .prazo_ms=12000, .seguir=1, .job=p->job};
+  rede_pedir(&q, &r);
+  char *body = NULL;
+  if (r.erro == REDE_OK && r.status >= 200 && r.status < 300) { body = r.corpo; r.corpo = NULL; }
+  rede_resposta_limpar(&r);
+  return body;
+}
 static void *buscarEpComent(void *arg) {
-  const char *cab[4];
-  char chave[140], url[260], show[24];
-  char *corpo;
-  int t, e;
-  NvPerfilSessao sessao;
-  (void)arg;
-
+  EpPedido *p = arg;
+  const char *cab[4] = {0}; char chave[140], url[600];
+  char *corpo = NULL;
+  int n = 0, total = 0, raw = 0, source = p->tmdb, more = 0;
+  ComentAchado achado[20] = {0};
+  if (!source && trakt_cabecalhos_publicos(cab, chave, sizeof chave)) {
+    snprintf(url, sizeof url,
+      "https://api.trakt.tv/shows/%s/seasons/%d/episodes/%d/comments/likes?page=%d&limit=%d",
+      p->show, p->t, p->e, p->pagina, EP_PAGINA);
+    corpo = epBaixar(p, url, cab);
+    const char *v = corpo ? strchr(corpo, '[') : NULL;
+    v = v ? v + 1 : NULL;
+    while (v && *v && (unsigned char)*v <= ' ') v++;
+    while (v && *v == '{' && raw < EP_PAGINA) {
+      const char *end = js_fim(v); raw++;
+      if (comentarioLer(&achado[n], v, end)) n++;
+      v = js_prox(end);
+    }
+    more = raw == EP_PAGINA;
+    free(corpo); corpo = NULL;
+  }
+  if (!source && p->pagina == 1 && rede_job_estado(p->job) == REDE_OK) {
+    snprintf(url, sizeof url, "https://api.trakt.tv/shows/%s/seasons/%d/episodes/%d/ratings", p->show, p->t, p->e);
+    corpo = cab[0] ? epBaixar(p, url, cab) : NULL;
+    ExEpNotas notas = {0};
+    if (corpo) {
+      const char *dist = strstr(corpo, "\"distribution\"");
+      notas.nota = (int)(js_num(corpo, NULL, "rating", 0) * 10 + .5);
+      notas.votos = (int)js_num(corpo, NULL, "votes", 0);
+      for (int k=1; dist && k<=10; k++) {
+        char key[4]; snprintf(key, sizeof key, "%d", k);
+        notas.distribuicao[k] = (int)js_num(dist, NULL, key, 0);
+      }
+      free(corpo); corpo = NULL;
+    }
+    pthread_mutex_lock(&trava);
+    if (epAtual(p)) epNotas = notas;
+    pthread_mutex_unlock(&trava);
+  }
+  // TMDB has title-level reviews only. Never present these as episode reviews.
+  if ((source || (p->pagina == 1 && n == 0)) && p->chaveTmdb[0] && rede_job_estado(p->job) == REDE_OK) {
+    source = 1;
+    if (p->idTmdb <= 0) {
+      snprintf(url, sizeof url, "https://api.themoviedb.org/3/find/%s?api_key=%s&external_source=imdb_id", p->show, p->chaveTmdb);
+      corpo = epBaixar(p, url, NULL);
+      const char *v = corpo ? js_array(corpo, NULL, p->serie ? "tv_results" : "movie_results") : NULL;
+      if (v) p->idTmdb = (long)js_num(v, js_fim(v), "id", 0);
+      free(corpo); corpo = NULL;
+    }
+    if (p->idTmdb > 0) {
+      snprintf(url, sizeof url, "https://api.themoviedb.org/3/%s/%ld/reviews?api_key=%s&page=%d",
+        p->serie ? "tv" : "movie", p->idTmdb, p->chaveTmdb, p->pagina);
+      corpo = epBaixar(p, url, NULL);
+      total = corpo ? (int)js_num(corpo, NULL, "total_pages", 0) : 0;
+      const char *v = corpo ? js_array(corpo, NULL, "results") : NULL;
+      raw = 0;
+      while (v && *v == '{') {
+        const char *end = js_fim(v);
+        // TMDB pages contain at most 20 reviews; publish through the same feed.
+        ComentAchado a = {0};
+        a.t = malloc((size_t)(end-v)+1);
+        if (a.t) {
+          js_texto_linhas(v,end,"content",a.t,(size_t)(end-v)+1);
+          js_texto(v,end,"author",a.u,sizeof a.u);
+          js_texto(v,end,"created_at",a.data,sizeof a.data);
+          a.nota = (int)js_num(v,end,"rating",0);
+          if (n < 20 && a.t[0]) achado[n++] = a;
+          else free(a.t);
+        }
+        raw++; v = js_prox(end);
+      }
+      free(corpo); corpo = NULL;
+      more = p->pagina < total;
+    } else more = 0;
+  }
+  coment_ordenar(achado,n,idioma_iso(ajustes_idioma()));
   pthread_mutex_lock(&trava);
-  snprintf(show, sizeof show, "%s", epShow);
-  t = epPedTemp; e = epPedNum;
-  sessao = epComentSessao;
-  pthread_mutex_unlock(&trava);
+  if (epAtual(p)) {
 
-  if (!nv_perfil_sessao_atual(sessao) ||
-      !trakt_cabecalhos_publicos(cab, chave, sizeof chave)) {
-    printf("[nuvio] episode reviews %s S%dE%d: stale session or missing public Trakt key\n", show, t, e);
-    pthread_mutex_lock(&trava); epFioVivo = 0; pthread_mutex_unlock(&trava);
-    return NULL;
-  }
-  snprintf(url, sizeof url,
-           "https://api.trakt.tv/shows/%s/seasons/%d/episodes/%d/comments/likes?limit=%d",
-           show, t, e, EX_COMENT_MAX);
-  corpo = rede_baixar_com(url, 12, cab);
-  int commentsOk = corpo != NULL;
-  if (corpo) {
-    ComentAchado achado[EX_COMENT_MAX];
-    int n = 0;
-    const char *p = strchr(corpo, '[');
-    p = p ? p + 1 : NULL;
-    while (p && *p && (unsigned char)*p <= ' ') p++;
-    while (p && *p == '{' && n < EX_COMENT_MAX) {
-      const char *f = js_fim(p);
-      if (comentarioLer(&achado[n], p, f)) n++;
-      p = js_prox(f);
+    for (int k=0; k<n; k++) {
+      int duplicate = 0;
+      for (int j=0; j<nComentEp; j++)
+        if (!strcmp(comentEp[j].user,achado[k].u) && !strcmp(comentEp[j].data,achado[k].data) &&
+            !strcmp(comentEp[j].texto,achado[k].t)) { duplicate=1; break; }
+      if (duplicate) continue;
+      if (nComentEp == epCap) {
+        int cap = epCap + 16;
+        ExComentario *v = realloc(comentEp,cap*sizeof *v);
+        if (!v) { more=0; break; }
+        memset(v+epCap,0,(cap-epCap)*sizeof *v); comentEp=v; epCap=cap;
+      }
+      comentarioPublicar(&comentEp[nComentEp++], &achado[k]);
     }
-    free(corpo);
-    // Os que estao no idioma da interface primeiro (comentordem.h). Sem pedido
-    // novo: e so a ordem das oito linhas que ja chegaram.
-    coment_ordenar(achado, n, idioma_iso(ajustes_idioma()));
-    pthread_mutex_lock(&trava);
-    // So publica se o dono ainda esta no mesmo episodio: trocar de episodio
-    // enquanto isto volta faria a lista antiga aparecer sob o rotulo novo.
-    if (nv_perfil_sessao_atual(sessao) && !strcmp(show, epShow) &&
-        t == epPedTemp && e == epPedNum) {
-      int k;
-      comentariosLimpar(comentEp);
-      for (k = 0; k < n; k++) comentarioPublicar(&comentEp[k], &achado[k]);
-      nComentEp = n;
-      epTempAtual = t; epNumAtual = e;
-    }
-    pthread_mutex_unlock(&trava);
-    for (int k = 0; k < n; k++) free(achado[k].t);
-  } else {
-    // Falhou: marca o episodio como respondido (lista vazia) pelo mesmo
-    // motivo do teste em extras_pedir_comentarios_ep — senao seria um pedido
-    // por quadro ate a rede voltar.
-    pthread_mutex_lock(&trava);
-    if (nv_perfil_sessao_atual(sessao) && !strcmp(show, epShow) &&
-        t == epPedTemp && e == epPedNum) { epTempAtual = t; epNumAtual = e; }
-    pthread_mutex_unlock(&trava);
+    epTempAtual=p->t; epNumAtual=p->e; epPagina=p->pagina;
+    epMais=more; epTmdb=source; epFioVivo=0;
   }
-  // Same headers, worker, session guard and episode cache as comments.
-  snprintf(url, sizeof url, "https://api.trakt.tv/shows/%s/seasons/%d/episodes/%d/ratings", show, t, e);
-  corpo = rede_baixar_com(url, 12, cab);
-  ExEpNotas notas = {0};
-  int ratingsOk = corpo != NULL;
-  if (corpo) {
-    const char *dist = strstr(corpo, "\"distribution\"");
-    notas.nota = (int)(js_num(corpo, NULL, "rating", 0) * 10 + .5);
-    notas.votos = (int)js_num(corpo, NULL, "votes", 0);
-    for (int k = 1; dist && k <= 10; k++) {
-      char key[4]; snprintf(key, sizeof key, "%d", k);
-      notas.distribuicao[k] = (int)js_num(dist, NULL, key, 0);
-    }
-    pthread_mutex_lock(&trava);
-    if (nv_perfil_sessao_atual(sessao) && !strcmp(show, epShow) && t == epPedTemp && e == epPedNum) epNotas = notas;
-    pthread_mutex_unlock(&trava);
-    free(corpo);
-  }
-  printf("[nuvio] episode reviews %s S%dE%d: comments=%s ratings=%s score=%d votes=%d\n",
-         show, t, e, commentsOk ? "ok" : "failed",
-         ratingsOk ? "ok" : "failed", notas.nota, notas.votos);
-  fflush(stdout);
-  pthread_mutex_lock(&trava); epFioVivo = 0; pthread_mutex_unlock(&trava);
+  pthread_mutex_unlock(&trava);
+  for (int k=0;k<n;k++) free(achado[k].t);
+  rede_job_soltar(p->job); free(p);
   return NULL;
 }
-
-void extras_pedir_comentarios_ep(const char *imdbSerie, int temporada, int episodio) {
-  pthread_t f;
-  if (!imdbSerie || !imdbSerie[0] || temporada < 0 || episodio <= 0) return;
-  pthread_mutex_lock(&trava);
-  // Include show and profile in the cache key; identical T/E is not enough.
-  char show[24];
-  snprintf(show, sizeof show, "%s", imdbSerie);
-  { char *dp = strchr(show, ':'); if (dp) *dp = 0; }
-  // Mesmo episodio ja carregado (ou em voo): nao repete a viagem.
-  // Sem o `nComentEp > 0` que havia aqui: um episodio SEM comentario
-  // (t/e publicados, lista vazia) era pedido de novo a cada quadro, um fio
-  // por quadro contra o Trakt, enquanto o foco ficasse na secao.
-  if (epFioVivo || (!strcmp(show, epShow) && temporada == epTempAtual && episodio == epNumAtual && nv_perfil_sessao_atual(epComentSessao))) {
-    pthread_mutex_unlock(&trava);
-    return;
-  }
-  // O id pode vir como "tt123:2:4" da lista de episodios; o Trakt quer so a
-  // serie.
-  { const char *dp;
-    snprintf(epShow, sizeof epShow, "%s", imdbSerie);
-    dp = strchr(epShow, ':');
-    if (dp) *(char *)dp = 0; }
-  epPedTemp = temporada; epPedNum = episodio;
-  epComentSessao = nv_perfil_sessao_ler();
-  comentariosLimpar(comentEp);
-  nComentEp = 0;                 // limpa: a lista velha e de outro episodio
-  memset(&epNotas, 0, sizeof epNotas);
-  epTempAtual = epNumAtual = 0;
-  epFioVivo = 1;
-  pthread_mutex_unlock(&trava);
-  if (pthread_create(&f, NULL, buscarEpComent, NULL) != 0) {
-    pthread_mutex_lock(&trava); epFioVivo = 0; pthread_mutex_unlock(&trava);
-  } else {
-    pthread_detach(f);
-  }
+static void epIniciar(void) {
+  EpPedido *p=calloc(1,sizeof *p); pthread_t f;
+  if (!p) { epFioVivo=0; epMais=0; return; }
+  snprintf(p->show,sizeof p->show,"%s",epShow);
+  snprintf(p->chaveTmdb,sizeof p->chaveTmdb,"%s",desc_chave_tmdb());
+  p->t=epPedTemp; p->e=epPedNum; p->pagina=epPagina+1;
+  p->tmdb=epTmdb; p->sessao=epComentSessao; p->serie=1;
+  int idx=cat_indice_por_imdb(epShow); const CatItem *ci=cat_item(idx);
+  if (ci) { p->idTmdb=ci->tmdb; p->serie=strcmp(ci->tipo,"movie")!=0; }
+  if (!epGrupo) epGrupo=rede_grupo_criar();
+  p->job=rede_job_criar(epGrupo);
+  epFioVivo=1;
+  if (!p->job || pthread_create(&f,NULL,buscarEpComent,p)!=0) {
+    if (p->job) rede_job_soltar(p->job);
+    free(p); epFioVivo=0; epMais=0;
+  } else pthread_detach(f);
 }
+void extras_comentarios_ep_cancelar(void) {
+  pthread_mutex_lock(&trava);
+  if (epGrupo) rede_grupo_avancar(epGrupo);
+  epFioVivo=0;
+  pthread_mutex_unlock(&trava);
+}
+void extras_pedir_comentarios_ep(const char *imdbSerie,int t,int e) {
+  if (!imdbSerie || !*imdbSerie || t<0 || e<=0) return;
+  char show[24]; snprintf(show,sizeof show,"%s",imdbSerie);
+  char *dp=strchr(show,':'); if (dp) *dp=0;
+  pthread_mutex_lock(&trava);
+  if (!strcmp(show,epShow) && t==epPedTemp && e==epPedNum &&
+      nv_perfil_sessao_atual(epComentSessao) && (epFioVivo || (t==epTempAtual && e==epNumAtual))) {
+    pthread_mutex_unlock(&trava); return;
+  }
+  if (epGrupo) rede_grupo_avancar(epGrupo);
+  for (int i=0;i<nComentEp;i++) { free(comentEp[i].texto); memset(&comentEp[i],0,sizeof comentEp[i]); }
+  snprintf(epShow,sizeof epShow,"%s",show);
+  epPedTemp=t; epPedNum=e; epComentSessao=nv_perfil_sessao_ler();
+  epPagina=epTmdb=nComentEp=epTempAtual=epNumAtual=0; epMais=1;
+  memset(&epNotas,0,sizeof epNotas);
+  epIniciar();
+  pthread_mutex_unlock(&trava);
+}
+void extras_comentarios_ep_mais(void) {
+  pthread_mutex_lock(&trava);
+  if (epMais && !epFioVivo && nv_perfil_sessao_atual(epComentSessao)) epIniciar();
+  pthread_mutex_unlock(&trava);
+}
+int extras_comentarios_ep_tem_mais(void) { pthread_mutex_lock(&trava); int n=epMais; pthread_mutex_unlock(&trava); return n; }
+int extras_comentarios_ep_tmdb(void) { pthread_mutex_lock(&trava); int n=epTmdb; pthread_mutex_unlock(&trava); return n; }
 
 int extras_comentarios_ep_do(const char *imdb, int t, int e) {
   char show[24]; int ok;
@@ -1921,11 +1978,25 @@ int extras_comentarios_ep_do(const char *imdb, int t, int e) {
 void extras_notas_ep(ExEpNotas *saida) {
   pthread_mutex_lock(&trava); *saida = epNotas; pthread_mutex_unlock(&trava);
 }
-const char *extras_comentario_ep_data(int i) { return i >= 0 && i < nComentEp ? comentEp[i].data : ""; }
-int extras_comentario_ep_respostas(int i) { return i >= 0 && i < nComentEp ? comentEp[i].respostas : 0; }
-int extras_comentario_ep_spoiler(int i) { return i >= 0 && i < nComentEp ? comentEp[i].spoiler : 0; }
-int extras_n_comentarios_ep(void) { return nComentEp; }
-int extras_comentarios_ep_carregando(void) { return epFioVivo; }
+// Copy short fields while locked: append may realloc the feed on another thread.
+static const char *epCampo(int i,int field) {
+  static char copy[3][40];
+  pthread_mutex_lock(&trava);
+  const char *s="";
+  if (i>=0 && i<nComentEp) s=field==0?comentEp[i].user:field==1?comentEp[i].data:comentEp[i].lingua;
+  snprintf(copy[field],sizeof copy[field],"%s",s);
+  pthread_mutex_unlock(&trava); return copy[field];
+}
+static int epNumero(int i,int field) {
+  pthread_mutex_lock(&trava); int n=0;
+  if (i>=0 && i<nComentEp) n=field==0?comentEp[i].nota:field==1?comentEp[i].curtidas:field==2?comentEp[i].respostas:comentEp[i].spoiler;
+  pthread_mutex_unlock(&trava); return n;
+}
+const char *extras_comentario_ep_data(int i) { return epCampo(i,1); }
+int extras_comentario_ep_respostas(int i) { return epNumero(i,2); }
+int extras_comentario_ep_spoiler(int i) { return epNumero(i,3); }
+int extras_n_comentarios_ep(void) { pthread_mutex_lock(&trava); int n=nComentEp; pthread_mutex_unlock(&trava); return n; }
+int extras_comentarios_ep_carregando(void) { pthread_mutex_lock(&trava); int n=epFioVivo; pthread_mutex_unlock(&trava); return n; }
 
 // O fio de extras ainda esta no ar. Serve para separar "ainda nao chegou" de
 // "nao ha", que sao a mesma lista vazia — sem isso a pagina de filme mostrava
@@ -1938,14 +2009,14 @@ int extras_carregando(void) {
   return v;
 }
 const char *extras_comentario_ep_usuario(int i) {
-  return (i >= 0 && i < nComentEp) ? comentEp[i].user : "";
+  return epCampo(i,0);
 }
 const char *extras_comentario_ep_texto(int i) { return comentarioTexto(1, i); }
 int extras_comentario_ep_curtidas(int i) {
-  return (i >= 0 && i < nComentEp) ? comentEp[i].curtidas : 0;
+  return epNumero(i,1);
 }
 int extras_comentario_ep_nota(int i) {
-  return (i >= 0 && i < nComentEp) ? comentEp[i].nota : 0;
+  return epNumero(i,0);
 }
 
 // Idioma do comentario quando NAO e o da interface ("" quando e, ou quando o
@@ -1955,17 +2026,17 @@ const char *extras_comentario_lingua(int i) {
           idioma_iso(ajustes_idioma()))) ? coment[i].lingua : "";
 }
 const char *extras_comentario_ep_lingua(int i) {
-  return (i >= 0 && i < nComentEp && !coment_mesmo_idioma(comentEp[i].lingua,
-          idioma_iso(ajustes_idioma()))) ? comentEp[i].lingua : "";
+  const char *s=epCampo(i,2);
+  return !coment_mesmo_idioma(s,idioma_iso(ajustes_idioma())) ? s : "";
 }
 const char *extras_comentario_data(int ep, int i) {
-  return i >= 0 && i < (ep ? nComentEp : nComent) ? (ep ? comentEp[i].data : coment[i].data) : "";
+  return ep ? extras_comentario_ep_data(i) : i>=0 && i<nComent ? coment[i].data : "";
 }
 int extras_comentario_spoiler(int ep, int i) {
-  return i >= 0 && i < (ep ? nComentEp : nComent) ? (ep ? comentEp[i].spoiler : coment[i].spoiler) : 0;
+  return ep ? extras_comentario_ep_spoiler(i) : i>=0 && i<nComent ? coment[i].spoiler : 0;
 }
 int extras_comentario_respostas(int ep, int i) {
-  return i >= 0 && i < (ep ? nComentEp : nComent) ? (ep ? comentEp[i].respostas : coment[i].respostas) : 0;
+  return ep ? extras_comentario_ep_respostas(i) : i>=0 && i<nComent ? coment[i].respostas : 0;
 }
 int extras_comentario_nota(int i) {
   return (i >= 0 && i < nComent) ? coment[i].nota : 0;
@@ -2637,7 +2708,9 @@ void extras_abrir_sessao(void) {
   zerarPublicado();
   epShow[0] = 0;
   memset(&epNotas, 0, sizeof epNotas);
-  comentariosLimpar(comentEp);
+  if (epGrupo) rede_grupo_avancar(epGrupo);
+  for (int i=0;i<nComentEp;i++) { free(comentEp[i].texto); memset(&comentEp[i],0,sizeof comentEp[i]); }
+  epFioVivo=epMais=epPagina=epTmdb=0;
   nComentEp = epTempAtual = epNumAtual = epPedTemp = epPedNum = 0;
   pthread_mutex_unlock(&trava);
   pthread_mutex_lock(&heroTrailerTrava);
