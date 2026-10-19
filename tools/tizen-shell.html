@@ -507,6 +507,10 @@
     nvPool: nvHeap.pool,
     preRun: [function () {
       try {
+        var duid = webapis.productinfo.getDuid();
+        if (duid) ENV.NUVIO_DEVICE_ID = "samsung:" + duid;
+      } catch (_) { /* No model fallback: identical TVs must remain separate. */ }
+      try {
         var model = webapis.productinfo.getModel();
         ENV.NUVIO_TV_MODEL = model;
         console.log("[tv] modelo=" + model);
