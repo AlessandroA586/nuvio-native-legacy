@@ -576,13 +576,15 @@ void gpun_quadro_fim(void) {
     gfx_opacidade_grupo = 1.0f;
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     // RCAS reads the upscaled frame back from a drawable-sized target.
-    int rcas = upRcas();
+    int rcas = !gfx_hdr_output && upRcas();
     if (rcas && !rcasFbo && alvoCriar(&rcasFbo, &rcasTex, telaW, telaH) != GL_FRAMEBUFFER_COMPLETE) {
       printf("[gpu-nivel] alvo RCAS %dx%d incompleto: sem nitidez\n", telaW, telaH);
       rcasFalhou = 1; rcas = 0;
     }
     if (rcas) glBindFramebuffer(GL_FRAMEBUFFER, rcasFbo);
-    switch (upEtapa()) {
+    if (gfx_hdr_output)
+      gfx_rect(tela, intTex, GFX_HDR_OUTPUT, (float)gfx_hdr_output, 0, 0, 0, 1, 1, 1, 1);
+    else switch (upEtapa()) {
       case UP_SGSR:
         gfx_rect(tela, intTex, GFX_COPIA, 0, (float)intW, (float)intH, 0.0f, 1, 1, 1, 1);
         break;
@@ -604,19 +606,6 @@ void gpun_quadro_fim(void) {
       gfx_rect(tela, rcasTex, GFX_RCAS, upNitidez / 4.0f,
                1.0f / telaW, 1.0f / telaH, 0.0f, 1, 1, 1, 1);
     }
-    // Fractional scaling uses SGSR; integer factors keep Sharp-Bilinear.
-    if (gfx_hdr_output)
-      gfx_rect(tela, intTex, GFX_HDR_OUTPUT, (float)gfx_hdr_output, 0, 0, 0, 1, 1, 1, 1);
-    else if (upscaleNitido() && (telaW % intW || telaH % intH))
-      gfx_rect(tela, intTex, GFX_COPIA, 0,
-               (float)intW, (float)intH, 0.0f, 1, 1, 1, 1);
-    else if (upscaleNitido())
-      gfx_rect(tela, intTex, GFX_COPIA_NITIDA, (float)telaW / intW,
-               1.0f / intW, 1.0f / intH, 0.0f, 1, 1, 1, 1);
-    else
-      gfx_rect(tela, intTex, GFX_COPIA, 0,
-               0.0f, 1.0f,
-               0.0f, 1, 1, 1, 1);
     // Solta a textura do alvo: no quadro seguinte ela volta a ser o alvo de
     // desenho, e ficar ligada para leitura ao mesmo tempo e o laco de
     // realimentacao que o GLES deixa indefinido.
