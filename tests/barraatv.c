@@ -62,6 +62,12 @@ int main(int argc, char **argv) {
   char art[4096]; assert(realpath("deploy/app/art", art));
   dados_iniciar(art); tex_iniciar(64); gfx_icones_dir(art);
   config(2, 0); assert(ajustes_menu_topo());
+  // TCL boot: the home spends the frame's raster budget before the first bar
+  // measure; refused labels come back w=0 and must not be cached (overlap).
+  txt_novo_quadro();
+  for (int n = 0, p = txt_pendentes; txt_pendentes == p; n++) {
+    char s[32]; snprintf(s, sizeof s, "budget %d", n); txt_linha(TXT_BODY, s, 255, 255, 255, 255);
+  }
   menu_iniciar(); menu_pilula_mostrar(1); menu_atualizar(1, 0);
   // Warm cached glyphs/icons before the deterministic sequence.
   for (int n = 0; n < 30; n++) {
@@ -72,6 +78,9 @@ int main(int argc, char **argv) {
   }
   char icon[4200]; snprintf(icon, sizeof icon, "%s/icones/aj_chevrons-down.png", art);
   assert(tex_obter_larg(icon, 16));
+  { TopoTira t; topoMedir(&t);
+    for (int k = 0; k < t.n; k++)
+      if (t.ordem[k] != MENU_BUSCAR) assert(t.ws[k] > 2 * t.pad + 1); }
   draw(argv[1], "t000"); menu_abrir();
   float prev[9] = {0}, lastWidth = 0, prevY[16], prevA[16] = {0};
   for (int n = 0; n < 16; n++) prevY[n] = 10000;
