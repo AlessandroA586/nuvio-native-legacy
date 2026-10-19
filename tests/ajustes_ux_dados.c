@@ -728,7 +728,9 @@ int main(void) {
          AJ_DET_ESPACO == AJ_LINK_PRAZO + 1 && AJ_FOCO_ACENTO == AJ_DET_ESPACO + 1 &&
          AJ_NT_ORDEM == AJ_FOCO_ACENTO + 1 && AJ_ARTE_TOM == AJ_NT_ORDEM + 1 &&
          AJ_NT_EP == AJ_URL_REM + 1 && AJ_LIVETV_SUGERIR == AJ_NT_EP + 1 && AJ_AUDIO_OFFSET == AJ_LIVETV_SUGERIR + 1 &&
-         AJ_GUIA_CATEGORIAS == AJ_N - 1 && !strcmp(CHAVE[AJ_URL_REM], "-urlRem"));
+         AJ_BIB_HOME == AJ_GUIA_CATEGORIAS + 1 && AJ_AMPLIACAO_ALGO == AJ_BIB_HOME + 1 &&
+         AJ_AMPLIACAO_NITIDEZ == AJ_AMPLIACAO_ALGO + 1 && AJ_HDR_INTERFACE == AJ_AMPLIACAO_NITIDEZ + 1 &&
+         AJ_HDR_INTERFACE == AJ_N - 1 && !strcmp(CHAVE[AJ_URL_REM], "-urlRem"));
   { static const char *CH[4] = { "fonteGrupoLocal", "fonteGrupoSessoesLocal", "linkReusarLocal", "linkPrazoLocal" };
     static const int PAD[4] = { 0, 0, 0, 5 }, NV[4] = { 2, 2, 2, 9 };
     for (int o = 0; o < 4; o++) {
