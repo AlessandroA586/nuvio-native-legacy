@@ -327,5 +327,8 @@
   0, /* suggest Live TV categories: On, names only */
   0, /* #578: audio presentation offset, unchanged by default */
   0, /* Xtream limited connections: Auto; account storage owns the value. */
-  0, /* interface scaling: TV hardware, preserving the existing drawable */
+1, /* interface scaling: App (4K) hardware, preserving the existing drawable */
+  1, /* #507: Library row on Home: Off */
+  0, /* upscaling algorithm: Automatic (default) */
+  2, /* upscaling RCAS sharpness, 0..4 */
   0, /* experimental HDR menus: Off */

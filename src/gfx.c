@@ -1689,6 +1689,9 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  }else c*=203.0/80.0;\n"
   "  gl_FragColor=vec4(c*t.a,t.a);\n"
   "}\n",
+  NV_EASU_SHADER,
+  NV_LANCZOS_SHADER,
+  NV_RCAS_SHADER,
 };
 
 // Cada corpo declara o que usa; montar so o necessario mantem o shader enxuto.
@@ -1732,6 +1735,7 @@ static const struct { int sdf, cover; } PRECISA[GFX_NMODOS] = {
   {0,0},   /* GFX_PALCO_CHAO — procedural floor pool */
   {0,0},   /* GFX_PALCO_ARTE — own anchored cover */
   {0,0},   /* GFX_COPIA_NITIDA */
+  {0,0}, {0,0}, {0,0},   /* GFX_COPIA_EASU, GFX_COPIA_LANCZOS, GFX_RCAS */
   {0,0}    /* GFX_HDR_OUTPUT */
 };
 
@@ -1833,8 +1837,8 @@ int gfx_iniciar(void) {
   // interface" sem passar por Ajustes. No app quem define e ajustes.c.
   { const char *t = getenv("NUVIO_TAMANHO_UI"); if (t && *t) { gfx_escala_ui_definir((float)atof(t)); escUiFixa = 1; } }
   for (int m = 0; m < GFX_NMODOS; m++) {
-    if (m == GFX_HDR_OUTPUT && !gfx_hdr_output) continue;
-    if (m == GFX_VIDRO) continue;   // sob demanda: progMontar em gfx_rect
+    if (m == GFX_VIDRO || m >= GFX_COPIA_EASU) continue;   // sob demanda   // sob demanda: progMontar em gfx_rect
+    if (m == GFX_VIDRO || m >= GFX_COPIA_EASU) continue;   // sob demanda: progMontar em gfx_rect
     if (!progMontar(m)) return 0;
   }
   glUseProgram(progs[GFX_CARD].prog);
@@ -2444,6 +2448,12 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
   float din[4] = { 0.0f, 0.0f, 0.0f, 0.0f }, dinResto = -1.0f;
   if ((int)modo < 0 || (int)modo >= GFX_NMODOS) return;
   if (modo == GFX_VIDRO && !progs[modo].prog) return;   // gfx_vidro so chega aqui com o programa pronto
+  if (modo >= GFX_COPIA_EASU && !progs[modo].prog) {
+    // Opt-in upscaler: link on first use; a failed link falls back to the bilinear copy.
+    static int falhou[GFX_NMODOS];
+    if (falhou[modo] || !progMontar(modo)) { falhou[modo] = 1; modo = GFX_COPIA; parx = 0.0f; pary = 1.0f; }
+    progAtual = -1;
+  }
   if (modo == GFX_CARD && gfx_card_heroi_veu_atual[3] > 0.0f) modo = GFX_CARD_HERO;
   // Grupo a 0 = "desenhar sem aparecer" (quem mede uma previa ou pede as
   // texturas de uma cena que ainda nao entrou): todo modo multiplica o alfa

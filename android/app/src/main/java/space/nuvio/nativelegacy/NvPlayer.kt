@@ -637,6 +637,7 @@ object NvPlayer {
         var liberado = false
         @Volatile var adotado = carga.adotada
         @Volatile var audioFormato = AudioSyncTap.FMT_NENHUM
+        @Volatile var velocidadePcm = false
         val proc = GanhoAudioProcessor()
         val tap = AudioSyncTap(
             { pcm, n, pts -> if (adotado) try { nativeAudioPcm(pcm, n, pts) } catch (_: UnsatisfiedLinkError) {} },
@@ -1134,11 +1135,27 @@ object NvPlayer {
     @JvmStatic fun ganho(pct: Int) {
         principal.post { ganhoPct = GanhoMath.pct(pct); aplicarGanho() }
     }
-    // #202: velocidade em centesimos. O C reaplica a cada abertura (o player
-    // novo nasce em 1x), entao aqui nao fica estado.
+    // C reapplies speed after each open; keep PCM policy with that player.
     @JvmStatic fun velocidade(centesimos: Int) {
         val v = centesimos.coerceIn(25, 400) / 100f
-        principal.post { player?.setPlaybackSpeed(v) }
+        val pedido = pedidos.get()
+        principal.post {
+            if (pedido != pedidos.get()) return@post
+            val p = player ?: return@post
+            val r = recursosAtuais ?: return@post
+            val pcm = v != 1f
+            if (r.velocidadePcm != pcm) {
+                val pos = p.currentPosition
+                r.velocidadePcm = pcm
+                // Re-select the audio decoder against the new sink capabilities.
+                // stop/prepare keeps the media source, track overrides and pause.
+                p.stop()
+                p.seekTo(pos)
+                p.setPlaybackSpeed(v)
+                p.prepare()
+            } else p.setPlaybackSpeed(v)
+            Log.i(TAG, "[speed] requested=$v parameters=${p.playbackParameters.speed} pcm=$pcm")
+        }
     }
     private val janelaPedido = AtomicInteger()
     // Request -> applied on the UI thread (definida) -> acknowledged after a
@@ -1303,9 +1320,10 @@ object NvPlayer {
             r.renderizadores = object : androidx.media3.exoplayer.DefaultRenderersFactory(act) {
                 override fun buildAudioSink(context: Context, enableFloatOutput: Boolean,
                                             enableAudioTrackPlaybackParams: Boolean): AudioSink =
-                    AudioSyncSink(DefaultAudioSink.Builder(context).setEnableFloatOutput(enableFloatOutput)
-                        .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-                        .setAudioProcessors(arrayOf(r.proc)).build(), r.tap)
+                    // Sonic needs integer PCM; float output bypasses audio processors.
+                    AudioSyncSink(DefaultAudioSink.Builder(context).setEnableFloatOutput(false)
+                        .setEnableAudioTrackPlaybackParams(false)
+                        .setAudioProcessors(arrayOf(r.proc)).build(), r.tap, { r.velocidadePcm })
             }.setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
                 .setEnableDecoderFallback(true)
             r.fabricaMidia = DefaultMediaSourceFactory(act)
@@ -1959,6 +1977,7 @@ object NvPlayer {
                 Player.STATE_READY -> {
                     if (live.ready()) Log.i(TAG, "[live] janela recuperada na mesma sessao=$minha")
                     ev(EV_BUFFER, 100)
+                    Log.i(TAG, "[speed] ready parameters=${p.playbackParameters.speed} pcm=${recursosAtuais?.velocidadePcm}; awaiting native clock measurement")
                     relatarAudio(minha, "pronto volume=${p.volume} playWhenReady=${p.playWhenReady} suppression=${p.playbackSuppressionReason}")
                     if (!pronto) {
                         // Antes do EV_PRONTO: o C le o ack ao ver o "pronto".

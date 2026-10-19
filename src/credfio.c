@@ -9,7 +9,7 @@
 
 // Isolated fixtures omit sync.c: weak legacy-equivalent defaults; sync.c's strong scoped APIs override them.
 __attribute__((weak)) int sync_credencial_pedido(SyncCredencialPedido *p) {
-  p->sessao = nv_perfil_sessao_ler(); return 1;
+  memset(p, 0, sizeof *p); p->sessao = nv_perfil_sessao_ler(); return 1;
 }
 __attribute__((weak)) int sync_empurrar_credencial_pedido(const SyncCredencialPedido *p, const char *prov, const char *j) {
   (void)p; return sync_empurrar_credencial(prov, j);

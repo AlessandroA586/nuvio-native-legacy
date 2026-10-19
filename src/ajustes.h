@@ -504,6 +504,9 @@ int   ajustes_1080p(void);
 int   ajustes_720p(void);
 // Device-local output choice; applied after restarting, only on a 4K panel.
 int   ajustes_ampliar_app(void);
+// Device-local upscaling algorithm and RCAS sharpness 0..4 (gpun_ampliacao).
+int   ajustes_ampliacao_algo(void);
+int   ajustes_ampliacao_nitidez(void);
 // Actual drawable granted by the platform; controls the output-limit hint.
 void  ajustes_ui_saida(int w, int h);
 // Ilha do relogio (ilha.h). _ligado: 0 = sem pilula em repouso (os avisos
@@ -607,6 +610,7 @@ int   ajustes_selo_visto_modo(void);   // 0 desligado, 1 icone (check), 2 escrit
 // #366: oculta filmes vistos so na descoberta, por perfil neste aparelho.
 // Desligado de fabrica; busca, biblioteca e historico nao sao filtrados.
 int   ajustes_ocultar_filmes_vistos(void);
+int   ajustes_bib_home(void);   // #507: Library row on Home
 void  ajustes_definir_ocultar_filmes_vistos(int ligado);
 // MODO SEGURO (seguro.h). Chamar no arranque, DEPOIS de ajustes_dir e de
 // avisos_iniciar: `caiu` = a sessao anterior nao se despediu. Desfaz o ajuste

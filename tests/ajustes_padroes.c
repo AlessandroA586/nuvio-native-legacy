@@ -20,9 +20,13 @@ int main(void) {
   valor[AJ_HDR_INTERFACE] = 1; assert(ajustes_hdr_interface());
   valor[AJ_HDR_INTERFACE] = 0;
   // Merge regression: both appended settings keep their parallel table entries.
-  assert(valor[AJ_XTREAM_CONEXOES] == 0 && valor[AJ_AMPLIAR_UI] == 0);
+  assert(valor[AJ_XTREAM_CONEXOES] == 0 && valor[AJ_AMPLIAR_UI] == 1);
   assert(!strcmp(CHAVE[AJ_XTREAM_CONEXOES], "-xtreamConexoes"));
   assert(!strcmp(CHAVE[AJ_AMPLIAR_UI], "ampliarUiLocal"));
+  // Upscaling: Automatic, sharpness 2; both device-local.
+  assert(valor[AJ_AMPLIACAO_ALGO] == 0 && valor[AJ_AMPLIACAO_NITIDEZ] == 2);
+  assert(!strcmp(CHAVE[AJ_AMPLIACAO_ALGO], "ampliarAlgoLocal") &&
+         !strcmp(CHAVE[AJ_AMPLIACAO_NITIDEZ], "ampliarNitidezLocal"));
   assert(OPCOES[AJ_XTREAM_CONEXOES].n == 3 && OPCOES[AJ_AMPLIAR_UI].n == 2);
   // c2e07fe41: 0 = follow the primary, then 50%..300% every 10%; the #439
   // indices saved by 2.0.5 are migrated on load (viuLeg2Escala).
@@ -209,7 +213,11 @@ int main(void) {
   AJ_AUDIO_OFFSET == AJ_LIVETV_SUGERIR + 1 &&
   AJ_XTREAM_CONEXOES == AJ_AUDIO_OFFSET + 1 &&
   AJ_AMPLIAR_UI == AJ_XTREAM_CONEXOES + 1 &&
-  AJ_HDR_INTERFACE == AJ_AMPLIAR_UI + 1 && AJ_N == AJ_HDR_INTERFACE + 1);
+AJ_BIB_HOME == AJ_AMPLIAR_UI + 1 &&
+  AJ_AMPLIACAO_ALGO == AJ_BIB_HOME + 1 &&
+  AJ_AMPLIACAO_NITIDEZ == AJ_AMPLIACAO_ALGO + 1 &&
+  AJ_HDR_INTERFACE == AJ_AMPLIACAO_NITIDEZ + 1 &&
+  AJ_N == AJ_HDR_INTERFACE + 1);
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));

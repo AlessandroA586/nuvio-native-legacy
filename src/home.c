@@ -205,6 +205,24 @@ static int filmeVistoOculto(const CatItem *item) {
   return ajustes_ocultar_filmes_vistos() && item &&
          !strcmp(item->tipo, "movie") && cat_visto(item);
 }
+// #507: the Library row. The saved titles of the Library's source, in catalog
+// order, one card per title; drawn like any other poster row.
+static void montarBiblioteca(Fileira *f) {
+  int teto = ajustes_itens_fileira(), fonte = ajustes_fonte_biblioteca();
+  if (teto > DESC_ITENS_POR_FILEIRA) teto = DESC_ITENS_POR_FILEIRA;
+  memset(f, 0, sizeof *f);
+  for (int i = 0; i < cat_n() && f->n < teto; i++) {
+    const CatItem *it = cat_item(i);
+    int c = 0;
+    if (!it || !it->naLista || !(it->listaFontes & (1u << fonte))) continue;
+    while (c < f->n && strcmp(cat_item(f->itens[c])->imdb, it->imdb)) c++;
+    if (c == f->n) f->itens[f->n++] = i;
+  }
+  f->usaItens = 1;
+  f->tipo = FILEIRA_NORMAL;
+  snprintf(f->titulo, sizeof f->titulo, "%s", i18n("Biblioteca"));
+  snprintf(f->chave, sizeof f->chave, "library");
+}
 static void filtrarFilmesVistos(Fileira *f, const CatFileira *cf) {
   if (!f || !cf || !ajustes_ocultar_filmes_vistos() ||
       !cf->base[0] || !cf->catId[0]) return;
@@ -2772,7 +2790,8 @@ static int assinaturaPrefs(void) {
        // Ligar/desligar o destaque decide se a primeira fileira vira vitrine
        // (vitrineNaPrimeira).
        | (ajustes_hero_ligado() ? 1 << 12 : 0)
-       | (ajustes_ocultar_filmes_vistos() ? 1 << 13 : 0);
+       | (ajustes_ocultar_filmes_vistos() ? 1 << 13 : 0)
+       | (ajustes_bib_home() ? 1 << 14 : 0);
 }
 
 // A PRIMEIRA FILEIRA DE CATALOGO VIRA VITRINE (cartoes 16:9 grandes) so quando
@@ -2927,7 +2946,7 @@ static void sincronizarFileiras(void) {
   // que troca fils[].
   static unsigned ultCatRev, ultFilRev, ultColRev, ultFilLim, ultCwoRev, ultOrdemRev, ultRetRev, ultItensRev, ultCurRev;
   unsigned catRev = cat_revisao(), filRev = fil_revisao();
-  unsigned itensRev = ajustes_ocultar_filmes_vistos() ? cat_revisao_itens() : 0;
+  unsigned itensRev = ajustes_ocultar_filmes_vistos() || ajustes_bib_home() ? cat_revisao_itens() : 0;
   int filLim = fil_limite();
   // A CURADORIA da fileira Herói entra na guarda: a recomendação chega DEPOIS
   // do catálogo (e volta a cada 30 min), e sem este termo o cartão só trocaria
@@ -3029,6 +3048,7 @@ static void sincronizarFileiras(void) {
 #endif
   int temDestaque = 0;
   int destaqueIndice = -1;
+  int bib = ajustes_bib_home();
   nProxHome = 0;
   for (r = 0; r < nCat && destino < MAX_FIL - 1; r++) {
     const CatFileira *cf = cat_fileira(r);
@@ -3108,7 +3128,12 @@ static void sincronizarFileiras(void) {
     snprintf(fileiras[destino].chave, sizeof fileiras[destino].chave,
              "%s", cf->chave);
     destino++;
+    // #507: the Library row sits right below Continue Watching.
+    if (bib && !strcmp(cf->chave, "continue_watching") && destino < MAX_FIL - 1) {
+      montarBiblioteca(&fileiras[destino++]); bib = 0;
+    }
   }
+  if (bib && destino < MAX_FIL - 1) montarBiblioteca(&fileiras[destino++]);
   // UMA TERCEIRA OPÇÃO NO DESTAQUE. A fonte principal continua sendo a
   // primeira fileira escolhida pela conta; quando ela tem só dois títulos, a
   // terceira posição vem do próximo catálogo que já foi carregado. Assim o
@@ -3451,7 +3476,7 @@ static void sincronizarFileiras(void) {
   // (menu.c). Depois do corte acima de proposito: fileira que a pessoa
   // desligou em Ajustes nao reaparece na barra. Ordem = a da fileira.
   nStreamBarra = 0;
-  if (ajustes_home_layout() == HOME_LAYOUT_DINAMICA && !ajustes_menu_topo()) {
+  if (ajustes_home_layout() == HOME_LAYOUT_DINAMICA) {
     int q;
     for (q = 0; q < destino; q++) {
       if (fileiras[q].tipo != FILEIRA_CATALOGOS ||

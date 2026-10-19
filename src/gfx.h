@@ -287,8 +287,13 @@ typedef enum {
   // Integer prescale with a bilinear transition. uPar=inverse source size,
   // uFoco=integer scale; alpha remains the original bilinear sample.
   GFX_COPIA_NITIDA = 49,
-  GFX_HDR_OUTPUT = 50, // Final SDR UI to HDR conversion; preserves alpha.
-  GFX_NMODOS = 51
+// Opt-in upscalers (Settings > This TV > Upscaling algorithm), compiled on demand
+  // on first use. Source = internal FBO: uPar = source size in texels.
+  GFX_COPIA_EASU = 50,     // FSR 1 EASU
+  GFX_COPIA_LANCZOS = 51,  // Lanczos3
+  GFX_RCAS = 52,           // FSR 1 RCAS (sharpening after upscale)
+  GFX_HDR_OUTPUT = 53,     // Final SDR UI to HDR conversion; preserves all color accuracy
+  GFX_NMODOS = 54
 } GfxModo;
 
 typedef struct {
