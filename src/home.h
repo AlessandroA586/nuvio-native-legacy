@@ -33,7 +33,8 @@ typedef enum {
   FILEIRA_POSTER_GRANDE,
   // 16/10: o painel deitado do foco a esquerda (arte, logo e ficha) e a fila
   // de cartazes a direita; o painel segue o foco da fileira.
-  FILEIRA_HEROI_DIVIDIDO
+  FILEIRA_HEROI_DIVIDIDO,
+  FILEIRA_POSTER       // Explicit portrait row style, independent of global landscape.
 } TipoFileira;
 
 // O item sob o foco, com o retangulo que ele ocupa na tela NESTE quadro. A

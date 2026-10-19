@@ -1156,6 +1156,9 @@ int main(int argc, char **argv) {
   // NV_PEDIR_4K continua existindo para a build de medicao, que precisa pedir
   // sem depender de ajuste gravado.
   { int quer4k = resolucaoDaTv() && ajustes_4k();
+    // The larger output workload is an explicit device-local choice.
+    int uiMenor4k = resolucaoDaTv() && ajustes_ampliar_app() &&
+                    (ajustes_720p() || ajustes_1080p());
     // 4K THAT DID NOT HOLD on this TV in an earlier session (resolucao.h):
     // start at 1080p. Picking 4K again in Settings deletes the file.
     if (quer4k) {
@@ -1189,14 +1192,15 @@ int main(int argc, char **argv) {
       printf("[4k] build de medicao: pedindo 3840x2160\n");
     }
 #endif
-    pedeW = quer4k ? 3840 : (int)NV_TELA_W;
-    pedeH = quer4k ? 2160 : (int)NV_TELA_H;
+    pedeW = quer4k || uiMenor4k ? 3840 : (int)NV_TELA_W;
+    pedeH = quer4k || uiMenor4k ? 2160 : (int)NV_TELA_H;
     if (quer4k) { printf("[4k] pedindo %dx%d — a linha `janela=` abaixo diz o "
                          "que a TV concedeu\n", pedeW, pedeH); fflush(stdout); } }
   SDL_Window *win;
 #ifdef NV_ANDROID
   // No Android a janela do SDL tem o tamanho da SUPERFICIE: pedir 3840x2160 ao
   // SDL_CreateWindow nao muda nada. Ver android_pedir_superficie.
+  // TV mode preserves the integration surface; app mode explicitly asks for 4K.
   if (pedeW > (int)NV_TELA_W) android_pedir_superficie(pedeW, pedeH);
 #endif
   const char *windowTitle = "Nuvio";
@@ -1358,6 +1362,16 @@ int main(int argc, char **argv) {
   }
   if (!ctx) { printf("[android] sem contexto GL: %s\n", SDL_GetError()); SDL_Quit(); return 2; }
 #endif
+  // Capability is known only after creating the GL context. A saved app choice
+  // must not leave a weak GPU paying for a 4K drawable.
+  if (resolucaoDaTv() && ajustes_ampliar_app() &&
+      (ajustes_720p() || ajustes_1080p()) && !gpun_upscale_suportado()) {
+#ifdef NV_ANDROID
+    android_pedir_superficie((int)NV_TELA_W, (int)NV_TELA_H);
+#endif
+    SDL_SetWindowSize(win, (int)NV_TELA_W, (int)NV_TELA_H);
+    printf("[gpu-nivel] app 4K unavailable: restoring TV surface\n");
+  }
   // O cursor do Magic Remote e desenhado pelo app (ponteiro.c). Depois do
   // contexto: o log de arranque dele le a janela corrente.
   ponteiro_iniciar();
@@ -1501,6 +1515,8 @@ int main(int argc, char **argv) {
   int gpuPref = ajustes_gpu_efeitos();
   if (gpuPref) gpun_preferencia(gpuPref);
   if (ajustes_720p()) gpun_forcar_720();
+  else if (ajustes_1080p() && dw > (int)NV_TELA_W) gpun_alvo_1080();
+  gpun_ampliar_app(resolucaoDaTv() && ajustes_ampliar_app());
 #ifdef NV_TPK
   video_tpk_zoom_roi_definir(ajustes_trailer_zoom_tpk());
 #endif
@@ -1669,6 +1685,13 @@ int main(int argc, char **argv) {
   static int rastroQuadros;
   static double gpuFillSoma, gpuFillPico;   // [gpu-modos] fill: media e pico da janela
   static int gpuFillN;
+#if defined(NV_TPK) || defined(NV_ANDROID) || defined(NV_WEBOS)
+  int gpuRelatoCena = 0, gpuRelatoCheia = 0, gpuRelatoMisto = 0;
+  SDL_DisplayMode gpuModo;
+  // Swap cadence can fall with FPS; prefer the panel's advertised refresh.
+  double gpuRelatoPeriodo = SDL_GetCurrentDisplayMode(0, &gpuModo) == 0 && gpuModo.refresh_rate > 0
+    ? 1000.0 / gpuModo.refresh_rate : 16.70;
+#endif
   double fPrep = 0, fGlClr = 0;
   int    txtNQuadro = 0, piorTxtN = 0;
   int quadros = 0, janks = 0; double pior = 0;
@@ -2006,7 +2029,10 @@ int main(int argc, char **argv) {
       // previously rejected trial. Settings needs no Home artwork cache.
       if (cena) cena += 4 * (ajustes_home_layout() + 4 * (ajustes_vidro() +
         2 * (ajustes_cor_viva() + 16 * (ajustes_vidro_fosco() + 2 * ajustes_vidro_qualidade()))));
-      gpun_medir(dtms, fClr + fSwap, fEv + fBomb + fUpd + fDes + fAux, cena, settings || cheia); }
+      int elegivel = settings || cheia;
+      if (!quadros) { gpuRelatoCena = cena; gpuRelatoCheia = elegivel; }
+      else if (cena != gpuRelatoCena || !elegivel) gpuRelatoMisto = 1;
+      gpun_medir(dtms, fClr + fSwap, fEv + fBomb + fUpd + fDes + fAux, cena, elegivel); }
 #endif
     // zera os contadores do quadro que comeca agora; o que foi medido acima
     // pertence ao quadro anterior, que e o que acabou de custar dtms
@@ -2428,7 +2454,12 @@ int main(int argc, char **argv) {
         // na 1.5.4 e 41 na 1.6.0 com a mesma configuracao, e o log nao dizia
         // que desenho pesava.
         static Uint32 ultModos;
-        double fpsAgora = quadros * 1000.0 / (double)(agora - ultRelato + 1);
+        double fpsAgora = quadros * 1000.0 / (double)(agora - ultRelato);
+#if defined(NV_TPK) || defined(NV_ANDROID) || defined(NV_WEBOS)
+        gpun_relatar(fpsAgora, pior, gpuRelatoPeriodo,
+                     gpuRelatoMisto ? 0 : gpuRelatoCena, gpuRelatoCheia);
+        gpuRelatoMisto = 0;
+#endif
         // 45 e nao 50: TV Samsung roda a 50 Hz e o .tpk marca 49,9 fps em
         // repouso; com 50 a linha saia para 12 de 12 pessoas na 1.6.1 e
         // afogava os casos lentos de verdade.

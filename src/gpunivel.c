@@ -49,7 +49,8 @@ static unsigned long chave;
 static int telaW = 1920, telaH = 1080;
 // Explicit 720p target or 4K fallback (1920x1080, gpun_alvo_1080).
 static GLuint intFbo, intTex;
-static int alvo1080, prefFixa, forca720;
+static int alvo1080, prefFixa, upscaleSgsr;
+static int forca720, ampliarApp;
 static int intW, intH, intFalhou, intLigado;
 // Descarte (glInvalidateFramebuffer ou glDiscardFramebufferEXT).
 typedef void (*PfnDescarte)(GLenum, GLsizei, const GLenum *);
@@ -67,9 +68,14 @@ static int janN, estavaNaHome, descartes, cenaAtual;
 // variar a carga o bastante para falsear esta comparacao.
 static double fpsNivel[3];
 static int anterior = -1, reavaliar, bloqueado;
+// Three 3-second reports to shed effects; ten near-vsync reports to restore.
+static int relatoAtivo, relatoCena, relatosLentos, relatosRapidos, relatosValidos;
+static int relatoPiso = 0, relatoTentativa = -1;
 
 static void reiniciarMedida(void) {
   decidido = bloqueado = reavaliar = 0; anterior = -1;
+  relatoAtivo = relatoCena = relatosLentos = relatosRapidos = relatosValidos = 0;
+  relatoPiso = 0; relatoTentativa = -1;
   memset(fpsNivel, 0, sizeof fpsNivel);
   aquece = GPUN_AQUECE_MS; janMs = janEsp = janCpu = totalMs = 0;
   janN = estavaNaHome = descartes = cenaAtual = 0;
@@ -188,6 +194,7 @@ static void ler(void) {
   }
   nivel = n > GPUN_NIVEL_AUTO_MAX ? GPUN_NIVEL_AUTO_MAX : n;
   origem = "salvo";
+  printf("[gpu-nivel] saved level %d: revalidate with live FPS reports\n", nivel);
   if (avaliado) {
     memcpy(fpsNivel, f, sizeof f);
     // A rejected trial belongs to its scene/effects, not the GPU forever.
@@ -214,11 +221,37 @@ static void aplicar(int n, const char *porque) {
   fflush(stdout);
 }
 
+int gpun_upscale_suportado(void) {
+  const char *gpu = (const char *)glGetString(GL_RENDERER);
+  if (!gpu || strstr(gpu, "Mali-4")) return 0;
+#if !defined(__APPLE__) || defined(NV_GLES_NO_MAC)
+  GLint range[2], precision = 0;
+  glGetShaderPrecisionFormat(GL_FRAGMENT_SHADER, GL_HIGH_FLOAT, range, &precision);
+  if (!precision) return 0;
+#endif
+  return 1;
+}
+
+void gpun_ampliar_app(int app) {
+  // Owner scope (#205): app scaling covers 720->1080, 720->4K and 1080->4K.
+  // Automatic/4K falling back to a 1080 target is the same opt-in 1080->4K path.
+  // The caller supplies panel eligibility via ajustes_ampliar_app(). A 4K panel
+  // may grant only 1080p (C9); drawable size must not veto its 720p upscaler.
+  ampliarApp = app && upscaleSgsr;
+  if ((!forca720 && !alvo1080) || (forca720 && telaW <= 1280 && telaH <= 720))
+    printf("[gpu-nivel] ampliar=%s upscale=bilinear %dx%d -> %dx%d\n",
+           ampliarApp ? "app" : "tv", telaW, telaH, telaW, telaH);
+}
+
 void gpun_iniciar(int w, int h) {
   const char *ext = "";
   GLint db = 0, sb = 0;
   reiniciarMedida();
-  nivel = adaptativo = prefFixa = forca720 = alvo1080 = 0; origem = "padrao";
+  nivel = adaptativo = prefFixa = 0; origem = "padrao";
+  if (intFbo) glDeleteFramebuffers(1, &intFbo);
+  if (intTex) glDeleteTextures(1, &intTex);
+  intFbo = intTex = 0;
+  intW = intH = intFalhou = intLigado = alvo1080 = forca720 = ampliarApp = 0;
   telaW = w > 0 ? w : 1920;
   telaH = h > 0 ? h : 1080;
 #ifdef NV_ANDROID
@@ -229,6 +262,7 @@ void gpun_iniciar(int w, int h) {
 #endif
   snprintf(renderer, sizeof renderer, "%s", glTxt(GL_RENDERER));
   snprintf(versaoGl, sizeof versaoGl, "%s", glTxt(GL_VERSION));
+  upscaleSgsr = gpun_upscale_suportado();
   ext = glTxt(GL_EXTENSIONS);
 #ifdef NV_ANDROID
   android_etapa("gpun_iniciar: GL_DEPTH_BITS");
@@ -414,6 +448,11 @@ void gpun_redimensionar(int w, int h) {
 #endif
 }
 
+static int upscaleNitido(void) {
+  return ampliarApp && intW > 0 && intH > 0 &&
+         telaW > intW && telaH > intH;
+}
+
 static int intPreparar(void) {
   GLint ant = 0;
   GLenum st;
@@ -444,13 +483,18 @@ static int intPreparar(void) {
     // Target failure must not override the person's effects choice.
     return 0;
   }
-  printf("[gpu-nivel] alvo interno %dx%d RGBA -> janela %dx%d\n", intW, intH, telaW, telaH);
+  printf("[gpu-nivel] ampliar=%s upscale=%s %dx%d -> %dx%d\n",
+         ampliarApp ? "app" : "tv", !upscaleNitido() ? "bilinear" :
+         telaW % intW || telaH % intH ? "sgsr" : "sharp-bilinear",
+         intW, intH, telaW, telaH);
   fflush(stdout);
   return 1;
 }
 
 void gpun_quadro_inicio(void) {
   intLigado = 0;
+  // A granted 720p drawable is already scaled by the platform compositor.
+  if (forca720 && telaW <= 1280 && telaH <= 720) return;
   if ((!forca720 && !alvo1080) || !intPreparar()) return;
   glBindFramebuffer(GL_FRAMEBUFFER, intFbo);
   glViewport(0, 0, intW, intH);
@@ -476,7 +520,18 @@ void gpun_quadro_fim(void) {
     glDisable(GL_BLEND);   // copia RGB E alpha exatos (o furo do video)
     gfx_tex_aspect_atual = 0.0f;
     gfx_opacidade_grupo = 1.0f;
-    gfx_rect(tela, intTex, GFX_COPIA, 0, 0.0f, 1.0f, 0.0f, 1, 1, 1, 1);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    // Fractional scaling uses SGSR; integer factors keep Sharp-Bilinear.
+    if (upscaleNitido() && (telaW % intW || telaH % intH))
+      gfx_rect(tela, intTex, GFX_COPIA, 0,
+               (float)intW, (float)intH, 0.0f, 1, 1, 1, 1);
+    else if (upscaleNitido())
+      gfx_rect(tela, intTex, GFX_COPIA_NITIDA, (float)telaW / intW,
+               1.0f / intW, 1.0f / intH, 0.0f, 1, 1, 1, 1);
+    else
+      gfx_rect(tela, intTex, GFX_COPIA, 0,
+               0.0f, 1.0f,
+               0.0f, 1, 1, 1, 1);
     // Solta a textura do alvo: no quadro seguinte ela volta a ser o alvo de
     // desenho, e ficar ligada para leitura ao mesmo tempo e o laco de
     // realimentacao que o GLES deixa indefinido.
@@ -511,9 +566,61 @@ static void decidir(const char *porque) {
   gravar();
 }
 
+void gpun_relatar(double fps, double pior, double periodo, int cena, int cheia) {
+  double alvo = periodo > 0 ? 1000.0 / periodo : 60.0;
+  if (!adaptativo || nivel > GPUN_NIVEL_AUTO_MAX) return;
+  if (alvo > 60.0) alvo = 60.0;
+  if (cena != relatoCena) {
+    relatoCena = cena;
+    relatosLentos = relatosRapidos = relatosValidos = relatoPiso = 0;
+    relatoTentativa = -1;
+  }
+  if (!cena || !cheia || !(fps > 0) || pior > 1000.0) {
+    relatosLentos = relatosRapidos = 0;
+    if (pior > 1000.0)
+      printf("[gpu-nivel] report ignored: fps=%.1f worst=%.1fms (stall)\n", fps, pior);
+    return;
+  }
+  if (!relatoAtivo) {
+    // The live reporter owns subsequent decisions; cancel any legacy trial.
+    if (anterior >= 0) aplicar(anterior, "live FPS baseline");
+    anterior = -1;
+    reavaliar = 0;
+    relatoAtivo = 1;
+  }
+  relatosValidos++;
+  // 55/58 FPS on 60 Hz; preserve healthy 50 Hz panels (45/48 FPS).
+  relatosLentos = fps < alvo - 5.0 ? relatosLentos + 1 : 0;
+  relatosRapidos = fps >= alvo - 2.0 ? relatosRapidos + 1 : 0;
+  int proximo = nivel;
+  if (relatosLentos >= 3 && nivel < GPUN_NIVEL_AUTO_MAX) {
+    proximo++;
+    if (relatoTentativa >= 0) {
+      // A failed restoration must not oscillate for the same workload.
+      relatoPiso = relatoTentativa;
+      relatoTentativa = -1;
+    }
+  } else if (relatosRapidos >= 10 && nivel > relatoPiso) {
+    relatoTentativa = nivel;
+    proximo--;
+  }
+  if (proximo != nivel) {
+    printf("[gpu-nivel] live decision: level %d -> %d fps=%.1f target=%.1f slow=%d fast=%d floor=%d\n",
+           nivel, proximo, fps, alvo, relatosLentos, relatosRapidos, relatoPiso);
+    aplicar(proximo, "sustained FPS reports");
+    relatosLentos = relatosRapidos = 0;
+    decidido = 1; bloqueado = 0;
+    fpsNivel[nivel] = fps;
+    gravar();
+  } else if (relatosValidos == 3) {
+    printf("[gpu-nivel] live validation: level=%d fps=%.1f target=%.1f reports=%d\n",
+           nivel, fps, alvo, relatosValidos);
+  }
+}
+
 void gpun_medir(double dtms, double espera, double cpu, int cena, int cheia) {
   double fps, e, c;
-  if (!adaptativo || nivel > GPUN_NIVEL_AUTO_MAX) return;
+  if (!adaptativo || nivel > GPUN_NIVEL_AUTO_MAX || relatoAtivo) return;
   // Scene and effect settings identify a comparable workload. A new workload
   // gets a fresh baseline, including after a good/CPU-bound/rejected window.
   if (cena != cenaAtual) {

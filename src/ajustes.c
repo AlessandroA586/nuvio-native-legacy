@@ -651,7 +651,7 @@ typedef enum {
   AJ_MENU_CARTAZ,      // Device-local, append-only: 0 On (default, enriched card), 1 Off (side list only).
   AJ_TITULO_FIL,       // #205: titulo das fileiras da Home, 0 Classico, 1 Ilha, 2 Editorial, 3 Acento; local, append-only
   AJ_VIDRO_QUALIDADE,  // glass quality: 0 Automatica (frost + governor), 1 Desempenho (smoked, no blur), 2 Alta (frost); local, append-only
-  AJ_FUNDO_DIN,        // #205: fundo da Dinamica, 0 = Cinza (padrao), 1 = Cor, 2 = Imersivo; local, append-only
+  AJ_FUNDO_DIN,        // #205: fundo da Dinamica, 0 = Cinza, 1 = Cor, 2 = Imersivo, 3 = Cinza escuro; local, append-only
   AJ_FUNDO_DIN_COR,    // #205: a cor do fundo "Cor" (indice de FUNDO_DIN_TEMA); local, append-only
   AJ_ESCALA_TEXTO,     // text and component scale (gfx.h): 85/90/100/110/120/130%, default 85%; local, append-only
   // MEMORIA DA FONTE (dono, 15-16/10/2026). Prefer Binge Group (a escolha a
@@ -676,6 +676,7 @@ typedef enum {
   AJ_LIVETV_SUGERIR,   // Live TV: Jev suggests sections for channels with none (livecat.h); default on; local, append-only
   AJ_AUDIO_OFFSET,     // #578: device-local converted audio offset, append-only
   AJ_XTREAM_CONEXOES,  // Stored with this IPTV account, not global settings.
+  AJ_AMPLIAR_UI,      // Device-local output scaler, append-only; TV by default.
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -709,7 +710,7 @@ static const char *V_NT_EP[]    = { "Como na linha do título", "IMDb", "TMDB", 
 static const char *V_PALCO_FUNDO[] = { "Cortina", "Como está", "Só arte", "Preto", "Aura", "Tríptico", "Monumento" };
 static const char *V_TITULO_FIL[] = { "Clássico", "Ilha", "Editorial", "Acento" };
 static const char *V_VIDRO_QUALIDADE[] = { "Automática", "Desempenho", "Alta" };
-static const char *V_FUNDO_DIN[] = { "Cinza", "Cor", "Imersivo" };
+static const char *V_FUNDO_DIN[] = { "Cinza", "Cor", "Imersivo", "Cinza escuro" };
 // A cor do fundo "Cor" sai da paleta do acento (TEMA_ACENTO), em ordem de
 // matiz. Sem o Branco (o fundo e escuro) e sem os dinamicos. Os nomes sao os
 // de V_TEMA, ja traduzidos; o indice gravado e o desta lista (append-only).
@@ -955,6 +956,7 @@ static const char *V_FONTE_UI[]  = { "Inter", "LG Display", "Droid Sans",
 // to the window, independently of effects, on every platform.
 // Order = RES_* (resolucao.h). The old order lives only in res_migrar.
 static const char *V_RESOLUCAO[] = { "Automática", "1080p", "4K (experimental)", "720p (leve)" };
+static const char *V_AMPLIAR_UI[] = { "Pela TV", "Pelo app (4K)" };
 
 static const char *V_LEG_COR[] = { "Branco", "Amarelo", "Verde", "Azul", "Vermelho", "Preto" };
 static const char *V_LEG_COR_BORDA[] = { "Preto", "Branco", "Amarelo", "Verde", "Azul", "Vermelho" };
@@ -1724,7 +1726,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Menu de contexto enriquecido", V_LIGA, 2),              // local: menuCartazLocal
   ESC("Título das fileiras", V_TITULO_FIL, 4),   // local: rowTitleStyleLocal
   ESC("Qualidade do vidro", V_VIDRO_QUALIDADE, 3),   // local: vidroQualidadeLocal
-  ESC("Fundo da Dinâmica", V_FUNDO_DIN, 3),                  // local: fundoDinamicaLocal
+  ESC("Fundo da Dinâmica", V_FUNDO_DIN, 4),                  // local: fundoDinamicaLocal
   ESC("Cor do fundo", V_FUNDO_DIN_COR, 17),                  // local: fundoDinamicaCorLocal
   ESC("Escala de texto e componentes", V_ESCALA_TEXTO, 6),   // local: escalaTextoLocal
   ESC("Preferir o mesmo grupo de fonte", V_LIGA, 2),          // local: fonteGrupoLocal
@@ -1744,6 +1746,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Sugerir categorias dos canais", V_LIGA, 2),   // local: liveTvSugerirLocal
   NUM("Ajuste do áudio (ms)", -AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_STEP_MS, " ms"),
   ESC("Conta com limite de conexões", V_CONEXOES, 3),
+  ESC("Ampliar interface", V_AMPLIAR_UI, 2),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -2052,6 +2055,7 @@ static const char *CHAVE[] = {
   "liveTvSugerirLocal",
   "audioOffsetMsLocal",
   "-xtreamConexoes",
+  "ampliarUiLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2566,6 +2570,12 @@ static int perfilSeguro;
 #else
 #define SEGURO perfilSeguro
 #endif
+static int painel4k(void) {
+  SDL_DisplayMode dm;
+  return SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.w >= 3840 && dm.h >= 2160;
+}
+int ajustes_ampliar_app(void) { return valor[AJ_AMPLIAR_UI] == 1 && painel4k() && !SEGURO; }
+int ajustes_1080p(void)               { return valor[AJ_RESOLUCAO] == RES_1080 && !SEGURO; }
 int ajustes_4k(void)                  { return valor[AJ_RESOLUCAO] == RES_4K && !SEGURO; }
 int ajustes_res_auto(void)            { return valor[AJ_RESOLUCAO] == RES_AUTO && !SEGURO; }
 int ajustes_720p(void)                { return valor[AJ_RESOLUCAO] == RES_720 && !SEGURO; }
@@ -2805,6 +2815,7 @@ float ajustes_tamanho_ajustes(void) {
 // The phone always uses List. Keep the stored TV preference unchanged.
 static int ajLayoutSelecionavel(void) { return !telefoneui_ativo(); }
 static int ajOpcaoDisponivel(int op) {
+  if (op == AJ_AMPLIAR_UI) return painel4k() && !telefoneui_ativo();
   if (op == AJ_ARTE_TOM) return valor[AJ_TEMA] == AJ_TEMA_DINAMICA;
   if (op == AJ_FALHA_ADDON_LIMITE) return faAddonEditar[0] != 0;
 #ifndef NV_ANDROID
@@ -2940,7 +2951,7 @@ int ajustes_palco_fundo(void) { return valor[AJ_PALCO_FUNDO]; }
 int ajustes_titulo_fil(void) { int v = valor[AJ_TITULO_FIL]; return v >= 0 && v <= 3 ? v : 0; }
 int ajustes_abertura_estilo(void) { return valor[AJ_ABERTURA_ESTILO] == 1; }   // 0 Centro (A3), 1 Canto (B3)
 int ajustes_menu_cartaz_simples(void) { return valor[AJ_MENU_CARTAZ] == 1; }
-int ajustes_fundo_din(void) { int v = valor[AJ_FUNDO_DIN]; return v >= 0 && v <= 2 ? v : 0; }
+int ajustes_fundo_din(void) { int v = valor[AJ_FUNDO_DIN]; return v >= 0 && v <= 3 ? v : 0; }
 void ajustes_fundo_din_cor(float rgb[3]) {
   int v = valor[AJ_FUNDO_DIN_COR];
   if (v < 0 || v >= FUNDO_DIN_N_COR) v = FUNDO_DIN_COR_PADRAO;   // arquivo de outra versao
@@ -3199,10 +3210,9 @@ void ajustes_textura_quadro(void) {
 // moderna DESLIGA o recolhimento, e nao o contrario. Copiado de
 // normalizeLayoutPreferences para nao inventar precedencia.
 int ajustes_rail_moderna(void)        { return lig(AJ_RAIL_MODERNA); }
-// #461: a barra no topo nao existe no Dinamica (a pilula dela ja e o topo) nem
-// no telefone em retrato (nao cabe).
+// Dinamica always uses the top bar; portrait phones keep the compact menu.
 int ajustes_menu_topo(void) {
-  return valor[AJ_MENU_TOPO] == 1 && ajustes_home_layout() != HOME_LAYOUT_DINAMICA && !ajRetrato();
+  return (valor[AJ_MENU_TOPO] == 1 || ajustes_home_layout() == HOME_LAYOUT_DINAMICA) && !ajRetrato();
 }
 int ajustes_abas_estilo(void) { return valor[AJ_ABAS_ESTILO]; }
 void ajustes_definir_abas_estilo(int estilo) {
@@ -5408,12 +5418,17 @@ static const char *chaveConta(int i) {
   return i == AJ_FOCO_TRAILER ? "focusedPosterBackdropTrailerEnabled" : CHAVE[i];
 }
 
-static int ajustesExtrasAplicar(const char *json);
+static int ajustesExtrasAplicar(const char *json, const char *web);
 
+static char *ajustesWebBlob(const char *json);
 int ajustes_aplicar_blob(const char *json) {
   const char *fim;
   int i, mudou = 0, reconhecidas = 0;
   if (!json || !*json) return 0;
+  const char *original = json;
+  char *web = ajustesWebBlob(json);
+  if (!web) return 0;
+  json = web;
   // Os pacotes de selos da conta (features.stream_badge_settings) vivem em
   // selospacote.c, que guarda por perfil; nao sao uma opcao desta tabela.
   selospacote_conta_do_blob(json);
@@ -5517,7 +5532,9 @@ int ajustes_aplicar_blob(const char *json) {
   // na primeira verificacao na TV.
   printf("[ajustes] blob da conta: %d chave(s) reconhecida(s), %d mudou(aram)\n",
          reconhecidas, mudou);
-  return mudou + ajustesExtrasAplicar(json);
+  mudou += ajustesExtrasAplicar(original, web);
+  free(web);
+  return mudou;
 }
 
 // ---------------------------------------------------------------- subir (#85)
@@ -5552,6 +5569,7 @@ static int somenteDesteAparelho(int op) {
     // consentimento de registro) ou uma escolha que so este port tem, ele fica.
     // A TV da sala e a do quarto nao tem a mesma memoria nem a mesma tela, e a
     // conta e uma so.
+    case AJ_AMPLIAR_UI:    /* output workload belongs to this device */
     case AJ_RESOLUCAO:      /* pedir superficie 4K: depende do painel */
     case AJ_TEX_MB:         /* teto de memoria de imagem: depende da RAM */
     case AJ_QUALIDADE_IMG:  /* resolucao da arte decodificada: idem */
@@ -5881,7 +5899,8 @@ static int acharValor(const char *ini, const char *fim, const char *chave,
   size_t n;
   n = (size_t)snprintf(alvo, sizeof alvo, "\"%s\"", chave);
   if (n >= sizeof alvo) return 0;
-  for (p = ini; p && (p = strstr(p, alvo)) != NULL && p < fim; p += n) {
+  for (p = ini; p < fim && (p = memchr(p, '"', (size_t)(fim - p))) != NULL; p++) {
+    if ((size_t)(fim - p) < n || memcmp(p, alvo, n)) continue;
     const char *v = p + n;
     while (v < fim && (unsigned char)*v <= ' ') v++;
     if (v >= fim || *v != ':') continue;
@@ -6707,6 +6726,7 @@ static const char *textoLeitura(int op) {
 // de a linha sumir.
 static int inativa(int op) {
   switch (op) {
+    case AJ_AMPLIAR_UI: return !gpun_upscale_suportado();
     case AJ_VIDRO_CONTORNO: case AJ_FOCO_ACENTO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE: return !lig(AJ_VIDRO);
     case AJ_RAIL:         return ajustes_rail_moderna();
     case AJ_MENU_TOPO:    return ajustes_home_layout() == HOME_LAYOUT_DINAMICA;
@@ -7308,6 +7328,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_FONTE_REGEX_MODELO: return "Padrões prontos: idiomas como os add-ons escrevem, áudio MULTI ou DUAL, 4K e Remux. Escolher um troca o padrão da regex.";
     case AJ_ESPACO_FILEIRAS: return "O espaço vertical entre uma fileira da Home e a seguinte. Com menos cabem mais fileiras na tela, com mais a Home fica mais arejada.";
     case AJ_ESPACO_TITULOS: return "O espaço horizontal entre os cartazes de uma fileira da Home.";
+    case AJ_AMPLIAR_UI: return "Pelo app (4K): usa mais GPU. Reinicie o app depois de mudar.";
     case AJ_AUDIO_OFFSET: return "Positivo atrasa; negativo adianta. Só áudio convertido, a partir do próximo vídeo.";
     case AJ_TAM_MIN: return "Na escolha automática, fontes menores que este tamanho ficam para o fim da fila. Se for maior que o tamanho máximo, o mínimo é ignorado. Só vale para arquivos com tamanho conhecido; se só houver fontes fora da faixa, a melhor delas ainda toca.";
 #ifdef NV_TPK
@@ -7324,7 +7345,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ABERTURA_ADDON: return "Desligado (padrão): a tela Cinema mostra só a arte, o logo e a barra. Ligado: o nome do add-on aparece sob a barra. Vale só nesta TV.";
     case AJ_TELA_ABERTURA: return "Cinema (padrão): a arte e o logo do título ficam na tela até o vídeo entrar. Detalhada: a fonte, o add-on e cada passo da abertura. Na Cinema, Para cima ou Para baixo mostra os detalhes. Vale só nesta TV.";
     case AJ_TITULO_FIL: return "Como o título de cada fileira da Home aparece. Clássico (padrão): só o texto. Ilha: numa pílula de vidro. Editorial: com uma linha de categoria acima. Acento: com um ponto de destaque. Vale só nesta TV.";
-    case AJ_FUNDO_DIN: return "O fundo do layout Dinâmica. Cinza (padrão): o cinza escuro da Apple TV, sempre o mesmo. Cor: uma cor sua, fixa. Imersivo: acompanha a arte do título, em tons suaves e com troca lenta. Vale só nesta TV.";
+    case AJ_FUNDO_DIN: return "O fundo do layout Dinâmica. Cinza (padrão): o cinza escuro da Apple TV, sempre o mesmo. Cor: uma cor sua, fixa. Imersivo: acompanha a arte do título, em tons suaves e com troca lenta. Vale só nesta TV. Cinza escuro: degradê grafite quase preto, fixo.";
     case AJ_PALCO_FUNDO: return "Palco na Moderna e na Dinâmica (Apple TV), com artes de fundo, nunca o cartaz. Cortina (padrão): arte à direita com o logo; Aura: arte desfocada; Tríptico: três artes; Monumento: arte no tom do app; Preto: só cartazes e ficha; Como está: destaque completo; Só arte: sem texto no topo. Sem arte de fundo, usa Preto. Só neste aparelho.";
     case AJ_FUNDO_DIN_COR: return "A cor do fundo da Dinâmica, escurecida para o texto continuar legível. Vale só nesta TV.";
     case AJ_ABERTURA_ESTILO: return "Como a tela de abertura se organiza. Centro (padrão): o logo no meio e o anel de progresso embaixo dele. Canto: o logo no canto inferior esquerdo, com o anel pequeno embaixo dele. Vale só nesta TV.";
@@ -9922,7 +9943,8 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_NT_METAUSER: case AJ_NT_TRAKT: case AJ_NT_TMDB: case AJ_NT_LETTER:
     case AJ_NT_MAL: case AJ_NT_EBERT: case AJ_NT_SCORE: case AJ_NT_ORDEM: case AJ_NT_EP:
       return AJPV_MDB;
-    case AJ_RESOLUCAO: case AJ_GPU_EFEITOS: case AJ_QUALIDADE_IMG: case AJ_TEX_MB:
+    case AJ_AMPLIAR_UI: case AJ_RESOLUCAO: case AJ_GPU_EFEITOS:
+    case AJ_QUALIDADE_IMG: case AJ_TEX_MB:
     case AJ_ESPACO:
       return AJPV_TV;
     case AJ_ADDONS: case AJ_PLUGINS: case AJ_STALKER_PORTAL: case AJ_STALKER_MAC:

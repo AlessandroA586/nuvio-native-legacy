@@ -35,7 +35,8 @@ int fontesonda_causa(const char *t, int *http) {
     if (http) *http = n == 2005 ? 404 : n == 2006 ? 403 : 0;
     return FS_CAUSA_HTTP;
   }
-  if ((android && (n == 2001 || n == 2002)) || fontesonda_erro_conexao(t)) return FS_CAUSA_REDE;
+  if ((android && (n == 2000 || n == 2001 || n == 2002 || n == 2008)) ||
+      fontesonda_erro_conexao(t)) return FS_CAUSA_REDE;
   if ((android && n >= 3000 && n < 5000) || strcasestr(t, "unsupported") ||
       strcasestr(t, "codec") || strcasestr(t, "decoder") || strcasestr(t, "format"))
     return FS_CAUSA_FORMATO;

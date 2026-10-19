@@ -333,7 +333,7 @@ static const char *uxCaminhoAntigo(int op) {
     case AJ_POSTER_INST: case AJ_POSTER_TOKEN: case AJ_POSTER_EXTRA: case AJ_POSTER_CHAVE:
     case AJ_POSTER_MODELO: case AJ_POSTER_TESTAR:
       return "Cartazes e arte";
-    case AJ_RESOLUCAO: case AJ_QUALIDADE_IMG: case AJ_GPU_EFEITOS: case AJ_NAV_RAPIDA: case AJ_MEDIDOR:
+    case AJ_AMPLIAR_UI: case AJ_RESOLUCAO: case AJ_QUALIDADE_IMG: case AJ_GPU_EFEITOS: case AJ_NAV_RAPIDA: case AJ_MEDIDOR:
     case AJ_DIAGNOSTICO: case AJ_VELOCIDADE: case AJ_ESPACO: case AJ_TEX_MB:
       return "Desempenho desta TV";
     default: return "";

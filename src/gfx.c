@@ -269,6 +269,9 @@ static const char *VS =
 #define NV_STR_(x) #x
 #define NV_STR(x) NV_STR_(x)
 
+#include "gfx_sgsr.h"
+#include "gfx_upscale.h"
+
 static const char *FS_CABECA =
   NV_GLSL_PREFIXO
   "#ifdef GL_FRAGMENT_PRECISION_HIGH\n"
@@ -284,7 +287,11 @@ static const char *FS_CABECA =
   "uniform float uVarre;\n"
   "uniform vec4  uVeu;     // GFX_CARD: dois veus da base (fracao, alfa)\n"
   "uniform float uDesliza;\n"
-  "uniform vec2  uPar;\n"
+  "#if !defined(GL_ES) || defined(GL_FRAGMENT_PRECISION_HIGH)\n"
+  "uniform highp vec2 uPar;\n"
+  "#else\n"
+  "uniform mediump vec2 uPar;\n"
+  "#endif\n"
   "uniform float uRaio;\n"
   "uniform vec4  uCor;\n"
   "uniform float uAspect;\n"
@@ -470,7 +477,8 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "uniform vec4 uHeroiVeu;\n"
   "#endif\n"
   "void main(){\n"
-  "  float d = sdf(vUv, uRaio, uAspect);\n"
+  // Modern episode images join the opaque panel with square lower corners.
+  "  float d = sdf(vUv, uVeu.x < -1.5 && vUv.y > 0.5 ? 0.0 : uRaio, uAspect);\n"
   "  float m = borda(d);\n"
   "  if (m <= 0.001) discard;\n"
   // COVER VIRA CONTAIN quando a arte foge muito da moldura (issue #89):
@@ -548,6 +556,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "    g = mix(g, 0.62, smoothstep(0.22, 0.52, t));\n"
   "    g = mix(g, 0.86, smoothstep(0.52, 0.82, t));\n"
   "    g = mix(g, 0.95, smoothstep(0.82, 1.00, t));\n"
+  "    if (uVeu.x < -1.5) g = smoothstep(0.55, 1.0, t) * 0.65;\n"
   "    cor = mix(vec3(0.133), cor, uVeu.y) * (1.0 - g) * (1.0 - uVeu.z);\n"
   "  } else if (uVeu.y > 0.0 || uVeu.w > 0.0) {\n"
   "    float yb = 1.0 - vUv.y;\n"
@@ -1312,10 +1321,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // GFX_COPIA — ampliacao do alvo interno (gpunivel.c). RGB E ALPHA da
   // textura, que e o que diferencia do GFX_SNAP (la o alpha vem de uCor): o
   // furo de alpha 0 por onde o plano de video aparece tem de sobreviver.
-  "void main(){\n"
-  "  vec2 uv = (uPar.y > 0.5) ? vec2(vUv.x, 1.0 - vUv.y) : vUv;\n"
-  "  gl_FragColor = texture2D(uTex, uv);\n"
-  "}\n",
+  NV_SGSR_SHADER,
 
   // GFX_HERO_CAM / GFX_HERO_CHEIO_CAM — AS CAMADAS DO DESTAQUE NUMA PASSADA
   // (gfx_hero_camadas). Programas PROPRIOS, e nao um ramo nos shaders do
@@ -1663,6 +1669,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  }\n"
   "  gl_FragColor = nv_dither(c, a);\n"
   "}\n",
+  NV_SHARP_BILINEAR_SHADER,
 };
 
 // Cada corpo declara o que usa; montar so o necessario mantem o shader enxuto.
@@ -1704,7 +1711,8 @@ static const struct { int sdf, cover; } PRECISA[GFX_NMODOS] = {
   {0,0},   /* GFX_HOLOFOTE — procedural, tela cheia */
   {1,1},   /* GFX_CARD_HERO — same artwork, compiled with the reading tint */
   {0,0},   /* GFX_PALCO_CHAO — procedural floor pool */
-  {0,0}    /* GFX_PALCO_ARTE — own anchored cover */
+  {0,0},   /* GFX_PALCO_ARTE — own anchored cover */
+  {0,0}    /* GFX_COPIA_NITIDA */
 };
 
 static GLuint compila(GLenum tipo, const char *src) {

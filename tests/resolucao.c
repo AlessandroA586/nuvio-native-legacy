@@ -77,8 +77,8 @@ int main(void) {
   assert(carregar(dir, "resolucao_ui 0\n") == RES_AUTO && !ajustes_4k() && !ajustes_720p());
   assert(carregar(dir, "resolucao_ui 1\n") == RES_4K && ajustes_4k());
   assert(carregar(dir, "resolucao_ui 2\n") == RES_720 && ajustes_720p());
-  assert(carregar(dir, "resolucao_ui 1\nresolucaoUi 1\n") == RES_1080 && !ajustes_4k());
-  assert(carregar(dir, "resolucaoUi 0\nresolucao_ui 2\n") == RES_AUTO);
+  assert(carregar(dir, "resolucao_ui 1\nresolucaoUi 1\n") == RES_1080 && ajustes_1080p() && !ajustes_4k());
+  assert(carregar(dir, "resolucaoUi 0\nresolucao_ui 2\n") == RES_AUTO && !ajustes_1080p());
   assert(carregar(dir, "idioma 0\n") == RES_AUTO);
   puts("ok  ajustes.txt: resolucao_ui migra, resolucaoUi vence");
   dados_apagar("efeitos720-205.txt");

@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T06:48:58-03:00, HEAD `29260acfe`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T07:48:13-03:00, HEAD `688f08e53`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -101,6 +101,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   is slow. All platforms. Refs #545 #551 #552 #504, `26b9c635b`, `1c9043ed0`, `455135df2`, `cbcf467f5`, `27988615e`.
 
 ### New
+
+- **Read complete Trakt reviews**: Open comment cards to read full multiline reviews, reveal spoilers, scroll smoothly and move between adjacent reviews. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-cominteiro`, merge `93570ed75`, `1aae8f38f`.
+- **Choose sharper interface scaling**: Supported devices offer explicit TV or app scaling, using sharper integer or fractional scaling while preserving video transparency and saved fallback choices. Platforms: webOS, Android, Samsung .tpk, WASM, subject to GPU support. Refs owner request, `agente/205-ui720`, merge `688f08e53`, `691a26008`, `74a4f88cb`, `f0a87650d`, `9ab2b3781`, `f371a2571`, `f228d3816`, `d44f9a283`.
 
 - **More Stage artwork styles**: Cortina, Aura, Triptych and Monument offer different Stage artwork treatments, and the focused row moves its label below its cards. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `b5f4f9b18`, `2f60a19ff`.
 
@@ -217,6 +220,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Recover device settings without undoing newer edits**: Account recovery restores device preferences after logout or reinstall while retaining newer shared settings and provider scope. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-ajustesnuvem`, merge `5db74fe9f`, `5aee9720f`, `d6e4e2401`.
+- **Keep unconfirmed Dolby Vision streams on HDR10**: LG playback avoids the Dolby Vision pipeline until probing confirms usable RPU data, while confirmed streams retain Dolby Vision playback. Platforms: webOS. Refs owner request, `agente/205-dvqueda`, merge `a790444f3`, `aae29b157`.
 
 - **Back closes controls before leaving playback**: Back dismisses the visible player layer first, and holding the button cannot also exit playback before release. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner/community request, `agente/205-voltarplayer`, merge `29260acfe`, `bbe5211df`, `ce09230d7`, `a30e48d52`, `c4fb903c5`; physical TV validation remains pending.
 
@@ -502,6 +508,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Internal
 
+- **webOS Rust MKV build support**: ARM builds enable the offline soft-float Rust core with a C opt-out and repaired subtitle harness dependencies. Platforms: webOS. Refs `agente/205-mkvwebos`, merge `2e38d5397`, `b50df8df6`, `dc39713e9`.
+- **Scaling reference checks**: Paired captures identify scene, source, target and filter, reject duplicate images and isolate resolution migration fixtures. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `30ab43b99`, `30319bec0`.
+
 - **Rust MKV core enabled for webOS builds**: ARM builds now use the offline soft-float Rust MKV core by default, with the C implementation retained as an opt-out; playback on a physical TV remains unverified. Platforms: webOS. Refs owner request, `agente/205-mkvwebos`, merge `2e38d5397`, `b50df8df6`, `dc39713e9`.
 
 - **Isolated resolution migration checks**: Migration tests use temporary user data so existing settings cannot affect their results or be deleted. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `30319bec0`.
@@ -592,9 +601,16 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-- **Sharper rendering at reduced UI resolution**: Upscaling experiments aim to improve text and artwork clarity while retaining reduced-resolution rendering savings; device performance and visual validation remain pending. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-ui720` (running; not integrated).
+- **IPTV accounts with limited connections**: Per-account connection limits and serialized channel changes await review; equivalent transport handling across platforms remains incomplete. Platforms: webOS, Android, Samsung .tpk, WASM; platform validation pending. Refs owner request, `agente/205-conexlim`.
+- **Catalog rows after PIN entry**: PIN-protected profiles should load catalog rows at startup and after switching; finished work awaits review. Platforms: webOS, Android, Samsung .tpk, WASM; platform validation pending. Refs community report, `agente/205-pinrows`.
+- **Dark gray Dynamic background**: An additional darker background choice preserves existing saved color meanings; finished work awaits review. Platforms: webOS, Android, Samsung .tpk, WASM; platform validation pending. Refs owner request, `agente/205-fundoescuro`.
+- **WGT follow-up hardening**: Further browser timeout, subtitle-copy and decoder recovery changes await review before integration. Platforms: webOS, Android, Samsung .tpk, WASM; platform validation pending. Refs #607, `agente/205-i607`.
+- **Episode comments beside the menu**: A long-press episode menu adds episode reviews and rating context; review is OK and merge remains pending. Platforms: webOS, Android, Samsung .tpk, WASM; platform validation pending. Refs owner request, `agente/205-epcoment`.
+- **Modern episode information and focus**: Modern and Refined episode details receive consistent information and minimal focus styling while Standard keeps its existing focus; review is OK and merge remains pending. Platforms: webOS, Android, Samsung .tpk, WASM; platform validation pending. Refs owner request, `agente/205-epinfo`.
 
-Tracking snapshot: 18 unmerged branches without running jobs; 12 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-ajustesnuvem`, `agente/205-epinfo`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/205-ui720`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
+
+
+Tracking snapshot: 27 unmerged branches without running jobs; 11 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
