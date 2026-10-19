@@ -557,12 +557,10 @@ static float vaoDe(int m, float d) {
 }
 
 // --- FUNDOS NOVOS (2.0): Filmes, Luz, Projetor (psestilos.h) -----------------
-// O fundo que vale agora. "Filmes" numa TV que caiu para efeitos minimos (nivel
-// de GPU 2) vira "Luz": a parede sao dezenas de cartazes de tela inteira.
+// Keep the selected background when automatic GPU adaptation changes effects.
+// psestilos already omits decorative light and extra veils on lighter tiers.
 static int modoFundo(void) {
-  int m = ajustes_ps_fundo();
-  if (m == PS_FUNDO_FILMES && gfx_efeitos_minimos()) return PS_FUNDO_LUZ;
-  return m;
+  return ajustes_ps_fundo();
 }
 
 static const char *muralUrls[PS_MURAL_MAX];
