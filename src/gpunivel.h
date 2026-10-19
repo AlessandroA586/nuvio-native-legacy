@@ -63,6 +63,10 @@
 // decide o nivel inicial e marca a GPU fraca no perfil (perfiltv.h).
 // `w`,`h` = drawable da janela.
 void gpun_iniciar(int w, int h);
+// Query with the current GL context; Mali-4xx/no fragment highp use bilinear.
+int gpun_upscale_suportado(void);
+// Output choice, independent of the internal resolution/effects.
+void gpun_ampliar_app(int app);
 // Preview resize: keep the selected GPU level and rebuild its internal target.
 // Called on the drawing thread before beginning the next frame; other builds ignore it.
 void gpun_redimensionar(int w, int h);

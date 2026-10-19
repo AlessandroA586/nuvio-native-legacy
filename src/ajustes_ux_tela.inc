@@ -234,7 +234,7 @@ static const Item TELA[] = {
     ROT("Notificações"), OPC(AJ_ENQUETES),
 
   SEC("Esta TV", "Resolução, imagens, efeitos e diagnóstico", "aj_monitor-cog"),
-    OPC(AJ_RESOLUCAO), OPC(AJ_QUALIDADE_IMG),
+    OPC(AJ_RESOLUCAO), OPC(AJ_AMPLIAR_UI), OPC(AJ_QUALIDADE_IMG),
 #if defined(NV_TPK) || defined(NV_ANDROID)
     OPC(AJ_GPU_EFEITOS),
 #endif

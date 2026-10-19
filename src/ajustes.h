@@ -501,6 +501,8 @@ int   ajustes_1080p(void);
 // 1 = a pessoa escolheu 720p: desenhar em 1280x720 e ampliar (gpun_forcar_720).
 // Nunca automatico.
 int   ajustes_720p(void);
+// Device-local output choice; applied after restarting, only on a 4K panel.
+int   ajustes_ampliar_app(void);
 // Ilha do relogio (ilha.h). _ligado: 0 = sem pilula em repouso (os avisos
 // continuam saindo dela). _pos: 0 automatica, 1 esquerda, 2 direita.
 int   ajustes_relogio_ligado(void);

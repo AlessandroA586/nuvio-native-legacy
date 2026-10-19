@@ -53,7 +53,7 @@ static int telaW = 1920, telaH = 1080;
 // Alvo interno do nivel 3 (720p) ou do recuo de 4K (1920x1080, gpun_alvo_1080).
 static GLuint intFbo, intTex;
 static int alvo1080, prefFixa, upscaleSgsr;
-static int forca720;
+static int forca720, ampliarApp;
 static int intW, intH, intFalhou, intLigado;
 // Descarte (glInvalidateFramebuffer ou glDiscardFramebufferEXT).
 typedef void (*PfnDescarte)(GLenum, GLsizei, const GLenum *);
@@ -218,6 +218,24 @@ static void aplicar(int n, const char *porque) {
   fflush(stdout);
 }
 
+int gpun_upscale_suportado(void) {
+  const char *gpu = (const char *)glGetString(GL_RENDERER);
+  if (!gpu || strstr(gpu, "Mali-4")) return 0;
+#if !defined(__APPLE__) || defined(NV_GLES_NO_MAC)
+  GLint range[2], precision = 0;
+  glGetShaderPrecisionFormat(GL_FRAGMENT_SHADER, GL_HIGH_FLOAT, range, &precision);
+  if (!precision) return 0;
+#endif
+  return 1;
+}
+
+void gpun_ampliar_app(int app) {
+  ampliarApp = app && upscaleSgsr;
+  if ((!forca720 && !alvo1080) || (forca720 && telaW <= 1280 && telaH <= 720))
+    printf("[gpu-nivel] ampliar=%s upscale=bilinear %dx%d -> %dx%d\n",
+           ampliarApp ? "app" : "tv", telaW, telaH, telaW, telaH);
+}
+
 void gpun_iniciar(int w, int h) {
   const char *ext = "";
   GLint db = 0, sb = 0;
@@ -226,7 +244,7 @@ void gpun_iniciar(int w, int h) {
   if (intFbo) glDeleteFramebuffers(1, &intFbo);
   if (intTex) glDeleteTextures(1, &intTex);
   intFbo = intTex = 0;
-  intW = intH = intFalhou = intLigado = alvo1080 = forca720 = 0;
+  intW = intH = intFalhou = intLigado = alvo1080 = forca720 = ampliarApp = 0;
   telaW = w > 0 ? w : 1920;
   telaH = h > 0 ? h : 1080;
 #ifdef NV_ANDROID
@@ -237,13 +255,7 @@ void gpun_iniciar(int w, int h) {
 #endif
   snprintf(renderer, sizeof renderer, "%s", glTxt(GL_RENDERER));
   snprintf(versaoGl, sizeof versaoGl, "%s", glTxt(GL_VERSION));
-  upscaleSgsr = !strstr(renderer, "Mali-4");
-#if !defined(__APPLE__) || defined(NV_GLES_NO_MAC)
-  { GLint range[2], precision = 0;
-    glGetShaderPrecisionFormat(GL_FRAGMENT_SHADER, GL_HIGH_FLOAT, range, &precision);
-    if (!precision) upscaleSgsr = 0;
-  }
-#endif
+  upscaleSgsr = gpun_upscale_suportado();
   ext = glTxt(GL_EXTENSIONS);
 #ifdef NV_ANDROID
   android_etapa("gpun_iniciar: GL_DEPTH_BITS");
@@ -432,7 +444,7 @@ void gpun_redimensionar(int w, int h) {
 }
 
 static int upscaleNitido(void) {
-  return forca720 && upscaleSgsr && intW > 0 && intH > 0 &&
+  return (forca720 || ampliarApp) && upscaleSgsr && intW > 0 && intH > 0 &&
          telaW > intW && telaH > intH;
 }
 
@@ -466,8 +478,8 @@ static int intPreparar(void) {
     if (!alvo1080) aplicar(1, "sem alvo interno");
     return 0;
   }
-  printf("[gpu-nivel] upscale=%s %dx%d -> %dx%d\n",
-         upscaleNitido() ? "sharp-bilinear" : "bilinear",
+  printf("[gpu-nivel] ampliar=%s upscale=%s %dx%d -> %dx%d\n",
+         ampliarApp ? "app" : "tv", upscaleNitido() ? "sharp-bilinear" : "bilinear",
          intW, intH, telaW, telaH);
   fflush(stdout);
   return 1;
@@ -503,7 +515,7 @@ void gpun_quadro_fim(void) {
     gfx_tex_aspect_atual = 0.0f;
     gfx_opacidade_grupo = 1.0f;
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    // Two reads preserve the 720p frame savings even at fractional scales.
+    // RGB sharpening and unchanged alpha require two reads.
     if (upscaleNitido())
       gfx_rect(tela, intTex, GFX_COPIA_NITIDA, (float)telaW / intW,
                1.0f / intW, 1.0f / intH, 0.0f, 1, 1, 1, 1);

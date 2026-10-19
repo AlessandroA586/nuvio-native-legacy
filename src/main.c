@@ -1156,12 +1156,9 @@ int main(int argc, char **argv) {
   // NV_PEDIR_4K continua existindo para a build de medicao, que precisa pedir
   // sem depender de ajuste gravado.
   { int quer4k = resolucaoDaTv() && ajustes_4k();
-    // Only explicit 720p uses a native 4K surface for upscaling.
-    int uiMenor4k = 0;
-    if (resolucaoDaTv() && ajustes_720p()) {
-      SDL_DisplayMode dm;
-      uiMenor4k = SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.w >= 3840;
-    }
+    // The larger output workload is an explicit device-local choice.
+    int uiMenor4k = resolucaoDaTv() && ajustes_ampliar_app() &&
+                    (ajustes_720p() || ajustes_1080p());
     // 4K THAT DID NOT HOLD on this TV in an earlier session (resolucao.h):
     // start at 1080p. Picking 4K again in Settings deletes the file.
     if (quer4k) {
@@ -1203,11 +1200,8 @@ int main(int argc, char **argv) {
 #ifdef NV_ANDROID
   // No Android a janela do SDL tem o tamanho da SUPERFICIE: pedir 3840x2160 ao
   // SDL_CreateWindow nao muda nada. Ver android_pedir_superficie.
-  // SurfaceView keeps its full-screen View; only its buffer becomes 720p.
-  // NvPlayer maps logical coordinates to its own View, independent of this buffer.
-  // If denied, keep the drawable and gpunivel uses its internal FBO fallback.
+  // TV mode preserves the integration surface; app mode explicitly asks for 4K.
   if (pedeW > (int)NV_TELA_W) android_pedir_superficie(pedeW, pedeH);
-  else if (resolucaoDaTv() && ajustes_720p()) android_pedir_superficie(1280, 720);
 #endif
   const char *windowTitle = "Nuvio";
 #ifdef NV_LINUX_DESKTOP
@@ -1368,6 +1362,16 @@ int main(int argc, char **argv) {
   }
   if (!ctx) { printf("[android] sem contexto GL: %s\n", SDL_GetError()); SDL_Quit(); return 2; }
 #endif
+  // Capability is known only after creating the GL context. A saved app choice
+  // must not leave a weak GPU paying for a 4K drawable.
+  if (resolucaoDaTv() && ajustes_ampliar_app() &&
+      (ajustes_720p() || ajustes_1080p()) && !gpun_upscale_suportado()) {
+#ifdef NV_ANDROID
+    android_pedir_superficie((int)NV_TELA_W, (int)NV_TELA_H);
+#endif
+    SDL_SetWindowSize(win, (int)NV_TELA_W, (int)NV_TELA_H);
+    printf("[gpu-nivel] app 4K unavailable: restoring TV surface\n");
+  }
   // O cursor do Magic Remote e desenhado pelo app (ponteiro.c). Depois do
   // contexto: o log de arranque dele le a janela corrente.
   ponteiro_iniciar();
@@ -1512,6 +1516,7 @@ int main(int argc, char **argv) {
   if (gpuPref) gpun_preferencia(gpuPref);
   if (ajustes_720p()) gpun_forcar_720();
   else if (ajustes_1080p() && dw > (int)NV_TELA_W) gpun_alvo_1080();
+  gpun_ampliar_app(resolucaoDaTv() && ajustes_ampliar_app() && gpun_upscale_suportado());
 #ifdef NV_TPK
   video_tpk_zoom_roi_definir(ajustes_trailer_zoom_tpk());
 #endif

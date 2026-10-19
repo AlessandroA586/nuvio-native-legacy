@@ -33,6 +33,7 @@ static const GLubyte *testGlString(GLenum e) {
 #undef telaH
 #undef glGetString
 
+void ui720_settings(int width, int height, int app, int weak, int sourceHeight);
 static GLuint source, sourceFbo, query;
 static Programa productionCopy;
 static int sw=1920, sh=1080, iw=1280, ih=720;
@@ -114,8 +115,13 @@ static void timing(int settings, int mode, int whole, double *host, double *gpu)
   for(int k=-4;k<15;k++) {
     glFinish(); Uint64 start=SDL_GetPerformanceCounter();
     glBeginQuery(GL_TIME_ELAPSED_EXT,query);
-    if(whole) {target(mode!=0); frame(settings);}
-    if(!whole || mode) copy(mode==1?0:1);
+    if(whole==2) {
+      progs[GFX_COPIA]=productionCopy;progAtual=-1;
+      gpun_quadro_inicio();frame(settings);gpun_quadro_fim();
+    } else {
+      if(whole) {target(mode!=0); frame(settings);}
+      if(!whole || mode) copy(mode==1?0:1);
+    }
     glEndQuery(GL_TIME_ELAPSED_EXT); glFinish();
     double ms=1000.0*(SDL_GetPerformanceCounter()-start)/SDL_GetPerformanceFrequency();
     GLuint64 ns; glGetQueryObjectui64vEXT(query,GL_QUERY_RESULT,&ns);
@@ -183,8 +189,9 @@ int main(int argc,char **argv) {
   pixels=malloc(capacity);flipped=malloc(capacity);linear=malloc(capacity);native=malloc(capacity);
   assert(pixels&&flipped&&linear&&native);
   int failed=0;
-  for(int test=0;test<3;test++) {
-    sw=test?3840:1920;sh=test?2160:1080;iw=test==2?1920:1280;ih=test==2?1080:720;
+  for(int test=0;test<4;test++) {
+    sw=test==1||test==2?3840:1920;sh=sw*9/16;
+    iw=test>=2?1920:1280;ih=iw*9/16;
     size_t bytes=(size_t)sw*sh*4;
     glGenTextures(1,&source);glBindTexture(GL_TEXTURE_2D,source);
     glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,iw,ih,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
@@ -201,7 +208,7 @@ int main(int argc,char **argv) {
       ajustes_definir_vidro(glass);
       target(0);for(int n=0;n<8;n++) frame(settings);
       readback();memcpy(native,pixels,bytes);double ref=gradient(native,settings);
-      if(!glass) {snprintf(name,sizeof name,"r3-native-%d-%s",sh,scene);png(argv[1],name);}
+      if(!glass) {snprintf(name,sizeof name,"r4-native-%d-%s",sh,scene);png(argv[1],name);}
       target(1);for(int n=0;n<8;n++) frame(settings);
       candidate=0;copy(0);readback();memcpy(linear,pixels,bytes);
       double b=gradient(linear,settings), be=error(linear,settings);
@@ -209,7 +216,7 @@ int main(int argc,char **argv) {
       candidate=0;
       timing(settings,0,1,&nativeHost,&nativeGpu);
       timing(settings,1,1,&bilinearHost,&bilinearGpu);
-      candidate=test==2?0:3;
+      candidate=test==3?0:3;
       timing(settings,2,1,&filteredHost,&filteredGpu);
       printf("FRAME %d->%d %s glass=%d native=%.4f bilinear=%.4f filtered=%.4f GPU-ms\n",
              ih,sh,scene,glass,nativeGpu,bilinearGpu,filteredGpu);
@@ -225,7 +232,7 @@ int main(int argc,char **argv) {
         double g=gradient(pixels,settings),e=error(pixels,settings),host,gpu;
         for(size_t i=3;i<bytes;i+=4) assert(pixels[i]==linear[i]);
         assert(pixels[((size_t)(sh-1-250*sh/1080)*sw+1550*sw/1920)*4+3]==0);
-        if(!glass && candidate==3 && test<2) {snprintf(name,sizeof name,"r3-%s-%d-%d-%s",names[candidate],ih,sh,scene);png(argv[1],name);}
+        if(!glass && candidate==3 && test<2) {snprintf(name,sizeof name,"r4-%s-%d-%d-%s",names[candidate],ih,sh,scene);png(argv[1],name);}
         timing(settings,candidate?2:1,0,&host,&gpu);
         printf("METRIC %d->%d %s glass=%d filter=%s gradient=%.6f native=%.6f MAE=%.6f host=%.4f GPU=%.4f alpha=identical\n",
           ih,sh,scene,glass,names[candidate],g,ref,e,host,gpu);
@@ -237,30 +244,53 @@ int main(int argc,char **argv) {
         }
       }
     }
-    // Only explicit 720p uses new filters; Automatic/4K fallback stays bilinear.
-    candidate=test==2?0:3;
+    // The same filter is used by opt-in app scaling at both integer factors.
+    candidate=test==3?0:3;
     ajustes_definir_vidro(0);target(1);frame(0);copy(1);readback();memcpy(linear,pixels,bytes);
     progs[GFX_COPIA]=sgsr;progAtual=-1;
-    if(test==2) gpun_alvo_1080();else gpun_forcar_720();
-    // Level 0 effects, even when today's 720p setting selects level 3.
+    if(test==2) {gpun_alvo_1080();gpun_ampliar_app(1);}
+    else if(test<2) {gpun_forcar_720();gpun_ampliar_app(test==1);}
+    // Compare filter output independently of the effect level.
     gfx_definir_efeitos_leves(0);gfx_definir_efeitos_minimos(0);
     gpun_quadro_inicio();
+    if(test==3) {GLint bound;glGetIntegerv(GL_FRAMEBUFFER_BINDING,&bound);assert(bound==0);}
     assert(glGetError()==GL_NO_ERROR);
     frame(0);
     assert(glGetError()==GL_NO_ERROR);
     // The final draw must restore alpha writes even after a masked pass.
-    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_FALSE);
+    if(test!=3) glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_FALSE);
     progs[GFX_COPIA]=sgsr;progAtual=-1;
     gpun_quadro_fim();readback();
-    if(memcmp(linear,pixels,bytes)) {
+    // Native 1080p has no copy pass; a texture round trip can round RGB bytes.
+    if(test!=3 && memcmp(linear,pixels,bytes)) {
       fprintf(stderr,"FAIL production filter %d->%d\n",ih,sh);
       failed=1;
+    }
+    // Choice costs use the production level, including minimal 720p effects.
+    gpun_iniciar(sw,sh);
+    if(ih==720) gpun_forcar_720();
+    else if(sh==2160) gpun_alvo_1080();
+    gpun_ampliar_app(sh==2160);
+    ui720_settings(3840,2160,sh==2160,0,ih);
+    for(int settings=0;settings<2;settings++) {
+      double host,gpu;
+      candidate=test==3?0:3;
+      for(int n=0;n<8;n++) {target(ih<sh);frame(settings);if(ih<sh)copy(1);}
+      target(0);
+      timing(settings,test==3?0:2,2,&host,&gpu);
+      printf("CHOICE ampliar=%s %d->%d %s level=%d host=%.4f GPU=%.4f ms\n",
+        sh==2160?"app":"tv",ih,sh,settings?"settings":"home",gpun_nivel(),host,gpu);
+      if(settings) {
+        char name[160];snprintf(name,sizeof name,"r4-choice-%s-%d-settings",sh==2160?"app":"tv",ih);
+        png(argv[1],name);
+      }
     }
     glDeleteFramebuffers(1,&sourceFbo);glDeleteTextures(1,&source);gfx_tex_esquecer(0);
   }
   candidate=0;progs[GFX_COPIA]=sgsr;progAtual=-1;
   sw=1920;sh=1080;iw=1280;ih=720;
-  pretendUtgard=1;gpun_iniciar(sw,sh);gpun_forcar_720();
+  pretendUtgard=1;gpun_iniciar(sw,sh);assert(!gpun_upscale_suportado());gpun_forcar_720();
+  ui720_settings(3840,2160,0,1,720);
   gpun_quadro_inicio();frame(0);
   glGenTextures(1,&source);glBindTexture(GL_TEXTURE_2D,source);
   glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,iw,ih,0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
@@ -271,7 +301,12 @@ int main(int argc,char **argv) {
   glCopyTexSubImage2D(GL_TEXTURE_2D,0,0,0,0,0,iw,ih);gfx_tex_esquecer(0);
   gpun_quadro_fim();readback();memcpy(linear,pixels,(size_t)sw*sh*4);
   copy(0);readback();assert(!memcmp(linear,pixels,(size_t)sw*sh*4));
+  progs[GFX_COPIA]=productionCopy;progAtual=-1;
+  for(int n=0;n<8;n++) {gpun_quadro_inicio();frame(1);gpun_quadro_fim();}
+  png(argv[1],"r4-choice-mali-disabled-settings");
   pretendUtgard=0;glDeleteTextures(1,&source);gfx_tex_esquecer(0);
+  gpun_iniciar(sw,sh);ui720_settings(1920,1080,0,0,1080);target(0);frame(1);
+  png(argv[1],"r4-choice-non4k-hidden-settings");
   puts("PASS Mali-450 automatically selects exact bilinear output");
   gpun_iniciar(1280,720);gpun_forcar_720();gfx_novo_quadro();gpun_quadro_inicio();
   GLint bound;glGetIntegerv(GL_FRAMEBUFFER_BINDING,&bound);assert(bound==0);

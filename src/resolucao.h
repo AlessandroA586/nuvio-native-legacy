@@ -20,8 +20,9 @@
 //     target scaled to the 4K surface, gpun_alvo_1080), the island says so
 //     once, and RES_ARQ_RECUO makes the next launches start at 1080p. Picking
 //     4K again in Settings deletes the file and tries again.
-//   - Explicit 1080p keeps its 1920x1080 surface request. Only explicit 720p
-//     requests a native 4K surface and uses Sharp-Bilinear (bilinear on weak GPUs).
+//   - TV scaling (default) preserves the previous surface requests. App scaling
+//     explicitly requests 4K for 720p/1080p UI on a 4K panel; Sharp-Bilinear
+//     handles both integer factors. Mali-4xx/no-highp disables this choice.
 //   - 720p only when the person picks it (gpun_forcar_720).
 #ifndef NV_RESOLUCAO_H
 #define NV_RESOLUCAO_H
