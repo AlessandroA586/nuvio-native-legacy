@@ -15,6 +15,9 @@ static const Item TELA[] = {
   SEC("Reprodução", "Qualidade, som e o que o player faz", "aj_circle-play"),
     ROT("Imagem e som"),
       OPC(AJ_QUALIDADE), OPC(AJ_FONTE_HDR), OPC(AJ_DV), OPC(AJ_ATMOS),
+#ifdef NV_TPK
+      OPC(AJ_AUDIO_OFFSET),
+#endif
     ROT("Escolha da fonte"),
       OPC(AJ_FONTE_MANUAL), OPC(AJ_FONTE_PRIORIDADE), OPC(AJ_FONTE_IDIOMA_AUDIO), OPC(AJ_FONTE_PRAZO),
       OPC(AJ_FONTE_REPOR), OPC(AJ_TAM_MAX),
@@ -176,7 +179,7 @@ static const Item TELA[] = {
     ROT("Notas"),
       OPC(AJ_NT_IMDB), OPC(AJ_NT_TOMATES), OPC(AJ_NT_AUDIENCIA), OPC(AJ_NT_META),
       OPC(AJ_NT_METAUSER), OPC(AJ_NT_TRAKT), OPC(AJ_NT_TMDB), OPC(AJ_NT_LETTER),
-      OPC(AJ_NT_MAL), OPC(AJ_NT_EBERT), OPC(AJ_NT_SCORE), OPC(AJ_NT_ORDEM), OPC(AJ_MDB_CHAVE),
+      OPC(AJ_NT_MAL), OPC(AJ_NT_EBERT), OPC(AJ_NT_SCORE), OPC(AJ_NT_ORDEM), OPC(AJ_NT_EP), OPC(AJ_MDB_CHAVE),
     ROT("Dados do título"),
       OPC(AJ_TMDB_LIGADO),
     MAIS(),

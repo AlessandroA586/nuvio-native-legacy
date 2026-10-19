@@ -152,7 +152,7 @@ namespace NuvioTpk
             fParar = Parar;
             fPausar = p => ComSessao(() => Pausar(p != 0));
             fBuscar = ms => ComSessao(() => Buscar(ms));
-            fVolume = v => ComSessao(() => PedirVolume(v));
+            fVolume = v => ComSessao(() => PedirVolume(v), false);
             fJanela = (x, y, w, h) => ComSessao(() => Janela(x, y, w, h));
             fAspecto = (x,y,w,h,lx,ly,lw,lh) => ComSessao(() => Janela(x,y,w,h,lx,ly,lw,lh));
             // Older staged libnuvio versions only have the original window callback.
@@ -350,11 +350,11 @@ namespace NuvioTpk
         }
 
         // Invalida tambem comandos que ficaram na fila durante uma troca.
-        void ComSessao(Action a)
+        void ComSessao(Action a, bool exigePlayer = true)
         {
             int minha = Volatile.Read(ref sessao);
             var f = Volatile.Read(ref fio);
-            f?.Post(_ => { if (minha == Volatile.Read(ref sessao) && playerSessao == minha) a(); }, null);
+            f?.Post(_ => { if (minha == Volatile.Read(ref sessao) && (!exigePlayer || playerSessao == minha)) a(); }, null);
         }
 
         // Descarte independente da fila: ate GetPlayPosition/Prepare presos
@@ -395,6 +395,9 @@ namespace NuvioTpk
                 }
             });
             novo.Post(async _ => {
+                // #603: reset before yielding to decoder release. Trailer volume
+                // can arrive before this session has a Player; keep that request.
+                volAlvo = 1f; volPedido = false;
                 if (await Task.WhenAny(soltar, Task.Delay(PrazoPararMs)) != soltar || !await soltar) {
                     Log("[video] tpk parar nao confirmou; player indisponivel, processo preservado");
                     lock (trocaTrava) { if (minha == sessao) NvVid.Evento(EV_ERRO, -3, 0); }
@@ -409,9 +412,6 @@ namespace NuvioTpk
         async void Abrir(string url, string cabecalhos, int minha)
         {
             posMs = 0; buscando = false; buscaPend = pausaPend = -1;
-            // Player novo nasce no volume cheio; so um pedido DESTA sessao
-            // (trailer.c, logo depois do video_tocar) o muda.
-            volAlvo = 1f; volPedido = false;
             aspectoRecusado = false;
             try
             {

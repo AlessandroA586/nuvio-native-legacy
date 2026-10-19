@@ -24,6 +24,7 @@
 #include "escala.h"
 #include "detail.h"
 #include "biblioteca.h"
+#include "detail_acoes.h"
 #include "focoprof.h"
 #include "posterprov.h"
 #include "episodios.h"
@@ -1435,6 +1436,7 @@ int detail_arte_titulo(const CatItem *titulo, char *saida, size_t tam, int *post
   return 1;
 }
 
+static int epFuros(GfxRect *holes);
 static void desenhaArteDetalhe(GfxRect alvo, GLuint tex, const char *arte,
                                int poster, float alpha, float pg) {
   if (!tex) {
@@ -1457,8 +1459,11 @@ static void desenhaArteDetalhe(GfxRect alvo, GLuint tex, const char *arte,
       // No modo cinema o bloco de texto saiu: o veu sai junto (fica 15%,
       // para o logo pequeno do canto nao flutuar sobre uma cena clara).
       gfx_rect(alvo, 0, GFX_DETALHE, veu * (1.0f - 0.85f * trailercinema_t(&trailerCinema)), 1.0f, 0, 0.0f, 0, 0, 0, alpha * trailerFade);
-    } else
-      gfx_rect(alvo, tex, GFX_DETALHE, veu, 0, 0, 0.0f, 0, 0, 0, alpha);
+    } else {
+      GfxRect holes[N_ITENS * 2];
+      int n = epFuros(holes);
+      gfx_rect_furos(alvo, tex, GFX_DETALHE, veu, 0, 0, 0, 0, 0, 0, alpha, holes, n);
+    }
   } else {
     float ap = gfx_tex_aspect_atual > 0.05f ? gfx_tex_aspect_atual : (2.0f / 3.0f);
     float h = alvo.h * 0.90f, w = h * ap, maxW = alvo.w * 0.42f;
@@ -1482,15 +1487,9 @@ static float suave(float x) {
 }
 static float fase2(void) { return suave((t - 0.45f) / 0.55f); }
 
-// A Inter embarcada so tem Regular, Medium e Bold, e a pagina pede 500, 600 e
-// 800 em corpos (32, 26, 21) que so existem em Regular na tabela de text.c —
-// que e arquivo de outro agente nesta sessao. Engrossar redesenhando a mesma
-// linha com deslocamentos sub-pixel e o que sobra, e e o que os rasterizadores
-// chamam de "faux bold": custa uma textura so, porque a linha vem do cache.
+// Preserve the approved weight using the same cached glyph texture.
 static void txt_peso(TxtLinha l, float x, float y, float a, float grossura) {
-  txt_desenhar_alpha(l, x, y, a);
-  if (grossura > 0.05f) txt_desenhar_alpha(l, x + grossura * 0.5f, y, a);
-  if (grossura > 0.9f)  txt_desenhar_alpha(l, x + grossura, y, a);
+  txt_desenhar_peso(l, x, y, a, grossura);
 }
 
 // AUDITORIA (tools/auditoria-release.sh): uma linha quando o numero de
@@ -2215,10 +2214,12 @@ static GfxRect epPlacaRect(GfxRect r, float thH, float ft) {
 }
 static float epPlacaA(float f) { return NV_DETP_EP_PLACA_A * anim_clamp(f, 0.0f, 1.0f); }
 // Glass cards tint the shared page backdrop, without a per-card material pass.
-// Glass off keeps the existing white focus plate.
+// Moderna text rests on the cast tile tint (7%); focus doubles it.
+// Moderna keeps its resting tint through focus transitions, with or without glass.
 static void epPlacaDesenha(GfxRect p, float f, float a) {
-  if (ajustes_vidro())
-    gfx_cor(p, 24.0f / p.h, 1, 1, 1, 0.07f * anim_clamp(f, 0.0f, 1.0f) * a);
+  if (ajustes_vidro() || epModerna())
+    gfx_cor(p, 24.0f / p.h, 1, 1, 1,
+            0.07f * ((epModerna() ? 1.0f : 0.0f) + anim_clamp(f, 0.0f, 1.0f)) * a);
   else
     gfx_cor(p, 24.0f / p.h, 1, 1, 1, epPlacaA(f) * a);
 }
@@ -4870,7 +4871,7 @@ static void heroWeb(float a, float desloc) {
     player_morph_de(morphLogo, rp);   // A3: o morph da abertura parte daqui
     primarioPct = -1;   // os outros botoes nao tem trilho
     if (a > 0.3f) ponteiro_alvo(rp.x, rp.y, rp.w, rp.h, ponteiroDetalhe, NULL, -1, nb);
-    bx += rp.w + NV_DETW2_BTN_GAP; nb++;
+    bx += det_avanco(rp.w, nivel == 0 && botao == nb, NV_DETW2_FOCO_SX, NV_DETW2_BTN_GAP); nb++;
     if (temInicio()) {
       // "Assistir do comeco" entre o primario e os circulares (issue #46).
       const char *rotIni = i18n("Assistir do começo");
@@ -4918,13 +4919,16 @@ static void heroWeb(float a, float desloc) {
     }
     if (temLembrar() && !acoesAgrupadas()) {
       const CatItem *ciL = cat_item(idx);
+      int foc = nivel == 0 && botao == nb;
+      float ext = foc ? det_foco_extra(NV_DETW2_CIRC, NV_DETW2_FOCO_SY) : 0.0f;
+      bx += ext;
       GfxRect rs = { bx, cyBtn - NV_DETW2_CIRC * 0.5f,
                      NV_DETW2_CIRC, NV_DETW2_CIRC };
       if (detalheRetrato()) rs = heroAcaoRect(&bx, &cyBtn, rs.w, rs.h);
       desenhaLembrete(rs, ciL && agenda_lembrete(ciL->imdb),
                       nivel == 0 && botao == nb, a);
       if (a > 0.3f) ponteiro_alvo(rs.x, rs.y, rs.w, rs.h, ponteiroDetalhe, NULL, -1, nb);
-      bx += NV_DETW2_CIRC + NV_DETW2_BTN_GAP; nb++;
+      bx += det_avanco(NV_DETW2_CIRC, nivel == 0 && botao == nb, NV_DETW2_FOCO_SY, NV_DETW2_BTN_GAP); nb++;
     }
     if (acoesAgrupadas()) {
       static float reveal, revealVelocity;
@@ -4939,14 +4943,24 @@ static void heroWeb(float a, float desloc) {
         anim_mola2(&revealVelocity,reveal,maisAcoes ? 1.0f : 0.0f,elapsed*.001f,16.0f);
       float progress = anim_clamp(reveal,0,1);
       int first = nb;
+      float ext = nivel == 0 && botao == first ? det_foco_extra(NV_DETW2_CIRC, NV_DETW2_FOCO_SY) : 0.0f;
+      bx += ext;   // focused Add grows left: keep the gap to the previous button
       GfxRect anchor = {bx,cyBtn-NV_DETW2_CIRC*.5f,NV_DETW2_CIRC,NV_DETW2_CIRC};
       // Draw outgoing circles behind Add, then keep the anchor in front.
       for (int j=nBotoesTodos()-1; j>first; j--) {
         float stagger = anim_clamp((progress-(j-first-1)*.045f)/.78f,0,1);
         if (stagger < .005f) continue;
-        GfxRect rc = {bx+(j-first)*(NV_DETW2_CIRC+NV_DETW2_BTN_GAP)*stagger,
+        // A focused circle grows around its center: its left half is inside
+        // the stagger distance; every circle at or past it shifts right —
+        // the focused one by one half, the ones beyond by two — so the gaps
+        // stay 18.
+        float jext = nivel == 0 && botao > first && botao <= j
+          ? det_foco_extra(NV_DETW2_CIRC, NV_DETW2_FOCO_SY) * (1.0f + (botao < j)) *
+            anim_clamp((progress-(botao-first-1)*.045f)/.78f,0,1) : 0.0f;
+        int selected = nivel == 0 && botao == j;
+        GfxRect rc = {bx+((j-first)*(NV_DETW2_CIRC+NV_DETW2_BTN_GAP)+ext)*stagger+jext,
           anchor.y,NV_DETW2_CIRC,NV_DETW2_CIRC};
-        int action = acaoEm(j), selected = nivel == 0 && botao == j;
+        int action = acaoEm(j);
         if (action == ACAO_LEMBRAR)
           desenhaLembrete(rc,ci && agenda_lembrete(ci->imdb),selected,a*stagger);
         else desenhaBotao(rc,NULL,action,selected,a*stagger);
@@ -4957,13 +4971,16 @@ static void heroWeb(float a, float desloc) {
       desenhaBotao(anchor,NULL,ACAO_LISTA,nivel == 0 && botao == first,a);
       if (a > .3f) ponteiro_alvo(anchor.x,anchor.y,anchor.w,anchor.h,ponteiroDetalhe,NULL,-1,first);
     } else for (; nb < n; nb++) {
+      int foc = nivel == 0 && botao == nb;
+      float ext = foc ? det_foco_extra(NV_DETW2_CIRC, NV_DETW2_FOCO_SY) : 0.0f;
+      bx += ext;   // the focused circle grows both ways: keep the gap on its left too
       GfxRect rc = { bx, cyBtn - NV_DETW2_CIRC * 0.5f,
                      NV_DETW2_CIRC, NV_DETW2_CIRC };
       if (detalheRetrato()) rc = heroAcaoRect(&bx, &cyBtn, rc.w, rc.h);
-      desenhaBotao(rc, NULL, acaoEm(nb), nivel == 0 && botao == nb, a);
+      desenhaBotao(rc, NULL, acaoEm(nb), foc, a);
       if (acaoEm(nb) == ACAO_MAIS) maisAncora = rc;
       if (a > 0.3f) ponteiro_alvo(rc.x, rc.y, rc.w, rc.h, ponteiroDetalhe, NULL, -1, nb);
-      bx += NV_DETW2_CIRC + NV_DETW2_BTN_GAP;
+      bx += NV_DETW2_CIRC + ext + NV_DETW2_BTN_GAP;
     }
   }
 
@@ -5529,15 +5546,27 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   // que nasce e cresce ~3% a partir do centro NA MOLA do foco — antes o card
   // so ganhava anel/zoom e o texto ficava parado. Nao muda a caixa (`r`), logo
   // nao move nenhum vizinho; some desfocando pelo mesmo caminho.
+  // Glass Moderna: the text rests on a tile in the card box (below); the plate
+  // grows out of that tile with the spring, so a fading card pays no margins.
+  const GfxRect epTile = { r.x, r.y + th.h, r.w, r.h - th.h };
+  const int epVidroTile = !epApple() && epModerna();
   if (!epApple() && f > 0.005f) {
-    epPlacaDesenha(epPlacaRect(r, th.h, ft), f, a);
+    GfxRect p = epPlacaRect(r, th.h, ft);
+    if (epVidroTile) {
+      p.x = epTile.x + (p.x - epTile.x) * ft; p.y = epTile.y + (p.y - epTile.y) * ft;
+      p.w = epTile.w + (p.w - epTile.w) * ft; p.h = epTile.h + (p.h - epTile.h) * ft;
+    }
+    epPlacaDesenha(p, f, a);
   }
   if (!epApple()) { foco_anel(th, raioTh, f, a); th = foco_zoom(th, f); }
 
   const CatItem *serie = cat_item(idx);
   const char *arte = (ep && ep->thumb[0]) ? ep->thumb
                      : (serie && serie->backdrop[0] ? serie->backdrop : NULL);
-  GLuint t2 = arte ? tex_obter_larg(arte, th.w) : 0;
+  // Reserve the largest focus size once; spring motion must not promote
+  // and decode the same thumbnail at successive 32-pixel cache limits.
+  const float texW = r.w * (ajustes_borda_foco() || epApple() ? 1.0f : 1.0f + FOCO_ZOOM);
+  GLuint t2 = arte ? tex_obter_larg(arte, texW) : 0;
   // STILL QUE NAO EXISTE NEM NO METAHUB NEM NO TMDB (One Piece da 2a
   // temporada em diante, 23/09): o card nao fica cinza, leva o fundo da serie
   // — o numero e o nome do episodio ja estao no texto por cima. O still
@@ -5545,10 +5574,15 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   if (!t2 && ep && ep->thumb[0] && arte == ep->thumb && tex_falhou(arte) && serie) {
     const char *reserva = serie->backdrop[0] ? serie->backdrop
                         : (serie->poster[0] ? serie->poster : NULL);
-    GLuint t3 = reserva ? tex_obter_larg(reserva, th.w) : 0;
+    GLuint t3 = reserva ? tex_obter_larg(reserva, texW) : 0;
     if (t3) { arte = reserva; t2 = t3; }
   }
   float aArte = (c >= 0 && c < DET_REV_EP) ? revela_arte(&revEp[c], t2 != 0, agora) : 1.0f;
+  // The rest tile follows the text, not the still: glass on or off, art or not.
+  if (epVidroTile && f <= 0.005f) {
+    if (ajustes_vidro()) epPlacaDesenha(epTile, 0.0f, a);
+    else gfx_cor(epTile, 24.0f / epTile.h, 1, 1, 1, 0.07f * a);
+  }
   // DESFOCAR NAO ASSISTIDOS (blurUnwatchedEpisodes, #133). O ajuste existia na
   // tela e na conta e nada o lia — o card saia nitido em toda plataforma.
   // "Nao assistido" e tudo que o mapa NAO afirma como visto: inclusive o "nao
@@ -5564,22 +5598,30 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     if (tb) t2 = tb;
     else { t2 = 0; arte = NULL; }
   }
+  const int watched = ep && serie && serie->imdb[0] &&
+      vistoep_estado(serie->imdb, ep->temporada, ep->episodio) == 1;
+  const int mergedVeil = t2 && a * gfx_opacidade_grupo >= .999f;
+  if (mergedVeil) {
+    gfx_veu_card_atual[0] = -1.0f;
+    gfx_veu_card_atual[1] = aArte;
+    gfx_veu_card_atual[2] = watched ? .12f : 0.0f;
+  }
   if (t2) {
-    if (aArte < 0.999f) gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
+    if (!mergedVeil && aArte < 0.999f) gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
     gfx_tex_aspect_atual = tex_aspecto(arte);
-    gfx_rect(th, t2, GFX_CARD, f, 0, 0, raioTh, 0, 0, 0, a * aArte);
+    gfx_rect(th, t2, GFX_CARD, f, 0, 0, raioTh, 0, 0, 0, mergedVeil ? a : a * aArte);
     gfx_tex_aspect_atual = 0.0f;
   } else if (arte && !tex_falhou(arte))
     gfx_esqueleto(th, raioTh, 0.133f, 0.133f, 0.133f, a);
   else gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
-  veuEpisodio(th, a);
+  if (mergedVeil) gfx_veu_card_limpar();
+  else veuEpisodio(th, a);
   if (ajustes_vidro()) gfx_vidro_aro(th, raioTh, 1.5f, 1, 1, 1, 0.14f * a);   // vidro: aro fino na miniatura
 
   // A mesma fonte que o menu modifica: desconhecido (-1) nao recebe selo.
   // A lavagem e leve para preservar a arte; texto e estado sao desenhados depois.
-  if (ep && serie && serie->imdb[0] &&
-      vistoep_estado(serie->imdb, ep->temporada, ep->episodio) == 1) {
-    gfx_cor(th, raioTh, 0, 0, 0, .12f * a);
+  if (watched) {
+    if (!mergedVeil) gfx_cor(th, raioTh, 0, 0, 0, .12f * a);
     desenhaAssistidoEpisodio(th, a);
   }
   th = thLayout;   // o texto abaixo segue a caixa de repouso
@@ -5796,14 +5838,14 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
         }
       break;
     }
-    if (ep && ep->notaImdb > 0 && ajustes_nota_titulo(EX_IMDB))
+    if (ep && ep->notaImdb > 0 && ajustes_nota_episodio(EX_IMDB))
       x += desenhaNotaEpisodio(x, y - 4, EX_IMDB, ep->notaImdb, a);
-    if (nota > 0 && ajustes_nota_titulo(EX_TRAKT))
+    if (nota > 0 && ajustes_nota_episodio(EX_TRAKT))
       x += desenhaNotaEpisodio(x, y - 4, EX_TRAKT, nota, a);
     // O voto do TMDB entra AO LADO do do Trakt, no mesmo selo compacto
     // (issue #87). Sao fontes diferentes — o logo diz qual e qual, e um
     // episodio pode ter uma, a outra ou as duas.
-    if (ep && ep->nota > 0 && ajustes_nota_titulo(EX_TMDB))
+    if (ep && ep->nota > 0 && ajustes_nota_episodio(EX_TMDB))
       x += desenhaNotaEpisodio(x, y - 4, EX_TMDB, ep->nota, a);
     // A DATA vai para a direita do card, como na referencia: a esquerda fica so
     // a duracao, e as duas deixam de disputar a mesma linha corrida.
@@ -7322,7 +7364,10 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
     float f = animFoco[r][c];
     float x = xItem(r, c) - scrollSec[r];
     float w = larguraItem(r, c);
-    if (x > NV_TELA_W || x + w < -ANC(NV_DETP_X)) continue;   // shadow/glow reach, not a whole extra card
+    // Episodes have only a focus rim/zoom, no wide shadow. Keep the
+    // protruding pixels, but do not request textures or lay out hidden cards.
+    float margin = r == SEC_EPISODIOS ? fmaxf(w * FOCO_ZOOM * 0.5f, NV_ANEL_FOCO + 10.0f) : ANC(NV_DETP_X);
+    if (x > NV_TELA_W + (r == SEC_EPISODIOS ? margin : 0.0f) || x + w < -margin) continue;
     if (ponteiro_ativo() && a > 0.3f && c < secaoColunas(r) && alturaAlvo(r) > 0.0f)
       ponteiro_alvo(x, y,
                     w, alturaAlvo(r), ponteiroDetalhe, NULL, r, c);
@@ -7336,7 +7381,11 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
       case SEC_EPISODIOS: {
         GfxRect b = { x, y, epCardW(), epCardH() };
         if (foco.fileira == r && c == foco.coluna) { menuOrigem = b; menuOrigemCol = c; menuOrigemF = f; menuOrigemA = a; }
-        desenhaEpisodio(b, c, f, a, agora); break;
+        int clip = gfx_cortar_invisiveis;
+        gfx_cortar_invisiveis = 1;
+        desenhaEpisodio(b, c, f, a, agora);
+        gfx_cortar_invisiveis = clip;
+        break;
       }
       case SEC_ABAS_INFO: {
         desenhaAbaInfo(x, y, c, f, a);
@@ -7705,6 +7754,37 @@ static void reacaoPendente(float s) {
 // juntarem, a troca e AQUI e em mais lugar nenhum. O conteudo da pagina nao
 // depende da arte nitida para ter contraste — o veu de leitura do heroi
 // (veuLeitura) e desenhado por cima, fora desta funcao.
+// Alpha of the first two series rows (seasons and episodes).
+static float epLinhaAlfa(void) {
+  float a2 = fase2();
+  float aTopo = a2 * (1.0f - trailercinema_t(&trailerCinema)) * (1.0f - trocaarte_visivel());
+  return aTopo > corpoAlpha(a2) ? aTopo : corpoAlpha(a2);
+}
+
+static int epFuros(GfxRect *holes) {
+  int n = 0;
+  // Holes are only hidden under fully opaque thumbnails (desenhaEpisodio's mergedVeil).
+  if (epLinhaAlfa() * gfx_opacidade_grupo < .999f) return 0;
+  // Glass captures this backdrop before thumbnails repaint, including the
+  // 68 px sampling fringe. Keep the complete source intact while frost is on.
+  if (ajustes_vidro() && ajustes_vidro_fosco()) return 0;
+  if (!epModerna() || corpoSobArte() || corpoOculto(ehSerie()) ||
+      fase2() < .999f || trocaarte_visivel() > .001f ||
+      trailercinema_t(&trailerCinema) > .001f || ajustes_desfocar_nao_assistidos()) return 0;
+  for (int c = 0; c < epVisiveis() && c < N_ITENS && c < DET_REV_EP; c++) {
+    const CatEp *ep = cat_episodio(idx, epAbsoluto(c));
+    float x = xItem(SEC_EPISODIOS, c) - scrollSec[SEC_EPISODIOS];
+    if (x > NV_TELA_W || x + epCardW() < 0 || !ep || !ep->thumb[0]) continue;
+    if (!tex_obter_larg(ep->thumb, epCardW() * (ajustes_borda_foco() ? 1 : 1 + FOCO_ZOOM))) continue;
+    GfxRect th = foco_zoom((GfxRect){x, epRowY()-scrollY, epCardW(), epThumbH()}, animFoco[SEC_EPISODIOS][c]);
+    // Keep corners and their antialias fringe; only the solid interior occludes.
+    float inset = NV_DETP_EP_RAIO + 2;
+    holes[n++] = (GfxRect){th.x+inset, th.y+2, th.w-2*inset, th.h-4};
+    holes[n++] = (GfxRect){th.x+2, th.y+inset, th.w-4, th.h-2*inset};
+  }
+  return n;
+}
+
 static void detalheFundo(float s) {
   if (!detail_cobre_tela() && !carDesenhaFundo()) {
     GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
@@ -7892,10 +7972,9 @@ static void detail_desenhar_(Uint32 agora) {
   desenhaEsqueletoElenco(corpoAlpha(a2));
   // As duas fileiras da primeira tela da serie entram com o heroi, e nao com
   // a rolagem (pg fica em 0 com o foco nelas).
-  { float aTopo = a2 * (1.0f - trailercinema_t(&trailerCinema)) * (1.0f - trocaarte_visivel());
-    for (int r = 0; r < N_SECOES; r++)
-      desenhaSecao(r, (ehSerie() && (r == SEC_TEMPORADAS || r == SEC_EPISODIOS))
-                      ? (aTopo > corpoAlpha(a2) ? aTopo : corpoAlpha(a2)) : corpoAlpha(a2), agora); }
+  for (int r = 0; r < N_SECOES; r++)
+    desenhaSecao(r, (ehSerie() && (r == SEC_TEMPORADAS || r == SEC_EPISODIOS))
+                    ? epLinhaAlfa() : corpoAlpha(a2), agora);
   // POR CIMA de tudo: a ficha e outra tela, nao uma secao desta.
   // O ponteiro (#99) nao alcanca a pagina por baixo de nenhuma das duas.
   if (pessoaAberta) { ponteiro_camada(); desenhaPessoa(s); }
@@ -7999,4 +8078,10 @@ int detail_sob_menu_ativo(void) { return sobMenu; }
 // de texto; o corpo mede NV_TELA_W/H na tela virtual dela.
 void detail_evento(const SDL_Event *e) { TXT_INI(); detail_evento_(e); TXT_FIM(); }
 void detail_atualizar(float dt, Uint32 agora) { TXT_INI(); detail_atualizar_(dt, agora); TXT_FIM(); }
-void detail_desenhar(Uint32 agora) { TXT_INI(); detail_desenhar_(agora); TXT_FIM(); }
+void detail_desenhar(Uint32 agora) {
+  int clip = gfx_cortar_invisiveis;
+  if (epModerna() && nivel >= 1 && foco.fileira == SEC_EPISODIOS)
+    gfx_cortar_invisiveis = 1;
+  TXT_INI(); detail_desenhar_(agora); TXT_FIM();
+  gfx_cortar_invisiveis = clip;
+}

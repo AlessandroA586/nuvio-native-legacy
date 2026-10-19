@@ -4157,7 +4157,8 @@ void app_evento(const SDL_Event *e) {
   // esta. Em 18/09 eu naveguei as cegas ate o guia tres vezes; nas tres o foco
   // caiu num card de filme e o OK marcou "A Captura" como assistido na conta
   // do dono. Uma tecla que vai direto elimina a classe inteira de acidente.
-  // Nao ha F10 em controle de TV, entao isto nao muda nada para quem usa.
+  // Android Guide/Menu and Tizen TV Guide also map to F10. During playback,
+  // the live player or mini guide handles it below, preserving modal priority.
   if (e->type == SDL_KEYDOWN && e->key.keysym.sym == SDLK_F10 &&
       login_concluido() && perfilsel_concluido() && !player_aberto()) {
     menu_fechar();
@@ -6359,7 +6360,7 @@ void app_atualizar(float dt, Uint32 agora) {
     printf("[guia] preview -> tela cheia no mesmo fluxo\n");
     fflush(stdout);
   }
-  // Azul na faixa do mini guia: o guia completo, com o canal no preview.
+  // Second OK on the playing channel, Guide/Menu or BLUE: full guide with preview.
   if (guia_pediu_guia_cheio() && player_aberto() && player_id_canal()[0]) guiaComCanalNoAr();
   // O botao "Guia" do OSD do canal: o mesmo guia completo, com o canal no
   // preview e tocando.
@@ -6410,7 +6411,7 @@ void app_atualizar(float dt, Uint32 agora) {
     else recarregarFonteVOD();
   }
 
-  // BAIXO/AZUL COM CANAL NO AR: o overlay do guia abre focado no canal que
+  // Live OK without controls, DOWN or BLUE: the mini guide focuses the channel
   // esta tocando. player_id_canal e o id congelado na abertura — o indice no
   // catalogo pode ja ter sido remapeado por uma republicacao da descoberta.
   if (player_pediu_guia() && player_aberto()) {

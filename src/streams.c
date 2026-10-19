@@ -5321,6 +5321,9 @@ static void stream_folha_desenharCorpo_(Uint32 agora) {
 // ilha quem manda na opacidade e a forma, nao a mola da folha).
 #ifdef NV_SHOT_HOOKS
 float stream_folha_pilula_x(void) { return pillX; }
+float stream_folha_topo(void) { return FOLHA_TOPO; }
+static float folhaRecorteY;
+float stream_folha_recorte_y(void) { return folhaRecorteY; }
 #endif
 static float trocaEase(Uint32 agora) {
   float t=(float)(agora-trocaDesde)/FOLHA_TROCA_MS;
@@ -5496,7 +5499,11 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
   melhor = melhorFolha = automaticoDaFolhaModo();
   montar(automatica);
   nf=nOrdem;
-  gfx_recorte(x,FOLHA_TOPO-8,w,folhaBase-(FOLHA_TOPO-8));
+  { float cy = FOLHA_TOPO - (rolagem > 1.0f ? 0.0f : 8.0f);   // scrolled: no sliver of a cut row above the first card
+#ifdef NV_SHOT_HOOKS
+    folhaRecorteY = cy;
+#endif
+    gfx_recorte(x,cy,w,folhaBase-cy); }
   // CABECALHOS DE GRUPO: "4K  ULTRA HD ........ 3 fontes", com um fio embaixo.
   for(int g=0;g<FOLHA_GRUPOS;g++){
     float y; char q[48];
@@ -5783,18 +5790,8 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
                                     : txt_linha_corta(TXT_PG_FIM,f2,c,c,c-2,255,tr-tx);
           txt_desenhar_alpha(l2,tx,fy+FOLHA_FIT_H,anim*a); } } } }
   }
-  // O TOPO DA LISTA ESMAECE em vez de cortar seco embaixo do seletor: a linha
-  // que sobe some aos poucos, na cor da folha. So com a lista rolada: parada
-  // no topo, o esmaecido apagaria o cabecalho "4K" do primeiro grupo.
-  // Um degrade so no shader (GFX_BRILHO_TOPO, rampa de cima para baixo na
-  // cor da folha) e NAO faixas empilhadas: o painel de 8 bits da OLED mostra
-  // cada degrau de 1/255 como contorno num escuro de pouco contraste (medido
-  // na C9 em 25/09, ver nv_dither em gfx.c), e faixas solidas sao degraus por
-  // construcao. O modo passa pelo nv_dither; cor escura, entao nao sai no
-  // nivel de efeitos leves.
-  if (rolagem > 1.0f) { float e=rolagem>30.0f?1.0f:rolagem/30.0f;
-    gfx_rect((GfxRect){x,FOLHA_TOPO-8,w,34},0,GFX_BRILHO_TOPO,0,1.0f,0,0,
-             .071f,.075f,.086f,(ajustes_vidro()?.78f:.98f)*e*anim); }
+  // Top of the list: hard clip at the list top (gfx_recorte above). No dark
+  // fade band under the tabs (owner: header shadow).
   // A FONTE DOS DADOS, como rodape da lista (era uma linha solta entre o
   // cabecalho e as abas, na borda do cartao e nao na coluna do texto).
   if (nf && filtro == -1)

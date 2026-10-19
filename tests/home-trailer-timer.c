@@ -505,6 +505,32 @@ int main(void) {
   home_trailer_passo(1,.016f,start+500+NV_TRAILER_HERO_ESPERA_MS);
   rc|=check("tela cheia poster asks for sound with the switch on",opened&&lastSom==1);
 
+  // Dinamica Stage/Split borrow Moderna geometry but keep opaque artwork.
+  // Fullscreen poster trailers must follow the saved layout, even with sound.
+  { const TipoFileira rows[] = {FILEIRA_PALCO, FILEIRA_HEROI_DIVIDIDO};
+    for (int row = 0; row < 2; row++) {
+      for (int layout = HOME_LAYOUT_MODERNA; layout <= HOME_LAYOUT_DINAMICA; layout++) {
+        resetState("tt-dinpalco-trailer");
+        focoHero = 0; foco.fileira = 0; nFileiras = 1;
+        fileiras[0].tipo = rows[row];
+        layoutSetting = layout; posterSetting = AJ_TRAILER_CARTAZ_CHEIA;
+        trailerSetting = 0; somSetting = 1; appleReady = 1;
+        heroPendente = heroAtual; heroPendenteEm = start; sourceRequests = 0;
+        home_trailer_passo(1, .016f, start + 500);
+        home_trailer_passo(1, .016f, start + 500 + NV_TRAILER_HERO_ESPERA_MS);
+        if (layout == HOME_LAYOUT_DINAMICA) {
+          rc |= check(row ? "Dinamica Split blocks hidden fullscreen playback" :
+                            "Dinamica Stage blocks hidden fullscreen playback",
+                      !opened && openedCount == 0 && sourceRequests == 0 &&
+                      heroTrailerItem == -1 && heroTrailerGateAnterior == HERO_GATE_DYNAMIC);
+        } else {
+          rc |= check("Stage/Split fullscreen trailers remain eligible in other saved layouts",
+                      opened && openedCount == 1 && lastSom == 1);
+        }
+      }
+    }
+  }
+
   // TRES MODOS. No card: so com o cartaz que o desenho marcou,
   // no retangulo dele, sem modo cinema; Tela cheia: no destaque, com a Home
   // no lugar (#509: o modo cinema ficava para o trailer do destaque).

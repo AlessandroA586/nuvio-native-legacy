@@ -332,12 +332,18 @@ extern float gfx_varre_atual;
 // pixel da borda, deixava arte quase sem veu: um fio claro na base do card.
 // Quem chama: limpa, poe os veus (gfx_veu_card_por), desenha a arte, liga
 // gfx_veu_na_arte (gfx_veu_base passa a pular os mesmos veus) e limpa no fim.
+// Draw a rectangle except for opaque interiors that will be painted later.
+void gfx_rect_furos(GfxRect r, GLuint tex, GfxModo modo, float foco,
+                    float parx, float pary, float raio, float cr, float cg,
+                    float cb, float ca, const GfxRect *furos, int n);
 extern float gfx_veu_card_atual[4];
 extern int gfx_veu_na_arte;
 int  gfx_veu_card_por(float fracao, float alfa);
 void gfx_veu_card_limpar(void);
 // Opacidade de grupo: deve voltar a 1 ao terminar o grupo.
 extern float gfx_opacidade_grupo;
+// Opt-in for axis-aligned card rows; restores legacy submission elsewhere.
+extern int gfx_cortar_invisiveis;
 // Transformacao de grupo (Ajustes v2: a lista que cresce por cima do menu):
 // todo retangulo e recorte desenhado ate gfx_sem_transformar sai escalado por
 // `s` em torno de (ox, oy) e deslocado por (dx, dy), em coordenadas de layout.

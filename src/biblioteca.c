@@ -422,16 +422,21 @@ static float bibX(void) {
   ajustes_area_conteudo(NV_BIB_X, NV_TELA_W - NV_BIB_DIR, &x, NULL);
   return x;
 }
+// Right edge in text-layer units. NV_TELA_W changes with the active layer (the
+// header runs at another scale than the grid), so the edge is derived from the
+// text scale alone: the same left/right margins at every scale, and the grid,
+// the columns and the header badge all agree on it.
 static float bibDireita(void) {
+  float txtDx = NV_LAYOUT_REAL_W / gfx_escala_txt() - NV_LAYOUT_REAL_W;
 #ifdef NV_TOUCH_UI
-  if (NV_TELA_W < NV_TELA_H) return NV_TELA_W - NV_BIB_X;
+  if (NV_LAYOUT_REAL_W < NV_LAYOUT_REAL_H) return NV_LAYOUT_REAL_W / gfx_escala_txt() - NV_BIB_X;
 #endif
-  return NV_BIB_DIR;
+  return NV_BIB_DIR + txtDx;
 }
 static float bibW(void) {
-  float w;
-  ajustes_area_conteudo(NV_BIB_X, NV_TELA_W - bibDireita(), NULL, &w);
-  return w;
+  float x;
+  ajustes_area_conteudo(NV_BIB_X, 0.0f, &x, NULL);
+  return bibDireita() - x;
 }
 // O TOPO (modos, chips, botoes, titulo, resumo e selo) NASCE A 120% E ACOMPANHA
 // o Tamanho da interface acima disso (dono, 03/10); a GRADE de cartazes fica no

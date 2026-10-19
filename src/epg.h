@@ -178,6 +178,8 @@ int epg_sugerir(const char *nome, int *out, int max);
 int epg_n_canais(void);
 const char *epg_canal_id(int epg);
 const char *epg_canal_nome(int epg);
+const char *epg_canal_icone(int epg);      // XMLTV <icon src>; "" = absent
+const char *epg_icone_id(const char *fonte, const char *id); // also channels without programmes
 const char *epg_canal_fonte(int epg);      // "" = epgshare01
 
 // --- SUPERFICIE DE TESTE ----------------------------------------------------

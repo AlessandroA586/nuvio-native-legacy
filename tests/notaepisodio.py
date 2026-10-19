@@ -14,7 +14,7 @@ with tempfile.TemporaryDirectory() as directory:
 enum { EX_TRAKT, EX_IMDB, EX_TMDB };
 typedef struct { int temporada, episodio, nota, notaImdb; } CatEp;
 static int enabled[3], drawn[3];
-static int ajustes_nota_titulo(int source) { return enabled[source]; }
+static int ajustes_nota_episodio(int source) { return enabled[source]; }
 static int extras_n_temporadas(void) { return 1; }
 static int extras_temporada_numero(int st) { return 2; }
 static int extras_n_eps(int st) { return 1; }

@@ -22,6 +22,10 @@ const char *legsync_acao_rotulo(int a) {
   return "";
 }
 
+void legsync_audio_offset_texto(int ms, char *dst, unsigned tam) {
+  snprintf(dst, tam, "%+d ms", ms);
+}
+
 static void segundos(int ms, char *dst, unsigned tam) {
   snprintf(dst, tam, "%+.2f s", ms / 1000.0);
   plrui_decimal(dst);
