@@ -1922,6 +1922,7 @@
   T("Esmeralda", "Smaragd"),
   T("Espanha", "Spanien"),
   T("Espanhol", "Spanska"),
+  T("Espanhol (América Latina)", "Spanska (Latinamerika)"),
   T("Espaçamento das fileiras", "Radavstånd"),
   T("Espaçamento, proporção padrão e resolução automática.", "Avstånd, standardbildformat och automatisk upplösning."),
   T("Espaço entre fileiras", "Avstånd mellan rader"),

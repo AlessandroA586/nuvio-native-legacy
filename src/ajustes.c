@@ -1067,10 +1067,13 @@ static const char *V_TMDB_LING[] = {
   // Arabe (relato do .tpk 4/5): sem ele o TMDB nunca era pedido em arabe e a
   // arte localizada (logo/fundo "ar") nunca chegava. A interface nao tem arabe;
   // e so o idioma dos metadados.
-  "العربية"
+  "العربية",
+  // Official NuvioTV 9f17e8bf: TmdbMetadataService.normalizeTmdbLanguage
+  // maps the account's es-419 to es-MX before sending TMDB requests.
+  "Espanhol (América Latina)"
 };
-_Static_assert(sizeof V_TMDB_LING / sizeof *V_TMDB_LING == 33,
-               "V_TMDB_LING casa com ESC(..., 33), W_TMDB_LING e L[] de ajustes_tmdb_idioma");
+_Static_assert(sizeof V_TMDB_LING / sizeof *V_TMDB_LING == 34,
+               "V_TMDB_LING casa com ESC(..., 34), W_TMDB_LING e L[] de ajustes_tmdb_idioma");
 _Static_assert(sizeof V_IDIOMA / sizeof *V_IDIOMA == IDIOMA_N + 1,
                "V_IDIOMA: \"Automático\" e um rotulo por IDIOMA_* de idiomacod.h");
 // Preenchido em rotulosDeIdioma(), no arranque: os nomes saem de linguas.c em
@@ -1429,7 +1432,7 @@ static const Opcao OPCOES[AJ_N] = {
   // nativo sempre enriqueceu por ele — nascer desligado apagaria elenco com
   // foto, ficha e trailers de quem ja usa o app sem nunca ter visto o ajuste.
   ESC("TMDB",                       V_LIGA, 2),   // tmdb_enabled
-  ESC("Idioma dos metadados",       V_TMDB_LING, 33), // tmdb_language
+  ESC("Idioma dos metadados",       V_TMDB_LING, 34), // tmdb_language
   ESC("Arte localizada",            V_LIGA, 2),   // tmdb_use_artwork
   ESC("Título e sinopse",           V_LIGA, 2),   // tmdb_use_basic_info
   ESC("Ficha técnica",              V_LIGA, 2),   // tmdb_use_details
@@ -3513,7 +3516,7 @@ const char *ajustes_tmdb_idioma(void) {
     "ja-JP", "ko-KR", "zh-CN", "ro-RO", "uk-UA", "ru-RU",
     "nl-NL", "pl-PL", "tr-TR", "sv-SE", "da-DK", "nb-NO", "cs-CZ", "sk-SK",
     "sl-SI", "hu-HU", "lt-LT", "bs-BA", "sr-RS", "bg-BG", "el-GR", "id-ID",
-    "vi-VN", "zh-TW", "ar-SA"
+    "vi-VN", "zh-TW", "ar-SA", "es-MX"
   };
   int v = valor[AJ_TMDB_IDIOMA];
   if (v < 0 || v >= (int)(sizeof L / sizeof *L)) v = 0;
@@ -3640,8 +3643,22 @@ static const char *W_TMDB_LING[] = {
   "interface", "pt", "en", "es", "fr", "de", "it", "pt-pt", "ja", "ko", "zh",
   "ro", "uk", "ru",
   "nl", "pl", "tr", "sv", "da", "no", "cs", "sk", "sl", "hu", "lt", "bs", "sr",
-  "bg", "el", "id", "vi", "zh-tw", "ar", NULL
+  "bg", "el", "id", "vi", "zh-tw", "ar", "es-419", NULL
 };
+
+// Indice de W_TMDB_LING para o texto da conta: exato, senao pela base antes do
+// '-' ("pt-BR" -> "pt"). -1 se a lista nao tem.
+static int igualSemCaixa(const char *a, const char *b);
+static int indiceTmdbLing(const char *texto) {
+  const char *const *lit = W_TMDB_LING;
+  char base[16]; int k; const char *h = strchr(texto, '-');
+  for (k = 0; lit[k]; k++) if (!igualSemCaixa(lit[k], texto)) return k;
+  if (h && h > texto && (size_t)(h - texto) < sizeof base) {
+    memcpy(base, texto, (size_t)(h - texto)); base[h - texto] = 0;
+    for (k = 1; lit[k]; k++) if (!igualSemCaixa(lit[k], base)) return k;
+  }
+  return -1;
+}
 
 // `heroSectionEnabled` -> `hero_section_enabled`. Uma sequencia de maiusculas
 // conta como uma palavra so (`homeImdbRatingsVisibility` ->
@@ -5422,18 +5439,8 @@ int ajustes_aplicar_blob(const char *json) {
       // web os escreve em minuscula. Ler so o codigo do web levava a rejeitar
       // o valor de verdade — e a rejeicao era CORRETA (melhor manter que
       // inventar), mas o efeito era o ajuste nunca chegar.
-      if (lit) { int k; for (k = 0; lit[k]; k++) if (!igualSemCaixa(lit[k], texto)) { novo = k; break; } }
-      // IDIOMA COM REGIAO: contas antigas guardam "pt-br"/"pt-BR" (22 logs
-      // no D1 em 01/10/2026) e a lista so tem a base. Sem casar exato,
-      // tenta a base antes do '-' ("pt-br" -> "pt"); "pt-pt" e "zh-tw" ja
-      // casaram exato acima.
-      if (novo < 0 && lit && i == AJ_TMDB_IDIOMA && strchr(texto, '-')) {
-        char base[16]; int k; size_t b = (size_t)(strchr(texto, '-') - texto);
-        if (b > 0 && b < sizeof base) {
-          memcpy(base, texto, b); base[b] = 0;
-          for (k = 1; lit[k]; k++) if (!igualSemCaixa(lit[k], base)) { novo = k; break; }
-        }
-      }
+      if (lit && i == AJ_TMDB_IDIOMA) novo = indiceTmdbLing(texto);
+      else if (lit) { int k; for (k = 0; lit[k]; k++) if (!igualSemCaixa(lit[k], texto)) { novo = k; break; } }
       if (novo < 0) {
         // Valor que este app nao conhece (versao nova do web, opcao nova).
         // Manter o que esta e a resposta certa: escolher um padrao aqui
@@ -5928,6 +5935,13 @@ static int ajustesMesclarWeb(const char *base, char **saida) {
         !acharValor(base, fim, chaveConta(i), &vi, &vf)) continue;
     // Valor embrulhado em {"type":...,"value":X}: o que se reescreve e o X.
     if (*vi == '{' && acharValor(vi, vf, "value", &ei, &ef)) { vi = ei; vf = ef; }
+    if (i == AJ_TMDB_IDIOMA) {
+      char conta[128];
+      // An equivalent local index must never shorten the account's region.
+      if ((textoCruDoBlob(base, fim, snake, conta, sizeof conta) ||
+           textoCruDoBlob(base, fim, chaveConta(i), conta, sizeof conta)) &&
+          indiceTmdbLing(conta) == valor[i]) continue;
+    }
     if (!textoDoValor(i, vi, vf, troca[n].texto, sizeof troca[n].texto)) {
       printf("[ajustes] %s nao tem forma para subir; mantido como esta na conta\n",
              CHAVE[i]);

@@ -1922,6 +1922,7 @@
   T("Esmeralda", "Zümrüt"),
   T("Espanha", "İspanya"),
   T("Espanhol", "İspanyolca"),
+  T("Espanhol (América Latina)", "İspanyolca (Latin Amerika)"),
   T("Espaçamento das fileiras", "Sıra aralığı"),
   T("Espaçamento, proporção padrão e resolução automática.", "Boşluk, varsayılan en boy oranı ve otomatik çözünürlük."),
   T("Espaço entre fileiras", "Satırlar arası boşluk"),

@@ -1922,6 +1922,7 @@
   T("Esmeralda", "Изумруд"),
   T("Espanha", "Испания"),
   T("Espanhol", "Испански"),
+  T("Espanhol (América Latina)", "Испански (Латинска Америка)"),
   T("Espaçamento das fileiras", "Разстояние между редовете"),
   T("Espaçamento, proporção padrão e resolução automática.", "Разстояния, съотношение и автоматична резолюция."),
   T("Espaço entre fileiras", "Разстояние между редовете"),

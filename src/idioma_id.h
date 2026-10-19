@@ -1922,6 +1922,7 @@
   T("Esmeralda", "Zamrud"),
   T("Espanha", "Spanyol"),
   T("Espanhol", "Spanyol"),
+  T("Espanhol (América Latina)", "Spanyol (Amerika Latin)"),
   T("Espaçamento das fileiras", "Jarak baris"),
   T("Espaçamento, proporção padrão e resolução automática.", "Jarak, rasio aspek default, dan resolusi otomatis."),
   T("Espaço entre fileiras", "Jarak antar baris"),

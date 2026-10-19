@@ -1922,6 +1922,7 @@
   T("Esmeralda", "エメラルド"),
   T("Espanha", "スペイン"),
   T("Espanhol", "スペイン語"),
+  T("Espanhol (América Latina)", "スペイン語（中南米）"),
   T("Espaçamento das fileiras", "列の間隔"),
   T("Espaçamento, proporção padrão e resolução automática.", "間隔、既定のアスペクト比、解像度の自動設定。"),
   T("Espaço entre fileiras", "行の間隔"),

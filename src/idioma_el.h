@@ -1922,6 +1922,7 @@
   T("Esmeralda", "Σμαραγδί"),
   T("Espanha", "Ισπανία"),
   T("Espanhol", "Ισπανικά"),
+  T("Espanhol (América Latina)", "Ισπανικά (Λατινική Αμερική)"),
   T("Espaçamento das fileiras", "Απόσταση σειρών"),
   T("Espaçamento, proporção padrão e resolução automática.", "Αποστάσεις, λόγος διαστάσεων και αυτόματη ανάλυση."),
   T("Espaço entre fileiras", "Απόσταση μεταξύ γραμμών"),

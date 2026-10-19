@@ -1922,6 +1922,7 @@
   T("Esmeralda", "Smaragd"),
   T("Espanha", "Spanyolország"),
   T("Espanhol", "Spanyol"),
+  T("Espanhol (América Latina)", "Spanyol (Latin-Amerika)"),
   T("Espaçamento das fileiras", "Sorok térköze"),
   T("Espaçamento, proporção padrão e resolução automática.", "Térköz, alapértelmezett képarány és automatikus felbontás."),
   T("Espaço entre fileiras", "Sorok közti hely"),

@@ -1922,6 +1922,7 @@
   T("Esmeralda", "Smaragdová"),
   T("Espanha", "Španielsko"),
   T("Espanhol", "Španielčina"),
+  T("Espanhol (América Latina)", "Španielčina (Latinská Amerika)"),
   T("Espaçamento das fileiras", "Rozostupy radov"),
   T("Espaçamento, proporção padrão e resolução automática.", "Medzery, predvolený pomer strán a automatické rozlíšenie."),
   T("Espaço entre fileiras", "Medzera medzi radmi"),

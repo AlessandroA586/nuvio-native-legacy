@@ -1922,6 +1922,7 @@
   T("Esmeralda", "Smaragdas"),
   T("Espanha", "Ispanija"),
   T("Espanhol", "Ispanų"),
+  T("Espanhol (América Latina)", "Ispanų (Lotynų Amerika)"),
   T("Espaçamento das fileiras", "Eilučių tarpai"),
   T("Espaçamento, proporção padrão e resolução automática.", "Tarpai, vaizdo santykis ir automatinė raiška."),
   T("Espaço entre fileiras", "Tarpas tarp eilučių"),

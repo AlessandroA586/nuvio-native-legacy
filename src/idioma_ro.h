@@ -1921,6 +1921,7 @@
   T("Esmeralda", "Smarald"),
   T("Espanha", "Spania"),
   T("Espanhol", "Spaniolă"),
+  T("Espanhol (América Latina)", "Spaniolă (America Latină)"),
   T("Espaçamento das fileiras", "Spațierea rândurilor"),
   T("Espaçamento, proporção padrão e resolução automática.", "Spațiere, raport de aspect implicit și rezoluție automată."),
   T("Espaço entre fileiras", "Spațiu între rânduri"),
