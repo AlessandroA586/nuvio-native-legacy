@@ -31,6 +31,7 @@ int main(void) {
   ResAuto a;
   int i;
   assert(mkdtemp(dir));
+  assert(setenv("NUVIO_DADOS", dir, 1) == 0);
   dados_iniciar(dir);
 
   // 1. Migration: old 0 (the old default, 1080p) is Automatic; 4K and 720p
