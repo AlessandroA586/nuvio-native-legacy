@@ -1687,6 +1687,7 @@
   T("Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "Fra Nuvio: titlens navn øverst og kvalitetslogoerne under. Fra addon: navn og beskrivelse præcis som addon'en sender dem — til dem, der allerede formaterer teksten i AIOStreams. Titellogo: titlens logo i stedet for det skrevne navn."),
   T("Do add-on", "Fra tilføjelsen"),
   T("Do addon", "Fra addon"),
+  T("Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "Fra tilføjelsen: afspiller den første tilladte kilde uden kvalitetsrangering eller genbrug af tidligere valg."),
   T("Do app", "Fra appen"),
   T("Do catálogo, quando ele já foi lido", "Fra kataloget, når det er læst"),
   T("Do link", "Fra linket"),

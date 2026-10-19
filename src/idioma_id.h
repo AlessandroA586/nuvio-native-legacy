@@ -1687,6 +1687,7 @@
   T("Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "Dari Nuvio: nama judul di atas dan logo kualitas di bawahnya. Dari addon: nama dan deskripsi persis seperti yang dikirim addon — untuk yang sudah memformat teks di AIOStreams. Logo judul: logo judul sebagai ganti nama yang ditulis."),
   T("Do add-on", "Dari add-on"),
   T("Do addon", "Dari addon"),
+  T("Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "Dari addon: memutar sumber pertama yang diizinkan tanpa peringkat kualitas atau menggunakan kembali pilihan sebelumnya."),
   T("Do app", "Dari aplikasi"),
   T("Do catálogo, quando ele já foi lido", "Dari katalog, setelah dibaca"),
   T("Do link", "Dari tautan"),

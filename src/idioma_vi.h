@@ -1687,6 +1687,7 @@
   T("Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "Từ Nuvio: tên phim ở trên và logo chất lượng ở dưới. Từ addon: tên và mô tả đúng như addon gửi — dành cho ai đã định dạng chữ trong AIOStreams. Logo tiêu đề: logo của tiêu đề thay cho tên viết."),
   T("Do add-on", "Từ add-on"),
   T("Do addon", "Từ addon"),
+  T("Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "Từ tiện ích: phát nguồn được phép đầu tiên mà không xếp hạng chất lượng hay dùng lại lựa chọn trước đó."),
   T("Do app", "Từ ứng dụng"),
   T("Do catálogo, quando ele já foi lido", "Từ danh mục, khi đã đọc xong"),
   T("Do link", "Từ liên kết"),

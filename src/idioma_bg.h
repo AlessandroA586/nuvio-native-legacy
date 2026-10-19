@@ -1687,6 +1687,7 @@
   T("Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "От Nuvio: името на заглавието отгоре и логата за качество отдолу. От добавката: името и описанието точно както ги изпраща добавката — за тези, които вече форматират текста в AIOStreams. Лого на заглавието: логото на заглавието вместо изписаното име."),
   T("Do add-on", "От добавката"),
   T("Do addon", "От добавката"),
+  T("Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "От добавката: възпроизвежда първия разрешен източник без класиране по качество или повторно използване на предишни избори."),
   T("Do app", "От приложението"),
   T("Do catálogo, quando ele já foi lido", "От каталога, щом е прочетен"),
   T("Do link", "От връзката"),

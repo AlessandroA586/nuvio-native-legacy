@@ -1686,6 +1686,7 @@
   T("Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "De la Nuvio: numele titlului sus și logourile de calitate dedesubt. Din addon: numele și descrierea exact cum le trimite addonul — pentru cine formatează deja textul în AIOStreams. Logo titlu: logo-ul titlului în locul numelui scris."),
   T("Do add-on", "De la add-on"),
   T("Do addon", "Din addon"),
+  T("Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "Din extensie: redă prima sursă permisă, fără clasare după calitate sau reutilizarea alegerilor anterioare."),
   T("Do app", "Din aplicație"),
   T("Do catálogo, quando ele já foi lido", "Din catalog, după ce a fost citit"),
   T("Do link", "Din link"),

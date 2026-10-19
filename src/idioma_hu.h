@@ -1687,6 +1687,7 @@
   T("Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "A Nuviótól: fent a cím neve, alatta a minőségi logók. A kiegészítőtől: a név és a leírás pontosan úgy, ahogy a kiegészítő küldi — annak, aki már az AIOStreamsben formázza a szöveget. Cím logója: a cím logója a kiírt név helyett."),
   T("Do add-on", "Kiegészítőből"),
   T("Do addon", "A kiegészítőtől"),
+  T("Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "A kiegészítőből: az első engedélyezett forrást játssza le minőségi rangsorolás vagy korábbi választások újrafelhasználása nélkül."),
   T("Do app", "Az appból"),
   T("Do catálogo, quando ele já foi lido", "A katalógusból, ha már beolvasta"),
   T("Do link", "A linkből"),

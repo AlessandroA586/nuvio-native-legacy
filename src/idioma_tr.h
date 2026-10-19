@@ -1687,6 +1687,7 @@
   T("Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "Nuvio'dan: üstte başlığın adı, altta kalite logoları. Eklentiden: ad ve açıklama tam eklentinin gönderdiği gibi — metni zaten AIOStreams'te biçimlendirenler için. Başlık logosu: yazılı ad yerine başlığın logosu."),
   T("Do add-on", "Eklentiden"),
   T("Do addon", "Eklentiden"),
+  T("Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "Eklentiden: kaliteye göre sıralamadan veya önceki seçimleri yeniden kullanmadan izin verilen ilk kaynağı oynatır."),
   T("Do app", "Uygulamadan"),
   T("Do catálogo, quando ele já foi lido", "Katalogdan, okunduğunda"),
   T("Do link", "Bağlantıdan"),
