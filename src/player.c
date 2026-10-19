@@ -405,7 +405,7 @@ static double posLegenda(void) {
   return relogio_ler(&relLeg, monoSeg());
 }
 // Creditos tambem sao pulaveis — e o "Skip Outro" do web.
-static int skipDisponivel(void);
+static int skipDisponivel(void), skipLiberado;
 static int trechoPulavel(double *fim) { int tipo; return skipDisponivel() && intro_botao_visivel(fim, &tipo); }
 static float duracaoSeg = PLR_DUR_PADRAO;
 // O fim ZERO do TheIntroDB quer dizer "ate o fim da midia" (intro.c): mirar
@@ -1981,6 +1981,7 @@ static int preTituloLegendaUsar(const char *url) {
 static void tocarFonteInterno(const char *url);
 static void tocarFonteInterno(const char *url) {
   marco("abrir: url ao pipeline");
+  skipLiberado = 0;
   loadEm = SDL_GetTicks();   // #202: do pipeline ao primeiro quadro ("[player] load->1o quadro")
   video_definir_reconexao(!ehCanal());
   video_definir_modo_live(ehCanal() ? guia_modo_do_canal(player_id_canal(), ajustes_livetv_modo()) : 0);
@@ -5354,15 +5355,18 @@ static void ponteiroBuscar(int a, int b) {
     buscarUsuario(posSeg);
   }
 }
-// Marker timing alone cannot prove that the current source is playing.
+// Marker timing alone cannot prove that the current source is playing. Once it
+// played, pause/scrub keep the button; a new source (tocarFonteInterno) clears it.
 static int skipDisponivel(void) {
-  return fontePrincipal() && !player_carregando() && !erroFonte && !saindo &&
-         retomadaAplicada && video_tocando() && !video_iniciando() &&
-         cine.veu <= 0.01f && !dvtela_ativa() &&
+  if (player_carregando() || erroFonte || saindo || cine.veu > 0.01f || dvtela_ativa()) return 0;
+  if (!comVideo) return 1;   // host/screenshot: no pipeline to wait for
+  if (!skipLiberado)
+    skipLiberado = fontePrincipal() && retomadaAplicada && video_tocando() && !video_iniciando() &&
 #ifdef NV_ANDROID
-         video_quadro_visto() &&
+                   video_quadro_visto() &&
 #endif
-         !video_bufferando_ms();
+                   !video_bufferando_ms();
+  return skipLiberado && fontePrincipal();
 }
 static void ponteiroSkip(int a, int b) { (void)a; (void)b; if (!skipDisponivel()) return; skipFoco = 1; barraFoco = 1; acordar(); }
 

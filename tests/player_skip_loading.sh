@@ -24,6 +24,8 @@ parts.append(function('static int trechoPulavel(double *fim) {'))
 a = s.index('static void desenharAcoesEpisodioCorpo(void){')
 b = s.index('  // A CAIXA', a)
 parts.append(s[a:b] + '\n  renderVisivel = trecho;\n}')
+# A new source must clear the "already played" latch.
+assert 'skipLiberado = 0;' in function('static void tocarFonteInterno(const char *url) {'), 'tocarFonteInterno keeps skipLiberado'
 Path(sys.argv[1], 'decision.c').write_text('\n'.join(parts))
 PY
 for platform in host android; do

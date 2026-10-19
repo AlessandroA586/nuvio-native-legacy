@@ -7,11 +7,11 @@ static int pronto, playing, buffering, iniciando, switching;
 static int visivel, skipFoco, duracaoReal = 1, epE, renderVisivel;
 static float posSeg, duracaoSeg = 5694;
 static double markerStart, markerEnd = 90;
-static int cachedVisible, firstFrame, dv;
+static int cachedVisible, firstFrame, dv, skipLiberado;
 static struct { float veu; } cine;
 static int dvtela_ativa(void) { return dv; }
 static int video_quadro_visto(void) { return firstFrame; }
-static int player_carregando(void) { return esperandoFonte || !pronto; }
+static int player_carregando(void) { return esperandoFonte || (comVideo && !pronto); }
 static int video_tocando(void) { return playing; }
 static unsigned video_bufferando_ms(void) { return buffering; }
 static int video_iniciando(void) { return iniciando; }
@@ -44,7 +44,7 @@ static void check(int expected) {
 int main(void) {
   for (int resume = 0; resume <= 1; resume++) {
     posSeg = resume ? 56.94f : 0;
-    pronto = playing = retomadaAplicada = 0;
+    pronto = playing = retomadaAplicada = skipLiberado = 0;
     check(0); // Loading, markers already known, no first frame.
     pronto = 1; check(0); // loadCompleted does not prove playback.
     playing = 1; check(0); // Resume seek not yet applied.
@@ -59,9 +59,19 @@ int main(void) {
     firstFrame = 0; check(0); // Audio-only ready timeout is not a video frame.
 #endif
     firstFrame = 1; check(1);
+    playing = 0; check(1); // Paused or scrubbing after playback started.
+    buffering = 100; check(1); buffering = 0; playing = 1;
     erroFonte = 1; check(0); erroFonte = 0;
     saindo = 1; check(0); saindo = 0;
   }
+  // Direct source switch: stale retomadaAplicada, new pipeline not playing yet.
+  skipLiberado = 0; playing = 0; check(0);
+  playing = 1; check(1);
+  // Host/screenshot mode has no pipeline: the marker alone decides.
+  comVideo = 0; playing = retomadaAplicada = skipLiberado = 0; switching = 1;
+  check(1);
+  esperandoFonte = 1; check(0); esperandoFonte = 0;
+  comVideo = 1; switching = 0;
   posSeg = 100;
   cachedVisible = 0;
   assert(!trechoPulavel(NULL));
