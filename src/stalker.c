@@ -43,6 +43,7 @@ typedef struct FonteContexto {
 } FonteContexto;
 #define IPTV_CTX_INICIALIZAR(c) do { (c)->perfilLido_ = -1; pthread_mutex_init(&(c)->travaSessao_, NULL); pthread_mutex_init(&(c)->travaTabela_, NULL); pthread_mutex_init(&(c)->travaHandshake_, NULL); } while (0)
 #define IPTV_CTX_EMERGENCIA { .sid = UINT_MAX, .perfilLido_ = -1, .travaSessao_ = PTHREAD_MUTEX_INITIALIZER, .travaTabela_ = PTHREAD_MUTEX_INITIALIZER, .travaHandshake_ = PTHREAD_MUTEX_INITIALIZER }
+// NV_TPK40: rebuild this unit with pthread storage (tools/tpk.sh).
 #include "iptvcontexto.inc"
 #define portal (contexto()->portal_ )
 #define mac (contexto()->mac_ )
@@ -128,10 +129,10 @@ static int prefixoTemStalkerPortal(const char *base) {
 // ----------------------------------------------------------------- cadastro
 
 static const char *arquivo(void) {
-  static _Thread_local char nome[64];
-  if (contexto()->sid) snprintf(nome, sizeof nome, "stalker-p%d-s%u.txt", perfis_ativo(), contexto()->sid);
-  else snprintf(nome, sizeof nome, ST_ARQ_FMT, perfis_ativo());
-  return nome;
+  FonteFio *f = fonteFio();
+  if (contexto()->sid) snprintf(f->nome, sizeof f->nome, "stalker-p%d-s%u.txt", perfis_ativo(), contexto()->sid);
+  else snprintf(f->nome, sizeof f->nome, ST_ARQ_FMT, perfis_ativo());
+  return f->nome;
 }
 
 static void limparSessao(void) {

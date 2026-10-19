@@ -7,9 +7,38 @@ static pthread_mutex_t fontesTrava = PTHREAD_MUTEX_INITIALIZER;
 static FonteContexto *fontesContextos;
 static FonteContexto fonteEmergencia = IPTV_CTX_EMERGENCIA;
 static atomic_uint contaEditada;
-static _Thread_local unsigned fonteExplicita = UINT_MAX;
-static _Thread_local unsigned fonteLidaId = UINT_MAX;
-static _Thread_local FonteContexto *fonteLida;
+typedef struct {
+  unsigned explicita, lidaId;
+  FonteContexto *lida;
+  char nome[64];
+  int retry;
+} FonteFio;
+#if defined(NV_TPK40) || defined(NV_UM_FIO)
+static pthread_key_t fonteFioChave;
+static pthread_once_t fonteFioUma = PTHREAD_ONCE_INIT;
+static void fonteFioCriar(void) {
+  if (pthread_key_create(&fonteFioChave, free)) abort();
+}
+static FonteFio *fonteFio(void) {
+  pthread_once(&fonteFioUma, fonteFioCriar);
+  FonteFio *f = pthread_getspecific(fonteFioChave);
+  if (!f) {
+    f = calloc(1, sizeof *f);
+    if (!f) abort(); // Never share account selection between workers on OOM.
+    f->explicita = f->lidaId = UINT_MAX;
+    if (pthread_setspecific(fonteFioChave, f)) { free(f); abort(); }
+  }
+  return f;
+}
+#else
+static FonteFio *fonteFio(void) {
+  static _Thread_local FonteFio f = { .explicita = UINT_MAX, .lidaId = UINT_MAX };
+  return &f;
+}
+#endif
+#define fonteExplicita (fonteFio()->explicita)
+#define fonteLidaId (fonteFio()->lidaId)
+#define fonteLida (fonteFio()->lida)
 
 static FonteContexto *contexto(void) {
   unsigned id = fonteExplicita == UINT_MAX ? atomic_load(&contaEditada) : fonteExplicita;

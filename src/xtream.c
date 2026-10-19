@@ -51,6 +51,7 @@ typedef struct FonteContexto {
 } FonteContexto;
 #define IPTV_CTX_INICIALIZAR(c) do { (c)->perfilLido_ = -1; (c)->formatoOk_ = -1; pthread_mutex_init(&(c)->trava_, NULL); } while (0)
 #define IPTV_CTX_EMERGENCIA { .sid = UINT_MAX, .perfilLido_ = -1, .formatoOk_ = -1, .trava_ = PTHREAD_MUTEX_INITIALIZER }
+// NV_TPK40: rebuild this unit with pthread storage (tools/tpk.sh).
 #include "iptvcontexto.inc"
 #define ultimoHttp (contexto()->ultimoHttp_)
 #define ultimoTotal (contexto()->ultimoTotal_)
@@ -69,10 +70,10 @@ typedef struct FonteContexto {
 #define trava (contexto()->trava_ )
 
 static const char *arquivo(void) {
-  static _Thread_local char nome[64];
-  if (contexto()->sid) snprintf(nome, sizeof nome, "xtream-p%d-s%u.txt", perfis_ativo(), contexto()->sid);
-  else snprintf(nome, sizeof nome, XT_ARQ_FMT, perfis_ativo());
-  return nome;
+  FonteFio *f = fonteFio();
+  if (contexto()->sid) snprintf(f->nome, sizeof f->nome, "xtream-p%d-s%u.txt", perfis_ativo(), contexto()->sid);
+  else snprintf(f->nome, sizeof f->nome, XT_ARQ_FMT, perfis_ativo());
+  return f->nome;
 }
 
 // "meu.servidor.tv:8080", "http://meu.servidor.tv:8080/", "https://x/y" —
@@ -355,7 +356,7 @@ static char *chamarSt(const char *acao, int prazo, int *status, NvPerfilSessao s
   if (status) *status = st;
   return r;
 }
-static _Thread_local int retryCanal;
+#define retryCanal (fonteFio()->retry)
 int xtream_ultimo_retry_after(void) { return retryCanal; }
 
 // O que veio no corpo, para o log e para a tela: JSON (comeca com { ou [),

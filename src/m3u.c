@@ -38,6 +38,7 @@ typedef struct FonteContexto {
 } FonteContexto;
 #define IPTV_CTX_INICIALIZAR(c) do { (c)->perfil_ = -1; pthread_mutex_init(&(c)->trava_, NULL); pthread_mutex_init(&(c)->cargaTrava_, NULL); } while (0)
 #define IPTV_CTX_EMERGENCIA { .sid = UINT_MAX, .perfil_ = -1, .trava_ = PTHREAD_MUTEX_INITIALIZER, .cargaTrava_ = PTHREAD_MUTEX_INITIALIZER }
+// NV_TPK40: rebuild this unit with pthread storage (tools/tpk.sh).
 #include "iptvcontexto.inc"
 #define trava (contexto()->trava_ )
 #define cargaTrava (contexto()->cargaTrava_ )
