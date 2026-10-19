@@ -9,6 +9,21 @@ static int reportedDesktop(int display, SDL_DisplayMode *mode) {
 #undef SDL_GetDesktopDisplayMode
 #include <assert.h>
 
+// Round-trip the device choice, then change resolution and reload as at restart.
+void ui720_saved(int width, int height, int app, int resolution) {
+  panelW = width; panelH = height;
+  valor[AJ_AMPLIAR_UI] = app;
+  valor[AJ_RESOLUCAO] = RES_720;
+  assert(gravar());
+  valor[AJ_RESOLUCAO] = resolution;
+  assert(gravar());
+  valor[AJ_AMPLIAR_UI] = !app;
+  valor[AJ_RESOLUCAO] = RES_720;
+  assert(dados_gravar(RES_ARQ_MIGRADA, "1\n"));
+  ajustes_dir(getenv("NUVIO_DADOS"));
+  assert(valor[AJ_AMPLIAR_UI] == app && valor[AJ_RESOLUCAO] == resolution);
+}
+
 void ui720_settings(int width, int height, int app, int weak, int sourceHeight) {
   panelW = width; panelH = height;
   valor[AJ_AMPLIAR_UI] = app;

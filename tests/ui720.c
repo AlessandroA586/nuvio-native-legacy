@@ -9,6 +9,7 @@
 #include "catalogo.h"
 #include "dados.h"
 #include "gpunivel.h"
+#include "resolucao.h"
 #include "home.h"
 #include "tex_cache.h"
 #include "text.h"
@@ -34,6 +35,7 @@ static const GLubyte *testGlString(GLenum e) {
 #undef glGetString
 
 void ui720_settings(int width, int height, int app, int weak, int sourceHeight);
+void ui720_saved(int width, int height, int app, int resolution);
 static GLuint source, sourceFbo, query;
 static Programa productionCopy;
 static int sw=1920, sh=1080, iw=1280, ih=720;
@@ -254,8 +256,8 @@ int main(int argc,char **argv) {
         }
       }
     }
-    // The same filter is used by opt-in app scaling at both integer factors.
-    candidate=test==3?0:3;
+    // Only the opt-in 4K output uses sharpening; TV output keeps bilinear.
+    candidate=test==1 || test==2?3:0;
     ajustes_definir_vidro(0);target(1);frame(0);copy(1);readback();memcpy(linear,pixels,bytes);
     progs[GFX_COPIA]=sgsr;progAtual=-1;
     if(test==2) {gpun_alvo_1080();gpun_ampliar_app(1);}
@@ -271,6 +273,12 @@ int main(int argc,char **argv) {
     if(test!=3) glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_FALSE);
     progs[GFX_COPIA]=sgsr;progAtual=-1;
     gpun_quadro_fim();readback();
+    // TV scaling must match bilinear on the exact same source frame.
+    if(test==0) {
+      memcpy(linear,pixels,bytes);
+      GLuint savedSource=source;source=intTex;candidate=0;
+      copy(0);readback();source=savedSource;
+    }
     // Native 1080p has no copy pass; a texture round trip can round RGB bytes.
     if(test!=3 && memcmp(linear,pixels,bytes)) {
       fprintf(stderr,"FAIL production filter %d->%d\n",ih,sh);
@@ -295,19 +303,54 @@ int main(int argc,char **argv) {
     }
     for(int settings=0;settings<2;settings++) {
       double host,gpu;
-      candidate=test==3?0:3;
+      candidate=sh==2160?3:0;
       for(int n=0;n<8;n++) {target(ih<sh);frame(settings);if(ih<sh)copy(1);}
       target(0);
       timing(settings,test==3?0:2,2,&host,&gpu);
       printf("CHOICE ampliar=%s %d->%d %s level=%d host=%.4f GPU=%.4f ms\n",
         sh==2160?"app":"tv",ih,sh,settings?"settings":"home",gpun_nivel(),host,gpu);
       if(settings) {
-        char name[160];snprintf(name,sizeof name,"r4-test%d-%d-to-%d-settings-choice-%s-%s",test,ih,sh,sh==2160?"app":"tv",test==3?"native":"sharp-bilinear");
+        char name[160];snprintf(name,sizeof name,"r4-test%d-%d-to-%d-settings-choice-%s-%s",test,ih,sh,sh==2160?"app":"tv",test==3?"native":test==0?"bilinear":"sharp-bilinear");
         png(argv[1],name);
       }
     }
     glDeleteFramebuffers(1,&sourceFbo);glDeleteTextures(1,&source);gfx_tex_esquecer(0);
   }
+  // Saved app/TV choice must survive 720p -> Automatic/4K -> runtime fallback.
+  // Compare real pixels and one-copy dispatch with the integration bilinear path.
+  dados_iniciar(getenv("NUVIO_DADOS"));
+  for(int panel=0;panel<2;panel++) for(int weak=0;weak<2;weak++)
+    for(int app=0;app<2;app++) for(int resolution=RES_AUTO;resolution<=RES_4K;resolution+=2) {
+      sw=panel?3840:2560;sh=panel?2160:1440;iw=1920;ih=1080;
+      size_t bytes=(size_t)sw*sh*4;
+      pretendUtgard=weak;
+      ui720_saved(sw,sh,app,resolution);
+      progs[GFX_COPIA]=productionCopy;progAtual=-1;
+      gpun_iniciar(sw,sh);
+      gpun_ampliar_app(ajustes_ampliar_app());
+      if(!panel) {
+        assert(!ajustes_ampliar_app());
+        gpun_ampliar_app(app); // The shared gate must also reject a stale raw opt-in.
+      }
+      gpun_quadro_inicio();
+      GLint bound;glGetIntegerv(GL_FRAMEBUFFER_BINDING,&bound);assert(bound==0);
+      ResAuto automatic={0};ResVigia watch={0};
+      int fallback=0;
+      for(int n=0;n<RES_4K_SEGUIDAS && !fallback;n++)
+        fallback=resolution==RES_AUTO ? res_auto_amostra(&automatic,20,55,1)==RES_AUTO_REBAIXOU
+                                     : res_vigia_amostra(&watch,20,55,1);
+      assert(fallback);
+      gpun_alvo_1080();
+      gpun_quadro_inicio();frame(0);gfx_novo_quadro();
+      gpun_quadro_fim();
+      assert(gfx_n_rect==1);
+      assert(progAtual==(app && panel && !weak?GFX_COPIA_NITIDA:GFX_COPIA));
+      readback();memcpy(native,pixels,bytes);
+      source=intTex;candidate=app && panel && !weak?3:0;
+      copy(candidate!=0);readback();assert(!memcmp(native,pixels,bytes));
+      printf("PASS saved %s resolution=%d panel=%dx%d Mali=%d runtime fallback %s, one copy, exact RGBA\n",
+             app?"app":"TV",resolution,sw,sh,weak,candidate?"sharp-bilinear":"bilinear");
+    }
   candidate=0;progs[GFX_COPIA]=sgsr;progAtual=-1;
   sw=1920;sh=1080;iw=1280;ih=720;
   pretendUtgard=1;gpun_iniciar(sw,sh);assert(!gpun_upscale_suportado());gpun_forcar_720();
@@ -329,6 +372,11 @@ int main(int argc,char **argv) {
   gpun_iniciar(sw,sh);ui720_settings(1920,1080,0,0,1080);target(0);frame(1);
   png(argv[1],"r4-test5-1080-to-1080-settings-choice-non4k-hidden-native");
   puts("PASS Mali-450 automatically selects exact bilinear output");
+  pretendUtgard=0;sw=1920;sh=1080;
+  gpun_iniciar(sw,sh);gpun_forcar_720();gpun_ampliar_app(0);
+  gpun_quadro_inicio();frame(0);gpun_quadro_fim();
+  assert(progAtual==GFX_COPIA);
+  puts("PASS forced 720p with TV scaling keeps bilinear");
   gpun_iniciar(1280,720);gpun_forcar_720();gfx_novo_quadro();gpun_quadro_inicio();
   GLint bound;glGetIntegerv(GL_FRAMEBUFFER_BINDING,&bound);assert(bound==0);
   gpun_quadro_fim();assert(gfx_n_rect==0);

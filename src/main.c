@@ -1516,7 +1516,7 @@ int main(int argc, char **argv) {
   if (gpuPref) gpun_preferencia(gpuPref);
   if (ajustes_720p()) gpun_forcar_720();
   else if (ajustes_1080p() && dw > (int)NV_TELA_W) gpun_alvo_1080();
-  gpun_ampliar_app(resolucaoDaTv() && ajustes_ampliar_app() && gpun_upscale_suportado());
+  gpun_ampliar_app(resolucaoDaTv() && ajustes_ampliar_app());
 #ifdef NV_TPK
   video_tpk_zoom_roi_definir(ajustes_trailer_zoom_tpk());
 #endif

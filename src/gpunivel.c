@@ -230,7 +230,10 @@ int gpun_upscale_suportado(void) {
 }
 
 void gpun_ampliar_app(int app) {
-  ampliarApp = app && upscaleSgsr;
+  // Owner scope (#205): app scaling covers 720->1080, 720->4K and 1080->4K.
+  // Automatic/4K falling back to a 1080 target is the same opt-in 1080->4K path.
+  // TV scaling, non-4K output and Mali-4xx/no-highp keep the original bilinear pass.
+  ampliarApp = app && telaW >= 3840 && telaH >= 2160 && upscaleSgsr;
   if ((!forca720 && !alvo1080) || (forca720 && telaW <= 1280 && telaH <= 720))
     printf("[gpu-nivel] ampliar=%s upscale=bilinear %dx%d -> %dx%d\n",
            ampliarApp ? "app" : "tv", telaW, telaH, telaW, telaH);
@@ -444,7 +447,7 @@ void gpun_redimensionar(int w, int h) {
 }
 
 static int upscaleNitido(void) {
-  return (forca720 || ampliarApp) && upscaleSgsr && intW > 0 && intH > 0 &&
+  return ampliarApp && intW > 0 && intH > 0 &&
          telaW > intW && telaH > intH;
 }
 
