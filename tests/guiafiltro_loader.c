@@ -485,6 +485,46 @@ static void lateInventoryRegression(void) {
 }
 static void defaultInventoryRegression(void) {
   int fl = begin(GF_TODAS, 900);
+  for (int i = 0; i < 900; i++) {
+    char id[32]; snprintf(id, sizeof id, "xtream:sport%d", i);
+    channel(fl, "Sports", id, "Sports HD");
+  }
+  for (int i = 0; i < 65; i++) {
+    char id[32]; snprintf(id, sizeof id, "xtream:movie%d", i);
+    channel(fl, "Movies", id, "Movie HD");
+  }
+  adotarStaging(); cacheGravar();
+  filtrosAbrir(); fMontarCanais("Movies");
+  assert(fN == 65);
+  strcpy(fCatNome, "Movies"); fNivel = 1; paFoco = 64;
+  assert(!strcmp(fIt[paFoco].id, "xtream:movie64"));
+  filtrosOk();
+  assert(guiafiltro_canal_oculto(&fltLive, "xtream:movie64"));
+  filtrosOk();
+  assert(!guiafiltro_canal_oculto(&fltLive, "xtream:movie64"));
+  fl = begin(GF_TODAS, 900);
+  XtCtx x = {0}; x.fl = fl;
+  xtCat("Movies", 0, 4002, &x);
+  for (int i = 0; i < 4002; i++) {
+    char id[32]; snprintf(id, sizeof id, "xtream:page%d", i);
+    XtreamItem it = {0}; it.id = id; it.nome = "Movie HD";
+    it.categoria = "Movies"; it.catOrdem = 0;
+    xtCanal(&it, &x);
+  }
+  free(x.giDe);
+  adotarStaging(); cacheGravar();
+  filtrosAbrir(); fMontarCanais("Movies");
+  assert(fN == 4001 && fIt[4000].n == -1);
+  strcpy(fCatNome, "Movies"); fNivel = 1; paFoco = 4000;
+  filtrosOk();
+  assert(fN <= 4000);
+  for (paFoco = 0; paFoco < fN && strcmp(fIt[paFoco].id, "xtream:page4001"); paFoco++) {}
+  assert(paFoco < fN);
+  filtrosOk();
+  assert(guiafiltro_canal_oculto(&fltLive, "xtream:page4001"));
+  filtrosOk();
+  assert(!guiafiltro_canal_oculto(&fltLive, "xtream:page4001"));
+  fl = begin(GF_TODAS, 900);
   // Exceed both the old inventory prefix and raw cache byte budget.
   for (int i = 0; i < 30000; i++) {
     char id[32]; snprintf(id, sizeof id, "xtream:%d", i);

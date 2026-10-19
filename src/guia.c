@@ -340,6 +340,8 @@ static size_t sCacheBytes;
 typedef struct { char id[GF_ID], nome[GF_NOME], cat[GF_NOME], fonte[LTV_CHAVE]; } GInventario;
 static GInventario *inventario, *sInventario;
 static int nInventario, sNInventario;
+// Compact channel controls spill to disk; only one category page lives in RAM.
+static FILE *inventarioDisco, *sInventarioDisco;
 
 static FILE *sCache[G_MAX_LTV];
 static int sCacheN[G_MAX_LTV], sCacheErro[G_MAX_LTV], sCacheCortada[G_MAX_LTV];
@@ -406,6 +408,8 @@ static void stagingZerar(void) {
     sCache[i] = NULL; sCacheN[i] = sCacheErro[i] = sCacheCortada[i] = 0;
   }
   sCacheBytes = 0;
+  if (sInventarioDisco) fclose(sInventarioDisco);
+  sInventarioDisco = NULL;
   free(sInventario); sInventario = NULL; sNInventario = 0;
   sFiltrados = 0;
   guiafiltro_dup_zerar(&sDup);
@@ -523,6 +527,17 @@ static int sCanalAdd(int f, const GCru *c) {
     if (gi >= 0 && sLtvF[f].gi[gi].n > 0) sLtvF[f].gi[gi].n--;
   }
   int gi = sGrupoInfo(f, grupo, 0);
+  if (c->id && c->id[0] && c->nome && c->nome[0]) {
+    GInventario item = {0};
+    snprintf(item.id, sizeof item.id, "%s", c->id);
+    snprintf(item.nome, sizeof item.nome, "%s", c->nome);
+    snprintf(item.cat, sizeof item.cat, "%s", grupo);
+    snprintf(item.fonte, sizeof item.fonte, "%s", sLtvF[f].chave);
+    if (!sInventarioDisco) sInventarioDisco = tmpfile();
+    if (sInventarioDisco && fwrite(&item, sizeof item, 1, sInventarioDisco) != 1) {
+      fclose(sInventarioDisco); sInventarioDisco = NULL;
+    }
+  }
   if (sNInventario >= G_INVENTARIO_MAX && sCotaCompleta()) { sLtvF[f].cortada = 1; return 0; }
   if (c->id && c->id[0] && c->nome && c->nome[0] &&
       sNInventario < G_INVENTARIO_MAX &&
@@ -1434,7 +1449,6 @@ static int xtCanal(const XtreamItem *it, void *u) {
       gi = inferred;
     }
   }
-  if (sNInventario >= G_INVENTARIO_MAX && sCotaCompleta()) { F->cortada = 1; return 1; }
   c.numero = it->num;
   c.desc = c.tvgNome = c.url = c.ua = c.ref = "";
   sCanalAdd(x->fl, &c);
@@ -1468,7 +1482,6 @@ static int m3uCanal(const LtvM3uCanal *m, void *u) {
   gi = sGrupoInfo(x->fl, g, 1);
   sLtvF[x->fl].total++;
   if (x->nsel && !(semCat && ajustes_livetv_sugerir()) && !nomeNaLista(g, x->sel, x->nsel)) { if (gi >= 0) sLtvF[x->fl].gi[gi].entra = 0; return 1; }
-  if (sNInventario >= G_INVENTARIO_MAX && sCotaCompleta()) { sLtvF[x->fl].cortada = 1; return 1; }
   // ID ESTAVEL sem a URL (que pode ter token que muda e credencial): tvg-id,
   // nome e grupo. Repetido exato e o mesmo canal duas vezes na lista.
   snprintf(chave, sizeof chave, "%s|%s|%s", m->tvgId, m->nome, g);
@@ -2207,6 +2220,8 @@ static void adotarStaging(void) {
   fontesLtvSoltar(ltvF, nLtvF);
   ltv_arena_soltar(&arena);
   free(canais); free(cats); free(alts);
+  if (inventarioDisco) fclose(inventarioDisco);
+  inventarioDisco = sInventarioDisco; sInventarioDisco = NULL;
   free(inventario); inventario = sInventario; nInventario = sNInventario;
   sInventario = NULL; sNInventario = 0;
   alts = sAlts; nAlts = sNAlts; sAlts = NULL; sNAlts = 0;
@@ -2539,7 +2554,7 @@ static int   paModo;
 static Uint32 paOkTick;
 typedef struct { char id[GF_ID], nome[GF_NOME], fonte[LTV_CHAVE]; int oculto, n; } GFItem;
 static GFItem *fIt;            // categorias (nivel 0) ou canais da categoria (nivel 1)
-static int   fN, fNivel, fSujo, fFocoCat;
+static int   fN, fNivel, fSujo, fFocoCat, fProximo;
 static char  fCatNome[GF_NOME];
 #define G_PF_ROW 100.0f
 // 1 quando nesta visita alguem LIGOU um addon (ou instalou um novo). Ligar so
@@ -3401,10 +3416,29 @@ static void fCanaisCache(const char *chave, const char *cat) {
 fim:
   fclose(fp);
 }
-static void fMontarCanais(const char *cat) {
+static void fMontarCanaisPagina(const char *cat, int inicio) {
   int i, k;
-  free(fIt); fIt = calloc(G_PF_CANAIS_MAX + GF_CANAIS_MAX, sizeof *fIt); fN = 0;
+  fProximo = 0;
+  free(fIt); fIt = calloc(G_PF_CANAIS_MAX + GF_CANAIS_MAX + 1, sizeof *fIt); fN = 0;
   if (!fIt) return;
+  if (inventarioDisco) {
+    // Preserve the inventory order and reserve room for admitted late channels.
+    for (i = 0; !inicio && i < nInventario && fN < G_PF_CANAIS_MAX - nCanais; i++)
+      if (!strcmp(inventario[i].cat, cat))
+        fCanalAdd(inventario[i].fonte, inventario[i].id, inventario[i].nome);
+    for (i = 0; i < nCanais; i++)
+      if (canais[i].cat >= 0 && !strcmp(cats[canais[i].cat].nome, cat))
+        fCanalAdd(ltvF[canais[i].fonte].chave, canais[i].id, canais[i].nome);
+    GInventario item;
+    int pos = 0;
+    rewind(inventarioDisco);
+    while (fread(&item, sizeof item, 1, inventarioDisco) == 1) {
+      if (strcmp(item.cat, cat)) continue;
+      if (pos++ < inicio) continue;
+      if (fN == G_PF_CANAIS_MAX) { fProximo = pos - 1; break; }
+      fCanalAdd(item.fonte, item.id, item.nome);
+    }
+  } else {
   // Reserve room for displayed channels even if this raw category filled the panel.
   for (i = 0; i < nInventario && fN < G_PF_CANAIS_MAX - nCanais; i++)
     if (!strcmp(inventario[i].cat, cat)) fCanalAdd(inventario[i].fonte, inventario[i].id, inventario[i].nome);
@@ -3412,6 +3446,7 @@ static void fMontarCanais(const char *cat) {
     if (canais[i].cat >= 0 && !strcmp(cats[canais[i].cat].nome, cat))
       fCanalAdd(ltvF[canais[i].fonte].chave, canais[i].id, canais[i].nome);
   for (i = 0; i < nLtvF && fN < G_PF_CANAIS_MAX; i++) fCanaisCache(ltvF[i].chave, cat);
+  }
   for (i = 0; i < fltLive.nCan; i++) {
     if (strcmp(fltLive.can[i].cat, cat)) continue;
     if (!fltLive.can[i].fonte[0]) {
@@ -3430,7 +3465,12 @@ static void fMontarCanais(const char *cat) {
   }
   for (i = 0; i < fN; i++)
     fIt[i].oculto = guiafiltro_canal_oculto_fonte(&fltLive, fIt[i].fonte, fIt[i].id);
+  if (fProximo) {
+    snprintf(fIt[fN].nome, sizeof fIt[fN].nome, "%s", i18n("Carregar mais"));
+    fIt[fN++].n = -1;
+  }
 }
+static void fMontarCanais(const char *cat) { fMontarCanaisPagina(cat, 0); }
 static void filtrosAbrir(void) {
 #ifdef NV_TOUCH_UI
   toquerol_limpar(&toqueAddon);
@@ -3465,6 +3505,11 @@ static void filtrosOk(void) {
     return;
   }
   { GFItem *it = &fIt[fNivel ? paFoco : paFoco - 3];
+    if (fNivel && it->n == -1) {
+      fMontarCanaisPagina(fCatNome, fProximo);
+      paFoco = 0; paRol = paVelRol = 0.0f;
+      return;
+    }
     if (fNivel) it->oculto = guiafiltro_canal_alternar_fonte(&fltLive, it->fonte, it->id, it->nome, fCatNome);
     else it->oculto = guiafiltro_cat_alternar(&fltLive, it->nome);
     fSujo = 1; fltGravar(); }
@@ -7388,6 +7433,8 @@ void guia_abrir_sessao(void) {
   free(fIt); fIt = NULL; fN = fNivel = fSujo = paModo = 0;
   free(alts); alts = NULL; nAlts = 0;
   free(inventario); inventario = NULL; nInventario = 0;
+  if (inventarioDisco) fclose(inventarioDisco);
+  inventarioDisco = NULL;
   focoPend[0] = pedidoBase[0] = previewId[0] = heroId[0] = 0;
   aberta = overlay = querSair = pediuCanal = 0;
   focoLin = focoCol = focoTopo = topoCol = 0;
