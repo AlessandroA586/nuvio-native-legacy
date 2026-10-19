@@ -47,7 +47,6 @@ static char *provedorGet(const char *url, int seconds, const char *const *header
   int st = 0, retry = 0;
   char *body = NULL;
   if (next) *next = -1;
-  pthread_mutex_lock(&provedorTrava);
   if (time(NULL) < __atomic_load_n(&provedorAte, __ATOMIC_ACQUIRE)) { st = 429; goto done; }
 #ifndef __EMSCRIPTEN__
   if (next) {
@@ -65,13 +64,16 @@ static char *provedorGet(const char *url, int seconds, const char *const *header
   } else
 #endif
   body = rede_baixar_st_retry(url, seconds, headers, &st, &retry);
+  pthread_mutex_lock(&provedorTrava);
   if (st == 429) {
     provedorRecuo = provedorRecuo ? (provedorRecuo < 60 ? provedorRecuo * 2 : 60) : 5;
     if (provedorRecuo > 60) provedorRecuo = 60;
-    __atomic_store_n(&provedorAte, time(NULL) + (retry > provedorRecuo ? retry : provedorRecuo), __ATOMIC_RELEASE);
-  } else if (st >= 200 && st < 300) provedorRecuo = 0;
-done:
+    time_t until = time(NULL) + (retry > provedorRecuo ? retry : provedorRecuo);
+    if (until > __atomic_load_n(&provedorAte, __ATOMIC_ACQUIRE))
+      __atomic_store_n(&provedorAte, until, __ATOMIC_RELEASE);
+  } else if (st >= 200 && st < 300 && time(NULL) >= __atomic_load_n(&provedorAte, __ATOMIC_ACQUIRE)) provedorRecuo = 0;
   pthread_mutex_unlock(&provedorTrava);
+done:
   if (status) *status = st;
   if (st < 200 || st >= 300) { free(body); return NULL; }
   return body;

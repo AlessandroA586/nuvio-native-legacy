@@ -29,17 +29,41 @@ int main(void) {
 #include "js.h"
 int rede_pedir(const RedePedido *p, RedeResposta *r) { (void)p; memset(r,0,sizeof *r); r->erro=REDE_INDISPONIVEL; return 0; }
 void rede_resposta_limpar(RedeResposta *r) { free(r->corpo); free(r->cabecalhos); }
+static pthread_mutex_t progress_lock = PTHREAD_MUTEX_INITIALIZER;
+static int progress_active, progress_peak, progress_requests;
 char *rede_baixar_st_retry(const char *u,int s,const char *const *h,int *st,int *retry) {
   *retry=0;
   if (strstr(u,"/sync/watched/")) return rede_baixar_st(u,s,h,st);
-  char *body=rede_baixar_com(u,s,h); *st=body?200:0; return body;
+  int progress = strstr(u,"/progress/watched") != NULL;
+  if (progress) {
+    pthread_mutex_lock(&progress_lock);
+    progress_requests++;
+    if (++progress_active > progress_peak) progress_peak = progress_active;
+    pthread_mutex_unlock(&progress_lock);
+  }
+  char *body=rede_baixar_com(u,s,h); *st=body?200:0;
+  if (progress) {
+    pthread_mutex_lock(&progress_lock);
+    progress_active--;
+    pthread_mutex_unlock(&progress_lock);
+  }
+  return body;
 }
 int main(void) {
   const char *latencies[]={"L_PLAYBACK","L_HISTORICO","L_ATIV","L_PROX","L_SOCIAL","L_CINEMETA","L_FILMES"};
   for (int i=0;i<7;i++) setenv(latencies[i],"0",1);
+  setenv("L_PROX","600",1);
   assert(trakt_definir("fixture","client"));
   CatItem *v=calloc(12,sizeof *v); assert(v);
+  double start = agoraMs();
   int n=trakt_continuar(v,12); assert(n>2);
+  double elapsed = agoraMs() - start;
+  printf("#610 startup: %d progress requests, peak %d workers, %.0f ms\n",
+         progress_requests, progress_peak, elapsed);
+  if (progress_requests != N_SERIES || progress_peak < 2 || progress_peak > 6 || elapsed >= 6000) {
+    fprintf(stderr,"FAIL: 21 requests at 600 ms must overlap within six workers and finish under 6000 ms\n");
+    free(v); return 1;
+  }
   assert(v[0].retomadoMs > js_ms_iso("2026-01-01T00:00:00Z"));
   for(int i=1;i<n;i++) assert(v[i-1].retomadoMs>=v[i].retomadoMs);
   trakt_esquecer(); assert(!trakt_ativo());
@@ -197,4 +221,3 @@ int main(void) {
   free(v); puts("#610 fixture pagination and shared 429 backoff: PASS"); return 0;
 }
 #endif
-
