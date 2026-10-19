@@ -7,12 +7,12 @@ binding = "DB"
 database_name = "nuvio-recomendacoes"
 database_id = "fbea4764-9125-474e-ae4e-875d2e21b2fc"
 
-# CACHE DAS CATEGORIAS DE CANAL (livetvcat.js, 30 dias por nome-base). Crie com
-# `wrangler kv namespace create CATS` e cole o id aqui antes de publicar; sem o
-# binding a rota funciona, so que sem cache (cada pedido refaz as consultas).
-# [[kv_namespaces]]
-# binding = "CATS"
-# id = "<id do namespace>"
+# Channel categories, cached 30 days. Wrangler provisions KV on a future deploy.
+[[kv_namespaces]]
+binding = "CATS"
+
+[ai]
+binding = "AI"
 
 # TV VIDAA: o site e o proxy dela vivem no worker nuvio-tv (servidor/tv). Este
 # binding so repassa /tv/* e /v1/proxy para la (ver index.js). NUNCA ponha
@@ -44,8 +44,6 @@ crons = ["17 4 * * *"]
 #   SUPABASE_ANON_KEY   anon key do mesmo projeto
 #   SALA_SEGREDO        assina os bilhetes do Watch Together; o MESMO valor no
 #                       nuvio-juntos (tools/juntos-publicar.sh --segredo)
-#   TYPESAFE_KEY       chave do Jev (typesafe.ai) de /livetv/categorias; sem ela a
-#                       rota responde 503 e o app segue so com a heuristica local
 #   TMDB_KEY            chave da API do TMDB (/v1/filmografia da Caca; sem ela a TV
 #                       pergunta ao TMDB direto). `wrangler secret put TMDB_KEY`
 # Opcional em [vars]: TRILHA_TRAKT_TOP250 = "<id numerico da lista publica do Trakt>"

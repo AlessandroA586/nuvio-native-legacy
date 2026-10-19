@@ -977,10 +977,10 @@ export default {
       return rotaXtream(req, url);
 
     // SUGESTAO DE CATEGORIA DE CANAL AO VIVO (Jev): so nomes de canal, sem
-    // sessao, como /v1/xtream. Cache em KV, limite por IP e a chave do Jev
-    // (segredo TYPESAFE_KEY, nunca no app) em livetvcat.js.
+    // sessao, como /v1/xtream. Cache em KV e limite por IP; o Jev roda
+    // pelo binding Workers AI em livetvcat.js.
     if (rota === "/livetv/categorias" && req.method === "POST")
-      return rotaLiveTvCategorias(req, env, fetch, limitar);
+      return rotaLiveTvCategorias(req, env, limitar);
 
     // TRAILER NA SAMSUNG (#136): a pergunta ao IMDb (que exige Referer) e a
     // pagina que embute o YouTube com origem valida. Regras em trailer.js.
