@@ -155,9 +155,9 @@ static int ehAss(const VideoFaixa *f) {
 #else
 #define FX_TEXTO_OVERLAY 1
 #endif
-// PGS: so o .tpk decodifica e desenha (imgsub); as outras plataformas seguem.
+// PGS: o app decodifica e desenha (imgsub) no .tpk e na LG; as outras seguem.
 static int ehPgs(const VideoFaixa *f) {
-#ifdef NV_TPK
+#if defined(NV_TPK) || defined(NV_WEBOS)
   return f && faixasmkv_imagem_overlay(f->codec);
 #else
   (void)f; return 0;
