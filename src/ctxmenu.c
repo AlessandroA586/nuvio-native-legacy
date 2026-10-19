@@ -93,10 +93,13 @@ enum { CTX_PENDENTE = 1, CTX_CONFIRMADA = 2, CTX_FALHA = 3 };
 // catalogo (watchlist do Trakt) e o Plan to Watch do Simkl.
 static int tituloSalvo(const CatItem *ci) {
   if (!ci) return 0;
-  if (ci->naLista) return 1;
+  int fonte = ajustes_fonte_biblioteca();
+  if (ci->naLista && (ci->listaFontes & (1u << fonte))) return 1;
   if (!ci->imdb[0]) return 0;
-  return salvos_tem(ci->imdb) || cat_imdb_na_lista(ci->imdb) ||
-         (simkl_ativo() && simkl_na_plantowatch(ci->imdb));
+  if (cat_imdb_na_lista_na_fonte(ci->imdb, fonte)) return 1;
+  if (fonte == AJ_SALVOS_LOCAL) return salvos_tem(ci->imdb);
+  if (fonte == AJ_SALVOS_SIMKL) return simkl_ativo() && simkl_na_plantowatch(ci->imdb);
+  return 0;
 }
 
 static int   aberto, idx = -1, foco;

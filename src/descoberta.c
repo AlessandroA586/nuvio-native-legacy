@@ -5238,7 +5238,7 @@ static void *montar(void *u) {
   // TITULO QUE JA ESTA NO LOTE (na watchlist do Trakt, ou numa fileira) SO
   // GANHA A MARCA, nao entra de novo: dois CatItem com o mesmo imdb poriam o
   // titulo duas vezes na Biblioteca.
-  if (ajustes_salvos_no_simkl() && simkl_ativo()) {
+  if (ajustes_fonte_biblioteca() == AJ_SALVOS_SIMKL) {
     // DIRETO NO LOTE, e nao num vetor a parte: 300 CatItem sao 4,7 MB, e a
     // Samsung roda com teto de 128 MiB. O lote ja cresce por GARANTE; os
     // repetidos saem na compactacao logo abaixo.
@@ -5248,7 +5248,9 @@ static void *montar(void *u) {
     for (k = n, w = n; k < n + np; k++) {
       int jj, ja = 0;
       for (jj = 0; jj < n; jj++)
-        if (!strcmp(lote[jj].imdb, lote[k].imdb)) { lote[jj].naLista = 1; ja = 1; break; }
+        if (!strcmp(lote[jj].imdb, lote[k].imdb)) {
+          lote[jj].naLista = 1; lote[jj].listaFontes |= lote[k].listaFontes; ja = 1; break;
+        }
       if (ja) continue;
       if (w != k) lote[w] = lote[k];
       w++;

@@ -889,6 +889,7 @@ static void ajPontEdValor(int i, int b) {
   (void)b;
   if (!ajPontEdVale() || i < 0 || i >= nValores(uxOp) || (!uxRodape && uxPendente == i)) return;
   if (uxOp == AJ_TEX_MB && texAcima(i)) return;
+  if (uxOp == AJ_SALVOS_DEST && !ajustes_fonte_oferecida(i, trakt_ativo(), simkl_ativo())) return;
   uxRodape = 0; uxPendente = i;
 }
 static void ajPontEdNumero(int a, int b) { (void)a; (void)b; if (ajPontEdVale()) uxRodape = 0; }
@@ -1089,6 +1090,9 @@ static void aj2EditorEscolha(GfxRect m) {
 #ifdef NV_TOUCH_UI
     if (ajTelaCheia() && (y + 96 < y0 || y >= aj2EditorBase(m))) { y += 100; continue; }
 #endif
+    // Servico desligado nao e oferta, e so linha de ponteiro: como o valor nao
+    // aparece na lista do editor, clicar nele nao pode dar passo algum.
+    if (uxOp == AJ_SALVOS_DEST && !ajustes_fonte_oferecida(i, trakt_ativo(), simkl_ativo())) { y += 100; continue; }
     char t[160];
     int foco = !uxRodape && i == uxPendente;
     GfxRect r = { lx, y, lw, 96 };

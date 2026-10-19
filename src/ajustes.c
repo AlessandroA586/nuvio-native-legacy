@@ -45,6 +45,7 @@
 #include "anim.h"
 #include "layout.h"
 #include "sessao.h"
+#include "contalib.h"
 #include "sync.h"
 #include "perfis.h"
 #include "ltv.h"
@@ -54,6 +55,7 @@
 #include "simklauth.h"
 #include "discord.h"
 #include "simkl.h"
+#include "trakt.h"
 #include "qr.h"
 #include "atualizacao.h"
 #include "avisos.h"
@@ -1411,7 +1413,7 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Remover o Xtream"),
   LER("Conta Xtream"),
   ESC("Grade de programação",      V_EPG_PAIS, AJ_N_EPG_PAIS),
-  ESC("Onde o + salva",             V_SALVOS, 3),
+  ESC("Fonte da biblioteca",        V_SALVOS, 3),
   ACAO("Trakt"),
   ACAO("Simkl"),
   ACAO("Sair da conta"),
@@ -2184,6 +2186,9 @@ static float legendaEspera;
 // `valor[AJ_N]` a inicializacao parcial passava em silencio e as ultimas
 // opcoes ficavam no zero. Foi o que aconteceu com as sete linhas do Stalker e
 // do Xtream (#149, ver a nota delas abaixo).
+// Legacy salvosDestino controlled writes only; retain account precedence until
+// the user explicitly chooses a Library source. Persist separately from value.
+static int bibliotecaFonteEscolhida;
 static int valor[] = {
 #include "ajustes_ux_padrao.inc"
 };
@@ -3251,17 +3256,23 @@ void ajustes_definir_ocultar_nao_lancados(int ligado) {
 }
 // 1 = o "+" tambem publica na watchlist do Trakt. A lista LOCAL e escrita nos
 // dois casos; ver a nota de V_SALVOS e a de abertura de salvos.h.
-int ajustes_salvos_no_trakt(void)     { return valor[AJ_SALVOS_DEST] == AJ_SALVOS_TRAKT; }
-int ajustes_salvos_no_simkl(void)     { return valor[AJ_SALVOS_DEST] == AJ_SALVOS_SIMKL; }
+int ajustes_salvos_no_trakt(void)     { return ajustes_fonte_biblioteca() == AJ_SALVOS_TRAKT; }
+int ajustes_salvos_no_simkl(void)     { return ajustes_fonte_biblioteca() == AJ_SALVOS_SIMKL; }
 // Setter para o explicador de primeira vez (salvosintro.c), que faz esta
 // pergunta antes de a pessoa chegar em Ajustes. Grava na hora: quem respondeu e
 // desligou a TV nao deve ser perguntado de novo.
 void ajustes_definir_salvos_no_trakt(int noTrakt) {
+  bibliotecaFonteEscolhida = 1;
   valor[AJ_SALVOS_DEST] = noTrakt ? 1 : 0;
   AJ_COM_ORIGEM(AJLOG_PRIMEIRA, gravar());
 }
+int ajustes_fonte_biblioteca(void) {
+  if (!bibliotecaFonteEscolhida && contalib_tem_conta()) return AJ_SALVOS_LOCAL;
+  return ajustes_fonte_resolver(valor[AJ_SALVOS_DEST], trakt_ativo(), simkl_ativo());
+}
 void ajustes_definir_salvos_destino(int destino) {
   if (destino < AJ_SALVOS_LOCAL || destino > AJ_SALVOS_SIMKL) return;
+  bibliotecaFonteEscolhida = 1;
   valor[AJ_SALVOS_DEST] = destino;
   AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar());
   desc_repetir();   // o mesmo que a linha de Ajustes faz ao mudar
@@ -4369,6 +4380,7 @@ void ajustes_dir(const char *dir) {
   if (!dir || !*dir) return;
   snprintf(dirAjustes, sizeof dirAjustes, "%s", dir);
   memoriaEscolhida = 0;
+  bibliotecaFonteEscolhida = 0;
   valor[AJ_ESCALA_TEXTO] = valorPadrao[AJ_ESCALA_TEXTO];
   valor[AJ_TAMANHO_UI] = UI_SIZE_AUTO;
   fonteregra_carregar();
@@ -4455,6 +4467,7 @@ void ajustes_dir(const char *dir) {
       continue;
     }
     if (!strcmp(chave, "idiomaAutoLocal")) { autoGravado = v == 1; viuAuto = 1; continue; }
+    if (!strcmp(chave, "bibliotecaFonteEscolhidaLocal")) { bibliotecaFonteEscolhida = v == 1; continue; }
     if (!strcmp(chave, "texturasEscolhaLocal")) { memoriaEscolhida = v == 1; continue; }
     if (!strcmp(chave, "escalaTextoVersaoLocal")) { escalaVersao = v; continue; }
     // "resolucao_ui" (ate a 2.0.1) virou "resolucaoUi" com Automatica na
@@ -4787,6 +4800,7 @@ static int gravar(void) {
   fprintf(f, "\n");
   fprintf(f, "escalaTextoVersaoLocal 1\n");
   if (memoriaEscolhida) fprintf(f, "texturasEscolhaLocal 1\n");
+  if (bibliotecaFonteEscolhida) fprintf(f, "bibliotecaFonteEscolhidaLocal 1\n");
   { int erro = ferror(f);
     if (fclose(f)) erro = 1;
     if (erro || rename(tmp, caminho)) { remove(tmp); return 0; } }
@@ -5703,6 +5717,7 @@ static void nomePerfil(char *dst, size_t tam, int perfil) {
 void ajustes_perfil_padrao(void) {
   int i;
   for (i = 0; i < AJ_N; i++) if (dePerfil(i)) valor[i] = valorPadrao[i];
+  bibliotecaFonteEscolhida = 0;
   aplicarIdioma(AJ_LEG_LINGUA); aplicarIdioma(AJ_LEG_LINGUA2); aplicarIdioma(AJ_AUD_LINGUA);
   ajSombraSync();
 }
@@ -5712,7 +5727,7 @@ void ajustes_perfil_guardar(int perfil) {
   size_t p = 0;
   int i;
   if (perfil <= 0) return;
-  buf[0] = 0;
+  p = (size_t)snprintf(buf, sizeof buf, "bibliotecaFonteEscolhidaLocal %d\n", bibliotecaFonteEscolhida);
   for (i = 0; i < AJ_N; i++) {
     int k;
     if (!dePerfil(i)) continue;
@@ -5727,7 +5742,7 @@ void ajustes_perfil_guardar(int perfil) {
 
 int ajustes_perfil_restaurar(int perfil) {
   char nome[32], *t, *l;
-  int mudou = 0, colecaoPropria = perfil == perfis_ativo();
+  int mudou = 0, colecaoPropria = perfil == perfis_ativo(), fonteEscolhida = 0;
   if (perfil <= 0) return 0;
   // As listas e a regex do auto-play (#202) seguem o perfil do mesmo jeito.
   fonteregra_perfil_restaurar(perfil);
@@ -5735,7 +5750,9 @@ int ajustes_perfil_restaurar(int perfil) {
   t = dados_ler(nome);
   if (!t) {
     // A new/older profile must not inherit another profile's collection default.
-    if (colecaoPropria && valor[AJ_COLECAO_EXIBICAO] != 0) { valor[AJ_COLECAO_EXIBICAO] = 0; gravar(); }
+    if (colecaoPropria && valor[AJ_COLECAO_EXIBICAO] != 0) { valor[AJ_COLECAO_EXIBICAO] = 0; mudou++; }
+    if (bibliotecaFonteEscolhida) { bibliotecaFonteEscolhida = 0; mudou++; }
+    if (mudou) gravar();
     return 0;
   }
   { int focoAntigo = -1, viuFoco = 0, viuTopo = 0, viuAbas = 0, viuColecao = 0;
@@ -5746,6 +5763,8 @@ int ajustes_perfil_restaurar(int perfil) {
     // Perfil guardado antes dos tres modos (ver focoTrailerMigrar).
     if (sscanf(l, "%63s %d", chave, &v) == 2 && !strcmp(chave, "focusedPosterBackdropTrailerEnabled"))
       focoAntigo = v;
+    else if (sscanf(l, "%63s %d", chave, &v) == 2 && !strcmp(chave, "bibliotecaFonteEscolhidaLocal"))
+      fonteEscolhida = v == 1;
     else if (sscanf(l, "%63s %d", chave, &v) == 2)
       for (i = 0; i < AJ_N; i++) {
         if (!dePerfil(i) || strcmp(CHAVE[i], chave)) continue;
@@ -5778,6 +5797,8 @@ int ajustes_perfil_restaurar(int perfil) {
   // Idem para o estilo das abas (#205).
   if (!viuAbas && valor[AJ_ABAS_ESTILO]) { valor[AJ_ABAS_ESTILO] = 0; mudou++; } }
   free(t);
+  // Legacy profile files preserve account precedence until this profile chooses.
+  if (bibliotecaFonteEscolhida != fonteEscolhida) { bibliotecaFonteEscolhida = fonteEscolhida; mudou++; }
   if (mudou) {
     gravar();
     aplicarIdioma(AJ_LEG_LINGUA);
@@ -7453,9 +7474,7 @@ static const char *efeitoOpcao(int op) {
     case AJ_SAIR:
       return "Pede o OK duas vezes. Para voltar é preciso entrar de novo pelo QR.";
     case AJ_SALVOS_DEST:
-      if (valor[op] == AJ_SALVOS_SIMKL && !simklauth_token()[0])
-        return "Vincule o Simkl em Ajustes: sem o vínculo, o + guarda só na lista desta TV.";
-      return "A lista desta TV recebe o título em todos os casos. Isto decide se ele também vai para o Trakt ou para o Simkl.";
+      return "Escolhe de onde vem a Biblioteca e para onde o + também publica. A lista desta TV recebe o título em todos os casos.";
     case AJ_TRAKT: case AJ_SIMKL:
       return (op == AJ_TRAKT ? traktauth_estado() == TRA_LIGADO : simklauth_estado() == SMK_LIGADO)
         ? "conectado — OK desconecta"
@@ -8141,10 +8160,11 @@ static int passoAdiante(int op, int dir) {
     return limita(op, o->min + (dir > 0 ? v / o->passo + 1 : (v + o->passo - 1) / o->passo - 1) * o->passo);
   }
   if (o->tipo == OP_NUMERO) return limita(op, valor[op] + dir * o->passo);
-  { int n = nValores(op), v = valor[op], k;
+  { int n = nValores(op), v = op == AJ_SALVOS_DEST ? ajustes_fonte_biblioteca() : valor[op], k;
     // Ao girar, pula o que esta TV nao suporta (o 512 numa TV de 160 so enganaria).
     for (k = 0; k < n; k++) {
       v = (v + (dir > 0 ? 1 : n - 1)) % n;
+      if (op == AJ_SALVOS_DEST && !ajustes_fonte_oferecida(v, trakt_ativo(), simkl_ativo())) continue;
       if (op != AJ_TEX_MB || !texAcima(v)) return v;
     }
     return 0; }
@@ -8740,10 +8760,11 @@ static void notaLigarPar(int op) {
 }
 static int ajOrigemDireto = AJLOG_AJUSTES;   // quem chamou: a tela, ou a Central via ajustes_rapido_passo
 static int definirValorDireto(int op, int novo) {
-  int antes, memoriaAntes = memoriaEscolhida;
+  int antes, memoriaAntes = memoriaEscolhida, bibliotecaAntes = bibliotecaFonteEscolhida;
   if (op < 0 || op >= AJ_N || !ajOpcaoDisponivel(op) ||
       (OPCOES[op].tipo != OP_ESCOLHA && OPCOES[op].tipo != OP_NUMERO)) return 0;
   novo = limita(op, novo);
+  if (op == AJ_SALVOS_DEST && !ajustes_fonte_oferecida(novo, trakt_ativo(), simkl_ativo())) return 0;
   if (ajLegendaPrincipal(op)) return ajLegendaDefinir(op, novo);
   if (ajFalhaBackend(op)) return ajFalhaDefinir(op, novo);
   if (op == AJ_SEEKR_LIGADO && novo == 0 && !seekrChave[0]) {
@@ -8762,13 +8783,15 @@ static int definirValorDireto(int op, int novo) {
   int posicaoAntes = valor[AJ_LEG2_POSICAO];
   if (op == AJ_LEG2_POS) valor[AJ_LEG2_POSICAO] = 0;
   antes = valor[op];
-  if (novo == antes && !(op == AJ_LEG2_POS && posicaoAntes != 0) && (op != AJ_TEX_MB || memoriaEscolhida)) return 1;
+  if (novo == antes && !(op == AJ_LEG2_POS && posicaoAntes != 0) &&
+      (op != AJ_TEX_MB || memoriaEscolhida) && (op != AJ_SALVOS_DEST || bibliotecaFonteEscolhida)) return 1;
   if (op == AJ_TEX_MB && texAcima(novo)) return 0;
   if (op == AJ_TEX_MB) memoriaEscolhida = 1;
+  if (op == AJ_SALVOS_DEST) bibliotecaFonteEscolhida = 1;
   valor[op] = novo;
   if (novo == 0) notaLigarPar(op);
   { int ok; ajOrigem = ajOrigemDireto; ok = gravar(); ajOrigem = 0;
-    if (!ok) { valor[op] = antes; valor[AJ_LEG2_POSICAO] = posicaoAntes; memoriaEscolhida = memoriaAntes; return 0; } }
+    if (!ok) { valor[op] = antes; valor[AJ_LEG2_POSICAO] = posicaoAntes; memoriaEscolhida = memoriaAntes; bibliotecaFonteEscolhida = bibliotecaAntes; return 0; } }
   if (op == AJ_LIVETV_SUGERIR) guia_sugestoes_mudaram();
   if (op == AJ_FIL_LIMITE) {
     fil_ajustar_limite(novo);
@@ -9382,7 +9405,7 @@ static const char *textoValor(int op) {
   // vez que a linha aparece na tela. Valor invalido tem de ler como "o
   // primeiro", nunca como um endereco qualquer da memoria.
   if (!o->valores || o->n <= 0) return "";
-  { int v = valor[op];
+  { int v = op == AJ_SALVOS_DEST ? ajustes_fonte_biblioteca() : valor[op];
     if (v < 0 || v >= o->n) v = 0;
     return o->valores[v] ? o->valores[v] : ""; }
 }

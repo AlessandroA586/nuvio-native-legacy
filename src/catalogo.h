@@ -115,6 +115,7 @@ typedef struct {
   // reconstruido da rede — uma tabela por indice apontaria para outro titulo
   // depois da primeira atualizacao.
   int  naLista, naColecao;
+  unsigned listaFontes; // AJ_SALVOS_* bits; naLista remains shared with Agenda.
   // 64 E NAO 16. O campo nasceu para "tt11280740", e 16 bastava. O id de um
   // addon de canal e "cs:channel:globo-tv-integracao-ituiutaba" — 16 bytes
   // cortavam TODO canal da Globo em "cs:channel:glob": todos viravam o mesmo
@@ -335,13 +336,15 @@ int cat_acrescentar_lote(const CatItem *v, int qtd, int *saidaIdx);
 // quantos entraram.
 int cat_mesclar_listas(const CatItem *v, int qtd);
 
-// Atualiza o espelho local de "esta na watchlist". A verdade e o Trakt, mas
-// esperar o proximo ciclo de descoberta para o botao mudar de cara faria o
-// toque parecer sem efeito.
+// Update effective-source membership on every copy of the indexed title.
+// Keep unrelated remote sources; items without an ID update only this index.
 void cat_definir_na_lista(int i, int naLista);
 // Por TITULO, em todas as copias do catalogo (ver catalogo.c).
 int  cat_definir_na_lista_imdb(const char *imdb, int naLista);
 int  cat_imdb_na_lista(const char *imdb);   // alguma copia do titulo esta salva
+int  cat_imdb_na_lista_fonte(const char *imdb); // salvo pela fonte da Biblioteca
+// Membership using the caller's captured effective source.
+int  cat_imdb_na_lista_na_fonte(const char *imdb, int fonte);
 
 // Grava onde o dono parou NESTE app: escreve em progresso.c (pendente, com a
 // chave do web) e atualiza o item. E o caminho do player.

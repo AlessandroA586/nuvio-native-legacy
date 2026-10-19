@@ -33,7 +33,7 @@ int main(void) {
   assert(!ajustes_legenda_sync_auto() && !dePerfil(AJ_LEG_SYNC_AUTO));
   { char *blob = NULL;
     ajustes_mesclar_blob("{}", &blob);
-    assert(!blob || !strstr(blob, "legendaSyncAutoLocal")); free(blob); }
+    assert(!blob || !strstr(blob, "\"legendaSyncAutoLocal\"")); free(blob); }
 
   // Perfil 1: destaque desligado, 4K pedido. 2.0.2: ele manda o historico so
   // para o Simkl e nao quer o social; o perfil 2 e o contrario.

@@ -7,6 +7,7 @@
 #include "catalogo.h"
 #include "js.h"
 #include "idioma.h"
+#include "ajustes.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -329,6 +330,7 @@ static void montarItem(CatItem *d, const ContaLibItem *s) {
   snprintf(d->meta, sizeof d->meta, "%s", s->meta);
   d->nota = s->nota;
   d->naLista = 1;
+  d->listaFontes = 1u << AJ_SALVOS_LOCAL;
   if (s->poster[0]) snprintf(d->poster, sizeof d->poster, "%s", s->poster);
   if (s->backdrop[0]) snprintf(d->backdrop, sizeof d->backdrop, "%s", s->backdrop);
   snprintf(d->backdropCatalogo, sizeof d->backdropCatalogo, "%s", d->backdrop);
@@ -360,6 +362,7 @@ int contalib_aplicar_catalogo(void) {
   int i, marcados = 0, nFaltam = 0, ultimo = -1;
 
   if (nItens < 1) return 0;
+  if (!ajustes_fonte_traz_conta(ajustes_fonte_biblioteca())) return 0;
   // Catalogo vazio nao aceita acrescimo (cat_acrescentar_lote recusa com n<1) e
   // nao tem onde marcar. Sair aqui, sem tocar na marca, faz a reconciliacao
   // tentar de novo assim que o catalogo existir.
@@ -417,7 +420,7 @@ void contalib_reconciliar(void) {
   // os acrescentados ficam no fim do vetor.
   if (marcaIdx < 0 || marcaIdx >= cat_n()) return;
   c = cat_item(marcaIdx);
-  if (c && !strcmp(c->imdb, marcaId) && c->naLista) return;
+  if (c && !strcmp(c->imdb, marcaId) && (c->listaFontes & (1u << AJ_SALVOS_LOCAL))) return;
   contalib_aplicar_catalogo();
 }
 

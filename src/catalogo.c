@@ -789,7 +789,9 @@ int ajustes_idioma(void);
 // VERSAO 7: novo campo CatItem.posCreditos (cena pós-créditos, TMDB
 // 179430/179431). O sizeof recusaria o arquivo sozinho; a versao sobe mesmo
 // assim para o motivo da recusa ser o campo novo.
-#define CACHE_VERSAO 7
+// Version 8 adds per-source Saved membership, including builds where padding
+// keeps sizeof(CatItem) unchanged. Old shared marks cannot identify a source.
+#define CACHE_VERSAO 8
 // Mesmo cabecalho, itens CODIFICADOS (zeros em corrida). Um CatItem tem ~16 KB
 // e quase tudo e zero (buffers de URL dimensionados para o pior caso): 1600
 // titulos eram 25,6 MB gravados na MEMFS dentro da trava do sistema de arquivos
@@ -841,7 +843,6 @@ static int rleDecodificar(const unsigned char *enc, size_t encN, unsigned char *
   }
   return o <= n;
 }
-#define CACHE_VERSAO_SO_P1 5
 
 typedef struct {
   unsigned magia, versao, tamItem, tamFileira;
@@ -1171,8 +1172,7 @@ int cat_ler_cache(const char *dirArte) {
   if (fread(&c, sizeof c, 1, f) != 1) { fclose(f); return 0; }
   // RECUSA em vez de ler torto. Struct diferente = arquivo de outra build.
   if ((c.magia != CACHE_MAGIA && c.magia != CACHE_MAGIA_RLE) ||
-      !(c.versao == CACHE_VERSAO ||
-        (c.versao == CACHE_VERSAO_SO_P1 && c.perfil == 1)) ||
+      c.versao != CACHE_VERSAO ||
       c.tamItem != sizeof(CatItem) || c.tamFileira != sizeof(CatFileira) ||
       c.nItens < 0 || c.nItens > CAT_MAX ||
       c.nFileiras < 0 || c.nFileiras > CAT_FIL_MAX) {
@@ -1274,6 +1274,7 @@ unsigned long cat_assinatura_de(const CatItem *lista, int qtd,
     MIX(lista[i].backdropCatalogo); MIX(lista[i].backdropTmdb);
     MIX(lista[i].backdropTrakt); MIX(lista[i].genero); MIX(lista[i].meta);
     MIX(lista[i].classificacao); MIX(lista[i].sinopse);
+    h ^= lista[i].listaFontes; h *= 16777619UL;
   }
 #undef MIX
   return h;
@@ -1938,17 +1939,29 @@ int cat_copiar_fileira(const char *chave, CatItem *saida, int max,
 //   - `n` NAO e zerado: subir a contagem depois que o bloco novo ja esta
 //     publicado e seguro, e zerar faria a home piscar a cada titulo aberto.
 // Sob pubTrava; as APIs publicas nao chamam umas as outras com a trava presa.
+int ajustes_fonte_biblioteca(void);
 static void definir_na_lista(int i, int naLista) {
   if (!itens || n <= 0 || i < 0 || i >= n) return;
-  if (itens[i].naLista == (naLista ? 1 : 0)) return;
-  itens[i].naLista = naLista ? 1 : 0;
+  unsigned bit = 1u << ajustes_fonte_biblioteca();
+  // Removal also deletes the local save; retain only unrelated remote sources.
+  unsigned fontes = naLista ? itens[i].listaFontes | bit : itens[i].listaFontes & ~(bit | 1u);
+  int marcada = fontes != 0;
+  if (itens[i].naLista == marcada && itens[i].listaFontes == fontes) return;
+  itens[i].listaFontes = fontes;
+  itens[i].naLista = marcada;
   mudou();
 }
 
 void cat_definir_na_lista(int i, int naLista) {
   CAT_TESTE_ANTES_TRAVA();
   catTravar();
-  definir_na_lista(i, naLista);
+  if (itens && i >= 0 && i < n) {
+    // Index callers also change title membership, across every Home row.
+    const char *id = itens[i].imdb;
+    for (int j = 0; j < n; j++)
+      if (j == i || (id[0] && !strcmp(itens[j].imdb, id)))
+        definir_na_lista(j, naLista);
+  }
   pthread_mutex_unlock(&pubTrava);
 }
 
@@ -1975,6 +1988,24 @@ int cat_imdb_na_lista(const char *imdb) {
   catTravar();
   for (i = 0; itens && i < n; i++)
     if (itens[i].naLista && !strcmp(itens[i].imdb, id)) { achou = 1; break; }
+  pthread_mutex_unlock(&pubTrava);
+  return achou;
+}
+
+int cat_imdb_na_lista_fonte(const char *imdb) {
+  return cat_imdb_na_lista_na_fonte(imdb, ajustes_fonte_biblioteca());
+}
+
+int cat_imdb_na_lista_na_fonte(const char *imdb, int fonte) {
+  int i, achou = 0;
+  char id[64];
+  if (!imdb || !imdb[0]) return 0;
+  snprintf(id, sizeof id, "%s", imdb);
+  CAT_TESTE_ANTES_TRAVA();
+  catTravar();
+  for (i = 0; itens && i < n; i++)
+    if (itens[i].naLista && !strcmp(itens[i].imdb, id) &&
+        (itens[i].listaFontes & (1u << fonte))) { achou = 1; break; }
   pthread_mutex_unlock(&pubTrava);
   return achou;
 }
@@ -2189,6 +2220,7 @@ int cat_mesclar_listas(const CatItem *v, int qtd) {
       for (i = 0; i < n && !achou; i++)
         if (!strcmp(itens[i].imdb, v[k].imdb) &&
             (!v[k].naLista || itens[i].naLista) &&
+            (itens[i].listaFontes & v[k].listaFontes) == v[k].listaFontes &&
             (!v[k].naColecao || itens[i].naColecao)) achou = 1;
       if (!achou) falta = 1;
     }
@@ -2203,6 +2235,7 @@ int cat_mesclar_listas(const CatItem *v, int qtd) {
     for (i = 0; i < m; i++) {
       if (strcmp(novo[i].imdb, v[k].imdb)) continue;
       if (v[k].naLista)   novo[i].naLista = 1;
+      novo[i].listaFontes |= v[k].listaFontes;
       if (v[k].naColecao) novo[i].naColecao = 1;
       achou = 1;
     }

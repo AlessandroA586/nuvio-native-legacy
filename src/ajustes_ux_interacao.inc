@@ -248,10 +248,14 @@ static int uxEvento(SDL_Keycode k) {
       else {
         int ant = uxPendente;
         do uxPendente += d;
-        while (uxOp == AJ_TEX_MB && uxPendente >= 0 && uxPendente < nValores(uxOp) && texAcima(uxPendente));
+        while ((uxOp == AJ_TEX_MB || uxOp == AJ_SALVOS_DEST) && uxPendente >= 0 && uxPendente < nValores(uxOp) &&
+               (uxOp == AJ_TEX_MB ? texAcima(uxPendente)
+                                  : !ajustes_fonte_oferecida(uxPendente, trakt_ativo(), simkl_ativo())));
         if (uxPendente < 0) uxPendente = 0;
         if (uxPendente >= nValores(uxOp)) uxPendente = nValores(uxOp) - 1;
         if (uxOp == AJ_TEX_MB && texAcima(uxPendente)) uxPendente = ant;
+        else if (uxOp == AJ_SALVOS_DEST &&
+                 !ajustes_fonte_oferecida(uxPendente, trakt_ativo(), simkl_ativo())) uxPendente = ant;
       }
     }
     return 1;
