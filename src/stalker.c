@@ -12,7 +12,6 @@
 
 #define ST_ARQ_FMT     "stalker-p%d.txt"
 #define ST_MAX_CANAL   1200
-#define ST_PAGINA_MAX  64      // teto de paginas; portais grandes param antes
 #define ST_PRAZO_S     15
 // Piso de renovacao do token. O 401 e o sinal de verdade e e ele que manda;
 // isto so cobre o caso em que o portal aceita o token velho para a LISTA e o
@@ -453,7 +452,10 @@ static void tabelaPor(const char *id, const char *cmd, NvPerfilSessao sessao) {
   pthread_mutex_lock(&travaTabela);
   for (i = 0; i < nTabela; i++)
     if (!strcmp(tabela[i].id, id)) break;
-  if (i == nTabela && nTabela < ST_MAX_CANAL) nTabela++;
+  if (i == nTabela) {
+    if (nTabela < ST_MAX_CANAL) nTabela++;
+    else i = 0; // Keep storage bounded; missing commands are reloaded on playback.
+  }
   if (i < ST_MAX_CANAL) {
     snprintf(tabela[i].id, sizeof tabela[i].id, "%s", id);
     snprintf(tabela[i].cmd, sizeof tabela[i].cmd, "%s", cmd);
@@ -462,10 +464,9 @@ static void tabelaPor(const char *id, const char *cmd, NvPerfilSessao sessao) {
   nv_perfil_sessao_destravar();
 }
 
-#define ST_MAX_GEN 64
 typedef struct { char id[24], titulo[64]; } StGen;
 
-static int lerGeneros(StGen *gen, int max, NvPerfilSessao sessao) {
+static int lerGeneros(StGen **saida, NvPerfilSessao sessao) {
   char *corpo = chamar("type=itv&action=get_genres", 0, sessao);
   const char *p;
   int n = 0;
@@ -473,12 +474,19 @@ static int lerGeneros(StGen *gen, int max, NvPerfilSessao sessao) {
   p = strstr(corpo, "\"js\"");
   p = p ? strchr(p, '[') : NULL;
   p = p ? p + 1 : NULL;
-  while (p && *p && n < max) {
+  while (p && *p) {
     const char *fim = js_fim(p);
+    StGen gen;
     if (!fim) break;
-    if (js_texto(p, fim, "id", gen[n].id, sizeof gen[n].id) &&
-        js_texto(p, fim, "title", gen[n].titulo, sizeof gen[n].titulo))
-      n++;
+    if (js_texto(p, fim, "id", gen.id, sizeof gen.id) &&
+        js_texto(p, fim, "title", gen.titulo, sizeof gen.titulo)) {
+      if (!(n % 64)) {
+        StGen *v = realloc(*saida, sizeof *v * (size_t)(n + 64));
+        if (!v) break;
+        *saida = v;
+      }
+      (*saida)[n++] = gen;
+    }
     p = js_prox(fim);
   }
   free(corpo);
@@ -493,16 +501,17 @@ static const char *tituloDoGenero(const StGen *gen, int nGen, const char *id) {
   return "Outros";
 }
 
-int stalker_canais_sessao(StalkerCanal *saida, int max, uint64_t sessao) {
-  StGen gen[ST_MAX_GEN];
-  int nGen, pagina, n = 0;
-  if (!nv_perfil_sessao_atual(sessao) || !stalker_configurado() || !saida || max < 1) return 0;
-  nGen = lerGeneros(gen, ST_MAX_GEN, sessao);
+int stalker_canais_cb_sessao(StalkerCb cb, void *u, uint64_t sessao) {
+  StGen *gen = NULL;
+  int nGen, pagina, n = 0, parar = 0;
+  unsigned long anterior = 0;
+  if (!nv_perfil_sessao_atual(sessao) || !stalker_configurado() || !cb) return 0;
+  nGen = lerGeneros(&gen, sessao);
 
   // genre=* traz TODOS os canais numa varredura paginada, com o genero de cada
   // um no proprio item. Pedir genero a genero seria uma requisicao por
   // categoria — em portal com 40 generos, 40 idas so para montar a mesma lista.
-  for (pagina = 1; nv_perfil_sessao_atual(sessao) && pagina <= ST_PAGINA_MAX && n < max; pagina++) {
+  for (pagina = 1; nv_perfil_sessao_atual(sessao) && !parar; pagina++) {
     char consulta[128];
     char *corpo;
     const char *p;
@@ -512,10 +521,15 @@ int stalker_canais_sessao(StalkerCanal *saida, int max, uint64_t sessao) {
              "&fav=0&sortby=number&hd=0&p=%d", pagina);
     corpo = chamar(consulta, 0, sessao);
     if (!corpo) break;
+    // Stop portals ignoring p without truncating valid later pages.
+    unsigned long hash = 5381;
+    for (const unsigned char *s = (const unsigned char *)corpo; *s; s++) hash = hash * 33 + *s;
+    if (pagina > 1 && hash == anterior) { free(corpo); break; }
+    anterior = hash;
     p = strstr(corpo, "\"data\"");
     p = p ? strchr(p, '[') : NULL;
     p = p ? p + 1 : NULL;
-    while (p && *p && n < max) {
+    while (p && *p && !parar) {
       const char *fim = js_fim(p);
       char id[48], cmd[192], genId[24];
       StalkerCanal c;
@@ -530,8 +544,9 @@ int stalker_canais_sessao(StalkerCanal *saida, int max, uint64_t sessao) {
                  tituloDoGenero(gen, nGen, genId));
         if (js_texto(p, fim, "cmd", cmd, sizeof cmd) && cmd[0])
           tabelaPor(c.id, cmd, sessao);
-        saida[n++] = c;
+        n++;
         noCiclo++;
+        parar = !cb(&c, u);
       }
       p = js_prox(fim);
     }
@@ -541,7 +556,21 @@ int stalker_canais_sessao(StalkerCanal *saida, int max, uint64_t sessao) {
   // CONTAGEM, e so contagem. Portal, MAC e token nao entram em log: registro.c
   // le o stdout do app e o desenha NA TELA (ver a nota no topo do header).
   printf("[stalker] portal ok, %d canal(is) em %d categoria(s)\n", n, nGen);
+  free(gen);
   return nv_perfil_sessao_atual(sessao) ? n : 0;
+}
+
+typedef struct { StalkerCanal *saida; int n, max; } StVetor;
+static int canalNoVetor(const StalkerCanal *c, void *u) {
+  StVetor *v = u;
+  v->saida[v->n++] = *c;
+  return v->n < v->max;
+}
+int stalker_canais_sessao(StalkerCanal *saida, int max, uint64_t sessao) {
+  if (!saida || max < 1) return 0;
+  StVetor v = {saida, 0, max < ST_MAX_CANAL ? max : ST_MAX_CANAL};
+  stalker_canais_cb_sessao(canalNoVetor, &v, sessao);
+  return nv_perfil_sessao_atual(sessao) ? v.n : 0;
 }
 
 int stalker_canais(StalkerCanal *saida, int max) {
@@ -567,6 +596,10 @@ static int cmdDe(const char *id, char *dst, unsigned tam) {
   return achou;
 }
 
+static int procurarCmd(const StalkerCanal *c, void *u) {
+  return strcmp(c->id, (const char *)u) != 0;
+}
+
 int stalker_resolver_sessao(const char *id, char *url, unsigned n, uint64_t sessao) {
   char cmd[192], enc[640], consulta[768];
   char *corpo;
@@ -574,7 +607,10 @@ int stalker_resolver_sessao(const char *id, char *url, unsigned n, uint64_t sess
   const char *p;
   if (!nv_perfil_sessao_atual(sessao) || !stalker_e_id(id) || !url || n < 2) return 0;
   if (!stalker_configurado()) return 0;
-  if (!cmdDe(id, cmd, sizeof cmd)) return 0;
+  if (!cmdDe(id, cmd, sizeof cmd)) {
+    stalker_canais_cb_sessao(procurarCmd, (void *)id, sessao);
+    if (!cmdDe(id, cmd, sizeof cmd)) return 0;
+  }
   urlenc(cmd, enc, sizeof enc);
   snprintf(consulta, sizeof consulta,
            "type=itv&action=create_link&cmd=%s&series=0&forced_storage=0"

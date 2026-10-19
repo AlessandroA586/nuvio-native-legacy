@@ -13,7 +13,6 @@ int ajustes_livetv_formato(void);  // ajustes.h puxa SDL; o teste do xtream nao
 #include <time.h>
 
 #define XT_ARQ_FMT   "xtream-p%d.txt"
-#define XT_MAX_CAT   2048
 #define XT_PRAZO_S   20
 #define XT_PRAZO_LISTA_S 60
 
@@ -321,22 +320,29 @@ static int campoTextoOuNumero(const char *ini, const char *fim, const char *chav
   return 1;
 }
 
-static int lerCategorias(XtCat *cats, int max, NvPerfilSessao sessao) {
+static int lerCategorias(XtCat **saida, NvPerfilSessao sessao) {
   char *corpo = chamar("get_live_categories", sessao);
   const char *p;
   int n = 0;
   if (!corpo) return 0;
   p = strchr(corpo, '[');
   p = p ? p + 1 : NULL;
-  while (p && *p && n < max) {
+  while (p && *p) {
     const char *fim;
     while (*p && (unsigned char)*p <= ' ') p++;
     if (*p != '{') break;
     fim = js_fim(p);
     if (!fim) break;
-    if (campoTextoOuNumero(p, fim, "category_id", cats[n].id, sizeof cats[n].id) &&
-        js_texto(p, fim, "category_name", cats[n].nome, sizeof cats[n].nome))
-      n++;
+    XtCat cat;
+    if (campoTextoOuNumero(p, fim, "category_id", cat.id, sizeof cat.id) &&
+        js_texto(p, fim, "category_name", cat.nome, sizeof cat.nome)) {
+      if (!(n % 64)) {
+        XtCat *v = realloc(*saida, sizeof *v * (size_t)(n + 64));
+        if (!v) break;
+        *saida = v;
+      }
+      (*saida)[n++] = cat;
+    }
     p = js_prox(fim);
   }
   free(corpo);
@@ -365,8 +371,8 @@ static int catIndice(const XtCat *cats, int n, const char *id) {
 // guia decidir que grupos inteiros cabem no teto da TV.
 int xtream_canais_cb_sessao(void (*cat)(const char *nome, int ordem, int n, void *u),
                      XtreamCb cb, void *u, int *totalOut, uint64_t sessao) {
-  static XtCat cats[XT_MAX_CAT];
-  static int conta[XT_MAX_CAT + 1];
+  XtCat *cats = NULL;
+  int *conta;
   int nCat, n = 0, total = 0, st = 0, classe, i, passo;
   char *corpo;
   const char *p, *ini;
@@ -377,7 +383,9 @@ int xtream_canais_cb_sessao(void (*cat)(const char *nome, int ordem, int n, void
   // uso, formatos) e o que a tela precisa quando a lista falha. Sem resposta
   // aqui a lista ainda e tentada — o login pode ter caido por prazo.
   { XtreamConta c; contaLerSessao(&c, sessao); }
-  nCat = lerCategorias(cats, XT_MAX_CAT, sessao);
+  nCat = lerCategorias(&cats, sessao);
+  conta = calloc((size_t)nCat + 1, sizeof *conta);
+  if (!conta) { free(cats); return 0; }
   // PRAZO MAIOR SO PARA A LISTA. get_live_streams de um provedor europeu passa
   // de 7 MB (pesquisa do #158); 20 s num painel lento estoura antes do fim.
   corpo = chamarSt("get_live_streams", XT_PRAZO_LISTA_S, &st, sessao);
@@ -386,7 +394,7 @@ int xtream_canais_cb_sessao(void (*cat)(const char *nome, int ordem, int n, void
   if (!corpo || st == 0) {
     printf("[xtream] servidor nao respondeu a lista de canais\n");
     ultimaFalha = XT_SEM_RESPOSTA;
-    free(corpo);
+    free(corpo); free(cats); free(conta);
     return 0;
   }
   if (st >= 400) {
@@ -396,7 +404,7 @@ int xtream_canais_cb_sessao(void (*cat)(const char *nome, int ordem, int n, void
            (long)strlen(corpo));
     ultimaFalha = (strstr(corpo, "\"auth\":0") || st == 401) ? XT_RECUSOU
                 : (st == 502 || st == 504) ? XT_SEM_RESPOSTA : XT_HTTP;
-    free(corpo);
+    free(corpo); free(cats); free(conta);
     return 0;
   }
   // Credencial errada nao e "[]": o servidor responde {"user_info":{"auth":0}}
@@ -412,7 +420,7 @@ int xtream_canais_cb_sessao(void (*cat)(const char *nome, int ordem, int n, void
              st, nomeClasse(classe), (long)strlen(corpo));
       ultimaFalha = classe == XC_HTML ? XT_PAGINA : XT_SEM_RESPOSTA;
     }
-    free(corpo);
+    free(corpo); free(cats); free(conta);
     return 0;
   }
   ini = p + 1;
@@ -470,7 +478,7 @@ int xtream_canais_cb_sessao(void (*cat)(const char *nome, int ordem, int n, void
       p = js_prox(fim);
     }
   }
-  free(corpo);
+  free(corpo); free(cats); free(conta);
   ultimoTotal = total;
   // Contagem, e so: servidor, usuario e senha nao entram em log (registro.c
   // desenha o stdout na tela).

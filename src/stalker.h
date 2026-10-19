@@ -84,6 +84,11 @@ typedef struct {
 int stalker_canais(StalkerCanal *saida, int max);
 int stalker_canais_sessao(StalkerCanal *saida, int max, uint64_t sessao);
 
+// Stream every page before Guide selection. Return 0 from cb to stop.
+// Commands use a bounded cache; playback reloads an evicted command on demand.
+typedef int (*StalkerCb)(const StalkerCanal *canal, void *u);
+int stalker_canais_cb_sessao(StalkerCb cb, void *u, uint64_t sessao);
+
 // ------------------------------------------------------------ reproducao
 
 // 1 quando o id veio deste modulo (prefixo "stalker:").
