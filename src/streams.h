@@ -222,6 +222,13 @@ void stream_definir_alvo(const char *id);
 int  stream_lista_do_alvo(const char *id);
 // Descarta a lista porque ela e de outro alvo. `porque` so entra no log.
 void stream_invalidar(const char *porque);
+struct AddonsConsulta;
+// Availability means an offered video source, excluding known warning URLs.
+int stream_fonte_disponivel(const Stream *fonte);
+int stream_filme_consultar(const struct AddonsConsulta *consulta, const char *id,
+                           int (*cancelado)(void *), void *ctx);
+// -1 = no completed list owned by this movie, otherwise playable count (including zero).
+int stream_filme_fontes(const char *id);
 int  stream_n(void);
 const Stream *stream_item(int i);
 // Fileira de selos do pacote ativo (ver selospacote.h) para fora da folha, como

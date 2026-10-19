@@ -1492,6 +1492,23 @@ static int enderecoDeAviso(const char *u) {
          strstr(u, "slate.mp4") || strstr(u, "slate.m3u8") ? 1 : 0;
 }
 
+int stream_fonte_disponivel(const Stream *s) {
+  return s && (s->url[0] || s->infoHash[0]) && fonteOferecida(s) && !ehInformativa(s) && !s->foraCache &&
+    !enderecoDeAviso(s->url);
+}
+int stream_filme_consultar(const AddonsConsulta *consulta, const char *id,
+                           int (*cancelado)(void *), void *ctx) {
+  return addons_consulta_filme(consulta, id, cancelado, ctx);
+}
+int stream_filme_fontes(const char *id) {
+  if (!id || !*id || strcmp(id, alvoLista) || addons_ocupado()) return -1;
+  int qtd = 0;
+  pthread_mutex_lock(&verTrava);
+  for (int i = 0; i < n; i++) if (stream_fonte_disponivel(&lista[i])) qtd++;
+  pthread_mutex_unlock(&verTrava);
+  return qtd;
+}
+
 // PLAYLIST HLS SEM UM SEGMENTO SEQUER e fonte MORTA, e ela passava na
 // verificacao.
 //

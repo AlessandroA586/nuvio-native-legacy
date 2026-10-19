@@ -4431,7 +4431,27 @@ void app_evento(const SDL_Event *e) {
   // deixar a tecla vazar para a home moveria o foco dela debaixo do cartao.
   if (recintro_aberto()) { recintro_evento(e); return; }
   if (atualizacao_aberta()) { atualizacao_evento(e); return; }
-  if (agendaviso_aberto()) { agendaviso_evento(e); return; }
+  if (agendaviso_aberto()) {
+    agendaviso_evento(e);
+    AgItem aviso;
+    if (agendaviso_tomar_filme(&aviso)) {
+      int i = cat_indice_por_imdb_tipo(aviso.imdb, "movie");
+      if (i < 0) {
+        CatItem ci = {0};
+        snprintf(ci.imdb, sizeof ci.imdb, "%s", aviso.imdb);
+        snprintf(ci.tipo, sizeof ci.tipo, "movie");
+        snprintf(ci.titulo, sizeof ci.titulo, "%s", aviso.titulo);
+        snprintf(ci.poster, sizeof ci.poster, "%s", aviso.poster);
+        i = cat_acrescentar(&ci);
+      }
+      if (i >= 0) {
+        HomeItem it = {0}; it.indice = i;
+        it.rect = (GfxRect){0, 0, NV_TELA_W, NV_TELA_H};
+        abrirTitulo(&it, 0, 1);
+      }
+    }
+    return;
+  }
   if (recomenda_tecla(e)) return;
   // A MODAL DE RECOMENDAR fica acima do detalhe, do menu do cartaz e do
   // painel da tecla AZUL — as tres portas que a abrem. Abaixo do cartao de
@@ -4959,6 +4979,7 @@ void app_atualizar(float dt, Uint32 agora) {
   // Um ciclo por vez, e so quando a conta existe. O passo e barato: sem fio
   // terminado ele nao faz nada.
   sync_passo((unsigned)agora);
+  agenda_filmes_atualizar();
   // SERVIDOR DA CONTA FORA DO AR (#215): um aviso discreto na ilha, uma vez
   // por queda, e retirado quando ele volta. Sem isto a pessoa via a home sem
   // addons (ou com os de ontem) e concluia que o app quebrou — e saia da conta
