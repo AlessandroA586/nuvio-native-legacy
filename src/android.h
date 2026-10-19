@@ -60,7 +60,7 @@ void android_etapa(const char *nome);
 // por '\n'. Devolve o corpo (malloc, com 0 no fim; *n = bytes) e *status = HTTP;
 // NULL = falha de transporte, com o motivo em `erro`. Qualquer fio.
 char *android_http(const char *verbo, const char *url, const char *cabs,
-                   const char *corpo, int prazoMs, int *status, long *n,
+                   const char *corpo, int prazoMs, int *status, int *retryAfter, long *n,
                    char *erro, size_t nErro);
 void android_quadro(void);
 #endif
