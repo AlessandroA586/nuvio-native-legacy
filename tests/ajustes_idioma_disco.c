@@ -322,7 +322,10 @@ int main(void) {
   }
 
   // es-419 na conta: ler + mesclar mantem "es-419" (nao encolhe para "es");
-  // escolher a opcao nova grava es-419 e pede es-MX ao TMDB.
+  // Official NuvioTV 9f17e8bf4abc799dc8c832d2894a8b3b166e4353 maps
+  // es-419 to es-MX in TmdbMetadataService.normalizeTmdbLanguage (line 1215),
+  // then passes it to getMovieDetails/getTvDetails (lines 100-101).
+  // https://github.com/NuvioMedia/NuvioTV/blob/9f17e8bf4abc799dc8c832d2894a8b3b166e4353/app/src/main/java/com/nuvio/tv/core/tmdb/TmdbMetadataService.kt#L1202
   {
     const char *blob = "{\"features\":{\"tmdb_settings\":{\"tmdb_language\":\"es-419\"}}}";
     char *m = NULL;
@@ -351,7 +354,57 @@ int main(void) {
     free(m);
   }
 
-  // A protected legacy local index must not erase a regional account value.
+  // P1: a prior explicit choice (including its persisted marker) must not
+  // authorize shortening a later regional language imported from the account.
+  {
+    const char *codes[] = { "pt-BR", "es-ES", "PT-br", "ES-es" };
+    for (int wrapped = 0; wrapped < 2; wrapped++) {
+      for (int i = 0; i < 4; i++) {
+        char blob[256], actual[128];
+        char *m = NULL;
+        escrever(caminho, "tmdb_language 2\ntmdbIdiomaEscolhaLocal 1\n");
+        ajustes_dir(dir);
+        assert(definirValorDireto(AJ_TMDB_IDIOMA, 3));
+        ajustes_dir(dir);
+        snprintf(blob, sizeof blob, wrapped
+          ? "{\"features\":{\"tmdb_settings\":{\"tmdb_language\":{\"type\":\"string\",\"value\":\"%s\"}}}}"
+          : "{\"features\":{\"tmdb_settings\":{\"tmdb_language\":\"%s\"}}}", codes[i]);
+        ajustes_aplicar_blob(blob);
+        assert(valor[AJ_TMDB_IDIOMA] == (i % 2 ? 3 : 1));
+        ajustes_dir(dir); // The imported value must also survive a restart.
+        ajustes_mesclar_blob(blob, &m);
+        if (m && (!textoCruDoBlob(m, m + strlen(m), "tmdb_language", actual, sizeof actual) ||
+                  strcmp(actual, codes[i]))) {
+          fprintf(stderr, "FAIL P1: prior explicit choice shortened %s (wrapped=%d)\n", codes[i], wrapped);
+          failures++;
+        }
+        free(m);
+      }
+    }
+  }
+
+  // P2: pre-update choices have no marker. A differing saved choice still
+  // pushes, including when protected local settings prevent account import.
+  {
+    const int indices[] = { 1, 2, 3, 33 };
+    const char *codes[] = { "pt", "en", "es", "es-419" };
+    for (int i = 0; i < 4; i++) {
+      char saved[80], expected[80];
+      char *m = NULL;
+      snprintf(saved, sizeof saved, "tmdb_language %d\n", indices[i]);
+      escrever(caminho, saved);
+      ajustes_dir(dir);
+      ajustes_mesclar_blob("{\"features\":{\"tmdb_settings\":{\"tmdb_language\":\"fr\"}}}", &m);
+      snprintf(expected, sizeof expected, "\"tmdb_language\":\"%s\"", codes[i]);
+      if (!m || !strstr(m, expected)) {
+        fprintf(stderr, "FAIL P2: pre-update choice %s did not push\n", codes[i]);
+        failures++;
+      }
+      free(m);
+    }
+  }
+
+  // A differing protected Legacy choice must push without reselecting it.
   escrever(caminho, "tmdb_language 3\n");
   ajustes_dir(dir);
   valor[AJ_TMDB_IDIOMA] = 3;
@@ -360,8 +413,8 @@ int main(void) {
     const char *blob = "{\"features\":{\"tmdb_settings\":{\"tmdb_language\":{\"type\":\"string\",\"value\":\"es-419\"}}}}";
     char *m = NULL;
     ajustes_mesclar_blob(blob, &m);
-    if (m && !strstr(m, "\"es-419\"")) {
-      fputs("FAIL P1: unrelated edit erased account es-419\n", stderr);
+    if (!m || !strstr(m, "\"value\":\"es\"")) {
+      fputs("FAIL P2: protected pre-update choice did not push\n", stderr);
       failures++;
     }
     free(m);

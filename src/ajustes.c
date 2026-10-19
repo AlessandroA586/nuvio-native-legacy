@@ -1066,8 +1066,8 @@ static const char *V_TMDB_LING[] = {
   // arte localizada (logo/fundo "ar") nunca chegava. A interface nao tem arabe;
   // e so o idioma dos metadados.
   "العربية",
-  // Espanhol latino: a conta guarda "es-419" (o Nuvio oficial); o TMDB so
-  // conhece es-MX, entao o pedido sai como es-MX (ajustes_tmdb_idioma).
+  // Official NuvioTV 9f17e8bf: TmdbMetadataService.normalizeTmdbLanguage
+  // maps the account's es-419 to es-MX before sending TMDB requests.
   "Espanhol (América Latina)"
 };
 _Static_assert(sizeof V_TMDB_LING / sizeof *V_TMDB_LING == 34,
@@ -2266,7 +2266,6 @@ _Static_assert(sizeof valor / sizeof *valor == AJ_N,
 static int ajSombra[AJ_N];
 static int ajSombraOk;
 static int ajOrigem;   // AjlogOrigem; 0 = silencioso
-static int tmdbIdiomaEscolhido; // Only an explicit local selection may replace the account language.
 static void ajSombraSync(void) { memcpy(ajSombra, valor, sizeof ajSombra); ajSombraOk = 1; }
 static void ajLogDiff(void) {
   int i;
@@ -4346,7 +4345,6 @@ void ajustes_dir(const char *dir) {
   if (!dir || !*dir) return;
   snprintf(dirAjustes, sizeof dirAjustes, "%s", dir);
   memoriaEscolhida = 0;
-  tmdbIdiomaEscolhido = 0;
   valor[AJ_ESCALA_TEXTO] = valorPadrao[AJ_ESCALA_TEXTO];
   valor[AJ_TAMANHO_UI] = UI_SIZE_AUTO;
   fonteregra_carregar();
@@ -4433,7 +4431,6 @@ void ajustes_dir(const char *dir) {
       continue;
     }
     if (!strcmp(chave, "idiomaAutoLocal")) { autoGravado = v == 1; viuAuto = 1; continue; }
-    if (!strcmp(chave, "tmdbIdiomaEscolhaLocal")) { tmdbIdiomaEscolhido = v == 1; continue; }
     if (!strcmp(chave, "texturasEscolhaLocal")) { memoriaEscolhida = v == 1; continue; }
     if (!strcmp(chave, "escalaTextoVersaoLocal")) { escalaVersao = v; continue; }
     // "resolucao_ui" (ate a 2.0.1) virou "resolucaoUi" com Automatica na
@@ -4766,7 +4763,6 @@ static int gravar(void) {
   fprintf(f, "\n");
   fprintf(f, "escalaTextoVersaoLocal 1\n");
   if (memoriaEscolhida) fprintf(f, "texturasEscolhaLocal 1\n");
-  if (tmdbIdiomaEscolhido) fprintf(f, "tmdbIdiomaEscolhaLocal 1\n");
   { int erro = ferror(f);
     if (fclose(f)) erro = 1;
     if (erro || rename(tmp, caminho)) { remove(tmp); return 0; } }
@@ -5872,8 +5868,6 @@ static int textoDoValor(int op, const char *vi, const char *vf,
     // mais o devolvia. Sem forma fiel, a chave nao e tocada.
     if (op == AJ_TMDB_IDIOMA && valor[op] == 0) return 0;
     for (k = 0; k <= valor[op]; k++) if (!lit[k]) return 0;   // fora da lista
-    // Legacy local indices may differ from the account without a user edit.
-    if (op == AJ_TMDB_IDIOMA && !tmdbIdiomaEscolhido) return 0;
     // A CAIXA DO SERVIDOR, e nao a do codigo JS. MEDIDO na TV: a conta guarda
     // estes enums em MAIUSCULA ("IN_SEARCH", "CARD") enquanto o web os escreve
     // em minuscula, e a leitura daqui e sem caixa justamente por isso. Na
@@ -5927,6 +5921,13 @@ static int ajustesMesclarWeb(const char *base, char **saida) {
         !acharValor(base, fim, chaveConta(i), &vi, &vf)) continue;
     // Valor embrulhado em {"type":...,"value":X}: o que se reescreve e o X.
     if (*vi == '{' && acharValor(vi, vf, "value", &ei, &ef)) { vi = ei; vf = ef; }
+    if (i == AJ_TMDB_IDIOMA) {
+      char conta[128];
+      // An equivalent local index must never shorten the account's region.
+      if ((textoCruDoBlob(base, fim, snake, conta, sizeof conta) ||
+           textoCruDoBlob(base, fim, chaveConta(i), conta, sizeof conta)) &&
+          indiceTmdbLing(conta) == valor[i]) continue;
+    }
     if (!textoDoValor(i, vi, vf, troca[n].texto, sizeof troca[n].texto)) {
       printf("[ajustes] %s nao tem forma para subir; mantido como esta na conta\n",
              CHAVE[i]);
@@ -8708,7 +8709,7 @@ static void notaLigarPar(int op) {
 }
 static int ajOrigemDireto = AJLOG_AJUSTES;   // quem chamou: a tela, ou a Central via ajustes_rapido_passo
 static int definirValorDireto(int op, int novo) {
-  int antes, memoriaAntes = memoriaEscolhida, tmdbAntes = tmdbIdiomaEscolhido;
+  int antes, memoriaAntes = memoriaEscolhida;
   if (op < 0 || op >= AJ_N || !ajOpcaoDisponivel(op) ||
       (OPCOES[op].tipo != OP_ESCOLHA && OPCOES[op].tipo != OP_NUMERO)) return 0;
   novo = limita(op, novo);
@@ -8733,11 +8734,10 @@ static int definirValorDireto(int op, int novo) {
   if (novo == antes && !(op == AJ_LEG2_POS && posicaoAntes != 0) && (op != AJ_TEX_MB || memoriaEscolhida)) return 1;
   if (op == AJ_TEX_MB && texAcima(novo)) return 0;
   if (op == AJ_TEX_MB) memoriaEscolhida = 1;
-  if (op == AJ_TMDB_IDIOMA) tmdbIdiomaEscolhido = 1;
   valor[op] = novo;
   if (novo == 0) notaLigarPar(op);
   { int ok; ajOrigem = ajOrigemDireto; ok = gravar(); ajOrigem = 0;
-    if (!ok) { valor[op] = antes; valor[AJ_LEG2_POSICAO] = posicaoAntes; memoriaEscolhida = memoriaAntes; tmdbIdiomaEscolhido = tmdbAntes; return 0; } }
+    if (!ok) { valor[op] = antes; valor[AJ_LEG2_POSICAO] = posicaoAntes; memoriaEscolhida = memoriaAntes; return 0; } }
   if (op == AJ_FIL_LIMITE) {
     fil_ajustar_limite(novo);
     valor[op] = fil_limite_gravado();
