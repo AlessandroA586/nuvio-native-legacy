@@ -328,3 +328,5 @@
   0, /* #578: audio presentation offset, unchanged by default */
   0, /* Xtream limited connections: Auto; account storage owns the value. */
   1, /* interface scaling: App (4K) hardware, preserving the existing drawable */
+  0, /* upscaling algorithm: Automatic (default) */
+  2, /* upscaling RCAS sharpness, 0..4 */
