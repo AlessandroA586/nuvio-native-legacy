@@ -3,6 +3,17 @@
 #include "../src/guia.c"
 #include <assert.h>
 
+static unsigned long long coverageSteps;
+__attribute__((no_sanitize("coverage")))
+void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
+  (void)guard;
+  coverageSteps++;
+}
+__attribute__((no_sanitize("coverage")))
+void __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop) {
+  for (; start < stop; start++) *start = 1;
+}
+
 static int enabled = 1, posts;
 int ajustes_livetv_sugerir(void) { return enabled; }
 int stalker_canais_sessao(StalkerCanal *out, int max, uint64_t session) {
@@ -52,6 +63,118 @@ static void checkGroups(void) {
   }
   assert(sports == 2 && kids == 1 && other == 0);
 }
+static int xtreamLocalSections(void) {
+  int failures = 0;
+  const char *selections[] = {NULL, "Esportes", "Outros"};
+  for (int mode = 0; mode < 3; mode++) {
+    for (enabled = 0; enabled <= 1; enabled++) {
+      stagingZerar(); sTeto = 100;
+      XtCtx xt = {0};
+      xt.fl = sFonte(LTV_XTREAM, "", "Xtream", "");
+      ltv_pref_definir_grupos(ltv_pref("xt", 1), &selections[mode], mode != 0);
+      xt.nsel = sGruposEscolhidos(xt.fl, xt.sel, 256);
+      xtCat("Outros", 0, 2, &xt);
+      XtreamItem it = {0};
+      it.catOrdem = 0; it.categoria = "Outros"; it.logo = it.epgId = "";
+      it.id = "xtream:espn"; it.nome = "ESPN HD"; it.semCategoria = 1;
+      xtCanal(&it, &xt);
+      it.id = "xtream:provider"; it.nome = "Provider channel"; it.semCategoria = 0;
+      xtCanal(&it, &xt);
+      int sports = 0, other = 0;
+      for (int i = 0; i < sLtvF[xt.fl].ngi; i++) {
+        GGrupoInfo *g = &sLtvF[xt.fl].gi[i];
+        if (!strcmp(g->nome, "Esportes")) sports += g->n;
+        if (!strcmp(g->nome, "Outros")) other += g->n;
+      }
+      if (sports != 1 || other != 1 || sLtvF[xt.fl].total != 2 ||
+          sNCanais != (mode ? 1 : 2) ||
+          (mode == 1 && strcmp(sCanais[0].nome, "ESPN HD")) ||
+          (mode == 2 && strcmp(sCanais[0].nome, "Provider channel"))) failures++;
+      if (mode == 0) {
+        canais = sCanais; cats = sCats; nCanais = sNCanais;
+        ltvF[0] = sLtvF[xt.fl]; cacheFonteGravar(0);
+        canais = NULL; cats = NULL; nCanais = 0; memset(ltvF, 0, sizeof ltvF);
+        stagingZerar(); sTeto = 100;
+        assert(cacheFonteLer("xt") == 2);
+        sports = other = 0;
+        for (int i = 0; i < sLtvF[0].ngi; i++) {
+          GGrupoInfo *g = &sLtvF[0].gi[i];
+          if (!strcmp(g->nome, "Esportes")) sports += g->n;
+          if (!strcmp(g->nome, "Outros")) other += g->n;
+        }
+        if (sports != 1 || other != 1 || sCanais[0].sug ||
+            strcmp(sCats[sCanais[0].cat].nome, "Esportes")) failures++;
+      }
+      free(xt.giDe);
+    }
+  }
+  enabled = 1;
+  ltv_pref_definir_grupos(ltv_pref("xt", 1), NULL, 0);
+  printf("%s: Xtream inferred selector counts and selection with suggestions on/off\n", failures ? "FAIL" : "PASS");
+  return failures != 0;
+}
+
+static int cacheWorkBound(void) {
+  int failures = 0;
+  stagingZerar();
+  int fl = sFonte(LTV_M3U, "https://cache-work.test", "Cache work", "");
+  for (int i = 0; i < 1000; i++) {
+    char name[32]; snprintf(name, sizeof name, "Group %04d", i);
+    sGrupoInfo(fl, name, 30);
+  }
+  GCanal *fixture = calloc(30000, sizeof *fixture);
+  assert(fixture);
+  GCat sections[] = {{.nome = "Group 0999"}};
+  for (int i = 0; i < 30000; i++) {
+    GCanal *c = &fixture[i];
+    c->fonte = 0; c->cat = 0; c->grupoOriginal = "Group 0000";
+    c->id = c->nome = c->logo = c->desc = c->epgId = c->tvgNome = "";
+    c->url = c->ua = c->ref = c->tipo = "";
+  }
+  canais = fixture; cats = sections; nCanais = 30000;
+  ltvF[0] = sLtvF[fl]; ltvF[0].nCanais = 30000;
+  for (int eligible = 0; eligible <= 1; eligible++) {
+    for (int i = 0; i < nCanais; i++) fixture[i].sug = eligible;
+    // Reflect the move in published metadata; cache must reverse it exactly.
+    ltvF[0].gi[0].n = eligible ? 0 : 30;
+    ltvF[0].gi[999].n = eligible ? 60 : 30;
+    if (eligible) for (int i = 30; i < nCanais; i++) fixture[i].sug = 0;
+    coverageSteps = 0;
+    cacheFonteGravar(0);
+    unsigned long long steps = coverageSteps;
+    if (steps > 3000000) failures++;
+    printf("%s: cache reconciliation bounded with %d eligible channels (%llu steps)\n",
+           steps > 3000000 ? "FAIL" : "PASS", eligible ? 30 : 0, steps);
+    char name[64], path[600];
+    cacheNomeFonte(ltvF[0].chave, name, sizeof name);
+    assert(dados_caminho(path, sizeof path, name));
+    FILE *fp = fopen(path, "rb"); assert(fp);
+    assert(fseek(fp, 0, SEEK_END) == 0);
+    long length = ftell(fp); rewind(fp);
+    char *bytes = malloc((size_t)length); assert(bytes);
+    assert(fread(bytes, (size_t)length, 1, fp) == 1); fclose(fp);
+    CLeitor reader = {bytes, bytes + length, 1};
+    long long header[8];
+    for (int i = 0; i < 8; i++) header[i] = lInt(&reader);
+    assert(header[3] == 30000 && header[4] == 1000);
+    char value[1024];
+    for (int i = 0; i < 3; i++) lStr(&reader, value, sizeof value);
+    for (int i = 0; i < 1000; i++) {
+      lStr(&reader, value, sizeof value);
+      assert(lInt(&reader) == 30);
+      assert(lInt(&reader) == 1);
+    }
+    assert(reader.ok);
+    assert(ltvF[0].gi[0].n == (eligible ? 0 : 30));
+    assert(ltvF[0].gi[999].n == (eligible ? 60 : 30));
+    free(bytes);
+  }
+  canais = NULL; cats = NULL; nCanais = 0;
+  memset(ltvF, 0, sizeof ltvF); free(fixture);
+  stagingZerar();
+  return failures != 0;
+}
+
 int main(int argc, char **argv) {
   M3uCtx ctx = {0};
   dados_iniciar(NULL);
@@ -205,5 +328,7 @@ int main(int argc, char **argv) {
   assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "Nimbo") && sRetidos == 1);
   assert(posts == 2 && sLtvF[ctx.fl].cortada);
   puts("PASS: uncached suggestions filter before quota and retain at most the channel cap");
+  failures += xtreamLocalSections();
+  failures += cacheWorkBound();
   return failures ? 1 : 0;
 }

@@ -1277,11 +1277,21 @@ static int xtCanal(const XtreamItem *it, void *u) {
     free(conta); free(nomes); free(entra);
   }
   gi = it->catOrdem >= 0 && it->catOrdem < x->nOrd ? x->giDe[it->catOrdem] : -1;
-  if (gi >= 0 && !F->gi[gi].entra && !(it->semCategoria && ajustes_livetv_sugerir())) { F->cortada = 1; return 1; }
   memset(&c, 0, sizeof c);
   c.id = it->id; c.nome = it->nome; c.logo = it->logo; c.epgId = it->epgId;
   c.grupo = it->semCategoria ? categoriaPorNome(it->nome) : it->categoria;
   c.sug = !c.grupo || !c.grupo[0];
+  // Infer and count before filtering: the selector includes omitted channels too.
+  if (it->semCategoria && !c.sug &&
+      (gi < 0 || strcmp(c.grupo, F->gi[gi].nome))) {
+    int inferred = sGrupoInfo(x->fl, c.grupo, 1);
+    if (inferred >= 0) {
+      if (gi >= 0 && F->gi[gi].n > 0) F->gi[gi].n--;
+      gi = inferred;
+    }
+  }
+  if (gi >= 0 && !F->gi[gi].entra &&
+      !(it->semCategoria && (!c.sug || ajustes_livetv_sugerir()))) { F->cortada = 1; return 1; }
   c.numero = it->num;
   c.desc = c.tvgNome = c.url = c.ua = c.ref = "";
   if (!sCanalAdd(x->fl, &c) && gi >= 0) F->gi[gi].entra = 0;
@@ -1383,10 +1393,15 @@ static int cStr(FILE *f, const char *s) {
 }
 static int cInt(FILE *f, long long v) { return fwrite(&v, sizeof v, 1, f) == 1; }
 
+static int cacheGrupoComparar(const void *a, const void *b) {
+  return strcmp(((const GGrupoInfo *)a)->nome, ((const GGrupoInfo *)b)->nome);
+}
+
 static void cacheFonteGravar(int f) {
   char nome[64], caminho[600], tmp[620];
   const GFonteLtv *F = &ltvF[f];
   FILE *fp;
+  GGrupoInfo *originais = NULL;
   int ok, i;
   cacheNomeFonte(F->chave, nome, sizeof nome);
   if (!dados_caminho(caminho, sizeof caminho, nome)) return;
@@ -1399,16 +1414,27 @@ static void cacheFonteGravar(int f) {
     ok = cInt(fp, GC_MAGIA) && cInt(fp, GC_VERSAO) && cInt(fp, F->tipo) && cInt(fp, F->nCanais) &&
          cInt(fp, F->ngi) && cInt(fp, F->total) && cInt(fp, F->cortada) && cInt(fp, F->atualizada) &&
          cStr(fp, F->nome) && cStr(fp, F->base) && cStr(fp, F->urlTvg);
-    for (i = 0; ok && i < F->ngi; i++) {
-      int count = F->gi[i].n;
-      // The cache stores original groups, just like the channel records below.
-      for (int j = 0; j < nCanais; j++) {
-        const GCanal *c = &canais[j];
-        if (c->fonte != f || !c->sug) continue;
-        count += !strcmp(c->grupoOriginal, F->gi[i].nome);
-        count -= !strcmp(cats[c->cat].nome, F->gi[i].nome);
+    // Reverse regrouping once per changed channel; leave published counts intact.
+    for (i = 0; ok && i < nCanais && F->ngi; i++) {
+      const GCanal *c = &canais[i];
+      if (c->fonte != f || !c->sug || !strcmp(c->grupoOriginal, cats[c->cat].nome)) continue;
+      if (!originais) {
+        originais = malloc(sizeof *originais * (size_t)F->ngi);
+        if (!originais) { ok = 0; break; }
+        memcpy(originais, F->gi, sizeof *originais * (size_t)F->ngi);
+        qsort(originais, (size_t)F->ngi, sizeof *originais, cacheGrupoComparar);
       }
-      ok = cStr(fp, F->gi[i].nome) && cInt(fp, count) && cInt(fp, F->gi[i].entra);
+      GGrupoInfo key = {.nome = c->grupoOriginal};
+      GGrupoInfo *g = bsearch(&key, originais, (size_t)F->ngi, sizeof *originais, cacheGrupoComparar);
+      if (g) g->n++;
+      key.nome = cats[c->cat].nome;
+      g = bsearch(&key, originais, (size_t)F->ngi, sizeof *originais, cacheGrupoComparar);
+      if (g) g->n--;
+    }
+    for (i = 0; ok && i < F->ngi; i++) {
+      const GGrupoInfo *g = originais ? bsearch(&F->gi[i], originais, (size_t)F->ngi,
+                                               sizeof *originais, cacheGrupoComparar) : &F->gi[i];
+      ok = cStr(fp, F->gi[i].nome) && cInt(fp, g->n) && cInt(fp, F->gi[i].entra);
     }
     for (i = 0; ok && i < nCanais; i++) {
       const GCanal *c = &canais[i];
@@ -1420,6 +1446,7 @@ static void cacheFonteGravar(int f) {
     ok = (fclose(fp) == 0) && ok;
     if (!ok || rename(tmp, caminho) != 0) remove(tmp);
   }
+  free(originais);
 #ifdef __EMSCRIPTEN__
   dados_fs_liberar();
   dados_marcar_sujo(0);

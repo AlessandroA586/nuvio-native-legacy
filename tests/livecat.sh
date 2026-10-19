@@ -16,11 +16,12 @@ flags=(-ffunction-sections -fdata-sections)
 if [ "$(uname -s)" = Darwin ]; then flags+=(-Wl,-dead_strip); else flags+=(-Wl,--gc-sections); fi
 cc tests/livecat_guia.c src/livecat.c src/dados.c src/ltv.c src/js.c src/idcanal.c -Isrc \
   -DNV_REC_URL='"http://rec.test"' -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
-  -O1 -g -Wno-macro-redefined "${flags[@]}" -o "$tmp/guia"
+  -O1 -g -fsanitize-coverage=trace-pc-guard -Wno-macro-redefined "${flags[@]}" -o "$tmp/guia"
 # Run both integration regressions even when one fails (FAIL-before evidence).
 rc=0
 NUVIO_DADOS="$tmp/guide" "$tmp/guia" || rc=1
 NUVIO_DADOS="$tmp/guide" "$tmp/guia" restart || rc=1
+if [ "${1:-}" = --guide-only ]; then exit "$rc"; fi
 sources=()
 for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/guia.c) continue;; esac
