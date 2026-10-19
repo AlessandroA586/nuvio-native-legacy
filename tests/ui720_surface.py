@@ -23,27 +23,29 @@ prefix = r'''
 #define RES_AUTO_1080 2
 #define RES_AUTO_4K 1
 typedef struct { int w, h; } SDL_DisplayMode;
-static int choice, app, desktop, tv=1, surfaceW, surfaceH;
+static int choice, app, desktop, panel, tv=1, surfaceW, surfaceH;
 static int resolucaoDaTv(void) { return tv; }
 static int ajustes_4k(void) { return choice==2; }
 static int ajustes_1080p(void) { return choice==1; }
 static int ajustes_720p(void) { return choice==3; }
 static int ajustes_res_auto(void) { return choice==0; }
-static int ajustes_ampliar_app(void) { return app && desktop>=3840; }
+static int ajustes_ampliar_app(void) { return app && panel>=3840; }
 static int SDL_GetDesktopDisplayMode(int d, SDL_DisplayMode *m) {
   (void)d; m->w=desktop; m->h=desktop*9/16; return 0;
 }
 static char *dados_ler(const char *p) { (void)p; return NULL; }
 static int res_auto_ler(const char *p,const char *v) { (void)p;(void)v;return 0; }
 static int android_pedir_superficie(int w,int h) { surfaceW=w;surfaceH=h;return 1; }
+static void tpk_pedir_saida(int w,int h) { (void)w;(void)h; }
 '''
 body = r'''
 int main(void) {
- for(int d=0;d<3;d++) for(tv=0;tv<2;tv++) for(choice=0;choice<4;choice++) {
+ for(int d=0;d<3;d++) for(int p=0;p<2;p++) for(tv=0;tv<2;tv++) for(choice=0;choice<4;choice++) {
   desktop=d==0?1280:d==1?1920:3840;
+  panel=p?3840:1920;
   int oldW,oldH,oldSW,oldSH;
   {int pedeW=0,pedeH=0,pediu4k=0,autoEst=0,autoPediu=0;
-   surfaceW=surfaceH=0;
+   surfaceW=surfaceH=0; app=0;
 BASE
    oldW=pedeW;oldH=pedeH;oldSW=surfaceW;oldSH=surfaceH;
   }
@@ -51,7 +53,7 @@ BASE
    int pedeW=0,pedeH=0,pediu4k=0,autoEst=0,autoPediu=0;
    surfaceW=surfaceH=0;
 CURRENT
-   if(app && desktop==3840 && tv && (choice==1 || choice==3)) {
+   if(app && panel==3840 && tv && (choice==1 || choice==3)) {
     assert(pedeW==3840 && pedeH==2160);
 #ifdef NV_ANDROID
     assert(surfaceW==3840 && surfaceH==2160);
@@ -73,4 +75,4 @@ with tempfile.TemporaryDirectory(prefix='ui720-surface-') as work:
         binary = Path(work) / platform
         subprocess.run(['cc', '-D' + platform, str(source), '-o', str(binary)], check=True)
         subprocess.run([str(binary)], check=True, stdout=subprocess.DEVNULL)
-        print('PASS', platform, 'integration drawable parity; opt-in 720/1080 -> 2160')
+        print('PASS', platform, 'integration drawable parity; physical 4K + 720/1080 desktop requests 2160')

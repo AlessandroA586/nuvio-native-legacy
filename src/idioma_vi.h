@@ -400,6 +400,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "Cấu hình tham chiếu của dự án: C9 đời 2019, 60 khung hình/giây ở màn hình chính."),
   T("A resposta não é vídeo", "Phản hồi không phải video"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "Xem tiếp hiển thị tập kế tiếp trước khi nó phát sóng."),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "Đầu ra giao diện trên TV này bị giới hạn ở 1080p. Ứng dụng phóng lớn đến giới hạn đó; TV hoàn tất lên 4K."),
   T("A seguir", "Tiếp theo"),
   T("A seguir em %d s", "Tiếp theo sau %d giây"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "Mật khẩu gói đăng ký. Đây là thông tin xác thực: nó nằm trong mọi URL kênh và không bao giờ hiện dạng văn bản thường trên màn hình này."),

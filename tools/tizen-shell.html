@@ -507,6 +507,12 @@
     nvPool: nvHeap.pool,
     preRun: [function () {
       try {
+        if (webapis.productinfo.isUdPanelSupported()) {
+          ENV.NUVIO_PANEL_SIZE = "3840x2160";
+          ENV.NUVIO_PANEL_SOURCE = "Tizen productinfo UHD panel";
+        }
+      } catch (_) { /* Native/system display fallback remains available. */ }
+      try {
         var duid = webapis.productinfo.getDuid();
         if (duid) ENV.NUVIO_DEVICE_ID = "samsung:" + duid;
       } catch (_) { /* No model fallback: identical TVs must remain separate. */ }

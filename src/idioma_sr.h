@@ -400,6 +400,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "Referentni uređaj ovog projekta: C9 iz 2019, 60 kadrova u sekundi na početnom ekranu."),
   T("A resposta não é vídeo", "Odgovor nije video"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "Nastavak prikazuje sledeću epizodu pre emitovanja."),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "Izlaz interfejsa na ovom TV-u ograničen je na 1080p. Aplikacija uvećava do te granice; TV dovršava do 4K."),
   T("A seguir", "Sledeće"),
   T("A seguir em %d s", "Sledeće za %d s"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "Lozinka pretplate. Ovo su akreditivi: putuje unutar svakog URL-a kanala i nikada se ne prikazuje otvoreno na ovom ekranu."),

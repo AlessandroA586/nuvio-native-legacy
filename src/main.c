@@ -1197,6 +1197,9 @@ int main(int argc, char **argv) {
     if (quer4k) { printf("[4k] pedindo %dx%d — a linha `janela=` abaixo diz o "
                          "que a TV concedeu\n", pedeW, pedeH); fflush(stdout); } }
   SDL_Window *win;
+#ifdef NV_TPK
+  tpk_pedir_saida(pedeW, pedeH);
+#endif
 #ifdef NV_ANDROID
   // No Android a janela do SDL tem o tamanho da SUPERFICIE: pedir 3840x2160 ao
   // SDL_CreateWindow nao muda nada. Ver android_pedir_superficie.
@@ -1247,6 +1250,15 @@ int main(int argc, char **argv) {
     if (win && i) { printf("[android] janela com EGL de reserva: %s\n", reserva[i - 1].nome); fflush(stdout); }
   }
 #endif
+  if (!win && pedeW == 3840 && ajustes_ampliar_app()) {
+    // A rejected UHD surface must not prevent opening Settings again.
+    printf("[gpu-nivel] 4K window rejected: retrying 1920x1080\n");
+#ifdef NV_ANDROID
+    android_pedir_superficie((int)NV_TELA_W, (int)NV_TELA_H);
+#endif
+    win = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                           (int)NV_TELA_W, (int)NV_TELA_H, flags);
+  }
   if (!win) {
     printf("janela: %s\n", SDL_GetError()); fflush(stdout);
     arranque_etapa("FALHA: sem janela SDL");
@@ -1322,6 +1334,8 @@ int main(int argc, char **argv) {
   if (!ctx) {
     printf("[arranque] SDL_GL_CreateContext falhou: %s\n", SDL_GetError()); fflush(stdout);
     ctx = nv_contexto_simples(&win, windowTitle, pedeW, pedeH, flags);
+    if (!ctx && pedeW == 3840 && ajustes_ampliar_app())
+      ctx = nv_contexto_simples(&win, windowTitle, (int)NV_TELA_W, (int)NV_TELA_H, flags);
     if (!ctx) {
       printf("[arranque] sem contexto GL em nenhuma config: %s\n", SDL_GetError()); fflush(stdout);
       arranque_etapa("FALHA: sem contexto GL");
@@ -1391,6 +1405,10 @@ int main(int argc, char **argv) {
   int dw = 0, dh = 0, jw = 0, jh = 0;
   SDL_GL_GetDrawableSize(win, &dw, &dh);
   SDL_GetWindowSize(win, &jw, &jh);
+  ajustes_ui_saida(dw, dh);
+  if (resolucaoDaTv() && ajustes_ampliar_app())
+    printf("[gpu-nivel] app output requested=%dx%d drawable=%dx%d%s\n",
+           pedeW, pedeH, dw, dh, dw < 3840 || dh < 2160 ? " (platform limit; TV completes 4K)" : "");
 #ifdef NV_TOUCH_UI
   // Video scale reads the virtual canvas; establish the saved mode's physical
   // aspect ratio before positioning the first native video plane.

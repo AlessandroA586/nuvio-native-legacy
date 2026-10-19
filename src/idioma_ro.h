@@ -399,6 +399,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "Referința proiectului: un C9 din 2019, 60 de cadre pe secundă pe ecranul principal."),
   T("A resposta não é vídeo", "Răspunsul nu e video"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "Reluarea arată următorul episod înainte de difuzare."),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "Ieșirea interfeței pe acest televizor este limitată la 1080p. Aplicația mărește până la această limită; televizorul continuă până la 4K."),
   T("A seguir", "Urmează"),
   T("A seguir em %d s", "Urmează în %d s"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "Parola abonamentului. Este o credențială: merge în fiecare URL de canal și nu apare niciodată în clar pe acest ecran."),

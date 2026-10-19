@@ -400,6 +400,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "Projektets reference: en C9 fra 2019, 60 billeder i sekundet på startskærmen."),
   T("A resposta não é vídeo", "Svaret er ikke video"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "Fortsæt med at se viser næste afsnit, før det udsendes."),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "Interfacets output på dette TV er begrænset til 1080p. Appen skalerer op til denne grænse; TV’et fortsætter til 4K."),
   T("A seguir", "Næste"),
   T("A seguir em %d s", "Næste om %d s"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "Abonnementets adgangskode. Den er en legitimationsoplysning: den indgår i hver kanal-URL og vises aldrig i klartekst på denne skærm."),

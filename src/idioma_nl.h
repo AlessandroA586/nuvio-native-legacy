@@ -400,6 +400,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "Het referentietoestel van dit project: een C9 uit 2019, 60 beelden per seconde op het startscherm."),
   T("A resposta não é vídeo", "Het antwoord is geen video"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "Hervatten toont de volgende aflevering voordat die wordt uitgezonden."),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "De interface-uitvoer op deze tv is beperkt tot 1080p. De app schaalt tot die limiet; de tv schaalt verder naar 4K."),
   T("A seguir", "Hierna"),
   T("A seguir em %d s", "Hierna over %d s"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "Het wachtwoord van het abonnement. Het is een inloggegeven: het zit in elke kanaal-URL en wordt op dit scherm nooit leesbaar getoond."),

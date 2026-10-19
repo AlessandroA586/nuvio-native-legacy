@@ -399,6 +399,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "La référence du projet: une C9 de 2019, 60 images par seconde sur l'écran d'accueil."),
   T("A resposta não é vídeo", "La réponse n'est pas une vidéo"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "La reprise affiche le prochain épisode avant sa diffusion."),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "La sortie de l’interface sur ce téléviseur est limitée à 1080p. L’application agrandit jusqu’à cette limite ; le téléviseur termine jusqu’à 4K."),
   T("A seguir", "À suivre"),
   T("A seguir em %d s", "À suivre dans %d s"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "Le mot de passe de l'abonnement. C'est un identifiant: il circule dans chaque URL de chaîne et n'apparaît jamais en clair sur cet écran."),
