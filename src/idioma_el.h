@@ -400,6 +400,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "Το σύνολο αναφοράς αυτού του έργου: ένα C9 του 2019, 60 καρέ ανά δευτερόλεπτο στην αρχική οθόνη."),
   T("A resposta não é vídeo", "Η απάντηση δεν είναι βίντεο"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "Η συνέχιση δείχνει το επόμενο επεισόδιο πριν προβληθεί."),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "Η έξοδος της διεπαφής σε αυτή την TV περιορίζεται σε 1080p. Η εφαρμογή μεγεθύνει έως αυτό το όριο· η TV ολοκληρώνει έως 4K."),
   T("A seguir", "Επόμενο"),
   T("A seguir em %d s", "Επόμενο σε %d δ"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "Ο κωδικός της συνδρομής. Είναι διαπιστευτήριο: ταξιδεύει μέσα σε κάθε URL καναλιού και δεν εμφανίζεται ποτέ ως απλό κείμενο σε αυτή την οθόνη."),

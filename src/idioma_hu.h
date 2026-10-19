@@ -400,6 +400,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "A projekt referenciaeszköze: egy 2019-es C9, 60 képkocka/másodperc a főoldalon."),
   T("A resposta não é vídeo", "A válasz nem videó"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "A folytatás a következő epizódot még a leadás előtt mutatja."),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "A felület kimenete ezen a TV-n 1080p-re korlátozott. Az alkalmazás eddig nagyít; a TV folytatja 4K-ig."),
   T("A seguir", "Következik"),
   T("A seguir em %d s", "Következik %d mp múlva"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "Az előfizetés jelszava. Hitelesítő adat: minden csatorna-URL-ben szerepel, és ezen a képernyőn sosem látszik olvashatóan."),

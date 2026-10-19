@@ -400,6 +400,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "Bu projenin referans cihazı: 2019 model C9, ana ekranda saniyede 60 kare."),
   T("A resposta não é vídeo", "Yanıt video değil"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "Devam, bir sonraki bölümü yayınlanmadan önce gösterir."),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "Bu TV’de arayüz çıkışı 1080p ile sınırlıdır. Uygulama bu sınıra kadar büyütür; TV, 4K’ya tamamlar."),
   T("A seguir", "Sıradaki"),
   T("A seguir em %d s", "%d sn sonra sıradaki"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "Abonelik şifresi. Bir kimlik bilgisidir: her kanal URL'sinin içinde yer alır ve bu ekranda asla açık görünmez."),

@@ -400,6 +400,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "Acuan proyek ini: C9 tahun 2019, 60 frame per detik di layar beranda."),
   T("A resposta não é vídeo", "Responsnya bukan video"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "Lanjutkan menampilkan episode berikutnya sebelum tayang."),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "Keluaran antarmuka di TV ini terbatas pada 1080p. Aplikasi memperbesar hingga batas itu; TV melanjutkan hingga 4K."),
   T("A seguir", "Berikutnya"),
   T("A seguir em %d s", "Berikutnya dalam %d dtk"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "Kata sandi langganan. Ini kredensial: ikut dalam setiap URL kanal dan tidak pernah tampil sebagai teks biasa di layar ini."),

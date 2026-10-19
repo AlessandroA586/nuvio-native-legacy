@@ -400,6 +400,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "Еталонът на този проект: C9 от 2019 г., 60 кадъра в секунда на началния екран."),
   T("A resposta não é vídeo", "Отговорът не е видео"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "Продължаването показва следващия епизод, преди да бъде излъчен."),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "Изходът на интерфейса на този телевизор е ограничен до 1080p. Приложението увеличава до този лимит; телевизорът довършва до 4K."),
   T("A seguir", "Следва"),
   T("A seguir em %d s", "Следва след %d с"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "Паролата на абонамента. Това са данни за вход: тя пътува във всеки URL на канал и никога не се показва в явен вид на този екран."),

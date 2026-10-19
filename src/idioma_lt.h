@@ -400,6 +400,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "Šio projekto etaloninė įranga: 2019 m. C9, 60 kadrų per sekundę pradžios ekrane."),
   T("A resposta não é vídeo", "Atsakas nėra vaizdo įrašas"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "Tęsimo eilutė rodo kitą epizodą dar prieš jį transliuojant."),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "Šio TV sąsajos išvestis ribojama iki 1080p. Programa didina iki šios ribos; TV užbaigia iki 4K."),
   T("A seguir", "Toliau"),
   T("A seguir em %d s", "Kitas po %d s"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "Prenumeratos slaptažodis. Tai prisijungimo duomenys: jis siunčiamas kiekviename kanalo URL ir šiame ekrane niekada nerodomas atviru tekstu."),

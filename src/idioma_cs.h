@@ -400,6 +400,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "Referenční sestava tohoto projektu: C9 z roku 2019, 60 snímků za sekundu na úvodní obrazovce."),
   T("A resposta não é vídeo", "Odpověď není video"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "Pokračování ukáže další epizodu ještě před jejím vysíláním."),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "Výstup rozhraní na této TV je omezen na 1080p. Aplikace zvětšuje do tohoto limitu; TV dokončí zvětšení na 4K."),
   T("A seguir", "Další v pořadí"),
   T("A seguir em %d s", "Další za %d s"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "Heslo k předplatnému. Je to přihlašovací údaj: putuje v každé URL kanálu a na této obrazovce se nikdy nezobrazí v čitelné podobě."),

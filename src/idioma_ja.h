@@ -400,6 +400,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "このプロジェクトの基準機種: 2019 年の C9、ホーム画面で毎秒 60 フレーム。"),
   T("A resposta não é vídeo", "応答が映像ではありません"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "再開の行では、放送前の次のエピソードも表示されます。"),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "このテレビの画面出力は1080pに制限されています。アプリはその上限まで拡大し、テレビが4Kまでの拡大を行います。"),
   T("A seguir", "次に見る"),
   T("A seguir em %d s", "%d 秒後に次を再生"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "購読のパスワードです。資格情報にあたり、各チャンネルの URL の中に含まれ、この画面では平文で表示されません。"),

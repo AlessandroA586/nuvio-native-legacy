@@ -112,6 +112,13 @@ static EGLDisplay dpy = EGL_NO_DISPLAY;
 static EGLSurface sup = EGL_NO_SURFACE;
 static EGLContext ctx = EGL_NO_CONTEXT;
 static int telaW = 1920, telaH = 1080;
+static int saidaPedida;
+void tpk_pedir_saida(int w, int h) {
+  __atomic_store_n(&saidaPedida, w >= 3840 && h >= 2160 ? 3840 : 1920, __ATOMIC_RELEASE);
+}
+// Read by the host before constructing GLWindow; zero means startup is pending.
+__attribute__((visibility("default")))
+int nv_tpk_saida_pedida(void) { return __atomic_load_n(&saidaPedida, __ATOMIC_ACQUIRE); }
 static char dirArte[512];
 static char erro[512];
 // Configuracao do host (nv_tpk_config): quanto o framework espera o app num

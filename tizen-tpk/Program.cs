@@ -44,6 +44,7 @@ namespace NuvioTpk
     class Program : NUIApplication
     {
         [DllImport("libnuvio.so")] static extern int nv_tpk_iniciar(string arte, string dados, int w, int h);
+        [DllImport("libnuvio.so")] static extern int nv_tpk_saida_pedida();
         [DllImport("libnuvio.so")] static extern int nv_tpk_quadro();
         [DllImport("libnuvio.so")] static extern void nv_tpk_config(int esperaMs, int swapZero);
         [DllImport("libnuvio.so")] static extern void nv_tpk_tecla(string nome, int apertou);
@@ -345,17 +346,34 @@ namespace NuvioTpk
 
             inicioDesenhoMs = relogio.ElapsedMilliseconds;
             Etapa("begin gl-window");
+            // Native settings decide the output before waiting for the first GL frame.
+            // Older staged libraries do not export this optional query.
+            try
+            {
+                var deadline = relogio.ElapsedMilliseconds + 3000;
+                int requested;
+                while ((requested = nv_tpk_saida_pedida()) == 0 && relogio.ElapsedMilliseconds < deadline)
+                    Thread.Sleep(10);
+                if (requested == 3840) { glW = 3840; glH = 2160; }
+            }
+            catch (EntryPointNotFoundException) { }
             try
             {
                 CriaJanelaGL();
             }
             catch (Exception e)
             {
-                Etapa("fail gl-window " + e.GetType().Name + ": " + e.Message);
-                Erro("Nuvio could not open its window.", e.GetType().Name + ": " + e.Message);
-                return;
+                if (glW == 3840)
+                {
+                    Etapa("note 4K GL surface rejected: " + e.Message + "; retrying 1080p");
+                    LimpaJanelaGL();
+                    glW = W; glH = H;
+                    try { CriaJanelaGL(); }
+                    catch (Exception retry) { Erro("Nuvio could not open its window.", retry.Message); return; }
+                }
+                else { Erro("Nuvio could not open its window.", e.Message); return; }
             }
-            Etapa("ok gl-window");
+            Etapa("ok gl-window requested=" + glW + "x" + glH);
             ReservaTeclasMidia();
             Etapa("begin first-frame");
             if (etapaAnterior != null) Aviso("Previous launch stopped at: " + etapaAnterior);
@@ -401,6 +419,14 @@ namespace NuvioTpk
             catch { }
         }
 
+        int glW = W, glH = H;
+        void LimpaJanelaGL()
+        {
+#if NV_API11
+            if (glView != null) { glView.Dispose(); glView = null; }
+#endif
+            if (gl != null) { gl.Dispose(); gl = null; }
+        }
         void CriaJanelaGL()
         {
 #if NV_API11
@@ -424,9 +450,12 @@ namespace NuvioTpk
             {
                 Name = "nuvio-glview",
                 Position2D = new Position2D(0, 0),
-                Size2D = new Size2D(W, H),
+                Size2D = new Size2D(glW, glH),
                 BackgroundColor = NuiColor.Transparent,
             };
+            // Keep the UI's bounds in the host's logical 1920x1080 coordinates.
+            glView.ScaleX = (float)W / glW;
+            glView.ScaleY = (float)H / glH;
             // Interlocked: o vigia conta "parado" a partir daqui.
             Interlocked.Exchange(ref ultimaChamadaMs, relogio.ElapsedMilliseconds);
             try { glView.SetGraphicsConfig(false, false, 0, GLESVersion.Version20); Janela("glview SetGraphicsConfig(depth=0 stencil=0 msaa=0 GLES2) ok"); }
@@ -439,8 +468,8 @@ namespace NuvioTpk
             glView.RenderingMode = GLRenderingMode.Continuous;
             NuiWindow.Instance.KeyEvent += (s, e) => Tecla(e.Key, "main");
             NuiWindow.Instance.Add(glView);
-            Etapa("note glview created size=" + W + "x" + H + " format=RGBA8888 mode=Continuous" + Contagem());
-            Janela("glview criado " + W + "x" + H + " RGBA8888 Continuous, na janela principal");
+            Etapa("note glview created size=" + glW + "x" + glH + " format=RGBA8888 mode=Continuous" + Contagem());
+            Janela("glview criado " + glW + "x" + glH + " RGBA8888 Continuous, na janela principal");
         }
 #endif
 
@@ -542,7 +571,7 @@ namespace NuvioTpk
 
         void CriaGlWindow()
         {
-            gl = new GLWindow("nuvio", new NuiRect(0, 0, W, H), true);
+            gl = new GLWindow("nuvio", new NuiRect(0, 0, glW, glH), true);
             // O vigia conta "parado" a partir daqui ate a primeira chamada.
             Interlocked.Exchange(ref ultimaChamadaMs, relogio.ElapsedMilliseconds);
 #if NV_API8

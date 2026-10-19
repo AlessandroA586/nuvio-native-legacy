@@ -400,6 +400,7 @@
   T("A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "本專案的基準機型：2019 年的 C9，主畫面 60 幀/秒。"),
   T("A resposta não é vídeo", "回應不是影片"),
   T("A retomada mostra o próximo episódio antes de ir ao ar.", "繼續觀看列會在下一集播出前就顯示它。"),
+  T("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "此電視的介面輸出限於1080p。應用程式放大至此上限，再由電視放大至4K。"),
   T("A seguir", "接下來"),
   T("A seguir em %d s", "%d 秒後播放下一個"),
   T("A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "訂閱密碼。它屬於憑證，包含在每個頻道的 URL 中，不會在此畫面明文顯示。"),

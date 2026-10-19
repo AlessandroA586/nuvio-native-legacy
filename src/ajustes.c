@@ -19,6 +19,7 @@
 #include "extplayer.h"
 #include "resolucao.h"
 #include "gpunivel.h"
+#include "painel.h"
 #include "enquete.h"
 #include "stalker.h"
 #include "xtream.h"
@@ -2566,11 +2567,9 @@ static int perfilSeguro;
 #else
 #define SEGURO perfilSeguro
 #endif
-static int painel4k(void) {
-  SDL_DisplayMode dm;
-  return SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.w >= 3840 && dm.h >= 2160;
-}
-int ajustes_ampliar_app(void) { return valor[AJ_AMPLIAR_UI] == 1 && painel4k() && !SEGURO; }
+static int saidaLimitada;
+void ajustes_ui_saida(int w, int h) { saidaLimitada = w > 0 && h > 0 && (w < 3840 || h < 2160); }
+int ajustes_ampliar_app(void) { return painel4k() && valor[AJ_AMPLIAR_UI] == 1 && !SEGURO; }
 int ajustes_1080p(void)               { return valor[AJ_RESOLUCAO] == RES_1080 && !SEGURO; }
 int ajustes_4k(void)                  { return valor[AJ_RESOLUCAO] == RES_4K && !SEGURO; }
 int ajustes_res_auto(void)            { return valor[AJ_RESOLUCAO] == RES_AUTO && !SEGURO; }
@@ -7425,6 +7424,11 @@ static const char *ajudaOpcaoBase(int op) {
 static const char *ajudaOpcao(int op) {
   const char *base = ajudaOpcaoBase(op);
   static char b[2048];
+  if (op == AJ_AMPLIAR_UI && saidaLimitada) {
+    snprintf(b, sizeof b, "%s\n%s",
+      i18n("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K."), i18n(base));
+    return b;
+  }
   // A linha Ligada que NAO vale: diz por que em vez de parecer obedecida.
   if ((op == AJ_HERO_TRAILER || op == AJ_FOCO_TRAILER) && ajustes_trailer_hero_vetado()) {
     const char *aviso = ajustes_trailer_hero_vetado() == 2

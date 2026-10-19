@@ -399,6 +399,7 @@
   { "A referência do projeto: uma C9 de 2019, 60 quadros por segundo na tela inicial.", "This project's reference set: a 2019 C9, 60 frames per second on the home screen." },
   { "A resposta não é vídeo", "The response isn't video" },
   { "A retomada mostra o próximo episódio antes de ir ao ar.", "Resume shows the next episode before it airs." },
+  { "A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K.", "The UI output on this TV is limited to 1080p. The app scales up to that limit; the TV completes the scaling to 4K." },
   { "A seguir", "Up next" },
   { "A seguir em %d s", "Up next in %d s" },
   { "A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.", "The subscription password. It is a credential: it travels inside every channel URL and never shows in the clear on this screen." },
