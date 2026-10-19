@@ -33,13 +33,13 @@ TMPDIR="${TMPDIR%/}"
 # SDK, e a TV so tem /usr/lib/libcurl.so.5 — o binario nem inicia, com
 # "libcurl.so.4 => not found" e nenhuma mensagem visivel na tela.
 set -e
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." && source tools/ctr.sh
 
 TV_IP="${NUVIO_TV_IP:-192.168.1.32}"
 TV_PASS="${NUVIO_TV_PASS:-alpine}"
 APP_ID="space.nuvio.native.legacy"
 ARES="${NUVIO_ARES_PACKAGE:-../NuvioWeb-0.3.38-beta/node_modules/.bin/ares-package}"
-CONTAINER_RUNTIME="${NUVIO_CONTAINER_RUNTIME:-docker}"
+# Use ctr_run / ctr_build helpers instead (see tools/ctr.sh)
 BUILD_PLATFORM="${NUVIO_BUILD_PLATFORM:-linux/arm64}"
 SDK_IMAGE="${NUVIO_SDK_IMAGE:-nuvio-webos-sdk}"
 # DTS (PR #259): o FFmpeg mora na IMAGEM. Por padrao a build exige a
@@ -49,7 +49,7 @@ SDK_IMAGE="${NUVIO_SDK_IMAGE:-nuvio-webos-sdk}"
 DTS_ENABLED="${NUVIO_DTS_FFMPEG:-1}"
 case "$DTS_ENABLED" in 0|1|auto) ;; *) echo 'NUVIO_DTS_FFMPEG deve ser 0, 1 ou auto' >&2; exit 2;; esac
 if [ "$DTS_ENABLED" = auto ]; then
-  if "$CONTAINER_RUNTIME" run --rm --platform "$BUILD_PLATFORM" "$SDK_IMAGE" \
+  if ctr_run --rm --platform "$BUILD_PLATFORM" "$SDK_IMAGE" \
        sh -c 'test -f "${NUVIO_DTS_ROOT:-/opt/nuvio-dts}/include/libavcodec/avcodec.h"' 2>/dev/null; then
     DTS_ENABLED=1
   else
@@ -111,11 +111,11 @@ P2P_VOL=""
 [ -n "$NV_P2P_DIR" ] && P2P_VOL="-v $NV_P2P_DIR:/p2p"
 DTS_ENV=()
 if [ -n "${NUVIO_DTS_ROOT:-}" ]; then DTS_ENV=(-e "NUVIO_DTS_ROOT=$NUVIO_DTS_ROOT"); fi
-"$CONTAINER_RUNTIME" run --rm --platform "$BUILD_PLATFORM" --env-file "$ENVF" \
+ctr_run --rm --platform "$BUILD_PLATFORM" --env-file "$ENVF" \
   -e NUVIO_P2P_MOTOR="${NV_P2P_DIR:+1}" $P2P_VOL \
   -e NUVIO_BUILD_JOBS="${NUVIO_BUILD_JOBS:-3}" \
   -e NUVIO_RUST_MKVCORE="$RUST_MKVCORE" "${RUST_VOL[@]}" \
-  -e NUVIO_SDK_ID="$("$CONTAINER_RUNTIME" image inspect --format '{{.Id}}' "$SDK_IMAGE"):$NV_P2P_DIR" \
+  -e NUVIO_SDK_ID="$(ctr_image_inspect "$SDK_IMAGE"):$NV_P2P_DIR" \
   -e CCACHE_DIR=/work/build/ccache-arm \
   -e NUVIO_EXTRA_CFLAGS="${NUVIO_EXTRA_CFLAGS:-}" \
   -e NUVIO_ASS_LIBASS="${NUVIO_ASS_LIBASS:-1}" \
