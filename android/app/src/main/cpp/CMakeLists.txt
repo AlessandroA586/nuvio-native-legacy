@@ -53,7 +53,20 @@ get_target_property(NV_SDL_SOURCES SDL2 SOURCES)
 list(FILTER NV_SDL_SOURCES EXCLUDE REGEX "/SDL_egl\\.c$")
 set_property(TARGET SDL2 PROPERTY SOURCES "${NV_SDL_SOURCES}" "${CMAKE_CURRENT_BINARY_DIR}/SDL_egl_hdr.c")
 target_include_directories(SDL2 PRIVATE "${SDL_DIR}/src/video")
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/hdr_surface.inc" "${CMAKE_CURRENT_LIST_DIR}/hdr_native.inc")
+# Recreate EGL_BAD_SURFACE at the Android window owner, keeping driverdata current.
+file(READ "${SDL_DIR}/src/video/android/SDL_androidgl.c" NV_ANDROID_GL)
+file(READ "${CMAKE_CURRENT_LIST_DIR}/hdr_recover.inc" NV_HDR_RECOVER)
+string(REPLACE "#include <dlfcn.h>" "#include <dlfcn.h>\n#include \"SDL_hints.h\"" NV_ANDROID_GL "${NV_ANDROID_GL}")
+string(REPLACE "    SDL_UnlockMutex(Android_ActivityMutex);\n\n    return retval;"
+  "${NV_HDR_RECOVER}\n    SDL_UnlockMutex(Android_ActivityMutex);\n\n    return retval;" NV_ANDROID_GL "${NV_ANDROID_GL}")
+string(REPLACE "\"../../" "\"${SDL_DIR}/src/" NV_ANDROID_GL "${NV_ANDROID_GL}")
+string(REPLACE "\"../" "\"${SDL_DIR}/src/video/" NV_ANDROID_GL "${NV_ANDROID_GL}")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/SDL_androidgl_hdr.c" "${NV_ANDROID_GL}")
+get_target_property(NV_SDL_SOURCES SDL2 SOURCES)
+list(FILTER NV_SDL_SOURCES EXCLUDE REGEX "/SDL_androidgl\\.c$")
+set_property(TARGET SDL2 PROPERTY SOURCES "${NV_SDL_SOURCES}" "${CMAKE_CURRENT_BINARY_DIR}/SDL_androidgl_hdr.c")
+target_include_directories(SDL2 PRIVATE "${SDL_DIR}/src/video/android" "${CMAKE_CURRENT_BINARY_DIR}/android")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/hdr_surface.inc" "${CMAKE_CURRENT_LIST_DIR}/hdr_native.inc" "${CMAKE_CURRENT_LIST_DIR}/hdr_recover.inc")
 
 # ---- libwebp (so decodificador + demux) ----
 set(WEBP_BUILD_ANIM_UTILS OFF CACHE BOOL "" FORCE)

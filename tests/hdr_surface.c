@@ -86,11 +86,11 @@ static void *dlopen(const char *name, int flags) {
 }
 static void *dlsym(void *handle, const char *name) {
     if (!strcmp(name, "ANativeWindow_getBuffersDataSpace")) return (void *)getData;
+    if (strstr(name, "Metadata")) return NULL;
     assert(!strcmp(name, "ANativeWindow_setBuffersDataSpace"));
     /* Reproduce TCL: hidden from RTLD_DEFAULT, exported by libnativewindow. */
     return symbol && handle ? (void *)setData : NULL;
 }
-#include "../android/app/src/main/cpp/hdr_native.inc"
 static const char *extensions(void *display, int key) { (void)display; (void)key; return "EGL_KHR_gl_colorspace EGL_EXT_pixel_format_float"; }
 static int config(void *display, void *c, int key, int *value) {
     (void)display; (void)c;
@@ -119,12 +119,20 @@ typedef struct {
 } Egl;
 typedef struct { Egl *egl_data; } Device;
 static int SDL_EGL_HasExtension(Device *device, int type, const char *name) {
-    (void)device; (void)type; assert(!strcmp(name, "EGL_EXT_gl_colorspace_bt2020_pq")); return pq;
+    (void)device; (void)type;
+    return !strcmp(name, "EGL_EXT_gl_colorspace_bt2020_pq") ? pq : 0;
 }
 typedef int (*PFNEGLQUERYSURFACEPROC)(void *, void *, int, int *);
 static void *SDL_EGL_GetProcAddress(Device *device, const char *name) {
-    (void)device; assert(!strcmp(name, "eglQuerySurface")); return (void *)querySurface;
+    (void)device;
+    if (!strcmp(name, "eglSurfaceAttrib")) return NULL;
+    assert(!strcmp(name, "eglQuerySurface")); return (void *)querySurface;
 }
+#define _THIS Device *_this
+#define EGL_SMPTE2086_DISPLAY_PRIMARY_RX_EXT 0x3341
+#define EGL_CTA861_3_MAX_CONTENT_LIGHT_LEVEL_EXT 0x3360
+typedef int (*PFNEGLSURFACEATTRIBPROC)(void *, EGLSurface, int, int);
+#include "../android/app/src/main/cpp/hdr_native.inc"
 static EGLSurface *surface(Device *_this, void *nw) {
     int attribs[9] = { EGL_NONE }, attr = 1, format_wanted = 43, format_got;
     EGLSurface *surface;

@@ -389,9 +389,10 @@ class NuvioActivity : SDLActivity() {
     // Chamado pelo C (android_pedir_superficie), do fio do SDL, antes de criar a
     // janela: fixa o buffer da SDLSurface em w x h e espera a superficie nova
     // chegar (ate 2 s). Devolve true se ela veio nesse tamanho.
-    // SDL calls this before EGL surface creation. Only the Activity window changes;
+    // SDL calls this before EGL surface creation; request a ten-bit UI layer.
     // ExoPlayer retains its separate SurfaceView and video color handling.
     private var hdrCapabilitiesLogged = false
+    private var hdrSurfaceRequested = false
 
     fun pedirHdrInterface(ativa: Boolean): Boolean {
         if (Build.VERSION.SDK_INT < 26) return false
@@ -401,6 +402,22 @@ class NuvioActivity : SDLActivity() {
             try {
                 if (!ativa || (Build.VERSION.SDK_INT >= 34 && display?.isHdr == true)) {
                     window.colorMode = if (ativa) ActivityInfo.COLOR_MODE_HDR else ActivityInfo.COLOR_MODE_DEFAULT
+                    if (ativa) {
+                        hdrSurfaceRequested = true
+                        mSurface.setZOrderOnTop(false)
+                        mSurface.holder.setFormat(PixelFormat.RGBA_1010102)
+                        if (Build.VERSION.SDK_INT >= 35) {
+                            mSurface.setDesiredHdrHeadroom(1000.0f / 203.0f)
+                            window.setDesiredHdrHeadroom(1000.0f / 203.0f)
+                        }
+                    } else if (hdrSurfaceRequested) {
+                        mSurface.holder.setFormat(PixelFormat.TRANSLUCENT)
+                        if (Build.VERSION.SDK_INT >= 35) {
+                            mSurface.setDesiredHdrHeadroom(0.0f)
+                            window.setDesiredHdrHeadroom(0.0f)
+                        }
+                        hdrSurfaceRequested = false
+                    }
                     ok = !ativa || window.colorMode == ActivityInfo.COLOR_MODE_HDR
                 }
             } catch (_: Exception) {

@@ -31,11 +31,23 @@ for token in ('[hdr-ui] cap=', 'supportedHdrTypes', 'desiredMaxLuminance', 'scre
     assert token in java, token
 cmake = Path('android/app/src/main/cpp/CMakeLists.txt').read_text()
 assert 'nvHdrAfterSwap(egl_surface)' in cmake
+native = Path('android/app/src/main/cpp/hdr_native.inc').read_text()
+surface = Path('android/app/src/main/cpp/hdr_surface.inc').read_text()
+for token in ('ANativeWindow_setBuffersSmpte2086Metadata', 'ANativeWindow_setBuffersCta8613Metadata', 'eglSurfaceAttrib', 'metadata egl-smpte=', 'dumpsys SurfaceFlinger'):
+    assert token in native, token
+assert 'nvHdrMetadata(_this, surface)' in surface
+recover = Path('android/app/src/main/cpp/hdr_recover.inc').read_text()
+assert 'hdr_recover.inc' in cmake
+assert 'EGL_BAD_SURFACE' in recover and 'SDL_EGL_MakeCurrent' in recover
+for token in ('setDesiredHdrHeadroom', 'SDK_INT >= 35', 'setZOrderOnTop(false)', 'PixelFormat.RGBA_1010102'):
+    assert token in java, token
 assert 'SDL_GL_GetAttribute' not in main[main.index('int ten = config'):main.index('if (hdrPedido) {', main.index('int ten = config'))]
 gpu = Path('src/gpunivel.c').read_text()
 assert 'gfx_rect(tela, intTex, GFX_HDR_OUTPUT, (float)gfx_hdr_output' in gpu
 assert 'c*0.0203' in shader
 print('PASS verified EGL config drives summary/blit despite GL 8888; FP16 fallback; no 8-bit PQ')
 PY
+cc -std=c99 -Wall -Wextra -Werror tests/hdr_metadata.c -o "$testdir/metadata"
+"$testdir/metadata"
 # Existing opt-in defaults and device-local persistence regression.
 bash tests/ajustes_padroes.sh

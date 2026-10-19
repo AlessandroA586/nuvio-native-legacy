@@ -69,6 +69,7 @@
                 nvHdrDataspace = attempts[i].space;
                 nvHdrName = attempts[i].name;
                 nvHdrFirstSwap = 0;
+                nvHdrMetadata(_this, surface);
                 format_got = ANativeWindow_getFormat(nw);
                 Android_SetFormat(format_wanted, format_got);
                 SDL_SetHint("NUVIO_HDR_CONFIG", first == 0 ? "1010102" : "FP16");
