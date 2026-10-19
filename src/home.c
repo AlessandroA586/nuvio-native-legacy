@@ -4015,6 +4015,7 @@ static void home_atualizar_(float dt, Uint32 agora) {
     for (int i = 0; i < r && i < nFileiras; i++)
       alvoY += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(i) + fileiraGap();
     if (layoutHome() == HOME_LAYOUT_DINAMICA) alvoY = dinRolagemCentrada(r, alvoY);
+    if (r < nFileiras && fileiras[r].tipo == FILEIRA_PALCO) alvoY += 44.0f;   // room for the label under the cards
   }
   scrollY = homeScrollYPasso(alvoY, dt, motionReduzido);
   for (int r = 0; r < nFileiras && r < MAX_FIL; r++)
@@ -7517,6 +7518,11 @@ static const char *tfKicker(const Fileira *f) {
   }
   return !strcmp(f->catTipo, "series") ? "Séries" : !strcmp(f->catTipo, "movie") ? "Filmes" : "Catálogo";
 }
+// Stage focado: o titulo da fileira desce para baixo dos cards (dono, 18/10).
+static float tituloFilY(int r, float y) {
+  return fileiras[r].tipo == FILEIRA_PALCO && foco.fileira == r && !focoHero
+         ? y + NV_LEGACY_ROW_HEAD_H + alturaFil(r) + 6.0f : y;
+}
 // Devolve o x onde o titulo (e o que vem junto) termina; `tl` sai com o texto
 // do titulo (w/h) para quem mede o resto do cabecalho.
 static float desenhaTituloFil(int r, float y, const char *rot, int cr, int cg, int cb,
@@ -7754,7 +7760,7 @@ static void home_desenhar_(Uint32 agora) {
         int cb = 181 + (int)((249 - 181) * k + 0.5f);
         const float maxW = homeRetratoTelefone() ? homeLarguraUtil() - 76.0f : NV_TELA_W - homeConteudoX() - 180.0f;
         const int mudo = tipo == FILEIRA_SOCIAL && ajustes_amigos_estilo() == 3 && !amigosfil_convite();
-        fimTit = desenhaTituloFil(r, y, rotFil, cr, cg, cb, k, maxW, !mudo, &tl); }
+        fimTit = desenhaTituloFil(r, tituloFilY(r, y), rotFil, cr, cg, cb, k, maxW, !mudo, &tl); }
       // A FONTE (Trakt, Simkl...) NAO APARECE NA FILEIRA DE AMIGOS: a pessoa
       // quer saber quem viu e o que achou, nao de onde veio o dado. Ela fica
       // so no perfil do amigo (amigoperfil.c). Era a marca do Trakt aqui.

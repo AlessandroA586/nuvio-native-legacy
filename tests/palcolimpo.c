@@ -152,6 +152,9 @@ int main(int argc, char **argv) {
   setting(0, glass, 2); quadros(90, NULL);
   capture(dir, phase, 2, "stage");
   assert(heroInfo == 0 && heroBackdrops == 0 && stageArtwork == 1);
+  { int sr = foco.fileira; // focused Stage: label sits below the cards
+    assert(fileiras[sr].tipo == FILEIRA_PALCO);
+    assert(tituloFilY(sr, 100.0f) >= 100.0f + NV_LEGACY_ROW_HEAD_H + alturaFil(sr)); }
   const CatItem *focused = cat_item_exato(fileiraItemIndice(&fileiras[foco.fileira], foco.coluna));
   assert(focused && palcoArte(focused));
   assert(artworkTexture == tex_obter_hero(focused->backdrop));
@@ -202,6 +205,7 @@ int main(int argc, char **argv) {
   setting(0, glass, 2); quadros(90, NULL);
   tecla(SDLK_UP); quadros(1, NULL);
   capture(dir, phase, 2, "leave");
+  assert(foco.fileira != nFileiras && tituloFilY(foco.fileira, 100.0f) == 100.0f); // unfocused: above
   quadros(90, NULL);
   capture(dir, phase, 2, "normal-return");
   assert(heroInfo > 0 && heroBackdrops > 0);
@@ -214,6 +218,7 @@ int main(int argc, char **argv) {
     if (!mode) { otherInfo[layout] = heroInfo; otherBackdrops[layout] = stageArtwork; }
     else assert(heroInfo == otherInfo[layout] && stageArtwork == otherBackdrops[layout]);
     tecla(SDLK_UP); quadros(90, NULL);
+    capture(dir, phase, mode, layout == 1 ? "standard-off" : "dynamic-off");
   }
   tex_encerrar(); txt_encerrar();
   SDL_GL_DeleteContext(gl); SDL_DestroyWindow(janela); SDL_Quit();
