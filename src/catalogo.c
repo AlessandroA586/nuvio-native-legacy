@@ -1993,7 +1993,11 @@ int cat_imdb_na_lista(const char *imdb) {
 }
 
 int cat_imdb_na_lista_fonte(const char *imdb) {
-  int i, achou = 0, fonte = ajustes_fonte_biblioteca();
+  return cat_imdb_na_lista_na_fonte(imdb, ajustes_fonte_biblioteca());
+}
+
+int cat_imdb_na_lista_na_fonte(const char *imdb, int fonte) {
+  int i, achou = 0;
   char id[64];
   if (!imdb || !imdb[0]) return 0;
   snprintf(id, sizeof id, "%s", imdb);

@@ -343,6 +343,8 @@ void cat_definir_na_lista(int i, int naLista);
 int  cat_definir_na_lista_imdb(const char *imdb, int naLista);
 int  cat_imdb_na_lista(const char *imdb);   // alguma copia do titulo esta salva
 int  cat_imdb_na_lista_fonte(const char *imdb); // salvo pela fonte da Biblioteca
+// Membership using the caller's captured effective source.
+int  cat_imdb_na_lista_na_fonte(const char *imdb, int fonte);
 
 // Grava onde o dono parou NESTE app: escreve em progresso.c (pendente, com a
 // chave do web) e atualiza o item. E o caminho do player.

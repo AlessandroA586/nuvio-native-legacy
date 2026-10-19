@@ -25,6 +25,7 @@ int test_simkl_write(const char *id, const char *type, int add) {
   simklWrites += add ? 1 : -1; return 1;
 }
 int bibfonte_library_count(void);
+int bibfonte_library_frame(int count, const char *id, const char *expectedBadge);
 int bibfonte_discovery_watchlist(void);
 const char *bibfonte_menu_label(int index);
 void bibfonte_menu_toggle(int index);
@@ -260,6 +261,31 @@ int main(int argc, char **argv) {
     ajustes_definir_salvos_destino(source == AJ_SALVOS_TRAKT ? AJ_SALVOS_SIMKL : AJ_SALVOS_TRAKT);
     CHECK("remote removal preserves unrelated source on every copy", biblioteca_na_lista(0) && biblioteca_na_lista(1) && cat_imdb_na_lista(ci.imdb));
   }
+  // Source transitions must update the open grid without an explicit rebuild.
+  valor[AJ_IDIOMA] = IDIOMA_EN + 1;
+  CatItem sources[3] = {ci, ci, ci};
+  strcpy(sources[1].imdb, "tt7654321");
+  for (int i = 0; i < 3; i++) {
+    sources[i].naLista = 1;
+    sources[i].listaFontes = 1u << (i == 1 ? AJ_SALVOS_LOCAL : AJ_SALVOS_TRAKT);
+  }
+  cat_definir_tudo(sources, 3, NULL, 0);
+  contalib_esquecer();
+  dados_gravar("ajustes.txt", "salvosDestino 1\n");
+  ajustes_dir(dir);
+  assert(biblioteca_iniciar());
+  CHECK("open Library initially shows legacy Trakt source", bibfonte_library_frame(1, "tt1234567", "TRAKT"));
+  assert(contalib_ler_biblioteca("[{\"content_id\":\"tt7654321\",\"content_type\":\"series\",\"name\":\"Account series\"}]") == 1);
+  CHECK("account arrival replaces equal-count open grid", bibfonte_library_frame(1, "tt7654321", "ACCOUNT"));
+  CHECK("account arrival updates duplicate membership", !biblioteca_na_lista(2) && biblioteca_na_lista(1));
+  contalib_esquecer();
+  CHECK("account disconnect restores legacy Trakt grid", bibfonte_library_frame(1, "tt1234567", "TRAKT"));
+  trakt_esquecer();
+  CHECK("Trakt disconnect fallback clears open grid and count", bibfonte_library_frame(0, NULL, "SIMKL"));
+  CHECK("fallback excludes Trakt duplicate membership", !biblioteca_na_lista(2));
+  trakt_definir("test-token", "test-client");
+  CHECK("membership refresh also synchronizes Library source", biblioteca_na_lista(2));
+  CHECK("reconnect restores open grid", bibfonte_library_frame(1, "tt1234567", "TRAKT"));
 #endif
   SDL_Quit();
   printf("bibfonte: %d failure(s)\n", failures);

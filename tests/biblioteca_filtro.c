@@ -26,6 +26,7 @@ int perfis_ativo(void) { return 1; }
 static int fonteBib = AJ_SALVOS_LOCAL, extraLocal;
 int ajustes_fonte_biblioteca(void) { return fonteBib; }
 float gfx_escala_tela_txt(void) { return 1.0f; }
+float gfx_escala_txt(void) { return 1.0f; }
 float gfx_poster_k(void) { return 1.0f; }
 int lst_n(void) { return 0; }
 int lst_itens_n(void) { return 0; }

@@ -301,6 +301,7 @@ static int tipo = TIPO_TODOS;
 static int ordem = ORD_ADICIONADOS;
 static int exibicao = VIS_CARTAZ;
 static int fonte = FONTE_TRAKT;
+static int fonteSalvos = -1; // Shared snapshot for the grid, badge and membership.
 static int pickSel = 0;          // qual dos tres seletores esta em foco
 
 static LstLista aberta;          // lista aberta (EST_ITENS)
@@ -679,7 +680,7 @@ static int jaNoFiltro(const char *id) {
 // titulo" de reconstruir — contar diferente do que a grade mostra seria o
 // numero mentindo. Usa `contados` como rascunho; reconstruir zera depois.
 static int salvoNaFonte(const CatItem *ci) {
-  return ci->naLista && (ci->listaFontes & (1u << ajustes_fonte_biblioteca()));
+  return ci->naLista && (ci->listaFontes & (1u << fonteSalvos));
 }
 
 static int contarModo(int m) {
@@ -694,7 +695,7 @@ static int contarModo(int m) {
     if (nContados < CAT_MAX) contados[nContados++] = i;
     total++;
   }
-  if (m == MODO_SALVOS && ajustes_fonte_traz_locais(ajustes_fonte_biblioteca()))
+  if (m == MODO_SALVOS && ajustes_fonte_traz_locais(fonteSalvos))
     for (int k = salvos_n() - 1; k >= 0; k--) {
       const SalvoItem *sv = salvos_item(k);
       if (sv && sv->id[0] && cat_indice_por_imdb(sv->id) < 0) total++;
@@ -703,7 +704,8 @@ static int contarModo(int m) {
 }
 
 // Refaz a lista visivel de TITULOS (modos Salvos e Coleção).
-static void reconstruir(void) {
+static void reconstruirFonte(int novaFonte) {
+  fonteSalvos = novaFonte;
   int n = cat_n();
   int exclTipo = 0, exclMeta = 0, locaisFora = 0;
   int anoAtual = 0;
@@ -756,7 +758,7 @@ static void reconstruir(void) {
   // agora nao aparece" (issue do Owlphibia29). O painel de Salvos ja desenhava
   // da lista local; a Biblioteca agora tambem. Os mais novos primeiro: a lista
   // local e na ordem de insercao, e quem acabou de salvar procura o que salvou.
-  if (modo == MODO_SALVOS && ajustes_fonte_traz_locais(ajustes_fonte_biblioteca())) {
+  if (modo == MODO_SALVOS && ajustes_fonte_traz_locais(fonteSalvos)) {
     for (int k = salvos_n() - 1; k >= 0 && nFiltro < (int)(sizeof filtro / sizeof filtro[0]); k--) {
       const SalvoItem *s = salvos_item(k);
       if (!s || !s->id[0] || cat_indice_por_imdb(s->id) >= 0) continue;
@@ -802,6 +804,17 @@ static void reconstruir(void) {
          contaModo[0], contaModo[1], totalModo, nContados, locaisFora,
          exclTipo, exclMeta, nCelulas, colunas(), nLinhas(), BIB_MAX_LINHAS);
   fflush(stdout);
+}
+
+static void reconstruir(void) {
+  reconstruirFonte(ajustes_fonte_biblioteca());
+}
+
+static void atualizarFonte(void) {
+  int novaFonte = ajustes_fonte_biblioteca();
+  if (novaFonte == fonteSalvos) return;
+  if (modo != MODO_LISTAS) reconstruirFonte(novaFonte);
+  else fonteSalvos = novaFonte;
 }
 
 // Pede a fonte escolhida ao modulo de listas. Cada uma custa no maximo UM
@@ -850,8 +863,9 @@ void biblioteca_encerrar(void) { pediuRelogio = 0; }
 
 int biblioteca_na_lista(int i) {
   // Discovery may mark only one catalog copy; membership belongs to the title.
+  atualizarFonte();
   const CatItem *c = cat_item(i);
-  return c ? salvoNaFonte(c) || cat_imdb_na_lista_fonte(c->imdb) : 0;
+  return c ? salvoNaFonte(c) || cat_imdb_na_lista_na_fonte(c->imdb, fonteSalvos) : 0;
 }
 int biblioteca_comprado(int i) { return (i >= 0 && i < CAT_MAX) ? comprado[i] : 0; }
 void biblioteca_alternar_lista(int i) {
@@ -1211,6 +1225,7 @@ static void biblioteca_atualizar_(float dt, Uint32 agora) {
 #endif
   (void)agora;
   lerPref();
+  atualizarFonte();
   if (teclado_aberto()) teclado_atualizar(dt, agora);
   if (buscaAberta && !teclado_aberto()) {
     // O resultado e CONSUMIDO NA LEITURA (contrato de teclado.h): perguntar
@@ -2267,8 +2282,8 @@ static void desenhaCabecalho(void) {
                              : fonte == FONTE_FIXADAS ? "LOCAL"
                              : "TRAKT")
       : modo == MODO_NUVEM ? (trakt_ativo() ? "TRAKT" : "LOCAL")
-      : ajustes_fonte_biblioteca() == AJ_SALVOS_LOCAL && contalib_tem_conta() ? seloCaixaAlta("Conta")
-      : ajustes_fonte_selo(ajustes_fonte_biblioteca());
+      : fonteSalvos == AJ_SALVOS_LOCAL && contalib_tem_conta() ? seloCaixaAlta("Conta")
+      : ajustes_fonte_selo(fonteSalvos);
     // TRAKT SAI COMO LOGO, nao como palavra. As outras origens continuam texto
     // espacado porque nao ha wordmark delas no pacote — "SIMKL" e "NUVIO"
     // escritos sao o que existe, e inventar um desenho seria pior.
