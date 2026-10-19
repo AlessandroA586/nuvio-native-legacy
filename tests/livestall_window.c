@@ -66,5 +66,40 @@ int main(void) {
   assert(nv_ls_passo(&s,9250,20,1,0,0,0)==NV_LS_ESPERA);
   assert(nv_ls_passo(&s,9500,20.25,1,0,0,0)==NV_LS_NADA);
   assert(!s.pendente && s.tentativa==0);
+  assert(nv_ls_buffer_prazo(0)==8000);
+  assert(nv_ls_buffer_prazo(6000)==30000);
+  assert(nv_ls_buffer_prazo(12000)==36000);
+  assert(nv_ls_buffer_prazo(13000)==39000);
+  assert(nv_ls_buffer_prazo(0xffffffffu)==60000);
+  // Logs69: a 7.8-second segment needed 20.7 seconds. Neither a moving
+  // window nor a delayed READY position sample should cause an early reopen.
+  nv_ls_zerar(&s);nv_ls_passo(&s,1000,30,1,0,0,0);
+  for(unsigned t=1250;t<=22000;t+=250)
+    assert(nv_ls_passo_buf_prazo(&s,t,t<10000?30:0,1,0,0,t-1000,0,36000)==NV_LS_NADA);
+  assert(nv_ls_passo_buf_prazo(&s,22250,0,1,0,0,0,0,36000)==NV_LS_NADA);
+  assert(!s.pendente && s.tentativa==0);
+  assert(nv_ls_passo_buf_prazo(&s,22500,0.25,1,0,0,0,0,36000)==NV_LS_NADA);
+  // Dead downloads remain bounded; READY still cancels the queued restart.
+  nv_ls_zerar(&s);nv_ls_passo(&s,1000,30,1,0,0,0);
+  for(unsigned t=1250;t<37000;t+=250)
+    assert(nv_ls_passo_buf_prazo(&s,t,30,1,0,0,t-1000,0,36000)==NV_LS_NADA);
+  assert(nv_ls_passo_buf_prazo(&s,37000,30,1,0,0,36000,0,36000)==NV_LS_AGENDOU);
+  assert(nv_ls_passo_buf_prazo(&s,38000,30,1,0,0,37000,0,36000)==NV_LS_REABRIR);
+  assert(nv_ls_passo_buf_prazo(&s,38001,30,1,0,0,0,0,36000)==NV_LS_NADA);
+  // The longer allowance is only for buffering, not a frozen decoder.
+  nv_ls_zerar(&s);nv_ls_passo(&s,1000,30,1,0,0,0);
+  assert(nv_ls_passo_buf_prazo(&s,9000,30,1,0,0,0,0,36000)==NV_LS_AGENDOU);
+  nv_ls_zerar(&s);nv_ls_passo(&s,1000,30,1,0,0,0);
+#ifdef NV_TPK
+  assert(nv_ls_passo_buf_prazo(&s,2000,30,1,0,1,1000,0,36000)==NV_LS_REABRIR);
+#else
+  assert(nv_ls_passo_buf_prazo(&s,2000,30,1,0,1,1000,0,36000)==NV_LS_AGENDOU);
+#endif
+  nv_ls_zerar(&s);nv_ls_passo(&s,1000,30,1,0,0,0);
+  assert(nv_ls_passo_buf_prazo(&s,61000,30,1,1,0,60000,0,36000)==NV_LS_NADA);
+  // Malformed durations cannot disable the watchdog.
+  nv_ls_zerar(&s);nv_ls_passo(&s,1000,30,1,0,0,0);
+  assert(nv_ls_passo_buf_prazo(&s,60999,30,1,0,0,59999,0,0xffffffffu)==NV_LS_NADA);
+  assert(nv_ls_passo_buf_prazo(&s,61000,30,1,0,0,60000,0,0xffffffffu)==NV_LS_AGENDOU);
   puts("PASS: sliding live windows keep playing; actual stalls, buffering, EOF, pause and retry limits remain protected");
 }

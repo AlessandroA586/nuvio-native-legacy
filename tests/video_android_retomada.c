@@ -274,5 +274,22 @@ int main(int argc, char **argv) {
   Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL, NULL, EV_LIVE_RECOVERY, 8000, (int)liveSessao);
   assert(!video_recuperando_live());
   puts("ok bounded live recovery, native expiry, stale sessions and stop; no automatic reopen");
+  unsigned segmentSession = video_android_sessao();
+  assert(video_live_segmento_ms()==0);
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL,NULL,EV_LIVE_SEGMENT,12000,(int)segmentSession);
+  assert(video_live_segmento_ms()==12000);
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL,NULL,EV_LIVE_SEGMENT,6000,(int)segmentSession-1);
+  assert(video_live_segmento_ms()==12000);
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL,NULL,EV_LIVE_SEGMENT,INT_MAX,(int)segmentSession);
+  assert(video_live_segmento_ms()==60000);
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL,NULL,EV_LIVE_SEGMENT,-1,(int)segmentSession);
+  assert(video_live_segmento_ms()==0);
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL,NULL,EV_LIVE_SEGMENT,12000,(int)segmentSession);
+  video_parar(); assert(video_live_segmento_ms()==0);
+  assert(video_tocar_posicao("https://example.invalid/next.m3u8",0));
+  assert(video_live_segmento_ms()==0);
+  Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(NULL,NULL,EV_LIVE_SEGMENT,12000,(int)segmentSession);
+  assert(video_live_segmento_ms()==0);
+  puts("ok HLS target duration bounds, stale sessions, stop and next open");
   puts("video Android retomada: PASS (JNI, geracoes, fallback e limites)");
 }
