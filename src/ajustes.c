@@ -944,7 +944,9 @@ static const char *V_IDIOMA[]    = { "Automático", "Português", "English", "Ro
                                      "Italiano", "Nederlands", "Polski", "Türkçe", "Português (Portugal)",
                                      "Svenska", "Dansk", "Norsk", "Čeština", "Slovenčina", "Slovenščina",
                                      "Magyar", "Lietuvių", "Bosanski", "Srpski", "Български", "Ελληνικά",
-                                     "Bahasa Indonesia", "Tiếng Việt", "日本語", "简体中文", "繁體中文" };
+                                     "Bahasa Indonesia", "Tiếng Việt", "日本語", "简体中文", "繁體中文",
+                                     // IDIOMA_AR: text.c junta as letras (bidi.c) na fonte arabe.
+                                     "العربية" };
 static const char *V_ANIM[]      = { "Completas", "Reduzidas" };
 static const char *V_FONTE_UI[]  = { "Inter", "LG Display", "Droid Sans",
                                      "Montserrat", "Roboto",
@@ -3598,6 +3600,7 @@ const char *ajustes_tmdb_idioma(void) {
       case IDIOMA_JA: return "ja-JP";
       case IDIOMA_ZHCN: return "zh-CN";
       case IDIOMA_ZHTW: return "zh-TW";
+      case IDIOMA_AR: return "ar-SA";
       default:        return "pt-BR";
     }
   }

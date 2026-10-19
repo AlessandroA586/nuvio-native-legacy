@@ -2061,7 +2061,12 @@ float txt_tracking(TxtEstilo estilo, const char *s, int r, int g, int b,
   float larg;
   TxtLinha l;
   if (!s || !*s) return 0.0f;
-  l = linhaCache(estilo, s, r, g, b, 255, fonteInterface, 0, &tracking, &larg);
+  // RTL captions must stay a joined, reordered line; tracking individual
+  // codepoints breaks Arabic shaping and reverses the reading order.
+  if (temRtl(s)) {
+    l = txt_linha(estilo, s, r, g, b, 255);
+    larg = (float)txt_largura(estilo, s);
+  } else l = linhaCache(estilo, s, r, g, b, 255, fonteInterface, 0, &tracking, &larg);
   if (x >= 0.0f) txt_desenhar_alpha(l, x, y, alpha);
   return larg;
 }
