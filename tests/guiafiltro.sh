@@ -11,6 +11,9 @@ sources=(tests/guiafiltro_loader.c src/ltv.c src/js.c src/idcanal.c src/dados.c 
   src/fontecache.c src/cachearte.c src/cachedisco.c src/xmltv.c)
 common=(-Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -O1 -g -Wno-macro-redefined -lz)
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST -DGUIAFILTRO_RESET_TEST -o "$work/loader"
+GUIAFILTRO_CASE=category-channel-cap NUVIO_DADOS="$work/target-data" \
+  "$work/loader" "$work/target-data"
+if [ "${1:-}" = category-channel-cap ]; then exit 0; fi
 git show 61647910d:src/guia.c > "$work/collapsed-review.c"
 for platform in tv android; do
   platform_flags=()

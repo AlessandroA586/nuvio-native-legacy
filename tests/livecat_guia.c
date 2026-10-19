@@ -213,7 +213,7 @@ static int stagingBudget(void) {
     c.grupo = "Outros"; c.sug = 1;
     if (sCanalAdd(addon, &c) || sNCanais > 1200) bounded = 0;
     addM3u(&ctx, "Lumen", "", "late-cached-match");
-    if (!bounded || sNCanais != 1201 || sRetidos != 1 ||
+    if (!bounded || sNCanais != 1201 || sPendentes != 1200 ||
         strcmp(sCanais[sNCanais - 1].nome, "Lumen") ||
         !sLtvF[ctx.fl].cortada || !sLtvF[addon].cortada) failures++;
     int before = posts;
@@ -465,7 +465,7 @@ int main(int argc, char **argv) {
   stalkerCarregar();
   sugerirSecoes(); selecionarSecoes();
   if (sNCanais != 1 || strcmp(sCanais[0].nome, "Lumen") ||
-      sRetidos != 1 || posts != 1) {
+      posts != 1) {
     puts("FAIL: selected suggested section gets capacity after an unselected Stalker candidate");
     failures++;
   } else puts("PASS: selected suggested section gets capacity after an unselected Stalker candidate");
@@ -478,7 +478,7 @@ int main(int argc, char **argv) {
   addM3u(&ctx, "Lumen", "", "https://private/2");
   sugerirSecoes(); selecionarSecoes();
   if (sNCanais != 1 || strcmp(sCanais[0].nome, "Lumen") ||
-      sRetidos != 1 || posts != 1) {
+      posts != 1) {
     puts("FAIL: selected suggested section gets capacity after an unselected M3U candidate");
     failures++;
   } else puts("PASS: selected suggested section gets capacity after an unselected M3U candidate");
@@ -487,7 +487,7 @@ int main(int argc, char **argv) {
   cacheFonteLer(source);
   selecionarSecoes();
   if (sNCanais != 1 || strcmp(sCanais[0].nome, "Lumen") ||
-      sRetidos != 1 || posts != 1) {
+      posts != 1) {
     puts("FAIL: cold source cache applies suggested selection before channel capacity");
     failures++;
   } else puts("PASS: cold source cache applies suggested selection before channel capacity");
@@ -497,7 +497,7 @@ int main(int argc, char **argv) {
   sugerirSecoes();
   puts("PASS: source cache preserves fallback; suggested selector selection survives reload without network");
 
-  XtCtx xt = {0}; xt.fl = sFonte(LTV_XTREAM, "", "Xtream", ""); xt.decidido = 1;
+  XtCtx xt = {0}; xt.fl = sFonte(LTV_XTREAM, "", "Xtream", "");
   XtreamItem it = {0};
   it.id = "xtream:1"; it.nome = "Aurora HD"; it.categoria = "Outros";
   it.logo = it.epgId = ""; it.semCategoria = 1;
@@ -518,7 +518,7 @@ int main(int argc, char **argv) {
   addM3u(&ctx, "Nimbo", "", "https://private/6");
   addM3u(&ctx, "Talume", "", "https://private/7");
   sugerirSecoes(); selecionarSecoes();
-  assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "Nimbo") && sRetidos == 1);
+  assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "Nimbo"));
   assert(posts == 2 && sLtvF[ctx.fl].cortada);
   puts("PASS: uncached suggestions filter before quota and retain at most the channel cap");
   failures += xtreamLocalSections();

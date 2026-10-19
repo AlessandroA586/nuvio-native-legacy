@@ -2,7 +2,7 @@
 #include "livetv_regras.h"
 #include <stdlib.h>
 
-#define DUP_CAP 16384   /* potencia de 2; acima de 3/4 cheia, para de agrupar */
+#define DUP_CAP 65536   /* Covers all 30000 bounded candidates before admission. */
 
 static void copiar(char *dst, size_t n, const char *s) {
   size_t i = 0;

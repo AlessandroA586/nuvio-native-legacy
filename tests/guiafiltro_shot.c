@@ -72,7 +72,11 @@ int main(int argc, char **argv) {
   fioVivo = recarregarPend = cargaCancelada = 0;
   seed(GF_PREFERIR_4K); shot(win, argv[1], "grid-prefer-4k");
   seed(GF_SO_4K); shot(win, argv[1], "grid-only-4k");
-  filtrosAbrir(); paFoco = 4; filtrosEvento(SDLK_RIGHT, SDL_GetTicks());
+  // Raw inventory keeps filtered channels available; use a truly empty category.
+  guiafiltro_cat_alternar(&fltLive, "Empty fixture");
+  filtrosAbrir();
+  for (paFoco = 3; paFoco < 3 + fN && strcmp(fIt[paFoco - 3].nome, "Empty fixture"); paFoco++) {}
+  filtrosEvento(SDLK_RIGHT, SDL_GetTicks());
   assert(fNivel && fN == 0); filtrosOk();
   shot(win, argv[1], "panel-empty-channels");
   filtrosVoltar(); assert(!fNivel); painelFechar();

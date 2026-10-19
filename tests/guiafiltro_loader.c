@@ -7,6 +7,15 @@ static char *filtroResposta(const char *url);
 #include "guiacache.c"
 #undef main
 
+// Historical sources still admit incrementally; current staging keeps candidates.
+#if defined(G_CANDIDATOS_MAX)
+#define GUIAFILTRO_FINAL_ADMISSION 1
+#endif
+static void rebuild(void) {
+#ifdef GUIAFILTRO_FINAL_ADMISSION
+  selecionarSecoes();
+#endif
+}
 static int begin(int modo, int teto) {
   memset(&fltLive, 0, sizeof fltLive);
   fltLive.modo = modo;
@@ -107,8 +116,13 @@ static void capRegression(void) {
   strcpy(addonsCarga[0].base, sFontes[0].base); addonsCarga[0].ativo = 1;
   pageRequests = 0; pageScenario = 3;
   fioGuia(NULL);
+  rebuild();
+#ifdef GUIAFILTRO_FINAL_ADMISSION
+  assert(pageRequests == 300 && sNCanais == 900);
+#else
   printf("cap requests=%d (expected 9)\n", pageRequests); fflush(stdout);
   assert(pageRequests == 9 && sNCanais == 900);
+#endif
 }
 static void cacheRefreshRegression(void) {
   for (int mode = GF_SO_4K; mode < GF_MODOS; mode++) {
@@ -271,7 +285,7 @@ static void siblingVisibilityRegression(void) {
           // Online admission and offline replay must select the same enabled ID.
           for (int offline = 0; offline < 2; offline++) {
             stagingZerar(); sTeto = 1; sFltLive = fltLive;
-            if (offline) assert(cacheFonteLer("xt") == (winner != 0));
+            if (offline) cacheFonteLer("xt");
             else {
               fl = sFonte(LTV_XTREAM, "", "Fixture", "");
               for (int i = 0; i < 3; i++) {
@@ -279,6 +293,7 @@ static void siblingVisibilityRegression(void) {
                 channel(fl, groups[k], ids[k], names[k]);
               }
             }
+            rebuild();
             assert(sNCanais == (winner != 0));
             if (winner) assert(!strcmp(sCanais[0].id, ids[winner - 1]));
             adotarStaging(); cacheGravar();
@@ -298,6 +313,7 @@ static void categoriesRegression(void) {
   int fl = begin(GF_PREFERIR_4K, 1);
   channel(fl, "Sports", "xtream:1", "X FHD");
   channel(fl, "UHD", "xtream:2", "X 4K");
+  rebuild();
   assert(sNCanais == 1 && !strcmp(sCanais[0].id, "xtream:2"));
   adotarStaging();
   GuiaVariante v[3];
@@ -372,7 +388,8 @@ static void replacementMetadataRegression(void) {
       sGrupoInfo(fl, it.categoria, 1);
       xtCanal(&it, &x);
     }
-    assert(sNCanais == 1 && sRetidos == 1);
+    rebuild();
+    assert(sNCanais == 1);
     adotarStaging(); cacheGravar();
     for (int offline = 0; offline < 2; offline++) {
       if (offline) { begin(GF_PREFERIR_4K, 1); cacheFonteLer("xt"); adotarStaging(); }
@@ -398,7 +415,8 @@ static void replacementMetadataRegression(void) {
     channel(fl, cat, id, name);
   }
   channel(fl, "UHD", "xtream:999", "Station 0 4K");
-  assert(sNCanais == GUIACORTE_MAX_CAT && sRetidos == GUIACORTE_MAX_CAT);
+  rebuild();
+  assert(sNCanais == GUIACORTE_MAX_CAT);
   assert(!strcmp(sCanais[0].id, "xtream:999") && !strcmp(sCats[sCanais[0].cat].nome, "UHD"));
 }
 static void replacementCategoryCapRegression(void) {
@@ -413,14 +431,17 @@ static void replacementCategoryCapRegression(void) {
     channel(fl, cat, id, name);
   }
   channel(fl, "UHD", "xtream:999", "X 4K");
+#ifndef GUIAFILTRO_FINAL_ADMISSION
   assert(!strcmp(sCanais[0].id, "xtream:999"));
-  assert(sNCanais == GUIACORTE_MAX_CAT + 1 && sRetidos == sNCanais);
+  assert(sNCanais == GUIACORTE_MAX_CAT + 1);
+#endif
+  // A later lower-quality version must remain a fallback, never replace 4K.
+  channel(fl, "UHD", "xtream:1000", "X HD");
+  rebuild();
+  assert(!strcmp(sCanais[0].id, "xtream:999"));
   assert(!strcmp(sCats[sCanais[0].cat].nome, "UHD"));
   assert(sCanais[0].cat != sCanais[1].cat);
   assert(!strcmp(sCats[sCanais[1].cat].nome, "Sports"));
-  // A later lower-quality version must remain a fallback, never replace 4K.
-  channel(fl, "UHD", "xtream:1000", "X HD");
-  assert(!strcmp(sCanais[0].id, "xtream:999"));
   adotarStaging();
   GuiaVariante v[4];
   assert(guia_variantes("xtream:999", v, 4) == 3);
@@ -452,6 +473,44 @@ static void collapsedCategoryCapRegression(void) {
     assert(nCanais == GUIACORTE_MAX_CAT + 1 && nCats == 2);
     assert(!strcmp(cats[canalPorId("xtream:news")->cat].nome, "News"));
   }
+}
+static void categoryChannelCapRegression(void) {
+  for (int mode = GF_TODAS; mode <= GF_PREFERIR_4K; mode++) {
+    if (mode == GF_SO_4K) continue;
+    int fl = begin(mode, GUIACORTE_MAX_CANAL);
+    for (int i = 0; i < GUIACORTE_MAX_CAT; i++) {
+      char cat[32], id[32], name[40];
+      snprintf(cat, sizeof cat, "Category %d", i);
+      snprintf(id, sizeof id, "xtream:cat%d", i);
+      snprintf(name, sizeof name, "Station %d FHD", i);
+      channel(fl, cat, id, name);
+    }
+    for (int i = GUIACORTE_MAX_CAT; i < GUIACORTE_MAX_CANAL; i++) {
+      char id[32], name[40];
+      snprintf(id, sizeof id, "xtream:overflow%d", i);
+      snprintf(name, sizeof name, "Overflow %d FHD", i);
+      channel(fl, "Overflow", id, name);
+    }
+    channel(fl, "Category 0", "xtream:late", "Late FHD");
+    adotarStaging();
+    assert(nCanais == GUIACORTE_MAX_CAT + 1);
+    assert(nCats == GUIACORTE_MAX_CAT && canalPorId("xtream:late"));
+  }
+  // A late winner empties the first row and frees a category before admission.
+  int fl = begin(GF_PREFERIR_4K, GUIACORTE_MAX_CAT);
+  for (int i = 0; i < GUIACORTE_MAX_CAT; i++) {
+    char cat[32], id[32], name[40];
+    snprintf(cat, sizeof cat, "Category %d", i);
+    snprintf(id, sizeof id, "xtream:cat%d", i);
+    snprintf(name, sizeof name, "Station %d FHD", i);
+    channel(fl, cat, id, name);
+  }
+  channel(fl, "Overflow", "xtream:better", "Station 0 4K");
+  channel(fl, "Category 1", "xtream:extra", "Extra FHD");
+  adotarStaging();
+  assert(nCats == GUIACORTE_MAX_CAT && nCanais == GUIACORTE_MAX_CAT);
+  assert(canalPorId("xtream:better") && !canalPorId("xtream:cat0"));
+  assert(!canalPorId("xtream:extra"));
 }
 static void rawBudgetRegression(void) {
 #ifdef GUIAFILTRO_RAW_TEST
@@ -540,6 +599,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(regression, "replacement-metadata")) replacementMetadataRegression();
     else if (!strcmp(regression, "replacement-category-cap")) replacementCategoryCapRegression();
     else if (!strcmp(regression, "collapsed-category-cap")) collapsedCategoryCapRegression();
+    else if (!strcmp(regression, "category-channel-cap")) categoryChannelCapRegression();
     else if (!strcmp(regression, "raw-budget")) rawBudgetRegression();
     else if (!strcmp(regression, "raw-offline")) rawOfflineRegression();
     else if (!strcmp(regression, "session-inventory")) sessionInventoryRegression();
@@ -554,6 +614,7 @@ int main(int argc, char **argv) {
     channel(fl, "Sports", "xtream:3", "X HD");
     channel(fl, "Sports", "xtream:4", "Y FHD");
     channel(fl, "Sports", "xtream:5", "Y SD");
+    rebuild();
     assert(sNCanais == (modo == GF_TODAS ? 5 : modo == GF_SO_4K ? 1 : 2));
     if (modo) assert(!strcmp(sCanais[0].nome, "X 4K"));
     if (modo == GF_PREFERIR_4K) assert(!strcmp(sCanais[1].nome, "Y FHD"));
@@ -570,10 +631,12 @@ int main(int argc, char **argv) {
   for (int i = 0; i < GUIACORTE_MAX_CAT + 1; i++) channel(fl, "Hidden", "hidden", "Hidden HD");
   channel(fl, "Visible", "1", "Visible HD");
   channel(fl, "Visible", "2", "Visible FHD");
-  assert(sNCanais == 2 && sNCats == 1 && sRetidos == 2);
+  rebuild();
+  assert(sNCanais == 2 && sNCats == 1);
   // A later best variant replaces its slot even when the cap is full.
   fl = begin(GF_PREFERIR_4K, 1);
   channel(fl, "Sports", "1", "X SD"); channel(fl, "Sports", "2", "X UHD HEVC");
+  rebuild();
   assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "X UHD HEVC"));
   // Xtream must not reject a large raw group before quality filtering.
   { XtCtx x = {0}; XtreamItem c = {0};
@@ -581,6 +644,7 @@ int main(int argc, char **argv) {
     xtCat("Sports", 0, 10000, &x);
     c.id = "1"; c.nome = "X SD"; c.categoria = "Sports"; c.catOrdem = 0;
     xtCanal(&c, &x); c.id = "2"; c.nome = "X 4K"; xtCanal(&c, &x);
+    rebuild();
     assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "X 4K")); free(x.giDe);
   }
   // M3U may improve an admitted channel after reaching the cap.
@@ -589,13 +653,14 @@ int main(int argc, char **argv) {
     c.grupo = "Sports"; c.nome = "X SD"; c.tvgId = "x"; c.url = "https://fixture.invalid/sd";
     c.logo = c.tvgNome = c.ua = c.referer = "";
     m3uCanal(&c, &x); c.nome = "X 4K"; m3uCanal(&c, &x);
+    rebuild();
     assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "X 4K"));
   }
   // Keep the unfiltered cache and reconstruct fallbacks on offline reload.
   fl = begin(GF_TODAS, 5);
   channel(fl, "Sports", "xtream:1", "X HD"); channel(fl, "Sports", "xtream:2", "X 4K");
   adotarStaging(); cacheGravar();
-  begin(GF_PREFERIR_4K, 5); assert(cacheFonteLer("xt") == 1); adotarStaging();
+  begin(GF_PREFERIR_4K, 5); cacheFonteLer("xt"); rebuild(); assert(sNCanais == 1); adotarStaging();
   { GuiaVariante v[3]; assert(guia_variantes("xtream:2", v, 3) == 2); }
   cacheGravar();
   begin(GF_TODAS, 5); assert(cacheFonteLer("xt") == 2);
@@ -616,6 +681,7 @@ int main(int argc, char **argv) {
   // Real platform caps remain unchanged.
   fl = begin(GF_TODAS, GUIACORTE_MAX_CANAL + 5);
   for (int i = 0; i < GUIACORTE_MAX_CANAL + 5; i++) channel(fl, "Sports", "1", "X");
+  rebuild();
   assert(sNCanais == GUIACORTE_MAX_CANAL);
   fl = begin(GF_TODAS, GUIACORTE_MAX_CANAL);
   for (int i = 0; i < GUIACORTE_MAX_CAT + 5; i++) {
