@@ -5519,12 +5519,56 @@ static void desenhaAssistidoEpisodio(GfxRect th, float a) {
                      selo.y + (h - texto.h) * .5f, a);
 }
 
+// Temporary review switch: unset/invalid keeps the baseline; A/B/C are opt-in.
+static int epMaterial(void) {
+  const char *v = getenv("NUVIO_EP_MATERIAL");
+  return v && v[0] >= 'A' && v[0] <= 'C' && !v[1] ? v[0] : 0;
+}
+
+static void epMaterialCor(const char *arte, float cor[3]) {
+  CorvivaPaleta p;
+  cor[0] = .071f; cor[1] = .075f; cor[2] = .086f;
+  if (!arte) return;
+  tex_publicar_paleta(arte);
+  if (!corviva_paleta(arte, &p) || !p.ok) return;
+  // Reuse the decode palette: no readback, image decode or per-frame sampling.
+  float y = .2126f * p.acento[0] + .7152f * p.acento[1] + .0722f * p.acento[2];
+  for (int i = 0; i < 3; i++)
+    cor[i] = .055f + .085f * y + .065f * (p.acento[i] - y);
+}
+
+static void epMaterialPainel(GfxRect r, float raio, int material,
+                             const float cor[3], float f, float a) {
+  if (material == 'A') {
+    gfx_cor(r, raio, cor[0], cor[1], cor[2], a);
+    // Focus light starts below the image join; the still never changes on focus.
+    gfx_rect(r, 0, GFX_BRILHO_TOPO, 0, 1, .01f, raio,
+             1, 1, 1, .055f * f * a);
+  } else if (material == 'B') {
+    // ponytail: translucent frost approximation; no framebuffer capture or blur.
+    gfx_cor(r, raio, .071f + .025f * f, .075f + .025f * f,
+            .086f + .028f * f, (ajustes_vidro() ? .80f : .96f) * a);
+    gfx_luz_canto(r, raio, r.w * .22f, 0, r.w * .65f,
+                  .72f, .77f, .86f, .04f * a);
+  } else if (material == 'C' && f > .005f) {
+    gfx_cor(r, raio, .071f, .075f, .086f, .65f * f * a);
+    gfx_luz_canto(r, raio, r.w * .22f, 0, r.w * .65f,
+                  .72f, .77f, .86f, .04f * f * a);
+  }
+}
+
 static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   const CatEp *ep = cat_episodio(idx, epAbsoluto(c));
   GfxRect th = { r.x, r.y, r.w, epThumbH() };
   float raioTh = NV_DETP_EP_RAIO / epThumbH();
 
   const float ft = anim_clamp(f, 0.0f, 1.0f);
+  const int material = epMaterial();
+  float materialCor[3];
+  const CatItem *serie = cat_item(idx);
+  const char *arte = (ep && ep->thumb[0]) ? ep->thumb
+                     : (serie && serie->backdrop[0] ? serie->backdrop : NULL);
+  if (!epModerna() && material == 'A') epMaterialCor(arte, materialCor);
   // Extend behind the image's bottom corners: no gap or separator at the join.
   const GfxRect epTile = { r.x, r.y + th.h - NV_DETP_EP_RAIO, r.w,
                            r.h - th.h + NV_DETP_EP_RAIO };
@@ -5537,16 +5581,14 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
       float pw = p.w, ph = p.h, s = 1.0f + 0.03f * ft;
       p.w *= s; p.h *= s;
       p.x -= (p.w - pw) * 0.5f; p.y -= (p.h - ph) * 0.5f;
-      gfx_cor(p, 24.0f / p.h, 1, 1, 1,
-              (ajustes_vidro() ? 0.07f : NV_DETP_EP_PLACA_A) * ft * a);
+      if (material) epMaterialPainel(p, 24.0f / p.h, material, materialCor, ft, a);
+      else gfx_cor(p, 24.0f / p.h, 1, 1, 1,
+                   (ajustes_vidro() ? 0.07f : NV_DETP_EP_PLACA_A) * ft * a);
     }
     foco_anel(th, raioTh, f, a);
     th = foco_zoom(th, f);
   }
 
-  const CatItem *serie = cat_item(idx);
-  const char *arte = (ep && ep->thumb[0]) ? ep->thumb
-                     : (serie && serie->backdrop[0] ? serie->backdrop : NULL);
   // Standard reserves its maximum zoom size; Modern/Refined never zoom.
   const float texW = r.w * (epModerna() || ajustes_borda_foco() ? 1.0f : 1.0f + FOCO_ZOOM);
   GLuint t2 = arte ? tex_obter_larg(arte, texW) : 0;
@@ -5562,9 +5604,13 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   }
   float aArte = (c >= 0 && c < DET_REV_EP) ? revela_arte(&revEp[c], t2 != 0, agora) : 1.0f;
   // Focus changes only the panel: #1f2125 at rest, #26282d in focus.
-  if (epVidroTile)
-    gfx_cor(epTile, 18.0f / epTile.h, (31 + 7 * ft) / 255.0f,
-            (33 + 7 * ft) / 255.0f, (37 + 8 * ft) / 255.0f, a);
+  if (epVidroTile) {
+    if (material) {
+      if (material == 'A') epMaterialCor(arte, materialCor);
+      epMaterialPainel(epTile, 18.0f / epTile.h, material, materialCor, ft, a);
+    } else gfx_cor(epTile, 18.0f / epTile.h, (31 + 7 * ft) / 255.0f,
+                   (33 + 7 * ft) / 255.0f, (37 + 8 * ft) / 255.0f, a);
+  }
   // DESFOCAR NAO ASSISTIDOS (blurUnwatchedEpisodes, #133). O ajuste existia na
   // tela e na conta e nada o lia — o card saia nitido em toda plataforma.
   // "Nao assistido" e tudo que o mapa NAO afirma como visto: inclusive o "nao
@@ -5584,14 +5630,19 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
       vistoep_estado(serie->imdb, ep->temporada, ep->episodio) == 1;
   const int mergedVeil = t2 && (epModerna() || a * gfx_opacidade_grupo >= .999f);
   if (mergedVeil) {
-    gfx_veu_card_atual[0] = epModerna() ? -2.0f : -1.0f;
+    gfx_veu_card_atual[0] = epModerna() ? (material == 'A' ? -3.0f : -2.0f) : -1.0f;
     gfx_veu_card_atual[1] = aArte;
     gfx_veu_card_atual[2] = watched ? .12f : 0.0f;
   }
   if (t2) {
     if (!mergedVeil && aArte < 0.999f) gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
     gfx_tex_aspect_atual = tex_aspecto(arte);
-    gfx_rect(th, t2, GFX_CARD, epModerna() ? 0 : f, 0, 0, raioTh, 0, 0, 0, mergedVeil ? a : a * aArte);
+    // Textured cards bypass UI dimming; match the solid panel tint in HDR.
+    const float hdrTint = gfx_hdr_ui < .999f ? gfx_hdr_ui : 1.0f;
+    gfx_rect(th, t2, GFX_CARD, epModerna() ? 0 : f, 0, 0, raioTh,
+             material == 'A' ? materialCor[0] * hdrTint : 0,
+             material == 'A' ? materialCor[1] * hdrTint : 0,
+             material == 'A' ? materialCor[2] * hdrTint : 0, mergedVeil ? a : a * aArte);
     gfx_tex_aspect_atual = 0.0f;
   } else if (arte && !tex_falhou(arte))
     gfx_esqueleto(th, raioTh, 0.133f, 0.133f, 0.133f, a);
@@ -7740,7 +7791,10 @@ static int epFuros(GfxRect *holes) {
     float x = xItem(SEC_EPISODIOS, c) - scrollSec[SEC_EPISODIOS];
     if (x > NV_TELA_W || x + epCardW() < 0 || !ep || !ep->thumb[0]) continue;
     if (!tex_obter_larg(ep->thumb, epCardW())) continue;
-    GfxRect th = {x, epRowY()-scrollY, epCardW(), epCardH()};
+    // Translucent/absent panels need the existing page background beneath them.
+    int material = epMaterial();
+    GfxRect th = {x, epRowY()-scrollY, epCardW(),
+                  material == 'B' || material == 'C' ? epThumbH() : epCardH()};
     // Keep corners and their antialias fringe; only the solid interior occludes.
     float inset = NV_DETP_EP_RAIO + 2;
     holes[n++] = (GfxRect){th.x+inset, th.y+2, th.w-2*inset, th.h-4};
