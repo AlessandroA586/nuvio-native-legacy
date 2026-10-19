@@ -15,6 +15,24 @@ void __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop) {
 }
 
 static int enabled = 1, posts;
+static char *addonPage;
+static int addonPaginated, addonRequests;
+char *rede_baixar_medido_controle(const char *url, int seconds,
+                                 const char *const *headers,
+                                 const RedeControle *control, RedeMedida *measure) {
+  (void)seconds; (void)headers; (void)control; (void)measure;
+  addonRequests++;
+  if (addonPaginated) {
+    const char *page = strstr(url, "/skip=");
+    int skip = page ? atoi(page + 6) : 0;
+    size_t used = (size_t)snprintf(addonPage, 16384, "{\"metas\":[");
+    for (int i = skip; i < skip + 100 && i <= 1200; i++)
+      used += (size_t)snprintf(addonPage + used, 16384 - used,
+        "%s{\"id\":\"page-%d\",\"name\":\"page pending %04d\"}", i > skip ? "," : "", i, i);
+    snprintf(addonPage + used, 16384 - used, "]}");
+  }
+  return strdup(addonPage);
+}
 int ajustes_livetv_sugerir(void) { return enabled; }
 int stalker_canais_sessao(StalkerCanal *out, int max, uint64_t session) {
   const char *names[] = {"Aurora HD", "Lumen"};
@@ -148,8 +166,8 @@ static int selectedOverflow(void) {
       addM3u(&ctx, name, "", name);
     }
     addM3u(&ctx, "Latechannel", "", "late");
-    if ((!load && sNCanais != 1202) || (load && sNCanais != 2)) {
-      puts("FAIL: P1 retains candidates beyond 1200 and skips cached negatives on reload");
+    if ((!load && sNCanais > 1200) || (load && sNCanais != 2)) {
+      puts("FAIL: P1 candidate storage is bounded and cached negatives free slots on reload");
       failures++;
     }
     int before = posts;
@@ -162,6 +180,130 @@ static int selectedOverflow(void) {
   if (!failures) puts("PASS: P1 later selected channel resolves after 1200 negatives; bounded requests");
   stagingZerar();
   return failures;
+}
+
+static char *unavailableWorker(const char *url, const char *body, int *status) {
+  (void)url; (void)body; posts++; *status = 503;
+  return NULL;
+}
+
+static int stagingBudget(void) {
+  int failures = 0;
+  const char *selected[] = {"Infantil"};
+  const int limits[] = {5000, 8000, 20000};
+  for (int mode = 0; mode < 3; mode++) {
+    stagingZerar(); sTeto = limits[mode];
+    M3uCtx ctx = {0};
+    ctx.fl = sFonte(LTV_M3U, "https://budget.test", "Budget", "");
+    ltv_pref_definir_grupos(ltv_pref(sLtvF[ctx.fl].chave, 1), selected, 1);
+    ctx.nsel = sGruposEscolhidos(ctx.fl, ctx.sel, 256);
+    size_t full = 0;
+    int bounded = 1;
+    for (int i = 0; i < limits[mode] + 100; i++) {
+      char name[32]; snprintf(name, sizeof name, "budget candidate %05d", i);
+      addM3u(&ctx, name, "", name);
+      if (i == 1199) full = ltv_arena_bytes(&sArena);
+      if (i >= 1200 && (sNCanais > 1200 || ltv_arena_bytes(&sArena) != full)) bounded = 0;
+    }
+    // All sources share the candidate budget. Known matches still have their quota.
+    int addon = sFonte(LTV_ADDON, "https://budget-addon.test", "Addon", "");
+    ltv_pref_definir_grupos(ltv_pref(sLtvF[addon].chave, 1), selected, 1);
+    GCru c = {0}; c.id = "pending"; c.nome = "budget addon candidate";
+    c.grupo = "Outros"; c.sug = 1;
+    if (sCanalAdd(addon, &c) || sNCanais > 1200) bounded = 0;
+    addM3u(&ctx, "Lumen", "", "late-cached-match");
+    if (!bounded || sNCanais != 1201 || sRetidos != 1 ||
+        strcmp(sCanais[sNCanais - 1].nome, "Lumen") ||
+        !sLtvF[ctx.fl].cortada || !sLtvF[addon].cortada) failures++;
+    int before = posts;
+    livecat_postar_teste(unavailableWorker);
+    sugerirSecoes();
+    if (posts != before + 1 || sNCanais != 1201) failures++;
+    selecionarSecoes();
+    if (sNCanais != 1 || strcmp(sCanais[0].nome, "Lumen")) failures++;
+  }
+  printf("%s: P1 staging bounds candidates and arena at low-memory/TV/Android limits; late cached match survives\n",
+         failures ? "FAIL" : "PASS");
+  stagingZerar();
+  return failures != 0;
+}
+
+static int addonBudget(void) {
+  int failures = 0;
+  const char *selected[] = {"Infantil"};
+  GFonte source = {0};
+  snprintf(source.base, sizeof source.base, "https://addon-budget.test");
+  snprintf(source.tipo, sizeof source.tipo, "tv");
+  snprintf(source.id, sizeof source.id, "channels");
+  GAddonCarga addon = {0};
+  snprintf(addon.base, sizeof addon.base, "%s", source.base); addon.ativo = 1;
+  addonsCarga = &addon; nAddonsCarga = 1;
+  addonPage = malloc(16384); assert(addonPage);
+  size_t used = (size_t)snprintf(addonPage, 16384, "{\"metas\":[");
+  for (int i = 0; i < 100; i++)
+    used += (size_t)snprintf(addonPage + used, 16384 - used,
+      "%s{\"id\":\"candidate-%d\",\"name\":\"unresolved %04d\"}", i ? "," : "", i, i);
+  snprintf(addonPage + used, 16384 - used, "]}");
+  stagingZerar(); sTeto = 5000;
+  int fl = sFonte(LTV_ADDON, source.base, "Addon", source.base);
+  ltv_pref_definir_grupos(ltv_pref(sLtvF[fl].chave, 1), selected, 1);
+  int novos;
+  // Cached negative page must count as progress, even though it retains no channels.
+  if (lerPagina(&source, fl, 0, &novos) != 100 || novos == 0 || sNCanais != 0) failures++;
+  if (lerPagina(&source, fl, 100, &novos) != 0 || novos != 0) failures++;
+  snprintf(addonPage, 16384, "{\"metas\":[{\"id\":\"late\",\"name\":\"Latechannel\"}]}");
+  if (lerPagina(&source, fl, 200, &novos) != 1 || novos != 1 || sNCanais != 1 ||
+      strcmp(sCanais[0].nome, "Latechannel")) failures++;
+  // A full pending budget must stop allocating when another full page arrives.
+  for (int i = 0; i < 1200; i++) {
+    char name[32]; snprintf(name, sizeof name, "addon pending %04d", i);
+    GCru c = {0}; c.id = c.nome = name; c.grupo = "Outros"; c.sug = 1;
+    sCanalAdd(fl, &c);
+  }
+  used = (size_t)snprintf(addonPage, 16384, "{\"metas\":[");
+  for (int i = 0; i < 100; i++)
+    used += (size_t)snprintf(addonPage + used, 16384 - used,
+      "%s{\"id\":\"overflow-%d\",\"name\":\"addon overflow %04d\"}", i ? "," : "", i, i);
+  snprintf(addonPage + used, 16384 - used, "]}");
+  size_t bytes = ltv_arena_bytes(&sArena);
+  if (lerPagina(&source, fl, 100, &novos) != 100 || novos != 0 ||
+      sNCanais != 1201 || ltv_arena_bytes(&sArena) != bytes || !sLtvF[fl].cortada) failures++;
+  printf("%s: P1 add-on pages respect candidate cap and progress past cached negatives\n", failures ? "FAIL" : "PASS");
+  addonsCarga = NULL; nAddonsCarga = 0; free(addonPage); addonPage = NULL;
+  stagingZerar();
+  return failures != 0;
+}
+
+static int addonPagination(void) {
+  int failures = 0;
+  const char *selected[] = {"Infantil"};
+  GFonte source = {.base = "https://pagination.test", .tipo = "tv", .id = "channels"};
+  GAddonCarga addon = {.base = "https://pagination.test", .ativo = 1};
+  addonsCarga = &addon; nAddonsCarga = 1;
+  addonPage = malloc(16384); assert(addonPage);
+  addonPaginated = 1;
+  livecat_postar_teste(overflowWorker);
+  for (int load = 0; load < 2; load++) {
+    stagingZerar(); sTeto = 5000; addonRequests = 0;
+    int fl = sFonte(LTV_ADDON, source.base, "Addon", source.base);
+    ltv_pref_definir_grupos(ltv_pref(sLtvF[fl].chave, 1), selected, 1);
+    if (!carregarCatalogo(&source, fl) || addonRequests != (load ? 13 : 12) ||
+        sNCanais != (load ? 1 : 1200) || (!load && !sLtvF[fl].cortada)) failures++;
+    int before = posts;
+    sugerirSecoes(); selecionarSecoes();
+    if (sNCanais || posts - before != (load ? 1 : 6)) failures++;
+    if (load) {
+      int resolved = 0;
+      livecat_secao("page pending 1200", &resolved);
+      if (!resolved) failures++;
+    }
+  }
+  printf("%s: P1 add-on pagination stops at candidate budget and reaches later pages on reload\n",
+         failures ? "FAIL" : "PASS");
+  addonPaginated = 0;
+  addonsCarga = NULL; nAddonsCarga = 0; free(addonPage); addonPage = NULL;
+  stagingZerar();
+  return failures != 0;
 }
 
 static int cacheWorkBound(void) {
@@ -381,5 +523,8 @@ int main(int argc, char **argv) {
   failures += xtreamLocalSections();
   failures += cacheWorkBound();
   failures += selectedOverflow();
+  failures += stagingBudget();
+  failures += addonBudget();
+  failures += addonPagination();
   return failures ? 1 : 0;
 }

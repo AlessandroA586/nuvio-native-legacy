@@ -325,6 +325,7 @@ static GCat   *sCats;    static int sNCats, sCapCats;
 static GFonteLtv sLtvF[G_MAX_LTV]; static int sNLtvF;
 static LtvArena sArena;
 static int sTeto, sRetidos;   // teto da carga e quanto ja entrou
+#define G_MAX_PENDENTES 1200  // One load's suggestion budget; separate from selected channels.
 
 enum { G_PARADO, G_BAIXANDO, G_PRONTO, G_FALHOU };
 static int estado = G_PARADO;
@@ -448,8 +449,8 @@ static int sCanalAdd(int f, const GCru *c) {
     if (gi >= 0 && sLtvF[f].gi[gi].n > 0) sLtvF[f].gi[gi].n--;
   }
   if (ns && !pendente && !nomeNaLista(grupo, sel, ns)) return 0;
-  // Network work is bounded by livecat; retain misses so later loads can resolve them.
-  if (!pendente && sRetidos >= sTeto) {
+  // Bound full channel records too; cached negatives free candidate slots on reload.
+  if (pendente ? sNCanais - sRetidos >= G_MAX_PENDENTES : sRetidos >= sTeto) {
     sLtvF[f].cortada = 1; return 0;
   }
   cat = sCatDe(f, grupo);
@@ -1144,10 +1145,11 @@ static void sondaManifestos(void) {
 
 // Uma pagina de catalogo de addon para a fonte `fl`. Devolve quantos METAS a
 // pagina trouxe — nao quantos entraram: uma fonte pode repetir canais de outra,
-// e contar so os novos encerraria a pagina uma rodada cedo. `novos` recebe
-// quantos entraram de fato — a diferenca e o que separa "acabou" de "catalogo
-// que ignora skip e repete a mesma pagina".
+// e contar so os novos encerraria a pagina uma rodada cedo.
+// `novos` includes cached resolutions skipped by selection, so reloads can
+// reach later candidates. Identical consecutive pages stop providers ignoring skip.
 static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
+  static unsigned long ultimaPagina;
   char url[NV_ADDON_PEDIDO_MAX];
   char *corpo;
   const char *p, *sel[256];
@@ -1163,6 +1165,9 @@ static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
   if (!cargaAtual() || !cargaBaseLigada(f->base)) return 0;
   corpo = cargaBaixar(url);
   if (!corpo || !cargaAtual()) { free(corpo); return 0; }
+  unsigned long pagina = ltv_hash(corpo);
+  if (skip > 0 && pagina == ultimaPagina) { free(corpo); return 0; }
+  ultimaPagina = pagina;
   p = js_array(corpo, NULL, "metas");
   while (p) {
     const char *fim = js_fim(p);
@@ -1202,12 +1207,32 @@ static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
       { int gi = sGrupoInfo(fl, gen, 1);
         if (nsel && !(semCat && ajustes_livetv_sugerir()) && !nomeNaLista(gen, sel, nsel)) { if (gi >= 0) sLtvF[fl].gi[gi].entra = 0; }
         else if (sCanalAdd(fl, &c)) (*novos)++;
-        else if (gi >= 0 && sRetidos >= sTeto) sLtvF[fl].gi[gi].entra = 0; }
+        else {
+          int resolvido = 0;
+          if (semCat && ajustes_livetv_sugerir()) livecat_secao(nome, &resolvido);
+          // Cached negatives must not hide candidates on later pages after reload.
+          if (resolvido) (*novos)++;
+          if (gi >= 0 && sRetidos >= sTeto) sLtvF[fl].gi[gi].entra = 0;
+        } }
     }
     p = js_prox(fim);
   }
   free(corpo);
   return n;
+}
+
+static int carregarCatalogo(const GFonte *f, int fl) {
+  int ok = 0;
+  for (int skip = 0; cargaAtual() && sRetidos < sTeto &&
+       sNCanais - sRetidos < G_MAX_PENDENTES; skip += G_PAGINA) {
+    int novos = 0, n = lerPagina(f, fl, skip, &novos);
+    if (n <= 0) break;
+    ok = 1;
+    if (n < G_PAGINA || novos == 0) break;
+  }
+  if (sRetidos >= sTeto || sNCanais - sRetidos >= G_MAX_PENDENTES)
+    sLtvF[fl].cortada = 1;
+  return ok;
 }
 
 // --- Stalker, Xtream e M3U para o staging ---------------------------------------
@@ -1744,17 +1769,8 @@ static void *fioGuia(void *u) {
   // ADDONS: uma fonte da barra por addon (base), com todos os catalogos dele.
   for (i = 0; cargaAtual() && i < sNFontes; i++) {
     int fl = sFonte(LTV_ADDON, sFontes[i].base, nomeDoAddon(sFontes[i].base), sFontes[i].base);
-    int skip, okC = 0;
     if (fl < 0) continue;
-    for (skip = 0; cargaAtual() && sRetidos < sTeto; skip += G_PAGINA) {
-      int novos = 0, n = lerPagina(&sFontes[i], fl, skip, &novos);
-      if (n <= 0) break;
-      okC = 1;
-      // Pagina cheia que nao trouxe nada novo e catalogo que ignora `skip`.
-      if (n < G_PAGINA || novos == 0) break;
-    }
-    if (sRetidos >= sTeto) sLtvF[fl].cortada = 1;
-    if (okC) ok = 1;
+    if (carregarCatalogo(&sFontes[i], fl)) ok = 1;
   }
   // Fonte de addon sem canal nenhum (todos os catalogos falharam): o cache.
   for (i = 0; i < sNFontes; i++) {
