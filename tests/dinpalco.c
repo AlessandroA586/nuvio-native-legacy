@@ -4,8 +4,6 @@
 #undef main
 #undef ajustes_fundo_din
 extern int ajustes_fundo_din(void);
-void gfx_recorte(float x, float y, float w, float h) { (void)x; (void)y; (void)w; (void)h; }
-void gfx_sem_recorte(void) {}
 
 int main(void) {
   assert(ajustes_fundo_din() == 0); // Fresh device: Gray, independent of layout.
