@@ -457,6 +457,8 @@ static int intPreparar(void) {
 
 void gpun_quadro_inicio(void) {
   intLigado = 0;
+  // A granted 720p drawable is already scaled by the platform compositor.
+  if (nivel >= 3 && telaW <= 1280 && telaH <= 720) return;
   if ((nivel < 3 && !alvo1080) || !intPreparar()) return;
   glBindFramebuffer(GL_FRAMEBUFFER, intFbo);
   glViewport(0, 0, intW, intH);
@@ -482,7 +484,10 @@ void gpun_quadro_fim(void) {
     glDisable(GL_BLEND);   // copia RGB E alpha exatos (o furo do video)
     gfx_tex_aspect_atual = 0.0f;
     gfx_opacidade_grupo = 1.0f;
-    gfx_rect(tela, intTex, GFX_COPIA, 0, 0.0f, 1.0f, 0.0f, 1, 1, 1, 1);
+    gfx_rect(tela, intTex, GFX_COPIA, 0,
+             nivel >= 3 && !alvo1080 ? (float)intW : 0.0f,
+             nivel >= 3 && !alvo1080 ? (float)intH : 1.0f,
+             0.0f, 1, 1, 1, 1);
     // Solta a textura do alvo: no quadro seguinte ela volta a ser o alvo de
     // desenho, e ficar ligada para leitura ao mesmo tempo e o laco de
     // realimentacao que o GLES deixa indefinido.

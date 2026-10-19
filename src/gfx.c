@@ -1314,7 +1314,18 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // furo de alpha 0 por onde o plano de video aparece tem de sobreviver.
   "void main(){\n"
   "  vec2 uv = (uPar.y > 0.5) ? vec2(vUv.x, 1.0 - vUv.y) : vUv;\n"
-  "  gl_FragColor = texture2D(uTex, uv);\n"
+  "  vec4 c = texture2D(uTex, uv);\n"
+  // Only 720p supplies source dimensions. Alpha keeps the original sample.
+  // Small unsharp kernel: five fetches; no highp/floor dependency on Mali-4xx.
+  "  if (uPar.x > 1.0) {\n"
+  "    vec2 d = 1.0 / uPar;\n"
+  "    vec3 n = texture2D(uTex, uv + vec2(d.x, 0.0)).rgb\n"
+  "           + texture2D(uTex, uv - vec2(d.x, 0.0)).rgb\n"
+  "           + texture2D(uTex, uv + vec2(0.0, d.y)).rgb\n"
+  "           + texture2D(uTex, uv - vec2(0.0, d.y)).rgb;\n"
+  "    c.rgb = clamp(c.rgb * 1.8 - n * 0.2, 0.0, 1.0);\n"
+  "  }\n"
+  "  gl_FragColor = c;\n"
   "}\n",
 
   // GFX_HERO_CAM / GFX_HERO_CHEIO_CAM — AS CAMADAS DO DESTAQUE NUMA PASSADA

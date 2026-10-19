@@ -1197,7 +1197,11 @@ int main(int argc, char **argv) {
 #ifdef NV_ANDROID
   // No Android a janela do SDL tem o tamanho da SUPERFICIE: pedir 3840x2160 ao
   // SDL_CreateWindow nao muda nada. Ver android_pedir_superficie.
-  if (pedeW > (int)NV_TELA_W) android_pedir_superficie(pedeW, pedeH);
+  // SurfaceView keeps its full-screen View; only its buffer becomes 720p.
+  // NvPlayer maps logical coordinates to its own View, independent of this buffer.
+  // If denied, keep the drawable and gpunivel uses its internal FBO fallback.
+  if (resolucaoDaTv() && ajustes_720p()) android_pedir_superficie(1280, 720);
+  else if (pedeW > (int)NV_TELA_W) android_pedir_superficie(pedeW, pedeH);
 #endif
   const char *windowTitle = "Nuvio";
 #ifdef NV_LINUX_DESKTOP
