@@ -682,16 +682,16 @@ typedef enum {
   AJ_LIVETV_SUGERIR,   // Live TV: Jev suggests sections for channels with none (livecat.h); default on; local, append-only
   AJ_AUDIO_OFFSET,     // #578: device-local converted audio offset, append-only
   AJ_XTREAM_CONEXOES,  // Stored with this IPTV account, not global settings.
-  AJ_AMPLIAR_UI,      // Device-local output scaler, append-only; App (4K) hardware
+  AJ_AMPLIAR_UI,      // Device-local output scaler, append-only; App (4K) hardware by default.
   AJ_GUIA_FONTE, AJ_GUIA_RECARREGAR, AJ_M3U_URL, AJ_M3U_EPG, AJ_M3U_LIMPAR,
   AJ_IPTV_CONTA, AJ_IPTV_ADD_XTREAM, AJ_IPTV_ADD_M3U, AJ_IPTV_ADD_STALKER,
   AJ_IPTV_NOME, AJ_IPTV_ATIVA, AJ_IPTV_REMOVER,
   AJ_IPTV_LISTA_XTREAM, AJ_IPTV_LISTA_M3U, AJ_IPTV_LISTA_STALKER,
   AJ_IPTV_ACOES, AJ_IPTV_EXCLUIR, AJ_IPTV_SALVAR, AJ_IPTV_CANCELAR,
   AJ_GUIA_ORDEM, AJ_IPTV_ORDEM, AJ_EPG_MEMORIA, AJ_GUIA_CATEGORIAS,
-  AJ_BIB_HOME,        // #507: Library row on Home; default off; per player
-  AJ_AMPLIACAO_ALGO,  // Device-local upscaling algorithm, append-only; per player
-  AJ_AMPLIACAO_NITIDEZ, // Device-local upscaling RCAS sharpness, append-only; per player
+  AJ_BIB_HOME,        // #507: Library row on Home; default off; per profile on this device, append-only
+  AJ_AMPLIACAO_ALGO,  // Device-local upscaling algorithm, append-only; automatic by default.
+  AJ_AMPLIACAO_NITIDEZ, // Device-local RCAS sharpness for SGSR sharp / FSR 1, append-only.
   AJ_HDR_INTERFACE,    // Experimental Android HDR output; device-local
   AJ_N
 } OpcaoId;
