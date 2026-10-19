@@ -258,7 +258,8 @@ static int ajCenaSecao(int op) {
     case AJ_JF_LIGADO: case AJ_JF_SERVIDOR: case AJ_JF_ENTRAR: case AJ_JF_SAIR: case AJ_EM_SERVIDOR:
     case AJ_EM_ENTRAR: case AJ_EM_SAIR: case AJ_PX_ENTRAR: case AJ_PX_SERVIDOR: case AJ_PX_SAIR:
       return AJC_CON_SERVIDORES;
-    case AJ_AMPLIAR_UI: case AJ_RESOLUCAO: case AJ_QUALIDADE_IMG: case AJ_GPU_EFEITOS: case AJ_NAV_RAPIDA: return AJC_DES_TELA;
+    case AJ_AMPLIAR_UI: case AJ_AMPLIACAO_ALGO: case AJ_AMPLIACAO_NITIDEZ:
+    case AJ_RESOLUCAO: case AJ_QUALIDADE_IMG: case AJ_GPU_EFEITOS: case AJ_NAV_RAPIDA: return AJC_DES_TELA;
     case AJ_MEDIDOR: case AJ_DIAGNOSTICO: case AJ_VELOCIDADE: return AJC_DES_DIAG;
     case AJ_GUIA: return AJC_SOB_GUIA;
     case AJ_VERSAO_I: case AJ_ATUALIZAR: return AJC_SOB_APP;

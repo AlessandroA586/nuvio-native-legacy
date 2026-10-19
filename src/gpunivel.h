@@ -76,6 +76,9 @@ int gpun_upscale_suportado(void);
 // Pass panel eligibility + opt-in from ajustes_ampliar_app(); this gate rejects
 // unsupported GPUs (Mali-4xx/no-highp), even on an eligible 4K panel.
 void gpun_ampliar_app(int app);
+// Settings > This TV: upscaling algorithm (0 = automatic) and RCAS sharpness
+// 0..4. Read every frame; only used while gpun_ampliar_app upscales.
+void gpun_ampliacao(int algo, int nitidez);
 // Preview resize: keep the selected GPU level and rebuild its internal target.
 // Called on the drawing thread before beginning the next frame; other builds ignore it.
 void gpun_redimensionar(int w, int h);

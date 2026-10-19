@@ -28,19 +28,6 @@
 // Scalar texel-center reads replace textureGather (no GLES3/extensions).
 // Original RGBA mode uses green as its edge signal. Keep bilinear alpha.
 // uPar = source dimensions, or (0,1) for bilinear. vUv is the existing quad UV.
-// Tunables: set before including to override defaults
-#ifndef NV_SGSR_EDGE_THRESHOLD
-#define NV_SGSR_EDGE_THRESHOLD_NUM 8
-#define NV_SGSR_EDGE_THRESHOLD_DEN 255
-#endif
-#ifndef NV_SGSR_EDGE_SHARPNESS
-#define NV_SGSR_EDGE_SHARPNESS_VAL 2.181818
-#endif
-#ifndef NV_SGSR_DELTA_CLAMP
-#define NV_SGSR_DELTA_CLAMP_NUM 23
-#define NV_SGSR_DELTA_CLAMP_DEN 255
-#endif
-
 #define NV_SGSR_SHADER \
 "// Copyright (c) 2025, Qualcomm Innovation Center, Inc. All rights reserved.\n" \
 "// SPDX-License-Identifier: BSD-3-Clause; full terms in src/gfx_sgsr.h\n" \
@@ -69,7 +56,7 @@
 "    left.z = texture2D(uTex,coord-vec2(0.0,d.y)).g;\n" \
 "    left.w = texture2D(uTex,coord-d).g;\n" \
 "    float vote = abs(left.z-left.y)+abs(color.g-left.y)+abs(color.g-left.z);\n" \
-"    if (vote > " NV_STR(NV_SGSR_EDGE_THRESHOLD_NUM) ".0/" NV_STR(NV_SGSR_EDGE_THRESHOLD_DEN) ".0) {\n" \
+"    if (vote > 8.0/255.0) {\n" \
 "      vec4 right, ud;\n" \
 "      right.x = texture2D(uTex,coord+vec2(d.x,0.0)).g;\n" \
 "      right.y = texture2D(uTex,coord+vec2(2.0*d.x,0.0)).g;\n" \
@@ -82,7 +69,7 @@
 "      float mean = (left.y+left.z+right.x+right.w)*0.25;\n" \
 "      left -= mean; right -= mean; ud -= mean;\n" \
 "      float sum = dot(abs(left)+abs(right)+abs(ud),vec4(1.0));\n" \
-"      float stddev = " NV_STR(NV_SGSR_EDGE_SHARPNESS_VAL) "/max(sum,0.0001);\n" \
+"      float stddev = 2.181818/max(sum,0.0001);\n" \
 "      vec2 w = srWeight(p+vec2(0.0,1.0),ud.x,stddev);\n" \
 "      w += srWeight(p+vec2(-1.0,1.0),ud.y,stddev);\n" \
 "      w += srWeight(p+vec2(-1.0,-2.0),ud.z,stddev);\n" \
@@ -98,70 +85,7 @@
 "      float lo = min(min(left.y,left.z),min(right.x,right.w));\n" \
 "      float hi = max(max(left.y,left.z),max(right.x,right.w));\n" \
 "      float y = clamp(2.0*w.y/w.x,lo,hi);\n" \
-"      float delta = clamp(y-(color.g-mean),-" NV_STR(NV_SGSR_DELTA_CLAMP_NUM) ".0/" NV_STR(NV_SGSR_DELTA_CLAMP_DEN) ".0," NV_STR(NV_SGSR_DELTA_CLAMP_NUM) ".0/" NV_STR(NV_SGSR_DELTA_CLAMP_DEN) ".0);\n" \
-"      color.rgb = clamp(color.rgb+delta,0.0,1.0);\n" \
-"    }\n" \
-"  }\n" \
-"  gl_FragColor = color;\n" \
-"}\n"
-
-#define NV_SGSR_SHARP_SHADER \
-"// SGSR Sharp variant with stronger edge detection and clamping\n" \
-"#if defined(GL_ES) && (!defined(GL_FRAGMENT_PRECISION_HIGH) || defined(NV_SGSR_MEDIUMP))\n" \
-"#define SRP mediump\n" \
-"#else\n" \
-"#define SRP highp\n" \
-"#endif\n" \
-"vec2 srWeight(vec2 d, float c, float stddev) {\n" \
-"  float x = dot(d,d)*0.55 + clamp(abs(c)*stddev,0.0,1.0);\n" \
-"  float a = x-4.0, b = x*a-a;\n" \
-"  return vec2(1.0,c)*(b*a*a);\n" \
-"}\n" \
-"void main() {\n" \
-"  SRP vec2 uv = uPar.y > 0.5 ? vec2(vUv.x,1.0-vUv.y) : vUv;\n" \
-"  vec4 color = texture2D(uTex,uv);\n" \
-"  if (uPar.x > 1.0) {\n" \
-"    SRP vec2 d = 1.0/uPar;\n" \
-"    SRP vec2 pixel = uv*uPar + vec2(-0.5,0.5);\n" \
-"    SRP vec2 base = floor(pixel);\n" \
-"    vec2 p = pixel-base;\n" \
-"    SRP vec2 coord = (base+0.5)*d;\n" \
-"    vec4 left;\n" \
-"    left.x = texture2D(uTex,coord+vec2(-d.x,0.0)).g;\n" \
-"    left.y = texture2D(uTex,coord).g;\n" \
-"    left.z = texture2D(uTex,coord-vec2(0.0,d.y)).g;\n" \
-"    left.w = texture2D(uTex,coord-d).g;\n" \
-"    float vote = abs(left.z-left.y)+abs(color.g-left.y)+abs(color.g-left.z);\n" \
-"    if (vote > 4.0/255.0) {\n" \
-"      vec4 right, ud;\n" \
-"      right.x = texture2D(uTex,coord+vec2(d.x,0.0)).g;\n" \
-"      right.y = texture2D(uTex,coord+vec2(2.0*d.x,0.0)).g;\n" \
-"      right.z = texture2D(uTex,coord+vec2(2.0*d.x,-d.y)).g;\n" \
-"      right.w = texture2D(uTex,coord+vec2(d.x,-d.y)).g;\n" \
-"      ud.x = texture2D(uTex,coord+vec2(0.0,-2.0*d.y)).g;\n" \
-"      ud.y = texture2D(uTex,coord+vec2(d.x,-2.0*d.y)).g;\n" \
-"      ud.z = texture2D(uTex,coord+vec2(d.x,d.y)).g;\n" \
-"      ud.w = texture2D(uTex,coord+vec2(0.0,d.y)).g;\n" \
-"      float mean = (left.y+left.z+right.x+right.w)*0.25;\n" \
-"      left -= mean; right -= mean; ud -= mean;\n" \
-"      float sum = dot(abs(left)+abs(right)+abs(ud),vec4(1.0));\n" \
-"      float stddev = 2.727273/max(sum,0.0001);\n" \
-"      vec2 w = srWeight(p+vec2(0.0,1.0),ud.x,stddev);\n" \
-"      w += srWeight(p+vec2(-1.0,1.0),ud.y,stddev);\n" \
-"      w += srWeight(p+vec2(-1.0,-2.0),ud.z,stddev);\n" \
-"      w += srWeight(p+vec2(0.0,-2.0),ud.w,stddev);\n" \
-"      w += srWeight(p+vec2(1.0,-1.0),left.x,stddev);\n" \
-"      w += srWeight(p+vec2(0.0,-1.0),left.y,stddev);\n" \
-"      w += srWeight(p,left.z,stddev);\n" \
-"      w += srWeight(p+vec2(1.0,0.0),left.w,stddev);\n" \
-"      w += srWeight(p+vec2(-1.0,-1.0),right.x,stddev);\n" \
-"      w += srWeight(p+vec2(-2.0,-1.0),right.y,stddev);\n" \
-"      w += srWeight(p+vec2(-2.0,0.0),right.z,stddev);\n" \
-"      w += srWeight(p+vec2(-1.0,0.0),right.w,stddev);\n" \
-"      float lo = min(min(left.y,left.z),min(right.x,right.w));\n" \
-"      float hi = max(max(left.y,left.z),max(right.x,right.w));\n" \
-"      float y = clamp(2.0*w.y/w.x,lo,hi);\n" \
-"      float delta = clamp(y-(color.g-mean),-40.0/255.0,40.0/255.0);\n" \
+"      float delta = clamp(y-(color.g-mean),-23.0/255.0,23.0/255.0);\n" \
 "      color.rgb = clamp(color.rgb+delta,0.0,1.0);\n" \
 "    }\n" \
 "  }\n" \
