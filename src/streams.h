@@ -253,6 +253,12 @@ int stream_falha_aplicar(int indice, unsigned lista, int servico, const char *ur
 int stream_falha_aplicar_sessao(int indice, unsigned lista, int servico, const char *url, uint64_t sessao);
 // Renova somente a rota ja escolhida, sem reservar outra tentativa na
 // politica. O consumidor aceita e publica a URL depois de validar o alvo.
+// Fresh, independent addon query for the same VOD file; never replaces the list.
+struct AddonsConsulta;
+int stream_vod_renovar(const struct AddonsConsulta *consulta, const char *id, const char *tipo,
+                       int indice, unsigned lista, int (*cancelado)(void *), void *ctx,
+                       Stream *saida);
+int stream_vod_renovada_aplicar(int indice, unsigned lista, const Stream *fonte, uint64_t sessao);
 int stream_falha_renovar(int indice, unsigned lista, int servico,
                          int (*cancelado)(void *), void *ctx, char *url, unsigned tam);
 void stream_falha_identidade(const Stream *fonte, char *dst, unsigned tam);
