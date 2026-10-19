@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T18:48:01-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T19:48:49-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -104,6 +104,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   is slow. All platforms. Refs #545 #551 #552 #504, `26b9c635b`, `1c9043ed0`, `455135df2`, `cbcf467f5`, `27988615e`.
 
 ### New
+
+- **PGS subtitles on LG webOS**: Watch BD/remux releases with image subtitles through the app overlay when the native player does not expose them. Platforms: webOS. Refs PR #593, @I0-oX, `3fb7c9b3f`, merge `efb9af469`.
+
+- **Prioritize the add-on source order**: Choose “From the addon” to keep eligible sources in provider order across the list, autoplay, next episode and failover. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #618, PR #620, @ghbarker, `e3ff9726d`, merge `ba27808d5`.
 
 - **Saved titles on Home**: Enable the optional Library row below Continue Watching for the current profile on this device. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #507, fcd611bad.
 - **Experimental HDR interface**: Opt into Android HDR interface output with verified surface support, HDR10 metadata and SDR fallback when unavailable. Platforms: Android. Refs 855860239, 9f8202c87, 184e6964a, e5fc04b4a, 2e0113eff, ecb3c201a.
@@ -238,6 +242,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Embedded ASS in large remux files**: Discover embedded ASS subtitles even when large MKV track headers exceed the initial probe, without matching hidden image tracks to the wrong text track. Platforms: webOS. Refs PR #593, @I0-oX, `44d19129e`, `b738d5b14`.
 
 - **Clear posters and reliable scaling on C9**: Artwork requests match output pixels, while corrected shader slots prevent grey output and preserve video transparency across scaling filters. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `366f2d0b4`, `041ae37a1`, merges `952b13d49`, `0e980dd9e`.
 
@@ -550,6 +556,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Community
 
+- **Remux subtitles from @I0-oX**: PR #593 improves embedded ASS discovery and adds PGS overlay playback on LG TVs. Platforms: webOS. Refs PR #593, `44d19129e`, `3fb7c9b3f`.
+
+- **Add-on order from @ghbarker**: PR #620 adds an explicit source-order preference while preserving the existing priority modes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #618, PR #620, `e3ff9726d`.
+
 - **Source audio and subtitle language labels**: Sources display their declared audio and subtitle languages to help choose the right release. Platforms: webOS, Android, Samsung .tpk, WASM. Refs @ghbarker, PR #487, `e4fb8c085`, `agente/205-pr487v2`, merge `abf3c0fa8`.
 
 - **Live playback and source controls from @ghbarker**: Live sources gain filter overrides and Android HLS stall recovery. Platforms: webOS, Android, Samsung .tpk, WASM; HLS recovery on Android. Refs PR #587, PR #597, `957a5040e`, `3c8664c62`, merges `8f1328be0`, `f22d70933`.
@@ -570,6 +580,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   `f6618db6b`, `22f3d22bb`).
 
 ### Internal
+
+- **Remux subtitle regression coverage**: Track-header relayout and subtitle matching checks cover complete codec headers and rejected image-track ordinals. Platforms: webOS, Android, Samsung .tpk, WASM. Refs PR #593, `205c14995`, `82a3feef1`, `6ab0c1132`.
 
 - **Integration checks and session fixtures**: Restore settings and GPU checks, refresh session fixtures and retain the reverted Imersiva experiment as history only. Platforms: webOS, Android, Samsung .tpk, WASM. Refs eae75315f, db2e3a4ca, 1f88b9e4e, 71fbc7453, eef92bc2f, 281e4431e, c6fb8a58c, b24a2cc5d, 1891742bd, 2a5015dce, 72ad3345e.
 - **Optional session linkage**: Isolated builds use weak defaults for optional session collaborators and capture probe state under the matching session identity. Platforms: webOS, Android, Samsung .tpk, WASM. Refs a4c9bc039, d50ca08d0.
@@ -672,6 +684,12 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   generation token / "Play from beginning" (`5195cd14f`, `1165245fc`, `075fec9a4`, `6a6d5b71b`).
 
 ### Pending (not integrated yet)
+
+- **Episode card materials**: Apply the selected Modern material and restore the requested Standard card presentation; the follow-up job is running. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-epcor1019`.
+
+- **Public episode reviews**: Load public episode ratings and comments without requiring a linked Trakt account and share context-menu material; review is OK, merge remains pending in the supplied branch snapshot. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-epreview1019`.
+
+- **Friends artwork recovery**: Seed missing Friends titles through the shared artwork pipeline; review is OK, merge remains pending in the supplied branch snapshot. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-amigosarte`.
 
 
 
