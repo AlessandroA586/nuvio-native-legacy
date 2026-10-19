@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T12:52:11-03:00, HEAD `41280e41d`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T17:48:14-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -16,6 +16,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 ## Release features (English)
 
 ### Highlights
+
+- **Arabic menus and joined captions**: Use the complete Arabic interface with joined right-to-left captions and translated Live TV and scaling controls. Platforms: webOS, Android, Samsung .tpk, WASM. Refs 07deddb4e, ec32d315a, 45016c003, 02da9933e, a427430e1.
+- **Choose your upscaling filter**: Select Automatic, SGSR, SGSR sharp, FSR 1, Lanczos-2 or Bilinear on supported GPUs, with live sharpness control for the sharpened filters. Platforms: webOS, Android, Samsung .tpk, WASM. Refs 5fd15e357, d7f22f1a3, 2c5e6afbb, 5869dccb5.
 
 - **Dynamic Stage and Split stay consistent**: Dynamic Home uses Modern Stage and Split geometry while retaining the saved layout identity, background choices and correct fullscreen trailer eligibility. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `1d3728312`, `e9354d12d`, `7d6317655`, merge `dfb22a56e`.
 
@@ -101,6 +104,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   is slow. All platforms. Refs #545 #551 #552 #504, `26b9c635b`, `1c9043ed0`, `455135df2`, `cbcf467f5`, `27988615e`.
 
 ### New
+
+- **Saved titles on Home**: Enable the optional Library row below Continue Watching for the current profile on this device. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #507, fcd611bad.
+- **Experimental HDR interface**: Opt into Android HDR interface output with verified surface support, HDR10 metadata and SDR fallback when unavailable. Platforms: Android. Refs 855860239, 9f8202c87, 184e6964a, e5fc04b4a, 2e0113eff, ecb3c201a.
 
 - **IPTV connection limits**: Set an account connection policy and serialize Android stream changes to respect limited subscriptions. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `5cf11bf8c`.
 
@@ -232,6 +238,15 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **HDR playback keeps controls visible**: Android keeps the interface above video when experimental HDR output is enabled. Platforms: Android. Refs b11dc487a.
+- **Playback speed keeps audio working**: Audio is decoded to PCM for playback speed changes. Platforms: Android. Refs #591, 5f6436ecd.
+- **Trailers follow your audio preference**: Automatic trailer audio uses the playback language preference instead of the interface language. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #564, 22d34f13b.
+- **Dynamic Home keeps its sidebar**: The Apple TV sidebar returns with a streaming hint inside the sidebar and reduced-motion support. Platforms: webOS, Android, Samsung .tpk, WASM. Refs b6ddc0fa2.
+- **Live TV keeps provider group order**: Guide categories retain their source order when alphabetical sorting is disabled, and older Tizen builds retain IPTV account storage. Platforms: webOS, Android, Samsung .tpk, WASM. Refs 5aa851535, f083e4ba5.
+- **Profile changes isolate background work**: Switching profiles resets stale interactions and keeps requests, credentials and provider settings scoped to their original session; logout clears account provider files. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #488, 5f12d3971, b94f2b9af, a05864ce1.
+- **Social suggestions survive anonymous startup**: Locally cached Social suggestions load without login while other accounts remain isolated. Platforms: webOS, Android, Samsung .tpk, WASM. Refs 9f1043aa4.
+- **Simkl history stays ordered**: Episode history posts remain serialized so fallback scrobbles wait for the history request. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #459, 3fdc8b243.
 
 - **Video remains visible on Tizen 6.5**: The main window stays transparent so native video can appear behind the interface. Platforms: Samsung .tpk. Refs #612, `24876fd76`, merge `41280e41d`.
 
@@ -550,6 +565,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Internal
 
+- **Integration checks and session fixtures**: Restore settings and GPU checks, refresh session fixtures and retain the reverted Imersiva experiment as history only. Platforms: webOS, Android, Samsung .tpk, WASM. Refs eae75315f, db2e3a4ca, 1f88b9e4e, 71fbc7453, eef92bc2f, 281e4431e, c6fb8a58c, b24a2cc5d, 1891742bd, 2a5015dce, 72ad3345e.
+- **Optional session linkage**: Isolated builds use weak defaults for optional session collaborators and capture probe state under the matching session identity. Platforms: webOS, Android, Samsung .tpk, WASM. Refs a4c9bc039, d50ca08d0.
+
 - **AIOStreams integration research and 2.1 controls plan**: Capability matrix, user journeys and 2.1 control planning document AIOStreams integration and reverted experimental Imersiva home trials. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-aioestudo`, `agente/205-aiohub`, merges `185a01001`, `d649382e3`, `b1c40966f`, `1dcf51b83`, `74cea5346`, revert `72ad3345e`.
 
 - **Regression coverage and release tracking**: Offline regression checks and tracking document playlist recovery, library behavior, episode rendering, PIN profiles and platform investigation. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #607; tracking and test commits, `902a31ce2`, `72795e98a`, `97ce590bd`, `f08d20086`, `bb0d034ac`, `c6865b7c2`, `430ecc402`, `926051fd1`, `f1941a781`, `2c98dd2e8`, `ac92eacec`, `9da0183ae`, `eb4957bb7`, `60788e07b`, `9d2b509fe`, `a5fef4162`, `03b2c9625`, `95b2ed22b`, `a10cdd65f`, `e1faa6e56`, `0887480be`, `2de330bc6`, `0f3553992`, `74da097a2`, `10d1d2961`, `ddda65d97`, `81326cb55`, `57337bed6`, `0c89d10e9`, `eff214cd9`, `af10dd6d5`, `25c73b48e`, `315a61f12`, `4f66a1c1f`, `e7515c158`, `b5812a3d8`, `151b45208`, `ef77ae6b8`, `05426cdee`, `92bf71c7b`, `fe6a8c0bf`, `1e3c93994`, `ef3c51319`, `2c8e6e96a`, `e978236b6`, `5ff69db39`, `f41907092`, `51e1377d5`, `cbd3a2cd9`, `f9944a132`, `e7b0c9631`, `4821d35d3`, `a648c5d4e`, `2068ab77c`, `c38f8dd45`, `90a434bf2`, `64871e2e4`, `3e9f77e5c`, `af7ab651f`, `ad4ec990b`, `de28147ba`, `b207a8a51`, `af6b12394`, `9d89c6f60`, `995376c07`, `45f2397fd`, `8df743dff`, `61205f62e`, `dad0421d3`, `6304d2765`, `02c2ef1d7`, `97adfdd8a`, `7e4b2605b`, `b280cd698`, `1b5c9d39a`, `3118a0494`, `180241442`, `620f041d8`, `9b86a6af8`, `61417ac95`, `82dad7d43`, `ba38888fc`.
@@ -652,7 +670,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 
 
-Tracking snapshot: 21 unmerged branches without running jobs; 12 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-205-upscalealt`, `agente/205-livepr2`, `agente/205-pr493`, `agente/p2p`. Queued jobs and deferred 2.1 work are not lost. Android installed at `cb7ece972`; C9 installation failed, so TV HEAD remains unconfirmed.
+Tracking snapshot: 20 unmerged branches without running jobs; 8 open issues without mapped jobs or prompts. Newer fixes need review on `agente/p2p`. Android installation succeeded at `cb7ece972`; C9 installation failed and installed TV HEAD is unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
