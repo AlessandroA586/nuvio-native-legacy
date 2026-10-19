@@ -504,7 +504,7 @@ int   ajustes_abertura_addon(void);
 // #508: fundo da tela Cinema da abertura: 0 = Desligado, 1 = Arte (nitida com
 // veu escuro), 2 = Arte borrada (padrao).
 int   ajustes_abertura_fundo(void);
-// Modern Stage background: 0 Black (default), 1 Current, 2 Artwork only.
+// Modern/Dynamic Stage background: 0 Black (default), 1 Current, 2 Artwork only.
 int   ajustes_palco_fundo(void);
 int   ajustes_titulo_fil(void);        // 0 Classico, 1 Ilha, 2 Editorial, 3 Acento
 int   ajustes_abertura_estilo(void);   // 0 Centro (A3), 1 Canto (B3)

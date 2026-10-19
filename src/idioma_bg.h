@@ -3879,7 +3879,7 @@
   T("Paisagem pequena", "Малко хоризонтално"),
   T("Palco", "Сцена"),
   T("Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", "Сцена и Разделен герой показват цялото изображение и скриват редовете отгоре, както Модерно. Фонът по подразбиране е Сив, а Фон на сцената вече работи в това оформление."),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Сцена в Модерен: Черно (по подразбиране), само плакати и информация до тях; Както сега, пълно представяне; Само изображение, фон различен от плаката, без текст горе. Без отделен фон използва Черно. Само на това устройство."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Сцена в Модерен и Динамичен (Apple TV): Черно (по подразбиране), само плакати и информация до тях; Както сега, пълно представяне; Само изображение, фон различен от плаката, без текст горе. Без отделен фон използва Черно. Само на това устройство."),
   T("Paquistão", "Пакистан"),
   T("Para %s", "За %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "За OLED телевизори: логото не остава неподвижно на екрана, докато върви трейлърът."),

@@ -3879,7 +3879,7 @@
   T("Paisagem pequena", "Malo pejzažno"),
   T("Palco", "Scena"),
   T("Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", "Scena i Podijeljeni hero prikazuju cijelu sliku i skrivaju redove iznad, kao Moderno. Zadana pozadina je Siva, a Pozadina scene sada radi u ovom rasporedu."),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Pozornica u Modernom: Crno (zadano), samo posteri i podaci pored; Kao sada, puni prikaz; Samo slika, pozadina različita od postera, bez teksta na vrhu. Bez posebne pozadine koristi Crno. Samo na ovom uređaju."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Pozornica u Modernom i Dinamičnom (Apple TV): Crno (zadano), samo posteri i podaci pored; Kao sada, puni prikaz; Samo slika, pozadina različita od postera, bez teksta na vrhu. Bez posebne pozadine koristi Crno. Samo na ovom uređaju."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "Za %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Za OLED TV: logotip ne ostaje nepomičan na ekranu dok se trejler reproducira."),

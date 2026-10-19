@@ -3879,7 +3879,7 @@
   T("Paisagem pequena", "Lille liggende"),
   T("Palco", "Scene"),
   T("Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", "Scene og Delt hero viser hele billedet og skjuler rækkerne ovenover, som Moderne. Grå er standardbaggrunden, og Scenebaggrund virker nu i dette layout."),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Scene i Moderne: Sort (standard), kun plakater og oplysninger ved siden af; Som nu, fuld præsentation; Kun billede, anden baggrund end plakaten, uden tekst øverst. Uden særskilt baggrund bruges Sort. Kun på denne enhed."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Scene i Moderne og Dynamisk (Apple TV): Sort (standard), kun plakater og oplysninger ved siden af; Som nu, fuld præsentation; Kun billede, anden baggrund end plakaten, uden tekst øverst. Uden særskilt baggrund bruges Sort. Kun på denne enhed."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "Til %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Til OLED-tv: logoet bliver ikke stående stille på skærmen, mens traileren afspilles."),

@@ -3878,7 +3878,7 @@
   T("Paisagem pequena", "Kleines Querformat"),
   T("Palco", "Bühne"),
   T("Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", "Bühne und Geteilter Hero zeigen das ganze Bild und blenden die oberen Reihen aus, wie Modern. Grau ist der Standardhintergrund, und Bühnenhintergrund funktioniert nun in diesem Layout."),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Bühne im modernen Layout: Schwarz (Standard), nur Poster und Infos daneben; Wie bisher, vollständiger Titelbereich; Nur Bild, anderer Hintergrund als das Poster, ohne Text oben. Ohne eigenes Hintergrundbild wird Schwarz verwendet. Nur dieses Gerät."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Bühne im modernen und dynamischen Layout (Apple TV): Schwarz (Standard), nur Poster und Infos daneben; Wie bisher, vollständiger Titelbereich; Nur Bild, anderer Hintergrund als das Poster, ohne Text oben. Ohne eigenes Hintergrundbild wird Schwarz verwendet. Nur dieses Gerät."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "Für %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Für OLED-Fernseher: Das Logo bleibt während des Trailers nicht statisch auf dem Bildschirm."),

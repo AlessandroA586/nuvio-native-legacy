@@ -3879,7 +3879,7 @@
   T("Paisagem pequena", "Horizontal pequena"),
   T("Palco", "Palco"),
   T("Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", "Palco e Herói dividido mostram a imagem inteira e ocultam as filas acima, como na Moderna. O fundo predefinido é Cinzento, e Fundo do Palco passa a funcionar neste esquema."),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho."),
   T("Paquistão", "Paquistão"),
   T("Para %s", "Para %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Para TVs OLED: não deixa o logótipo parado no ecrã enquanto o trailer toca."),

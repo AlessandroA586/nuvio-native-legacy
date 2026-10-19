@@ -3879,7 +3879,7 @@
   T("Paisagem pequena", "Ngang nhỏ"),
   T("Palco", "Sân khấu"),
   T("Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", "Sân khấu và Hero chia đôi hiện toàn bộ ảnh và ẩn các hàng phía trên, như Hiện đại. Nền mặc định là Xám, và Nền sân khấu nay hoạt động trong bố cục này."),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Sân khấu trong Hiện đại: Đen (mặc định), chỉ áp phích và thông tin bên cạnh; Như hiện tại, giới thiệu đầy đủ; Chỉ hình ảnh, nền khác áp phích, không có chữ phía trên. Không có nền riêng thì dùng Đen. Chỉ trên thiết bị này."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Sân khấu trong Hiện đại và Động (Apple TV): Đen (mặc định), chỉ áp phích và thông tin bên cạnh; Như hiện tại, giới thiệu đầy đủ; Chỉ hình ảnh, nền khác áp phích, không có chữ phía trên. Không có nền riêng thì dùng Đen. Chỉ trên thiết bị này."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "Gửi %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Cho TV OLED: logo không đứng yên trên màn hình khi trailer đang phát."),

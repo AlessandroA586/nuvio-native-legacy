@@ -3879,7 +3879,7 @@
   T("Paisagem pequena", "Küçük yatay"),
   T("Palco", "Sahne"),
   T("Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", "Sahne ve Bölünmüş hero, Modern gibi tam görseli gösterir ve üst sıraları gizler. Varsayılan arka plan Gri’dir ve Sahne arka planı artık bu düzende çalışır."),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Modern düzende Sahne: Siyah (varsayılan), yalnızca afişler ve yan bilgiler; Şimdiki gibi, tam tanıtım; Yalnızca görsel, afişten farklı arka plan, üstte metin yok. Ayrı arka plan yoksa Siyah kullanılır. Yalnızca bu cihazda."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Modern ve Dinamik düzende Sahne (Apple TV): Siyah (varsayılan), yalnızca afişler ve yan bilgiler; Şimdiki gibi, tam tanıtım; Yalnızca görsel, afişten farklı arka plan, üstte metin yok. Ayrı arka plan yoksa Siyah kullanılır. Yalnızca bu cihazda."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "%s için"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "OLED TV'ler için: fragman oynarken logonun ekranda sabit kalmasını önler."),

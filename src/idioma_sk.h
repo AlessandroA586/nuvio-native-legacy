@@ -3879,7 +3879,7 @@
   T("Paisagem pequena", "Malé na šírku"),
   T("Palco", "Javisko"),
   T("Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", "Scéna a Rozdelený hero zobrazujú celý obrázok a skrývajú riadky nad ním, ako Moderné. Predvolené pozadie je Sivé a Pozadie scény teraz funguje aj v tomto rozložení."),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Pódium v Modernom: Čierna (predvolené), iba plagáty a informácie vedľa; Ako teraz, úplná prezentácia; Iba obrázok, iné pozadie než plagát, bez textu hore. Bez samostatného pozadia sa použije Čierna. Iba toto zariadenie."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Pódium v Modernom a Dynamickom (Apple TV): Čierna (predvolené), iba plagáty a informácie vedľa; Ako teraz, úplná prezentácia; Iba obrázok, iné pozadie než plagát, bez textu hore. Bez samostatného pozadia sa použije Čierna. Iba toto zariadenie."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "Pre %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Pre OLED televízory: logo nezostáva nehybne na obrazovke, keď hrá trailer."),

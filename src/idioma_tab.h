@@ -3878,7 +3878,7 @@
   { "Paisagem pequena", "Small landscape" },
   { "Palco", "Stage" },
   { "Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", "Stage and Split hero show full artwork and hide the rows above, as in Modern. Gray is the default background, and Stage background now works in this layout." },
-  { "Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Stage in Modern: Black (default), posters and side info only; Current, full hero; Artwork only, a background different from the poster, without top text. Without a distinct background, uses Black. This device only." },
+  { "Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Stage in Modern and Dynamic (Apple TV): Black (default), posters and side info only; Current, full hero; Artwork only, a background different from the poster, without top text. Without a distinct background, uses Black. This device only." },
   { "Paquistão", "Pakistan" },
   { "Para %s", "To %s" },
   { "Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "For OLED TVs: keeps the logo from sitting still on screen while the trailer plays." },

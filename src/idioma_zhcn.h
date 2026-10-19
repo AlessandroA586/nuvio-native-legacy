@@ -3879,7 +3879,7 @@
   T("Paisagem pequena", "小横版"),
   T("Palco", "舞台"),
   T("Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", "舞台和分割主视觉如现代布局一样显示完整图片，并隐藏上方行。默认背景为灰色，舞台背景设置现已在此布局中生效。"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "现代布局的舞台：黑色（默认）仅显示海报及旁边的信息；保持现状显示完整推荐区；仅背景图使用不同于海报的背景，不显示顶部文字。没有独立背景时使用黑色。仅此设备。"),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "现代与动态（Apple TV）布局的舞台：黑色（默认）仅显示海报及旁边的信息；保持现状显示完整推荐区；仅背景图使用不同于海报的背景，不显示顶部文字。没有独立背景时使用黑色。仅此设备。"),
   T("Paquistão", "巴基斯坦"),
   T("Para %s", "发给 %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "适用于 OLED 电视：预告片播放时，徽标不会一直停留在屏幕上。"),

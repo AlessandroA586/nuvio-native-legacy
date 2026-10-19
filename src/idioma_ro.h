@@ -3878,7 +3878,7 @@
   T("Paisagem pequena", "Orizontal mic"),
   T("Palco", "Scenă"),
   T("Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", "Scenă și Erou împărțit arată imaginea întreagă și ascund rândurile de deasupra, ca Modern. Fundalul implicit este Gri, iar Fundalul scenei funcționează acum în acest aspect."),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Scenă în Modern: Negru (implicit), doar postere și informații alături; Ca acum, prezentare completă; Doar imagine, fundal diferit de poster, fără text sus. Fără fundal distinct, folosește Negru. Doar pe acest dispozitiv."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Scenă în Modern și Dinamic (Apple TV): Negru (implicit), doar postere și informații alături; Ca acum, prezentare completă; Doar imagine, fundal diferit de poster, fără text sus. Fără fundal distinct, folosește Negru. Doar pe acest dispozitiv."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "Pentru %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Pentru televizoare OLED: nu lasă logo-ul nemișcat pe ecran cât rulează trailerul."),

@@ -3878,7 +3878,7 @@
   T("Paisagem pequena", "Мале горизонтальне"),
   T("Palco", "Сцена"),
   T("Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", "Сцена та Розділений герой показують ціле зображення й приховують верхні ряди, як Сучасний. Типове тло — Сіре, а Тло сцени тепер працює в цьому макеті."),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Сцена в сучасному макеті: Чорне (типово), лише постери та інформація поруч; Як зараз, повний блок; Лише зображення, тло відмінне від постера, без тексту вгорі. Без окремого тла використовується Чорне. Лише на цьому пристрої."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Сцена в сучасному та динамічному макетах (Apple TV): Чорне (типово), лише постери та інформація поруч; Як зараз, повний блок; Лише зображення, тло відмінне від постера, без тексту вгорі. Без окремого тла використовується Чорне. Лише на цьому пристрої."),
   T("Paquistão", "Пакистан"),
   T("Para %s", "Для %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Для OLED-телевізорів: логотип не залишається нерухомим на екрані, поки грає трейлер."),

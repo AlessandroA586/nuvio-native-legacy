@@ -3878,7 +3878,7 @@
   T("Paisagem pequena", "Horizontal pequeño"),
   T("Palco", "Escenario"),
   T("Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", "Escenario y Héroe dividido muestran la imagen completa y ocultan las filas superiores, como en Moderna. El fondo predeterminado es Gris, y Fondo del escenario ya funciona en este diseño."),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Escenario en Moderna: Negro (predeterminado), solo carteles y ficha; Como está, destacado completo; Solo arte, fondo distinto del cartel, sin texto arriba. Sin fondo distinto, usa Negro. Solo en este dispositivo."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Escenario en Moderna y Dinámica (Apple TV): Negro (predeterminado), solo carteles y ficha; Como está, destacado completo; Solo arte, fondo distinto del cartel, sin texto arriba. Sin fondo distinto, usa Negro. Solo en este dispositivo."),
   T("Paquistão", "Pakistán"),
   T("Para %s", "Para %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Para televisores OLED: evita que el logotipo quede fijo en la pantalla mientras suena el tráiler."),
