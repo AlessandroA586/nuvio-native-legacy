@@ -237,6 +237,29 @@ static void addonOrder(void) {
   prioridadeTeste = 0; qualidadeTeste = "Automatica";
   puts("add-on order sheet: PASS (raw order, matching badge, soft cap, next link)");
 }
+static void threeSourceExample(void) {
+  Stream sources[3] = {source(0,20000,UINT64_C(20)<<30,2160),
+                       source(1,30000,UINT64_C(30)<<30,2160),
+                       source(2,2000,UINT64_C(2)<<30,1080)};
+  sources[1].badges=badges_bit("v-hdr10");sources[1].dolbyVision=1;
+  strcpy(sources[1].rotulo,"4K DV HDR10");
+  streamfit_limpar();stream_definir_alvo("tt618-example");
+  stream_definir_lista(sources,3);
+  const int ranked[] = {1,1,2};
+  for(int i=0;i<3;i++) {
+    prioridadeTeste=i;
+    assert(stream_automatico()==ranked[i]);
+  }
+  prioridadeTeste=3;stream_folha_abrir();
+  const int raw[]={0,1,2};expect(raw,3);
+  for(int i=0;i<3;i++) {
+    assert(stream_automatico()==i && automaticaDaFolha()==i);
+    stream_automatico_excluir(i);
+  }
+  assert(stream_automatico()==-1);
+  prioridadeTeste=0;
+  puts("AIOStreams example: PASS (Balanced=2, Maximum quality=2, Quick start=3; From addon=1 then2 then3 on failure)");
+}
 int main(void) {
   Stream sources[5]={source(0,50000,sizeAt(50000),2160),source(1,10000,sizeAt(10000),2160),
     source(2,10000,sizeAt(10000),2160),source(3,70000,0,2160),source(4,80000,sizeAt(50000),1080)};
@@ -347,6 +370,7 @@ int main(void) {
   liveTvActions();
   playbackActions();
   addonOrder();
+  threeSourceExample();
   stream_definir_lista(NULL,0);free(ordem);free(linhaY);free(linhaH);free(grupoTmp);free(grupoFitTmp);free(fitResultados);free(fitClasses);
   puts("streamfit sheet: PASS (stable groups, raw identities, freeze, incremental/focus, OndeVer, first-source)");return 0;
 }
