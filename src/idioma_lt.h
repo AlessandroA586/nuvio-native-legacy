@@ -1687,6 +1687,7 @@
   T("Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "Iš Nuvio: viršuje pavadinimas, apačioje kokybės logotipai. Iš priedo: pavadinimas ir aprašymas tiksliai taip, kaip siunčia priedas — tiems, kas jau formatuoja tekstą AIOStreams. Pavadinimo logotipas: pavadinimo logotipas vietoj parašyto pavadinimo."),
   T("Do add-on", "Iš priedo"),
   T("Do addon", "Iš priedo"),
+  T("Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "Iš priedo: paleidžia pirmą leidžiamą šaltinį nerikiuojant pagal kokybę ir nenaudojant ankstesnių pasirinkimų."),
   T("Do app", "Iš programos"),
   T("Do catálogo, quando ele já foi lido", "Iš katalogo, kai jis jau perskaitytas"),
   T("Do link", "Iš nuorodos"),

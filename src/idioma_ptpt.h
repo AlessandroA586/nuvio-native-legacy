@@ -1687,6 +1687,7 @@
   T("Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "Do Nuvio: o nome do título em cima e os logótipos de qualidade em baixo. Do addon: o nome e a descrição exatamente como o addon envia — para quem já formata o texto no AIOStreams. Logótipo do título: o logótipo do título em vez do nome escrito."),
   T("Do add-on", "Do add-on"),
   T("Do addon", "Do addon"),
+  T("Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "Do addon: reproduz a primeira fonte permitida, sem dar prioridade à qualidade nem reutilizar escolhas anteriores."),
   T("Do app", "Da app"),
   T("Do catálogo, quando ele já foi lido", "Do catálogo, quando já foi lido"),
   T("Do link", "Da ligação"),

@@ -794,7 +794,7 @@ static void ajcRepFonte(int A) {
   static const char *const ADD[4] = { "Torrentio", "AIOStreams", "Comet", "MediaFusion" };
   static const char *const SEL[4][4] = { { "r-4k", "v-dv", "a-atmos", "q-remux" }, { "r-4k", "v-hdr10", "a-ddp", "q-webdl" },
                                          { "r-1080", "v-sdr", "a-dd", "q-bluray" }, { "r-720", "a-dd", NULL, NULL } };
-  int i, k, cores = lig(AJ_SELOS_CORES), auto_ = valor[AJ_FONTE_AUTO] == 0;
+  int i, k, cores = lig(AJ_SELOS_CORES), auto_ = !ajustes_fonte_primeira();
   ajCenaArte(ajArte(AJA_FUNDO, A), (GfxRect){ ajc.x, ajc.y, 640 * ajc.s, ajc.h }, 22, 0.3f);
   gfx_veu_css((GfxRect){ ajc.x, ajc.y, 640 * 0.5f * ajc.s, ajc.h }, 2, 0, 1.0f, 0.8f);
   if (ajLogo(ajArte(AJA_LOGO, A), CX(28), CY(40), 170 * ajc.s, 54 * ajc.s, 1) <= 0) ajcTxt(ajTituloN(A), 18, 1, 28, 54, 180, 1);

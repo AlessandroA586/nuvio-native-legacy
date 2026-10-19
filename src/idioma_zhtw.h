@@ -1687,6 +1687,7 @@
   T("Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "來自 Nuvio：上方顯示片名，下方顯示畫質標誌。來自外掛：名稱和說明完全照外掛傳送的顯示——適合已在 AIOStreams 設定格式的人。 標題標誌：以標題的標誌取代文字名稱。"),
   T("Do add-on", "來自外掛"),
   T("Do addon", "來自外掛"),
+  T("Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "來自外掛：播放第一個允許的片源，不按畫質排序，也不重用先前的選擇。"),
   T("Do app", "來自應用程式"),
   T("Do catálogo, quando ele já foi lido", "來自目錄（已讀取時）"),
   T("Do link", "來自連結"),

@@ -9,6 +9,8 @@ typedef struct { int servico, arquivo; char hash[48]; } Pedido;
 static Pedido pedidos[128];
 static int nPedidos, nHttp, cancelar, trocar, errar, duplicar, recusar, bloquearManual;
 static int falharServico = -1;
+static int prioridadeTeste = 1, primeiraTeste;
+static const char *qualidadeTeste = "Automatica";
 static int nManual, manualResultado = 1, nP2P, p2pHabilitado, motor;
 static AddEstado estadoAddons = ADD_PRONTO;
 static unsigned disponiveis = 15;
@@ -91,11 +93,25 @@ long fontesmortas_idade(const Stream *s) {
 int ajustes_fonte_escopo(void) { return 0; }
 int ajustes_fonte_regex_modo(void) { return 0; }
 int ajustes_fonte_usar_outros(void) { return 0; }
-int ajustes_fonte_prioridade(void) { return 1; }
+int ajustes_fonte_prioridade(void) { return prioridadeTeste; }
 int ajustes_fonte_hdr(void) { return 1; }
 int ajustes_fonte_manual(void) { return 0; }
 int ajustes_fonte_idioma_audio(void) { return 0; }
-int ajustes_fonte_primeira(void) { return 0; }
+int ajustes_fonte_preparar(void) { return 1; }
+int ajustes_fonte_precarregar(void) { return 1; }
+int ajustes_buffer_preset(void) { return 0; }
+int ajustes_cache_seek_mb(void) { return 0; }
+int ajustes_fonte_conferir_varias(void) { return 0; }
+int ajustes_fonte_tocar_conferindo(void) { return 0; }
+void debrid_contexto_capturar(DebridContexto *c) { memset(c, 0, sizeof *c); }
+void debrid_contexto_entrar(const DebridContexto *c) { (void)c; }
+void debrid_contexto_sair(void) {}
+static int memoriaNextConsultas;
+int fontepref_escolher_lista_next(const char *id, const Stream *s, int n,
+                                  int (*pode)(int,int,void *), void *ctx) {
+  (void)id;(void)s;(void)n;(void)pode;(void)ctx;memoriaNextConsultas++;return -1;
+}
+int ajustes_fonte_primeira(void) { return prioridadeTeste == 3 || primeiraTeste; }
 int ajustes_fonte_ordem_uso(void) { return 0; }
 int ajustes_dolby_vision(void) { return 0; }
 int ajustes_dolby_atmos(void) { return 0; }
@@ -103,7 +119,7 @@ int ajustes_dv_mkv(void) { return 0; }
 int ajustes_tamanho_max_gb(void) { return 0; }
 int ajustes_tamanho_min_gb(void) { return 0; }
 int ajustes_selos_coloridos(void) { return 0; }
-const char *ajustes_qualidade(void) { return "Automatica"; }
+const char *ajustes_qualidade(void) { return qualidadeTeste; }
 unsigned fonteregra_versao(void) { return 1; }
 int fonteregra_grupo(const FonteRegraCfg *c, const char *nome, int plugin, const char *texto) {
   (void)c; (void)plugin; (void)texto;
@@ -151,6 +167,7 @@ static Stream fonte(const FonteFalhaConfig *c, int addon, const char *hash, int 
   return s;
 }
 static void resetar(void) {
+  prioridadeTeste = 1; primeiraTeste = 0; qualidadeTeste = "Automatica";
   nPedidos = nHttp = cancelar = trocar = errar = duplicar = recusar = bloquearManual = 0;
   disponiveis = 15; estadoAddons = ADD_PRONTO;
   falharServico = -1;
@@ -490,6 +507,49 @@ static void canalIgnoraFiltros(const char *dir) {
   assert(stream_resolver_escolhida(0, generation, url, sizeof url, service, sizeof service, &pct) == 0);
   assert(fontefalha_filtro_definir(&previous));
 }
+static void ordemSemPrioridade(void) {
+  for (int priority = 0; priority < 4; priority++) {
+    resetar(); primeiraTeste = 1; prioridadeTeste = priority; qualidadeTeste = "1080p";
+    FonteFalhaConfig c = cfg(1, 0, 3);
+    Stream list[2] = {fonte(&c, 0, "hash-first", 0), fonte(&c, 0, "hash-second", 1)};
+    list[0].altura = 2160;
+    strcpy(list[0].rotulo, "First from AIOStreams");
+    strcpy(list[1].rotulo, "1080p REMUX higher local preference");
+    stream_definir_lista(list, 2);
+    FonteFalhaSessao *s = fontefalha_sessao_nova(&c, 15, -1); assert(s);
+    int index = -1, service = -1; char url[4096];
+    assert(verificar(s, stream_lista_geracao(), &index, &service, url) == FONTEFALHA_PROXIMA);
+    assert(index == (priority == 3 ? 0 : 1));
+    assert(nPedidos == 1);
+    fontefalha_sessao_liberar(s);
+    if (priority == 3) {
+      memoriaNextConsultas = 0;
+      StreamPreparo *prepared = stream_preparo_criar_alvo(list, 2, 1, "tt123:1:2");
+      assert(prepared && prepared->nc == 2 && prepared->candidatas[0].indice == 0);
+      assert(!memoriaNextConsultas); // No remembered source overrides the current order.
+      Stream result;
+      assert(stream_preparo_resolver(prepared, foiCancelado, NULL, &result, &index, NULL) == 1);
+      assert(index == 0);
+      prioridadeTeste = 0;
+      assert(!stream_preparo_contexto_atual(prepared)); // Old preparation cannot survive a mode change.
+      prioridadeTeste = 3;
+      stream_preparo_liberar(prepared);
+      // Explicit selection in Sources must still play the source the user tapped.
+      s = fontefalha_sessao_nova(&c, 15, -1); assert(s);
+      assert(stream_falha_verificar(s, stream_lista_geracao(), 1, foiCancelado, NULL,
+                                   &index, &service, url, sizeof url) == FONTEFALHA_PROXIMA);
+      assert(index == 1); fontefalha_sessao_liberar(s);
+      // A profile's disallowed add-on cannot win just because it was first.
+      bloquearManual = 1; strcpy(list[0].provedor, "Blocked addon");
+      stream_definir_lista(list, 2);
+      s = fontefalha_sessao_nova(&c, 15, -1); assert(s);
+      assert(verificar(s, stream_lista_geracao(), &index, &service, url) == FONTEFALHA_PROXIMA);
+      assert(index == 1); fontefalha_sessao_liberar(s);
+    }
+  }
+  resetar();
+  puts("add-on order worker: PASS (soft cap bypass, existing priorities, manual pick, add-on eligibility)");
+}
 int main(int argc, char **argv) {
   assert(argc == 2 && "runner supplies an isolated preference directory");
   ordemETotal(); identidadeEDedup(); missNaoExcluiOutroServico(); semTetosAntigos();
@@ -498,6 +558,7 @@ int main(int argc, char **argv) {
   geracaoECancelamento(); addonIndependente(); buscaParcial(); escolhaManual();
   resolvedorManual(argv[1]);
   canalIgnoraFiltros(argv[1]);
+  ordemSemPrioridade();
   stream_definir_lista(NULL, 0);
   puts("fontefalha worker: PASS (provider order, total limits, dedup, identity, generation, cancellation, addon order, partial search, manual selection, cached winner, P2P isolation)");
   return 0;
