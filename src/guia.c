@@ -2123,11 +2123,13 @@ static int *ordAz;   // por fonte: 1 = A-Z
 static int cmpCat(const void *a, const void *b) {
   const GCat *x = &cats[*(const int *)a], *y = &cats[*(const int *)b];
   int rx=grupoOrdFonte[x->fonte], ry=grupoOrdFonte[y->fonte];
-  if (!ajustes_guia_ordem()) {
-    int c = strcasecmp(x->nome, y->nome);
-    if (c) return c;
+  if (rx != ry) {
+    if (!ajustes_guia_ordem()) {
+      int c = strcasecmp(x->nome, y->nome);
+      if (c) return c;
+    }
+    return rx - ry;
   }
-  if (rx != ry) return rx - ry;
   if (x->fonte != y->fonte) return x->fonte - y->fonte;
   if (ordAz && ordAz[x->fonte]) {
     int c = strcasecmp(x->nome, y->nome);

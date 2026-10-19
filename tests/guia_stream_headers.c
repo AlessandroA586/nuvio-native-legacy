@@ -25,6 +25,8 @@ int teste_proxy_ativo(void) { return proxyAtivo; }
 const char *teste_id_canal(void) { return "m3u:canaisabertos:0"; }
 int xtream_e_id(const char *id) { (void)id; return 0; }
 int stalker_e_id(const char *id) { (void)id; return 0; }
+int xtream_url_limitada(const char *u) { (void)u; return 0; }
+int xtream_conexoes_limitadas(void) { return 0; }
 
 int main(void) {
   Stream *s = NULL;
