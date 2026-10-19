@@ -1,12 +1,45 @@
 // Reuse the offline series fixture and real GL renderer.
 #include "tex_cache.h"
+#include "gfx.h"
+GLuint fx_desfocado(GLuint src, const char *chave);
 static int checkThumbnailWidth, thumbnailRequests;
 static GLuint checkedThumbnail(const char *path, float width);
+#include "sinopse.h"
+static int checkPanel, synopsisCalls, metaCalls;
+static GfxRect panelCard;
+static char panelMeta[512];
+static float checkedSynopsis(TxtEstilo style, const char *s, int r, int g, int b,
+                             float x, float y, float w, float leading, float a, int lines);
+static float checkedMeta(TxtEstilo style, const char *s, int r, int g, int b,
+                         float x, float y, float a, float tracking);
+#define sinopse_bloco_corta checkedSynopsis
+#define txt_tracking checkedMeta
 #define tex_obter_larg checkedThumbnail
 #define main episode_fixture_main
 #include "detail_eps_shot.c"
 #undef main
 #undef tex_obter_larg
+#undef sinopse_bloco_corta
+#undef txt_tracking
+
+static float checkedSynopsis(TxtEstilo style, const char *s, int r, int g, int b,
+                             float x, float y, float w, float leading, float a, int lines) {
+  if (checkPanel) {
+    assert(x == panelCard.x + 24 && y == panelCard.y + epThumbH() + 104);
+    assert(lines == 5 && y + lines * leading <= panelCard.y + panelCard.h);
+    synopsisCalls++;
+  }
+  return sinopse_bloco_corta(style,s,r,g,b,x,y,w,leading,a,lines);
+}
+static float checkedMeta(TxtEstilo style, const char *s, int r, int g, int b,
+                         float x, float y, float a, float tracking) {
+  if (checkPanel) {
+    assert(y == panelCard.y + epThumbH() + 62 && tracking == 1);
+    assert(r == 169 && g == 171 && b == 178);
+    snprintf(panelMeta,sizeof panelMeta,"%s",s); metaCalls++;
+  }
+  return txt_tracking(style,s,r,g,b,x,y,a,tracking);
+}
 
 static GLuint checkedThumbnail(const char *path, float width) {
   if (checkThumbnailWidth) {
@@ -32,8 +65,8 @@ static void checkThumbnailHoles(void) {
       float x=xItem(SEC_EPISODIOS,c)-scrollSec[SEC_EPISODIOS];
       if (x>NV_TELA_W || x+epCardW()<0) continue;
       float y=epRowY()-scrollY, inset=NV_DETP_EP_RAIO+2;
-      GfxRect rects[] = {{x+inset,y+2,epCardW()-2*inset,epThumbH()-4},
-                         {x+2,y+inset,epCardW()-4,epThumbH()-2*inset}};
+      GfxRect rects[] = {{x+inset,y+2,epCardW()-2*inset,epCardH()-4},
+                         {x+2,y+inset,epCardW()-4,epCardH()-2*inset}};
       for (int i=0;i<2;i++) {
         assert(expected < n);
         GfxRect h=holes[expected++], r=rects[i];
@@ -43,7 +76,7 @@ static void checkThumbnailHoles(void) {
     assert(expected == n);
   }
   animFoco[SEC_EPISODIOS][foco.coluna] = settled;
-  puts("PASS: fixed thumbnail holes and texture widths at rest and during focus changes");
+  puts("PASS: full card holes and unchanged image cache widths across focus changes");
 }
 
 static void saveShot(const char *path, int w, int h) {
@@ -79,26 +112,6 @@ int main(int argc, char **argv) {
   tex_iniciar(16); gfx_icones_dir("deploy/app/art");
   ajustes_iniciar(); dados_iniciar("deploy/app/art");
 
-  // GL proof: focus adds no pixels inside the card, on dark or light art.
-  for (int light=0;light<2;light++) {
-    float background=light?.9f:.08f;
-    glViewport(0,0,1920,1080); gfx_novo_quadro(); gfx_sem_recorte();
-    glClearColor(background,background,background,1); glClear(GL_COLOR_BUFFER_BIT);
-    unsigned char before[4],after[4];
-    glReadPixels(400,700,1,1,GL_RGBA,GL_UNSIGNED_BYTE,before);
-    epFocoDesenha((GfxRect){100,100,640,548},1,1);
-    glReadPixels(400,700,1,1,GL_RGBA,GL_UNSIGNED_BYTE,after);
-    assert(memcmp(before,after,4)==0);
-    unsigned char edge[640*4]; int dots=0,gaps=0;
-    glReadPixels(100,978,640,1,GL_RGBA,GL_UNSIGNED_BYTE,edge);
-    for(int x=40;x<600;x++) {
-      dots+=edge[x*4]>245;
-      gaps+=abs(edge[x*4]-before[0])<3;
-    }
-    assert(dots>10 && gaps>10);
-  }
-  puts("PASS: GL dotted focus has transparent interior on dark/light artwork");
-
   // Preserve image detail while exercising both luminance extremes.
   for (int light=0;light<2;light++) {
     char art[700];
@@ -114,17 +127,63 @@ int main(int argc, char **argv) {
     for(int layout=0;layout<3;layout+=2) {
       char settings[700]; snprintf(settings,sizeof settings,"%s/ajustes.txt",dados_dir());
       FILE *file=fopen(settings,"w"); assert(file);
-      fprintf(file,"idioma 1\nhomeLayoutLocal %d\nbordaFocoCartaz 1\nvidroLocal 1\n",layout); fclose(file);
+      fprintf(file,"idioma 1\nhomeLayoutLocal %d\nbordaFocoCartaz 1\nvidroLocal 1\nnotaEpisodio 3\nselected_theme %d\nshowFullReleaseDate 0\nescalaTextoVersaoLocal 1\nescalaTextoLocal 2\n",layout,light?0:2); fclose(file);
       ajustes_dir(dados_dir());
       montarCatalogo();
       snprintf(itens[0].backdrop,sizeof itens[0].backdrop,"%s",art);
       itens[0].temporada=1; itens[0].episodio=4; itens[0].progresso=45;
       cat_definir_tudo(itens,2,&filEnsaio,1);
-      for(int i=0;i<T1_N;i++) snprintf(episodios[i].thumb,sizeof episodios[i].thumb,"%s",art);
+      for(int i=0;i<T1_N;i++) {
+        snprintf(episodios[i].thumb,sizeof episodios[i].thumb,"%s",art);
+        snprintf(episodios[i].sinopse,sizeof episodios[i].sinopse,
+          "Sinopse de enchimento do episódio, comprida o bastante para ocupar as linhas que o card agora reserva e mostrar onde o bloco corta. Com mais espaço embaixo, a pessoa lê quase tudo sem abrir o episódio, e o texto respira melhor na TV. Mais detalhes continuam aqui para comprovar as reticências na quinta linha, sem invadir a base do cartão.");
+      }
       cat_definir_episodios(0,episodios,T1_N+T2_N+T3_N);
       semear(1,T1_N,3); abrir(0,0); nosEpisodios(3);
       parado=1; quadros(32);
       checkThumbnailHoles();
+      panelCard = (GfxRect){100,100,epCardW(),epCardH()};
+      assert(panelCard.w == 640 && epThumbH() == 360 && panelCard.h == 624);
+      assert(fabsf(epRowY()-scrollY + epCardH()) < 1080);
+      CatEp *sample = &episodios[3];
+      CatEp saved = *sample;
+      for (int missing=0;missing<4;missing++) {
+        *sample = saved;
+        if (missing & 1) sample->data[0]=0;
+        if (missing & 2) sample->duracao[0]=0;
+        sample->notaImdb = sample->nota = missing ? 0 : 85;
+        cat_definir_episodios(0,episodios,T1_N+T2_N+T3_N);
+        synopsisCalls=metaCalls=0; checkPanel=1;
+        txt_novo_quadro(); desenhaEpisodio(panelCard,3,1,1,10000);
+        checkPanel=0;
+        assert(synopsisCalls == 1 && metaCalls == 1);
+        assert((strstr(panelMeta,"·") != NULL) == (missing == 0));
+        if (missing == 3) assert(!panelMeta[0]);
+      }
+      *sample = saved; cat_definir_episodios(0,episodios,T1_N+T2_N+T3_N);
+      // Warm caches, then compare actual focus frames, including text and still.
+      unsigned char *rest=malloc(1920*1080*4), *focused=malloc(1920*1080*4);
+      assert(rest && focused);
+      for (int pass=0;pass<4;pass++) {
+        gfx_novo_quadro(); txt_novo_quadro(); gfx_sem_recorte();
+        glClearColor(.02f,.02f,.025f,1); glClear(GL_COLOR_BUFFER_BIT);
+        desenhaEpisodio(panelCard,3,pass&1,1,10000);
+        glReadPixels(0,0,1920,1080,GL_RGBA,GL_UNSIGNED_BYTE,pass&1?focused:rest);
+      }
+      int changes=0;
+      for(int y=0;y<1080;y++) for(int x=0;x<1920;x++) {
+        int p=((1079-y)*1920+x)*4;
+        int delta=0;
+        for (int channel=0;channel<4;channel++)
+          if (abs(rest[p+channel]-focused[p+channel])>delta)
+            delta=abs(rest[p+channel]-focused[p+channel]);
+        if (delta<=2) continue;
+        assert(x>=100 && x<740 && y>=428 && y<724);
+        if (y<460) assert(x<132 || x>=708); // Panel behind rounded image corners.
+        changes++;
+      }
+      assert(changes>1000); free(rest); free(focused);
+      puts("PASS: missing metadata, five synopsis lines, panel-only focus pixels");
       for(int h=1080;h>=720;h-=360) {
         int w=h*16/9;
         gfx_tamanho_alvo(w,h); glBindFramebuffer(GL_FRAMEBUFFER,fbo);

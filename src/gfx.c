@@ -470,7 +470,8 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "uniform vec4 uHeroiVeu;\n"
   "#endif\n"
   "void main(){\n"
-  "  float d = sdf(vUv, uRaio, uAspect);\n"
+  // Modern episode images join the opaque panel with square lower corners.
+  "  float d = sdf(vUv, uVeu.x < -1.5 && vUv.y > 0.5 ? 0.0 : uRaio, uAspect);\n"
   "  float m = borda(d);\n"
   "  if (m <= 0.001) discard;\n"
   // COVER VIRA CONTAIN quando a arte foge muito da moldura (issue #89):
@@ -548,6 +549,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "    g = mix(g, 0.62, smoothstep(0.22, 0.52, t));\n"
   "    g = mix(g, 0.86, smoothstep(0.52, 0.82, t));\n"
   "    g = mix(g, 0.95, smoothstep(0.82, 1.00, t));\n"
+  "    if (uVeu.x < -1.5) g = smoothstep(0.55, 1.0, t) * 0.65;\n"
   "    cor = mix(vec3(0.133), cor, uVeu.y) * (1.0 - g) * (1.0 - uVeu.z);\n"
   "  } else if (uVeu.y > 0.0 || uVeu.w > 0.0) {\n"
   "    float yb = 1.0 - vUv.y;\n"

@@ -1,4 +1,4 @@
-"""Execute the production resting tile branch across focus and glass states."""
+"""Execute variant C panel colors across focus and page fades."""
 from pathlib import Path
 import subprocess
 import tempfile
@@ -12,12 +12,12 @@ program = r'''
 #include <stdio.h>
 typedef struct { float x,y,w,h; } GfxRect;
 static int draws;
-static float alpha;
+static float alpha, red, green, blue;
 static void gfx_cor(GfxRect r,float radius,float cr,float cg,float cb,float a) {
-  (void)r; (void)radius; (void)cr; (void)cg; (void)cb;
-  draws++; alpha=a;
+  (void)r; (void)radius;
+  draws++; alpha=a; red=cr; green=cg; blue=cb;
 }
-static void draw(int epVidroTile,float a) {
+static void draw(int epVidroTile,float ft,float a) {
   GfxRect epTile={0,360,640,200};
 ''' + tile + r'''
 }
@@ -26,11 +26,17 @@ int main(void) {
     for(int focus=0;focus<=100;focus++)
       for(int fade=1;fade<=2;fade++) {
         float a=fade*.5f; draws=0; alpha=0;
-        draw(modern,a);
+        float ft=focus/100.0f;
+        draw(modern,ft,a);
         assert(draws==modern);
-        assert(fabsf(alpha-(modern?.07f*a:0))<.00001f);
+        assert(fabsf(alpha-(modern?a:0))<.00001f);
+        if (modern) {
+          assert(fabsf(red-(31+7*ft)/255)<.00001f);
+          assert(fabsf(green-(33+7*ft)/255)<.00001f);
+          assert(fabsf(blue-(37+8*ft)/255)<.00001f);
+        }
       }
-  puts("PASS: resting tile opacity is independent of focus; Standard has no focus fill");
+  puts("PASS: opaque panel interpolates #1f2125 to #26282d; Standard has no panel");
 }
 '''
 with tempfile.TemporaryDirectory(prefix='episode-tint-') as tmp:

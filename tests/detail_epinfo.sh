@@ -19,4 +19,6 @@ cc "${sources[@]}" tests/detail_epinfo_shot.c -Isrc -o "$NUVIO_DADOS/shot" \
   -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \
   -Wno-deprecated-declarations -Wno-macro-redefined
 python3 tests/detail_epinfo.py
-"$NUVIO_DADOS/shot" "$out" "${1:-depois}"
+bash tests/detail_epcard.sh
+bash tests/detail_episode_review.sh
+"$NUVIO_DADOS/shot" "$out" "${1:-depois-c}"
