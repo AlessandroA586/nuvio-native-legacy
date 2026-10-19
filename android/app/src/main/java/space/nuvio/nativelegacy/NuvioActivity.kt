@@ -404,7 +404,6 @@ class NuvioActivity : SDLActivity() {
                     window.colorMode = if (ativa) ActivityInfo.COLOR_MODE_HDR else ActivityInfo.COLOR_MODE_DEFAULT
                     if (ativa) {
                         hdrSurfaceRequested = true
-                        mSurface.setZOrderOnTop(false)
                         mSurface.holder.setFormat(PixelFormat.RGBA_1010102)
                         if (Build.VERSION.SDK_INT >= 35) {
                             mSurface.setDesiredHdrHeadroom(1000.0f / 203.0f)

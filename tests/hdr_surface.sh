@@ -16,8 +16,8 @@ cc -std=c99 -Wall -Wextra -Werror -I"$binary" tests/hdr_surface.c -o "$binary/ru
 binary="$binary/run"
 "$binary" > "$testdir/log"
 cat "$testdir/log"
-rg -q 'egl=dataspace config=1010102 resultado=hdr dataspace=pq gl=8/8/8/8 blit=1 white=203' "$testdir/log"
-rg -q 'egl=dataspace config=FP16 resultado=hdr dataspace=scrgb-linear.*blit=2' "$testdir/log"
+rg -q 'egl=pq config=1010102 resultado=hdr dataspace=pq gl=8/8/8/8 blit=1 white=203' "$testdir/log"
+rg -q 'egl=scrgb config=FP16 resultado=hdr dataspace=scrgb-linear.*blit=2' "$testdir/log"
 "$binary" missing-symbol
 python3 - <<'PY'
 from pathlib import Path
@@ -39,8 +39,10 @@ assert 'nvHdrMetadata(_this, surface)' in surface
 recover = Path('android/app/src/main/cpp/hdr_recover.inc').read_text()
 assert 'hdr_recover.inc' in cmake
 assert 'EGL_BAD_SURFACE' in recover and 'SDL_EGL_MakeCurrent' in recover
-for token in ('setDesiredHdrHeadroom', 'SDK_INT >= 35', 'setZOrderOnTop(false)', 'PixelFormat.RGBA_1010102'):
+for token in ('setDesiredHdrHeadroom', 'SDK_INT >= 35', 'PixelFormat.RGBA_1010102'):
     assert token in java, token
+# HDR must keep the UI on the media-overlay sublayer above ExoPlayer's SurfaceView.
+assert 'setZOrderOnTop' not in java and java.count('setZOrderMediaOverlay(true)') == 1
 assert 'SDL_GL_GetAttribute' not in main[main.index('int ten = config'):main.index('if (hdrPedido) {', main.index('int ten = config'))]
 gpu = Path('src/gpunivel.c').read_text()
 assert 'gfx_rect(tela, intTex, GFX_HDR_OUTPUT, (float)gfx_hdr_output' in gpu

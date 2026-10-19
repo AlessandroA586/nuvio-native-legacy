@@ -1432,7 +1432,8 @@ int main(int argc, char **argv) {
     if (hdrPedido) {
       if (!gfx_hdr_output) android_hdr_interface(0);
       printf("[hdr-ui] pedido=on colormode=%s egl=%s config=%s resultado=%s dataspace=%s gl=%d/%d/%d/%d blit=%d white=203\n",
-             hdrColor ? "ok" : "unsupported", gfx_hdr_output ? "dataspace" : "none",
+             hdrColor ? "ok" : "unsupported",
+             !gfx_hdr_output ? "none" : gfx_hdr_output == 3 ? "hlg" : fp16 ? "scrgb" : "pq",
              gfx_hdr_output ? config : "8888", gfx_hdr_output ? "hdr" : "sdr",
              gfx_hdr_output ? space : "none", r, g, b, a, gfx_hdr_output);
       fflush(stdout);
