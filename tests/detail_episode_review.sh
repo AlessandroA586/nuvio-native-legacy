@@ -28,3 +28,4 @@ if not m or 't2' in m.group(0): fails.append('rest tile gated on artwork')
 for f in fails: print('FAIL:', f)
 print('OK' if not fails else ''); sys.exit(1 if fails else 0)
 EOF
+python3 tests/detail_episode_tint.py

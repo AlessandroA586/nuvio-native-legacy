@@ -2139,9 +2139,9 @@ static GfxRect epPlacaRect(GfxRect r, float thH, float ft) {
 static float epPlacaA(float f) { return NV_DETP_EP_PLACA_A * anim_clamp(f, 0.0f, 1.0f); }
 // Glass cards tint the shared page backdrop, without a per-card material pass.
 // Moderna text rests on the cast tile tint (7%); focus doubles it.
-// Glass off keeps the existing white focus plate.
+// Moderna keeps its resting tint through focus transitions, with or without glass.
 static void epPlacaDesenha(GfxRect p, float f, float a) {
-  if (ajustes_vidro())
+  if (ajustes_vidro() || epModerna())
     gfx_cor(p, 24.0f / p.h, 1, 1, 1,
             0.07f * ((epModerna() ? 1.0f : 0.0f) + anim_clamp(f, 0.0f, 1.0f)) * a);
   else
