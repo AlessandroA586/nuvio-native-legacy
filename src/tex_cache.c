@@ -3557,6 +3557,7 @@ static int aceitaMenor;
 // Pedido de LOGO DE TITULO em curso (ver tex_obter_logo_larg): sobe o item para
 // o nivel 2 da fila, a frente ate do fundo de tela cheia.
 static int pedidoLogo;
+static int pedidoPalco;
 // Pedido de ARQUIVO em curso (tex_arquivo): o teto da variante a baixar. Ver
 // Item.limiteArquivo.
 static int pedidoArquivo;
@@ -3781,7 +3782,7 @@ static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
     // hero (1920). Se o teto novo e maior e a textura pronta ficou menor que
     // ele, refaz — senao o hero herda para sempre a versao pequena que o card
     // pediu primeiro, e o borrao volta sem explicacao aparente.
-    if (limite > itens[i].limite) itens[i].limite = limite;
+    if (pedidoPalco || limite > itens[i].limite) itens[i].limite = limite;
     if (limite < NV_TEX_MIP_LARG && !pedidoArquivo) itens[i].card = 1;
     // PROMOCAO PELO TETO REALMENTE USADO, e nao pelo pedido.
     //
@@ -3815,9 +3816,11 @@ static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
     // duas ou tres vezes (o cinza entre uma versao e outra). Promover so
     // quando o pedido e ao menos um quarto maior: o card (928) que vira hero
     // (1920) continua promovendo; o foco e a animacao, nao.
-    if (itens[i].estado == PRONTO && itens[i].tetoUsado < limite &&
-        limite >= itens[i].tetoUsado + itens[i].tetoUsado / 4 &&
-        (itens[i].fonteW <= 0 || itens[i].fonteW > itens[i].w)) {
+    if (itens[i].estado == PRONTO &&
+        ((pedidoPalco && itens[i].w > limite) ||
+         (itens[i].tetoUsado < limite &&
+          limite >= itens[i].tetoUsado + itens[i].tetoUsado / 4 &&
+          (itens[i].fonteW <= 0 || itens[i].fonteW > itens[i].w)))) {
       if (itens[i].localDireto) {
         itens[i].estado = PENDENTE;
         (void)enfileirarDecodeSemEspera(i);
@@ -3849,6 +3852,8 @@ static GLuint tex_obter_limite(const char *caminho, int limite, int urgente,
     // crossfade dele ja sabe fazer.
     saida = (itens[i].estado == PRONTO || itens[i].w * 2 >= limite || aceitaMenor)
               ? itens[i].tex : 0;
+    // A larger Current/Detail cache entry must finish resizing before Stage uses it.
+    if (pedidoPalco && itens[i].w > limite) saida = 0;
   } else {
     int novo = slotLivre();
     if (novo >= 0) {
@@ -4051,6 +4056,14 @@ GLuint tex_obter_passageira(const char *caminho, float largLayout) {
 // menos e ampliar depois.
 GLuint tex_obter_hero(const char *caminho) {
   return tex_obter_limite(caminho, tetoDoHeroi(), 1, 0);
+}
+
+GLuint tex_obter_palco(const char *caminho) {
+  int cap = tetoDoHeroi();
+  pedidoPalco = 1;
+  GLuint t = tex_obter_limite(caminho, cap < 1280 ? cap : 1280, 1, 0);
+  pedidoPalco = 0;
+  return t;
 }
 
 // O MESMO HERO, SEM FURAR A FILA: o vizinho do carrossel que ainda nao esta em

@@ -324,4 +324,5 @@
   0, /* Modern Stage background: Black */
   0, 0, 0, 0, /* URL lists and guides (Guia de TV, M9): choice (none) and three actions */
   0, /* episode card rating: follow the title line */
+  0, /* suggest Live TV categories: On, names only */
   0, /* #578: audio presentation offset, unchanged by default */

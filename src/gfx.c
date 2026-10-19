@@ -1638,6 +1638,31 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  float l = (uLeve > 0.5 ? 0.0 : 1.0) * uCor.a * 0.42 * (1.0 - smoothstep(0.0, 1.0, dot(p, p)));\n"
   "  gl_FragColor = nv_dither(uAcento, l);\n"
   "}\n",
+  // GFX_PALCO_ARTE — see gfx.h. Cover anchored 30% from the top, like the
+  // approved CSS (object-position: center 30%).
+  "void main(){\n"
+  "  float v = uPar.x, a = uCor.a;\n"
+  "  vec2 uv = vUv;\n"
+  "  float ra = uAspect / max(uTexAsp, 0.01);\n"
+  "  if (ra > 1.0) uv.y = uv.y / ra + 0.3 * (1.0 - 1.0 / ra);\n"
+  "  else          uv.x = uv.x * ra + uPar.y * (1.0 - ra);\n"
+  "  vec3 c = texture2D(uTex, clamp(uv, 0.0, 1.0)).rgb;\n"
+  "  float l = dot(c, vec3(0.299, 0.587, 0.114));\n"
+  "  if (v < 0.5) a *= smoothstep(0.0, 0.3, vUv.x) * (1.0 - smoothstep(0.55, 1.0, vUv.y));\n"
+  "  else if (v < 1.5) {\n"
+  "    c = clamp(mix(vec3(l), c, 1.5), 0.0, 1.0);\n"
+  "    a *= 0.75 * (1.0 - smoothstep(0.2, 0.75, length((vUv - vec2(0.5, 0.15)) / vec2(1.2, 0.9))));\n"
+  "  } else if (v < 3.5) {\n"
+  "    float q = (vUv.x - uFoco * (1.0 - vUv.y)) / (1.0 - uFoco);\n"
+  "    a *= smoothstep(0.0, 0.004, q) * (1.0 - smoothstep(0.996, 1.0, q)) * (1.0 - smoothstep(0.5, 1.0, vUv.y));\n"
+  "    if (v > 2.5) c = mix(c, vec3(l), 0.6) * 0.55;\n"
+  "  } else {\n"
+  "    l = clamp((l - 0.5) * 1.15 + 0.5, 0.0, 1.0);\n"
+  "    c = mix(vec3(0.05, 0.02, 0.04), uAcento, l) * 0.75;\n"
+  "    a *= 1.0 - smoothstep(0.2, 0.58, vUv.y);\n"
+  "  }\n"
+  "  gl_FragColor = nv_dither(c, a);\n"
+  "}\n",
 };
 
 // Cada corpo declara o que usa; montar so o necessario mantem o shader enxuto.
@@ -1678,7 +1703,8 @@ static const struct { int sdf, cover; } PRECISA[GFX_NMODOS] = {
   {1,0},   /* GFX_VITRINE_DIN — o do GFX_VITRINE */
   {0,0},   /* GFX_HOLOFOTE — procedural, tela cheia */
   {1,1},   /* GFX_CARD_HERO — same artwork, compiled with the reading tint */
-  {0,0}    /* GFX_PALCO_CHAO — procedural floor pool */
+  {0,0},   /* GFX_PALCO_CHAO — procedural floor pool */
+  {0,0}    /* GFX_PALCO_ARTE — own anchored cover */
 };
 
 static GLuint compila(GLenum tipo, const char *src) {
@@ -2087,7 +2113,7 @@ static int vidroFundoModo(GfxRect r, GfxModo m) {
     1ull << GFX_HERO_CHEIO | 1ull << GFX_VEU_BAIXO | 1ull << GFX_SOCIAL | 1ull << GFX_EDITORIAL |
     1ull << GFX_BRILHO_TOPO | 1ull << GFX_LUZ | 1ull << GFX_CEU | 1ull << GFX_AMBIENTE | 1ull << GFX_VITRINE |
     1ull << GFX_FUNDO_DIN | 1ull << GFX_HERO_CAM | 1ull << GFX_HERO_CHEIO_CAM | 1ull << GFX_VEU_CSS |
-    1ull << GFX_VITRINE_DIN;
+    1ull << GFX_VITRINE_DIN | 1ull << GFX_PALCO_ARTE;
   return ((FUNDO >> (unsigned)m) & 1ull) ||
          (m != GFX_VIDRO && r.x <= 0.0f && r.y <= 0.0f && r.x + r.w >= NV_TELA_W && r.y + r.h >= NV_TELA_H);
 }

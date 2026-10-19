@@ -306,6 +306,7 @@ int   ajustes_pediu_livetv_diag(void);
 // Modo do load do player nos canais: 0 A, 1 B, 2 C (video_definir_modo_live).
 int   ajustes_livetv_modo(void);
 int   ajustes_livetv_proxy(void);
+int   ajustes_livetv_sugerir(void);   // Jev sugere categoria so para canal sem categoria (livecat.h)
 void  ajustes_livetv_aplicar_proxy(int ligado);   // proxy de TS da Live TV (proxyts.c)
 void  ajustes_livetv_aplicar_modo(int modo);
 
@@ -529,7 +530,9 @@ int   ajustes_abertura_addon(void);
 // #508: fundo da tela Cinema da abertura: 0 = Desligado, 1 = Arte (nitida com
 // veu escuro), 2 = Arte borrada (padrao).
 int   ajustes_abertura_fundo(void);
-// Modern/Dynamic Stage background: 0 Black (default), 1 Current, 2 Artwork only.
+// Modern/Dynamic Stage background. Stored 0 was Black: it now means Cortina, so old
+// defaults move to the new default with no migration.
+enum { PALCO_CORTINA, PALCO_ATUAL, PALCO_ARTE, PALCO_PRETO, PALCO_AURA, PALCO_TRIPTICO, PALCO_MONUMENTO };
 int   ajustes_palco_fundo(void);
 int   ajustes_titulo_fil(void);        // 0 Classico, 1 Ilha, 2 Editorial, 3 Acento
 int   ajustes_abertura_estilo(void);   // 0 Centro (A3), 1 Canto (B3)
