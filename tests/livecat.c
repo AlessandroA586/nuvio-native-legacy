@@ -10,10 +10,21 @@
 static time_t clockNow = 1800000000;
 time_t time(time_t *out) { if (out) *out = clockNow; return clockNow; }
 
-// livecat.c chama rede_postar_st quando nao ha poster injetado; aqui nunca.
+static long monotonicMs;
+static int slowNetwork, largestTimeout;
+int clock_gettime(clockid_t clock, struct timespec *out) {
+  (void)clock;
+  out->tv_sec = monotonicMs / 1000;
+  out->tv_nsec = (monotonicMs % 1000) * 1000000;
+  return 0;
+}
+static char *worker(const char *url, const char *corpo, int *st);
 char *rede_postar_st(const char *u, int s, const char *const *c, const char *b, int *st) {
-  (void)u; (void)s; (void)c; (void)b; (void)st;
-  fprintf(stderr, "rede real chamada\n"); exit(2);
+  (void)c;
+  if (!slowNetwork) { fprintf(stderr, "unexpected real network\n"); exit(2); }
+  if (s > largestTimeout) largestTimeout = s;
+  monotonicMs += 1200; // Successful but slow; no wall-clock sleep.
+  return worker(u, b, st);
 }
 
 static int falhas, posts, status = 200, maiorLote, vazou;
@@ -127,6 +138,21 @@ int main(int argc, char **argv) {
     ganhou = livecat_sugerir(um, s1, 1, out, ativo);
     OK(ganhou == 0 && posts == 0, "cancelled load asks nothing");
     cancelada = 0; }
+
+  { static char nm[1200][32]; const char *pn[1201], *result[1201]; unsigned char eligible[1201];
+    for (i = 0; i < 1200; i++) {
+      snprintf(nm[i], sizeof nm[i], "slow kids %04d", i); pn[i] = nm[i]; eligible[i] = 1;
+    }
+    pn[1200] = "Canal Futebol HD"; eligible[1200] = 1;
+    posts = 0; monotonicMs = 0; largestTimeout = 0; slowNetwork = 1;
+    livecat_postar_teste(NULL);
+    ganhou = livecat_sugerir(pn, eligible, 1201, result, ativo);
+    OK(posts == 1 && monotonicMs <= 2000 && largestTimeout <= 2,
+       "P2: 1200 cold names share a two-second network budget, including request timeout");
+    OK(ganhou == 201 && result[0] && !result[200] && result[1200] && !strcmp(result[1200], "Esportes"),
+       "budget exhaustion preserves successful and cached suggestions for the usable guide");
+    slowNetwork = 0; livecat_postar_teste(worker);
+  }
 
   { const char *names[] = { "Canal Futebol HD", "xyzzy tv" }; unsigned char both[] = {1, 1};
     clockNow += 31 * 86400; posts = 0;

@@ -977,8 +977,8 @@ export default {
       return rotaXtream(req, url);
 
     // SUGESTAO DE CATEGORIA DE CANAL AO VIVO (Jev): so nomes de canal, sem
-    // sessao, como /v1/xtream. Cache em KV e limite por IP; o Jev roda
-    // pelo binding Workers AI em livetvcat.js.
+    // sessao, como /v1/xtream. Cache em KV e limite por IP; o Jev usa
+    // HTTP com o segredo TYPESAFE_KEY em livetvcat.js.
     if (rota === "/livetv/categorias" && req.method === "POST")
       return rotaLiveTvCategorias(req, env, limitar);
 

@@ -15,11 +15,17 @@
 
 #define ARQ "livecat.txt"
 #define BASE_MAX 201         // Worker accepts up to 200 UTF-8 bytes
-#define LOTE 200             // Worker splits each request into <=64 AI questions
+#define LOTE 200             // Worker splits each request into <=64 Jev questions
 #define LOTES_MAX 6          // ponytail: cap each load at 1200 misses; remaining names retry next load
 #define CACHE_MAX 3000
 #define VALIDADE_DIAS 30
-#define PRAZO_S 12
+#define PRAZO_S 2            // Total network budget: optional suggestions must not delay the guide
+
+static long long agoraMs(void) {
+  struct timespec t;
+  if (clock_gettime(CLOCK_MONOTONIC, &t)) return -1;
+  return (long long)t.tv_sec * 1000 + t.tv_nsec / 1000000;
+}
 
 // As secoes de categoriaPorNome (chaves de idioma_tab.h), na ordem do Worker.
 static const char *const SECAO[] = {
@@ -98,7 +104,7 @@ static void escapar(const char *src, char *dst) {
 
 // Um lote: POST {"nomes":[...]} e le {"cats":{"<base>":"<secao>"|null}}. Nome
 // ausente da resposta (teto do Worker, falha do Jev) nao entra no cache.
-static int perguntar(char (*bases)[BASE_MAX], int n) {
+static int perguntar(char (*bases)[BASE_MAX], int n, int prazo) {
   static const char *const cab[] = { "Content-Type: application/json", NULL };
   char url[200], *corpo, *resp, *cats;
   size_t u = 0, cap = (size_t)n * (2 * BASE_MAX + 4) + 16;
@@ -113,7 +119,7 @@ static int perguntar(char (*bases)[BASE_MAX], int n) {
   }
   snprintf(corpo + u, cap - u, "]}");
   snprintf(url, sizeof url, "%s/livetv/categorias", NV_REC_URL);
-  resp = postar ? postar(url, corpo, &st) : rede_postar_st(url, PRAZO_S, cab, corpo, &st);
+  resp = postar ? postar(url, corpo, &st) : rede_postar_st(url, prazo, cab, corpo, &st);
   free(corpo);
   if (!resp || st < 200 || st >= 300) { free(resp); return 0; }
   cats = malloc(strlen(resp) + 1);
@@ -140,6 +146,7 @@ int livecat_sugerir(const char *const *nomes, const unsigned char *sem, int n,
   char (*falta)[BASE_MAX] = NULL;
   char (*base)[BASE_MAX] = NULL;
   int i, nf = 0, lote, ganhou = 0;
+  long long inicio = agoraMs();
   for (i = 0; i < n; i++) out[i] = NULL;
   if (!NV_REC_URL[0] && !postar) return 0;
   base = malloc(sizeof *base * (size_t)(n > 0 ? n : 1));
@@ -167,7 +174,10 @@ int livecat_sugerir(const char *const *nomes, const unsigned char *sem, int n,
   }
   for (lote = 0; lote * LOTE < nf && (!ativo || ativo()); lote++) {
     int m = nf - lote * LOTE < LOTE ? nf - lote * LOTE : LOTE;
-    if (!perguntar(falta + lote * LOTE, m)) break;     // rede fora: nao insiste nesta carga
+    long long agora = agoraMs();
+    int prazo = (int)((inicio + PRAZO_S * 1000 - agora) / 1000);
+    if (inicio < 0 || agora < inicio || prazo <= 0) break;
+    if (!perguntar(falta + lote * LOTE, m, prazo)) break;     // rede fora: nao insiste nesta carga
   }
   if (nf) gravar();
   for (i = 0; i < n; i++) {

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Live TV category suggestions (src/livecat.c): section per unclassified channel,
 # disk cache per base name, batches of 200, no network for classified channels.
-# Worker route has its own test: node servidor/recomendacoes/teste-livetvcat.mjs
+# Includes Worker HTTP contract, shared limiter and cleanup regressions.
 #
 #   bash tests/livecat.sh
 set -euo pipefail
@@ -18,3 +18,4 @@ cc tests/livecat_guia.c src/livecat.c src/dados.c src/ltv.c src/js.c src/idcanal
   -DNV_REC_URL='"http://rec.test"' -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -O1 -g -Wno-macro-redefined "${flags[@]}" -o "$tmp/guia"
 NUVIO_DADOS="$tmp/guide" "$tmp/guia"
+node servidor/recomendacoes/teste-livetvcat.mjs
