@@ -1758,8 +1758,8 @@ static int acbConfigurarTipo(int bufferstream) {
   } while (0)
 
 static int iniciar(int automatico);
-int video_iniciar(void)      { return iniciar(0); }
-int video_iniciar_auto(void) { return iniciar(1); }
+int video_iniciar(void)      { mkvass_aceitar_imagem(1); return iniciar(0); }
+int video_iniciar_auto(void) { mkvass_aceitar_imagem(1); return iniciar(1); }
 int video_registro_negado(void) { return regNegado; }
 
 static int iniciar(int automatico) {
@@ -2246,6 +2246,9 @@ static void *lerMkv(void *arg) {
     fflush(stdout); }
   // #510: sourceInfo can omit embedded text tracks the app can render itself.
   nLeg = faixasmkv_acrescentar_texto(faixaLeg, nLeg, NV_FAIXA_MAX, fx, n);
+  // PGS (BD/remux): o uMS nao lista legenda de imagem. O app a decodifica
+  // (pgs.c/imgsub, o mesmo do .tpk) e entra no fim da lista, com o ordinal do arquivo.
+  nLeg = faixasmkv_acrescentar_imagem(faixaLeg, nLeg, NV_FAIXA_MAX, fx, n);
   { char m[64];
     snprintf(m, sizeof m, "mkv: %d faixas lidas, %d legendas com idioma", n, casou);
     marco(m); }
