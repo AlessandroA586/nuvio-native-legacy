@@ -1,7 +1,7 @@
 {
- "atualizado_em": "2026-10-19T00:47:30-03:00",
- "base": "78d299575",
- "nota": "Local snapshot sync 2026-10-19T00:47:30-03:00, HEAD 78d299575. Added 0 issues. Device validation remains pending; see external estado.md. Previous history retained in item notes.",
+ "atualizado_em": "2026-10-19T01:48:14-03:00",
+ "base": "01ce50d7f",
+ "nota": "Local snapshot sync 2026-10-19T01:48:14-03:00, HEAD 01ce50d7f. Added 0 issues. Merged palcoarte, livecat, palcotoggle, citpk, pr487probes, guiaoverlay, dinpalco, livelogos, whatsnew207b/c, sport588, menutvos, audoff578, poster566, trakt610, epglass. bibfonte+livefiltro still in job (reviews/fixes running, last verdicts BLOQUEIA).",
  "itens": [
   {
    "numero": 1,
@@ -21567,8 +21567,8 @@
    "conserto": [
     "agente/205-bibfonte"
    ],
-   "proximo_passo": "Latest fix postdates review; review newest tip after queued/running work finishes.",
-   "notas": "Snapshot 2026-10-18T21:57:35-03:00: agente/205-bibfonte: running; j-rev2105-bibfonte.log: BLOQUEIA. Newer fix log requires review.\nSnapshot 2026-10-18T23:51:00-03:00: agente/205-bibfonte: running; j-rev2340-bibfonte.log: BLOQUEIA. Newer fix log requires review.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-bibfonte: running; j-rev0033-bibfonte.log: BLOQUEIA. Newer fix log requires review."
+   "proximo_passo": "Wait for running job; then review fix.",
+   "notas": "Snapshot 2026-10-18T21:57:35-03:00: agente/205-bibfonte: running; j-rev2105-bibfonte.log: BLOQUEIA. Newer fix log requires review.\nSnapshot 2026-10-18T23:51:00-03:00: agente/205-bibfonte: running; j-rev2340-bibfonte.log: BLOQUEIA. Newer fix log requires review.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-bibfonte: running; j-rev0033-bibfonte.log: BLOQUEIA. Newer fix log requires review.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-bibfonte: j-rev0141-bibfonte.log RUNNING; last verdict j-rev0118-bibfonte.log: BLOQUEIA; newer fix j-fix0125 done awaiting this review."
   },
   {
    "id": "tracking-agente-205-bibgrade",
@@ -21604,8 +21604,8 @@
     "agente/205-epglass",
     "agente/205-epglass (merge 5404c88ac)"
    ],
-   "proximo_passo": "Verify merged result; build/install and check device.",
-   "notas": "Snapshot 2026-10-18T21:57:35-03:00: agente/205-epglass: review-OK; j-rev2141-epglass.log: OK.\nSnapshot 2026-10-18T23:51:00-03:00: agente/205-epglass: merged; j-rev2141-epglass.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-epglass: merged; j-rev2141-epglass.log: OK."
+   "proximo_passo": "Merged into integracao/2.0.5 at 5404c88ac; ships in 2.0.7.",
+   "notas": "Snapshot 2026-10-18T21:57:35-03:00: agente/205-epglass: review-OK; j-rev2141-epglass.log: OK.\nSnapshot 2026-10-18T23:51:00-03:00: agente/205-epglass: merged; j-rev2141-epglass.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-epglass: merged; j-rev2141-epglass.log: OK.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-epglass: merged 5404c88ac; j-rev2141-epglass.log: OK."
   },
   {
    "id": "tracking-agente-205-es419",
@@ -21654,8 +21654,8 @@
     "agente/205-menutvos",
     "agente/205-menutvos (merge 8cb639b60)"
    ],
-   "proximo_passo": "Verify merged result; build/install and check device.",
-   "notas": "Snapshot 2026-10-18T21:57:35-03:00: agente/205-menutvos: merged; No mapped review verdict.\nSnapshot 2026-10-18T23:51:00-03:00: agente/205-menutvos: merged; j-rev2238-menutvos.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-menutvos: merged; j-rev2238-menutvos.log: OK."
+   "proximo_passo": "Merged into integracao/2.0.5 at 8cb639b60; ships in 2.0.7.",
+   "notas": "Snapshot 2026-10-18T21:57:35-03:00: agente/205-menutvos: merged; No mapped review verdict.\nSnapshot 2026-10-18T23:51:00-03:00: agente/205-menutvos: merged; j-rev2238-menutvos.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-menutvos: merged; j-rev2238-menutvos.log: OK.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-menutvos: merged 8cb639b60; j-rev2238-menutvos.log: OK."
   },
   {
    "id": "tracking-agente-205-mic585",
@@ -21686,13 +21686,14 @@
    "id": "tracking-agente-205-palcoarte",
    "titulo": "Worktree /Volumes/ExternalSSD/nv-205-splithero, branch agente/205-splithero. Release 2.0.7.",
    "plataforma": "See task prompt",
-   "status": "em_job",
+   "status": "integrada",
    "release": "2.0.7",
    "conserto": [
-    "agente/205-palcoarte"
+    "agente/205-palcoarte",
+    "agente/205-palcoarte (merge 01ce50d7f)"
    ],
-   "proximo_passo": "Latest fix postdates review; review newest tip after queued/running work finishes.",
-   "notas": "Snapshot 2026-10-18T21:57:35-03:00: agente/205-palcoarte: running; No mapped review verdict.\nSnapshot 2026-10-18T23:51:00-03:00: agente/205-palcoarte: review-OK; j-rev2340-palcoarte.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-palcoarte: running; j-rev0023-palcoarte.log: BLOQUEIA. Newer fix log requires review."
+   "proximo_passo": "Merged into integracao/2.0.5 at 01ce50d7f; ships in 2.0.7.",
+   "notas": "Snapshot 2026-10-18T21:57:35-03:00: agente/205-palcoarte: running; No mapped review verdict.\nSnapshot 2026-10-18T23:51:00-03:00: agente/205-palcoarte: review-OK; j-rev2340-palcoarte.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-palcoarte: running; j-rev0023-palcoarte.log: BLOQUEIA. Newer fix log requires review.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-palcoarte: merged 01ce50d7f; j-rev2340-palcoarte.log: OK."
   },
   {
    "id": "tracking-agente-205-rolagem579",
@@ -21742,8 +21743,8 @@
     "agente/205-trakt610",
     "agente/205-trakt610 (merge 436ea511c)"
    ],
-   "proximo_passo": "Verify merged result; build/install and check device.",
-   "notas": "Snapshot 2026-10-18T21:57:35-03:00: agente/205-trakt610: review-OK; j-rev2141-trakt610.log: OK.\nSnapshot 2026-10-18T23:51:00-03:00: agente/205-trakt610: merged; j-rev2141-trakt610.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-trakt610: merged; j-rev2141-trakt610.log: OK."
+   "proximo_passo": "Merged into integracao/2.0.5 at 436ea511c; ships in 2.0.7.",
+   "notas": "Snapshot 2026-10-18T21:57:35-03:00: agente/205-trakt610: review-OK; j-rev2141-trakt610.log: OK.\nSnapshot 2026-10-18T23:51:00-03:00: agente/205-trakt610: merged; j-rev2141-trakt610.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-trakt610: merged; j-rev2141-trakt610.log: OK.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-trakt610: merged 436ea511c; j-rev2141-trakt610.log: OK."
   },
   {
    "id": "tracking-agente-205-dinpalco",
@@ -21754,8 +21755,8 @@
    "conserto": [
     "agente/205-dinpalco (merge dfb22a56e)"
    ],
-   "proximo_passo": "Latest fix postdates review; review newest tip after queued/running work finishes.",
-   "notas": "Snapshot 2026-10-18T23:51:00-03:00: agente/205-dinpalco: merged; j-rev2344-dinpalco.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-dinpalco: merged; j-rev2344-dinpalco.log: OK. Newer fix log requires review."
+   "proximo_passo": "Merged into integracao/2.0.5 at dfb22a56e; ships in 2.0.7.",
+   "notas": "Snapshot 2026-10-18T23:51:00-03:00: agente/205-dinpalco: merged; j-rev2344-dinpalco.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-dinpalco: merged; j-rev2344-dinpalco.log: OK. Newer fix log requires review.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-dinpalco: merged dfb22a56e; j-rev2344-dinpalco.log: OK."
   },
   {
    "id": "tracking-agente-205-guiaoverlay",
@@ -21767,20 +21768,21 @@
     "agente/205-guiaoverlay",
     "agente/205-guiaoverlay (merge 4f244e2de)"
    ],
-   "proximo_passo": "Latest fix postdates review; review newest tip after queued/running work finishes.",
-   "notas": "Snapshot 2026-10-18T23:51:00-03:00: agente/205-guiaoverlay: running; j-rev2330-guiaoverlay.log: BLOQUEIA. Newer fix log requires review.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-guiaoverlay: merged; j-rev2348-guiaoverlay.log: OK. Newer fix log requires review."
+   "proximo_passo": "Merged into integracao/2.0.5 at 4f244e2de; ships in 2.0.7.",
+   "notas": "Snapshot 2026-10-18T23:51:00-03:00: agente/205-guiaoverlay: running; j-rev2330-guiaoverlay.log: BLOQUEIA. Newer fix log requires review.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-guiaoverlay: merged; j-rev2348-guiaoverlay.log: OK. Newer fix log requires review.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-guiaoverlay: merged 4f244e2de; j-rev2348-guiaoverlay.log: OK."
   },
   {
    "id": "tracking-agente-205-livecat",
    "titulo": "Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-livecat, branch agente/205-livecat vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/livecat.diff. Original task prompt (owner request + constraints): /Volumes/ExternalSSD",
    "plataforma": "See task prompt",
-   "status": "em_job",
+   "status": "integrada",
    "release": "2.0.7",
    "conserto": [
-    "agente/205-livecat"
+    "agente/205-livecat",
+    "agente/205-livecat (merge 228b62d8f)"
    ],
-   "proximo_passo": "Wait for job; review latest commit.",
-   "notas": "Snapshot 2026-10-18T23:51:00-03:00: agente/205-livecat: running; j-rev2340-livecat.log: BLOQUEIA. Newer fix log requires review.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-livecat: running; j-rev0040-livecat.log: BLOQUEIA."
+   "proximo_passo": "Merged into integracao/2.0.5 at 228b62d8f; ships in 2.0.7.",
+   "notas": "Snapshot 2026-10-18T23:51:00-03:00: agente/205-livecat: running; j-rev2340-livecat.log: BLOQUEIA. Newer fix log requires review.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-livecat: running; j-rev0040-livecat.log: BLOQUEIA.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-livecat: merged 228b62d8f; j-rev0118-livecat.log: OK."
   },
   {
    "id": "tracking-agente-205-livefiltro",
@@ -21791,8 +21793,8 @@
    "conserto": [
     "agente/205-livefiltro"
    ],
-   "proximo_passo": "Latest fix postdates review; review newest tip after queued/running work finishes.",
-   "notas": "Snapshot 2026-10-18T23:51:00-03:00: agente/205-livefiltro: running; j-rev2344-livefiltro.log: BLOQUEIA. Newer fix log requires review.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-livefiltro: running; j-rev0033-livefiltro.log: BLOQUEIA. Newer fix log requires review."
+   "proximo_passo": "Wait for running job; then review fix.",
+   "notas": "Snapshot 2026-10-18T23:51:00-03:00: agente/205-livefiltro: running; j-rev2344-livefiltro.log: BLOQUEIA. Newer fix log requires review.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-livefiltro: running; j-rev0033-livefiltro.log: BLOQUEIA. Newer fix log requires review.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-livefiltro: j-fix0129-livefiltro.log RUNNING; last verdict j-rev0124-livefiltro.log: BLOQUEIA; fix0119 done, fix0129 in flight."
   },
   {
    "id": "tracking-agente-205-livelogos",
@@ -21803,8 +21805,8 @@
    "conserto": [
     "agente/205-livelogos (merge caea5e54d)"
    ],
-   "proximo_passo": "Latest fix postdates review; review newest tip after queued/running work finishes.",
-   "notas": "Snapshot 2026-10-18T23:51:00-03:00: agente/205-livelogos: merged; j-rev2340-livelogos.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-livelogos: merged; j-rev2340-livelogos.log: OK. Newer fix log requires review."
+   "proximo_passo": "Merged into integracao/2.0.5 at caea5e54d; ships in 2.0.7.",
+   "notas": "Snapshot 2026-10-18T23:51:00-03:00: agente/205-livelogos: merged; j-rev2340-livelogos.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-livelogos: merged; j-rev2340-livelogos.log: OK. Newer fix log requires review.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-livelogos: merged caea5e54d; j-rev2340-livelogos.log: OK."
   },
   {
    "id": "tracking-agente-205-triagem4",
@@ -21827,8 +21829,8 @@
    "conserto": [
     "agente/205-whatsnew207b (merge 0e9148055)"
    ],
-   "proximo_passo": "Latest fix postdates review; review newest tip after queued/running work finishes.",
-   "notas": "Snapshot 2026-10-18T23:51:00-03:00: agente/205-whatsnew207b: merged; j-rev2319-whatsnew207b.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-whatsnew207b: merged; j-rev2319-whatsnew207b.log: OK. Newer fix log requires review."
+   "proximo_passo": "Merged into integracao/2.0.5 at 0e9148055; ships in 2.0.7.",
+   "notas": "Snapshot 2026-10-18T23:51:00-03:00: agente/205-whatsnew207b: merged; j-rev2319-whatsnew207b.log: OK.\nSnapshot 2026-10-19T00:47:30-03:00: agente/205-whatsnew207b: merged; j-rev2319-whatsnew207b.log: OK. Newer fix log requires review.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-whatsnew207b: merged 0e9148055; j-rev2319-whatsnew207b.log: OK."
   },
   {
    "id": "tracking-agente-205-citpk",
@@ -21839,8 +21841,8 @@
    "conserto": [
     "agente/205-citpk (merge 4c8c80e9c)"
    ],
-   "proximo_passo": "Verify merged result; build/install and check device.",
-   "notas": "Snapshot 2026-10-19T00:47:30-03:00: agente/205-citpk: merged; j-rev0011-citpk.log: OK."
+   "proximo_passo": "Merged into integracao/2.0.5 at 4c8c80e9c; ships in 2.0.7.",
+   "notas": "Snapshot 2026-10-19T00:47:30-03:00: agente/205-citpk: merged; j-rev0011-citpk.log: OK.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-citpk: merged 4c8c80e9c; j-rev0011-citpk.log: OK."
   },
   {
    "id": "tracking-agente-205-palcotoggle",
@@ -21851,8 +21853,8 @@
    "conserto": [
     "agente/205-palcotoggle (merge 71c53b8e1)"
    ],
-   "proximo_passo": "Latest fix postdates review; review newest tip after queued/running work finishes.",
-   "notas": "Snapshot 2026-10-19T00:47:30-03:00: agente/205-palcotoggle: merged; j-rev0029-palcotoggle.log: OK. Newer fix log requires review."
+   "proximo_passo": "Merged into integracao/2.0.5 at 71c53b8e1; ships in 2.0.7.",
+   "notas": "Snapshot 2026-10-19T00:47:30-03:00: agente/205-palcotoggle: merged; j-rev0029-palcotoggle.log: OK. Newer fix log requires review.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-palcotoggle: merged 71c53b8e1; j-rev0029-palcotoggle.log: OK."
   },
   {
    "id": "tracking-agente-205-pr487probes",
@@ -21863,8 +21865,8 @@
    "conserto": [
     "agente/205-pr487probes (merge 32fb7e4b0)"
    ],
-   "proximo_passo": "Latest fix postdates review; review newest tip after queued/running work finishes.",
-   "notas": "Snapshot 2026-10-19T00:47:30-03:00: agente/205-pr487probes: merged; j-rev2353-pr487probes.log: OK. Newer fix log requires review."
+   "proximo_passo": "Merged into integracao/2.0.5 at 32fb7e4b0; ships in 2.0.7.",
+   "notas": "Snapshot 2026-10-19T00:47:30-03:00: agente/205-pr487probes: merged; j-rev2353-pr487probes.log: OK. Newer fix log requires review.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-pr487probes: merged 32fb7e4b0; j-rev2353-pr487probes.log: OK."
   },
   {
    "id": "tracking-agente-205-whatsnew207c",
@@ -21875,8 +21877,8 @@
    "conserto": [
     "agente/205-whatsnew207c (merge 78d299575)"
    ],
-   "proximo_passo": "Latest fix postdates review; review newest tip after queued/running work finishes.",
-   "notas": "Snapshot 2026-10-19T00:47:30-03:00: agente/205-whatsnew207c: merged; j-rev0029-whatsnew207c.log: OK. Newer fix log requires review."
+   "proximo_passo": "Merged into integracao/2.0.5 at 78d299575; ships in 2.0.7.",
+   "notas": "Snapshot 2026-10-19T00:47:30-03:00: agente/205-whatsnew207c: merged; j-rev0029-whatsnew207c.log: OK. Newer fix log requires review.\nSnapshot 2026-10-19T01:48:14-03:00: agente/205-whatsnew207c: merged 78d299575; j-rev0029-whatsnew207c.log: OK."
   }
  ],
  "fechar_203": [],

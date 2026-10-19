@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `78d299575` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-19T00:47:30-03:00. 503 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `01ce50d7f` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-19T01:48:14-03:00. 503 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -26487,10 +26487,11 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-aspecto426: merged; j-rev-205-asp
 - Status: em_job
 - Release: 2.0.7
 - Conserto: agente/205-bibfonte
-- Próximo passo: Latest fix postdates review; review newest tip after queued/running work finishes.
+- Próximo passo: Wait for running job; then review fix.
 - Notas: Snapshot 2026-10-18T21:57:35-03:00: agente/205-bibfonte: running; j-rev2105-bibfonte.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-18T23:51:00-03:00: agente/205-bibfonte: running; j-rev2340-bibfonte.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-19T00:47:30-03:00: agente/205-bibfonte: running; j-rev0033-bibfonte.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-bibfonte: j-rev0141-bibfonte.log RUNNING; last verdict j-rev0118-bibfonte.log: BLOQUEIA; newer fix j-fix0125 done awaiting this review.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-bibgrade, branch agente/205-bibgrade.
 
@@ -26520,10 +26521,11 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-botaogap: merged; j-rev2057-botao
 - Status: integrada
 - Release: 2.0.7
 - Conserto: agente/205-epglass; agente/205-epglass (merge 5404c88ac)
-- Próximo passo: Verify merged result; build/install and check device.
+- Próximo passo: Merged into integracao/2.0.5 at 5404c88ac; ships in 2.0.7.
 - Notas: Snapshot 2026-10-18T21:57:35-03:00: agente/205-epglass: review-OK; j-rev2141-epglass.log: OK.
 Snapshot 2026-10-18T23:51:00-03:00: agente/205-epglass: merged; j-rev2141-epglass.log: OK.
 Snapshot 2026-10-19T00:47:30-03:00: agente/205-epglass: merged; j-rev2141-epglass.log: OK.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-epglass: merged 5404c88ac; j-rev2141-epglass.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-es419, branch agente/205-es419 vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/es419.diff. Original task prompt (owner request + constraints): /Volumes/ExternalSSD/tmp/r
 
@@ -26564,10 +26566,11 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-legtags604: merged; j-rev2029-leg
 - Status: integrada
 - Release: 2.0.7
 - Conserto: agente/205-menutvos; agente/205-menutvos (merge 8cb639b60)
-- Próximo passo: Verify merged result; build/install and check device.
+- Próximo passo: Merged into integracao/2.0.5 at 8cb639b60; ships in 2.0.7.
 - Notas: Snapshot 2026-10-18T21:57:35-03:00: agente/205-menutvos: merged; No mapped review verdict.
 Snapshot 2026-10-18T23:51:00-03:00: agente/205-menutvos: merged; j-rev2238-menutvos.log: OK.
 Snapshot 2026-10-19T00:47:30-03:00: agente/205-menutvos: merged; j-rev2238-menutvos.log: OK.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-menutvos: merged 8cb639b60; j-rev2238-menutvos.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-mic585, branch agente/205-mic585. Fix GitHub issue #585 for release 2.0.7.
 
@@ -26594,13 +26597,14 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-notaeplista: merged; j-rev2029-no
 ### Worktree /Volumes/ExternalSSD/nv-205-splithero, branch agente/205-splithero. Release 2.0.7.
 
 - Plataforma: See task prompt
-- Status: em_job
+- Status: integrada
 - Release: 2.0.7
-- Conserto: agente/205-palcoarte
-- Próximo passo: Latest fix postdates review; review newest tip after queued/running work finishes.
+- Conserto: agente/205-palcoarte; agente/205-palcoarte (merge 01ce50d7f)
+- Próximo passo: Merged into integracao/2.0.5 at 01ce50d7f; ships in 2.0.7.
 - Notas: Snapshot 2026-10-18T21:57:35-03:00: agente/205-palcoarte: running; No mapped review verdict.
 Snapshot 2026-10-18T23:51:00-03:00: agente/205-palcoarte: review-OK; j-rev2340-palcoarte.log: OK.
 Snapshot 2026-10-19T00:47:30-03:00: agente/205-palcoarte: running; j-rev0023-palcoarte.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-palcoarte: merged 01ce50d7f; j-rev2340-palcoarte.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-rolagem579, branch agente/205-rolagem579. Fix GitHub issue #579 for release 2.0.7.
 
@@ -26641,10 +26645,11 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-tizenaudio603: merged; j-rev2029-
 - Status: integrada
 - Release: 2.0.7
 - Conserto: agente/205-trakt610; agente/205-trakt610 (merge 436ea511c)
-- Próximo passo: Verify merged result; build/install and check device.
+- Próximo passo: Merged into integracao/2.0.5 at 436ea511c; ships in 2.0.7.
 - Notas: Snapshot 2026-10-18T21:57:35-03:00: agente/205-trakt610: review-OK; j-rev2141-trakt610.log: OK.
 Snapshot 2026-10-18T23:51:00-03:00: agente/205-trakt610: merged; j-rev2141-trakt610.log: OK.
 Snapshot 2026-10-19T00:47:30-03:00: agente/205-trakt610: merged; j-rev2141-trakt610.log: OK.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-trakt610: merged 436ea511c; j-rev2141-trakt610.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-dinpalco, branch agente/205-dinpalco. The previous job was killed by a machine shutdown; its work is in the tree (commits and uncommitted changes). First read git log/status/diff and keep good work; then
 
@@ -26652,9 +26657,10 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-trakt610: merged; j-rev2141-trakt
 - Status: integrada
 - Release: 2.0.7
 - Conserto: agente/205-dinpalco (merge dfb22a56e)
-- Próximo passo: Latest fix postdates review; review newest tip after queued/running work finishes.
+- Próximo passo: Merged into integracao/2.0.5 at dfb22a56e; ships in 2.0.7.
 - Notas: Snapshot 2026-10-18T23:51:00-03:00: agente/205-dinpalco: merged; j-rev2344-dinpalco.log: OK.
 Snapshot 2026-10-19T00:47:30-03:00: agente/205-dinpalco: merged; j-rev2344-dinpalco.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-dinpalco: merged dfb22a56e; j-rev2344-dinpalco.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-guiaoverlay, branch agente/205-guiaoverlay. Fix ALL P0-P2 code/test findings of the review below, then commit. Ignore environment limits (60 s timeouts, missing NUVIO_SUPABASE_*/TV_LOGIN_* env). Proof: t
 
@@ -26662,19 +26668,21 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-dinpalco: merged; j-rev2344-dinpa
 - Status: integrada
 - Release: 2.0.7
 - Conserto: agente/205-guiaoverlay; agente/205-guiaoverlay (merge 4f244e2de)
-- Próximo passo: Latest fix postdates review; review newest tip after queued/running work finishes.
+- Próximo passo: Merged into integracao/2.0.5 at 4f244e2de; ships in 2.0.7.
 - Notas: Snapshot 2026-10-18T23:51:00-03:00: agente/205-guiaoverlay: running; j-rev2330-guiaoverlay.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-19T00:47:30-03:00: agente/205-guiaoverlay: merged; j-rev2348-guiaoverlay.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-guiaoverlay: merged 4f244e2de; j-rev2348-guiaoverlay.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-livecat, branch agente/205-livecat vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/livecat.diff. Original task prompt (owner request + constraints): /Volumes/ExternalSSD
 
 - Plataforma: See task prompt
-- Status: em_job
+- Status: integrada
 - Release: 2.0.7
-- Conserto: agente/205-livecat
-- Próximo passo: Wait for job; review latest commit.
+- Conserto: agente/205-livecat; agente/205-livecat (merge 228b62d8f)
+- Próximo passo: Merged into integracao/2.0.5 at 228b62d8f; ships in 2.0.7.
 - Notas: Snapshot 2026-10-18T23:51:00-03:00: agente/205-livecat: running; j-rev2340-livecat.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-19T00:47:30-03:00: agente/205-livecat: running; j-rev0040-livecat.log: BLOQUEIA.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-livecat: merged 228b62d8f; j-rev0118-livecat.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-livefiltro, branch agente/205-livefiltro. Fix ALL P0-P2 code/test findings of the review below, then commit. Ignore environment limits (60 s timeouts, missing NUVIO_SUPABASE_*/TV_LOGIN_* env). Proof: tar
 
@@ -26682,9 +26690,10 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-livecat: running; j-rev0040-livec
 - Status: em_job
 - Release: 2.0.7
 - Conserto: agente/205-livefiltro
-- Próximo passo: Latest fix postdates review; review newest tip after queued/running work finishes.
+- Próximo passo: Wait for running job; then review fix.
 - Notas: Snapshot 2026-10-18T23:51:00-03:00: agente/205-livefiltro: running; j-rev2344-livefiltro.log: BLOQUEIA. Newer fix log requires review.
 Snapshot 2026-10-19T00:47:30-03:00: agente/205-livefiltro: running; j-rev0033-livefiltro.log: BLOQUEIA. Newer fix log requires review.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-livefiltro: j-fix0129-livefiltro.log RUNNING; last verdict j-rev0124-livefiltro.log: BLOQUEIA; fix0119 done, fix0129 in flight.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-livelogos, branch agente/205-livelogos. Bug, cause unknown: in the Live TV guide (src/guia.c, src/xtream.c, src/epg.c) channel logos are not shown for an Xtream account on the TCL (Android TV). Owner: "n
 
@@ -26692,9 +26701,10 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-livefiltro: running; j-rev0033-li
 - Status: integrada
 - Release: 2.0.7
 - Conserto: agente/205-livelogos (merge caea5e54d)
-- Próximo passo: Latest fix postdates review; review newest tip after queued/running work finishes.
+- Próximo passo: Merged into integracao/2.0.5 at caea5e54d; ships in 2.0.7.
 - Notas: Snapshot 2026-10-18T23:51:00-03:00: agente/205-livelogos: merged; j-rev2340-livelogos.log: OK.
 Snapshot 2026-10-19T00:47:30-03:00: agente/205-livelogos: merged; j-rev2340-livelogos.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-livelogos: merged caea5e54d; j-rev2340-livelogos.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-triagem4 (read only: do not edit code, do not commit). Triage 8 new GitHub issues opened after 2.0.6.
 
@@ -26712,9 +26722,10 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-triagem4: merged; No mapped revie
 - Status: integrada
 - Release: 2.0.7
 - Conserto: agente/205-whatsnew207b (merge 0e9148055)
-- Próximo passo: Latest fix postdates review; review newest tip after queued/running work finishes.
+- Próximo passo: Merged into integracao/2.0.5 at 0e9148055; ships in 2.0.7.
 - Notas: Snapshot 2026-10-18T23:51:00-03:00: agente/205-whatsnew207b: merged; j-rev2319-whatsnew207b.log: OK.
 Snapshot 2026-10-19T00:47:30-03:00: agente/205-whatsnew207b: merged; j-rev2319-whatsnew207b.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-whatsnew207b: merged 0e9148055; j-rev2319-whatsnew207b.log: OK.
 
 ### Review only, do not edit. Worktree /Volumes/ExternalSSD/nv-205-citpk, branch agente/205-citpk vs integracao/2.0.5. Diff: /Volumes/ExternalSSD/tmp/rev/citpk.diff. Original task prompt (owner request + constraints): /Volumes/ExternalSSD/tmp/r
 
@@ -26722,8 +26733,9 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-whatsnew207b: merged; j-rev2319-w
 - Status: integrada
 - Release: 2.0.7
 - Conserto: agente/205-citpk (merge 4c8c80e9c)
-- Próximo passo: Verify merged result; build/install and check device.
+- Próximo passo: Merged into integracao/2.0.5 at 4c8c80e9c; ships in 2.0.7.
 - Notas: Snapshot 2026-10-19T00:47:30-03:00: agente/205-citpk: merged; j-rev0011-citpk.log: OK.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-citpk: merged 4c8c80e9c; j-rev0011-citpk.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-palcotoggle, branch agente/205-palcotoggle (from integracao/2.0.5).
 
@@ -26731,8 +26743,9 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-whatsnew207b: merged; j-rev2319-w
 - Status: integrada
 - Release: 2.0.7
 - Conserto: agente/205-palcotoggle (merge 71c53b8e1)
-- Próximo passo: Latest fix postdates review; review newest tip after queued/running work finishes.
+- Próximo passo: Merged into integracao/2.0.5 at 71c53b8e1; ships in 2.0.7.
 - Notas: Snapshot 2026-10-19T00:47:30-03:00: agente/205-palcotoggle: merged; j-rev0029-palcotoggle.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-palcotoggle: merged 71c53b8e1; j-rev0029-palcotoggle.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-whatsnew207c, branch agente/205-whatsnew207c (from integracao/2.0.5). Update the 2.0.7 What's New again before release.
 
@@ -26740,8 +26753,9 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-whatsnew207b: merged; j-rev2319-w
 - Status: integrada
 - Release: 2.0.7
 - Conserto: agente/205-pr487probes (merge 32fb7e4b0)
-- Próximo passo: Latest fix postdates review; review newest tip after queued/running work finishes.
+- Próximo passo: Merged into integracao/2.0.5 at 32fb7e4b0; ships in 2.0.7.
 - Notas: Snapshot 2026-10-19T00:47:30-03:00: agente/205-pr487probes: merged; j-rev2353-pr487probes.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-pr487probes: merged 32fb7e4b0; j-rev2353-pr487probes.log: OK.
 
 ### Worktree /Volumes/ExternalSSD/nv-205-whatsnew207c, branch agente/205-whatsnew207c (from integracao/2.0.5). Update the 2.0.7 What's New again before release.
 
@@ -26749,5 +26763,6 @@ Snapshot 2026-10-19T00:47:30-03:00: agente/205-whatsnew207b: merged; j-rev2319-w
 - Status: integrada
 - Release: 2.0.7
 - Conserto: agente/205-whatsnew207c (merge 78d299575)
-- Próximo passo: Latest fix postdates review; review newest tip after queued/running work finishes.
+- Próximo passo: Merged into integracao/2.0.5 at 78d299575; ships in 2.0.7.
 - Notas: Snapshot 2026-10-19T00:47:30-03:00: agente/205-whatsnew207c: merged; j-rev0029-whatsnew207c.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T01:48:14-03:00: agente/205-whatsnew207c: merged 78d299575; j-rev0029-whatsnew207c.log: OK.

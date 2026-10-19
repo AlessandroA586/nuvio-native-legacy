@@ -224,6 +224,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 - **Custom poster templates accept optional IDs**: IMDb-only cards can use custom poster services whose TMDB identifier is optional while required identifiers retain their fallback. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #566, `6c3b323b2`, merge `25225cf86`.
 - **Sports sources keep their provider type**: Sports items try their original item and catalog types before legacy channel fallbacks, sharing the existing add-on timeout budget. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #588, `b3fde1a13`, `a017d44e0`, merge `3356994e8`.
 - **Trakt disconnect and retry remain reliable**: Profile disconnects survive delayed credential pushes, Android honors retry delays, and watchlists show newest entries first. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #610, `0ed0312f0`, `8bd79ad4c`, `4a1e17561`, merge `436ea511c`.
+- **Live TV suggests channel sections for you** (owner request): when a Live TV source has no groups or you ask for a fresh grouping, the app asks the Jev worker to propose sections from your channel names, restores them at startup, filters out unusable candidates before counting them against limits, and keeps them bounded even on giant lists. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `cb6d669eb`, `d48f5132a`, `ab64c3059`, `83f2cca2e`, `fcdfb0207`, `ed6d2615b`, `43dd6ded4`, `83a999ff7`, merge `228b62d8f`.
+- **Home artwork crossfades between refreshes**: when Home rows refresh under you, replaced artwork now fades in smoothly instead of popping, and a delayed backdrop no longer appears from black on the same title. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `2e67a1b5f`, `30d0763d4`, merge `01ce50d7f`.
+
 - **Episode tiles retain their resting tint**: Episode text keeps its resting background across focus changes, page fades and glass settings. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `8a61d1c1f`, `a95079a43`, `2d26a3a87`, merge `5404c88ac`.
 
 - **Subtitle emphasis survives formatting tags**: SRT subtitles retain bold and italic emphasis while unsupported formatting is removed before display. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #604, `fc94e9c24`, merge `3ce5b5f22`.
@@ -472,6 +475,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 ### Internal
 
 - **Avoid duplicate Samsung package builds**: Samsung package CI runs only for master pushes that change app code, avoiding duplicate integration builds and repeated cancellations. Platforms: Samsung .tpk. Refs `02989fd6c`, merge `4c8c80e9c`.
+
+- **Live TV filter and Stalker recovery hardening**: filtered-empty Live TV sources recover with automatic retries, the admitted channel cache survives reloads, and guide filters stay consistent across categories. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `d497c3673`, `46732dde2`.
 
 - **Release card and Dynamic Stage regression upkeep**: Release copy and card capacity cover all current items, while Dynamic Stage rendering and source-order fixtures verify current integration behavior. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `1694cc299`, `26bf3bf32`, `3c5cc4eb1`, `c3f4d3e1d`, merge `78d299575`.
 
