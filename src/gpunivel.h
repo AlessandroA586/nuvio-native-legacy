@@ -19,6 +19,7 @@
 //       tela cheia do tema imersivo e sem sombra/halo. Existing flat-glass
 //       rule remains. Tried if level 1 is still GPU-bound below 45 fps.
 //   720p is selected separately: any effects level, never automatic.
+//   App upscaling uses SGSR 1 or sharp bilinear; weak GPUs use linear.
 //
 // COMO O NIVEL E ESCOLHIDO (.tpk, Android e LG webOS):
 //   - -DNV_TPK_NIVEL_FORCADO=N (tools/tpk.sh com NV_TPK_NIVEL=N): fixo, sem
@@ -64,6 +65,12 @@
 // decide o nivel inicial e marca a GPU fraca no perfil (perfiltv.h).
 // `w`,`h` = drawable da janela.
 void gpun_iniciar(int w, int h);
+// Query with the current GL context; Mali-4xx/no fragment highp use bilinear.
+int gpun_upscale_suportado(void);
+// Output choice, independent of drawable size and internal resolution/effects.
+// Pass panel eligibility + opt-in from ajustes_ampliar_app(); this gate rejects
+// unsupported GPUs (Mali-4xx/no-highp), even on an eligible 4K panel.
+void gpun_ampliar_app(int app);
 // Preview resize: keep the selected GPU level and rebuild its internal target.
 // Called on the drawing thread before beginning the next frame; other builds ignore it.
 void gpun_redimensionar(int w, int h);
