@@ -871,6 +871,7 @@ static int assentado(void) {
 }
 static float tvRolar = 0.0f, tvRolarV = 0.0f;
 #ifdef NV_TOUCH_UI
+static float tvLayout(float *ys, float *yRotulo);
 static int tvToqueLivre;
 static void tvToqueLimpar(void) { tvToqueLivre = 0; }
 static GfxRect tvToqueRegiao;
@@ -882,9 +883,15 @@ static int tvToqueRolar(const PonteiroRolagem *e) {
     tvToqueLivre = 1; tvRolarV = 0.0f; buscaOk = buscaLongo = 0; return 1;
   }
   if (e->fase == PONT_ROL_MOVER || e->fase == PONT_ROL_INERCIA) {
-    float antes = tvRolar;
-    tvRolar = anim_clamp(tvRolar - e->delta / tvToqueEscala, 0.0f, tvToqueMaximo);
-    return fabsf(tvRolar - antes) > 0.001f;
+    float antes = tvRolar, proxima = tvRolar - e->delta / tvToqueEscala;
+    int expandir = proxima > tvToqueMaximo && linha < MENU_ST0 && tvPastasTotal(NULL);
+    if (expandir) {
+      float ys[NV_MENU_FOCOS_TV];
+      linha = MENU_ST0;  // Swiping past Settings opens Streaming, like Down.
+      tvToqueMaximo = fmaxf(0.0f, tvLayout(ys, NULL) - TV_ALTURA_MAX);
+    }
+    tvRolar = anim_clamp(proxima, 0.0f, tvToqueMaximo);
+    return expandir || fabsf(tvRolar - antes) > 0.001f;
   }
   return 1;
 }
@@ -908,7 +915,7 @@ static int tvPastasTotal(const int **v) {
   if (v) *v = t;
   return n > NV_MENU_ST_MAX ? NV_MENU_ST_MAX : (n < 0 ? 0 : n);
 }
-// Streaming stays collapsed until focus goes down past Settings into it.
+// Streaming stays collapsed until focus or a mobile swipe passes Settings.
 static int tvPastas(const int **v) {
   int n = tvPastasTotal(v);
   return linha >= MENU_ST0 ? n : 0;

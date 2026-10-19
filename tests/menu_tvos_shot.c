@@ -1,5 +1,5 @@
 // PNGs of the Apple TV (Dinamica) sidebar at UI scale 80/90/100, Streaming
-// collapsed (focus on Settings) and expanded (focus below Settings).
+// collapsed, D-pad expanded, and after an upward mobile swipe.
 //   bash tests/menu_tvos_shot.sh /Volumes/ExternalSSD/tmp/rev/menutvos/<tag>
 #define home_streaming_barra stub_barra
 #define col_folder stub_folder
@@ -52,17 +52,26 @@ int main(int argc, char **argv) {
   tex_iniciar(64); gfx_icones_dir("deploy/app/art");
   assert(ajustes_home_layout() == HOME_LAYOUT_DINAMICA);
   menu_iniciar();
-  for (i = 0; i < 3; i++) for (k = 0; k < 2; k++) {
+  for (i = 0; i < 3; i++) for (k = 0; k < 3; k++) {
+    layout_modo_definir(k == 2);
     gfx_escala_ui_definir(pct[i] / 100.0f);
     menu_fechar(); menu_abrir();
-    linha = k ? MENU_ST0 : MENU_AJUSTES;
+    linha = k == 1 ? MENU_ST0 : MENU_AJUSTES;
     for (j = 0; j < 90; j++) quadro(1000 + 16 * j);
+    if (k == 2) {
+      PonteiroRolagem e = {PONT_ROL_INICIO, 1, 0, 0,
+                          tvToqueRegiao.x + 10, tvToqueRegiao.y + 10};
+      assert(tvToqueRolar(&e));
+      e.fase = PONT_ROL_MOVER; e.delta = -1000;
+      tvToqueRolar(&e);
+      for (j = 0; j < 90; j++) quadro(2500 + 16 * j);
+    }
     unsigned char *px = malloc((size_t)W * H * 4);
     SDL_Surface *s = SDL_CreateRGBSurfaceWithFormat(0, W, H, 32, SDL_PIXELFORMAT_RGBA32);
     assert(px && s);
     glReadPixels(0, 0, W, H, GL_RGBA, GL_UNSIGNED_BYTE, px);
     for (j = 0; j < H; j++) memcpy((char *)s->pixels + j * s->pitch, px + (size_t)(H - 1 - j) * W * 4, W * 4);
-    snprintf(path, sizeof path, "%s/menutvos-%d-%s.png", out, pct[i], k ? "expanded" : "collapsed");
+    snprintf(path, sizeof path, "%s/menutvos-%d-%s.png", out, pct[i], k == 2 ? "touch-swipe" : k ? "expanded" : "collapsed");
     assert(IMG_SavePNG(s, path) == 0);
     puts(path);
     SDL_FreeSurface(s); free(px);
