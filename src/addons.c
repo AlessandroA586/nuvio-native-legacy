@@ -2341,7 +2341,7 @@ typedef struct {
   int nBaldes, proxBalde;
   int (*cancelado)(void *);   // NULL = nunca cancela
   void *ctx;
-  int timeout;                // segundos por requisicao (12 na 1a rodada)
+  int timeout;                // seconds per addon round, shared by type fallbacks
   int progresso;              // 1 = a busca real que publica aos poucos (#221)
   int rodada;                 // 0/1 = primeira, 2 = segunda chance
   Uint32 inicio;              // SDL_GetTicks do disparo, para o log por addon
@@ -2420,6 +2420,7 @@ static void *fioFontes(void *u) {
     // Prazo da consulta (c->timeout): 30 s para filme/serie, 12 s para canal e
     // prefetch. Ver ADD_PRAZO_VOD_S em consultar().
     prazoS = prazoDoAddon(c, i);
+    Uint32 inicioAddon = SDL_GetTicks();
     corpo = nv_addon_pedido_coube(origem->nome, nv_addon_url(url, sizeof url, origem->base, "/stream/%s/%s.json",
                                     t1, idUrl), sizeof url) && idUrl[0]
             ? rede_baixar(url, prazoS) : NULL;
@@ -2455,10 +2456,15 @@ static void *fioFontes(void *u) {
       for (int k = 0; k < t; k++)
         if (!strcmp(t2, tipos[k])) { repetido = 1; break; }
       if (repetido) continue;
+      // The transport takes whole seconds: never round past the shared deadline.
+      Uint32 gasto = SDL_GetTicks() - inicioAddon;
+      if (gasto >= (Uint32)prazoS * 1000u) break;
+      int restanteS = ((Uint32)prazoS * 1000u - gasto) / 1000u;
+      if (restanteS <= 0) break;
       char *alt;
       alt = nv_addon_pedido_coube(origem->nome, nv_addon_url(url, sizeof url, origem->base, "/stream/%s/%s.json",
                                     t2, idUrl), sizeof url) && idUrl[0]
-            ? rede_baixar(url, prazoS) : NULL;
+            ? rede_baixar(url, restanteS) : NULL;
       if (consultaCancelada(c)) { free(alt); free(corpo); free(achados); return NULL; }
       if (alt) {
         Stream *a2 = NULL;

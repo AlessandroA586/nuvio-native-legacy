@@ -52,6 +52,9 @@ static char pedidosLive[64];
 static char pedidosSport[256];
 static const char *tipoSport = "sport";
 static int sportVazio;
+static unsigned sportDelayMs;
+static int sportTimeouts[16], sportRequests;
+static _Thread_local Uint32 sportTicks;
 
 // lento.test (#182): as primeiras `falhasLento` requisicoes NAO respondem (o
 // timeout do AIOStreams frio); as seguintes respondem com uma fonte.
@@ -93,6 +96,11 @@ char *rede_baixar(const char *url, int s) {
     p += strlen("/stream/");
     const char *fim = strchr(p, '/');
     if (!fim) return NULL;
+    if (sportDelayMs) {
+      if (sportRequests < 16) sportTimeouts[sportRequests] = s;
+      sportRequests++;
+      sportTicks += sportDelayMs < (unsigned)s * 1000u ? sportDelayMs : (unsigned)s * 1000u;
+    }
     snprintf(pedidosSport + strlen(pedidosSport), sizeof pedidosSport - strlen(pedidosSport),
              "%.*s,", (int)(fim - p), p);
     if ((size_t)(fim - p) == strlen(tipoSport) && !strncmp(p, tipoSport, strlen(tipoSport)))
@@ -141,7 +149,7 @@ int stream_n(void) { return 0; }
 int stream_lista_do_alvo(const char *id) { (void)id; return 0; }
 // addons.c recarimba o id normalizado ("tt:1:1") do pedido.
 void stream_definir_alvo(const char *id) { (void)id; }
-Uint32 SDL_GetTicks(void) { return 1000; }
+Uint32 SDL_GetTicks(void) { return 1000 + sportTicks; }
 const char *sessao_usuario(void) { return ""; }
 int perfis_ativo(void) { return 1; }
 // A integracao da poda com addons.c e exercitada em watchstate_poda.sh.
@@ -366,6 +374,45 @@ int main(void) {
       conferirTexto("exact item, catalog, then legacy types", pedidosSport, expected[k]);
       free(sources);
     }
+  }
+
+  // Slow live fallbacks share one deadline per addon and retry round.
+  // Virtual transport time keeps timeout regression coverage deterministic.
+  {
+    Stream *sources = NULL;
+    tipoSport = "unavailable";
+    sportVazio = 1; sportDelayMs = 4500; sportRequests = 0; pedidosSport[0] = 0;
+    conferir("slow custom fallback has no sources",
+      addons_consultar("sport:deadline", "event", "https://sport.test", 1, NULL, NULL, &sources), 0);
+    conferirTexto("deadline preserves item/catalog order", pedidosSport, "event,sport,channel,");
+    conferir("fallbacks stop at shared deadline", sportRequests, 3);
+    conferir("initial live timeout", sportTimeouts[0], 12);
+    conferir("catalog gets remaining whole seconds", sportTimeouts[1], 7);
+    conferir("legacy gets remaining whole seconds", sportTimeouts[2], 3);
+    free(sources);
+
+    sportDelayMs = 12000; sportRequests = 0; pedidosSport[0] = 0;
+    conferir("timed-out tv lookup has no sources",
+      addons_consultar("sport:deadline-tv", "tv", "https://sport.test", 1, NULL, NULL, &sources), 0);
+    conferirTexto("no fallback after deadline", pedidosSport, "tv,");
+    conferir("tv timeout is not multiplied", sportRequests, 1);
+    free(sources);
+
+    sportDelayMs = 11500; sportRequests = 0; pedidosSport[0] = 0;
+    conferir("subsecond budget has no sources",
+      addons_consultar("sport:deadline-fraction", "event", "https://sport.test", 1, NULL, NULL, &sources), 0);
+    conferir("subsecond remainder cannot start a one-second request", sportRequests, 1);
+    free(sources);
+
+    sportVazio = 0; sportDelayMs = 30000; sportRequests = 0; pedidosSport[0] = 0;
+    conferir("unresponsive custom lookup has no sources",
+      addons_consultar("sport:deadline-retry", "event", "https://sport.test", 1, NULL, NULL, &sources), 0);
+    conferirTexto("each retry round starts with item type", pedidosSport, "event,event,");
+    conferir("one timeout per retry round", sportRequests, 2);
+    conferir("first round keeps 12-second budget", sportTimeouts[0], 12);
+    conferir("second round keeps independent 20-second budget", sportTimeouts[1], 20);
+    free(sources);
+    sportDelayMs = 0;
   }
 
   // ---- #182: addon lento aparece sozinho, sem recarregar a mao
