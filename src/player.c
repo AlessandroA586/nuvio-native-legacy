@@ -405,7 +405,8 @@ static double posLegenda(void) {
   return relogio_ler(&relLeg, monoSeg());
 }
 // Creditos tambem sao pulaveis — e o "Skip Outro" do web.
-static int trechoPulavel(double *fim) { int tipo; return intro_botao_visivel(fim, &tipo); }
+static int skipDisponivel(void);
+static int trechoPulavel(double *fim) { int tipo; return skipDisponivel() && intro_botao_visivel(fim, &tipo); }
 static float duracaoSeg = PLR_DUR_PADRAO;
 // O fim ZERO do TheIntroDB quer dizer "ate o fim da midia" (intro.c): mirar
 // fim+0.25 ai seria um salto para o COMECO do arquivo — o alvo resolve o nulo.
@@ -5353,7 +5354,17 @@ static void ponteiroBuscar(int a, int b) {
     buscarUsuario(posSeg);
   }
 }
-static void ponteiroSkip(int a, int b) { (void)a; (void)b; skipFoco = 1; barraFoco = 1; acordar(); }
+// Marker timing alone cannot prove that the current source is playing.
+static int skipDisponivel(void) {
+  return fontePrincipal() && !player_carregando() && !erroFonte && !saindo &&
+         retomadaAplicada && video_tocando() && !video_iniciando() &&
+         cine.veu <= 0.01f && !dvtela_ativa() &&
+#ifdef NV_ANDROID
+         video_quadro_visto() &&
+#endif
+         !video_bufferando_ms();
+}
+static void ponteiroSkip(int a, int b) { (void)a; (void)b; if (!skipDisponivel()) return; skipFoco = 1; barraFoco = 1; acordar(); }
 
 static void desenharAcoesEpisodioCorpo(void);
 // O botao de pular e OSD: camada ampliada (escala.h), na tela virtual.
@@ -5364,6 +5375,7 @@ static void desenharAcoesEpisodio(void){
 }
 static void desenharAcoesEpisodioCorpo(void){
   const CatEp *prox=player_proximo_episodio();double fim;int tipo=0;
+  if (!skipDisponivel()) { skipFoco = 0; return; }
   intro_definir_duracao(duracaoReal ? (double)duracaoSeg : 0.0, epE <= 0);
   int trecho=intro_botao(posSeg,monoSeg(),visivel,skipFoco&&visivel,&fim,&tipo);
   // A CAIXA DE "Próximo episódio" QUE FICAVA AQUI FOI APAGADA. Era um retangulo
