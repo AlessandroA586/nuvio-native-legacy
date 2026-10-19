@@ -10,6 +10,25 @@ static uint64_t fixtureNow(void) { return fakeNow; }
 #include "../src/streams.c"
 #undef streamfit_agora_ms
 #include <assert.h>
+/* Parts/P2P are unavailable in this source-sheet-only fixture. */
+const char *ajustes_p2p_url(void) { return ""; }
+int partes_disponivel(void) { return 0; }
+const PartesLista *partes_sessao_lista(void) { return NULL; }
+void partes_lista_limpar(PartesLista *l) { if(l)memset(l,0,sizeof *l); }
+int partes_lista_copiar(PartesLista *d,const PartesLista *o) { (void)d;(void)o;return 0; }
+int partes_hashes_texto(const char *s,char out[][41],int max) { (void)s;(void)out;(void)max;return 0; }
+void partes_pedir(const Stream *s,const char *t) { (void)s;(void)t; }
+void partes_pedir_cedo(const Stream *s,const char *t) { (void)s;(void)t; }
+void partes_pedir_item(const Stream *s,int i) { (void)s;(void)i; }
+int partes_resultado(PartesLista *l) { (void)l;return PARTES_VAZIO; }
+void partes_aquecer(void) {}
+void partes_cancelar(void) {}
+void ctxhold_cancelar(CtxHold *h) { memset(h,0,sizeof *h); }
+int ctxhold_passo(CtxHold *h,Uint32 t,int f) { (void)h;(void)t;(void)f;return 0; }
+int ctxhold_evento(CtxHold *h,const SDL_Event *e,int c) { (void)h;(void)e;(void)c;return CTXH_NADA; }
+float txt_bloco(TxtEstilo e,const char *s,int r,int g,int b,float x,float y,float w,float lh,float alpha,int n) {
+ (void)e;(void)r;(void)g;(void)b;(void)x;(void)y;(void)w;(void)n;(void)alpha;return s&&s[0]?lh:0;
+}
 static int streamfitpassiva_test_ok(int v) { return v; }
 
 Uint32 SDL_GetTicks(void) { return (Uint32)fakeNow; }
@@ -30,7 +49,9 @@ const SeloFiltro *selospacote_filtro(unsigned short id) {
 void selospacote_colorido(int ligado) { (void)ligado; }
 int selospacote_embutidos_ok(void) { return 0; }
 int ajustes_selos_coloridos(void) { return 0; }
-const char *ajustes_qualidade(void) { return "Automatica"; }
+static const char *qualidadeTeste = "Automatica";
+static int prioridadeTeste;
+const char *ajustes_qualidade(void) { return qualidadeTeste; }
 int ajustes_fonte_texto_addon(void) { return 0; }
 // Externos que o caminho de montar/automatico puxa desde o #402/#409: sem
 // stub, dynamic_lookup os deixa NULL e a folha morre antes da primeira
@@ -42,10 +63,10 @@ int ajustes_fonte_escopo(void) { return 0; }
 int ajustes_fonte_hdr(void) { return 0; }
 int ajustes_fonte_manual(void) { return 0; }
 int ajustes_fonte_ordem_addon(void) { return 0; }
-int ajustes_fonte_prioridade(void) { return 0; }
+int ajustes_fonte_prioridade(void) { return prioridadeTeste; }
 int ajustes_fonte_regex_modo(void) { return 0; }
 int ajustes_fonte_usar_outros(void) { return 0; }
-int ajustes_fonte_primeira(void) { return 0; }
+int ajustes_fonte_primeira(void) { return prioridadeTeste == 3; }
 int ajustes_fonte_ordem_uso(void) { return 0; }
 int ajustes_fonte_idioma_audio(void) { return 0; }
 int fonteregra_ordem_rank(const char *nome) { (void)nome; return 0; }
@@ -199,6 +220,23 @@ static void liveTvActions(void) {
   soMp4 = oldMp4; soCache = oldCache; soDub = oldDub;
   puts("live TV source actions: PASS (no movie filters, channel source remains visible)");
 }
+static void addonOrder(void) {
+  Stream sources[4] = {source(0,50000,0,720),source(1,10000,0,2160),
+                       source(2,70000,0,1080),source(3,1000,0,1080)};
+  sources[0].foraCache = 1;
+  prioridadeTeste = 3; qualidadeTeste = "1080p";
+  stream_definir_alvo("tt-addon-order");stream_definir_lista(sources,4);
+  stream_folha_abrir();
+  const int raw[] = {0,1,2,3};expect(raw,4);
+  // The first playable result wins even above the soft resolution preference;
+  // the cached-negative row is displayed in place but is not auto-played.
+  assert(automaticaDaFolha() == 1 && stream_automatico() == 1);
+  stream_automatico_excluir(1);
+  assert(automaticaDaFolha() == 2); // Genuine failure advances in original order.
+  montar(automaticaDaFolha());expect(raw,4); // No quality regrouping after failure.
+  prioridadeTeste = 0; qualidadeTeste = "Automatica";
+  puts("add-on order sheet: PASS (raw order, matching badge, soft cap, next link)");
+}
 int main(void) {
   Stream sources[5]={source(0,50000,sizeAt(50000),2160),source(1,10000,sizeAt(10000),2160),
     source(2,10000,sizeAt(10000),2160),source(3,70000,0,2160),source(4,80000,sizeAt(50000),1080)};
@@ -308,6 +346,7 @@ int main(void) {
   assert(queue[0]==0 && queue[1]==1 && queue[2]==2 && fonteauto_tentativas(FONTEAUTO_PRIMEIRA,9)==1);
   liveTvActions();
   playbackActions();
+  addonOrder();
   stream_definir_lista(NULL,0);free(ordem);free(linhaY);free(linhaH);free(grupoTmp);free(grupoFitTmp);free(fitResultados);free(fitClasses);
   puts("streamfit sheet: PASS (stable groups, raw identities, freeze, incremental/focus, OndeVer, first-source)");return 0;
 }
