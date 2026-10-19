@@ -6,3 +6,4 @@ cc src/catalogo.c src/progresso.c src/focus.c src/ajustes.c src/posterprov.c src
   -DCURADORIA_TESTE -Wl,-dead_strip -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -Wno-deprecated-declarations -Wno-macro-redefined
 "${TMPDIR:-/tmp}/nuvio-dinpalco"
+bash tests/home-trailer-timer.sh

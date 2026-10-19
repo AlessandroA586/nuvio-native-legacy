@@ -5933,10 +5933,10 @@ static void home_trailer_passo_(int topo, float dt, Uint32 agora) {
   // trailer toca onde a arte dele ja esta. Espera o mesmo tempo da expansao do
   // cartaz, contado de quando o foco parou nele.
   { int noHero = focoHero && ajustes_hero_ligado() && heroSetting;
-    // Na Dinamica o destaque ROLOU para fora quando o foco esta num cartaz: o
-    // trailer do cartaz tocaria onde ninguem ve.
+    // Use the saved layout: Dinamica hides the hero or forces opaque Stage/Split
+    // artwork, even when those rows borrow Moderna geometry.
     int noCartaz = !focoHero && posterSetting &&
-                   (destCartao || (ajustes_hero_ligado() && layoutHome() != HOME_LAYOUT_DINAMICA)) &&
+                   (destCartao || (ajustes_hero_ligado() && ajustes_home_layout() != HOME_LAYOUT_DINAMICA)) &&
                    (destCartao || heroPendente == heroAtual) &&
                    agora - heroPendenteEm >= (Uint32)(ajustes_expandir_poster_atraso() * 1000.0f);
     // No card: the focused card drawn last frame must accept the video.
@@ -5946,7 +5946,7 @@ static void home_trailer_passo_(int topo, float dt, Uint32 agora) {
     if (!topo) motivo = HERO_GATE_OVERLAY;
     else if (!destCartao && !ajustes_hero_ligado()) motivo = HERO_GATE_DISABLED;
     else if (focoHero ? !heroSetting : !posterSetting) motivo = HERO_GATE_SETTING;
-    else if (!destCartao && !focoHero && layoutHome() == HOME_LAYOUT_DINAMICA) motivo = HERO_GATE_DYNAMIC;
+    else if (!destCartao && !focoHero && ajustes_home_layout() == HOME_LAYOUT_DINAMICA) motivo = HERO_GATE_DYNAMIC;
     else if (!noHero && !noCartaz) motivo = HERO_GATE_POSTER_WAIT;
   }
   pronto = pronto && itemAtual >= 0 &&
