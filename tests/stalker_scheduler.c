@@ -6,6 +6,7 @@
 // reproduzir uma resposta velha sem depender de rede ou de temporizacao.
 #define SDL_MAIN_HANDLED
 #include "../src/app.c"
+#include "stub_m3u.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -187,6 +188,7 @@ unsigned fonteregra_versao(void) { return 0; }
 int detail_aberto(void) { return 0; }
 int detail_indice(void) { return 0; }
 int detail_ep_foco(int *t, int *e) { if (t) *t = 0; if (e) *e = 0; return 0; }
+int stream_filtro_permite(const Stream *fonte) { (void)fonte; return 1; }
 int stream_lista_do_alvo(const char *id) { (void)id; return 1; }
 int stream_falha_verificar(FonteFalhaSessao *s, unsigned ger, int escolhida,
                           int (*cancelado)(void *), void *ctx,

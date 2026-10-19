@@ -236,6 +236,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_STALKER_PORTAL: return "aj_server";
     case AJ_STALKER_MAC: return "aj_server";
     case AJ_STALKER_LIMPAR: return "aj_server";
+    case AJ_GUIA_FONTE: case AJ_GUIA_RECARREGAR: case AJ_M3U_URL: case AJ_M3U_EPG: case AJ_M3U_LIMPAR:
     case AJ_EPG_PAIS: return "aj_server";
     case AJ_LIVETV_DIAG: return "aj_stethoscope";
     case AJ_LIVETV_RES: return "aj_stethoscope";

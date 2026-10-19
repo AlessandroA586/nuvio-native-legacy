@@ -19,6 +19,8 @@ static int uxValorPadrao(int op) {
 static int uxValorAtual(int op) {
   if (op < 0 || op >= AJ_N) return 0;
   if (op == AJ_SALVOS_DEST) return ajustes_fonte_biblioteca();
+  if(op==AJ_GUIA_CATEGORIAS || op==AJ_IPTV_ACOES || op==AJ_IPTV_EXCLUIR)return 0;
+  if(ajIptvGerenciador(op))return ajIptvQuantos(ajIptvTipo(op))?ajIptvAtualTipo(ajIptvTipo(op)):1;
   if (ajLegendaPrincipal(op)) return ajLegendaValor(op);
   if (ajFalhaBackend(op)) return ajFalhaValor(op);
   if (op == AJ_SEEKR_LIGADO && !seekrChave[0]) return 1;
@@ -90,6 +92,15 @@ static void uxValorTexto(int op, int v, char *buf, size_t tam) {
   if (!buf || !tam) return;
   buf[0] = 0;
   if (op < 0 || op >= AJ_N) return;
+  if(op==AJ_GUIA_CATEGORIAS) {
+    snprintf(buf,tam,"%s",v>=0 && v<uxNCategorias?uxCategorias[v].nome:i18n("Nenhuma"));return;
+  }
+  if(op==AJ_IPTV_CONTA){snprintf(buf,tam,"%s",ajIptvNome(v));return;}
+  if(ajIptvGerenciador(op)) {
+    int tipo=ajIptvTipo(op),n=ajIptvQuantos(tipo);
+    const char *s=v==(n?n:1)?i18n(ajIptvAdicionarNome(tipo)):!n?i18n("Nenhuma"):ajIptvNome(ajIptvDoTipo(tipo,v));
+    snprintf(buf,tam,"%s",s);return;
+  }
   o = &OPCOES[op];
   if (o->tipo == OP_ACAO) texto = i18n("Abrir");
   else if (o->tipo == OP_LEITURA) texto = i18n("Ver detalhes");

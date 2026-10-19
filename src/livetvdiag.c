@@ -412,7 +412,7 @@ static void iniciarRede(int i) {
 // na ordem do Xtream (xtream_formatos: o que a conta declara e o que ja tocou).
 static int proximoFormato(const LtdItem *it) {
   const char *ext[2];
-  int k = it->xt ? xtream_formatos(ext) : 0, i;
+  int k = it->xt ? xtream_formatos_canal(it->id, ext) : 0, i;
   for (i = 0; i < k; i++) {
     int f = !strcmp(ext[i], "ts") ? F_TS : F_HLS;
     if (it->f[f].servido && !it->f[f].testou) return f;

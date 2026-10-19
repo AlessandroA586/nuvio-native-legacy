@@ -8,6 +8,7 @@ static int fake_join(pthread_t, void **);
 #define pthread_create fake_create
 #define pthread_join fake_join
 #include "../src/app.c"
+#include "stub_m3u.h"
 #undef pthread_create
 #undef pthread_join
 #include <assert.h>

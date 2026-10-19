@@ -64,7 +64,13 @@ static void regression(int which) {
     ltv_pref_definir_grupos(ltv_pref("st", 1), selected, 1);
     scenario = 0;
   }
-  stalkerCarregar(); selecionarSecoes();
+#ifdef NV_IPTVFONTES_H
+  IptvConta conta = {.tipo=IPTV_STALKER,.ativa=1,.nome="Stalker"};
+  stalkerCarregar(&conta);
+#else
+  stalkerCarregar();
+#endif
+  selecionarSecoes();
   if (which <= 3 || which == 7) assert(sNCanais == 100 && !strcmp(sCanais[0].id, "stalker:1200"));
   else if (which <= 5) assert(sNCanais == 900 && !strcmp(sCanais[0].id, which == 4 ? "stalker:1299" : "stalker:2400"));
   else assert(sNCanais == 101 && pages >= 66);
@@ -75,7 +81,13 @@ static void regression(int which) {
   // A subsequent load must not strand commands behind the preceding load's cache.
   if (which == 5) {
     scenario = 1;
-    begin(GF_SO_4K, 900); stalkerCarregar(); selecionarSecoes();
+    begin(GF_SO_4K, 900);
+#ifdef NV_IPTVFONTES_H
+    stalkerCarregar(&conta);
+#else
+    stalkerCarregar();
+#endif
+    selecionarSecoes();
     assert(sNCanais == 100);
     assert(stalker_resolver_sessao(sCanais[0].id, url, sizeof url, 0));
     assert(nTabela <= 1200);

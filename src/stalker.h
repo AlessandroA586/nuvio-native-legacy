@@ -49,7 +49,8 @@ int  stalker_configurado(void);
 //
 // Qualquer um dos tres derruba a sessao em memoria: token e tabela de canais
 // pertencem ao cadastro que os produziu.
-void stalker_definir_portal(const char *portal);
+int stalker_definir_portal(const char *portal);
+int stalker_conta_definir(const char *portal,const char *mac);
 void stalker_definir_mac(const char *mac);
 // Opcionais: a maioria dos portais nao confere, e os que conferem pedem
 // exatamente estes dois campos.
@@ -103,4 +104,10 @@ int stalker_e_id(const char *id);
 int stalker_resolver(const char *id, char *url, unsigned n);
 int stalker_resolver_sessao(const char *id, char *url, unsigned n, uint64_t sessao);
 
+void stalker_fonte_selecionar(unsigned id);
+int stalker_fonte_configurado(unsigned id);
+int stalker_fonte_canais(unsigned id,StalkerCanal *out,int max,uint64_t sessao);
+int stalker_fonte_canais_cb(unsigned id, StalkerCb cb, void *u, uint64_t sessao);
+void stalker_fonte_esquecer(unsigned id);
+void stalker_fontes_invalidar(void);
 #endif
