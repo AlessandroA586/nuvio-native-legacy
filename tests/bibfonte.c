@@ -49,6 +49,15 @@ int main(int argc, char **argv) {
   cat_definir_tudo(&ci, 1, NULL, 0); assert(cat_n() == 1);
   salvos_iniciar();
   if (argc == 2) { screenshots(argv[1]); return 0; }
+  // Restore the factory source through the actual confirmation event.
+  assert(definirValorDireto(AJ_SALVOS_DEST, AJ_SALVOS_LOCAL));
+  uxAbrirEditor(AJ_SALVOS_DEST);
+  uxRestaurar = uxConfirmar = 1;
+  uxEvento(SDLK_RETURN);
+  CHECK("restore default without Trakt closes editor", !uxEditor);
+  CHECK("restore default without Trakt selects Simkl", ajustes_fonte_biblioteca() == AJ_SALVOS_SIMKL);
+  CHECK("restored source matches effective default", !uxDiferente(AJ_SALVOS_DEST));
+  uxCancelar();
   // Factory Trakt choice with only Simkl connected must save into its feed.
   valor[AJ_SALVOS_DEST] = AJ_SALVOS_TRAKT;
   CHECK("detail/context save getters follow fallback", ajustes_salvos_no_simkl() && !ajustes_salvos_no_trakt());
@@ -81,6 +90,13 @@ int main(int argc, char **argv) {
   CHECK("legacy account keeps Library source", !ajustes_salvos_no_trakt() && !ajustes_salvos_no_simkl());
   CHECK("account save getters agree with Library", !ajustes_salvos_no_trakt() && !ajustes_salvos_no_simkl());
   CHECK("Settings displays effective source", uxValorAtual(AJ_SALVOS_DEST) == AJ_SALVOS_LOCAL);
+  CHECK("Quick Settings displays effective source", !strcmp(ajustes_rapido_valor(AJ_SALVOS_DEST), "Lista do Nuvio"));
+  CHECK("Quick Settings advances from Nuvio to Trakt", ajustes_rapido_passo(AJ_SALVOS_DEST, 1) && ajustes_fonte_biblioteca() == AJ_SALVOS_TRAKT);
+  dados_gravar("ajustes.txt", "salvosDestino 1\n");
+  ajustes_dir(dir);
+  CHECK("Quick Settings reverses from Nuvio to Simkl", ajustes_rapido_passo(AJ_SALVOS_DEST, -1) && ajustes_fonte_biblioteca() == AJ_SALVOS_SIMKL);
+  dados_gravar("ajustes.txt", "salvosDestino 1\n");
+  ajustes_dir(dir);
   CHECK("legacy account reaches Library", contalib_aplicar_catalogo() == 1 && bibfonte_library_count() == 1);
   assert(definirValorDireto(AJ_SALVOS_DEST, AJ_SALVOS_TRAKT));
   CHECK("explicit Trakt choice wins over account", ajustes_salvos_no_trakt());

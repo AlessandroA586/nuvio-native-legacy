@@ -11,6 +11,7 @@ static int uxTemPadrao(int op) {
 }
 
 static int uxValorPadrao(int op) {
+  if (op == AJ_SALVOS_DEST) return ajustes_fonte_resolver(valorPadrao[op], trakt_ativo(), simkl_ativo());
   return uxTemPadrao(op) ? valorPadrao[op] : 0;
 }
 
@@ -25,7 +26,7 @@ static int uxValorAtual(int op) {
 }
 
 static int uxDiferente(int op) {
-  return uxTemPadrao(op) && uxValorAtual(op) != valorPadrao[op];
+  return uxTemPadrao(op) && uxValorAtual(op) != uxValorPadrao(op);
 }
 
 /* O candidato pode ter alcance diferente do valor salvo. Espelha as excecoes

@@ -40,6 +40,20 @@ static void screenshots(const char *base) {
   tex_iniciar(64); gfx_icones_dir("deploy/app/art"); extras_carregar("deploy/app/art");
   valor[AJ_IDIOMA] = IDIOMA_EN + 1; ajustes_iniciar();
   trakt_definir("test-token", "test-client");
+  if (strstr(base, "settings-review")) {
+    valor[AJ_SALVOS_DEST] = AJ_SALVOS_TRAKT;
+    bibliotecaFonteEscolhida = 0;
+    assert(contalib_ler_biblioteca("[{\"content_id\":\"tt7654321\",\"content_type\":\"series\",\"name\":\"Account series\"}]") == 1);
+    focarOpcao(AJ_SALVOS_DEST);
+    shotSave(win, base, "legacy-source", 1);
+    trakt_esquecer();
+    assert(definirValorDireto(AJ_SALVOS_DEST, AJ_SALVOS_LOCAL));
+    uxAbrirEditor(AJ_SALVOS_DEST);
+    uxRestaurar = 1;
+    shotSave(win, base, "restore-default", 1);
+    SDL_GL_DeleteContext(gl); SDL_DestroyWindow(win); SDL_Quit();
+    return;
+  }
   if (strstr(base, "sidebar")) {
     CatItem local = *cat_item(0);
     ajustes_definir_salvos_destino(AJ_SALVOS_LOCAL);

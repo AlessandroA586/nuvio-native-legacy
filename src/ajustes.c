@@ -8115,7 +8115,7 @@ static int passoAdiante(int op, int dir) {
     return limita(op, o->min + (dir > 0 ? v / o->passo + 1 : (v + o->passo - 1) / o->passo - 1) * o->passo);
   }
   if (o->tipo == OP_NUMERO) return limita(op, valor[op] + dir * o->passo);
-  { int n = nValores(op), v = valor[op], k;
+  { int n = nValores(op), v = op == AJ_SALVOS_DEST ? ajustes_fonte_biblioteca() : valor[op], k;
     // Ao girar, pula o que esta TV nao suporta (o 512 numa TV de 160 so enganaria).
     for (k = 0; k < n; k++) {
       v = (v + (dir > 0 ? 1 : n - 1)) % n;
@@ -9347,7 +9347,7 @@ static const char *textoValor(int op) {
   // vez que a linha aparece na tela. Valor invalido tem de ler como "o
   // primeiro", nunca como um endereco qualquer da memoria.
   if (!o->valores || o->n <= 0) return "";
-  { int v = valor[op];
+  { int v = op == AJ_SALVOS_DEST ? ajustes_fonte_biblioteca() : valor[op];
     if (v < 0 || v >= o->n) v = 0;
     return o->valores[v] ? o->valores[v] : ""; }
 }
