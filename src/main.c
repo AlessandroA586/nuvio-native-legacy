@@ -1685,6 +1685,13 @@ int main(int argc, char **argv) {
   static int rastroQuadros;
   static double gpuFillSoma, gpuFillPico;   // [gpu-modos] fill: media e pico da janela
   static int gpuFillN;
+#if defined(NV_TPK) || defined(NV_ANDROID) || defined(NV_WEBOS)
+  int gpuRelatoCena = 0, gpuRelatoCheia = 0, gpuRelatoMisto = 0;
+  SDL_DisplayMode gpuModo;
+  // Swap cadence can fall with FPS; prefer the panel's advertised refresh.
+  double gpuRelatoPeriodo = SDL_GetCurrentDisplayMode(0, &gpuModo) == 0 && gpuModo.refresh_rate > 0
+    ? 1000.0 / gpuModo.refresh_rate : 16.70;
+#endif
   double fPrep = 0, fGlClr = 0;
   int    txtNQuadro = 0, piorTxtN = 0;
   int quadros = 0, janks = 0; double pior = 0;
@@ -2022,7 +2029,10 @@ int main(int argc, char **argv) {
       // previously rejected trial. Settings needs no Home artwork cache.
       if (cena) cena += 4 * (ajustes_home_layout() + 4 * (ajustes_vidro() +
         2 * (ajustes_cor_viva() + 16 * (ajustes_vidro_fosco() + 2 * ajustes_vidro_qualidade()))));
-      gpun_medir(dtms, fClr + fSwap, fEv + fBomb + fUpd + fDes + fAux, cena, settings || cheia); }
+      int elegivel = settings || cheia;
+      if (!quadros) { gpuRelatoCena = cena; gpuRelatoCheia = elegivel; }
+      else if (cena != gpuRelatoCena || !elegivel) gpuRelatoMisto = 1;
+      gpun_medir(dtms, fClr + fSwap, fEv + fBomb + fUpd + fDes + fAux, cena, elegivel); }
 #endif
     // zera os contadores do quadro que comeca agora; o que foi medido acima
     // pertence ao quadro anterior, que e o que acabou de custar dtms
@@ -2444,7 +2454,12 @@ int main(int argc, char **argv) {
         // na 1.5.4 e 41 na 1.6.0 com a mesma configuracao, e o log nao dizia
         // que desenho pesava.
         static Uint32 ultModos;
-        double fpsAgora = quadros * 1000.0 / (double)(agora - ultRelato + 1);
+        double fpsAgora = quadros * 1000.0 / (double)(agora - ultRelato);
+#if defined(NV_TPK) || defined(NV_ANDROID) || defined(NV_WEBOS)
+        gpun_relatar(fpsAgora, pior, gpuRelatoPeriodo,
+                     gpuRelatoMisto ? 0 : gpuRelatoCena, gpuRelatoCheia);
+        gpuRelatoMisto = 0;
+#endif
         // 45 e nao 50: TV Samsung roda a 50 Hz e o .tpk marca 49,9 fps em
         // repouso; com 50 a linha saia para 12 de 12 pessoas na 1.6.1 e
         // afogava os casos lentos de verdade.
