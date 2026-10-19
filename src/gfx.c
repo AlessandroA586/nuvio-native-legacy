@@ -1622,7 +1622,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "    a *= 0.75 * (1.0 - smoothstep(0.2, 0.75, length((vUv - vec2(0.5, 0.15)) / vec2(1.2, 0.9))));\n"
   "  } else if (v < 3.5) {\n"
   "    float q = (vUv.x - uFoco * (1.0 - vUv.y)) / (1.0 - uFoco);\n"
-  "    a *= smoothstep(0.0, 0.004, q) * smoothstep(1.0, 0.996, q) * (1.0 - smoothstep(0.5, 1.0, vUv.y));\n"
+  "    a *= smoothstep(0.0, 0.004, q) * (1.0 - smoothstep(0.996, 1.0, q)) * (1.0 - smoothstep(0.5, 1.0, vUv.y));\n"
   "    if (v > 2.5) c = mix(c, vec3(l), 0.6) * 0.55;\n"
   "  } else {\n"
   "    l = clamp((l - 0.5) * 1.15 + 0.5, 0.0, 1.0);\n"

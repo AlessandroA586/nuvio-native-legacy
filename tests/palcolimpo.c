@@ -179,6 +179,53 @@ static void regressions(const char *dir, const char *phase, int glass) {
   printf("Stage regression failures=%d\n", regressionFailures);
 }
 
+static void reviewRegressions(const char *dir, const char *phase, int glass) {
+  // GLSL requires ascending smoothstep edges; desktop drivers can hide this bug.
+  FILE *shader = fopen("src/gfx.c", "r");
+  assert(shader);
+  char line[2048];
+  int inStage = 0, masks = 0, ordered = 1;
+  while (fgets(line, sizeof line, shader)) {
+    if (strstr(line, "// GFX_PALCO_ARTE")) inStage = 1;
+    if (!inStage) continue;
+    const char *p = line;
+    while ((p = strstr(p, "smoothstep("))) {
+      float low, high;
+      if (sscanf(p, "smoothstep(%f, %f", &low, &high) == 2) {
+        masks++;
+        ordered &= low < high;
+      }
+      p++;
+    }
+    if (strstr(line, "gl_FragColor")) break;
+  }
+  fclose(shader);
+  checkRegression(masks > 0 && ordered, "Triptych smoothstep edges are defined by GLSL");
+
+  setting(0, glass, PALCO_CORTINA); quadros(90, NULL);
+  capture(dir, phase, PALCO_CORTINA, "backdrop-old");
+  GLuint old = artworkTexture;
+  assert(old && heroInfo > 0);
+  CatItem *next = (CatItem *)cat_item_exato(fileiraItemIndice(&fileiras[foco.fileira], foco.coluna + 1));
+  assert(next);
+  CatItem saved = *next;
+  next->backdrop[0] = 0;
+  tecla(SDLK_RIGHT); quadros(5, NULL);
+  capture(dir, phase, PALCO_CORTINA, "backdrop-missing-mid");
+  checkRegression(stageArtwork == 1 && artworkTexture == old && heroInfo > 0 &&
+                  palcoItemA > 0.0f && palcoItemA < 1.0f,
+                  "Missing backdrop fades outgoing artwork and logo without incoming art");
+  quadros(90, NULL);
+  capture(dir, phase, PALCO_CORTINA, "backdrop-missing-end");
+  checkRegression(stageArtwork == 0 && heroInfo == 0 && palcoItemA == 1.0f,
+                  "Missing backdrop settles to Black");
+  blankHero();
+  *next = saved;
+  setting(0, glass, PALCO_TRIPTICO); quadros(90, NULL);
+  capture(dir, phase, PALCO_TRIPTICO, "triptych");
+  checkRegression(stageArtwork == 3, "Triptych renders three artwork panels");
+}
+
 int main(int argc, char **argv) {
   assert(argc == 5);
   const char *dir = argv[1], *phase = argv[2];
@@ -248,6 +295,12 @@ int main(int argc, char **argv) {
   assert(heroBackdrops > 0); // First focus frames retain the fading hero.
   quadros(90, NULL);
   capture(dir, phase, PALCO_PRETO, "stage");
+  if (!strcmp(phase, "review-before") || !strcmp(phase, "review-after")) {
+    reviewRegressions(dir, phase, glass);
+    tex_encerrar(); txt_encerrar();
+    SDL_GL_DeleteContext(gl); SDL_DestroyWindow(janela); SDL_Quit();
+    return regressionFailures ? 1 : 0;
+  }
   regressions(dir, phase, glass);
 #ifdef PALCO_BASELINE
   return regressionFailures ? 1 : 0;

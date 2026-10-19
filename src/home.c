@@ -4893,7 +4893,7 @@ static void desenhaPalcoArte(void) {
   if (palcoMostra != palcoFundoItem && palcoItemA >= 1.0f && (tex || !art)) {
     palcoAnterior = palcoMostra;
     palcoMostra = palcoFundoItem;
-    palcoItemA = palcoAnterior < 0 || !art || ajustes_animacoes_reduzidas() ? 1.0f : 0.0f;
+    palcoItemA = palcoAnterior < 0 || ajustes_animacoes_reduzidas() ? 1.0f : 0.0f;
   }
   if (palcoItemA < 1.0f)
     desenhaPalcoItem(palcoAnterior, palcoFundoAlpha * (1.0f - palcoItemA));
