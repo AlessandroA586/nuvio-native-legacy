@@ -527,7 +527,10 @@ static int sCanalAdd(int f, const GCru *c) {
       if (i == sNCanais) {
         cat = v->cat;
         sCats[cat].nome = ltv_dup(&sArena, grupo);
-      } else cat = sCatDe(f, grupo);
+      } else {
+        // At the category cap, keep the occupied row but still upgrade quality.
+        cat = sNCats >= GUIACORTE_MAX_CAT ? v->cat : sCatDe(f, grupo);
+      }
     }
     if (cat < 0) {
       guiafiltro_dup_registrar(&sFltLive, &sDup, f, sCats[v->cat].nome, v->nome, sLtvF[f].nome, velho);

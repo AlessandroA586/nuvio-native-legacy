@@ -34,6 +34,31 @@ git show f11f3a8af:src/guia.c > "$work/overflow-review.c"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
   "-DGUIACACHE_SOURCE=\"$work/overflow-review.c\"" -o "$work/overflow-review"
 failed=0
+git show 4a009af28:src/guia.c > "$work/category-cap-review.c"
+for platform in tv android; do
+  platform_flags=()
+  if [ "$platform" = android ]; then platform_flags+=(-DNV_ANDROID); fi
+  for version in category-cap-review current; do
+    source_file="$PWD/src/guia.c"
+    if [ "$version" = category-cap-review ]; then source_file="$work/category-cap-review.c"; fi
+    cc "${flags[@]}" "${sources[@]}" "${common[@]}" "${platform_flags[@]}" \
+      "-DGUIACACHE_SOURCE=\"$source_file\"" -o "$work/category-cap-$platform-$version"
+    rc=0
+    GUIAFILTRO_CASE=replacement-category-cap NUVIO_DADOS="$work/category-cap-$platform-$version-data" \
+      "$work/category-cap-$platform-$version" "$work/category-cap-$platform-$version-data" \
+      > "$work/category-cap-$platform-$version.log" 2>&1 || rc=$?
+    if [ "$version" = category-cap-review ] && [ "$rc" = 134 ] && \
+      rg -q -F 'Assertion failed: (!strcmp(sCanais[0].id, "xtream:999"))' "$work/category-cap-$platform-$version.log"; then
+      printf 'PASS: reviewed revision fails replacement-category-cap %s (rc=134)\n' "$platform"
+    elif [ "$version" = current ] && [ "$rc" = 0 ]; then
+      printf 'PASS: replacement-category-cap %s regression\n' "$platform"
+    else
+      printf 'FAIL: %s replacement-category-cap %s (rc=%s)\n' "$version" "$platform" "$rc"
+      tail -n 3 "$work/category-cap-$platform-$version.log"
+      failed=1
+    fi
+  done
+done
 for regression in late-inventory replacement-metadata; do
   for version in overflow-review loader; do
     rc=0

@@ -345,6 +345,33 @@ static void replacementMetadataRegression(void) {
   assert(sNCanais == GUIACORTE_MAX_CAT && sRetidos == GUIACORTE_MAX_CAT);
   assert(!strcmp(sCanais[0].id, "xtream:999") && !strcmp(sCats[sCanais[0].cat].nome, "UHD"));
 }
+static void replacementCategoryCapRegression(void) {
+  int fl = begin(GF_PREFERIR_4K, GUIACORTE_MAX_CAT + 1);
+  channel(fl, "Sports", "xtream:1", "X FHD");
+  channel(fl, "Sports", "xtream:2", "Y FHD");
+  for (int i = 1; i < GUIACORTE_MAX_CAT; i++) {
+    char cat[32], id[32], name[32];
+    snprintf(cat, sizeof cat, "Category %d", i);
+    snprintf(id, sizeof id, "xtream:%d", i + 2);
+    snprintf(name, sizeof name, "Station %d FHD", i);
+    channel(fl, cat, id, name);
+  }
+  channel(fl, "UHD", "xtream:999", "X 4K");
+  assert(!strcmp(sCanais[0].id, "xtream:999"));
+  assert(sNCats == GUIACORTE_MAX_CAT);
+  assert(sNCanais == GUIACORTE_MAX_CAT + 1 && sRetidos == sNCanais);
+  assert(sCanais[0].cat == sCanais[1].cat);
+  assert(!strcmp(sCats[sCanais[1].cat].nome, "Sports"));
+  // A later lower-quality version must remain a fallback, never replace 4K.
+  channel(fl, "UHD", "xtream:1000", "X HD");
+  assert(!strcmp(sCanais[0].id, "xtream:999"));
+  adotarStaging();
+  GuiaVariante v[4];
+  assert(guia_variantes("xtream:999", v, 4) == 3);
+  assert(!strcmp(v[0].nome, "X 4K"));
+  assert(!strcmp(v[1].nome, "X FHD"));
+  assert(!strcmp(v[2].nome, "X HD"));
+}
 static void rawBudgetRegression(void) {
 #ifdef GUIAFILTRO_RAW_TEST
   int fl = begin(GF_SO_4K, 1);
@@ -375,6 +402,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(regression, "inventory")) inventoryRegression();
     else if (!strcmp(regression, "late-inventory")) lateInventoryRegression();
     else if (!strcmp(regression, "replacement-metadata")) replacementMetadataRegression();
+    else if (!strcmp(regression, "replacement-category-cap")) replacementCategoryCapRegression();
     else if (!strcmp(regression, "raw-budget")) rawBudgetRegression();
     else assert(0);
     printf("PASS: %s regression\n", regression);
