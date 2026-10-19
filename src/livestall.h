@@ -24,7 +24,8 @@
 // ja, com a imagem ainda rodando, em vez de esperar mais NV_LS_PARADO_MS de
 // quadro congelado. O prazo e maior que um segmento (6-10 s) para o canal no
 // "live edge", que so ganha segmento novo a cada duracao dele, nao disparar.
-// Fim do buffer desconhecido (0, as demais plataformas): o guarda nao arma.
+// Fim do buffer desconhecido (0): o guarda nao arma. Android informa o buffer
+// para diagnostico, mas deixa o Media3 chegar a buffering/erro antes de reabrir.
 //
 // So funcoes puras e sem SDL: o teste compila no Mac (tests/livestall.sh).
 #ifndef NV_LIVESTALL_H
@@ -117,9 +118,14 @@ static inline int nv_ls_passo_buf_prazo(NvLiveStall *s, unsigned agora, double p
     return NV_LS_REABRIR;
   }
 #endif
+#ifndef NV_ANDROID
+  // Media3 can still be playing or loading the next HLS segment with a low
+  // reserve. Reporting its buffer must not enable this proactive reopen rule.
+  // Android retains the actual freeze, buffering, EOF and error recovery paths.
   if (pronto && s->andou && s->fim > 0.5 && pos <= s->fim &&
       s->fim - pos <= NV_LS_RESERVA_S && (unsigned)(agora - s->fimEm) >= NV_LS_SEMDADO_MS)
     seco = 1;
+#endif
   // A sliding live window (or a seek) changes the position's origin. Rebase
   // the comparison, but only subsequent FORWARD motion can refresh movEm.
   // A backward clock alone must not hide a genuinely frozen stream.
