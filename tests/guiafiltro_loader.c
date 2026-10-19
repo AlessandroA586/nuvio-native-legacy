@@ -267,6 +267,84 @@ static void inventoryRegression(void) {
     filtrosAbrir(); fMontarCanais("Sports"); assert(fN == 2);
   }
 }
+static void lateInventoryRegression(void) {
+  for (int scenario = 0; scenario < 3; scenario++) {
+    int fl = begin(scenario == 1 ? GF_TODAS : GF_SO_4K, 5);
+    if (scenario == 1) guiafiltro_cat_alternar(&sFltLive, "Hidden");
+    for (int i = 0; i < 4000; i++) {
+      char id[32]; snprintf(id, sizeof id, "xtream:%d", i + 1);
+      channel(fl, scenario == 1 ? "Hidden" : scenario == 2 ? "UHD" : "Sports", id, "X HD");
+    }
+    channel(fl, "UHD", "xtream:4001", "Late 4K");
+    channel(fl, "UHD", "xtream:4002", "Later 4K");
+    channel(fl, "UHD", "xtream:4003", "Late HD");
+    fltLive = sFltLive; adotarStaging(); cacheGravar();
+    for (int offline = 0; offline < 2; offline++) {
+      if (offline) { stagingZerar(); sFltLive = fltLive; sTeto = 5; cacheFonteLer("xt"); adotarStaging(); }
+      assert(nCanais == (scenario == 1 ? 3 : 2));
+      filtrosAbrir(); fMontarCanais("UHD");
+      int found = 0;
+      for (int i = 0; i < fN; i++) if (!strcmp(fIt[i].id, "xtream:4001")) found++;
+      assert(found == 1);
+      int later = 0;
+      for (int i = 0; i < fN; i++) if (!strcmp(fIt[i].id, "xtream:4002")) later++;
+      assert(later == 1);
+      if (scenario != 2) {
+        int raw = 0;
+        for (int i = 0; i < fN; i++) if (!strcmp(fIt[i].id, "xtream:4003")) raw++;
+        assert(raw == 1);
+      }
+      strcpy(fCatNome, "UHD"); fNivel = 1;
+      for (paFoco = 0; paFoco < fN && strcmp(fIt[paFoco].id, "xtream:4001"); paFoco++) {}
+      filtrosOk();
+      assert(guiafiltro_canal_oculto(&fltLive, "xtream:4001"));
+      filtrosOk();
+    }
+  }
+}
+static void replacementMetadataRegression(void) {
+  for (int reverse = 0; reverse < 2; reverse++) {
+    int fl = begin(GF_PREFERIR_4K, 1);
+    for (int i = 0; i < 2; i++) {
+      int uhd = reverse ? !i : i;
+      XtreamItem it = {0}; XtCtx x = {0};
+      x.fl = fl;
+      it.id = uhd ? "xtream:2" : "xtream:1";
+      it.nome = uhd ? "X 4K" : "X FHD";
+      it.categoria = uhd ? "UHD" : "Sports";
+      it.num = uhd ? 202 : 101; it.catOrdem = -1;
+      sGrupoInfo(fl, it.categoria, 1);
+      xtCanal(&it, &x);
+    }
+    assert(sNCanais == 1 && sRetidos == 1);
+    adotarStaging(); cacheGravar();
+    for (int offline = 0; offline < 2; offline++) {
+      if (offline) { begin(GF_PREFERIR_4K, 1); cacheFonteLer("xt"); adotarStaging(); }
+      char cat[64]; int number = 0;
+      estado = G_PRONTO;
+      assert(guia_info_canal("xtream:2", &number, NULL, cat, sizeof cat));
+      assert(!strcmp(cat, "UHD") && number == 202);
+      filtrosAbrir(); fMontarCanais("UHD");
+      assert(fN == 1 && !strcmp(fIt[0].id, "xtream:2"));
+      GuiaVariante v[3]; assert(guia_variantes("xtream:2", v, 3) == 2);
+      guiafiltro_cat_alternar(&fltLive, "Sports"); empacotar();
+      assert(nCanais == 1 && !strcmp(canais[0].id, "xtream:2"));
+      guiafiltro_cat_alternar(&fltLive, "Sports");
+    }
+  }
+  // Repeated replacements must not exhaust category or channel slots.
+  int fl = begin(GF_PREFERIR_4K, GUIACORTE_MAX_CAT);
+  for (int i = 0; i < GUIACORTE_MAX_CAT; i++) {
+    char cat[32], id[32], name[32];
+    snprintf(cat, sizeof cat, "Category %d", i);
+    snprintf(id, sizeof id, "xtream:%d", i);
+    snprintf(name, sizeof name, "Station %d FHD", i);
+    channel(fl, cat, id, name);
+  }
+  channel(fl, "UHD", "xtream:999", "Station 0 4K");
+  assert(sNCanais == GUIACORTE_MAX_CAT && sRetidos == GUIACORTE_MAX_CAT);
+  assert(!strcmp(sCanais[0].id, "xtream:999") && !strcmp(sCats[sCanais[0].cat].nome, "UHD"));
+}
 static void rawBudgetRegression(void) {
 #ifdef GUIAFILTRO_RAW_TEST
   int fl = begin(GF_SO_4K, 1);
@@ -295,6 +373,8 @@ int main(int argc, char **argv) {
     else if (!strcmp(regression, "variants")) variantsRegression();
     else if (!strcmp(regression, "categories")) categoriesRegression();
     else if (!strcmp(regression, "inventory")) inventoryRegression();
+    else if (!strcmp(regression, "late-inventory")) lateInventoryRegression();
+    else if (!strcmp(regression, "replacement-metadata")) replacementMetadataRegression();
     else if (!strcmp(regression, "raw-budget")) rawBudgetRegression();
     else assert(0);
     printf("PASS: %s regression\n", regression);

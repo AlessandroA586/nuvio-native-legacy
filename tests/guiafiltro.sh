@@ -30,7 +30,30 @@ for i in "${!latest_sources[@]}"; do
 done
 cc "${flags[@]}" "${latest_sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST \
   "-DGUIACACHE_SOURCE=\"$work/latest-review.c\"" -o "$work/latest-review"
+git show f11f3a8af:src/guia.c > "$work/overflow-review.c"
+cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
+  "-DGUIACACHE_SOURCE=\"$work/overflow-review.c\"" -o "$work/overflow-review"
 failed=0
+for regression in late-inventory replacement-metadata; do
+  for version in overflow-review loader; do
+    rc=0
+    GUIAFILTRO_CASE="$regression" NUVIO_DADOS="$work/$version-$regression" \
+      "$work/$version" "$work/$version-$regression" > "$work/$version-$regression.log" 2>&1 || rc=$?
+    case "$regression" in
+      late-inventory) expected='Assertion failed: (found == 1)' ;;
+      replacement-metadata) expected='Assertion failed: (!strcmp(cat, "UHD") && number == 202)' ;;
+    esac
+    if [ "$version" = overflow-review ] && [ "$rc" = 134 ] && rg -q -F "$expected" "$work/$version-$regression.log"; then
+      printf 'PASS: reviewed revision fails %s (rc=134)\n' "$regression"
+    elif [ "$version" = loader ] && [ "$rc" = 0 ]; then
+      printf 'PASS: %s regression\n' "$regression"
+    else
+      printf 'FAIL: %s %s (rc=%s)\n' "$version" "$regression" "$rc"
+      tail -n 3 "$work/$version-$regression.log"
+      failed=1
+    fi
+  done
+done
 for regression in categories inventory raw-budget; do
   for version in latest-review loader; do
     rc=0

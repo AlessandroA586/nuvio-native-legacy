@@ -85,6 +85,7 @@
 #include "ltv.h"           /* modelo por fonte: arena, teto, numeracao, M3U */
 #include "perfiltv.h"      /* ptv_plataforma: o teto de canais da TV */
 #include <stdio.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -328,7 +329,7 @@ static int sTeto, sRetidos;   // teto da carga e quanto ja entrou
 #define G_RAW_BYTES_MAX (2 * 1024 * 1024)
 static size_t sCacheBytes;
 #define G_PF_CANAIS_MAX 4000
-// ponytail: settings retain at most 4000 raw channels; page inventory if needed.
+// First raw entries stay in memory; category controls also read the source cache.
 typedef struct { char id[GF_ID], nome[GF_NOME], cat[GF_NOME]; } GInventario;
 static GInventario *inventario, *sInventario;
 static int nInventario, sNInventario;
@@ -517,8 +518,24 @@ static int sCanalAdd(int f, const GCru *c) {
   if (quem == GF_FORA_DUP) { if (velho >= 0) sAltAdd(sCanais[velho].id, c->id, c->nome); return 0; }
   if (quem == GF_TROCA && velho >= 0) {
     GCanal *v = &sCanais[velho];
-    const char *antigo = v->id, *antigoNome = v->nome, *novo = ltv_dup(&sArena, c->id);
+    const char *antigo = v->id, *antigoNome = v->nome, *novo;
     int i;
+    for (cat = 0; cat < sNCats; cat++)
+      if (sCats[cat].fonte == f && !strcmp(sCats[cat].nome, grupo)) break;
+    if (cat == sNCats) {
+      for (i = 0; i < sNCanais; i++) if (i != velho && sCanais[i].cat == v->cat) break;
+      if (i == sNCanais) {
+        cat = v->cat;
+        sCats[cat].nome = ltv_dup(&sArena, grupo);
+      } else cat = sCatDe(f, grupo);
+    }
+    if (cat < 0) {
+      guiafiltro_dup_registrar(&sFltLive, &sDup, f, sCats[v->cat].nome, v->nome, sLtvF[f].nome, velho);
+      return 0;
+    }
+    novo = ltv_dup(&sArena, c->id);
+    v->cat = cat;
+    v->numero = c->numero > 0 ? c->numero : sLtvF[f].nCanais;
     for (i = 0; i < sNAlts; i++) if (sAlts[i].dono == antigo) sAlts[i].dono = novo;
     sAltAdd(novo, antigo, antigoNome);
     v->id = novo;
@@ -3056,16 +3073,58 @@ static void fMontarCats(void) {
     fIt[k].oculto = 1;
   }
 }
+static void fCanalAdd(const char *id, const char *nome) {
+  int i;
+  for (i = 0; i < fN; i++) if (!strcmp(fIt[i].id, id)) return;
+  if (fN >= G_PF_CANAIS_MAX) return;
+  snprintf(fIt[fN].id, sizeof fIt[fN].id, "%s", id);
+  snprintf(fIt[fN].nome, sizeof fIt[fN].nome, "%s", nome);
+  fN++;
+}
+// Read only this category into the bounded panel, including later raw entries.
+static void fCanaisCache(const char *chave, const char *cat) {
+  char nome[64], caminho[600], grupo[GF_NOME], id[GF_ID], canal[GF_NOME];
+  long long header[8];
+  FILE *fp;
+  cacheNomeFonte(chave, nome, sizeof nome);
+  if (!dados_caminho(caminho, sizeof caminho, nome) || !(fp = fopen(caminho, "rb"))) return;
+  if (fread(header, sizeof header, 1, fp) != 1 || header[0] != GC_MAGIA || header[1] != GC_VERSAO ||
+      header[3] < 0 || header[3] > INT_MAX || header[4] < 0 || header[4] > INT_MAX) {
+    fclose(fp); return;
+  }
+  // Source strings, then group name/count/visibility records.
+  for (long long i = 0; i < 3 + header[4]; i++) {
+    unsigned short n;
+    if (fread(&n, sizeof n, 1, fp) != 1 || fseek(fp, n, SEEK_CUR) != 0 ||
+        (i >= 3 && fseek(fp, 2 * sizeof(long long), SEEK_CUR) != 0)) goto fim;
+  }
+  for (long long i = 0; i < header[3] && fN < G_PF_CANAIS_MAX; i++) {
+    for (int field = 0; field < 11; field++) {
+      unsigned short n;
+      char *dst = field == 0 ? grupo : field == 1 ? id : field == 2 ? canal : NULL;
+      size_t cap = field == 1 ? sizeof id : sizeof grupo;
+      if (fread(&n, sizeof n, 1, fp) != 1) goto fim;
+      size_t k = dst ? (n < cap - 1 ? n : cap - 1) : 0;
+      if ((k && fread(dst, 1, k, fp) != k) || fseek(fp, n - (long)k, SEEK_CUR) != 0) goto fim;
+      if (dst) dst[k] = 0;
+      if (field == 0 && fseek(fp, sizeof(long long), SEEK_CUR) != 0) goto fim;
+    }
+    if (!strcmp(grupo, cat)) fCanalAdd(id, canal);
+  }
+fim:
+  fclose(fp);
+}
 static void fMontarCanais(const char *cat) {
   int i, k;
   free(fIt); fIt = calloc(G_PF_CANAIS_MAX + GF_CANAIS_MAX, sizeof *fIt); fN = 0;
   if (!fIt) return;
-  for (i = 0; i < nInventario && fN < G_PF_CANAIS_MAX; i++) {
-    if (strcmp(inventario[i].cat, cat)) continue;
-    snprintf(fIt[fN].id, sizeof fIt[fN].id, "%s", inventario[i].id);
-    snprintf(fIt[fN].nome, sizeof fIt[fN].nome, "%s", inventario[i].nome);
-    fN++;
-  }
+  // Reserve room for displayed channels even if this raw category filled the panel.
+  for (i = 0; i < nInventario && fN < G_PF_CANAIS_MAX - nCanais; i++)
+    if (!strcmp(inventario[i].cat, cat)) fCanalAdd(inventario[i].id, inventario[i].nome);
+  for (i = 0; i < nCanais; i++)
+    if (canais[i].cat >= 0 && !strcmp(cats[canais[i].cat].nome, cat))
+      fCanalAdd(canais[i].id, canais[i].nome);
+  for (i = 0; i < nLtvF && fN < G_PF_CANAIS_MAX; i++) fCanaisCache(ltvF[i].chave, cat);
   for (i = 0; i < fltLive.nCan; i++) {
     if (strcmp(fltLive.can[i].cat, cat)) continue;
     for (k = 0; k < fN && strcmp(fIt[k].id, fltLive.can[i].id); k++) {}
