@@ -334,7 +334,7 @@ static _Atomic int fonteEscolhida = -2;   // release/acquire entre verificacao e
 // nenhum fio de rede le player_id_canal(), que pode mudar durante um zap.
 static _Atomic unsigned stalkerGeracao;
 enum { FJOB_IDLE, FJOB_RUNNING, FJOB_DONE };
-enum { FJOB_NONE, FJOB_ADDON, FJOB_CANAL, FJOB_STALKER, FJOB_PREPARO, FJOB_PROXIMA_VOD, FJOB_FALHA, FJOB_PREPARO_FALHA };
+enum { FJOB_NONE, FJOB_ADDON, FJOB_CANAL, FJOB_STALKER, FJOB_PREPARO, FJOB_PROXIMA_VOD, FJOB_FALHA, FJOB_PREPARO_FALHA, FJOB_RENOVAR_VOD };
 typedef struct {
   FonteFalhaConfig politica;
   DebridContexto debrid;
@@ -391,6 +391,9 @@ typedef struct {
   int lembrada, catalogo, temporada, episodio, renovar;
   char id[80];
   char url[4096];
+  AddonsConsulta *consulta;
+  Stream renovada;
+  char tipoVod[16];
 } FonteJob;
 static FonteJob fonteJob;
 static _Atomic unsigned preparoGeracao;
@@ -463,6 +466,9 @@ static unsigned fonteFalhaLista;
 static int fonteFalhaEsperando, fonteFalhaN;
 static int fonteFalhaManual = -1;
 static double fonteFalhaPos = -1.0;
+static int vodRenovou;
+static Uint32 vodRenovandoDesde;
+static double vodRenovarPos;
 // TOCAR ENQUANTO CONFERE (fonteantecipa.h): a candidata que o player abriu antes
 // do veredito da conferencia (-1 = nenhuma) e o que valia antes de abrir, para
 // desfazer sem perder a conta das tentativas.
@@ -502,6 +508,7 @@ static void marcarFonteMorta(int indice) {
 // A fonte que vai para o player e outra candidata: a prova recomeca.
 static void definirFonteVOD(const char *url) {
   fonteVODRetentou = 0;
+  vodRenovou = 0;
   provaZerar(); player_definir_fonte(url);
 }
 #define CANAL_FONTE_PRAZO_MS 25000
@@ -626,10 +633,21 @@ static void *escolherProximaVOD(void *u) {
 }
 static int fonteJobCancelado(void *u) {
   FonteJob *job = u;
+  if (job->tipo == FJOB_RENOVAR_VOD && (Sint32)(SDL_GetTicks() - job->prazo) >= 30000) return 1;
   if (!nv_perfil_sessao_atual(job->sessaoPerfil)) return 1;
   if (job->tipo == FJOB_PREPARO || job->tipo == FJOB_PREPARO_FALHA)
     return job->preparoRodada != atomic_load_explicit(&preparoGeracao, memory_order_acquire);
   return job->geracao != atomic_load_explicit(&stalkerGeracao, memory_order_acquire);
+}
+static void *renovarFonteVod(void *u) {
+  FonteJob *job = u;
+  debrid_contexto_entrar(&job->debrid);
+  job->resultado = stream_vod_renovar(job->consulta, job->id, job->tipoVod,
+      job->depoisDe, job->listaGeracao, fonteJobCancelado, job, &job->renovada)
+      ? job->depoisDe : -1;
+  debrid_contexto_sair();
+  atomic_store_explicit(&job->estado, FJOB_DONE, memory_order_release);
+  return NULL;
 }
 static void *escolherFonteFalha(void *u) {
   FonteJob *job = u;
@@ -696,6 +714,7 @@ static void limparFonteVOD(void) {
   fonteFalhaEsperando = fonteFalhaN = 0;
   fonteFalhaManual = -1;
   fonteFalhaPos = -1.0; fonteFalhaLista = 0;
+  vodRenovou = 0; vodRenovandoDesde = 0;
   antAberta = -1;
   fonteVODAutomatica = 0;
   voltaAtiva = 0;
@@ -734,6 +753,13 @@ static int iniciarFonteJob(int tipo, unsigned geracao, const char *id, int renov
   job->escolhida = fonteFalhaManual;
   job->renovar = 0;
   job->preparoRodada = 0;
+  job->consulta = NULL;
+  if (tipo == FJOB_RENOVAR_VOD) {
+    const CatItem *c = cat_item(player_indice());
+    if (!c || !(job->consulta = addons_consulta_capturar())) return -1;
+    snprintf(job->tipoVod, sizeof job->tipoVod, "%s", c->tipo);
+    job->prazo = vodRenovandoDesde;
+  }
   if (tipo == FJOB_FALHA) {
     if (!fonteFalha || fonteFalhaLista != job->listaGeracao ||
         !(job->falha = fontefalha_sessao_clonar(fonteFalha))) return -1;
@@ -769,10 +795,12 @@ static int iniciarFonteJob(int tipo, unsigned geracao, const char *id, int renov
       ((tipo == FJOB_PREPARO || tipo == FJOB_PREPARO_FALHA) &&
        job->contexto.sessaoPerfil != job->sessaoPerfil)) {
     fontefalha_sessao_liberar(job->falha); job->falha = NULL;
+    addons_consulta_liberar(job->consulta); job->consulta = NULL;
     return -1;
   }
   atomic_store_explicit(&job->estado, FJOB_RUNNING, memory_order_release);
   if (pthread_create(&fioFonte, NULL,
+                     tipo == FJOB_RENOVAR_VOD ? renovarFonteVod :
                      tipo == FJOB_STALKER ? escolherFonteStalker :
                      tipo == FJOB_CANAL ? escolherFonteCanal :
                      (tipo == FJOB_FALHA || tipo == FJOB_PREPARO_FALHA || job->renovar) ? escolherFonteFalha :
@@ -780,6 +808,7 @@ static int iniciarFonteJob(int tipo, unsigned geracao, const char *id, int renov
                      job) != 0) {
     atomic_store_explicit(&job->estado, FJOB_IDLE, memory_order_release);
     fontefalha_sessao_liberar(job->falha); job->falha = NULL;
+    addons_consulta_liberar(job->consulta); job->consulta = NULL;
     return -1;
   }
   fioFonteVivo = 1;
@@ -1605,6 +1634,7 @@ static void processarFonteJob(void) {
   atomic_store_explicit(&job->estado, FJOB_IDLE, memory_order_release);
   if (!nv_perfil_sessao_atual(job->sessaoPerfil)) {
     fontefalha_sessao_liberar(job->falha); job->falha = NULL;
+    addons_consulta_liberar(job->consulta); job->consulta = NULL;
     goto iniciarPendente;
   }
   if (tipo == FJOB_PREPARO || tipo == FJOB_PREPARO_FALHA) {
@@ -1639,7 +1669,24 @@ static void processarFonteJob(void) {
   aplicar = geracao == fontePedidoGeracao &&
             geracao == atomic_load_explicit(&stalkerGeracao, memory_order_acquire);
   if (tipo == FJOB_PREPARO || tipo == FJOB_PREPARO_FALHA) aplicar = 0;
-  if (tipo == FJOB_FALHA) {
+  if (tipo == FJOB_RENOVAR_VOD) {
+    if (aplicar && vodRenovandoDesde && aguardandoFonte == 2 &&
+        player_aberto() && !player_quer_sair()) {
+      aguardandoFonte = 0; vodRenovandoDesde = 0;
+      if (resultado >= 0 && addons_consulta_atual(job->consulta) &&
+          stream_vod_renovada_aplicar(resultado, job->listaGeracao,
+                                     &job->renovada, job->sessaoPerfil)) {
+        const Stream *s = stream_item(resultado);
+        stream_definir_atual(resultado);
+        video_definir_cabecalhos(s->cabecalhos);
+        player_definir_retomada_fonte(vodRenovarPos);
+        definirFonteVOD(s->url);
+        vodRenovou = 1;
+        fonteVODDesde = fonteManualDesde = SDL_GetTicks() | 1u;
+      } else player_erro_fonte_motivo(i18n("A fonte não respondeu a tempo."), NULL);
+    }
+    addons_consulta_liberar(job->consulta); job->consulta = NULL;
+  } else if (tipo == FJOB_FALHA) {
     aplicar = aplicar && fonteFalha && job->listaGeracao == fonteFalhaLista &&
               job->listaGeracao == stream_lista_geracao() &&
               (player_aberto() || player_mini_ativo()) && !player_quer_sair();
@@ -1722,8 +1769,10 @@ iniciarPendente:
   }
 }
 static void cancelarFonteSeSaiu(void) {
-  int jobSessao = (fioFonteVivo && (fonteJob.tipo == FJOB_STALKER || fonteJob.tipo == FJOB_FALHA)) ||
-                   fontePendenteTipo == FJOB_STALKER || fontePendenteTipo == FJOB_FALHA || fonteFalha;
+  int jobSessao = (fioFonteVivo && (fonteJob.tipo == FJOB_STALKER || fonteJob.tipo == FJOB_FALHA ||
+                                                  fonteJob.tipo == FJOB_RENOVAR_VOD)) ||
+                   fontePendenteTipo == FJOB_STALKER || fontePendenteTipo == FJOB_FALHA ||
+                   fontePendenteTipo == FJOB_RENOVAR_VOD || fonteFalha;
   if (jobSessao &&
       (player_quer_sair() || (!player_aberto() && !player_mini_ativo()))) {
     novaGeracaoFonte();
@@ -3170,14 +3219,50 @@ static void lembrarTocando(void) {
   if (base[0]) fontepref_tocando(base, s);
 }
 static void guardarPosicaoFonteFalha(void) {
-  // GATE e o AUTOMATICO (nao a sessao fonteFalha): o watchdog arma tambem sem
-  // sessao (fonte aberta "enquanto confere", arming que falhou) e a troca
-  // precisa da posicao mesmo nesse caso. limparFonteVOD/iniciarPoliticaFonte
-  // zeram fonteVODAutomatica e fonteFalhaPos juntos a cada reproducao.
-  if (fonteVODAutomatica && player_aberto() && !player_quer_sair() &&
-      aguardandoFonte == 0 && video_pronto() && !video_falhou() && !player_fonte_falhou()) {
+  // Keep the last valid position for both manual and automatic VOD. A
+  // reopening backend may temporarily report zero, so skip recovery frames.
+  if (player_aberto() && !player_quer_sair() && !player_id_canal()[0] &&
+      aguardandoFonte == 0 && video_pronto() && !video_reconectando() &&
+      !video_falhou() && !player_fonte_falhou()) {
     double pos = video_pos();
     if (pos >= 0.0 && isfinite(pos)) fonteFalhaPos = pos;
+  }
+}
+// One fresh addon query per interrupted VOD; silent workers have a deadline.
+static void renovarVodInterrompido(void) {
+  if (vodRenovandoDesde) {
+    if ((Sint32)(SDL_GetTicks() - vodRenovandoDesde) >= 30000) {
+      novaGeracaoFonte(); limparFontePendente();
+      vodRenovandoDesde = 0; aguardandoFonte = 0;
+      player_erro_fonte_motivo(i18n("A fonte não respondeu a tempo."), NULL);
+    }
+    return;
+  }
+  if (vodRenovou && video_pronto() && !video_falhou() &&
+      video_pos() >= vodRenovarPos + 10.0) vodRenovou = 0;
+  if (vodRenovou || fonteFalhaPos <= 0.0 || !video_falhou() ||
+      !player_aberto() || player_quer_sair() || player_id_canal()[0] ||
+      aguardandoFonte || player_fonte_falhou()) return;
+  int causa = fontesonda_causa(video_erro_texto(), NULL);
+  if (causa != FS_CAUSA_REDE && causa != FS_CAUSA_HTTP) return;
+  char alvo[64]; alvoPlayer(alvo, sizeof alvo);
+  fonteDepoisDe = stream_atual();
+  if (fonteDepoisDe < 0 || !alvo[0] ||
+      partes_sessao_lista() || parteFase != PF_NADA) return;
+  vodRenovou = 1; vodRenovarPos = fonteFalhaPos;
+#ifdef NV_ANDROID
+  // Android retains the exact failure point through failed reopens.
+  if (video_pos() > 0.0) vodRenovarPos = video_pos();
+#endif
+  unsigned geracao = novaGeracaoFonte();
+  vodRenovandoDesde = SDL_GetTicks() | 1u;
+  aguardandoFonte = 2; fontePedidoGeracao = geracao; fonteEscolhida = -2;
+  limparFontePendente();
+  player_voltar_a_esperar();
+  player_toast(i18n("Conexão caiu, reconectando…"), 3000);
+  if (pedirFonteJob(FJOB_RENOVAR_VOD, geracao, alvo, 0) < 0) {
+    vodRenovandoDesde = 0; aguardandoFonte = 0;
+    player_erro_fonte();
   }
 }
 static void recarregarFonteVOD(void) {
@@ -6256,6 +6341,7 @@ void app_atualizar(float dt, Uint32 agora) {
       }
     }
   }
+  renovarVodInterrompido();
   tentarProximaFonteVOD();
   lembrarAutomatica();
   bingeDaFonteAtual();
@@ -7340,6 +7426,7 @@ void app_encerrar(void) {
     pthread_join(fioFonte, NULL);
     fioFonteVivo = 0;
     fontefalha_sessao_liberar(fonteJob.falha); fonteJob.falha = NULL;
+    addons_consulta_liberar(fonteJob.consulta); fonteJob.consulta = NULL;
     atomic_store_explicit(&fonteJob.estado, FJOB_IDLE, memory_order_release);
   }
   aguardandoFonte = 0;
