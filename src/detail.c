@@ -5460,7 +5460,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   // Glass Moderna: the text rests on a tile in the card box (below); the plate
   // grows out of that tile with the spring, so a fading card pays no margins.
   const GfxRect epTile = { r.x, r.y + th.h, r.w, r.h - th.h };
-  const int epVidroTile = !epApple() && ajustes_vidro() && epModerna();
+  const int epVidroTile = !epApple() && epModerna();
   if (!epApple() && f > 0.005f) {
     GfxRect p = epPlacaRect(r, th.h, ft);
     if (epVidroTile) {
@@ -5489,8 +5489,11 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     if (t3) { arte = reserva; t2 = t3; }
   }
   float aArte = (c >= 0 && c < DET_REV_EP) ? revela_arte(&revEp[c], t2 != 0, agora) : 1.0f;
-  // The rest tile arrives with the still, so loading cards add no fill.
-  if (epVidroTile && f <= 0.005f && t2) epPlacaDesenha(epTile, 0.0f, a * aArte);
+  // The rest tile follows the text, not the still: glass on or off, art or not.
+  if (epVidroTile && f <= 0.005f) {
+    if (ajustes_vidro()) epPlacaDesenha(epTile, 0.0f, a);
+    else gfx_cor(epTile, 24.0f / epTile.h, 1, 1, 1, 0.07f * a);
+  }
   // DESFOCAR NAO ASSISTIDOS (blurUnwatchedEpisodes, #133). O ajuste existia na
   // tela e na conta e nada o lia — o card saia nitido em toda plataforma.
   // "Nao assistido" e tudo que o mapa NAO afirma como visto: inclusive o "nao
