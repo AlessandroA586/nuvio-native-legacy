@@ -2433,6 +2433,7 @@
   { "Imagens", "Images" },
   { "Imagens guardadas na memória", "Images kept in memory" },
   { "Imersiva", "Immersive" },
+  { "Imersiva (experimental)", "Immersive (experimental)" },
   { "Imersivo", "Immersive" },
   { "Impressão digital do episódio", "Episode fingerprint" },
   { "Impressão digital · E%d", "Fingerprint · E%d" },
