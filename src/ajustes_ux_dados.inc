@@ -3,7 +3,7 @@
  * valor[], nunca uma fotografia de preferencias ja carregadas do usuario. */
 
 static int uxTemPadrao(int op) {
-  if (ajFalhaBackend(op) || ajLegendaPrincipal(op)) return 1;
+  if (op == AJ_XTREAM_CONEXOES || ajFalhaBackend(op) || ajLegendaPrincipal(op)) return 1;
   return op >= 0 && op < AJ_N &&
     (OPCOES[op].tipo == OP_ESCOLHA || OPCOES[op].tipo == OP_NUMERO) &&
     CHAVE[op] && CHAVE[op][0] && CHAVE[op][0] != '-' &&
@@ -18,6 +18,7 @@ static int uxValorPadrao(int op) {
 /* Fileiras tem uma fonte propria. valor[] e apenas seu espelho na tela. */
 static int uxValorAtual(int op) {
   if (op < 0 || op >= AJ_N) return 0;
+  if (op == AJ_XTREAM_CONEXOES) return xtream_conexoes_modo();
   if (op == AJ_SALVOS_DEST) return ajustes_fonte_biblioteca();
   if (ajLegendaPrincipal(op)) return ajLegendaValor(op);
   if (ajFalhaBackend(op)) return ajFalhaValor(op);

@@ -541,7 +541,7 @@ enum { PALCO_CORTINA, PALCO_ATUAL, PALCO_ARTE, PALCO_PRETO, PALCO_AURA, PALCO_TR
 int   ajustes_palco_fundo(void);
 int   ajustes_titulo_fil(void);        // 0 Classico, 1 Ilha, 2 Editorial, 3 Acento
 int   ajustes_abertura_estilo(void);   // 0 Centro (A3), 1 Canto (B3)
-int   ajustes_fundo_din(void);         // #205: fundo da Dinamica, 0 Cinza (padrao), 1 Cor, 2 Imersivo
+int   ajustes_fundo_din(void);         // #205: fundo da Dinamica, 0 Cinza (padrao), 1 Cor, 2 Imersivo, 3 Cinza escuro
 void  ajustes_fundo_din_cor(float rgb[3]);   // #205: a cor escolhida para o fundo "Cor" (sRGB 0..1)
 // #205: tamanho dos cards de episodio (Moderna): 0 pequeno, 1 medio (padrao), 2 grande.
 int   ajustes_menu_cartaz_simples(void); // 0 On (default, enriched card), 1 Off (side list only); this TV only.
@@ -764,6 +764,8 @@ void ajustes_perfil_esquecer(void);
 // live under c_settings_v1. Device/display/decoder budgets, local endpoints
 // and credentials are excluded; see ajustePortavel in ajustes_sync.inc.
 int ajustes_mesclar_blob(const char *base, char **saida);
+// Main-thread local edit detector; avoids building the account JSON snapshot.
+unsigned long long ajustes_sync_hash(void);
 // #187: uma linha "[tmdb] idioma dos metadados: ..." com o que a TV pede ao
 // TMDB, de onde vem (ajuste desta TV) e o tmdb_language cru da conta.
 void ajustes_tmdb_idioma_relatar(const char *blob);

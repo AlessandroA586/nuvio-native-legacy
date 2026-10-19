@@ -23,6 +23,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include <math.h>
+#include "provedorhttp.h"
 
 
 static char token[128], cliente[80];
@@ -182,6 +183,7 @@ int trakt_operacao_estado(int tipo) {
 }
 
 int trakt_ativo(void) { return ligado; }
+int trakt_aguardando(void) { return provedorEspera(); }
 
 void trakt_sessao_morta(void) {
   pthread_mutex_lock(&travaCred);
@@ -1154,7 +1156,7 @@ int trakt_episodios_marcar(const char *imdb, const VistoPar *pares, int qtd, int
 // visto um episodio nao significa ter marcado a serie inteira como assistida.
 static void carregarHistoricoReal(const char *const *cab, HistoricoPedido pedido,
                                     TkUltimo *ultSaida, int *nUltSaida) {
-  char *corpo = rede_baixar_com("https://api.trakt.tv/sync/history?limit=100&extended=full", 25, cab);
+  char *corpo = provedorBaixar("https://api.trakt.tv/sync/history?limit=100&extended=full", 25, cab);
   const char *p;
   if (!corpo) return;
   if (!historicoPedidoAtual(pedido)) { free(corpo); return; }
@@ -1227,7 +1229,7 @@ static void carregarSeriesVistas(const char *const *cab, HistoricoPedido pedido,
     int st = 0, objetos = 0;
     snprintf(url, sizeof url,
              "https://api.trakt.tv/sync/watched/shows?extended=noseasons&page=%d&limit=250", pagina);
-    corpo = rede_baixar_st(url, 25, cab, &st);
+    corpo = provedorBaixarSt(url, 25, cab, &st);
     if (!corpo || st != 200 || (anterior && !strcmp(anterior, corpo))) { free(corpo); break; }
     free(anterior); anterior = corpo;
     p = filmesPula(corpo);
@@ -1380,7 +1382,7 @@ static void *fioProximo(void *x) {
     } else return NULL;
     snprintf(url, sizeof url,
              "https://api.trakt.tv/shows/%s/progress/watched?hidden=false&specials=false", imdb);
-    corpo = rede_baixar_com(url, 8, fila->cab);
+    corpo = provedorBaixar(url, 8, fila->cab);
     tarefa->estado = tk_prog_proximo(corpo, &tarefa->t, &tarefa->e);
     // O SELO DE SERIE VISTA SAI DAQUI, nao da abertura do titulo: o cabecalho
     // (aired/completed, antes de "seasons") diz se tudo o que foi ao ar foi visto.
@@ -1527,7 +1529,7 @@ static void carregarFilmesVistos(const char *const *cab, HistoricoPedido pedido)
   char ativ[40] = "";
   char url[128], *anterior = NULL;
   int pagina = 1, ok = 0;
-  char *corpo = rede_baixar_com("https://api.trakt.tv/sync/last_activities", 15, cab);
+  char *corpo = provedorBaixar("https://api.trakt.tv/sync/last_activities", 15, cab);
   if (corpo) {
     const char *m = strstr(corpo, "\"movies\"");
     const char *o = m ? strchr(m, '{') : NULL;
@@ -1542,7 +1544,7 @@ static void carregarFilmesVistos(const char *const *cab, HistoricoPedido pedido)
   for (;;) {
     int st = 0, n;
     snprintf(url, sizeof url, "https://api.trakt.tv/sync/watched/movies?page=%d&limit=250", pagina);
-    corpo = rede_baixar_st(url, 25, cab, &st);
+    corpo = provedorBaixarSt(url, 25, cab, &st);
     if (!corpo || st != 200 || (anterior && !strcmp(anterior, corpo))) { free(corpo); break; }
     n = filmesLerPagina(corpo, &v);
     free(anterior); anterior = corpo;
@@ -1654,7 +1656,7 @@ int trakt_continuar(CatItem *saida, int max) {
   pthread_t fioHist, fioFilmes;
   int hist = pthread_create(&fioHist, NULL, fioHistorico, &ph) == 0;
   int filmes = pthread_create(&fioFilmes, NULL, fioFilmesVistos, &ph) == 0;
-  corpo = rede_baixar_com("https://api.trakt.tv/sync/playback?extended=full", 25, cab);
+  corpo = provedorBaixar("https://api.trakt.tv/sync/playback?extended=full", 25, cab);
   if (!corpo) {
     if (hist) pthread_join(fioHist, NULL);
     if (filmes) pthread_join(fioFilmes, NULL);
@@ -1832,14 +1834,12 @@ int trakt_continuar(CatItem *saida, int max) {
       printf("[trakt] a seguir conferido no Trakt: %d serie(s), %d sem proximo\n", nTar, acabou);
     free(tar); free(tarDe);
   }
-  // Pausados primeiro; recencia dentro de cada grupo. Insercao: n <= CONT_MAX.
+  // Last watched first, including next episodes after a completed episode.
   { int a, b;
     for (a = 1; a < n; a++) {
       CatItem t = saida[a];
-      for (b = a - 1; b >= 0 &&
-           ((saida[b].progresso == 0 && t.progresso > 0) ||
-            ((saida[b].progresso == 0) == (t.progresso == 0) &&
-             saida[b].retomadoMs < t.retomadoMs)); b--) saida[b + 1] = saida[b];
+      for (b = a - 1; b >= 0 && saida[b].retomadoMs < t.retomadoMs; b--)
+        saida[b + 1] = saida[b];
       saida[b + 1] = t;
     } }
   // O MAPA DE EPISODIOS VISTOS NAO SAI DAQUI. Ele e buscado por SERIE, em
@@ -1876,7 +1876,7 @@ int trakt_continuar(CatItem *saida, int max) {
 // Alguns clientes recebem 401 apenas no feed agregado. O grafo e o
 // historico publico dos perfis continuam acessiveis com a mesma credencial.
 static char *socialPorSeguidos(const char *const *cab, int max) {
-  char *lista=rede_baixar_com("https://api.trakt.tv/users/me/following?extended=full",10,cab);
+  char *lista=provedorBaixar("https://api.trakt.tv/users/me/following?extended=full",10,cab);
   if(!lista)return NULL;
   char *out=calloc(1,262144);size_t used=1;int n=0,consultados=0;
   if(!out){free(lista);return NULL;}out[0]='[';
@@ -1891,8 +1891,8 @@ static char *socialPorSeguidos(const char *const *cab, int max) {
     if(!id[0] || strspn(id,"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")!=strlen(id)){p=js_prox(f);continue;}
     consultados++;
     snprintf(url,sizeof url,"https://api.trakt.tv/users/%s/watching?extended=full",id);
-    char *body=rede_baixar_com(url,8,cab);int agora=body&&strchr(body,'{');
-    if(!agora){free(body);snprintf(url,sizeof url,"https://api.trakt.tv/users/%s/history?limit=1&extended=full",id);body=rede_baixar_com(url,8,cab);}
+    char *body=provedorBaixar(url,8,cab);int agora=body&&strchr(body,'{');
+    if(!agora){free(body);snprintf(url,sizeof url,"https://api.trakt.tv/users/%s/history?limit=1&extended=full",id);body=provedorBaixar(url,8,cab);}
     const char *b=body?strchr(body,'{'):NULL,*bf=b?js_fim(b):NULL;
     if(b&&bf&&bf>b+1) {
       size_t un=(size_t)(uf-u),bn=(size_t)(bf-b-2);
@@ -1927,13 +1927,13 @@ int trakt_social(CatItem *saida, int max) {
   if (!cabecalhosPedido(pedido, cab, aut, sizeof aut, chave, sizeof chave)) return 0;
   corpo = NULL;
   if (!socialSemFeed) {
-    corpo = rede_baixar_com(
+    corpo = provedorBaixar(
       "https://api.trakt.tv/users/me/friends/activities?extended=full&page=1&limit=12",
       20, cab);
     // Contas sem o escopo social novo podem receber 401 no grafo `friends`,
     // embora o token continue valido para historico. `following` e o fallback
     // honesto: ainda sao pessoas escolhidas pelo dono, nunca atividade global.
-    if (!corpo) corpo = rede_baixar_com(
+    if (!corpo) corpo = provedorBaixar(
       "https://api.trakt.tv/users/me/following/activities?extended=full&page=1&limit=12",
       20, cab);
     if (!corpo) {
@@ -2082,13 +2082,13 @@ int trakt_perfil(PerfilDados *d) {
   strftime(inicio,sizeof inicio,"%Y-%m-%dT%H%%3A%M%%3A%SZ",&utc);
   // Perfil e avatar. O avatar pode ser WebP no Trakt novo; o renderer so o
   // pede se o firmware aceitar, e a tela continua completa sem ele.
-  corpo=rede_baixar_com("https://api.trakt.tv/users/settings?extended=full",15,cab);
+  corpo=provedorBaixar("https://api.trakt.tv/users/settings?extended=full",15,cab);
   if(corpo){ const char *u=strstr(corpo,"\"user\""); const char *fu=u?js_fim(strchr(u,'{')):NULL;
     if(u&&fu){js_texto(u,fu,"name",d->nome,sizeof d->nome);js_texto(u,fu,"username",d->usuario,sizeof d->usuario);
       js_texto(u,fu,"full",d->avatar,sizeof d->avatar);} free(corpo); }
   snprintf(url,sizeof url,
     "https://api.trakt.tv/users/me/history?start_at=%s&extended=full&page=1&limit=100",inicio);
-  corpo=rede_baixar_com(url,25,cab);
+  corpo=provedorBaixar(url,25,cab);
   if (!corpo || !strchr(corpo, '[')) { free(corpo); return 0; }
   ranking = calloc(100, sizeof *ranking);
   if (!ranking) { free(corpo); return 0; }
@@ -2149,13 +2149,8 @@ int trakt_perfil(PerfilDados *d) {
   return historicoPedidoAtual(pedido);
 }
 
-// PAGINACAO (#6 Shield: biblioteca mostrava Trakt 213 de 1600+). A watchlist
-// aceita ?page=&limit= e, sem eles, devolve tudo; a colecao NAO pagina (a doc
-// do Trakt so lista page/limit na watchlist). O cabecalho X-Pagination-Page-
-// Count nao chega aqui (rede_baixar_com devolve so o corpo), entao a parada e a
-// do mapa de filmes vistos: pagina VAZIA, corpo igual ao anterior ou o teto da
-// plataforma. O Trakt pode capar a pagina abaixo do limit pedido, por isso
-// pagina curta NAO encerra. A colecao e pedida sem parametros, uma vez.
+// Watchlist pages follow response metadata, with empty/repeated-page fallback
+// when headers are unavailable. Collection remains a single request per type.
 #define TRAKT_LISTA_PAGINA 500
 #define TRAKT_LISTA_PAGINAS_MAX 64
 
@@ -2179,7 +2174,7 @@ static int listaNucleo(const char *qual, CatItem **pv, int *cap, int cresce,
     int pagina = 1;
     anterior = NULL;
     for (;;) {
-      int lidos = 0;
+      int lidos = 0, proxima = -1;
       if (paginavel)
         // added/desc: the most recently added title comes first (#610).
         snprintf(url, sizeof url, "https://api.trakt.tv/sync/%s/%s/added/desc?page=%d&limit=%d",
@@ -2187,7 +2182,7 @@ static int listaNucleo(const char *qual, CatItem **pv, int *cap, int cresce,
       else
         snprintf(url, sizeof url, "https://api.trakt.tv/sync/%s/%s", qual, tipo);
       if (!historicoPedidoAtual(pedido)) break;
-      corpo = rede_baixar_com(url, 25, cab);
+      corpo = provedorGet(url, 25, cab, NULL, &proxima, pagina);
       if (!corpo) break;
       if (anterior && !strcmp(anterior, corpo)) { free(corpo); break; }
       paginas++;
@@ -2237,9 +2232,9 @@ static int listaNucleo(const char *qual, CatItem **pv, int *cap, int cresce,
         p = js_prox(f);
       }
       free(anterior); anterior = corpo;
-      if (!paginavel || !lidos || pagina >= TRAKT_LISTA_PAGINAS_MAX) break;
+      if (!paginavel || !lidos || !proxima || pagina >= TRAKT_LISTA_PAGINAS_MAX) break;
       if (n >= max) break;   // teto da plataforma: nao pede o resto
-      pagina++;
+      pagina = proxima > pagina ? proxima : pagina + 1;
     }
     free(anterior);
   }

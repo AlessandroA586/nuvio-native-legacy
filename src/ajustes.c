@@ -652,7 +652,7 @@ typedef enum {
   AJ_MENU_CARTAZ,      // Device-local, append-only: 0 On (default, enriched card), 1 Off (side list only).
   AJ_TITULO_FIL,       // #205: titulo das fileiras da Home, 0 Classico, 1 Ilha, 2 Editorial, 3 Acento; local, append-only
   AJ_VIDRO_QUALIDADE,  // glass quality: 0 Automatica (frost + governor), 1 Desempenho (smoked, no blur), 2 Alta (frost); local, append-only
-  AJ_FUNDO_DIN,        // #205: fundo da Dinamica, 0 = Cinza (padrao), 1 = Cor, 2 = Imersivo; local, append-only
+  AJ_FUNDO_DIN,        // #205: fundo da Dinamica, 0 = Cinza, 1 = Cor, 2 = Imersivo, 3 = Cinza escuro; local, append-only
   AJ_FUNDO_DIN_COR,    // #205: a cor do fundo "Cor" (indice de FUNDO_DIN_TEMA); local, append-only
   AJ_ESCALA_TEXTO,     // text and component scale (gfx.h): 85/90/100/110/120/130%, default 85%; local, append-only
   // MEMORIA DA FONTE (dono, 15-16/10/2026). Prefer Binge Group (a escolha a
@@ -676,6 +676,7 @@ typedef enum {
   AJ_NT_EP,            // episode card rating: 0 Follow title line, 1 IMDb, 2 TMDB, 3 Both, 4 Off; local, append-only
   AJ_LIVETV_SUGERIR,   // Live TV: Jev suggests sections for channels with none (livecat.h); default on; local, append-only
   AJ_AUDIO_OFFSET,     // #578: device-local converted audio offset, append-only
+  AJ_XTREAM_CONEXOES,  // Stored with this IPTV account, not global settings.
   AJ_AMPLIAR_UI,      // Device-local output scaler, append-only; TV by default.
   AJ_N
 } OpcaoId;
@@ -710,7 +711,7 @@ static const char *V_NT_EP[]    = { "Como na linha do título", "IMDb", "TMDB", 
 static const char *V_PALCO_FUNDO[] = { "Cortina", "Como está", "Só arte", "Preto", "Aura", "Tríptico", "Monumento" };
 static const char *V_TITULO_FIL[] = { "Clássico", "Ilha", "Editorial", "Acento" };
 static const char *V_VIDRO_QUALIDADE[] = { "Automática", "Desempenho", "Alta" };
-static const char *V_FUNDO_DIN[] = { "Cinza", "Cor", "Imersivo" };
+static const char *V_FUNDO_DIN[] = { "Cinza", "Cor", "Imersivo", "Cinza escuro" };
 // A cor do fundo "Cor" sai da paleta do acento (TEMA_ACENTO), em ordem de
 // matiz. Sem o Branco (o fundo e escuro) e sem os dinamicos. Os nomes sao os
 // de V_TEMA, ja traduzidos; o indice gravado e o desta lista (append-only).
@@ -1286,6 +1287,7 @@ static const char *JF_ALFA_SENHA =
 
 static const char *V_MANTER_PRAZO[] = { "2 min", "5 min", "10 min", "30 min", "Sem limite" };
 static const char *V_AMIGOS_ESTILO[] = { "Feed de cartões", "Ao vivo em destaque", "Histórias com cartaz", "Faixa de presença", "Cartaz primeiro", "Rostos clássicos" };
+static const char *V_CONEXOES[] = { "Automático", "Ligado", "Desligado" };
 static const Opcao OPCOES[AJ_N] = {
   ESC("Qualidade máxima",           V_QUALIDADE, 4),
   ESC("Dolby Vision",               V_LIGA, 2),
@@ -1725,7 +1727,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Menu de contexto enriquecido", V_LIGA, 2),              // local: menuCartazLocal
   ESC("Título das fileiras", V_TITULO_FIL, 4),   // local: rowTitleStyleLocal
   ESC("Qualidade do vidro", V_VIDRO_QUALIDADE, 3),   // local: vidroQualidadeLocal
-  ESC("Fundo da Dinâmica", V_FUNDO_DIN, 3),                  // local: fundoDinamicaLocal
+  ESC("Fundo da Dinâmica", V_FUNDO_DIN, 4),                  // local: fundoDinamicaLocal
   ESC("Cor do fundo", V_FUNDO_DIN_COR, 17),                  // local: fundoDinamicaCorLocal
   ESC("Escala de texto e componentes", V_ESCALA_TEXTO, 6),   // local: escalaTextoLocal
   ESC("Preferir o mesmo grupo de fonte", V_LIGA, 2),          // local: fonteGrupoLocal
@@ -1744,6 +1746,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Nota nos episódios", V_NT_EP, 5),   // local: notaEpisodio
   ESC("Sugerir categorias dos canais", V_LIGA, 2),   // local: liveTvSugerirLocal
   NUM("Ajuste do áudio (ms)", -AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_STEP_MS, " ms"),
+  ESC("Conta com limite de conexões", V_CONEXOES, 3),
   ESC("Ampliar interface", V_AMPLIAR_UI, 2),
 };
 
@@ -2052,6 +2055,7 @@ static const char *CHAVE[] = {
   "notaEpisodio",
   "liveTvSugerirLocal",
   "audioOffsetMsLocal",
+  "-xtreamConexoes",
   "ampliarUiLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
@@ -2946,7 +2950,7 @@ int ajustes_palco_fundo(void) { return valor[AJ_PALCO_FUNDO]; }
 int ajustes_titulo_fil(void) { int v = valor[AJ_TITULO_FIL]; return v >= 0 && v <= 3 ? v : 0; }
 int ajustes_abertura_estilo(void) { return valor[AJ_ABERTURA_ESTILO] == 1; }   // 0 Centro (A3), 1 Canto (B3)
 int ajustes_menu_cartaz_simples(void) { return valor[AJ_MENU_CARTAZ] == 1; }
-int ajustes_fundo_din(void) { int v = valor[AJ_FUNDO_DIN]; return v >= 0 && v <= 2 ? v : 0; }
+int ajustes_fundo_din(void) { int v = valor[AJ_FUNDO_DIN]; return v >= 0 && v <= 3 ? v : 0; }
 void ajustes_fundo_din_cor(float rgb[3]) {
   int v = valor[AJ_FUNDO_DIN_COR];
   if (v < 0 || v >= FUNDO_DIN_N_COR) v = FUNDO_DIN_COR_PADRAO;   // arquivo de outra versao
@@ -3205,10 +3209,9 @@ void ajustes_textura_quadro(void) {
 // moderna DESLIGA o recolhimento, e nao o contrario. Copiado de
 // normalizeLayoutPreferences para nao inventar precedencia.
 int ajustes_rail_moderna(void)        { return lig(AJ_RAIL_MODERNA); }
-// #461: a barra no topo nao existe no Dinamica (a pilula dela ja e o topo) nem
-// no telefone em retrato (nao cabe).
+// Dinamica always uses the top bar; portrait phones keep the compact menu.
 int ajustes_menu_topo(void) {
-  return valor[AJ_MENU_TOPO] == 1 && ajustes_home_layout() != HOME_LAYOUT_DINAMICA && !ajRetrato();
+  return (valor[AJ_MENU_TOPO] == 1 || ajustes_home_layout() == HOME_LAYOUT_DINAMICA) && !ajRetrato();
 }
 int ajustes_abas_estilo(void) { return valor[AJ_ABAS_ESTILO]; }
 void ajustes_definir_abas_estilo(int estilo) {
@@ -5414,12 +5417,17 @@ static const char *chaveConta(int i) {
   return i == AJ_FOCO_TRAILER ? "focusedPosterBackdropTrailerEnabled" : CHAVE[i];
 }
 
-static int ajustesExtrasAplicar(const char *json);
+static int ajustesExtrasAplicar(const char *json, const char *web);
 
+static char *ajustesWebBlob(const char *json);
 int ajustes_aplicar_blob(const char *json) {
   const char *fim;
   int i, mudou = 0, reconhecidas = 0;
   if (!json || !*json) return 0;
+  const char *original = json;
+  char *web = ajustesWebBlob(json);
+  if (!web) return 0;
+  json = web;
   // Os pacotes de selos da conta (features.stream_badge_settings) vivem em
   // selospacote.c, que guarda por perfil; nao sao uma opcao desta tabela.
   selospacote_conta_do_blob(json);
@@ -5523,7 +5531,9 @@ int ajustes_aplicar_blob(const char *json) {
   // na primeira verificacao na TV.
   printf("[ajustes] blob da conta: %d chave(s) reconhecida(s), %d mudou(aram)\n",
          reconhecidas, mudou);
-  return mudou + ajustesExtrasAplicar(json);
+  mudou += ajustesExtrasAplicar(original, web);
+  free(web);
+  return mudou;
 }
 
 // ---------------------------------------------------------------- subir (#85)
@@ -5888,7 +5898,8 @@ static int acharValor(const char *ini, const char *fim, const char *chave,
   size_t n;
   n = (size_t)snprintf(alvo, sizeof alvo, "\"%s\"", chave);
   if (n >= sizeof alvo) return 0;
-  for (p = ini; p && (p = strstr(p, alvo)) != NULL && p < fim; p += n) {
+  for (p = ini; p < fim && (p = memchr(p, '"', (size_t)(fim - p))) != NULL; p++) {
+    if ((size_t)(fim - p) < n || memcmp(p, alvo, n)) continue;
     const char *v = p + n;
     while (v < fim && (unsigned char)*v <= ' ') v++;
     if (v >= fim || *v != ':') continue;
@@ -6626,10 +6637,11 @@ static const char *textoLeitura(int op) {
     }
   }
   if (op == AJ_TRAKT) {
-    if (traktauth_estado() == TRA_PARADO && trakt_ativo()) return i18n("conectado — OK desconecta");
+    if (trakt_aguardando()) return i18n("Não foi possível agora. Tente novamente.");
+    if (trakt_ativo()) return i18n("Sair da conta");
     switch (traktauth_estado()) {
-      case TRA_LIGADO:     return i18n("conectado — OK desconecta");
-      case TRA_PEDINDO:    return i18n("preparando…");
+      case TRA_LIGADO:     return i18n("Sair da conta");
+      case TRA_PEDINDO:    return traktauth_aguardando() ? i18n("Não foi possível agora. Tente novamente.") : i18n("preparando…");
       case TRA_AGUARDANDO: return i18n("aguardando");
       case TRA_ERRO:       return i18n("falhou");
       case TRA_INVALIDO:   return i18n("expirou — reconectar");
@@ -6648,8 +6660,10 @@ static const char *textoLeitura(int op) {
     }
   }
   if (op == AJ_SIMKL) {
+    if (simkl_aguardando()) return i18n("Não foi possível agora. Tente novamente.");
+    if (simkl_ativo()) return i18n("Sair da conta");
     switch (simklauth_estado()) {
-      case SMK_LIGADO:     return i18n("conectado — OK desconecta");
+      case SMK_LIGADO:     return i18n("Sair da conta");
       case SMK_PEDINDO:    return i18n("preparando…");
       case SMK_AGUARDANDO: return i18n("aguardando");
       case SMK_ERRO:       return i18n("falhou");
@@ -7043,6 +7057,7 @@ static const char *ajudaOpcaoBase(int op) {
     }
     case AJ_XTREAM_SENHA: return "A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.";
     case AJ_XTREAM_LIMPAR: return "Apaga servidor, usuário e senha deste perfil, e os canais somem do Guia. Sair da conta também apaga.";
+    case AJ_XTREAM_CONEXOES: return "Conta com limite de conexões";
     case AJ_XTREAM_CONTA: return "O que o servidor Xtream disse da assinatura na última carga do Guia: se está ativa, quando vence e quantas telas estão em uso.";
     case AJ_EPG_PAIS: return "De que país vem a programação dos canais no Guia. Automático escolhe pelo idioma e pelos nomes dos canais (RO:, |RO|…). A grade do próprio provedor Xtream entra sempre que existir.";
     case AJ_FONTE_MANUAL: return "Ao mandar reproduzir, abre a lista de fontes em vez de escolher sozinho. Canal ao vivo não pergunta.";
@@ -7332,7 +7347,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ABERTURA_ADDON: return "Desligado (padrão): a tela Cinema mostra só a arte, o logo e a barra. Ligado: o nome do add-on aparece sob a barra. Vale só nesta TV.";
     case AJ_TELA_ABERTURA: return "Cinema (padrão): a arte e o logo do título ficam na tela até o vídeo entrar. Detalhada: a fonte, o add-on e cada passo da abertura. Na Cinema, Para cima ou Para baixo mostra os detalhes. Vale só nesta TV.";
     case AJ_TITULO_FIL: return "Como o título de cada fileira da Home aparece. Clássico (padrão): só o texto. Ilha: numa pílula de vidro. Editorial: com uma linha de categoria acima. Acento: com um ponto de destaque. Vale só nesta TV.";
-    case AJ_FUNDO_DIN: return "O fundo do layout Dinâmica. Cinza (padrão): o cinza escuro da Apple TV, sempre o mesmo. Cor: uma cor sua, fixa. Imersivo: acompanha a arte do título, em tons suaves e com troca lenta. Vale só nesta TV.";
+    case AJ_FUNDO_DIN: return "O fundo do layout Dinâmica. Cinza (padrão): o cinza escuro da Apple TV, sempre o mesmo. Cor: uma cor sua, fixa. Imersivo: acompanha a arte do título, em tons suaves e com troca lenta. Vale só nesta TV. Cinza escuro: degradê grafite quase preto, fixo.";
     case AJ_PALCO_FUNDO: return "Palco na Moderna e na Dinâmica (Apple TV), com artes de fundo, nunca o cartaz. Cortina (padrão): arte à direita com o logo; Aura: arte desfocada; Tríptico: três artes; Monumento: arte no tom do app; Preto: só cartazes e ficha; Como está: destaque completo; Só arte: sem texto no topo. Sem arte de fundo, usa Preto. Só neste aparelho.";
     case AJ_FUNDO_DIN_COR: return "A cor do fundo da Dinâmica, escurecida para o texto continuar legível. Vale só nesta TV.";
     case AJ_ABERTURA_ESTILO: return "Como a tela de abertura se organiza. Centro (padrão): o logo no meio e o anel de progresso embaixo dele. Canto: o logo no canto inferior esquerdo, com o anel pequeno embaixo dele. Vale só nesta TV.";
@@ -8186,6 +8201,7 @@ static void mudarValor(int op, int dir);
 // O valor a que `dir` levaria `op`, sem aplicar. Espelha mudarValor.
 static int passoAdiante(int op, int dir) {
   const Opcao *o = &OPCOES[op];
+  if (op == AJ_XTREAM_CONEXOES) return (xtream_conexoes_modo() + (dir > 0 ? 1 : 2)) % 3;
   if (op == AJ_FIL_LIMITE) return fil_limite_passo(valor[op], dir);   // Android: 40 -> Ilimitado
   // Valores antigos (passos de 10) ficam intactos ate a primeira seta.
   if (op == AJ_ESPACO_FILEIRAS || op == AJ_ESPACO_TITULOS) {
@@ -8804,6 +8820,11 @@ static int definirValorDireto(int op, int novo) {
     uxNotificar(seekrPedirChave());
     return 0;
   }
+  if (op == AJ_XTREAM_CONEXOES) {
+    xtream_definir_conexoes_modo(novo);
+    valor[op] = xtream_conexoes_modo();
+    return valor[op] == novo;
+  }
   if (op == AJ_PROVEDORES_ESCOPO) {
     int ok = ajustes_definir_provedores_compartilhados(novo == 0);
     if (!ok) uxNotificar("Não foi possível agora. Tente novamente.");
@@ -8880,6 +8901,7 @@ static int definirValorDireto(int op, int novo) {
   return 1;
 }
 static void mudarValorDireto(int op, int dir) {
+  if (op == AJ_XTREAM_CONEXOES) valor[op] = xtream_conexoes_modo();
   definirValorDireto(op, passoAdiante(op, dir));
 }
 
@@ -8937,7 +8959,7 @@ static void eventoTela(const SDL_Event *e) {
   // tela responde ao controle.
   { TraEstado ta = traktauth_estado();
     SmkEstado sa = simklauth_estado();
-    int traAtivo = (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO);
+    int traAtivo = !traktauth_aguardando() && (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO);
     int smkAtivo = (sa == SMK_PEDINDO || sa == SMK_AGUARDANDO || sa == SMK_ERRO);
     DisEstado da = discord_estado();
     int disAtivo = (da == DIS_PEDINDO || da == DIS_AGUARDANDO || da == DIS_ERRO);
@@ -9377,6 +9399,7 @@ static int nValores(int op) {
 // por vez dentro de desenhaLinha.
 static const char *textoValor(int op) {
   static char buf[48];
+  if (op == AJ_XTREAM_CONEXOES) return i18n(V_CONEXOES[xtream_conexoes_modo()]);
   if (ajFalhaBackend(op)) {
     int v = ajFalhaValor(op);
     if (op == AJ_FALHA_PROVEDORES || op == AJ_FALHA_ADDONS) return i18n(V_LIGA[v]);
@@ -9937,7 +9960,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_SEEKR_CHAVE: case AJ_SEEKR_TESTAR:
     case AJ_SELOS_PACOTE_ADD: case AJ_SELOS_PACOTE_REM:
     case AJ_URL_LISTA: case AJ_URL_M3U_ADD: case AJ_URL_XMLTV_ADD: case AJ_URL_REM:
-    case AJ_XTREAM_CONTA:
+    case AJ_XTREAM_CONEXOES: case AJ_XTREAM_CONTA:
     case AJ_DIAGNOSTICO: case AJ_VELOCIDADE: case AJ_LIVETV_DIAG:
     case AJ_P2P_URL: case AJ_P2P_TESTAR:
     case AJ_JF_SERVIDOR: case AJ_JF_ENTRAR: case AJ_JF_SAIR:
@@ -10011,7 +10034,7 @@ static void ajDesenharTudo(Uint32 agora) {
 #ifdef AJUSTES_TESTE
     if (ajVinculoTeste) desenhaVinculo("Trakt", "8F3K2QPA", "https://trakt.tv/activate", NULL, 1); else
 #endif
-    if (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO)
+    if (!traktauth_aguardando() && (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO))
       desenhaVinculo("Trakt", traktauth_codigo(), traktauth_url(),
                      traktauth_erro(), ta == TRA_AGUARDANDO);
     else if (sa == SMK_PEDINDO || sa == SMK_AGUARDANDO || sa == SMK_ERRO)
@@ -10034,7 +10057,7 @@ int ajustes_relogio_cabe(void) {
   TraEstado ta = traktauth_estado();
   SmkEstado sa = simklauth_estado();
   if (teclado_aberto() || (ajModalAberto() && !filAberta)) return 0;
-  if (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO) return 0;
+  if (!traktauth_aguardando() && (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO)) return 0;
   if (sa == SMK_PEDINDO || sa == SMK_AGUARDANDO || sa == SMK_ERRO) return 0;
   return 1;
 }
@@ -10047,6 +10070,12 @@ int ajustes_relogio_navegavel(void) {
 }
 
 #ifdef AJUSTES_TESTE
+int ajustes_teste_conexoes(void) {
+  montarTela();
+  xtream_definir_conexoes_modo(1);
+  focarOpcao(AJ_XTREAM_CONEXOES); scrollY = velY = 0;
+  return 1;
+}
 int ajustes_teste_focar_opcao(int op) {
   int i;
   montarTela();

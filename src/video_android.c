@@ -29,6 +29,7 @@
 #include "marco.h"
 #include "streams.h"
 #include "video.h"
+#include "xtream.h"
 #include "capmkv.h"
 #include "audioinfo.h"
 #include "video_reconexao.h"
@@ -55,7 +56,7 @@
 
 static jclass    gCls;      // GlobalRef: FindClass de fio do SDL nao acha classe do app
 static jmethodID mAbrir, mParar, mPausar, mBuscar, mVolume, mJanela, mEscolher;
-static jmethodID mAbrirPosicao, mJanelaPronta;
+static jmethodID mAbrirPosicao, mJanelaPronta, mLimitedConnections;
 // 2.0.3 (opcional): abrirRetomada(url, cab, inicioMs, fracao, geracao). So o
 // percentual conhecido (retomada da conta, sem registro local): o Kotlin
 // aplica fracao/10000 da duracao do CONTAINER antes do primeiro quadro.
@@ -82,6 +83,8 @@ static int resolverMetodos(JNIEnv *env) {
   mJanelaPronta = (*env)->GetStaticMethodID(env, gCls, "janelaPronta", "()Z");
   mEscolher = (*env)->GetStaticMethodID(env, gCls, "escolher", "(II)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); return 0; }
+  mLimitedConnections = (*env)->GetStaticMethodID(env, gCls, "limitedConnections", "(I)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mLimitedConnections = NULL; }
   // Opcional: uma casca anterior ainda abre normalmente e recebe o seek
   // depois da duracao. A ausencia deste metodo nao derruba a ponte inteira.
   mAbrirPosicao = (*env)->GetStaticMethodID(env, gCls, "abrirPosicao", "(Ljava/lang/String;Ljava/lang/String;II)V");
@@ -267,7 +270,7 @@ static int precarregarVideo(const char *url, const char *cab, double segundos,
   jmethodID metodo;
   jstring u, c, a;
   int inicioMs, fracao, ok;
-  if (!url || !*url || !token || token > INT_MAX) return 0;
+  if (!url || !*url || !token || token > INT_MAX || xtream_url_limitada(url)) return 0;
   env = ambiente();
   metodo = proximo ? mPrepararProximo : mPreparar;
   if (!env || !metodo || !mPrepararEstado || !mCancelarPreparo || !mAbrirPreparada) return 0;
@@ -396,11 +399,10 @@ static int reconPausado;
 static int recarregarPausa = -1, recarregarPosMs;
 static char erroTxt[64];
 
-// Codigos do PlaybackException (Media3) que sao de REDE: IO_UNSPECIFIED 2000,
-// IO_NETWORK_CONNECTION_FAILED 2001, IO_NETWORK_CONNECTION_TIMEOUT 2002. NAO
-// MEDIDO em aparelho: status HTTP (2004), 403/404 e formato quebrado ficam de
-// fora de proposito, recarregar a mesma URL so repete a recusa.
-static int erroDeRede(int cod) { return cod >= 2000 && cod <= 2002; }
+// Media3 I/O failures, including HTTP rejection and premature EOF. Recovery
+// is bounded; the app can renew the addon URL after reopening fails.
+static int erroDeRede(int cod) { return (cod >= 2000 && cod <= 2002) ||
+                                      (cod >= 2004 && cod <= 2006) || cod == 2008; }
 
 void video_escolher_audio(int i);
 
@@ -698,6 +700,15 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeCache(JNIEnv
   }
 }
 
+JNIEXPORT jint JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeLimitedStatus(JNIEnv *env, jclass cls) {
+  XtreamConta c;
+  (void)env; (void)cls;
+  if (!xtream_conexoes_limitadas()) return 0;
+  xtream_conta_ler(&c);
+  return c.http == 403 || c.http == 458 || c.http == 509 ? c.http :
+      c.valido && c.maxConexoes > 0 && c.conexoes >= c.maxConexoes ? 458 : 0;
+}
+
 enum { EV_PRONTO = 1, EV_TOCANDO = 2, EV_PAUSADO = 3, EV_FIM = 4, EV_ERRO = 5,
        EV_TAMANHO = 6, EV_BUFFER = 7, EV_PRIMEIRO_QUADRO = 8, EV_AUDIO_SEM_DECODER = 9,
        EV_SUPERFICIE_ESTAVEL = 10, EV_LIVE_RECOVERY = 11, EV_LIVE_SEGMENT = 12 };
@@ -890,13 +901,19 @@ static int abrirSessao(int inicioMs, int fracao) {
 }
 
 int video_tocar_retomada(const char *u, double segundos, double pct) {
+  static int limitedEnviado;
+  int limited = xtream_url_limitada(u);
+  if (mLimitedConnections && limited != limitedEnviado) {
+    kInt(mLimitedConnections, limited); limitedEnviado = limited;
+  }
+  if (limited && !mLimitedConnections) return 0; // Older shells cannot enforce this policy.
   int inicioMs = isfinite(segundos) && segundos > 0.0 && segundos <= INT_MAX / 1000.0
     ? (int)(segundos * 1000.0) : 0;
   // Centesimos de ponto percentual; segundos exatos vencem (abrirPosicao).
   int fracao = !inicioMs && isfinite(pct) && pct > 0.0 && pct < 100.0
     ? (int)(pct * 100.0 + 0.5) : 0;
   snprintf(urlAtual, sizeof urlAtual, "%s", u ? u : "");
-  capmkv_iniciar(urlAtual);
+  if (limited) capmkv_zerar(); else capmkv_iniciar(urlAtual);
   nv_recon_zerar(&recon);
   reconPermitida = reconProxima; reconProxima = 0;
   reconIniciou = 0; reconErroPend = 0;
@@ -974,17 +991,30 @@ void video_bombear(void) {
   if (prontoLoad && pos > 0.5) reconIniciou = 1;
   if (prontoLoad && reconBuscarMs < 0) nv_recon_progresso(&recon, pos);
   // O seek do recarregar sai com o player ja tocando.
-  if (reconBuscarMs >= 0 && prontoLoad && (tocando || reconPausado)) {
-    kInt(mBuscar, reconBuscarMs);
+  if (reconBuscarMs >= 0 && prontoLoad &&
+      (video_retomada_inicial_estado() != 0 || tocando || reconPausado)) {
+    if (video_retomada_inicial_estado() != 1) kInt(mBuscar, reconBuscarMs);
     printf("[video] reconexao: retomado em %ds\n", reconBuscarMs / 1000);
     fflush(stdout);
     reconBuscarMs = -1;
+  }
+  if (!falhou && (!prontoLoad || reconBuscarMs >= 0 || (!pausaPedida && bufferando)) &&
+      nv_recon_expirou(&recon, SDL_GetTicks())) {
+    reconErroCod = 2002; reconErroPend = 1;
+    snprintf(erroTxt, sizeof erroTxt, "2002 player error: recovery timeout");
+  }
+  // A silent VOD stall also needs recovery when Media3 never emits an error.
+  if (!falhou && reconPermitida && reconIniciou && !pausaPedida && !nv_recon_ativa(&recon) &&
+      bufferando && SDL_GetTicks() - bufferDesde >= NV_RECON_PRAZO_MS) {
+    reconErroCod = 2002; reconErroPend = 1;
+    snprintf(erroTxt, sizeof erroTxt, "2002 player error: stalled download");
   }
   if (reconErroPend) {
     int antes = recon.tentativa;
     int rede = erroDeRede(reconErroCod);
     reconErroPend = 0;
-    if (reconPermitida && urlAtual[0] && (reconIniciou || recon.tentativa) &&
+    if (!(xtream_url_limitada(urlAtual) && (reconErroCod == 403 || reconErroCod == 458 || reconErroCod == 509)) &&
+        reconPermitida && urlAtual[0] && (reconIniciou || recon.tentativa) &&
         nv_recon_erro(&recon, rede, SDL_GetTicks(),
                       eraRecarga ? recarregarPosMs / 1000.0 : pos)) {
       if (!antes && !eraRecarga) {
@@ -1009,7 +1039,8 @@ void video_bombear(void) {
     fflush(stdout);
     reconFaixasPend = 1;
     reconBuscarMs = recarregarPausa < 0 && recon.alvo > 1.0 ? (int)(recon.alvo * 1000.0) : -1;
-    if (!abrirSessao(recarregarPausa >= 0 ? recarregarPosMs : 0, 0))
+    if (!abrirSessao(recarregarPausa >= 0 ? recarregarPosMs :
+                     (int)(recon.alvo * 1000.0), 0))
       { reconErroCod = -1; reconErroPend = 1; }
     else if (recarregarPausa > 0) video_pausar(1);
     else if (recarregarPausa < 0 && reconPausado) {
@@ -1127,7 +1158,12 @@ void video_recorte_reaplicar(void) { if (temUlt) janelaKt(ultX, ultY, ultW, ultH
 void video_escala_definir(int sw, int sh) { (void)sw; (void)sh; }
 
 const char *video_url_atual(void) { return urlAtual; }
-double video_pos(void) { return prontoLoad ? posMs / 1000.0 : 0; }
+double video_pos(void) {
+  // Reopening clears native position until READY; never publish zero as the
+  // resume point to the source-renewal worker during that interval.
+  return recon.tentativa && (!prontoLoad || reconBuscarMs >= 0 || recon.esgotou)
+         ? recon.alvo : prontoLoad ? posMs / 1000.0 : 0;
+}
 double video_duracao(void) { return durMs / 1000.0; }
 // Capitulos do MKV lidos por um fio lateral (capmkv.c, 203-capitulos).
 double video_creditos(void) { return capmkv_creditos(video_duracao()); }

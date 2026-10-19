@@ -191,6 +191,7 @@ static int comentarioLer(ComentAchado *a, const char *p, const char *f) {
 // Vem sob demanda — so quando o dono escolhe "Episódio" —, porque o custo e uma
 // viagem por episodio e a maioria das visitas nunca troca de aba.
 static ExComentario comentEp[EX_COMENT_MAX];
+static ExEpNotas epNotas;
 static int  nComentEp;
 static int  epTempAtual, epNumAtual;    // de que episodio a lista acima e
 static int  epFioVivo;
@@ -1834,6 +1835,23 @@ static void *buscarEpComent(void *arg) {
         t == epPedTemp && e == epPedNum) { epTempAtual = t; epNumAtual = e; }
     pthread_mutex_unlock(&trava);
   }
+  // Same headers, worker, session guard and episode cache as comments.
+  snprintf(url, sizeof url, "https://api.trakt.tv/shows/%s/seasons/%d/episodes/%d/ratings", show, t, e);
+  corpo = rede_baixar_com(url, 12, cab);
+  if (corpo) {
+    ExEpNotas notas = {0};
+    const char *dist = strstr(corpo, "\"distribution\"");
+    notas.nota = (int)(js_num(corpo, NULL, "rating", 0) * 10 + .5);
+    notas.votos = (int)js_num(corpo, NULL, "votes", 0);
+    for (int k = 1; dist && k <= 10; k++) {
+      char key[4]; snprintf(key, sizeof key, "%d", k);
+      notas.distribuicao[k] = (int)js_num(dist, NULL, key, 0);
+    }
+    pthread_mutex_lock(&trava);
+    if (nv_perfil_sessao_atual(sessao) && !strcmp(show, epShow) && t == epPedTemp && e == epPedNum) epNotas = notas;
+    pthread_mutex_unlock(&trava);
+    free(corpo);
+  }
   pthread_mutex_lock(&trava); epFioVivo = 0; pthread_mutex_unlock(&trava);
   return NULL;
 }
@@ -1842,11 +1860,15 @@ void extras_pedir_comentarios_ep(const char *imdbSerie, int temporada, int episo
   pthread_t f;
   if (!imdbSerie || !imdbSerie[0] || temporada < 0 || episodio <= 0) return;
   pthread_mutex_lock(&trava);
+  // Include show and profile in the cache key; identical T/E is not enough.
+  char show[24];
+  snprintf(show, sizeof show, "%s", imdbSerie);
+  { char *dp = strchr(show, ':'); if (dp) *dp = 0; }
   // Mesmo episodio ja carregado (ou em voo): nao repete a viagem.
   // Sem o `nComentEp > 0` que havia aqui: um episodio SEM comentario
   // (t/e publicados, lista vazia) era pedido de novo a cada quadro, um fio
   // por quadro contra o Trakt, enquanto o foco ficasse na secao.
-  if (epFioVivo || (temporada == epTempAtual && episodio == epNumAtual)) {
+  if (epFioVivo || (!strcmp(show, epShow) && temporada == epTempAtual && episodio == epNumAtual && nv_perfil_sessao_atual(epComentSessao))) {
     pthread_mutex_unlock(&trava);
     return;
   }
@@ -1860,6 +1882,7 @@ void extras_pedir_comentarios_ep(const char *imdbSerie, int temporada, int episo
   epComentSessao = nv_perfil_sessao_ler();
   comentariosLimpar(comentEp);
   nComentEp = 0;                 // limpa: a lista velha e de outro episodio
+  memset(&epNotas, 0, sizeof epNotas);
   epTempAtual = epNumAtual = 0;
   epFioVivo = 1;
   pthread_mutex_unlock(&trava);
@@ -1870,6 +1893,21 @@ void extras_pedir_comentarios_ep(const char *imdbSerie, int temporada, int episo
   }
 }
 
+int extras_comentarios_ep_do(const char *imdb, int t, int e) {
+  char show[24]; int ok;
+  snprintf(show, sizeof show, "%s", imdb ? imdb : "");
+  { char *dp = strchr(show, ':'); if (dp) *dp = 0; }
+  pthread_mutex_lock(&trava);
+  ok = !strcmp(show, epShow) && t == epPedTemp && e == epPedNum && nv_perfil_sessao_atual(epComentSessao);
+  pthread_mutex_unlock(&trava);
+  return ok;
+}
+void extras_notas_ep(ExEpNotas *saida) {
+  pthread_mutex_lock(&trava); *saida = epNotas; pthread_mutex_unlock(&trava);
+}
+const char *extras_comentario_ep_data(int i) { return i >= 0 && i < nComentEp ? comentEp[i].data : ""; }
+int extras_comentario_ep_respostas(int i) { return i >= 0 && i < nComentEp ? comentEp[i].respostas : 0; }
+int extras_comentario_ep_spoiler(int i) { return i >= 0 && i < nComentEp ? comentEp[i].spoiler : 0; }
 int extras_n_comentarios_ep(void) { return nComentEp; }
 int extras_comentarios_ep_carregando(void) { return epFioVivo; }
 
@@ -2582,6 +2620,7 @@ void extras_abrir_sessao(void) {
   fioVivo = 0;
   zerarPublicado();
   epShow[0] = 0;
+  memset(&epNotas, 0, sizeof epNotas);
   comentariosLimpar(comentEp);
   nComentEp = epTempAtual = epNumAtual = epPedTemp = epPedNum = 0;
   pthread_mutex_unlock(&trava);

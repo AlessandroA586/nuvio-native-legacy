@@ -3,6 +3,7 @@
 #include "ondever.h"
 #include "naovideo.h"
 #include "fonteantecipa.h"
+#include "xtream.h"
 #include "fonteparalela.h"
 #include "tex_cache.h"
 #include "livetv_regras.h"
@@ -1667,6 +1668,9 @@ static int verificarUma(int i, Conferencia *c) {
   fileIdx = lista[i].fileIdx;
   pthread_mutex_unlock(&verTrava);
 
+  // A limited account must never be probed beside its visible stream.
+  // Playback performs the account check after closing the previous HTTP request.
+  if (xtream_url_limitada(url)) return 1;
   if (!url[0] && infoHash[0]) {
     // Link recem-saido do unrestrict: nao precisa da segunda viagem abaixo.
     int fora = 0;
@@ -2198,6 +2202,58 @@ int stream_falha_verificar(FonteFalhaSessao *sessao, unsigned geracao, int escol
   for (int q = 0; q < nc; q++) free((void *)c[q].identidade);
   free(c); free(fontes);
   return resultado;
+}
+int stream_vod_renovar(const AddonsConsulta *consulta, const char *id, const char *tipo,
+                       int indice, unsigned geracao, int (*cancelado)(void *), void *ctx,
+                       Stream *saida) {
+  Stream antiga, *fontes = NULL;
+  if (!saida || falhaCancelada(geracao, cancelado, ctx)) return 0;
+  pthread_mutex_lock(&verTrava);
+  int ok = geracao == listaGeracao && indice >= 0 && indice < n && !lista[indice].urlP2P;
+  if (ok) antiga = lista[indice];
+  pthread_mutex_unlock(&verTrava);
+  if (!ok) return 0;
+  int total = addons_consulta_consultar(consulta, id, tipo, 4, cancelado, ctx, &fontes);
+  int achou = -1;
+  for (int i = 0; i < total; i++) {
+    const Stream *s = &fontes[i];
+    if (!antiga.addonChave[0] || strcmp(antiga.addonChave, s->addonChave)) continue;
+    // A URL is not an identity once its token expires. Require an exact file
+    // identity, or an unchanged release label with size/group corroboration.
+    int mesmo = antiga.infoHash[0]
+      ? !strcasecmp(antiga.infoHash, s->infoHash) && antiga.fileIdx == s->fileIdx
+      : antiga.arquivo[0] ? !strcmp(antiga.arquivo, s->arquivo)
+      : antiga.rotulo[0] && !strcmp(antiga.rotulo, s->rotulo) &&
+        ((antiga.tamanhoBytes && antiga.tamanhoBytes == s->tamanhoBytes) ||
+         (antiga.bingeGroup[0] && !strcmp(antiga.bingeGroup, s->bingeGroup)));
+    if (!mesmo || (antiga.tamanhoBytes && s->tamanhoBytes && antiga.tamanhoBytes != s->tamanhoBytes)) continue;
+    if (achou >= 0) { achou = -1; break; } // Ambiguous releases must not resume another file.
+    achou = i;
+  }
+  ok = achou >= 0 && !falhaCancelada(geracao, cancelado, ctx);
+  if (ok) {
+    *saida = fontes[achou];
+    if (saida->infoHash[0]) {
+      int fora = 0, servico = antiga.debridServico - 1;
+      ok = servico >= 0 ? debrid_resolver_servico_cache(servico, saida->infoHash, saida->fileIdx,
+                                                     saida->url, sizeof saida->url, &fora)
+                        : debrid_resolver_cache(saida->infoHash, saida->fileIdx,
+                                               saida->url, sizeof saida->url, &fora);
+      saida->debridServico = antiga.debridServico;
+    }
+    ok = ok && saida->url[0] && !falhaCancelada(geracao, cancelado, ctx);
+  }
+  free(fontes);
+  return ok;
+}
+int stream_vod_renovada_aplicar(int indice, unsigned geracao, const Stream *fonte, uint64_t sessao) {
+  if (!fonte || !fonte->url[0] || !nv_perfil_sessao_travar(sessao)) return 0;
+  pthread_mutex_lock(&verTrava);
+  int ok = geracao == listaGeracao && indice >= 0 && indice < n;
+  if (ok) lista[indice] = *fonte;
+  pthread_mutex_unlock(&verTrava);
+  nv_perfil_sessao_destravar();
+  return ok;
 }
 int stream_falha_renovar(int indice, unsigned geracao, int servico,
                          int (*cancelado)(void *), void *ctx, char *url, unsigned tam) {

@@ -22,6 +22,11 @@
 //   App upscaling uses SGSR 1 or sharp bilinear; weak GPUs use linear.
 //
 // COMO O NIVEL E ESCOLHIDO (.tpk, Android e LG webOS):
+//   Live FPS reports govern eligible Home/Settings continuously, revalidating
+//   saved levels: three reports below panel refresh minus 5 FPS reduce one
+//   effects tier; ten near refresh restore one, with failed-retry hysteresis.
+//   Loading/mixed scenes and >1-second stalls do not count. The per-frame
+//   comparison below remains the fallback until the first eligible report.
 //   - -DNV_TPK_NIVEL_FORCADO=N (tools/tpk.sh com NV_TPK_NIVEL=N): fixo, sem
 //     medir. E o canario de comparacao; a release nao usa.
 //   - senao ADAPTATIVO: in full Home or Settings, measures FPS and how much of the
@@ -107,6 +112,12 @@ void gpun_quadro_fim(void);
 // full Home/Settings (0 = ineligible); changed identity cancels comparison.
 // `cheia` requires artwork only on Home; Settings is eligible without it.
 void gpun_medir(double dtms, double espera, double cpu, int cena, int cheia);
+// Live FPS/[gpu-modos] report (~3 seconds), same scene/artwork eligibility.
+// Three reports below refresh minus 5 FPS shed one effects tier; ten above
+// refresh minus 2 FPS restore one. Reports with >1-second stalls are ignored.
+// Saved levels are provisional; failed restorations cannot repeat per workload.
+// Once eligible, this reporter governs instead of the legacy frame comparison.
+void gpun_relatar(double fps, double pior, double periodo, int cena, int cheia);
 
 // Descarta a COR do alvo ligado agora, que vai ser sobrescrito inteiro.
 // `padrao` = 1 se o ligado e a janela (FBO 0). No-op sem ES3/extensao.

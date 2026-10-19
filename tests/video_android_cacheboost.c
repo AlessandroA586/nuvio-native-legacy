@@ -10,6 +10,10 @@ void *SDL_AndroidGetJNIEnv(void);
 void *SDL_AndroidGetActivity(void);
 #include "../src/video_android.c"
 // capmkv.c (capitulos do MKV) nao faz parte deste teste.
+int stream_kbps_atual(void) { return 0; }
+int xtream_url_limitada(const char *u) { (void)u; return 0; }
+int xtream_conexoes_limitadas(void) { return 0; }
+int xtream_conta_ler(XtreamConta *c) { memset(c, 0, sizeof *c); return 0; }
 void capmkv_iniciar(const char *u) { (void)u; }
 void capmkv_zerar(void) {}
 double capmkv_creditos(double d) { (void)d; return 0.0; }

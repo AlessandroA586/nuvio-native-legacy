@@ -32,7 +32,7 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#ifndef MONTAGEM_PERFIS_REAIS
+#if !defined(MONTAGEM_PERFIS_REAIS) && !defined(NV_TEST_SESSAO_PROPRIA)
 // These six discovery cases have one fixed account/profile per process.
 // The CW owner fixture instead links real perfis.c, including invalidation.
 #include "stub_perfisessao.h"
@@ -45,6 +45,7 @@ int ajustes_busca_cinemeta(void) { return 1; }
 int ajustes_busca_nuvio(void) { return 0; }   // #311: Primeiro (padrao)
 int ajustes_ocultar_nao_lancados(void) { return 0; }   // #369: descoberta.c le o ajuste
 int ajustes_ocultar_filmes_vistos(void) { return 0; }    // #366: descoberta.c le o ajuste
+int ajustes_fonte_biblioteca(void) { return 0; }
 #include "../src/descoberta.c"
 // Session, addon and social functions belong to this fixture or real modules.
 #define NV_TEST_SERVIDORES_APENAS
@@ -226,6 +227,11 @@ char *rede_baixar(const char *url, int t) {
   return strdup(buf);
 }
 char *rede_baixar_com(const char *u, int t, const char *const *c) { (void)c; return rede_baixar(u, t); }
+char *rede_baixar_st(const char *u, int t, const char *const *c, int *status) {
+  char *body = rede_baixar_com(u, t, c);
+  if (status) *status = body ? 200 : 0;
+  return body;
+}
 
 // ------------------------------------------------------------------ o Trakt
 static char listaWl[4][32];

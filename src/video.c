@@ -2437,6 +2437,11 @@ void video_bombear(void) {
   // RECONEXAO: ver video_reconexao.h.
   if (pronto && posSeg > 0.5) reconIniciou = fonteTocou = 1;
   if (pronto) nv_recon_progresso(&recon, posSeg);
+  if (!falhou && (!pronto || (!pausaPedida && bufferandoDesde)) &&
+      nv_recon_expirou(&recon, SDL_GetTicks())) {
+    reconErroRede = 1; reconErroPend = 1;
+    snprintf(erroTexto, sizeof erroTexto, "network recovery timeout");
+  }
   if (reconErroPend) {
     int antes = recon.tentativa;
     reconErroPend = 0;
