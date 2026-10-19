@@ -3874,7 +3874,7 @@
   T("Paisagem média", "Peisaj mediu"),
   T("Paisagem pequena", "Orizontal mic"),
   T("Palco", "Scenă"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Scenă în Modern: Negru (implicit), doar postere și informații alături; Ca acum, prezentare completă; Doar imagine, fundal diferit de poster, fără text sus. Fără fundal distinct, folosește Negru. Doar pe acest dispozitiv."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Scenă în Modern și Dinamic (Apple TV): Negru (implicit), doar postere și informații alături; Ca acum, prezentare completă; Doar imagine, fundal diferit de poster, fără text sus. Fără fundal distinct, folosește Negru. Doar pe acest dispozitiv."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "Pentru %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Pentru televizoare OLED: nu lasă logo-ul nemișcat pe ecran cât rulează trailerul."),

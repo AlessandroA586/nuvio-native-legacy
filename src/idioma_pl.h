@@ -3875,7 +3875,7 @@
   T("Paisagem média", "Poziome średnie"),
   T("Paisagem pequena", "Mały poziomy"),
   T("Palco", "Scena"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Scena w układzie Nowoczesnym: Czarne (domyślnie), tylko plakaty i informacje obok; Jak teraz, pełna prezentacja; Tylko grafika, tło inne niż plakat, bez tekstu u góry. Bez osobnego tła używane jest Czarne. Tylko na tym urządzeniu."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Scena w układzie Nowoczesnym i Dynamicznym (Apple TV): Czarne (domyślnie), tylko plakaty i informacje obok; Jak teraz, pełna prezentacja; Tylko grafika, tło inne niż plakat, bez tekstu u góry. Bez osobnego tła używane jest Czarne. Tylko na tym urządzeniu."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "Dla %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Dla telewizorów OLED: logo nie zostaje nieruchomo na ekranie podczas zwiastuna."),

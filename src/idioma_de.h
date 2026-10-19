@@ -3874,7 +3874,7 @@
   T("Paisagem média", "Querformat mittel"),
   T("Paisagem pequena", "Kleines Querformat"),
   T("Palco", "Bühne"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Bühne im modernen Layout: Schwarz (Standard), nur Poster und Infos daneben; Wie bisher, vollständiger Titelbereich; Nur Bild, anderer Hintergrund als das Poster, ohne Text oben. Ohne eigenes Hintergrundbild wird Schwarz verwendet. Nur dieses Gerät."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Bühne im modernen und dynamischen Layout (Apple TV): Schwarz (Standard), nur Poster und Infos daneben; Wie bisher, vollständiger Titelbereich; Nur Bild, anderer Hintergrund als das Poster, ohne Text oben. Ohne eigenes Hintergrundbild wird Schwarz verwendet. Nur dieses Gerät."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "Für %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Für OLED-Fernseher: Das Logo bleibt während des Trailers nicht statisch auf dem Bildschirm."),

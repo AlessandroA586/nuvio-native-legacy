@@ -3875,7 +3875,7 @@
   T("Paisagem média", "Lanskap sedang"),
   T("Paisagem pequena", "Lanskap kecil"),
   T("Palco", "Panggung"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Panggung di Modern: Hitam (bawaan), hanya poster dan info di samping; Seperti sekarang, sorotan lengkap; Hanya gambar, latar berbeda dari poster, tanpa teks di atas. Tanpa latar berbeda, memakai Hitam. Hanya perangkat ini."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Panggung di Modern dan Dinamis (Apple TV): Hitam (bawaan), hanya poster dan info di samping; Seperti sekarang, sorotan lengkap; Hanya gambar, latar berbeda dari poster, tanpa teks di atas. Tanpa latar berbeda, memakai Hitam. Hanya perangkat ini."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "Untuk %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Untuk TV OLED: logo tidak diam di layar saat trailer diputar."),

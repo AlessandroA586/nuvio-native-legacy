@@ -3874,7 +3874,7 @@
   T("Paisagem média", "Горизонтальні середні"),
   T("Paisagem pequena", "Мале горизонтальне"),
   T("Palco", "Сцена"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Сцена в сучасному макеті: Чорне (типово), лише постери та інформація поруч; Як зараз, повний блок; Лише зображення, тло відмінне від постера, без тексту вгорі. Без окремого тла використовується Чорне. Лише на цьому пристрої."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Сцена в сучасному та динамічному макетах (Apple TV): Чорне (типово), лише постери та інформація поруч; Як зараз, повний блок; Лише зображення, тло відмінне від постера, без тексту вгорі. Без окремого тла використовується Чорне. Лише на цьому пристрої."),
   T("Paquistão", "Пакистан"),
   T("Para %s", "Для %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "Для OLED-телевізорів: логотип не залишається нерухомим на екрані, поки грає трейлер."),

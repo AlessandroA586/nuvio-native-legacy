@@ -3875,7 +3875,7 @@
   T("Paisagem média", "Liggende middels"),
   T("Paisagem pequena", "Liten liggende"),
   T("Palco", "Scene"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Scene i Moderne: Svart (standard), bare plakater og informasjon ved siden av; Som nå, full presentasjon; Bare bilde, annen bakgrunn enn plakaten, uten tekst øverst. Uten egen bakgrunn brukes Svart. Bare på denne enheten."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Scene i Moderne og Dynamisk (Apple TV): Svart (standard), bare plakater og informasjon ved siden av; Som nå, full presentasjon; Bare bilde, annen bakgrunn enn plakaten, uten tekst øverst. Uten egen bakgrunn brukes Svart. Bare på denne enheten."),
   T("Paquistão", "Pakistan"),
   T("Para %s", "Til %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "For OLED-TV: logoen blir ikke stående stille på skjermen mens traileren spilles."),

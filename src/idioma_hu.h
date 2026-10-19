@@ -3875,7 +3875,7 @@
   T("Paisagem média", "Közepes fekvő"),
   T("Paisagem pequena", "Kis fekvő"),
   T("Palco", "Színpad"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Színpad a Modern elrendezésben: Fekete (alapértelmezett), csak poszterek és mellettük adatok; Jelenlegi, teljes kiemelés; Csak kép, a posztertől eltérő háttér, felső szöveg nélkül. Külön háttér hiányában Fekete. Csak ezen az eszközön."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Színpad a Modern és Dinamikus elrendezésben (Apple TV): Fekete (alapértelmezett), csak poszterek és mellettük adatok; Jelenlegi, teljes kiemelés; Csak kép, a posztertől eltérő háttér, felső szöveg nélkül. Külön háttér hiányában Fekete. Csak ezen az eszközön."),
   T("Paquistão", "Pakisztán"),
   T("Para %s", "Neki: %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "OLED TV-khez: nem hagyja mozdulatlanul a képernyőn a logót, amíg az előzetes szól."),

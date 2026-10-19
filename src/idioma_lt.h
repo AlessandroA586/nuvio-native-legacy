@@ -3875,7 +3875,7 @@
   T("Paisagem média", "Vidutinis gulsčias"),
   T("Paisagem pequena", "Mažas horizontalus"),
   T("Palco", "Scena"),
-  T("Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Scena moderniame išdėstyme: Juodas (numatytasis), tik plakatai ir informacija šalia; Kaip dabar, visas pristatymas; Tik vaizdas, nuo plakato besiskiriantis fonas be teksto viršuje. Be atskiro fono naudojamas Juodas. Tik šiame įrenginyje."),
+  T("Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.", "Scena moderniame ir dinaminiame išdėstyme (Apple TV): Juodas (numatytasis), tik plakatai ir informacija šalia; Kaip dabar, visas pristatymas; Tik vaizdas, nuo plakato besiskiriantis fonas be teksto viršuje. Be atskiro fono naudojamas Juodas. Tik šiame įrenginyje."),
   T("Paquistão", "Pakistanas"),
   T("Para %s", "Kam: %s"),
   T("Para TVs OLED: não deixa a logo parada na tela enquanto o trailer toca.", "OLED televizoriams: logotipas nelieka nejudantis ekrane, kol rodomas anonsas."),
