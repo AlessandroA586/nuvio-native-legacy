@@ -406,7 +406,8 @@ int main(int argc, char **argv) {
     assert(celN == nSemente);
     for (i = 0; i < nSemente; i++) {
       assert(celX[i] >= 0.0f && celY[i] >= 0.0f);
-      assert(celX[i] + celW[i] <= VT_CW + 30.0f);   // ranking passa 16 px no maximo
+      float width = L == VT_LAY_MURAL || L == VT_LAY_LINHA ? vtFim() - vtInicio() : VT_CW;
+      assert(celX[i] + celW[i] <= width + 30.0f);   // ranking passes by at most 16 px
       if (i) assert(celLin[i] >= celLin[i - 1] && celLin[i] <= celLin[i - 1] + 1);
       for (j = 0; j < i; j++) if (sobrepoe(i, j)) {
         fprintf(stderr, "exibicao %d: celulas %d e %d se sobrepoem\n", L, i, j);
