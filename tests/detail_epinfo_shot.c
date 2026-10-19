@@ -1,7 +1,50 @@
 // Reuse the offline series fixture and real GL renderer.
+#include "tex_cache.h"
+static int checkThumbnailWidth, thumbnailRequests;
+static GLuint checkedThumbnail(const char *path, float width);
+#define tex_obter_larg checkedThumbnail
 #define main episode_fixture_main
 #include "detail_eps_shot.c"
 #undef main
+#undef tex_obter_larg
+
+static GLuint checkedThumbnail(const char *path, float width) {
+  if (checkThumbnailWidth) {
+    assert(width == epCardW());
+    thumbnailRequests++;
+  }
+  return tex_obter_larg(path, width);
+}
+
+static void checkThumbnailHoles(void) {
+  assert(!ajustes_borda_foco() && !ajustes_vidro());
+  assert(animFoco[SEC_EPISODIOS][foco.coluna] > .999f);
+  float settled = animFoco[SEC_EPISODIOS][foco.coluna];
+  const float focus[] = {0, .5f, 1};
+  for (int f=0;f<3;f++) {
+    animFoco[SEC_EPISODIOS][foco.coluna] = focus[f];
+    GfxRect holes[N_ITENS * 2];
+    thumbnailRequests=0; checkThumbnailWidth=1;
+    int n=epFuros(holes), expected=0;
+    checkThumbnailWidth=0;
+    assert(n > 0 && n == thumbnailRequests * 2);
+    for (int c=0;c<epVisiveis() && c<N_ITENS && c<DET_REV_EP;c++) {
+      float x=xItem(SEC_EPISODIOS,c)-scrollSec[SEC_EPISODIOS];
+      if (x>NV_TELA_W || x+epCardW()<0) continue;
+      float y=epRowY()-scrollY, inset=NV_DETP_EP_RAIO+2;
+      GfxRect rects[] = {{x+inset,y+2,epCardW()-2*inset,epThumbH()-4},
+                         {x+2,y+inset,epCardW()-4,epThumbH()-2*inset}};
+      for (int i=0;i<2;i++) {
+        assert(expected < n);
+        GfxRect h=holes[expected++], r=rects[i];
+        assert(h.x==r.x && h.y==r.y && h.w==r.w && h.h==r.h);
+      }
+    }
+    assert(expected == n);
+  }
+  animFoco[SEC_EPISODIOS][foco.coluna] = settled;
+  puts("PASS: fixed thumbnail holes and texture widths at rest and during focus changes");
+}
 
 static void saveShot(const char *path, int w, int h) {
   unsigned char *pixels = malloc((size_t)w * h * 4);
@@ -71,7 +114,7 @@ int main(int argc, char **argv) {
     for(int layout=0;layout<3;layout+=2) {
       char settings[700]; snprintf(settings,sizeof settings,"%s/ajustes.txt",dados_dir());
       FILE *file=fopen(settings,"w"); assert(file);
-      fprintf(file,"idioma 1\nhomeLayoutLocal %d\n",layout); fclose(file);
+      fprintf(file,"idioma 1\nhomeLayoutLocal %d\nbordaFocoCartaz 1\nvidroLocal 1\n",layout); fclose(file);
       ajustes_dir(dados_dir());
       montarCatalogo();
       snprintf(itens[0].backdrop,sizeof itens[0].backdrop,"%s",art);
@@ -81,6 +124,7 @@ int main(int argc, char **argv) {
       cat_definir_episodios(0,episodios,T1_N+T2_N+T3_N);
       semear(1,T1_N,3); abrir(0,0); nosEpisodios(3);
       parado=1; quadros(32);
+      checkThumbnailHoles();
       for(int h=1080;h>=720;h-=360) {
         int w=h*16/9;
         gfx_tamanho_alvo(w,h); glBindFramebuffer(GL_FRAMEBUFFER,fbo);

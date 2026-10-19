@@ -7654,8 +7654,8 @@ static int epFuros(GfxRect *holes) {
     const CatEp *ep = cat_episodio(idx, epAbsoluto(c));
     float x = xItem(SEC_EPISODIOS, c) - scrollSec[SEC_EPISODIOS];
     if (x > NV_TELA_W || x + epCardW() < 0 || !ep || !ep->thumb[0]) continue;
-    if (!tex_obter_larg(ep->thumb, epCardW() * (ajustes_borda_foco() ? 1 : 1 + FOCO_ZOOM))) continue;
-    GfxRect th = foco_zoom((GfxRect){x, epRowY()-scrollY, epCardW(), epThumbH()}, animFoco[SEC_EPISODIOS][c]);
+    if (!tex_obter_larg(ep->thumb, epCardW())) continue;
+    GfxRect th = {x, epRowY()-scrollY, epCardW(), epThumbH()};
     // Keep corners and their antialias fringe; only the solid interior occludes.
     float inset = NV_DETP_EP_RAIO + 2;
     holes[n++] = (GfxRect){th.x+inset, th.y+2, th.w-2*inset, th.h-4};
