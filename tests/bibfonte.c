@@ -143,6 +143,7 @@ int main(int argc, char **argv) {
   CHECK("sidebar preserves local save after source switches", salvos_uniao(sidebar, 8) == 1 && salvos_tem(ci.imdb));
   salvos_definir(&ci, 0);
   cat_definir_tudo(&remote, 1, NULL, 0);
+#ifndef BIBFONTE_BASELINE
   // Upgraded profiles share a legacy write preference, not an explicit source.
   dados_gravar("ajustes.txt", "salvosDestino 1\n");
   dados_gravar("ajustes-p1.txt", "salvosDestino 1\n");
@@ -184,6 +185,7 @@ int main(int argc, char **argv) {
   ajustes_definir_salvos_destino(AJ_SALVOS_TRAKT);
   assert(!ajustes_perfil_restaurar(3));
   CHECK("missing profile does not inherit explicit source", ajustes_fonte_biblioteca() == AJ_SALVOS_LOCAL);
+#endif
   SDL_Quit();
   printf("bibfonte: %d failure(s)\n", failures);
   return failures ? 1 : 0;
