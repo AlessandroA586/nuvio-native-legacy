@@ -40,6 +40,8 @@ GLuint tex_obter(const char *caminho);
 // home, backdrop do detalhe, arte do player). Com o teto comum de 960 essas
 // tres eram decodificadas com metade da resolucao e ampliadas na tela.
 GLuint tex_obter_hero(const char *caminho);
+// Stage backgrounds: fixed 1280px ceiling, independent of quality/buffer scale.
+GLuint tex_obter_palco(const char *caminho);
 // Idem, sem furar a fila (vizinho do carrossel; ver tex_cache.c).
 GLuint tex_obter_hero_quente(const char *caminho);
 

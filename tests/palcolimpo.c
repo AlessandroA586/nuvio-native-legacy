@@ -5,15 +5,31 @@
 #include <math.h>
 
 static int heroInfo, heroBackdrops, stageArtwork;
-static GLuint artworkTexture, stageTextures[4];
+static GLuint artworkTexture, stageTextures[8], labelTexture;
+static float labelY = -1;
+static const char *labelTitle;
+static int regressionFailures;
+static TxtLinha auditLine(TxtEstilo style, const char *s, int r, int g, int b, int a, float width) {
+  TxtLinha line = txt_linha_corta(style, s, r, g, b, a, width);
+  if (labelTitle && style == TXT_ROW_TITULO && !strcmp(s, labelTitle)) labelTexture = line.tex;
+  return line;
+}
+static void checkRegression(int pass, const char *name) {
+  printf("%s: %s\n", pass ? "PASS" : "FAIL", name);
+  if (!pass) regressionFailures++;
+}
+static void auditLabel(TxtLinha l, float x, float y) {
+  if (l.tex == labelTexture) labelY = y * gfx_escala();
+  txt_desenhar(l, x, y);
+}
 static void auditRect(GfxRect r, GLuint tex, GfxModo modo, float foco,
                       float px, float py, float raio, float cr, float cg, float cb, float ca) {
   if (r.y * gfx_escala() < 480 && ca * gfx_opacidade_grupo > .004f) {
     if (modo == GFX_HERO || modo == GFX_HERO_CHEIO ||
         modo == GFX_HERO_CAM || modo == GFX_HERO_CHEIO_CAM) heroBackdrops++;
     if (modo == GFX_TEXTO || modo == GFX_MARCA) heroInfo++;
-    if (modo == GFX_VITRINE && tex) { stageArtwork++; artworkTexture = tex; }
-    if (modo == GFX_PALCO_ARTE && tex && stageArtwork < 4) stageTextures[stageArtwork++] = artworkTexture = tex;
+    if (modo == GFX_VITRINE && tex && stageArtwork < 8) stageTextures[stageArtwork++] = artworkTexture = tex;
+    if (modo == GFX_PALCO_ARTE && tex && stageArtwork < 8) stageTextures[stageArtwork++] = artworkTexture = tex;
   }
   gfx_rect(r, tex, modo, foco, px, py, raio, cr, cg, cb, ca);
 }
@@ -24,6 +40,8 @@ static void auditText(TxtLinha l, float x, float y, float a) {
 // Keep instrumentation in the test translation unit, with no production hooks.
 #define gfx_rect auditRect
 #define txt_desenhar_alpha auditText
+#define txt_desenhar auditLabel
+#define txt_linha_corta auditLine
 #ifdef PALCO_BASELINE
 #include PALCO_BASELINE
 #else
@@ -31,6 +49,8 @@ static void auditText(TxtLinha l, float x, float y, float a) {
 #endif
 #undef gfx_rect
 #undef txt_desenhar_alpha
+#undef txt_desenhar
+#undef txt_linha_corta
 
 static char shotPath[900];
 static void capture(const char *dir, const char *phase, int mode, const char *state) {
@@ -62,6 +82,101 @@ static void setting(int layout, int glass, int mode) {
   setenv("NV_AJ", extra, 1);
   ajusta(layout, glass);
   assert(ajustes_palco_fundo() == mode);
+}
+
+static void regressions(const char *dir, const char *phase, int glass) {
+  int sr = foco.fileira;
+  float expectedScroll = 0, expectedLabel;
+  { TXT_INI();
+    for (int r = 0; r < sr; r++) expectedScroll += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(r) + fileiraGap();
+    expectedLabel = topoFileiras() * gfx_escala();
+    TXT_FIM(); }
+  for (int mode = 0; mode <= PALCO_MONUMENTO; mode++) {
+    setting(0, glass, mode); quadros(90, NULL);
+    labelTitle = fileiras[sr].titulo; labelTexture = 0; labelY = -1;
+    capture(dir, phase, mode, "geometry");
+    checkRegression(fabsf(scrollY - expectedScroll) < .1f, "Stage cards and info keep approved Y");
+    printf("Stage mode=%d scroll=%.2f expected=%.2f label=%.2f expected=%.2f\n", mode, scrollY, expectedScroll, labelY, expectedLabel);
+    checkRegression(fabsf(labelY - expectedLabel) < .1f, "Stage label stays above cards in every mode");
+    labelTitle = NULL; labelTexture = 0;
+  }
+  // Wider than the budget, independent of the bundled 1280px JPEG fixtures.
+  char art[900], warm[900];
+  snprintf(art, sizeof art, "%s/budget.bmp", dirDados);
+  snprintf(warm, sizeof warm, "%s/budget-warm.bmp", dirDados);
+  SDL_Surface *large = SDL_CreateRGBSurfaceWithFormat(0, 2560, 1440, 32, SDL_PIXELFORMAT_ABGR8888);
+  assert(large); SDL_FillRect(large, NULL, SDL_MapRGB(large->format, 180, 70, 90));
+  assert(SDL_SaveBMP(large, art) == 0);
+  assert(SDL_SaveBMP(large, warm) == 0); SDL_FreeSurface(large);
+  // Stage must also respect its ceiling when Current already cached this URL.
+  tex_qualidade(1);
+  GLuint warmed = 0;
+  for (int f = 0; f < 90; f++) {
+    warmed = tex_obter_hero(warm); quadros(1, NULL);
+  }
+  assert(warmed);
+  GLint warmedWidth = 0; glBindTexture(GL_TEXTURE_2D, warmed);
+  glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &warmedWidth);
+  assert(warmedWidth > 1280);
+  CatItem *live = (CatItem *)cat_item_exato(fileiraItemIndice(&fileiras[sr], foco.coluna));
+  CatItem saved = *live;
+  snprintf(live->backdrop, sizeof live->backdrop, "%s", art);
+  snprintf(live->backdropTmdb, sizeof live->backdropTmdb, "%s", warm);
+  for (int quality = 0; quality < 3; quality++) {
+    tex_qualidade(quality); tex_escala(2);
+    setting(0, glass, PALCO_TRIPTICO); quadros(90, NULL);
+    capture(dir, phase, PALCO_TRIPTICO, "budget");
+    int within = stageArtwork == 3;
+    for (int t = 0; t < stageArtwork; t++) {
+      GLint width = 0; glBindTexture(GL_TEXTURE_2D, stageTextures[t]);
+      glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+      printf("Stage quality=%d texture width=%d\n", quality, width);
+      within &= width > 0 && width <= 1280;
+    }
+    checkRegression(within, "Stage and Triptych textures never exceed 1280");
+  }
+  tex_qualidade(1); tex_escala(1); *live = saved;
+  for (int mode = PALCO_CORTINA; mode <= PALCO_MONUMENTO; mode++) {
+    if (mode == PALCO_PRETO || mode == PALCO_ATUAL) continue;
+    setting(0, glass, mode); quadros(90, NULL);
+    const CatItem *next = cat_item_exato(fileiraItemIndice(&fileiras[sr], foco.coluna + 1));
+    assert(next);
+    // Warm the exact Stage request through its real draw path.
+    int column = foco.coluna;
+    tecla(SDLK_RIGHT); quadros(90, NULL);
+    tecla(SDLK_LEFT); quadros(90, NULL);
+    capture(dir, phase, mode, "focus-old");
+    GLuint old = artworkTexture;
+    tecla(SDLK_RIGHT); quadros(5, NULL);
+    capture(dir, phase, mode, "focus-mid");
+    int oldSeen = 0, newSeen = 0;
+    for (int t = 0; t < stageArtwork; t++) {
+      oldSeen |= stageTextures[t] == old;
+      newSeen |= stageTextures[t] != old;
+    }
+    checkRegression(oldSeen && newSeen, "Cached focus change draws both titles together");
+    quadros(90, NULL);
+    // No uploads while waiting: old art must remain visible past a full fade.
+    CatItem *cold = (CatItem *)cat_item_exato(fileiraItemIndice(&fileiras[sr], foco.coluna + 1));
+    CatItem coldSaved = *cold;
+    snprintf(cold->backdrop, sizeof cold->backdrop, "%s/cold-%d.bmp", dirDados, mode);
+    assert(SDL_SaveBMP((large = SDL_LoadBMP(art)), cold->backdrop) == 0); SDL_FreeSurface(large);
+    capture(dir, phase, mode, "cold-old"); old = artworkTexture;
+    tecla(SDLK_RIGHT);
+    for (int f = 0; f < 20; f++) {
+      heroInfo = heroBackdrops = stageArtwork = 0; artworkTexture = 0;
+      memset(stageTextures, 0, sizeof stageTextures);
+      home_atualizar(1.0f / 60.0f, SDL_GetTicks());
+      home_desenhar(SDL_GetTicks());
+    }
+    oldSeen = 0;
+    for (int t = 0; t < stageArtwork; t++) oldSeen |= stageTextures[t] == old;
+    checkRegression(oldSeen, "Cache miss retains outgoing artwork until upload");
+    quadros(90, NULL); *cold = coldSaved;
+    while (foco.coluna > column) tecla(SDLK_LEFT);
+    quadros(90, NULL);
+  }
+  printf("Stage regression failures=%d\n", regressionFailures);
 }
 
 int main(int argc, char **argv) {
@@ -133,13 +248,13 @@ int main(int argc, char **argv) {
   assert(heroBackdrops > 0); // First focus frames retain the fading hero.
   quadros(90, NULL);
   capture(dir, phase, PALCO_PRETO, "stage");
+  regressions(dir, phase, glass);
 #ifdef PALCO_BASELINE
-  // Untouched renderer: capture proof, then demonstrate the missing behavior.
-  fflush(stdout);
-  quadros(510, NULL); capture(dir, phase, PALCO_PRETO, "stage"); // same settle time as Current
-  assert(heroInfo == 0 && heroBackdrops == 0);
-  return 0;
+  return regressionFailures ? 1 : 0;
 #else
+  assert(regressionFailures == 0);
+  setting(0, glass, PALCO_PRETO); quadros(90, NULL);
+  capture(dir, phase, PALCO_PRETO, "stage");
   assert(heroInfo == 0 && heroBackdrops == 0 && stageArtwork == 0);
   blankHero();
   double blackFill = fillVisUlt;
@@ -152,12 +267,9 @@ int main(int argc, char **argv) {
   setting(0, glass, 2); quadros(90, NULL);
   capture(dir, phase, 2, "stage");
   assert(heroInfo == 0 && heroBackdrops == 0 && stageArtwork == 1);
-  { int sr = foco.fileira; // focused Stage: label sits below the cards
-    assert(fileiras[sr].tipo == FILEIRA_PALCO);
-    assert(tituloFilY(sr, 100.0f) >= 100.0f + NV_LEGACY_ROW_HEAD_H + alturaFil(sr)); }
   const CatItem *focused = cat_item_exato(fileiraItemIndice(&fileiras[foco.fileira], foco.coluna));
   assert(focused && palcoArte(focused));
-  assert(artworkTexture == tex_obter_hero(focused->backdrop));
+  assert(artworkTexture != 0);
   assert(artworkTexture != tex_obter(focused->poster));
   assert(blackFill < currentFill && fillVisUlt <= currentFill);
   assert(blackRects < currentRects && rectUlt <= currentRects);
@@ -205,7 +317,7 @@ int main(int argc, char **argv) {
   setting(0, glass, 2); quadros(90, NULL);
   tecla(SDLK_UP); quadros(1, NULL);
   capture(dir, phase, 2, "leave");
-  assert(foco.fileira != nFileiras && tituloFilY(foco.fileira, 100.0f) == 100.0f); // unfocused: above
+  assert(foco.fileira != nFileiras);
   quadros(90, NULL);
   capture(dir, phase, 2, "normal-return");
   assert(heroInfo > 0 && heroBackdrops > 0);

@@ -520,10 +520,9 @@ static float heroEntra = 1.0f;
 static int palcoFundoModo = 1, palcoFundoAlvo = 1, palcoFundoItem = -1;
 static float palcoFundoT = 1.0f, palcoFundoInicio = 1.0f;
 static float palcoFundoAlpha = 1.0f;
-// Focus changes fade the shown item out, then the new one in once its art is
-// decoded: one art pass per frame, never two stacked fullscreen layers.
-static int palcoMostra = -1, palcoPronto;
-static float palcoItemA;
+// Keep outgoing art until the incoming texture is ready, then crossfade.
+static int palcoMostra = -1, palcoAnterior = -1;
+static float palcoItemA = 1.0f;
 static int palcoFundoDestino(void) {
   return ajustes_home_layout() == HOME_LAYOUT_MODERNA && !focoHero &&
          foco.fileira >= 0 && foco.fileira < nFileiras &&
@@ -3921,10 +3920,7 @@ static void home_atualizar_(float dt, Uint32 agora) {
     } else palcoFundoAlpha = palcoFundoModo == PALCO_PRETO ? 0.0f : palcoFundoT >= 1.0f ? 1.0f :
       palcoFundoInicio + (1.0f - palcoFundoInicio) * anim_saida(palcoFundoT);
     float k = motionReduzido ? 1.0f : dt * 1000.0f / NV_HERO_FADE_MS;
-    if (palcoMostra != palcoFundoItem) {
-      palcoItemA = fmaxf(0.0f, palcoItemA - k);
-      if (palcoItemA <= 0.0f) { palcoMostra = palcoFundoItem; palcoPronto = 0; }
-    } else if (palcoPronto) palcoItemA = fminf(1.0f, palcoItemA + k);
+    palcoItemA = fminf(1.0f, palcoItemA + k);
   }
 
   if (heroSai > 0.0f) {
@@ -4015,7 +4011,6 @@ static void home_atualizar_(float dt, Uint32 agora) {
     for (int i = 0; i < r && i < nFileiras; i++)
       alvoY += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(i) + fileiraGap();
     if (layoutHome() == HOME_LAYOUT_DINAMICA) alvoY = dinRolagemCentrada(r, alvoY);
-    if (r < nFileiras && fileiras[r].tipo == FILEIRA_PALCO) alvoY += 44.0f;   // room for the label under the cards
   }
   scrollY = homeScrollYPasso(alvoY, dt, motionReduzido);
   for (int r = 0; r < nFileiras && r < MAX_FIL; r++)
@@ -4823,12 +4818,10 @@ static const char *palcoArteOutra(const CatItem *item, const char *centro, const
   return NULL;
 }
 // Stage art concepts (owner 18/10): backdrops only, then the title logo.
-static void desenhaPalcoArte(void) {
-  const CatItem *item = cat_item_exato(palcoMostra);
+static void desenhaPalcoItem(int indice, float a) {
+  const CatItem *item = cat_item_exato(indice);
   const char *art = palcoArte(item);
-  GLuint tex = art ? tex_obter_hero(art) : 0;
-  palcoPronto = tex != 0;
-  float a = palcoFundoAlpha * palcoItemA;
+  GLuint tex = art ? tex_obter_palco(art) : 0;
   if (!tex || a <= 0.004f) return;
   const float W = NV_TELA_W, H = NV_TELA_H;
   const int m = palcoFundoModo;
@@ -4861,7 +4854,7 @@ static void desenhaPalcoArte(void) {
     for (int i = 0; i < 3; i++) {
       float w = i == 1 ? u * 1.6f : u;
       const char *url = i == 1 ? art : lado[i / 2];
-      GLuint t = url ? tex_obter_hero(url) : 0;
+      GLuint t = url ? tex_obter_palco(url) : 0;
       if (!t) { url = art; t = tex; }
       gfx_tex_aspect_atual = tex_aspecto(url);
       gfx_rect((GfxRect){x - s * 0.5f, 0, w + s, h}, t, GFX_PALCO_ARTE, s / (w + s),
@@ -4893,6 +4886,18 @@ static void desenhaPalcoArte(void) {
     txt_bloco_corta(heroSinEstilo(), frase, 255, 255, 255, lx, H * 0.33f, lw,
                     heroSinEntrelinha(), a * 0.8f, 2);
   }
+}
+static void desenhaPalcoArte(void) {
+  const char *art = palcoArte(cat_item_exato(palcoFundoItem));
+  GLuint tex = art ? tex_obter_palco(art) : 0;
+  if (palcoMostra != palcoFundoItem && palcoItemA >= 1.0f && (tex || !art)) {
+    palcoAnterior = palcoMostra;
+    palcoMostra = palcoFundoItem;
+    palcoItemA = palcoAnterior < 0 || !art || ajustes_animacoes_reduzidas() ? 1.0f : 0.0f;
+  }
+  if (palcoItemA < 1.0f)
+    desenhaPalcoItem(palcoAnterior, palcoFundoAlpha * (1.0f - palcoItemA));
+  desenhaPalcoItem(palcoMostra, palcoFundoAlpha * palcoItemA);
 }
 static void desenhaHero(Uint32 agora, float saida) {
   (void)agora;
@@ -7518,11 +7523,6 @@ static const char *tfKicker(const Fileira *f) {
   }
   return !strcmp(f->catTipo, "series") ? "Séries" : !strcmp(f->catTipo, "movie") ? "Filmes" : "Catálogo";
 }
-// Stage focado: o titulo da fileira desce para baixo dos cards (dono, 18/10).
-static float tituloFilY(int r, float y) {
-  return fileiras[r].tipo == FILEIRA_PALCO && foco.fileira == r && !focoHero
-         ? y + NV_LEGACY_ROW_HEAD_H + alturaFil(r) + 6.0f : y;
-}
 // Devolve o x onde o titulo (e o que vem junto) termina; `tl` sai com o texto
 // do titulo (w/h) para quem mede o resto do cabecalho.
 static float desenhaTituloFil(int r, float y, const char *rot, int cr, int cg, int cb,
@@ -7760,7 +7760,7 @@ static void home_desenhar_(Uint32 agora) {
         int cb = 181 + (int)((249 - 181) * k + 0.5f);
         const float maxW = homeRetratoTelefone() ? homeLarguraUtil() - 76.0f : NV_TELA_W - homeConteudoX() - 180.0f;
         const int mudo = tipo == FILEIRA_SOCIAL && ajustes_amigos_estilo() == 3 && !amigosfil_convite();
-        fimTit = desenhaTituloFil(r, tituloFilY(r, y), rotFil, cr, cg, cb, k, maxW, !mudo, &tl); }
+        fimTit = desenhaTituloFil(r, y, rotFil, cr, cg, cb, k, maxW, !mudo, &tl); }
       // A FONTE (Trakt, Simkl...) NAO APARECE NA FILEIRA DE AMIGOS: a pessoa
       // quer saber quem viu e o que achou, nao de onde veio o dado. Ela fica
       // so no perfil do amigo (amigoperfil.c). Era a marca do Trakt aqui.
