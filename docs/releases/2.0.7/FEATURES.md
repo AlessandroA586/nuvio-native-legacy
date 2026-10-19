@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T19:48:49-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T20:48:03-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -242,6 +242,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Friends artwork recovery**: Seed missing Friends titles through the shared artwork pipeline; now integrated into the release. Platforms: webOS, Android, Samsung .tpk, WASM. Refs a6e233df0; merge 28b2a8579, owner request, `agente/205-amigosarte`.
+
+- **Public episode reviews**: Load public episode ratings and comments without requiring a linked Trakt account and share context-menu material; now integrated into the release. Platforms: webOS, Android, Samsung .tpk, WASM. Refs 29b977c74; merge 4761cc98b, owner request, `agente/205-epreview1019`.
 
 - **Embedded ASS in large remux files**: Discover embedded ASS subtitles even when large MKV track headers exceed the initial probe, without matching hidden image tracks to the wrong text track. Platforms: webOS. Refs PR #593, @I0-oX, `44d19129e`, `b738d5b14`.
 
@@ -685,16 +689,22 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-- **Episode card materials**: Apply the selected Modern material and restore the requested Standard card presentation; the follow-up job is running. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-epcor1019`.
+- **Reliable Android 4K selection**: Preserve 4K selection when HDR, startup work or missing GPU timing makes fallback measurements unreliable. Platforms: Android. Refs owner request, `agente/205-recuo4k`.
 
-- **Public episode reviews**: Load public episode ratings and comments without requiring a linked Trakt account and share context-menu material; review is OK, merge remains pending in the supplied branch snapshot. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-epreview1019`.
+- **Movie availability alerts**: Request a reminder when playable movie sources become available; review blocks integration pending bounded background processing. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-avisofonte`.
 
-- **Friends artwork recovery**: Seed missing Friends titles through the shared artwork pipeline; review is OK, merge remains pending in the supplied branch snapshot. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-amigosarte`.
+- **Episode review panel**: Browse clearer rating distributions, filter reviews by score, load further comments and use a labelled TMDB fallback while navigating between episodes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-eppainel`.
+
+- **Episode card materials**: Apply the selected Modern material and restore the requested Standard card presentation; the latest follow-up fix awaits review. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-epcor1019`.
 
 
 
 
-Tracking snapshot: 19 unmerged branches without running jobs; 8 open issues without mapped jobs or prompts. Newer fixes need review on `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android installation succeeded at `cb7ece972`; C9 installation failed and installed TV HEAD is unconfirmed.
+
+
+
+
+Tracking snapshot: 22 unmerged branches without running jobs; 8 open issues without jobs or prompts. Newer fixes need review on `agente/205-epcor1019`, `agente/p2p`. Queued work and 2.1 deferrals are not lost. Android installation succeeded at `cb7ece972`; C9 installation failed and installed TV HEAD is unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
