@@ -57,7 +57,7 @@ Missing in-band RPU is **not proved** and is not the instruction's direct input.
 
 ## Minimal fix and regression
 
-After the existing probe, profile 8 with compatibility ID 1 and unconfirmed in-band RPU (`rpu != 1` or zero complete frames) clears `dvMkvRpu`. The existing shared `dvPronto` refusal then keeps the native URI HDR10 playback, rewinds the covered interval to the requested entry position, and exits the DV opening screen. No DV BUFFERSTREAM Load is attempted. Log:
+After the existing probe, profile 8 with compatibility ID 1 and unconfirmed in-band RPU (`rpu != 1` or zero complete frames) clears `dvMkvRpu`. Probe completion (`dvSondado`) is published only after that check, preventing the main loop from admitting the declaration before the guard runs. The existing shared `dvPronto` refusal then keeps the native URI HDR10 playback, rewinds the covered interval to the requested entry position, and exits the DV opening screen. No DV BUFFERSTREAM Load is attempted. Log:
 
 ```text
 [dv] HDR10: profile 8.1 in-band RPU unconfirmed (rpu=-1 frames=0)
@@ -68,6 +68,14 @@ The guard does not rewrite the file, change persisted settings, reset death coun
 `tests/dvsonda_contentor.sh` compiles the real webOS `video.c` branch on the host, with only the external bus/stream startup and downloaded probe results substituted. The added cases include the exact reported metadata, a complete frame without RPU, hvcC NAL 62 without in-band proof, confirmed in-band RPU, profile 5, and a later unconfirmed source following a confirmed one. Assertions cover admission/refusal, retained native playback, rewind to 600 seconds, and opening-screen exit. Existing MP4/TS and network-retry cases remain.
 
 Before the production change, the exact crash-input case failed the `dvPronto()` assertion (rc 134). After the change, the same command passed (rc 0).
+
+## Final validation
+
+- `bash tests/dvsonda_contentor.sh`: rc 0 (regression was rc 134 before the fix). A final rerun initially exceeded the 60-second tool limit during compilation; the completed rerun passed.
+- `bash tests/i18n.sh`: rc 1, existing Cyrillic Serbian translation in `src/idioma_sr.h:3806` triggers 15 script violations. The same line exists in the starting HEAD; this change does not edit translations.
+- `bash tools/build-local.sh`: rc 0.
+- `bash tests/c9_dv_arm_offline.sh`: rc 0. This invokes `tools/arm.sh --build` through a temporary Docker wrapper forcing `--network none --pull never`, with Cargo offline. Full ARM binary and both Starfish adapters built; FFmpeg, libass, Rust MKV core and P2P remained enabled. Existing compiler/linker warnings and empty local service credentials remain.
+- `git diff --check`: rc 0.
 
 ## Limits and remaining proof
 
