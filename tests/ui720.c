@@ -50,12 +50,24 @@ static void readback(void) {
   assert(glGetError()==GL_NO_ERROR);
 }
 static void png(const char *dir, const char *name) {
+  static char written[64][1024];
+  static size_t count;
   char path[1024];
+  assert(snprintf(path,sizeof path,"%s/%s.png",dir,name)<(int)sizeof path);
+  for(size_t i=0;i<count;i++) {
+    if(!strcmp(written[i],path)) {
+      fprintf(stderr,"FAIL duplicate PNG path: %s\n",path);
+      abort();
+    }
+  }
+  assert(count<sizeof written/sizeof written[0]);
+  strcpy(written[count++],path);
   readback();
   for (int y=0;y<sh;y++) memcpy(flipped+(size_t)y*sw*4,pixels+(size_t)(sh-1-y)*sw*4,sw*4);
   SDL_Surface *s=SDL_CreateRGBSurfaceWithFormatFrom(flipped,sw,sh,32,sw*4,SDL_PIXELFORMAT_RGBA32);
-  assert(s); snprintf(path,sizeof path,"%s/%s.png",dir,name);
+  assert(s);
   assert(IMG_SavePNG(s,path)==0); SDL_FreeSurface(s);
+  printf("PNG %s\n",path);
 }
 static void frame(int settings) {
   txt_novo_quadro(); tex_novo_quadro(); tex_bombear(16); gfx_novo_quadro();
@@ -204,11 +216,10 @@ int main(int argc,char **argv) {
     assert(glCheckFramebufferStatus(GL_FRAMEBUFFER)==GL_FRAMEBUFFER_COMPLETE);
     gpun_iniciar(sw,sh);gpun_definir_nivel(0);
     for(int settings=0;settings<2;settings++) for(int glass=0;glass<2;glass++) {
-      const char *scene=settings?"settings":"home"; char name[160];
+      const char *scene=settings?"settings":"home";
       ajustes_definir_vidro(glass);
       target(0);for(int n=0;n<8;n++) frame(settings);
       readback();memcpy(native,pixels,bytes);double ref=gradient(native,settings);
-      if(!glass) {snprintf(name,sizeof name,"r4-native-%d-%s",sh,scene);png(argv[1],name);}
       target(1);for(int n=0;n<8;n++) frame(settings);
       candidate=0;copy(0);readback();memcpy(linear,pixels,bytes);
       double b=gradient(linear,settings), be=error(linear,settings);
@@ -232,7 +243,6 @@ int main(int argc,char **argv) {
         double g=gradient(pixels,settings),e=error(pixels,settings),host,gpu;
         for(size_t i=3;i<bytes;i+=4) assert(pixels[i]==linear[i]);
         assert(pixels[((size_t)(sh-1-250*sh/1080)*sw+1550*sw/1920)*4+3]==0);
-        if(!glass && candidate==3 && test<2) {snprintf(name,sizeof name,"r4-%s-%d-%d-%s",names[candidate],ih,sh,scene);png(argv[1],name);}
         timing(settings,candidate?2:1,0,&host,&gpu);
         printf("METRIC %d->%d %s glass=%d filter=%s gradient=%.6f native=%.6f MAE=%.6f host=%.4f GPU=%.4f alpha=identical\n",
           ih,sh,scene,glass,names[candidate],g,ref,e,host,gpu);
@@ -273,6 +283,17 @@ int main(int argc,char **argv) {
     gpun_ampliar_app(sh==2160);
     ui720_settings(3840,2160,sh==2160,0,ih);
     for(int settings=0;settings<2;settings++) {
+      const char *scene=settings?"settings":"home";
+      char name[160];
+      target(0);for(int n=0;n<8;n++) frame(settings);
+      snprintf(name,sizeof name,"r4-test%d-%d-to-%d-%s-native",test,ih,sh,scene);png(argv[1],name);
+      target(1);for(int n=0;n<8;n++) frame(settings);
+      for(candidate=0;candidate<=3;candidate+=3) {
+        copy(candidate!=0);
+        snprintf(name,sizeof name,"r4-test%d-%d-to-%d-%s-%s",test,ih,sh,scene,names[candidate]);png(argv[1],name);
+      }
+    }
+    for(int settings=0;settings<2;settings++) {
       double host,gpu;
       candidate=test==3?0:3;
       for(int n=0;n<8;n++) {target(ih<sh);frame(settings);if(ih<sh)copy(1);}
@@ -281,7 +302,7 @@ int main(int argc,char **argv) {
       printf("CHOICE ampliar=%s %d->%d %s level=%d host=%.4f GPU=%.4f ms\n",
         sh==2160?"app":"tv",ih,sh,settings?"settings":"home",gpun_nivel(),host,gpu);
       if(settings) {
-        char name[160];snprintf(name,sizeof name,"r4-choice-%s-%d-settings",sh==2160?"app":"tv",ih);
+        char name[160];snprintf(name,sizeof name,"r4-test%d-%d-to-%d-settings-choice-%s-%s",test,ih,sh,sh==2160?"app":"tv",test==3?"native":"sharp-bilinear");
         png(argv[1],name);
       }
     }
@@ -303,10 +324,10 @@ int main(int argc,char **argv) {
   copy(0);readback();assert(!memcmp(linear,pixels,(size_t)sw*sh*4));
   progs[GFX_COPIA]=productionCopy;progAtual=-1;
   for(int n=0;n<8;n++) {gpun_quadro_inicio();frame(1);gpun_quadro_fim();}
-  png(argv[1],"r4-choice-mali-disabled-settings");
+  png(argv[1],"r4-test4-720-to-1080-settings-choice-mali-disabled-bilinear");
   pretendUtgard=0;glDeleteTextures(1,&source);gfx_tex_esquecer(0);
   gpun_iniciar(sw,sh);ui720_settings(1920,1080,0,0,1080);target(0);frame(1);
-  png(argv[1],"r4-choice-non4k-hidden-settings");
+  png(argv[1],"r4-test5-1080-to-1080-settings-choice-non4k-hidden-native");
   puts("PASS Mali-450 automatically selects exact bilinear output");
   gpun_iniciar(1280,720);gpun_forcar_720();gfx_novo_quadro();gpun_quadro_inicio();
   GLint bound;glGetIntegerv(GL_FRAMEBUFFER_BINDING,&bound);assert(bound==0);
