@@ -29,6 +29,7 @@
 #include "dts/dts_overlay.h"
 #include "legenda.h"
 #include "dados.h"
+#include "ilha.h"
 #include "vazao.h"
 #include <stdio.h>
 #include <string.h>
@@ -41,6 +42,33 @@
 #include <unistd.h>
 #include <math.h>
 #include <limits.h>
+
+#ifndef NV_VERSAO
+#define NV_VERSAO "dev"
+#endif
+
+#define DTS_MARCA_ARQ "dts-conversao.txt"
+static void dtsMarcarAbertas(int n) {
+  char b[sizeof NV_VERSAO + 32];
+  snprintf(b, sizeof b, "%d\n%s\n", n, NV_VERSAO);
+  dados_gravar(DTS_MARCA_ARQ, b);
+}
+static int dtsAbertasSemFechar(void) {
+  char *t = dados_ler(DTS_MARCA_ARQ);
+  char *versao = t ? strchr(t, '\n') : NULL;
+  int n = t ? atoi(t) : 0;
+  if (t && (!versao || strcmp(versao + 1, NV_VERSAO "\n"))) {
+    n = 0;
+    dtsMarcarAbertas(0);
+    printf("[dv] guard reset: version changed\n"); fflush(stdout);
+  }
+  free(t);
+  return n;
+}
+void video_dv_guard_reiniciar(void) {
+  dtsMarcarAbertas(0);
+  printf("[dv] guard reset: user toggle\n"); fflush(stdout);
+}
 
 static DtsPlayback *dtsSessao;
 static char dtsSaida[64];
@@ -632,7 +660,6 @@ static char cabsHttp[512];
 static int iniciarDts(int stream);
 static void bombearDts(void);
 static int dtsLiberadoNestaTv(void);
-static void dtsMarcarAbertas(int n);
 // RECONEXAO (video_reconexao.h). O erro chega no fio do LS2 e so ANOTA
 // (reconErroPend); a decisao e o recarregar sao do video_bombear, no fio
 // principal, como o `recuperando`.
@@ -2781,24 +2808,10 @@ static void pararSessao(void) {
 //
 // E EM QUALQUER VERSAO: dts-conversao.txt conta as conversoes abertas que nao
 // fecharam. Duas seguidas = o app morreu duas vezes com a conversao aberta, e
-// ela se desliga nesta TV. Uma so pode ser a TV desligada no meio do filme.
-#define DTS_MARCA_ARQ "dts-conversao.txt"
-static int dtsAbertasSemFechar(void) {
-  char *t = dados_ler(DTS_MARCA_ARQ);
-  int n = t ? atoi(t) : 0;
-  free(t);
-  return n;
-}
-static void dtsMarcarAbertas(int n) {
-  char b[16];
-  if (!n && !dtsAbertasSemFechar()) return;
-  snprintf(b, sizeof b, "%d\n", n);
-  dados_gravar(DTS_MARCA_ARQ, b);
-}
+// ela se desliga nesta versao ate a pessoa religar em Ajustes.
+// Uma so pode ser a TV desligada no meio do filme.
 static int dtsLiberadoNestaTv(void) {
-  static int v = -1;
-  int maior, abertas;
-  if (v >= 0) return v;
+  int v, maior, abertas;
   if (access("/tmp/nuvio-dts-liberar", F_OK) == 0) {
     printf("[dts] conversao liberada por /tmp/nuvio-dts-liberar\n"); fflush(stdout);
     return v = 1;
@@ -2821,6 +2834,7 @@ static int dtsLiberadoNestaTv(void) {
 // webOS 3 fica fora; desconhecida chega aqui ja como o chute do webosMaior().
 static int dvVersaoLiberada(int maior) { return maior >= 4; }
 static int dvLiberadoNestaTv(void) {
+  static int avisado;
   int forcado = 0;
 #ifdef NV_DTS_DEBUG
   forcado = access("/tmp/nuvio-dv-forcar", F_OK) == 0;
@@ -2832,6 +2846,11 @@ static int dvLiberadoNestaTv(void) {
   }
   if (dtsAbertasSemFechar() >= 2) {
     printf("[dv] Dolby Vision in MKV off: the app died twice with it open\n"); fflush(stdout);
+    if (!avisado) {
+      avisado = 1;
+      ilha_avisar("dv-guard", ILHA_ERRO, NULL,
+        i18n("Dolby Vision desligado: o app fechou 2 vezes com ele. Religue em Ajustes para tentar de novo."), 10000u, 0);
+    }
     return 0;
   }
   return 1;

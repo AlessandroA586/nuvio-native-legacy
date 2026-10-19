@@ -1679,6 +1679,7 @@
   T("Do título", "Din titlu"),
   T("Documentário", "Documentar"),
   T("Documentários", "Documentare"),
+  T("Dolby Vision desligado: o app fechou 2 vezes com ele. Religue em Ajustes para tentar de novo.", "Dolby Vision dezactivat: aplicația s-a închis de 2 ori cu el activ. Reactivează-l în Setări pentru a încerca din nou."),
   T("Dolby Vision e HDR", "Dolby Vision și HDR"),
   T("Dolby Vision em MKV", "Dolby Vision în MKV"),
   T("Dolby Vision em MKV (experimental)", "Dolby Vision în MKV (experimental)"),

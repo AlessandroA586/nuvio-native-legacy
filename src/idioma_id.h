@@ -1680,6 +1680,7 @@
   T("Do título", "Dari judul"),
   T("Documentário", "Dokumenter"),
   T("Documentários", "Dokumenter"),
+  T("Dolby Vision desligado: o app fechou 2 vezes com ele. Religue em Ajustes para tentar de novo.", "Dolby Vision dinonaktifkan: aplikasi tertutup 2 kali saat fitur ini aktif. Aktifkan kembali di Pengaturan untuk mencoba lagi."),
   T("Dolby Vision e HDR", "Dolby Vision dan HDR"),
   T("Dolby Vision em MKV", "Dolby Vision di MKV"),
   T("Dolby Vision em MKV (experimental)", "Dolby Vision di MKV (eksperimental)"),

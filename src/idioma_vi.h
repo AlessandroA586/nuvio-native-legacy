@@ -1680,6 +1680,7 @@
   T("Do título", "Từ tựa phim"),
   T("Documentário", "Phim tài liệu"),
   T("Documentários", "Phim tài liệu"),
+  T("Dolby Vision desligado: o app fechou 2 vezes com ele. Religue em Ajustes para tentar de novo.", "Dolby Vision đã tắt: ứng dụng đã đóng 2 lần khi bật tính năng này. Bật lại trong Cài đặt để thử lại."),
   T("Dolby Vision e HDR", "Dolby Vision và HDR"),
   T("Dolby Vision em MKV", "Dolby Vision trong MKV"),
   T("Dolby Vision em MKV (experimental)", "Dolby Vision trong MKV (thử nghiệm)"),

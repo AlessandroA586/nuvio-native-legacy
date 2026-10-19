@@ -1679,6 +1679,7 @@
   T("Do título", "Aus dem Titel"),
   T("Documentário", "Dokumentarfilm"),
   T("Documentários", "Dokumentarfilme"),
+  T("Dolby Vision desligado: o app fechou 2 vezes com ele. Religue em Ajustes para tentar de novo.", "Dolby Vision deaktiviert: Die App wurde damit zweimal beendet. Aktiviere es in den Einstellungen erneut, um es noch einmal zu versuchen."),
   T("Dolby Vision e HDR", "Dolby Vision und HDR"),
   T("Dolby Vision em MKV", "Dolby Vision in MKV"),
   T("Dolby Vision em MKV (experimental)", "Dolby Vision in MKV (experimentell)"),
