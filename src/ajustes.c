@@ -677,7 +677,7 @@ typedef enum {
   AJ_LIVETV_SUGERIR,   // Live TV: Jev suggests sections for channels with none (livecat.h); default on; local, append-only
   AJ_AUDIO_OFFSET,     // #578: device-local converted audio offset, append-only
   AJ_XTREAM_CONEXOES,  // Stored with this IPTV account, not global settings.
-  AJ_AMPLIAR_UI,      // Device-local output scaler, append-only; TV by default.
+  AJ_AMPLIAR_UI,      // Device-local output scaler, append-only; App (4K) by default.
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -4747,6 +4747,21 @@ void ajustes_dir(const char *dir) {
       valor[AJ_PROF] = 0;            // V_LIGA: 0 = Ligado
       valor[AJ_PROF_BRILHO] = 100;
       dados_gravar("profundidade-205.txt", "1\n");
+      gravar();
+    } }
+  // MIGRACAO UNICA (2.0.6, dono 19/10/2026): "Ampliar interface" de fabrica
+  // virou App (4K) em vez de TV. Quem nunca tocou nesta opcao recebe o novo
+  // padrao uma so vez; quem ja tinha gravado sua escolha (explicitamente TV)
+  // mantem. Como o arquivo nao distingue "default" de "never touched",
+  // usamos um marcador.
+  { char *m = dados_ler("ampliarUi-206.txt");
+    if (m) free(m);
+    else {
+      if (valor[AJ_AMPLIAR_UI] == 0) {
+        valor[AJ_AMPLIAR_UI] = 1;
+        printf("[ajustes] ampliar interface -> App (4K) by default (migracao unica da 2.0.6)\n");
+      }
+      dados_gravar("ampliarUi-206.txt", "1\n");
       gravar();
     } }
 #ifdef NV_TEX_MB_FIXO

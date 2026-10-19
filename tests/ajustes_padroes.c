@@ -12,7 +12,7 @@
 
 int main(void) {
   // Merge regression: both appended settings keep their parallel table entries.
-  assert(valor[AJ_XTREAM_CONEXOES] == 0 && valor[AJ_AMPLIAR_UI] == 0);
+  assert(valor[AJ_XTREAM_CONEXOES] == 0 && valor[AJ_AMPLIAR_UI] == 1);
   assert(!strcmp(CHAVE[AJ_XTREAM_CONEXOES], "-xtreamConexoes"));
   assert(!strcmp(CHAVE[AJ_AMPLIAR_UI], "ampliarUiLocal"));
   assert(OPCOES[AJ_XTREAM_CONEXOES].n == 3 && OPCOES[AJ_AMPLIAR_UI].n == 2);
