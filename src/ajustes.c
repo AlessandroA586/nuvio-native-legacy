@@ -2734,6 +2734,7 @@ static int perfilSeguro;
 #endif
 static int saidaLimitada;
 void ajustes_ui_saida(int w, int h) { saidaLimitada = w > 0 && h > 0 && (w < 3840 || h < 2160); }
+int ajustes_painel4k(void) { return painel4k(); }
 int ajustes_ampliar_app(void) { return painel4k() && valor[AJ_AMPLIAR_UI] == 1 && !SEGURO; }
 int ajustes_ampliacao_algo(void)    { return valor[AJ_AMPLIACAO_ALGO]; }
 int ajustes_ampliacao_nitidez(void) { return valor[AJ_AMPLIACAO_NITIDEZ]; }

@@ -505,6 +505,7 @@ int   ajustes_1080p(void);
 // Nunca automatico.
 int   ajustes_720p(void);
 // Device-local output choice; applied after restarting, only on a 4K panel.
+int   ajustes_painel4k(void);
 int   ajustes_ampliar_app(void);
 // Device-local upscaling algorithm and RCAS sharpness 0..4 (gpun_ampliacao).
 int   ajustes_ampliacao_algo(void);
