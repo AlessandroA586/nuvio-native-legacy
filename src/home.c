@@ -68,6 +68,7 @@ static void heroTempoInicio(int indice) {
 #include "descoberta.h"
 #include "dados.h"
 #include "tendencia.h"
+#include "imersiva.h"
 #include <strings.h>
 // Os veus da base de cada forma de card (gfx_veu_base): a fracao da altura que
 // o degrade cobre e o alfa na base. Nomeados porque o laco da fileira os poe
@@ -2493,6 +2494,9 @@ static int focoVertical(int dy) {
   return 1;
 }
 
+static int imvEvento(const SDL_Event *e);
+static void imvAtualizar(float dt);
+static Imersiva imv;
 static void home_evento_(const SDL_Event *e) {
   pedidoRelogio = 0;
   if (e->type == SDL_QUIT) { sair = 1; return; }
@@ -2505,6 +2509,7 @@ static void home_evento_(const SDL_Event *e) {
       if (k == SDLK_DOWN || k == SDLK_RIGHT) return;
     }
   }
+  if (imvEvento(e)) return;   // layout Imersiva com o cartaz aberto no lugar
 #ifdef NV_TOUCH_UI
   if (e->type == SDL_KEYDOWN) {
     toqueHeroCancelar();
@@ -2621,6 +2626,8 @@ static void home_evento_(const SDL_Event *e) {
         // card dela ja e um convite a tocar. Segurar OK continua abrindo o
         // menu — o ramo NV_HOLD_MS acima nem chega aqui.
         const Fileira *fl = &fileiras[foco.fileira];
+        // Imersiva: o primeiro OK abre o cartaz no lugar; o segundo segue abaixo.
+        if (ajustes_home_imersiva() && !imv.aberto) { imv_abrir(&imv, foco.coluna); return; }
         // "Proximos episodios" (issue #127) NAO toca: o episodio ainda nao foi
         // ao ar, e nenhum addon tem fonte para ele. OK abre a pagina.
         if (ajustes_cw_ok_toca() && strcmp(fl->chave, "upcoming_section") &&
@@ -3646,6 +3653,7 @@ static void home_atualizar_(float dt, Uint32 agora) {
   if (!telefoneui_ativo()) { toqueHomeLimpar(); toqueHeroCancelar(); }
 #endif
   sincronizarFileiras();
+  if (ajustes_home_imersiva()) imvAtualizar(dt);
   // A FILEIRA DE AMIGOS tem tantas colunas quantos rostos (+ "Adicionar"), e
   // isso muda sem o catalogo mudar (um amigo novo chega do recomenda.c).
   for (int r = 0; r < nFileiras; r++) {
@@ -6554,7 +6562,7 @@ static void holofote(Uint32 agora) {
     if (clean) gfx_sem_recorte(); }
   holoTem = 0;
 }
-void home_holofote_desenhar(Uint32 agora) { TXT_INI(); holofote(agora); TXT_FIM(); }
+void home_holofote_desenhar(Uint32 agora) { if (ajustes_home_imersiva()) return; TXT_INI(); holofote(agora); TXT_FIM(); }
 // CARTAZ COM FICHA: a placa inteira atras, o texto a direita do cartaz. O
 // cartaz e desenhado depois, pelo caminho comum (pintarCartao), na largura 2:3.
 static void desenhaFicha(const CatItem *it, float px, float py, float w, float h, float f) {
@@ -7688,6 +7696,7 @@ static float desenhaTituloFil(int r, float y, const char *rot, int cr, int cg, i
   return x0 + tl->w;
 }
 
+#include "home_imersiva.inc"
 static void home_desenhar_(Uint32 agora) {
   // Nao conservar ponteiros para o catalogo de outro quadro/perfil quando
   // nenhuma tela de titulo publica um item (pasta, social ou estado vazio).
@@ -7702,6 +7711,7 @@ static void home_desenhar_(Uint32 agora) {
   // GFX_CARD (nao e um retangulo desenhado por cima): por isso vai por uma
   // variavel de modulo, uma vez por quadro, e nao em cada chamada.
   gfx_borda_foco_atual = ajustes_borda_foco() ? 1.0f : 0.0f;
+  if (ajustes_home_imersiva() && nFileiras > 0 && !homevazio_ativo(nFileiras)) { imvDesenhar(agora); return; }
   desenhaFundo(agora);
   float pd = detail_progresso();
   const int vazioQr = homevazio_ativo(nFileiras);   // sem add-ons: o cartao com o QR no lugar da Home
