@@ -4514,15 +4514,17 @@ static int epgDo(GCanal *c) {
   if (c->epg == -1) {
     GMapa *m;
     int met = EPG_M_NENHUM;
-    int estadoFonte=epg_fonte_estado(chaveDo(c));
-    if (estadoFonte == EPG_FALHOU) return -2;
-    if (estadoFonte != EPG_PRONTO) return -1;
     m = mapaDe(c);
     if (m && !strcmp(m->gid, "-")) { c->epg = -2; c->epgMetodo = EPG_M_MANUAL; return -2; }
     if (m && (c->epg = epg_achar(m->gf, m->gid)) >= 0) { c->epgMetodo = EPG_M_MANUAL; return c->epg; }
     c->epg = epg_casar(chaveDo(c), c->epgId, c->tvgNome, c->nome, &met);
     c->epgMetodo = (short)met;
-    if (c->epg < 0) c->epg = -2;
+    if (c->epg < 0) {
+      int estadoFonte=epg_fonte_estado(chaveDo(c));
+      if (estadoFonte == EPG_FALHOU) return -2;
+      if (estadoFonte != EPG_PRONTO) return -1;
+      c->epg = -2;
+    }
   }
   return c->epg;
 }

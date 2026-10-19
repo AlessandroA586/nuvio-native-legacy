@@ -1,7 +1,8 @@
 #include "epg_core_fixture.h"
 static atomic_int falhar, lenta, liberar;
+void epg_shared_consumers(void);
 static int conta(const char *url,int (*cb)(const char *,size_t,void *),void *u,int *st,long long *bytes) {
-  *bytes=0;*st=503;if(atomic_load(&falhar))return 0;
+  *bytes=0;*st=503;if(atomic_load(&falhar) && !strstr(url,"shared"))return 0;
   if(strstr(url,"slow")) {
     atomic_store(&lenta,1);
     while(!atomic_load(&liberar) && cargaAtual()) {struct timespec t={0,1000000};nanosleep(&t,NULL);}
@@ -73,5 +74,16 @@ int main(int argc,char **argv) {
   programa("xtream:@00000003:7","Account two");
   epg_abrir_sessao(1);
   puts("PASS: standalone XMLTV matches IDs, names and rules across sources; own account schedules retain priority");
+  // Fresh profile: provider fails without cache, standalone XMLTV still works.
+  epg_abrir_sessao(3);epg_so_provedores(1);atomic_store(&falhar,1);
+  epg_extras_definir(shared,2);epg_iniciar();esperar();
+  assert(epg_estado()==EPG_PRONTO);
+  assert(epg_fonte_estado("xta00000001")==EPG_FALHOU);
+  assert(epg_canal_estado("xtream:@00000001:7")==EPG_FALHOU);
+  assert(epg_casar("xta00000001","news",NULL,"News HD",NULL)==0);
+  programa("xtream:@00000001:7","Account two");
+  epg_shared_consumers();
+  epg_abrir_sessao(3);
+  puts("PASS: failed provider does not hide shared programmes in guide, player or programme search; unmatched channels retain failure");
   return 0;
 }

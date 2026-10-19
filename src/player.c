@@ -735,9 +735,12 @@ static int epgIdx = -1;
 static unsigned epgIdxRev;
 static void pEpgAtualizar(void) {
   if(epgIdxRev!=epg_revisao()){epgIdxRev=epg_revisao();epgIdx=-1;}
-  if(epgIdx==-1 && epg_canal_estado(player_id_canal())==EPG_PRONTO) {
+  if(epgIdx==-1) {
     epgIdx=epg_match_canal(player_id_canal(),NULL,itemCanal.titulo);
-    if(epgIdx<0)epgIdx=-2;
+    if(epgIdx<0) {
+      int estadoFonte=epg_canal_estado(player_id_canal());
+      if(estadoFonte==EPG_PRONTO || estadoFonte==EPG_FALHOU)epgIdx=-2;
+    }
   }
 }
 // Diagnostico da janela do cartao de proximo episodio. Zerados a cada episodio
