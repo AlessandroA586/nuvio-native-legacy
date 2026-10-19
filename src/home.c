@@ -7163,8 +7163,9 @@ static float divididoFimY(float cardY, float yh) {
   return cardY + divArteH() + 18.0f + (fmaxf(34.0f, yh) + yh) * 0.5f;
 }
 typedef struct { float logoB, meta, ov; } DivBloco;
-static DivBloco divididoBloco(float fim, float ovH, float metaH) {
-  DivBloco b = { 0, 0, fim - ovH };
+// ovH is the block advance (lines x leading); the last line ends textH below its top.
+static DivBloco divididoBloco(float fim, float ovH, float lead, float textH, float metaH) {
+  DivBloco b = { 0, 0, fim - (ovH > 0 ? ovH - lead + textH : 0) };
   b.meta = b.ov - 14.0f - metaH;
   b.logoB = b.meta - 20.0f;
   return b;
@@ -7211,8 +7212,10 @@ static void desenhaDividido(int r, float cardY) {
   const float tw = fminf(NV_DIV_LOGO_W, p.w);
   float ovH = ci->sinopse[0]
     ? sinopse_bloco_corta(TXT_DET_SIN, ci->sinopse, 243, 242, 239, x, 0, tw, 36.0f, 0, 2) : 0;
+  const float lead = sinopse_entrelinha(TXT_DET_SIN, 36.0f);
   DivBloco b = divididoBloco(divididoFimY(cardY, txt_linha(TXT_CAPTION2, "2025", 218,222,232,255).h),
-                             ovH, fmaxf(34.0f, BADGE_H));
+                             ovH, lead, txt_linha(sinopse_estilo(TXT_DET_SIN), "Ag", 255,255,255,255).h,
+                             fmaxf(34.0f, BADGE_H));
   if (ovH > 0)
     sinopse_bloco_corta(TXT_DET_SIN, ci->sinopse, 243, 242, 239, x, b.ov, tw, 36.0f, 0.95f, 2);
   heroiMeta(ci, x, b.meta, tw);

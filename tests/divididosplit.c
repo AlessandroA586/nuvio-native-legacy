@@ -15,8 +15,10 @@ int main(void) {
   float by = cardY + divArteH() + 18.0f, bh = fmaxf(34.0f, yh);
   float fim = divididoFimY(cardY, yh);
   assert(fabsf(fim - (by + (bh - yh) * 0.5f + yh)) < 0.01f);   // side meta text bottom
-  DivBloco b = divididoBloco(fim, ovH, mh);
-  assert(fabsf(b.ov + ovH - fim) < 0.01f);                     // overview ends on that line
+  const float lead = 36.0f, th = 24.0f;                        // text height != leading
+  DivBloco b = divididoBloco(fim, ovH, lead, th, mh);
+  assert(fabsf(b.ov + (ovH - lead) + th - fim) < 0.01f);       // last rendered line ends on that line
+  assert(divididoBloco(fim, 0, lead, th, mh).ov == fim);       // no overview: no offset
   assert(b.meta + mh < b.ov && b.logoB < b.meta);
   const float ap[] = {5.0f, 2.0f, 1.0f};
   for (int i = 0; i < 3; i++) {
