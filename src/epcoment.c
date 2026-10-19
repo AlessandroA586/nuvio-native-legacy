@@ -1,4 +1,6 @@
 #include "epcoment.h"
+#include "ctxmenu.h"
+#include "catalogo.h"
 #include "extras.h"
 #include "sinopse.h"
 #include "descoberta.h"
@@ -14,7 +16,7 @@
 #include <time.h>
 
 static char show[64];
-static int temp, episodio, foco, dentro, quantidade;
+static int temp, episodio, foco, dentro, quantidade, notaImdb;
 static float scroll;
 // Byte ranges survive texture eviction. Rewrap only on content/font/width changes.
 static struct {
@@ -31,6 +33,16 @@ void epcoment_abrir(const char *imdb, int t, int e) {
   temp = t; episodio = e; foco = dentro = 0;
   quantidade = -2; scroll = 0;
   memset(cards, 0, sizeof cards);
+  notaImdb = 0;
+  int item = cat_indice_por_imdb(show);
+  for (int i = 0; item >= 0 && i < cat_n_episodios(item); i++) {
+    const CatEp *ep = cat_episodio(item, i);
+    if (ep && ep->temporada == t && ep->episodio == e) { notaImdb = ep->notaImdb; break; }
+  }
+  if (ajustes_nota_episodio(EX_IMDB) && !notaImdb) {
+    printf("[nuvio] episode IMDb %s S%dE%d: metadata has no per-episode IMDb rating\n", show, t, e);
+    fflush(stdout);
+  }
   extras_pedir_comentarios_ep(show, temp, episodio);
 }
 int epcoment_quantidade(void) {
@@ -124,8 +136,7 @@ void epcoment_desenhar(GfxRect r, float a) {
   ExEpNotas notas = {0}; char buf[120];
   int n = epcoment_quantidade();
   float x = r.x + 28, top = r.y + 190, w = r.w - 56, max = 1;
-  gfx_cor(r, 24 / r.h, .11f, .114f, .129f, a);
-  gfx_anel(r, 24 / r.h, 1, 1, 1, 1, .12f * a);
+  ctx_menu_ilha(r, 24, a);
   if (n >= 0) extras_notas_ep(&notas);
   if (notas.nota) snprintf(buf, sizeof buf, idioma_ponto_decimal(ajustes_idioma()) ? "%d.%d" : "%d,%d", notas.nota / 10, notas.nota % 10);
   else snprintf(buf, sizeof buf, "%s", "—");
@@ -143,6 +154,11 @@ void epcoment_desenhar(GfxRect r, float a) {
     texto(TXT_G18R, buf, bx - 30, y - 9, .6f * a);
     gfx_cor((GfxRect){bx, y, bw, 7}, .5f, 1, 1, 1, .12f * a);
     if (notas.distribuicao[k]) gfx_cor((GfxRect){bx, y, bw * notas.distribuicao[k] / max, 7}, .5f, 1, .30f, .43f, a);
+  }
+  if (notaImdb && ajustes_nota_episodio(EX_IMDB)) {
+    snprintf(buf, sizeof buf, idioma_ponto_decimal(ajustes_idioma()) ? "%d.%d" : "%d,%d", notaImdb / 10, notaImdb % 10);
+    texto(TXT_G18R, "IMDb", x, top - 50, .8f * a);
+    texto(TXT_G18R, buf, x + 60, top - 50, a);
   }
   gfx_cor((GfxRect){x, top - 16, w, 1}, 0, 1, 1, 1, .12f * a);
   if (n <= 0) {
