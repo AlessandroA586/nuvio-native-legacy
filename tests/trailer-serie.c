@@ -15,6 +15,7 @@ int extras_teste_hero_serie(const char *corpo, const char *idioma, char *dst, un
 void extras_teste_url_hero(char *dst, unsigned cap, int serie, long id, const char *idioma);
 
 void extras_teste_trailer_audio(const char *cod);
+void extras_teste_audio_pref(const char *v);
 void extras_teste_idiomas_video(const char *idioma, const char *original, char *dst, unsigned cap);
 void extras_teste_publicar_hero(const char *id, const char *corpo, const char *idioma);
 const char *desc_tmdb_idioma(void) { return "en-US"; }
@@ -170,6 +171,21 @@ int main(void) {
     check("native (no YouTube): pending language never blocks", d == TRF_ABRE && q == TRF_APPLE);
     extras_teste_trailer_audio("");
     free(corpo);
+  }
+
+  // Test: automatic trailer audio follows playback audio preference, not UI language
+  {
+    char idiomas[64];
+    extras_teste_trailer_audio("");       // Automatic mode
+    extras_teste_audio_pref("pt");        // Playback audio preference is Portuguese
+    extras_teste_idiomas_video("en-US", "", idiomas, sizeof idiomas);
+    check("automatic: playback preference (pt) over UI (en-US)",
+          strstr(idiomas, "pt,en,null") != NULL);
+    
+    extras_teste_audio_pref("");          // Clear playback preference
+    extras_teste_idiomas_video("en-US", "", idiomas, sizeof idiomas);
+    check("automatic: fallback to UI language when no playback preference",
+          strstr(idiomas, "en,null") != NULL);
   }
   puts(falhas ? "trailer-serie: FALHOU" : "trailer-serie: tudo ok");
   return falhas ? 1 : 0;
