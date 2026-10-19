@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T02:47:51-03:00, HEAD `e5fc8f342`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T03:49:15-03:00, HEAD `8626c596c`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -476,6 +476,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Internal
 
+- **More useful webOS crash diagnostics**: Crash reports retain firmware modules loaded late and include bounded thread diagnostics, helping investigate playback failures; the reported C9 playback crash remains unproven. Platforms: webOS. Refs owner request, `315f4af48`, merge `8626c596c`, `agente/205-c9queda`.
+
 - **Avoid duplicate Samsung package builds**: Samsung package CI runs only for master pushes that change app code, avoiding duplicate integration builds and repeated cancellations. Platforms: Samsung .tpk. Refs `02989fd6c`, merge `4c8c80e9c`.
 
 - **Live TV filter and Stalker recovery hardening**: filtered-empty Live TV sources recover with automatic retries, the admitted channel cache survives reloads, and guide filters stay consistent across categories. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `d497c3673`, `46732dde2`.
@@ -560,7 +562,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-Tracking snapshot: 18 unmerged branches without running jobs; 12 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-livefiltro`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
+- **Sharper rendering at reduced UI resolution**: Upscaling experiments aim to improve text and artwork clarity while retaining reduced-resolution rendering savings; device performance and visual validation remain pending. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-ui720` (running; not integrated).
+- **Separate rendering resolution from effect quality**: Independent GPU settings aim to preserve readable UI while reducing effect cost; the latest fix follows a blocking review and needs another review. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-gpu1080`, `j-rev0337-gpu1080.log`, `j-fix0347-gpu1080.log` (running; not integrated).
+
+Tracking snapshot: 18 unmerged branches without running jobs; 12 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-gpu1080`, `agente/205-livefiltro`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
