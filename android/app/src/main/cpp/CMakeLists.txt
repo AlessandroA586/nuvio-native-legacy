@@ -36,6 +36,10 @@ add_subdirectory("${SDL_DIR}" "${CMAKE_BINARY_DIR}/sdl2" EXCLUDE_FROM_ALL)
 # Patch a private build copy, never the shared SDL source cache.
 file(READ "${SDL_DIR}/src/video/SDL_egl.c" NV_EGL_SOURCE)
 file(READ "${CMAKE_CURRENT_LIST_DIR}/hdr_surface.inc" NV_HDR_SURFACE)
+string(REPLACE "#include <android/native_window.h>"
+  "#include <android/native_window.h>\n#include <android/api-level.h>\n#include <android/data_space.h>\n#include <dlfcn.h>" NV_EGL_SOURCE "${NV_EGL_SOURCE}")
+string(REPLACE "    if (SDL_EGL_ChooseConfig(_this) != 0) {"
+  "    if (SDL_EGL_ChooseConfig(_this) != 0) {\n        SDL_Log(\"[egl] config failed: %s\", SDL_GetError());" NV_EGL_SOURCE "${NV_EGL_SOURCE}")
 string(REPLACE "EGLint attribs[5];" "EGLint attribs[9];" NV_EGL_SOURCE "${NV_EGL_SOURCE}")
 string(REPLACE "    surface = _this->egl_data->eglCreateWindowSurface("
   "${NV_HDR_SURFACE}\n    surface = _this->egl_data->eglCreateWindowSurface(" NV_EGL_SOURCE "${NV_EGL_SOURCE}")

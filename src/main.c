@@ -1376,15 +1376,15 @@ int main(int argc, char **argv) {
   if (!ctx) {
     // A janela ja existe com a config escolhida; recriar janela e contexto
     // numa config mais simples (o contexto ES2 e o mesmo pedido em todas).
-    printf("[android] sem contexto GL: %s; tentando RGB565 sem profundidade\n", SDL_GetError());
+    printf("[android] sem contexto GL: %s; tentando RGBA8888 sem profundidade\n", SDL_GetError());
     fflush(stdout);
     SDL_DestroyWindow(win);
     SDL_SetHint("NUVIO_HDR_UI", "0");
     if (hdrColor) android_hdr_interface(0);
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 6);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 0);
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
     win = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -1400,7 +1400,7 @@ int main(int argc, char **argv) {
     SDL_GL_GetAttribute(SDL_GL_BLUE_SIZE, &b); SDL_GL_GetAttribute(SDL_GL_ALPHA_SIZE, &a);
     int ten = r == 10 && g == 10 && b == 10 && a == 2;
     if (hdrColor && SDL_GetHintBoolean("NUVIO_HDR_UI", SDL_FALSE) && ten && space)
-      gfx_hdr_output = !strcmp(space, "pq") ? 1 : !strcmp(space, "scrgb") ? 2 : 0;
+      gfx_hdr_output = (!strcmp(space, "pq") || !strcmp(space, "dataspace")) ? 1 : 0;
     if (hdrPedido) {
       if (!gfx_hdr_output) android_hdr_interface(0);
       printf("[hdr-ui] pedido=on colormode=%s egl=%s config=%s resultado=%s\n",
