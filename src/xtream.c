@@ -448,10 +448,18 @@ int xtream_canais_cb_sessao(void (*cat)(const char *nome, int ordem, int n, void
           snprintf(c.id, sizeof c.id, "xtream:%s", sid);
           c.logo[0] = c.epgId[0] = 0;
           js_texto(p, fim, "stream_icon", c.logo, sizeof c.logo);
+          // Trim panel whitespace; invalid URLs must allow guide fallbacks.
+          { char *s = c.logo, *e;
+            while (*s && (unsigned char)*s <= ' ') s++;
+            e = s + strlen(s);
+            while (e > s && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\r' || e[-1] == '\n')) *--e = 0;
+            if (strncmp(s, "http://", 7) && strncmp(s, "https://", 8)) *s = 0;
+            memmove(c.logo, s, strlen(s) + 1); }
           js_texto(p, fim, "epg_channel_id", c.epgId, sizeof c.epgId);
           it.id = c.id; it.nome = c.nome; it.logo = c.logo; it.epgId = c.epgId;
           it.categoria = ci >= 0 ? cats[ci].nome : "Outros";
           it.catOrdem = ci >= 0 ? ci : nCat;
+          it.semCategoria = ci < 0;
           it.num = campoTextoOuNumero(p, fim, "num", num, sizeof num) ? atoi(num) : 0;
           it.arquivo = campoTextoOuNumero(p, fim, "tv_archive", arq, sizeof arq) && atoi(arq) > 0;
           it.arquivoDias = campoTextoOuNumero(p, fim, "tv_archive_duration", arq, sizeof arq) ? atoi(arq) : 0;

@@ -446,9 +446,9 @@ int android_abrir_loja(const char *pacote, const char *nome) {
 }
 
 // Ver android.h. A resposta vem como byte[]: 4 bytes de status (big-endian) e
-// o corpo; status 0 = falha de transporte, e o corpo e o motivo.
+// 4 bytes de Retry-After em segundos e o corpo; status 0 = falha de transporte.
 char *android_http(const char *verbo, const char *url, const char *cabs,
-                   const char *corpo, int prazoMs, int *status, long *n,
+                   const char *corpo, int prazoMs, int *status, int *retryAfter, long *n,
                    char *erro, size_t nErro) {
   JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
   jobject act = env ? (jobject)SDL_AndroidGetActivity() : NULL;
@@ -459,6 +459,7 @@ char *android_http(const char *verbo, const char *url, const char *cabs,
   char *r = NULL;
   if (status) *status = 0;
   if (n) *n = 0;
+  if (retryAfter) *retryAfter = 0;
   if (erro && nErro) snprintf(erro, nErro, "jni indisponivel");
   if (!env || !act) return NULL;
   m = metodo(env, act, &cls, "httpPedir", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[BI)[B");
@@ -477,21 +478,22 @@ char *android_http(const char *verbo, const char *url, const char *cabs,
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); jr = NULL; }
   if (jr) {
     jsize k = (*env)->GetArrayLength(env, jr);
-    if (k >= 4) {
-      unsigned char s4[4];
+    if (k >= 8) {
+      unsigned char s4[8];
       int st;
-      (*env)->GetByteArrayRegion(env, jr, 0, 4, (jbyte *)s4);
+      (*env)->GetByteArrayRegion(env, jr, 0, 8, (jbyte *)s4);
       st = (s4[0] << 24) | (s4[1] << 16) | (s4[2] << 8) | s4[3];
-      r = (char *)malloc((size_t)(k - 4) + 1);
+      r = (char *)malloc((size_t)(k - 8) + 1);
       if (r) {
-        (*env)->GetByteArrayRegion(env, jr, 4, k - 4, (jbyte *)r);
-        r[k - 4] = 0;
+        (*env)->GetByteArrayRegion(env, jr, 8, k - 8, (jbyte *)r);
+        r[k - 8] = 0;
         if (st <= 0) {   // falha: o corpo e o motivo
           if (erro && nErro) snprintf(erro, nErro, "%s", r);
           free(r); r = NULL;
         } else {
           if (status) *status = st;
-          if (n) *n = (long)(k - 4);
+          if (retryAfter) *retryAfter = (s4[4] << 24) | (s4[5] << 16) | (s4[6] << 8) | s4[7];
+          if (n) *n = (long)(k - 8);
         }
       }
     }

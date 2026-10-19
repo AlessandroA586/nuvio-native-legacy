@@ -97,7 +97,7 @@ typedef struct {
 } NovConteudo;
 
 #define NOV_ARTES_MAX 6
-#define NOV_ITENS_MAX 32
+#define NOV_ITENS_MAX 35
 #define NOV_CENAS_MAX 6
 #define NOV_PAGINAS_MAX 24
 

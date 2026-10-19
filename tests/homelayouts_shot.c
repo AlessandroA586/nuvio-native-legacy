@@ -45,6 +45,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef NV_DINPALCO_AUDIT
+#include "../src/home.c"
+#endif
 
 #define NA 40
 static const char *NOMES[] = {
@@ -430,6 +433,50 @@ int main(int argc, char **argv) {
       printf("[shot] tipo %s=%s ok=%d\n", p, ig + 1, fil_definir_tipo(p, atoi(ig + 1)));
     }
     quadros(60, NULL);
+  }
+
+  // Focused Stage/Split comparison, using the production renderer and local art.
+  if (getenv("NV_DINPALCO")) {
+    const char *l;
+    for (l = camadas; *l; l++) {
+      ajusta(*l - '0', getenv("NV_DINPALCO_GLASS") ? atoi(getenv("NV_DINPALCO_GLASS")) : 0);
+      for (int r = 0; r < 14; r++) tecla(SDLK_UP);
+      quadros(90, NULL);
+      for (int r = 1; r <= 4; r++) {
+        tecla(SDLK_DOWN); quadros(110, NULL);
+        if (r != 3 && r != 4) continue;
+        for (int c = 0; c < 24; c++) tecla(SDLK_LEFT);
+        quadros(110, NULL);
+        snprintf(bmp, sizeof bmp, "%s-L%c-%s.bmp", saida, *l, r == 3 ? "stage" : "split");
+        quadros(1, bmp);
+        printf("[dinpalco] %s %s\n", bmp, home_rastro_foco());
+#ifdef NV_DINPALCO_AUDIT
+        assert(!focoHero && fileiras[foco.fileira].tipo ==
+               (r == 3 ? FILEIRA_PALCO : FILEIRA_HEROI_DIVIDIDO));
+        assert(layoutHome() == HOME_LAYOUT_MODERNA);
+        TXT_INI();
+        float rowY = topoFileiras() - scrollY;
+        for (int q = 0; q < foco.fileira; q++)
+          rowY += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(q) + fileiraGap();
+        assert(fabsf(rowY - ANC(NV_SHELF_TOP)) < 0.1f);
+        TXT_FIM();
+        if (*l == '2') {
+          int expected = r == 3 ? ajustes_palco_fundo() : 2;
+          assert(palcoFundoModo == expected);
+          assert(expected == 0 ? palcoFundoAlpha == 0 : palcoFundoAlpha > .99f);
+          const CatItem *focused = cat_item_exato(fileiraItemIndice(&fileiras[foco.fileira], foco.coluna));
+          assert(focused && palcoArte(focused));
+          if (expected == 2) assert(tex_obter_hero(palcoArte(focused)));
+          assert(ajustes_fundo_din() == (getenv("NV_DINPALCO_BACKGROUND") ?
+                 atoi(getenv("NV_DINPALCO_BACKGROUND")) : 0));
+          assert(!home_topo_fracao());
+        }
+#endif
+      }
+    }
+    tex_encerrar(); txt_encerrar();
+    SDL_GL_DeleteContext(gl); SDL_DestroyWindow(janela); SDL_Quit();
+    return 0;
   }
 
   // NV_PALCO=N (com NV_TIPOS="pop_movie=13"): desce N fileiras ate a Palco e

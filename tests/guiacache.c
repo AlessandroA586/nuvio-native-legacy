@@ -45,6 +45,7 @@ int addons_consultar_sessao(const char *id, const char *tipo, const char *base, 
 }
 const char *ajustes_epg_pais(void) { return ""; }
 int ajustes_idioma(void) { return 0; }
+int ajustes_livetv_sugerir(void) { return 0; }
 const char *ajustes_tmdb_idioma(void) { return "pt-BR"; }
 int xtream_e_id(const char *id) {
 #ifdef GUIAFILTRO_LOADER

@@ -414,9 +414,9 @@ static void replacementCategoryCapRegression(void) {
   }
   channel(fl, "UHD", "xtream:999", "X 4K");
   assert(!strcmp(sCanais[0].id, "xtream:999"));
-  assert(sNCats == GUIACORTE_MAX_CAT);
   assert(sNCanais == GUIACORTE_MAX_CAT + 1 && sRetidos == sNCanais);
-  assert(sCanais[0].cat == sCanais[1].cat);
+  assert(!strcmp(sCats[sCanais[0].cat].nome, "UHD"));
+  assert(sCanais[0].cat != sCanais[1].cat);
   assert(!strcmp(sCats[sCanais[1].cat].nome, "Sports"));
   // A later lower-quality version must remain a fallback, never replace 4K.
   channel(fl, "UHD", "xtream:1000", "X HD");
@@ -427,6 +427,31 @@ static void replacementCategoryCapRegression(void) {
   assert(!strcmp(v[0].nome, "X 4K"));
   assert(!strcmp(v[1].nome, "X FHD"));
   assert(!strcmp(v[2].nome, "X HD"));
+}
+static void collapsedCategoryCapRegression(void) {
+  for (int mode = GF_SO_4K; mode <= GF_PREFERIR_4K; mode++) {
+    int fl = begin(mode, GUIACORTE_MAX_CANAL);
+    channel(fl, "UHD", "xtream:anchor", "Anchor 4K");
+    for (int i = 1; i < GUIACORTE_MAX_CAT; i++) {
+      char cat[32], id[32], name[40];
+      snprintf(cat, sizeof cat, "Category %d", i);
+      snprintf(id, sizeof id, "xtream:low%d", i);
+      snprintf(name, sizeof name, "Station %d FHD", i);
+      channel(fl, cat, id, name);
+    }
+    for (int i = 1; i < GUIACORTE_MAX_CAT; i++) {
+      char id[32], name[40];
+      snprintf(id, sizeof id, "xtream:high%d", i);
+      snprintf(name, sizeof name, "Station %d 4K", i);
+      channel(fl, "UHD", id, name);
+    }
+    // Every surviving station is now in an existing UHD row.
+    channel(fl, "News", "xtream:news", "News 4K");
+    assert(sCanalPorId(fl, "xtream:news") >= 0);
+    adotarStaging();
+    assert(nCanais == GUIACORTE_MAX_CAT + 1 && nCats == 2);
+    assert(!strcmp(cats[canalPorId("xtream:news")->cat].nome, "News"));
+  }
 }
 static void rawBudgetRegression(void) {
 #ifdef GUIAFILTRO_RAW_TEST
@@ -514,6 +539,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(regression, "late-inventory")) lateInventoryRegression();
     else if (!strcmp(regression, "replacement-metadata")) replacementMetadataRegression();
     else if (!strcmp(regression, "replacement-category-cap")) replacementCategoryCapRegression();
+    else if (!strcmp(regression, "collapsed-category-cap")) collapsedCategoryCapRegression();
     else if (!strcmp(regression, "raw-budget")) rawBudgetRegression();
     else if (!strcmp(regression, "raw-offline")) rawOfflineRegression();
     else if (!strcmp(regression, "session-inventory")) sessionInventoryRegression();
@@ -595,7 +621,8 @@ int main(int argc, char **argv) {
   for (int i = 0; i < GUIACORTE_MAX_CAT + 5; i++) {
     char cat[32]; snprintf(cat, sizeof cat, "Category %d", i); channel(fl, cat, "1", "X");
   }
-  assert(sNCats == GUIACORTE_MAX_CAT && sNCanais == GUIACORTE_MAX_CAT);
+  adotarStaging();
+  assert(nCats == GUIACORTE_MAX_CAT && nCanais == GUIACORTE_MAX_CAT);
   puts("PASS: real Live TV loader, source callbacks, empty results and caps");
   return 0;
 }

@@ -7,10 +7,36 @@ trap 'rm -rf "$work"' EXIT
 flags=(-ffunction-sections -fdata-sections)
 if [ "$(uname -s)" = Darwin ]; then flags+=(-Wl,-dead_strip); else flags+=(-Wl,--gc-sections); fi
 sources=(tests/guiafiltro_loader.c src/ltv.c src/js.c src/idcanal.c src/dados.c src/marco.c
-  src/guiaaddons.c src/guiafiltro.c src/epg.c src/xtepg.c src/lembrete.c src/guialembrete.c
+  src/guiaaddons.c src/guiafiltro.c src/livecat.c src/epg.c src/xtepg.c src/lembrete.c src/guialembrete.c
   src/fontecache.c src/cachearte.c src/cachedisco.c src/xmltv.c)
 common=(-Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -O1 -g -Wno-macro-redefined -lz)
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST -DGUIAFILTRO_RESET_TEST -o "$work/loader"
+git show 61647910d:src/guia.c > "$work/collapsed-review.c"
+for platform in tv android; do
+  platform_flags=()
+  if [ "$platform" = android ]; then platform_flags+=(-DNV_ANDROID); fi
+  for version in collapsed-review current; do
+    source_file="$PWD/src/guia.c"
+    if [ "$version" = collapsed-review ]; then source_file="$work/collapsed-review.c"; fi
+    cc "${flags[@]}" "${sources[@]}" "${common[@]}" "${platform_flags[@]}" \
+      "-DGUIACACHE_SOURCE=\"$source_file\"" -o "$work/collapsed-$platform-$version"
+    rc=0
+    GUIAFILTRO_CASE=collapsed-category-cap NUVIO_DADOS="$work/collapsed-$platform-$version-data" \
+      "$work/collapsed-$platform-$version" "$work/collapsed-$platform-$version-data" \
+      > "$work/collapsed-$platform-$version.log" 2>&1 || rc=$?
+    if [ "$version" = collapsed-review ] && [ "$rc" = 134 ] && \
+      rg -q -F 'Assertion failed: (sCanalPorId(fl, "xtream:news") >= 0)' "$work/collapsed-$platform-$version.log"; then
+      printf 'PASS: reviewed revision fails collapsed-category-cap %s (rc=134)\n' "$platform"
+    elif [ "$version" = current ] && [ "$rc" = 0 ]; then
+      printf 'PASS: collapsed-category-cap %s regression\n' "$platform"
+    else
+      printf 'FAIL: %s collapsed-category-cap %s (rc=%s)\n' "$version" "$platform" "$rc"
+      tail -n 3 "$work/collapsed-$platform-$version.log"
+      exit 1
+    fi
+  done
+done
+if [ "${1:-}" = collapsed-category-cap ]; then exit 0; fi
 git show d497c3673:src/guiafiltro.c > "$work/sibling-review.c"
 sibling_sources=("${sources[@]}")
 for i in "${!sibling_sources[@]}"; do

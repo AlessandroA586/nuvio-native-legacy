@@ -8,6 +8,8 @@
 #include "player.h"
 #include "legenda.h"
 #include "legenda2.h"
+#include "audsync.h"
+#include "legsync.h"
 #include "vertudo.h"
 #include "ajlog.h"
 #include "horafmt.h"
@@ -48,6 +50,7 @@
 #include "ltv.h"
 #include "guia.h"
 #include "traktauth.h"
+#include "trakt.h"
 #include "simklauth.h"
 #include "discord.h"
 #include "simkl.h"
@@ -668,6 +671,8 @@ typedef enum {
   // ltv-urls-p<N>.txt, nunca em ajustes.txt. No fim: valor[]/CHAVE[] posicionais.
   AJ_URL_LISTA, AJ_URL_M3U_ADD, AJ_URL_XMLTV_ADD, AJ_URL_REM,
   AJ_NT_EP,            // episode card rating: 0 Follow title line, 1 IMDb, 2 TMDB, 3 Both, 4 Off; local, append-only
+  AJ_LIVETV_SUGERIR,   // Live TV: Jev suggests sections for channels with none (livecat.h); default on; local, append-only
+  AJ_AUDIO_OFFSET,     // #578: device-local converted audio offset, append-only
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -1732,6 +1737,8 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Adicionar guia XMLTV"),
   ACAO("Remover a escolhida"),
   ESC("Nota nos episódios", V_NT_EP, 5),   // local: notaEpisodio
+  ESC("Sugerir categorias dos canais", V_LIGA, 2),   // local: liveTvSugerirLocal
+  NUM("Ajuste do áudio (ms)", -AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_STEP_MS, " ms"),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -2037,6 +2044,8 @@ static const char *CHAVE[] = {
   "palcoFundoLocal",
   "-urlLista", "-urlM3uAdd", "-urlXmltvAdd", "-urlRem",
   "notaEpisodio",
+  "liveTvSugerirLocal",
+  "audioOffsetMsLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2799,6 +2808,7 @@ static int ajOpcaoDisponivel(int op) {
 }
 int ajustes_layout_lista(void) { return !ajLayoutSelecionavel() || valor[AJ_LAYOUT_AJUSTES] == 1; }
 int ajustes_esconder_logo_trailer(void) { return lig(AJ_LOGO_TRAILER); }
+int ajustes_audio_offset_ms(void) { return audsync_offset_ms(valor[AJ_AUDIO_OFFSET]); }
 int ajustes_legenda_sync_auto(void) { return lig(AJ_LEG_SYNC_AUTO); }
 int ajustes_teclado_android(void) { int v = valor[AJ_TECLADO_ANDROID]; return v < 0 || v > 2 ? 0 : v; }   // 0 auto, 1 do app, 2 do Android
 int ajustes_mic_busca(void) { return valor[AJ_MIC_BUSCA]; }   // 0 auto, 1 ligado, 2 desligado
@@ -3300,6 +3310,7 @@ int   ajustes_livetv_resolucao(void)  { return valor[AJ_LIVETV_RES]; }
 int   ajustes_livetv_formato(void)    { return valor[AJ_LIVETV_FORMATO]; }
 int   ajustes_livetv_modo(void)       { return valor[AJ_LIVETV_MODO]; }
 int   ajustes_livetv_proxy(void)      { return lig(AJ_LIVETV_PROXY); }
+int   ajustes_livetv_sugerir(void)    { return lig(AJ_LIVETV_SUGERIR); }
 void  ajustes_livetv_aplicar_proxy(int l) { valor[AJ_LIVETV_PROXY] = l ? 0 : 1; AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar()); }
 void  ajustes_livetv_aplicar_modo(int m) { if (m >= 0 && m < 3) { valor[AJ_LIVETV_MODO] = m; AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar()); } }
 unsigned ajustes_livetv_espera_ms(void) {
@@ -5564,6 +5575,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_URL_LISTA: case AJ_URL_M3U_ADD: case AJ_URL_XMLTV_ADD: case AJ_URL_REM: /* por perfil, em ltv-urls-p<N>.txt */
     case AJ_LIVETV_RES: case AJ_LIVETV_FORMATO: case AJ_LIVETV_ESPERA:
     case AJ_LIVETV_DIAG: case AJ_LIVETV_MODO: case AJ_LIVETV_PROXY: /* rede e provedor desta casa: o web nao tem */
+    case AJ_LIVETV_SUGERIR:
     case AJ_HOME_LAYOUT:    /* a Dinamica nao tem par na conta (selected_layout) */
     case AJ_PERFIL_PESQ:    /* estado em recomenda.c, por conta: nunca no blob */
     case AJ_PERFIL_EDITAR:
@@ -5589,6 +5601,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_PLR_CLASSIF:    /* o web nao tem esta escolha */
     case AJ_CW_RETIDO_TAMBEM: /* o web nao tem a ilha */
     case AJ_PS_CONTINUAR:   /* o web nao tem este cartao; escolha desta TV */
+    case AJ_AUDIO_OFFSET:   /* audio presentation calibration belongs to this TV */
     case AJ_DTS_AC3:        /* o conversor de DTS e desta TV */
     case AJ_DV_MKV:         /* o demux e o decoder sao desta TV */
     case AJ_HIST_CONTA: case AJ_SOCIAL: /* por perfil desta TV (perfilLocal); o web nao tem */
@@ -6028,7 +6041,7 @@ static int foraDestaPlataforma(int op) {
   if (op == AJ_TRAILER_AUDIO) return 1;
 #endif
 #ifndef NV_TPK
-  if (op == AJ_TRAILER_ZOOM_TPK) return 1;
+  if (op == AJ_TRAILER_ZOOM_TPK || op == AJ_AUDIO_OFFSET) return 1;
 #endif
   // Botao de microfone das buscas: so onde ha o teclado da Samsung por tras
   // (.tpk de release e .wgt; o NuvioTpk40 do Tizen 4/5 nao tem o host dele).
@@ -6566,8 +6579,9 @@ static const char *textoLeitura(int op) {
     }
   }
   if (op == AJ_TRAKT) {
+    if (traktauth_estado() == TRA_PARADO && trakt_ativo()) return i18n("conectado — OK desconecta");
     switch (traktauth_estado()) {
-      case TRA_LIGADO:     return i18n("conectado");
+      case TRA_LIGADO:     return i18n("conectado — OK desconecta");
       case TRA_PEDINDO:    return i18n("preparando…");
       case TRA_AGUARDANDO: return i18n("aguardando");
       case TRA_ERRO:       return i18n("falhou");
@@ -6588,7 +6602,7 @@ static const char *textoLeitura(int op) {
   }
   if (op == AJ_SIMKL) {
     switch (simklauth_estado()) {
-      case SMK_LIGADO:     return i18n("conectado");
+      case SMK_LIGADO:     return i18n("conectado — OK desconecta");
       case SMK_PEDINDO:    return i18n("preparando…");
       case SMK_AGUARDANDO: return i18n("aguardando");
       case SMK_ERRO:       return i18n("falhou");
@@ -7034,6 +7048,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_LIVETV_FORMATO: return "Automático usa o formato que a conta Xtream declara e lembra o que tocou. HLS ou TS pede esse formato primeiro, mesmo quando a conta só declara o outro.";
     case AJ_LIVETV_ESPERA: return "Quanto tempo o canal tem para mostrar a imagem antes de o app passar para a próxima fonte ou mostrar o erro. Automática espera 15 s no Xtream e 25 s nos addons.";
     case AJ_LIVETV_PROXY: return "Nos canais Xtream que chegam como HLS, o app junta os segmentos num fluxo TS contínuo e entrega à TV, que toca TS contínuo e não toca o HLS desses canais. Canal que já é TS contínuo vai direto. Desligado, a TV recebe o HLS do provedor.";
+    case AJ_LIVETV_SUGERIR: return "Os canais que a lista não separa em categorias são agrupados por sugestão do Jev, que recebe só o nome do canal. As categorias que a lista já traz não mudam.";
     case AJ_LIVETV_MODO: return "Teste para TVs em que o canal chega mas não aparece. A é o modo de sempre; B não escolhe a faixa de vídeo antes de o canal abrir; C também manda o pedido no formato de transmissão ao vivo. O diagnóstico da Live TV testa os três.";
     case AJ_LIVETV_DIAG: return "Mede a rede até o provedor, lê a conta Xtream e testa vários canais: se tocam, em que formato, com que resolução e em quanto tempo. No fim sugere ajustes da Live TV e pode aplicá-los.";
     case AJ_SELOS_CORES: return "Na lista de fontes, cada selo (4K, HDR, Dolby, codec, serviço) ganha a cor do seu tipo, como no pacote de selos do Nuvio. Desligado, os selos ficam brancos.";
@@ -7252,6 +7267,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_FONTE_REGEX_MODELO: return "Padrões prontos: idiomas como os add-ons escrevem, áudio MULTI ou DUAL, 4K e Remux. Escolher um troca o padrão da regex.";
     case AJ_ESPACO_FILEIRAS: return "O espaço vertical entre uma fileira da Home e a seguinte. Com menos cabem mais fileiras na tela, com mais a Home fica mais arejada.";
     case AJ_ESPACO_TITULOS: return "O espaço horizontal entre os cartazes de uma fileira da Home.";
+    case AJ_AUDIO_OFFSET: return "Positivo atrasa; negativo adianta. Só áudio convertido, a partir do próximo vídeo.";
     case AJ_TAM_MIN: return "Na escolha automática, fontes menores que este tamanho ficam para o fim da fila. Se for maior que o tamanho máximo, o mínimo é ignorado. Só vale para arquivos com tamanho conhecido; se só houver fontes fora da faixa, a melhor delas ainda toca.";
 #ifdef NV_TPK
     case AJ_DTS_AC3: return "Esta TV não toca DTS nem TrueHD: o app converte o som na hora. 5.1 (Dolby Digital) mantém o surround para barra de som e receiver; 7.1, Atmos e DTS:X viram 5.1, sem os objetos. Estéreo (AAC) serve qualquer TV. Desligado: esses vídeos tocam sem som, como antes. Vale a partir do próximo vídeo.";
@@ -7268,7 +7284,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_TELA_ABERTURA: return "Cinema (padrão): a arte e o logo do título ficam na tela até o vídeo entrar. Detalhada: a fonte, o add-on e cada passo da abertura. Na Cinema, Para cima ou Para baixo mostra os detalhes. Vale só nesta TV.";
     case AJ_TITULO_FIL: return "Como o título de cada fileira da Home aparece. Clássico (padrão): só o texto. Ilha: numa pílula de vidro. Editorial: com uma linha de categoria acima. Acento: com um ponto de destaque. Vale só nesta TV.";
     case AJ_FUNDO_DIN: return "O fundo do layout Dinâmica. Cinza (padrão): o cinza escuro da Apple TV, sempre o mesmo. Cor: uma cor sua, fixa. Imersivo: acompanha a arte do título, em tons suaves e com troca lenta. Vale só nesta TV.";
-    case AJ_PALCO_FUNDO: return "Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.";
+    case AJ_PALCO_FUNDO: return "Palco na Moderna e na Dinâmica (Apple TV): Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.";
     case AJ_FUNDO_DIN_COR: return "A cor do fundo da Dinâmica, escurecida para o texto continuar legível. Vale só nesta TV.";
     case AJ_ABERTURA_ESTILO: return "Como a tela de abertura se organiza. Centro (padrão): o logo no meio e o anel de progresso embaixo dele. Canto: o logo no canto inferior esquerdo, com o anel pequeno embaixo dele. Vale só nesta TV.";
     case AJ_MENU_CARTAZ: return "Ligado (padrão): o menu de contexto traz o cartaz ampliado com logo, notas e sinopse, e a Home continua atrás. Desligado: só a lista de ações ao lado do cartaz, sem ampliar. Vale só nesta TV.";
@@ -7442,7 +7458,7 @@ static const char *efeitoOpcao(int op) {
       return "A lista desta TV recebe o título em todos os casos. Isto decide se ele também vai para o Trakt ou para o Simkl.";
     case AJ_TRAKT: case AJ_SIMKL:
       return (op == AJ_TRAKT ? traktauth_estado() == TRA_LIGADO : simklauth_estado() == SMK_LIGADO)
-        ? "OK abre o vínculo de novo, com QR e código. As setas laterais não fazem nada nesta linha."
+        ? "conectado — OK desconecta"
         : "OK abre o vínculo, com QR e código. As setas laterais não fazem nada nesta linha.";
     case AJ_ADDONS: case AJ_DISCORD: case AJ_PLUGINS:
       return "OK abre. As setas laterais não fazem nada nesta linha.";
@@ -8753,6 +8769,7 @@ static int definirValorDireto(int op, int novo) {
   if (novo == 0) notaLigarPar(op);
   { int ok; ajOrigem = ajOrigemDireto; ok = gravar(); ajOrigem = 0;
     if (!ok) { valor[op] = antes; valor[AJ_LEG2_POSICAO] = posicaoAntes; memoriaEscolhida = memoriaAntes; return 0; } }
+  if (op == AJ_LIVETV_SUGERIR) guia_sugestoes_mudaram();
   if (op == AJ_FIL_LIMITE) {
     fil_ajustar_limite(novo);
     valor[op] = fil_limite_gravado();
@@ -9067,8 +9084,16 @@ static void eventoTela(const SDL_Event *e) {
       return;
     }
     if (debTesteServico(focoOp) >= 0) { adTesteIniciar(debTesteServico(focoOp)); return; }
-    if (focoOp == AJ_TRAKT) { traktauth_comecar(); return; }
-    if (focoOp == AJ_SIMKL) { simklauth_comecar(); return; }
+    if (focoOp == AJ_TRAKT) {
+      if (traktauth_estado() == TRA_LIGADO || (traktauth_estado() == TRA_PARADO && trakt_ativo())) { traktauth_desconectar(); desc_repetir(); }
+      else traktauth_comecar();
+      return;
+    }
+    if (focoOp == AJ_SIMKL) {
+      if (simklauth_token()[0]) { simklauth_desconectar(); simkl_esquecer(); desc_repetir(); }
+      else simklauth_comecar();
+      return;
+    }
     if (focoOp == AJ_DISCORD) {
       if (discord_estado() == DIS_LIGADO) discord_esquecer(); else discord_comecar();
       return;
@@ -9314,6 +9339,10 @@ static const char *textoValor(int op) {
     return buf;
   }
   if (op == AJ_FIL_LIMITE && fil_limite_ilimitado(valor[op])) return i18n("Ilimitado");
+  if (op == AJ_AUDIO_OFFSET) {
+    legsync_audio_offset_texto(ajustes_audio_offset_ms(), buf, sizeof buf);
+    return buf;
+  }
   if (o->tipo == OP_NUMERO) {
     snprintf(buf, sizeof buf, "%d%s", valor[op], o->sufixo ? o->sufixo : "");
     return buf;

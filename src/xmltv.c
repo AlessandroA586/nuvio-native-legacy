@@ -7,9 +7,10 @@
 int xmltv_iniciar(Xmltv *x) {
   void (*c)(const char *, const char *const *, int, void *) = x->canal;
   void (*p)(const char *, const char *, const char *, const char *, void *) = x->programa;
+  void (*ic)(const char *, const char *, void *) = x->icone;
   void *u = x->u;
   memset(x, 0, sizeof *x);
-  x->canal = c; x->programa = p; x->u = u;
+  x->canal = c; x->programa = p; x->icone = ic; x->u = u;
   x->inicio = 1;
   x->buf = malloc(XMLTV_ELEM + 1);
   return x->buf != NULL;
@@ -158,6 +159,11 @@ static void elemento(Xmltv *x) {
       if (nomes[k][0]) { ptr[k] = nomes[k]; k++; }
     }
     if (x->canal) x->canal(id, ptr, k, x->u);
+    if (x->icone) {
+      const char *ic = strstr(fimTag, "<icon"), *fi = ic ? strchr(ic, '>') : NULL;
+      char src[600];
+      if (fi && atr(ic, fi, "src", src, sizeof src) && src[0]) x->icone(id, src, x->u);
+    }
   } else {
     char canal[160], ini[40], fim[40], titulo[240];
     x->nProgramas++;
