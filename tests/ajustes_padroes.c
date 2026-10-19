@@ -201,7 +201,8 @@ int main(void) {
   AJ_AUDIO_OFFSET == AJ_LIVETV_SUGERIR + 1 &&
   AJ_XTREAM_CONEXOES == AJ_AUDIO_OFFSET + 1 &&
   AJ_AMPLIAR_UI == AJ_XTREAM_CONEXOES + 1 &&
-  AJ_N == AJ_AMPLIAR_UI + 1);
+  AJ_BIB_HOME == AJ_AMPLIAR_UI + 1 &&
+  AJ_N == AJ_BIB_HOME + 1);
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));

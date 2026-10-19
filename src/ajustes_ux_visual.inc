@@ -27,6 +27,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_SUFIXO_TIPO: return "aj_rows-3";
     case AJ_SELO_VISTO: return "aj_rows-3";
     case AJ_OCULTAR_FILMES_VISTOS: return "aj_rows-3";
+    case AJ_BIB_HOME: return "aj_rows-3";
     case AJ_CURADORIA_URL: return "aj_rows-3";
     case AJ_CW_LIGADO: return "aj_rotate-ccw-clock";
     case AJ_CW_OK: return "aj_rotate-ccw-clock";

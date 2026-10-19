@@ -311,6 +311,10 @@ int main(int argc, char **argv) {
       if (getenv("NV_BACKDROP_FIXO")) snprintf(c->backdrop, sizeof c->backdrop, "%s", getenv("NV_BACKDROP_FIXO"));
       snprintf(c->backdropCatalogo, sizeof c->backdropCatalogo, "%s", c->backdrop);
       snprintf(c->poster, sizeof c->poster, "deploy/app/art/poster/%02d.jpg", a);
+      // NV_BIB=1 (#507): every third catalog title saved, for the Library row.
+      if (getenv("NV_BIB") && FILS[k].catalogo && i % 3 == 1) {
+        c->naLista = 1; c->listaFontes = 1u << ajustes_fonte_biblioteca();
+      }
       // NV_SEM_LOGO=1: nenhum titulo com logo (o cabecalho em texto do menu).
       if (a < 10 && !getenv("NV_SEM_LOGO")) snprintf(c->logo, sizeof c->logo, "deploy/app/art/logo/%02d.png", a);
       // NV_ARTE_ADDON=1: todo item vem de um addon (origem; inclusive o da
