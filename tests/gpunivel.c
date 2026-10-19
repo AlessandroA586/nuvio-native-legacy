@@ -40,8 +40,9 @@ int dados_gravar(const char *nome, const char *c) {
 char *dados_ler(const char *nome) { (void)nome; return gravado[0] ? strdup(gravado) : NULL; }
 
 // Inicializacao real, sem contexto GL: GPU fraca reconhecida pelo perfiltv.
+static const char *testRenderer = "Mali-400";
 const GLubyte *glGetString(GLenum e) {
-  return (const GLubyte *)(e == GL_RENDERER ? "Mali-400" : "");
+  return (const GLubyte *)(e == GL_RENDERER ? testRenderer : "");
 }
 void glGetIntegerv(GLenum e, GLint *v) { (void)e; *v = 0; }
 
@@ -236,7 +237,21 @@ static void combinations(void) {
   }
   puts("ok  1080p/720p x Automatic/Full/Light/Minimal: independent target and effects");
 }
+static void maliLight(void) {
+  const char *gpus[] = {"Mali-400", "Mali-450", "Mali-470", "Mali-G52"};
+  for (int i = 0; i < 4; i++) {
+    testRenderer = gpus[i];
+    gravado[0] = 0;
+    gpun_iniciar(1920, 1080);
+    gpun_preferencia(2); // Saved Light preference at startup.
+    assert(gpun_nivel() == (i < 3 ? 2 : 1) && !gpun_efeitos_automaticos());
+    rodar(30, 100, 90, 4, 1, 1);
+    assert(gpun_nivel() == (i < 3 ? 2 : 1));
+  }
+  puts("ok  saved Light: Mali-400/450/470 level 2, Mali-G52 level 1");
+}
 int main(int argc, char **argv) {
+  if (argc == 2 && !strcmp(argv[1], "mali-light")) { maliLight(); return 0; }
   if (argc == 2 && !strcmp(argv[1], "gpu1080")) { gpu1080(); return 0; }
   if (argc == 2 && !strcmp(argv[1], "combinations")) { combinations(); return 0; }
   if (argc == 2 && !strcmp(argv[1], "inicio")) { inicioFraco(); return 0; }
@@ -369,7 +384,7 @@ int main(int argc, char **argv) {
   puts("ok  proven legacy stays; 720p preserves manual effects choice");
   legadoInterrompido();
   referenciaAlternada();
-  gpu1080(); combinations();
+  gpu1080(); combinations(); maliLight();
   puts("gpunivel: tudo ok");
   return 0;
 }

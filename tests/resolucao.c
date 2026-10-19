@@ -56,6 +56,16 @@ int main(void) {
     if (TELA[row].op == AJ_GPU_EFEITOS) effectsRow = row;
   }
   assert(resRow >= 0 && effectsRow == resRow + 1);
+  // Legacy 720p + Automatic migrates once and persists to disk.
+  assert(carregar(dir, "resolucaoUi 3\ngpuEfeitosLocal 0\n") == RES_720);
+  assert(ajustes_gpu_efeitos() == 3);
+  { char *m = dados_ler("efeitos720-205.txt"); assert(m); free(m); }
+  valor[AJ_GPU_EFEITOS] = 0; ajustes_dir(dir);
+  assert(ajustes_gpu_efeitos() == 3);
+  valor[AJ_GPU_EFEITOS] = 1; assert(gravar());
+  valor[AJ_GPU_EFEITOS] = 0; ajustes_dir(dir);
+  assert(ajustes_gpu_efeitos() == 1);
+  puts("ok  legacy 720p Automatic migrates once; later Full persists");
   for (int p = 0; p < 4; p++) {
     char saved[80]; snprintf(saved, sizeof saved, "resolucaoUi 3\ngpuEfeitosLocal %d\n", p);
     assert(carregar(dir, saved) == RES_720 && ajustes_gpu_efeitos() == p);
@@ -70,6 +80,24 @@ int main(void) {
   assert(carregar(dir, "resolucaoUi 0\nresolucao_ui 2\n") == RES_AUTO);
   assert(carregar(dir, "idioma 0\n") == RES_AUTO);
   puts("ok  ajustes.txt: resolucao_ui migra, resolucaoUi vence");
+  dados_apagar("efeitos720-205.txt");
+  assert(carregar(dir, "resolucao_ui 2\ngpuEfeitosLocal 0\n") == RES_720);
+  assert(ajustes_gpu_efeitos() == 3);
+  dados_apagar("efeitos720-205.txt");
+  assert(carregar(dir, "resolucaoUi 1\ngpuEfeitosLocal 0\n") == RES_1080);
+  assert(ajustes_gpu_efeitos() == 0);
+  dados_apagar("efeitos720-205.txt");
+  assert(carregar(dir, "resolucaoUi 3\ngpuEfeitosLocal 1\n") == RES_720);
+  assert(ajustes_gpu_efeitos() == 1);
+  dados_apagar("efeitos720-205.txt");
+  { char caminho[700];
+    snprintf(caminho, sizeof caminho, "%s/ajustes.txt", dir);
+    assert(!unlink(caminho));
+    ajustes_dir(dir); // New installs mark migration before any user choice.
+    assert(carregar(dir, "resolucaoUi 3\ngpuEfeitosLocal 0\n") == RES_720);
+    assert(ajustes_gpu_efeitos() == 0);
+  }
+  puts("ok  old resolution key migrates; 1080p, explicit Full and new choices stay");
 
   // 4. The 4K watch: 4 bad reports in a row (GPU clock) = fallback, once.
   memset(&v, 0, sizeof v);

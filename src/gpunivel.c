@@ -335,7 +335,8 @@ void gpun_preferencia(int p) {
   if (p == 1) { adaptativo = 0; aplicar(0, "ajuste: efeitos completos"); return; }
   if (p == 2) {
     adaptativo = 0;
-    aplicar(1, "ajuste: efeitos leves");
+    // Mali-4xx stalls at level 1; preserve its established Light safeguard.
+    aplicar(ptv_gpu_utgard(renderer) ? 2 : 1, "ajuste: efeitos leves");
     return;
   }
   reiniciarMedida();

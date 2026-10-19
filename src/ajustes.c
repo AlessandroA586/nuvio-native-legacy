@@ -4302,6 +4302,17 @@ static void memoriaMigrar(void) {
 }
 #endif
 
+// Preserve legacy 720p performance once; later effects choices stay independent.
+static void efeitos720Migrar(int legado) {
+  char *m = dados_ler("efeitos720-205.txt");
+  if (m) { free(m); return; }
+  if (legado && valor[AJ_RESOLUCAO] == RES_720 && valor[AJ_GPU_EFEITOS] == 0) {
+    valor[AJ_GPU_EFEITOS] = 3;
+    printf("[ajustes] efeitos em 720p -> Minimos (migracao unica da 2.0.5)\n");
+  }
+  if (!legado || gravar()) dados_gravar("efeitos720-205.txt", "1\n");
+}
+
 // --- LISTAS E GUIAS POR URL (M9) --------------------------------------------------
 // M3U e XMLTV deste perfil (ltv.h). A tela mostra "M3U · host", nunca a URL.
 // Cache local da lista (o desenho chama textoValor varias vezes por quadro) e a
@@ -4403,6 +4414,7 @@ void ajustes_dir(const char *dir) {
   valor[AJ_NT_ORDEM] = 0;
   f = fopen(caminho, "r");
   if (!f) {
+    efeitos720Migrar(0);
     // Nunca gravou nada: o idioma nasce automatico (o padrao de valor[]).
     valor[AJ_IDIOMA] = 0;
 #ifdef NV_TEX_MB_FIXO
@@ -4585,6 +4597,7 @@ void ajustes_dir(const char *dir) {
   }
   }
   fclose(f);
+  efeitos720Migrar(1);
   if (escalaVersao < 1) gravar();
   // "DINAMICA ESTILIZADA" SAIU (03/10/2026): a base tingida virou o Fundo
   // Frost, que vale para qualquer acento. Quem a tinha abre em Da arte + Frost
