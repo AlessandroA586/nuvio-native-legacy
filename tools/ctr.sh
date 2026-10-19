@@ -201,11 +201,11 @@ ctr_image_inspect() {
   if [ "$NUVIO_CTR" = "docker" ]; then
     docker image inspect --format "$format" "$image"
   else
-    # container image inspect returns JSON; extract Id if requested
+    # container image inspect returns JSON; extract id if requested
     if [ "$format" = "{{.Id}}" ]; then
-      container image inspect "$image" | grep -o '"id":"[^"]*' | cut -d'"' -f4
+      container image inspect "$image" 2>/dev/null | grep -o '"id"\s*:\s*"[^"]*' | head -1 | cut -d'"' -f4 || echo ""
     else
-      container image inspect "$image"
+      container image inspect "$image" 2>/dev/null
     fi
   fi
 }
