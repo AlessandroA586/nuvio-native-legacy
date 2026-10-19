@@ -68,9 +68,14 @@ static int janN, estavaNaHome, descartes, cenaAtual;
 // variar a carga o bastante para falsear esta comparacao.
 static double fpsNivel[3];
 static int anterior = -1, reavaliar, bloqueado;
+// Three 3-second reports to shed effects; ten near-vsync reports to restore.
+static int relatoAtivo, relatoCena, relatosLentos, relatosRapidos, relatosValidos;
+static int relatoPiso = 0, relatoTentativa = -1;
 
 static void reiniciarMedida(void) {
   decidido = bloqueado = reavaliar = 0; anterior = -1;
+  relatoAtivo = relatoCena = relatosLentos = relatosRapidos = relatosValidos = 0;
+  relatoPiso = 0; relatoTentativa = -1;
   memset(fpsNivel, 0, sizeof fpsNivel);
   aquece = GPUN_AQUECE_MS; janMs = janEsp = janCpu = totalMs = 0;
   janN = estavaNaHome = descartes = cenaAtual = 0;
@@ -189,6 +194,7 @@ static void ler(void) {
   }
   nivel = n > GPUN_NIVEL_AUTO_MAX ? GPUN_NIVEL_AUTO_MAX : n;
   origem = "salvo";
+  printf("[gpu-nivel] saved level %d: revalidate with live FPS reports\n", nivel);
   if (avaliado) {
     memcpy(fpsNivel, f, sizeof f);
     // A rejected trial belongs to its scene/effects, not the GPU forever.
@@ -560,9 +566,61 @@ static void decidir(const char *porque) {
   gravar();
 }
 
+void gpun_relatar(double fps, double pior, double periodo, int cena, int cheia) {
+  double alvo = periodo > 0 ? 1000.0 / periodo : 60.0;
+  if (!adaptativo || nivel > GPUN_NIVEL_AUTO_MAX) return;
+  if (alvo > 60.0) alvo = 60.0;
+  if (cena != relatoCena) {
+    relatoCena = cena;
+    relatosLentos = relatosRapidos = relatosValidos = relatoPiso = 0;
+    relatoTentativa = -1;
+  }
+  if (!cena || !cheia || !(fps > 0) || pior > 1000.0) {
+    relatosLentos = relatosRapidos = 0;
+    if (pior > 1000.0)
+      printf("[gpu-nivel] report ignored: fps=%.1f worst=%.1fms (stall)\n", fps, pior);
+    return;
+  }
+  if (!relatoAtivo) {
+    // The live reporter owns subsequent decisions; cancel any legacy trial.
+    if (anterior >= 0) aplicar(anterior, "live FPS baseline");
+    anterior = -1;
+    reavaliar = 0;
+    relatoAtivo = 1;
+  }
+  relatosValidos++;
+  // 55/58 FPS on 60 Hz; preserve healthy 50 Hz panels (45/48 FPS).
+  relatosLentos = fps < alvo - 5.0 ? relatosLentos + 1 : 0;
+  relatosRapidos = fps >= alvo - 2.0 ? relatosRapidos + 1 : 0;
+  int proximo = nivel;
+  if (relatosLentos >= 3 && nivel < GPUN_NIVEL_AUTO_MAX) {
+    proximo++;
+    if (relatoTentativa >= 0) {
+      // A failed restoration must not oscillate for the same workload.
+      relatoPiso = relatoTentativa;
+      relatoTentativa = -1;
+    }
+  } else if (relatosRapidos >= 10 && nivel > relatoPiso) {
+    relatoTentativa = nivel;
+    proximo--;
+  }
+  if (proximo != nivel) {
+    printf("[gpu-nivel] live decision: level %d -> %d fps=%.1f target=%.1f slow=%d fast=%d floor=%d\n",
+           nivel, proximo, fps, alvo, relatosLentos, relatosRapidos, relatoPiso);
+    aplicar(proximo, "sustained FPS reports");
+    relatosLentos = relatosRapidos = 0;
+    decidido = 1; bloqueado = 0;
+    fpsNivel[nivel] = fps;
+    gravar();
+  } else if (relatosValidos == 3) {
+    printf("[gpu-nivel] live validation: level=%d fps=%.1f target=%.1f reports=%d\n",
+           nivel, fps, alvo, relatosValidos);
+  }
+}
+
 void gpun_medir(double dtms, double espera, double cpu, int cena, int cheia) {
   double fps, e, c;
-  if (!adaptativo || nivel > GPUN_NIVEL_AUTO_MAX) return;
+  if (!adaptativo || nivel > GPUN_NIVEL_AUTO_MAX || relatoAtivo) return;
   // Scene and effect settings identify a comparable workload. A new workload
   // gets a fresh baseline, including after a good/CPU-bound/rejected window.
   if (cena != cenaAtual) {

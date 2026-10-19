@@ -49,6 +49,8 @@ void glGetIntegerv(GLenum e, GLint *v) { (void)e; *v = 0; }
 #undef glTexImage2D
 void glGenTextures(GLsizei n, GLuint *v) { while (n--) *v++ = 1; }
 void glGenFramebuffers(GLsizei n, GLuint *v) { while (n--) *v++ = 2; }
+void glDeleteTextures(GLsizei n, const GLuint *v) { (void)n; (void)v; }
+void glDeleteFramebuffers(GLsizei n, const GLuint *v) { (void)n; (void)v; }
 void glBindTexture(GLenum t, GLuint v) { (void)t; (void)v; }
 void glBindFramebuffer(GLenum t, GLuint v) { (void)t; (void)v; }
 void glTexImage2D(GLenum t, GLint l, GLint f, GLsizei w, GLsizei h, GLint b, GLenum fmt, GLenum ty, const GLvoid *p) {
