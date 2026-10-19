@@ -4756,7 +4756,7 @@ void gfx_icone(GfxRect r, const char *nome, float cr, float cg, float cb, float 
     snprintf(cam, sizeof cam, "%s/%s.png", dirIcones, nome);
     // Pede pela largura de desenho: um icone de 38px nao precisa dos 128 do
     // arquivo, e o teto por uso e o que mantem o cache fora do vermelho.
-    t = tex_obter_larg(cam, r.w * escAtiva);
+    t = tex_obter_larg(cam, r.w);
   }
   if (!t) return;
   gfx_tex_aspect_atual = 0.0f;   // o arquivo ja e quadrado

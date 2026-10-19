@@ -1732,7 +1732,7 @@ static void desenhaLista(float a) {
   TxtLinha n, m, q;
   float x, y, alt, hx, hy, hw, cy;
   int i, temQuem, carregando = lst_itens_carregando() > 0;
-  const float pad = CTX_ILHA_PAD, esc = gfx_escala_ui();
+  const float pad = CTX_ILHA_PAD;
   const float capaW = (CTXL_W - 2.0f * (pad + 20.0f) - (CTXL_CAPAS - 1) * CTXL_CAPA_GAP) / CTXL_CAPAS;
   const float capaH = capaW * 1.5f;
 
@@ -1777,7 +1777,7 @@ static void desenhaLista(float a) {
   cy = y + pad;
   if (arte) {
     GfxRect r = { x + pad, cy, CTXL_W - 2.0f * pad, CTXL_ARTE_H };
-    GLuint t = tex_obter_larg(arte, r.w * esc);
+    GLuint t = tex_obter_larg(arte, r.w);
     float raio = 22.0f / r.h;
     if (t) {
       gfx_tex_aspect_atual = tex_aspecto(arte);
@@ -1805,7 +1805,7 @@ static void desenhaLista(float a) {
     const char *u = NULL;
     GLuint t = 0;
     if (lst_item(i, &it)) u = it.poster[0] ? it.poster : it.backdrop[0] ? it.backdrop : NULL;
-    if (u) t = tex_obter_larg(u, capaW * esc);
+    if (u) t = tex_obter_larg(u, capaW);
     if (t) {
       gfx_tex_aspect_atual = tex_aspecto(u);
       gfx_rect(r, t, GFX_CARD, 0, 0, 0, raio, 0, 0, 0, a);
@@ -2125,7 +2125,7 @@ static void ctx_desenharCorpo_(Uint32 agora) {
     artA = grande ? 1.0f : 1.0f - anim_clamp((e - 0.15f) / 0.55f, 0.0f, 1.0f);
     ilhaCtx(r, raioPx, sa);
     if (artA > 0.01f && cartazArte[0]) {
-      GLuint t = tex_obter_larg(cartazArte, P.w * gfx_escala_ui());
+      GLuint t = tex_obter_larg(cartazArte, P.w);
       if (t) {
         gfx_tex_aspect_atual = tex_aspecto(cartazArte);
         gfx_card_forcar_cover_atual = 1.0f;
@@ -2149,7 +2149,7 @@ static void ctx_desenharCorpo_(Uint32 agora) {
     /* feito */
   } else
   if (temCartaz && !doPainel && cartazArte[0]) {
-    GLuint t = tex_obter_larg(cartazArte, cartazRect.w * gfx_escala_ui());
+    GLuint t = tex_obter_larg(cartazArte, cartazRect.w);
     if (t) {
       float raio = ajustes_raio_poster_px() / gfx_escala_ui() / cartazRect.h, teto = 0.5f * cartazRect.w / cartazRect.h;
       if (raio > teto) raio = teto;

@@ -36,6 +36,8 @@ void tex_encerrar(void);
 // Devolve a textura se ja estiver pronta; senao 0 e enfileira o decode.
 // Nunca bloqueia a thread de desenho.
 GLuint tex_obter(const char *caminho);
+// Width APIs take current layer coordinates; the cache applies gfx_escala()
+// and drawable scale before selecting the download variant and decode cap.
 // Mesma coisa, com teto de 1920: para a arte que ocupa a tela inteira (hero da
 // home, backdrop do detalhe, arte do player). Com o teto comum de 960 essas
 // tres eram decodificadas com metade da resolucao e ampliadas na tela.

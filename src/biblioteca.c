@@ -1784,7 +1784,7 @@ static void desenhaCartaz(const CatItem *ci, GfxRect base, float f, float a,
   if (arte && !arte[0]) arte = NULL;
   // O teto de decodificacao sai da largura pedida: a do cartaz EM FOCO (238),
   // para a arte nao amolecer quando ele sobe.
-  GLuint tex = arte ? tex_obter_larg(arte, BIB_CARD_W * gfx_escala_txt() * (1.0f + BIB_FOCO_ESCALA)) : 0;
+  GLuint tex = arte ? tex_obter_larg(arte, BIB_CARD_W * (1.0f + BIB_FOCO_ESCALA)) : 0;
   // Arte chegando esvanece sobre o esqueleto (revela.h), como na home.
   float aArte = rv ? revela_arte(rv, tex != 0, agora) : 1.0f;
   if (f > 0.01f)
