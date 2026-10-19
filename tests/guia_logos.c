@@ -70,15 +70,22 @@ int rede_baixar_fluxo(const char *u, int s, const char *const *c,
 static const char *failed, *failed2;
 static char requested[600];
 static GLuint texture;
+#ifdef GUIA_LOGOS_RETRY
+int guia_logos_retry_check(const char *name, const char *bad, const char *fallback,
+                           GLuint texture, const char *(*draw)(void *), void *channel);
+#else
 int tex_falhou(const char *s) {
   return s && ((failed && !strcmp(failed, s)) || (failed2 && !strcmp(failed2, s)));
 }
 GLuint tex_obter_larg(const char *s, float w) {
-  (void)w; snprintf(requested, sizeof requested, "%s", s ? s : ""); return texture;
+  (void)w;
+  if (tex_falhou(s)) return 0;
+  snprintf(requested, sizeof requested, "%s", s ? s : ""); return texture;
 }
 float tex_aspecto(const char *s) { (void)s; return 2.0f; }
 int tex_cor_fundo(const char *s, float *r, float *g, float *b) { (void)s; (void)r; (void)g; (void)b; return 0; }
 int tex_logo_tom_unico(const char *s) { (void)s; return 0; }
+#endif
 
 static GCanal *channel(const char *name) {
   int i;
@@ -91,6 +98,12 @@ static void row(GCanal *c, float y) {
   desenharLinhaLista(c, y, 0, 1, fixtureTime, fixtureTime - 600, fixtureTime, 0, G_L_FAIXA_X + 100, NULL);
   desenharLinhaLista(c, y, 0, 1, fixtureTime, fixtureTime - 600, fixtureTime, 1, G_L_FAIXA_X + 100, NULL);
 }
+#ifdef GUIA_LOGOS_RETRY
+static const char *retryRow(void *c) {
+  row(c, 80);
+  return logoDe(c);
+}
+#endif
 static int failures;
 static void check(const char *name, const char *want) {
   row(channel(name), 80);
@@ -146,6 +159,16 @@ int main(int argc, char **argv) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   SDL_FreeSurface(rgba); SDL_FreeSurface(image); gfx_tex_esquecer(0);
+#ifdef GUIA_LOGOS_RETRY
+  failures += guia_logos_retry_check("own logo", "http://logos.test/espn.png",
+      "http://logos.test/espn-hd.png", texture, retryRow, channel("ESPN FHD"));
+  failures += guia_logos_retry_check("variant donor", "http://logos.test/espn.png",
+      "http://logos.test/espn-hd.png", texture, retryRow, channel("ESPN SD"));
+  failures += guia_logos_retry_check("M3U donor", "http://m3u.test/canal.png",
+      "http://m3u.test/second.png", texture, retryRow, channel("By ID"));
+  failures += guia_logos_retry_check("XMLTV initials", "http://xmltv.test/globo.png?a=1&b=2",
+      "", texture, retryRow, channel("Globo RJ"));
+#else
   check("ESPN FHD", "http://logos.test/espn.png");
   check("ESPN SD", "http://logos.test/espn.png");
   check("Globo RJ", "http://xmltv.test/globo.png?a=1&b=2");
@@ -187,6 +210,7 @@ int main(int argc, char **argv) {
   check("Canal M3U HD", "http://m3u.test/second.png");
   channel("Canal M3U SD")->logo = ""; empacotar();
   check("Canal M3U HD", "http://xmltv.test/lower-priority.png");
+#endif
   glDeleteTextures(1, &texture); txt_encerrar(); gfx_encerrar();
   SDL_GL_DeleteContext(gl); SDL_DestroyWindow(win); SDL_Quit();
   return failures ? 1 : 0;

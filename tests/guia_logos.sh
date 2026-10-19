@@ -29,7 +29,7 @@ expect_failure() {
   if [ "$rc" != 1 ]; then echo "Expected $name assertion failure (rc=1), got $rc"; exit 1; fi
   local check
   for check in "$@"; do
-    grep -F "FAIL grid: $check (" "$work/$name.log" > /dev/null
+    grep -F "FAIL $check (" "$work/$name.log" > /dev/null
   done
 }
 # Original regression uses matching guide, Xtream, EPG, XMLTV and headers.
@@ -37,11 +37,18 @@ base=$(git merge-base integracao/2.0.5 HEAD)
 mkdir "$work/baseline"
 git archive "$base" src | tar -x -C "$work/baseline"
 compile "$work/baseline" "-DGUIA_LOGOS_SOURCE=\"$work/baseline/src/guia.c\""
-expect_failure before "ESPN SD" "Globo RJ" "Whitespace" "Invalid"
+expect_failure before "grid: ESPN SD" "grid: Globo RJ" "grid: Whitespace" "grid: Invalid"
 # Keep independent proof of the later donor-download failure regression.
 git show 65107e6fc2a492d32b058e72ed337c8204d1ae6f:src/guia.c > "$work/guia.c"
 compile . "-DGUIA_LOGOS_SOURCE=\"$work/guia.c\""
-expect_failure donor-before "ESPN SD" "Canal M3U HD" "By ID"
+expect_failure donor-before "grid: ESPN SD" "grid: Canal M3U HD" "grid: By ID"
+# Real loader regression: failed candidates must still reach retry scheduling.
+git show 1744000b3:src/guia.c > "$work/guia.c"
+retry_sources=(-DGUIA_LOGOS_RETRY tests/guia_logos_retry.c src/artetamanho.c src/perfiltv.c)
+compile . "${retry_sources[@]}" "-DGUIA_LOGOS_SOURCE=\"$work/guia.c\""
+expect_failure retry-before "retry: own logo" "retry: variant donor" "retry: M3U donor" "retry: XMLTV initials"
+compile . "${retry_sources[@]}"
+NUVIO_DADOS="$work/retry-after" "$work/test" "$work/retry-after" "$out/retry-after.png"
 compile .
 NUVIO_DADOS="$work/after" "$work/test" "$work/after" "$out/after.png"
-echo "PASS: integration baseline ($base) rc=1; donor baseline rc=1; fixed rc=0; guide grid PNGs: $out"
+echo "PASS: integration baseline ($base) rc=1; donor/retry baselines rc=1; fixed grid/retry rc=0; guide grid PNGs: $out"

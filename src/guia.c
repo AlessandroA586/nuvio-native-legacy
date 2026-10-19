@@ -1710,11 +1710,17 @@ static int cmpLogoK(const void *a, const void *b) {
   const GLogoK *x = a, *y = b;
   return x->h < y->h ? -1 : x->h > y->h ? 1 : x->i - y->i;
 }
+static int logoFalhou(const char *logo) {
+  if (!tex_falhou(logo)) return 0;
+  // Keep the loader's bounded retries alive while this draw uses a fallback.
+  (void)tex_obter_larg(logo, 92.0f);
+  return 1;
+}
 static int logoAchar(const GLogoK *v, int n, unsigned long long h, int excluir) {
   int lo = 0, hi = n;
   while (lo < hi) { int m = (lo + hi) / 2; if (v[m].h < h) lo = m + 1; else hi = m; }
   for (; lo < n && v[lo].h == h; lo++)
-    if (v[lo].i != excluir && !tex_falhou(canais[v[lo].i].logo)) return v[lo].i;
+    if (v[lo].i != excluir && !logoFalhou(canais[v[lo].i].logo)) return v[lo].i;
   return -1;
 }
 static void logosEmprestar(void) {
@@ -4137,14 +4143,14 @@ static const char *logoDe(const GCanal *c) {
   const char *s;
   int i, k;
   if (!c) return NULL;
-  if (c->logo && c->logo[0] && !tex_falhou(c->logo)) return c->logo;
+  if (c->logo && c->logo[0] && !logoFalhou(c->logo)) return c->logo;
   i = (int)(c - canais);
   k = c->logoId ? logoAchar(logoM3u, nLogoM3u, c->logoId, i) : -1;
   if (k < 0 && c->logoNome) k = logoAchar(logoM3u, nLogoM3u, c->logoNome, i);
   if (k >= 0) return canais[k].logo;
   s = c->epg >= 0 ? epg_canal_icone(c->epg) : "";
   if (!s[0]) s = epg_icone_id(chaveDo(c), c->epgId);
-  if (s[0] && !tex_falhou(s)) return s;
+  if (s[0] && !logoFalhou(s)) return s;
   k = c->logoNome ? logoAchar(logoVar, nLogoVar, c->logoNome, i) : -1;
   return k >= 0 ? canais[k].logo : NULL;
 }
