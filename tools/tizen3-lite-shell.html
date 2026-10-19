@@ -147,19 +147,20 @@
 
   function imeAberto() { return window.nvTexto && window.nvTexto.aberto; }
 
-  window.addEventListener("keydown", function (ev) {
-    if (imeAberto()) return;
-    if (ev.keyCode !== 10009) return;
-    ev.preventDefault();
-    ev.stopPropagation();
-    var alvo = document.getElementById("canvas") || window;
-    ["keydown", "keyup"].forEach(function (t) {
-      alvo.dispatchEvent(new KeyboardEvent(t, {
+  ["keydown", "keyup"].forEach(function (tipo) {
+    window.addEventListener(tipo, function (ev) {
+      if (imeAberto()) return;
+      if (ev.keyCode !== 10009) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      var alvo = document.getElementById("canvas") || window;
+      // Preserve the physical release and repeat marker for the Back guard.
+      alvo.dispatchEvent(new KeyboardEvent(tipo, {
         key: "Escape", code: "Escape", keyCode: 27, which: 27,
-        bubbles: true, cancelable: true
+        repeat: ev.repeat, bubbles: true, cancelable: true
       }));
-    });
-  }, true);
+    }, true);
+  });
 
   var MEDIA_TECLA = {
     10252: { key: "Pause", code: "Pause", keyCode: 19 },  // MediaPlayPause
