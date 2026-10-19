@@ -45,6 +45,16 @@ int main(void) {
   layoutTeste = HOME_LAYOUT_DINAMICA;
   escalaTeste = 1.0f;
 
+  // "Scroll down for streaming" ends the sidebar, right under Settings, only
+  // while Streaming is collapsed and there is something to open.
+  { float ys[NV_MENU_FOCOS_TV];
+    aberto = 1; linha = MENU_AJUSTES; tvLayout(ys, NULL);
+    assert(tvDicaY >= 0.0f && fabsf(tvDicaY - (ys[MENU_AJUSTES] + TV_LINHA_H)) < 0.01f);
+    linha = MENU_ST0; tvLayout(ys, NULL);
+    assert(tvDicaY < 0.0f);
+    pastasTeste = 0; linha = MENU_AJUSTES; tvLayout(ys, NULL);
+    assert(tvDicaY < 0.0f);
+    pastasTeste = 3; }
   aberto = 1; linha = MENU_AJUSTES;
   assert(!visivel());
   tecla(SDLK_DOWN);

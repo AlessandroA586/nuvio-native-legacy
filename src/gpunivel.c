@@ -49,6 +49,9 @@ static unsigned long chave;
 static int telaW = 1920, telaH = 1080;
 // Explicit 720p target or 4K fallback (1920x1080, gpun_alvo_1080).
 static GLuint intFbo, intTex;
+// RCAS input: the upscaled frame at drawable size (only SGSR sharp / FSR 1).
+static GLuint rcasFbo, rcasTex;
+static int rcasFalhou, upAlgo, upNitidez;
 static int alvo1080, prefFixa, upscaleSgsr;
 static int forca720, ampliarApp;
 static int intW, intH, intFalhou, intLigado;
@@ -243,14 +246,43 @@ void gpun_ampliar_app(int app) {
            ampliarApp ? "app" : "tv", telaW, telaH, telaW, telaH);
 }
 
+static void alvoApagar(GLuint *fbo, GLuint *tex) {
+  if (*fbo) glDeleteFramebuffers(1, fbo);
+  if (*tex) glDeleteTextures(1, tex);
+  *fbo = *tex = 0;
+}
+
+// RGBA target; returns the FBO status (0 when both are already deleted).
+static GLenum alvoCriar(GLuint *fbo, GLuint *tex, int w, int h) {
+  GLint ant = 0;
+  GLenum st;
+  glGenTextures(1, tex);
+  glBindTexture(GL_TEXTURE_2D, *tex);
+  // RGBA: o alpha e o canal do furo do video (gfx_furo) e tem de chegar a janela.
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  gfx_tex_esquecer(0);
+  glGetIntegerv(GL_FRAMEBUFFER_BINDING, &ant);
+  glGenFramebuffers(1, fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, *fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *tex, 0);
+  st = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)ant);
+  if (st != GL_FRAMEBUFFER_COMPLETE) alvoApagar(fbo, tex);
+  return st;
+}
+
 void gpun_iniciar(int w, int h) {
   const char *ext = "";
   GLint db = 0, sb = 0;
   reiniciarMedida();
   nivel = adaptativo = prefFixa = 0; origem = "padrao";
-  if (intFbo) glDeleteFramebuffers(1, &intFbo);
-  if (intTex) glDeleteTextures(1, &intTex);
-  intFbo = intTex = 0;
+  alvoApagar(&intFbo, &intTex);
+  alvoApagar(&rcasFbo, &rcasTex);
+  rcasFalhou = 0;
   intW = intH = intFalhou = intLigado = alvo1080 = forca720 = ampliarApp = 0;
   telaW = w > 0 ? w : 1920;
   telaH = h > 0 ? h : 1080;
@@ -438,9 +470,9 @@ void gpun_redimensionar(int w, int h) {
   if (w == telaW && h == telaH &&
       (!alvo1080 || (intW == (int)NV_TELA_W && intH == (int)NV_TELA_H))) return;
   if (intLigado) glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  if (intFbo) glDeleteFramebuffers(1, &intFbo);
-  if (intTex) glDeleteTextures(1, &intTex);
-  intFbo = intTex = 0;
+  alvoApagar(&intFbo, &intTex);
+  alvoApagar(&rcasFbo, &rcasTex);
+  rcasFalhou = 0;
   intW = intH = intFalhou = intLigado = 0;
   telaW = w; telaH = h;
 #else
@@ -453,39 +485,54 @@ static int upscaleNitido(void) {
          telaW > intW && telaH > intH;
 }
 
+// Settings > This TV > Upscaling algorithm, applied only while the app upscales.
+// 0 Automatic: fractional SGSR, integer Sharp-Bilinear (the original rule).
+// 1 SGSR, 2 SGSR sharp (+RCAS), 3 FSR 1 (EASU+RCAS), 4 Lanczos, 5 Bilinear.
+enum { UP_BILINEAR, UP_NITIDA, UP_SGSR, UP_EASU, UP_LANCZOS };
+static int upEtapa(void) {
+  if (!upscaleNitido()) return UP_BILINEAR;
+  switch (upAlgo) {
+    case 1: case 2: return UP_SGSR;
+    case 3: return UP_EASU;
+    case 4: return UP_LANCZOS;
+    case 5: return UP_BILINEAR;
+  }
+  return telaW % intW || telaH % intH ? UP_SGSR : UP_NITIDA;
+}
+static int upRcas(void) {
+  return upscaleNitido() && (upAlgo == 2 || upAlgo == 3) && upNitidez > 0 && !rcasFalhou;
+}
+static const char *upscaleAlgoNome(void) {
+  static const char *N[] = { "bilinear", "sharp-bilinear", "sgsr", "easu", "lanczos" };
+  static const char *R[] = { "", "", "sgsr+rcas", "easu+rcas", "" };
+  return upRcas() ? R[upEtapa()] : N[upEtapa()];
+}
+
+void gpun_ampliacao(int algo, int nitidez) {
+  if (algo == upAlgo && nitidez == upNitidez) return;
+  upAlgo = algo; upNitidez = nitidez;
+  if (intFbo) {
+    printf("[gpu-nivel] upscale=%s nitidez=%d\n", upscaleAlgoNome(), upNitidez);
+    fflush(stdout);
+  }
+}
+
 static int intPreparar(void) {
-  GLint ant = 0;
   GLenum st;
   if (intFbo) return 1;
   if (intFalhou) return 0;
   if (alvo1080) { intW = (int)NV_TELA_W; intH = (int)NV_TELA_H; }
   else { intW = 1280; intH = 720; }
-  glGenTextures(1, &intTex);
-  glBindTexture(GL_TEXTURE_2D, intTex);
-  // RGBA: o alpha e o canal do furo do video (gfx_furo) e tem de chegar a janela.
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, intW, intH, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  gfx_tex_esquecer(0);
-  glGetIntegerv(GL_FRAMEBUFFER_BINDING, &ant);
-  glGenFramebuffers(1, &intFbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, intFbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, intTex, 0);
-  st = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-  glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)ant);
+  st = alvoCriar(&intFbo, &intTex, intW, intH);
   if (st != GL_FRAMEBUFFER_COMPLETE) {
     printf("[gpu-nivel] alvo interno %dx%d incompleto (0x%x)%s\n", intW, intH, (unsigned)st,
            ": segue na superficie inteira");
-    glDeleteFramebuffers(1, &intFbo); glDeleteTextures(1, &intTex);
-    intFbo = intTex = 0; intFalhou = 1;
+    intFalhou = 1;
     // Target failure must not override the person's effects choice.
     return 0;
   }
   printf("[gpu-nivel] ampliar=%s upscale=%s %dx%d -> %dx%d\n",
-         ampliarApp ? "app" : "tv", !upscaleNitido() ? "bilinear" :
-         telaW % intW || telaH % intH ? "sgsr" : "sharp-bilinear",
+         ampliarApp ? "app" : "tv", upscaleAlgoNome(),
          intW, intH, telaW, telaH);
   fflush(stdout);
   return 1;
@@ -521,17 +568,35 @@ void gpun_quadro_fim(void) {
     gfx_tex_aspect_atual = 0.0f;
     gfx_opacidade_grupo = 1.0f;
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    // Fractional scaling uses SGSR; integer factors keep Sharp-Bilinear.
-    if (upscaleNitido() && (telaW % intW || telaH % intH))
-      gfx_rect(tela, intTex, GFX_COPIA, 0,
-               (float)intW, (float)intH, 0.0f, 1, 1, 1, 1);
-    else if (upscaleNitido())
-      gfx_rect(tela, intTex, GFX_COPIA_NITIDA, (float)telaW / intW,
-               1.0f / intW, 1.0f / intH, 0.0f, 1, 1, 1, 1);
-    else
-      gfx_rect(tela, intTex, GFX_COPIA, 0,
-               0.0f, 1.0f,
-               0.0f, 1, 1, 1, 1);
+    // RCAS reads the upscaled frame back from a drawable-sized target.
+    int rcas = upRcas();
+    if (rcas && !rcasFbo && alvoCriar(&rcasFbo, &rcasTex, telaW, telaH) != GL_FRAMEBUFFER_COMPLETE) {
+      printf("[gpu-nivel] alvo RCAS %dx%d incompleto: sem nitidez\n", telaW, telaH);
+      rcasFalhou = 1; rcas = 0;
+    }
+    if (rcas) glBindFramebuffer(GL_FRAMEBUFFER, rcasFbo);
+    switch (upEtapa()) {
+      case UP_SGSR:
+        gfx_rect(tela, intTex, GFX_COPIA, 0, (float)intW, (float)intH, 0.0f, 1, 1, 1, 1);
+        break;
+      case UP_NITIDA:
+        gfx_rect(tela, intTex, GFX_COPIA_NITIDA, (float)telaW / intW,
+                 1.0f / intW, 1.0f / intH, 0.0f, 1, 1, 1, 1);
+        break;
+      case UP_EASU:
+        gfx_rect(tela, intTex, GFX_COPIA_EASU, 0, (float)intW, (float)intH, 0.0f, 1, 1, 1, 1);
+        break;
+      case UP_LANCZOS:
+        gfx_rect(tela, intTex, GFX_COPIA_LANCZOS, 0, (float)intW, (float)intH, 0.0f, 1, 1, 1, 1);
+        break;
+      default:
+        gfx_rect(tela, intTex, GFX_COPIA, 0, 0.0f, 1.0f, 0.0f, 1, 1, 1, 1);
+    }
+    if (rcas) {
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      gfx_rect(tela, rcasTex, GFX_RCAS, upNitidez / 4.0f,
+               1.0f / telaW, 1.0f / telaH, 0.0f, 1, 1, 1, 1);
+    }
     // Solta a textura do alvo: no quadro seguinte ela volta a ser o alvo de
     // desenho, e ficar ligada para leitura ao mesmo tempo e o laco de
     // realimentacao que o GLES deixa indefinido.
@@ -557,6 +622,10 @@ void gpun_teste_reiniciar(void) {
   aplicar(0, "teste");
 }
 int gpun_teste_decidido(void) { return decidido; }
+const char *gpun_teste_upscale(int sw, int sh, int iw, int ih, int app) {
+  telaW = sw; telaH = sh; intW = iw; intH = ih; ampliarApp = app;
+  return upscaleAlgoNome();
+}
 #endif
 
 static void decidir(const char *porque) {

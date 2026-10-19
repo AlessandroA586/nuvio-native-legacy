@@ -286,7 +286,13 @@ typedef enum {
   // Integer prescale with a bilinear transition. uPar=inverse source size,
   // uFoco=integer scale; alpha remains the original bilinear sample.
   GFX_COPIA_NITIDA = 49,
-  GFX_NMODOS = 50
+  // Opt-in upscalers (Settings > This TV > Upscaling algorithm), compiled on
+  // first use. Source = internal FBO: uPar = source size in texels.
+  GFX_COPIA_EASU = 50,     // FSR 1 EASU
+  GFX_COPIA_LANCZOS = 51,  // Lanczos-2, 4x4 taps
+  // FSR 1 RCAS over the upscaled FBO: uPar = inverse size, uFoco = sharpness 0..1.
+  GFX_RCAS = 52,
+  GFX_NMODOS = 53
 } GfxModo;
 
 typedef struct {
