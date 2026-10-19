@@ -1404,8 +1404,7 @@ static int sCotaCompleta(void) {
 }
 static int carregarCatalogo(const GFonte *f, int fl) {
   int ok = 0;
-  for (int skip = 0; cargaAtual() && skip < 100000 &&
-       sNCanais < G_CANDIDATOS_MAX && sPendentes < G_MAX_PENDENTES && !sCotaCompleta(); skip += G_PAGINA) {
+  for (int skip = 0; cargaAtual() && !sCotaCompleta(); skip += G_PAGINA) {
     int novos = 0, n = lerPagina(f, fl, skip, &novos);
     if (n <= 0) break;
     ok = 1;
@@ -1418,34 +1417,27 @@ static int carregarCatalogo(const GFonte *f, int fl) {
 }
 
 // --- Stalker, Xtream e M3U para o staging ---------------------------------------
-#define ST_MAX_GUIA 1200   /* a tabela de cmd do stalker.c (ST_MAX_CANAL) */
+static int stCanal(const StalkerCanal *st, void *u) {
+  int fl = *(int *)u;
+  GCru c = {0};
+  if (!cargaAtual()) return 0;
+  const char *g = st->categoria[0] ? st->categoria : categoriaPorNome(st->nome);
+  int semCat = !g;
+  if (!g) g = "Outros";
+  sGrupoInfo(fl, g, 1);
+  sLtvF[fl].total++;
+  if (sCanalPorId(fl, st->id) >= 0) return 1;
+  c.id = st->id; c.nome = st->nome; c.logo = st->logo; c.grupo = g;
+  c.desc = c.epgId = c.tvgNome = c.url = c.ua = c.ref = "";
+  c.sug = semCat;
+  sCanalAdd(fl, &c);
+  return 1;
+}
 static int stalkerCarregar(void) {
-  int fl = sFonte(LTV_STALKER, "", "Stalker", ""), cota = ST_MAX_GUIA, n, i, nsel;
-  const char *sel[256];
-  StalkerCanal *st;
+  int fl = sFonte(LTV_STALKER, "", "Stalker", "");
   if (fl < 0) return 0;
-
-  nsel = sGruposEscolhidos(fl, sel, 256);
-  // MALLOC e nao `static`: so serve durante a carga.
-  st = malloc(sizeof *st * (size_t)cota);
-  n = st ? stalker_canais_sessao(st, cota, cargaSessao) : 0;
-  for (i = 0; i < n; i++) {
-    GCru c;
-    const char *g = st[i].categoria[0] ? st[i].categoria : categoriaPorNome(st[i].nome);
-    int semCat = !g, gi;
-    if (!g) g = "Outros";
-    gi = sGrupoInfo(fl, g, 1);
-    sLtvF[fl].total++;
-    if (sCanalPorId(fl, st[i].id) >= 0) continue;
-    if (nsel && !(semCat && ajustes_livetv_sugerir()) && !nomeNaLista(g, sel, nsel)) { if (gi >= 0) sLtvF[fl].gi[gi].entra = 0; continue; }
-    memset(&c, 0, sizeof c);
-    c.id = st[i].id; c.nome = st[i].nome; c.logo = st[i].logo; c.grupo = g;
-    c.desc = c.epgId = c.tvgNome = c.url = c.ua = c.ref = "";
-    c.sug = semCat;
-    sCanalAdd(fl, &c);
-  }
-  if (n >= cota) sLtvF[fl].cortada = 1;
-  free(st);
+  int n = stalker_canais_cb_sessao(stCanal, &fl, cargaSessao);
+  sLtvF[fl].respondeu = n > 0;
   return n;
 }
 

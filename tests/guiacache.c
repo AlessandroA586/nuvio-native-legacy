@@ -67,7 +67,9 @@ int xtream_ultima_falha(void) {
 #endif
 }
 int xtream_ultimo_http(void) { return 0; }
+#ifndef GUIAFILTRO_STALKER_TEST
 int stalker_configurado(void) { return stOk; }
+#endif
 int xtream_url_xmltv(char *d, unsigned n) { (void)d; (void)n; return 0; }
 int xtream_conta(XtreamConta *c) { (void)c; return 0; }
 uint64_t perfis_sessao_geracao(void) { return 0; }
@@ -106,7 +108,10 @@ int rede_baixar_fluxo(const char *u, int s, const char *const *c,
 #endif
   return 0;
 }
+#ifndef GUIAFILTRO_STALKER_TEST
 int stalker_canais_sessao(StalkerCanal *s, int m, uint64_t se) { (void)s; (void)m; (void)se; return 0; }
+int stalker_canais_cb_sessao(StalkerCb cb, void *u, uint64_t se) { (void)cb; (void)u; (void)se; return 0; }
+#endif
 int xtream_canais_cb_sessao(void (*cat)(const char *, int, int, void *),
                             XtreamCb cb, void *u, int *total, uint64_t sessao) {
   (void)sessao;

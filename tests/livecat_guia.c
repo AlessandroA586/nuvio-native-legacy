@@ -46,6 +46,12 @@ int stalker_canais_sessao(StalkerCanal *out, int max, uint64_t session) {
   }
   return n;
 }
+int stalker_canais_cb_sessao(StalkerCb cb, void *u, uint64_t session) {
+  StalkerCanal out[2];
+  int n = stalker_canais_sessao(out, 2, session);
+  for (int i = 0; i < n; i++) if (!cb(&out[i], u)) break;
+  return n;
+}
 uint64_t perfis_sessao_geracao(void) { return 0; }
 int perfis_sessao_atual(uint64_t g) { return g == 0; }
 int perfis_sessao_travar(uint64_t g) { return g == 0; }
@@ -288,7 +294,7 @@ static int addonPagination(void) {
     stagingZerar(); sTeto = 5000; addonRequests = 0;
     int fl = sFonte(LTV_ADDON, source.base, "Addon", source.base);
     ltv_pref_definir_grupos(ltv_pref(sLtvF[fl].chave, 1), selected, 1);
-    if (!carregarCatalogo(&source, fl) || addonRequests != (load ? 13 : 12) ||
+    if (!carregarCatalogo(&source, fl) || addonRequests != 13 ||
         sNCanais != (load ? 1 : 1200) || (!load && !sLtvF[fl].cortada)) failures++;
     int before = posts;
     sugerirSecoes(); selecionarSecoes();
@@ -299,7 +305,7 @@ static int addonPagination(void) {
       if (!resolved) failures++;
     }
   }
-  printf("%s: P1 add-on pagination stops at candidate budget and reaches later pages on reload\n",
+  printf("%s: P1 add-on pagination scans later pages while bounding candidates and resolves them on reload\n",
          failures ? "FAIL" : "PASS");
   addonPaginated = 0;
   addonsCarga = NULL; nAddonsCarga = 0; free(addonPage); addonPage = NULL;

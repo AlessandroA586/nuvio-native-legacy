@@ -99,6 +99,22 @@ static char *responder(const char *url) {
   return NULL;
 }
 
+static void lateCategoryRegression(void) {
+  char *categories = malloc(160000); assert(categories);
+  size_t used = (size_t)snprintf(categories, 160000, "[");
+  for (int i = 0; i < 2049; i++)
+    used += (size_t)snprintf(categories + used, 160000 - used,
+      "%s{\"category_id\":%d,\"category_name\":\"%s\"}", i ? "," : "", i, i == 2048 ? "Hidden" : "Sports");
+  snprintf(categories + used, 160000 - used, "]");
+  const char *savedCats = respCats, *savedStreams = respStreams;
+  respCats = categories;
+  respStreams = "[{\"stream_id\":1,\"name\":\"Station 4K\",\"category_id\":2048}]";
+  XtreamCanal channel;
+  assert(xtream_canais(&channel, 1) == 1);
+  assert(!strcmp(channel.categoria, "Hidden"));
+  respCats = savedCats; respStreams = savedStreams; free(categories);
+  puts("PASS: Xtream category beyond 2048 retains filter identity");
+}
 int main(void) {
   XtreamCanal c[16];
   char url[600];
@@ -119,6 +135,7 @@ int main(void) {
   assert(strstr(disco, "# CREDENCIAL"));
   puts("ok  cadastro: normaliza, mascara, grava com aviso");
 
+  if (getenv("XTREAM_LATE_CATEGORY")) { lateCategoryRegression(); return 0; }
   n = xtream_canais(c, 16);
   assert(n == 3);                              // o de nome vazio fica de fora
   assert(xtream_ultima_falha() == XT_OK);

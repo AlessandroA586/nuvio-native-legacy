@@ -10,6 +10,49 @@ sources=(tests/guiafiltro_loader.c src/ltv.c src/js.c src/idcanal.c src/dados.c 
   src/guiaaddons.c src/guiafiltro.c src/livecat.c src/epg.c src/xtepg.c src/lembrete.c src/guialembrete.c
   src/fontecache.c src/cachearte.c src/cachedisco.c src/xmltv.c)
 common=(-Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -O1 -g -Wno-macro-redefined -lz)
+# Stalker and addon source caps: real ingestion, reviewed FAIL/current PASS.
+git show e35ee7ac6:src/guia.c > "$work/source-cap-review.c"
+git show e35ee7ac6:src/stalker.c > "$work/stalker-review.c"
+source_cap_sources=(tests/guiafiltro_stalker.c "${sources[@]:1}")
+for version in review current; do
+  version_flags=()
+  if [ "$version" = review ]; then
+    version_flags+=("-DGUIACACHE_SOURCE=\"$work/source-cap-review.c\""
+                    "-DSTALKER_TEST_SOURCE=\"$work/stalker-review.c\"")
+  fi
+  cc "${flags[@]}" "${source_cap_sources[@]}" "${common[@]}" "${version_flags[@]}" -o "$work/source-cap-$version"
+  for regression in 0 1 2 3 4 5 6 7 addon; do
+    rc=0
+    NUVIO_DADOS="$work/source-cap-$version-$regression" "$work/source-cap-$version" \
+      "$work/source-cap-$version-$regression" "$regression" > "$work/source-cap-$version-$regression.log" 2>&1 || rc=$?
+    if [ "$version" = review ]; then
+      if [ "$rc" = 134 ] && rg -q 'Assertion failed: .*sNCanais ==' "$work/source-cap-$version-$regression.log"; then
+        printf 'PASS: reviewed source cap fails case %s (rc=134)\n' "$regression"
+        continue
+      fi
+    elif [ "$rc" = 0 ]; then
+      printf 'PASS: source cap case %s\n' "$regression"
+      continue
+    fi
+    tail -n 3 "$work/source-cap-$version-$regression.log"
+    exit 1
+  done
+done
+git show e35ee7ac6:src/xtream.c > "$work/xtream-category-review.c"
+for version in review current; do
+  xt_source=src/xtream.c
+  if [ "$version" = review ]; then xt_source="$work/xtream-category-review.c"; fi
+  cc "$xt_source" src/js.c tests/xtream.c -Isrc -O1 -Wno-macro-redefined -lpthread -o "$work/xtream-$version"
+  rc=0
+  XTREAM_LATE_CATEGORY=1 "$work/xtream-$version" > "$work/xtream-$version.log" 2>&1 || rc=$?
+  if [ "$version" = review ]; then
+    [ "$rc" = 134 ] && rg -q -F 'Assertion failed: (!strcmp(channel.categoria, "Hidden"))' "$work/xtream-$version.log"
+  else
+    [ "$rc" = 0 ] || { tail -n 3 "$work/xtream-$version.log"; exit 1; }
+  fi
+  printf 'PASS: Xtream late category %s (rc=%s)\n' "$version" "$rc"
+done
+if [ "${1:-}" = source-caps ]; then exit 0; fi
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST -DGUIAFILTRO_RESET_TEST -o "$work/loader"
 git show e28fd824a:src/guia.c > "$work/spool-overflow-review.c"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \

@@ -104,17 +104,22 @@ static char *filtroResposta(const char *url) {
   if (!pageScenario) return NULL;
   assert(strstr(url, "/catalog/tv/channels"));
   pageRequests++;
+  if (pageScenario >= 3 && pageRequests > 300) {
+    if (pageScenario == 4 && pageRequests == 301)
+      return strdup("{\"metas\":[{\"id\":\"late-4k\",\"name\":\"Station0 4K\",\"genre\":[\"Sports\"]}]}");
+    return strdup("{\"metas\":[]}");
+  }
   used += (size_t)snprintf(body + used, sizeof body - used, "{\"metas\":[");
-  int offset = pageScenario == 3 ? (pageRequests - 1) * 100 :
+  int offset = pageScenario >= 3 ? (pageRequests - 1) * 100 :
                pageScenario == 2 && pageRequests > 1 ? 100 : 0;
   int count = pageScenario == 2 && pageRequests > 1 ? 1 : 100;
   for (int i = 0; i < count; i++) {
     char name[64];
-    if (pageScenario == 3) snprintf(name, sizeof name, "Station%d 4K", offset + i);
+    if (pageScenario >= 3) snprintf(name, sizeof name, "Station%d %s", offset + i, pageScenario == 4 ? "HD" : "4K");
     else snprintf(name, sizeof name, "X %s", offset ? "4K" : "HD");
     used += (size_t)snprintf(body + used, sizeof body - used,
       "%s{\"id\":\"channel:%d\",\"name\":\"%s\",\"genre\":[\"%s\"]}",
-      i ? "," : "", offset + i, name, i == 0 ? "Hidden" : "Sports");
+      i ? "," : "", offset + i, name, pageScenario != 4 && i == 0 ? "Hidden" : "Sports");
   }
   snprintf(body + used, sizeof body - used, "]}");
   return strdup(body);
@@ -164,10 +169,26 @@ static void capRegression(void) {
     pageRequests = 0;
     fioGuia(NULL); rebuild();
     printf("cap filtered mode=%d requests=%d\n", mode, pageRequests); fflush(stdout);
-    assert(pageRequests == 300 && sNCanais == 900);
+    assert(pageRequests >= 300 && pageRequests <= 301 && sNCanais == 900);
   }
 #endif
 }
+#ifdef GUIAFILTRO_STALKER_TEST
+static void addonLateUpgradeRegression(void) {
+  begin(GF_PREFERIR_4K, 900);
+  GFonte f = {0};
+  strcpy(f.base, "https://fixture.invalid"); strcpy(f.tipo, "tv"); strcpy(f.id, "channels");
+  nAddonsCarga = 1; addonsCarga = calloc(1, sizeof *addonsCarga);
+  strcpy(addonsCarga[0].base, f.base); addonsCarga[0].ativo = 1;
+  int fl = sFonte(LTV_ADDON, f.base, "Fixture", f.base);
+  pageScenario = 4; pageRequests = 0;
+  assert(carregarCatalogo(&f, fl));
+  rebuild();
+  assert(sNCanais == 900 && !strcmp(sCanais[0].id, "late-4k"));
+  assert(pageRequests == 301);
+  puts("PASS: addon upgrade beyond candidate budget");
+}
+#endif
 static void cacheRefreshRegression(void) {
   for (int mode = GF_SO_4K; mode < GF_MODOS; mode++) {
     int fl = begin(mode, 5);
@@ -906,6 +927,9 @@ static void sessionInventoryRegression(void) {
   assert(inventario == NULL && nInventario == 0);
 #endif
 }
+#ifdef GUIAFILTRO_STALKER_TEST
+#define main filter_test_main
+#endif
 int main(int argc, char **argv) {
   int fl;
   assert(argc == 2); dados_iniciar(argv[1]);
