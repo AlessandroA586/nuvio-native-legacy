@@ -2060,12 +2060,12 @@ object NvPlayer {
             val exo = error as? ExoPlaybackException
             val p = player
             val recoveryTimeout = LiveWindowRecovery.timeoutForSegment(liveSegmentMs)
-            if (p != null && live.recover(p, error.errorCode, SystemClock.elapsedRealtime(), recoveryTimeout) {
+            if (p != null && live.recover(p, error, SystemClock.elapsedRealtime(), recoveryTimeout) {
                     Log.w(TAG, "[live] recuperacao excedeu $recoveryTimeout ms sessao=$minha; seguindo erro normal")
-                    try { nativeErroTexto("ERROR_CODE_BEHIND_LIVE_WINDOW (1002): recovery timeout") } catch (_: Throwable) {}
-                    ev(EV_ERRO, PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW, C.TRACK_TYPE_UNKNOWN)
+                    try { nativeErroTexto("${error.errorCodeName} (${error.errorCode}): recovery timeout") } catch (_: Throwable) {}
+                    ev(EV_ERRO, error.errorCode, C.TRACK_TYPE_UNKNOWN)
                 }) {
-                Log.i(TAG, "[live] atras da janela; buscando posicao ao vivo sem trocar URL sessao=$minha")
+                Log.i(TAG, "[live] janela/playlist invalida code=${error.errorCode}; buscando posicao ao vivo sem trocar URL sessao=$minha")
                 return
             }
             live.cancel()

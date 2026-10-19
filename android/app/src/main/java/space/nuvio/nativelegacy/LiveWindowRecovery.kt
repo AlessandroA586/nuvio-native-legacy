@@ -3,6 +3,7 @@ package space.nuvio.nativelegacy
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.hls.playlist.HlsPlaylistTracker
 
 // Recover the existing live player before asking native code to replace its URL.
 // The source's default live position respects its advertised live window/holdback.
@@ -26,9 +27,17 @@ internal class LiveWindowRecovery(
         }
     }
 
-    fun recover(player: Player, errorCode: Int, nowMs: Long, timeoutMs: Long = 8_000L,
+    fun recover(player: Player, error: PlaybackException, nowMs: Long, timeoutMs: Long = 8_000L,
                 failed: () -> Unit): Boolean {
-        if (errorCode != PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW || !active()) return false
+        if (!active()) return false
+        // Media3 releases the source/tracker on a fatal I/O error. Preparing the
+        // same player then reads a fresh playlist, without replacing the URL.
+        // Only the typed reset is recoverable here, not arbitrary I/O failures.
+        val reset = error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED &&
+            generateSequence(error.cause) { it.cause }.take(8)
+                .any { it is HlsPlaylistTracker.PlaylistResetException }
+        if (error.errorCode != PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW &&
+            !(reset && player.isCurrentMediaItemLive)) return false
         // A second error before READY is a failed recovery, not another hidden retry.
         if (pending != null) return false
         if (windowStart < 0 || nowMs - windowStart >= 60_000L) {
