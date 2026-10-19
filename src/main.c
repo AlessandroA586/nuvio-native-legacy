@@ -1156,9 +1156,9 @@ int main(int argc, char **argv) {
   // NV_PEDIR_4K continua existindo para a build de medicao, que precisa pedir
   // sem depender de ajuste gravado.
   { int quer4k = resolucaoDaTv() && ajustes_4k();
-    // Explicit lower UI targets can use SGSR on a native 4K surface.
+    // Only explicit 720p uses a native 4K surface for upscaling.
     int uiMenor4k = 0;
-    if (resolucaoDaTv() && (ajustes_1080p() || ajustes_720p())) {
+    if (resolucaoDaTv() && ajustes_720p()) {
       SDL_DisplayMode dm;
       uiMenor4k = SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.w >= 3840;
     }
