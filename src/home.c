@@ -506,6 +506,7 @@ static float  expAbre = 0.0f;   // 0 fechado, 1 aberto
 // a de posteres deitados ja mostram a arte larga — nao ha para o que abrir.
 static int podeExpandir(int r) {
   if (r < 0 || r >= nFileiras) return 0;
+  if (fileiras[r].tipo == FILEIRA_POSTER) return 1;
   if (fileiras[r].tipo != FILEIRA_NORMAL) return 0;
   return !ajustes_posteres_deitados();
 }
@@ -960,6 +961,10 @@ static void medidaColecao(int forma, float *w, float *h) {
 
 static float larguraDe(TipoFileira t) {
   switch (t) {
+    case FILEIRA_POSTER:
+      return layoutHome() == HOME_LAYOUT_PADRAO
+        ? escalaCartazPadrao() * NV_PAD_CARTAZ_W * gfx_poster_k()
+        : escalaDoAjuste() * escalaPosterTelefone() * NV_CARD_W * gfx_poster_k();
     case FILEIRA_CONTINUE: return NV_DESTAQUE_W * gfx_poster_k();
     // Opção editorial já existente: card panorâmico 16:9.
     case FILEIRA_DESTAQUE: return layoutHome() == HOME_LAYOUT_DINAMICA
@@ -1468,6 +1473,10 @@ static int foco_pode_pressao_longa(void) {
 
 static float alturaDe(TipoFileira t) {
   switch (t) {
+    case FILEIRA_POSTER:
+      return layoutHome() == HOME_LAYOUT_PADRAO
+        ? escalaCartazPadrao() * NV_PAD_CARTAZ_H * gfx_poster_k()
+        : escalaDoAjuste() * escalaPosterTelefone() * NV_CARD_H * gfx_poster_k();
     case FILEIRA_CONTINUE: return NV_DESTAQUE_H * gfx_poster_k();
     case FILEIRA_DESTAQUE: return layoutHome() == HOME_LAYOUT_DINAMICA
                                 ? NV_DIN_DEST_H * gfx_poster_k() : NV_DESTAQUE_EDITORIAL_H * gfx_poster_k();
@@ -1509,8 +1518,8 @@ static int temRotulo(TipoFileira t) {
   // bloco de fora (.home-poster-card.is-landscape .home-poster-copy{display:none}).
   if (t == FILEIRA_HEROI_DIVIDIDO) return 1;   // ano e nota embaixo do poster
   if (t == FILEIRA_REDONDA) return 1;   // pessoa sem nome embaixo nao se reconhece
-  return t == FILEIRA_NORMAL && ajustes_rotulos_poster()
-      && !ajustes_posteres_deitados();
+  return ajustes_rotulos_poster() && (t == FILEIRA_POSTER ||
+         (t == FILEIRA_NORMAL && !ajustes_posteres_deitados()));
 }
 // O gap comum é 24px. Cards editoriais grandes precisam de 40px porque crescem
 // 6% quando focados e, com o gap menor, quase encostam no vizinho.
@@ -2178,7 +2187,7 @@ static float homeScrollYPasso(float alvo, float dt, int reduzido) {
 // mede; fileiras.h nao pode incluir home.h sem fechar um ciclo de headers.
 static TipoFileira tipoDaEscolha(int t) {
   switch (t) {
-    case FIL_TIPO_CARTAZ:   return FILEIRA_NORMAL;
+    case FIL_TIPO_CARTAZ:   return FILEIRA_POSTER;
     case FIL_TIPO_DESTAQUE: return FILEIRA_DESTAQUE;
     // Os tres tamanhos sao a MESMA forma; o fator vem por fil_escala.
     case FIL_TIPO_DESTAQUE_QUADRADO:
@@ -4137,7 +4146,7 @@ static const char *dinArteDaCor(void) {
   deitado = editorial(f->tipo) || f->tipo == FILEIRA_LARGA ||
             f->tipo == FILEIRA_HEROI ||
             f->tipo == FILEIRA_CONTINUE || f->tipo == FILEIRA_RETORNO ||
-            ajustes_posteres_deitados();
+            (f->tipo != FILEIRA_POSTER && ajustes_posteres_deitados());
   return arte_por_identidade(idx, deitado);
 }
 // O BANNER DA COLECAO NA DINAMICA. Com o foco num grupo de colecao o destaque
@@ -7808,7 +7817,7 @@ static void home_desenhar_(Uint32 agora) {
                        tipo == FILEIRA_HEROI_DIVIDIDO ? 59.0f : NV_LEGACY_ROW_HEAD_H);
 
     int deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
-                  ((tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO && tipo != FILEIRA_PALCO) &&
+                  ((tipo != FILEIRA_POSTER && tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO && tipo != FILEIRA_PALCO) &&
                    ajustes_posteres_deitados());
     int rotuloFora = temRotulo(tipo);
     if (y < NV_TELA_H + 200 && y + NV_LEGACY_ROW_HEAD_H + lh > -200) {

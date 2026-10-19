@@ -576,24 +576,16 @@ static float ctxXCartaz(GfxRect r) {
   return esquerda;
 }
 
-// A fileira em edicao: o cartao que a Home pintou em foco (inclusive pasta e
-// pilha), senao o cartaz de onde o menu saiu. A fileira remonta a cada passo e
-// o cartao muda de largura, entao o menu o segue — suave (`dt` > 0), para nao
-// pular; `dt` = 0 crava (abertura). Quadro sem cartao: fica onde estava.
+// Capture the opening card once. Live style previews resize/move the row;
+// following them moves the whole option list and can flip the menu's side.
 static void estAncorar(float dt) {
   GfxRect r, alvo;
+  if (temAncora && dt > 0.0f) return;
   int tem = 0;
   if (home_ancora_foco(&r) && r.w > 8.0f && r.h > 8.0f) { alvo = ctxDaHome(r); tem = 1; }
   else if (!temAncora && temCartaz) { alvo = cartazRect; tem = 1; }
   if (!tem) return;
-  if (!temAncora || dt <= 0.0f || ajustes_animacoes_reduzidas()) estAncora = alvo;
-  else {
-    float k = 1.0f - expf(-14.0f * dt);
-    estAncora.x += (alvo.x - estAncora.x) * k;
-    estAncora.y += (alvo.y - estAncora.y) * k;
-    estAncora.w += (alvo.w - estAncora.w) * k;
-    estAncora.h += (alvo.h - estAncora.h) * k;
-  }
+  estAncora = alvo;
   temAncora = 1;
 }
 
