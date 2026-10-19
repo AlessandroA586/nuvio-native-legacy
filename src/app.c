@@ -5660,7 +5660,7 @@ void app_atualizar(float dt, Uint32 agora) {
       // oposto do que gravava no espelho local sempre que a ordem mudasse. E a
       // mesma disciplina que ctxmenu.c ja aplica (e que o teste de contrato
       // cobra la).
-      int entrar = c ? !c->naLista : 0;
+      int entrar = c ? !biblioteca_na_lista(i) : 0;
       // Primeira vez: a ilha pergunta onde o + salva e grava DEPOIS (ilhasalvar.c).
       if (c && ilhasalvar_perguntar(c, entrar)) c = NULL;
       biblioteca_alternar_lista(i);

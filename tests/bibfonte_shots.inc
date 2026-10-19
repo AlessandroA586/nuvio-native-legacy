@@ -4,12 +4,14 @@
 #include "../src/gfx.h"
 #include <SDL2/SDL_image.h>
 void bibfonte_library_shot(void);
+void bibfonte_detail_shot(void);
 static void shotFrame(int settings) {
   txt_novo_quadro(); tex_novo_quadro(); tex_bombear(4);
   glClearColor(.025f, .025f, .03f, 1); glClear(GL_COLOR_BUFFER_BIT);
-  if (settings) {
+  if (settings == 1) {
     ajustes_atualizar(1.0f / 60, SDL_GetTicks()); ajustes_desenhar(SDL_GetTicks());
-  } else bibfonte_library_shot();
+  } else if (settings == 0) bibfonte_library_shot();
+  else bibfonte_detail_shot();
 }
 static void shotSave(SDL_Window *win, const char *base, const char *name, int settings) {
   char path[1200];
@@ -47,5 +49,12 @@ static void screenshots(const char *base) {
     bibfonte_library_count();
     snprintf(name, sizeof name, "library-%s", names[i]); shotSave(win, base, name, 0);
   }
+  CatItem remote = *cat_item(0); remote.naLista = 1;
+#ifndef BIBFONTE_BASELINE
+  remote.listaFontes = 1u << AJ_SALVOS_TRAKT;
+#endif
+  cat_definir_tudo(&remote, 1, NULL, 0);
+  ajustes_definir_salvos_destino(AJ_SALVOS_SIMKL);
+  shotSave(win, base, "detail-trakt-only-simkl", 2);
   SDL_GL_DeleteContext(gl); SDL_DestroyWindow(win); SDL_Quit();
 }

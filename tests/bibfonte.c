@@ -26,6 +26,7 @@ int test_simkl_write(const char *id, const char *type, int add) {
 }
 int bibfonte_library_count(void);
 int bibfonte_discovery_watchlist(void);
+const char *bibfonte_menu_label(int index);
 #define CHECK(name, condition) do { int ok = !!(condition); \
   printf("%s: %s\n", ok ? "PASS" : "FAIL", name); failures += !ok; } while (0)
 
@@ -62,6 +63,7 @@ int main(int argc, char **argv) {
 #endif
   cat_definir_tudo(&remote, 1, NULL, 0);
   CHECK("Simkl save survives discovery rebuild", bibfonte_library_count() == 1);
+  CHECK("menu offers remove on active source", !strcmp(bibfonte_menu_label(0), "Remover dos Salvos"));
   ilhasalvar_executar(&ci, 0);
   CHECK("Simkl-only remove reaches Simkl", simklWrites == 0);
   trakt_definir("test-token", "test-client");
@@ -76,14 +78,14 @@ int main(int argc, char **argv) {
   ajustes_dir(dir);
   trakt_definir("test-token", "test-client");
   assert(contalib_ler_biblioteca("[{\"content_id\":\"tt7654321\",\"content_type\":\"series\",\"name\":\"Account series\"}]") == 1);
-  CHECK("legacy account keeps Library source", ajustes_fonte_biblioteca() == AJ_SALVOS_LOCAL);
+  CHECK("legacy account keeps Library source", !ajustes_salvos_no_trakt() && !ajustes_salvos_no_simkl());
   CHECK("account save getters agree with Library", !ajustes_salvos_no_trakt() && !ajustes_salvos_no_simkl());
   CHECK("Settings displays effective source", uxValorAtual(AJ_SALVOS_DEST) == AJ_SALVOS_LOCAL);
   CHECK("legacy account reaches Library", contalib_aplicar_catalogo() == 1 && bibfonte_library_count() == 1);
   assert(definirValorDireto(AJ_SALVOS_DEST, AJ_SALVOS_TRAKT));
-  CHECK("explicit Trakt choice wins over account", ajustes_fonte_biblioteca() == AJ_SALVOS_TRAKT);
+  CHECK("explicit Trakt choice wins over account", ajustes_salvos_no_trakt());
   ajustes_dir(dir);
-  CHECK("explicit choice survives reload", ajustes_fonte_biblioteca() == AJ_SALVOS_TRAKT);
+  CHECK("explicit choice survives reload", ajustes_salvos_no_trakt());
   ajustes_definir_salvos_destino(AJ_SALVOS_LOCAL);
   CHECK("Trakt watchlist still fetched for Agenda", bibfonte_discovery_watchlist() == 1);
   CHECK("Trakt-only title stays outside Nuvio Library", bibfonte_library_count() == 1);
@@ -101,6 +103,27 @@ int main(int argc, char **argv) {
   ajustes_definir_salvos_destino(AJ_SALVOS_LOCAL);
   CHECK("account item remains after remote removal", bibfonte_library_count() == 1);
 #endif
+  // Both services connected; union membership must not decide the action.
+  remote.naLista = 1;
+#ifndef BIBFONTE_BASELINE
+  remote.listaFontes = 1u << AJ_SALVOS_TRAKT;
+#endif
+  cat_definir_tudo(&remote, 1, NULL, 0);
+  ajustes_definir_salvos_destino(AJ_SALVOS_SIMKL);
+  CHECK("Trakt-only title excluded under Simkl", bibfonte_library_count() == 0);
+  CHECK("Trakt-only title offers save under Simkl", !strcmp(bibfonte_menu_label(0), "Salvar"));
+  int entrar = !biblioteca_na_lista(0);
+  CHECK("Detail chooses add under Simkl", entrar);
+  ilhasalvar_executar(cat_item(0), entrar);
+  CHECK("Detail add reaches Simkl", simklWrites == 1);
+  CHECK("menu offers remove after Simkl add", !strcmp(bibfonte_menu_label(0), "Remover dos Salvos"));
+  ajustes_definir_salvos_destino(AJ_SALVOS_TRAKT);
+  CHECK("Trakt membership survives Simkl add", biblioteca_na_lista(0));
+  ajustes_definir_salvos_destino(AJ_SALVOS_SIMKL);
+  ilhasalvar_executar(cat_item(0), !biblioteca_na_lista(0));
+  CHECK("Detail remove reaches Simkl", simklWrites == 0);
+  CHECK("Simkl remove preserves Trakt membership", cat_item(0)->naLista && !biblioteca_na_lista(0));
+  CHECK("menu offers save after Simkl remove", !strcmp(bibfonte_menu_label(0), "Salvar"));
   SDL_Quit();
   printf("bibfonte: %d failure(s)\n", failures);
   return failures ? 1 : 0;

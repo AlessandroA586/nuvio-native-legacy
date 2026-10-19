@@ -1985,6 +1985,20 @@ int cat_imdb_na_lista(const char *imdb) {
   return achou;
 }
 
+int cat_imdb_na_lista_fonte(const char *imdb) {
+  int i, achou = 0, fonte = ajustes_fonte_biblioteca();
+  char id[64];
+  if (!imdb || !imdb[0]) return 0;
+  snprintf(id, sizeof id, "%s", imdb);
+  CAT_TESTE_ANTES_TRAVA();
+  catTravar();
+  for (i = 0; itens && i < n; i++)
+    if (itens[i].naLista && !strcmp(itens[i].imdb, id) &&
+        (itens[i].listaFontes & (1u << fonte))) { achou = 1; break; }
+  pthread_mutex_unlock(&pubTrava);
+  return achou;
+}
+
 // Resolve only the selected person; preserve concurrent metadata updates.
 int cat_elenco_tmdb(int i, const char *imdb, const char *tipo,
                     const char *nome, long tmdb) {
