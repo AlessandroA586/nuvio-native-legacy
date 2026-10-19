@@ -27,6 +27,8 @@ static int ajustePortavel(int op) {
   }
 }
 
+#include "ajustes_device.inc"
+
 static void ajustesArquivoSync(int k, char *nome, size_t tam) {
   if (k == 0) snprintf(nome, tam, "fonteregra.txt");
   else if (k == 1) snprintf(nome, tam, "fileirasui-p%d.txt", perfis_ativo());
@@ -37,7 +39,7 @@ static char *ajustesExtras(void) {
   Jsw w;
   jsw_iniciar(&w); jsw_obj_ini(&w);
   jsw_chave(&w, "values"); jsw_obj_ini(&w);
-  for (int i = 0; i < AJ_N; i++) if (ajustePortavel(i)) {
+  for (int i = 0; i < AJ_N; i++) if (ajustePortavel(i) && !ajusteAparelho(i)) {
     char key[96]; snprintf(key, sizeof key, "c_%s", CHAVE[i]);
     jsw_ci(&w, key, ajLegendaPrincipal(i) ? ajLegendaValor(i) : valor[i]);
   }
@@ -86,8 +88,9 @@ static int ajustesExtrasAplicar(const char *json) {
   const char *a, *b, *v, *f;
   int mudou = 0;
   if (!acharValor(json, json + strlen(json), "c_settings_v1", &a, &b) || *a != '{' ||
-      !acharValor(a, b, "values", &v, &f) || *v != '{') return 0;
-  for (int i = 0; i < AJ_N; i++) if (ajustePortavel(i)) {
+      !acharValor(a, b, "values", &v, &f) || *v != '{') return ajustesDeviceAplicar(json);
+  ajustesSnapshotAtual();
+  for (int i = 0; i < AJ_N; i++) if (ajustePortavel(i) && !ajusteAparelho(i)) {
     const char *p, *end;
     char key[96];
     snprintf(key, sizeof key, "c_%s", CHAVE[i]);
@@ -112,7 +115,7 @@ static int ajustesExtrasAplicar(const char *json) {
     // An escaped string never decodes to more bytes than its JSON input.
     char *t = malloc((size_t)(f - v) + 32);
     if (!t) continue;
-    if (f - v < 2 || f[-1] != '"') continue;
+    if (f - v < 2 || f[-1] != '"') { free(t); continue; }
     size_t len = (size_t)(f - v) - 2;
     int valid = len % 2 == 0;
     for (size_t j = 0; valid && j < len; j++)
@@ -142,30 +145,32 @@ static int ajustesExtrasAplicar(const char *json) {
   if (valor[AJ_IDIOMA] == 0) idiomaEscolhido();
   txt_definir_fonte_interface((TxtFamilia)valor[AJ_FONTE_UI]);
   if (mudou) gravar();
-  return mudou;
+  return mudou + ajustesDeviceAplicar(json);
 }
 
 int ajustes_mesclar_blob(const char *base, char **saida) {
   char *web = NULL, *ext;
-  const char *a, *b;
   if (saida) *saida = NULL;
   if (!base || !*base || !saida || *base != '{') return 0;
   int n = ajustesMesclarWeb(base, &web);
   const char *src = web ? web : base, *fim = js_fim(src);
   if (!fim || fim <= src + 1 || fim[-1] != '}' || !(ext = ajustesExtras())) { free(web); return 0; }
-  if (acharValor(src, fim, "c_settings_v1", &a, &b)) {
-    if ((size_t)(b - a) == strlen(ext) && !strncmp(a, ext, strlen(ext))) {
-      free(ext); *saida = web; return n;
-    }
-    size_t cap = strlen(src) + strlen(ext) + 1;
-    *saida = malloc(cap);
-    if (*saida) snprintf(*saida, cap, "%.*s%s%s", (int)(a - src), src, ext, b);
-  } else {
-    size_t cap = strlen(src) + strlen(ext) + 32;
-    *saida = malloc(cap);
-    if (*saida) snprintf(*saida, cap, "%.*s%s\"c_settings_v1\":%s}",
-                         (int)(fim - src - 1), src, fim - src > 2 ? "," : "", ext);
+  Jsw patch; jsw_iniciar(&patch); jsw_obj_ini(&patch);
+  jsw_chave(&patch, "c_settings_v1"); jsw_bruto(&patch, ext); free(ext);
+  const char *id = dados_aparelho_id();
+  if (*id) {
+    char *device = ajustesDeviceSnapshot();
+    if (!device) { jsw_livre(&patch); free(web); return 0; }
+    jsw_chave(&patch, "c_devices_v1"); jsw_obj_ini(&patch);
+    jsw_chave(&patch, id); jsw_bruto(&patch, device); free(device);
+    jsw_obj_fim(&patch);
   }
-  free(ext); free(web);
-  return *saida ? n + 1 : 0;
+  jsw_obj_fim(&patch);
+  const char *p = jsw_texto_final(&patch);
+  char *merged = p ? ajJsonMerge(src, fim, p, p + strlen(p)) : NULL;
+  jsw_livre(&patch);
+  if (!merged) { free(web); return 0; }
+  if (!strcmp(merged, src)) { free(merged); *saida = web; return n; }
+  *saida = merged; free(web);
+  return n + 1;
 }

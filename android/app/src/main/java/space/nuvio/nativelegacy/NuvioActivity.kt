@@ -659,6 +659,9 @@ class NuvioActivity : SDLActivity() {
         fun env(k: String, v: String) = Os.setenv(k, v, true)
         env("NUVIO_INTERFACE_AUTO", if (automaticMobile) "1" else "0")
         env("NUVIO_DADOS", dados.path)
+        // Scoped to signing key/user/device; stable across app reinstall.
+        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        if (!deviceId.isNullOrBlank()) env("NUVIO_DEVICE_ID", "android:$deviceId")
         env("NUVIO_LOG", File(dados, "nuvio.log").path)
         env("NUVIO_LOG_ANTERIOR", File(dados, "nuvio-anterior.log").path)
         env("HOME", dados.path)

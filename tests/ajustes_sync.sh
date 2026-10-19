@@ -15,7 +15,7 @@ cc "${sources[@]}" tests/ajustes_sync.c -Isrc -o "$bin" -O1 -g -pthread \
   -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \
   -Wno-deprecated-declarations -Wno-macro-redefined
 rc=0
-for scenario in roundtrip defaults empty offline legacy webedit quota; do
+for scenario in ${*:-roundtrip defaults empty offline legacy webedit quota}; do
   mkdir "$dir/$scenario"
   "$bin" "$dir/$scenario" "$scenario" || rc=1
 done
