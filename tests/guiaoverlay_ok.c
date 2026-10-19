@@ -83,6 +83,18 @@ static void foto(const char *nome, SDL_Window *w) {
       assert(pix && s);
       glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, pix);
       for (y = 0; y < 1080; y++) memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
+      if (player_mini_no_guia_ativo()) {
+        // Composite the fixture behind the real transparent video hole on Mac.
+        SDL_Surface *frame = IMG_Load(getenv("NUVIO_SHOT_ARTE"));
+        SDL_Surface *back = SDL_CreateRGBSurfaceWithFormat(0, 1920, 1080, 32, SDL_PIXELFORMAT_RGBA32);
+        SDL_Rect pv = { G_PREVIEW_X, G_PREVIEW_Y, G_PREVIEW_W, G_PREVIEW_H };
+        assert(frame && back);
+        SDL_FillRect(back, NULL, SDL_MapRGBA(back->format, 0, 0, 0, 255));
+        assert(SDL_BlitScaled(frame, NULL, back, &pv) == 0);
+        SDL_SetSurfaceBlendMode(s, SDL_BLENDMODE_BLEND);
+        assert(SDL_BlitSurface(s, NULL, back, NULL) == 0);
+        SDL_FreeSurface(frame); SDL_FreeSurface(s); s = back;
+      }
       assert(IMG_SavePNG(s, nome) == 0); SDL_FreeSurface(s); free(pix);
     }
     SDL_GL_SwapWindow(w);
@@ -186,14 +198,25 @@ int main(int argc, char **argv) {
     IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
     w = SDL_CreateWindow("guiaoverlay", 0, 0, 1920, 1080, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
     assert(w && SDL_GL_CreateContext(w));
     glViewport(0, 0, 1920, 1080); gfx_tamanho_alvo(1920, 1080);
     assert(gfx_iniciar()); assert(txt_iniciar("deploy/app", 1)); tex_iniciar(64);
     gfx_icones_dir("deploy/app/art");
+    snprintf(tv.imdb, sizeof tv.imdb, "%s", id);
+    cat_definir(&tv, 1); player_abrir(0, NULL); player_marcar_canal(&tv); comFonte();
     aberta = 0; overlay = 1; entrada = 1; guia_focar_id(id);
     snprintf(nome, sizeof nome, "%s-faixa.png", argv[1]); foto(nome, w);
-    overlay = 0; aberta = 1; guia_focar_id(id);
+    { float x, y, w, h;
+      guia_preview_rect(&x, &y, &w, &h);
+      player_minimizar_para_guia(x, y, w, h);
+      for (int step = 0; step < 40; step++)
+        player_atualizar(0.016f, SDL_GetTicks() + (Uint32)step * 100u);
+      assert(!player_janela_animando(NULL, NULL, NULL, NULL));
+      guia_adotar_canal(id);
+      assert(player_mini_no_guia_ativo() && previewPreso && !overlay);
+    }
     snprintf(nome, sizeof nome, "%s-guia.png", argv[1]); foto(nome, w);
   }
   return 0;
