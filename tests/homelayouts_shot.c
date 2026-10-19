@@ -45,6 +45,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef NV_DINPALCO_AUDIT
+#include "../src/home.c"
+#endif
 
 #define NA 40
 static const char *NOMES[] = {
@@ -436,7 +439,7 @@ int main(int argc, char **argv) {
   if (getenv("NV_DINPALCO")) {
     const char *l;
     for (l = camadas; *l; l++) {
-      ajusta(*l - '0', 0);
+      ajusta(*l - '0', getenv("NV_DINPALCO_GLASS") ? atoi(getenv("NV_DINPALCO_GLASS")) : 0);
       for (int r = 0; r < 14; r++) tecla(SDLK_UP);
       quadros(90, NULL);
       for (int r = 1; r <= 4; r++) {
@@ -447,6 +450,25 @@ int main(int argc, char **argv) {
         snprintf(bmp, sizeof bmp, "%s-L%c-%s.bmp", saida, *l, r == 3 ? "stage" : "split");
         quadros(1, bmp);
         printf("[dinpalco] %s %s\n", bmp, home_rastro_foco());
+#ifdef NV_DINPALCO_AUDIT
+        assert(!focoHero && fileiras[foco.fileira].tipo ==
+               (r == 3 ? FILEIRA_PALCO : FILEIRA_HEROI_DIVIDIDO));
+        assert(layoutHome() == HOME_LAYOUT_MODERNA);
+        TXT_INI();
+        float rowY = topoFileiras() - scrollY;
+        for (int q = 0; q < foco.fileira; q++)
+          rowY += NV_LEGACY_ROW_HEAD_H + alturaTotalFil(q) + fileiraGap();
+        assert(fabsf(rowY - ANC(NV_SHELF_TOP)) < 0.1f);
+        TXT_FIM();
+        if (*l == '2') {
+          assert(palcoFundoModo == 2 && palcoFundoAlpha > .99f);
+          const CatItem *focused = cat_item_exato(fileiraItemIndice(&fileiras[foco.fileira], foco.coluna));
+          assert(focused && palcoArte(focused) && tex_obter_hero(palcoArte(focused)));
+          assert(ajustes_fundo_din() == (getenv("NV_DINPALCO_BACKGROUND") ?
+                 atoi(getenv("NV_DINPALCO_BACKGROUND")) : 0));
+          assert(!home_topo_fracao());
+        }
+#endif
       }
     }
     tex_encerrar(); txt_encerrar();

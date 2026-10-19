@@ -3437,7 +3437,7 @@ static void sincronizarFileiras(void) {
   // (menu.c). Depois do corte acima de proposito: fileira que a pessoa
   // desligou em Ajustes nao reaparece na barra. Ordem = a da fileira.
   nStreamBarra = 0;
-  if (layoutHome() == HOME_LAYOUT_DINAMICA) {
+  if (ajustes_home_layout() == HOME_LAYOUT_DINAMICA) {
     int q;
     for (q = 0; q < destino; q++) {
       if (fileiras[q].tipo != FILEIRA_CATALOGOS ||
@@ -4820,8 +4820,10 @@ static void desenhaHero(Uint32 agora, float saida) {
     GLuint tex = art ? tex_obter_hero(art) : 0;
     if (tex && palcoFundoAlpha > 0.004f) {
       gfx_tex_aspect_atual = tex_aspecto(art);
-      gfx_rect((GfxRect){0, 0, NV_TELA_W, NV_TELA_H}, tex, GFX_VITRINE,
-               0.20f, 0.5f, 0, 0, 0, 0, 0, palcoFundoAlpha);
+      int split = dinPalcoSplit() && fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO;
+      gfx_rect((GfxRect){0, 0, NV_TELA_W, NV_TELA_H}, tex,
+               split ? GFX_HERO_CHEIO : GFX_VITRINE,
+               split ? 0.0f : 0.20f, split ? 0.0f : 0.5f, 0, 0, 0, 0, 0, palcoFundoAlpha);
       gfx_tex_aspect_atual = 0;
     }
     return;
