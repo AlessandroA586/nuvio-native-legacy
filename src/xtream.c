@@ -459,6 +459,7 @@ int xtream_canais_cb_sessao(void (*cat)(const char *nome, int ordem, int n, void
           it.id = c.id; it.nome = c.nome; it.logo = c.logo; it.epgId = c.epgId;
           it.categoria = ci >= 0 ? cats[ci].nome : "Outros";
           it.catOrdem = ci >= 0 ? ci : nCat;
+          it.semCategoria = ci < 0;
           it.num = campoTextoOuNumero(p, fim, "num", num, sizeof num) ? atoi(num) : 0;
           it.arquivo = campoTextoOuNumero(p, fim, "tv_archive", arq, sizeof arq) && atoi(arq) > 0;
           it.arquivoDias = campoTextoOuNumero(p, fim, "tv_archive_duration", arq, sizeof arq) ? atoi(arq) : 0;

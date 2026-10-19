@@ -60,6 +60,7 @@
 #include "stalker.h"
 #include "xtream.h"
 #include "guiacorte.h"   /* tetos e o aviso "Mostrando N de M" */
+#include "livecat.h"   /* secao sugerida pelo Jev para canal sem categoria */
 #include "xtepg.h"     /* grade curta por canal do Xtream (#158) */
 #include "dados.h"
 #include "perfis.h"   /* perfis_ativo: o cache do guia e por perfil */
@@ -280,6 +281,8 @@ typedef struct {
   int  numero;          // do provedor (tvg-chno, num) ou a posicao na fonte
   short fonte;          // indice em ltvF[]
   short epgMetodo;      // EPG_M_* do casamento
+  unsigned char sug;    // sem genero da fonte nem da heuristica: candidato a secao do Jev
+  const char *grupoOriginal; // fallback before suggestions; persist this in source cache
 } GCanal;
 
 typedef struct {
@@ -323,6 +326,7 @@ static GCat   *sCats;    static int sNCats, sCapCats;
 static GFonteLtv sLtvF[G_MAX_LTV]; static int sNLtvF;
 static LtvArena sArena;
 static int sTeto, sRetidos;   // teto da carga e quanto ja entrou
+#define G_MAX_PENDENTES 1200  // One load's suggestion budget; separate from selected channels.
 
 enum { G_PARADO, G_BAIXANDO, G_PRONTO, G_FALHOU };
 static int estado = G_PARADO;
@@ -428,12 +432,29 @@ static int sCanalPorId(int f, const char *id) {
 typedef struct {
   const char *id, *nome, *logo, *desc, *epgId, *tvgNome, *url, *ua, *ref, *grupo, *tipo;
   int numero;
+  int sug;              // 1 = sem categoria (livecat.h sugere uma depois da carga)
 } GCru;
+static int sGruposEscolhidos(int f, const char **v, int max);
+static int nomeNaLista(const char *nome, const char *const *v, int n);
 static int sCanalAdd(int f, const GCru *c) {
   GCanal *g;
-  int cat;
-  if (sRetidos >= sTeto) { sLtvF[f].cortada = 1; return 0; }
-  cat = sCatDe(f, c->grupo && c->grupo[0] ? c->grupo : "Outros");
+  const char *sel[256], *original = c->grupo && c->grupo[0] ? c->grupo : "Outros";
+  int cat, ns = sGruposEscolhidos(f, sel, 256);
+  int resolvido = 0;
+  const char *sec = c->sug && ajustes_livetv_sugerir() ? livecat_secao(c->nome, &resolvido) : NULL;
+  const char *grupo = sec ? sec : original;
+  int pendente = ns && c->sug && ajustes_livetv_sugerir() && !resolvido;
+  if (sec && strcmp(sec, original)) {
+    int gi = sGrupoInfo(f, original, 0);
+    sGrupoInfo(f, sec, 1);
+    if (gi >= 0 && sLtvF[f].gi[gi].n > 0) sLtvF[f].gi[gi].n--;
+  }
+  if (ns && !pendente && !nomeNaLista(grupo, sel, ns)) return 0;
+  // Bound full channel records too; cached negatives free candidate slots on reload.
+  if (pendente ? sNCanais - sRetidos >= G_MAX_PENDENTES : sRetidos >= sTeto) {
+    sLtvF[f].cortada = 1; return 0;
+  }
+  cat = sCatDe(f, grupo);
   if (cat < 0) return 0;
   if (sNCanais >= sCapCanais) {
     int cap = sCapCanais ? sCapCanais * 2 : 512;
@@ -455,11 +476,13 @@ static int sCanalAdd(int f, const GCru *c) {
   g->base = sLtvF[f].base;
   g->tipo = ltv_dup(&sArena, c->tipo);
   g->cat = cat;
+  g->sug = c->sug ? 1 : 0;
+  g->grupoOriginal = sec ? ltv_dup(&sArena, original) : sCats[cat].nome;
   g->epg = -1;
   g->fonte = (short)f;
   sLtvF[f].nCanais++;
   g->numero = c->numero > 0 ? c->numero : sLtvF[f].nCanais;
-  sNCanais++; sRetidos++;
+  sNCanais++; if (!pendente) sRetidos++;
   return 1;
 }
 
@@ -1123,10 +1146,11 @@ static void sondaManifestos(void) {
 
 // Uma pagina de catalogo de addon para a fonte `fl`. Devolve quantos METAS a
 // pagina trouxe — nao quantos entraram: uma fonte pode repetir canais de outra,
-// e contar so os novos encerraria a pagina uma rodada cedo. `novos` recebe
-// quantos entraram de fato — a diferenca e o que separa "acabou" de "catalogo
-// que ignora skip e repete a mesma pagina".
+// e contar so os novos encerraria a pagina uma rodada cedo.
+// `novos` includes cached resolutions skipped by selection, so reloads can
+// reach later candidates. Identical consecutive pages stop providers ignoring skip.
 static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
+  static unsigned long ultimaPagina;
   char url[NV_ADDON_PEDIDO_MAX];
   char *corpo;
   const char *p, *sel[256];
@@ -1142,6 +1166,9 @@ static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
   if (!cargaAtual() || !cargaBaseLigada(f->base)) return 0;
   corpo = cargaBaixar(url);
   if (!corpo || !cargaAtual()) { free(corpo); return 0; }
+  unsigned long pagina = ltv_hash(corpo);
+  if (skip > 0 && pagina == ultimaPagina) { free(corpo); return 0; }
+  ultimaPagina = pagina;
   p = js_array(corpo, NULL, "metas");
   while (p) {
     const char *fim = js_fim(p);
@@ -1151,6 +1178,7 @@ static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
         idcanal_curto(idLongo, id, sizeof id) &&
         js_texto(p, fim, "name", nome, sizeof nome) && sCanalPorId(fl, id) < 0) {
       GCru c;
+      int semCat;
       // O catalogo se declara de canal, mas um meta que se diz filme/serie
       // nao entra — protege o guia de catalogo mal declarado.
       if (js_texto(p, fim, "type", mtipo, sizeof mtipo) &&
@@ -1169,16 +1197,24 @@ static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
         const char *h = categoriaPorNome(nome);
         if (h) snprintf(gen, sizeof gen, "%s", h);
       }
+      semCat = !gen[0];
       if (!gen[0]) snprintf(gen, sizeof gen, "%s", f->nome[0] ? f->nome : "Outros");
       memset(&c, 0, sizeof c);
       c.id = id; c.nome = nome; c.logo = logo; c.desc = desc; c.grupo = gen;
       c.tipo = mtipo[0] ? mtipo : f->tipo;
       c.epgId = c.tvgNome = c.url = c.ua = c.ref = "";
+      c.sug = semCat;
       sLtvF[fl].total++;
       { int gi = sGrupoInfo(fl, gen, 1);
-        if (nsel && !nomeNaLista(gen, sel, nsel)) { if (gi >= 0) sLtvF[fl].gi[gi].entra = 0; }
+        if (nsel && !(semCat && ajustes_livetv_sugerir()) && !nomeNaLista(gen, sel, nsel)) { if (gi >= 0) sLtvF[fl].gi[gi].entra = 0; }
         else if (sCanalAdd(fl, &c)) (*novos)++;
-        else if (gi >= 0 && sRetidos >= sTeto) sLtvF[fl].gi[gi].entra = 0; }
+        else {
+          int resolvido = 0;
+          if (semCat && ajustes_livetv_sugerir()) livecat_secao(nome, &resolvido);
+          // Cached negatives must not hide candidates on later pages after reload.
+          if (resolvido) (*novos)++;
+          if (gi >= 0 && sRetidos >= sTeto) sLtvF[fl].gi[gi].entra = 0;
+        } }
     }
     p = js_prox(fim);
   }
@@ -1186,29 +1222,45 @@ static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
   return n;
 }
 
+static int carregarCatalogo(const GFonte *f, int fl) {
+  int ok = 0;
+  for (int skip = 0; cargaAtual() && sRetidos < sTeto &&
+       sNCanais - sRetidos < G_MAX_PENDENTES; skip += G_PAGINA) {
+    int novos = 0, n = lerPagina(f, fl, skip, &novos);
+    if (n <= 0) break;
+    ok = 1;
+    if (n < G_PAGINA || novos == 0) break;
+  }
+  if (sRetidos >= sTeto || sNCanais - sRetidos >= G_MAX_PENDENTES)
+    sLtvF[fl].cortada = 1;
+  return ok;
+}
+
 // --- Stalker, Xtream e M3U para o staging ---------------------------------------
 #define ST_MAX_GUIA 1200   /* a tabela de cmd do stalker.c (ST_MAX_CANAL) */
 static int stalkerCarregar(void) {
-  int fl = sFonte(LTV_STALKER, "", "Stalker", ""), cota = sTeto - sRetidos, n, i, nsel;
+  int fl = sFonte(LTV_STALKER, "", "Stalker", ""), cota = ST_MAX_GUIA, n, i, nsel;
   const char *sel[256];
   StalkerCanal *st;
   if (fl < 0) return 0;
-  if (cota > ST_MAX_GUIA) cota = ST_MAX_GUIA;
-  if (cota < 1) { sLtvF[fl].cortada = 1; return 0; }
+  if (sRetidos >= sTeto) { sLtvF[fl].cortada = 1; return 0; }
   nsel = sGruposEscolhidos(fl, sel, 256);
   // MALLOC e nao `static`: so serve durante a carga.
   st = malloc(sizeof *st * (size_t)cota);
   n = st ? stalker_canais_sessao(st, cota, cargaSessao) : 0;
   for (i = 0; i < n; i++) {
     GCru c;
-    const char *g = st[i].categoria[0] ? st[i].categoria : "Outros";
-    int gi = sGrupoInfo(fl, g, 1);
+    const char *g = st[i].categoria[0] ? st[i].categoria : categoriaPorNome(st[i].nome);
+    int semCat = !g, gi;
+    if (!g) g = "Outros";
+    gi = sGrupoInfo(fl, g, 1);
     sLtvF[fl].total++;
     if (sCanalPorId(fl, st[i].id) >= 0) continue;
-    if (nsel && !nomeNaLista(g, sel, nsel)) { if (gi >= 0) sLtvF[fl].gi[gi].entra = 0; continue; }
+    if (nsel && !(semCat && ajustes_livetv_sugerir()) && !nomeNaLista(g, sel, nsel)) { if (gi >= 0) sLtvF[fl].gi[gi].entra = 0; continue; }
     memset(&c, 0, sizeof c);
     c.id = st[i].id; c.nome = st[i].nome; c.logo = st[i].logo; c.grupo = g;
     c.desc = c.epgId = c.tvgNome = c.url = c.ua = c.ref = "";
+    c.sug = semCat;
     sCanalAdd(fl, &c);
   }
   if (n >= cota) sLtvF[fl].cortada = 1;
@@ -1252,10 +1304,22 @@ static int xtCanal(const XtreamItem *it, void *u) {
     free(conta); free(nomes); free(entra);
   }
   gi = it->catOrdem >= 0 && it->catOrdem < x->nOrd ? x->giDe[it->catOrdem] : -1;
-  if (gi >= 0 && !F->gi[gi].entra) { F->cortada = 1; return 1; }
   memset(&c, 0, sizeof c);
   c.id = it->id; c.nome = it->nome; c.logo = it->logo; c.epgId = it->epgId;
-  c.grupo = it->categoria; c.numero = it->num;
+  c.grupo = it->semCategoria ? categoriaPorNome(it->nome) : it->categoria;
+  c.sug = !c.grupo || !c.grupo[0];
+  // Infer and count before filtering: the selector includes omitted channels too.
+  if (it->semCategoria && !c.sug &&
+      (gi < 0 || strcmp(c.grupo, F->gi[gi].nome))) {
+    int inferred = sGrupoInfo(x->fl, c.grupo, 1);
+    if (inferred >= 0) {
+      if (gi >= 0 && F->gi[gi].n > 0) F->gi[gi].n--;
+      gi = inferred;
+    }
+  }
+  if (gi >= 0 && !F->gi[gi].entra &&
+      !(it->semCategoria && (!c.sug || ajustes_livetv_sugerir()))) { F->cortada = 1; return 1; }
+  c.numero = it->num;
   c.desc = c.tvgNome = c.url = c.ua = c.ref = "";
   if (!sCanalAdd(x->fl, &c) && gi >= 0) F->gi[gi].entra = 0;
   return 1;
@@ -1280,12 +1344,13 @@ typedef struct { int fl, nsel; const char *sel[256]; int nIdDup; } M3uCtx;
 static int m3uCanal(const LtvM3uCanal *m, void *u) {
   M3uCtx *x = u;
   char id[64], chave[300];
-  const char *g = m->grupo && m->grupo[0] ? m->grupo : "Outros";
-  int gi = sGrupoInfo(x->fl, g, 1);
+  const char *g = m->grupo && m->grupo[0] ? m->grupo : categoriaPorNome(m->nome);
+  int semCat = !g, gi;
   GCru c;
+  if (!g) g = "Outros";
+  gi = sGrupoInfo(x->fl, g, 1);
   sLtvF[x->fl].total++;
-  if (x->nsel && !nomeNaLista(g, x->sel, x->nsel)) { if (gi >= 0) sLtvF[x->fl].gi[gi].entra = 0; return 1; }
-  if (sRetidos >= sTeto) { sLtvF[x->fl].cortada = 1; if (gi >= 0) sLtvF[x->fl].gi[gi].entra = 0; return 1; }
+  if (x->nsel && !(semCat && ajustes_livetv_sugerir()) && !nomeNaLista(g, x->sel, x->nsel)) { if (gi >= 0) sLtvF[x->fl].gi[gi].entra = 0; return 1; }
   // ID ESTAVEL sem a URL (que pode ter token que muda e credencial): tvg-id,
   // nome e grupo. Repetido exato e o mesmo canal duas vezes na lista.
   snprintf(chave, sizeof chave, "%s|%s|%s", m->tvgId, m->nome, g);
@@ -1294,7 +1359,8 @@ static int m3uCanal(const LtvM3uCanal *m, void *u) {
   c.id = id; c.nome = m->nome; c.logo = m->logo; c.epgId = m->tvgId; c.tvgNome = m->tvgNome;
   c.url = m->url; c.ua = m->ua; c.ref = m->referer; c.grupo = g; c.numero = m->chno;
   c.desc = "";
-  sCanalAdd(x->fl, &c);
+  c.sug = semCat;
+  if (!sCanalAdd(x->fl, &c) && gi >= 0 && sRetidos >= sTeto) sLtvF[x->fl].gi[gi].entra = 0;
   return 1;
 }
 static int alimentarM3u(const char *d, size_t n, void *u) { return cargaAtual() && ltv_m3u_alimentar((LtvM3u *)u, d, n); }
@@ -1332,7 +1398,7 @@ static int m3uCarregar(const LtvUrl *u) {
 // struct crua: uma build que mude GCanal le o mesmo arquivo), e
 // ltv-indice-p<perfil>.txt com as chaves na ordem da barra.
 #define GC_MAGIA  0x324c564eu   /* "NVL2" */
-#define GC_VERSAO 2u
+#define GC_VERSAO 3u
 static int cacheLido;          // ja tentou ler nesta sessao
 static unsigned long assinaturaPublicada;
 
@@ -1354,10 +1420,15 @@ static int cStr(FILE *f, const char *s) {
 }
 static int cInt(FILE *f, long long v) { return fwrite(&v, sizeof v, 1, f) == 1; }
 
+static int cacheGrupoComparar(const void *a, const void *b) {
+  return strcmp(((const GGrupoInfo *)a)->nome, ((const GGrupoInfo *)b)->nome);
+}
+
 static void cacheFonteGravar(int f) {
   char nome[64], caminho[600], tmp[620];
   const GFonteLtv *F = &ltvF[f];
   FILE *fp;
+  GGrupoInfo *originais = NULL;
   int ok, i;
   cacheNomeFonte(F->chave, nome, sizeof nome);
   if (!dados_caminho(caminho, sizeof caminho, nome)) return;
@@ -1370,18 +1441,39 @@ static void cacheFonteGravar(int f) {
     ok = cInt(fp, GC_MAGIA) && cInt(fp, GC_VERSAO) && cInt(fp, F->tipo) && cInt(fp, F->nCanais) &&
          cInt(fp, F->ngi) && cInt(fp, F->total) && cInt(fp, F->cortada) && cInt(fp, F->atualizada) &&
          cStr(fp, F->nome) && cStr(fp, F->base) && cStr(fp, F->urlTvg);
-    for (i = 0; ok && i < F->ngi; i++)
-      ok = cStr(fp, F->gi[i].nome) && cInt(fp, F->gi[i].n) && cInt(fp, F->gi[i].entra);
+    // Reverse regrouping once per changed channel; leave published counts intact.
+    for (i = 0; ok && i < nCanais && F->ngi; i++) {
+      const GCanal *c = &canais[i];
+      if (c->fonte != f || !c->sug || !strcmp(c->grupoOriginal, cats[c->cat].nome)) continue;
+      if (!originais) {
+        originais = malloc(sizeof *originais * (size_t)F->ngi);
+        if (!originais) { ok = 0; break; }
+        memcpy(originais, F->gi, sizeof *originais * (size_t)F->ngi);
+        qsort(originais, (size_t)F->ngi, sizeof *originais, cacheGrupoComparar);
+      }
+      GGrupoInfo key = {.nome = c->grupoOriginal};
+      GGrupoInfo *g = bsearch(&key, originais, (size_t)F->ngi, sizeof *originais, cacheGrupoComparar);
+      if (g) g->n++;
+      key.nome = cats[c->cat].nome;
+      g = bsearch(&key, originais, (size_t)F->ngi, sizeof *originais, cacheGrupoComparar);
+      if (g) g->n--;
+    }
+    for (i = 0; ok && i < F->ngi; i++) {
+      const GGrupoInfo *g = originais ? bsearch(&F->gi[i], originais, (size_t)F->ngi,
+                                               sizeof *originais, cacheGrupoComparar) : &F->gi[i];
+      ok = cStr(fp, F->gi[i].nome) && cInt(fp, g->n) && cInt(fp, F->gi[i].entra);
+    }
     for (i = 0; ok && i < nCanais; i++) {
       const GCanal *c = &canais[i];
       if (c->fonte != f) continue;
-      ok = cStr(fp, cats[c->cat].nome) && cInt(fp, c->numero) && cStr(fp, c->id) && cStr(fp, c->nome) &&
+      ok = cStr(fp, c->sug ? c->grupoOriginal : cats[c->cat].nome) && cInt(fp, c->numero) && cStr(fp, c->id) && cStr(fp, c->nome) &&
            cStr(fp, c->logo) && cStr(fp, c->desc) && cStr(fp, c->epgId) && cStr(fp, c->tvgNome) &&
-           cStr(fp, c->url) && cStr(fp, c->ua) && cStr(fp, c->ref) && cStr(fp, c->tipo);
+           cStr(fp, c->url) && cStr(fp, c->ua) && cStr(fp, c->ref) && cStr(fp, c->tipo) && cInt(fp, c->sug);
     }
     ok = (fclose(fp) == 0) && ok;
     if (!ok || rename(tmp, caminho) != 0) remove(tmp);
   }
+  free(originais);
 #ifdef __EMSCRIPTEN__
   dados_fs_liberar();
   dados_marcar_sujo(0);
@@ -1412,7 +1504,7 @@ static int cacheFonteLer(const char *chave) {
   long n = 0;
   FILE *fp;
   CLeitor l;
-  int tipo, nc, ngi, i, fl, total, cortada, antes = sRetidos;
+  int tipo, nc, ngi, i, fl, total, cortada, versao, antes = sRetidos;
   long long quando;
   static char s1[1024], s2[1024], s3[1024];
   cacheNomeFonte(chave, nome, sizeof nome);
@@ -1431,7 +1523,9 @@ static int cacheFonteLer(const char *chave) {
 #endif
   if (!b) return -1;
   l.p = b; l.fim = b + n; l.ok = 1;
-  if (lInt(&l) != GC_MAGIA || lInt(&l) != GC_VERSAO) { free(b); return -1; }
+  if (lInt(&l) != GC_MAGIA) { free(b); return -1; }
+  versao = (int)lInt(&l);
+  if (versao != 2 && versao != GC_VERSAO) { free(b); return -1; }
   tipo = (int)lInt(&l); nc = (int)lInt(&l); ngi = (int)lInt(&l);
   total = (int)lInt(&l); cortada = (int)lInt(&l); quando = lInt(&l);
   lStr(&l, s1, sizeof s1); lStr(&l, s2, sizeof s2); lStr(&l, s3, sizeof s3);
@@ -1455,6 +1549,7 @@ static int cacheFonteLer(const char *chave) {
     c.desc = lStr(&l, ds, sizeof ds); c.epgId = lStr(&l, ei, sizeof ei); c.tvgNome = lStr(&l, tn, sizeof tn);
     c.url = lStr(&l, ur, sizeof ur); c.ua = lStr(&l, ua, sizeof ua); c.ref = lStr(&l, rf, sizeof rf);
     char tipoCanal[16]; c.tipo = lStr(&l, tipoCanal, sizeof tipoCanal);
+    if (versao >= 3) c.sug = (int)lInt(&l);
     if (l.ok) sCanalAdd(fl, &c);
   }
   sLtvF[fl].total = total > sLtvF[fl].nCanais ? total : sLtvF[fl].nCanais;
@@ -1625,6 +1720,43 @@ static void fonteVaziaRecupera(int tipo, const char *ref, const char *nome, cons
   fflush(stdout);
 }
 
+// SECAO SUGERIDA (Jev, via livecat.c) para o canal que nao veio com categoria
+// nem casou na heuristica local. Mexe so nesses (g->sug): a categoria que a
+// lista trouxe nunca troca. O canal sai do grupo-sobra ("Outros" ou o nome do
+// catalogo) para a secao; o grupo que esvaziar some em empacotar(). Roda no fio
+// de carga, antes de publicar, e so se a pessoa deixou ligado.
+static void sugerirSecoes(void) {
+  const char **nomes = NULL, **sec = NULL;
+  unsigned char *sem = NULL;
+  int *idx = NULL, i, n = 0;
+  if (!ajustes_livetv_sugerir()) return;
+  for (i = 0; i < sNCanais; i++) if (sCanais[i].sug) n++;
+  if (!n) return;
+  nomes = malloc(sizeof *nomes * (size_t)n); sec = malloc(sizeof *sec * (size_t)n);
+  sem = malloc((size_t)n); idx = malloc(sizeof *idx * (size_t)n);
+  if (nomes && sec && sem && idx) {
+    int k = 0;
+    for (i = 0; i < sNCanais; i++)
+      if (sCanais[i].sug) { idx[k] = i; nomes[k] = sCanais[i].nome; sem[k] = 1; k++; }
+    if (livecat_sugerir(nomes, sem, n, sec, cargaAtual) > 0 && cargaAtual())
+      for (k = 0; k < n; k++) {
+        int cat;
+        if (!sec[k]) continue;
+        cat = sCatDe(sCanais[idx[k]].fonte, sec[k]);
+        if (cat >= 0) {
+          GCanal *g = &sCanais[idx[k]];
+          if (cat == g->cat) continue;
+          int gi = sGrupoInfo(g->fonte, sCats[g->cat].nome, 0);
+          int novo = sGrupoInfo(g->fonte, sec[k], 1);
+          if (novo < 0) continue;
+          if (gi >= 0 && sLtvF[g->fonte].gi[gi].n > 0) sLtvF[g->fonte].gi[gi].n--;
+          g->cat = cat;
+        }
+      }
+  }
+  free(nomes); free(sec); free(sem); free(idx);
+}
+
 static void *fioGuia(void *u) {
   int ok = 0, i, nu;
   LtvUrl urls[LTV_URLS_MAX];
@@ -1638,17 +1770,8 @@ static void *fioGuia(void *u) {
   // ADDONS: uma fonte da barra por addon (base), com todos os catalogos dele.
   for (i = 0; cargaAtual() && i < sNFontes; i++) {
     int fl = sFonte(LTV_ADDON, sFontes[i].base, nomeDoAddon(sFontes[i].base), sFontes[i].base);
-    int skip, okC = 0;
     if (fl < 0) continue;
-    for (skip = 0; cargaAtual() && sRetidos < sTeto; skip += G_PAGINA) {
-      int novos = 0, n = lerPagina(&sFontes[i], fl, skip, &novos);
-      if (n <= 0) break;
-      okC = 1;
-      // Pagina cheia que nao trouxe nada novo e catalogo que ignora `skip`.
-      if (n < G_PAGINA || novos == 0) break;
-    }
-    if (sRetidos >= sTeto) sLtvF[fl].cortada = 1;
-    if (okC) ok = 1;
+    if (carregarCatalogo(&sFontes[i], fl)) ok = 1;
   }
   // Fonte de addon sem canal nenhum (todos os catalogos falharam): o cache.
   for (i = 0; i < sNFontes; i++) {
@@ -1671,6 +1794,7 @@ static void *fioGuia(void *u) {
     if (m3uCarregar(&urls[i]) > 0) ok = 1;
     else fonteVaziaRecupera(LTV_M3U, urls[i].url, urls[i].nome, "");
   }
+  if (cargaAtual()) sugerirSecoes();
   for (i = 0; i < sNLtvF; i++) if (sLtvF[i].nCanais > 0) ok = 1;
   // FONTE ACHADA E NENHUMA PAGINA RESPONDEU tambem e "nao respondeu".
   if (sNFontes > 0 && !ok) sFalhas++;
@@ -1810,8 +1934,31 @@ static void empacotar(void) {
   vistaMontar();
 }
 
+// Apply section choices after suggestions, including channels restored from cache.
+static void selecionarSecoes(void) {
+  int w = 0;
+  for (int f = 0; f < sNLtvF; f++) {
+    const char *sel[256];
+    int ns = sGruposEscolhidos(f, sel, 256);
+    for (int i = 0; i < sLtvF[f].ngi; i++) {
+      GGrupoInfo *g = &sLtvF[f].gi[i];
+      if (ns) g->entra = nomeNaLista(g->nome, sel, ns);
+    }
+  }
+  for (int i = 0; i < sNCanais; i++) {
+    const char *sel[256];
+    int ns = sGruposEscolhidos(sCanais[i].fonte, sel, 256);
+    if (!ns || nomeNaLista(sCats[sCanais[i].cat].nome, sel, ns)) {
+      if (w < sTeto) sCanais[w++] = sCanais[i];
+      else sLtvF[sCanais[i].fonte].cortada = 1;
+    }
+  }
+  sNCanais = sRetidos = w;
+}
+
 // O staging vira a lista publicada (fio parado). O que era publicado e solto.
 static void adotarStaging(void) {
+  selecionarSecoes();
   fontesLtvSoltar(ltvF, nLtvF);
   ltv_arena_soltar(&arena);
   free(canais); free(cats);
@@ -3784,6 +3931,11 @@ static float paItemY(int i) {
   return 36.0f + (float)n * G_PA_ROW + 28.0f + 36.0f + 60.0f + (float)(i - n) * G_PA_ROW_REC;
 }
 #define G_PA_LISTA_Y 200.0f
+
+void guia_sugestoes_mudaram(void) {
+  if (fioVivo) { cargaCancelada = 1; recarregarPend = 1; }
+  else { estado = G_PARADO; ultTentativa = 0; }
+}
 
 // Ajustes mexeu nas listas M3U / guias XMLTV por URL (M9): o que ja esta na
 // tela recarrega para a fonte nova entrar (ou a removida sair). Sem lista
