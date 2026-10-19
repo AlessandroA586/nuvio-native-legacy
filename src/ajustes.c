@@ -874,7 +874,7 @@ static const char *V_POSTER_PROV[] = { "Desligado", "SpatialPosters", "RPDB", "M
 // A terceira e so "Dinâmica" (dono, 13/10: "pode tirar o apple tv"). A chave
 // era a do antigo tema de cor, que desde 03/10 se chama "Da arte"; a traducao
 // dela agora e a do layout. O valor gravado continua HOME_LAYOUT_DINAMICA.
-static const char *V_HOME_LAYOUT[] = { "Moderna", "Padrão", "Dinâmica" };
+static const char *V_HOME_LAYOUT[] = { "Moderna", "Padrão", "Dinâmica", "Imersiva (experimental)" };
 // "Fonte automatica" (issue #130). O INDICE e o gravado (fonteAutoLocal) e o
 // FONTEAUTO_* de fonteauto.h: 0 = a regra de pontuacao, 1 = a primeira da
 // lista do addon, e so ela — o "Auto-play first source" do Nuvio.
@@ -1499,7 +1499,7 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Chave do RPDB"),
   ACAO("Modelo de URL dos pôsteres"),
   ACAO("Testar pôsteres"),
-  ESC("Layout da home",             V_HOME_LAYOUT, 3), // local: ver V_HOME_LAYOUT
+  ESC("Layout da home",             V_HOME_LAYOUT, 4), // local: ver V_HOME_LAYOUT
   ACAO("Chave do AllDebrid"),
   ACAO("Testar chave do AllDebrid"),
   ACAO("Chave do Real-Debrid"),
@@ -3236,8 +3236,11 @@ int ajustes_hero_cheio(void)          { return lig(AJ_HERO_CHEIO); }
 int ajustes_hero_sinopse_grande(void) { return valor[AJ_HERO_SINOPSE_TAM] == 1; }
 int ajustes_home_layout(void) {
   int v = valor[AJ_HOME_LAYOUT];
-  return v >= 0 && v < HOME_LAYOUT_N ? v : HOME_LAYOUT_MODERNA;
+  // A Imersiva e a Moderna por baixo: menu, detalhe e geometria seguem a
+  // Moderna; so home_imersiva.inc pergunta ajustes_home_imersiva().
+  return v >= 0 && v < HOME_LAYOUT_N && v != HOME_LAYOUT_IMERSIVA ? v : HOME_LAYOUT_MODERNA;
 }
+int ajustes_home_imersiva(void) { return valor[AJ_HOME_LAYOUT] == HOME_LAYOUT_IMERSIVA; }
 int ajustes_hero_arte_diferente(void) { return lig(AJ_HERO_ARTE_DIF); }
 int ajustes_hero_fonte(void) {
   int v = valor[AJ_HERO_FUNDO];

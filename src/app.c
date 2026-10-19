@@ -6934,7 +6934,14 @@ static void desenharAtrasDoPainel(void *ctx) {
                            tela == TELA_BIBLIOTECA || tela == TELA_AGENDA ||
                            tela == TELA_PERFIL || tela == TELA_AJUSTES) ? 1.0f : -1.0f);
     CAMADA_SE(menu_aberto());
-    menu_desenhar(agora);
+    // Imersiva: sem menu enquanto se navega nas fileiras; volta com o foco no
+    // destaque ou com o menu aberto (home_cromo_alfa).
+    { float cromo = tela == TELA_HOME && !menu_aberto() && !detail_aberto() ? home_cromo_alfa() : 1.0f;
+      if (cromo > 0.004f) {
+        gfx_opacidade_grupo = cromo;
+        menu_desenhar(agora);
+        gfx_opacidade_grupo = 1.0f;
+      } }
   }
   // Palco: o holofote escurece a home e a barra, nunca um menu ou a pagina.
   if (tela == TELA_HOME && !detail_aberto() && !vertudo_aberta() && !ctx_aberto() && !menu_aberto())
@@ -7089,7 +7096,7 @@ static int relogioCabe(void) {
   // relogio (dono, 04/10). Ele volta, pela animacao da ilha, quando o cartao
   // estica para a pagina.
   if (detail_aberto() && detail_relogio_oculto()) return 0;
-  if (tela == TELA_HOME) { if (!homePronta) return 0; }
+  if (tela == TELA_HOME) { if (!homePronta || home_cromo_alfa() < 0.5f) return 0; }
   else if (tela != TELA_EXPLORAR && tela != TELA_BUSCA &&
            tela != TELA_BIBLIOTECA && tela != TELA_PERFIL && tela != TELA_SOCIAL &&
            tela != TELA_ADDONS && tela != TELA_PLUGINS && tela != TELA_AGENDA) return 0;
