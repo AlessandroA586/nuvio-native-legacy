@@ -7,6 +7,7 @@
 #define stream_folha_canal teste_stream_folha_canal
 #define stream_folha_item teste_stream_folha_item
 #include "../src/app.c"
+#include "stub_m3u.h"
 #include <assert.h>
 #include <unistd.h>
 #include "consumir-fonte.h"

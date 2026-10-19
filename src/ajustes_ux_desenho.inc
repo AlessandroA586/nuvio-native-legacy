@@ -454,7 +454,7 @@ static const char *ajRotSeg(int op, int i) {
 static float aj2SegLargura(int op, int n);
 static int ajSegmentada(int op) {
   int n;
-  if (op < 0 || ajTipo(op) != AJL_ESC || op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2 || op == AJ_FUNDO ||
+  if (op < 0 || ajIptvMenu(op) || ajTipo(op) != AJL_ESC || op == AJ_LEG_LINGUA || op == AJ_LEG_LINGUA2 || op == AJ_AUD_LINGUA || op == AJ_AUD_LINGUA2 || op == AJ_FUNDO ||
       op == AJ_INTERFACE_MODO /* o seletor com alvos proprios permite sair de TV usando so o toque */ ||
       op == AJ_LOGO_APP /* abre o seletor com miniaturas de 64 px, como o icone do app */) return 0;
   n = nValores(op);
@@ -481,15 +481,18 @@ static void ajToqueInlineValor(int v, int op) {
   if (!ajPontInline || !ajEditandoLinha(op) || v < 0 || v >= nValores(op)) return;
   uxPendente = v; uxRodape = 0;
 }
+#endif
 static void ajToqueConfirmar(int a, int b) {
   (void)a; (void)b;
   if (uxEditor == 1 && !uxRestaurar && !uxAvisoRisco) { uxRodape = 0; uxAplicar(); }
 }
-static void ajToqueCancelar(int a, int b) { (void)a; (void)b; if (uxEditor) uxCancelar(); }
+static void ajToqueCancelar(int a, int b) { (void)a; (void)b; if (uxEditor) ajIptvVoltar(); }
+#ifdef NV_TOUCH_UI
 static void ajToqueEscolhaAlvo(GfxRect r, int v, int op, float topo, float base) {
   if (ajTelaCheia() && ajPontInline && ajEditandoLinha(op))
     ponteiro_alvo_faixa(r.x, r.y, r.w, r.h, topo, base, NULL, ajToqueInlineValor, v, op);
 }
+#endif
 static void ajToqueBotoes(float direita, float yc, float a) {
   const char *rot[2] = { "Confirmar", "Cancelar" };
   for (int i = 0; i < 2; i++) {
@@ -497,12 +500,15 @@ static void ajToqueBotoes(float direita, float yc, float a) {
     GfxRect r = { direita - t.w - 40.0f, yc - 24.0f, t.w + 40.0f, 48.0f };
     if (i == 0) ajPilulaAcento(r, 24.0f, a);
     else ajNeutro(r, 24.0f, 0.10f, AJ_CHIP_SOL, a);
+    if(uxOp==AJ_GUIA_CATEGORIAS && uxRodape==i+1) {
+      float ar,ag,ab;ajustes_acento(&ar,&ag,&ab);
+      gfx_anel_fora(r,0.5f,0,3,ar,ag,ab,a);
+    }
     txt_desenhar_alpha(t, r.x + 20.0f, yc - t.h * 0.5f, a);
     ponteiro_alvo(r.x, r.y, r.w, r.h, NULL, i == 0 ? ajToqueConfirmar : ajToqueCancelar, 0, 0);
     direita = r.x - 12.0f;
   }
 }
-#endif
 // AS LINHAS QUE ABREM (v2): a primeira linha fica com 70,4 (16 + 38,4 + 16),
 // 20 de vao (o gap do flex que quebra) e o que vem embaixo — a regua da cor
 // de destaque editando, os tres cartoes do Fundo em foco e, sem inspetor

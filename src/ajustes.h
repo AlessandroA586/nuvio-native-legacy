@@ -698,6 +698,8 @@ int         ajustes_tmdb_ligado(void);          // tmdb_enabled
 const char *ajustes_tmdb_idioma(void);          // "pt-BR", "en-US"… (TMDB)
 // Pais da grade do Guia de TV (#158): "" = automatico, senao "RO", "BR"...
 const char *ajustes_epg_pais(void);
+int ajustes_guia_ordem(void); // 0 category first, 1 account first
+int ajustes_guia_fonte(void); // 0 all, 1 Xtream, 2 M3U, 3 Stalker, 4 add-ons
 int         ajustes_tmdb_arte(void);            // tmdb_use_artwork
 int         ajustes_tmdb_basico(void);          // tmdb_use_basic_info
 int         ajustes_tmdb_ficha(void);           // tmdb_use_details

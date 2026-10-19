@@ -22,6 +22,7 @@
 #include <SDL2/SDL.h>
 #include "catalogo.h"
 #include "epg.h"
+#include <stdint.h>
 #include "gfx.h"   /* GfxRect de guia_logo_desenhar */
 
 void guia_abrir(void);           // tela cheia
@@ -34,12 +35,22 @@ int  guia_visivel(void);         // qualquer um dos dois
 // da fileira de canais ja abre no canal focado) e pelo player (o overlay abre
 // no canal que esta tocando).
 void guia_focar_id(const char *id);
+void guia_reordenar(void); // presentation only; retain cached channels and focus
+
+// Snapshot of all loaded categories, including hidden ones. Identity excludes
+// account names/order; stale profile sessions cannot change visibility.
+typedef struct { uint64_t chave, sessao; char nome[64], conta[96]; int oculta; } GuiaCategoria;
+int guia_categorias(GuiaCategoria *out, int max);
+int guia_categoria_definir(const GuiaCategoria *categoria, int ocultar);
+// Save a multi-selection atomically; failed or stale editors change nothing.
+int guia_categorias_definir(const GuiaCategoria *categorias, int n);
 
 // Dispara a carga de canais sem abrir nada — o CH+/- do controle funciona
 // mesmo com o guia nunca aberto, e precisa da lista para saber quem vem depois.
 void guia_carregar(void);
 // Invalidate a published/in-flight guide after the suggestions setting changes.
 void guia_sugestoes_mudaram(void);
+void guia_recarregar(int limparLista);
 // Nova abertura de perfil: fecha a tela e invalida a carga anterior sem
 // esperar rede. O cache persistido do perfil novo continua disponivel.
 void guia_abrir_sessao(void);

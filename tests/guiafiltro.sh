@@ -30,7 +30,7 @@ if [ "${1:-}" = review-fixes ]; then
 fi
 # Stalker and addon source caps: real ingestion, reviewed FAIL/current PASS.
 git show e35ee7ac6:src/guia.c > "$work/source-cap-review.c"
-git show e35ee7ac6:src/stalker.c > "$work/stalker-review.c"
+git show e35ee7ac6:src/stalker.c | perl -0777 -pe 's/void stalker_definir_portal\((.*?)\n}/int stalker_definir_portal($1\n  return 1;\n}/s' > "$work/stalker-review.c"
 source_cap_sources=(tests/guiafiltro_stalker.c "${sources[@]:1}")
 for version in review current; do
   version_flags=()
@@ -56,11 +56,11 @@ for version in review current; do
     exit 1
   done
 done
-git show e35ee7ac6:src/xtream.c > "$work/xtream-category-review.c"
+git show e35ee7ac6:src/xtream.c | perl -0777 -pe 's/void xtream_definir_servidor\((.*?)\n}/int xtream_definir_servidor($1\n  return 1;\n}/s' > "$work/xtream-category-review.c"
 for version in review current; do
   xt_source=src/xtream.c
   if [ "$version" = review ]; then xt_source="$work/xtream-category-review.c"; fi
-  cc "$xt_source" src/js.c tests/xtream.c -Isrc -O1 -Wno-macro-redefined -lpthread -o "$work/xtream-$version"
+  cc "$xt_source" src/js.c tests/xtream.c -DXTREAM_LEGACY_FIXTURE -Isrc -O1 -Wno-macro-redefined -lpthread -o "$work/xtream-$version"
   rc=0
   XTREAM_LATE_CATEGORY=1 "$work/xtream-$version" > "$work/xtream-$version.log" 2>&1 || rc=$?
   if [ "$version" = review ]; then

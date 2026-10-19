@@ -135,6 +135,32 @@ int xtream_canais_cb_sessao(void (*cat)(const char *, int, int, void *),
   return 0;
 }
 
+// Account-aware adapter preserves the same removed/configured source fixtures.
+#ifdef NV_IPTVFONTES_H
+int ajustes_guia_ordem(void) { return 1; }
+int ajustes_guia_fonte(void) { return 0; }
+int iptv_contas(IptvConta *out,int max) {
+  int n=0;
+  if(xtOk && n<max)out[n++]=(IptvConta){.tipo=IPTV_XTREAM,.ativa=1,.nome="Xtream"};
+  if(stOk && n<max)out[n++]=(IptvConta){.tipo=IPTV_STALKER,.ativa=1,.nome="Stalker"};
+  return n;
+}
+int xtream_fonte_configurado(unsigned id) { return id==0 && xtOk; }
+#ifndef GUIAFILTRO_STALKER_TEST
+int stalker_fonte_configurado(unsigned id) { return id==0 && stOk; }
+int stalker_fonte_canais_cb(unsigned id, StalkerCb cb, void *u, uint64_t sessao) { (void)id;return stalker_canais_cb_sessao(cb,u,sessao); }
+#endif
+int xtream_fonte_canais_cb(unsigned id,void (*cat)(const char*,int,int,void*),XtreamCb cb,void *u,int *total,uint64_t sessao) {
+  (void)id;return xtream_canais_cb_sessao(cat,cb,u,total,sessao);
+}
+int xtream_fonte_estado(unsigned id,int *http) { (void)id;*http=0;return xtream_ultima_falha(); }
+int xtream_fonte_xmltv(unsigned id,char *out,unsigned n) { (void)id;return xtream_url_xmltv(out,n); }
+#ifndef GUIAFILTRO_STALKER_TEST
+int stalker_fonte_canais(unsigned id,StalkerCanal *out,int n,uint64_t sessao) { (void)id;return stalker_canais_sessao(out,n,sessao); }
+#endif
+int m3u_fonte_urls(unsigned id,char *url,unsigned n,char *epg,unsigned ne) { (void)id;(void)url;(void)n;(void)epg;(void)ne;return 0; }
+#endif
+
 // Tex/orcamento so para ltv_teto_canais nao consultar nada.
 void tex_orcamento_info(int *mb, long *memTotal, int *fixo, int *slots) {
   if (mb) *mb = 0; if (memTotal) *memTotal = 4096;

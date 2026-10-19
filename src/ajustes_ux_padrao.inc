@@ -327,7 +327,14 @@
   0, /* suggest Live TV categories: On, names only */
   0, /* #578: audio presentation offset, unchanged by default */
   0, /* Xtream limited connections: Auto; account storage owns the value. */
-1, /* interface scaling: App (4K) hardware, preserving the existing drawable */
+  1, /* interface scaling: App (4K) hardware, preserving the existing drawable */
+  0, 0, 0, 0, 0, /* guide source, refresh and M3U actions */
+
+  0, 0, 0, 0, 0, 0, 0, /* native Live TV account registry views/actions */
+  0, 0, 0, /* saved accounts by provider type */
+  0, 0, 0, 0, /* account actions, confirmation, Save and Cancel */
+  0, 0, /* guide category/account order and account reorder action */
+  0, 0, /* EPG memory policy and hidden-category editor */
   1, /* #507: Library row on Home: Off */
   0, /* upscaling algorithm: Automatic (default) */
   2, /* upscaling RCAS sharpness, 0..4 */

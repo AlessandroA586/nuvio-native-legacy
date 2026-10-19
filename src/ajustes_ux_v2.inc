@@ -243,10 +243,11 @@ static void aj2MenuValor(int sec, char *b, size_t n) {
       snprintf(a, sizeof a, i18n("Áudio: %s"), i18n(textoValor(AJ_AUD_LINGUA)));
       snprintf(b, n, "%s · %s", i18n(textoValor(AJ_IDIOMA)), a);
       return; }
-    case AJS_TVAOVIVO:
-      snprintf(b, n, "%s", xtream_configurado() ? textoLeitura(AJ_XTREAM_SERVIDOR)
-                         : stalker_configurado() ? textoLeitura(AJ_STALKER_PORTAL) : i18n("Não configurado"));
-      return;
+    case AJS_TVAOVIVO: {
+      int contas = iptv_contas(NULL, 0);
+      if (contas) snprintf(b, n, "%s: %d", i18n("Contas de TV ao vivo"), contas);
+      else snprintf(b, n, "%s", i18n("Não configurado"));
+      return; }
     case AJS_CONTAS: {   // "Henrique · Trakt"
       size_t u = (size_t)snprintf(b, n, "%s", textoLeitura(AJ_PERFIL_ATIVO));
       if (u < n && traktauth_estado() == TRA_LIGADO) u += (size_t)snprintf(b + u, n - u, " · Trakt");
@@ -1220,6 +1221,10 @@ static void aj2DesenharPagina(float t) {
   } else {
     nome = aj2ChipRotulo(1); ic = "aj_rotate-ccw-clock"; kick = "Ajustes";
     snprintf(vb, sizeof vb, "%d", uxNDifs); q[0] = 0;
+  }
+  if(iptvForm.tipo && sec==AJS_TVAOVIVO) {
+    nome=iptvForm.nova?ajIptvAdicionarNome(iptvForm.tipo):iptvAlvo.nome;
+    vb[0]=q[0]=0;
   }
   x = h.x + 28.0f;
   float meio = h.y + (ajRetrato() ? 57.0f : h.h * 0.5f);
