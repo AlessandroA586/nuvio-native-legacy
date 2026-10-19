@@ -432,6 +432,28 @@ int main(int argc, char **argv) {
     quadros(60, NULL);
   }
 
+  // Focused Stage/Split comparison, using the production renderer and local art.
+  if (getenv("NV_DINPALCO")) {
+    const char *l;
+    for (l = camadas; *l; l++) {
+      ajusta(*l - '0', 0);
+      for (int r = 0; r < 14; r++) tecla(SDLK_UP);
+      quadros(90, NULL);
+      for (int r = 1; r <= 4; r++) {
+        tecla(SDLK_DOWN); quadros(110, NULL);
+        if (r != 3 && r != 4) continue;
+        for (int c = 0; c < 24; c++) tecla(SDLK_LEFT);
+        quadros(110, NULL);
+        snprintf(bmp, sizeof bmp, "%s-L%c-%s.bmp", saida, *l, r == 3 ? "stage" : "split");
+        quadros(1, bmp);
+        printf("[dinpalco] %s %s\n", bmp, home_rastro_foco());
+      }
+    }
+    tex_encerrar(); txt_encerrar();
+    SDL_GL_DeleteContext(gl); SDL_DestroyWindow(janela); SDL_Quit();
+    return 0;
+  }
+
   // NV_PALCO=N (com NV_TIPOS="pop_movie=13"): desce N fileiras ate a Palco e
   // fotografa o foco andando para a direita — a prova visual de que o cartaz
   // grande segue a fileira em vez de ficar parado no lugar.

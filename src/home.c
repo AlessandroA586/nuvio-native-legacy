@@ -520,7 +520,14 @@ static float heroEntra = 1.0f;
 static int palcoFundoModo = 1, palcoFundoAlvo = 1, palcoFundoItem = -1;
 static float palcoFundoT = 1.0f, palcoFundoInicio = 1.0f;
 static float palcoFundoAlpha = 1.0f;
+static int dinPalcoSplit(void) {
+  return ajustes_home_layout() == HOME_LAYOUT_DINAMICA && !focoHero &&
+         foco.fileira >= 0 && foco.fileira < nFileiras &&
+         (fileiras[foco.fileira].tipo == FILEIRA_PALCO ||
+          fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO);
+}
 static int palcoFundoDestino(void) {
+  if (dinPalcoSplit()) return 2;
   return ajustes_home_layout() == HOME_LAYOUT_MODERNA && !focoHero &&
          foco.fileira >= 0 && foco.fileira < nFileiras &&
          fileiras[foco.fileira].tipo == FILEIRA_PALCO ? ajustes_palco_fundo() : 1;
@@ -741,7 +748,10 @@ static float escalaDoAjuste(void) {
 // destaque e como ele se comporta (desenhaHero), e o fundo por baixo das
 // fileiras (home_desenhar). MODERNA devolve exatamente as constantes que este
 // arquivo sempre usou: tests/homelayouts_shot.sh compara o quadro byte a byte.
-static int layoutHome(void) { return ajustes_home_layout(); }
+// Focused Stage/Split share Moderna geometry; the saved layout stays Dinamica.
+static int layoutHome(void) {
+  return dinPalcoSplit() ? HOME_LAYOUT_MODERNA : ajustes_home_layout();
+}
 static int homeRetratoTelefone(void) {
 #ifdef NV_TOUCH_UI
   return layout_modo_mobile() && NV_TELA_H > NV_TELA_W;
@@ -4197,7 +4207,7 @@ static void heroPublicarFoco(const CatItem *ci, float aTexto) {
 #endif
 int home_streaming_barra(const int **pastas) {
   if (pastas) *pastas = streamBarra;
-  return layoutHome() == HOME_LAYOUT_DINAMICA ? nStreamBarra : 0;
+  return ajustes_home_layout() == HOME_LAYOUT_DINAMICA ? nStreamBarra : 0;
 }
 
 // A pilula da barra (layout Dinamica, menu.c) so aparece com a pagina no
@@ -4205,7 +4215,7 @@ int home_streaming_barra(const int **pastas) {
 float home_topo_fracao(void) {
   float f;
   // Barra no topo (#461): so com o foco no destaque, como a pilula na pagina rolada.
-  if (layoutHome() != HOME_LAYOUT_DINAMICA) return ajustes_menu_topo() ? (float)focoHero : 1.0f;
+  if (ajustes_home_layout() != HOME_LAYOUT_DINAMICA) return ajustes_menu_topo() ? (float)focoHero : 1.0f;
   f = 1.0f + dinHeroY() / 140.0f;
   return f < 0.0f ? 0.0f : (f > 1.0f ? 1.0f : f);
 }
@@ -7568,7 +7578,7 @@ static void home_desenhar_(Uint32 agora) {
   desenhaFundo(agora);
   float pd = detail_progresso();
   const int vazioQr = homevazio_ativo(nFileiras);   // sem add-ons: o cartao com o QR no lugar da Home
-  if (ajustes_hero_ligado() && !vazioQr && palcoFundoAlpha > 0.004f) {
+  if ((ajustes_hero_ligado() || dinPalcoSplit()) && !vazioQr && palcoFundoAlpha > 0.004f) {
     gfx_opacidade_grupo = palcoFundoModo == 1 ? palcoFundoAlpha : 1.0f;
     desenhaHero(agora, pd);
     gfx_opacidade_grupo = 1.0f;
