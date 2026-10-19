@@ -3907,7 +3907,9 @@ GLuint tex_obter(const char *caminho) {
 // dois caminhos caia no mesmo teto e nao seja promovido a toa.
 static int capDeLargura(float largLayout) {
   int cap;
-  cap = (int)(largLayout * escalaBuf * folgaDaQualidade() + 0.5f);
+  // Convert layer coordinates to output pixels before choosing URL/decode size.
+  // Keep layer scale out of escalaBuf: it must not inflate the byte budget.
+  cap = (int)(largLayout * gfx_escala() * escalaBuf * folgaDaQualidade() + 0.5f);
   // Arredonda para multiplo de 32: sem isso cada largura de desenho vira um
   // teto proprio, e a mesma arte pedida por dois lugares com poucos pixels de
   // diferenca era promovida e RE-DECODIFICADA sem ganho visivel.
