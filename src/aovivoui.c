@@ -570,7 +570,7 @@ static void aovivo_erro_desenharCorpo_(const char *nome, const char *logo, const
   const float w = telefoneui_largura(960.0f, NV_TELA_W, 48.0f), pad = 44.0f, tw = w - 2.0f * pad;
   const char *tit = titulo && titulo[0] ? titulo : "Não foi possível abrir a fonte";
   const char *dc = dica && dica[0] ? dica : "Abra Fontes para escolher outra opção ou recarregar.";
-  static const char *rot[3] = { "Recarregar", "Fonte", "Guia" };
+  const char *rot[3] = { titulo && !strcmp(titulo, i18n("Esta linha está em uso em outra tela")) ? "Tentar de novo" : "Recarregar", "Fonte", "Guia" };
   static const char *ic[3] = { "pl_rotate-ccw", "pl_layers", "pl_list" };
   float x = (NV_TELA_W - w) * 0.5f, y = 290.0f, h, hTit, hDica, yy, lead;
   erroFocoAlvo = erroFoco;

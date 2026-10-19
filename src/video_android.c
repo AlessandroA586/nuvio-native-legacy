@@ -29,6 +29,7 @@
 #include "marco.h"
 #include "streams.h"
 #include "video.h"
+#include "xtream.h"
 #include "capmkv.h"
 #include "audioinfo.h"
 #include "video_reconexao.h"
@@ -55,7 +56,7 @@
 
 static jclass    gCls;      // GlobalRef: FindClass de fio do SDL nao acha classe do app
 static jmethodID mAbrir, mParar, mPausar, mBuscar, mVolume, mJanela, mEscolher;
-static jmethodID mAbrirPosicao, mJanelaPronta;
+static jmethodID mAbrirPosicao, mJanelaPronta, mLimitedConnections;
 // 2.0.3 (opcional): abrirRetomada(url, cab, inicioMs, fracao, geracao). So o
 // percentual conhecido (retomada da conta, sem registro local): o Kotlin
 // aplica fracao/10000 da duracao do CONTAINER antes do primeiro quadro.
@@ -82,6 +83,8 @@ static int resolverMetodos(JNIEnv *env) {
   mJanelaPronta = (*env)->GetStaticMethodID(env, gCls, "janelaPronta", "()Z");
   mEscolher = (*env)->GetStaticMethodID(env, gCls, "escolher", "(II)V");
   if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); return 0; }
+  mLimitedConnections = (*env)->GetStaticMethodID(env, gCls, "limitedConnections", "(I)V");
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); mLimitedConnections = NULL; }
   // Opcional: uma casca anterior ainda abre normalmente e recebe o seek
   // depois da duracao. A ausencia deste metodo nao derruba a ponte inteira.
   mAbrirPosicao = (*env)->GetStaticMethodID(env, gCls, "abrirPosicao", "(Ljava/lang/String;Ljava/lang/String;II)V");
@@ -267,7 +270,7 @@ static int precarregarVideo(const char *url, const char *cab, double segundos,
   jmethodID metodo;
   jstring u, c, a;
   int inicioMs, fracao, ok;
-  if (!url || !*url || !token || token > INT_MAX) return 0;
+  if (!url || !*url || !token || token > INT_MAX || xtream_url_limitada(url)) return 0;
   env = ambiente();
   metodo = proximo ? mPrepararProximo : mPreparar;
   if (!env || !metodo || !mPrepararEstado || !mCancelarPreparo || !mAbrirPreparada) return 0;
@@ -697,6 +700,15 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeCache(JNIEnv
   }
 }
 
+JNIEXPORT jint JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeLimitedStatus(JNIEnv *env, jclass cls) {
+  XtreamConta c;
+  (void)env; (void)cls;
+  if (!xtream_conexoes_limitadas()) return 0;
+  xtream_conta_ler(&c);
+  return c.http == 403 || c.http == 458 || c.http == 509 ? c.http :
+      c.valido && c.maxConexoes > 0 && c.conexoes >= c.maxConexoes ? 458 : 0;
+}
+
 enum { EV_PRONTO = 1, EV_TOCANDO = 2, EV_PAUSADO = 3, EV_FIM = 4, EV_ERRO = 5,
        EV_TAMANHO = 6, EV_BUFFER = 7, EV_PRIMEIRO_QUADRO = 8, EV_AUDIO_SEM_DECODER = 9,
        EV_SUPERFICIE_ESTAVEL = 10, EV_LIVE_RECOVERY = 11, EV_LIVE_SEGMENT = 12 };
@@ -889,13 +901,19 @@ static int abrirSessao(int inicioMs, int fracao) {
 }
 
 int video_tocar_retomada(const char *u, double segundos, double pct) {
+  static int limitedEnviado;
+  int limited = xtream_url_limitada(u);
+  if (mLimitedConnections && limited != limitedEnviado) {
+    kInt(mLimitedConnections, limited); limitedEnviado = limited;
+  }
+  if (limited && !mLimitedConnections) return 0; // Older shells cannot enforce this policy.
   int inicioMs = isfinite(segundos) && segundos > 0.0 && segundos <= INT_MAX / 1000.0
     ? (int)(segundos * 1000.0) : 0;
   // Centesimos de ponto percentual; segundos exatos vencem (abrirPosicao).
   int fracao = !inicioMs && isfinite(pct) && pct > 0.0 && pct < 100.0
     ? (int)(pct * 100.0 + 0.5) : 0;
   snprintf(urlAtual, sizeof urlAtual, "%s", u ? u : "");
-  capmkv_iniciar(urlAtual);
+  if (limited) capmkv_zerar(); else capmkv_iniciar(urlAtual);
   nv_recon_zerar(&recon);
   reconPermitida = reconProxima; reconProxima = 0;
   reconIniciou = 0; reconErroPend = 0;
@@ -995,7 +1013,8 @@ void video_bombear(void) {
     int antes = recon.tentativa;
     int rede = erroDeRede(reconErroCod);
     reconErroPend = 0;
-    if (reconPermitida && urlAtual[0] && (reconIniciou || recon.tentativa) &&
+    if (!(xtream_url_limitada(urlAtual) && (reconErroCod == 403 || reconErroCod == 458 || reconErroCod == 509)) &&
+        reconPermitida && urlAtual[0] && (reconIniciou || recon.tentativa) &&
         nv_recon_erro(&recon, rede, SDL_GetTicks(),
                       eraRecarga ? recarregarPosMs / 1000.0 : pos)) {
       if (!antes && !eraRecarga) {

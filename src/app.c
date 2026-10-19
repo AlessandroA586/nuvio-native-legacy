@@ -1243,6 +1243,7 @@ static void renovarListaDoPlayer(void) {
 static const char *urlCanal(const Stream *s, char *buf, size_t n) {
   const char *id = player_id_canal();
   canalViaProxy = 0;
+  if (s && xtream_url_limitada(s->url)) return s->url;
   if (!s) return "";
   // Toda troca de fonte do guia passa aqui, inclusive a do watchdog.
   video_definir_cabecalhos(s->cabecalhos);
@@ -1447,7 +1448,7 @@ static int resolverCanalXtream(void) {
       // pelo proxy local — HLS (ou .ts que o painel responde com playlist) vira
       // TS continuo; o que ja e TS continuo o proxy redireciona direto. As
       // fontes diretas ficam atras, de reserva.
-      if (!i && ajustes_livetv_proxy() && proxyts_disponivel() && n < (int)(sizeof s / sizeof *s) - 1) {
+      if (!i && !xtream_conexoes_limitadas() && ajustes_livetv_proxy() && proxyts_disponivel() && n < (int)(sizeof s / sizeof *s) - 1) {
         snprintf(s[n].url, sizeof s[n].url, "%s%s", PROXYTS_PREFIXO, url);
         if (strcmp(ord[j].id, player_id_canal()) && ord[j].nome[0])
           snprintf(s[n].rotulo, sizeof s[n].rotulo, "Xtream (%s, proxy) · %s", f, ord[j].nome);
@@ -1516,9 +1517,12 @@ static void motivoCanalXtream(char *t, size_t nt, char *d, size_t nd) {
   } else if (aviso == XA_DESATIVADA || aviso == XA_RECUSOU) {
     snprintf(t, nt, "%s", i18n("O provedor desativou esta conta Xtream."));
     snprintf(d, nd, "%s", i18n("Fale com o seu provedor ou confira o cadastro em Ajustes."));
+  } else if ((xtream_conexoes_limitadas() && aviso == XA_TELAS_CHEIAS) || (xtream_conexoes_limitadas() && err &&
+             (strstr(err, "403") || strstr(err, "458") || strstr(err, "509")))) {
+    snprintf(t, nt, "%s", i18n("Esta linha está em uso em outra tela"));
+    snprintf(d, nd, "%s", i18n("Feche o Xtream em outro aparelho e tente de novo."));
   } else if (aviso == XA_TELAS_CHEIAS) {
-    snprintf(t, nt, i18n("Todas as telas da conta Xtream estão em uso (%d de %d)."),
-             c.conexoes, c.maxConexoes);
+    snprintf(t, nt, i18n("Todas as telas da conta Xtream estão em uso (%d de %d)."), c.conexoes, c.maxConexoes);
     snprintf(d, nd, "%s", i18n("Feche o Xtream em outro aparelho e tente de novo."));
   } else if (err && err[0]) {
     snprintf(t, nt, "%s", i18n("O provedor não entregou este canal."));
@@ -1587,7 +1591,7 @@ static void sondarCanalXtream(const char *id) {
   static char ultimo[80];
   pthread_t t;
   char *c;
-  if (!id || !id[0] || !strcmp(ultimo, id)) return;
+  if (!id || !id[0] || !strcmp(ultimo, id) || xtream_conexoes_limitadas()) return;
   snprintf(ultimo, sizeof ultimo, "%s", id);
   c = strdup(id);
   if (!c) return;
@@ -2609,7 +2613,7 @@ static void sondarAposRecusa(void) {
   const Stream *s;
   SondaRecusa *p;
   pthread_t t;
-  if (!url || !*url || !fontesonda_erro_conexao(video_erro_texto())) return;
+  if (!url || !*url || xtream_url_limitada(url) || !fontesonda_erro_conexao(video_erro_texto())) return;
   if (!strcmp(url, ultima)) return;
   snprintf(ultima, sizeof ultima, "%s", url);
   s = stream_atual() >= 0 ? stream_item(stream_atual()) : NULL;
@@ -3298,6 +3302,14 @@ static void tentarProximaFonteVOD(void) {
   // (video_reconexao.h). So vira troca de fonte quando ela desistir (falhou).
   if (video_reconectando()) return;
   desde = SDL_GetTicks() - fonteVODDesde;
+  const char *err = video_erro_texto();
+  if (xtream_url_limitada(video_url_atual()) && err &&
+      (strstr(err, "403") || strstr(err, "458") || strstr(err, "509"))) {
+    fonteVODAutomatica = 0;
+    player_erro_fonte();
+    video_parar();
+    return;
+  }
   if (video_falhou() || player_fonte_falhou()) { motivo = 1; sondarAposRecusa(); }
   // Reloading a source that already played (Dolby Vision path handing back
   // to the TV player, track switch) is not a source that never opened: on
@@ -3488,7 +3500,8 @@ static void guiaComCanalNoAr(void) {
   float x, y, w, h;
   snprintf(id, sizeof id, "%s", player_id_canal());
   guia_preview_rect(&x, &y, &w, &h);
-  if (player_mini_ativo()) player_mini_no_guia(x, y, w, h);
+  if (xtream_e_id(id) && xtream_conexoes_limitadas()) player_encerrar();
+  else if (player_mini_ativo()) player_mini_no_guia(x, y, w, h);
   else player_minimizar_para_guia(x, y, w, h);
   if (tela != TELA_GUIA || !guia_aberta()) {
     if (tela == TELA_GUIA) guia_abrir();
@@ -6117,6 +6130,14 @@ void app_atualizar(float dt, Uint32 agora) {
     // longo — o uMS que engole 39 s e nao toca em 45 s esta mesmo travado.
     Uint32 desde = SDL_GetTicks() - canalFonteDesde;
     int xt = xtream_e_id(player_id_canal());
+    const char *limitedError = video_erro_texto();
+    if (xt && xtream_conexoes_limitadas() && limitedError &&
+        (strstr(limitedError, "403") || strstr(limitedError, "458") || strstr(limitedError, "509"))) {
+      canalFonteIdx = -1;
+      erroCanalXtream();
+      video_parar();
+      return;
+    }
     // ESPERA DE AJUSTES (Live TV > Espera para abrir o canal, ou o "Aplicar"
     // do diagnostico da Live TV): 25 ou 45 s no lugar dos 15 s do Xtream sem
     // decoder e dos 25 s da fonte viva sem dado. O prazo curto da fonte MUDA
@@ -6478,7 +6499,8 @@ void app_atualizar(float dt, Uint32 agora) {
   // O PREVIEW DO GUIA e uma sessao "mini no guia" do player: mesma busca de
   // fonte, mesmo watchdog, e o OK nele depois so faz a janela crescer.
   { CatItem it;
-    if (aguardandoFonte != 2 && guia_pediu_preview(&it)) {
+    if (aguardandoFonte != 2 && guia_pediu_preview(&it) &&
+        !(xtream_e_id(it.imdb) && xtream_conexoes_limitadas())) {
       float x, y, w, h;
       guia_preview_rect(&x, &y, &w, &h);
       player_mini_no_guia(x, y, w, h);

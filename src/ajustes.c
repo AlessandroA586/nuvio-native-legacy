@@ -675,6 +675,7 @@ typedef enum {
   AJ_NT_EP,            // episode card rating: 0 Follow title line, 1 IMDb, 2 TMDB, 3 Both, 4 Off; local, append-only
   AJ_LIVETV_SUGERIR,   // Live TV: Jev suggests sections for channels with none (livecat.h); default on; local, append-only
   AJ_AUDIO_OFFSET,     // #578: device-local converted audio offset, append-only
+  AJ_XTREAM_CONEXOES,  // Stored with this IPTV account, not global settings.
   AJ_AMPLIAR_UI,      // Device-local output scaler, append-only; TV by default.
   AJ_N
 } OpcaoId;
@@ -1285,6 +1286,7 @@ static const char *JF_ALFA_SENHA =
 
 static const char *V_MANTER_PRAZO[] = { "2 min", "5 min", "10 min", "30 min", "Sem limite" };
 static const char *V_AMIGOS_ESTILO[] = { "Feed de cartões", "Ao vivo em destaque", "Histórias com cartaz", "Faixa de presença", "Cartaz primeiro", "Rostos clássicos" };
+static const char *V_CONEXOES[] = { "Automático", "Ligado", "Desligado" };
 static const Opcao OPCOES[AJ_N] = {
   ESC("Qualidade máxima",           V_QUALIDADE, 4),
   ESC("Dolby Vision",               V_LIGA, 2),
@@ -1743,6 +1745,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Nota nos episódios", V_NT_EP, 5),   // local: notaEpisodio
   ESC("Sugerir categorias dos canais", V_LIGA, 2),   // local: liveTvSugerirLocal
   NUM("Ajuste do áudio (ms)", -AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_STEP_MS, " ms"),
+  ESC("Conta com limite de conexões", V_CONEXOES, 3),
   ESC("Ampliar interface", V_AMPLIAR_UI, 2),
 };
 
@@ -2051,6 +2054,7 @@ static const char *CHAVE[] = {
   "notaEpisodio",
   "liveTvSugerirLocal",
   "audioOffsetMsLocal",
+  "-xtreamConexoes",
   "ampliarUiLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
@@ -7051,6 +7055,7 @@ static const char *ajudaOpcaoBase(int op) {
     }
     case AJ_XTREAM_SENHA: return "A senha da assinatura. É credencial: vai dentro de cada URL de canal e nunca aparece nesta tela em claro.";
     case AJ_XTREAM_LIMPAR: return "Apaga servidor, usuário e senha deste perfil, e os canais somem do Guia. Sair da conta também apaga.";
+    case AJ_XTREAM_CONEXOES: return "Conta com limite de conexões";
     case AJ_XTREAM_CONTA: return "O que o servidor Xtream disse da assinatura na última carga do Guia: se está ativa, quando vence e quantas telas estão em uso.";
     case AJ_EPG_PAIS: return "De que país vem a programação dos canais no Guia. Automático escolhe pelo idioma e pelos nomes dos canais (RO:, |RO|…). A grade do próprio provedor Xtream entra sempre que existir.";
     case AJ_FONTE_MANUAL: return "Ao mandar reproduzir, abre a lista de fontes em vez de escolher sozinho. Canal ao vivo não pergunta.";
@@ -8189,6 +8194,7 @@ static void mudarValor(int op, int dir);
 // O valor a que `dir` levaria `op`, sem aplicar. Espelha mudarValor.
 static int passoAdiante(int op, int dir) {
   const Opcao *o = &OPCOES[op];
+  if (op == AJ_XTREAM_CONEXOES) return (xtream_conexoes_modo() + (dir > 0 ? 1 : 2)) % 3;
   if (op == AJ_FIL_LIMITE) return fil_limite_passo(valor[op], dir);   // Android: 40 -> Ilimitado
   // Valores antigos (passos de 10) ficam intactos ate a primeira seta.
   if (op == AJ_ESPACO_FILEIRAS || op == AJ_ESPACO_TITULOS) {
@@ -8807,6 +8813,11 @@ static int definirValorDireto(int op, int novo) {
     uxNotificar(seekrPedirChave());
     return 0;
   }
+  if (op == AJ_XTREAM_CONEXOES) {
+    xtream_definir_conexoes_modo(novo);
+    valor[op] = xtream_conexoes_modo();
+    return valor[op] == novo;
+  }
   if (op == AJ_PROVEDORES_ESCOPO) {
     int ok = ajustes_definir_provedores_compartilhados(novo == 0);
     if (!ok) uxNotificar("Não foi possível agora. Tente novamente.");
@@ -8883,6 +8894,7 @@ static int definirValorDireto(int op, int novo) {
   return 1;
 }
 static void mudarValorDireto(int op, int dir) {
+  if (op == AJ_XTREAM_CONEXOES) valor[op] = xtream_conexoes_modo();
   definirValorDireto(op, passoAdiante(op, dir));
 }
 
@@ -9380,6 +9392,7 @@ static int nValores(int op) {
 // por vez dentro de desenhaLinha.
 static const char *textoValor(int op) {
   static char buf[48];
+  if (op == AJ_XTREAM_CONEXOES) return i18n(V_CONEXOES[xtream_conexoes_modo()]);
   if (ajFalhaBackend(op)) {
     int v = ajFalhaValor(op);
     if (op == AJ_FALHA_PROVEDORES || op == AJ_FALHA_ADDONS) return i18n(V_LIGA[v]);
@@ -9940,7 +9953,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_SEEKR_CHAVE: case AJ_SEEKR_TESTAR:
     case AJ_SELOS_PACOTE_ADD: case AJ_SELOS_PACOTE_REM:
     case AJ_URL_LISTA: case AJ_URL_M3U_ADD: case AJ_URL_XMLTV_ADD: case AJ_URL_REM:
-    case AJ_XTREAM_CONTA:
+    case AJ_XTREAM_CONEXOES: case AJ_XTREAM_CONTA:
     case AJ_DIAGNOSTICO: case AJ_VELOCIDADE: case AJ_LIVETV_DIAG:
     case AJ_P2P_URL: case AJ_P2P_TESTAR:
     case AJ_JF_SERVIDOR: case AJ_JF_ENTRAR: case AJ_JF_SAIR:
@@ -10050,6 +10063,12 @@ int ajustes_relogio_navegavel(void) {
 }
 
 #ifdef AJUSTES_TESTE
+int ajustes_teste_conexoes(void) {
+  montarTela();
+  xtream_definir_conexoes_modo(1);
+  focarOpcao(AJ_XTREAM_CONEXOES); scrollY = velY = 0;
+  return 1;
+}
 int ajustes_teste_focar_opcao(int op) {
   int i;
   montarTela();
