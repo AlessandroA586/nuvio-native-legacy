@@ -47,6 +47,20 @@ int main(void) {
   assert(!strcmp(V_RESOLUCAO[RES_4K], "4K (experimental)"));
   assert(!strcmp(V_RESOLUCAO[RES_720], "720p (leve)"));
   puts("ok  lista: Automatica primeiro, padrao de fabrica");
+  assert(OPCOES[AJ_GPU_EFEITOS].n == 4);
+  assert(!strcmp(V_GPU_EF[1], "Completos") && !strcmp(V_GPU_EF[2], "Leves"));
+  assert(!strcmp(V_GPU_EF[3], "Mínimos") && !inativa(AJ_GPU_EFEITOS));
+  int resRow = -1, effectsRow = -1;
+  for (int row = 0; row < AJ_N_TELA; row++) if (TELA[row].tipo == IT_OPC) {
+    if (TELA[row].op == AJ_RESOLUCAO) resRow = row;
+    if (TELA[row].op == AJ_GPU_EFEITOS) effectsRow = row;
+  }
+  assert(resRow >= 0 && effectsRow == resRow + 1);
+  for (int p = 0; p < 4; p++) {
+    char saved[80]; snprintf(saved, sizeof saved, "resolucaoUi 3\ngpuEfeitosLocal %d\n", p);
+    assert(carregar(dir, saved) == RES_720 && ajustes_gpu_efeitos() == p);
+  }
+  puts("ok  effects appended, visible beside resolution, saved 720p choices preserved");
 
   // 3. Disk: old key migrates; the new key wins over the old one.
   assert(carregar(dir, "resolucao_ui 0\n") == RES_AUTO && !ajustes_4k() && !ajustes_720p());

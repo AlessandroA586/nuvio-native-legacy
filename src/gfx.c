@@ -3738,8 +3738,14 @@ static int vidCapturar(const float reg[][4], int n, GLuint dst, GLuint dstFbo, G
     float o = (float)telaW / qw * 0.5f - 1.0f;
     vidPassada(source ? source : vidGrab, vidQaFbo, qw, qh, uv, k, o / telaW, o / telaH);
   }
-  vidPassada(vidQa, vidQbFbo, qw, qh, uv, k, 0.35f / qw, 0.35f / qh);         // Kawase
-  vidPassada(vidQb, dstFbo, qw, qh, uv, k, 0.75f / qw, 0.75f / qh);
+  if (efeitosLeves) {
+    // One Kawase instead of two; sqrt(.35^2 + .75^2) keeps the blur spread.
+    // Glass stays frosted at native UI resolution; level 2 keeps its old rule.
+    vidPassada(vidQa, dstFbo, qw, qh, uv, k, 0.828f / qw, 0.828f / qh);
+  } else {
+    vidPassada(vidQa, vidQbFbo, qw, qh, uv, k, 0.35f / qw, 0.35f / qh);
+    vidPassada(vidQb, dstFbo, qw, qh, uv, k, 0.75f / qw, 0.75f / qh);
+  }
   glBindTexture(GL_TEXTURE_2D, 0);
   glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)fboAnt);
   glViewport(vp[0], vp[1], vp[2], vp[3]);
