@@ -2164,7 +2164,7 @@ static int nLinhasDetalhe(void) {
 // filme e ao culling. Antes cada numero destes vivia cravado no meio do
 // desenho, e uma secao nova herdava a altura do elenco em silencio.
 static int epApple(void) { return ajustes_home_layout() == HOME_LAYOUT_DINAMICA; }
-static int epModerna(void) { return ajustes_home_layout() == HOME_LAYOUT_MODERNA; }
+static int epModerna(void) { return ajustes_home_layout() == HOME_LAYOUT_MODERNA || ajustes_home_layout() == HOME_LAYOUT_DINAMICA; }
 // #205 (dono): tres tamanhos de card de episodio na Moderna — Pequeno, Medio
 // (o de sempre) e Grande, no Ajustes. UMA escala so (ajustes_ep_tamanho):
 // largura, passo e miniatura saem daqui multiplicados, e o que e ancorado na
@@ -2176,52 +2176,25 @@ static float epEscala(void) {
   return epModerna() ? S[ajustes_ep_tamanho()] : 1.0f;
 }
 static float epThumbH(void) {
-  return (epApple() ? 236.0f : epModerna() ? NV_DETP_EPM_THUMB_H * epEscala() : NV_DETP_EP_THUMB_H) * gfx_poster_k();
+  return (epModerna() ? NV_DETP_EPM_THUMB_H * epEscala() : NV_DETP_EP_THUMB_H) * gfx_poster_k();
 }
-static float epCardW(void) { return (epApple() ? 420.0f : NV_DETP_EP_W * epEscala()) * gfx_poster_k(); }
+static float epCardW(void) { return (NV_DETP_EP_W * epEscala()) * gfx_poster_k(); }
 static float epCardH(void) {
-  if (epApple()) return ANC(500.0f);
   if (!epModerna()) return epThumbH();
   // Miniatura + bloco de texto: titulo (1 linha) + sinopse de 4 linhas (#205),
   // Reserve scaled text offsets and line advances before following sections.
   return epThumbH() + NV_DETP_EPM_SIN_DY +
          (float)NV_DETP_EPM_SIN_LINHAS * NV_DETP_EP_LD_SIN + ANC(10.0f);
 }
-static float epCardPasso(void) { return epCardW() + (epApple() ? NV_DETP_EP_GAP : (NV_DETP_EP_PASSO - NV_DETP_EP_W) * epEscala()); }
-// A placa de foco estilo Apple TV (#205): alpha da mola `f` vezes o teto
-// NV_DETP_EP_PLACA_A. Sem foco (f=0) nao ha placa; o teste le daqui.
-// Moderna: a placa tem a largura da miniatura JA com o zoom do foco (mesmas
-// bordas, dono: "ta sem margem" / mais larga que o texto; o texto fica a
-// NV_DETP_EPM_TEXTO_X do card, >= 16 da borda da placa), comeca embaixo dela
-// e desce NV_DETP_EPM_PLACA_PAD alem do card. `r` e a caixa do card, `thH` a
-// altura da miniatura, `ft` o foco 0..1.
-// Standard keeps the full-card plate because its text overlays the thumbnail.
-static GfxRect epPlacaRect(GfxRect r, float thH, float ft) {
-  if (epModerna()) {
-    GfxRect z = foco_zoom((GfxRect){ r.x, r.y, r.w, thH }, ft);
-    float base = z.y + z.h;
-    // Com o anel nao ha zoom: a placa acompanha a borda de fora do anel.
-    if (ajustes_borda_foco()) { z.x -= NV_ANEL_FOCO; z.w += 2.0f * NV_ANEL_FOCO; }
-    return (GfxRect){ z.x, base, z.w, r.y + r.h + NV_DETP_EPM_PLACA_PAD - base };
-  }
-  GfxRect p = { r.x - NV_DETP_EP_PLACA_PAD, r.y - NV_DETP_EP_PLACA_PAD,
-                r.w + NV_DETP_EP_PLACA_PAD * 2.0f,
-                r.h + NV_DETP_EP_PLACA_PAD * 2.0f };
-  float pw = p.w, ph = p.h, s = 1.0f + 0.03f * ft;
-  p.w *= s; p.h *= s;
-  p.x -= (p.w - pw) * 0.5f; p.y -= (p.h - ph) * 0.5f;
-  return p;
-}
-static float epPlacaA(float f) { return NV_DETP_EP_PLACA_A * anim_clamp(f, 0.0f, 1.0f); }
-// Glass cards tint the shared page backdrop, without a per-card material pass.
-// Moderna text rests on the cast tile tint (7%); focus doubles it.
-// Moderna keeps its resting tint through focus transitions, with or without glass.
-static void epPlacaDesenha(GfxRect p, float f, float a) {
-  if (ajustes_vidro() || epModerna())
-    gfx_cor(p, 24.0f / p.h, 1, 1, 1,
-            0.07f * ((epModerna() ? 1.0f : 0.0f) + anim_clamp(f, 0.0f, 1.0f)) * a);
-  else
-    gfx_cor(p, 24.0f / p.h, 1, 1, 1, epPlacaA(f) * a);
+static float epCardPasso(void) { return epCardW() + ((NV_DETP_EP_PASSO - NV_DETP_EP_W) * epEscala()); }
+// Episode focus is outline only, independent of poster glow/zoom settings.
+// Both strokes use the existing GLES2 ring shader; no texture sampling.
+static void epFocoDesenha(GfxRect r, float f, float a) {
+  if (f <= 0.005f || r.h <= 0.0f) return;
+  float dots = floorf(2.0f * (r.w + r.h) / 8.0f);
+  float radius = NV_DETP_EP_RAIO / r.h;
+  gfx_rect(r, 0, GFX_ANEL, 0, 4.0f / r.h, dots, radius, 0, 0, 0, f * a);
+  gfx_rect(r, 0, GFX_ANEL, 0, 2.0f / r.h, dots, radius, 1, 1, 1, f * a);
 }
 // Largura do texto abaixo da miniatura (titulo, sinopse e barra): a do card,
 // menos as margens do Padrao (32 de cada lado, o NV_DETP_EP_TEXTO_W medido).
@@ -5529,43 +5502,16 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   GfxRect th = { r.x, r.y, r.w, epThumbH() };
   float raioTh = NV_DETP_EP_RAIO / epThumbH();
 
-  // Foco: no web e um box-shadow na MINIATURA, nao no card, e nao ha escala
-  // nenhuma (`transform: none`). A cor acompanha o accent escolhido — o anel
-  // branco fixo fazia esta fileira destoar justamente quando o resto da tela
-  // ja seguia o tema.
-  // FOCO COMO O DA HOME (focoprof.h): anel so com "Foco no cartaz" ligado;
-  // desligado, a miniatura cresce com a animacao do foco. O brilho e o
-  // realce de profundidade seguem os mesmos Ajustes (Episodios).
-  // O FOCO NA MOLA (0..1), ja com o ajuste de animacoes reduzidas embutido
-  // (anim.h: a primitiva mesma vai direto ao alvo). A placa e o texto leem
-  // `ft` e nunca o f cru.
   const float ft = anim_clamp(f, 0.0f, 1.0f);
-  GfxRect thLayout = th;
-  // O PRATO DE FOCO, estilo Apple TV (#205, dono: "o fundo meio cinza do apple
-  // tv"): placa branca translucida ATRAS do card inteiro (miniatura + texto),
-  // que nasce e cresce ~3% a partir do centro NA MOLA do foco — antes o card
-  // so ganhava anel/zoom e o texto ficava parado. Nao muda a caixa (`r`), logo
-  // nao move nenhum vizinho; some desfocando pelo mesmo caminho.
-  // Glass Moderna: the text rests on a tile in the card box (below); the plate
-  // grows out of that tile with the spring, so a fading card pays no margins.
   const GfxRect epTile = { r.x, r.y + th.h, r.w, r.h - th.h };
-  const int epVidroTile = !epApple() && epModerna();
-  if (!epApple() && f > 0.005f) {
-    GfxRect p = epPlacaRect(r, th.h, ft);
-    if (epVidroTile) {
-      p.x = epTile.x + (p.x - epTile.x) * ft; p.y = epTile.y + (p.y - epTile.y) * ft;
-      p.w = epTile.w + (p.w - epTile.w) * ft; p.h = epTile.h + (p.h - epTile.h) * ft;
-    }
-    epPlacaDesenha(p, f, a);
-  }
-  if (!epApple()) { foco_anel(th, raioTh, f, a); th = foco_zoom(th, f); }
+  const int epVidroTile = epModerna();
 
   const CatItem *serie = cat_item(idx);
   const char *arte = (ep && ep->thumb[0]) ? ep->thumb
                      : (serie && serie->backdrop[0] ? serie->backdrop : NULL);
   // Reserve the largest focus size once; spring motion must not promote
   // and decode the same thumbnail at successive 32-pixel cache limits.
-  const float texW = r.w * (ajustes_borda_foco() || epApple() ? 1.0f : 1.0f + FOCO_ZOOM);
+  const float texW = r.w;
   GLuint t2 = arte ? tex_obter_larg(arte, texW) : 0;
   // STILL QUE NAO EXISTE NEM NO METAHUB NEM NO TMDB (One Piece da 2a
   // temporada em diante, 23/09): o card nao fica cinza, leva o fundo da serie
@@ -5579,10 +5525,8 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   }
   float aArte = (c >= 0 && c < DET_REV_EP) ? revela_arte(&revEp[c], t2 != 0, agora) : 1.0f;
   // The rest tile follows the text, not the still: glass on or off, art or not.
-  if (epVidroTile && f <= 0.005f) {
-    if (ajustes_vidro()) epPlacaDesenha(epTile, 0.0f, a);
-    else gfx_cor(epTile, 24.0f / epTile.h, 1, 1, 1, 0.07f * a);
-  }
+  if (epVidroTile)
+    gfx_cor(epTile, 24.0f / epTile.h, 1, 1, 1, 0.07f * a);
   // DESFOCAR NAO ASSISTIDOS (blurUnwatchedEpisodes, #133). O ajuste existia na
   // tela e na conta e nada o lia — o card saia nitido em toda plataforma.
   // "Nao assistido" e tudo que o mapa NAO afirma como visto: inclusive o "nao
@@ -5609,7 +5553,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   if (t2) {
     if (!mergedVeil && aArte < 0.999f) gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
     gfx_tex_aspect_atual = tex_aspecto(arte);
-    gfx_rect(th, t2, GFX_CARD, f, 0, 0, raioTh, 0, 0, 0, mergedVeil ? a : a * aArte);
+    gfx_rect(th, t2, GFX_CARD, 0, 0, 0, raioTh, 0, 0, 0, mergedVeil ? a : a * aArte);
     gfx_tex_aspect_atual = 0.0f;
   } else if (arte && !tex_falhou(arte))
     gfx_esqueleto(th, raioTh, 0.133f, 0.133f, 0.133f, a);
@@ -5624,7 +5568,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     if (!mergedVeil) gfx_cor(th, raioTh, 0, 0, 0, .12f * a);
     desenhaAssistidoEpisodio(th, a);
   }
-  th = thLayout;   // o texto abaixo segue a caixa de repouso
+  epFocoDesenha(r, ft, a);
 
   // NADA DE RESERVA INVENTADA. Aqui as quatro linhas caiam numa tabela de
   // demonstracao (nome, duracao, data e sinopse de "Shrinking"), entao um
@@ -5638,71 +5582,6 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   const char *epData = (ep && ep->data[0])    ? ep->data    : NULL;
   const char *epSin  = (ep && ep->sinopse[0]) ? ep->sinopse : NULL;
   int epNum = ep ? ep->episodio : c + 1;
-
-  if (epApple()) {
-    float textX = r.x + 18.0f, textW = r.w - 36.0f;
-    float textY = r.y + epThumbH() + 18.0f;
-    GfxRect info = {r.x,textY-8,r.w,epCardH()-epThumbH()-18};
-    if (f > .005f) {
-      if (ajustes_vidro()) gfx_vidro_chip(info,20.0f/info.h,.64f,f*a);
-      else gfx_cor(info,20.0f/info.h,.19f,.21f,.23f,.64f*f*a);
-      if (ajustes_borda_foco()) gfx_anel(th,20.0f/th.h,1.5f,1,1,1,.18f*f*a);
-    }
-    float metaY = th.y + th.h - 36.0f;
-    int watched = serie && ep &&
-      vistoep_estado(serie->imdb, ep->temporada, ep->episodio) == 1;
-    int current = serie && ep && serie->temporada == ep->temporada &&
-      serie->episodio == ep->episodio;
-    int progress = current && !watched ? serie->progresso : 0;
-    if (watched)
-      gfx_icone((GfxRect){textX,metaY+2,20,20},"aj_rotate-ccw-clock",
-                .9f,.92f,.94f,a);
-    else
-      gfx_rect((GfxRect){textX,metaY+4,14,17},0,GFX_PLAY,0,0,0,0,
-               .9f,.92f,.94f,a);
-    float durationX = textX+28;
-    if (progress > 0 && progress < 100) {
-      GfxRect track = {durationX,metaY+10,72,4};
-      gfx_cor(track,.5f,1,1,1,.25f*a);
-      track.w *= progress/100.0f; gfx_cor(track,.5f,1,1,1,.8f*a);
-      durationX += 84;
-      if (serie->restanteMin > 0) {
-        char remaining[64];
-        int h = serie->restanteMin / 60, m = serie->restanteMin % 60;
-        if (h && m) snprintf(remaining,sizeof remaining,i18n("%dh %dmin Restantes"),h,m);
-        else if (h) snprintf(remaining,sizeof remaining,i18n("%dh Restantes"),h);
-        else snprintf(remaining,sizeof remaining,i18n("%dmin Restantes"),m);
-        txt_desenhar_alpha(txt_linha_corta(TXT_CAPTION,remaining,235,237,240,255,
-                          r.x+r.w-18-durationX),durationX,metaY,a);
-      }
-    } else if (epDur)
-      txt_desenhar_alpha(txt_linha(TXT_CAPTION,epDur,235,237,240,255),durationX,metaY,a);
-    char number[32]; snprintf(number,sizeof number,i18n("EPISÓDIO %d"),epNum);
-    txt_desenhar_alpha(txt_linha(TXT_CAPTION2,number,164,169,176,255),textX,textY,a);
-    char fallback[40]; snprintf(fallback,sizeof fallback,i18n("Episódio %d"),epNum);
-    TxtLinha name = txt_linha_corta(TXT_DET_META2,epNome ? epNome : fallback,
-                                   246,247,250,255,textW);
-    // O titulo acende com a mola do foco, como nos outros layouts (#205).
-    txt_desenhar_alpha(name,textX,textY+30,a*(0.86f+0.14f*ft));
-    float y = textY+64;
-    float copyBottom = r.y + epCardH() - (epNaoExibido(ep) ? 30.0f : 0.0f);
-    if (epData) copyBottom -= 10.0f + txt_linha(TXT_CAPTION2,epData,165,171,180,255).h;
-    int lines = (int)floorf((copyBottom-y)/29.0f);
-    if (lines > 4) lines = 4;
-    if (epSin && lines > 0) y += sinopse_bloco_corta(TXT_CAPTION, epSin,171,177,185,
-                                   textX,y,textW,29,a,lines);
-    if (epData) {
-      const char *date = epData;
-      if (!ajustes_data_completa() && strlen(date)>=4) date += strlen(date)-4;
-      txt_desenhar_alpha(txt_linha_corta(TXT_CAPTION2,date,165,171,180,255,textW),
-                        textX,y+10,a);
-    }
-    if (epNaoExibido(ep)) {
-      TxtLinha status = txt_linha_corta(TXT_CAPTION2,i18n("NÃO EXIBIDO"),245,199,77,255,textW);
-      txt_desenhar_alpha(status,textX,r.y+epCardH()-30,a);
-    }
-    return;
-  }
 
   float tx = r.x + NV_DETP_EP_PAD;
   const int moderna = epModerna();

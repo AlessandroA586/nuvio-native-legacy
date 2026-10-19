@@ -127,31 +127,20 @@ int main(void) {
   //    TXT_PLR_CORPO (32) do Padrao.
   assert(epTituloEstilo() == TXT_CALLOUT);
 
-  // 5. A PLACA do texto e mais estreita que a miniatura, centrada, e abriga o
-  //    texto (que comeca em r.x+12 e +6 no foco) com folga, em repouso e em foco.
-  { GfxRect r = {100, 50, epCardW(), epCardH()};
-    for (i = 0; i <= 1; i++) {
-      GfxRect pl = epPlacaRect(r, epThumbH(), (float)i);
-      assert(pl.w < r.w);
-      assert(pl.x > r.x && pl.x + pl.w < r.x + r.w);
-      assert(fabsf((pl.x + pl.w * 0.5f) - (r.x + r.w * 0.5f)) < 0.01f);
-      if (i) assert(pl.x + 6.0f <= r.x + 18.0f);   // em repouso nao ha placa
-      if (i) assert(r.x + 18.0f + epTextoW() <= pl.x + pl.w);
-    } }
+  // Refined shares Modern episode metrics in every card size.
+  for (v = 0; v < 3; v++) {
+    char settings[80];
+    snprintf(settings, sizeof settings, "homeLayoutLocal 2\nepTamanhoLocal %d\n", v);
+    gravar(settings);
+    assert(epCardW() == w[v] && epCardH() == h[v]);
+    assert(epThumbH() == th[v] && epCardPasso() == p[v]);
+    assert(epTituloEstilo() == TXT_CALLOUT && epSinLinhas() == 4);
+  }
 
-  // Standard keeps its full-card focus plate: text overlays the thumbnail.
+  // Standard retains its overlaid text geometry.
   gravar("homeLayoutLocal 1\n");
   assert(ajustes_home_layout() == HOME_LAYOUT_PADRAO);
   assert(epCardH() == epThumbH());
-  { GfxRect r = {100, 50, epCardW(), epCardH()};
-    for (i = 0; i <= 1; i++) {
-      GfxRect pl = epPlacaRect(r, epThumbH(), (float)i);
-      float scale = 1.0f + 0.03f * i;
-      assert(fabsf(pl.w - (r.w + 2 * NV_DETP_EP_PLACA_PAD) * scale) < 0.01f);
-      assert(fabsf(pl.h - (r.h + 2 * NV_DETP_EP_PLACA_PAD) * scale) < 0.01f);
-      assert(fabsf(pl.x + pl.w * 0.5f - (r.x + r.w * 0.5f)) < 0.01f);
-      assert(fabsf(pl.y + pl.h * 0.5f - (r.y + r.h * 0.5f)) < 0.01f);
-    } }
 
   puts("detail_epcard: bases casadas, tres tamanhos, sinopse de 4 linhas e foco andando");
   return 0;

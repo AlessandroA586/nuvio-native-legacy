@@ -23,8 +23,8 @@ if 'fillGpuArea(r,' in rf or 'GFX_TR_RECT' not in rf or 'escAtiva' not in rf:
     fails.append('rect_furos visibility check uses unscaled coordinates')
 m = re.search(r'const int epVidroTile = ([^;]*);', d)
 if not m or 'ajustes_vidro' in m.group(1): fails.append('rest tile gated on glass setting')
-m = re.search(r'if \(epVidroTile && f <= 0\.005f[^\n]*', d)
-if not m or 't2' in m.group(0): fails.append('rest tile gated on artwork')
+m = re.search(r'if \(epVidroTile\)\n[^\n]*', d)
+if not m or '0.07f * a' not in m.group(0): fails.append('rest tile changes with focus or artwork')
 for f in fails: print('FAIL:', f)
 print('OK' if not fails else ''); sys.exit(1 if fails else 0)
 EOF
