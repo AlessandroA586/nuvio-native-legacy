@@ -21,10 +21,11 @@ if 'gfx_opacidade_grupo' not in furos: fails.append('epFuros ignores row/group a
 rf = block(g, 'void gfx_rect_furos(', '\nvoid gfx_rect(')
 if 'fillGpuArea(r,' in rf or 'GFX_TR_RECT' not in rf or 'escAtiva' not in rf:
     fails.append('rect_furos visibility check uses unscaled coordinates')
-m = re.search(r'const int epVidroTile = ([^;]*);', d)
-if not m or 'ajustes_vidro' in m.group(1): fails.append('rest tile gated on glass setting')
-m = re.search(r'if \(epVidroTile\)\n.*?;', d, re.S)
-if not m or '(31 + 7 * ft) / 255.0f' not in m.group(0): fails.append('variant C panel focus color missing')
+if 'if (epModerna() && ft > .005f)' not in d:
+    fails.append('Modern C focus panel missing')
+if 'NUVIO_EP_MATERIAL' in d: fails.append('temporary material switch remains')
+if 'GfxRect th = {x, epRowY()-scrollY, epCardW(), epThumbH()};' not in furos:
+    fails.append('translucent panel wrongly culls backdrop')
 for f in fails: print('FAIL:', f)
 print('OK' if not fails else ''); sys.exit(1 if fails else 0)
 EOF

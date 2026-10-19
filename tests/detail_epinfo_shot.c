@@ -44,14 +44,11 @@ static void checkedRect(GfxRect r, GLuint tex, GfxModo mode, float focus,
   gfx_rect(r,tex,mode,focus,px,py,radius,cr,cg,cb,a);
 }
 static void checkedColor(GfxRect r, float radius, float cr, float cg, float cb, float a) {
-  if (checkP1 && cr == 1 && cg == 1 && cb == 1 && r.w > panelCard.w &&
-      r.h > panelCard.h) {
-    float w = (panelCard.w + 2 * NV_DETP_EP_PLACA_PAD) * 1.03f;
-    float h = (panelCard.h + 2 * NV_DETP_EP_PLACA_PAD) * 1.03f;
-    assert(fabsf(r.w-w)<.001f && fabsf(r.h-h)<.001f);
-    assert(fabsf(r.x-(panelCard.x-(w-panelCard.w)*.5f))<.001f);
-    assert(fabsf(r.y-(panelCard.y-(h-panelCard.h)*.5f))<.001f);
-    assert(fabsf(a-(ajustes_vidro() ? .07f : NV_DETP_EP_PLACA_A))<.001f);
+  if (checkP1 && !epModerna() && cr == 1 && cg == 1 && cb == 1 &&
+      r.w == panelCard.w && r.h > epThumbH()) {
+    assert(r.x == panelCard.x && r.y == panelCard.y + epThumbH() + 10);
+    assert(r.h == epCardH() - epThumbH() - 18);
+    assert(fabsf(a - .12f) < .001f);
     plateDraws++;
   }
   gfx_cor(r,radius,cr,cg,cb,a);
@@ -89,7 +86,7 @@ static void checkReviewP1(const char *out, const char *finding) {
         checkP1=0;
         if (standard) {
           assert(cardDraws==1 && drawnFocus==1 && plateDraws==1);
-          GfxRect expected=foco_zoom((GfxRect){100,100,panelCard.w,epThumbH()},1);
+          GfxRect expected={100,100,420,236};
           assert(drawnArt.x==expected.x && drawnArt.y==expected.y &&
                  drawnArt.w==expected.w && drawnArt.h==expected.h);
         } else {
@@ -158,8 +155,8 @@ static void checkThumbnailHoles(void) {
       float x=xItem(SEC_EPISODIOS,c)-scrollSec[SEC_EPISODIOS];
       if (x>NV_TELA_W || x+epCardW()<0) continue;
       float y=epRowY()-scrollY, inset=NV_DETP_EP_RAIO+2;
-      GfxRect rects[] = {{x+inset,y+2,epCardW()-2*inset,epCardH()-4},
-                         {x+2,y+inset,epCardW()-4,epCardH()-2*inset}};
+      GfxRect rects[] = {{x+inset,y+2,epCardW()-2*inset,epThumbH()-4},
+                         {x+2,y+inset,epCardW()-4,epThumbH()-2*inset}};
       for (int i=0;i<2;i++) {
         assert(expected < n);
         GfxRect h=holes[expected++], r=rects[i];
@@ -169,7 +166,7 @@ static void checkThumbnailHoles(void) {
     assert(expected == n);
   }
   animFoco[SEC_EPISODIOS][foco.coluna] = settled;
-  puts("PASS: full card holes and unchanged image cache widths across focus changes");
+  puts("PASS: thumbnail holes and unchanged image cache widths across focus changes");
 }
 
 static void saveShot(const char *path, int w, int h) {

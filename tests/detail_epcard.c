@@ -129,11 +129,32 @@ int main(void) {
     assert(epTituloEstilo() == TXT_CALLOUT && epSinLinhas() == 5);
   }
 
-  // Standard retains its overlaid text geometry.
-  gravar("homeLayoutLocal 1\n");
-  assert(ajustes_home_layout() == HOME_LAYOUT_PADRAO);
-  assert(epCardH() == epThumbH());
-
-  puts("detail_epcard: unchanged images, 624 px card, seven panel rows, three sizes and navigation");
+  // Standard restores the old Apple TV metrics regardless of Modern card size.
+  for (v = 0; v < 3; v++) {
+    char settings[80];
+    snprintf(settings, sizeof settings, "homeLayoutLocal 1\nepTamanhoLocal %d\n", v);
+    gravar(settings);
+    assert(ajustes_home_layout() == HOME_LAYOUT_PADRAO);
+    assert(epCardW() == 420 && epThumbH() == 236 && epCardH() == 464);
+    assert(epCardPasso() == 420 + NV_DETP_EP_GAP);
+    assert(epRowY() == ANC(NV_DETP_EP_Y));
+    assert(epSinLinhas() == 4 && epTituloEstilo() == TXT_DET_META2);
+    assert(alturaSecao(SEC_EPISODIOS) == epCardH());
+    assert(epCardH() - epThumbH() == 228);
+    aberto = 1; saindo = 0; nivel = 1;
+    foco.fileira = SEC_EPISODIOS; foco.coluna = 0;
+    for (i = 0; i < 30; i++) detail_atualizar(1.0f / 60.0f, 2000 + i * 16);
+    for (i = 1; i < 6; i++) {
+      e.key.keysym.sym = SDLK_RIGHT; detail_evento(&e);
+      assert(foco.fileira == SEC_EPISODIOS && foco.coluna == i);
+      assert(fabsf(xItem(SEC_EPISODIOS, i) - xItem(SEC_EPISODIOS, i - 1)
+                   - epCardPasso()) < .01f);
+    }
+    e.key.keysym.sym = SDLK_DOWN; detail_evento(&e);
+    assert(foco.fileira != SEC_EPISODIOS);
+    e.key.keysym.sym = SDLK_UP; detail_evento(&e);
+    assert(foco.fileira == SEC_EPISODIOS);
+  }
+  puts("detail_epcard: Modern/Refined metrics and navigation preserved; Standard Apple TV cards restored");
   return 0;
 }

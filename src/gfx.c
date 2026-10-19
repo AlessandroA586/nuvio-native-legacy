@@ -478,7 +478,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "uniform vec4 uHeroiVeu;\n"
   "#endif\n"
   "void main(){\n"
-  // Modern episode images join the opaque panel with square lower corners.
+  // Modern episode images keep square lower corners above the text panel.
   "  float d = sdf(vUv, uVeu.x < -1.5 && vUv.y > 0.5 ? 0.0 : uRaio, uAspect);\n"
   "  float m = borda(d);\n"
   "  if (m <= 0.001) discard;\n"

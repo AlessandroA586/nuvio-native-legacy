@@ -14,7 +14,7 @@ shader = Path('src/gfx.c').read_text()
 assert 'uVeu.x < -1.5 && vUv.y > 0.5 ? 0.0 : uRaio' in shader
 assert 'if (uVeu.x < -1.5) g = smoothstep(0.55, 1.0, t) * 0.65' in shader
 assert 'epDur && data[0] ? "   ·   " : ""' in card
-metrics = source.split('static int epModerna(void)', 1)[1].split('// Largura do texto', 1)[0]
+metrics = source.split('static int epModerna(void)', 1)[1].split('// Text padding', 1)[0]
 program = r'''
 #include <assert.h>
 #include <math.h>

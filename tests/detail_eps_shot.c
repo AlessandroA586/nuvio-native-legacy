@@ -112,7 +112,7 @@ static int fxTrailerVivo;
 static int fx_trailer_aberto(void) { return fxTrailerVivo; }
 #define trailer_aberto fx_trailer_aberto
 static Uint32 fxTick;
-static Uint32 fx_ticks(void) { return getenv("NV_EP_PERF") ? fxTick : SDL_GetTicks(); }
+static Uint32 fx_ticks(void) { return getenv("NV_EP_PERF") || getenv("NV_EP_FINAL_SHOTS") ? fxTick : SDL_GetTicks(); }
 #define SDL_GetTicks fx_ticks
 #include "../src/detail.c"
 #undef SDL_GetTicks
@@ -583,6 +583,81 @@ static void checkTextWeight(void) {
   puts("[detail-weight] approved pixels preserved across styles, weights and fades");
 }
 
+// Freeze identical fixtures for the approved Modern and restored Standard cards.
+static void episodeShots(const char *out) {
+  unsigned char *rest = malloc(1920 * 1080 * 4);
+  unsigned char *pixels = malloc(1920 * 1080 * 4);
+  assert(rest && pixels);
+  extras_carregar("deploy/app/art");
+  dados_gravar("aparencia-20.txt", "1\n");
+  for (int layout = 0; layout < 2; layout++) {
+    char settings[700];
+    snprintf(settings, sizeof settings, "%s/ajustes.txt", dados_dir());
+    FILE *file = fopen(settings, "w"); assert(file);
+    fprintf(file, "idioma 1\nhomeLayoutLocal %d\nvidroLocal 1\nbordaFocoCartaz 1\n"
+                  "epTamanhoLocal 1\nselected_theme 2\nnotaEpisodio 3\n"
+                  "escalaTextoVersaoLocal 1\nescalaTextoLocal 2\n", layout);
+    fclose(file); ajustes_dir(dados_dir());
+    assert(!ajustes_vidro() && ajustes_home_layout() == layout);
+    montarCatalogo();
+    snprintf(itens[0].sinopse, sizeof itens[0].sinopse,
+             "After a family tragedy, three siblings move into their ancestral home "
+             "and discover keys with unusual powers. Each discovery reveals another mystery.");
+    snprintf(itens[0].genero, sizeof itens[0].genero, "Drama · Fantasy · Mystery");
+    cat_definir_tudo(itens, 2, &filEnsaio, 1);
+    for (int i = 0; i < T1_N; i++) {
+      snprintf(episodios[i].thumb, sizeof episodios[i].thumb,
+               "deploy/app/art/ep/27_1_%02d.jpg", i % 10 + 1);
+      snprintf(episodios[i].nome, sizeof episodios[i].nome, "Episode title %d", i + 1);
+      snprintf(episodios[i].sinopse, sizeof episodios[i].sinopse,
+               "The family follows a new clue while an unexpected visitor changes their plans. "
+               "As the mystery deepens, each discovery brings them closer to the truth "
+               "and forces them to reconsider who they can trust.");
+      snprintf(episodios[i].data, sizeof episodios[i].data, "March %d, 2024", i + 1);
+    }
+    if (layout == HOME_LAYOUT_PADRAO) {
+      snprintf(episodios[1].data, sizeof episodios[1].data, "Wednesday, September 22, 2024");
+      episodios[2].notaImdb = episodios[2].nota = 0;
+    }
+    cat_definir_episodios(0, episodios, T1_N + T2_N + T3_N);
+    semear(1, T1_N, 3); abrir(0, 0); nosEpisodios(0);
+    // Allow worker decode/reveal to settle before freezing both navigation states.
+    for (int i = 0; i < 40; i++) { SDL_Delay(10); fxTick += 16; quadros(1); }
+    parado = 1; fxTick = 10000;
+    GfxRect card = {100, 100, epCardW(), epCardH()};
+    GfxRect holes[N_ITENS * 2];
+    int n = epFuros(holes);
+    assert(layout == HOME_LAYOUT_MODERNA ? n > 0 : n == 0);
+    for (int i = 0; i < n; i++) assert(holes[i].h <= epThumbH());
+    for (int focused = 0; focused < 2; focused++) {
+      memset(animFoco, 0, sizeof animFoco);
+      animFoco[SEC_EPISODIOS][0] = focused;
+      for (int warm = 0; warm < 3; warm++) {
+        gfx_novo_quadro(); txt_novo_quadro(); gfx_sem_recorte();
+        glClearColor(.02f, .02f, .025f, 1); glClear(GL_COLOR_BUFFER_BIT);
+        desenhaEpisodio(card, 0, focused, 1, fxTick);
+        assert(gfx_n_cheio == 0);
+      }
+      glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, focused ? pixels : rest);
+      if (focused && layout == HOME_LAYOUT_MODERNA) {
+        for (int y = 140; y < 420; y++) for (int x = 150; x < 690; x++)
+          for (int channel = 0; channel < 4; channel++) {
+            int p = ((1079 - y) * 1920 + x) * 4 + channel;
+            assert(abs(rest[p] - pixels[p]) <= 1);
+          }
+      }
+      quadros(3);
+      char path[900];
+      snprintf(path, sizeof path, "%s/final-%s-%s.png", out,
+               layout ? "standard" : "modern", focused ? "foco" : "rest");
+      gravar(path);
+      assert(glGetError() == GL_NO_ERROR);
+    }
+  }
+  free(rest); free(pixels);
+  puts("PASS: episode PNGs, fixed Modern still pixels and thumbnail-only culling");
+}
+
 int main(int argc, char **argv) {
   const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-deteps");
   char nome[600];
@@ -637,6 +712,7 @@ int main(int argc, char **argv) {
     ajustes_dir(dados_dir()); }
 
   montarCatalogo();
+  if (getenv("NV_EP_FINAL_SHOTS")) { episodeShots(saida); return 0; }
   if (getenv("NV_EP_PERF")) {
     assert(ajustes_home_layout() == HOME_LAYOUT_MODERNA && ajustes_vidro());
     semear(1, T1_N, 3);
