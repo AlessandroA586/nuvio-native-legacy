@@ -195,7 +195,7 @@ class LiveWindowRecoveryTest {
         assertEquals(listOf("live position", "prepare", "stop", "failed"), f.calls)
     }
 
-    private fun playlistReset() = HlsPlaylistTracker.PlaylistResetException(Uri.EMPTY)
+    private fun playlistReset() = HlsPlaylistTracker.PlaylistResetException(Uri.parse("https://example.test/live.m3u8"))
 
     @Test fun loggedPlaylistResetRecoversSameLivePlayer() {
         val f = Fixture()
@@ -214,7 +214,7 @@ class LiveWindowRecoveryTest {
         assertFalse(f.recover(code = 2004, cause = playlistReset()))
         assertFalse(f.recover(code = 2000, cause = IOException("PlaylistResetException")))
         assertFalse(f.recover(code = 2000,
-            cause = HlsPlaylistTracker.PlaylistStuckException(Uri.EMPTY)))
+            cause = HlsPlaylistTracker.PlaylistStuckException(Uri.parse("https://example.test/live.m3u8"))))
         assertTrue(f.calls.isEmpty())
         assertTrue(f.status.isEmpty())
     }
