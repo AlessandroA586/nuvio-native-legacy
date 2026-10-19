@@ -24,7 +24,15 @@ export OBJ="$TMPDIR/nuvio-vidroc9-cache-obj"
 mkdir -p "$OBJ"
 gfx_source=src/gfx.c
 if [ "${1:-after}" = before ]; then
-  git show af7ab651f:src/gfx.c > "$OBJ/gfx-before.c"
+  # Reproduce af7ab651f's unconditional invalidation with today's renderer API.
+  python3 - "$OBJ/gfx-before.c" <<'PY'
+from pathlib import Path
+import sys
+source = Path("src/gfx.c").read_text()
+old = "if (tex) vidroEsquecerFonte(tex);"
+assert source.count(old) == 1
+Path(sys.argv[1]).write_text(source.replace(old, "if (tex) gfx_vidro_sujar();"))
+PY
   gfx_source="$OBJ/gfx-before.c"
 fi
 cc -O1 -g -DNV_WEBOS -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
