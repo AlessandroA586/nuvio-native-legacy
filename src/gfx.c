@@ -269,6 +269,8 @@ static const char *VS =
 #define NV_STR_(x) #x
 #define NV_STR(x) NV_STR_(x)
 
+#include "gfx_sgsr.h"
+
 static const char *FS_CABECA =
   NV_GLSL_PREFIXO
   "#ifdef GL_FRAGMENT_PRECISION_HIGH\n"
@@ -284,7 +286,11 @@ static const char *FS_CABECA =
   "uniform float uVarre;\n"
   "uniform vec4  uVeu;     // GFX_CARD: dois veus da base (fracao, alfa)\n"
   "uniform float uDesliza;\n"
-  "uniform vec2  uPar;\n"
+  "#if !defined(GL_ES) || defined(GL_FRAGMENT_PRECISION_HIGH)\n"
+  "uniform highp vec2 uPar;\n"
+  "#else\n"
+  "uniform mediump vec2 uPar;\n"
+  "#endif\n"
   "uniform float uRaio;\n"
   "uniform vec4  uCor;\n"
   "uniform float uAspect;\n"
@@ -1312,21 +1318,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   // GFX_COPIA — ampliacao do alvo interno (gpunivel.c). RGB E ALPHA da
   // textura, que e o que diferencia do GFX_SNAP (la o alpha vem de uCor): o
   // furo de alpha 0 por onde o plano de video aparece tem de sobreviver.
-  "void main(){\n"
-  "  vec2 uv = (uPar.y > 0.5) ? vec2(vUv.x, 1.0 - vUv.y) : vUv;\n"
-  "  vec4 c = texture2D(uTex, uv);\n"
-  // Only 720p supplies source dimensions. Alpha keeps the original sample.
-  // Small unsharp kernel: five fetches; no highp/floor dependency on Mali-4xx.
-  "  if (uPar.x > 1.0) {\n"
-  "    vec2 d = 1.0 / uPar;\n"
-  "    vec3 n = texture2D(uTex, uv + vec2(d.x, 0.0)).rgb\n"
-  "           + texture2D(uTex, uv - vec2(d.x, 0.0)).rgb\n"
-  "           + texture2D(uTex, uv + vec2(0.0, d.y)).rgb\n"
-  "           + texture2D(uTex, uv - vec2(0.0, d.y)).rgb;\n"
-  "    c.rgb = clamp(c.rgb * 1.8 - n * 0.2, 0.0, 1.0);\n"
-  "  }\n"
-  "  gl_FragColor = c;\n"
-  "}\n",
+  NV_SGSR_SHADER,
 
   // GFX_HERO_CAM / GFX_HERO_CHEIO_CAM — AS CAMADAS DO DESTAQUE NUMA PASSADA
   // (gfx_hero_camadas). Programas PROPRIOS, e nao um ramo nos shaders do

@@ -20,6 +20,8 @@
 //     target scaled to the 4K surface, gpun_alvo_1080), the island says so
 //     once, and RES_ARQ_RECUO makes the next launches start at 1080p. Picking
 //     4K again in Settings deletes the file and tries again.
+//   - Explicit 1080p/720p on a 4K display requests its native surface and
+//     upscales the internal target with SGSR 1 (bilinear on weak GPUs).
 //   - 720p only when the person picks it (gpun_forcar_720).
 #ifndef NV_RESOLUCAO_H
 #define NV_RESOLUCAO_H

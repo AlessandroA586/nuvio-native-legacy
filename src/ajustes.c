@@ -2562,6 +2562,7 @@ static int perfilSeguro;
 #else
 #define SEGURO perfilSeguro
 #endif
+int ajustes_1080p(void)               { return valor[AJ_RESOLUCAO] == RES_1080 && !SEGURO; }
 int ajustes_4k(void)                  { return valor[AJ_RESOLUCAO] == RES_4K && !SEGURO; }
 int ajustes_res_auto(void)            { return valor[AJ_RESOLUCAO] == RES_AUTO && !SEGURO; }
 int ajustes_720p(void)                { return valor[AJ_RESOLUCAO] == RES_720 && !SEGURO; }

@@ -18,7 +18,7 @@
 //       tela cheia do tema imersivo e sem sombra/halo. Resolucao nativa. So
 //       quando o 1 ainda fica abaixo de 25 fps (Mali-400, registro 9859).
 //   3 = nivel 2 + DESENHO INTERNO EM 1280x720, ampliado para a janela numa
-//       unica passada (GFX_COPIA, filtro linear). 2,25x menos pixels por
+//       unica passada (GFX_COPIA, SGSR 1; linear em GPU fraca). 2,25x menos pixels por
 //       quadro. SO FORCADO: nas Tizen 5.0 o texto ficou borrado demais.
 //
 // COMO O NIVEL E ESCOLHIDO (.tpk, Android e LG webOS):

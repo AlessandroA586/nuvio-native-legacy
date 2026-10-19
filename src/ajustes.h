@@ -497,6 +497,7 @@ int   ajustes_descobrir_na_busca(void); // searchDiscoverEnabled (derivado)
 int   ajustes_4k(void);
 // 1 = Automatica: 1080p, sondando o 4K onde a tela for 4K (resolucao.h, RES_AUTO_*).
 int   ajustes_res_auto(void);
+int   ajustes_1080p(void);
 // 1 = a pessoa escolheu 720p: desenhar em 1280x720 e ampliar (gpun_forcar_720).
 // Nunca automatico.
 int   ajustes_720p(void);

@@ -6,10 +6,27 @@ work=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-ui720.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 out="${1:-/Volumes/ExternalSSD/tmp/rev/ui720}"
 mkdir -p "$out" "$work/data"
+# Existing Android SDK only; never install a compiler/runtime for this check.
+angle="$HOME/Library/Android/sdk/emulator/lib64/gles_angle"
+ndk=$(ls -d "$HOME"/Library/Android/sdk/ndk/*/toolchains/llvm/prebuilt/*/sysroot/usr/include 2>/dev/null | tail -1 || true)
+if [ -f "$angle/libGLESv2.dylib" ] && [ -n "$ndk" ]; then
+  mkdir -p "$work/inc"
+  for d in GLES2 EGL KHR; do ln -s "$ndk/$d" "$work/inc/$d"; done
+  cc tests/ui720_gles.c -Isrc -I"$work/inc" -L"$angle" -lEGL -lGLESv2 \
+    -Wl,-rpath,"$angle" -Wl,-headerpad_max_install_names -o "$work/gles"
+  for l in libEGL libGLESv2; do
+    install_name_tool -change "./$l.dylib" "$angle/$l.dylib" "$work/gles"
+  done
+  codesign -f -s - "$work/gles" 2>/dev/null
+  "$work/gles"
+else
+  echo "SKIP GLES2 compiler check: existing ANGLE/NDK unavailable"
+fi
 printf 'animacoes 0\nidioma 1\nhomeLayoutLocal 0\n' > "$work/data/ajustes.txt"
 sources=()
 for source in src/*.c src/dts/*.c; do
-  [ "$source" != src/main.c ] && sources+=("$source")
+  case "$source" in src/main.c|src/gfx.c|src/gpunivel.c) continue;; esac
+  sources+=("$source")
 done
 cc "${sources[@]}" tests/ui720.c -Isrc -o "$work/test" -O1 \
   -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -L/opt/homebrew/lib \
@@ -19,4 +36,4 @@ NUVIO_DADOS="$work/data" "$work/test" "$out" > "$out/results.txt" 2>&1 || {
   tail -20 "$out/results.txt"
   exit 1
 }
-tail -16 "$out/results.txt"
+rg '^(GPU |METRIC |BLIT |FRAME |PASS |\[gpu-nivel\] upscale=)' "$out/results.txt"

@@ -52,7 +52,8 @@ static unsigned long chave;
 static int telaW = 1920, telaH = 1080;
 // Alvo interno do nivel 3 (720p) ou do recuo de 4K (1920x1080, gpun_alvo_1080).
 static GLuint intFbo, intTex;
-static int alvo1080, prefFixa;
+static int alvo1080, prefFixa, upscaleSgsr;
+static int forca720;
 static int intW, intH, intFalhou, intLigado;
 // Descarte (glInvalidateFramebuffer ou glDiscardFramebufferEXT).
 typedef void (*PfnDescarte)(GLenum, GLsizei, const GLenum *);
@@ -222,6 +223,10 @@ void gpun_iniciar(int w, int h) {
   GLint db = 0, sb = 0;
   reiniciarMedida();
   nivel = adaptativo = prefFixa = 0; origem = "padrao";
+  if (intFbo) glDeleteFramebuffers(1, &intFbo);
+  if (intTex) glDeleteTextures(1, &intTex);
+  intFbo = intTex = 0;
+  intW = intH = intFalhou = intLigado = alvo1080 = forca720 = 0;
   telaW = w > 0 ? w : 1920;
   telaH = h > 0 ? h : 1080;
 #ifdef NV_ANDROID
@@ -232,6 +237,13 @@ void gpun_iniciar(int w, int h) {
 #endif
   snprintf(renderer, sizeof renderer, "%s", glTxt(GL_RENDERER));
   snprintf(versaoGl, sizeof versaoGl, "%s", glTxt(GL_VERSION));
+  upscaleSgsr = !strstr(renderer, "Mali-4");
+#if !defined(__APPLE__) || defined(NV_GLES_NO_MAC)
+  { GLint range[2], precision = 0;
+    glGetShaderPrecisionFormat(GL_FRAGMENT_SHADER, GL_HIGH_FLOAT, range, &precision);
+    if (!precision) upscaleSgsr = 0;
+  }
+#endif
   ext = glTxt(GL_EXTENSIONS);
 #ifdef NV_ANDROID
   android_etapa("gpun_iniciar: GL_DEPTH_BITS");
@@ -326,7 +338,6 @@ void gpun_iniciar(int w, int h) {
 // Completos/Leves fixam o nivel e desligam a medida; Automatico volta a medir
 // a partir do que esta gravado (ou do 0). Build com NV_TPK_NIVEL_FORCADO
 // ignora: o canario de teste manda.
-static int forca720;
 void gpun_forcar_720(void) {
   forca720 = 1; adaptativo = 0; decidido = 1;
   aplicar(3, "ajuste: interface 720p");
@@ -426,7 +437,7 @@ static int intPreparar(void) {
   if (intFbo) return 1;
   if (intFalhou) return 0;
   if (alvo1080) { intW = (int)NV_TELA_W; intH = (int)NV_TELA_H; }
-  else { intW = (telaW * 2 + 1) / 3; intH = (telaH * 2 + 1) / 3; }
+  else { intW = 1280; intH = 720; }
   glGenTextures(1, &intTex);
   glBindTexture(GL_TEXTURE_2D, intTex);
   // RGBA: o alpha e o canal do furo do video (gfx_furo) e tem de chegar a janela.
@@ -450,7 +461,8 @@ static int intPreparar(void) {
     if (!alvo1080) aplicar(1, "sem alvo interno");
     return 0;
   }
-  printf("[gpu-nivel] alvo interno %dx%d RGBA -> janela %dx%d\n", intW, intH, telaW, telaH);
+  printf("[gpu-nivel] upscale=%s %dx%d -> %dx%d\n",
+         upscaleSgsr ? "sgsr" : "bilinear", intW, intH, telaW, telaH);
   fflush(stdout);
   return 1;
 }
@@ -485,8 +497,8 @@ void gpun_quadro_fim(void) {
     gfx_tex_aspect_atual = 0.0f;
     gfx_opacidade_grupo = 1.0f;
     gfx_rect(tela, intTex, GFX_COPIA, 0,
-             nivel >= 3 && !alvo1080 ? (float)intW : 0.0f,
-             nivel >= 3 && !alvo1080 ? (float)intH : 1.0f,
+             upscaleSgsr ? (float)intW : 0.0f,
+             upscaleSgsr ? (float)intH : 1.0f,
              0.0f, 1, 1, 1, 1);
     // Solta a textura do alvo: no quadro seguinte ela volta a ser o alvo de
     // desenho, e ficar ligada para leitura ao mesmo tempo e o laco de
