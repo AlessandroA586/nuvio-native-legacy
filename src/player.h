@@ -198,6 +198,8 @@ const char *player_titulo_canal(void);   // nome do canal no ar ("" sem canal)
 // remapeado por uma republicacao da descoberta em plena reproducao, e zap/foco
 // do guia nao podem depender dele. "" quando a sessao nao e de canal.
 const char *player_id_canal(void);
+// Original resource type, including live-event add-ons using sport/sports.
+const char *player_tipo_canal(void);
 // Marca a sessao como CANAL com o item inteiro de quem abriu — usada pelo
 // guia, que e quem sabe o que pediu para tocar.
 void player_marcar_canal(const CatItem *item);

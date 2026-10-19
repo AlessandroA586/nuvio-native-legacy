@@ -34,6 +34,7 @@ char *rede_baixar_medido_controle(const char *url, int seconds,
   return strdup(addonPage);
 }
 int ajustes_livetv_sugerir(void) { return enabled; }
+int xtream_e_id(const char *id) { return id && !strncmp(id, "xtream:", 7); }
 int stalker_canais_sessao(StalkerCanal *out, int max, uint64_t session) {
   const char *names[] = {"Aurora HD", "Lumen"};
   int n = max < 2 ? max : 2;
@@ -43,6 +44,12 @@ int stalker_canais_sessao(StalkerCanal *out, int max, uint64_t session) {
     snprintf(out[i].id, sizeof out[i].id, "stalker:%d", i + 1);
     snprintf(out[i].nome, sizeof out[i].nome, "%s", names[i]);
   }
+  return n;
+}
+int stalker_canais_cb_sessao(StalkerCb cb, void *u, uint64_t session) {
+  StalkerCanal out[2];
+  int n = stalker_canais_sessao(out, 2, session);
+  for (int i = 0; i < n; i++) if (!cb(&out[i], u)) break;
   return n;
 }
 uint64_t perfis_sessao_geracao(void) { return 0; }
@@ -212,7 +219,7 @@ static int stagingBudget(void) {
     c.grupo = "Outros"; c.sug = 1;
     if (sCanalAdd(addon, &c) || sNCanais > 1200) bounded = 0;
     addM3u(&ctx, "Lumen", "", "late-cached-match");
-    if (!bounded || sNCanais != 1201 || sRetidos != 1 ||
+    if (!bounded || sNCanais != 1201 || sPendentes != 1200 ||
         strcmp(sCanais[sNCanais - 1].nome, "Lumen") ||
         !sLtvF[ctx.fl].cortada || !sLtvF[addon].cortada) failures++;
     int before = posts;
@@ -287,7 +294,7 @@ static int addonPagination(void) {
     stagingZerar(); sTeto = 5000; addonRequests = 0;
     int fl = sFonte(LTV_ADDON, source.base, "Addon", source.base);
     ltv_pref_definir_grupos(ltv_pref(sLtvF[fl].chave, 1), selected, 1);
-    if (!carregarCatalogo(&source, fl) || addonRequests != (load ? 13 : 12) ||
+    if (!carregarCatalogo(&source, fl) || addonRequests != 13 ||
         sNCanais != (load ? 1 : 1200) || (!load && !sLtvF[fl].cortada)) failures++;
     int before = posts;
     sugerirSecoes(); selecionarSecoes();
@@ -298,7 +305,7 @@ static int addonPagination(void) {
       if (!resolved) failures++;
     }
   }
-  printf("%s: P1 add-on pagination stops at candidate budget and reaches later pages on reload\n",
+  printf("%s: P1 add-on pagination scans later pages while bounding candidates and resolves them on reload\n",
          failures ? "FAIL" : "PASS");
   addonPaginated = 0;
   addonsCarga = NULL; nAddonsCarga = 0; free(addonPage); addonPage = NULL;
@@ -464,7 +471,7 @@ int main(int argc, char **argv) {
   stalkerCarregar();
   sugerirSecoes(); selecionarSecoes();
   if (sNCanais != 1 || strcmp(sCanais[0].nome, "Lumen") ||
-      sRetidos != 1 || posts != 1) {
+      posts != 1) {
     puts("FAIL: selected suggested section gets capacity after an unselected Stalker candidate");
     failures++;
   } else puts("PASS: selected suggested section gets capacity after an unselected Stalker candidate");
@@ -477,7 +484,7 @@ int main(int argc, char **argv) {
   addM3u(&ctx, "Lumen", "", "https://private/2");
   sugerirSecoes(); selecionarSecoes();
   if (sNCanais != 1 || strcmp(sCanais[0].nome, "Lumen") ||
-      sRetidos != 1 || posts != 1) {
+      posts != 1) {
     puts("FAIL: selected suggested section gets capacity after an unselected M3U candidate");
     failures++;
   } else puts("PASS: selected suggested section gets capacity after an unselected M3U candidate");
@@ -486,7 +493,7 @@ int main(int argc, char **argv) {
   cacheFonteLer(source);
   selecionarSecoes();
   if (sNCanais != 1 || strcmp(sCanais[0].nome, "Lumen") ||
-      sRetidos != 1 || posts != 1) {
+      posts != 1) {
     puts("FAIL: cold source cache applies suggested selection before channel capacity");
     failures++;
   } else puts("PASS: cold source cache applies suggested selection before channel capacity");
@@ -496,7 +503,7 @@ int main(int argc, char **argv) {
   sugerirSecoes();
   puts("PASS: source cache preserves fallback; suggested selector selection survives reload without network");
 
-  XtCtx xt = {0}; xt.fl = sFonte(LTV_XTREAM, "", "Xtream", ""); xt.decidido = 1;
+  XtCtx xt = {0}; xt.fl = sFonte(LTV_XTREAM, "", "Xtream", "");
   XtreamItem it = {0};
   it.id = "xtream:1"; it.nome = "Aurora HD"; it.categoria = "Outros";
   it.logo = it.epgId = ""; it.semCategoria = 1;
@@ -517,7 +524,7 @@ int main(int argc, char **argv) {
   addM3u(&ctx, "Nimbo", "", "https://private/6");
   addM3u(&ctx, "Talume", "", "https://private/7");
   sugerirSecoes(); selecionarSecoes();
-  assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "Nimbo") && sRetidos == 1);
+  assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "Nimbo"));
   assert(posts == 2 && sLtvF[ctx.fl].cortada);
   puts("PASS: uncached suggestions filter before quota and retain at most the channel cap");
   failures += xtreamLocalSections();

@@ -282,7 +282,7 @@ typedef enum {
   AJ_ITENS_FILEIRA,
   // A fonte da interface é independente da família das legendas.
   AJ_FONTE_UI,
-  // Efeitos visuais do .tpk (#180): automatico / completos / leves. No fim
+  // Effects (#180): automatic/full/light/minimal, independent of resolution. At the end
   // pelo mesmo motivo; so aparece na tela do .tpk.
   AJ_GPU_EFEITOS,
   // Interface de vidro: visual translucido, so desta TV. No fim pelo mesmo
@@ -952,7 +952,7 @@ static const char *V_FONTE_UI[]  = { "Inter", "LG Display", "Droid Sans",
 // preenchimento — nao e coisa para ligar sozinha em aparelho nenhum.
 // 720p entra no FIM (valor 2) para nao mexer no que ja esta gravado: 0 = 1080p e
 // 1 = 4K continuam como eram. 720p = alvo de desenho interno 1280x720 ampliado
-// para a janela (o nivel 3 de gpunivel.h), em qualquer plataforma.
+// to the window, independently of effects, on every platform.
 // Order = RES_* (resolucao.h). The old order lives only in res_migrar.
 static const char *V_RESOLUCAO[] = { "Automática", "1080p", "4K (experimental)", "720p (leve)" };
 static const char *V_AMPLIAR_UI[] = { "Pela TV", "Pelo app (4K)" };
@@ -994,7 +994,7 @@ static const char *V_CW_ORDEM[]  = { "Padrão", "Estilo streaming", "Separar fut
 // Itens por fileira da Home (#163). O INDICE e o que fica gravado; o numero de
 // cada um esta em ajustes_itens_fileira. 24 e o teto de DESC_ITENS_POR_FILEIRA.
 static const char *V_ITENS_FIL[] = { "12", "18", "24" };
-static const char *V_GPU_EF[]    = { "Automático", "Completos", "Leves" };
+static const char *V_GPU_EF[]    = { "Automático", "Completos", "Leves", "Mínimos" };
 static const char *V_MIC_BUSCA[] = { "Automático", "Ligado", "Desligado" };
 #ifdef NV_ANDROID
 static const char *V_TECLADO_AND[] = { "Automático", "Do app", "Do Android" };
@@ -1480,7 +1480,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Trailer do cartaz em foco",       V_FOCO_TRAILER, 3),   // trailerCartazModo (conta: focusedPosterBackdropTrailerEnabled)
   ESC("Itens por fileira",               V_ITENS_FIL, 3), // local: itensFileiraLocal
   ESC("Fonte da interface", V_FONTE_UI, 7),
-  ESC("Efeitos visuais", V_GPU_EF, 3),   // local: gpuEfeitosLocal (.tpk)
+  ESC("Efeitos visuais", V_GPU_EF, 4),   // local: gpuEfeitosLocal; append values for compatibility
   ESC("Interface de vidro",              V_LIGA, 2),   // local: vidroLocal
   // EXPERIMENTAL (p2p.h). Tocar torrent sem debrid, por um servidor de
   // streaming do Stremio na rede local. LOCAL: o web nao tem esta escolha.
@@ -4313,6 +4313,17 @@ static void memoriaMigrar(void) {
 }
 #endif
 
+// Preserve legacy 720p performance once; later effects choices stay independent.
+static void efeitos720Migrar(int legado) {
+  char *m = dados_ler("efeitos720-205.txt");
+  if (m) { free(m); return; }
+  if (legado && valor[AJ_RESOLUCAO] == RES_720 && valor[AJ_GPU_EFEITOS] == 0) {
+    valor[AJ_GPU_EFEITOS] = 3;
+    printf("[ajustes] efeitos em 720p -> Minimos (migracao unica da 2.0.5)\n");
+  }
+  if (!legado || gravar()) dados_gravar("efeitos720-205.txt", "1\n");
+}
+
 // --- LISTAS E GUIAS POR URL (M9) --------------------------------------------------
 // M3U e XMLTV deste perfil (ltv.h). A tela mostra "M3U · host", nunca a URL.
 // Cache local da lista (o desenho chama textoValor varias vezes por quadro) e a
@@ -4414,6 +4425,7 @@ void ajustes_dir(const char *dir) {
   valor[AJ_NT_ORDEM] = 0;
   f = fopen(caminho, "r");
   if (!f) {
+    efeitos720Migrar(0);
     // Nunca gravou nada: o idioma nasce automatico (o padrao de valor[]).
     valor[AJ_IDIOMA] = 0;
 #ifdef NV_TEX_MB_FIXO
@@ -4596,6 +4608,7 @@ void ajustes_dir(const char *dir) {
   }
   }
   fclose(f);
+  efeitos720Migrar(1);
   if (escalaVersao < 1) gravar();
   // "DINAMICA ESTILIZADA" SAIU (03/10/2026): a base tingida virou o Fundo
   // Frost, que vale para qualquer acento. Quem a tinha abre em Da arte + Frost
@@ -5587,6 +5600,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_TRAILER_FONTE:
     case AJ_HERO_TRAILER_SOM: case AJ_HERO_TRAILER_ESPERA: /* o web nao tem */
     case AJ_COR_LOGO:       /* so existe com os temas dinamicos, que sao locais */
+    case AJ_RAIL_BLUR:      /* blur cost belongs to this GPU */
     case AJ_VIDRO:          /* visual desta TV: a GPU de cada uma aguenta diferente */
     case AJ_VIDRO_CONTORNO:
     case AJ_CW_CONCLUIDO:   /* o web nao tem esta escolha */
@@ -6086,8 +6100,6 @@ static int foraDestaPlataforma(int op) {
 #endif
 #if defined(NV_TPK) || defined(NV_ANDROID)
   if (op == AJ_DV_MKV) return 1;
-#else
-  if (op == AJ_GPU_EFEITOS) return 1;
 #endif
 #ifndef NV_ANDROID
   if (op == AJ_FONTE_PRECARREGAR || op == AJ_LEG_SYNC_AUDIO) return 1;
@@ -6223,6 +6235,9 @@ int ajustes_iniciar(void) {
 }
 static int fileirasBusca;  // network cycle owed; run once when Settings closes
 void ajustes_encerrar(void) {
+  // Save file-backed and scalar preferences when leaving Settings as well as
+  // during periodic sync; no editor-specific cloud hook is required.
+  if (sessao_logada()) sync_iniciar();
   // One network cycle for all row changes made in this visit (low-end TVs).
   if (fileirasBusca) { fileirasBusca = 0; desc_repetir(); }
   pediuRelogio = 0; faRetornarFolha = 0; uxCancelar(); uxRetornarOp = -1; guiaFechar(); ajlog_vazar_tudo();
@@ -7208,7 +7223,7 @@ static const char *ajudaOpcaoBase(int op) {
 
     // --- Interface e conta
     case AJ_IDIOMA: return "Idioma de toda a interface. Automático segue a sua conta e, sem ela, o idioma da TV. Não muda o idioma das legendas nem do áudio.";
-    case AJ_GPU_EFEITOS: return "Automático mede a TV nos primeiros segundos e, se ela não der conta, tira os efeitos mais pesados. Completos mantém tudo; Leves tira desfoque e brilho para deixar a navegação mais lisa.";
+    case AJ_GPU_EFEITOS: return "Efeitos funcionam em qualquer resolução. Automático adapta; Completos mantém tudo; Leves reduz brilho e desfoque; Mínimos reduz mais.";
     case AJ_FONTE_UI: return "Altera a tipografia dos menus. A fonte das legendas é escolhida separadamente no player.";
     case AJ_HERO_SINOPSE_TAM: return "Aumenta apenas as sinopses. Na página do título, abra Mais opções › Ler sinopse para ler o texto completo.";
     case AJ_TAMANHO_UI: return "Aumenta os controles do player, os painéis e os avisos. Os Ajustes têm um tamanho próprio.";
@@ -7338,7 +7353,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_FONTE_IDIOMA_AUDIO: return "Na escolha automática, fontes com o seu Idioma do áudio ou áudio duplo passam na frente na mesma resolução. Não é filtro: sem elas, a melhor das outras toca.";
     case AJ_CACHE_SEEK: return "Com retomada rápida, guarda só o último título por até 3 horas. Trocar de perfil ou pouco espaço apagam o trecho.";
     case AJ_ANIM: return "Use Reduzidas para movimentos mais discretos ao navegar pela interface.";
-    case AJ_RESOLUCAO: return "Automática começa em 1080p e testa o 4K sozinha: só usa 4K se a tela for 4K e a TV aguentar com folga; se travar depois, volta para 1080p. Nunca baixa para 720p. Escolher 4K força 4K (se a TV não aguentar, o app volta para 1080p e avisa). 720p desenha em 1280x720 e amplia: mais leve, com texto mais suave. Reinicie o app depois de mudar. O vídeo não muda.";
+    case AJ_RESOLUCAO: return "Resolução controla a nitidez; efeitos controlam a velocidade. Automática nunca baixa para 720p. Reinicie após mudar a resolução; o vídeo não muda.";
     case AJ_PERFIL_ATIVO: return "Perfil em uso nesta TV. Trocar de perfil é feito na tela de perfis, ao abrir o app.";
     case AJ_SYNC: return "Estado da última troca de dados com a sua conta: addons, progresso, coleções e preferências.";
     case AJ_ADDONS: return "Abre a lista de addons da sua conta, para ligar e desligar cada um nesta TV.";
@@ -8806,6 +8821,7 @@ static int definirValorDireto(int op, int novo) {
   if (novo == 0) notaLigarPar(op);
   { int ok; ajOrigem = ajOrigemDireto; ok = gravar(); ajOrigem = 0;
     if (!ok) { valor[op] = antes; valor[AJ_LEG2_POSICAO] = posicaoAntes; memoriaEscolhida = memoriaAntes; bibliotecaFonteEscolhida = bibliotecaAntes; return 0; } }
+  if (op == AJ_DV_MKV && antes != 0 && novo == 0) video_dv_guard_reiniciar();
   if (op == AJ_LIVETV_SUGERIR) guia_sugestoes_mudaram();
   if (op == AJ_FIL_LIMITE) {
     fil_ajustar_limite(novo);
@@ -9907,7 +9923,8 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_NT_METAUSER: case AJ_NT_TRAKT: case AJ_NT_TMDB: case AJ_NT_LETTER:
     case AJ_NT_MAL: case AJ_NT_EBERT: case AJ_NT_SCORE: case AJ_NT_ORDEM: case AJ_NT_EP:
       return AJPV_MDB;
-    case AJ_AMPLIAR_UI: case AJ_RESOLUCAO: case AJ_QUALIDADE_IMG: case AJ_TEX_MB:
+    case AJ_AMPLIAR_UI: case AJ_RESOLUCAO: case AJ_GPU_EFEITOS:
+    case AJ_QUALIDADE_IMG: case AJ_TEX_MB:
     case AJ_ESPACO:
       return AJPV_TV;
     case AJ_ADDONS: case AJ_PLUGINS: case AJ_STALKER_PORTAL: case AJ_STALKER_MAC:

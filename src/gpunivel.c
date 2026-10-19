@@ -25,7 +25,7 @@
 #endif
 #endif
 
-#define GPUN_NIVEL_AUTO_MAX 2   // efeitos minimos; o 3 (720p) so forcado, ver gpun_medir
+#define GPUN_NIVEL_AUTO_MAX 2   // Effects only; resolution is independent.
 #define GPUN_ARQ "gpu-nivel.txt"
 // Regra do adaptativo (gpunivel.h). Os numeros:
 //  - 45 fps: abaixo disso o registro 8825 (22-29) e o jank visivel; a Tizen 6
@@ -36,9 +36,6 @@
 //    das primeiras artes e trabalho de CPU/upload, nao do regime) e 2 s depois
 //    de cada degrau; teto de 24 s de home medida por arranque.
 #define GPUN_FPS_BOM     45.0
-// Abaixo disto, JA com efeitos leves, a tela esta travada: tira mais efeitos
-// (registro 9859: Mali-400, Tizen 4.0, 10-21 fps no 1).
-#define GPUN_FPS_CRITICO 25.0
 #define GPUN_ESPERA_MIN   6.0
 #define GPUN_JANELA_MS 4000.0
 #define GPUN_AQUECE_MS 3000.0
@@ -50,7 +47,7 @@ static const char *origem = "padrao";
 static char renderer[160] = "?", versaoGl[160] = "?", modelo[96] = "?", tizen[32] = "?";
 static unsigned long chave;
 static int telaW = 1920, telaH = 1080;
-// Alvo interno do nivel 3 (720p) ou do recuo de 4K (1920x1080, gpun_alvo_1080).
+// Explicit 720p target or 4K fallback (1920x1080, gpun_alvo_1080).
 static GLuint intFbo, intTex;
 static int alvo1080, prefFixa, upscaleSgsr;
 static int forca720, ampliarApp;
@@ -64,7 +61,7 @@ static const char *descarteNome = "nenhum";
 static int profStencil;   // a janela tem profundidade/stencil para descartar
 // Medida.
 static double aquece = GPUN_AQUECE_MS, janMs, janEsp, janCpu, totalMs;
-static int janN, estavaNaHome, descartes;
+static int janN, estavaNaHome, descartes, cenaAtual;
 // #410B: so vale perder efeitos com >= 15% E >= 5 fps. Os dois pisos
 // rejeitam ruido perto de 45 fps e ganhos absolutos pequenos em TV muito lenta.
 // ponytail: janelas de Home cheia, nao cena fixa; usar A/B/A se a navegacao
@@ -76,7 +73,7 @@ static void reiniciarMedida(void) {
   decidido = bloqueado = reavaliar = 0; anterior = -1;
   memset(fpsNivel, 0, sizeof fpsNivel);
   aquece = GPUN_AQUECE_MS; janMs = janEsp = janCpu = totalMs = 0;
-  janN = estavaNaHome = descartes = 0;
+  janN = estavaNaHome = descartes = cenaAtual = 0;
 }
 
 #ifndef GL_FRAMEBUFFER_BINDING
@@ -172,7 +169,7 @@ static void gravar(void) {
 static void ler(void) {
   char *t = dados_ler(GPUN_ARQ);
   unsigned long c = 0;
-  int v = 0, n = -1, avaliado = 0, trava = 0;
+  int v = 0, n = -1, avaliado = 0;
   double f[3] = {0};
   const char *p;
   if (!t) { printf("[gpu-nivel] sem %s: comeca do 0\n", GPUN_ARQ); return; }
@@ -180,7 +177,6 @@ static void ler(void) {
   if ((p = strstr(t, "chave=")) != NULL) c = strtoul(p + 6, NULL, 16);
   if ((p = strstr(t, "nivel=")) != NULL) n = atoi(p + 6);
   if ((p = strstr(t, "avaliacao=")) != NULL) avaliado = atoi(p + 10) == 1;
-  if ((p = strstr(t, "bloqueado=")) != NULL) trava = atoi(p + 10) == 1;
   if ((p = strstr(t, "fps0=")) != NULL) f[0] = atof(p + 5);
   if ((p = strstr(t, "fps1=")) != NULL) f[1] = atof(p + 5);
   if ((p = strstr(t, "fps2=")) != NULL) f[2] = atof(p + 5);
@@ -195,7 +191,8 @@ static void ler(void) {
   origem = "salvo";
   if (avaliado) {
     memcpy(fpsNivel, f, sizeof f);
-    bloqueado = decidido = trava;
+    // A rejected trial belongs to its scene/effects, not the GPU forever.
+    bloqueado = decidido = 0;
   } else if (nivel > 0) {
     reavaliar = nivel;
     nivel = 0;
@@ -350,33 +347,31 @@ void gpun_iniciar(int w, int h) {
   aplicar(nivel, "");
 }
 
-// Ajuste "Efeitos visuais" (so .tpk): 0 automatico, 1 completos, 2 leves.
+// Effects preference on every platform: 0 automatic, 1 full, 2 light, 3 minimal.
 // Completos/Leves fixam o nivel e desligam a medida; Automatico volta a medir
 // a partir do que esta gravado (ou do 0). Build com NV_TPK_NIVEL_FORCADO
 // ignora: o canario de teste manda.
 void gpun_forcar_720(void) {
-  forca720 = 1; adaptativo = 0; decidido = 1;
-  aplicar(3, "ajuste: interface 720p");
+  forca720 = 1;
+  printf("[gpu-nivel] ajuste: interface 720p, efeitos independentes\n");
 }
 
 void gpun_preferencia(int p) {
-  if (forca720) return;
-#if (defined(NV_TPK) || defined(NV_ANDROID) || defined(NV_WEBOS) || defined(NV_GPUN_TESTE)) && !defined(NV_TPK_NIVEL_FORCADO)
-  prefFixa = p == 1 || p == 2;
+#if !defined(NV_TPK_NIVEL_FORCADO)
+  prefFixa = p >= 1 && p <= 3;
+  if (p == 3) { adaptativo = 0; aplicar(2, "ajuste: efeitos minimos"); return; }
   if (p == 1) { adaptativo = 0; aplicar(0, "ajuste: efeitos completos"); return; }
   if (p == 2) {
-    // Utgard (Mali-400/450/470, registro 1V5YJY, UA40N5300): level 1 still
-    // ran 9-17 fps with swap 60-230 ms and a 4-6x fill. "Leves" there means
-    // the minimal level, otherwise the setting pins the TV below what the
-    // adaptive measure had already learned (saved level 2).
     adaptativo = 0;
-    if (strstr(renderer, "Mali-4")) aplicar(2, "ajuste: efeitos leves (Mali-4xx: minimos)");
-    else aplicar(1, "ajuste: efeitos leves");
+    // Mali-4xx stalls at level 1; preserve its established Light safeguard.
+    aplicar(ptv_gpu_utgard(renderer) ? 2 : 1, "ajuste: efeitos leves");
     return;
   }
   reiniciarMedida();
   adaptativo = 1; origem = "adaptativo"; nivel = 0;
+#if defined(NV_TPK) || defined(NV_ANDROID) || defined(NV_WEBOS) || defined(NV_GPUN_TESTE)
   ler();
+#endif
   aplicar(nivel, "ajuste: automatico");
 #else
   (void)p;
@@ -416,7 +411,7 @@ void gpun_log_perfil(long memMB, int texMb, int fios, int heroi) {
   printf("[perfil] tpk mem=%ldMB gpu=\"%s\"%s tizen=%s modelo=%s -> tex=%dMB fios=%d heroi=%d"
          " escala=%s efeitos=%s nivel=%d (%s)\n",
          memMB, renderer, ptv_gpu_fraca_atual() ? " (fraca)" : "", tizen, modelo, texMb, fios, heroi,
-         nivel >= 3 ? "1280x720->1920x1080" : alvo1080 ? "1920x1080->4K" : "1920x1080",
+         forca720 ? "1280x720->1920x1080" : alvo1080 ? "1920x1080->4K" : "1920x1080",
          nivel >= 2 ? "minimos" : nivel >= 1 ? "leves" : "cheios", nivel, origem);
   fflush(stdout);
 #else
@@ -476,10 +471,10 @@ static int intPreparar(void) {
   glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)ant);
   if (st != GL_FRAMEBUFFER_COMPLETE) {
     printf("[gpu-nivel] alvo interno %dx%d incompleto (0x%x)%s\n", intW, intH, (unsigned)st,
-           alvo1080 ? ": segue na superficie inteira" : ": fica no nivel 1");
+           ": segue na superficie inteira");
     glDeleteFramebuffers(1, &intFbo); glDeleteTextures(1, &intTex);
     intFbo = intTex = 0; intFalhou = 1;
-    if (!alvo1080) aplicar(1, "sem alvo interno");
+    // Target failure must not override the person's effects choice.
     return 0;
   }
   printf("[gpu-nivel] ampliar=%s upscale=%s %dx%d -> %dx%d\n",
@@ -493,8 +488,8 @@ static int intPreparar(void) {
 void gpun_quadro_inicio(void) {
   intLigado = 0;
   // A granted 720p drawable is already scaled by the platform compositor.
-  if (nivel >= 3 && telaW <= 1280 && telaH <= 720) return;
-  if ((nivel < 3 && !alvo1080) || !intPreparar()) return;
+  if (forca720 && telaW <= 1280 && telaH <= 720) return;
+  if ((!forca720 && !alvo1080) || !intPreparar()) return;
   glBindFramebuffer(GL_FRAMEBUFFER, intFbo);
   glViewport(0, 0, intW, intH);
   gfx_tamanho_alvo(intW, intH);
@@ -565,13 +560,22 @@ static void decidir(const char *porque) {
   gravar();
 }
 
-void gpun_medir(double dtms, double espera, double cpu, int naHome, int cheia) {
+void gpun_medir(double dtms, double espera, double cpu, int cena, int cheia) {
   double fps, e, c;
-  if (!adaptativo || decidido || nivel > GPUN_NIVEL_AUTO_MAX) return;
+  if (!adaptativo || nivel > GPUN_NIVEL_AUTO_MAX) return;
+  // Scene and effect settings identify a comparable workload. A new workload
+  // gets a fresh baseline, including after a good/CPU-bound/rejected window.
+  if (cena != cenaAtual) {
+    if (anterior >= 0) aplicar(anterior, "comparacao interrompida");
+    int legado = reavaliar;
+    reiniciarMedida(); reavaliar = legado;
+    cenaAtual = cena;
+  }
+  if (decidido) return;
   // GPU fraca pode nao terminar nem a referencia no 0. Tres descartes na
   // tentativa, mesmo intercalados, ativam protecao so nesta sessao: sem
   // janela comparavel nao ha avaliacao para gravar.
-  if (naHome && cheia && ptv_gpu_fraca_atual() &&
+  if (cena && cheia && ptv_gpu_fraca_atual() &&
       espera >= GPUN_ESPERA_MIN && espera > cpu) {
     if (dtms > 1000.0 && ++descartes >= 3) {
       aplicar(GPUN_NIVEL_AUTO_MAX, "GPU fraca: referencia nao termina");
@@ -579,7 +583,7 @@ void gpun_medir(double dtms, double espera, double cpu, int naHome, int cheia) {
       return;
     }
   } else descartes = 0;
-  if (!naHome || !cheia || dtms > 1000.0) {
+  if (!cena || !cheia || dtms <= 0 || dtms > 1000.0) {
     // Outra cena invalida tambem a referencia do candidato. Volta ao ultimo
     // nivel confirmado, sem gravar/bloquear; ao voltar mede a referencia nova.
     if (anterior >= 0) {
@@ -599,7 +603,7 @@ void gpun_medir(double dtms, double espera, double cpu, int naHome, int cheia) {
   fps = janN * 1000.0 / janMs;
   e = janEsp / janN;
   c = janCpu / janN;
-  printf("[gpu-nivel] janela na home: nivel=%d fps=%.1f espera=%.1fms cpu=%.1fms (%d quadros)\n",
+  printf("[gpu-nivel] janela na interface: nivel=%d fps=%.1f espera=%.1fms cpu=%.1fms (%d quadros)\n",
          nivel, fps, e, c, janN);
   janN = 0; janMs = janEsp = janCpu = 0;
   fpsNivel[nivel] = fps;
@@ -611,7 +615,7 @@ void gpun_medir(double dtms, double espera, double cpu, int naHome, int cheia) {
              nivel, antes, fps, anterior);
       aplicar(anterior, "sem ganho significativo");
       bloqueado = 1;
-      decidir("nao desce de novo nesta TV");
+      decidir("trial rejected for this scene/session");
       return;
     }
     anterior = -1;
@@ -626,13 +630,8 @@ void gpun_medir(double dtms, double espera, double cpu, int naHome, int cheia) {
   }
   if (fps >= GPUN_FPS_BOM) { decidir("fps bom"); return; }
   if (e >= GPUN_ESPERA_MIN && e > c) {
-    // O adaptativo PARA no nivel 1 quando ele ja resolve. Teste nas duas
-    // Tizen 5.0 (#180, 29/09): "efeitos" ficou liso e bonito; o 720p ficou
-    // mais liso mas com o texto borrado demais — ninguem gostou, e por isso o
-    // 720p (nivel 3) so existe forcado. Quando o 1 AINDA fica abaixo de
-    // GPUN_FPS_CRITICO (a Mali-400 do registro 9859, UA40N5300, Tizen 4.0,
-    // 10-21 fps com efeitos leves), desce ao 2: efeitos MINIMOS, em 1080p.
-    if (nivel == 0 || (nivel == 1 && fps < GPUN_FPS_CRITICO)) {
+    // Try the next effects tier while GPU-bound; never change pixels.
+    if (nivel < GPUN_NIVEL_AUTO_MAX) {
       if (totalMs >= GPUN_TETO_MS) { decidir("teto de tempo de medida"); return; }
       anterior = nivel;
       aplicar(nivel + 1, nivel == 0 ? "GPU presa: efeitos leves"

@@ -757,6 +757,14 @@ int intro_botao_visivel(double*fim,int*tipo){
   pthread_mutex_unlock(&trava);return v;
 }
 
+// Dismiss this appearance; opening the controls can reveal it again.
+void intro_botao_esconder(double agora){
+  pthread_mutex_lock(&trava);
+  botaoVis=0;
+  botaoDesde=agora-INTRO_BOTAO_SEG-1.0;
+  pthread_mutex_unlock(&trava);
+}
+
 // O trecho de creditos que comeca POR ULTIMO, e nao o primeiro da lista
 // (#115): a API devolve uma lista por tipo, e um filme com creditos de abertura
 // e finais marcados punha o painel de relacionados no comeco.

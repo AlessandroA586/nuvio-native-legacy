@@ -18,6 +18,7 @@
 #include "teclado.h"
 #include "ponteiro.h"
 #include "app.h"
+#include "teclavoltar.h"
 #include "deeplink.h"
 #include "telefoneui.h"
 #include "descanso.h"
@@ -1141,7 +1142,9 @@ static void buscarParaPlayerModo(int renovar) {
   if (idC[0]) {
     // SEM LEGENDA DE ADDON NO CANAL: o id do canal ia ao OpenSubtitles como
     // "movie" (Recarregar da folha). As do canal sao as do fluxo (faixas.c).
-    if (renovar) addons_buscar_renovar(alvo,"tv"); else addons_buscar(alvo,"tv");
+    const char *tipo = player_tipo_canal();
+    if (!tipo[0]) tipo = "tv";
+    if (renovar) addons_buscar_renovar(alvo,tipo); else addons_buscar(alvo,tipo);
     return;
   }
   {
@@ -1345,7 +1348,7 @@ static void nomeParaFolha(void) {
   const CatItem *c = player_id_canal()[0] ? NULL
                    : cat_item(player_aberto() ? player_indice() : detail_indice());
   stream_folha_nome(c ? c->titulo : "");
-  stream_folha_canal(player_id_canal()[0] != 0);
+  stream_folha_canal(player_id_canal()[0] != 0 || (c && nv_tipo_canal(c->tipo)));
   stream_folha_item(c ? (player_aberto() ? player_indice() : detail_indice()) : -1);
 }
 
@@ -2204,7 +2207,7 @@ static void prepararAoAbrir(void) {
       player_retido() || aguardandoFonte || !detail_aberto() || preparoRodando) return;
   if (addons_estado() == ADD_BUSCANDO || stream_n() < 1 || stream_n_candidatas() < 1) return;
   ci = cat_item(detail_indice());
-  if (!ci || !ci->imdb[0]) return;
+  if (!ci || !ci->imdb[0] || !nv_tipo_vod(ci->tipo)) return;
   idDoAlvo(ci, alvo, sizeof alvo);
   if (!stream_lista_do_alvo(alvo)) return;
   g = stream_lista_geracao();
@@ -3219,7 +3222,7 @@ static void tentarProximaFonteVOD(void) {
   else if (!fonteFalha && video_bufferando_ms() > VOD_FONTE_BUFFER_MS) {
 #ifdef NV_ANDROID
     // Segura a troca so enquanto o fim do buffer ANDA (bufavanco.h), por fonte.
-    // No Android video_buffer_fim() e 0: a borda vem de VideoStats.bufferSeg.
+    // Para VOD no Android, a borda vem de VideoStats.bufferSeg.
     { static BufAvanco av; VideoStats vs;
       video_estatisticas(&vs);
       if (bufavanco_segura(&av, fonteVODDesde, video_bufferando_ms(), SDL_GetTicks(),
@@ -4036,6 +4039,20 @@ static int relogioPedidoPagina(void) {
 }
 
 void app_evento(const SDL_Event *e) {
+  static int backRetido;
+  static Uint32 backUltimo;
+  // Guard before any sheet/panel consumes Back. Flagged repeats are always held;
+  // only a non-repeat after 1.5 s of silence recovers from a lost keyup.
+  if ((e->type == SDL_KEYDOWN || e->type == SDL_KEYUP) && nv_tecla_voltar(e)) {
+    Uint32 agora = SDL_GetTicks();
+    if (e->type == SDL_KEYUP || !player_aberto()) backRetido = 0;
+    else {
+      int retido = e->key.repeat || (backRetido && agora - backUltimo < 1500u);
+      backRetido = 1;
+      backUltimo = agora;
+      if (retido) return;
+    }
+  }
   // Measurement anchors: only with perf enabled and an authenticated profile.
   // D-pad scrolling still follows the real screen handlers.
   if (perftv_enabled && e->type == SDL_KEYDOWN && !e->key.repeat &&
@@ -4608,6 +4625,22 @@ static void atualizarFolha(float dt, Uint32 agora) {
   stream_folha_atualizar(dt, agora);
   // Picks consume the latch before this step; every other close discards it.
   if (!stream_folha_aberta()) gravarFolhaTocar(0, 0, 0);
+}
+
+// Android's live buffer end is unknown (zero). READY video that is actually
+// playing again also proves recovery; audio alone or continued buffering does not.
+static void recuperarErroFonte(void) {
+  if ((player_aberto() || player_mini_ativo()) && player_fonte_falhou() &&
+      player_tem_video() && !video_falhou() &&
+      (video_buffer_fim() > 0.5 ||
+       (player_id_canal()[0] && video_tocando() && !video_bufferando_ms())) &&
+      video_pronto()) {
+    printf("[player] a fonte voltou a entregar (buffer %.1fs): tirando o erro da tela\n",
+           video_buffer_fim());
+    fflush(stdout);
+    player_limpar_erro_fonte();
+    canalFonteDesde = SDL_GetTicks();
+  }
 }
 
 void app_atualizar(float dt, Uint32 agora) {
@@ -5971,16 +6004,11 @@ void app_atualizar(float dt, Uint32 agora) {
   // com "buffer 9.0s" numa fonte que nunca chegou ao loadCompleted: o buffer
   // enchia, o decoder nao comecava, e o cartao era tirado para uma tela
   // preta. O caso que motivou o conserto (18/09) tinha loadCompleted.
-  if ((player_aberto() || player_mini_ativo()) && player_fonte_falhou() &&
-      player_tem_video() && video_buffer_fim() > 0.5 && !video_falhou() &&
-      video_pronto()) {
-    printf("[player] a fonte voltou a entregar (buffer %.1fs): tirando o erro da tela\n",
-           video_buffer_fim());
-    fflush(stdout);
-    player_limpar_erro_fonte();
-    canalFonteDesde = SDL_GetTicks();
-  }
+  recuperarErroFonte();
   if (canalFonteIdx >= 0 && (player_aberto() || player_mini_ativo()) &&
+#ifdef NV_ANDROID
+      !video_recuperando_live() &&
+#endif
       !player_quer_sair() && player_id_canal()[0]) {
     // TRAVOU DEPOIS DE ABRIR conta como morta, e sem isto nao contava.
     //
@@ -6014,12 +6042,22 @@ void app_atualizar(float dt, Uint32 agora) {
     Uint32 teto = espera > CANAL_ABRE_TETO_MS ? espera : CANAL_ABRE_TETO_MS;
     int semDecoder = (xt || canalViaProxy) && player_carregando() && desde > semDecMs &&
         video_buffer_fim() > 0.5 && !video_decoder_anunciou();
+    unsigned bufferMs = video_bufferando_ms();
+    unsigned travaMs = CANAL_TRAVA_MS, paradoMs = NV_LS_PARADO_MS;
+#ifdef NV_ANDROID
+    if (bufferMs) {
+      paradoMs = nv_ls_buffer_prazo(video_live_segmento_ms());
+      // Give the same-source watchdog its normal four-second lead over failover.
+      if (paradoMs > NV_LS_PARADO_MS) travaMs = paradoMs + 4000u;
+    }
+#endif
     int morta = player_fonte_falhou() || video_falhou() ||
         (player_carregando() && desde > prazo && video_buffer_fim() <= 0.5) ||
         (player_carregando() && desde > teto) ||
-        video_bufferando_ms() > CANAL_TRAVA_MS || semDecoder;
+        bufferMs > travaMs || semDecoder;
     // CANAL QUE PAROU DEPOIS DE TOCAR (#302): fim de fluxo, posicao parada ou
-    // buffering por 8 s. EOF de live TPK com progresso reabre imediatamente
+    // buffering por 8 s (HLS Android usa o prazo limitado do segmento).
+    // EOF de live TPK com progresso reabre imediatamente
     // sem gastar tentativa; as demais quedas reabrem a MESMA fonte, ate
     // NV_LS_MAX vezes (livestall.h); esgotou, cai no caminho de sempre (proxima
     // fonte). Pausa da pessoa nunca entra. No webOS o fim do buffer parado
@@ -6034,15 +6072,23 @@ void app_atualizar(float dt, Uint32 agora) {
         lsIdx = canalFonteIdx;
         snprintf(lsId, sizeof lsId, "%s", player_id_canal());
       }
-      ls = nv_ls_passo_buf(&liveStall, SDL_GetTicks(), video_pronto() ? video_pos() : 0.0,
+      double livePos = video_pronto() ? video_pos() : 0.0, liveFim = video_buffer_fim();
+#ifdef NV_ANDROID
+      if (video_pronto()) video_live_progresso(&livePos, &liveFim);
+#endif
+      int estavaPendente = liveStall.pendente;
+      ls = nv_ls_passo_buf_prazo(&liveStall, SDL_GetTicks(), livePos,
                            video_pronto(), player_pausa_pessoa(), video_terminou(),
-                           video_bufferando_ms(), video_buffer_fim());
+                           bufferMs, liveFim, paradoMs);
       if (morta) {
         nv_ls_zerar(&liveStall);
+      } else if (estavaPendente && !liveStall.pendente && ls == NV_LS_NADA) {
+        printf("[canal] reproducao recuperou: reabertura pendente cancelada (fonte %d)\n", canalFonteIdx);
+        fflush(stdout);
       } else if (ls == NV_LS_AGENDOU) {
         printf("[canal] parou de tocar (fim de fluxo=%d, posicao %.1fs, buffering %u ms): "
                "reabrindo a fonte %d, tentativa %d/%d em %u ms\n", video_terminou(),
-               video_pos(), video_bufferando_ms(), canalFonteIdx, liveStall.tentativa,
+               livePos, video_bufferando_ms(), canalFonteIdx, liveStall.tentativa,
                NV_LS_MAX, nv_ls_espera_ms(liveStall.tentativa));
         fflush(stdout);
         player_toast_ex(i18n("Conexão caiu, reconectando…"), 4000, "aj_wifi-off", 1);

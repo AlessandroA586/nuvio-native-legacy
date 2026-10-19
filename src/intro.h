@@ -131,6 +131,7 @@ int  intro_resposta_confere(const char *json,int temporada,int episodio);
 #define INTRO_BOTAO_SEG 10.0
 int  intro_botao(double posSeg,double agora,int osd,int focado,double *fim,int *tipo);
 int  intro_botao_visivel(double *fim,int *tipo);
+void intro_botao_esconder(double agora);
 // #329/#331: o trecho (tipo, fim) deve ser pulado sozinho? Abertura/resumo: ajuste ligado e
 // fim conhecido. Creditos: ajuste proprio, fim EXPLICITO do marcador e a pelo menos 5 s do fim
 // da midia `dur` (creditos ate o fim ficam com o proximo episodio, nunca um seek para alem do fim).

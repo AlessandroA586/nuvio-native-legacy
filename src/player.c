@@ -113,6 +113,7 @@ static void avisarCascaAberto(int v) { (void)v; tex_pressao_reproducao(v); }
 #include "home.h"
 #include "descoberta.h"
 #include "guia.h"
+#include "livetv_regras.h"
 #include "epg.h"
 #include "xtream.h"
 #include "xtepg.h"   /* grade curta do Xtream quando a XMLTV nao casa (#158) */
@@ -578,6 +579,7 @@ static const char *textoAudioAtual(void) {
   return txt;
 }
 const char *player_id_canal(void) { return canalSessao ? itemCanal.imdb : ""; }
+const char *player_tipo_canal(void) { return canalSessao ? itemCanal.tipo : ""; }
 
 // Programa do canal no ar: a XMLTV (epgIdx) ou, num canal Xtream que nao
 // casou nela, a grade curta do painel (#158). xtepg_passo aqui porque o guia,
@@ -1719,7 +1721,8 @@ void player_abrir(int indiceCatalogo, const char *url) {
     epPedidoT = epPedidoE = fonteSemEpisodio = 0;
     audioTitulo();
     artehero_logo_sessao_iniciar(temFixo ? &itemFixo : NULL);
-    canalSessao = ci && (!strcmp(ci->tipo, "channel") || !strcmp(ci->tipo, "tv"));
+    canalSessao = ci && nv_tipo_canal(ci->tipo);
+    stream_folha_canal(canalSessao);
     if (canalSessao) itemCanal = *ci;
     // So o CH+/- feito dentro do PiP (player_manter_mini) mantem a miniatura
     // na troca — o stream velho segue no ar ate a fonte nova chegar pelo
@@ -3915,6 +3918,18 @@ void player_evento(const SDL_Event *e) {
   }
   if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE ||
       k == SDLK_DELETE) {
+    // Back dismisses exactly one layer. Loading/buffering keeps its exit path.
+    if (pausao_visivel()) { pausao_fechar(); acordar(); return; }
+    if (!erroFonte && !player_carregando() && !video_bufferando_ms()) {
+      if (skipFoco) { skipFoco = 0; return; }
+      if (visivel || anim > 0.004f) {
+        if (scrubbing) terminarSalto();
+        esconderControles(); anim = 0.0f;
+        intro_botao_esconder(monoSeg());
+        return;
+      }
+      if (trechoPulavel(NULL)) { intro_botao_esconder(monoSeg()); return; }
+    }
 #ifdef NV_ANDROID
     if (erroFonte && !ehCanal()) {
       player_voltar_a_esperar(); pedFontes = 1;

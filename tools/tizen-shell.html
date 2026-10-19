@@ -507,6 +507,10 @@
     nvPool: nvHeap.pool,
     preRun: [function () {
       try {
+        var duid = webapis.productinfo.getDuid();
+        if (duid) ENV.NUVIO_DEVICE_ID = "samsung:" + duid;
+      } catch (_) { /* No model fallback: identical TVs must remain separate. */ }
+      try {
         var model = webapis.productinfo.getModel();
         ENV.NUVIO_TV_MODEL = model;
         console.log("[tv] modelo=" + model);
@@ -755,19 +759,20 @@
   // Traduzir aqui e melhor que ensinar o C a conhecer 10009: o codigo de voltar
   // ja existe e e o mesmo dos outros dois alvos; o que faltava era a tecla
   // chegar. Escape porque as telas ja o aceitam ao lado de AC_BACK.
-  window.addEventListener("keydown", function (ev) {
-    if (imeAberto()) return;
-    if (ev.keyCode !== 10009) return;
-    ev.preventDefault();
-    ev.stopPropagation();
-    var alvo = document.getElementById("canvas") || window;
-    ["keydown", "keyup"].forEach(function (t) {
-      alvo.dispatchEvent(new KeyboardEvent(t, {
+  ["keydown", "keyup"].forEach(function (tipo) {
+    window.addEventListener(tipo, function (ev) {
+      if (imeAberto()) return;
+      if (ev.keyCode !== 10009) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      var alvo = document.getElementById("canvas") || window;
+      // Preserve the physical release; repeats must not clear the Back guard.
+      alvo.dispatchEvent(new KeyboardEvent(tipo, {
         key: "Escape", code: "Escape", keyCode: 27, which: 27,
-        bubbles: true, cancelable: true
+        repeat: ev.repeat, bubbles: true, cancelable: true
       }));
-    });
-  }, true);
+    }, true);
+  });
 
   // TECLAS DE MIDIA DO CONTROLE SAMSUNG -> as teclas que player.c ja entende.
   //

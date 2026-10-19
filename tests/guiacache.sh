@@ -18,7 +18,7 @@ if [ "${GUIACACHE_BASELINE:-0}" = 1 ]; then
   flags+=(-DGUIACACHE_BASELINE "-DGUIACACHE_SOURCE=\"$work/guia.c\"")
 fi
 cc ${flags[@]+"${flags[@]}"} tests/guiacache.c \
-  src/ltv.c src/js.c src/idcanal.c src/dados.c src/marco.c src/guiaaddons.c \
+  src/ltv.c src/js.c src/idcanal.c src/dados.c src/marco.c src/guiaaddons.c src/guiafiltro.c \
   src/epg.c src/xtepg.c src/lembrete.c src/guialembrete.c \
   src/fontecache.c src/cachearte.c src/cachedisco.c \
   -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
