@@ -389,6 +389,26 @@ class NuvioActivity : SDLActivity() {
     // Chamado pelo C (android_pedir_superficie), do fio do SDL, antes de criar a
     // janela: fixa o buffer da SDLSurface em w x h e espera a superficie nova
     // chegar (ate 2 s). Devolve true se ela veio nesse tamanho.
+    // SDL calls this before EGL surface creation. Only the Activity window changes;
+    // ExoPlayer retains its separate SurfaceView and video color handling.
+    fun pedirHdrInterface(ativa: Boolean): Boolean {
+        if (Build.VERSION.SDK_INT < 26) return false
+        val done = CountDownLatch(1)
+        var ok = false
+        runOnUiThread {
+            try {
+                if (!ativa || (Build.VERSION.SDK_INT >= 34 && display?.isHdr == true)) {
+                    window.colorMode = if (ativa) ActivityInfo.COLOR_MODE_HDR else ActivityInfo.COLOR_MODE_DEFAULT
+                    ok = !ativa || window.colorMode == ActivityInfo.COLOR_MODE_HDR
+                }
+            } catch (_: Exception) {
+                ok = false
+            } finally { done.countDown() }
+        }
+        done.await()
+        return ok
+    }
+
     fun pedirSuperficie(w: Int, h: Int): Boolean {
         // SDL normalizes touches against the holder buffer dimensions. On a
         // phone that buffer must follow the viewport's physical view size.

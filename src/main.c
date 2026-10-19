@@ -1210,6 +1210,20 @@ int main(int argc, char **argv) {
 #ifdef NV_LINUX_DESKTOP
   windowTitle = "Nuvio - Linux UI preview";
 #endif
+#ifdef NV_ANDROID
+  int hdrPedido = ajustes_hdr_interface();
+  int hdrColor = hdrPedido && android_hdr_interface(1);
+  SDL_SetHint("NUVIO_HDR_REQUESTED", hdrPedido ? "1" : "0");
+  SDL_SetHint("NUVIO_HDR_EGL", "none");
+  SDL_SetHint("NUVIO_HDR_UI", hdrColor ? "1" : "0");
+  if (hdrColor) {
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 10);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 10);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 10);
+    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 2);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
+  }
+#endif
   NV_ETAPA("SDL_CreateWindow");
   arranque_etapa("SDL_CreateWindow");
   win = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED,
@@ -1235,6 +1249,7 @@ int main(int argc, char **argv) {
       { 5, 6, 5, 0, 0, "RGB565" },
     };
     size_t i;
+    if (!win && hdrColor) { SDL_SetHint("NUVIO_HDR_UI", "0"); android_hdr_interface(0); }
     for (i = 0; !win && i < sizeof reserva / sizeof reserva[0]; i++) {
       printf("[android] janela falhou (%s); tentando EGL %s\n", SDL_GetError(), reserva[i].nome);
       fflush(stdout);
@@ -1364,6 +1379,8 @@ int main(int argc, char **argv) {
     printf("[android] sem contexto GL: %s; tentando RGB565 sem profundidade\n", SDL_GetError());
     fflush(stdout);
     SDL_DestroyWindow(win);
+    SDL_SetHint("NUVIO_HDR_UI", "0");
+    if (hdrColor) android_hdr_interface(0);
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 6);
     SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
@@ -1375,6 +1392,23 @@ int main(int argc, char **argv) {
     ctx = win ? SDL_GL_CreateContext(win) : NULL;
   }
   if (!ctx) { printf("[android] sem contexto GL: %s\n", SDL_GetError()); SDL_Quit(); return 2; }
+#endif
+#ifdef NV_ANDROID
+  { const char *space = SDL_GetHint("NUVIO_HDR_EGL");
+    int r = 0, g = 0, b = 0, a = 0;
+    SDL_GL_GetAttribute(SDL_GL_RED_SIZE, &r); SDL_GL_GetAttribute(SDL_GL_GREEN_SIZE, &g);
+    SDL_GL_GetAttribute(SDL_GL_BLUE_SIZE, &b); SDL_GL_GetAttribute(SDL_GL_ALPHA_SIZE, &a);
+    int ten = r == 10 && g == 10 && b == 10 && a == 2;
+    if (hdrColor && SDL_GetHintBoolean("NUVIO_HDR_UI", SDL_FALSE) && ten && space)
+      gfx_hdr_output = !strcmp(space, "pq") ? 1 : !strcmp(space, "scrgb") ? 2 : 0;
+    if (hdrPedido) {
+      if (!gfx_hdr_output) android_hdr_interface(0);
+      printf("[hdr-ui] pedido=on colormode=%s egl=%s config=%s resultado=%s\n",
+             hdrColor ? "ok" : "unsupported", gfx_hdr_output ? space : "none",
+             ten ? "1010102" : "8888", gfx_hdr_output ? "hdr" : "sdr");
+      fflush(stdout);
+    }
+  }
 #endif
   // Capability is known only after creating the GL context. A saved app choice
   // must not leave a weak GPU paying for a 4K drawable.

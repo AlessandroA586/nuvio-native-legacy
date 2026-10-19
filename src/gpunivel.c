@@ -459,6 +459,7 @@ static int intPreparar(void) {
   if (intFbo) return 1;
   if (intFalhou) return 0;
   if (alvo1080) { intW = (int)NV_TELA_W; intH = (int)NV_TELA_H; }
+  else if (gfx_hdr_output && !forca720) { intW = telaW; intH = telaH; }
   else { intW = 1280; intH = 720; }
   glGenTextures(1, &intTex);
   glBindTexture(GL_TEXTURE_2D, intTex);
@@ -494,8 +495,8 @@ static int intPreparar(void) {
 void gpun_quadro_inicio(void) {
   intLigado = 0;
   // A granted 720p drawable is already scaled by the platform compositor.
-  if (forca720 && telaW <= 1280 && telaH <= 720) return;
-  if ((!forca720 && !alvo1080) || !intPreparar()) return;
+  if (!gfx_hdr_output && forca720 && telaW <= 1280 && telaH <= 720) return;
+  if ((!gfx_hdr_output && !forca720 && !alvo1080) || !intPreparar()) return;
   glBindFramebuffer(GL_FRAMEBUFFER, intFbo);
   glViewport(0, 0, intW, intH);
   gfx_tamanho_alvo(intW, intH);
@@ -522,7 +523,9 @@ void gpun_quadro_fim(void) {
     gfx_opacidade_grupo = 1.0f;
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     // Fractional scaling uses SGSR; integer factors keep Sharp-Bilinear.
-    if (upscaleNitido() && (telaW % intW || telaH % intH))
+    if (gfx_hdr_output)
+      gfx_rect(tela, intTex, GFX_HDR_OUTPUT, (float)gfx_hdr_output, 0, 0, 0, 1, 1, 1, 1);
+    else if (upscaleNitido() && (telaW % intW || telaH % intH))
       gfx_rect(tela, intTex, GFX_COPIA, 0,
                (float)intW, (float)intH, 0.0f, 1, 1, 1, 1);
     else if (upscaleNitido())

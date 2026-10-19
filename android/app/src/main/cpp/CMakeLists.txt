@@ -33,6 +33,18 @@ set(SDL_HAPTIC ON CACHE BOOL "" FORCE)  # SDL_android.c chama Android_AddHaptic
 set(SDL_SENSOR OFF CACHE BOOL "" FORCE)
 set(SDL_HIDAPI ON CACHE BOOL "" FORCE)  # SDLActivity chama HIDDeviceRegisterCallback sempre
 add_subdirectory("${SDL_DIR}" "${CMAKE_BINARY_DIR}/sdl2" EXCLUDE_FROM_ALL)
+# Patch a private build copy, never the shared SDL source cache.
+file(READ "${SDL_DIR}/src/video/SDL_egl.c" NV_EGL_SOURCE)
+file(READ "${CMAKE_CURRENT_LIST_DIR}/hdr_surface.inc" NV_HDR_SURFACE)
+string(REPLACE "EGLint attribs[5];" "EGLint attribs[9];" NV_EGL_SOURCE "${NV_EGL_SOURCE}")
+string(REPLACE "    surface = _this->egl_data->eglCreateWindowSurface("
+  "${NV_HDR_SURFACE}\n    surface = _this->egl_data->eglCreateWindowSurface(" NV_EGL_SOURCE "${NV_EGL_SOURCE}")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/SDL_egl_hdr.c" "${NV_EGL_SOURCE}")
+get_target_property(NV_SDL_SOURCES SDL2 SOURCES)
+list(FILTER NV_SDL_SOURCES EXCLUDE REGEX "/SDL_egl\\.c$")
+set_property(TARGET SDL2 PROPERTY SOURCES "${NV_SDL_SOURCES}" "${CMAKE_CURRENT_BINARY_DIR}/SDL_egl_hdr.c")
+target_include_directories(SDL2 PRIVATE "${SDL_DIR}/src/video")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/hdr_surface.inc")
 
 # ---- libwebp (so decodificador + demux) ----
 set(WEBP_BUILD_ANIM_UTILS OFF CACHE BOOL "" FORCE)

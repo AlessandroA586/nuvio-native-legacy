@@ -5,6 +5,7 @@
 #ifndef NV_GFX_H
 #define NV_GFX_H
 #include "gl_compat.h"
+extern int gfx_hdr_output; // 0 SDR, 1 BT.2020 PQ, 2 linear scRGB.
 
 typedef enum {
   GFX_CARD   = 0,  // textura com cantos, parallax e especular
@@ -286,7 +287,8 @@ typedef enum {
   // Integer prescale with a bilinear transition. uPar=inverse source size,
   // uFoco=integer scale; alpha remains the original bilinear sample.
   GFX_COPIA_NITIDA = 49,
-  GFX_NMODOS = 50
+  GFX_HDR_OUTPUT = 50, // Final SDR UI to HDR conversion; preserves alpha.
+  GFX_NMODOS = 51
 } GfxModo;
 
 typedef struct {

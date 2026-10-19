@@ -223,6 +223,19 @@ void android_iniciar(void) {
 // composta pelo SurfaceFlinger no espaco FISICO; se o plano de graficos da TV
 // aceitar, a UI sai em 4K de verdade. O que a TV concedeu aparece na linha
 // `janela=... drawable=...` do main.c.
+int android_hdr_interface(int ativa) {
+  JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
+  jobject act = (jobject)SDL_AndroidGetActivity();
+  if (!env || !act) return 0;
+  jclass cls = (*env)->GetObjectClass(env, act);
+  jmethodID m = cls ? (*env)->GetMethodID(env, cls, "pedirHdrInterface", "(Z)Z") : NULL;
+  int ok = m && (*env)->CallBooleanMethod(env, act, m, ativa ? JNI_TRUE : JNI_FALSE);
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); ok = 0; }
+  if (cls) (*env)->DeleteLocalRef(env, cls);
+  (*env)->DeleteLocalRef(env, act);
+  return ok;
+}
+
 int android_pedir_superficie(int w, int h) {
   JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
   jobject act = (jobject)SDL_AndroidGetActivity();
