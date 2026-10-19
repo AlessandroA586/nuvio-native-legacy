@@ -23,6 +23,7 @@
 #define NV_TXT_TELA   // NV_TELA_W/H = tela virtual da escala de texto (escala.h)
 #include "escala.h"
 #include "detail.h"
+#include "detail_acoes.h"
 #include "focoprof.h"
 #include "posterprov.h"
 #include "episodios.h"
@@ -4870,7 +4871,7 @@ static void heroWeb(float a, float desloc) {
     player_morph_de(morphLogo, rp);   // A3: o morph da abertura parte daqui
     primarioPct = -1;   // os outros botoes nao tem trilho
     if (a > 0.3f) ponteiro_alvo(rp.x, rp.y, rp.w, rp.h, ponteiroDetalhe, NULL, -1, nb);
-    bx += rp.w + NV_DETW2_BTN_GAP; nb++;
+    bx += det_avanco(rp.w, nivel == 0 && botao == nb, NV_DETW2_FOCO_SX, NV_DETW2_BTN_GAP); nb++;
     if (temInicio()) {
       // "Assistir do comeco" entre o primario e os circulares (issue #46).
       const char *rotIni = i18n("Assistir do começo");
@@ -4918,13 +4919,16 @@ static void heroWeb(float a, float desloc) {
     }
     if (temLembrar() && !acoesAgrupadas()) {
       const CatItem *ciL = cat_item(idx);
+      int foc = nivel == 0 && botao == nb;
+      float ext = foc ? det_foco_extra(NV_DETW2_CIRC, NV_DETW2_FOCO_SY) : 0.0f;
+      bx += ext;
       GfxRect rs = { bx, cyBtn - NV_DETW2_CIRC * 0.5f,
                      NV_DETW2_CIRC, NV_DETW2_CIRC };
       if (detalheRetrato()) rs = heroAcaoRect(&bx, &cyBtn, rs.w, rs.h);
       desenhaLembrete(rs, ciL && agenda_lembrete(ciL->imdb),
                       nivel == 0 && botao == nb, a);
       if (a > 0.3f) ponteiro_alvo(rs.x, rs.y, rs.w, rs.h, ponteiroDetalhe, NULL, -1, nb);
-      bx += NV_DETW2_CIRC + NV_DETW2_BTN_GAP; nb++;
+      bx += det_avanco(NV_DETW2_CIRC, nivel == 0 && botao == nb, NV_DETW2_FOCO_SY, NV_DETW2_BTN_GAP); nb++;
     }
     if (acoesAgrupadas()) {
       static float reveal, revealVelocity;
@@ -4939,14 +4943,24 @@ static void heroWeb(float a, float desloc) {
         anim_mola2(&revealVelocity,reveal,maisAcoes ? 1.0f : 0.0f,elapsed*.001f,16.0f);
       float progress = anim_clamp(reveal,0,1);
       int first = nb;
+      float ext = nivel == 0 && botao == first ? det_foco_extra(NV_DETW2_CIRC, NV_DETW2_FOCO_SY) : 0.0f;
+      bx += ext;   // focused Add grows left: keep the gap to the previous button
       GfxRect anchor = {bx,cyBtn-NV_DETW2_CIRC*.5f,NV_DETW2_CIRC,NV_DETW2_CIRC};
       // Draw outgoing circles behind Add, then keep the anchor in front.
       for (int j=nBotoesTodos()-1; j>first; j--) {
         float stagger = anim_clamp((progress-(j-first-1)*.045f)/.78f,0,1);
         if (stagger < .005f) continue;
-        GfxRect rc = {bx+(j-first)*(NV_DETW2_CIRC+NV_DETW2_BTN_GAP)*stagger,
+        // A focused circle grows around its center: its left half is inside
+        // the stagger distance; every circle at or past it shifts right —
+        // the focused one by one half, the ones beyond by two — so the gaps
+        // stay 18.
+        float jext = nivel == 0 && botao > first && botao <= j
+          ? det_foco_extra(NV_DETW2_CIRC, NV_DETW2_FOCO_SY) * (1.0f + (botao < j)) *
+            anim_clamp((progress-(botao-first-1)*.045f)/.78f,0,1) : 0.0f;
+        int selected = nivel == 0 && botao == j;
+        GfxRect rc = {bx+((j-first)*(NV_DETW2_CIRC+NV_DETW2_BTN_GAP)+ext)*stagger+jext,
           anchor.y,NV_DETW2_CIRC,NV_DETW2_CIRC};
-        int action = acaoEm(j), selected = nivel == 0 && botao == j;
+        int action = acaoEm(j);
         if (action == ACAO_LEMBRAR)
           desenhaLembrete(rc,ci && agenda_lembrete(ci->imdb),selected,a*stagger);
         else desenhaBotao(rc,NULL,action,selected,a*stagger);
@@ -4957,13 +4971,16 @@ static void heroWeb(float a, float desloc) {
       desenhaBotao(anchor,NULL,ACAO_LISTA,nivel == 0 && botao == first,a);
       if (a > .3f) ponteiro_alvo(anchor.x,anchor.y,anchor.w,anchor.h,ponteiroDetalhe,NULL,-1,first);
     } else for (; nb < n; nb++) {
+      int foc = nivel == 0 && botao == nb;
+      float ext = foc ? det_foco_extra(NV_DETW2_CIRC, NV_DETW2_FOCO_SY) : 0.0f;
+      bx += ext;   // the focused circle grows both ways: keep the gap on its left too
       GfxRect rc = { bx, cyBtn - NV_DETW2_CIRC * 0.5f,
                      NV_DETW2_CIRC, NV_DETW2_CIRC };
       if (detalheRetrato()) rc = heroAcaoRect(&bx, &cyBtn, rc.w, rc.h);
-      desenhaBotao(rc, NULL, acaoEm(nb), nivel == 0 && botao == nb, a);
+      desenhaBotao(rc, NULL, acaoEm(nb), foc, a);
       if (acaoEm(nb) == ACAO_MAIS) maisAncora = rc;
       if (a > 0.3f) ponteiro_alvo(rc.x, rc.y, rc.w, rc.h, ponteiroDetalhe, NULL, -1, nb);
-      bx += NV_DETW2_CIRC + NV_DETW2_BTN_GAP;
+      bx += NV_DETW2_CIRC + ext + NV_DETW2_BTN_GAP;
     }
   }
 
