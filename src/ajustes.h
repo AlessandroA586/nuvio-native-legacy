@@ -762,6 +762,8 @@ void ajustes_perfil_esquecer(void);
 // live under c_settings_v1. Device/display/decoder budgets, local endpoints
 // and credentials are excluded; see ajustePortavel in ajustes_sync.inc.
 int ajustes_mesclar_blob(const char *base, char **saida);
+// Main-thread local edit detector; avoids building the account JSON snapshot.
+unsigned long long ajustes_sync_hash(void);
 // #187: uma linha "[tmdb] idioma dos metadados: ..." com o que a TV pede ao
 // TMDB, de onde vem (ajuste desta TV) e o tmdb_language cru da conta.
 void ajustes_tmdb_idioma_relatar(const char *blob);

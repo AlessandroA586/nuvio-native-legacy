@@ -42,8 +42,15 @@ static int ajJsonNext(const char **cursor, const char *end, char *key, size_t ca
                       const char **v, const char **f) {
   const char *p = ajJsonSpace(*cursor, end);
   if (p < end && (*p == '{' || *p == ',')) p = ajJsonSpace(p + 1, end);
-  if (p >= end || *p != '"' || !js_cadeia(p, key, cap)) return 0;
-  p = ajJsonEnd(p, end);
+  if (p >= end || *p != '"') return 0;
+  const char *ke = ajJsonEnd(p, end);
+  if (!ke) return 0;
+  // Decode only this key: js_cadeia also strlen-scans the remaining document.
+  char *quoted = strndup(p, (size_t)(ke - p));
+  if (!quoted) return 0;
+  int ok = js_cadeia(quoted, key, cap); free(quoted);
+  if (!ok) return 0;
+  p = ke;
   if (!p || (p = ajJsonSpace(p, end)) >= end || *p != ':') return 0;
   *v = ajJsonSpace(p + 1, end); *f = ajJsonEnd(*v, end);
   if (!*f) return 0;
@@ -56,6 +63,25 @@ static int ajJsonGet(const char *obj, const char *end, const char *key,
   char *k = malloc(cap); if (!k) return 0;
   while (ajJsonNext(&p, end, k, cap, v, f)) if (!strcmp(k, key)) { free(k); return 1; }
   free(k); return 0;
+}
+
+// Web options never live in C snapshots. Keep those potentially huge hex
+// strings out of the repeated recursive web-key lookups on the main thread.
+static char *ajustesWebBlob(const char *json) {
+  const char *end = json + strlen(json), *p = json, *v, *f;
+  char *key = malloc((size_t)(end - json) + 1);
+  if (!key) return NULL;
+  Jsw w; jsw_iniciar(&w); jsw_obj_ini(&w);
+  while (ajJsonNext(&p, end, key, (size_t)(end - json) + 1, &v, &f)) {
+    if (!strcmp(key, "c_settings_v1") || !strcmp(key, "c_devices_v1")) continue;
+    jsw_chave(&w, key);
+    char *raw = strndup(v, (size_t)(f - v));
+    if (!raw) { free(key); jsw_livre(&w); return NULL; }
+    jsw_bruto(&w, raw); free(raw);
+  }
+  free(key); jsw_obj_fim(&w);
+  const char *s = jsw_texto_final(&w);
+  char *out = s ? strdup(s) : NULL; jsw_livre(&w); return out;
 }
 
 // Overlay known fields recursively. Unknown fields, including other devices and
@@ -152,8 +178,12 @@ static char *ajusteFileirasMesclar(char *shared, char *device) {
 static void ajusteHex(Jsw *w, const char *key, const char *text) {
   if (!text) { jsw_chave(w, key); jsw_bruto(w, "null"); return; }
   size_t n = strlen(text); char *hex = malloc(n * 2 + 1);
-  if (!hex) return;
-  for (size_t i = 0; i < n; i++) sprintf(hex + i * 2, "%02x", (unsigned char)text[i]);
+  if (!hex) { w->erro = 1; return; }
+  static const char digits[] = "0123456789abcdef";
+  for (size_t i = 0; i < n; i++) {
+    unsigned byte = (unsigned char)text[i];
+    hex[i * 2] = digits[byte >> 4]; hex[i * 2 + 1] = digits[byte & 15];
+  }
   hex[n * 2] = 0; jsw_cs(w, key, hex); free(hex);
 }
 static char *ajusteUnhex(const char *v, const char *f) {
@@ -163,7 +193,11 @@ static char *ajusteUnhex(const char *v, const char *f) {
   char *text = malloc(n / 2 + 1); if (!text) return NULL;
   for (size_t i = 0; i < n; i += 2) {
     if (!strchr("0123456789abcdef", v[1 + i]) || !strchr("0123456789abcdef", v[2 + i])) { free(text); return NULL; }
-    unsigned byte; sscanf(v + 1 + i, "%2x", &byte);
+    // sscanf can scan the entire remaining string even with a field width.
+    // Decode exactly two digits: linear time on TV libc as well as the host.
+    unsigned hi = v[1 + i] <= '9' ? v[1 + i] - '0' : v[1 + i] - 'a' + 10;
+    unsigned lo = v[2 + i] <= '9' ? v[2 + i] - '0' : v[2 + i] - 'a' + 10;
+    unsigned byte = hi * 16 + lo;
     if (!byte) { free(text); return NULL; }
     text[i / 2] = (char)byte;
   }
@@ -205,7 +239,11 @@ static void ajustesSnapshotAtual(void) {
     "aparencia-20.txt", "profundidade-205.txt", "idiomas-206.txt",
     "memoriaimagens-205.txt", "efeitos720-205.txt"
   };
-  for (size_t i = 0; i < sizeof markers / sizeof *markers; i++) dados_gravar(markers[i], "1\n");
+  for (size_t i = 0; i < sizeof markers / sizeof *markers; i++) {
+    char *old = dados_ler(markers[i]);
+    if (!old || strcmp(old, "1\n")) dados_gravar(markers[i], "1\n");
+    free(old);
+  }
 }
 
 static int ajustesDeviceAplicar(const char *json) {
@@ -233,7 +271,9 @@ static int ajustesDeviceAplicar(const char *json) {
     for (size_t i = 0; i < sizeof extra / sizeof *extra; i++) {
       if (!ajJsonGet(values, ve, extra[i].key, &v, &f)) continue;
       char *tail; long n = strtol(v, &tail, 10);
-      if (tail == f && n >= extra[i].min && n <= extra[i].max) { *extra[i].value = (int)n; changed++; }
+      if (tail == f && n >= extra[i].min && n <= extra[i].max && *extra[i].value != (int)n) {
+        *extra[i].value = (int)n; changed++;
+      }
     }
   }
   char order[EX_NFONTES * 8];
@@ -244,7 +284,9 @@ static int ajustesDeviceAplicar(const char *json) {
       if (tail == p || n < 0 || n >= EX_NFONTES || seen[n]) break;
       seen[n] = 1; next[i] = (int)n; p = tail;
     }
-    if (i == EX_NFONTES) { memcpy(notaFontes, next, sizeof next); changed++; }
+    if (i == EX_NFONTES && memcmp(notaFontes, next, sizeof next)) {
+      memcpy(notaFontes, next, sizeof next); changed++;
+    }
   }
   if (ajJsonGet(dev, end, "files", &values, &ve)) {
     for (int i = 0; i < AJ_DEVICE_FILES; i++) {
@@ -252,18 +294,25 @@ static int ajustesDeviceAplicar(const char *json) {
       snprintf(key, sizeof key, "file%d", i);
       if (!ajJsonGet(values, ve, key, &v, &f)) continue;
       ajusteDeviceFile(i, name, sizeof name); if (!*name) continue;
-      if (f - v == 4 && !strncmp(v, "null", 4)) { if (i != 8) dados_apagar(name); continue; }
+      if (f - v == 4 && !strncmp(v, "null", 4)) {
+        char *old = dados_ler(name);
+        if (i != 8 && old) { dados_apagar(name); changed++; }
+        free(old); continue;
+      }
       char *text = ajusteUnhex(v, f); if (!text) continue;
       if (i == 8) {
         char *shared = dados_ler(name), *merged = ajusteFileirasMesclar(shared, text);
         free(shared); free(text); text = merged;
         if (!text) continue;
       }
-      if (debGravarArquivo(name, text)) changed++;
+      char *old = dados_ler(name);
+      if ((!old || strcmp(old, text)) && debGravarArquivo(name, text)) changed++;
+      free(old);
       free(text);
     }
   }
-  // Reload effective state now; waiting for another launch defeats login restore.
+  // Reload only when something changed; unchanged snapshots need no side effects.
+  if (!changed) return 0;
   player_dir(dados_dir()); player_leg_estilo_carregar();
   ppCarregar(); fanartCarregar(); seekrCarregar(); p2pCarregar(); pstCarregar();
   ajustes_provedores_abrir_sessao();

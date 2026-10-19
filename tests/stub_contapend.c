@@ -67,6 +67,7 @@ WEAK void debrid_conta_iniciar(DebridConta *c) { (void)c; }
 WEAK void debrid_conta_definir(DebridConta *c, const char *s, const char *k) { (void)c; (void)s; (void)k; }
 WEAK int debrid_aplicar_chaves_conta(const DebridConta *c, uint64_t s) { (void)c; (void)s; return 0; }
 WEAK void ajustes_perfil_padrao(void) {}
+WEAK unsigned long long ajustes_sync_hash(void) { return 0; }
 int syncprog_puxar(void);
 int syncprog_empurrar(void);
 WEAK int syncprog_puxar_sessao(int p, uint64_t s) { (void)p; (void)s; return syncprog_puxar(); }
