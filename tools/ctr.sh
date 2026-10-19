@@ -37,7 +37,7 @@ ctr_run() {
   ctr_check_system || return 1
   [ "$NUVIO_CTR" = container ] || { "$NUVIO_CTR" run "$@"; return; }
 
-  local platform="" pull="" rm_flag="" vols=() envs=() workdir="" image="" cmd=()
+  local platform="" pull="" rm_flag="" vols=() envs=() workdir=() image="" cmd=()
   local collect_cmd=0 i=0 args=("$@")
   
   while [ $i -lt ${#args[@]} ]; do
@@ -60,7 +60,7 @@ ctr_run() {
         i=$((i+2))
         ;;
       -w|--workdir)
-        workdir="-w ${args[$((i+1))]}"
+        workdir=("-w" "${args[$((i+1))]}")
         i=$((i+2))
         ;;
       --pull)
@@ -109,7 +109,7 @@ ctr_run() {
     return 1
   fi
   
-  container run --rm ${platform:+--platform "$platform"} "${vols[@]}" "${envs[@]}" $workdir "$image" "${cmd[@]}"
+  container run --rm ${platform:+--platform "$platform"} "${vols[@]}" "${envs[@]}" "${workdir[@]}" "$image" "${cmd[@]}"
 }
 
 # ctr_build [OPTIONS] -t TAG -f DOCKERFILE CONTEXT

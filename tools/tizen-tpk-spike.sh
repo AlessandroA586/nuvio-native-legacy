@@ -44,11 +44,11 @@ if ctr_check_system 2>/dev/null; then
   cp native/libnvspike.so native/spikebin native/teste/carrega.c "$T/"
   "$BIN/arm-linux-gnueabi-readelf" --dyn-syms -W native/libnvspike.so |
     awk '$7=="UND" && $8 ~ /^gl/ {print "void " $8 "(void){}"}' > "$T/gles.c"
-  ctr_run --rm --platform linux/arm/v5 -v "$T:/w" -w /w arm32v5/debian:buster-slim sh -c '
-    sed -i "s#deb.debian.org#archive.debian.org#g; /security/d" /etc/apt/sources.list
-    apt-get -qq update >/dev/null 2>&1 && apt-get -qq install -y gcc libc6-dev >/dev/null 2>&1 || exit 3
-    gcc -shared -fPIC gles.c -o libGLESv2.so.2 && gcc carrega.c -o carrega -ldl &&
-    LD_LIBRARY_PATH=. ./carrega && ./spikebin /w/saida.txt && grep -q rodou saida.txt' ||
+  source ../tools/tpk/sdk.sh
+  (cd .. && tpk_sdk)
+  ctr_run --rm --platform "$TPK_PLATFORM" -v "$T:/w" -w /w "$TPK_IMAGE" sh -c '
+    gcc $CFLAGS -shared gles.c -o libGLESv2.so.2 && gcc $CFLAGS carrega.c -o carrega -ldl &&
+    LD_LIBRARY_PATH=. '"${TPK_EXEC[*]}"' ./carrega && '"${TPK_EXEC[*]}"' ./spikebin /w/saida.txt && grep -q rodou saida.txt' ||
     { echo "libnvspike.so/spikebin NAO passaram no container ARM glibc 2.28" >&2; rm -rf "$T"; exit 1; }
   rm -rf "$T"
   echo "  carga ARM glibc 2.28: OK"

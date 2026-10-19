@@ -11,7 +11,9 @@ cc -Isrc -O1 -g -Wall -Wextra -Wno-deprecated-declarations $FONTES -o "$DIR/test
 mkdir "$DIR/dados"
 (cd "$DIR" && NUVIO_DADOS="$DIR/dados" ./test)
 if [ "${MKVASS_GRANDE_ARM:-0}" = 1 ]; then
-  ctr_run --rm -v "$PWD:/src:ro" -w /src nuvio-tpk-sdk sh -c \
+  source tools/tpk/sdk.sh
+  tpk_sdk
+  ctr_run --rm --platform "$TPK_PLATFORM" -v "$PWD:/src:ro" -w /src "$TPK_IMAGE" sh -c \
     "gcc -Isrc -O1 -Wall -Wextra -Wno-deprecated-declarations $FONTES -o /tmp/t -pthread -lm && \
-     mkdir -p /tmp/d && cd /tmp && NUVIO_DADOS=/tmp/d ./t"
+     mkdir -p /tmp/d && cd /tmp && NUVIO_DADOS=/tmp/d ${TPK_EXEC[*]} ./t"
 fi

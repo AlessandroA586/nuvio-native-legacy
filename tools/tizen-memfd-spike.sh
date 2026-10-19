@@ -14,22 +14,21 @@
 #
 # A .so de teste (native/uepprobe.c) NAO tem segredo: so nv_probe()==42 e um
 # teste de pthread. Compilada no mesmo container ARM do tools/tpk.sh
-# (arm32v5/debian:buster, glibc 2.28, softfp NEON), com --hash-style=both para
+# (Debian buster, glibc 2.28, ARM32 softfp NEON output), com --hash-style=both para
 # que o DT_HASH exista (o carregador em C# usa nchain para contar simbolos).
 # Pacote/appid proprio (NvMemfd): nao encosta nos pacotes publicados.
 set -euo pipefail
 cd "$(dirname "$0")/.." && source tools/ctr.sh
+source tools/tpk/sdk.sh
 RAIZ="$PWD"
 SPIKE="tizen-tpk-spike"
 OUT="$SPIKE/out"
 mkdir -p "$OUT"
 
-ctr_check_system || { echo "Apple Container not running: run 'container system start'" >&2; exit 1; }
-ctr_image_exists nuvio-tpk-sdk ||
-  ctr_build --platform linux/arm/v5 -t nuvio-tpk-sdk -f tools/tpk/Dockerfile tools/tpk/
+tpk_sdk
 
 echo "[1/3] libnvprobe.so (ARMv7 softfp, glibc 2.28, hash-style=both)"
-ctr_run --rm --platform linux/arm/v5 -v "$RAIZ":/work -w /work nuvio-tpk-sdk sh -c '
+ctr_run --rm --platform "$TPK_PLATFORM" -v "$RAIZ":/work -w /work "$TPK_IMAGE" sh -c '
   set -e
   gcc $CFLAGS -c '"$SPIKE"'/native/uepprobe.c -o /tmp/uepprobe.o -fvisibility=hidden
   gcc -shared -o '"$SPIKE"'/native/libnvprobe.so /tmp/uepprobe.o \
