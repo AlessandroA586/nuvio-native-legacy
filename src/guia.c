@@ -323,6 +323,9 @@ static GCat   *sCats;    static int sNCats, sCapCats;
 static GFonteLtv sLtvF[G_MAX_LTV]; static int sNLtvF;
 static LtvArena sArena;
 static int sTeto, sRetidos;   // teto da carga e quanto ja entrou
+// Raw records stay on disk while the filtered staging list stays within its cap.
+static FILE *sCache[G_MAX_LTV];
+static int sCacheN[G_MAX_LTV], sCacheErro[G_MAX_LTV];
 
 enum { G_PARADO, G_BAIXANDO, G_PRONTO, G_FALHOU };
 static int estado = G_PARADO;
@@ -378,6 +381,10 @@ static void fltGravar(void) {
 
 // --- staging ---------------------------------------------------------------------
 static void stagingZerar(void) {
+  for (int i = 0; i < G_MAX_LTV; i++) {
+    if (sCache[i]) fclose(sCache[i]);
+    sCache[i] = NULL; sCacheN[i] = sCacheErro[i] = 0;
+  }
   sFiltrados = 0;
   guiafiltro_dup_zerar(&sDup);
   free(sAlts); sAlts = NULL; sNAlts = 0;
@@ -464,6 +471,7 @@ typedef struct {
   const char *id, *nome, *logo, *desc, *epgId, *tvgNome, *url, *ua, *ref, *grupo, *tipo;
   int numero;
 } GCru;
+static void cacheCru(int f, const char *grupo, const GCru *c);
 // Uma versao escondida pelo "Preferir 4K" vira reserva do canal que ficou.
 static void sAltAdd(const char *dono, const char *id, const char *nome) {
   if (!xtream_e_id(id) || sNAlts >= G_ALT_MAX) return;
@@ -481,6 +489,8 @@ static int sCanalAdd(int f, const GCru *c) {
   GCanal *g;
   int cat, velho = -1, quem;
   const char *grupo = c->grupo && c->grupo[0] ? c->grupo : "Outros";
+  if (!sLtvF[f].deCache &&
+      (sFltLive.modo != GF_TODAS || sFltLive.nCat || sFltLive.nCan)) cacheCru(f, grupo, c);
   // O filtro vem ANTES do teto: escondido ou colapsado nao gasta vaga.
   quem = guiafiltro_avaliar(&sFltLive, &sDup, f, grupo, c->id, c->nome, sLtvF[f].nome, &velho);
   if (quem == GF_FORA) { sFiltrados++; return 0; }
@@ -1425,11 +1435,27 @@ static int cStr(FILE *f, const char *s) {
 }
 static int cInt(FILE *f, long long v) { return fwrite(&v, sizeof v, 1, f) == 1; }
 
+static void cacheCru(int f, const char *grupo, const GCru *c) {
+  if (sCacheErro[f]) return;
+  if (!sCache[f]) sCache[f] = tmpfile();
+  FILE *fp = sCache[f];
+  if (!fp || !(cStr(fp, grupo) && cInt(fp, c->numero) && cStr(fp, c->id) &&
+      cStr(fp, c->nome) && cStr(fp, c->logo) && cStr(fp, c->desc) &&
+      cStr(fp, c->epgId) && cStr(fp, c->tvgNome) && cStr(fp, c->url) &&
+      cStr(fp, c->ua) && cStr(fp, c->ref) && cStr(fp, c->tipo))) {
+    sCacheErro[f] = 1;
+    return;
+  }
+  sCacheN[f]++;
+}
+
 static void cacheFonteGravar(int f) {
   char nome[64], caminho[600], tmp[620];
   const GFonteLtv *F = &ltvF[f];
   FILE *fp;
   int ok, i;
+  int raw = sCache[f] != NULL;
+  if (sCacheErro[f]) return;
   cacheNomeFonte(F->chave, nome, sizeof nome);
   if (!dados_caminho(caminho, sizeof caminho, nome)) return;
   snprintf(tmp, sizeof tmp, "%s.tmp", caminho);
@@ -1438,12 +1464,20 @@ static void cacheFonteGravar(int f) {
 #endif
   fp = fopen(tmp, "wb");
   if (fp) {
-    ok = cInt(fp, GC_MAGIA) && cInt(fp, GC_VERSAO) && cInt(fp, F->tipo) && cInt(fp, F->nCanais) &&
+    ok = cInt(fp, GC_MAGIA) && cInt(fp, GC_VERSAO) && cInt(fp, F->tipo) && cInt(fp, raw ? sCacheN[f] : F->nCanais) &&
          cInt(fp, F->ngi) && cInt(fp, F->total) && cInt(fp, F->cortada) && cInt(fp, F->atualizada) &&
          cStr(fp, F->nome) && cStr(fp, F->base) && cStr(fp, F->urlTvg);
     for (i = 0; ok && i < F->ngi; i++)
       ok = cStr(fp, F->gi[i].nome) && cInt(fp, F->gi[i].n) && cInt(fp, F->gi[i].entra);
-    for (i = 0; ok && i < nCanais; i++) {
+    if (raw) {
+      char buf[8192]; size_t n;
+      if (fflush(sCache[f]) != 0) ok = 0;
+      rewind(sCache[f]);
+      while (ok && (n = fread(buf, 1, sizeof buf, sCache[f])) > 0)
+        ok = fwrite(buf, 1, n, fp) == n;
+      if (ferror(sCache[f])) ok = 0;
+    }
+    for (i = 0; !raw && ok && i < nCanais; i++) {
       const GCanal *c = &canais[i];
       if (c->fonte != f) continue;
       ok = cStr(fp, cats[c->cat].nome) && cInt(fp, c->numero) && cStr(fp, c->id) && cStr(fp, c->nome) &&
@@ -1535,13 +1569,13 @@ static int cacheFonteLer(const char *chave) {
 }
 
 static void cacheGravar(void) {
-  // Keep the unfiltered cache: it can restore hidden channels and alternatives offline.
-  if (sFltLive.modo != GF_TODAS || sFltLive.nCat || sFltLive.nCan) return;
   char nome[48], buf[G_MAX_LTV * 32];
   size_t u = 0;
   int i;
   for (i = 0; i < nLtvF; i++) {
-    if (!ltvF[i].deCache && ltvF[i].nCanais > 0) cacheFonteGravar(i);
+    if (!ltvF[i].deCache && (sCacheN[i] > 0 ||
+        (sFltLive.modo == GF_TODAS && !sFltLive.nCat && !sFltLive.nCan && ltvF[i].nCanais > 0)))
+      cacheFonteGravar(i);
     u += (size_t)snprintf(buf + u, sizeof buf - u, "%s\n", ltvF[i].chave);
   }
   buf[u] = 0;
@@ -1720,7 +1754,9 @@ static void *fioGuia(void *u) {
       if (n <= 0) break;
       okC = 1;
       // Detect ignored offsets even when filtering admits no new channels.
-      if (n < G_PAGINA || (skip > 0 && pagina == anterior)) break;
+      if (n < G_PAGINA || (skip > 0 && pagina == anterior) ||
+          (sFltLive.modo != GF_PREFERIR_4K &&
+           (sRetidos >= sTeto || sRetidos >= GUIACORTE_MAX_CANAL))) break;
       anterior = pagina;
     }
     if (sRetidos >= sTeto) sLtvF[fl].cortada = 1;
@@ -1996,12 +2032,7 @@ static void publicar(void) {
            guiacorte_motivo(&corte));
   fflush(stdout);
   marco("guia: lista da rede publicada");
-  if (nCanais > 0 && !igual) cacheGravar();
-  else if (nCanais > 0) {   // o indice da barra pode ter mudado mesmo com a lista igual
-    char nome[48], buf[G_MAX_LTV * 32]; size_t u = 0;
-    for (i = 0; i < nLtvF; i++) u += (size_t)snprintf(buf + u, sizeof buf - u, "%s\n", ltvF[i].chave);
-    cacheNomeIndice(nome, sizeof nome); dados_gravar(nome, buf);
-  }
+  if (nCanais > 0 || sFiltrados > 0) cacheGravar();
   epgPaisesEscolher();
   epgExtrasMontar();
   epgCoberturaZerar();

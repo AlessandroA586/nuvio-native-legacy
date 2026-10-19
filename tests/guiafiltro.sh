@@ -13,9 +13,12 @@ sources=(tests/guiafiltro_loader.c src/ltv.c src/js.c src/idcanal.c src/dados.c 
   src/fontecache.c src/cachearte.c src/cachedisco.c)
 common=(-Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -O1 -g -Wno-macro-redefined)
 git show 5dddb0955:src/guia.c > "$work/guia.c"
+git show 2e8eb26cd:src/guia.c > "$work/review.c"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
   "-DGUIACACHE_SOURCE=\"$work/guia.c\"" -o "$work/baseline"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" -o "$work/loader"
+cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
+  "-DGUIACACHE_SOURCE=\"$work/review.c\"" -o "$work/review"
 failed=0
 for regression in pagination-all pagination-4k pagination-prefer visibility variants; do
   for version in baseline loader; do
@@ -30,6 +33,27 @@ for regression in pagination-all pagination-4k pagination-prefer visibility vari
       esac
       if [ "$rc" = 134 ] && rg -q -F "$expected" "$work/$version-$regression.log"; then
         printf 'PASS: reviewed baseline fails %s (rc=134)\n' "$regression"
+        continue
+      fi
+    elif [ "$rc" = 0 ]; then
+      printf 'PASS: %s regression\n' "$regression"
+      continue
+    fi
+    printf 'FAIL: %s %s (rc=%s)\n' "$version" "$regression" "$rc"
+    tail -n 3 "$work/$version-$regression.log"
+    failed=1
+  done
+done
+for regression in cap cache-refresh; do
+  for version in review loader; do
+    rc=0
+    GUIAFILTRO_CASE="$regression" NUVIO_DADOS="$work/$version-$regression" \
+      "$work/$version" "$work/$version-$regression" > "$work/$version-$regression.log" 2>&1 || rc=$?
+    if [ "$version" = review ]; then
+      if [ "$regression" = cap ]; then expected='Assertion failed: (pageRequests == 9 && sNCanais == 900)';
+      else expected='Assertion failed: (restored == 4)'; fi
+      if [ "$rc" = 134 ] && rg -q -F "$expected" "$work/$version-$regression.log"; then
+        printf 'PASS: reviewed revision fails %s (rc=134)\n' "$regression"
         continue
       fi
     elif [ "$rc" = 0 ]; then

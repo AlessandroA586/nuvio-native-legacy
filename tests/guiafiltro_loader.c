@@ -30,7 +30,8 @@ static char *filtroResposta(const char *url) {
   assert(strstr(url, "/catalog/tv/channels"));
   pageRequests++;
   used += (size_t)snprintf(body + used, sizeof body - used, "{\"metas\":[");
-  int offset = pageScenario == 2 && pageRequests > 1 ? 100 : 0;
+  int offset = pageScenario == 3 ? (pageRequests - 1) * 100 :
+               pageScenario == 2 && pageRequests > 1 ? 100 : 0;
   int count = pageScenario == 2 && pageRequests > 1 ? 1 : 100;
   for (int i = 0; i < count; i++)
     used += (size_t)snprintf(body + used, sizeof body - used,
@@ -63,6 +64,47 @@ static void paginationRegression(int mode) {
   }
   pageScenario = 0;
 }
+static void capRegression(void) {
+  paginationRegression(GF_TODAS);
+  memset(&sFltLive, 0, sizeof sFltLive);
+  tetoCarga = 900;
+  nAddonsCarga = 1; addonsCarga = calloc(1, sizeof *addonsCarga);
+  strcpy(addonsCarga[0].base, sFontes[0].base); addonsCarga[0].ativo = 1;
+  pageRequests = 0; pageScenario = 3;
+  fioGuia(NULL);
+  printf("cap requests=%d (expected 9)\n", pageRequests); fflush(stdout);
+  assert(pageRequests == 9 && sNCanais == 900);
+}
+static void cacheRefreshRegression(void) {
+  for (int mode = GF_SO_4K; mode < GF_MODOS; mode++) {
+    int fl = begin(mode, 5);
+    guiafiltro_cat_alternar(&sFltLive, "Hidden");
+    guiafiltro_canal_alternar(&sFltLive, "xtream:4", "Z 4K", "Sports");
+    channel(fl, "Sports", "xtream:1", "X HD");
+    channel(fl, "Sports", "xtream:2", "X 4K");
+    channel(fl, "Hidden", "xtream:3", "Y HD");
+    channel(fl, "Sports", "xtream:4", "Z 4K");
+    adotarStaging(); cacheGravar();
+    begin(GF_TODAS, 10);
+    int restored = cacheFonteLer("xt");
+    printf("cache mode=%d restored=%d (expected 4)\n", mode, restored); fflush(stdout);
+    assert(restored == 4);
+    assert(!strcmp(sCanais[0].nome, "X HD") && !strcmp(sCanais[3].nome, "Z 4K"));
+    // Same selected ID, changed raw metadata: publication must still refresh disk.
+    fl = begin(mode, 5); fltLive = sFltLive;
+    channel(fl, "Sports", "xtream:2", "X 4K"); publicar();
+    fl = begin(mode, 5);
+    channel(fl, "Sports", "xtream:2", "X 4K");
+    channel(fl, "Sports", "xtream:1", "X SD"); publicar();
+    begin(GF_TODAS, 10); assert(cacheFonteLer("xt") == 2);
+    assert(!strcmp(sCanais[1].nome, "X SD"));
+    // A successful source filtered to zero must also refresh its raw cache.
+    fl = begin(GF_SO_4K, 5); fltLive = sFltLive;
+    channel(fl, "Sports", "xtream:5", "New SD"); publicar();
+    begin(GF_TODAS, 10); assert(cacheFonteLer("xt") == 1);
+    assert(!strcmp(sCanais[0].nome, "New SD"));
+  }
+}
 static void visibilityRegression(void) {
   int fl = begin(GF_PREFERIR_4K, 5);
   channel(fl, "Sports", "xtream:1", "X 4K");
@@ -70,7 +112,7 @@ static void visibilityRegression(void) {
   channel(fl, "News", "xtream:3", "Z 4K");
   adotarStaging(); cacheGravar();
   char name[64]; cacheNomeFonte("xt", name, sizeof name);
-  char *cached = dados_ler(name); assert(!cached); free(cached);
+  char *cached = dados_ler(name); free(cached);
   filtrosAbrir();
   guiafiltro_cat_alternar(&fltLive, "Sports");
   guiafiltro_canal_alternar(&fltLive, "xtream:2", "Y 4K", "News");
@@ -109,6 +151,8 @@ int main(int argc, char **argv) {
     if (!strncmp(regression, "pagination", 10))
       paginationRegression(!strcmp(regression, "pagination-4k") ? GF_SO_4K :
                            !strcmp(regression, "pagination-prefer") ? GF_PREFERIR_4K : GF_TODAS);
+    else if (!strcmp(regression, "cap")) capRegression();
+    else if (!strcmp(regression, "cache-refresh")) cacheRefreshRegression();
     else if (!strcmp(regression, "visibility")) visibilityRegression();
     else if (!strcmp(regression, "variants")) variantsRegression();
     else assert(0);
