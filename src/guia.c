@@ -44,6 +44,7 @@
 #include "idcanal.h"
 #include "registro.h"
 #include "guiaaddons.h"
+#include "guiafiltro.h"
 #include "plrui.h"
 #include "badges.h"   /* marcas de resolucao no heroi */
 #include "aovivo.h"
@@ -204,7 +205,7 @@ static float gPreviewLargura(void) {
 }
 // CATEGORIAS e o primeiro chip: a porta VISIVEL do painel de categorias,
 // que antes so abria segurando a seta (ninguem descobre gesto que nao se ve).
-enum { G_TOPO_BUSCAR = 0, G_TOPO_CATEGORIAS, G_TOPO_CARTOES, G_TOPO_LISTA, G_TOPO_ADDONS, G_TOPO_DIAG,
+enum { G_TOPO_BUSCAR = 0, G_TOPO_CATEGORIAS, G_TOPO_CARTOES, G_TOPO_LISTA, G_TOPO_ADDONS, G_TOPO_FILTROS, G_TOPO_DIAG,
        G_TOPO_LIMPAR, G_TOPO_PREVIEW, G_TOPO_N };
 
 #ifdef NV_TOUCH_UI
@@ -344,8 +345,42 @@ static void fontesLtvSoltar(GFonteLtv *f, int n) {
   for (i = 0; i < n; i++) { free(f[i].gi); f[i].gi = NULL; f[i].ngi = 0; }
 }
 
+// --- filtro da Live TV: qualidade, categorias e canais escondidos ----------------
+// Por perfil, padrao: tudo aparece, todas as versoes. `fltLive` e o que a tela
+// edita; a carga le a COPIA `sFltLive` tirada em iniciarCarga, entao mexer no
+// painel no meio de uma recarga nao muda a lista pela metade.
+static GuiaFiltro fltLive, sFltLive;
+static int fltPerfil = -1;
+static GuiaFiltroDup sDup;
+static int sFiltrados;
+// Outras resolucoes do mesmo canal que o modo "Preferir 4K" escondeu: viram
+// fontes de reserva em guia_variantes. So Xtream (ids de resolucao proprios).
+typedef struct { const char *dono, *id, *nome; } GAlt;
+#define G_ALT_MAX 8192
+static GAlt *alts, *sAlts; static int nAlts, sNAlts;
+
+static void fltGarantir(void) {
+  int p = perfis_ativo();
+  char nome[48], *t;
+  if (p == fltPerfil) return;
+  fltPerfil = p;
+  t = dados_ler(guiafiltro_arquivo(p, nome, sizeof nome));
+  guiafiltro_ler(&fltLive, t);
+  free(t);
+}
+static void fltGravar(void) {
+  char nome[48], *buf = malloc(sizeof fltLive + 64);
+  if (!buf) return;
+  if (guiafiltro_texto(&fltLive, buf, sizeof fltLive + 64))
+    dados_gravar(guiafiltro_arquivo(fltPerfil, nome, sizeof nome), buf);
+  free(buf);
+}
+
 // --- staging ---------------------------------------------------------------------
 static void stagingZerar(void) {
+  sFiltrados = 0;
+  guiafiltro_dup_zerar(&sDup);
+  free(sAlts); sAlts = NULL; sNAlts = 0;
   fontesLtvSoltar(sLtvF, sNLtvF);
   ltv_arena_soltar(&sArena);
   free(sCanais); sCanais = NULL; sNCanais = sCapCanais = 0;
@@ -402,6 +437,7 @@ static int sCatDe(int f, const char *nome) {
   if (ult >= 0 && ult < sNCats && sCats[ult].fonte == f && !strcmp(sCats[ult].nome, nome)) return ult;
   for (i = sNCats - 1; i >= 0; i--)
     if (sCats[i].fonte == f && !strcmp(sCats[i].nome, nome)) return ult = i;
+  if (sNCats >= GUIACORTE_MAX_CAT) { sLtvF[f].cortada = 1; return -1; }
   if (sNCats >= sCapCats) {
     int cap = sCapCats ? sCapCats * 2 : 128;
     GCat *no = realloc(sCats, sizeof *no * (size_t)cap);
@@ -428,11 +464,47 @@ typedef struct {
   const char *id, *nome, *logo, *desc, *epgId, *tvgNome, *url, *ua, *ref, *grupo, *tipo;
   int numero;
 } GCru;
+// Uma versao escondida pelo "Preferir 4K" vira reserva do canal que ficou.
+static void sAltAdd(const char *dono, const char *id, const char *nome) {
+  if (!xtream_e_id(id) || sNAlts >= G_ALT_MAX) return;
+  if (!(sNAlts % 256)) {
+    GAlt *no = realloc(sAlts, sizeof *no * (size_t)(sNAlts + 256));
+    if (!no) return;
+    sAlts = no;
+  }
+  sAlts[sNAlts].dono = dono;
+  sAlts[sNAlts].id = ltv_dup(&sArena, id);
+  sAlts[sNAlts].nome = ltv_dup(&sArena, nome);
+  sNAlts++;
+}
 static int sCanalAdd(int f, const GCru *c) {
   GCanal *g;
-  int cat;
-  if (sRetidos >= sTeto) { sLtvF[f].cortada = 1; return 0; }
-  cat = sCatDe(f, c->grupo && c->grupo[0] ? c->grupo : "Outros");
+  int cat, velho = -1, quem;
+  const char *grupo = c->grupo && c->grupo[0] ? c->grupo : "Outros";
+  // O filtro vem ANTES do teto: escondido ou colapsado nao gasta vaga.
+  quem = guiafiltro_avaliar(&sFltLive, &sDup, f, grupo, c->id, c->nome, sLtvF[f].nome, &velho);
+  if (quem == GF_FORA) { sFiltrados++; return 0; }
+  if (quem == GF_FORA_DUP) { if (velho >= 0) sAltAdd(sCanais[velho].id, c->id, c->nome); return 0; }
+  if (quem == GF_TROCA && velho >= 0) {
+    GCanal *v = &sCanais[velho];
+    const char *antigo = v->id, *antigoNome = v->nome, *novo = ltv_dup(&sArena, c->id);
+    int i;
+    for (i = 0; i < sNAlts; i++) if (sAlts[i].dono == antigo) sAlts[i].dono = novo;
+    sAltAdd(novo, antigo, antigoNome);
+    v->id = novo;
+    v->nome = ltv_dup(&sArena, c->nome);
+    v->logo = ltv_dup(&sArena, c->logo);
+    v->desc = ltv_dup(&sArena, c->desc);
+    v->epgId = ltv_dup(&sArena, c->epgId);
+    v->tvgNome = ltv_dup(&sArena, c->tvgNome);
+    v->url = ltv_dup(&sArena, c->url);
+    v->ua = ltv_dup(&sArena, c->ua);
+    v->ref = ltv_dup(&sArena, c->ref);
+    v->tipo = ltv_dup(&sArena, c->tipo);
+    return 0;
+  }
+  if (sRetidos >= sTeto || sRetidos >= GUIACORTE_MAX_CANAL) { sLtvF[f].cortada = 1; return 0; }
+  cat = sCatDe(f, grupo);
   if (cat < 0) return 0;
   if (sNCanais >= sCapCanais) {
     int cap = sCapCanais ? sCapCanais * 2 : 512;
@@ -458,6 +530,7 @@ static int sCanalAdd(int f, const GCru *c) {
   g->fonte = (short)f;
   sLtvF[f].nCanais++;
   g->numero = c->numero > 0 ? c->numero : sLtvF[f].nCanais;
+  guiafiltro_dup_registrar(&sFltLive, &sDup, f, grupo, c->nome, sLtvF[f].nome, sNCanais);
   sNCanais++; sRetidos++;
   return 1;
 }
@@ -1188,12 +1261,10 @@ static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
 // --- Stalker, Xtream e M3U para o staging ---------------------------------------
 #define ST_MAX_GUIA 1200   /* a tabela de cmd do stalker.c (ST_MAX_CANAL) */
 static int stalkerCarregar(void) {
-  int fl = sFonte(LTV_STALKER, "", "Stalker", ""), cota = sTeto - sRetidos, n, i, nsel;
+  int fl = sFonte(LTV_STALKER, "", "Stalker", ""), cota = ST_MAX_GUIA, n, i, nsel;
   const char *sel[256];
   StalkerCanal *st;
   if (fl < 0) return 0;
-  if (cota > ST_MAX_GUIA) cota = ST_MAX_GUIA;
-  if (cota < 1) { sLtvF[fl].cortada = 1; return 0; }
   nsel = sGruposEscolhidos(fl, sel, 256);
   // MALLOC e nao `static`: so serve durante a carga.
   st = malloc(sizeof *st * (size_t)cota);
@@ -1236,7 +1307,7 @@ static int xtCanal(const XtreamItem *it, void *u) {
   GFonteLtv *F = &sLtvF[x->fl];
   int gi;
   GCru c;
-  if (!x->decidido) {
+  if (!x->decidido && sFltLive.modo == GF_TODAS && !sFltLive.nCat && !sFltLive.nCan) {
     // GRUPOS INTEIROS, na ordem do painel (ou os escolhidos), ate o que sobra
     // do teto. Decidido antes do primeiro canal: as contagens ja vieram.
     int *conta = malloc(sizeof(int) * (size_t)(F->ngi ? F->ngi : 1)), i;
@@ -1251,12 +1322,13 @@ static int xtCanal(const XtreamItem *it, void *u) {
     free(conta); free(nomes); free(entra);
   }
   gi = it->catOrdem >= 0 && it->catOrdem < x->nOrd ? x->giDe[it->catOrdem] : -1;
-  if (gi >= 0 && !F->gi[gi].entra) { F->cortada = 1; return 1; }
+  if (x->nsel && !nomeNaLista(it->categoria, x->sel, x->nsel)) return 1;
+  if (x->decidido && gi >= 0 && !F->gi[gi].entra) { F->cortada = 1; return 1; }
   memset(&c, 0, sizeof c);
   c.id = it->id; c.nome = it->nome; c.logo = it->logo; c.epgId = it->epgId;
   c.grupo = it->categoria; c.numero = it->num;
   c.desc = c.tvgNome = c.url = c.ua = c.ref = "";
-  if (!sCanalAdd(x->fl, &c) && gi >= 0) F->gi[gi].entra = 0;
+  sCanalAdd(x->fl, &c);
   return 1;
 }
 static int xtreamCarregar(void) {
@@ -1284,7 +1356,6 @@ static int m3uCanal(const LtvM3uCanal *m, void *u) {
   GCru c;
   sLtvF[x->fl].total++;
   if (x->nsel && !nomeNaLista(g, x->sel, x->nsel)) { if (gi >= 0) sLtvF[x->fl].gi[gi].entra = 0; return 1; }
-  if (sRetidos >= sTeto) { sLtvF[x->fl].cortada = 1; if (gi >= 0) sLtvF[x->fl].gi[gi].entra = 0; return 1; }
   // ID ESTAVEL sem a URL (que pode ter token que muda e credencial): tvg-id,
   // nome e grupo. Repetido exato e o mesmo canal duas vezes na lista.
   snprintf(chave, sizeof chave, "%s|%s|%s", m->tvgId, m->nome, g);
@@ -1463,6 +1534,8 @@ static int cacheFonteLer(const char *chave) {
 }
 
 static void cacheGravar(void) {
+  // Keep the unfiltered cache: it can restore hidden channels and alternatives offline.
+  if (sFltLive.modo != GF_TODAS || sFltLive.nCat || sFltLive.nCan) return;
   char nome[48], buf[G_MAX_LTV * 32];
   size_t u = 0;
   int i;
@@ -1639,12 +1712,12 @@ static void *fioGuia(void *u) {
     int fl = sFonte(LTV_ADDON, sFontes[i].base, nomeDoAddon(sFontes[i].base), sFontes[i].base);
     int skip, okC = 0;
     if (fl < 0) continue;
-    for (skip = 0; cargaAtual() && sRetidos < sTeto; skip += G_PAGINA) {
+    for (skip = 0; cargaAtual() && skip < 100000; skip += G_PAGINA) {
       int novos = 0, n = lerPagina(&sFontes[i], fl, skip, &novos);
       if (n <= 0) break;
       okC = 1;
       // Pagina cheia que nao trouxe nada novo e catalogo que ignora `skip`.
-      if (n < G_PAGINA || novos == 0) break;
+      if (n < G_PAGINA || (novos == 0 && !sFiltrados && sFltLive.modo == GF_TODAS)) break;
     }
     if (sRetidos >= sTeto) sLtvF[fl].cortada = 1;
     if (okC) ok = 1;
@@ -1673,7 +1746,7 @@ static void *fioGuia(void *u) {
   for (i = 0; i < sNLtvF; i++) if (sLtvF[i].nCanais > 0) ok = 1;
   // FONTE ACHADA E NENHUMA PAGINA RESPONDEU tambem e "nao respondeu".
   if (sNFontes > 0 && !ok) sFalhas++;
-  sOk = ok;
+  sOk = ok || sFiltrados > 0;
   free(addonsCarga); addonsCarga = NULL; nAddonsCarga = 0;
   atomic_store_explicit(&pendPronto, 1, memory_order_release);
   return NULL;
@@ -1757,7 +1830,8 @@ static void empacotar(void) {
 static void adotarStaging(void) {
   fontesLtvSoltar(ltvF, nLtvF);
   ltv_arena_soltar(&arena);
-  free(canais); free(cats);
+  free(canais); free(cats); free(alts);
+  alts = sAlts; nAlts = sNAlts; sAlts = NULL; sNAlts = 0;
   canais = sCanais; nCanais = sNCanais; capCanais = sCapCanais;
   cats = sCats; nCats = sNCats; capCats = sCapCats;
   memcpy(ltvF, sLtvF, sizeof sLtvF); nLtvF = sNLtvF;
@@ -1767,6 +1841,7 @@ static void adotarStaging(void) {
   memset(sLtvF, 0, sizeof sLtvF); sNLtvF = 0;
   memset(&sArena, 0, sizeof sArena);
   sRetidos = 0;
+  guiafiltro_dup_zerar(&sDup);
   empacotar();
 }
 
@@ -1780,6 +1855,7 @@ static int cacheLer(void) {
   cacheNomeIndice(nome, sizeof nome);
   t = dados_ler(nome);
   if (!t) return 0;
+  fltGarantir(); sFltLive = fltLive;
   stagingZerar();
   sTeto = tetoCarga;
   for (p = t; *p; ) {
@@ -1868,7 +1944,7 @@ static void publicar(void) {
   int i, igual;
   // REDE VAZIA NAO APAGA A LISTA QUE HA: sem resposta nenhuma (todos fora), a
   // lista de ontem continua valendo mais que uma tela vazia.
-  if (sNCanais == 0 && nCanais > 0) {
+  if (sNCanais == 0 && nCanais > 0 && !sFiltrados) {
     falhas = sFalhas; xtFalha = sXtFalha; xtHttp = sXtHttp;
     memcpy(sabe, sSabe, sizeof sSabe); nSabe = sNSabe;
     stagingZerar();
@@ -1929,6 +2005,7 @@ static void iniciarCarga(void) {
   // Sem portaria por nFontes: a sonda de manifestos dentro do fio pode achar
   // catalogo de canal que nenhuma fileira montou.
   if (fioVivo) return;
+  fltGarantir(); sFltLive = fltLive;
   // Copia no desenho: nenhum pedido relera as URLs ou os manifestos do
   // perfil novo enquanto a resposta do anterior ainda estiver em voo.
   cargaSessao = nv_perfil_sessao_ler(); cargaCancelada = 0;
@@ -2084,6 +2161,15 @@ static float rolL, velL;
 
 // Painel de addons por cima do guia.
 static int   painel, paFoco, paMexeu;
+// 0 = painel de addons; 1 = filtros da Live TV (qualidade, categorias, canais).
+// Mesma gaveta, mesmo foco/rolagem/toque: so a lista de itens muda.
+static int   paModo;
+static Uint32 paOkTick;
+typedef struct { char id[GF_ID], nome[GF_NOME]; int oculto, n; } GFItem;
+static GFItem *fIt;            // categorias (nivel 0) ou canais da categoria (nivel 1)
+static int   fN, fNivel, fSujo, fFocoCat;
+static char  fCatNome[GF_NOME];
+#define G_PF_ROW 100.0f
 // 1 quando nesta visita alguem LIGOU um addon (ou instalou um novo). Ligar so
 // traz catalogo baixando da rede, entao o fechar pede desc_repetir() — o ciclo
 // completo. Desligar nao precisa de rede: as fileiras do addon saem por filtro
@@ -2208,7 +2294,7 @@ static GCanal *canalPorIdBase(const char *id, const char *base) {
 int guia_variantes(const char *id, GuiaVariante *out, int max) {
   GCanal *c = canalPorId(id);
   char base[160], outra[160];
-  int i, n = 0;
+  int i, j, k, n = 0;
   if (!c || max < 1 || !xtream_e_id(c->id)) return 0;
   nv_nome_base(c->nome, base, sizeof base);
   snprintf(out[n].id, sizeof out[n].id, "%s", c->id);
@@ -2217,13 +2303,27 @@ int guia_variantes(const char *id, GuiaVariante *out, int max) {
   n++;
   if (!base[0]) return n;
   for (i = 0; i < nCanais && n < max; i++) {
-    if (&canais[i] == c || !xtream_e_id(canais[i].id)) continue;
+    if (&canais[i] == c || canais[i].fonte != c->fonte || canais[i].cat != c->cat ||
+        guiafiltro_canal_oculto(&fltLive, canais[i].id) || !xtream_e_id(canais[i].id)) continue;
     nv_nome_base(canais[i].nome, outra, sizeof outra);
     if (strcmp(base, outra)) continue;
     snprintf(out[n].id, sizeof out[n].id, "%s", canais[i].id);
     snprintf(out[n].nome, sizeof out[n].nome, "%s", canais[i].nome);
     out[n].altura = nv_res_do_texto(canais[i].nome);
     n++;
+  }
+  // Reservas que o filtro "Preferir 4K" escondeu, da maior para a menor.
+  for (i = 0, k = n; i < nAlts && n < max; i++) {
+    if (strcmp(alts[i].dono, c->id)) continue;
+    snprintf(out[n].id, sizeof out[n].id, "%s", alts[i].id);
+    snprintf(out[n].nome, sizeof out[n].nome, "%s", alts[i].nome);
+    out[n].altura = nv_res_do_texto(alts[i].nome);
+    n++;
+  }
+  for (i = k + 1; i < n; i++) {
+    GuiaVariante t = out[i];
+    for (j = i - 1; j >= k && out[j].altura < t.altura; j--) out[j + 1] = out[j];
+    out[j + 1] = t;
   }
   return n;
 }
@@ -2806,14 +2906,14 @@ static void painelMontar(void) {
   if (paFoco >= paN + nRec) paFoco = paN + nRec - 1;
   if (paFoco < 0) paFoco = 0;
 }
-static int painelN(void) { return paN + nRec; }
+static int painelN(void) { return paModo == 1 ? (fNivel ? fN : 3 + fN) : paN + nRec; }
 
 static void painelAbrir(void) {
 #ifdef NV_TOUCH_UI
   toquerol_limpar(&toqueAddon);
 #endif
   recLer();
-  painel = 1; paFoco = 0; paMexeu = 0; paLigou = 0; paRol = 0.0f; paVelRol = 0.0f;
+  painel = 1; paModo = 0; paFoco = 0; paMexeu = 0; paLigou = 0; paRol = 0.0f; paVelRol = 0.0f;
   paErro = -1;
   painelMontar();
   // O painel mostra o que o manifesto disse; se a sonda de Ajustes nunca
@@ -2854,8 +2954,110 @@ static void painelAplicar(int i) {
 // os desativados"). Roda uma vez por visita, nao por tecla: o guia ja se
 // atualizou a cada tecla em painelAplicar.
 static int recargaDoPainel;   // ver guia_atualizando_lista
+
+// --- FILTROS DA LIVE TV (qualidade, categorias, canais) -----------------------------
+// Itens do painel: 0..2 = qualidade (Todas / So 4K / Preferir 4K), depois uma
+// linha por categoria. Direita numa categoria abre os canais dela; OK mostra
+// ou esconde. Tudo vale por perfil e e gravado na hora; a lista so e refeita
+// ao fechar. O cache sem filtro permite recuperar a lista sem rede.
+static void fMontarCats(void) {
+  int i, j, k, cap = fltLive.nCat + 1;
+  for (i = 0; i < nLtvF; i++) cap += ltvF[i].ngi;
+  free(fIt); fIt = calloc((size_t)cap, sizeof *fIt); fN = 0;
+  if (!fIt) return;
+  for (i = 0; i < nLtvF; i++) for (j = 0; j < ltvF[i].ngi; j++) {
+    const GGrupoInfo *g = &ltvF[i].gi[j];
+    for (k = 0; k < fN && strcmp(fIt[k].nome, g->nome); k++) {}
+    if (k == fN) {
+      snprintf(fIt[k].nome, sizeof fIt[k].nome, "%s", g->nome);
+      fN++;
+    }
+    fIt[k].n += g->n;
+  }
+  for (i = 0; i < fN; i++) fIt[i].oculto = 0;
+  for (i = 0; i < fltLive.nCat; i++) {
+    for (k = 0; k < fN && strcmp(fIt[k].nome, fltLive.cat[i]); k++) {}
+    if (k == fN) { snprintf(fIt[k].nome, sizeof fIt[k].nome, "%s", fltLive.cat[i]); fN++; }
+    fIt[k].oculto = 1;
+  }
+}
+#define G_PF_CANAIS_MAX 4000
+static void fMontarCanais(const char *cat) {
+  int i, k;
+  free(fIt); fIt = calloc(G_PF_CANAIS_MAX + GF_CANAIS_MAX, sizeof *fIt); fN = 0;
+  if (!fIt) return;
+  for (i = 0; i < nCanais && fN < G_PF_CANAIS_MAX; i++) {
+    if (canais[i].cat < 0 || canais[i].cat >= nCats || strcmp(cats[canais[i].cat].nome, cat)) continue;
+    snprintf(fIt[fN].id, sizeof fIt[fN].id, "%s", canais[i].id);
+    snprintf(fIt[fN].nome, sizeof fIt[fN].nome, "%s", canais[i].nome);
+    fN++;
+  }
+  for (i = 0; i < fltLive.nCan; i++) {
+    if (strcmp(fltLive.can[i].cat, cat)) continue;
+    for (k = 0; k < fN && strcmp(fIt[k].id, fltLive.can[i].id); k++) {}
+    if (k == fN) {
+      snprintf(fIt[k].id, sizeof fIt[k].id, "%s", fltLive.can[i].id);
+      snprintf(fIt[k].nome, sizeof fIt[k].nome, "%s", fltLive.can[i].nome);
+      fN++;
+    }
+    fIt[k].oculto = 1;
+  }
+}
+static void filtrosAbrir(void) {
+#ifdef NV_TOUCH_UI
+  toquerol_limpar(&toqueAddon);
+#endif
+  fltGarantir();
+  paOkTick = 0;
+  painel = 1; paModo = 1; paFoco = 0; paMexeu = 0; paRol = 0.0f; paVelRol = 0.0f;
+  fNivel = 0; fSujo = 0;
+  fMontarCats();
+}
+static void filtrosVoltar(void) {
+  fNivel = 0;
+  fMontarCats();
+  paFoco = 3 + fFocoCat < 3 + fN ? 3 + fFocoCat : 2;
+  paRol = paVelRol = 0.0f;
+}
+static void filtrosFechar(void) {
+  free(fIt); fIt = NULL; fN = 0; fNivel = 0; paModo = 0;
+  if (!fSujo) return;
+  fSujo = 0;
+  assinaturaPublicada = 0;
+  if (fioVivo) { cargaCancelada = 1; recarregarPend = 1; }
+  else { estado = G_PARADO; ultTentativa = 0; iniciarCarga(); }
+  recargaDoPainel = 1;
+}
+static void filtrosOk(void) {
+  if (paFoco < 0 || paFoco >= painelN()) return;
+  if (!fNivel && paFoco < 3) {
+    if (fltLive.modo != paFoco) { guiafiltro_modo_definir(&fltLive, paFoco); fSujo = 1; fltGravar(); }
+    return;
+  }
+  { GFItem *it = &fIt[fNivel ? paFoco : paFoco - 3];
+    if (fNivel) it->oculto = guiafiltro_canal_alternar(&fltLive, it->id, it->nome, fCatNome);
+    else it->oculto = guiafiltro_cat_alternar(&fltLive, it->nome);
+    fSujo = 1; fltGravar(); }
+}
+static void filtrosEvento(SDL_Keycode k, Uint32 agora) {
+  int n = painelN();
+  if (k == SDLK_UP)   { if (paFoco > 0) paFoco--; return; }
+  if (k == SDLK_DOWN) { if (paFoco + 1 < n) paFoco++; return; }
+  if (k == SDLK_LEFT && fNivel) { filtrosVoltar(); return; }
+  if (k == SDLK_RIGHT && !fNivel && paFoco >= 3 && paFoco < n) {
+    fFocoCat = paFoco - 3;
+    snprintf(fCatNome, sizeof fCatNome, "%s", fIt[fFocoCat].nome);
+    fNivel = 1; fMontarCanais(fCatNome); paFoco = 0; paRol = 0.0f; paVelRol = 0.0f;
+    return;
+  }
+  if ((k == SDLK_RETURN || k == SDLK_KP_ENTER) && n > 0 && agora - paOkTick >= G_REP_MS) {
+    paOkTick = agora; filtrosOk();
+  }
+}
+
 static void painelFechar(void) {
   painel = 0;
+  if (paModo == 1) { filtrosFechar(); return; }
   // A recarga que o painel pediu continua depois que ele fecha: quem diz
   // "Atualizando a lista de canais…" passa a ser a ilha (app.c).
   if (paMexeu && (fioVivo || recarregarPend)) recargaDoPainel = 1;
@@ -2941,9 +3143,9 @@ static void ponteiroAddonGuia(int addon, int linha) {
 // OK segurado NAO e varios OK: o firmware repete o KEYDOWN a cada ~130 ms, e
 // sem este repouso segurar a tecla ligava e desligava o addon em sequencia
 // (addonsui.c herda esse comportamento; aqui nao).
-static Uint32 paOkTick;
 static void painelEvento(SDL_Keycode k, Uint32 agora) {
   int n = painelN();
+  if (paModo == 1) { filtrosEvento(k, agora); return; }
   if (k == SDLK_UP)   { if (paFoco > 0) paFoco--; return; }
   if (k == SDLK_DOWN) { if (paFoco + 1 < n) paFoco++; return; }
   if ((k == SDLK_LEFT || k == SDLK_RIGHT) && paFoco < paN) {
@@ -2957,7 +3159,7 @@ static void painelEvento(SDL_Keycode k, Uint32 agora) {
 }
 
 static void sair(void) {
-  if (painel) { painelFechar(); return; }
+  if (painel) { if (paModo == 1 && fNivel) filtrosVoltar(); else painelFechar(); return; }
   if (catAberto) { catFechar(); return; }
   if (overlay) overlay = 0;
   else { aberta = 0; querSair = 1; previewParar(); }
@@ -3298,6 +3500,7 @@ void guia_evento(const SDL_Event *e) {
       if (topoCol == G_TOPO_BUSCAR) buscaAbrir();
       else if (topoCol == G_TOPO_CATEGORIAS) catAbrir(2, 0);
       else if (topoCol == G_TOPO_ADDONS) painelAbrir();
+      else if (topoCol == G_TOPO_FILTROS) filtrosAbrir();
       else if (topoCol == G_TOPO_DIAG) pedLivetvDiag = 1;
       else if (topoCol == G_TOPO_LIMPAR) { limparConfirm = 1; limparFoco = 1; }
       else if (topoCol == G_TOPO_PREVIEW) {
@@ -3714,10 +3917,20 @@ static float listaAltura(void) {
 // desenharPainelAddons usa as mesmas contas — mude aqui e la.
 static float paItemY(int i) {
   int n = paN;
+  if (paModo == 1) {
+    if (fNivel || i < 3) return 36.0f + (float)i * G_PF_ROW;
+    return 36.0f + 3.0f * G_PF_ROW + 28.0f + 36.0f + (float)(i - 3) * G_PF_ROW;
+  }
   if (i < n) return 36.0f + (float)i * G_PA_ROW;
   return 36.0f + (float)n * G_PA_ROW + 28.0f + 36.0f + 60.0f + (float)(i - n) * G_PA_ROW_REC;
 }
 #define G_PA_LISTA_Y 200.0f
+// Base do conteudo rolavel do painel (ultimo item + a altura dele).
+static float paFim(void) {
+  int n = painelN();
+  if (n <= 0) return 0.0f;
+  return paItemY(n - 1) + (paModo == 1 ? G_PF_ROW : nRec > 0 ? G_PA_ROW_REC : G_PA_ROW);
+}
 
 // Ajustes mexeu nas listas M3U / guias XMLTV por URL (M9): o que ja esta na
 // tela recarrega para a fonte nova entrar (ou a removida sair). Sem lista
@@ -3778,7 +3991,7 @@ static void drenarCarga(void) {
     fioVivo = 0;
     if (atual) {
       focoValido();
-      if (painel) painelMontar();   // sabe[] mudou: quem nao fornece canal sai
+      if (painel && paModo == 0) painelMontar();   // sabe[] mudou: quem nao fornece canal sai
     }
   }
 }
@@ -3850,7 +4063,7 @@ void guia_atualizar(float dt, Uint32 agora) {
   if (painel) {
     float areaH = NV_TELA_H - 80.0f - G_PA_LISTA_Y;
     float alvo = paItemY(paFoco) - areaH * 0.4f;
-    float maxY = (painelN() > 0 ? paItemY(painelN() - 1) + (nRec > 0 ? G_PA_ROW_REC : G_PA_ROW) : 0.0f) - areaH;
+    float maxY = paFim() - areaH;
     if (maxY < 0.0f) maxY = 0.0f;
     if (alvo > maxY) alvo = maxY;
     if (alvo < 0.0f) alvo = 0.0f;
@@ -5119,6 +5332,7 @@ static void gTopoRotulos(const char **rot) {
   rot[G_TOPO_CARTOES] = i18n("Cartões");
   rot[G_TOPO_LISTA]   = i18n("Lista");
   rot[G_TOPO_ADDONS]  = i18n("Addons");
+  rot[G_TOPO_FILTROS] = i18n("Filtros da Live TV");
   // DIAGNOSTICO na barra (dono, 01/10: o controle do Android nao tem a tecla
   // VERDE). O verde continua como atalho onde existe.
   rot[G_TOPO_DIAG]    = i18n("Diagnóstico");
@@ -5509,7 +5723,7 @@ static void desenharPainelAddons(float a) {
 #ifdef NV_TOUCH_UI
   if (painel) {
     float area = NV_TELA_H - 80.0f - y0;
-    float fim = painelN() > 0 ? paItemY(painelN() - 1) + (nRec > 0 ? G_PA_ROW_REC : G_PA_ROW) : 0.0f;
+    float fim = paFim();
     toquerol_vincular(&toqueAddon, (GfxRect){ G_PA_X, y0, G_PA_W, area }, gfx_escala(), 0.0f, fmaxf(0.0f, fim - area), 1, &paRol);
     ponteiro_rolagem(toqueAddonRolar);
   }
@@ -5679,6 +5893,110 @@ static void desenharPainelAddons(float a) {
         i18n("OK liga ou desliga no app todo  ·  ← → mostra ou esconde só no guia  ·  Voltar volta ao guia"),
         140, 142, 150, 255, w);
     txt_desenhar_alpha(t, x, NV_TELA_H - 54.0f, a); }
+}
+
+// --- painel de filtros da Live TV ---------------------------------------------------
+// Mesma folha do painel de addons (veu, material, recorte, linha em foco). Nivel 0:
+// tres linhas de qualidade e uma por categoria; nivel 1: os canais de uma categoria.
+static void ponteiroFiltroCanais(int i, int b) {
+  (void)b;
+  if (!painel || paModo != 1 || fNivel || i < 3 || i >= painelN()) return;
+  paFoco = i;
+  filtrosEvento(SDLK_RIGHT, SDL_GetTicks());
+}
+static void desenharPainelFiltros(float a) {
+  float x = G_PA_X + G_PA_MARG, w = G_PA_W - 2.0f * G_PA_MARG;
+  float y0 = G_PA_LISTA_Y;
+  int n = painelN(), i, vidro = ajustes_vidro();
+  const char *qNome[3] = { i18n("Todas as versões"), i18n("Só 4K"), i18n("Preferir 4K") };
+  const char *qSub[3] = { NULL, NULL,
+                          i18n("Um por canal: o 4K, ou a maior resolução disponível") };
+  ponteiro_camada();
+#ifdef NV_TOUCH_UI
+  if (painel) {
+    float area = NV_TELA_H - 80.0f - y0;
+    toquerol_vincular(&toqueAddon, (GfxRect){ G_PA_X, y0, G_PA_W, area }, gfx_escala(), 0.0f, fmaxf(0.0f, paFim() - area), 1, &paRol);
+    ponteiro_rolagem(toqueAddonRolar);
+  }
+#endif
+  { GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
+    gfx_cor(tela, 0.0f, 0, 0, 0, (vidro ? 0.30f : 0.42f) * a); }
+  { GfxRect p = { G_PA_X, 24.0f, G_PA_W, NV_TELA_H - 48.0f };
+    materialPainelGuia(p, 28.0f, a); }
+  { TxtLinha t = txt_linha(TXT_HEADLINE, i18n("Filtros da Live TV"), 240, 242, 248, 255);
+    txt_desenhar_alpha(t, x, 64.0f, a); }
+  txt_bloco(TXT_CAPTION, i18n("As mudanças valem ao fechar este painel."), 150, 153, 162, x, 118.0f, w, 28.0f, a, 2);
+
+  gfx_recorte(G_PA_X, y0 - 8.0f, G_PA_W, NV_TELA_H - 80.0f - y0 + 8.0f);
+  if (fNivel) {
+    TxtLinha t = txt_linha_corta(TXT_CAPTION, fCatNome, 148, 200, 255, 255, w);
+    txt_desenhar_alpha(t, x, y0 - paRol, a);
+    if (!fN) {
+      TxtLinha vazio = txt_linha(TXT_CAPTION, i18n("Nenhum canal disponível"), 150, 153, 162, 255);
+      txt_desenhar_alpha(vazio, x, y0 + 36.0f, a);
+    }
+  } else {
+    TxtLinha t = txt_linha(TXT_CAPTION, i18n("Qualidade"), 148, 200, 255, 255);
+    TxtLinha t2 = txt_linha(TXT_CAPTION, i18n("Categorias"), 148, 200, 255, 255);
+    txt_desenhar_alpha(t, x, y0 - paRol, a);
+    txt_desenhar_alpha(t2, x, y0 + 36.0f + 3.0f * G_PF_ROW + 28.0f - paRol, a);
+    if (fN == 0) {
+      TxtLinha t3 = txt_linha(TXT_CAPTION, i18n("Nenhum canal disponível"), 150, 153, 162, 255);
+      txt_desenhar_alpha(t3, x, y0 + 36.0f + 3.0f * G_PF_ROW + 28.0f + 36.0f - paRol, a);
+    }
+  }
+  for (i = 0; i < n; i++) {
+    float yi = y0 + paItemY(i) - paRol;
+    GfxRect row = { x, yi, w, G_PF_ROW - 8.0f };
+    GfxRect pill = { x + w - 24.0f - 136.0f, yi + (row.h - 40.0f) * 0.5f, 136.0f, 40.0f };
+    float txtW = pill.x - 24.0f - (x + 24.0f);
+    int f = i == paFoco, q = !fNivel && i < 3, ligado;
+    const char *nome, *sub = NULL, *pillTxt;
+    char cnt[48];
+    if (yi + row.h < y0 - 8.0f || yi > NV_TELA_H - 80.0f) continue;
+    if (a > 0.99f) ponteiro_alvo_faixa(row.x, row.y, row.w, row.h, y0 - 8.0f, NV_TELA_H - 80.0f, ponteiroAddon, NULL, i, 0);
+    if (f) plrui_linha_foco(row, 20.0f, a);
+    if (!q && !fNivel && a > 0.99f) {
+      GfxRect abrir = { pill.x - 68.0f, row.y, 64.0f, row.h };
+      ponteiro_alvo_faixa(abrir.x, abrir.y, abrir.w, abrir.h, y0 - 8.0f, NV_TELA_H - 80.0f,
+                          NULL, ponteiroFiltroCanais, i, 0);
+      TxtLinha t = txt_linha(TXT_BODY, ">", 190, 192, 200, 255);
+      txt_desenhar_alpha(t, abrir.x + 20.0f, row.y + 22.0f, a);
+      txtW -= 68.0f;
+    }
+    if (q) {
+      nome = qNome[i]; sub = qSub[i]; ligado = fltLive.modo == i;
+      pillTxt = ligado ? i18n("Ligado") : "";
+    } else {
+      const GFItem *it = &fIt[fNivel ? i : i - 3];
+      nome = it->nome; ligado = !it->oculto;
+      if (!fNivel && it->n > 0) { snprintf(cnt, sizeof cnt, i18n("Canais · %d"), it->n); sub = cnt; }
+      pillTxt = ligado ? i18n("Ligado") : i18n("Desligado");
+    }
+    { TxtLinha t = f ? txt_linha_corta(TXT_BODY, nome, 243, 243, 243, 255, txtW)
+                     : txt_linha_corta(TXT_BODY, nome, 240, 241, 245, 255, txtW);
+      txt_desenhar_alpha(t, x + 24.0f, sub ? yi + 12.0f : yi + (row.h - t.h) * 0.5f, a); }
+    if (sub) txt_bloco(TXT_CAPTION, sub, f ? 190 : 150, f ? 192 : 153, f ? 200 : 162,
+                        x + 24.0f, yi + 40.0f, txtW, 24.0f, a, 2);
+    // Como no painel de addons: preenchida = "e este", anel = "poderia ser".
+    if (ligado) {
+      if (f) gfx_cor(pill, 0.5f, 0.11f, 0.115f, 0.13f, a);
+      else   gfx_cor(pill, 0.5f, 0.86f, 0.865f, 0.88f, a);
+      if (pillTxt[0]) { TxtLinha t = f ? txt_linha(TXT_CAPTION, pillTxt, 240, 241, 245, 255)
+                                       : txt_linha(TXT_CAPTION, pillTxt, 20, 21, 25, 255);
+        txt_desenhar_alpha(t, pill.x + (pill.w - t.w) * 0.5f, pill.y + (pill.h - t.h) * 0.5f, a); }
+    } else {
+      float c = 0.72f;
+      gfx_rect(pill, 0, GFX_ANEL, 0, 0.05f, 0, 0.5f, c, c, c + 0.02f, 0.9f * a);
+      if (pillTxt[0]) { TxtLinha t = txt_linha(TXT_CAPTION, pillTxt, 190, 192, 200, 255);
+        txt_desenhar_alpha(t, pill.x + (pill.w - t.w) * 0.5f, pill.y + (pill.h - t.h) * 0.5f, a); }
+    }
+  }
+  gfx_sem_recorte();
+  txt_bloco(TXT_CAPTION,
+      fNivel ? i18n("OK mostra ou esconde o canal  ·  ← ou Voltar volta às categorias")
+             : i18n("OK escolhe ou esconde  ·  → abre os canais da categoria  ·  Voltar volta ao guia"),
+      140, 142, 150, x, NV_TELA_H - 78.0f, w, 24.0f, a, 2);
 }
 
 // O anel que desliza. `alvo` em coordenadas de CONTEUDO (y + rolagem): a mola
@@ -6556,7 +6874,7 @@ void guia_desenhar(Uint32 agora) {
   desenharDica();
   desenharPainelCategorias(a);
   buscaDesenhar(agora);
-  if (painel) desenharPainelAddons(a);
+  if (painel) { if (paModo == 1) desenharPainelFiltros(a); else desenharPainelAddons(a); }
   desenharGrupos(a);
   desenharLimpar(a);
   // O CANAL NO AR ENCOLHENDO para o preview: o furo segue o degrau da janela
@@ -6617,6 +6935,9 @@ void guia_abrir_sessao(void) {
   falhas = xtFalha = xtHttp = 0;
   memset(&corte, 0, sizeof corte);
   memset(&ocultos, 0, sizeof ocultos); ocultosPerfil = -1;
+  fltPerfil = -1;
+  free(fIt); fIt = NULL; fN = fNivel = fSujo = paModo = 0;
+  free(alts); alts = NULL; nAlts = 0;
   focoPend[0] = pedidoBase[0] = previewId[0] = heroId[0] = 0;
   aberta = overlay = querSair = pediuCanal = 0;
   focoLin = focoCol = focoTopo = topoCol = 0;

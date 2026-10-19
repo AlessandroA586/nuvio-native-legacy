@@ -22,7 +22,8 @@
 static int nAddons;
 static const char *bases[128];
 static int xtOk, stOk, addonDisabled;
-int perfis_ativo(void) { return 1; }
+static int perfilAtivo = 1;
+int perfis_ativo(void) { return perfilAtivo; }
 int addons_n(void) { return nAddons; }
 const char *addons_base(int i) { return bases[i]; }
 const char *addons_nome(int i) { (void)i; return "addon"; }
@@ -45,7 +46,13 @@ int addons_consultar_sessao(const char *id, const char *tipo, const char *base, 
 const char *ajustes_epg_pais(void) { return ""; }
 int ajustes_idioma(void) { return 0; }
 const char *ajustes_tmdb_idioma(void) { return "pt-BR"; }
-int xtream_e_id(const char *id) { (void)id; return 0; }
+int xtream_e_id(const char *id) {
+#ifdef GUIAFILTRO_LOADER
+  return id && !strncmp(id, "xtream:", 7);
+#else
+  (void)id; return 0;
+#endif
+}
 Uint32 SDL_GetTicks(void) { static Uint32 t = 1000; return t += 16; }
 int xtream_configurado(void) { return xtOk; }
 int xtream_ultima_falha(void) { return 0; }
