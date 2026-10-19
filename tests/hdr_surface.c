@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <errno.h>
 #define SDL_VIDEO_DRIVER_ANDROID 1
 #define SDL_FALSE 0
 #define EGL_NO_SURFACE NULL
@@ -13,46 +14,68 @@
 #define EGL_GREEN_SIZE 3
 #define EGL_BLUE_SIZE 4
 #define EGL_ALPHA_SIZE 5
+#define EGL_COLOR_COMPONENT_TYPE_EXT 0x3339
+#define EGL_COLOR_COMPONENT_TYPE_FLOAT_EXT 0x333B
 #define SDL_EGL_DISPLAY_EXTENSION 0
 #define RTLD_DEFAULT NULL
+#define RTLD_NOW 2
+#define RTLD_LOCAL 0
+#define ADATASPACE_UNKNOWN 0
 #define ADATASPACE_BT2020_PQ 163971072
-#define _THIS Device *_this
+#define ADATASPACE_BT2020_ITU_PQ 298188800
+#define ADATASPACE_BT2020_HLG 168165376
+#define ADATASPACE_SCRGB_LINEAR 406913024
+#define STANDARD_BT2020 (6 << 16)
+#define TRANSFER_LINEAR (1 << 22)
+#define RANGE_EXTENDED (3 << 27)
 typedef int EGLint;
 typedef int SDL_bool;
-typedef void EGLSurface;
+typedef void *EGLSurface;
 typedef void ANativeWindow;
-static int requested, enabled, pq, api, symbol, bits, createFails, dataResult;
-static int creates, destroys, tags, attrs[9];
-static char mode[32], errorText[160], logText[256];
-static int SDL_GetHintBoolean(const char *key, int fallback) {
-    (void)fallback;
-    return !strcmp(key, "NUVIO_HDR_REQUESTED") ? requested : enabled;
-}
+static int enabled, pq, api, symbol = 1, bits, createFails, dataResult, acceptSpace;
+static int creates, destroys, tags, attrs[9], spaces[32], stages[32];
+static int32_t currentSpace;
+static char mode[32], errorText[160], logText[16384];
+static int SDL_GetHintBoolean(const char *key, int fallback) { (void)key; (void)fallback; return enabled; }
 static void SDL_SetHint(const char *key, const char *value) { (void)key; snprintf(mode, sizeof mode, "%s", value); }
 static void SDL_Log(const char *format, ...) {
-    va_list ap; va_start(ap, format); vsnprintf(logText, sizeof logText, format, ap); va_end(ap);
+    size_t end = strlen(logText);
+    va_list ap; va_start(ap, format); vsnprintf(logText + end, sizeof logText - end, format, ap); va_end(ap);
 }
 static void SDL_SetError(const char *format, ...) {
     va_list ap; va_start(ap, format); vsnprintf(errorText, sizeof errorText, format, ap); va_end(ap);
 }
 static const char *SDL_GetError(void) { return errorText; }
-static void SDL_EGL_SetErrorEx(const char *message, const char *function, int error) {
-    SDL_SetError("%s: %s 0x%04x", message, function, error);
-}
 static int android_get_device_api_level(void) { return api; }
 static int setData(ANativeWindow *window, int32_t space) {
-    assert(window && space == ADATASPACE_BT2020_PQ); tags++; return dataResult;
+    assert(window && tags < 32);
+    spaces[tags] = space; stages[tags++] = creates;
+    if (dataResult || (acceptSpace && space != acceptSpace && space != ADATASPACE_UNKNOWN)) {
+        errno = EINVAL; return dataResult ? dataResult : -22;
+    }
+    currentSpace = space;
+    return 0;
+}
+static int32_t getData(ANativeWindow *window) { assert(window); return currentSpace; }
+static const char *dlerror(void) { return symbol ? NULL : "missing symbol"; }
+static void *dlopen(const char *name, int flags) {
+    assert(!strcmp(name, "libnativewindow.so") && flags == (RTLD_NOW | RTLD_LOCAL)); return (void *)2;
 }
 static void *dlsym(void *handle, const char *name) {
-    (void)handle; assert(!strcmp(name, "ANativeWindow_setBuffersDataSpace"));
-    return symbol ? (void *)setData : NULL;
+    if (!strcmp(name, "ANativeWindow_getBuffersDataSpace")) return (void *)getData;
+    assert(!strcmp(name, "ANativeWindow_setBuffersDataSpace"));
+    /* Reproduce TCL: hidden from RTLD_DEFAULT, exported by libnativewindow. */
+    return symbol && handle ? (void *)setData : NULL;
 }
-static const char *extensions(void *display, int key) { (void)display; (void)key; return "EGL_KHR_gl_colorspace"; }
+#include "../android/app/src/main/cpp/hdr_native.inc"
+static const char *extensions(void *display, int key) { (void)display; (void)key; return "EGL_KHR_gl_colorspace EGL_EXT_pixel_format_float"; }
 static int config(void *display, void *c, int key, int *value) {
-    (void)display; (void)c; *value = key == EGL_ALPHA_SIZE ? 2 : bits; return 1;
+    (void)display; (void)c;
+    *value = key == EGL_COLOR_COMPONENT_TYPE_EXT ? EGL_COLOR_COMPONENT_TYPE_FLOAT_EXT : key == EGL_ALPHA_SIZE && bits == 10 ? 2 : bits;
+    return 1;
 }
 static EGLSurface *create(void *display, void *c, void *window, const int *a) {
-    (void)display; (void)c; (void)window; creates++;
+    (void)display; (void)c; (void)window; creates++; currentSpace = 0; /* Driver resets the tag. */
     for (int i = 0; i < 9; i++) { attrs[i] = a[i]; if (a[i] == EGL_NONE) break; }
     return createFails ? NULL : (void *)1;
 }
@@ -79,22 +102,41 @@ static EGLSurface *surface(Device *_this, void *nw) {
     return create(NULL, NULL, nw, attribs);
 }
 static void reset(void) {
-    requested = enabled = symbol = 1; pq = createFails = dataResult = 0; api = 34; bits = 10;
-    creates = destroys = tags = 0; mode[0] = errorText[0] = logText[0] = 0;
+    enabled = 1; pq = createFails = dataResult = acceptSpace = 0; api = 34; bits = 10;
+    creates = destroys = tags = 0; mode[0] = errorText[0] = logText[0] = 0; currentSpace = 0;
+    nvHdrWindow = NULL;
 }
-int main(void) {
+int main(int argc, char **argv) {
     Egl egl = {NULL, NULL, extensions, config, create, destroy, eglError}; Device device = {&egl};
+    if (argc > 1) {
+        assert(!strcmp(argv[1], "missing-symbol")); reset(); symbol = 0;
+        assert(!surface(&device, &device));
+        assert(!tags && !creates && strstr(logText, "lookup=libnativewindow.so symbol=setDataspace found=0"));
+        return 0;
+    }
     reset(); assert(surface(&device, &device));
-    assert(!strcmp(mode, "dataspace") && tags == 1 && attrs[0] == EGL_NONE);
-    reset(); pq = 1; assert(surface(&device, &device));
-    assert(!strcmp(mode, "pq") && !tags && attrs[0] == 0x309D && attrs[1] == 0x3340);
-    reset(); api = 27; assert(!surface(&device, &device)); assert(destroys == 1 && !tags && errorText[0]);
-    reset(); symbol = 0; assert(!surface(&device, &device)); assert(destroys == 1 && !strcmp(mode, "none"));
-    reset(); dataResult = -22; assert(!surface(&device, &device)); assert(destroys == 1 && strstr(errorText, "-22"));
-    reset(); bits = 8; assert(!surface(&device, &device)); assert(!creates && strstr(errorText, "8/8/8/2"));
-    reset(); createFails = 1; assert(!surface(&device, &device));
-    assert(strstr(logText, "0x3009") && strstr(errorText, "0x3009") && !tags);
-    reset(); enabled = requested = 0; assert(surface(&device, &device));
-    assert(creates == 1 && !tags && !mode[0] && attrs[0] == EGL_NONE);
-    puts("PASS HDR dataspace, PQ extension, API/symbol/config/EGL failures, SDR unchanged");
+    assert(!strcmp(mode, "pq") && tags == 2 && stages[0] == 0 && stages[1] == 1);
+    assert(strstr(logText, "lookup=RTLD_DEFAULT symbol=setDataspace found=0"));
+    assert(strstr(logText, "lookup=libnativewindow.so symbol=setDataspace found=1"));
+    assert(strstr(logText, "before=0 after=163971072 rc=0 errno=0"));
+    currentSpace = 0; nvHdrAfterSwap((void *)1); nvHdrAfterSwap((void *)1);
+    assert(tags == 3 && currentSpace == ADATASPACE_BT2020_PQ && strstr(logText, "stage=after-first-swap"));
+    reset(); acceptSpace = ADATASPACE_BT2020_ITU_PQ; assert(surface(&device, &device));
+    assert(!strcmp(mode, "pq-limited") && creates == 2 && destroys == 1);
+    assert(spaces[0] == ADATASPACE_BT2020_PQ && spaces[2] == ADATASPACE_BT2020_ITU_PQ);
+    reset(); acceptSpace = ADATASPACE_BT2020_HLG; assert(surface(&device, &device));
+    assert(!strcmp(mode, "hlg") && creates == 3 && destroys == 2 && tags == 6);
+    reset(); bits = 16; assert(surface(&device, &device));
+    assert(!strcmp(mode, "scrgb-linear") && spaces[0] == ADATASPACE_SCRGB_LINEAR);
+    reset(); bits = 16; acceptSpace = STANDARD_BT2020 | TRANSFER_LINEAR | RANGE_EXTENDED;
+    assert(surface(&device, &device)); assert(!strcmp(mode, "bt2020-linear") && creates == 2);
+    reset(); pq = 1; assert(surface(&device, &device)); assert(attrs[0] == 0x309D && attrs[1] == 0x3340);
+    reset(); api = 27; assert(!surface(&device, &device)); assert(!creates && !tags);
+    reset(); dataResult = -1; assert(!surface(&device, &device));
+    assert(creates == 3 && destroys == 3 && strstr(logText, "rc=-1 errno=22"));
+    reset(); bits = 8; assert(!surface(&device, &device)); assert(!creates && strstr(errorText, "8/8/8/8"));
+    reset(); createFails = 1; assert(!surface(&device, &device)); assert(creates == 3 && strstr(logText, "egl=0x3009"));
+    reset(); enabled = 0; assert(surface(&device, &device));
+    assert(creates == 1 && !tags && !mode[0] && !logText[0] && attrs[0] == EGL_NONE);
+    puts("PASS lookup fallback, errno, ordered PQ/HLG/FP16 attempts, creation/swap resets, SDR unchanged");
 }

@@ -1249,7 +1249,21 @@ int main(int argc, char **argv) {
       { 5, 6, 5, 0, 0, "RGB565" },
     };
     size_t i;
-    if (!win && hdrColor) { SDL_SetHint("NUVIO_HDR_UI", "0"); android_hdr_interface(0); }
+    if (!win && hdrColor) {
+      printf("[hdr-ui] config=1010102 failed=%s; trying FP16\n", SDL_GetError());
+      SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 16);
+      SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 16);
+      SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 16);
+      SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 16);
+      SDL_GL_SetAttribute(SDL_GL_FLOATBUFFERS, 1);
+      win = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                             pedeW, pedeH, flags);
+      if (!win) {
+        printf("[hdr-ui] config=FP16 failed=%s; trying SDR\n", SDL_GetError());
+        SDL_GL_SetAttribute(SDL_GL_FLOATBUFFERS, 0);
+        SDL_SetHint("NUVIO_HDR_UI", "0"); android_hdr_interface(0);
+      }
+    }
     for (i = 0; !win && i < sizeof reserva / sizeof reserva[0]; i++) {
       printf("[android] janela falhou (%s); tentando EGL %s\n", SDL_GetError(), reserva[i].nome);
       fflush(stdout);
@@ -1380,7 +1394,7 @@ int main(int argc, char **argv) {
     fflush(stdout);
     SDL_DestroyWindow(win);
     SDL_SetHint("NUVIO_HDR_UI", "0");
-    if (hdrColor) android_hdr_interface(0);
+    if (hdrColor) { SDL_GL_SetAttribute(SDL_GL_FLOATBUFFERS, 0); android_hdr_interface(0); }
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
@@ -1399,13 +1413,22 @@ int main(int argc, char **argv) {
     SDL_GL_GetAttribute(SDL_GL_RED_SIZE, &r); SDL_GL_GetAttribute(SDL_GL_GREEN_SIZE, &g);
     SDL_GL_GetAttribute(SDL_GL_BLUE_SIZE, &b); SDL_GL_GetAttribute(SDL_GL_ALPHA_SIZE, &a);
     int ten = r == 10 && g == 10 && b == 10 && a == 2;
-    if (hdrColor && SDL_GetHintBoolean("NUVIO_HDR_UI", SDL_FALSE) && ten && space)
-      gfx_hdr_output = (!strcmp(space, "pq") || !strcmp(space, "dataspace")) ? 1 : 0;
+    int fp16 = r == 16 && g == 16 && b == 16 && a == 16;
+    if (hdrColor && SDL_GetHintBoolean("NUVIO_HDR_UI", SDL_FALSE) && space) {
+      if (ten) {
+        if (!strcmp(space, "pq")) gfx_hdr_output = 1;
+        else if (!strcmp(space, "pq-limited")) gfx_hdr_output = 5;
+        else if (!strcmp(space, "hlg")) gfx_hdr_output = 3;
+      } else if (fp16) {
+        if (!strcmp(space, "scrgb-linear")) gfx_hdr_output = 2;
+        else if (!strcmp(space, "bt2020-linear")) gfx_hdr_output = 4;
+      }
+    }
     if (hdrPedido) {
       if (!gfx_hdr_output) android_hdr_interface(0);
       printf("[hdr-ui] pedido=on colormode=%s egl=%s config=%s resultado=%s\n",
              hdrColor ? "ok" : "unsupported", gfx_hdr_output ? space : "none",
-             ten ? "1010102" : "8888", gfx_hdr_output ? "hdr" : "sdr");
+             ten ? "1010102" : fp16 ? "FP16" : "8888", gfx_hdr_output ? "hdr" : "sdr");
       fflush(stdout);
     }
   }

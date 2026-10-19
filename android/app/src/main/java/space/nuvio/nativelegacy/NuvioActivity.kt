@@ -391,6 +391,8 @@ class NuvioActivity : SDLActivity() {
     // chegar (ate 2 s). Devolve true se ela veio nesse tamanho.
     // SDL calls this before EGL surface creation. Only the Activity window changes;
     // ExoPlayer retains its separate SurfaceView and video color handling.
+    private var hdrCapabilitiesLogged = false
+
     fun pedirHdrInterface(ativa: Boolean): Boolean {
         if (Build.VERSION.SDK_INT < 26) return false
         val done = CountDownLatch(1)
@@ -403,7 +405,20 @@ class NuvioActivity : SDLActivity() {
                 }
             } catch (_: Exception) {
                 ok = false
-            } finally { done.countDown() }
+            } finally {
+                if (ativa && !hdrCapabilitiesLogged) {
+                    hdrCapabilitiesLogged = true
+                    try {
+                        @Suppress("DEPRECATION")
+                        val screen = windowManager.defaultDisplay
+                        val caps = screen.hdrCapabilities
+                        Log.i("Nuvio", "[hdr-ui] cap=display types=${caps.supportedHdrTypes.joinToString(",")} maxLuminance=${caps.desiredMaxLuminance} mode=${screen.mode} isHdr=${if (Build.VERSION.SDK_INT >= 34) screen.isHdr else "unavailable"} colorMode=${window.colorMode} wideColorGamut=${screen.isWideColorGamut}")
+                    } catch (error: Exception) {
+                        Log.w("Nuvio", "[hdr-ui] cap=error ${error.javaClass.simpleName}: ${error.message}")
+                    }
+                }
+                done.countDown()
+            }
         }
         done.await()
         return ok

@@ -5,7 +5,7 @@
 #ifndef NV_GFX_H
 #define NV_GFX_H
 #include "gl_compat.h"
-extern int gfx_hdr_output; // 0 SDR, 1 BT.2020 PQ, 2 linear scRGB.
+extern int gfx_hdr_output; // 0 SDR, 1 PQ, 2 linear scRGB, 3 HLG, 4 linear BT.2020, 5 limited PQ.
 
 typedef enum {
   GFX_CARD   = 0,  // textura com cantos, parallax e especular
