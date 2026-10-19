@@ -51,8 +51,13 @@ static int achar(const char *base) {
 static void guardar(const char *base, int sec) {
   int i = achar(base);
   if (i < 0) {
-    if (nCache >= CACHE_MAX) return;
-    i = nCache++;
+    if (nCache >= CACHE_MAX) {
+      static int proximo;
+      i = proximo;
+      for (int j = 0; j < nCache; j++)
+        if (cache[j].dia < cache[i].dia) i = j;
+      proximo = (i + 1) % CACHE_MAX;
+    } else i = nCache++;
     snprintf(cache[i].base, sizeof cache[i].base, "%s", base);
   }
   cache[i].sec = (signed char)sec; cache[i].dia = hoje();
@@ -82,16 +87,18 @@ static void carregar(void) {
 }
 
 // Cached lookup only: safe during startup, with no Worker request or disk write.
-const char *livecat_secao(const char *nome) {
+const char *livecat_secao(const char *nome, int *resolvido) {
   char base[BASE_MAX];
   int k;
+  if (resolvido) *resolvido = 0;
   carregar();
   if (!cache || !nome) return NULL;
   nv_nome_base(nome, base, sizeof base);
   k = achar(base);
-  if (k < 0 || cache[k].sec < 0 || cache[k].dia > hoje() ||
+  if (k < 0 || cache[k].dia > hoje() ||
       hoje() - cache[k].dia >= VALIDADE_DIAS) return NULL;
-  return SECAO[cache[k].sec];
+  if (resolvido) *resolvido = 1;
+  return cache[k].sec < 0 ? NULL : SECAO[cache[k].sec];
 }
 
 static void gravar(void) {

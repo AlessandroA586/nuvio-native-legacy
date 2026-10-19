@@ -77,9 +77,9 @@ int main(int argc, char **argv) {
     const char *names[] = { "Canal Futebol HD", "xyzzy tv" }, *out[2];
     unsigned char sem[] = {1, 1};
     livecat_postar_teste(worker);
-    const char *section = livecat_secao("Canal Futebol FHD");
-    OK(section && !strcmp(section, "Esportes") && !livecat_secao("xyzzy tv") &&
-       !livecat_secao("uncached name") && posts == 0,
+    const char *section = livecat_secao("Canal Futebol FHD", NULL);
+    OK(section && !strcmp(section, "Esportes") && !livecat_secao("xyzzy tv", NULL) &&
+       !livecat_secao("uncached name", NULL) && posts == 0,
        "cached-only lookup loads disk answers without requesting missing names");
     OK(livecat_sugerir(names, sem, 2, out, ativo) == 1 && posts == 0,
        "disk cache survives process restart, including null");
@@ -158,9 +158,30 @@ int main(int argc, char **argv) {
     slowNetwork = 0; livecat_postar_teste(worker);
   }
 
+  // Fill all 3000 slots, then classify a new name without waiting for expiry.
+  { static char names[1000][32]; const char *pn[1000], *result[1000];
+    unsigned char eligible[1000];
+    for (int batch = 0; batch < 3; batch++) {
+      for (i = 0; i < 1000; i++) {
+        snprintf(names[i], sizeof names[i], "cachefill %04d", batch * 1000 + i);
+        pn[i] = names[i]; eligible[i] = 1;
+      }
+      livecat_sugerir(pn, eligible, 1000, result, ativo);
+    }
+    const char *fresh[] = {"Fresh Kids", "Another Kids"}; unsigned char both[] = {1, 1};
+    posts = 0;
+    ganhou = livecat_sugerir(fresh, both, 2, out, ativo);
+    OK(ganhou == 2 && out[0] && !strcmp(out[0], "Infantil") &&
+       out[1] && !strcmp(out[1], "Infantil"),
+       "P2: full 3000-name cache returns every fresh suggestion");
+    posts = 0;
+    ganhou = livecat_sugerir(fresh, both, 2, out, ativo);
+    OK(ganhou == 2 && posts == 0, "P2: fresh answers remain cached after eviction");
+  }
+
   { const char *names[] = { "Canal Futebol HD", "xyzzy tv" }; unsigned char both[] = {1, 1};
     clockNow += 31 * 86400; posts = 0;
-    OK(!livecat_secao("Canal Futebol HD") && posts == 0,
+    OK(!livecat_secao("Canal Futebol HD", NULL) && posts == 0,
        "cached-only lookup rejects expired sections without network");
     ganhou = livecat_sugerir(names, both, 2, out, ativo);
     OK(ganhou == 1 && posts == 1 && strstr(ultimoCorpo, "xyzzy"), "positive and null answers expire after 30 days in a running app");

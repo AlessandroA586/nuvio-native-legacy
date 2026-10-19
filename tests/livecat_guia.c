@@ -48,6 +48,25 @@ static char *coldWorker(const char *url, const char *body, int *status) {
   (void)url; posts++; *status = 200;
   return strdup("{\"cats\":{\"velora\":\"Esportes\",\"nimbo\":\"Infantil\",\"talume\":\"Infantil\"}}");
 }
+static char *overflowWorker(const char *url, const char *body, int *status) {
+  (void)url;
+  char *reply = malloc(16384);
+  size_t used = (size_t)snprintf(reply, 16384, "{\"cats\":{");
+  const char *p = strchr(body, '[');
+  int count = 0;
+  while (p && (p = strchr(p, '"'))) {
+    const char *end = strchr(++p, '"');
+    assert(end && end - p < 64);
+    used += (size_t)snprintf(reply + used, 16384 - used, "%s\"%.*s\":%s",
+                            count++ ? "," : "", (int)(end - p), p,
+                            !strncmp(p, "latechannel", 11) ? "\"Infantil\"" : "null");
+    p = end + 1;
+  }
+  assert(count <= 200);
+  snprintf(reply + used, 16384 - used, "}}");
+  posts++; *status = 200;
+  return reply;
+}
 static void addM3u(M3uCtx *ctx, const char *name, const char *group, const char *id) {
   LtvM3uCanal c = {0}; c.nome = name; c.grupo = group; c.url = id;
   c.tvgId = c.tvgNome = c.logo = c.ua = c.referer = "";
@@ -112,6 +131,37 @@ static int xtreamLocalSections(void) {
   ltv_pref_definir_grupos(ltv_pref("xt", 1), NULL, 0);
   printf("%s: Xtream inferred selector counts and selection with suggestions on/off\n", failures ? "FAIL" : "PASS");
   return failures != 0;
+}
+
+static int selectedOverflow(void) {
+  int failures = 0;
+  const char *selected[] = {"Infantil"};
+  livecat_postar_teste(overflowWorker);
+  for (int load = 0; load < 2; load++) {
+    stagingZerar(); sTeto = 30000;
+    M3uCtx ctx = {0};
+    ctx.fl = sFonte(LTV_M3U, "https://overflow.test", "Overflow", "");
+    ltv_pref_definir_grupos(ltv_pref(sLtvF[ctx.fl].chave, 1), selected, 1);
+    ctx.nsel = sGruposEscolhidos(ctx.fl, ctx.sel, 256);
+    for (int i = 0; i < 1201; i++) {
+      char name[32]; snprintf(name, sizeof name, "unresolved %04d", i);
+      addM3u(&ctx, name, "", name);
+    }
+    addM3u(&ctx, "Latechannel", "", "late");
+    if ((!load && sNCanais != 1202) || (load && sNCanais != 2)) {
+      puts("FAIL: P1 retains candidates beyond 1200 and skips cached negatives on reload");
+      failures++;
+    }
+    int before = posts;
+    sugerirSecoes(); selecionarSecoes();
+    if (posts - before > 6 || (load && (sNCanais != 1 || strcmp(sCanais[0].nome, "Latechannel")))) {
+      puts("FAIL: P1 later selected channel resolves on reload within network batch limit");
+      failures++;
+    }
+  }
+  if (!failures) puts("PASS: P1 later selected channel resolves after 1200 negatives; bounded requests");
+  stagingZerar();
+  return failures;
 }
 
 static int cacheWorkBound(void) {
@@ -330,5 +380,6 @@ int main(int argc, char **argv) {
   puts("PASS: uncached suggestions filter before quota and retain at most the channel cap");
   failures += xtreamLocalSections();
   failures += cacheWorkBound();
+  failures += selectedOverflow();
   return failures ? 1 : 0;
 }

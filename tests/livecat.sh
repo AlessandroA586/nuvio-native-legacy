@@ -10,7 +10,8 @@ tmp="$(mktemp -d "${TMPDIR:-/tmp}/nuvio-livecat-XXXXXX")"
 trap 'rm -rf "$tmp"' EXIT
 cc src/livecat.c src/dados.c src/js.c tests/livecat.c -Isrc -DNV_REC_URL='"http://rec.test"' \
   -o "$tmp/unidade" -O1 -g -Wall -Wextra -Wno-unused-function
-NUVIO_DADOS="$tmp/unit" "$tmp/unidade" | grep -v "^\[dados\]"
+rc=0
+NUVIO_DADOS="$tmp/unit" "$tmp/unidade" | grep -v "^\[dados\]" || rc=1
 NUVIO_DADOS="$tmp/unit" "$tmp/unidade" restart | grep -v "^\[dados\]"
 flags=(-ffunction-sections -fdata-sections)
 if [ "$(uname -s)" = Darwin ]; then flags+=(-Wl,-dead_strip); else flags+=(-Wl,--gc-sections); fi
@@ -18,7 +19,6 @@ cc tests/livecat_guia.c src/livecat.c src/dados.c src/ltv.c src/js.c src/idcanal
   -DNV_REC_URL='"http://rec.test"' -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -O1 -g -fsanitize-coverage=trace-pc-guard -Wno-macro-redefined "${flags[@]}" -o "$tmp/guia"
 # Run both integration regressions even when one fails (FAIL-before evidence).
-rc=0
 NUVIO_DADOS="$tmp/guide" "$tmp/guia" || rc=1
 NUVIO_DADOS="$tmp/guide" "$tmp/guia" restart || rc=1
 if [ "${1:-}" = --guide-only ]; then exit "$rc"; fi

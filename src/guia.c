@@ -438,17 +438,18 @@ static int sCanalAdd(int f, const GCru *c) {
   GCanal *g;
   const char *sel[256], *original = c->grupo && c->grupo[0] ? c->grupo : "Outros";
   int cat, ns = sGruposEscolhidos(f, sel, 256);
-  const char *sec = c->sug && ajustes_livetv_sugerir() ? livecat_secao(c->nome) : NULL;
+  int resolvido = 0;
+  const char *sec = c->sug && ajustes_livetv_sugerir() ? livecat_secao(c->nome, &resolvido) : NULL;
   const char *grupo = sec ? sec : original;
-  int pendente = ns && c->sug && ajustes_livetv_sugerir() && !sec;
+  int pendente = ns && c->sug && ajustes_livetv_sugerir() && !resolvido;
   if (sec && strcmp(sec, original)) {
     int gi = sGrupoInfo(f, original, 0);
     sGrupoInfo(f, sec, 1);
     if (gi >= 0 && sLtvF[f].gi[gi].n > 0) sLtvF[f].gi[gi].n--;
   }
   if (ns && !pendente && !nomeNaLista(grupo, sel, ns)) return 0;
-  // Match livecat's 1200-name batch ceiling; unresolved choices do not spend quota.
-  if ((!pendente && sRetidos >= sTeto) || (pendente && sNCanais - sRetidos >= 1200)) {
+  // Network work is bounded by livecat; retain misses so later loads can resolve them.
+  if (!pendente && sRetidos >= sTeto) {
     sLtvF[f].cortada = 1; return 0;
   }
   cat = sCatDe(f, grupo);

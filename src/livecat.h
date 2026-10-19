@@ -16,8 +16,9 @@
 typedef char *(*LiveCatPostar)(const char *url, const char *corpo, int *status);
 void livecat_postar_teste(LiveCatPostar p);
 
-// Cached, unexpired section for a channel name, or NULL. Never requests the network.
-const char *livecat_secao(const char *nome);
+// Cached, unexpired section or NULL; resolvido includes cached negative answers.
+// Never requests the network. resolvido may be NULL.
+const char *livecat_secao(const char *nome, int *resolvido);
 
 // Para cada nome[i] com sem[i] != 0 (canal sem categoria), out[i] = secao
 // sugerida ou NULL (sem sugestao, falha de rede ou desligado). Canal com
