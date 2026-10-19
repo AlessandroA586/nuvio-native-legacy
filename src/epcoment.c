@@ -11,6 +11,8 @@
 #include "anim.h"
 #include "layout.h"
 #include "ponteiro.h"
+#include "tex_cache.h"
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -18,21 +20,39 @@
 static char show[64];
 static int temp, episodio, foco, dentro, quantidade, notaImdb;
 static float scroll;
+static int filtro, cardCap;
+static int rawIndex(int pos) {
+  int n=extras_n_comentarios_ep();
+  for (int i=0;i<n;i++) if (!filtro || extras_comentario_ep_nota(i)==filtro) {
+    if (pos--==0) return i;
+  }
+  return -1;
+}
 // Byte ranges survive texture eviction. Rewrap only on content/font/width changes.
-static struct {
+static struct Card {
   char texto[16384], data[80];
-  unsigned short inicio[16384], tamanho[16384];
+  unsigned short inicio[4], tamanho[4];
   int n, revelado;
-  float comprimentos[16384];
+  float comprimentos[4];
   float largura, escala;
   TxtFamilia familia;
-} cards[EX_COMENT_MAX];
+} *cards;
+static int reservar(void) {
+  int n=extras_n_comentarios_ep();
+  if (n>cardCap) {
+    struct Card *v=realloc(cards,n*sizeof *v);
+    if (!v) return 0;
+    memset(v+cardCap,0,(n-cardCap)*sizeof *v); cards=v; cardCap=n;
+  }
+  return 1;
+}
 
 void epcoment_abrir(const char *imdb, int t, int e) {
   snprintf(show, sizeof show, "%s", imdb);
   temp = t; episodio = e; foco = dentro = 0;
   quantidade = -2; scroll = 0;
-  memset(cards, 0, sizeof cards);
+  filtro=0;
+  if (cards) memset(cards, 0, cardCap*sizeof *cards);
   notaImdb = 0;
   int item = cat_indice_por_imdb(show);
   for (int i = 0; item >= 0 && i < cat_n_episodios(item); i++) {
@@ -46,32 +66,47 @@ void epcoment_abrir(const char *imdb, int t, int e) {
   extras_pedir_comentarios_ep(show, temp, episodio);
 }
 int epcoment_quantidade(void) {
-  if (!extras_comentarios_ep_do(show, temp, episodio) || extras_comentarios_ep_carregando()) return -1;
-  return extras_n_comentarios_ep();
+  if (!extras_comentarios_ep_do(show, temp, episodio)) return -1;
+  int total=extras_n_comentarios_ep(), n=0;
+  if (!total && extras_comentarios_ep_carregando()) return -1;
+  for (int i=0;i<total;i++) n += !filtro || extras_comentario_ep_nota(i)==filtro;
+  return n;
 }
 void epcoment_atualizar(float dt) {
   // A previous episode's worker may still be finishing when this menu opens.
   if (!extras_comentarios_ep_do(show, temp, episodio) && !extras_comentarios_ep_carregando())
     extras_pedir_comentarios_ep(show, temp, episodio);
+  int n=epcoment_quantidade();
+  if (dentro && n>=0 && foco>=n-2 && extras_comentarios_ep_tem_mais()) extras_comentarios_ep_mais();
+  reservar();
   scroll = ajustes_animacoes_reduzidas() ? foco * 280.0f : anim_mola(scroll, foco * 280.0f, dt, NV_MOLA_TELA);
 }
 int epcoment_foco(void) { return dentro ? foco : -1; }
 void epcoment_menu(void) { dentro = 0; }
-int epcoment_entrar(void) { if (epcoment_quantidade() <= 0) return 0; dentro = 1; return 1; }
+int epcoment_entrar(void) { if (!extras_n_comentarios_ep()) return 0; dentro = 1; return 1; }
 void comentario_abrir_inteiro(int indice) {
   if (indice < 0 || indice >= epcoment_quantidade()) return;
   char data[64];
   foco = indice;
+  int visible=indice+1;
+  indice = rawIndex(indice);
+  if (indice < 0) return;
   desc_data_extenso(extras_comentario_ep_data(indice), data, sizeof data);
   sinopse_comentario(extras_comentario_ep_usuario(indice), extras_comentario_ep_texto(indice), data,
                     extras_comentario_ep_nota(indice), extras_comentario_ep_curtidas(indice),
-                    extras_comentario_ep_respostas(indice), 0, indice + 1, epcoment_quantidade());
+                    extras_comentario_ep_respostas(indice), 0, visible, epcoment_quantidade());
 }
 int epcoment_evento(const SDL_Event *e) {
   SDL_Keycode k;
   if (!dentro || e->type != SDL_KEYDOWN) return 0;
   k = e->key.keysym.sym;
-  if (k == SDLK_LEFT) { epcoment_menu(); return 1; }
+  // TV: LEFT cycles All,10..1,All without moving focus into tiny histogram
+  // rows. RIGHT returns to actions; Back closes the modal, including empty filters.
+  if (k == SDLK_LEFT) {
+    if (!e->key.repeat) { filtro = filtro ? filtro-1 : 10; foco=0; scroll=0; }
+    return 1;
+  }
+  if (k == SDLK_RIGHT) { epcoment_menu(); return 1; }
   if (k == SDLK_UP || k == SDLK_DOWN) {
     foco += k == SDLK_DOWN ? 1 : -1;
     if (foco >= epcoment_quantidade()) foco = epcoment_quantidade() - 1;
@@ -80,8 +115,11 @@ int epcoment_evento(const SDL_Event *e) {
   }
   if (k == SDLK_RETURN || k == SDLK_KP_ENTER || k == SDLK_SPACE) {
     if (!e->key.repeat) {
-      if (extras_comentario_ep_spoiler(foco) && !cards[foco].revelado) cards[foco].revelado = 1;
-      else comentario_abrir_inteiro(foco);
+      int i=rawIndex(foco);
+      if (i>=0 && reservar()) {
+        if (extras_comentario_ep_spoiler(i) && !cards[i].revelado) cards[i].revelado=1;
+        else comentario_abrir_inteiro(foco);
+      }
     }
     return 1;
   }
@@ -97,7 +135,7 @@ static void preparar(int i, float w) {
   snprintf(cards[i].texto, sizeof cards[i].texto, "%s", s);
   cards[i].largura = w; cards[i].escala = gfx_escala(); cards[i].familia = txt_fonte_interface();
   cards[i].n = 0; p = cards[i].texto;
-  while (*p && cards[i].n < 16384) {
+  while (*p && cards[i].n < 4) {
     char buf[16384]; size_t n = 0, quebra = 0;
     const char *inicio;
     while (*p == ' ' || *p == '\r') p++;
@@ -121,6 +159,7 @@ static void preparar(int i, float w) {
     if (*p == '\n') p++;
     if (p == inicio && *p) p++;
   }
+  if (*p && cards[i].n==4) cards[i].n=5;
   long long ms = js_ms_iso(extras_comentario_ep_data(i));
   int dias = ms ? (int)(((long long)time(NULL) - ms / 1000) / 86400) : 0;
   if (dias > 0) snprintf(cards[i].data, sizeof cards[i].data, i18n("há %d dias"), dias);
@@ -129,58 +168,87 @@ static void preparar(int i, float w) {
 static void focar(int i, int b) { (void)b; if (i >= 0 && i < epcoment_quantidade()) { foco = i; dentro = 1; } }
 static void ativar(int i, int b) {
   (void)b; focar(i, 0);
-  if (extras_comentario_ep_spoiler(i) && !cards[i].revelado) cards[i].revelado = 1;
+  int raw=rawIndex(i);
+  if (raw<0 || !reservar()) return;
+  if (extras_comentario_ep_spoiler(raw) && !cards[raw].revelado) cards[raw].revelado=1;
   else comentario_abrir_inteiro(i);
 }
 void epcoment_desenhar(GfxRect r, float a) {
   ExEpNotas notas = {0}; char buf[120];
   int n = epcoment_quantidade();
-  float x = r.x + 28, top = r.y + 190, w = r.w - 56, max = 1;
+  float x = r.x + 28, top = r.y + 240, w = r.w - 56;
+  if (!reservar()) return;
   ctx_menu_ilha(r, 24, a);
   if (n >= 0) extras_notas_ep(&notas);
+  int tmdb=extras_comentarios_ep_tmdb();
   if (notas.nota) snprintf(buf, sizeof buf, idioma_ponto_decimal(ajustes_idioma()) ? "%d.%d" : "%d,%d", notas.nota / 10, notas.nota % 10);
   else snprintf(buf, sizeof buf, "%s", "—");
-  texto(TXT_G52B, buf, x, r.y + 42, a);
-  snprintf(buf, sizeof buf, i18n("%d votos"), notas.votos);
-  texto(TXT_G18R, "Trakt", x + 28, r.y + 110, .8f * a);
-  texto(TXT_G18R, "·", x + 76, r.y + 110, .8f * a);
-  texto(TXT_G18R, buf, x + 92, r.y + 110, .8f * a);
-  gfx_cor((GfxRect){x, r.y + 112, 20, 20}, .5f, .93f, .08f, .13f, a);
-  for (int k = 5; k <= 10; k++) if (notas.distribuicao[k] > max) max = notas.distribuicao[k];
-  float bx = x + 235, bw = w - 235;
-  for (int k = 10; k >= 5; k--) {
-    float y = r.y + 32 + (10 - k) * 22;
-    snprintf(buf, sizeof buf, "%d", k);
-    texto(TXT_G18R, buf, bx - 30, y - 9, .6f * a);
-    gfx_cor((GfxRect){bx, y, bw, 7}, .5f, 1, 1, 1, .12f * a);
-    if (notas.distribuicao[k]) gfx_cor((GfxRect){bx, y, bw * notas.distribuicao[k] / max, 7}, .5f, 1, .30f, .43f, a);
+  float ar,ag,ab; ajustes_acento(&ar,&ag,&ab);
+  if (!tmdb) {
+    texto(TXT_AJ_NUM64, buf, x, r.y + 22, a);
+    texto(TXT_G18R, "/ 10", x+124, r.y+65, .58f*a);
+    GLuint mark=tex_obter(extras_caminho_marca(EX_TRAKT));
+    if (mark) { float alpha=gfx_opacidade_grupo; gfx_opacidade_grupo*=a; gfx_textura((GfxRect){x,r.y+108,26,26},mark); gfx_opacidade_grupo=alpha; }
+    texto(TXT_G21B,"Trakt",x+36,r.y+106,.9f*a);
+    texto(TXT_G18R,"·",x+100,r.y+108,.58f*a);
+    char count[40]; idioma_inteiro(ajustes_idioma(),notas.votos,count,sizeof count);
+    snprintf(buf,sizeof buf,i18n("%s votos"),count);
+    texto(TXT_G18R,buf,x+116,r.y+109,.7f*a);
+    int total=0,mode=10;
+    for (int k=1;k<=10;k++) { total+=notas.distribuicao[k]; if (notas.distribuicao[k]>notas.distribuicao[mode]) mode=k; }
+    // Show 10..5 to preserve the existing panel; shares include all ten buckets.
+    float bx=x+266,bw=w-332;
+    for (int k=10;k>=5;k--) {
+      float y=r.y+24+(10-k)*27;
+      int selected=notas.distribuicao[k]>0 && k==mode;
+      snprintf(buf,sizeof buf,"%d",k);
+      texto(TXT_G21B,buf,bx-40,y,.85f*a);
+      gfx_cor((GfxRect){bx,y+10,bw,9},.5f,1,1,1,.12f*a);
+      float share=total ? (float)notas.distribuicao[k]/total : 0;
+      if (share>0) gfx_cor((GfxRect){bx,y+10,bw*share,9},.5f,selected?ar:.75f,selected?ag:.76f,selected?ab:.79f,a);
+      snprintf(buf,sizeof buf,"%d%%",(int)(share*100+.5f));
+      texto(TXT_G20M,buf,bx+bw+12,y,selected?a:.65f*a);
+    }
+  } else {
+    texto(TXT_G28B,"TMDB",x,r.y+30,a);
+    texto(TXT_ILHA_TEXTO,i18n("TMDB · reviews da série"),x,r.y+85,.8f*a);
   }
+  if (filtro) snprintf(buf,sizeof buf,i18n("Nota %d/10"),filtro);
+  else snprintf(buf,sizeof buf,"%s",i18n("Todas"));
+  float chip=txt_largura(TXT_G18M,buf)+24;
+  gfx_cor((GfxRect){x,r.y+190,chip,30},.5f,ar,ag,ab,.22f*a);
+  texto(TXT_G18M,buf,x+12,r.y+193,a);
+  texto(TXT_G18R,i18n("← Nota · → Menu"),x+chip+18,r.y+193,.62f*a);
   if (notaImdb && ajustes_nota_episodio(EX_IMDB)) {
     snprintf(buf, sizeof buf, idioma_ponto_decimal(ajustes_idioma()) ? "%d.%d" : "%d,%d", notaImdb / 10, notaImdb % 10);
-    texto(TXT_G18R, "IMDb", x, top - 50, .8f * a);
-    texto(TXT_G18R, buf, x + 60, top - 50, a);
+    texto(TXT_G18R, "IMDb", x, top - 70, .8f * a);
+    texto(TXT_G18R, buf, x + 60, top - 70, a);
   }
   gfx_cor((GfxRect){x, top - 16, w, 1}, 0, 1, 1, 1, .12f * a);
   if (n <= 0) {
-    texto(TXT_ILHA_TEXTO, n < 0 ? i18n("Carregando comentários…") : i18n("Nenhum comentário ainda."), x + 20, top + 34, .75f * a);
+    texto(TXT_ILHA_TEXTO, n < 0 ? i18n("Carregando comentários…") : filtro ? i18n("Nenhum comentário com esta nota.") : i18n("Nenhum comentário ainda."), x + 20, top + 34, .75f * a);
+    if (extras_comentarios_ep_carregando()) texto(TXT_G18R,i18n("Carregando mais comentários…"),x+20,top+90,.7f*a);
     return;
   }
   if (quantidade != n) { quantidade = n; if (foco >= n) foco = 0; }
-  gfx_recorte(x - 4, top - 4, w + 8, r.h - 210);
-  for (int i = 0; i < n; i++) {
-    float y = top + i * 280 - scroll;
+  gfx_recorte(x - 4, top - 4, w + 8, r.h - 260);
+  int pos=-1, total=extras_n_comentarios_ep();
+  for (int i=0; i<total; i++) {
+    if (filtro && extras_comentario_ep_nota(i)!=filtro) continue;
+    pos++;
+    float y = top + pos * 280 - scroll;
     float h = 280;
     if (y + h < top || y > r.y + r.h) continue;
     preparar(i, w - 44);
-    int ativo = dentro && foco == i;
-    float ca = a * (foco == i ? 1 : .45f);
+    int ativo = dentro && foco == pos;
+    float ca = a * (foco == pos ? 1 : .65f);
     GfxRect card = {x, y, w, h};
     if (ativo) {
       gfx_cor(card, 18 / h, .21f, .216f, .235f, a);
-      gfx_anel(card, 18 / h, 3, .94f, .94f, .95f, a);
+
     }
     if (y >= top && y + h <= r.y + r.h - 20)
-      ponteiro_alvo(card.x, card.y, card.w, card.h, focar, ativar, i, 0);
+      ponteiro_alvo(card.x, card.y, card.w, card.h, focar, ativar, pos, 0);
     const char *user = extras_comentario_ep_usuario(i);
     char inicial[8] = "?"; size_t k = 1;
     if (*user) { while (user[k] && ((unsigned char)user[k] & 0xc0) == 0x80 && k < 7) k++; memcpy(inicial, user, k); inicial[k] = 0; }
@@ -212,8 +280,12 @@ void epcoment_desenhar(GfxRect r, float a) {
     texto(TXT_G18R, buf, x + 142, y + h - 44, .58f * ca);
   }
   gfx_sem_recorte();
-  float track = r.h - 218, thumb = track / n;
+  if (extras_comentarios_ep_carregando()) {
+    gfx_cor((GfxRect){x,r.y+r.h-44,w,34},.5f,.08f,.085f,.10f,a);
+    texto(TXT_G18R,i18n("Carregando mais comentários…"),x+16,r.y+r.h-39,.85f*a);
+  }
+  float track = r.h - 268, thumb = track / n;
   gfx_cor((GfxRect){r.x + r.w - 16, top, 4, track}, 2 / track, 1, 1, 1, .14f * a);
-  float pos = n > 1 ? foco / (float)(n - 1) : 0;
-  gfx_cor((GfxRect){r.x + r.w - 16, top + pos * (track - thumb), 4, thumb}, 2 / thumb, 1, 1, 1, .9f * a);
+  float fraction = n > 1 ? foco / (float)(n - 1) : 0;
+  gfx_cor((GfxRect){r.x + r.w - 16, top + fraction * (track - thumb), 4, thumb}, 2 / thumb, 1, 1, 1, .9f * a);
 }

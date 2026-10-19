@@ -73,15 +73,50 @@ static TxtLinha fx_txt_linha(TxtEstilo estilo, const char *s, int r, int g, int 
 #include "ponteiro.h"
 
 #ifdef NV_TEST_EPCOMENT
+#undef extras_n_comentarios_ep
+int extras_n_comentarios_ep(void);
 #include "js.h"
 #include "epcoment.h"
-static int epRequests, epRatings, epEmpty, epImdbLabels, epImdbScores;
+#include "rede.h"
+static int epRequests, epRatings, epEmpty, epImdbLabels, epImdbScores, epPaged;
+char *epcoment_baixar(const char *,int,const char *const *);
 TxtLinha epreview_texto(TxtEstilo estilo, const char *s, int r, int g, int b, int a) {
   if (s && !strcmp(s, "IMDb")) epImdbLabels++;
   if (s && (!strcmp(s, "8,7") || !strcmp(s, "8.7"))) epImdbScores++;
   return txt_linha(estilo, s, r, g, b, a);
 }
 static SDL_atomic_t epRelease;
+static int epMode, epPages[8], epTmdbRequests;
+static char *epFixture(const char *url) {
+  if (strstr(url,"themoviedb.org")) {
+    epTmdbRequests++;
+    if (strstr(url,"/find/")) return strdup("{\"tv_results\":[{\"id\":42}]}");
+    return strdup("{\"page\":1,\"total_pages\":1,\"results\":[{\"id\":\"tm1\",\"author\":\"Series reviewer\",\"content\":\"A review of the whole series, not this episode.\",\"author_details\":{\"rating\":8},\"created_at\":\"2026-01-01\"}]}");
+  }
+  if (!strstr(url,"/comments/")) return epcoment_baixar(url,12,NULL);
+  const char *param=strstr(url,"page="); int page=param?atoi(param+5):0;
+  if (page>=0 && page<8) epPages[page]++;
+  if (epMode==2) return NULL;
+  if (epMode!=1) return epcoment_baixar(url,12,NULL);
+  epRequests++;
+  while (!SDL_AtomicGet(&epRelease)) SDL_Delay(1);
+  if (page>=3) return strdup("[]");
+  char out[6000]="[";
+  int n=page==1?8:2;
+  for (int i=0;i<n;i++) {
+    char entry[600]; int id=page==1?i:(i?8:7);
+    snprintf(entry,sizeof entry,"%s{\"id\":%d,\"comment\":\"Paged review %d\",\"username\":\"Reader %d\",\"user_rating\":%d,\"created_at\":\"2026-01-01\"}",i?",":"",id,id,id,id%10+1);
+    strcat(out,entry);
+  }
+  strcat(out,"]"); return strdup(out);
+}
+int epcoment_pedir(const RedePedido *p,RedeResposta *r) {
+  memset(r,0,sizeof *r);
+  if (rede_job_estado(p->job)!=REDE_OK) { r->erro=REDE_CANCELADO; return 0; }
+  r->corpo=epFixture(p->url); r->status=r->corpo?200:503;
+  if (rede_job_estado(p->job)!=REDE_OK) { free(r->corpo); r->corpo=NULL; r->erro=REDE_CANCELADO; return 0; }
+  r->erro=REDE_OK; return 1;
+}
 int epcoment_cabecalhos(const char **cab, char *aut, size_t na, char *chave, size_t nc) {
   (void)aut; (void)na; (void)chave; (void)nc; cab[0] = NULL; return 0; // No linked Trakt account.
 }
@@ -97,6 +132,7 @@ char *epcoment_baixar(const char *url, int segundos, const char *const *cab) {
   }
   if (!strstr(url, "/comments/")) return NULL;
   epRequests++;
+  epPaged = strstr(url, "page=1") && strstr(url, "limit=");
   while (!SDL_AtomicGet(&epRelease)) SDL_Delay(1);
   if (epEmpty) return strdup("[]");
   return strdup("[{\"comment\":\"Episode that changes the tone of the season. The dinner scene is uncomfortable in the best sense, and the soundtrack carries everything without needing dialogue. Best direction of the series so far. I kept thinking about her last look at her brother. A long review continues here with enough text to prove that the focused card expands and scrolls all the way through the ending.\",\"user\":{\"username\":\"Marina R.\"},\"created_at\":\"2026-01-01T00:00:00Z\",\"likes\":212,\"replies\":18,\"user_rating\":9,\"spoiler\":false},{\"comment\":\"Starts slowly and takes time to get going. The final scene changes everything.\",\"user\":{\"username\":\"jpdacosta\"},\"created_at\":\"2025-12-29T00:00:00Z\",\"likes\":88,\"replies\":6,\"user_rating\":7,\"spoiler\":true}]");
@@ -374,7 +410,7 @@ int main(int argc, char **argv) {
   for (int wait = 0; extras_comentarios_ep_carregando() && wait < 500; wait++) SDL_Delay(2);
   quadros(90); acordar(); quadros(2);
   n = alvosDoMenu(&caixa, lin);
-  CONFERE(n == 6 && epcoment_quantidade() == 2, "Comments row added with episode count 2");
+  CONFERE(n == 8 && epcoment_quantidade() == 2, "Comments row added with episode count 2");
   ExEpNotas ratings; extras_notas_ep(&ratings);
   CONFERE(ratings.nota == 84 && ratings.votos == 1284 && ratings.distribuicao[10] == 600,
           "episode ratings and distribution parsed from Trakt");
@@ -398,7 +434,17 @@ int main(int argc, char **argv) {
   CONFERE(!sinopse_aberta() && episodios_menu_aberto() && epcoment_foco() == 1,
           "Back closes reader and preserves episode menu focus");
   tecla(SDL_KEYDOWN, SDLK_LEFT); tecla(SDL_KEYUP, SDLK_LEFT); quadros(2);
-  CONFERE(epcoment_foco() == -1 && episodios_menu_aberto(), "Left returns to menu");
+  CONFERE(epcoment_foco() == 0 && epcoment_quantidade() == 0 && episodios_menu_aberto(), "Left selects rating 10 without leaving reviews");
+  CONFERE(epPaged, "episode comments request includes page and limit");
+  for (int rating=9;rating>=1;rating--) {
+    tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); quadros(1);
+    CONFERE(epcoment_quantidade()==(rating==9 || rating==7),"filter matches exact rating");
+  }
+  tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); quadros(1);
+  CONFERE(epcoment_quantidade()==2,"filter wraps to All including unrated reviews");
+  tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); quadros(2);
+  tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); quadros(60);
+  gravar("filter-active");
   tecla(SDL_KEYDOWN, SDLK_RIGHT); tecla(SDL_KEYUP, SDLK_RIGHT);
   voltar(); quadros(60);
   CONFERE(!episodios_menu_aberto(), "Back closes entire menu from comment list");
@@ -407,7 +453,7 @@ int main(int argc, char **argv) {
   for (int wait = 0; extras_comentarios_ep_carregando() && wait < 500; wait++) SDL_Delay(2);
   quadros(90); acordar(); quadros(2);
   gravar("no-comments");
-  CONFERE(alvosDoMenu(&caixa, lin) == 5 && epcoment_quantidade() == 0, "empty episode omits Comments row");
+  CONFERE(alvosDoMenu(&caixa, lin) == 7 && epcoment_quantidade() == 0, "empty episode omits Comments row");
   CONFERE(epRequests == 2 && epRatings == 2, "one comments/ratings fetch per opened episode");
   voltar(); quadros(60);
   CONFERE(ajustes_nota_episodio(EX_IMDB) && !ajustes_nota_episodio(EX_TRAKT) &&
@@ -430,6 +476,95 @@ int main(int argc, char **argv) {
   epcoment_desenhar((GfxRect){1000, 350, 676, 624}, 1);
   CONFERE(!epImdbLabels && !epImdbScores, "missing IMDb episode score never borrows show rating");
   voltar(); quadros(60);
+  montarCatalogo(); epEmpty=0; epMode=1; memset(epPages,0,sizeof epPages);
+  focar(SEC_EPISODIOS,3); episodios_menu_visto(0,1,4,"Paged episode");
+  for (int wait=0;extras_comentarios_ep_carregando() && wait<1000;wait++) SDL_Delay(2);
+  quadros(60); gravar("header-bars-rest");
+  CONFERE(extras_n_comentarios_ep()==8 && !extras_comentarios_ep_tmdb(),"Trakt preferred when it has comments");
+  SDL_AtomicSet(&epRelease,0);
+  tecla(SDL_KEYDOWN,SDLK_RIGHT); tecla(SDL_KEYUP,SDLK_RIGHT);
+  for (int i=0;i<7;i++) { tecla(SDL_KEYDOWN,SDLK_DOWN); tecla(SDL_KEYUP,SDLK_DOWN); }
+  quadros(60); gravar("loading-more");
+  for (int i=0;i<20;i++) extras_comentarios_ep_mais();
+  SDL_AtomicSet(&epRelease,1);
+  for (int wait=0;extras_comentarios_ep_carregando() && wait<1000;wait++) SDL_Delay(2);
+  quadros(5);
+  CONFERE(extras_n_comentarios_ep()==9,"append removes duplicate review across pages");
+  CONFERE(epPages[1]==1 && epPages[2]==1,"near-end requests coalesce to one request per page");
+  CONFERE(!extras_comentarios_ep_tem_mais(),"short last page stops infinite loading");
+  for (int i=0;i<20;i++) extras_comentarios_ep_mais();
+  CONFERE(epPages[3]==0,"no request after last page");
+  tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); quadros(2);
+  int countBefore=epcoment_quantidade();
+  SDL_Event held={0}; held.type=SDL_KEYDOWN; held.key.keysym.sym=SDLK_LEFT; held.key.repeat=1;
+  epcoment_evento(&held);
+  CONFERE(epcoment_quantidade()==countBefore,"held Left does not skip rating filters");
+  for (int i=0;i<10;i++) { tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); }
+  CONFERE(epcoment_quantidade()==9,"All includes every appended review");
+  tecla(SDL_KEYDOWN,SDLK_RIGHT); tecla(SDL_KEYUP,SDLK_RIGHT);
+  for (int i=0;i<12;i++) { tecla(SDL_KEYDOWN,SDLK_UP); tecla(SDL_KEYUP,SDLK_UP); }
+  tecla(SDL_KEYDOWN,SDLK_RIGHT); tecla(SDL_KEYUP,SDLK_RIGHT); quadros(20);
+  int t1,e1; episodios_menu_fontes(&t1,&e1);
+  CONFERE(t1==1 && e1==5 && episodios_menu_aberto(),"header Right switches episode without closing modal");
+  tecla(SDL_KEYDOWN,SDLK_DOWN); tecla(SDL_KEYUP,SDLK_DOWN);
+  for (int i=0;i<5;i++) { tecla(SDL_KEYDOWN,SDLK_DOWN); tecla(SDL_KEYUP,SDLK_DOWN); }
+  tecla(SDL_KEYDOWN,SDLK_RETURN); tecla(SDL_KEYUP,SDLK_RETURN); quadros(20);
+  episodios_menu_fontes(&t1,&e1);
+  CONFERE(t1==1 && e1==4 && episodios_menu_aberto(),"Previous episode menu action updates modal");
+  tecla(SDL_KEYDOWN,SDLK_RIGHT); tecla(SDL_KEYUP,SDLK_RIGHT); quadros(20);
+  CONFERE(foco.coluna==4,"row behind follows selected episode");
+  episodios_menu_visto(0,1,10,"Season end");
+  tecla(SDL_KEYDOWN,SDLK_UP); tecla(SDL_KEYUP,SDLK_UP);
+  tecla(SDL_KEYDOWN,SDLK_RIGHT); tecla(SDL_KEYUP,SDLK_RIGHT); quadros(20);
+  episodios_menu_fontes(&t1,&e1);
+  CONFERE(t1==2 && e1==1,"navigation crosses loaded season boundary");
+  tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); quadros(20);
+  episodios_menu_fontes(&t1,&e1);
+  CONFERE(t1==1 && e1==10,"reverse navigation crosses season boundary");
+  anim_politica_reduzida=1;
+  tecla(SDL_KEYDOWN,SDLK_RIGHT); tecla(SDL_KEYUP,SDLK_RIGHT); quadros(1);
+  int direction; float phase=episodios_menu_transicao(&direction);
+  CONFERE(phase==1,"reduced motion skips episode transition");
+  anim_politica_reduzida=0;
+  tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT);
+  phase=episodios_menu_transicao(&direction);
+  CONFERE(phase==0 && direction==-1,"episode transition starts in travel direction");
+  quadros(5); phase=episodios_menu_transicao(&direction);
+  CONFERE(phase>0 && phase<1,"episode crossfade progresses before 180 ms");
+  quadros(20); phase=episodios_menu_transicao(&direction);
+  CONFERE(phase==1,"episode crossfade ends after 180 ms");
+  voltar(); quadros(20);
+  episodios_menu_visto(0,1,1,"First episode");
+  tecla(SDL_KEYDOWN,SDLK_UP); tecla(SDL_KEYUP,SDLK_UP);
+  tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT);
+  episodios_menu_fontes(&t1,&e1);
+  CONFERE(t1==1 && e1==1,"first episode boundary does not wrap");
+  voltar(); quadros(20);
+  epMode=2; desc_tmdb_definir("0123456789abcdef0123456789abcdef");
+  focar(SEC_EPISODIOS,1); episodios_menu_visto(0,1,2,"Fallback episode");
+  for (int wait=0;extras_comentarios_ep_carregando() && wait<1000;wait++) SDL_Delay(2);
+  quadros(60); gravar("tmdb-fallback");
+  CONFERE(extras_comentarios_ep_tmdb() && extras_n_comentarios_ep()==1,"TMDB fallback on Trakt unavailable");
+  CONFERE(strstr(extras_comentario_ep_texto(0),"whole series")!=NULL,"fallback preserves show review content");
+  voltar(); quadros(20);
+  epMode=0; epEmpty=1;
+  episodios_menu_visto(0,1,3,"Empty Trakt");
+  for (int wait=0;extras_comentarios_ep_carregando() && wait<1000;wait++) SDL_Delay(2);
+  CONFERE(extras_comentarios_ep_tmdb(),"TMDB fallback on empty Trakt response");
+  voltar(); quadros(20);
+  desc_tmdb_definir(""); epMode=1; epEmpty=0;
+  SDL_AtomicSet(&epRelease,0);
+  episodios_menu_visto(0,1,8,"Cancelled episode"); SDL_Delay(10);
+  episodios_menu_visto(0,1,9,"Replacement episode");
+  SDL_AtomicSet(&epRelease,1);
+  for (int wait=0;extras_comentarios_ep_carregando() && wait<1000;wait++) SDL_Delay(2);
+  quadros(20);
+  CONFERE(extras_comentarios_ep_do(IMDB_SERIE,1,9) && extras_n_comentarios_ep()==8,"cancelled worker cannot replace new episode feed");
+  char grouped[32]; idioma_inteiro(IDIOMA_PT,3948,grouped,sizeof grouped);
+  CONFERE(!strcmp(grouped,"3.948"),"Portuguese thousands grouping");
+  idioma_inteiro(IDIOMA_EN,3948,grouped,sizeof grouped);
+  CONFERE(!strcmp(grouped,"3,948"),"English thousands grouping");
+  voltar(); quadros(20);
   printf("epcoment: %d failures\n", falhas);
   return falhas ? 1 : 0;
 #endif
