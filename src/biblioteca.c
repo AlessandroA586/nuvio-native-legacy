@@ -844,11 +844,9 @@ int biblioteca_iniciar(void) {
 void biblioteca_encerrar(void) { pediuRelogio = 0; }
 
 int biblioteca_na_lista(int i) {
-  // A verdade e a marca DO ITEM, que a descoberta preenche com a watchlist do
-  // Trakt. O vetor por indice que respondia aqui apontava para outro titulo
-  // assim que o catalogo era reconstruido.
+  // Discovery may mark only one catalog copy; membership belongs to the title.
   const CatItem *c = cat_item(i);
-  return c ? salvoNaFonte(c) : 0;
+  return c ? salvoNaFonte(c) || cat_imdb_na_lista_fonte(c->imdb) : 0;
 }
 int biblioteca_comprado(int i) { return (i >= 0 && i < CAT_MAX) ? comprado[i] : 0; }
 void biblioteca_alternar_lista(int i) {

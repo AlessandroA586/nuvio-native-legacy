@@ -40,6 +40,19 @@ static void screenshots(const char *base) {
   tex_iniciar(64); gfx_icones_dir("deploy/app/art"); extras_carregar("deploy/app/art");
   valor[AJ_IDIOMA] = IDIOMA_EN + 1; ajustes_iniciar();
   trakt_definir("test-token", "test-client");
+  if (strstr(base, "duplicate")) {
+    CatItem copies[2] = {*cat_item(0), *cat_item(0)};
+    copies[0].naLista = copies[1].naLista = 1;
+#ifndef BIBFONTE_BASELINE
+    copies[0].listaFontes = 1u << AJ_SALVOS_TRAKT;
+    copies[1].listaFontes = (1u << AJ_SALVOS_TRAKT) | (1u << AJ_SALVOS_SIMKL);
+#endif
+    cat_definir_tudo(copies, 2, NULL, 0);
+    ajustes_definir_salvos_destino(AJ_SALVOS_SIMKL);
+    shotSave(win, base, "detail-simkl", 2);
+    SDL_GL_DeleteContext(gl); SDL_DestroyWindow(win); SDL_Quit();
+    return;
+  }
   if (strstr(base, "settings-review")) {
     valor[AJ_SALVOS_DEST] = AJ_SALVOS_TRAKT;
 #ifndef BIBFONTE_BASELINE

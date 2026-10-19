@@ -145,6 +145,20 @@ int main(int argc, char **argv) {
   CHECK("Detail remove reaches Simkl", simklWrites == 0);
   CHECK("Simkl remove preserves Trakt membership", cat_item(0)->naLista && !biblioteca_na_lista(0));
   CHECK("menu offers save after Simkl remove", !strcmp(bibfonte_menu_label(0), "Salvar"));
+#ifndef BIBFONTE_BASELINE
+  // Discovery marks only the first catalog copy with Simkl membership.
+  CatItem duplicates[2] = {remote, remote};
+  duplicates[0].listaFontes |= 1u << AJ_SALVOS_SIMKL;
+  cat_definir_tudo(duplicates, 2, NULL, 0);
+  CHECK("duplicate title appears once in Simkl Library", bibfonte_library_count() == 1);
+  CHECK("Detail sees Simkl membership on every copy", biblioteca_na_lista(0) && biblioteca_na_lista(1));
+  int duplicateWrites = simklWrites;
+  ilhasalvar_executar(cat_item(1), !biblioteca_na_lista(1));
+  CHECK("Detail removes duplicate from Simkl instead of adding", simklWrites == duplicateWrites - 1);
+  CHECK("duplicate removal clears Simkl on every copy", !biblioteca_na_lista(0) && !biblioteca_na_lista(1) && bibfonte_library_count() == 0);
+  ajustes_definir_salvos_destino(AJ_SALVOS_TRAKT);
+  CHECK("duplicate removal preserves Trakt on every copy", biblioteca_na_lista(0) && biblioteca_na_lista(1));
+#endif
   // Saved sidebar must offer only titles removable from its selected source.
   SalvosEntrada sidebar[8];
   cat_definir_tudo(&ci, 1, NULL, 0);
