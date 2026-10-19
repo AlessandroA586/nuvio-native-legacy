@@ -1273,6 +1273,9 @@ static const char *urlCanal(const Stream *s, char *buf, size_t n) {
 static int tocarFonteGuardada(void) {
   Stream s;
   char alvo[64];
+  // #618: a fresh automatic choice must use the add-on's current order.
+  // Keep the saved link intact for the other selection modes.
+  if (ajustes_fonte_prioridade() == 3) return 0;
   // "Escolher a fonte ao reproduzir": a URL da ultima sessao nao toca
   // sozinha. A folha e quem escolhe (detail_pediu_fontes, e o #62 quando a
   // lista chega). O Retomar do Continuar assistindo pede reproducao e cai

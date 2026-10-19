@@ -1686,6 +1686,7 @@
   { "Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "From Nuvio: the title's name on top and the quality logos below. From the addon: the name and description exactly as the addon sends them — for people who already format the text in AIOStreams. Title logo: the title's logo instead of the written name." },
   { "Do add-on", "From add-on" },
   { "Do addon", "From the addon" },
+  { "Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "From the addon: plays the first allowed source without quality ranking or reusing previous choices." },
   { "Do app", "From the app" },
   { "Do catálogo, quando ele já foi lido", "From the catalog, once it has been read" },
   { "Do link", "From link" },

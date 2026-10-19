@@ -1687,6 +1687,7 @@
   T("Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "Από το Nuvio: το όνομα του τίτλου πάνω και τα λογότυπα ποιότητας από κάτω. Από το πρόσθετο: όνομα και περιγραφή ακριβώς όπως τα στέλνει το πρόσθετο — για όσους ήδη μορφοποιούν το κείμενο στο AIOStreams. Λογότυπο τίτλου: το λογότυπο του τίτλου αντί για το γραμμένο όνομα."),
   T("Do add-on", "Από το πρόσθετο"),
   T("Do addon", "Από το πρόσθετο"),
+  T("Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "Από το πρόσθετο: αναπαράγει την πρώτη επιτρεπόμενη πηγή χωρίς κατάταξη ποιότητας ή επαναχρησιμοποίηση προηγούμενων επιλογών."),
   T("Do app", "Από την εφαρμογή"),
   T("Do catálogo, quando ele já foi lido", "Από τον κατάλογο, όταν έχει διαβαστεί"),
   T("Do link", "Από τον σύνδεσμο"),

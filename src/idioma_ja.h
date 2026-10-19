@@ -1687,6 +1687,7 @@
   T("Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "Nuvio：上にタイトル名、下に画質ロゴ。アドオン：アドオンが送る名前と説明をそのまま表示 — AIOStreams で書式を整えている人向け。 タイトルロゴ: 文字の名前の代わりにタイトルのロゴを表示。"),
   T("Do add-on", "アドオンから"),
   T("Do addon", "アドオン表示"),
+  T("Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "アドオンから：画質による順位付けや以前の選択の再利用をせず、最初の許可されたソースを再生します。"),
   T("Do app", "アプリから"),
   T("Do catálogo, quando ele já foi lido", "読み込み済みのカタログから"),
   T("Do link", "リンクから"),

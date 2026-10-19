@@ -1687,6 +1687,7 @@
   T("Do Nuvio: o nome do título em cima e os logos de qualidade embaixo. Do addon: o nome e a descrição exatamente como o addon manda — para quem já formata o texto no AIOStreams. Logo do título: a logo do título no lugar do nome escrito.", "Od Nuvia: názov titulu hore a logá kvality pod ním. Z doplnku: názov a popis presne tak, ako ich doplnok posiela — pre tých, čo už text formátujú v AIOStreams. Logo titulu: logo titulu namiesto napísaného názvu."),
   T("Do add-on", "Z doplnku"),
   T("Do addon", "Z doplnku"),
+  T("Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.", "Z doplnku: prehrá prvý povolený zdroj bez radenia podľa kvality a opätovného použitia predchádzajúcich volieb."),
   T("Do app", "Z aplikácie"),
   T("Do catálogo, quando ele já foi lido", "Z katalógu, keď už bol načítaný"),
   T("Do link", "Z odkazu"),
