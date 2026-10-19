@@ -435,6 +435,14 @@ int main(int argc, char **argv) {
     quadros(60, NULL);
   }
 
+#ifdef NV_FUNDO_ESCURO_TEST
+  extern int fundo_din_escuro_testar(const char *, void (*)(int, const char *));
+  int rc = fundo_din_escuro_testar(dirDados, quadros);
+  tex_encerrar(); txt_encerrar();
+  SDL_GL_DeleteContext(gl); SDL_DestroyWindow(janela); SDL_Quit();
+  return rc;
+#endif
+
   // Focused Stage/Split comparison, using the production renderer and local art.
   if (getenv("NV_DINPALCO")) {
     const char *l;

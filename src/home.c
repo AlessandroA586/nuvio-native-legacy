@@ -4061,17 +4061,18 @@ static void home_atualizar_(float dt, Uint32 agora) {
 // destaque desligado a fonte e a arte do primeiro cartao da fileira em foco, e
 // ela so tem cor se ja foi vista como destaque (corviva.txt lembra) — nao se
 // decodifica arte grande so para tingir o fundo.
-// TRES FUNDOS (ajustes_fundo_din, #205). O dono viu o fundo inteiro piscar de cor a
+// Background modes (ajustes_fundo_din, #205). O dono viu o fundo inteiro piscar de cor a
 // cada titulo ("fica feio"), entao o PADRAO e uma cor so:
 //   Cinza    #1C1C1E, o cinza escuro do tvOS (systemGray6 escuro). Liso, nunca muda.
 //   Cor      a cor escolhida em Ajustes, escurecida para o nivel do fundo (OKLab,
 //            L fixo): "Branco" ou "Dourado" cheios matariam o contraste do texto.
 //   Imersivo a cor do titulo de antes, mas presa: L numa faixa estreita, croma
 //            com teto, troca longa (~1,2 s) e so depois que o foco assenta (400 ms).
-// Cinza e Cor sao lisos (queda 1); so o Imersivo guarda o degrade para a base.
+// Cinza e Cor sao lisos (queda 1); Imersivo e Cinza escuro usam degrade.
 #define DIN_FUNDO_CINZA    0
 #define DIN_FUNDO_COR      1
 #define DIN_FUNDO_IMERSIVO 2
+#define DIN_FUNDO_CINZA_ESCURO 3
 #define DIN_QUEDA          0.34f   // Imersivo: o que sobra da cor na base da tela
 #define DIN_TROCA_TAU      0.11f   // s; troca de modo ou de cor fixa: ~0,45 s
 #define DIN_IMERSIVO_TAU   0.30f   // s; ~1,2 s para assentar, sem piscada
@@ -4079,6 +4080,7 @@ static void home_atualizar_(float dt, Uint32 agora) {
 #define DIN_IMERSIVO_L0    0.20f   // faixa de L (OKLab) do Imersivo: 0,05 de largura
 #define DIN_IMERSIVO_L1    0.25f
 static const float DIN_CINZA[3] = { 28 / 255.0f, 28 / 255.0f, 30 / 255.0f };   // #1C1C1E
+static const float DIN_CINZA_ESCURO[3] = { 26 / 255.0f, 27 / 255.0f, 31 / 255.0f }; // #1A1B1F; base ~#0E0F12
 static char  dinColArte[512];   // banner de colecao mostrado ("" = nenhum), ver dinArteColecao
 static float dinColAlfa = 0.0f;
 static float dinCor[3]  = { 28 / 255.0f, 28 / 255.0f, 30 / 255.0f };
@@ -4111,6 +4113,8 @@ static float dinPasso(Uint32 agora, const char *arte) {
   dinUlt = agora ? agora : 1u;
   if (modo == DIN_FUNDO_CINZA) {
     memcpy(dinAlvo, DIN_CINZA, sizeof dinAlvo); dinQuedaAlvo = 1.0f;
+  } else if (modo == DIN_FUNDO_CINZA_ESCURO) {
+    memcpy(dinAlvo, DIN_CINZA_ESCURO, sizeof dinAlvo); dinQuedaAlvo = 0.56f;
   } else if (modo == DIN_FUNDO_COR) {
     float c[3];
     ajustes_fundo_din_cor(c);
