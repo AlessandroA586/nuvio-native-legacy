@@ -378,6 +378,9 @@ int layout_modo_mobile(void);
 #define NV_DIV_PAINEL_F     0.45f
 #define NV_DIV_VAO          36.0f
 #define NV_DIV_META_H       150.0f
+// Em foco: logo no lugar do card, no maximo isto, alinhado a esquerda/base.
+#define NV_DIV_LOGO_W       690.0f
+#define NV_DIV_LOGO_H       270.0f
 // O numeral: corpo do TXT_RANK_GRANDE (os algarismos da Inter medem ~0,73 do
 // corpo, ~190 px contra o cartaz de 322 — perto de 60%, a proporcao da Apple),
 // quanto da largura dele fica POR BAIXO do cartaz, e a folga minima ate o
