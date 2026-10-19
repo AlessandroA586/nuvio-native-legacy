@@ -2,7 +2,7 @@
 //
 // Qualidade: Todas as versoes (padrao), So 4K, ou Preferir 4K (um por canal:
 // a 4K se houver, senao a maior resolucao). "O mesmo canal" e o nome-base de
-// livetv_regras.h dentro da mesma fonte e do mesmo grupo. Categoria e canal
+// livetv_regras.h dentro da mesma fonte, inclusive entre grupos. Categoria e canal
 // escondidos ficam por perfil, como os add-ons escondidos (guiaaddons.h).
 //
 // Modulo sem rede nem tela: o guia chama guiafiltro_avaliar ANTES do teto de

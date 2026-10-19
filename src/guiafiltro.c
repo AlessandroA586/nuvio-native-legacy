@@ -98,8 +98,7 @@ static uint64_t chaveDe(int fonte, const char *grupo, const char *base) {
   const char *p;
   snprintf(pre, sizeof pre, "%d\x1f", fonte);
   for (p = pre; *p; p++) h = (h ^ (unsigned char)*p) * 1099511628211ULL;
-  for (p = grupo ? grupo : ""; *p; p++) h = (h ^ (unsigned char)*p) * 1099511628211ULL;
-  h = (h ^ 0x1f) * 1099511628211ULL;
+  (void)grupo; // Resolution categories do not identify a channel within its source.
   for (p = base; *p; p++) h = (h ^ (unsigned char)*p) * 1099511628211ULL;
   return h ? h : 1;
 }

@@ -238,6 +238,44 @@ static void variantsRegression(void) {
   assert(guia_variantes("xtream:4", v, 3) == 3);
   assert(!strcmp(v[1].nome, "X HD") && !strcmp(v[2].nome, "X SD"));
 }
+static void categoriesRegression(void) {
+  int fl = begin(GF_PREFERIR_4K, 1);
+  channel(fl, "Sports", "xtream:1", "X FHD");
+  channel(fl, "UHD", "xtream:2", "X 4K");
+  assert(sNCanais == 1 && !strcmp(sCanais[0].id, "xtream:2"));
+  adotarStaging();
+  GuiaVariante v[3];
+  assert(guia_variantes("xtream:2", v, 3) == 2);
+  fl = begin(GF_TODAS, 3);
+  channel(fl, "Sports", "xtream:1", "X FHD");
+  channel(fl, "UHD", "xtream:2", "X 4K");
+  adotarStaging();
+  assert(guia_variantes("xtream:2", v, 3) == 2);
+}
+static void inventoryRegression(void) {
+  for (int mode = GF_TODAS; mode < GF_MODOS; mode++) {
+    int fl = begin(mode, 5);
+    if (mode == GF_TODAS) guiafiltro_cat_alternar(&sFltLive, "Sports");
+    channel(fl, "Sports", "xtream:1", "X FHD");
+    channel(fl, "Sports", "xtream:2", "X 4K");
+    adotarStaging(); cacheGravar();
+    filtrosAbrir(); fMontarCanais("Sports");
+    assert(fN == 2);
+    assert(!strcmp(fIt[0].id, "xtream:1") && !strcmp(fIt[1].id, "xtream:2"));
+    // Offline inventory must remain available after staging reset.
+    begin(mode, 5); cacheFonteLer("xt"); adotarStaging();
+    filtrosAbrir(); fMontarCanais("Sports"); assert(fN == 2);
+  }
+}
+static void rawBudgetRegression(void) {
+#ifdef GUIAFILTRO_RAW_TEST
+  int fl = begin(GF_SO_4K, 1);
+  for (int i = 0; i < 100000; i++) channel(fl, "Sports", "xtream:1", "X FHD");
+  assert(sCache[fl] && ftell(sCache[fl]) <= 2 * 1024 * 1024);
+  adotarStaging(); cacheGravar();
+  assert(sCache[fl] == NULL);
+#endif
+}
 int main(int argc, char **argv) {
   int fl;
   assert(argc == 2); dados_iniciar(argv[1]);
@@ -255,6 +293,9 @@ int main(int argc, char **argv) {
                               strstr(regression, "hidden") != NULL, strstr(regression, "retry") != NULL);
     else if (!strcmp(regression, "visibility")) visibilityRegression();
     else if (!strcmp(regression, "variants")) variantsRegression();
+    else if (!strcmp(regression, "categories")) categoriesRegression();
+    else if (!strcmp(regression, "inventory")) inventoryRegression();
+    else if (!strcmp(regression, "raw-budget")) rawBudgetRegression();
     else assert(0);
     printf("PASS: %s regression\n", regression);
     return 0;

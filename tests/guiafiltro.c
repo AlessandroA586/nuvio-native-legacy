@@ -73,10 +73,10 @@ int main(void) {
   { const Ent inv[] = { { "G", "1", "Z SD" }, { "G", "2", "Z HD" }, { "G", "3", "Z 4K" } };
     n = carrega(&f, inv, 3, 99, r, &alt);
     CHECA(n == 1 && !strcmp(r[0].nome, "Z 4K") && alt == 2); }
-  // Mesma base em grupos diferentes continua separada.
+  // Resolution categories share one channel within a source.
   { const Ent dois[] = { { "A", "1", "Q HD" }, { "B", "2", "Q FHD" } };
     n = carrega(&f, dois, 2, 99, r, &alt);
-    CHECA(n == 2 && alt == 0); }
+    CHECA(n == 1 && alt == 1 && !strcmp(r[0].nome, "Q FHD")); }
   // Categoria escondida sai ANTES do teto: nao gasta vaga.
   guiafiltro_modo_definir(&f, GF_TODAS);
   { const Ent c[] = { { "Adulto", "1", "P1" }, { "Adulto", "2", "P2" }, { "Adulto", "3", "P3" },

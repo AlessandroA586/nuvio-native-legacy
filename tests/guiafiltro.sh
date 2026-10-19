@@ -17,12 +17,41 @@ git show 2e8eb26cd:src/guia.c > "$work/review.c"
 git show 701a6e6eb:src/guia.c > "$work/empty-review.c"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
   "-DGUIACACHE_SOURCE=\"$work/guia.c\"" -o "$work/baseline"
-cc "${flags[@]}" "${sources[@]}" "${common[@]}" -o "$work/loader"
+cc "${flags[@]}" "${sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST -o "$work/loader"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
   "-DGUIACACHE_SOURCE=\"$work/review.c\"" -o "$work/review"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
   "-DGUIACACHE_SOURCE=\"$work/empty-review.c\"" -o "$work/empty-review"
+git show 46732dde2:src/guia.c > "$work/latest-review.c"
+git show 46732dde2:src/guiafiltro.c > "$work/latest-rules.c"
+latest_sources=("${sources[@]}")
+for i in "${!latest_sources[@]}"; do
+  if [ "${latest_sources[$i]}" = src/guiafiltro.c ]; then latest_sources[$i]="$work/latest-rules.c"; fi
+done
+cc "${flags[@]}" "${latest_sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST \
+  "-DGUIACACHE_SOURCE=\"$work/latest-review.c\"" -o "$work/latest-review"
 failed=0
+for regression in categories inventory raw-budget; do
+  for version in latest-review loader; do
+    rc=0
+    GUIAFILTRO_CASE="$regression" NUVIO_DADOS="$work/$version-$regression" \
+      "$work/$version" "$work/$version-$regression" > "$work/$version-$regression.log" 2>&1 || rc=$?
+    case "$regression" in
+      categories) expected='Assertion failed: (sNCanais == 1 && !strcmp(sCanais[0].id, "xtream:2"))' ;;
+      inventory) expected='Assertion failed: (fN == 2)' ;;
+      raw-budget) expected='Assertion failed: (sCache[fl] && ftell(sCache[fl]) <= 2 * 1024 * 1024)' ;;
+    esac
+    if [ "$version" = latest-review ] && [ "$rc" = 134 ] && rg -q -F "$expected" "$work/$version-$regression.log"; then
+      printf 'PASS: reviewed revision fails %s (rc=134)\n' "$regression"
+    elif [ "$version" = loader ] && [ "$rc" = 0 ]; then
+      printf 'PASS: %s regression\n' "$regression"
+    else
+      printf 'FAIL: %s %s (rc=%s)\n' "$version" "$regression" "$rc"
+      tail -n 3 "$work/$version-$regression.log"
+      failed=1
+    fi
+  done
+done
 for regression in pagination-all pagination-4k pagination-prefer visibility variants; do
   for version in baseline loader; do
     rc=0

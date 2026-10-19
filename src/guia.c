@@ -324,7 +324,15 @@ static GCat   *sCats;    static int sNCats, sCapCats;
 static GFonteLtv sLtvF[G_MAX_LTV]; static int sNLtvF;
 static LtvArena sArena;
 static int sTeto, sRetidos;   // teto da carga e quanto ja entrou
-// Raw records stay on disk while the filtered staging list stays within its cap.
+// Bound the spool even when tmpfile() uses Emscripten's in-memory filesystem.
+#define G_RAW_BYTES_MAX (2 * 1024 * 1024)
+static size_t sCacheBytes;
+#define G_PF_CANAIS_MAX 4000
+// ponytail: settings retain at most 4000 raw channels; page inventory if needed.
+typedef struct { char id[GF_ID], nome[GF_NOME], cat[GF_NOME]; } GInventario;
+static GInventario *inventario, *sInventario;
+static int nInventario, sNInventario;
+
 static FILE *sCache[G_MAX_LTV];
 static int sCacheN[G_MAX_LTV], sCacheErro[G_MAX_LTV];
 
@@ -386,6 +394,8 @@ static void stagingZerar(void) {
     if (sCache[i]) fclose(sCache[i]);
     sCache[i] = NULL; sCacheN[i] = sCacheErro[i] = 0;
   }
+  sCacheBytes = 0;
+  free(sInventario); sInventario = NULL; sNInventario = 0;
   sFiltrados = 0;
   guiafiltro_dup_zerar(&sDup);
   free(sAlts); sAlts = NULL; sNAlts = 0;
@@ -490,6 +500,15 @@ static int sCanalAdd(int f, const GCru *c) {
   GCanal *g;
   int cat, velho = -1, quem;
   const char *grupo = c->grupo && c->grupo[0] ? c->grupo : "Outros";
+  if (sNInventario < G_PF_CANAIS_MAX) {
+    if (!sInventario) sInventario = calloc(G_PF_CANAIS_MAX, sizeof *sInventario);
+    if (sInventario) {
+      GInventario *v = &sInventario[sNInventario++];
+      snprintf(v->id, sizeof v->id, "%s", c->id);
+      snprintf(v->nome, sizeof v->nome, "%s", c->nome);
+      snprintf(v->cat, sizeof v->cat, "%s", grupo);
+    }
+  }
   if (!sLtvF[f].deCache &&
       (sFltLive.modo != GF_TODAS || sFltLive.nCat || sFltLive.nCan)) cacheCru(f, grupo, c);
   // O filtro vem ANTES do teto: escondido ou colapsado nao gasta vaga.
@@ -1440,6 +1459,14 @@ static int cInt(FILE *f, long long v) { return fwrite(&v, sizeof v, 1, f) == 1; 
 
 static void cacheCru(int f, const char *grupo, const GCru *c) {
   if (sCacheErro[f]) return;
+  size_t bytes = sizeof(long long) + 11 * sizeof(unsigned short);
+  const char *fields[] = {grupo, c->id, c->nome, c->logo, c->desc, c->epgId,
+                         c->tvgNome, c->url, c->ua, c->ref, c->tipo};
+  for (size_t i = 0; i < sizeof fields / sizeof fields[0]; i++) {
+    size_t n = fields[i] ? strlen(fields[i]) : 0;
+    bytes += n > 65535 ? 65535 : n;
+  }
+  if (bytes > G_RAW_BYTES_MAX - sCacheBytes) { sLtvF[f].cortada = 1; return; }
   if (!sCache[f]) sCache[f] = tmpfile();
   FILE *fp = sCache[f];
   if (!fp || !(cStr(fp, grupo) && cInt(fp, c->numero) && cStr(fp, c->id) &&
@@ -1450,6 +1477,7 @@ static void cacheCru(int f, const char *grupo, const GCru *c) {
     return;
   }
   sCacheN[f]++;
+  sCacheBytes += bytes;
 }
 
 static void cacheFonteGravar(int f) {
@@ -1579,6 +1607,8 @@ static void cacheGravar(void) {
     if (!ltvF[i].deCache && (sCacheN[i] > 0 ||
         (sFltLive.modo == GF_TODAS && !sFltLive.nCat && !sFltLive.nCan && ltvF[i].nCanais > 0)))
       cacheFonteGravar(i);
+    if (sCache[i]) { fclose(sCache[i]); sCache[i] = NULL; }
+    sCacheN[i] = 0;
     u += (size_t)snprintf(buf + u, sizeof buf - u, "%s\n", ltvF[i].chave);
   }
   buf[u] = 0;
@@ -1878,6 +1908,8 @@ static void adotarStaging(void) {
   fontesLtvSoltar(ltvF, nLtvF);
   ltv_arena_soltar(&arena);
   free(canais); free(cats); free(alts);
+  free(inventario); inventario = sInventario; nInventario = sNInventario;
+  sInventario = NULL; sNInventario = 0;
   alts = sAlts; nAlts = sNAlts; sAlts = NULL; sNAlts = 0;
   canais = sCanais; nCanais = sNCanais; capCanais = sCapCanais;
   cats = sCats; nCats = sNCats; capCats = sCapCats;
@@ -2345,7 +2377,7 @@ int guia_variantes(const char *id, GuiaVariante *out, int max) {
   n++;
   if (!base[0]) return n;
   for (i = 0; i < nCanais && n < max; i++) {
-    if (&canais[i] == c || canais[i].fonte != c->fonte || canais[i].cat != c->cat ||
+    if (&canais[i] == c || canais[i].fonte != c->fonte ||
         guiafiltro_canal_oculto(&fltLive, canais[i].id) || !xtream_e_id(canais[i].id)) continue;
     nv_nome_base(canais[i].nome, outra, sizeof outra);
     if (strcmp(base, outra)) continue;
@@ -3024,15 +3056,14 @@ static void fMontarCats(void) {
     fIt[k].oculto = 1;
   }
 }
-#define G_PF_CANAIS_MAX 4000
 static void fMontarCanais(const char *cat) {
   int i, k;
   free(fIt); fIt = calloc(G_PF_CANAIS_MAX + GF_CANAIS_MAX, sizeof *fIt); fN = 0;
   if (!fIt) return;
-  for (i = 0; i < nCanais && fN < G_PF_CANAIS_MAX; i++) {
-    if (canais[i].cat < 0 || canais[i].cat >= nCats || strcmp(cats[canais[i].cat].nome, cat)) continue;
-    snprintf(fIt[fN].id, sizeof fIt[fN].id, "%s", canais[i].id);
-    snprintf(fIt[fN].nome, sizeof fIt[fN].nome, "%s", canais[i].nome);
+  for (i = 0; i < nInventario && fN < G_PF_CANAIS_MAX; i++) {
+    if (strcmp(inventario[i].cat, cat)) continue;
+    snprintf(fIt[fN].id, sizeof fIt[fN].id, "%s", inventario[i].id);
+    snprintf(fIt[fN].nome, sizeof fIt[fN].nome, "%s", inventario[i].nome);
     fN++;
   }
   for (i = 0; i < fltLive.nCan; i++) {
