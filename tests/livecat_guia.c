@@ -26,6 +26,16 @@ static void addM3u(M3uCtx *ctx, const char *name, const char *group, const char 
   c.tvgId = c.tvgNome = c.logo = c.ua = c.referer = "";
   assert(m3uCanal(&c, ctx));
 }
+static void checkGroups(void) {
+  GFonteLtv *f = &sLtvF[0];
+  int sports = 0, kids = 0, other = 0;
+  for (int i = 0; i < f->ngi; i++) {
+    if (!strcmp(f->gi[i].nome, "Esportes")) sports = f->gi[i].n;
+    if (!strcmp(f->gi[i].nome, "Infantil")) kids = f->gi[i].n;
+    if (!strcmp(f->gi[i].nome, "Outros")) other = f->gi[i].n;
+  }
+  assert(sports == 2 && kids == 1 && other == 0);
+}
 int main(void) {
   M3uCtx ctx = {0};
   dados_iniciar(NULL);
@@ -45,6 +55,8 @@ int main(void) {
   assert(!strcmp(sCats[sCanais[1].cat].nome, "Infantil"));
   assert(!strcmp(sCats[sCanais[2].cat].nome, "Esportes"));
   assert(!strcmp(sCats[sCanais[3].cat].nome, "Provider custom"));
+  checkGroups();
+  puts("PASS: suggested sections appear in source selector with accurate counts");
   puts("PASS: unclassified list builds suggested sections; local/provider categories untouched; setting off sends nothing");
   cargaCancelada = 1; sugerirSecoes(); assert(posts == 1);
   puts("PASS: cancelled guide load sends nothing");
@@ -63,7 +75,32 @@ int main(void) {
   enabled = 1; sugerirSecoes();
   assert(posts == 1 && !strcmp(sCats[sCanais[0].cat].nome, "Esportes"));
   assert(!strcmp(sCats[sCanais[3].cat].nome, "Provider custom"));
-  puts("PASS: source cache preserves fallback; disk suggestions regroup without network; setting off restores original groups");
+  checkGroups();
+  // Choosing one suggested section must survive a fresh provider load.
+  LtvPref *pref = ltv_pref(source, 1);
+  const char *selected[] = {"Infantil"};
+  ltv_pref_definir_grupos(pref, selected, 1);
+  stagingZerar(); sTeto = 100;
+  ctx.fl = sFonte(LTV_M3U, "https://private/list?token=secret", "My list", "");
+  ctx.nsel = sGruposEscolhidos(ctx.fl, ctx.sel, 256);
+  addM3u(&ctx, "Aurora HD", "", "https://private/1");
+  addM3u(&ctx, "Lumen", "", "https://private/2");
+  addM3u(&ctx, "ESPN HD", "", "https://private/3");
+  sugerirSecoes();
+  selecionarSecoes();
+  assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "Lumen"));
+  assert(!strcmp(sCats[sCanais[0].cat].nome, "Infantil"));
+  assert(posts == 1);
+  stagingZerar(); sTeto = 100;
+  assert(cacheFonteLer(source) == 4);
+  sugerirSecoes(); selecionarSecoes();
+  assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "Lumen"));
+  assert(posts == 1);
+  ltv_pref_definir_grupos(pref, NULL, 0);
+  stagingZerar(); sTeto = 100;
+  assert(cacheFonteLer(source) == 4);
+  sugerirSecoes();
+  puts("PASS: source cache preserves fallback; suggested selector selection survives reload without network");
 
   XtCtx xt = {0}; xt.fl = sFonte(LTV_XTREAM, "", "Xtream", ""); xt.decidido = 1;
   XtreamItem it = {0};

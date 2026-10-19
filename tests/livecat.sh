@@ -17,5 +17,18 @@ if [ "$(uname -s)" = Darwin ]; then flags+=(-Wl,-dead_strip); else flags+=(-Wl,-
 cc tests/livecat_guia.c src/livecat.c src/dados.c src/ltv.c src/js.c src/idcanal.c -Isrc \
   -DNV_REC_URL='"http://rec.test"' -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -O1 -g -Wno-macro-redefined "${flags[@]}" -o "$tmp/guia"
-NUVIO_DADOS="$tmp/guide" "$tmp/guia"
+# Run both integration regressions even when one fails (FAIL-before evidence).
+rc=0
+NUVIO_DADOS="$tmp/guide" "$tmp/guia" || rc=1
+sources=()
+for source in src/*.c src/dts/*.c; do
+  case "$source" in src/main.c|src/guia.c) continue;; esac
+  sources+=("$source")
+done
+cc "${sources[@]}" tests/livecat_toggle.c -Isrc -o "$tmp/toggle" -O1 \
+  -DNV_SUPABASE_URL='""' -DNV_SUPABASE_ANON_KEY='""' -DNV_TV_LOGIN_BASE='""' \
+  -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -L/opt/homebrew/lib \
+  -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL -Wno-deprecated-declarations
+NUVIO_DADOS="$tmp/toggle-data" "$tmp/toggle" || rc=1
+[ "$rc" = 0 ] || exit "$rc"
 node servidor/recomendacoes/teste-livetvcat.mjs
