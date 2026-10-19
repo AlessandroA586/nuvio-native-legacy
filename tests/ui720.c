@@ -137,7 +137,7 @@ static void timing(int settings, int mode, int whole, double *host, double *gpu)
   *host=median(hs); *gpu=median(gs);
 }
 int main(int argc,char **argv) {
-  assert(argc==2); SDL_SetHint("SDL_MAC_BACKGROUND_APP","1");
+  assert(argc==2 || argc==3); SDL_SetHint("SDL_MAC_BACKGROUND_APP","1");
   assert(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER)==0); IMG_Init(IMG_INIT_PNG|IMG_INIT_JPG);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,2); SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,1);
   SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE,8);
@@ -181,6 +181,41 @@ int main(int argc,char **argv) {
   pixels=malloc(capacity);flipped=malloc(capacity);linear=malloc(capacity);native=malloc(capacity);
   assert(pixels&&flipped&&linear&&native);
   int failed=0;
+  if(argc==3) {
+    // C9 drawable: effects never select a lower-resolution target.
+    sw=1920; sh=1080;
+    for(int level=0;level<=2;level++) {
+      gpun_iniciar(sw,sh);gpun_definir_nivel(level);
+      gpun_quadro_inicio();
+      GLint bound,viewport[4];glGetIntegerv(GL_FRAMEBUFFER_BINDING,&bound);
+      glGetIntegerv(GL_VIEWPORT,viewport);
+      assert(!bound && viewport[2]==1920 && viewport[3]==1080);
+      frame(1);gpun_quadro_fim();
+      char name[64];snprintf(name,sizeof name,"native-level-%d",level);png(argv[1],name);
+    }
+    puts("PASS C9 levels 0/1/2 retain native 1080p; 720p only explicit");
+    for(int algo=0;algo<=5;algo++) for(int sharp=0;sharp<=4;sharp+=4) {
+      gpun_iniciar(sw,sh);gpun_forcar_720();gpun_ampliar_app(1);gpun_ampliacao(algo,sharp);
+      for(int repeat=0;repeat<2;repeat++) {
+        gpun_quadro_inicio();frame(1);
+        glEnable(GL_SCISSOR_TEST);glScissor(40,40,200,120);
+        glClearColor(0.2f,0.4f,0.6f,1);glClear(GL_COLOR_BUFFER_BIT);glDisable(GL_SCISSOR_TEST);
+        gpun_quadro_fim();readback();
+        size_t bytes=(size_t)sw*sh*4;
+        memcpy(native,pixels,bytes);
+        char name[64];snprintf(name,sizeof name,"algo-%d-sharp-%d-frame-%d",algo,sharp,repeat);png(argv[1],name);
+        source=intTex;candidate=0;copy(0);readback();
+        int pass=1;
+        for(size_t i=3;i<bytes;i+=4) if(native[i]!=pixels[i]) {pass=0;break;}
+        size_t patch=((size_t)100*sw+150)*4;
+        for(int c=0;c<3;c++) if(abs(native[patch+c]-(c+1)*51)>2) pass=0;
+        printf("%s C9 algorithm=%d sharpness=%d frame=%d flat RGB=%d/%d/%d alpha=bilinear contract\n",
+          pass?"PASS":"FAIL",algo,sharp,repeat,native[patch],native[patch+1],native[patch+2]);
+        if(!pass) failed=1;
+      }
+    }
+    return failed;
+  }
   for(int test=0;test<4;test++) {
     sw=test==1||test==2?3840:1920;sh=sw*9/16;
     iw=test>=2?1920:1280;ih=iw*9/16;

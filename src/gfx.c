@@ -1671,8 +1671,9 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  gl_FragColor = nv_dither(c, a);\n"
   "}\n",
   NV_SHARP_BILINEAR_SHADER,
+  // Explicit slots keep independently merged output passes aligned with GfxModo.
   // Decode sRGB, convert primaries for PQ, and anchor SDR white at 203 nits.
-  "void main(){\n"
+  [GFX_HDR_OUTPUT] = "void main(){\n"
   "  vec4 t=texture2D(uTex,vec2(vUv.x,1.0-vUv.y));\n"
   "  vec3 s=clamp(t.rgb/max(t.a,0.00001),0.0,1.0);\n"
   "  vec3 c=mix(s/12.92,pow((s+0.055)/1.055,vec3(2.4)),step(vec3(0.04045),s));\n"
@@ -1689,9 +1690,9 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  }else c*=203.0/80.0;\n"
   "  gl_FragColor=vec4(c*t.a,t.a);\n"
   "}\n",
-  NV_EASU_SHADER,
-  NV_LANCZOS_SHADER,
-  NV_RCAS_SHADER,
+  [GFX_COPIA_EASU] = NV_EASU_SHADER,
+  [GFX_COPIA_LANCZOS] = NV_LANCZOS_SHADER,
+  [GFX_RCAS] = NV_RCAS_SHADER,
 };
 
 // Cada corpo declara o que usa; montar so o necessario mantem o shader enxuto.
