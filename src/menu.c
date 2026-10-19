@@ -1443,7 +1443,7 @@ static void topoMedir(TopoTira *t) {
   static TopoTira cache;
   static int idioma = -1, fonte = -1, pagina = -1;
   static float largura, escala, relogio;
-  int k, nl = 0, ni = 0, din = topoDinamica();
+  int k, nl = 0, ni = 0, din = topoDinamica(), pend = txt_pendentes;
   float txt = 0.0f, disp, fixo, anterior = gfx_escala();
   if (din) gfx_escala_sair(NV_MENU_ESCALA);
   t->n = topoLista(t->ordem);
@@ -1478,11 +1478,13 @@ static void topoMedir(TopoTira *t) {
              : 2.0f * t->pad + txt_linha_corta(TOPO_TXT, topoRotulo(t->ordem[k]), 255, 255, 255, 255, t->rotMax).w;
     t->larg += t->ws[k];
   }
-  if (din) {
+  // A label refused by the frame's raster budget measures 0: never cache it
+  // (TCL boot drew every label stacked at the strip's start).
+  if (din && txt_pendentes == pend) {
     cache = *t; pagina = destino; idioma = ajustes_idioma(); fonte = txt_fonte_interface();
     largura = NV_TELA_W; escala = NV_MENU_ESCALA; relogio = TOPO_RELOGIO;
-    gfx_escala_sair(anterior);
   }
+  if (din) gfx_escala_sair(anterior);
 }
 
 // x da pilula k na tira (0 = inicio dela): tab_pill_x deles.
