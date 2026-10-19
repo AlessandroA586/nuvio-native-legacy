@@ -96,9 +96,10 @@ static int tituloSalvo(const CatItem *ci) {
   int fonte = ajustes_fonte_biblioteca();
   if (ci->naLista && (ci->listaFontes & (1u << fonte))) return 1;
   if (!ci->imdb[0]) return 0;
+  if (cat_imdb_na_lista_fonte(ci->imdb)) return 1;
   if (fonte == AJ_SALVOS_LOCAL) return salvos_tem(ci->imdb);
   if (fonte == AJ_SALVOS_SIMKL) return simkl_ativo() && simkl_na_plantowatch(ci->imdb);
-  return cat_imdb_na_lista_fonte(ci->imdb);
+  return 0;
 }
 
 static int   aberto, idx = -1, foco;

@@ -336,9 +336,8 @@ int cat_acrescentar_lote(const CatItem *v, int qtd, int *saidaIdx);
 // quantos entraram.
 int cat_mesclar_listas(const CatItem *v, int qtd);
 
-// Atualiza o espelho local de "esta na watchlist". A verdade e o Trakt, mas
-// esperar o proximo ciclo de descoberta para o botao mudar de cara faria o
-// toque parecer sem efeito.
+// Update effective-source membership on every copy of the indexed title.
+// Keep unrelated remote sources; items without an ID update only this index.
 void cat_definir_na_lista(int i, int naLista);
 // Por TITULO, em todas as copias do catalogo (ver catalogo.c).
 int  cat_definir_na_lista_imdb(const char *imdb, int naLista);

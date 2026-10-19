@@ -27,6 +27,8 @@ int test_simkl_write(const char *id, const char *type, int add) {
 int bibfonte_library_count(void);
 int bibfonte_discovery_watchlist(void);
 const char *bibfonte_menu_label(int index);
+void bibfonte_menu_toggle(int index);
+void bibfonte_app_toggle(int index);
 #define CHECK(name, condition) do { int ok = !!(condition); \
   printf("%s: %s\n", ok ? "PASS" : "FAIL", name); failures += !ok; } while (0)
 
@@ -49,6 +51,7 @@ int main(int argc, char **argv) {
   cat_definir_tudo(&ci, 1, NULL, 0); assert(cat_n() == 1);
   salvos_iniciar();
   if (argc == 2) { screenshots(argv[1]); return 0; }
+  dados_gravar("salvar-perguntado.txt", "1\n");
   // Restore the factory source through the actual confirmation event.
   assert(definirValorDireto(AJ_SALVOS_DEST, AJ_SALVOS_LOCAL));
   uxAbrirEditor(AJ_SALVOS_DEST);
@@ -153,11 +156,25 @@ int main(int argc, char **argv) {
   CHECK("duplicate title appears once in Simkl Library", bibfonte_library_count() == 1);
   CHECK("Detail sees Simkl membership on every copy", biblioteca_na_lista(0) && biblioteca_na_lista(1));
   int duplicateWrites = simklWrites;
-  ilhasalvar_executar(cat_item(1), !biblioteca_na_lista(1));
+  bibfonte_app_toggle(1);
   CHECK("Detail removes duplicate from Simkl instead of adding", simklWrites == duplicateWrites - 1);
   CHECK("duplicate removal clears Simkl on every copy", !biblioteca_na_lista(0) && !biblioteca_na_lista(1) && bibfonte_library_count() == 0);
   ajustes_definir_salvos_destino(AJ_SALVOS_TRAKT);
   CHECK("duplicate removal preserves Trakt on every copy", biblioteca_na_lista(0) && biblioteca_na_lista(1));
+  // Account reconciliation can precede another Home row for the same title.
+  ajustes_definir_salvos_destino(AJ_SALVOS_LOCAL);
+  cat_definir_tudo(&ci, 1, NULL, 0);
+  salvos_definir(&ci, 0);
+  assert(contalib_ler_biblioteca("[{\"content_id\":\"tt1234567\",\"content_type\":\"series\",\"name\":\"Saved series\"}]") == 1);
+  assert(contalib_aplicar_catalogo() == 1);
+  assert(cat_acrescentar_lote(&ci, 1, NULL) == 1);
+  CHECK("account-only duplicate absent from local file", !salvos_tem(ci.imdb));
+  CHECK("account-only duplicate Detail reports saved", biblioteca_na_lista(1));
+  CHECK("account-only duplicate menu offers remove", !strcmp(bibfonte_menu_label(1), "Remover dos Salvos"));
+  bibfonte_menu_toggle(1);
+  CHECK("account-only duplicate menu removes instead of adding", !salvos_tem(ci.imdb) && !biblioteca_na_lista(0) && !biblioteca_na_lista(1) && bibfonte_library_count() == 0);
+  salvos_definir(&ci, 0);
+  assert(contalib_ler_biblioteca("[{\"content_id\":\"tt7654321\",\"content_type\":\"series\",\"name\":\"Account series\"}]") == 1);
 #endif
   // Saved sidebar must offer only titles removable from its selected source.
   SalvosEntrada sidebar[8];
@@ -231,7 +248,7 @@ int main(int argc, char **argv) {
     salvos_definir(&ci, 1);
     CHECK("Nuvio title exists before remote removal", biblioteca_na_lista(0) && salvos_tem(ci.imdb));
     ajustes_definir_salvos_destino(source);
-    ilhasalvar_executar(cat_item(0), 0);
+    bibfonte_app_toggle(0);
     CHECK("remote removal deletes local save", !salvos_tem(ci.imdb));
     CHECK("remote removal clears selected source", !biblioteca_na_lista(0) && !biblioteca_na_lista(1));
     ajustes_definir_salvos_destino(AJ_SALVOS_LOCAL);

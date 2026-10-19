@@ -1955,7 +1955,13 @@ static void definir_na_lista(int i, int naLista) {
 void cat_definir_na_lista(int i, int naLista) {
   CAT_TESTE_ANTES_TRAVA();
   catTravar();
-  definir_na_lista(i, naLista);
+  if (itens && i >= 0 && i < n) {
+    // Index callers also change title membership, across every Home row.
+    const char *id = itens[i].imdb;
+    for (int j = 0; j < n; j++)
+      if (j == i || (id[0] && !strcmp(itens[j].imdb, id)))
+        definir_na_lista(j, naLista);
+  }
   pthread_mutex_unlock(&pubTrava);
 }
 

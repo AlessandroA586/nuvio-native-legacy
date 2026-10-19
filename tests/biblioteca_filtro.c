@@ -91,7 +91,7 @@ int main(void) {
   { SalvosEntrada u[140]; int n = salvos_uniao(u, (int)(sizeof u / sizeof u[0]));
     int locais = 0, k;
     for (k = 0; k < n; k++) if (u[k].local >= 0) locais++;
-    assert(locais == 12); }   // lista local continua salva; so some da fonte
+    assert(n == 126 && locais == 0 && salvos_n() == 12); } // Hidden here, still persisted.
   fonteBib = AJ_SALVOS_SIMKL;
   confere(126);
   fonteBib = AJ_SALVOS_LOCAL;
