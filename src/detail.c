@@ -2793,7 +2793,7 @@ static void executarMais(int dm) {
 static void detail_evento_(const SDL_Event *e) {
   pediuRelogio = 0;
   if (sinopse_aberta()) {
-    if (sinopse_comentario_aberto() && e->type == SDL_KEYDOWN &&
+    if (!episodios_menu_aberto() && sinopse_comentario_aberto() && e->type == SDL_KEYDOWN &&
         (e->key.keysym.sym == SDLK_LEFT || e->key.keysym.sym == SDLK_RIGHT))
       abrirComentario(comLeitorIndice + (e->key.keysym.sym == SDLK_RIGHT ? 1 : -1));
     else sinopse_evento(e);
