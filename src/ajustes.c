@@ -678,6 +678,7 @@ typedef enum {
   AJ_AUDIO_OFFSET,     // #578: device-local converted audio offset, append-only
   AJ_XTREAM_CONEXOES,  // Stored with this IPTV account, not global settings.
   AJ_AMPLIAR_UI,      // Device-local output scaler, append-only; App (4K) by default.
+  AJ_BIB_HOME,        // #507: Library row on Home; default off; per profile on this device, append-only
   AJ_AMPLIACAO_ALGO,  // Device-local upscaling algorithm, append-only; automatic by default.
   AJ_AMPLIACAO_NITIDEZ, // Device-local RCAS sharpness for SGSR sharp / FSR 1, append-only.
   AJ_N
@@ -1753,6 +1754,7 @@ static const Opcao OPCOES[AJ_N] = {
   NUM("Ajuste do áudio (ms)", -AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_STEP_MS, " ms"),
   ESC("Conta com limite de conexões", V_CONEXOES, 3),
   ESC("Ampliar interface", V_AMPLIAR_UI, 2),
+  ESC("Fileira da Biblioteca", V_LIGA, 2),   // local: libraryRowLocal
   ESC("Algoritmo de ampliação", V_AMPLIACAO_ALGO, 6),
   NUM("Nitidez", 0, 4, 1, NULL),
 };
@@ -2064,6 +2066,7 @@ static const char *CHAVE[] = {
   "audioOffsetMsLocal",
   "-xtreamConexoes",
   "ampliarUiLocal",
+  "libraryRowLocal",
   "ampliarAlgoLocal",
   "ampliarNitidezLocal",
 };
@@ -3033,6 +3036,7 @@ unsigned ajustes_manter_video_ms(void) {
 int ajustes_selo_visto(void) { return valor[AJ_SELO_VISTO] != 1; }
 int ajustes_selo_visto_modo(void) { return valor[AJ_SELO_VISTO] == 1 ? 0 : valor[AJ_SELO_VISTO] == 2 ? 2 : 1; }
 int ajustes_ocultar_filmes_vistos(void) { return lig(AJ_OCULTAR_FILMES_VISTOS); }
+int ajustes_bib_home(void) { return lig(AJ_BIB_HOME); }
 void ajustes_definir_ocultar_filmes_vistos(int ligado) {
   valor[AJ_OCULTAR_FILMES_VISTOS] = ligado ? 0 : 1;
   AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar());
@@ -5736,6 +5740,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_VIDRO_QUALIDADE: /* o custo do desfoque e da GPU desta TV */
     case AJ_SELO_VISTO:     /* o web nao tem a escolha */
     case AJ_OCULTAR_FILMES_VISTOS: /* por perfil desta TV; fora do blob da conta */
+    case AJ_BIB_HOME:       /* #507: idem */
     case AJ_REACAO_CREDITOS: /* o web nao tem a pergunta */
     case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PROXIMO_AUTO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_CONTAGEM: /* idem: local desta TV */
     case AJ_SEEKR_LIGADO: case AJ_SEEKR_FITA: case AJ_SEEKR_AJUSTE: /* o web nao tem o Seekr */
@@ -5764,7 +5769,7 @@ static int somenteDesteAparelho(int op) {
 // (ajustes-p<N>.txt) e continuam FORA do blob (somenteDesteAparelho).
 static int perfilLocal(int i) {
   return i == AJ_COLECAO_EXIBICAO || i == AJ_CW_FONTE || i == AJ_CW_PROXIMO || i == AJ_SALVOS_DEST || i == AJ_HIST_CONTA || i == AJ_SOCIAL ||
-         i == AJ_MENU_TOPO || i == AJ_ABAS_ESTILO || i == AJ_OCULTAR_FILMES_VISTOS;
+         i == AJ_MENU_TOPO || i == AJ_ABAS_ESTILO || i == AJ_OCULTAR_FILMES_VISTOS || i == AJ_BIB_HOME;
 }
 
 static int dePerfil(int i) {
@@ -7182,6 +7187,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_HERO_CATALOGOS: return "De onde vêm os títulos do destaque: os primeiros do catálogo, um sorteio, ou uma fileira da Home. OK troca.";
     case AJ_PS_FUNDO: return "Fundo da tela de escolha de perfil. Filmes: os cartazes do que cada perfil assistiu, numa parede inclinada. Luz: preto com uma luz na cor do perfil. Projetor: sala de cinema antes da sessão. Arte do perfil: o fundo escolhido ao editar o perfil no app Nuvio; sem ele, o avatar desfocado. Ou as listras do login.";
     case AJ_DESCOBRIR: return "Onde fica a tela Descobrir: junto da Busca, como item próprio na barra lateral, ou em lugar nenhum.";
+    case AJ_BIB_HOME: return "Mostra na Tela inicial uma fileira com os títulos salvos na Biblioteca, logo abaixo de Continuar assistindo.";
     case AJ_SELO_VISTO: return "Marca no pôster dos títulos que você já assistiu: um ícone de check ou a palavra Assistido.";
     case AJ_OCULTAR_FILMES_VISTOS: return "Oculta filmes já assistidos nas fileiras de descoberta. Busca e Biblioteca continuam mostrando todos. Vale para este perfil neste aparelho.";
     case AJ_ROTULOS: return "Escreve o nome do título abaixo do cartaz. A maior parte da arte já traz o nome impresso.";
@@ -7629,6 +7635,7 @@ static const char *beneficioProprio(int op) {
     case AJ_LIVETV_RES: return "Qual versão do canal entra primeiro: FHD, HD ou SD.";
     case AJ_XTREAM_CONTA: return "Se a assinatura está ativa, quando vence e quantas telas usa.";
     case AJ_PERFIL_EDITAR: return "Apelido, bio e o que os amigos veem no seu perfil.";
+    case AJ_BIB_HOME: return "Os títulos salvos numa fileira da Tela inicial.";
     case AJ_SELO_VISTO: return "Um check no cartaz do que você já assistiu.";
     case AJ_CW_ORDEM: return "Em que ordem a retomada mostra os títulos.";
     case AJ_FONTE_REGEX: return "Sobe ou exige fontes cujo nome casa com um padrão.";
@@ -9930,7 +9937,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_HERO_SINOPSE: case AJ_HERO_NOTAS: case AJ_HERO_ANO: case AJ_HERO_DURACAO:
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: case AJ_DESCOBRIR: case AJ_ROTULOS:
     case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_OCULTAR_NLANC: case AJ_MURAL_TITULOS:
-    case AJ_NOTAS_HOME: case AJ_GRAD_CLASSICO: case AJ_SELO_VISTO: case AJ_OCULTAR_FILMES_VISTOS: case AJ_TITULO_FIL:
+    case AJ_NOTAS_HOME: case AJ_GRAD_CLASSICO: case AJ_SELO_VISTO: case AJ_OCULTAR_FILMES_VISTOS: case AJ_BIB_HOME: case AJ_TITULO_FIL:
       return AJPV_HOME;
     case AJ_CW_LIGADO: case AJ_CW_OK: case AJ_CW_FONTE:
     case AJ_CW_ESTILO: case AJ_CW_THUMB: case AJ_CW_BLUR_PROX:

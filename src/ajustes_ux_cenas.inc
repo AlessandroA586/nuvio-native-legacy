@@ -203,7 +203,7 @@ static void ajcCenaHome(int op) {
     case AJ_HERO_CATALOGOS: case AJ_HERO_TRANSICAO: o.marca = AJC_M_HERO; break;
     case AJ_LANDSCAPE: o.paisagem = ajcLig(op); break;
     case AJ_FIL_ORDEM: case AJ_FIL_LIMITE: case AJ_ITENS_FILEIRA: case AJ_OCULTAR_NLANC:
-    case AJ_OCULTAR_FILMES_VISTOS:
+    case AJ_OCULTAR_FILMES_VISTOS: case AJ_BIB_HOME:
       o.hero = 0.0f; o.marca = AJC_M_FILEIRAS; break;
     case AJ_ROTULOS: case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: o.hero = 0; o.marca = AJC_M_TITULOS; break;
     case AJ_NOTAS_HOME: case AJ_SELO_VISTO: o.hero = 0; break;
