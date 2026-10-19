@@ -37,11 +37,14 @@ int perfis_sessao_atual(uint64_t geracao) { return geracao == 0; }
 int perfis_sessao_travar(uint64_t geracao) { (void)geracao; return 1; }
 void perfis_sessao_destravar(void) {}
 int addons_base_desligada(const char *base) { (void)base; return 0; }
+char *dados_ler(const char *n) { (void)n; return NULL; }
+int dados_gravar(const char *n, const char *v) { (void)n; (void)v; return 1; }
 const char *i18n(const char *s) { return s; }
 
 int main(void) {
   GFonte f = {0};
   int novos;
+  sTeto = 30000;
   char *cat = ler("tests/fixtures/cncverse_live_catalog.json");
   char idsOriginais[3][IDCANAL_LONGO_MAX + 1];
   const char *p = js_array(cat, NULL, "metas");
@@ -52,12 +55,14 @@ int main(void) {
   free(cat);
 
   // ---- aba ao vivo: os 3 canais entram, nenhum some por tamanho de id
-  assert(lerPagina(&f, 0, 10, &novos) == 3);
+  int fl = sFonte(LTV_ADDON, f.base, f.nome, f.base);
+  assert(fl >= 0);
+  assert(lerPagina(&f, fl, 0, &novos) == 3);
   assert(novos == 3 && sNCanais == 3);
   for (int k = 0; k < 3; k++) {
     CatItem it;
     char longo[IDCANAL_LONGO_MAX + 1];
-    canalParaItem(&sCanais[k], &it);
+    cats = sCats; canalParaItem(&sCanais[k], &it);
     assert(strlen(it.imdb) < sizeof it.imdb);                       // cabe no CatItem sem corte
     assert(!strcmp(it.imdb, sCanais[k].id));
     assert(!strcmp(idcanal_longo(it.imdb, longo, sizeof longo), idsOriginais[k]));  // o /stream/ leva o id inteiro

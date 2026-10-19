@@ -251,38 +251,39 @@ int main(void) {
   ajustes_definir_p2p_ligado(0);
   stream_definir_lista(v, count);
   assert(stream_torrents_para_p2p() == 2);
-  // Connected debrid cannot offer P2P-only sources: keep the P2P hint.
+  // Lumio-like infoHash-only notWebReady stream: connected debrid resolves it
+  // (offered, not a P2P need); only the local-engine URL still needs P2P.
   debrid_definir_chave("torbox", "chave-de-teste");
   stream_definir_lista(v, count);
-  assert(stream_n() == 8 && stream_torrents_para_p2p() == 2);
+  assert(stream_n() == 9 && stream_torrents_para_p2p() == 1);
   Stream onlyP2P[2];
   int p2pCount = 0;
   for (int i = 0; i < count; i++)
     if (!v[i].url[0] || strstr(v[i].url, "127.0.0.1")) onlyP2P[p2pCount++] = v[i];
   assert(p2pCount == 2);
   stream_definir_lista(onlyP2P, p2pCount);
-  assert(stream_n() == 0 && stream_torrents_para_p2p() == 2);
+  assert(stream_n() == 1 && stream_torrents_para_p2p() == 1);
   stream_definir_lista(NULL, 0);
   assert(stream_torrents_para_p2p() == 0);
   stream_lista_acrescentar(onlyP2P, p2pCount, 0);
-  assert(stream_n() == 0 && stream_torrents_para_p2p() == 2);
+  assert(stream_n() == 1 && stream_torrents_para_p2p() == 1);
   stream_definir_lista(l, n);
   assert(stream_torrents_para_p2p() == 0);
   for (int ligado = 0; ligado <= 1; ligado++) {
     assert(ajustes_definir_p2p_url("192.168.1.5"));
     ajustes_definir_p2p_ligado(ligado);
     stream_definir_lista(v, count);
-    assert(stream_n() == (ligado ? 10 : 8));
-    assert(stream_torrents_para_p2p() == (ligado ? 0 : 2));
+    assert(stream_n() == (ligado ? 10 : 9));
+    assert(stream_torrents_para_p2p() == (ligado ? 0 : 1));
     for (int i = 0; i < stream_n(); i++)
-      assert(ligado || (stream_item(i)->url[0] && !strstr(stream_item(i)->url, "127.0.0.1")));
+      assert(ligado || stream_item(i)->infoHash[0] || (stream_item(i)->url[0] && !strstr(stream_item(i)->url, "127.0.0.1")));
     stream_definir_lista(NULL, 0);
     stream_lista_acrescentar(v, count, 0);
-    assert(stream_n() == (ligado ? 10 : 8));
+    assert(stream_n() == (ligado ? 10 : 9));
     for (int i = 0; i < stream_n(); i++)
-      assert(ligado || (stream_item(i)->url[0] && !strstr(stream_item(i)->url, "127.0.0.1")));
+      assert(ligado || stream_item(i)->infoHash[0] || (stream_item(i)->url[0] && !strstr(stream_item(i)->url, "127.0.0.1")));
     stream_folha_abrir();
-    assert(stream_folha_n() == (ligado ? 10 : 8));
+    assert(stream_folha_n() == (ligado ? 10 : 9));
     assert(ligado || !strstr(stream_item(stream_automatico())->url, "127.0.0.1"));
     tecla(SDLK_ESCAPE);
   }

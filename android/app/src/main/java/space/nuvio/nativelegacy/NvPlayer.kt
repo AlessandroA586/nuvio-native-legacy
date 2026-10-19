@@ -129,6 +129,8 @@ object NvPlayer {
     private var cabAtual = ""
     private var abriuEm = 0L
     private var retentou = false
+    private var atrasJanelaDesde = 0L
+    private var atrasJanelaN = 0
     private var pronto = false
     private var duracaoEnviada = -1
     private var videoW = 0
@@ -1129,7 +1131,64 @@ object NvPlayer {
         val v = centesimos.coerceIn(25, 400) / 100f
         principal.post { player?.setPlaybackSpeed(v) }
     }
-    @JvmStatic fun janela(x: Int, y: Int, w: Int, h: Int, encaixa: Int) { principal.post { definirJanela(x, y, w, h, encaixa != 0) } }
+    private val janelaPedido = AtomicInteger()
+    // Request -> applied on the UI thread (definida) -> acknowledged after a
+    // traversal on a valid surface (aplicada). Lifecycle/layout events drop the
+    // acknowledgement and rearm it; the SDL-side query never mutates state.
+    @Volatile private var janelaDefinida = -1
+    @Volatile private var janelaAplicada = -1
+    @Volatile private var janelaSuperficieAplicada: SurfaceView? = null
+    private var janelaUltimoPedido: List<Any?>? = null
+    @JvmStatic fun janelaPronta(): Boolean {
+        val sv = superficie ?: return false
+        return !sv.isLayoutRequested && sv.visibility == View.VISIBLE &&
+            sv.holder.surface.isValid && !recriando && !recriaAgendada &&
+            janelaAplicada == janelaPedido.get() && janelaSuperficieAplicada === sv
+    }
+    private fun observarJanela(sv: SurfaceView) {
+        sv.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or2, ob ->
+            if (superficie === sv && (l != ol || t != ot || r != or2 || b != ob))
+                recuperarJanela(sv)
+        }
+    }
+    private fun recuperarJanela(sv: SurfaceView) {
+        janelaSuperficieAplicada = null
+        // A request still queued confirms itself once applied.
+        val pedido = janelaPedido.get()
+        if (janelaDefinida == pedido) confirmarJanela(sv, pedido)
+    }
+    private fun confirmarJanela(sv: SurfaceView, pedido: Int) {
+        // A queued request is not a laid-out SurfaceView. Acknowledge only
+        // after traversal, and never let an old request acknowledge a new one.
+        sv.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                if (pedido != janelaPedido.get() || superficie !== sv || player == null) {
+                    sv.viewTreeObserver.removeOnPreDrawListener(this)
+                } else if (!sv.isLayoutRequested && sv.visibility == View.VISIBLE &&
+                           sv.holder.surface.isValid && !recriando && !recriaAgendada) {
+                    janelaSuperficieAplicada = sv
+                    janelaAplicada = pedido
+                    sv.viewTreeObserver.removeOnPreDrawListener(this)
+                }
+                return true
+            }
+        })
+        sv.invalidate()
+    }
+    @Synchronized @JvmStatic fun janela(x: Int, y: Int, w: Int, h: Int, encaixa: Int) {
+        val geometria = listOf(x, y, w, h, encaixa, superficie)
+        // Crop retries still apply layout, but unchanged requests keep their acknowledgement.
+        val pedido = if (geometria == janelaUltimoPedido) janelaPedido.get() else {
+            janelaUltimoPedido = geometria
+            janelaPedido.incrementAndGet()
+        }
+        principal.post {
+            definirJanela(x, y, w, h, encaixa != 0)
+            janelaDefinida = pedido
+            val sv = superficie ?: return@post
+            confirmarJanela(sv, pedido)
+        }
+    }
     @JvmStatic fun escolher(tipo: Int, idx: Int) { principal.post { escolherMain(tipo, idx) } }
 
     // --- abrir / liberar ------------------------------------------------------
@@ -1469,6 +1528,7 @@ object NvPlayer {
         sv.isFocusable = false
         sv.isFocusableInTouchMode = false
         sv.holder.addCallback(antesDoMedia3)
+        observarJanela(sv)
         c.addView(sv, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         superficie = sv
     }
@@ -1479,12 +1539,15 @@ object NvPlayer {
     private var destruirIni = 0L
     private val antesDoMedia3 = object : SurfaceHolder.Callback {
         override fun surfaceCreated(h: SurfaceHolder) {
+            superficie?.let { if (h === it.holder) recuperarJanela(it) }
             Log.i(TAG, "[dvtrace] created sessao=$sessao holder=${System.identityHashCode(h)} atual=${h === superficie?.holder} hdr=$ultHdr frame=${h.surfaceFrame}")
         }
         override fun surfaceChanged(h: SurfaceHolder, f: Int, w: Int, a: Int) {
+            superficie?.let { if (h === it.holder) recuperarJanela(it) }
             Log.i(TAG, "[dvtrace] changed sessao=$sessao holder=${System.identityHashCode(h)} atual=${h === superficie?.holder} tamanho=${w}x$a formato=$f hdr=$ultHdr")
         }
         override fun surfaceDestroyed(h: SurfaceHolder) {
+            superficie?.let { if (h === it.holder) recuperarJanela(it) }
             destruirIni = SystemClock.elapsedRealtime()
             Log.i(TAG, "[dvtrace] destroyed sessao=$sessao holder=${System.identityHashCode(h)} atual=${h === superficie?.holder} hdr=$ultHdr")
         }
@@ -1987,6 +2050,19 @@ object NvPlayer {
             val diagnostico = "${error.errorCodeName} (${error.errorCode}) renderer=$renderer erro=${camposErroCausa(error)} causa=$causa"
             Log.w(TAG, "[player] onPlayerError loadMs=${SystemClock.elapsedRealtime() - abriuEm} $diagnostico")
             try { nativeErroTexto(diagnostico) } catch (_: Throwable) {}
+            // AO VIVO ATRAS DA JANELA (1002, visto nos logs 2.0.x): o player ficou
+            // para tras do que o servidor ainda guarda (rede lenta, pausa longa).
+            // Nao e erro do canal: volta para a borda ao vivo e prepara de novo,
+            // ate 3 vezes por minuto para nao virar laco num fluxo quebrado.
+            if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
+                val agora = SystemClock.elapsedRealtime()
+                if (agora - atrasJanelaDesde > 60_000L) { atrasJanelaDesde = agora; atrasJanelaN = 0 }
+                if (atrasJanelaN < 3) {
+                    atrasJanelaN++
+                    player?.let { it.seekToDefaultPosition(); it.prepare() }
+                    return
+                }
+            }
             // Decoder que falha nos primeiros 5 s: o recurso pode estar sendo
             // solto por outro app (ResourceConflict do Tizen); reabre uma vez.
             val cedo = SystemClock.elapsedRealtime() - abriuEm < RETRY_DECODER_MS

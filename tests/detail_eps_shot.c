@@ -395,6 +395,7 @@ static void montarCatalogo(void) {
       e->episodio  = i + 1;
       snprintf(e->nome, sizeof e->nome, "Título do episódio %d", i + 1);
       snprintf(e->duracao, sizeof e->duracao, "%d min", 42 + (i % 7));
+      if (!(t == 2 && i + 1 >= T3_PROX_EP)) { e->nota = 70 + (i * 7) % 20; e->notaImdb = 75 + (i * 5) % 20; }
       snprintf(e->sinopse, sizeof e->sinopse, "%s", SINOPSE_ENSAIO);
       if (t == 2) snprintf(e->data, sizeof e->data, "%s", DATA_T3[i]);
       else snprintf(e->data, sizeof e->data, "%d de março de %d",

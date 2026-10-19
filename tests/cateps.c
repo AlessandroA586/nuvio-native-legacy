@@ -759,6 +759,20 @@ int main(void) {
                     "{\"season\":0,\"episode\":1,\"id\":\"duplicado\"},"
                     "{\"season\":0,\"episode\":2,\"id\":\"b\"}]}";
     CatEp eps556[3]; EpSet tempos556 = {0};
+    const char *ratings = "{\"imdbRating\":9.9,\"videos\":["
+      "{\"season\":1,\"episode\":1,\"imdbRating\":\"9.2\"},"
+      "{\"season\":1,\"episode\":2},"
+      "{\"season\":1,\"episode\":3,\"imdbRating\":11}]}";
+    assert(parsearEpisodios(ratings, eps556, 3) == 3);
+    assert(eps556[0].notaImdb == 92 && eps556[0].nota == 0);
+    assert(eps556[1].notaImdb == 0 && eps556[2].notaImdb == 0);
+    { CatEp merged = {0};
+      merged.temporada = merged.episodio = 1;
+      desc_mesclar_episodios(&merged, 1, eps556, 3, DESC_MESCLA_VAZIOS);
+      assert(merged.notaImdb == 92);
+      merged.notaImdb = 83;
+      desc_mesclar_episodios(&merged, 1, eps556, 3, DESC_MESCLA_TEXTO);
+      assert(merged.notaImdb == 83); }
     assert(desc_meta_tem_temporadas(s) && desc_meta_n_episodios(s) == 2);
     assert(parsearEpisodios(s, eps556, 3) == 2 && !strcmp(eps556[0].vid, "a"));
     assert(epSetNovo(&tempos556, 0, 0) && !epSetNovo(&tempos556, 0, 0));

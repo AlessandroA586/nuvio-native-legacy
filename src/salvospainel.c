@@ -91,7 +91,8 @@
 #define SP_LINHA_W    (SP_W - SP_LINHA_X * 2.0f)
 #define SP_LINHA_PADX   22.0f
 #define SP_LINHA_RAIO   22.0f
-#define SP_KICK_Y      (SP_Y + 40.0f)
+// Reserve a full font line plus breathing room above the title/tab row.
+#define SP_KICK_Y      fminf(SP_Y + 40.0f, SP_ABAS_Y - txt_linha(TXT_MINI, "Ag", 255, 255, 255, 255).h - 12.0f)
 #define SP_TIT_Y       (SP_Y + 62.0f)
 // ABAS. Elas so existem quando o servico de recomendacoes foi compilado
 // (recomenda_ativo); sem ele o painel e exatamente o que era, sem uma linha a
@@ -3559,7 +3560,7 @@ static void desenhaAbas(float dx, float a, float larguraDisp) {
         if (foco == SP_FOCO_ABAS && !editLapis) {
           if (ajustes_vidro()) gfx_vidro_pilula_cheia(p, 0.5f, 1.0f, a);
           else { botao_luz(p, .55f, a); gfx_cor(p, 0.5f, ar, ag, ab, a); }
-        } else {
+        } else if (!gfx_foco_placa(p, 0.5f, 1.0f, a)) {
           if (ajustes_vidro()) gfx_cor(p, 0.5f, 1, 1, 1, .14f * a);
           else gfx_cor(p, 0.5f, .204f, .212f, .243f, a);
         }
@@ -3594,7 +3595,7 @@ static void desenhaAbas(float dx, float a, float larguraDisp) {
       contaDaAba(i, &novo);
       // Sobre a pilula de acento a contagem vai na tinta do foco: no acento
       // ela sumiria justamente na aba em que o dedo esta.
-      if (focada) {
+      if (focada || (ativa && ajustes_foco_acento())) {
         char b[16];
         int n = contaDaAba(i, &novo);
         snprintf(b, sizeof b, "%d", n > 99 ? 99 : n);
@@ -3603,7 +3604,7 @@ static void desenhaAbas(float dx, float a, float larguraDisp) {
       }
       txt_desenhar_alpha(num, x + SP_SEG_PX + SP_SEG_ICO + SP_SEG_NUM,
                          p.y + (p.h - num.h) * 0.5f,
-                         a * (novo ? 1.0f : focada ? 0.7f : 0.45f));
+                         a * (novo ? 1.0f : focada || (ativa && ajustes_foco_acento()) ? 0.7f : 0.45f));
     }
     x += w + SP_SEG_VAO;
   }

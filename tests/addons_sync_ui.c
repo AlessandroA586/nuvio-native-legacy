@@ -6,7 +6,7 @@ static int total, logada, ocupado, pedidos, avisos, trocas;
 int addons_n(void) { return total; }
 void addons_sondar_manifestos(void) {}
 void addons_alternar(int i) { assert(i >= 0 && i < total); trocas++; }
-void sync_sujar_addons(void) {}
+void sync_sujar_addons(const char *u) { (void)u; }
 int sessao_logada(void) { return logada; }
 int sync_manual_addons_rodando(void) { return ocupado; }
 int sync_manual_addons(void) { pedidos++; ocupado = 1; return 1; }

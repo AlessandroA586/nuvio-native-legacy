@@ -117,7 +117,7 @@ static int vModo = TS_MIC_AUTO;
 static int micPermitido(void) {
   int tem, mic;
 #ifdef NV_TPK
-  tem = vIniciar != NULL; mic = vMic;
+  tem = vIniciar != NULL; mic = -1; // #585: TV microphone capability does not detect the remote's mic.
 #else
   // O shell responde uma vez (o <input> e o getCapability nao mudam).
   static int wTem = -1, wMic = -1;

@@ -7,11 +7,11 @@
 
 #define AV_REGISTRO_MAX (200 * 1024)
 #define AV_REGISTRO_AUTO_MAX (64 * 1024)
-static const char *logPath;
-#define AV_LOG_ANTERIOR logPath
+static const char *logPath, *prevPath;
+#define AV_LOG_ANTERIOR prevPath
 static const char *registro_arquivo(void) { return logPath; }
 
-static char *readUpload(int manual, int automatico, size_t *size) {
+static char *readUpload(int manual, int automatico, int comAnterior, size_t *size) {
   char *texto = NULL;
   size_t nTexto = 0;
 #include "upload.inc"
@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
   int i;
   assert(argc == 2);
   logPath = argv[1];
+  prevPath = argv[1];
   f = fopen(logPath, "wb");
   assert(f);
   fputs(header, f);
@@ -40,7 +41,7 @@ int main(int argc, char **argv) {
   fputs(tail, f);
   fclose(f);
   for (i = 0; i < 2; i++) {
-    text = readUpload(!i, i, &size);
+    text = readUpload(!i, i, 0, &size);
     assert(text && !strncmp(text, header, strlen(header)));
     assert(!strncmp(text + strlen(header), "\n[...] ", 7));
     assert(strstr(text, " KB omitidos\n"));
@@ -57,7 +58,7 @@ int main(int argc, char **argv) {
     fputs("[startup] subsystem initialization in progress\n", f);
   fputs(tail, f);
   fclose(f);
-  text = readUpload(1, 0, &size);
+  text = readUpload(1, 0, 0, &size);
   assert(text && !strncmp(text, "Nuvio 2.0.6\n", 12));
   assert(strstr(text, "\n[...] ") && strstr(text, tail));
   assert((size_t)(strstr(text, "\n[...] ") - text) <= 16 * 1024);
@@ -67,9 +68,23 @@ int main(int argc, char **argv) {
   assert(f);
   fputs(header, f);
   fclose(f);
-  text = readUpload(1, 0, &size);
+  text = readUpload(1, 0, 0, &size);
   assert(text && !strcmp(text, header) && size == strlen(header));
   free(text);
+  { FILE *a = fopen("prev.log", "wb");
+    const char *oldTail = "[player] saida: video parar 1 ms\n[queda] sinal fatal: relato gravado\n";
+    assert(a);
+    for (i = 0; i < 4000; i++) fputs("[swap] old session\n", a);
+    fputs(oldTail, a);
+    fclose(a);
+    prevPath = "prev.log";
+    text = readUpload(1, 0, 1, &size);
+    assert(text && strstr(text, header) && strstr(text, "--- sessao anterior ---"));
+    assert(strstr(text, "[queda] sinal fatal"));
+    assert(strstr(text, header) && size == strlen(text));
+    free(text);
+    prevPath = NULL;
+  }
   puts("registro_cabeca: ok");
   return 0;
 }

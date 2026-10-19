@@ -21,6 +21,8 @@
 #include "dados.h"
 #include "gfx.h"
 #include "ilha.h"
+#include "ltv.h"
+#include "perfis.h"
 #include "iconeapp.h"
 #include "logoapp.h"
 #include "text.h"
@@ -200,6 +202,13 @@ int main(int argc, char **argv) {
   gfx_icones_dir("deploy/app/art");
   ajustes_recursos("deploy/app/art");
   badges_carregar("deploy/app/art");   // marcas de formato (Dolby Vision, 4K...); no app quem faz e home_iniciar
+
+  // NUVIO_SHOT_URLS=1: duas fontes por URL (M9) para a linha "Listas e guias por URL".
+  if (getenv("NUVIO_SHOT_URLS")) {
+    ltv_urls_carregar(perfis_ativo());
+    ltv_urls_adicionar(LTV_URL_M3U, "iptv.exemplo.com", "https://iptv.exemplo.com/get.php?username=x&password=y&type=m3u");
+    ltv_urls_adicionar(LTV_URL_XMLTV, "epg.exemplo.org", "https://epg.exemplo.org/guia.xml.gz");
+  }
 
   // FILEIRAS DE MENTIRA cobrindo as origens que a folha sabe distinguir: o
   // catalogo de addon (com nome de addon e tipo), o grupo de colecoes, e as

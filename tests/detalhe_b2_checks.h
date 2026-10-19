@@ -36,7 +36,7 @@ static int b2_checks(void) {
     char path[600];
     snprintf(path, sizeof path, "%s/ajustes.txt", dados_dir());
     FILE *f = fopen(path, "w"); assert(f);
-    fprintf(f, "detEspacoLocal %d\nescalaTextoLocal %d\n", p % 3, p / 3 ? 5 : 2);
+    fprintf(f, "detEspacoLocal %d\nescalaTextoLocal %d\nescalaTextoVersaoLocal 1\n", p % 3, p / 3 ? 5 : 2);
     fclose(f); ajustes_dir(dados_dir()); ajustes_definir_vidro(1);
     gfx_escala_txt_definir(ajustes_escala_texto());
     float previousScale = gfx_escala_txt_entrar();

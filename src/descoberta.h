@@ -339,10 +339,15 @@ void desc_loc_apagar(void);
 // caixa nem pontuacao) e completa a lista com o resto do TMDB (#153). Pura;
 // devolve quantos nomes casaram.
 int  desc_tmdb_elenco(const char *json, CatItem *d);
+// Blocking person search: known title first, then most popular exact name.
+// Positive person ID, 0 for no match, -1 for unavailable/invalid response.
+long desc_buscar_pessoa(const char *nome, long titulo, const char *tipo);
 // Elenco/direcao do meta Stremio e app_extras (Nuvio/AIOMetadata), sem rede.
 // Preserva a ordem da raiz e casa fotos/papeis por nome; soVazios completa
 // lacunas sem trocar campos da fonte primaria. Devolve o numero de pessoas.
 int  desc_meta_elenco(const char *json, CatItem *d, int soVazios);
+// 1 quando o elenco tem nomes mas ninguem tem id de pessoa do TMDB ainda.
+int  desc_elenco_precisa_pessoas(const CatItem *c);
 // Tipo(s) em que perguntar o /meta do Cinemeta, na ordem (1 ou 2). Tipo
 // incerto ("anime" etc.) tenta serie e depois filme. Puras.
 int  desc_meta_tipos(const char *tipo, const char *saida[2]);

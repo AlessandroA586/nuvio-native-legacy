@@ -3003,7 +3003,7 @@ static void timelineCard(int i,float cy,float a,float x0) {
   // Os cartoes fora do foco recuam um pouco (sem foco na grade, todos iguais).
   if(!tabFocus)a*=.70f+.30f*t;
   GfxRect card=vtTimelineCard(cy), artRect=vtTimelineArte(card);
-  float tx=vtTelefone()?artRect.x+artRect.w+24.0f:card.x+418.0f;
+  float tx=artRect.x+artRect.w+24.0f;
   float tw=card.x+card.w-tx-(vtTelefone()?24.0f:32.0f);
   // FOCO DE LINHA (layout.h, NV_COR_FOCO e material da ilha): o cartao e uma
   // linha que da para preencher, entao a superficie sobe um degrau e NENHUM

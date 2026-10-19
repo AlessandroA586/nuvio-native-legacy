@@ -68,7 +68,11 @@ static float escalaTxt = 1.0f;
 // chips do resumo, as dicas, o rotulo da pilula) ficava sem texto para
 // sempre. Agora cada fator tem a sua casa (TXT_NCAM - 1 fatores vivos); a
 // casa menos usada so e reaproveitada quando aparece um fator novo.
-#define TXT_NCAM 4
+// 18/10: quatro fatores vivos num quadro so da Biblioteca com a interface em 85%
+// (topo 1,02, grade 0,85, menu 0,78, camadas ESCALA_INI 0,723): com tres casas
+// elas se despejavam a cada quadro e o texto do selo "Assistido" sumia/piscava
+// na C9. Cinco fatores vivos.
+#define TXT_NCAM 6
 static int camada;
 static char arabeBoldCaminho[600];   // face Bold real do Noto Naskh (#335), vazio ate txt_iniciar
 static int arabeCorpo;

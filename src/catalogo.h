@@ -179,6 +179,7 @@ typedef struct {
   // cache nenhum: o unico dump binario e o do CatItem (catalogo-rede.bin) e
   // episodios.txt e texto, campo a campo — ambos leem o que sabem ler.
   int  nota;
+  int  notaImdb;       // Episode IMDb rating x10; 0 = unknown, separate from TMDB.
   // O ID DO VIDEO como o /meta o publicou ("kitsu:41370:5", "tt123:1:2"). E com
   // ele que se pede fonte (/stream/series/<id>.json): o addon de anime tem id
   // proprio por episodio, e montar "<titulo>:<T>:<E>" na mao so acerta no IMDb.
@@ -514,6 +515,9 @@ void cat_definir_tudo(const CatItem *lista, int qtd,
 void cat_definir_episodios(int indiceItem, const CatEp *lista, int n);
 // So o bit da cena pos-creditos (TMDB 179430/179431), pelo id do titulo.
 void cat_marcar_pos_creditos(const char *imdb, int pos);
+// Cache a resolved cast ID only if title and person still match; no other edits.
+int cat_elenco_tmdb(int indice, const char *imdb, const char *tipo,
+                    const char *nome, long tmdb);
 
 // Substitui UM item, preservando o resto. Usado quando o detalhe abre e traz
 // elenco, direcao e temporadas que o catalogo da fileira nao tinha.

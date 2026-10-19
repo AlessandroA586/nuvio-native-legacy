@@ -22,6 +22,7 @@ void servidores_esquecer_todos(void);   // servidores.c: wipe every profile's to
 #include "mapa.h"
 #include "recomenda.h"
 #include "fontepref.h"
+#include "fontevolta.h"
 #include "legmemoria.h"
 #include "audiomemoria.h"
 #include "buscasrec.h"
@@ -45,6 +46,7 @@ void servidores_esquecer_todos(void);   // servidores.c: wipe every profile's to
 #include "cachearte.h"
 #include "extras.h"
 #include "arteescolha.h"
+#include "guia.h"
 #include "js.h"
 #include "jsw.h"
 #include <stdio.h>
@@ -169,6 +171,8 @@ static unsigned ajustesBlobGeracao;
 static int ajustesBlobPerfil = -1;
 static int  temAjustesBlob;
 static int  aplicarAjustes = 1;
+// No local/default upload until the main thread has restored this login.
+static int ajustesRestaurando = 1;
 // Flag em disco: a pessoa ja mudou ajustes nesta TV depois do ultimo
 // sync_reaplicar_ajustes. Sem ela, CADA arranque comecava com aplicarAjustes=1
 // e o blob da conta (ainda sem as mudancas locais — a TV nao empurra layout)
@@ -183,6 +187,8 @@ static void carregarProtecaoAjustes(void) {
   t = dados_ler(SY_AJUSTES_LOCAIS);
   if (t && t[0] == '1') {
     aplicarAjustes = 0;
+    __atomic_store_n(&ajustesRestaurando, 0, __ATOMIC_RELEASE);
+    sujoAjustes = 1;
     printf("[sync] ajustes locais protegidos: blob da conta nao reaplica neste arranque\n");
     fflush(stdout);
   }
@@ -416,6 +422,90 @@ static int addonsListaIgual(const AddonRemoto *a, int na, const AddonRemoto *b, 
   }
   return 1;
 }
+static pthread_mutex_t addonsToggleTrava = PTHREAD_MUTEX_INITIALIZER;
+
+static int addonsAchar(const AddonRemoto *lista, int n, const char *url) {
+  char key[NV_ADDON_URL_MAX], other[NV_ADDON_URL_MAX];
+  nv_addon_chave(url, key, sizeof key);
+  for (int i = 0; i < n; i++) {
+    nv_addon_chave(lista[i].url, other, sizeof other);
+    if (!strcmp(key, other)) return i;
+  }
+  return -1;
+}
+
+static void addonsGuardar(const char *superficie, const AddonRemoto *lista, int n,
+                          int perfil, const char *usuario, unsigned geracao) {
+  Jsw w;
+  jsw_iniciar(&w); jsw_arr_ini(&w);
+  for (int i = 0; i < n; i++) {
+    const char *longa = nv_longa_bruto(lista[i].url);
+    jsw_obj_ini(&w);
+    jsw_cs(&w, "url", longa ? longa : lista[i].url);
+    jsw_cs(&w, "name", lista[i].nome);
+    jsw_cb(&w, "enabled", lista[i].ativo);
+    jsw_obj_fim(&w);
+  }
+  jsw_arr_fim(&w);
+  const char *txt = jsw_texto_final(&w);
+  if (txt) contacache_gravar_geracao(superficie, perfil, usuario, txt, geracao);
+  jsw_livre(&w);
+}
+
+// Pending flags are durable, account/profile scoped, and never change membership.
+static void addonsEnviarToggles(const AddonRemoto *remotos, int nr) {
+  AddonRemoto *pend = calloc(SY_ADD_MAX, sizeof *pend);
+  char *url = malloc(SY_URL_LEITURA);
+  char *saved;
+  struct timespec agora;
+  clock_gettime(CLOCK_MONOTONIC, &agora);
+  long long fim = (long long)agora.tv_sec * 1000 + agora.tv_nsec / 1000000 + 2000;
+  if (!pend || !url) { free(pend); free(url); return; }
+  pthread_mutex_lock(&addonsToggleTrava);
+  saved = contacache_ler(CC_ADDONS_TOGGLES, perfilDoCiclo, usuarioDoCiclo, NULL);
+  pthread_mutex_unlock(&addonsToggleTrava);
+  int n = saved ? lerAddonsPara(saved, pend, url) : 0;
+  for (int i = 0; i < n && perfilDoCicloAtual(); i++) {
+    clock_gettime(CLOCK_MONOTONIC, &agora);
+    long long restante = fim - ((long long)agora.tv_sec * 1000 + agora.tv_nsec / 1000000);
+    // Whole seconds also bound the WGT adapter, whose timeout uses seconds.
+    if (restante < 1000) break;
+    // A row the account no longer has needs no write: the pull removes it.
+    int j = addonsAchar(remotos, nr, pend[i].url);
+    if (j < 0) { pend[i].url[0] = 0; continue; }
+    // Use the exact remote URL, quoted for PostgREST and URL escaped.
+    Jsw w;
+    char escaped[SY_URL_LEITURA * 3], dono[240], query[SY_URL_LEITURA * 3 + 400];
+    const char *longa = nv_longa_bruto(remotos[j].url);
+    jsw_iniciar(&w); jsw_str(&w, longa ? longa : remotos[j].url);
+    nuvem_url_escapar(jsw_texto_final(&w), escaped, sizeof escaped);
+    jsw_livre(&w);
+    nuvem_url_escapar(perfis_dono(), dono, sizeof dono);
+    snprintf(query, sizeof query, "user_id=eq.%s&profile_id=eq.%d&url=eq.%s",
+             dono, addonsPerfilCiclo, escaped);
+    int st = 0;
+    char *r = nuvem_addon_alternar(query, pend[i].ativo, tokenDoCiclo,
+                                   (unsigned)(restante / 1000) * 1000, &st);
+    if (ok2xx(r, st) && perfilDoCicloAtual() && js_raiz_array(r) &&
+        strchr(js_raiz_array(r), '{')) pend[i].url[0] = 0;
+    free(r);
+  }
+  int restantes = 0;
+  for (int i = 0; i < n; i++)
+    if (pend[i].url[0]) pend[restantes++] = pend[i];
+  pthread_mutex_lock(&addonsToggleTrava);
+  char *current = contacache_ler(CC_ADDONS_TOGGLES, perfilDoCiclo, usuarioDoCiclo, NULL);
+  if (saved && current && !strcmp(saved, current) && perfilDoCicloAtual())
+    addonsGuardar(CC_ADDONS_TOGGLES, pend, restantes, perfilDoCiclo,
+                  usuarioDoCiclo, copiaGeracaoDoCiclo);
+  free(current);
+  pthread_mutex_unlock(&addonsToggleTrava);
+  free(saved); free(pend); free(url);
+}
+
+static AddonRemoto addonsTogglesRem[SY_ADD_MAX];
+static int nAddonsTogglesRem;
+
 static int addonsAplicar(void) {
   static AddonRemoto local[SY_ADD_MAX];
   int n = addons_exportar(local, SY_ADD_MAX), mudou = 0, i;
@@ -425,6 +515,26 @@ static int addonsAplicar(void) {
   // Lista vazia da conta nao substitui a local (addons_definir_lista recusa)
   // nem vira snapshot: gravar "[]" apagaria a ultima lista boa do arranque.
   if (!nAddonsRem) return 0;
+  // Flag per remote addon, first match wins: unacknowledged toggle of this
+  // profile; local flag when the list in memory is this profile's (or the
+  // package list before any account list); else the remote value. Other
+  // clients write default/unsupported enabled values, so existing addon flags
+  // belong to this app; only membership/order come from the pull.
+  static AddonRemoto pend[SY_ADD_MAX];
+  static char buf[SY_URL_LEITURA];
+  pthread_mutex_lock(&addonsToggleTrava);
+  char *c = contacache_ler(CC_ADDONS_TOGGLES, perfilDoCiclo, usuarioDoCiclo, NULL);
+  pthread_mutex_unlock(&addonsToggleTrava);
+  int np = c ? lerAddonsPara(c, pend, buf) : 0;
+  free(c);
+  int donoLista = addons_perfil_da_lista();
+  int preservarFlags = !donoLista || donoLista == perfis_ativo();
+  for (i = 0; i < nAddonsRem; i++) {
+    int j = addonsAchar(pend, np, addonsRem[i].url);
+    if (j >= 0) addonsRem[i].ativo = pend[j].ativo;
+    else if (preservarFlags && (j = addonsAchar(local, n, addonsRem[i].url)) >= 0)
+      addonsRem[i].ativo = local[j].ativo;
+  }
   if (!addonsListaIgual(local, n, addonsRem, nAddonsRem))
     mudou = addons_definir_lista(addonsRem, nAddonsRem);
   jsw_iniciar(&w); jsw_arr_ini(&w);
@@ -524,7 +634,12 @@ static int puxarAddons(void) {
                                       r, copiaGeracaoDoCiclo);
   free(r);
   nAddonsRem = k;
+  // The main thread may merge/consume addonsRem as soon as it is published.
+  // PATCHes use a worker-owned snapshot and never mutate that mailbox.
+  nAddonsTogglesRem = k;
+  memcpy(addonsTogglesRem, addonsRem, (size_t)k * sizeof *addonsTogglesRem);
   temAddonsRem = 1;
+  PRONTO_PUBLICAR(addonsCedo, 1);
   // REGISTRA O PERFIL PEDIDO, e nao so o resultado. O defeito que levou a esta
   // linha (perfil secundario com "0 addons", relato do Mane155) era um pedido
   // BEM FORMADO para o perfil errado: o PostgREST responde 200 com array vazio,
@@ -945,6 +1060,27 @@ static int puxarAjustesPerfil(const char *corpo) {
       }
     }
   }
+  // A successful empty result is a new account, not a failed pull. It is
+  // safe to seed an empty base only after the server confirmed its absence.
+  const char *empty = r;
+  char raw[16];
+  while (*empty && (unsigned char)*empty <= ' ') empty++;
+  int noSettings = *empty == '[';
+  if (noSettings) {
+    empty++; while (*empty && (unsigned char)*empty <= ' ') empty++;
+    noSettings = *empty == ']';
+  }
+  if (!ok && (noSettings || (js_bruto(r, NULL, "settings_json", raw, sizeof raw) && !strcmp(raw, "null")))) {
+    if (nv_perfil_sessao_travar(sessaoDoCiclo)) {
+      free(ajustesBlob);
+      ajustesBlob = strdup("{}");
+      ajustesBlobPerfil = perfilDoCiclo;
+      ajustesBlobGeracao++;
+      temAjustesBlob = aplicarAjustes;
+      ok = ajustesBlob != NULL;
+      nv_perfil_sessao_destravar();
+    }
+  }
   free(r);
   return ok;
 }
@@ -963,7 +1099,8 @@ static int puxarAjustesPerfil(const char *corpo) {
 //   2. DEPOIS DO PULL DESTE MESMO CICLO. A base e sempre a mais nova que o
 //      servidor deu, entao o que so o web mudou nao e sobrescrito por um blob
 //      velho guardado em memoria.
-//   3. SO CHAVE QUE JA EXISTE, so o valor dela (ajustes_mesclar_blob).
+//   3. Existing web keys keep their types; portable C preferences use
+//      c_settings_v1, including accounts with a confirmed empty blob.
 //
 // A base guardada e trocada pelo que foi ACEITO: sem isso, o ciclo seguinte
 // costuraria sobre um blob que o servidor ja nao tem mais e mandaria a mesma
@@ -972,7 +1109,8 @@ static void empurrarAjustes(void) {
   char *mesclado = NULL, *r;
   Jsw w;
   int st = 0;
-  if (!sujoAjustes) return;
+  if (!sujoAjustes || !temAjustesPerfil || temAjustesBlob ||
+      __atomic_load_n(&ajustesRestaurando, __ATOMIC_ACQUIRE)) return;
   if (jaAusente("sync_push_profile_settings_blob")) return;
   if (!nv_perfil_sessao_travar(sessaoDoCiclo)) return;
   if (!ajustesBlob) {
@@ -1239,7 +1377,6 @@ static void *rodar(void *u) {
   // Publicando aqui, o remontar acontece com ~1,5 s de trabalho jogado fora em
   // vez de 27 s.
   //
-  if (temAddonsRem) PRONTO_PUBLICAR(addonsCedo, 1);
   // Retomar larga primeiro, mas nao e uma barreira para credenciais,
   // colecoes ou ordem. O pedido tem perfil/sessao proprios e a caixa continua
   // sendo aplicada no principal pelas regras de recencia de syncprog.
@@ -1298,6 +1435,8 @@ static void *rodar(void *u) {
   // novo o que ainda nao teve 2xx.
   contapend_enviar();
   contapend_reenviar();
+  // Pending addon writes run last, with a two-second budget for the whole batch.
+  if (puxouAddons == 1) addonsEnviarToggles(addonsTogglesRem, nAddonsTogglesRem);
 
   { SyncResumo r;
     memset(&r, 0, sizeof r);
@@ -1711,6 +1850,7 @@ void sync_passo(unsigned agoraMs) {
     // e o logout.
     temAjustesBlob = 0;
     aplicarAjustes = 0;   // daqui para frente, o que a pessoa mudar na TV fica
+    __atomic_store_n(&ajustesRestaurando, 0, __ATOMIC_RELEASE);
   }
   // #187: uma linha por blob novo (aplicado ou protegido) dizendo qual idioma
   // a TV pede ao TMDB e o que a conta guarda. A geracao muda a cada blob.
@@ -1838,13 +1978,44 @@ const char *sync_resumo(void) {
 }
 unsigned    sync_ultimo_ok(void)   { return ultimoOk; }
 void        sync_sujar_progresso(void) { sujoProgresso = 1; }
-// #360 MAO UNICA: a edicao local de addons NAO sobe mais para a conta
-// (sync_push_addons deixou de existir — ela substituia a lista inteira do
-// perfil e era a origem das duplicatas e das remocoes cruzadas do relato).
-// A mudanca feita nesta TV vale so aqui ate o proximo pull, que traz a lista
-// da conta por cima. O simbolo fica como no-op porque a tela de Add-ons, o
-// guia e os testes o chamam no mesmo gesto que liga/desliga.
-void        sync_sujar_addons(void) { }
+// Addon flag state, per account (see addonsAplicar for the merge order):
+//  - CC_ADDONS_TOGGLES, keyed by the ACTIVE profile: each addon the user
+//    toggled, until the account acknowledges that row (PATCH 2xx) or drops it.
+//    It wins every merge and survives restart; nothing else is ever queued.
+//  - CC_ADDONS_APLICADOS, keyed by the addon profile: last merged list. A
+//    toggle updates only that flag, and only when the snapshot already exists,
+//    so a package or foreign list never seeds membership.
+void sync_sujar_addons(const char *url) {
+  static AddonRemoto local[SY_ADD_MAX], lista[SY_ADD_MAX];
+  static char buf[SY_URL_LEITURA];
+  char usuario[80];
+  int perfil = perfis_ativo(), perfilAddons = perfis_ativo_addons();
+  unsigned geracao = contacache_geracao();
+  if (!url || !sessao_logada()) return;
+  // A list left in memory by another profile is not this profile's state.
+  int donoLista = addons_perfil_da_lista();
+  if (donoLista && donoLista != perfil) return;
+  snprintf(usuario, sizeof usuario, "%s", sessao_usuario());
+  pthread_mutex_lock(&addonsToggleTrava);
+  int n = addons_exportar(local, SY_ADD_MAX);
+  int i = addonsAchar(local, n, url);
+  if (i >= 0) {
+    char *c = contacache_ler(CC_ADDONS_TOGGLES, perfil, usuario, NULL);
+    int np = c ? lerAddonsPara(c, lista, buf) : 0, k = addonsAchar(lista, np, url);
+    free(c);
+    if (k < 0 && np < SY_ADD_MAX) k = np++;
+    if (k >= 0) lista[k] = local[i];
+    addonsGuardar(CC_ADDONS_TOGGLES, lista, np, perfil, usuario, geracao);
+    c = contacache_ler(CC_ADDONS_APLICADOS, perfilAddons, usuario, NULL);
+    int nb = c ? lerAddonsPara(c, lista, buf) : 0;
+    free(c);
+    if ((k = addonsAchar(lista, nb, url)) >= 0) {
+      lista[k].ativo = local[i].ativo;
+      addonsGuardar(CC_ADDONS_APLICADOS, lista, nb, perfilAddons, usuario, geracao);
+    }
+  }
+  pthread_mutex_unlock(&addonsToggleTrava);
+}
 // Provedor que o servidor recusou com "Unsupported provider credential": o
 // servidor de hoje nao guarda trakt/simkl, e a resposta nao muda ate o app
 // reiniciar. Perguntar de novo a cada renovacao do token era um 400 no log por
@@ -1976,6 +2147,7 @@ void sync_reaplicar_ajustes(void) {
   // superfície publique em seguida o conjunto pertencente ao novo contexto.
   cachearte_limpar_referencias();
   aplicarAjustes = 1;
+  __atomic_store_n(&ajustesRestaurando, 1, __ATOMIC_RELEASE);
   // Conta manda de novo: a protecao local deixa de valer ate a pessoa mexer.
   dados_apagar(SY_AJUSTES_LOCAIS);
   // E A PENDENCIA DE SUBIDA CAI COM ELA. Esta funcao e chamada ao entrar e ao
@@ -2031,6 +2203,7 @@ void sync_trocar_perfil(int antes) {
   t = dados_ler(nome);
   if (t && t[0] == '1') {
     aplicarAjustes = 0;
+    __atomic_store_n(&ajustesRestaurando, 0, __ATOMIC_RELEASE);
     dados_gravar(SY_AJUSTES_LOCAIS, "1\n");
     sujoAjustes = 1;
     printf("[sync] perfil %d tinha ajustes desta TV sem subir: mantidos\n", depois);
@@ -2088,6 +2261,8 @@ int sync_home_fontes_prontas(void) {
 }
 
 void sync_proteger_ajustes_locais(void) {
+  // Cloud wins while a login/profile restore is pending, including retries.
+  if (sessao_logada() && __atomic_load_n(&ajustesRestaurando, __ATOMIC_ACQUIRE)) return;
   aplicarAjustes = 0;
   dados_gravar(SY_AJUSTES_LOCAIS, "1\n");
   // E MARCA PARA SUBIR (#85). As duas coisas andam juntas de proposito: a
@@ -2163,6 +2338,9 @@ void sync_esquecer_usuario(void) {
   // sobreviveria ao logout em disco e passaria a mandar na reproducao da
   // proxima pessoa.
   fontepref_esquecer();
+  // E OS LINKS GUARDADOS ("Reusar o ultimo link", fontevolta.h): no disco, e
+  // um link de debrid e credencial na pratica.
+  fontevolta_esquecer_tudo();
   // E A LEGENDA ESCOLHIDA A MAO (2.0.3): o idioma e os titulos de quem saiu.
   legmem_esquecer();
   // E A FAIXA DE AUDIO ESCOLHIDA A MAO (audiomemoria.h), pela mesma razao.
@@ -2190,6 +2368,9 @@ void sync_esquecer_usuario(void) {
   // pessoa para a proxima que logasse nesta TV.
   stalker_esquecer();
   xtream_esquecer();   // mesma razao: usuario e senha sao a assinatura de quem saiu
+  // E a lista em cache das duas sai junto — o relato do "lista limpa":
+  // conta removida e os canais dela ainda na tela.
+  guia_fonte_esquecer("st"); guia_fonte_esquecer("xt");
   servidores_esquecer_todos();   // personal-server tokens of every profile on this TV
   trakt_esquecer();
   // Os ajustes por perfil guardados nesta TV (e as pendencias deles) sao da
@@ -2228,6 +2409,7 @@ void sync_esquecer_usuario(void) {
   ajustesBlob = NULL;
   temAjustesBlob = 0;
   aplicarAjustes = 1;
+  __atomic_store_n(&ajustesRestaurando, 1, __ATOMIC_RELEASE);
   dados_apagar(SY_AJUSTES_LOCAIS);
   resumoFixo("sem conta");
   printf("[sync] dados do usuario apagados deste aparelho\n");

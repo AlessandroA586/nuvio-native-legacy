@@ -95,7 +95,7 @@ namespace NuvioTpk
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate int FnPos();
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void FnEscolher(int tipo, int idx);
 
-        const int EV_PRONTO = 1, EV_TOCANDO = 2, EV_PAUSADO = 3, EV_FIM = 4, EV_ERRO = 5, EV_TAMANHO = 6, EV_BUFFER = 7, EV_VELOCIDADE = 8, EV_PRESO = 9, EV_CONSULTA_LENTA = 10, EV_BUSCOU = 11;
+        const int EV_PRONTO = 1, EV_TOCANDO = 2, EV_PAUSADO = 3, EV_FIM = 4, EV_ERRO = 5, EV_TAMANHO = 6, EV_BUFFER = 7, EV_VELOCIDADE = 8, EV_PRESO = 9, EV_CONSULTA_LENTA = 10, EV_BUSCOU = 11, EV_BUSCA_FALHOU = 12;
 
         readonly Func<Display> fazDisplay;
         readonly Action<Action> principal;
@@ -152,7 +152,7 @@ namespace NuvioTpk
             fParar = Parar;
             fPausar = p => ComSessao(() => Pausar(p != 0));
             fBuscar = ms => ComSessao(() => Buscar(ms));
-            fVolume = v => ComSessao(() => PedirVolume(v));
+            fVolume = v => ComSessao(() => PedirVolume(v), false);
             fJanela = (x, y, w, h) => ComSessao(() => Janela(x, y, w, h));
             fAspecto = (x,y,w,h,lx,ly,lw,lh) => ComSessao(() => Janela(x,y,w,h,lx,ly,lw,lh));
             // Older staged libnuvio versions only have the original window callback.
@@ -350,11 +350,11 @@ namespace NuvioTpk
         }
 
         // Invalida tambem comandos que ficaram na fila durante uma troca.
-        void ComSessao(Action a)
+        void ComSessao(Action a, bool exigePlayer = true)
         {
             int minha = Volatile.Read(ref sessao);
             var f = Volatile.Read(ref fio);
-            f?.Post(_ => { if (minha == Volatile.Read(ref sessao) && playerSessao == minha) a(); }, null);
+            f?.Post(_ => { if (minha == Volatile.Read(ref sessao) && (!exigePlayer || playerSessao == minha)) a(); }, null);
         }
 
         // Descarte independente da fila: ate GetPlayPosition/Prepare presos
@@ -395,6 +395,9 @@ namespace NuvioTpk
                 }
             });
             novo.Post(async _ => {
+                // #603: reset before yielding to decoder release. Trailer volume
+                // can arrive before this session has a Player; keep that request.
+                volAlvo = 1f; volPedido = false;
                 if (await Task.WhenAny(soltar, Task.Delay(PrazoPararMs)) != soltar || !await soltar) {
                     Log("[video] tpk parar nao confirmou; player indisponivel, processo preservado");
                     lock (trocaTrava) { if (minha == sessao) NvVid.Evento(EV_ERRO, -3, 0); }
@@ -409,9 +412,6 @@ namespace NuvioTpk
         async void Abrir(string url, string cabecalhos, int minha)
         {
             posMs = 0; buscando = false; buscaPend = pausaPend = -1;
-            // Player novo nasce no volume cheio; so um pedido DESTA sessao
-            // (trailer.c, logo depois do video_tocar) o muda.
-            volAlvo = 1f; volPedido = false;
             aspectoRecusado = false;
             try
             {
@@ -645,10 +645,13 @@ namespace NuvioTpk
             }
             catch (InvalidOperationException e) {
                 Log("buscar: " + e.Message);
+                // The core decides (mkvfix.h): an MKV with a hidden index reopens
+                // through the local fix; with no index at all, it tells the user.
+                NvVid.Evento(EV_BUSCA_FALHOU, ms, 0);
                 Preso(minha, buscaPend >= 0 ? buscaPend : ms);
                 return;
             }
-            catch (Exception e) { Log("buscar: " + e.Message); return; }
+            catch (Exception e) { Log("buscar: " + e.Message); NvVid.Evento(EV_BUSCA_FALHOU, ms, 0); return; }
             finally { if (!expirou && minha == Volatile.Read(ref sessao)) buscando = false; }
             if (minha != Volatile.Read(ref sessao)) return;
             // SetPlayPositionAsync terminou: nao disputar Pause/outro seek com

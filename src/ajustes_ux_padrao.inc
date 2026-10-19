@@ -314,6 +314,13 @@
   0, /* glass quality: Automatica */
   0, /* Dynamic layout background (#205): Gray */
   12, /* Dynamic layout background colour (#205): Ocean */
-  2, /* text and component scale: 100% */
+  0, /* text and component scale: 85% */
+  0, 0, /* prefer binge group (the hand pick for the whole show + the auto memory) Ligado, across sessions Ligado */
+  0, 5, /* reuse last link: Ligado (owner, 16/10), 24 h */
   1, /* title page row spacing: Normal */
   1, /* accent focus: Off (gray plate) */
+  0, /* title line rating order: Default */
+  0, /* art tone: Vivid, identical to existing art colors */
+  0, /* Modern Stage background: Black */
+  0, 0, 0, 0, /* URL lists and guides (Guia de TV, M9): choice (none) and three actions */
+  0, /* episode card rating: follow the title line */

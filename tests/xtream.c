@@ -3,6 +3,7 @@
 // rede_baixar e dados_* sao DUBLES: a lista vem de um corpo canned no formato
 // que os paineis Xtream Codes emitem (category_id ora "5" ora 5, stream_id
 // numero), e o cadastro vive num buffer em memoria.
+#include "stub_perfisessao.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
