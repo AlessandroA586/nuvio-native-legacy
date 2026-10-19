@@ -615,6 +615,10 @@ static void episodeShots(const char *out) {
                "and forces them to reconsider who they can trust.");
       snprintf(episodios[i].data, sizeof episodios[i].data, "March %d, 2024", i + 1);
     }
+    if (layout == HOME_LAYOUT_PADRAO) {
+      snprintf(episodios[1].data, sizeof episodios[1].data, "Wednesday, September 22, 2024");
+      episodios[2].notaImdb = episodios[2].nota = 0;
+    }
     cat_definir_episodios(0, episodios, T1_N + T2_N + T3_N);
     semear(1, T1_N, 3); abrir(0, 0); nosEpisodios(0);
     // Allow worker decode/reveal to settle before freezing both navigation states.

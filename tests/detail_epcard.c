@@ -135,12 +135,12 @@ int main(void) {
     snprintf(settings, sizeof settings, "homeLayoutLocal 1\nepTamanhoLocal %d\n", v);
     gravar(settings);
     assert(ajustes_home_layout() == HOME_LAYOUT_PADRAO);
-    assert(epCardW() == 420 && epThumbH() == 236 && epCardH() == 500);
+    assert(epCardW() == 420 && epThumbH() == 236 && epCardH() == 464);
     assert(epCardPasso() == 420 + NV_DETP_EP_GAP);
     assert(epRowY() == ANC(NV_DETP_EP_Y));
     assert(epSinLinhas() == 4 && epTituloEstilo() == TXT_DET_META2);
     assert(alturaSecao(SEC_EPISODIOS) == epCardH());
-    assert(epCardH() - epThumbH() == 264);
+    assert(epCardH() - epThumbH() == 228);
     aberto = 1; saindo = 0; nivel = 1;
     foco.fileira = SEC_EPISODIOS; foco.coluna = 0;
     for (i = 0; i < 30; i++) detail_atualizar(1.0f / 60.0f, 2000 + i * 16);

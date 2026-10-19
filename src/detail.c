@@ -2182,7 +2182,7 @@ static float epThumbH(void) {
 }
 static float epCardW(void) { return (epModerna() ? NV_DETP_EP_W * epEscala() : 420.0f) * gfx_poster_k(); }
 static float epCardH(void) {
-  if (!epModerna()) return ANC(500.0f);
+  if (!epModerna()) return ANC(464.0f);
   return epThumbH() + NV_DETP_EPM_SIN_DY +
          (float)NV_DETP_EPM_SIN_LINHAS * NV_DETP_EP_LD_SIN + 15.0f;
 }
@@ -5464,15 +5464,17 @@ static float desenhaNotaEpisodio(float x, float y, int fonte, int nota, float a)
   lv = txt_linha(TXT_G21B, valor, 242, 245, 250, 255);
   wm = notasui_marca_largura(fonte, hm);
   selo = (GfxRect){ x, y, pad + wm + gap + lv.w + pad + 2.0f, 30.0f };
-  ajustes_acento(&ar, &ag, &ab);
-  // Fundo quase-preto com uma lavagem mínima do accent: a marca continua
-  // discreta sobre a foto e deixa de parecer um bloco cinza genérico.
-  if (ajustes_vidro()) gfx_vidro_painel(selo, 0.5f, 0.6f, a);
-  else
-  gfx_cor(selo, 0.5f, .055f + ar * .06f, .062f + ag * .06f,
-          .078f + ab * .07f, .94f * a);
-  notasui_marca(fonte, x + pad, y + selo.h * .5f, hm, a);
-  txt_desenhar_alpha(lv, x + pad + wm + gap, y + (selo.h - lv.h) * .5f, a);
+  if (a > 0.0f) {
+    ajustes_acento(&ar, &ag, &ab);
+    // Fundo quase-preto com uma lavagem mínima do accent: a marca continua
+    // discreta sobre a foto e deixa de parecer um bloco cinza genérico.
+    if (ajustes_vidro()) gfx_vidro_painel(selo, 0.5f, 0.6f, a);
+    else
+    gfx_cor(selo, 0.5f, .055f + ar * .06f, .062f + ag * .06f,
+            .078f + ab * .07f, .94f * a);
+    notasui_marca(fonte, x + pad, y + selo.h * .5f, hm, a);
+    txt_desenhar_alpha(lv, x + pad + wm + gap, y + (selo.h - lv.h) * .5f, a);
+  }
   return selo.w + 12.0f;
 }
 
@@ -5667,31 +5669,31 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     // O titulo acende com a mola do foco, como nos outros layouts (#205).
     txt_desenhar_alpha(name,textX,textY+30,a*(0.86f+0.14f*ft));
     float y = textY+64;
-    const int ratings = ep && ((ep->notaImdb > 0 && ajustes_nota_episodio(EX_IMDB)) ||
-      (nota > 0 && ajustes_nota_episodio(EX_TRAKT)) ||
-      (ep->nota > 0 && ajustes_nota_episodio(EX_TMDB)));
-    float copyBottom = r.y + epCardH() - (epNaoExibido(ep) ? 30.0f : 0.0f)
-                       - (ratings ? 48.0f : 0.0f);
-    if (epData) copyBottom -= 10.0f + txt_linha(TXT_CAPTION2,epData,165,171,180,255).h;
+    const int fontes[] = {EX_IMDB, EX_TRAKT, EX_TMDB};
+    const int notas[] = {ep ? ep->notaImdb : 0, nota, ep ? ep->nota : 0};
+    float larg[3] = {0}, total = 0;
+    for (int i = 0; i < 3; i++) if (notas[i] > 0 && ajustes_nota_episodio(fontes[i])) {
+      larg[i] = desenhaNotaEpisodio(0, 0, fontes[i], notas[i], 0);
+      total += larg[i];
+    }
+    float copyBottom = r.y + epCardH() - (epNaoExibido(ep) ? 30.0f : 0.0f);
+    if (epData || total > 0) copyBottom -= 40.0f;
     int lines = (int)floorf((copyBottom-y)/29.0f);
     if (lines > epSinLinhas()) lines = epSinLinhas();
     if (epSin && lines > 0) y += sinopse_bloco_corta(TXT_CAPTION, epSin,171,177,185,
                                    textX,y,textW,29,a,lines);
+    float x = textX, ratingY = y + 10.0f;
     if (epData) {
       const char *date = epData;
       if (!ajustes_data_completa() && strlen(date)>=4) date += strlen(date)-4;
-      txt_desenhar_alpha(txt_linha_corta(TXT_CAPTION2,date,165,171,180,255,textW),
-                        textX,y+10,a);
+      // Reserve complete chips first; only the date may lose text.
+      TxtLinha line = txt_linha_corta(TXT_CAPTION2,date,165,171,180,255,
+                                      fmaxf(0, textW-total));
+      txt_desenhar_alpha(line,textX,ratingY+(30-line.h)*.5f,a);
+      x += line.w + 12.0f;
     }
-    if (ratings) {
-      float x = textX, ratingY = r.y + epCardH() - 46 - (epNaoExibido(ep) ? 30 : 0);
-      if (ep->notaImdb > 0 && ajustes_nota_episodio(EX_IMDB))
-        x += desenhaNotaEpisodio(x, ratingY, EX_IMDB, ep->notaImdb, a);
-      if (nota > 0 && ajustes_nota_episodio(EX_TRAKT))
-        x += desenhaNotaEpisodio(x, ratingY, EX_TRAKT, nota, a);
-      if (ep->nota > 0 && ajustes_nota_episodio(EX_TMDB))
-        desenhaNotaEpisodio(x, ratingY, EX_TMDB, ep->nota, a);
-    }
+    for (int i = 0; i < 3; i++) if (larg[i] > 0)
+      x += desenhaNotaEpisodio(x, ratingY, fontes[i], notas[i], a);
     if (epNaoExibido(ep)) {
       TxtLinha status = txt_linha_corta(TXT_CAPTION2,i18n("NÃO EXIBIDO"),245,199,77,255,textW);
       txt_desenhar_alpha(status,textX,r.y+epCardH()-30,a);
