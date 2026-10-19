@@ -45,7 +45,7 @@ static const NovItem ITENS_207[] = {
   { .icone = "aj_play", .nome = "Especiais",
     .frase = "Episódios especiais aparecem e podem ser reproduzidos (#556).", .linhas = 6 },
   { .icone = "aj_sliders-horizontal", .nome = "Escala de texto e componentes",
-    .frase = "Texto de 85% a 130%, sem deslocar cartazes e controles.", .linhas = 4 },
+    .frase = "Texto de 85% a 130%, sem deslocar cartazes e controles.", .linhas = 4 },
   { .icone = "aj_layout-dashboard", .nome = "Espaçamento das fileiras",
     .frase = "Compacto, Normal ou Confortável na página do título.", .linhas = 4 },
   { .icone = "aj_droplet", .nome = "Foco na cor de destaque",
