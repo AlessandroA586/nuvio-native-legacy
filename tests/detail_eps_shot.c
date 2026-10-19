@@ -79,6 +79,20 @@
 
 #include "text.h"
 #include "plrui.h"
+// Render the same frozen page with an intact backdrop as the glass reference.
+static int fxIntactBackdrop;
+static void fx_backdrop(GfxRect r, GLuint tex, GfxModo mode, float focus,
+                        float px, float py, float radius, float cr, float cg,
+                        float cb, float a, const GfxRect *holes, int n) {
+  if (fxIntactBackdrop) gfx_rect(r, tex, mode, focus, px, py, radius, cr, cg, cb, a);
+#ifndef NV_EP_BASELINE_BUILD
+  else gfx_rect_furos(r, tex, mode, focus, px, py, radius, cr, cg, cb, a, holes, n);
+#else
+  else gfx_rect(r, tex, mode, focus, px, py, radius, cr, cg, cb, a);
+  (void)holes; (void)n;
+#endif
+}
+#define gfx_rect_furos fx_backdrop
 static const char *fxTituloEsperado;
 static int fxTituloDesenhado;
 static const char *fxSinopseEsperada;
@@ -97,7 +111,12 @@ static float fx_titulo_bloco(TxtEstilo estilo, const char *s, int r, int g, int 
 static int fxTrailerVivo;
 static int fx_trailer_aberto(void) { return fxTrailerVivo; }
 #define trailer_aberto fx_trailer_aberto
+static Uint32 fxTick;
+static Uint32 fx_ticks(void) { return getenv("NV_EP_PERF") ? fxTick : SDL_GetTicks(); }
+#define SDL_GetTicks fx_ticks
 #include "../src/detail.c"
+#undef SDL_GetTicks
+#undef gfx_rect_furos
 #include "menu.h"
 #include "ilha.h"
 #undef txt_bloco
@@ -444,7 +463,8 @@ static void quadros(int n) {
     // do backdrop e as miniaturas dos episodios em cinza — de volta ao chao
     // chapado que este arquivo existe para nao ter.
     tex_bombear(3);
-    if (!parado) detail_atualizar(1.0f / 60.0f, SDL_GetTicks());
+    if (getenv("NV_EP_PERF") && !parado) fxTick += 16;
+    if (!parado) detail_atualizar(1.0f / 60.0f, fx_ticks());
     if (fxTrailerVivo) trailerFade = 1.0f;
     txt_novo_quadro();
     tex_novo_quadro();
@@ -456,7 +476,7 @@ static void quadros(int n) {
     gfx_ambiente_preparar();
     glClear(GL_COLOR_BUFFER_BIT);
     gfx_ambiente(1.0f);
-    detail_desenhar(SDL_GetTicks());
+    detail_desenhar(fx_ticks());
     gfx_ambiente_descarregar();
     // MENU OVER THE PAGE (NV_MENU_SOBRE): the same order as app.c — page,
     // side menu on top, clock island last (always top-right).
@@ -527,6 +547,42 @@ static void nosEpisodios(int col) {
   quadros(120);
 }
 
+// Compare the shared helper with the approved cached-line overdraw, including
+// pixel snapping at fractional positions and fades used by the detail tabs.
+static void checkTextWeight(void) {
+  unsigned char expected[512 * 128 * 4], actual[sizeof expected];
+  const float weights[] = {0, .5f, 1.0f, 1.1f, 1.4f};
+  const TxtEstilo styles[] = {TXT_CAPTION2, TXT_CALLOUT, TXT_CAPTION};
+  for (unsigned s = 0; s < sizeof styles / sizeof styles[0]; s++) {
+    TxtLinha line = txt_linha(styles[s], "EPISODE 9 / Season / Info", 245, 199, 77, 255);
+    assert(line.tex);
+    for (unsigned w = 0; w < sizeof weights / sizeof weights[0]; w++) {
+      for (int fade = 0; fade < 2; fade++) {
+        float a = fade ? .43f : 1, x = fade ? 10.4f : 10;
+        glClear(GL_COLOR_BUFFER_BIT);
+        txt_desenhar_alpha(line, x, 980, a);
+        if (weights[w] > .05f) txt_desenhar_alpha(line, x + weights[w] * .5f, 980, a);
+        if (weights[w] > .9f) txt_desenhar_alpha(line, x + weights[w], 980, a);
+        glReadPixels(0, 0, 512, 128, GL_RGBA, GL_UNSIGNED_BYTE, expected);
+        glClear(GL_COLOR_BUFFER_BIT);
+        txt_peso(line, x, 980, a, weights[w]);
+        glReadPixels(0, 0, 512, 128, GL_RGBA, GL_UNSIGNED_BYTE, actual);
+        int maxDelta = 0;
+        for (unsigned i = 0; i < sizeof expected; i++) {
+          int delta = abs((int)expected[i] - actual[i]);
+          if (delta > maxDelta) maxDelta = delta;
+        }
+        // Separate framebuffer blends round to 8 bits after each copy.
+        if (maxDelta > 2) {
+          fprintf(stderr, "Typography mismatch: style=%d weight=%.2f alpha=%.2f delta=%d\n", styles[s], weights[w], a, maxDelta);
+          assert(!"approved detail text weight changed");
+        }
+      }
+    }
+  }
+  puts("[detail-weight] approved pixels preserved across styles, weights and fades");
+}
+
 int main(int argc, char **argv) {
   const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-deteps");
   char nome[600];
@@ -558,6 +614,7 @@ int main(int argc, char **argv) {
   gfx_icones_dir("deploy/app/art");   // o check do card visto e icone (#74)
   ajustes_iniciar();
   dados_iniciar("deploy/app/art");
+  if (getenv("NV_EP_PERF")) dados_gravar("aparencia-20.txt", "1\n");
   // EM PORTUGUES, e nao no padrao de fabrica. `valor[AJ_IDIOMA]` nasce em 1
   // (ingles) e a captura saia com "Season 2 / EPISODE 9 / Cast & Crew" — o que
   // se precisa julgar aqui e a largura das frases que o dono ve na TV dele, e
@@ -580,6 +637,113 @@ int main(int argc, char **argv) {
     ajustes_dir(dados_dir()); }
 
   montarCatalogo();
+  if (getenv("NV_EP_PERF")) {
+    assert(ajustes_home_layout() == HOME_LAYOUT_MODERNA && ajustes_vidro());
+    semear(1, T1_N, 3);
+    for (int i = 0; i < T1_N; i++)
+      snprintf(episodios[i].thumb, sizeof episodios[i].thumb,
+               "deploy/app/art/%02d.jpg", i + 1);
+    cat_definir_episodios(0, episodios, T1_N + T2_N + T3_N);
+    abrir(0, 0); nosEpisodios(0);
+    // Freeze animation/time so the before/after pixels can be compared.
+    parado = 1;
+    medindo = 1; fpsN = 0;
+    quadros(8);
+    fpsRelata("episode-rest");
+    snprintf(nome, sizeof nome, "%s-episodes.png", saida); gravar(nome);
+    int rects = gfx_n_rect;
+    double fill = gfx_fill_gpu;
+    assert(epVisiveis() >= 8);
+    int count = gfx_n_rect;
+    TxtLinha probe = txt_linha(TXT_CAPTION, "Layout probe", 255, 255, 255, 255);
+    txt_desenhar_alpha(probe, 0, 0, 0);
+    // Baseline lacks the alpha-zero guard: measure its full navigation too,
+    // then fail the common cast budget below, rather than stopping this probe.
+#ifndef NV_EP_BASELINE_BUILD
+    assert(gfx_n_rect == count);
+#endif
+    // Measurement-only rating layout must submit no GL draws.
+    notasui_fontes_altura(notasDados());
+#ifndef NV_EP_BASELINE_BUILD
+    assert(gfx_n_rect == count);
+#endif
+    parado = 0;
+    medindo = 0;
+    foco.fileira = SEC_ELENCO; foco.coluna = 0; quadros(120);
+    const int castRects = gfx_n_rect;
+    const double castFill = gfx_fill_gpu;
+    int overBudget = rects > castRects || fill > castFill;
+    int churn = 0, checked = 0;
+    printf("[episode-cast] episodes=%d/%.3f cast=%d/%.3f\n",
+           rects, fill, castRects, castFill);
+    nosEpisodios(0);
+    // Check the first frame of each focus move, not only settled frames.
+    // First traversal admits newly visible cards; the warm return admits no
+    // uploads/rasterizations. Repeat with zoom, whose texture size must stay fixed.
+    int border = ajustes_rapido_op("bordaFocoCartaz");
+    assert(border >= 0 && ajustes_borda_foco());
+    for (int zoom = 0; zoom < 2; zoom++) {
+      if (zoom) {
+        assert(ajustes_rapido_passo(border, 1));
+        assert(!ajustes_borda_foco());
+        quadros(120); // Allow the new maximum thumbnail size once.
+      }
+      for (int pass = 0; pass < 2; pass++) {
+        for (int step = 0; step < T1_N; step++) {
+          int col = pass ? T1_N - 1 - step : step;
+          foco.coluna = col;
+          int uploads = 0, rasterizations = 0;
+          for (int frame = 0; frame < 128; frame++) {
+            quadros(1);
+            uploads += tex_upl_n; rasterizations += txt_rasterizadas;
+            if (gfx_n_rect > castRects || gfx_fill_gpu > castFill)
+              printf("[episode-over] zoom=%d pass=%d col=%d frame=%d rect=%d fill=%.3f\n",
+                     zoom, pass, col, frame, gfx_n_rect, gfx_fill_gpu);
+            overBudget += gfx_n_rect > castRects || gfx_fill_gpu > castFill;
+            checked++;
+          }
+          churn += uploads > (pass ? 0 : 2) || rasterizations > (pass ? 0 : 16);
+          if (uploads || rasterizations)
+            printf("[episode-move] zoom=%d pass=%d col=%d upl=%d txt=%d\n",
+                   zoom, pass, col, uploads, rasterizations);
+          if (col == T1_N - 1) {
+            snprintf(nome, sizeof nome, "%s-%s-scroll.png", saida, zoom ? "zoom" : "ring");
+            gravar(nome);
+          }
+        }
+      }
+    }
+    printf("[episode-navigation] frames=%d over-cast=%d churn=%d\n",
+           checked, overBudget, churn);
+    fflush(stdout);
+    assert(churn == 0);
+    assert(overBudget == 0);
+    checkTextWeight();
+#ifndef NV_EP_BASELINE_BUILD
+    // Frost samples the backdrop before the thumbnails, including the 68 px
+    // fringe. Compare actual GL pixels with the same page without occlusion.
+    nosEpisodios(0); parado = 1;
+    setenv("NUVIO_SHOT_VIDRO_FOSCO", "1", 1);
+    ajustes_teste_vidro_env();
+    unsigned char *actual = malloc(1920 * 1080 * 4), *expected = malloc(1920 * 1080 * 4);
+    assert(actual && expected && ajustes_vidro_fosco());
+    gfx_vidro_sujar(); quadros(8);
+    snprintf(nome, sizeof nome, "%s-frost.png", saida); gravar(nome);
+    glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, actual);
+    fxIntactBackdrop = 1;
+    gfx_vidro_sujar(); quadros(8);
+    glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, expected);
+    int changed = 0;
+    for (int i = 0; i < 1920 * 1080 * 4; i++) changed += abs(actual[i] - expected[i]) > 2;
+    printf("[glass-backdrop] channels-differing-over-2=%d\n", changed);
+    fflush(stdout);
+    free(actual); free(expected);
+    assert(changed == 0);
+    GfxRect holes[N_ITENS * 2];
+    assert(epFuros(holes) == 0);
+#endif
+    return 0;
+  }
   if (getenv("NV_APPLE_EP")) {
     semear(1,2,T1_N);
     itens[0].temporada=1; itens[0].episodio=3;

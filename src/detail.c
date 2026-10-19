@@ -1435,6 +1435,7 @@ int detail_arte_titulo(const CatItem *titulo, char *saida, size_t tam, int *post
   return 1;
 }
 
+static int epFuros(GfxRect *holes);
 static void desenhaArteDetalhe(GfxRect alvo, GLuint tex, const char *arte,
                                int poster, float alpha, float pg) {
   if (!tex) {
@@ -1457,8 +1458,11 @@ static void desenhaArteDetalhe(GfxRect alvo, GLuint tex, const char *arte,
       // No modo cinema o bloco de texto saiu: o veu sai junto (fica 15%,
       // para o logo pequeno do canto nao flutuar sobre uma cena clara).
       gfx_rect(alvo, 0, GFX_DETALHE, veu * (1.0f - 0.85f * trailercinema_t(&trailerCinema)), 1.0f, 0, 0.0f, 0, 0, 0, alpha * trailerFade);
-    } else
-      gfx_rect(alvo, tex, GFX_DETALHE, veu, 0, 0, 0.0f, 0, 0, 0, alpha);
+    } else {
+      GfxRect holes[N_ITENS * 2];
+      int n = epFuros(holes);
+      gfx_rect_furos(alvo, tex, GFX_DETALHE, veu, 0, 0, 0, 0, 0, 0, alpha, holes, n);
+    }
   } else {
     float ap = gfx_tex_aspect_atual > 0.05f ? gfx_tex_aspect_atual : (2.0f / 3.0f);
     float h = alvo.h * 0.90f, w = h * ap, maxW = alvo.w * 0.42f;
@@ -1482,15 +1486,9 @@ static float suave(float x) {
 }
 static float fase2(void) { return suave((t - 0.45f) / 0.55f); }
 
-// A Inter embarcada so tem Regular, Medium e Bold, e a pagina pede 500, 600 e
-// 800 em corpos (32, 26, 21) que so existem em Regular na tabela de text.c —
-// que e arquivo de outro agente nesta sessao. Engrossar redesenhando a mesma
-// linha com deslocamentos sub-pixel e o que sobra, e e o que os rasterizadores
-// chamam de "faux bold": custa uma textura so, porque a linha vem do cache.
+// Preserve the approved weight using the same cached glyph texture.
 static void txt_peso(TxtLinha l, float x, float y, float a, float grossura) {
-  txt_desenhar_alpha(l, x, y, a);
-  if (grossura > 0.05f) txt_desenhar_alpha(l, x + grossura * 0.5f, y, a);
-  if (grossura > 0.9f)  txt_desenhar_alpha(l, x + grossura, y, a);
+  txt_desenhar_peso(l, x, y, a, grossura);
 }
 
 // AUDITORIA (tools/auditoria-release.sh): uma linha quando o numero de
@@ -5554,7 +5552,10 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   const CatItem *serie = cat_item(idx);
   const char *arte = (ep && ep->thumb[0]) ? ep->thumb
                      : (serie && serie->backdrop[0] ? serie->backdrop : NULL);
-  GLuint t2 = arte ? tex_obter_larg(arte, th.w) : 0;
+  // Reserve the largest focus size once; spring motion must not promote
+  // and decode the same thumbnail at successive 32-pixel cache limits.
+  const float texW = r.w * (ajustes_borda_foco() || epApple() ? 1.0f : 1.0f + FOCO_ZOOM);
+  GLuint t2 = arte ? tex_obter_larg(arte, texW) : 0;
   // STILL QUE NAO EXISTE NEM NO METAHUB NEM NO TMDB (One Piece da 2a
   // temporada em diante, 23/09): o card nao fica cinza, leva o fundo da serie
   // — o numero e o nome do episodio ja estao no texto por cima. O still
@@ -5562,7 +5563,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   if (!t2 && ep && ep->thumb[0] && arte == ep->thumb && tex_falhou(arte) && serie) {
     const char *reserva = serie->backdrop[0] ? serie->backdrop
                         : (serie->poster[0] ? serie->poster : NULL);
-    GLuint t3 = reserva ? tex_obter_larg(reserva, th.w) : 0;
+    GLuint t3 = reserva ? tex_obter_larg(reserva, texW) : 0;
     if (t3) { arte = reserva; t2 = t3; }
   }
   float aArte = (c >= 0 && c < DET_REV_EP) ? revela_arte(&revEp[c], t2 != 0, agora) : 1.0f;
@@ -5581,22 +5582,30 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
     if (tb) t2 = tb;
     else { t2 = 0; arte = NULL; }
   }
+  const int watched = ep && serie && serie->imdb[0] &&
+      vistoep_estado(serie->imdb, ep->temporada, ep->episodio) == 1;
+  const int mergedVeil = t2 && a * gfx_opacidade_grupo >= .999f;
+  if (mergedVeil) {
+    gfx_veu_card_atual[0] = -1.0f;
+    gfx_veu_card_atual[1] = aArte;
+    gfx_veu_card_atual[2] = watched ? .12f : 0.0f;
+  }
   if (t2) {
-    if (aArte < 0.999f) gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
+    if (!mergedVeil && aArte < 0.999f) gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
     gfx_tex_aspect_atual = tex_aspecto(arte);
-    gfx_rect(th, t2, GFX_CARD, f, 0, 0, raioTh, 0, 0, 0, a * aArte);
+    gfx_rect(th, t2, GFX_CARD, f, 0, 0, raioTh, 0, 0, 0, mergedVeil ? a : a * aArte);
     gfx_tex_aspect_atual = 0.0f;
   } else if (arte && !tex_falhou(arte))
     gfx_esqueleto(th, raioTh, 0.133f, 0.133f, 0.133f, a);
   else gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
-  veuEpisodio(th, a);
+  if (mergedVeil) gfx_veu_card_limpar();
+  else veuEpisodio(th, a);
   if (ajustes_vidro()) gfx_vidro_aro(th, raioTh, 1.5f, 1, 1, 1, 0.14f * a);   // vidro: aro fino na miniatura
 
   // A mesma fonte que o menu modifica: desconhecido (-1) nao recebe selo.
   // A lavagem e leve para preservar a arte; texto e estado sao desenhados depois.
-  if (ep && serie && serie->imdb[0] &&
-      vistoep_estado(serie->imdb, ep->temporada, ep->episodio) == 1) {
-    gfx_cor(th, raioTh, 0, 0, 0, .12f * a);
+  if (watched) {
+    if (!mergedVeil) gfx_cor(th, raioTh, 0, 0, 0, .12f * a);
     desenhaAssistidoEpisodio(th, a);
   }
   th = thLayout;   // o texto abaixo segue a caixa de repouso
@@ -7339,7 +7348,10 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
     float f = animFoco[r][c];
     float x = xItem(r, c) - scrollSec[r];
     float w = larguraItem(r, c);
-    if (x > NV_TELA_W || x + w < -ANC(NV_DETP_X)) continue;   // shadow/glow reach, not a whole extra card
+    // Episodes have only a focus rim/zoom, no wide shadow. Keep the
+    // protruding pixels, but do not request textures or lay out hidden cards.
+    float margin = r == SEC_EPISODIOS ? fmaxf(w * FOCO_ZOOM * 0.5f, NV_ANEL_FOCO + 10.0f) : ANC(NV_DETP_X);
+    if (x > NV_TELA_W + (r == SEC_EPISODIOS ? margin : 0.0f) || x + w < -margin) continue;
     if (ponteiro_ativo() && a > 0.3f && c < secaoColunas(r) && alturaAlvo(r) > 0.0f)
       ponteiro_alvo(x, y,
                     w, alturaAlvo(r), ponteiroDetalhe, NULL, r, c);
@@ -7353,7 +7365,11 @@ static void desenhaSecao(int r, float a, Uint32 agora) {
       case SEC_EPISODIOS: {
         GfxRect b = { x, y, epCardW(), epCardH() };
         if (foco.fileira == r && c == foco.coluna) { menuOrigem = b; menuOrigemCol = c; menuOrigemF = f; menuOrigemA = a; }
-        desenhaEpisodio(b, c, f, a, agora); break;
+        int clip = gfx_cortar_invisiveis;
+        gfx_cortar_invisiveis = 1;
+        desenhaEpisodio(b, c, f, a, agora);
+        gfx_cortar_invisiveis = clip;
+        break;
       }
       case SEC_ABAS_INFO: {
         desenhaAbaInfo(x, y, c, f, a);
@@ -7722,6 +7738,37 @@ static void reacaoPendente(float s) {
 // juntarem, a troca e AQUI e em mais lugar nenhum. O conteudo da pagina nao
 // depende da arte nitida para ter contraste — o veu de leitura do heroi
 // (veuLeitura) e desenhado por cima, fora desta funcao.
+// Alpha of the first two series rows (seasons and episodes).
+static float epLinhaAlfa(void) {
+  float a2 = fase2();
+  float aTopo = a2 * (1.0f - trailercinema_t(&trailerCinema)) * (1.0f - trocaarte_visivel());
+  return aTopo > corpoAlpha(a2) ? aTopo : corpoAlpha(a2);
+}
+
+static int epFuros(GfxRect *holes) {
+  int n = 0;
+  // Holes are only hidden under fully opaque thumbnails (desenhaEpisodio's mergedVeil).
+  if (epLinhaAlfa() * gfx_opacidade_grupo < .999f) return 0;
+  // Glass captures this backdrop before thumbnails repaint, including the
+  // 68 px sampling fringe. Keep the complete source intact while frost is on.
+  if (ajustes_vidro() && ajustes_vidro_fosco()) return 0;
+  if (!epModerna() || corpoSobArte() || corpoOculto(ehSerie()) ||
+      fase2() < .999f || trocaarte_visivel() > .001f ||
+      trailercinema_t(&trailerCinema) > .001f || ajustes_desfocar_nao_assistidos()) return 0;
+  for (int c = 0; c < epVisiveis() && c < N_ITENS && c < DET_REV_EP; c++) {
+    const CatEp *ep = cat_episodio(idx, epAbsoluto(c));
+    float x = xItem(SEC_EPISODIOS, c) - scrollSec[SEC_EPISODIOS];
+    if (x > NV_TELA_W || x + epCardW() < 0 || !ep || !ep->thumb[0]) continue;
+    if (!tex_obter_larg(ep->thumb, epCardW() * (ajustes_borda_foco() ? 1 : 1 + FOCO_ZOOM))) continue;
+    GfxRect th = foco_zoom((GfxRect){x, epRowY()-scrollY, epCardW(), epThumbH()}, animFoco[SEC_EPISODIOS][c]);
+    // Keep corners and their antialias fringe; only the solid interior occludes.
+    float inset = NV_DETP_EP_RAIO + 2;
+    holes[n++] = (GfxRect){th.x+inset, th.y+2, th.w-2*inset, th.h-4};
+    holes[n++] = (GfxRect){th.x+2, th.y+inset, th.w-4, th.h-2*inset};
+  }
+  return n;
+}
+
 static void detalheFundo(float s) {
   if (!detail_cobre_tela() && !carDesenhaFundo()) {
     GfxRect tela = { 0, 0, NV_TELA_W, NV_TELA_H };
@@ -7909,10 +7956,9 @@ static void detail_desenhar_(Uint32 agora) {
   desenhaEsqueletoElenco(corpoAlpha(a2));
   // As duas fileiras da primeira tela da serie entram com o heroi, e nao com
   // a rolagem (pg fica em 0 com o foco nelas).
-  { float aTopo = a2 * (1.0f - trailercinema_t(&trailerCinema)) * (1.0f - trocaarte_visivel());
-    for (int r = 0; r < N_SECOES; r++)
-      desenhaSecao(r, (ehSerie() && (r == SEC_TEMPORADAS || r == SEC_EPISODIOS))
-                      ? (aTopo > corpoAlpha(a2) ? aTopo : corpoAlpha(a2)) : corpoAlpha(a2), agora); }
+  for (int r = 0; r < N_SECOES; r++)
+    desenhaSecao(r, (ehSerie() && (r == SEC_TEMPORADAS || r == SEC_EPISODIOS))
+                    ? epLinhaAlfa() : corpoAlpha(a2), agora);
   // POR CIMA de tudo: a ficha e outra tela, nao uma secao desta.
   // O ponteiro (#99) nao alcanca a pagina por baixo de nenhuma das duas.
   if (pessoaAberta) { ponteiro_camada(); desenhaPessoa(s); }
@@ -8016,4 +8062,10 @@ int detail_sob_menu_ativo(void) { return sobMenu; }
 // de texto; o corpo mede NV_TELA_W/H na tela virtual dela.
 void detail_evento(const SDL_Event *e) { TXT_INI(); detail_evento_(e); TXT_FIM(); }
 void detail_atualizar(float dt, Uint32 agora) { TXT_INI(); detail_atualizar_(dt, agora); TXT_FIM(); }
-void detail_desenhar(Uint32 agora) { TXT_INI(); detail_desenhar_(agora); TXT_FIM(); }
+void detail_desenhar(Uint32 agora) {
+  int clip = gfx_cortar_invisiveis;
+  if (epModerna() && nivel >= 1 && foco.fileira == SEC_EPISODIOS)
+    gfx_cortar_invisiveis = 1;
+  TXT_INI(); detail_desenhar_(agora); TXT_FIM();
+  gfx_cortar_invisiveis = clip;
+}

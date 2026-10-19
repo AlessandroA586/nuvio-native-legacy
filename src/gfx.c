@@ -41,6 +41,7 @@ typedef struct {
   GLint alt;     // uAlt: altura do rect em pixels do alvo (a rampa de 1 px do SDF)
   GLint margem;  // uMargem do VS: 1 px de folga no quad dos modos de SDF
   GLint jan;     // uJan: janela do GFX_JANELA
+  GLint peso;    // uPeso: GFX_TEXTO faux-bold scale/offsets in highp
   GLint leve;    // uLeve: 1 = efeitos leves (sem dither), ver gfx_definir_efeitos_leves
   GLint sub;     // uSub do VS: o pedaco do rect desenhado (gfx_sombra_vazada)
   float subAtual[4];
@@ -405,6 +406,9 @@ static const char *FS_CABECA =
   "#else\n"
   "#define NV_HP mediump\n"
   "#endif\n"
+  // GFX_TEXTO faux bold: line scale and copy offsets. mediump would put a
+  // ~1000-texel line up to half a texel off (soft or shimmering glyphs).
+  "uniform NV_HP vec3 uPeso;\n"
   // O fundo social (GFX_SOCIAL), como funcao da posicao na tela (y para
   // baixo), para o modo SOCIAL e para servir de fundo em gfx_hero_camadas.
   "vec3 nv_social(vec2 p){\n"
@@ -537,14 +541,22 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  float a = (1.0-smoothstep(0.30,0.66,vUv.x))*uHeroiVeu.a;\n"
   "  cor = mix(cor, uHeroiVeu.rgb, a);\n"
   "#endif\n"
-  "  if (uVeu.y > 0.0 || uVeu.w > 0.0) {\n"
+  // Opaque episode art carries its black veil and watched tint in one pass.
+  "  if (uVeu.x < 0.0) {\n"
+  "    float t = clamp(vUv.y, 0.0, 1.0);\n"
+  "    float g = mix(0.06, 0.18, smoothstep(0.00, 0.22, t));\n"
+  "    g = mix(g, 0.62, smoothstep(0.22, 0.52, t));\n"
+  "    g = mix(g, 0.86, smoothstep(0.52, 0.82, t));\n"
+  "    g = mix(g, 0.95, smoothstep(0.82, 1.00, t));\n"
+  "    cor = mix(vec3(0.133), cor, uVeu.y) * (1.0 - g) * (1.0 - uVeu.z);\n"
+  "  } else if (uVeu.y > 0.0 || uVeu.w > 0.0) {\n"
   "    float yb = 1.0 - vUv.y;\n"
   "    float t1 = 1.0 - smoothstep(0.42, 1.0, yb / max(uVeu.x, 0.001));\n"
   "    float t2 = 1.0 - smoothstep(0.42, 1.0, yb / max(uVeu.z, 0.001));\n"
   "    float v = 1.0 - (1.0 - uVeu.y * t1 * t1) * (1.0 - uVeu.w * t2 * t2);\n"
   "    cor = mix(cor, vec3(0.02, 0.02, 0.03), v);\n"
   "  }\n"
-  "  gl_FragColor = vec4(cor, m * uCor.a);\n"
+  "  gl_FragColor = uVeu.x < 0.0 ? nv_dither(cor, m * uCor.a) : vec4(cor, m * uCor.a);\n"
   "}\n",
 
   // GFX_SOMBRA — mancha difusa atras do item em foco
@@ -631,6 +643,26 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "void main(){\n"
   // uFoco = 1 - gfx_hdr_ui (UI em HDR, esmaecer.h); 0 fora do HDR.
   "  vec4 g = texture2D(uTex, vUv);\n"
+  // Negative uPar.x composes snapped faux-bold copies of the cached glyphs.
+  "  if (uPar.x < 0.0) {\n"
+  "    NV_HP vec2 uv = vec2(vUv.x / uPeso.x, vUv.y);\n"
+  "    g = texture2D(uTex, uv);\n"
+  "    g.a *= step(uv.x, 1.0) * uCor.a;\n"
+  "    vec3 rgb = g.rgb * g.a;\n"
+  "    if (uPeso.y >= 0.0) {\n"
+  "      NV_HP vec2 p = uv - vec2(uPeso.y, 0.0);\n"
+  "      vec4 h = texture2D(uTex, p);\n"
+  "      float a = h.a * uCor.a * step(0.0, p.x) * step(p.x, 1.0);\n"
+  "      rgb = h.rgb * a + rgb * (1.0-a); g.a = a + g.a * (1.0-a);\n"
+  "    }\n"
+  "    if (uPeso.z >= 0.0) {\n"
+  "      NV_HP vec2 p = uv - vec2(uPeso.z, 0.0);\n"
+  "      vec4 h = texture2D(uTex, p);\n"
+  "      float a = h.a * uCor.a * step(0.0, p.x) * step(p.x, 1.0);\n"
+  "      rgb = h.rgb * a + rgb * (1.0-a); g.a = a + g.a * (1.0-a);\n"
+  "    }\n"
+  "    gl_FragColor = vec4(rgb / max(g.a, 0.00001) * (1.0-uFoco), g.a); return;\n"
+  "  }\n"
   // uPar.x liga o tint RGB do texto em cache; logos mantem a cor original.
   "  vec3 tint = uPar.x > 0.5 ? uCor.rgb : vec3(1.0);\n"
   "  gl_FragColor = vec4(g.rgb * tint * (1.0 - uFoco), g.a * uCor.a);\n"
@@ -1686,6 +1718,7 @@ static int progMontar(int m) {
   progs[m].reflexo = glGetUniformLocation(p, "uReflexo");
   progs[m].par  = glGetUniformLocation(p, "uPar");
   progs[m].raio = glGetUniformLocation(p, "uRaio");
+  progs[m].peso = glGetUniformLocation(p, "uPeso");
   progs[m].cor  = glGetUniformLocation(p, "uCor");
   progs[m].asp  = glGetUniformLocation(p, "uAspect");
   progs[m].texAsp = glGetUniformLocation(p, "uTexAsp");
@@ -2316,6 +2349,39 @@ void gfx_ambiente_descarregar_fora(const GfxRect *furos, int n) {
 static void ambPintarVeu(float cr, float cg, float cb, float va);
 
 
+int gfx_cortar_invisiveis;
+void gfx_rect_furos(GfxRect r, GLuint tex, GfxModo modo, float foco,
+                    float parx, float pary, float raio, float cr, float cg,
+                    float cb, float ca, const GfxRect *furos, int n) {
+  float saved[4], y = r.y;
+  GfxRect t = r;   // as gfx_rect will draw it: group transform, then text scale
+  GFX_TR_RECT(t.x, t.y, t.w, t.h);
+  if (escAtiva != 1.0f) { t.x *= escAtiva; t.y *= escAtiva; t.w *= escAtiva; t.h *= escAtiva; }
+  memcpy(saved, subAtual, sizeof saved);
+  while (y < r.y + r.h) {
+    float end = r.y + r.h, x = r.x;
+    for (int i = 0; i < n; i++) {
+      if (furos[i].y > y) end = fminf(end, furos[i].y);
+      if (furos[i].y + furos[i].h > y) end = fminf(end, furos[i].y + furos[i].h);
+    }
+    while (x < r.x + r.w) {
+      float next = r.x + r.w, skip = x;
+      for (int i = 0; i < n; i++) if (furos[i].y <= y && furos[i].y + furos[i].h >= end) {
+        if (furos[i].x <= x) skip = fmaxf(skip, furos[i].x + furos[i].w);
+        else next = fminf(next, furos[i].x);
+      }
+      if (skip > x) { x = skip; continue; }
+      subAtual[0] = (x-r.x)/r.w; subAtual[1] = (y-r.y)/r.h;
+      subAtual[2] = (next-r.x)/r.w; subAtual[3] = (end-r.y)/r.h;
+      if (fillGpuArea(t, subAtual) > 0.0)
+        gfx_rect(r, tex, modo, foco, parx, pary, raio, cr, cg, cb, ca);
+      x = next;
+    }
+    y = end;
+  }
+  memcpy(subAtual, saved, sizeof saved);
+}
+
 void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
               float parx, float pary, float raio,
               float cr, float cg, float cb, float ca) {
@@ -2340,6 +2406,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
     esmaecer_cor_hdr(gfx_hdr_ui, &cr, &cg, &cb, &ca);
   GFX_TR_RECT(r.x, r.y, r.w, r.h);
   if (escAtiva != 1.0f) { r.x *= escAtiva; r.y *= escAtiva; r.w *= escAtiva; r.h *= escAtiva; }
+  if (gfx_cortar_invisiveis && !giroOn && !miniAtiva && fillGpuArea(r, subAtual) == 0.0) return;
   // A COR DO DESTAQUE E A ASSINATURA. Com o degrade ligado, todo retangulo ou
   // anel pintado EXATAMENTE com o destaque vivo (os tres floats que
   // ajustes_acento devolveu, sem conta no meio) e superficie de destaque, e
@@ -2547,6 +2614,7 @@ void gfx_rect(GfxRect r, GLuint tex, GfxModo modo, float foco,
     glUniform1f(P->reflexo, ajustes_profundidade() ? ajustes_profundidade_brilho() : 0.0f);
   if (P->par >= 0)    glUniform2f(P->par, parx, pary);
   if (P->raio >= 0)   glUniform1f(P->raio, raio);
+  if (P->peso >= 0 && parx < 0) glUniform3f(P->peso, -parx, pary, raio);
   if (P->asp >= 0)    glUniform1f(P->asp, r.h > 0 ? r.w / r.h : 1.0f);
   if (P->texAsp >= 0) glUniform1f(P->texAsp, gfx_tex_aspect_atual);
   if (P->jan >= 0) {
