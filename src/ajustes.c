@@ -660,7 +660,7 @@ typedef enum {
   AJ_FOCO_ACENTO,      // focus plate in the accent colour instead of gray (glass only); default off; local, append-only
   AJ_NT_ORDEM,         // local rating-source reorder sheet; append-only
   AJ_ARTE_TOM,         // Device-local, append-only: 0 Vivid (unchanged), 1 Light.
-  AJ_PALCO_FUNDO,      // Device-local, append-only: Black / Current / Artwork only.
+  AJ_PALCO_FUNDO,      // Device-local, append-only: PALCO_* (ajustes.h).
   // FONTES POR URL (Guia de TV, M9, ltv.h): listas M3U e guias XMLTV deste
   // perfil. AJ_URL_LISTA escolhe uma das ja cadastradas (so o nome e o host na
   // tela, nunca a URL: ela pode levar usuario e senha), os dois ADD abrem o
@@ -696,7 +696,7 @@ static const char *V_TELA_ABERTURA[] = { "Cinema", "Detalhada" };
 static const char *V_ABERTURA_FUNDO[] = { "Desligado", "Arte", "Arte borrada" };
 static const char *V_ABERTURA_ESTILO[] = { "Centro", "Canto" };
 static const char *V_ARTE_TOM[] = { "Vívido", "Claro" };
-static const char *V_PALCO_FUNDO[] = { "Preto", "Como está", "Só arte" };
+static const char *V_PALCO_FUNDO[] = { "Cortina", "Como está", "Só arte", "Preto", "Aura", "Tríptico", "Monumento" };
 static const char *V_TITULO_FIL[] = { "Clássico", "Ilha", "Editorial", "Acento" };
 static const char *V_VIDRO_QUALIDADE[] = { "Automática", "Desempenho", "Alta" };
 static const char *V_FUNDO_DIN[] = { "Cinza", "Cor", "Imersivo" };
@@ -1721,7 +1721,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Foco na cor de destaque", V_LIGA, 2),   // local: focoAcentoLocal
   ACAO("Ordem das notas na linha do título"),   // local: notaTituloOrdem
   ESC("Tom da arte", V_ARTE_TOM, 2),                       // local: artToneLocal
-  ESC("Fundo do Palco", V_PALCO_FUNDO, 3),
+  ESC("Fundo do Palco", V_PALCO_FUNDO, 7),
   ESC("Listas e guias por URL",          V_URL_LISTA, 9),     // por perfil: ltv-urls-p<N>.txt (tamanho dinamico)
   ACAO("Adicionar lista M3U"),
   ACAO("Adicionar guia XMLTV"),
@@ -7239,7 +7239,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_TELA_ABERTURA: return "Cinema (padrão): a arte e o logo do título ficam na tela até o vídeo entrar. Detalhada: a fonte, o add-on e cada passo da abertura. Na Cinema, Para cima ou Para baixo mostra os detalhes. Vale só nesta TV.";
     case AJ_TITULO_FIL: return "Como o título de cada fileira da Home aparece. Clássico (padrão): só o texto. Ilha: numa pílula de vidro. Editorial: com uma linha de categoria acima. Acento: com um ponto de destaque. Vale só nesta TV.";
     case AJ_FUNDO_DIN: return "O fundo do layout Dinâmica. Cinza (padrão): o cinza escuro da Apple TV, sempre o mesmo. Cor: uma cor sua, fixa. Imersivo: acompanha a arte do título, em tons suaves e com troca lenta. Vale só nesta TV.";
-    case AJ_PALCO_FUNDO: return "Palco na Moderna: Preto (padrão), só cartazes e ficha; Como está, destaque completo; Só arte, fundo diferente do cartaz, sem texto no topo. Sem fundo distinto, usa Preto. Só neste aparelho.";
+    case AJ_PALCO_FUNDO: return "Palco na Moderna, com artes de fundo, nunca o cartaz. Cortina (padrão): arte à direita com o logo; Aura: arte desfocada; Tríptico: três artes; Monumento: arte no tom do app; Preto: só cartazes e ficha; Como está: destaque completo; Só arte: sem texto no topo. Sem arte de fundo, usa Preto. Só neste aparelho.";
     case AJ_FUNDO_DIN_COR: return "A cor do fundo da Dinâmica, escurecida para o texto continuar legível. Vale só nesta TV.";
     case AJ_ABERTURA_ESTILO: return "Como a tela de abertura se organiza. Centro (padrão): o logo no meio e o anel de progresso embaixo dele. Canto: o logo no canto inferior esquerdo, com o anel pequeno embaixo dele. Vale só nesta TV.";
     case AJ_MENU_CARTAZ: return "Ligado (padrão): o menu de contexto traz o cartaz ampliado com logo, notas e sinopse, e a Home continua atrás. Desligado: só a lista de ações ao lado do cartaz, sem ampliar. Vale só nesta TV.";

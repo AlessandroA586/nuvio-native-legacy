@@ -5,7 +5,7 @@
 #include <math.h>
 
 static int heroInfo, heroBackdrops, stageArtwork;
-static GLuint artworkTexture;
+static GLuint artworkTexture, stageTextures[4];
 static void auditRect(GfxRect r, GLuint tex, GfxModo modo, float foco,
                       float px, float py, float raio, float cr, float cg, float cb, float ca) {
   if (r.y * gfx_escala() < 480 && ca * gfx_opacidade_grupo > .004f) {
@@ -13,6 +13,7 @@ static void auditRect(GfxRect r, GLuint tex, GfxModo modo, float foco,
         modo == GFX_HERO_CAM || modo == GFX_HERO_CHEIO_CAM) heroBackdrops++;
     if (modo == GFX_TEXTO || modo == GFX_MARCA) heroInfo++;
     if (modo == GFX_VITRINE && tex) { stageArtwork++; artworkTexture = tex; }
+    if (modo == GFX_PALCO_ARTE && tex && stageArtwork < 4) stageTextures[stageArtwork++] = artworkTexture = tex;
   }
   gfx_rect(r, tex, modo, foco, px, py, raio, cr, cg, cb, ca);
 }
@@ -36,6 +37,7 @@ static void capture(const char *dir, const char *phase, int mode, const char *st
   snprintf(shotPath, sizeof shotPath, "%s/%s-%d-g%d-m%d-%s.bmp", dir, phase,
            (int)roundf(gfx_escala_txt() * 100), ajustes_vidro(), mode, state);
   heroInfo = heroBackdrops = stageArtwork = 0; artworkTexture = 0;
+  memset(stageTextures, 0, sizeof stageTextures);
   if (!strcmp(state, "stage")) holoA = 1.0f;
   quadros(1, shotPath);
 }
@@ -90,10 +92,10 @@ int main(int argc, char **argv) {
   artehero_definir_falhou(tex_falhou);
   gfx_icones_dir("deploy/app/art");
   ajustes_dir(dirDados);
-  assert(ajustes_palco_fundo() == 0);
+  assert(ajustes_palco_fundo() == PALCO_CORTINA); // Old stored 0 (Black) is the new default.
   assert(ajustes_escala_texto() == .85f);
-  setting(0, glass, 0); // Run legacy appearance migrations once.
-  setting(0, glass, 0); // Then use one stable theme for every mode.
+  setting(0, glass, PALCO_PRETO); // Run legacy appearance migrations once.
+  setting(0, glass, PALCO_PRETO); // Then use one stable theme for every mode.
   assert(home_iniciar("deploy/app/art"));
   AddonRemoto addon = { .nome = "Fixture", .url = "http://127.0.0.1:1/manifest.json", .ativo = 1 };
   assert(addons_definir_lista(&addon, 1));
@@ -124,17 +126,17 @@ int main(int argc, char **argv) {
   assert(fil_definir_tipo("stage_movie", FIL_TIPO_PALCO));
   quadros(90, NULL);
   tecla(SDLK_DOWN); quadros(90, NULL);
-  capture(dir, phase, 0, "normal");
+  capture(dir, phase, PALCO_PRETO, "normal");
   assert(heroInfo > 0 && heroBackdrops > 0);
   tecla(SDLK_DOWN); quadros(1, NULL);
-  capture(dir, phase, 0, "enter");
+  capture(dir, phase, PALCO_PRETO, "enter");
   assert(heroBackdrops > 0); // First focus frames retain the fading hero.
   quadros(90, NULL);
-  capture(dir, phase, 0, "stage");
+  capture(dir, phase, PALCO_PRETO, "stage");
 #ifdef PALCO_BASELINE
   // Untouched renderer: capture proof, then demonstrate the missing behavior.
   fflush(stdout);
-  quadros(510, NULL); capture(dir, phase, 0, "stage"); // same settle time as Current
+  quadros(510, NULL); capture(dir, phase, PALCO_PRETO, "stage"); // same settle time as Current
   assert(heroInfo == 0 && heroBackdrops == 0);
   return 0;
 #else
@@ -165,12 +167,9 @@ int main(int argc, char **argv) {
   snprintf(missing.poster, sizeof missing.poster, "https://image.tmdb.org/t/p/w500/same.jpg");
   snprintf(missing.backdrop, sizeof missing.backdrop, "https://image.tmdb.org/t/p/original/same.jpg");
   assert(!palcoArte(&missing));
-  int op = ajustes_rapido_op("palcoFundoLocal");
-  assert(op >= 0);
-  assert(ajustes_rapido_passo(op, 1)); // Persist Artwork -> Black.
-  ajustes_dir(dirDados); assert(ajustes_palco_fundo() == 0);
+  setting(0, glass, PALCO_PRETO); // 7 choices: Settings only, not the quick panel.
   ajustes_aplicar_blob("{\"palcoFundoLocal\":2}");
-  assert(ajustes_palco_fundo() == 0); // Account cannot override device choice.
+  assert(ajustes_palco_fundo() == PALCO_PRETO); // Account cannot override device choice.
   setting(0, glass, 2);
   // Missing backdrop must render exactly the same empty hero as Black.
   CatItem *live = (CatItem *)focused;
@@ -179,13 +178,35 @@ int main(int argc, char **argv) {
   capture(dir, phase, 2, "fallback");
   assert(heroInfo == 0 && heroBackdrops == 0 && stageArtwork == 0);
   blankHero(); memcpy(live->backdrop, saved, sizeof saved);
+  // Premium concepts: backdrop art only, never the focused poster.
+  GLuint posterTex = tex_obter(live->poster);
+  snprintf(live->backdropTrakt, sizeof live->backdropTrakt, "%s", live->poster);
+  assert(!palcoArteOutra(live, live->backdrop, NULL)); // poster is never a side panel
+  snprintf(live->backdropTmdb, sizeof live->backdropTmdb, "%s", cat_item_exato(0)->backdrop);
+  assert(palcoArteOutra(live, live->backdrop, NULL) == live->backdropTmdb);
+  const int concepts[] = { PALCO_CORTINA, PALCO_AURA, PALCO_TRIPTICO, PALCO_MONUMENTO };
+  for (int i = 0; i < 4; i++) {
+    setting(0, glass, concepts[i]); quadros(90, NULL); quadros(1, NULL);
+    capture(dir, phase, concepts[i], "stage");
+    printf("concept %d: art=%d info=%d hero=%d\n", concepts[i], stageArtwork, heroInfo, heroBackdrops);
+    assert(heroBackdrops == 0 && heroInfo > 0); // logo, no Current hero
+    assert(stageArtwork == (concepts[i] == PALCO_TRIPTICO ? 3 : 1));
+    for (int t = 0; t < stageArtwork; t++) assert(stageTextures[t] && stageTextures[t] != posterTex);
+    if (concepts[i] == PALCO_TRIPTICO) assert(stageTextures[0] != stageTextures[1]);
+    snprintf(live->backdrop, sizeof live->backdrop, "%s", live->poster);
+    capture(dir, phase, concepts[i], "fallback");
+    assert(stageArtwork == 0 && heroBackdrops == 0); // no backdrop -> Black
+    blankHero(); memcpy(live->backdrop, saved, sizeof saved);
+  }
+  live->backdropTmdb[0] = live->backdropTrakt[0] = 0;
+  setting(0, glass, 2); quadros(90, NULL);
   tecla(SDLK_UP); quadros(1, NULL);
   capture(dir, phase, 2, "leave");
   quadros(90, NULL);
   capture(dir, phase, 2, "normal-return");
   assert(heroInfo > 0 && heroBackdrops > 0);
   int otherInfo[3] = {0}, otherBackdrops[3] = {0};
-  for (int mode = 0; mode < 3; mode++) for (int layout = 1; layout <= 2; layout++) {
+  for (int mode = 0; mode <= PALCO_MONUMENTO; mode++) for (int layout = 1; layout <= 2; layout++) {
     setting(layout, glass, mode); quadros(90, NULL);
     tecla(SDLK_DOWN); quadros(90, NULL);
     capture(dir, phase, mode, layout == 1 ? "standard" : "dynamic");

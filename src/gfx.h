@@ -275,7 +275,15 @@ typedef enum {
   // Selected internally for GFX_CARD while the Hero reading tint is active.
   GFX_CARD_HERO = 46,
   GFX_PALCO_CHAO = 47, // Stage floor glow without a fullscreen veil.
-  GFX_NMODOS = 48
+  // GFX_PALCO_ARTE — Stage backdrop art, one pass, alpha-faded into the page.
+  //   uPar.x = 0 Cortina (left/bottom mask), 1 Aura (saturated, vignette;
+  //            pass the gfx_desfocado copy), 2 Triptych centre panel,
+  //            3 Triptych side panel (grey, dim), 4 Monument (accent duotone)
+  //   uPar.y = horizontal cover anchor, 0 left .. 1 right
+  //   uFoco  = Triptych skew: top edge shift, in fractions of the rect width
+  //   uCor.a = alpha; uTexAsp = texture w/h
+  GFX_PALCO_ARTE = 48,
+  GFX_NMODOS = 49
 } GfxModo;
 
 typedef struct {

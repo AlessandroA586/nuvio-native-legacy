@@ -520,10 +520,14 @@ static float heroEntra = 1.0f;
 static int palcoFundoModo = 1, palcoFundoAlvo = 1, palcoFundoItem = -1;
 static float palcoFundoT = 1.0f, palcoFundoInicio = 1.0f;
 static float palcoFundoAlpha = 1.0f;
+// Focus changes fade the shown item out, then the new one in once its art is
+// decoded: one art pass per frame, never two stacked fullscreen layers.
+static int palcoMostra = -1, palcoPronto;
+static float palcoItemA;
 static int palcoFundoDestino(void) {
   return ajustes_home_layout() == HOME_LAYOUT_MODERNA && !focoHero &&
          foco.fileira >= 0 && foco.fileira < nFileiras &&
-         fileiras[foco.fileira].tipo == FILEIRA_PALCO ? ajustes_palco_fundo() : 1;
+         fileiras[foco.fileira].tipo == FILEIRA_PALCO ? ajustes_palco_fundo() : PALCO_ATUAL;
 }
 // TROCA DESLIZADA (dono, 30/09: "a hero passando animado, tipo trocando a
 // imagem pro lado e a outra bem grudada nela"; ajuste "Transicao do destaque").
@@ -3902,7 +3906,7 @@ static void home_atualizar_(float dt, Uint32 agora) {
   }
 
   { int alvo = palcoFundoDestino();
-    if (alvo == 2) palcoFundoItem = fileiraItemIndice(&fileiras[foco.fileira], foco.coluna);
+    if (alvo != PALCO_ATUAL) palcoFundoItem = fileiraItemIndice(&fileiras[foco.fileira], foco.coluna);
     if (alvo != palcoFundoAlvo) {
       palcoFundoAlvo = alvo; palcoFundoT = 0.0f;
       palcoFundoInicio = palcoFundoAlpha;
@@ -3914,8 +3918,13 @@ static void home_atualizar_(float dt, Uint32 agora) {
       if (palcoFundoT >= 1.0f) {
         palcoFundoModo = palcoFundoAlvo; palcoFundoT = 0.0f; palcoFundoInicio = 0.0f;
       }
-    } else palcoFundoAlpha = palcoFundoModo == 0 ? 0.0f : palcoFundoT >= 1.0f ? 1.0f :
+    } else palcoFundoAlpha = palcoFundoModo == PALCO_PRETO ? 0.0f : palcoFundoT >= 1.0f ? 1.0f :
       palcoFundoInicio + (1.0f - palcoFundoInicio) * anim_saida(palcoFundoT);
+    float k = motionReduzido ? 1.0f : dt * 1000.0f / NV_HERO_FADE_MS;
+    if (palcoMostra != palcoFundoItem) {
+      palcoItemA = fmaxf(0.0f, palcoItemA - k);
+      if (palcoItemA <= 0.0f) { palcoMostra = palcoFundoItem; palcoPronto = 0; }
+    } else if (palcoPronto) palcoItemA = fminf(1.0f, palcoItemA + k);
   }
 
   if (heroSai > 0.0f) {
@@ -4800,22 +4809,95 @@ static const char *palcoArte(const CatItem *item) {
       artehero_mesma_foto(art, poster) || tex_falhou(art)) return NULL;
   return art;
 }
+// Triptych side panels: another backdrop variant of the same title, never the
+// poster nor the centre art; NULL = reuse the centre art with another crop.
+static const char *palcoArteOutra(const CatItem *item, const char *centro, const char *evita) {
+  const char *v[3] = { item->backdropTmdb, item->backdropTrakt, item->backdropCatalogo };
+  for (int i = 0; i < 3; i++) {
+    if (!v[i][0] || artehero_mesma_foto(v[i], centro) || (evita && artehero_mesma_foto(v[i], evita)) ||
+        artehero_mesma_foto(v[i], item->poster) || artehero_mesma_foto(v[i], arte_por_formato(item, 0)) ||
+        tex_falhou(v[i])) continue;
+    return v[i];
+  }
+  return NULL;
+}
+// Stage art concepts (owner 18/10): backdrops only, then the title logo.
+static void desenhaPalcoArte(void) {
+  const CatItem *item = cat_item_exato(palcoMostra);
+  const char *art = palcoArte(item);
+  GLuint tex = art ? tex_obter_hero(art) : 0;
+  palcoPronto = tex != 0;
+  float a = palcoFundoAlpha * palcoItemA;
+  if (!tex || a <= 0.004f) return;
+  const float W = NV_TELA_W, H = NV_TELA_H;
+  const int m = palcoFundoModo;
+  gfx_tex_aspect_atual = tex_aspecto(art);
+  if (m == PALCO_ARTE) {
+    gfx_rect((GfxRect){0, 0, W, H}, tex, GFX_VITRINE, 0.20f, 0.5f, 0, 0, 0, 0, 0, a);
+    gfx_tex_aspect_atual = 0;
+    return;
+  }
+  // Logo box (x, y, w, h) and alignment, from the approved concept CSS.
+  float lx = W * 0.054f, ly = H * 0.116f, lw = W * 0.30f, lh = H * 0.196f;
+  int centro = 1, meio = 0;
+  if (m == PALCO_CORTINA) {
+    centro = 0;
+    gfx_rect((GfxRect){W * 0.22f, 0, W * 0.78f, H * 0.62f}, tex, GFX_PALCO_ARTE, 0, 0, 0.5f, 0, 0, 0, 0, a);
+  } else if (m == PALCO_AURA) {
+    GLuint b = gfx_desfocado(tex, art);
+    if (b) gfx_rect((GfxRect){0, 0, W, H}, b, GFX_PALCO_ARTE, 0, 1, 0.5f, 0, 0, 0, 0, a);
+    lw = W * 0.36f; ly = H * 0.142f;
+  } else if (m == PALCO_MONUMENTO) {
+    gfx_rect((GfxRect){0, 0, W, H}, tex, GFX_PALCO_ARTE, 0, 4, 0.5f, 0, 0, 0, 0, a);
+    lw = W * 0.58f; ly = H * 0.053f; lh = H * 0.338f; meio = 1;
+  } else {
+    // skewX(-8deg) strips, flex 1 / 1.6 / 1 with a 0.6% gap, 4% bleed per side.
+    const char *lado[2];
+    lado[0] = palcoArteOutra(item, art, NULL);
+    lado[1] = palcoArteOutra(item, art, lado[0]);
+    float h = H * 0.533f, s = h * 0.1405f, gap = W * 0.006f;
+    float u = (W * 1.08f - gap * 2.0f) / 3.6f, x = -W * 0.04f;
+    for (int i = 0; i < 3; i++) {
+      float w = i == 1 ? u * 1.6f : u;
+      const char *url = i == 1 ? art : lado[i / 2];
+      GLuint t = url ? tex_obter_hero(url) : 0;
+      if (!t) { url = art; t = tex; }
+      gfx_tex_aspect_atual = tex_aspecto(url);
+      gfx_rect((GfxRect){x - s * 0.5f, 0, w + s, h}, t, GFX_PALCO_ARTE, s / (w + s),
+               i == 1 ? 2 : 3, url == art && i != 1 ? (i ? 0.85f : 0.15f) : 0.5f,
+               0, 0, 0, 0, a);
+      x += w + gap;
+    }
+    lw = W * 0.26f; ly = H * 0.284f; lh = H * 0.142f;
+  }
+  gfx_tex_aspect_atual = 0;
+  if (centro) lx = (W - lw) * 0.5f;
+  const char *uL = logotitulo_url(item, lw);
+  GLuint tl = uL ? tex_obter_logo_larg_qualquer(uL, lw) : 0;
+  float asp = tl ? tex_aspecto(uL) : 0.0f;
+  if (tl && asp > 0.01f) {
+    float wL = lw, hL = wL / asp;
+    if (hL > lh) { hL = lh; wL = hL * asp; }
+    gfx_rect((GfxRect){ centro ? lx + (lw - wL) * 0.5f : lx, meio ? ly + (lh - hL) * 0.5f : ly + lh - hL, wL, hL },
+             tl, tex_marca_escura(uL) ? GFX_MARCA : GFX_TEXTO, 0, 0, 0, 0, 1, 1, 1, a);
+  } else if (item->titulo[0]) {
+    TxtLinha t = txt_linha_corta(TXT_ILHA_TITULO, item->titulo, 255, 255, 255, 255, lw);
+    txt_desenhar_alpha(t, centro ? lx + (lw - t.w) * 0.5f : lx, ly + lh - t.h, a);
+  }
+  if (m == PALCO_CORTINA && item->sinopse[0]) {
+    char frase[sizeof item->sinopse];
+    snprintf(frase, sizeof frase, "%s", item->sinopse);
+    char *fim = strstr(frase, ". ");
+    if (fim) fim[1] = 0;
+    txt_bloco_corta(heroSinEstilo(), frase, 255, 255, 255, lx, H * 0.33f, lw,
+                    heroSinEntrelinha(), a * 0.8f, 2);
+  }
+}
 static void desenhaHero(Uint32 agora, float saida) {
   (void)agora;
   const int motionReduzido = ajustes_animacoes_reduzidas();
   float aArte = 1.0f;
-  if (palcoFundoModo == 2) {
-    const CatItem *item = cat_item_exato(palcoFundoItem);
-    const char *art = palcoArte(item);
-    GLuint tex = art ? tex_obter_hero(art) : 0;
-    if (tex && palcoFundoAlpha > 0.004f) {
-      gfx_tex_aspect_atual = tex_aspecto(art);
-      gfx_rect((GfxRect){0, 0, NV_TELA_W, NV_TELA_H}, tex, GFX_VITRINE,
-               0.20f, 0.5f, 0, 0, 0, 0, 0, palcoFundoAlpha);
-      gfx_tex_aspect_atual = 0;
-    }
-    return;
-  }
+  if (palcoFundoModo != PALCO_ATUAL) { desenhaPalcoArte(); return; }
   // MEDIDO no app web: .home-modern-hero-media fica em x=555, y=0, 1421x670.
   // A conta que estava aqui (0.28*W - 56 = 481,6 de largura 1438) vinha de
   // proporcao estimada e punha a arte 73px a esquerda do lugar.
@@ -6407,7 +6489,7 @@ static void holofote(Uint32 agora) {
     float abre = 1.6f;
     float bw = p.w + NV_PALCO_INFO_VAO + NV_PALCO_INFO_W;
     // Clean modes draw only the floor pool, keeping the legacy shader intact.
-    int clean = palcoFundoDestino() != 1;
+    int clean = palcoFundoDestino() != PALCO_ATUAL;
     if (clean) gfx_recorte(0, p.y + p.h - H * 0.017f, W, H * 0.07f);
     gfx_rect((GfxRect){ 0, 0, W, H }, 0, clean ? GFX_PALCO_CHAO : GFX_HOLOFOTE,
              p.h * 0.5f * abre / H, (p.x + bw * 0.5f) / W, (p.y + p.h * 0.5f) / H,
@@ -7522,7 +7604,7 @@ static void home_desenhar_(Uint32 agora) {
   float pd = detail_progresso();
   const int vazioQr = homevazio_ativo(nFileiras);   // sem add-ons: o cartao com o QR no lugar da Home
   if (ajustes_hero_ligado() && !vazioQr && palcoFundoAlpha > 0.004f) {
-    gfx_opacidade_grupo = palcoFundoModo == 1 ? palcoFundoAlpha : 1.0f;
+    gfx_opacidade_grupo = palcoFundoModo == PALCO_ATUAL ? palcoFundoAlpha : 1.0f;
     desenhaHero(agora, pd);
     gfx_opacidade_grupo = 1.0f;
   }

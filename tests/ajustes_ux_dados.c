@@ -765,7 +765,7 @@ int main(void) {
   { int vz = 0, k; for (k = 0; k < AJ_N_TELA; k++) if (TELA[k].tipo == IT_OPC && TELA[k].op == AJ_DTS_AC3) vz++; assert(vz == 1); }
   assert(indiceResultado(AJ_DTS_AC3, ajustes_buscar("dolby digital", resultados, AJ_N)) >= 0);
   assert(AJ_ARTE_TOM == AJ_FOCO_ACENTO + 1 && AJ_PALCO_FUNDO == AJ_ARTE_TOM + 1 && !strcmp(CHAVE[AJ_PALCO_FUNDO], "palcoFundoLocal"));
-  assert(valorPadrao[AJ_PALCO_FUNDO] == 0 && OPCOES[AJ_PALCO_FUNDO].n == 3);
+  assert(valorPadrao[AJ_PALCO_FUNDO] == PALCO_CORTINA && OPCOES[AJ_PALCO_FUNDO].n == 7);
   assert(AJ_URL_LISTA == AJ_PALCO_FUNDO + 1 && AJ_URL_REM == AJ_N - 1 && !strcmp(CHAVE[AJ_URL_REM], "-urlRem"));
   { int vz = 0, k; for (k = 0; k < AJ_N_TELA; k++) if (TELA[k].tipo == IT_OPC && TELA[k].op == AJ_APOIAR) vz++; assert(vz == 1); }
   // #287: forced subtitle when the audio is in your language. Local, last, default ON, once on screen.
