@@ -112,6 +112,7 @@ int xtream_canais_cb_sessao(void (*cat)(const char *, int, int, void *),
   (void)sessao;
   if (total) *total = 0;
 #ifdef GUIAFILTRO_LOADER
+  if (inventoryFixture(cb, u, total)) { fixtureFailure = XT_OK; return 1; }
   char *name = filtroResposta("xtream");
   fixtureFailure = name ? XT_OK : XT_SEM_RESPOSTA;
   if (name) {

@@ -1,6 +1,8 @@
 // Exercise the real staging, Xtream/M3U callbacks, cache and fallback paths.
 #include "guiafiltro.h"
 #include <errno.h>
+#include "xtream.h"
+static int inventoryFixture(XtreamCb cb, void *u, int *total);
 #ifdef GUIAFILTRO_LEGACY_RULES
 // Historical rule implementations predate source-qualified entry points.
 int guiafiltro_canal_oculto_fonte(const GuiaFiltro *f, const char *fonte, const char *id) {
@@ -57,14 +59,33 @@ char *rede_baixar_bin_medido_controle(const char *url, int seconds, const char *
                                      const RedeControle *control, long *size, RedeMedida *measure) {
   (void)url; (void)seconds; (void)headers; (void)control; (void)measure; *size = 0; return NULL;
 }
+static int inventoryRefetch, inventoryRequests;
+static int inventoryFixture(XtreamCb cb, void *u, int *total) {
+  if (!inventoryRefetch) return 0;
+  inventoryRequests++;
+  char id[GF_ID], name[GF_NOME];
+  memset(id, 'i', sizeof id - 1); id[sizeof id - 1] = 0;
+  memset(name, 'n', sizeof name - 1); name[sizeof name - 1] = 0;
+  XtreamItem item = {0};
+  item.id = id; item.nome = name; item.categoria = "Sports";
+  item.logo = item.epgId = ""; item.catOrdem = -1;
+  for (int i = 0; i < 20000; i++) {
+    char prefix[32]; snprintf(prefix, sizeof prefix, "xtream:%014d", i);
+    memcpy(id, prefix, strlen(prefix));
+    cb(&item, u);
+  }
+  if (total) *total = 20000;
+  return 1;
+}
 static int pageRequests, pageScenario, sourceScenario, sourceRequests;
 static int discoveryRequests, loadRequests;
 int cat_n_fileiras(void) { discoveryRequests++; return 0; }
 const CatFileira *cat_fileira(int i) { (void)i; return NULL; }
 // Keep all test work foreground; record load launches without creating threads.
 int pthread_create(pthread_t *t, const pthread_attr_t *a, void *(*fn)(void *), void *u) {
-  (void)t; (void)a; (void)fn; (void)u; loadRequests++; return EAGAIN;
+  (void)t; (void)a; (void)fn; (void)u; loadRequests++; return inventoryRefetch ? 0 : EAGAIN;
 }
+int pthread_detach(pthread_t t) { (void)t; return 0; }
 static char *filtroResposta(const char *url) {
   char body[24000];
   size_t used = 0;
@@ -416,14 +437,38 @@ static void inventorySpoolRegression(void) {
   filtrosAbrir(); fMontarCanais("Late");
   assert(fN == 1 && !strcmp(fIt[0].id, "xtream:late"));
   fMontarCanais("Sports");
-  int found = 0;
-  for (int i = 0; i < fN; i++) if (!strcmp(fIt[i].id, id)) found++;
-  // The latest Sports entry is reached on a later page after the admitted prefix.
-  while (!found && fProximo) {
+  inventoryRefetch = xtOk = 1;
+  nFontes = sNFontes = nAddons = nAddonsCarga = nCargaUrls = 0;
+  cargaCancelada = 0;
+  fNivel = 1; snprintf(fCatNome, sizeof fCatNome, "Sports");
+  char middle[GF_ID]; memcpy(middle, id, sizeof middle);
+  memcpy(middle, "xtream:00000000002000", 21);
+  int found = 0, middleFound = 0, pages = 0;
+  do {
+    for (int i = 0; i < fN; i++) {
+      if (!strcmp(fIt[i].id, id)) found++;
+      if (!strcmp(fIt[i].id, middle)) {
+        middleFound++;
+        assert(guiafiltro_canal_alternar_fonte(&fltLive, fIt[i].fonte, middle, name, "Sports"));
+        assert(guiafiltro_canal_oculto_fonte(&fltLive, fIt[i].fonte, middle));
+        assert(!guiafiltro_canal_alternar_fonte(&fltLive, fIt[i].fonte, middle, name, "Sports"));
+      }
+    }
+    if (!fProximo) break;
+    assert(++pages < 20);
+    int launches = loadRequests;
     fMontarCanaisPagina("Sports", fProximo);
-    for (int i = 0; i < fN; i++) if (!strcmp(fIt[i].id, id)) found++;
-  }
-  assert(found == 1);
+    if (loadRequests != launches) {
+      fioGuia(NULL); drenarCarga();
+      assert(nCanais == 900);
+      assert(!sInventarioDisco && sNInventario == 0);
+    }
+    assert(fN <= G_PF_CANAIS_MAX + 1);
+  } while (1);
+  assert(found >= 1);
+  assert(middleFound >= 1);
+  assert(inventoryRequests == 5);
+  inventoryRefetch = xtOk = 0;
   stagingZerar(); assert(!sInventarioDisco);
 }
 #endif

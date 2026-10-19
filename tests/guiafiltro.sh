@@ -11,6 +11,17 @@ sources=(tests/guiafiltro_loader.c src/ltv.c src/js.c src/idcanal.c src/dados.c 
   src/fontecache.c src/cachearte.c src/cachedisco.c src/xmltv.c)
 common=(-Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -O1 -g -Wno-macro-redefined -lz)
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST -DGUIAFILTRO_RESET_TEST -o "$work/loader"
+git show e28fd824a:src/guia.c > "$work/spool-overflow-review.c"
+cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
+  "-DGUIACACHE_SOURCE=\"$work/spool-overflow-review.c\"" -o "$work/spool-overflow-review"
+rc=0
+GUIAFILTRO_CASE=inventory-spool NUVIO_DADOS="$work/spool-overflow-review-data" \
+  "$work/spool-overflow-review" "$work/spool-overflow-review-data" > "$work/spool-overflow-review.log" 2>&1 || rc=$?
+if [ "$rc" != 134 ] || ! rg -q -F 'Assertion failed: (middleFound >= 1)' "$work/spool-overflow-review.log"; then
+  tail -n 3 "$work/spool-overflow-review.log"
+  exit 1
+fi
+printf 'PASS: reviewed revision loses middle inventory channel (rc=134)\n'
 if [ "${1:-}" = inventory-spool ]; then
   GUIAFILTRO_CASE=inventory-spool NUVIO_DADOS="$work/spool-data" "$work/loader" "$work/spool-data"
   exit 0

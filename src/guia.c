@@ -341,9 +341,12 @@ typedef struct { char id[GF_ID], nome[GF_NOME], cat[GF_NOME], fonte[LTV_CHAVE]; 
 static GInventario *inventario, *sInventario;
 static int nInventario, sNInventario;
 // Compact records use source/group indexes instead of repeating their names.
-// ponytail: bounded circular blocks retain newest controls on overflow; refetch for a full unbounded catalog.
+// Circular blocks retain recent controls; overflow pages refetch through the loader.
 #define G_INVENTARIO_BLOCO 4096
 static FILE *inventarioDisco, *sInventarioDisco;
+static int inventarioCortado, sInventarioCortado;
+static char fInventarioCat[GF_NOME], sInventarioCat[GF_NOME];
+static int fInventarioInicio, sInventarioInicio, sInventarioVistos, sInventarioMais;
 
 static FILE *sCache[G_MAX_LTV];
 static int sCacheN[G_MAX_LTV], sCacheErro[G_MAX_LTV], sCacheCortada[G_MAX_LTV];
@@ -411,7 +414,8 @@ static void stagingZerar(void) {
   }
   sCacheBytes = 0;
   if (sInventarioDisco) fclose(sInventarioDisco);
-  sInventarioDisco = NULL;
+  sInventarioDisco = NULL; sInventarioCortado = 0;
+  sInventarioVistos = sInventarioMais = 0;
   free(sInventario); sInventario = NULL; sNInventario = 0;
   sFiltrados = 0;
   guiafiltro_dup_zerar(&sDup);
@@ -529,6 +533,19 @@ static int sCanalAdd(int f, const GCru *c) {
     if (gi >= 0 && sLtvF[f].gi[gi].n > 0) sLtvF[f].gi[gi].n--;
   }
   int gi = sGrupoInfo(f, grupo, 0);
+  if (sInventarioCat[0]) {
+    if (strcmp(grupo, sInventarioCat) || !c->id || !c->id[0] || !c->nome || !c->nome[0]) return 0;
+    if (sInventarioVistos++ < sInventarioInicio) return 0;
+    if (sNInventario == G_PF_CANAIS_MAX) { sInventarioMais = 1; return 0; }
+    if (!sInventario) sInventario = calloc(G_PF_CANAIS_MAX, sizeof *sInventario);
+    if (!sInventario) return 0;
+    GInventario *v = &sInventario[sNInventario++];
+    snprintf(v->id, sizeof v->id, "%s", c->id);
+    snprintf(v->nome, sizeof v->nome, "%s", c->nome);
+    snprintf(v->cat, sizeof v->cat, "%s", grupo);
+    snprintf(v->fonte, sizeof v->fonte, "%s", sLtvF[f].chave);
+    return 0;
+  }
   if (c->id && c->id[0] && c->nome && c->nome[0] && gi >= 0 && gi <= USHRT_MAX) {
     unsigned short h[] = {(unsigned short)f, (unsigned short)gi,
       (unsigned short)(strnlen(c->id, GF_ID - 1) + 1),
@@ -544,7 +561,7 @@ static int sCanalAdd(int f, const GCru *c) {
       int ok = pos >= 0;
       if (ok && bytes > G_INVENTARIO_BLOCO - pos % G_INVENTARIO_BLOCO)
         pos += G_INVENTARIO_BLOCO - pos % G_INVENTARIO_BLOCO;
-      if (pos >= G_INVENTARIO_BYTES_MAX) pos = 0;
+      if (pos >= G_INVENTARIO_BYTES_MAX) { pos = 0; sInventarioCortado = 1; }
       if (ok) ok = fseek(sInventarioDisco, pos, SEEK_SET) == 0;
       if (ok && !(pos % G_INVENTARIO_BLOCO)) {
         char empty[G_INVENTARIO_BLOCO] = {0};
@@ -1369,6 +1386,7 @@ static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
 // Count eligible rows without applying caps or discarding staging candidates.
 static int sCotaCompleta(void) {
   int nc = 0, n = 0, visiveis[GUIACORTE_MAX_CAT];
+  if (sInventarioCat[0]) return sInventarioMais;
   if (sFltLive.modo != GF_TODAS || sFltLive.nCat || sFltLive.nCan || sPendentes) return 0;
   for (int i = 0; i < sNCanais; i++) {
     const GCanal *g = &sCanais[i];
@@ -2240,6 +2258,7 @@ static void adotarStaging(void) {
   free(canais); free(cats); free(alts);
   if (inventarioDisco) fclose(inventarioDisco);
   inventarioDisco = sInventarioDisco; sInventarioDisco = NULL;
+  inventarioCortado = sInventarioCortado;
   free(inventario); inventario = sInventario; nInventario = sNInventario;
   sInventario = NULL; sNInventario = 0;
   alts = sAlts; nAlts = sNAlts; sAlts = NULL; sNAlts = 0;
@@ -2411,6 +2430,8 @@ static void iniciarCarga(void) {
   // catalogo de canal que nenhuma fileira montou.
   if (fioVivo) return;
   fltGarantir(); sFltLive = fltLive;
+  snprintf(sInventarioCat, sizeof sInventarioCat, "%s", fInventarioCat);
+  sInventarioInicio = fInventarioInicio;
   // Copia no desenho: nenhum pedido relera as URLs ou os manifestos do
   // perfil novo enquanto a resposta do anterior ainda estiver em voo.
   cargaSessao = nv_perfil_sessao_ler(); cargaCancelada = 0;
@@ -3436,6 +3457,18 @@ fim:
 }
 static void fMontarCanaisPagina(const char *cat, int inicio) {
   int i, k;
+  // Negative cursors address refetched category pages, independent of spool order.
+  if (inicio < 0) {
+    if (fInventarioCat[0]) return;
+    snprintf(fInventarioCat, sizeof fInventarioCat, "%s", cat);
+    fInventarioInicio = -(inicio + 1);
+    if (fioVivo) recarregarPend = 1;
+    else {
+      iniciarCarga();
+      if (!fioVivo) fInventarioCat[0] = 0;
+    }
+    return;
+  }
   fProximo = 0;
   free(fIt); fIt = calloc(G_PF_CANAIS_MAX + GF_CANAIS_MAX + 1, sizeof *fIt); fN = 0;
   if (!fIt) return;
@@ -3464,6 +3497,13 @@ static void fMontarCanaisPagina(const char *cat, int inicio) {
         if (fN == G_PF_CANAIS_MAX) { fProximo = pos - 1; break; }
         fCanalAdd(ltvF[h[0]].chave, id, nome);
       }
+    }
+    if (!fProximo && inventarioCortado) {
+      int total = 0;
+      for (i = 0; i < nLtvF; i++)
+        for (k = 0; k < ltvF[i].ngi; k++)
+          if (!strcmp(ltvF[i].gi[k].nome, cat)) total += ltvF[i].gi[k].n;
+      if (pos < total) fProximo = -1;
     }
   } else {
   // Reserve room for displayed channels even if this raw category filled the panel.
@@ -3509,12 +3549,14 @@ static void filtrosAbrir(void) {
   fMontarCats();
 }
 static void filtrosVoltar(void) {
+  fInventarioCat[0] = 0;
   fNivel = 0;
   fMontarCats();
   paFoco = 3 + fFocoCat < 3 + fN ? 3 + fFocoCat : 2;
   paRol = paVelRol = 0.0f;
 }
 static void filtrosFechar(void) {
+  fInventarioCat[0] = 0;
   free(fIt); fIt = NULL; fN = 0; fNivel = 0; paModo = 0;
   if (!fSujo) return;
   fSujo = 0;
@@ -4495,7 +4537,30 @@ int guia_atualizando_lista(void) {
 static void drenarCarga(void) {
   if (atomic_load_explicit(&pendPronto, memory_order_acquire)) {
     int atual = cargaAtual();
-    if (atual) publicar();
+    if (sInventarioCat[0]) {
+      if (atual && painel && paModo == 1 && fNivel &&
+          !strcmp(fCatNome, sInventarioCat) && !strcmp(fInventarioCat, sInventarioCat) &&
+          sInventarioInicio == fInventarioInicio && sNInventario > 0) {
+        fN = 0;
+        for (int i = 0; i < sNInventario; i++) {
+          const GInventario *v = &sInventario[i];
+          fCanalAdd(v->fonte, v->id, v->nome);
+        }
+        for (int i = 0; i < fN; i++)
+          fIt[i].oculto = guiafiltro_canal_oculto_fonte(&fltLive, fIt[i].fonte, fIt[i].id);
+        fProximo = sInventarioMais ? -(sInventarioInicio + sNInventario + 1) : 0;
+        if (fProximo) {
+          snprintf(fIt[fN].nome, sizeof fIt[fN].nome, "%s", i18n("Carregar mais"));
+          fIt[fN++].n = -1;
+        }
+        paFoco = 0; paRol = paVelRol = 0.0f;
+      }
+      if (!strcmp(fInventarioCat, sInventarioCat) && sInventarioInicio == fInventarioInicio)
+        fInventarioCat[0] = 0;
+      sInventarioCat[0] = 0;
+      stagingZerar();
+      sOk = nLtvF > 0;
+    } else if (atual) publicar();
     // Quem decide e o desenho: falha da carga continua G_FALHOU, e e ela que
     // faz guia_carregar tentar de novo.
     estado = atual ? (sOk ? G_PRONTO : G_FALHOU) : G_PARADO;
@@ -7461,7 +7526,8 @@ void guia_abrir_sessao(void) {
   free(alts); alts = NULL; nAlts = 0;
   free(inventario); inventario = NULL; nInventario = 0;
   if (inventarioDisco) fclose(inventarioDisco);
-  inventarioDisco = NULL;
+  inventarioDisco = NULL; inventarioCortado = 0;
+  fInventarioCat[0] = 0;
   focoPend[0] = pedidoBase[0] = previewId[0] = heroId[0] = 0;
   aberta = overlay = querSair = pediuCanal = 0;
   focoLin = focoCol = focoTopo = topoCol = 0;
