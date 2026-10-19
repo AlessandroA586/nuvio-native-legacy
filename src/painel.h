@@ -100,9 +100,19 @@ static int painel4k(void) {
       width = height = 0;
 #ifdef NV_WEBOS
       int panel[3] = {0};
-      painelWebos(panel);
+      // LG's SDL exposes the physical panel even when LS2 denies the query.
+      SDL_bool (*getPanel)(int *, int *) = NULL;
+      void *process = dlopen(NULL, RTLD_NOW);
+      if (process) *(void **)&getPanel = dlsym(process, "SDL_webOSGetPanelResolution");
+      if (getPanel && getPanel(&panel[0], &panel[1]) && panel[0] > 0 && panel[1] > 0)
+        source = "SDL_webOSGetPanelResolution";
+      else {
+        panel[0] = panel[1] = 0;
+        painelWebos(panel);
+        if (panel[0] > 0 && panel[1] > 0) source = "webOS panelResolution";
+      }
+      if (process) dlclose(process);
       width = panel[0]; height = panel[1];
-      if (width > 0 && height > 0) source = "webOS panelResolution";
 #elif defined(NV_TPK)
       void *lib = dlopen("libcapi-system-info.so.0", RTLD_NOW);
       if (!lib) lib = dlopen("libcapi-system-info.so", RTLD_NOW);
