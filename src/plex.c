@@ -2233,6 +2233,7 @@ int plex_ficha(CatItem *item, CatEp *eps, int maxEps) {
     }
   }
   novo->naLista = item->naLista;
+  novo->listaFontes = item->listaFontes;
   novo->naColecao = item->naColecao;
   novo->retomadoMs = item->retomadoMs;
   *item = *novo;
