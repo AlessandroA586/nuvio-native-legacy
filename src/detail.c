@@ -1546,6 +1546,8 @@ static void abrirInterno(const HomeItem *it) {
   trailerSemFonteLogado = 0;
   trailercinema_zerar(&trailerCinema);
   idx = it->indice;
+  { const CatItem *ci = cat_item(idx);
+    if (ci && !strcmp(ci->tipo, "movie")) agenda_filme_aberto(ci->imdb); }
   titulo_tempo_inicio(&detalheTempo, "detalhe", cat_item(idx));
   // O TRAILER DO CARTAZ CONTINUA AQUI, COM SOM (pedido do rawldon, canario
   // tpk-janela; so o .tpk, NV_TRAILER_CONTINUA_DETALHE em trailerfonte.h).
@@ -2507,12 +2509,17 @@ static int temRecomendar(void) {
 // unica superficie onde um nome cabia sem empurrar a grade medida no aparelho.
 static int temLembrar(void) {
   const CatItem *ci = cat_item(idx);
-  if (!ehSerie() || !ci || !ci->imdb[0]) return 0;
-  return agenda_pode_lembrar(ci->imdb);
+  if (!ci || !ci->imdb[0]) return 0;
+  if (!strcmp(ci->tipo, "movie"))
+    return agenda_lembrete(ci->imdb) || agenda_filme_elegivel(
+      extras_ficha_lancamento(), extras_ficha_digital(), stream_filme_fontes(ci->imdb));
+  return ehSerie() && agenda_pode_lembrar(ci->imdb);
 }
 static const char *rotuloLembrar(void) {
   const CatItem *ci = cat_item(idx);
-  return i18n(ci && agenda_lembrete(ci->imdb) ? "Lembrete ativo" : "Lembrar-me");
+  int ligado = ci && agenda_lembrete(ci->imdb);
+  if (ci && !strcmp(ci->tipo, "movie")) return i18n(ligado ? "Aviso ativo" : "Avisar quando sair");
+  return i18n(ligado ? "Lembrete ativo" : "Lembrar-me");
 }
 // Instante em que o dono ligou o lembrete, para o despertador tocar inteiro
 // no quadro seguinte ao OK. 0 = nao houve troca nesta sessao.
@@ -3044,7 +3051,8 @@ static void detail_evento_(const SDL_Event *e) {
         // vai procurar por ele.
         const CatItem *ci = cat_item(idx);
         if (ci && ci->imdb[0]) {
-          agenda_alternar_lembrete(ci->imdb);
+          if (!strcmp(ci->tipo, "movie")) agenda_filme_alternar(ci->imdb, ci->titulo, ci->poster);
+          else agenda_alternar_lembrete(ci->imdb);
           lembreteEm = SDL_GetTicks();
         }
       } else if (acao == ACAO_LISTA) {
@@ -4411,6 +4419,11 @@ static void desenhaLembrete(GfxRect r, int ligado, int focado, float a) {
   } else gfx_cor(r, NV_RAIO_PILL, 0.133f, 0.133f, 0.133f, a);
   agendaui_cor_lembrete(ligado, claro, &cr, &cg, &cb);
 glifo:
+  { const CatItem *ci = cat_item(idx);
+    if (ligado && ci && !strcmp(ci->tipo, "movie")) {
+      // Owner-requested active movie state, readable on either surface.
+      cr = claro ? .04f : .20f; cg = claro ? .42f : .83f; cb = claro ? .29f : .62f;
+    } }
   g = r.w * NV_DETW2_CIRC_GLIFO;
   { GfxRect ic = { r.x + (r.w - g) * 0.5f, r.y + (r.h - g) * 0.5f, g, g };
     agendaui_despertador(ic, ligado, cr, cg, cb, a, SDL_GetTicks(), lembreteEm); }
@@ -4684,7 +4697,9 @@ static void heroWeb(float a, float desloc) {
   char agLinha[200] = "";
   { const CatItem *ciAg = cat_item(idx);
     if (ehSerie() && ciAg && ciAg->imdb[0])
-      agenda_frase(ciAg->imdb, agLinha, sizeof agLinha); }
+      agenda_frase(ciAg->imdb, agLinha, sizeof agLinha);
+    else if (ciAg && !strcmp(ciAg->tipo, "movie") && temLembrar())
+      snprintf(agLinha, sizeof agLinha, "%s", rotuloLembrar()); }
   float yEstado = yAcoes - NV_DETW_GAP_RETOM;
   float yRetom = yEstado, yAgenda = yEstado;
   if (temRetom > 0.0f) { yEstado -= NV_DETW_RETOM_H; yRetom = yEstado; }
@@ -5008,7 +5023,8 @@ static void heroWeb(float a, float desloc) {
       ligado = ciL && ciL->imdb[0] && agenda_lembrete(ciL->imdb); }
     if (emFoco) {
       snprintf(leg, sizeof leg, "%s \xc2\xb7 %s", rotuloLembrar(),
-               i18n("o aviso aparece quando você abrir o app no dia"));
+               i18n(ehSerie() ? "o aviso aparece quando você abrir o app no dia" :
+                    "o aviso aparece no app quando houver uma fonte"));
     } else {
       snprintf(leg, sizeof leg, "%s", agLinha);
     }

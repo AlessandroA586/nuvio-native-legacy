@@ -3079,6 +3079,39 @@ static int arrayDeFontesCompleto(const char *corpo) {
   }
   return 0;
 }
+int addons_consulta_filme(const AddonsConsulta *c, const char *id,
+                          int (*cancelado)(void *), void *ctx) {
+  if (!c || !id || !*id) return -1;
+  Uint32 inicio = SDL_GetTicks();
+  int resultado = 0;
+  for (int i = 0; i < c->n; i++) {
+    if (!nv_perfil_sessao_atual(c->sessao) || (cancelado && cancelado(ctx)) ||
+        SDL_GetTicks() - inicio >= 15000u) return -1;
+    const AddonCapturado *a = &c->addons[i];
+    if (!a->ativo || !a->fonte) continue;
+    char url[NV_ADDON_PEDIDO_MAX], idUrl[768];
+    if (!nv_addon_id(idUrl, sizeof idUrl, id) ||
+        !nv_addon_url(url, sizeof url, a->base, "/stream/movie/%s.json", idUrl)) continue;
+    // ponytail: one request, at most five seconds; whole movie at most 15 s.
+    Uint32 gasto = SDL_GetTicks() - inicio;
+    if (gasto >= 15000u) return -1;
+    int restante = (int)((15000u - gasto) / 1000u);
+    if (restante <= 0) return -1;
+    char *corpo = rede_baixar(url, restante < 5 ? restante : 5);
+    if (!nv_perfil_sessao_atual(c->sessao) || (cancelado && cancelado(ctx))) { free(corpo); return -1; }
+    if (!arrayDeFontesCompleto(corpo)) { free(corpo); resultado = -1; continue; }
+    Stream *fontes = NULL;
+    debrid_contexto_entrar(&c->debrid);
+    int n = stream_extrair(corpo, a->nome, &fontes), disponivel = 0;
+    free(corpo);
+    for (int k = 0; k < n; k++) if (stream_fonte_disponivel(&fontes[k])) { disponivel = 1; break; }
+    debrid_contexto_sair();
+    free(fontes);
+    if (disponivel) return 1;
+  }
+  return resultado;
+}
+
 static void *fioConsultaCapturada(void *u) {
   ConsultaCapturada *c = u;
   debrid_contexto_entrar(&c->snapshot->debrid);

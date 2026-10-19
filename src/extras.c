@@ -234,7 +234,7 @@ static char colNome[80];
 // sinopse dela: o mini card da pagina e a tela de lista da saga.
 static char colCapa[160], colFundo[160], colSinopse[600];
 // Ficha tecnica e trailers: mesma viagem /movie/<id> da colecao.
-static char fichaStatus[32], fichaPaises[160], fichaCert[12], fichaLanc[16];
+static char fichaStatus[32], fichaPaises[160], fichaCert[12], fichaLanc[16], fichaDigital[16];
 // IDIOMA ORIGINAL do titulo, do `original_language` do TMDB. Vem no MESMO
 // corpo de /movie/<id> e /tv/<id> que este arquivo ja baixa — nenhuma viagem a
 // mais. Vazio quando o TMDB nao responde, e vazio e um estado a tratar, nao um
@@ -1177,6 +1177,23 @@ static void *buscar(void *arg) {
           }
         }
 
+        // Movie alert eligibility uses dates already present in this response.
+        if (!serie) {
+          js_texto_raiz_em(corpo, fimC, "release_date", fichaLanc, sizeof fichaLanc);
+          const char *rd = strstr(corpo, "\"release_dates\"");
+          if (rd) rd = strchr(rd, '{');
+          const char *res = rd ? js_array(rd, js_fim(rd), "results") : NULL;
+          for (; res; res = js_prox(js_fim(res))) {
+            const char *d = js_array(res, js_fim(res), "release_dates");
+            for (; d; d = js_prox(js_fim(d))) if ((int)js_num(d, js_fim(d), "type", 0) == 4) {
+              char dia[40] = "";
+              js_texto(d, js_fim(d), "release_date", dia, sizeof dia);
+              if (strlen(dia) >= 10 && (!fichaDigital[0] || strncmp(dia, fichaDigital, 10) < 0))
+                snprintf(fichaDigital, sizeof fichaDigital, "%.10s", dia);
+            }
+          }
+        }
+
         // --- ficha tecnica (so filme: a serie nao tem secao de Detalhes) ---
         if (!serie && ajustes_tmdb_ficha()) {
         js_texto(corpo, fimC, "status", fichaStatus, sizeof fichaStatus);
@@ -1670,7 +1687,7 @@ static void zerarPublicado(void) {
   notaTrakt = votosTrakt = nComent = nRel = nTemps = nCol = 0;
   colNome[0] = colCapa[0] = colFundo[0] = colSinopse[0] = 0;
   nTrailer = fichaDur = nEstudio = 0;
-  fichaStatus[0] = fichaPaises[0] = fichaCert[0] = fichaLanc[0] = 0;
+  fichaStatus[0] = fichaPaises[0] = fichaCert[0] = fichaLanc[0] = fichaDigital[0] = 0;
   fichaIdiomaOrig[0] = 0;
   agStatus[0] = agDataProx[0] = agDataUlt[0] = agNomeEp[0] = 0;
   agTemp = agEp = 0;
@@ -1975,6 +1992,7 @@ int         extras_ficha_duracao(void)       { return fichaDur; }
 const char *extras_ficha_paises(void)        { return fichaPaises; }
 const char *extras_ficha_classificacao(void) { return fichaCert; }
 const char *extras_ficha_lancamento(void)    { return fichaLanc; }
+const char *extras_ficha_digital(void)       { return fichaDigital; }
 
 int extras_n_trailers(void) { return nTrailer; }
 int extras_trailer_idioma_preferido(int i) {

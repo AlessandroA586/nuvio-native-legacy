@@ -199,6 +199,7 @@ const char *extras_ficha_status(void);          // "Released", "Post Production"
 int         extras_ficha_duracao(void);         // minutos; 0 = nao ha
 const char *extras_ficha_paises(void);          // "United States of America, Canada"
 const char *extras_ficha_classificacao(void);   // "R", "PG-13", "14"
+const char *extras_ficha_digital(void);         // earliest announced digital release, ISO or empty
 const char *extras_ficha_lancamento(void);      // "2026-01-15"
 
 // TRAILERS. O id do YouTube, nome e miniatura saem do /movie/<id> ou /tv/<id>
