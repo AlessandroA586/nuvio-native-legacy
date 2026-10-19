@@ -5,6 +5,17 @@
 
 static int enabled = 1, posts;
 int ajustes_livetv_sugerir(void) { return enabled; }
+int stalker_canais_sessao(StalkerCanal *out, int max, uint64_t session) {
+  const char *names[] = {"Aurora HD", "Lumen"};
+  int n = max < 2 ? max : 2;
+  assert(session == 0);
+  for (int i = 0; i < n; i++) {
+    memset(&out[i], 0, sizeof out[i]);
+    snprintf(out[i].id, sizeof out[i].id, "stalker:%d", i + 1);
+    snprintf(out[i].nome, sizeof out[i].nome, "%s", names[i]);
+  }
+  return n;
+}
 uint64_t perfis_sessao_geracao(void) { return 0; }
 int perfis_sessao_atual(uint64_t g) { return g == 0; }
 int perfis_sessao_travar(uint64_t g) { return g == 0; }
@@ -49,6 +60,17 @@ int main(int argc, char **argv) {
     char source[LTV_CHAVE];
     const char *selected[] = {"Infantil"};
     ltv_chave_fonte(LTV_M3U, "https://private/list?token=secret", source, sizeof source);
+    int failures = 0;
+    ltv_pref_definir_grupos(ltv_pref(source, 1), NULL, 0);
+    sTeto = 100;
+    assert(cacheFonteLer(source) == 4);
+    selecionarSecoes();
+    if (strcmp(sCats[sCanais[0].cat].nome, "Esportes") ||
+        strcmp(sCats[sCanais[1].cat].nome, "Infantil") || posts != 0) {
+      puts("FAIL: cold process restores cached suggestions with all sections selected");
+      failures++;
+    } else puts("PASS: cold process restores cached suggestions with all sections selected");
+    stagingZerar();
     ltv_pref_definir_grupos(ltv_pref(source, 1), selected, 1);
     sTeto = 1;
     assert(cacheFonteLer(source) == 1);
@@ -56,7 +78,7 @@ int main(int argc, char **argv) {
     assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "Lumen"));
     assert(!strcmp(sCats[sCanais[0].cat].nome, "Infantil") && posts == 0);
     puts("PASS: cold process restores selected suggested section from disk without network");
-    return 0;
+    return failures ? 1 : 0;
   }
   sTeto = 100;
   ctx.fl = sFonte(LTV_M3U, "https://private/list?token=secret", "My list", "");
@@ -87,9 +109,10 @@ int main(int argc, char **argv) {
   ltvF[0] = sLtvF[0]; cacheFonteGravar(0);
   canais = NULL; cats = NULL; nCanais = 0; memset(ltvF, 0, sizeof ltvF);
   stagingZerar(); sTeto = 100;
+  enabled = 0;
   assert(cacheFonteLer(source) == 4);
   assert(sCanais[0].sug && !strcmp(sCats[sCanais[0].cat].nome, "Outros"));
-  enabled = 0; sugerirSecoes();
+  sugerirSecoes();
   assert(!strcmp(sCats[sCanais[0].cat].nome, "Outros"));
   enabled = 1; sugerirSecoes();
   assert(posts == 1 && !strcmp(sCats[sCanais[0].cat].nome, "Esportes"));
@@ -120,6 +143,16 @@ int main(int argc, char **argv) {
     puts("FAIL: cold source cache retains the selected suggested section without network");
     failures++;
   } else puts("PASS: cold source cache retains the selected suggested section without network");
+
+  stagingZerar(); sTeto = 1;
+  ltv_pref_definir_grupos(ltv_pref("st", 1), selected, 1);
+  stalkerCarregar();
+  sugerirSecoes(); selecionarSecoes();
+  if (sNCanais != 1 || strcmp(sCanais[0].nome, "Lumen") ||
+      sRetidos != 1 || posts != 1) {
+    puts("FAIL: selected suggested section gets capacity after an unselected Stalker candidate");
+    failures++;
+  } else puts("PASS: selected suggested section gets capacity after an unselected Stalker candidate");
 
   // An earlier unselected candidate must not spend the last retained-channel slot.
   stagingZerar(); sTeto = 1;

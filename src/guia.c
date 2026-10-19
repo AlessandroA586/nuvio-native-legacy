@@ -438,7 +438,7 @@ static int sCanalAdd(int f, const GCru *c) {
   GCanal *g;
   const char *sel[256], *original = c->grupo && c->grupo[0] ? c->grupo : "Outros";
   int cat, ns = sGruposEscolhidos(f, sel, 256);
-  const char *sec = ns && c->sug && ajustes_livetv_sugerir() ? livecat_secao(c->nome) : NULL;
+  const char *sec = c->sug && ajustes_livetv_sugerir() ? livecat_secao(c->nome) : NULL;
   const char *grupo = sec ? sec : original;
   int pendente = ns && c->sug && ajustes_livetv_sugerir() && !sec;
   if (sec && strcmp(sec, original)) {
@@ -1212,12 +1212,11 @@ static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
 // --- Stalker, Xtream e M3U para o staging ---------------------------------------
 #define ST_MAX_GUIA 1200   /* a tabela de cmd do stalker.c (ST_MAX_CANAL) */
 static int stalkerCarregar(void) {
-  int fl = sFonte(LTV_STALKER, "", "Stalker", ""), cota = sTeto - sRetidos, n, i, nsel;
+  int fl = sFonte(LTV_STALKER, "", "Stalker", ""), cota = ST_MAX_GUIA, n, i, nsel;
   const char *sel[256];
   StalkerCanal *st;
   if (fl < 0) return 0;
-  if (cota > ST_MAX_GUIA) cota = ST_MAX_GUIA;
-  if (cota < 1) { sLtvF[fl].cortada = 1; return 0; }
+  if (sRetidos >= sTeto) { sLtvF[fl].cortada = 1; return 0; }
   nsel = sGruposEscolhidos(fl, sel, 256);
   // MALLOC e nao `static`: so serve durante a carga.
   st = malloc(sizeof *st * (size_t)cota);
