@@ -54,6 +54,7 @@ static void auditText(TxtLinha l, float x, float y, float a) {
 
 static char shotPath[900];
 static void capture(const char *dir, const char *phase, int mode, const char *state) {
+  if (!strcmp(phase, "dynamic-only") && strcmp(state, "dynamic")) return;
   snprintf(shotPath, sizeof shotPath, "%s/%s-%d-g%d-m%d-%s.bmp", dir, phase,
            (int)roundf(gfx_escala_txt() * 100), ajustes_vidro(), mode, state);
   heroInfo = heroBackdrops = stageArtwork = 0; artworkTexture = 0;
@@ -365,6 +366,30 @@ int main(int argc, char **argv) {
   capture(dir, phase, PALCO_PRETO, "enter");
   assert(heroBackdrops > 0); // First focus frames retain the fading hero.
   quadros(90, NULL);
+  if (!strcmp(phase, "dynamic-only")) {
+    for (int mode = PALCO_CORTINA; mode <= PALCO_MONUMENTO; mode++) {
+      setting(HOME_LAYOUT_DINAMICA, glass, mode); quadros(90, NULL);
+      capture(dir, phase, mode, "dynamic");
+      assert(palcoFundoDestino() == mode && foco.fileira == 1);
+      if (mode == PALCO_PRETO) {
+        assert(palcoFundoAlpha == 0 && !heroInfo && !heroBackdrops && !stageArtwork);
+      } else if (mode == PALCO_ATUAL) assert(heroInfo > 0 && heroBackdrops > 0);
+      else {
+        assert(!heroBackdrops && (heroInfo > 0) == (mode != PALCO_ARTE));
+        assert(stageArtwork == (mode == PALCO_TRIPTICO ? 3 : 1));
+      }
+    }
+    for (int mode = PALCO_CORTINA; mode <= PALCO_MONUMENTO; mode++) {
+      setting(HOME_LAYOUT_DINAMICA, glass, mode);
+      assert(fil_definir_tipo("stage_movie", FIL_TIPO_HEROI_DIVIDIDO));
+      quadros(90, NULL);
+      assert(palcoFundoDestino() == PALCO_ARTE);
+    }
+    tex_encerrar(); txt_encerrar();
+    SDL_GL_DeleteContext(gl); SDL_DestroyWindow(janela); SDL_Quit();
+    puts("Dynamic L2: seven Stage backgrounds and unchanged Split passed");
+    return 0;
+  }
   capture(dir, phase, PALCO_PRETO, "stage");
 #ifdef PALCO_ORIGINAL
   for (int stored = 0; stored <= 2; stored++) {
@@ -474,11 +499,22 @@ int main(int argc, char **argv) {
     setting(layout, glass, mode); quadros(90, NULL);
     tecla(SDLK_DOWN); quadros(90, NULL);
     capture(dir, phase, mode, layout == 1 ? "standard" : "dynamic");
-    assert(palcoFundoDestino() == (layout == HOME_LAYOUT_DINAMICA ? PALCO_ARTE : PALCO_ATUAL) &&
-           palcoFundoAlpha == 1.0f);
-    if (layout == HOME_LAYOUT_DINAMICA) assert(heroInfo == 0 && stageArtwork == 1);
-    if (!mode) { otherInfo[layout] = heroInfo; otherBackdrops[layout] = stageArtwork; }
-    else assert(heroInfo == otherInfo[layout] && stageArtwork == otherBackdrops[layout]);
+    if (layout == 2) {
+      assert(palcoFundoDestino() == mode);
+      if (mode == PALCO_PRETO) {
+        assert(palcoFundoAlpha == 0 && heroInfo == 0 && heroBackdrops == 0 && stageArtwork == 0);
+        blankHero();
+      } else if (mode == PALCO_ATUAL) assert(heroInfo > 0 && heroBackdrops > 0);
+      else {
+        assert(heroBackdrops == 0);
+        assert((heroInfo > 0) == (mode != PALCO_ARTE));
+        assert(stageArtwork == (mode == PALCO_TRIPTICO ? 3 : 1));
+      }
+    } else {
+      assert(palcoFundoDestino() == 1 && palcoFundoAlpha == 1.0f);
+      if (!mode) { otherInfo[layout] = heroInfo; otherBackdrops[layout] = stageArtwork; }
+      else assert(heroInfo == otherInfo[layout] && stageArtwork == otherBackdrops[layout]);
+    }
     tecla(SDLK_UP); quadros(90, NULL);
     capture(dir, phase, mode, layout == 1 ? "standard-off" : "dynamic-off");
   }

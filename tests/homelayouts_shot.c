@@ -461,9 +461,12 @@ int main(int argc, char **argv) {
         assert(fabsf(rowY - ANC(NV_SHELF_TOP)) < 0.1f);
         TXT_FIM();
         if (*l == '2') {
-          assert(palcoFundoModo == 2 && palcoFundoAlpha > .99f);
+          int expected = r == 3 ? ajustes_palco_fundo() : 2;
+          assert(palcoFundoModo == expected);
+          assert(expected == 0 ? palcoFundoAlpha == 0 : palcoFundoAlpha > .99f);
           const CatItem *focused = cat_item_exato(fileiraItemIndice(&fileiras[foco.fileira], foco.coluna));
-          assert(focused && palcoArte(focused) && tex_obter_hero(palcoArte(focused)));
+          assert(focused && palcoArte(focused));
+          if (expected == 2) assert(tex_obter_hero(palcoArte(focused)));
           assert(ajustes_fundo_din() == (getenv("NV_DINPALCO_BACKGROUND") ?
                  atoi(getenv("NV_DINPALCO_BACKGROUND")) : 0));
           assert(!home_topo_fracao());

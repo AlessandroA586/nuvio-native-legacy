@@ -37,7 +37,7 @@ cc "${sources[@]}" "${baseline_flags[@]}" tests/palcolimpo.c -Isrc -o "$NUVIO_DA
 rc=0
 scales="0.85 1"
 glasses="0 1"
-if [ "$phase" = before ] || [ "$phase" = original-before ] || [[ "$phase" = review-* ]]; then scales=1; glasses=0; fi
+if [ "$phase" = before ] || [ "$phase" = original-before ] || [ "$phase" = dynamic-only ] || [[ "$phase" = review-* ]]; then scales=1; glasses=0; fi
 for scale in $scales; do
   for glass in $glasses; do
     case_data=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-homelayouts-shot.XXXXXX")

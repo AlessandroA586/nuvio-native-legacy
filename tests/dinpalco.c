@@ -1,4 +1,7 @@
 // Reuse the headless Home fixture; exercise production routing and geometry.
+static int testePalcoFundo;
+static int teste_palco_fundo(void) { return testePalcoFundo; }
+#define ajustes_palco_fundo teste_palco_fundo
 #define main home_fixture_main
 #include "home_layout.c"
 #undef main
@@ -23,7 +26,10 @@ int main(void) {
       assert(topoFileiras() == top && corteFileiras() == cut && fileiraGap() == gap);
       assert(larguraFil(2) == width && alturaTotalFil(2) == height);
       assert(alfaFileiraHome(1, top - 80, top, cut) == 0);
-      assert(palcoFundoDestino() == 2); // Artwork even with hero disabled.
+      for (int mode = 0; mode < 3; mode++) {
+        testePalcoFundo = mode;
+        assert(palcoFundoDestino() == (types[t] == FILEIRA_PALCO ? mode : 2));
+      }
       focoHero = 1;
       assert(layoutHome() == HOME_LAYOUT_DINAMICA && palcoFundoDestino() == 1);
       focoHero = 0;
@@ -34,6 +40,6 @@ int main(void) {
   homeCom(HOME_LAYOUT_DINAMICA, 1);
   fileiras[2].tipo = FILEIRA_NORMAL;
   assert(layoutHome() == HOME_LAYOUT_DINAMICA && palcoFundoDestino() == 1);
-  puts("dinpalco: Stage/Split use Moderna geometry, hide upper rows, force artwork; Gray default");
+  puts("dinpalco: Stage/Split use Moderna geometry, hide upper rows; Stage follows setting, Split keeps artwork; Gray default");
   return 0;
 }

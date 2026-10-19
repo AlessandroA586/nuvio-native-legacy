@@ -1,4 +1,4 @@
-// User-facing release summary, checked against integracao/2.0.5 at f8176128d.
+// User-facing release summary: integration at 32fb7e4b0 and pending release branches.
 // Keep wording and order in sync with docs/releases/2.0.7/NOVIDADES.md.
 static void visual207(GfxRect p, float t, float a, int c);
 static void visual207a(GfxRect p, float t, float a) { visual207(p, t, a, 0); }
@@ -11,16 +11,22 @@ static const NovItem ITENS_207[] = {
   { .icone = "aj_layout-dashboard", .nome = "Herói dividido",
     .frase = "O título em foco ganha logo grande e sinopse ao lado dos pôsteres, com o texto alinhado à fileira.", .linhas = 5 },
   { .icone = "aj_tv-minimal-play", .nome = "Guia de TV",
-    .frase = "Canais por fonte e grupo, busca pelo número e volta ao último canal. Adicione suas listas M3U e guias XMLTV.", .linhas = 5 },
+    .frase = "Logos dos canais, listas M3U e guias XMLTV. OK abre a faixa sobre o vídeo; outro OK no canal atual abre o guia completo.", .linhas = 5 },
   { .icone = "aj_monitor-play", .nome = "Player externo",
     .frase = "Escolha qualquer player instalado e, se quiser, outro só para anime (Android).", .linhas = 6, .plataformas = NOV_ANDROID | NOV_OUTRAS },
   { .icone = "aj_audio-lines", .nome = "Trailer dublado",
     .frase = "Áudio do trailer põe o trailer dublado na frente, e Original mantém o idioma do título. Se o YouTube falhar, entra o da Apple ou do IMDb.", .linhas = 6 },
   { .icone = "aj_play", .nome = "Continuar assistindo",
     .frase = "Até 40 títulos, e a fileira chega primeiro sem segurar os outros catálogos da Home.", .linhas = 4 },
-  { .icone = "aj_droplet", .nome = "Vidro fosco",
+  { .icone = "aj_tv-minimal-play", .nome = "TV ao vivo",
+    .frase = "Prefira 4K sem repetir canais, mostre só 4K ou todas as versões. Escolha as seções, com sugestões para canais sem categoria e recuperação automática após falhas.", .linhas = 8 },
+  { .grupo = "Mais novidades", .icone = "aj_droplet", .nome = "Vidro fosco",
     .frase = "Telas mais fluidas, com vidro mais leve e menos sobreposição.", .linhas = 3 },
-  { .grupo = "Mais novidades", .icone = "aj_languages", .nome = "Espanhol (América Latina)",
+  { .icone = "aj_layout-dashboard", .nome = "Fundo do Palco",
+    .frase = "Cortina, Aura, Tríptico ou Monumento, com troca suave da arte ao mudar de título.", .linhas = 5 },
+  { .icone = "aj_house", .nome = "Biblioteca",
+    .frase = "Escolha nos Ajustes de onde vem a Biblioteca e para onde o + salva, por perfil.", .linhas = 5 },
+  { .icone = "aj_languages", .nome = "Espanhol (América Latina)",
     .frase = "Escolha o idioma dos títulos; a sincronização mantém a variante regional da sua conta.", .linhas = 4 },
   { .icone = "aj_smartphone", .nome = "Modo TV e Mobile",
     .frase = "O APK padrão escolhe sozinho entre TV e Mobile; dá para fixar em Modo da interface (Android).", .linhas = 6, .plataformas = NOV_ANDROID | NOV_OUTRAS },
@@ -39,12 +45,14 @@ static const NovItem ITENS_207[] = {
   { .icone = "aj_play", .nome = "Especiais",
     .frase = "Episódios especiais aparecem e podem ser reproduzidos (#556).", .linhas = 6 },
   { .icone = "aj_sliders-horizontal", .nome = "Escala de texto e componentes",
-    .frase = "Texto de 85% a 130%, sem deslocar cartazes e controles.", .linhas = 4 },
+    .frase = "Texto de 85% a 130%, sem deslocar cartazes e controles.", .linhas = 4 },
   { .icone = "aj_layout-dashboard", .nome = "Espaçamento das fileiras",
     .frase = "Compacto, Normal ou Confortável na página do título.", .linhas = 4 },
   { .icone = "aj_droplet", .nome = "Foco na cor de destaque",
     .frase = "Realce o item selecionado com a sua cor em Aparência.", .linhas = 4 },
-  { .grupo = "Correções", .icone = "aj_play", .nome = "Trakt",
+  { .grupo = "Correções", .icone = "aj_layout-dashboard", .nome = "Layout Apple TV",
+    .frase = "Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.", .linhas = 8 },
+  { .icone = "aj_play", .nome = "Trakt",
     .frase = "A lista mostra os mais recentes primeiro e carrega mesmo sem IMDb. Desconectar Trakt ou Simkl vale só para o perfil (#610).", .linhas = 6 },
   { .icone = "aj_link", .nome = "Modelo de URL dos pôsteres",
     .frase = "Serviços de pôster personalizados aceitam títulos sem TMDB quando esse campo é opcional (#566).", .linhas = 6 },
@@ -73,7 +81,7 @@ static const NovCena CENAS_207[] = {
   { "Destaques", "Palco", visual207a, 5.5f, 0 },
   { "Destaques", "Trailer dublado", visual207b, 5.5f, 0 },
   { "Destaques", "Continuar assistindo", visual207c, 5.5f, 0 },
-  { "Destaques", "Vidro fosco", visual207d, 5.5f, 0 },
+  { "Mais novidades", "Vidro fosco", visual207d, 5.5f, 0 },
 };
 static const int ARTES_207[] = { 2, 4, 7, 9 };
 static const NovConteudo NOV_ATUAL = {

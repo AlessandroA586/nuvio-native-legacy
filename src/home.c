@@ -532,8 +532,8 @@ static int dinPalcoSplit(void) {
           fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO);
 }
 static int palcoFundoDestino(void) {
-  if (dinPalcoSplit()) return PALCO_ARTE;
-  return ajustes_home_layout() == HOME_LAYOUT_MODERNA && !focoHero &&
+  if (dinPalcoSplit() && fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO) return PALCO_ARTE;
+  return (ajustes_home_layout() == HOME_LAYOUT_MODERNA || dinPalcoSplit()) && !focoHero &&
          foco.fileira >= 0 && foco.fileira < nFileiras &&
          fileiras[foco.fileira].tipo == FILEIRA_PALCO ? ajustes_palco_fundo() : PALCO_ATUAL;
 }
@@ -6045,8 +6045,8 @@ static void home_trailer_passo_(int topo, float dt, Uint32 agora) {
   // trailer toca onde a arte dele ja esta. Espera o mesmo tempo da expansao do
   // cartaz, contado de quando o foco parou nele.
   { int noHero = focoHero && ajustes_hero_ligado() && heroSetting;
-    // Use the saved layout: Dinamica hides the hero or forces opaque Stage/Split
-    // artwork, even when those rows borrow Moderna geometry.
+    // Use the saved layout: Dinamica keeps hero trailers disabled even when
+    // Stage/Split borrow Moderna geometry.
     int noCartaz = !focoHero && posterSetting &&
                    (destCartao || (ajustes_hero_ligado() && ajustes_home_layout() != HOME_LAYOUT_DINAMICA)) &&
                    (destCartao || heroPendente == heroAtual) &&
