@@ -302,6 +302,7 @@ typedef struct {
   int  total;                   // o que a fonte ofereceu
   int  cortada;                 // passou do teto: so parte entrou
   int  deCache;                 // a rede falhou e a lista e a do disco
+  int  respondeu;               // successful fetch, including filtered-empty results
   long long atualizada;         // epoch da lista
   int  erro;                    // XT_* (Xtream) ou 1 = nao respondeu
   int  ngi; GGrupoInfo *gi;     // malloc, nomes na arena da lista
@@ -1352,6 +1353,7 @@ static int xtreamCarregar(void) {
   xtream_canais_cb_sessao(xtCat, xtCanal, &x, &total, cargaSessao);
   sXtFalha = xtream_ultima_falha(); sXtHttp = xtream_ultimo_http();
   sLtvF[x.fl].erro = sXtFalha;
+  sLtvF[x.fl].respondeu = sXtFalha == XT_OK;
   free(x.giDe);
   return sLtvF[x.fl].nCanais;
 }
@@ -1398,6 +1400,7 @@ static int m3uCarregar(const LtvUrl *u) {
          p.urlTvg[0] ? ", com url-tvg" : "");
   if (!ok && st) printf("[ltv] m3u %s: HTTP %d\n", sLtvF[x.fl].chave, st);
   fflush(stdout);
+  sLtvF[x.fl].respondeu = ok;
   if (!ok && !sLtvF[x.fl].nCanais) sLtvF[x.fl].erro = 1;
   return sLtvF[x.fl].nCanais;
 }
@@ -1708,14 +1711,14 @@ static const char *nomeDoAddon(const char *base) {
   return "";
 }
 
-// Fonte que veio vazia da rede: a lista de ontem dela, do disco. Fica
-// "degradada"; sem cache, "fora".
+// Failed source: recover yesterday's list from disk. Successful filtered-empty
+// results remain empty. Cached sources are degraded; missing cache means offline.
 static void fonteVaziaRecupera(int tipo, const char *ref, const char *nome, const char *base) {
   char ch[LTV_CHAVE];
   int i, r;
   ltv_chave_fonte(tipo, ref, ch, sizeof ch);
   for (i = 0; i < sNLtvF && strcmp(sLtvF[i].chave, ch); i++) {}
-  if (i < sNLtvF && sLtvF[i].nCanais > 0) return;
+  if (i < sNLtvF && (sLtvF[i].nCanais > 0 || sLtvF[i].respondeu)) return;
   r = cacheFonteLer(ch);
   for (i = 0; i < sNLtvF && strcmp(sLtvF[i].chave, ch); i++) {}
   if (i == sNLtvF) i = sFonte(tipo, ref, nome, base);
@@ -1753,6 +1756,7 @@ static void *fioGuia(void *u) {
       int novos = 0, n = lerPagina(&sFontes[i], fl, skip, &novos, &pagina);
       if (n <= 0) break;
       okC = 1;
+      sLtvF[fl].respondeu = 1;
       // Detect ignored offsets even when filtering admits no new channels.
       if (n < G_PAGINA || (skip > 0 && pagina == anterior) ||
           (sFltLive.modo != GF_PREFERIR_4K &&
@@ -4129,11 +4133,9 @@ void guia_atualizar(float dt, Uint32 agora) {
   // instalado e respondendo 200. MEDIDO na LG: reabrir o guia nao consertava,
   // porque nada aqui chamava a carga de novo.
   //
-  // Agora a tentativa e por TEMPO enquanto nao ha canal: a cada 10 s com o guia
-  // na tela. Sao dois GET de manifesto por tentativa, e so enquanto a tela esta
-  // aberta e vazia — que e exatamente a situacao em que a pessoa esta olhando
-  // para um guia sem nada e esperando.
-  if (!nCanais && estado != G_BAIXANDO &&
+  // Retry missing/failed catalogs every 10 s while visible. Successful filtered
+  // emptiness stays ready until configuration changes or an explicit refresh.
+  if (!nCanais && estado != G_PRONTO && estado != G_BAIXANDO &&
       (!ultTentativa || agora - ultTentativa > G_RETENTAR_MS)) {
     ultTentativa = agora ? agora : 1;
     descobrirFontes();

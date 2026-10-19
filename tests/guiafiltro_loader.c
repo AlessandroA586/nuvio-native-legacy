@@ -1,5 +1,6 @@
 // Exercise the real staging, Xtream/M3U callbacks, cache and fallback paths.
 #include "guiafiltro.h"
+#include <errno.h>
 static char *filtroResposta(const char *url);
 #define GUIAFILTRO_LOADER
 #define main cache_test_main
@@ -22,10 +23,44 @@ static void channel(int fl, const char *cat, const char *id, const char *nome) {
 }
 void desc_remontar_fileiras(void) {}
 void desc_repetir(void) {}
-static int pageRequests, pageScenario;
+int player_aberto(void) { return 0; }
+int segurar_venceu(Uint32 now, Uint32 since, const char *screen) {
+  (void)now; (void)since; (void)screen; return 0;
+}
+void teclado_atualizar(float dt, Uint32 now) { (void)dt; (void)now; }
+int teclado_resultado(void) { return 0; }
+const char *teclado_texto(void) { return ""; }
+int xtream_epg_curto(const char *id, XtreamProg *out, int cap, int *status) {
+  (void)id; (void)out; (void)cap; *status = 0; return 0;
+}
+int xtream_ultimo_retry_after(void) { return 0; }
+char *rede_baixar_bin_medido_controle(const char *url, int seconds, const char *const *headers,
+                                     const RedeControle *control, long *size, RedeMedida *measure) {
+  (void)url; (void)seconds; (void)headers; (void)control; (void)measure; *size = 0; return NULL;
+}
+static int pageRequests, pageScenario, sourceScenario, sourceRequests;
+static int discoveryRequests, loadRequests;
+int cat_n_fileiras(void) { discoveryRequests++; return 0; }
+const CatFileira *cat_fileira(int i) { (void)i; return NULL; }
+// Keep all test work foreground; record load launches without creating threads.
+int pthread_create(pthread_t *t, const pthread_attr_t *a, void *(*fn)(void *), void *u) {
+  (void)t; (void)a; (void)fn; (void)u; loadRequests++; return EAGAIN;
+}
 static char *filtroResposta(const char *url) {
   char body[24000];
   size_t used = 0;
+  if (sourceScenario) {
+    sourceRequests++;
+    if (sourceScenario == 3) return NULL;
+    if (!strcmp(url, "xtream")) return strdup(sourceScenario == 1 ? "X 4K" : "X HD");
+    if (strstr(url, ".m3u")) return strdup(sourceScenario == 1 ?
+      "#EXTM3U\n#EXTINF:-1 tvg-id=\"x\" group-title=\"Sports\",X 4K\nhttps://fixture.invalid/live\n" :
+      "#EXTM3U\n#EXTINF:-1 tvg-id=\"x\" group-title=\"Sports\",X HD\nhttps://fixture.invalid/live\n");
+    assert(strstr(url, "/catalog/tv/channels"));
+    return strdup(sourceScenario == 1 ?
+      "{\"metas\":[{\"id\":\"channel:1\",\"name\":\"X 4K\",\"genre\":[\"Sports\"]}]}" :
+      "{\"metas\":[{\"id\":\"channel:1\",\"name\":\"X HD\",\"genre\":[\"Sports\"]}]}");
+  }
   if (!pageScenario) return NULL;
   assert(strstr(url, "/catalog/tv/channels"));
   pageRequests++;
@@ -105,6 +140,67 @@ static void cacheRefreshRegression(void) {
     assert(!strcmp(sCanais[0].nome, "New SD"));
   }
 }
+static void filteredEmptyRegression(int type, int hidden, int retry) {
+  const char *ref = type == LTV_M3U ? "https://fixture.invalid/list.m3u" :
+                    type == LTV_ADDON ? "https://fixture.invalid" : "";
+  char key[LTV_CHAVE];
+  ltv_chave_fonte(type, ref, key, sizeof key);
+  xtOk = type == LTV_XTREAM;
+  nCargaUrls = type == LTV_M3U;
+  if (nCargaUrls) {
+    cargaUrls[0].tipo = LTV_URL_M3U;
+    strcpy(cargaUrls[0].url, ref); strcpy(cargaUrls[0].nome, "Fixture");
+  }
+  nAddons = type == LTV_ADDON;
+  bases[0] = ref;
+  memset(sFontes, 0, sizeof sFontes);
+  if (nAddons) {
+    strcpy(sFontes[0].base, ref); strcpy(sFontes[0].tipo, "tv");
+    strcpy(sFontes[0].id, "channels");
+  }
+  // Seed stale 4K cache through the actual provider load and publication.
+  for (int pass = 1; pass <= 2; pass++) {
+    memset(&fltLive, 0, sizeof fltLive);
+    if (pass == 2) {
+      if (hidden) guiafiltro_cat_alternar(&fltLive, "Sports");
+      else fltLive.modo = GF_SO_4K;
+    }
+    sFltLive = fltLive; sourceScenario = retry ? 2 : pass;
+    sNFontes = nAddons;
+    nAddonsCarga = nAddons;
+    if (nAddons) {
+      addonsCarga = calloc(1, sizeof *addonsCarga);
+      strcpy(addonsCarga[0].base, ref); addonsCarga[0].ativo = 1;
+    }
+    fioGuia(NULL);
+    if (pass == 2 && !retry) {
+      assert(sNCanais == 0 && !sLtvF[0].deCache && sLtvF[0].saude == LTV_SAUDE_OK);
+    }
+    drenarCarga();
+    assert(nCanais == (pass == 1 ? 1 : 0));
+  }
+  if (retry) {
+    aberta = 1; previewLigado = 0; ultTentativa = 1;
+    int requests = sourceRequests;
+    for (Uint32 now = 11002; now < 50000; now += 11001) guia_atualizar(0.016f, now);
+    assert(loadRequests == 0 && discoveryRequests == 0 && sourceRequests == requests);
+    // Explicit refresh and configuration changes still launch loads.
+    guia_limpar_lista(); assert(loadRequests == 1);
+    guia_fontes_mudaram(); assert(loadRequests == 2);
+    estado = G_FALHOU; ultTentativa = 1;
+    guia_atualizar(0.016f, 60000);
+    assert(loadRequests == 3 && discoveryRequests > 0);
+  } else {
+    // Fresh raw HD replaces stale 4K on disk; failure still uses that cache.
+    memset(&sFltLive, 0, sizeof sFltLive);
+    stagingZerar(); sTeto = 10;
+    assert(cacheFonteLer(key) == 1 && !strcmp(sCanais[0].nome, "X HD"));
+    sourceScenario = 3; sNFontes = nAddons;
+    fioGuia(NULL);
+    assert(sNCanais == 1 && sLtvF[0].deCache && sLtvF[0].saude == LTV_SAUDE_DEGRADADA);
+  }
+  sourceScenario = 0;
+}
 static void visibilityRegression(void) {
   int fl = begin(GF_PREFERIR_4K, 5);
   channel(fl, "Sports", "xtream:1", "X 4K");
@@ -153,6 +249,10 @@ int main(int argc, char **argv) {
                            !strcmp(regression, "pagination-prefer") ? GF_PREFERIR_4K : GF_TODAS);
     else if (!strcmp(regression, "cap")) capRegression();
     else if (!strcmp(regression, "cache-refresh")) cacheRefreshRegression();
+    else if (!strncmp(regression, "empty-", 6))
+      filteredEmptyRegression(strstr(regression, "m3u") ? LTV_M3U :
+                              strstr(regression, "addon") ? LTV_ADDON : LTV_XTREAM,
+                              strstr(regression, "hidden") != NULL, strstr(regression, "retry") != NULL);
     else if (!strcmp(regression, "visibility")) visibilityRegression();
     else if (!strcmp(regression, "variants")) variantsRegression();
     else assert(0);

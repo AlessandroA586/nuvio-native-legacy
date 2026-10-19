@@ -55,7 +55,16 @@ int xtream_e_id(const char *id) {
 }
 Uint32 SDL_GetTicks(void) { static Uint32 t = 1000; return t += 16; }
 int xtream_configurado(void) { return xtOk; }
-int xtream_ultima_falha(void) { return 0; }
+#ifdef GUIAFILTRO_LOADER
+static int fixtureFailure = XT_SEM_RESPOSTA;
+#endif
+int xtream_ultima_falha(void) {
+#ifdef GUIAFILTRO_LOADER
+  return fixtureFailure;
+#else
+  return 0;
+#endif
+}
 int xtream_ultimo_http(void) { return 0; }
 int stalker_configurado(void) { return stOk; }
 int xtream_url_xmltv(char *d, unsigned n) { (void)d; (void)n; return 0; }
@@ -80,15 +89,42 @@ char *rede_baixar_medido_controle(const char *u, int s, const char *const *c,
 int rede_baixar_fluxo(const char *u, int s, const char *const *c,
                       int (*cb)(const char *, size_t, void *), void *x,
                       long long max, int *st, long long *bytes) {
-  (void)u; (void)s; (void)c; (void)cb; (void)x; (void)max;
+  (void)s; (void)c; (void)max;
   if (st) *st = 0; if (bytes) *bytes = 0;
+#ifdef GUIAFILTRO_LOADER
+  char *body = filtroResposta(u);
+  if (body) {
+    size_t n = strlen(body);
+    int ok = cb(body, n, x);
+    free(body);
+    if (st) *st = 200; if (bytes) *bytes = (long long)n;
+    return ok;
+  }
+#else
+  (void)u; (void)cb; (void)x;
+#endif
   return 0;
 }
 int stalker_canais_sessao(StalkerCanal *s, int m, uint64_t se) { (void)s; (void)m; (void)se; return 0; }
 int xtream_canais_cb_sessao(void (*cat)(const char *, int, int, void *),
                             XtreamCb cb, void *u, int *total, uint64_t sessao) {
-  (void)cat; (void)cb; (void)u; (void)sessao;
+  (void)sessao;
   if (total) *total = 0;
+#ifdef GUIAFILTRO_LOADER
+  char *name = filtroResposta("xtream");
+  fixtureFailure = name ? XT_OK : XT_SEM_RESPOSTA;
+  if (name) {
+    XtreamItem item = {0};
+    item.id = "xtream:1"; item.nome = name; item.categoria = "Sports";
+    item.logo = item.epgId = ""; item.catOrdem = 0;
+    cat("Sports", 0, 1, u); cb(&item, u);
+    free(name);
+    if (total) *total = 1;
+    return 1;
+  }
+#else
+  (void)cat; (void)cb; (void)u;
+#endif
   return 0;
 }
 
