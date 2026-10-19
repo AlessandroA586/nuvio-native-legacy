@@ -50,7 +50,7 @@ int main(void) {
   char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-aj-idioma-XXXXXX");
   char caminho[700];
   FILE *f;
-  int en = -1, es = -1, i;
+  int en = -1, es = -1, i, failures = 0;
   assert(mkdtemp(dir));
   // Pasta de dados de verdade: as migracoes de marca (resolucao, aparencia,
   // profundidade...) gravam a marca na primeira passagem e param de rodar —
@@ -332,15 +332,17 @@ int main(void) {
     ajustes_mesclar_blob(blob, &m);
     assert(!m || strstr(m, "\"es-419\""));
     free(m); m = NULL;
-    valor[AJ_TMDB_IDIOMA] = 3;   // Español: escolha real diferente
+    assert(definirValorDireto(AJ_TMDB_IDIOMA, 3)); // Explicit Spanish choice.
     ajustes_mesclar_blob(blob, &m);
     assert(m && strstr(m, "\"tmdb_language\":\"es\""));
     free(m); m = NULL;
-    valor[AJ_TMDB_IDIOMA] = 33;
+    assert(definirValorDireto(AJ_TMDB_IDIOMA, 33));
     ajustes_mesclar_blob("{\"features\":{\"tmdb_settings\":{\"tmdb_language\":\"pt\"}}}", &m);
     assert(m && strstr(m, "\"es-419\""));
     free(m); m = NULL;
     // Guarda de preservacao isolada: "pt-BR" so cai em "pt" por fallback.
+    escrever(caminho, "");
+    ajustes_dir(dir);
     valor[AJ_TMDB_IDIOMA] = 0;
     ajustes_aplicar_blob("{\"features\":{\"tmdb_settings\":{\"tmdb_language\":\"pt-BR\"}}}");
     assert(valor[AJ_TMDB_IDIOMA] == 1);
@@ -349,9 +351,45 @@ int main(void) {
     free(m);
   }
 
+  // A protected legacy local index must not erase a regional account value.
+  escrever(caminho, "tmdb_language 3\n");
+  ajustes_dir(dir);
+  valor[AJ_TMDB_IDIOMA] = 3;
+  assert(definirValorDireto(AJ_TMDB_ARTE, !valor[AJ_TMDB_ARTE]));
+  {
+    const char *blob = "{\"features\":{\"tmdb_settings\":{\"tmdb_language\":{\"type\":\"string\",\"value\":\"es-419\"}}}}";
+    char *m = NULL;
+    ajustes_mesclar_blob(blob, &m);
+    if (m && !strstr(m, "\"es-419\"")) {
+      fputs("FAIL P1: unrelated edit erased account es-419\n", stderr);
+      failures++;
+    }
+    free(m);
+    assert(definirValorDireto(AJ_TMDB_IDIOMA, 2));
+    ajustes_mesclar_blob(blob, &m);
+    assert(m && strstr(m, "\"value\":\"en\""));
+    free(m);
+    ajustes_dir(dir); // Explicit choice must survive a restart.
+    ajustes_mesclar_blob(blob, &m);
+    assert(m && strstr(m, "\"value\":\"en\""));
+    free(m);
+  }
+  valor[AJ_IDIOMA] = 1 + IDIOMA_PT;
+  idiomaEscolhido();
+  if (strcmp(i18n(V_TMDB_LING[33]), "Espanhol (América Latina)")) {
+    fputs("FAIL P2: pt-BR metadata label is not Portuguese\n", stderr);
+    failures++;
+  }
+  valor[AJ_IDIOMA] = 1 + IDIOMA_EN;
+  idiomaEscolhido();
+  assert(!strcmp(i18n(V_TMDB_LING[33]), "Spanish (Latin America)"));
+  valor[AJ_IDIOMA] = 1 + IDIOMA_ES;
+  idiomaEscolhido();
+  assert(!strcmp(i18n(V_TMDB_LING[33]), "Español (Latinoamérica)"));
+
   unlink(caminho);
   { char tmp[700]; snprintf(tmp, sizeof tmp, "%s/ajustes.tmp", dir); unlink(tmp); }
   rmdir(dir);
-  puts("ajustes_idioma_disco: ok");
-  return 0;
+  puts(failures ? "ajustes_idioma_disco: FAILED" : "ajustes_idioma_disco: ok");
+  return failures ? 1 : 0;
 }
