@@ -4,15 +4,15 @@
 
 set -e
 
-# Allow override to docker via NUVIO_CTR=docker for debugging
-: "${NUVIO_CTR:=container}"
+# Apple container on macOS; docker elsewhere (Linux CI). NUVIO_CTR=docker (or any
+# docker-compatible runtime) gets the original docker arguments untouched.
+: "${NUVIO_CTR:=${NUVIO_CONTAINER_RUNTIME:-}}"  # older name, still used by build-dts-*.sh
+[ "$(uname)" = Darwin ] && : "${NUVIO_CTR:=container}"
+: "${NUVIO_CTR:=docker}"
 
 # Check system is ready
 ctr_check_system() {
-  if [ "$NUVIO_CTR" = "docker" ]; then
-    docker info >/dev/null 2>&1 || { echo "Docker not running" >&2; return 1; }
-    return 0
-  fi
+  [ "$NUVIO_CTR" = container ] || return 0
   # container requires system to be running
   if ! container system status >/dev/null 2>&1; then
     echo "Apple Container system not running. Start with: container system start" >&2
@@ -20,19 +20,9 @@ ctr_check_system() {
   fi
 }
 
-# Map docker --platform to --arch
-_ctr_platform_to_arch() {
-  case "$1" in
-    linux/arm64)         echo "arm64" ;;
-    linux/amd64)         echo "amd64" ;;
-    linux/arm/v5|linux/arm/v7) echo "arm64" ;; # ARM v5/v7 compat with ARMv8
-    *)                   echo "arm64" ;; # default for Apple Silicon
-  esac
-}
-
 # ctr_run [OPTIONS] IMAGE COMMAND [ARGS...]
 # Maps: docker run → container run
-# --platform linux/X → --arch X
+# --platform → --platform (same; linux/arm/v5 must stay ARM32)
 # --rm → --rm (same)
 # -v HOST:CONTAINER → -v HOST:CONTAINER (same)
 # -v HOST:CONTAINER:ro → -v HOST:CONTAINER (same, read-only not supported, will warn)
@@ -45,15 +35,16 @@ _ctr_platform_to_arch() {
 # --entrypoint → not supported, must be handled differently
 ctr_run() {
   ctr_check_system || return 1
-  
-  local arch="arm64" pull="" rm_flag="" vols=() envs=() workdir="" image="" cmd=()
+  [ "$NUVIO_CTR" = container ] || { "$NUVIO_CTR" run "$@"; return; }
+
+  local platform="" pull="" rm_flag="" vols=() envs=() workdir="" image="" cmd=()
   local collect_cmd=0 i=0 args=("$@")
   
   while [ $i -lt ${#args[@]} ]; do
     local arg="${args[$i]}"
     case "$arg" in
       --platform)
-        arch=$(_ctr_platform_to_arch "${args[$((i+1))]}")
+        platform="${args[$((i+1))]}"
         i=$((i+2))
         ;;
       --rm)
@@ -118,32 +109,22 @@ ctr_run() {
     return 1
   fi
   
-  if [ "$NUVIO_CTR" = "docker" ]; then
-    # Fallback to docker (for testing/debugging)
-    docker run --rm --platform "$(
-      case "$arch" in
-        arm64) echo "linux/arm64" ;;
-        amd64) echo "linux/amd64" ;;
-      esac
-    )" "${vols[@]}" "${envs[@]}" $workdir "$image" "${cmd[@]}"
-  else
-    # Use container
-    container run --rm --arch "$arch" "${vols[@]}" "${envs[@]}" $workdir "$image" "${cmd[@]}"
-  fi
+  container run --rm ${platform:+--platform "$platform"} "${vols[@]}" "${envs[@]}" $workdir "$image" "${cmd[@]}"
 }
 
 # ctr_build [OPTIONS] -t TAG -f DOCKERFILE CONTEXT
 ctr_build() {
   ctr_check_system || return 1
-  
-  local arch="arm64" tag="" dockerfile="Dockerfile" context="." args=("$@")
+  [ "$NUVIO_CTR" = container ] || { "$NUVIO_CTR" build "$@"; return; }
+
+  local platform="" tag="" dockerfile="Dockerfile" context="." args=("$@")
   local i=0
   
   while [ $i -lt ${#args[@]} ]; do
     local arg="${args[$i]}"
     case "$arg" in
       --platform)
-        arch=$(_ctr_platform_to_arch "${args[$((i+1))]}")
+        platform="${args[$((i+1))]}"
         i=$((i+2))
         ;;
       -t|--tag)
@@ -171,23 +152,14 @@ ctr_build() {
     return 1
   fi
   
-  if [ "$NUVIO_CTR" = "docker" ]; then
-    docker build --platform "$(
-      case "$arch" in
-        arm64) echo "linux/arm64" ;;
-        amd64) echo "linux/amd64" ;;
-      esac
-    )" -t "$tag" -f "$dockerfile" "$context"
-  else
-    container build --arch "$arch" -t "$tag" -f "$dockerfile" "$context"
-  fi
+  container build ${platform:+--platform "$platform"} -t "$tag" -f "$dockerfile" "$context"
 }
 
 # ctr_image_exists IMAGE_NAME
 # Returns 0 if image exists, 1 otherwise
 ctr_image_exists() {
-  if [ "$NUVIO_CTR" = "docker" ]; then
-    docker image inspect "$1" >/dev/null 2>&1
+  if [ "$NUVIO_CTR" != container ]; then
+    "$NUVIO_CTR" image inspect "$1" >/dev/null 2>&1
   else
     container image inspect "$1" >/dev/null 2>&1
   fi
@@ -198,8 +170,8 @@ ctr_image_exists() {
 ctr_image_inspect() {
   local image="$1" format="${2:-{{.Id}}}"
   
-  if [ "$NUVIO_CTR" = "docker" ]; then
-    docker image inspect --format "$format" "$image"
+  if [ "$NUVIO_CTR" != container ]; then
+    "$NUVIO_CTR" image inspect --format "$format" "$image"
   else
     # container image inspect returns JSON; extract id if requested
     if [ "$format" = "{{.Id}}" ]; then
@@ -212,8 +184,8 @@ ctr_image_inspect() {
 
 # ctr_image_list
 ctr_image_list() {
-  if [ "$NUVIO_CTR" = "docker" ]; then
-    docker image ls
+  if [ "$NUVIO_CTR" != container ]; then
+    "$NUVIO_CTR" image ls
   else
     container image ls
   fi

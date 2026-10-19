@@ -8,7 +8,8 @@
 # O .tpk sai com a assinatura de desenvolvedor padrao do SDK; o Apps2Samsung
 # reassina por DUID na instalacao (TizenInstallerService.cs, manualResign).
 set -euo pipefail
-cd "$(dirname "$0")/../tizen-tpk-spike" && source tools/ctr.sh
+source "$(dirname "$0")/ctr.sh"
+cd "$(dirname "$0")/../tizen-tpk-spike"
 
 TIZEN_SDK="${TIZEN_SDK:-$HOME/tizen-studio}"
 BIN="$TIZEN_SDK/tools/arm-linux-gnueabi-gcc-14.2/bin"
