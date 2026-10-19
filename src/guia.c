@@ -4585,7 +4585,25 @@ static void drenarCarga(void) {
       sInventarioCat[0] = 0;
       stagingZerar();
       sOk = nLtvF > 0;
-    } else if (atual) publicar();
+    } else if (atual) {
+      publicar();
+      if (painel && paModo == 1) {
+        int item = fNivel ? paFoco : paFoco - 3;
+        GFItem foco = {0};
+        if (item >= 0 && item < fN) foco = fIt[item];
+        if (fNivel) fMontarCanais(fCatNome);
+        else fMontarCats();
+        for (int i = 0; i < fN; i++) {
+          if (fNivel ? (!strcmp(fIt[i].fonte, foco.fonte) && !strcmp(fIt[i].id, foco.id)) :
+                       !strcmp(fIt[i].nome, foco.nome)) {
+            paFoco = fNivel ? i : 3 + i;
+            break;
+          }
+        }
+        if (paFoco >= painelN()) paFoco = painelN() - 1;
+        if (paFoco < 0) paFoco = 0;
+      }
+    }
     // Quem decide e o desenho: falha da carga continua G_FALHOU, e e ela que
     // faz guia_carregar tentar de novo.
     estado = atual ? (sOk ? G_PRONTO : G_FALHOU) : G_PARADO;

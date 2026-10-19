@@ -1007,6 +1007,40 @@ static void sessionInventoryRegression(void) {
   assert(inventario == NULL && nInventario == 0);
 #endif
 }
+static void panelPublicationRegression(void) {
+  filtrosAbrir();
+  assert(fN == 0);
+  paFoco = GF_PREFERIR_4K;
+  int fl = begin(GF_TODAS, 5);
+  channel(fl, "Sports", "xtream:1", "X HD");
+  channel(fl, "News", "xtream:2", "Y HD");
+  rebuild(); atomic_store(&pendPronto, 1); drenarCarga();
+  assert(fN == 2);
+  assert(!fNivel && paFoco == GF_PREFERIR_4K);
+
+  paFoco = 4; paRol = 20.0f;
+  fl = begin(GF_TODAS, 5);
+  channel(fl, "News", "xtream:2", "Y HD");
+  channel(fl, "Movies", "xtream:3", "Z HD");
+  rebuild(); atomic_store(&pendPronto, 1); drenarCarga();
+  assert(fN == 2 && !strcmp(fIt[0].nome, "News") && !strcmp(fIt[1].nome, "Movies"));
+  assert(!fNivel && paFoco == 3 && paRol == 20.0f);
+
+  filtrosEvento(SDLK_RIGHT, 0);
+  assert(fNivel && !strcmp(fCatNome, "News") && fN == 1);
+  fl = begin(GF_TODAS, 5);
+  channel(fl, "News", "xtream:4", "New HD");
+  channel(fl, "News", "xtream:2", "Y FHD");
+  rebuild(); atomic_store(&pendPronto, 1); drenarCarga();
+  assert(fNivel && !strcmp(fCatNome, "News") && fN == 2);
+  assert(paFoco == 1 && !strcmp(fIt[paFoco].id, "xtream:2"));
+  assert(!strcmp(fIt[paFoco].nome, "Y FHD"));
+
+  fl = begin(GF_TODAS, 5);
+  channel(fl, "Movies", "xtream:3", "Z HD");
+  rebuild(); atomic_store(&pendPronto, 1); drenarCarga();
+  assert(fNivel && !strcmp(fCatNome, "News") && fN == 0 && paFoco == 0);
+}
 #ifdef GUIAFILTRO_STALKER_TEST
 #define main filter_test_main
 #endif
@@ -1019,6 +1053,7 @@ int main(int argc, char **argv) {
     if (!strncmp(regression, "pagination", 10))
       paginationRegression(!strcmp(regression, "pagination-4k") ? GF_SO_4K :
                            !strcmp(regression, "pagination-prefer") ? GF_PREFERIR_4K : GF_TODAS);
+    else if (!strcmp(regression, "panel-publication")) panelPublicationRegression();
     else if (!strcmp(regression, "cap")) capRegression();
     else if (!strcmp(regression, "cache-refresh")) cacheRefreshRegression();
     else if (!strncmp(regression, "empty-", 6))
