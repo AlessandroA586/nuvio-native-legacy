@@ -270,6 +270,7 @@ static const char *VS =
 #define NV_STR(x) NV_STR_(x)
 
 #include "gfx_sgsr.h"
+#include "gfx_upscale.h"
 
 static const char *FS_CABECA =
   NV_GLSL_PREFIXO
@@ -1666,6 +1667,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  }\n"
   "  gl_FragColor = nv_dither(c, a);\n"
   "}\n",
+  NV_SHARP_BILINEAR_SHADER,
 };
 
 // Cada corpo declara o que usa; montar so o necessario mantem o shader enxuto.
@@ -1707,7 +1709,8 @@ static const struct { int sdf, cover; } PRECISA[GFX_NMODOS] = {
   {0,0},   /* GFX_HOLOFOTE — procedural, tela cheia */
   {1,1},   /* GFX_CARD_HERO — same artwork, compiled with the reading tint */
   {0,0},   /* GFX_PALCO_CHAO — procedural floor pool */
-  {0,0}    /* GFX_PALCO_ARTE — own anchored cover */
+  {0,0},   /* GFX_PALCO_ARTE — own anchored cover */
+  {0,0}    /* GFX_COPIA_NITIDA */
 };
 
 static GLuint compila(GLenum tipo, const char *src) {

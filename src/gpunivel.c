@@ -431,6 +431,12 @@ void gpun_redimensionar(int w, int h) {
 #endif
 }
 
+static int upscaleInteiro(void) {
+  if (!upscaleSgsr || intW <= 0 || intH <= 0) return 0;
+  return telaW % intW == 0 && telaH % intH == 0 &&
+         telaW / intW == telaH / intH && telaW / intW > 1;
+}
+
 static int intPreparar(void) {
   GLint ant = 0;
   GLenum st;
@@ -462,7 +468,8 @@ static int intPreparar(void) {
     return 0;
   }
   printf("[gpu-nivel] upscale=%s %dx%d -> %dx%d\n",
-         upscaleSgsr ? "sgsr" : "bilinear", intW, intH, telaW, telaH);
+         upscaleInteiro() ? "sharp-bilinear" : upscaleSgsr ? "sgsr" : "bilinear",
+         intW, intH, telaW, telaH);
   fflush(stdout);
   return 1;
 }
@@ -496,10 +503,15 @@ void gpun_quadro_fim(void) {
     glDisable(GL_BLEND);   // copia RGB E alpha exatos (o furo do video)
     gfx_tex_aspect_atual = 0.0f;
     gfx_opacidade_grupo = 1.0f;
-    gfx_rect(tela, intTex, GFX_COPIA, 0,
-             upscaleSgsr ? (float)intW : 0.0f,
-             upscaleSgsr ? (float)intH : 1.0f,
-             0.0f, 1, 1, 1, 1);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    if (upscaleInteiro())
+      gfx_rect(tela, intTex, GFX_COPIA_NITIDA, (float)telaW / intW,
+               1.0f / intW, 1.0f / intH, 0.0f, 1, 1, 1, 1);
+    else
+      gfx_rect(tela, intTex, GFX_COPIA, 0,
+               upscaleSgsr ? (float)intW : 0.0f,
+               upscaleSgsr ? (float)intH : 1.0f,
+               0.0f, 1, 1, 1, 1);
     // Solta a textura do alvo: no quadro seguinte ela volta a ser o alvo de
     // desenho, e ficar ligada para leitura ao mesmo tempo e o laco de
     // realimentacao que o GLES deixa indefinido.

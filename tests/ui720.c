@@ -1,5 +1,6 @@
-// Offline SGSR proof: real UI, surface-size references, alpha, GPU/host medians.
-#include "gfx.c" // Reuse the real shader compiler; round 1 exists only in this benchmark.
+// Offline scale-factor proof: native-size UI references, alpha and GPU/host medians.
+#include "gfx.c" // Reuse the real shader compiler and production quad.
+#include "ui720_filters.h"
 #include "app.h"
 #include "ajustes.h"
 #include "addons.h"
@@ -68,10 +69,17 @@ static void target(int low) {
   glBindFramebuffer(GL_FRAMEBUFFER,low?sourceFbo:0);
   glViewport(0,0,low?iw:sw,low?ih:sh); gfx_tamanho_alvo(low?iw:sw,low?ih:sh);
 }
+static int candidate;
+static const char *names[]={"bilinear","round1","sgsr","sharp-bilinear","smoothstep","catmull4-invalid","catmull5","cas"};
+static Programa filters[8];
 static void copy(int mode) {
   target(0); gfx_sem_recorte(); glDisable(GL_BLEND);
+  glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
   gfx_tex_aspect_atual=0; gfx_opacidade_grupo=1;
-  gfx_rect(screen,source,GFX_COPIA,0,mode?iw:0,mode?ih:1,0,1,1,1,1);
+  progs[GFX_COPIA]=filters[candidate]; progAtual=-1;
+  float scale=(float)sw/iw;
+  gfx_rect(screen,source,GFX_COPIA,candidate==7?1:scale,
+           candidate==3?1.f/iw:mode?iw:0, candidate==3?1.f/ih:mode?ih:1,0,1,1,1,1);
   glEnable(GL_BLEND);
 }
 static double gradient(const unsigned char *p, int settings) {
@@ -149,11 +157,24 @@ int main(int argc,char **argv) {
   assert(strstr((const char*)glGetString(GL_EXTENSIONS),"GL_EXT_timer_query"));
   printf("GPU %s; GL_EXT_timer_query; synchronized host wall-time medians, 15 frames\n",glGetString(GL_RENDERER));
   glGenQueries(1,&query);
-  // Keep the obsolete round-1 shader in tests only, using the same production quad.
-  __typeof__(progs[0]) sgsr=progs[GFX_COPIA];
-  FS_CORPO[GFX_COPIA]=round1; assert(progMontar(GFX_COPIA));
-  __typeof__(progs[0]) old=progs[GFX_COPIA];
-  progs[GFX_COPIA]=sgsr; progAtual=-1;
+  Programa sgsr=progs[GFX_COPIA];
+  const char *bodies[]={NV_SGSR_SHADER,round1,NV_SGSR_SHADER,
+    NV_SHARP_BILINEAR_SHADER,smoothstep,catmull4_invalid,catmull5,cas};
+  GLuint sharedVS=vsProg;
+  for(int c=0;c<8;c++) {
+    if(c==7) {
+      char vertex[10000];
+      snprintf(vertex,sizeof vertex,"%s#define main nv_main\n%s\n#undef main\n"
+        "uniform highp vec2 uPar; varying highp vec4 vLR; varying highp vec4 vUD;\n"
+        "void main(){nv_main(); highp vec2 uv=vec2(vUv.x,1.0-vUv.y),d=1.0/uPar;"
+        "vLR=vec4(uv-vec2(d.x,0.0),uv+vec2(d.x,0.0));"
+        "vUD=vec4(uv-vec2(0.0,d.y),uv+vec2(0.0,d.y));}\n",NV_GLSL_PREFIXO,VS+strlen(NV_GLSL_PREFIXO));
+      vsProg=compila(GL_VERTEX_SHADER,vertex);
+    }
+    FS_CORPO[GFX_COPIA]=bodies[c];assert(progMontar(GFX_COPIA));filters[c]=progs[GFX_COPIA];
+    vsProg=sharedVS;
+  }
+  FS_CORPO[GFX_COPIA]=NV_SGSR_SHADER;progs[GFX_COPIA]=sgsr;progAtual=-1;
   size_t capacity=(size_t)3840*2160*4;
   pixels=malloc(capacity);flipped=malloc(capacity);linear=malloc(capacity);native=malloc(capacity);
   assert(pixels&&flipped&&linear&&native);
@@ -176,41 +197,40 @@ int main(int argc,char **argv) {
       ajustes_definir_vidro(glass);
       target(0);for(int n=0;n<8;n++) frame(settings);
       readback();memcpy(native,pixels,bytes);double ref=gradient(native,settings);
-      if(!glass) {snprintf(name,sizeof name,"native-%d-%s",sh,scene);png(argv[1],name);}
+      if(!glass) {snprintf(name,sizeof name,"r3-native-%d-%s",sh,scene);png(argv[1],name);}
       target(1);for(int n=0;n<8;n++) frame(settings);
-      copy(0);readback();memcpy(linear,pixels,bytes);
+      candidate=0;copy(0);readback();memcpy(linear,pixels,bytes);
       double b=gradient(linear,settings), be=error(linear,settings);
-      if(!glass) {snprintf(name,sizeof name,"bilinear-%d-%d-%s",ih,sh,scene);png(argv[1],name);}
-      progs[GFX_COPIA]=old;progAtual=-1;copy(1);readback();
-      double r=gradient(pixels,settings), re=error(pixels,settings), rh,rg;
-      timing(settings,2,0,&rh,&rg);
-      progs[GFX_COPIA]=sgsr;progAtual=-1;copy(1);readback();
-      double s=gradient(pixels,settings), se=error(pixels,settings);
-      for(size_t i=3;i<bytes;i+=4) assert(pixels[i]==linear[i]);
-      assert(pixels[((size_t)(sh-1-250*sh/1080)*sw+1550*sw/1920)*4+3]==0);
-      if(!glass) {
-        snprintf(name,sizeof name,"sgsr-%d-%d-%s",ih,sh,scene);png(argv[1],name);
-        if(!test) {snprintf(name,sizeof name,"sgsr-%s",scene);png(argv[1],name);}
+      for(candidate=0;candidate<8;candidate++) {
+        copy(candidate!=0);readback();
+        double g=gradient(pixels,settings),e=error(pixels,settings),host,gpu;
+        for(size_t i=3;i<bytes;i+=4) assert(pixels[i]==linear[i]);
+        assert(pixels[((size_t)(sh-1-250*sh/1080)*sw+1550*sw/1920)*4+3]==0);
+        if(!glass) {snprintf(name,sizeof name,"r3-%s-%d-%d-%s",names[candidate],ih,sh,scene);png(argv[1],name);}
+        timing(settings,candidate?2:1,0,&host,&gpu);
+        printf("METRIC %d->%d %s glass=%d filter=%s gradient=%.6f native=%.6f MAE=%.6f host=%.4f GPU=%.4f alpha=identical\n",
+          ih,sh,scene,glass,names[candidate],g,ref,e,host,gpu);
+        if(candidate==(test?3:2)) {
+          int pass=g>b+0.05*fmax(0.0,ref-b) && fabs(g-ref)<fabs(b-ref);
+          if(!test) pass=pass && e<be;
+          if(!pass) failed=1;
+        }
       }
-      // Recover at least 5% of lost native text contrast and beat both RGB errors.
-      double threshold=b+0.05*fmax(0.0,ref-b);
-      int pass=s>threshold && fabs(s-ref)<fabs(b-ref) && se<be && se<re;
-      printf("METRIC %d->%d %s glass=%d gradient bilinear=%.6f round1=%.6f SGSR=%.6f native=%.6f; MAE %.4f/%.4f/%.4f; threshold=%.6f before=%s after=%s; alpha identical\n",
-        ih,sh,scene,glass,b,r,s,ref,be,re,se,threshold,b>threshold?"PASS":"FAIL",pass?"PASS":"FAIL");
-      if(!pass) failed=1;
-      double bh,bg,ss,sg;timing(settings,1,0,&bh,&bg);timing(settings,2,0,&ss,&sg);
-      printf("BLIT %d->%d %s glass=%d host/GPU ms bilinear=%.4f/%.4f round1=%.4f/%.4f SGSR=%.4f/%.4f\n",ih,sh,scene,glass,bh,bg,rh,rg,ss,sg);
-      double nh,ng,lh,lg;timing(settings,0,1,&nh,&ng);timing(settings,1,1,&lh,&lg);timing(settings,2,1,&ss,&sg);
-      printf("FRAME %d->%d %s glass=%d level=0 host/GPU ms native=%.4f/%.4f bilinear=%.4f/%.4f SGSR=%.4f/%.4f\n",ih,sh,scene,glass,nh,ng,lh,lg,ss,sg);
     }
     // Real gpun_quadro_fim must match the benchmark, including 1080p->4K at level 0.
+    candidate=test?3:2;
     ajustes_definir_vidro(0);target(1);frame(0);copy(1);readback();memcpy(linear,pixels,bytes);
+    progs[GFX_COPIA]=sgsr;progAtual=-1;
     if(test==2) gpun_alvo_1080();else gpun_definir_nivel(3);
     // Level 0 effects, even when today's 720p setting selects level 3.
     gfx_definir_efeitos_leves(0);gfx_definir_efeitos_minimos(0);
-    gpun_quadro_inicio();frame(0);gpun_quadro_fim();readback();assert(!memcmp(linear,pixels,bytes));
+    gpun_quadro_inicio();frame(0);
+    // The final draw must restore alpha writes even after a masked pass.
+    glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_FALSE);
+    gpun_quadro_fim();readback();assert(!memcmp(linear,pixels,bytes));
     glDeleteFramebuffers(1,&sourceFbo);glDeleteTextures(1,&source);gfx_tex_esquecer(0);
   }
+  candidate=0;progs[GFX_COPIA]=sgsr;progAtual=-1;
   sw=1920;sh=1080;iw=1280;ih=720;
   pretendUtgard=1;gpun_iniciar(sw,sh);gpun_definir_nivel(3);
   gpun_quadro_inicio();frame(0);
