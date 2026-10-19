@@ -3219,7 +3219,7 @@ static void tentarProximaFonteVOD(void) {
   else if (!fonteFalha && video_bufferando_ms() > VOD_FONTE_BUFFER_MS) {
 #ifdef NV_ANDROID
     // Segura a troca so enquanto o fim do buffer ANDA (bufavanco.h), por fonte.
-    // No Android video_buffer_fim() e 0: a borda vem de VideoStats.bufferSeg.
+    // Para VOD no Android, a borda vem de VideoStats.bufferSeg.
     { static BufAvanco av; VideoStats vs;
       video_estatisticas(&vs);
       if (bufavanco_segura(&av, fonteVODDesde, video_bufferando_ms(), SDL_GetTicks(),
@@ -6054,10 +6054,14 @@ void app_atualizar(float dt, Uint32 agora) {
         lsIdx = canalFonteIdx;
         snprintf(lsId, sizeof lsId, "%s", player_id_canal());
       }
+      double livePos = video_pronto() ? video_pos() : 0.0, liveFim = video_buffer_fim();
+#ifdef NV_ANDROID
+      if (video_pronto()) video_live_progresso(&livePos, &liveFim);
+#endif
       int estavaPendente = liveStall.pendente;
-      ls = nv_ls_passo_buf_prazo(&liveStall, SDL_GetTicks(), video_pronto() ? video_pos() : 0.0,
+      ls = nv_ls_passo_buf_prazo(&liveStall, SDL_GetTicks(), livePos,
                            video_pronto(), player_pausa_pessoa(), video_terminou(),
-                           bufferMs, video_buffer_fim(), paradoMs);
+                           bufferMs, liveFim, paradoMs);
       if (morta) {
         nv_ls_zerar(&liveStall);
       } else if (estavaPendente && !liveStall.pendente && ls == NV_LS_NADA) {
@@ -6066,7 +6070,7 @@ void app_atualizar(float dt, Uint32 agora) {
       } else if (ls == NV_LS_AGENDOU) {
         printf("[canal] parou de tocar (fim de fluxo=%d, posicao %.1fs, buffering %u ms): "
                "reabrindo a fonte %d, tentativa %d/%d em %u ms\n", video_terminou(),
-               video_pos(), video_bufferando_ms(), canalFonteIdx, liveStall.tentativa,
+               livePos, video_bufferando_ms(), canalFonteIdx, liveStall.tentativa,
                NV_LS_MAX, nv_ls_espera_ms(liveStall.tentativa));
         fflush(stdout);
         player_toast_ex(i18n("Conexão caiu, reconectando…"), 4000, "aj_wifi-off", 1);

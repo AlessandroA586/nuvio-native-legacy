@@ -165,7 +165,8 @@ object NvPlayer {
     @JvmStatic external fun nativeFaixa(tipo: Int, idx: Int, lingua: String, flags: Int, nome: String, mime: String, canais: Int)
     @JvmStatic external fun nativeFaixasFim(selAudio: Int, selLeg: Int)
     @JvmStatic external fun nativeLegenda(texto: String, durMs: Int)
-    @JvmStatic external fun nativePos(ms: Int)
+    @JvmStatic external fun nativePos(ms: Long, bufferFimMs: Long, live: Boolean,
+                                      sampleBytes: Int, geracao: Int)
     @JvmStatic external fun nativeDecoder4k(hevc: Int, avc: Int, vp9: Int, av1: Int)
     @JvmStatic external fun nativeTela(hdr: Int, dv: Int)
     @JvmStatic external fun nativeHdr(hdr: String, dv: Int, atmos: Int)
@@ -1590,7 +1591,11 @@ object NvPlayer {
         override fun run() {
             if (!atual(minha)) return
             val p = player ?: return
-            try { nativePos(p.currentPosition.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()) } catch (e: UnsatisfiedLinkError) { }
+            // Keep the signed live-window clock for stall detection. Only the
+            // native UI position is clamped; a moving negative position is valid.
+            try { nativePos(p.currentPosition, p.bufferedPosition, p.isCurrentMediaItemLive,
+                recursosAtuais?.carga?.allocator?.totalBytesAllocated ?: -1, geracaoNative)
+            } catch (e: UnsatisfiedLinkError) { }
             if (++statsTiques >= 4) { statsTiques = 0; relatarStats(p) }
             if (cacheMidia != null && cacheEstado == CacheSessao.ATIVO && ++cacheTiques >= CACHE_RELATO_TIQUES) {
                 cacheTiques = 0
