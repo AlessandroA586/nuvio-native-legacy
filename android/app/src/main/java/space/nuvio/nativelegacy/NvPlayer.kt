@@ -1301,7 +1301,13 @@ object NvPlayer {
                 // nao empilhar outra rodada invisivel do Loader antes da
                 // maquina de reconexao 3/10/25 s do nucleo.
                 .setLoadErrorHandlingPolicy(PoliticaErroParalelo())
-                .setDataSourceFactory(DefaultDataSource.Factory(act, r.origem))
+                .setDataSourceFactory(LivePlaylistDataSource.Factory(
+                    DefaultDataSource.Factory(act, r.origem),
+                    DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
+                        .setConnectTimeoutMs(2000).setReadTimeoutMs(2000)
+                        .setUserAgent(ua).setDefaultRequestProperties(props),
+                    report = { Log.i(TAG, it) },
+                ))
             if (construir) construirPlayer(act, r)
             Log.i(TAG, "[player] buffer preset=$preset min=${minMs / 1000}s max=${maxMs / 1000}s teto=${bytes shr 20}MB preparo=$preparando")
             return r
