@@ -77,6 +77,10 @@ int main(int argc, char **argv) {
     const char *names[] = { "Canal Futebol HD", "xyzzy tv" }, *out[2];
     unsigned char sem[] = {1, 1};
     livecat_postar_teste(worker);
+    const char *section = livecat_secao("Canal Futebol FHD");
+    OK(section && !strcmp(section, "Esportes") && !livecat_secao("xyzzy tv") &&
+       !livecat_secao("uncached name") && posts == 0,
+       "cached-only lookup loads disk answers without requesting missing names");
     OK(livecat_sugerir(names, sem, 2, out, ativo) == 1 && posts == 0,
        "disk cache survives process restart, including null");
     return falhas ? 1 : 0;
@@ -156,6 +160,8 @@ int main(int argc, char **argv) {
 
   { const char *names[] = { "Canal Futebol HD", "xyzzy tv" }; unsigned char both[] = {1, 1};
     clockNow += 31 * 86400; posts = 0;
+    OK(!livecat_secao("Canal Futebol HD") && posts == 0,
+       "cached-only lookup rejects expired sections without network");
     ganhou = livecat_sugerir(names, both, 2, out, ativo);
     OK(ganhou == 1 && posts == 1 && strstr(ultimoCorpo, "xyzzy"), "positive and null answers expire after 30 days in a running app");
   }

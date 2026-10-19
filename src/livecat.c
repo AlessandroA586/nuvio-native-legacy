@@ -81,6 +81,19 @@ static void carregar(void) {
   free(txt);
 }
 
+// Cached lookup only: safe during startup, with no Worker request or disk write.
+const char *livecat_secao(const char *nome) {
+  char base[BASE_MAX];
+  int k;
+  carregar();
+  if (!cache || !nome) return NULL;
+  nv_nome_base(nome, base, sizeof base);
+  k = achar(base);
+  if (k < 0 || cache[k].sec < 0 || cache[k].dia > hoje() ||
+      hoje() - cache[k].dia >= VALIDADE_DIAS) return NULL;
+  return SECAO[cache[k].sec];
+}
+
 static void gravar(void) {
   size_t cap = (size_t)nCache * (BASE_MAX + 24) + 1, u = 0;
   char *b = malloc(cap);

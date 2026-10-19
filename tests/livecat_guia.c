@@ -21,6 +21,11 @@ static char *worker(const char *url, const char *body, int *status) {
   posts++; *status = 200;
   return strdup("{\"cats\":{\"aurora\":\"Esportes\",\"lumen\":\"Infantil\"}}");
 }
+static char *coldWorker(const char *url, const char *body, int *status) {
+  assert(strstr(body, "velora") && strstr(body, "nimbo") && strstr(body, "talume"));
+  (void)url; posts++; *status = 200;
+  return strdup("{\"cats\":{\"velora\":\"Esportes\",\"nimbo\":\"Infantil\",\"talume\":\"Infantil\"}}");
+}
 static void addM3u(M3uCtx *ctx, const char *name, const char *group, const char *id) {
   LtvM3uCanal c = {0}; c.nome = name; c.grupo = group; c.url = id;
   c.tvgId = c.tvgNome = c.logo = c.ua = c.referer = "";
@@ -36,9 +41,23 @@ static void checkGroups(void) {
   }
   assert(sports == 2 && kids == 1 && other == 0);
 }
-int main(void) {
+int main(int argc, char **argv) {
   M3uCtx ctx = {0};
   dados_iniciar(NULL);
+  (void)argv;
+  if (argc > 1) {
+    char source[LTV_CHAVE];
+    const char *selected[] = {"Infantil"};
+    ltv_chave_fonte(LTV_M3U, "https://private/list?token=secret", source, sizeof source);
+    ltv_pref_definir_grupos(ltv_pref(source, 1), selected, 1);
+    sTeto = 1;
+    assert(cacheFonteLer(source) == 1);
+    selecionarSecoes();
+    assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "Lumen"));
+    assert(!strcmp(sCats[sCanais[0].cat].nome, "Infantil") && posts == 0);
+    puts("PASS: cold process restores selected suggested section from disk without network");
+    return 0;
+  }
   sTeto = 100;
   ctx.fl = sFonte(LTV_M3U, "https://private/list?token=secret", "My list", "");
   addM3u(&ctx, "Aurora HD", "", "https://private/1");
@@ -91,11 +110,38 @@ int main(void) {
   assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "Lumen"));
   assert(!strcmp(sCats[sCanais[0].cat].nome, "Infantil"));
   assert(posts == 1);
+  // Startup adopts the source cache without running the network suggestion pass.
+  int failures = 0;
   stagingZerar(); sTeto = 100;
-  assert(cacheFonteLer(source) == 4);
+  assert(cacheFonteLer(source) > 0);
+  selecionarSecoes();
+  if (sNCanais != 1 || strcmp(sCanais[0].nome, "Lumen") ||
+      strcmp(sCats[sCanais[0].cat].nome, "Infantil") || posts != 1) {
+    puts("FAIL: cold source cache retains the selected suggested section without network");
+    failures++;
+  } else puts("PASS: cold source cache retains the selected suggested section without network");
+
+  // An earlier unselected candidate must not spend the last retained-channel slot.
+  stagingZerar(); sTeto = 1;
+  ctx.fl = sFonte(LTV_M3U, "https://private/list?token=secret", "My list", "");
+  ctx.nsel = sGruposEscolhidos(ctx.fl, ctx.sel, 256);
+  addM3u(&ctx, "Aurora HD", "", "https://private/1");
+  addM3u(&ctx, "Lumen", "", "https://private/2");
   sugerirSecoes(); selecionarSecoes();
-  assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "Lumen"));
-  assert(posts == 1);
+  if (sNCanais != 1 || strcmp(sCanais[0].nome, "Lumen") ||
+      sRetidos != 1 || posts != 1) {
+    puts("FAIL: selected suggested section gets capacity after an unselected M3U candidate");
+    failures++;
+  } else puts("PASS: selected suggested section gets capacity after an unselected M3U candidate");
+
+  stagingZerar(); sTeto = 1;
+  cacheFonteLer(source);
+  selecionarSecoes();
+  if (sNCanais != 1 || strcmp(sCanais[0].nome, "Lumen") ||
+      sRetidos != 1 || posts != 1) {
+    puts("FAIL: cold source cache applies suggested selection before channel capacity");
+    failures++;
+  } else puts("PASS: cold source cache applies suggested selection before channel capacity");
   ltv_pref_definir_grupos(pref, NULL, 0);
   stagingZerar(); sTeto = 100;
   assert(cacheFonteLer(source) == 4);
@@ -113,5 +159,18 @@ int main(void) {
   assert(!strcmp(sCats[sCanais[4].cat].nome, "Esportes"));
   assert(!strcmp(sCats[sCanais[5].cat].nome, "Outros"));
   puts("PASS: uncategorized Xtream channels get suggestions; provider category named Outros stays untouched");
-  return 0;
+
+  stagingZerar(); sTeto = 1;
+  ltv_pref_definir_grupos(pref, selected, 1);
+  ctx.fl = sFonte(LTV_M3U, "https://private/list?token=secret", "My list", "");
+  ctx.nsel = sGruposEscolhidos(ctx.fl, ctx.sel, 256);
+  livecat_postar_teste(coldWorker);
+  addM3u(&ctx, "Velora", "", "https://private/5");
+  addM3u(&ctx, "Nimbo", "", "https://private/6");
+  addM3u(&ctx, "Talume", "", "https://private/7");
+  sugerirSecoes(); selecionarSecoes();
+  assert(sNCanais == 1 && !strcmp(sCanais[0].nome, "Nimbo") && sRetidos == 1);
+  assert(posts == 2 && sLtvF[ctx.fl].cortada);
+  puts("PASS: uncached suggestions filter before quota and retain at most the channel cap");
+  return failures ? 1 : 0;
 }

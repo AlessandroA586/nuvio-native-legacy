@@ -432,11 +432,26 @@ typedef struct {
   int numero;
   int sug;              // 1 = sem categoria (livecat.h sugere uma depois da carga)
 } GCru;
+static int sGruposEscolhidos(int f, const char **v, int max);
+static int nomeNaLista(const char *nome, const char *const *v, int n);
 static int sCanalAdd(int f, const GCru *c) {
   GCanal *g;
-  int cat;
-  if (sRetidos >= sTeto) { sLtvF[f].cortada = 1; return 0; }
-  cat = sCatDe(f, c->grupo && c->grupo[0] ? c->grupo : "Outros");
+  const char *sel[256], *original = c->grupo && c->grupo[0] ? c->grupo : "Outros";
+  int cat, ns = sGruposEscolhidos(f, sel, 256);
+  const char *sec = ns && c->sug && ajustes_livetv_sugerir() ? livecat_secao(c->nome) : NULL;
+  const char *grupo = sec ? sec : original;
+  int pendente = ns && c->sug && ajustes_livetv_sugerir() && !sec;
+  if (sec && strcmp(sec, original)) {
+    int gi = sGrupoInfo(f, original, 0);
+    sGrupoInfo(f, sec, 1);
+    if (gi >= 0 && sLtvF[f].gi[gi].n > 0) sLtvF[f].gi[gi].n--;
+  }
+  if (ns && !pendente && !nomeNaLista(grupo, sel, ns)) return 0;
+  // Match livecat's 1200-name batch ceiling; unresolved choices do not spend quota.
+  if ((!pendente && sRetidos >= sTeto) || (pendente && sNCanais - sRetidos >= 1200)) {
+    sLtvF[f].cortada = 1; return 0;
+  }
+  cat = sCatDe(f, grupo);
   if (cat < 0) return 0;
   if (sNCanais >= sCapCanais) {
     int cap = sCapCanais ? sCapCanais * 2 : 512;
@@ -459,12 +474,12 @@ static int sCanalAdd(int f, const GCru *c) {
   g->tipo = ltv_dup(&sArena, c->tipo);
   g->cat = cat;
   g->sug = c->sug ? 1 : 0;
-  g->grupoOriginal = sCats[cat].nome;
+  g->grupoOriginal = sec ? ltv_dup(&sArena, original) : sCats[cat].nome;
   g->epg = -1;
   g->fonte = (short)f;
   sLtvF[f].nCanais++;
   g->numero = c->numero > 0 ? c->numero : sLtvF[f].nCanais;
-  sNCanais++; sRetidos++;
+  sNCanais++; if (!pendente) sRetidos++;
   return 1;
 }
 
@@ -1300,7 +1315,6 @@ static int m3uCanal(const LtvM3uCanal *m, void *u) {
   gi = sGrupoInfo(x->fl, g, 1);
   sLtvF[x->fl].total++;
   if (x->nsel && !(semCat && ajustes_livetv_sugerir()) && !nomeNaLista(g, x->sel, x->nsel)) { if (gi >= 0) sLtvF[x->fl].gi[gi].entra = 0; return 1; }
-  if (sRetidos >= sTeto) { sLtvF[x->fl].cortada = 1; if (gi >= 0) sLtvF[x->fl].gi[gi].entra = 0; return 1; }
   // ID ESTAVEL sem a URL (que pode ter token que muda e credencial): tvg-id,
   // nome e grupo. Repetido exato e o mesmo canal duas vezes na lista.
   snprintf(chave, sizeof chave, "%s|%s|%s", m->tvgId, m->nome, g);
@@ -1310,7 +1324,7 @@ static int m3uCanal(const LtvM3uCanal *m, void *u) {
   c.url = m->url; c.ua = m->ua; c.ref = m->referer; c.grupo = g; c.numero = m->chno;
   c.desc = "";
   c.sug = semCat;
-  sCanalAdd(x->fl, &c);
+  if (!sCanalAdd(x->fl, &c) && gi >= 0 && sRetidos >= sTeto) sLtvF[x->fl].gi[gi].entra = 0;
   return 1;
 }
 static int alimentarM3u(const char *d, size_t n, void *u) { return cargaAtual() && ltv_m3u_alimentar((LtvM3u *)u, d, n); }
@@ -1834,7 +1848,10 @@ static void selecionarSecoes(void) {
   for (int i = 0; i < sNCanais; i++) {
     const char *sel[256];
     int ns = sGruposEscolhidos(sCanais[i].fonte, sel, 256);
-    if (!ns || nomeNaLista(sCats[sCanais[i].cat].nome, sel, ns)) sCanais[w++] = sCanais[i];
+    if (!ns || nomeNaLista(sCats[sCanais[i].cat].nome, sel, ns)) {
+      if (w < sTeto) sCanais[w++] = sCanais[i];
+      else sLtvF[sCanais[i].fonte].cortada = 1;
+    }
   }
   sNCanais = sRetidos = w;
 }

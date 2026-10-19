@@ -20,6 +20,7 @@ cc tests/livecat_guia.c src/livecat.c src/dados.c src/ltv.c src/js.c src/idcanal
 # Run both integration regressions even when one fails (FAIL-before evidence).
 rc=0
 NUVIO_DADOS="$tmp/guide" "$tmp/guia" || rc=1
+NUVIO_DADOS="$tmp/guide" "$tmp/guia" restart || rc=1
 sources=()
 for source in src/*.c src/dts/*.c; do
   case "$source" in src/main.c|src/guia.c) continue;; esac
