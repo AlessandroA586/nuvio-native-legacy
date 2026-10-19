@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T11:48:55-03:00, HEAD `abf3c0fa8`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T12:52:11-03:00, HEAD `41280e41d`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -232,6 +232,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Video remains visible on Tizen 6.5**: The main window stays transparent so native video can appear behind the interface. Platforms: Samsung .tpk. Refs #612, `24876fd76`, merge `41280e41d`.
 
 - **Skip buttons wait until playback is ready**: Intro and credit skip actions stay hidden until video playback is active and remain available across pause or scrubbing until the source changes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-skipcarga`, merge `116f60053`, `5eda5fa1a`, `f518b8b1a`.
 
@@ -552,7 +554,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 - **Regression coverage and release tracking**: Offline regression checks and tracking document playlist recovery, library behavior, episode rendering, PIN profiles and platform investigation. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #607; tracking and test commits, `902a31ce2`, `72795e98a`, `97ce590bd`, `f08d20086`, `bb0d034ac`, `c6865b7c2`, `430ecc402`, `926051fd1`, `f1941a781`, `2c98dd2e8`, `ac92eacec`, `9da0183ae`, `eb4957bb7`, `60788e07b`, `9d2b509fe`, `a5fef4162`, `03b2c9625`, `95b2ed22b`, `a10cdd65f`, `e1faa6e56`, `0887480be`, `2de330bc6`, `0f3553992`, `74da097a2`, `10d1d2961`, `ddda65d97`, `81326cb55`, `57337bed6`, `0c89d10e9`, `eff214cd9`, `af10dd6d5`, `25c73b48e`, `315a61f12`, `4f66a1c1f`, `e7515c158`, `b5812a3d8`, `151b45208`, `ef77ae6b8`, `05426cdee`, `92bf71c7b`, `fe6a8c0bf`, `1e3c93994`, `ef3c51319`, `2c8e6e96a`, `e978236b6`, `5ff69db39`, `f41907092`, `51e1377d5`, `cbd3a2cd9`, `f9944a132`, `e7b0c9631`, `4821d35d3`, `a648c5d4e`, `2068ab77c`, `c38f8dd45`, `90a434bf2`, `64871e2e4`, `3e9f77e5c`, `af7ab651f`, `ad4ec990b`, `de28147ba`, `b207a8a51`, `af6b12394`, `9d89c6f60`, `995376c07`, `45f2397fd`, `8df743dff`, `61205f62e`, `dad0421d3`, `6304d2765`, `02c2ef1d7`, `97adfdd8a`, `7e4b2605b`, `b280cd698`, `1b5c9d39a`, `3118a0494`, `180241442`, `620f041d8`, `9b86a6af8`, `61417ac95`, `82dad7d43`, `ba38888fc`.
 
-- **Samsung startup diagnostics (#612)**: Samsung builds reject incomplete EGL startup state and preserve early diagnostics; the device-specific launch cause remains unresolved. Platforms: Samsung .tpk. Refs #612, `f50314f8b`.
+- **Samsung startup diagnostics (#612)**: Samsung builds reject incomplete EGL startup state and preserve early diagnostics; the integrated Tizen 6.5 transparency fix still awaits device confirmation. Platforms: Samsung .tpk. Refs #612, `f50314f8b`.
 
 - **webOS Rust MKV build support**: ARM builds enable the offline soft-float Rust core with a C opt-out and repaired subtitle harness dependencies. Platforms: webOS. Refs `agente/205-mkvwebos`, merge `2e38d5397`, `b50df8df6`, `dc39713e9`.
 - **Scaling reference checks**: Paired captures identify scene, source, target and filter, reject duplicate images and isolate resolution migration fixtures. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `30ab43b99`, `30319bec0`.
@@ -650,7 +652,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 
 
-Tracking snapshot: 24 unmerged branches without running jobs; 11 open issues without mapped jobs or prompts. Newer fixes need review on `agente/p2p`. Queued jobs and deferred work are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
+Tracking snapshot: 21 unmerged branches without running jobs; 12 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-205-upscalealt`, `agente/205-livepr2`, `agente/205-pr493`, `agente/p2p`. Queued jobs and deferred 2.1 work are not lost. Android installed at `cb7ece972`; C9 installation failed, so TV HEAD remains unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
