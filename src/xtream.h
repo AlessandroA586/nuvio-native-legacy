@@ -60,6 +60,7 @@ typedef struct {
   const char *id, *nome, *logo, *categoria, *epgId;
   int num;           // "num" do painel (0 = nao veio)
   int catOrdem;      // posicao da categoria na lista do painel
+  int semCategoria;  // category id absent/unknown; preserve a real provider group named Outros
   int arquivo, arquivoDias;   // tv_archive (catch-up, v2)
 } XtreamItem;
 typedef int (*XtreamCb)(const XtreamItem *c, void *u);
