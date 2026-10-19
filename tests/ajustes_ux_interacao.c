@@ -47,6 +47,25 @@ int main(void) {
     assert(definirValorDireto(AJ_SEEKR_LIGADO, 1));
   }
 
+  // Fonte da biblioteca: o editor so navega entre servicos ligados; Nuvio
+  // (LOCAL) fica sempre. Simkl desligado nao pode ser focado nem confirmado.
+  {
+    int ant = valor[AJ_SALVOS_DEST];
+    valor[AJ_SALVOS_DEST] = AJ_SALVOS_LOCAL;
+    trakt_definir("token-de-teste", "cliente-de-teste");
+    simklauth_esquecer();
+    abrir(AJ_SALVOS_DEST);
+    assert(uxPendente == AJ_SALVOS_LOCAL);
+    key(SDLK_DOWN); assert(uxPendente == AJ_SALVOS_TRAKT);
+    key(SDLK_DOWN); assert(uxPendente == AJ_SALVOS_TRAKT);   // Simkl nao entra
+    key(SDLK_UP); assert(uxPendente == AJ_SALVOS_LOCAL);
+    key(SDLK_RETURN); assert(!uxEditor && valor[AJ_SALVOS_DEST] == AJ_SALVOS_LOCAL);
+    abrir(AJ_SALVOS_DEST); key(SDLK_DOWN); key(SDLK_RETURN);
+    assert(!uxEditor && valor[AJ_SALVOS_DEST] == AJ_SALVOS_TRAKT);
+    trakt_definir("", "");
+    valor[AJ_SALVOS_DEST] = ant;
+  }
+
   // #427: a saved request above the RAM cap stays visible, but cannot be selected again.
   {
     char t[160];
@@ -77,7 +96,7 @@ int main(void) {
       ponteiro_quadro(SDL_GetTicks());
       ajPontEditor = 1;
       gfx_opacidade_grupo = 0;  // register real editor targets without a GL context
-      GfxRect painel = aj2EditorR(); painel.w = 1100;  // compact layout, no GPU preview
+      GfxRect painel = aj2EditorR(); painel.w = 1100; painel.h = 1400;  // all RAM rows visible, no GPU preview
       aj2EditorEscolha(painel);
       ponteiro_desenhar();
       gfx_opacidade_grupo = 1;

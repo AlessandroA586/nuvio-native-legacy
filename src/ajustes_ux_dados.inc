@@ -11,12 +11,14 @@ static int uxTemPadrao(int op) {
 }
 
 static int uxValorPadrao(int op) {
+  if (op == AJ_SALVOS_DEST) return ajustes_fonte_resolver(valorPadrao[op], trakt_ativo(), simkl_ativo());
   return uxTemPadrao(op) ? valorPadrao[op] : 0;
 }
 
 /* Fileiras tem uma fonte propria. valor[] e apenas seu espelho na tela. */
 static int uxValorAtual(int op) {
   if (op < 0 || op >= AJ_N) return 0;
+  if (op == AJ_SALVOS_DEST) return ajustes_fonte_biblioteca();
   if (ajLegendaPrincipal(op)) return ajLegendaValor(op);
   if (ajFalhaBackend(op)) return ajFalhaValor(op);
   if (op == AJ_SEEKR_LIGADO && !seekrChave[0]) return 1;
@@ -24,7 +26,7 @@ static int uxValorAtual(int op) {
 }
 
 static int uxDiferente(int op) {
-  return uxTemPadrao(op) && uxValorAtual(op) != valorPadrao[op];
+  return uxTemPadrao(op) && uxValorAtual(op) != uxValorPadrao(op);
 }
 
 /* O candidato pode ter alcance diferente do valor salvo. Espelha as excecoes

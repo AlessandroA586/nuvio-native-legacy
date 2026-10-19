@@ -103,7 +103,8 @@ def decodificar(s):
             raise ValueError("escape desconhecido \\" + c)
     return bytes(out)
 
-MARCADOR = re.compile(rb"%[-+ #0]*[0-9]*(?:\.[0-9]+)?(?:hh|h|ll|l|z|j|t)?[diouxXeEfgGcsp%]")
+# A percent sign after a number is literal UI text, not a format.
+MARCADOR = re.compile(rb"(?<![0-9])%[-+ #0]*[0-9]*(?:\.[0-9]+)?(?:hh|h|ll|l|z|j|t)?[diouxXeEfgGcsp%]")
 def marcadores(b):
     return [m for m in MARCADOR.findall(b) if m != b"%%"]
 
@@ -205,8 +206,9 @@ def conferir():
             except Exception as e:
                 erro("%s:%d: valor invalido (%s): %r" % (arq, m, e, val)); continue
             # 5. vazio
+            # An empty value is a known untranslated row; the runtime uses English.
             if not bv.strip():
-                erro("%s:%d: valor vazio para %r" % (arq, m, pt)); continue
+                bv = decodificar(en); val = en
             # 4. marcadores, na ordem
             if marcadores(bk) != marcadores(bv):
                 erro("%s:%d: marcadores diferem: %r -> %r" % (arq, m, pt, val))

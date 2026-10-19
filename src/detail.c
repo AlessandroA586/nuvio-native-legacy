@@ -23,6 +23,7 @@
 #define NV_TXT_TELA   // NV_TELA_W/H = tela virtual da escala de texto (escala.h)
 #include "escala.h"
 #include "detail.h"
+#include "biblioteca.h"
 #include "detail_acoes.h"
 #include "focoprof.h"
 #include "posterprov.h"
@@ -4245,9 +4246,8 @@ static void desenhaBotao(GfxRect r, const char *rot, int icone, int focado, floa
     if (icone == 1) {
       // O botao de lista troca o + por check quando o titulo ja esta salvo;
       // olho fica reservado ao controle separado de assistido logo ao lado.
-      // O estado vem de ci->naLista, atualizado pelo mesmo fluxo do botao.
-      const CatItem *ci = cat_item(idx);
-      gfx_icone(ig, (ci && ci->naLista) ? "check" : "mais", ic, ic, ic, a);
+      // Match the effective Library source used by the save action.
+      gfx_icone(ig, biblioteca_na_lista(idx) ? "check" : "mais", ic, ic, ic, a);
     } else if (icone == 2) {
       // ASSISTIDO: olho aberto quando ja viu, olho riscado quando nao. Antes o
       // icone era sempre o mesmo e nao dizia estado nenhum — era so um enfeite
