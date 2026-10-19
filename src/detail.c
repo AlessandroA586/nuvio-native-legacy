@@ -5475,13 +5475,16 @@ static float epNotaPainel(float x, float y, int fonte, int nota, float a) {
            nota / 10, nota % 10);
   TxtLinha lm = txt_linha(TXT_G16B, marca, 8, 19, 27, 255);
   TxtLinha lv = txt_linha(TXT_G21B, valor, 232, 233, 236, 255);
-  float w = lm.w + 12.0f;
+  float w = fonte == EX_TRAKT ? notasui_marca_largura(fonte, 26) : lm.w + 12.0f;
   if (a > 0.0f) {
-    gfx_cor((GfxRect){x, y + 5, w, 26}, 4.0f / 26.0f,
-            fonte == EX_IMDB ? .961f : .004f,
-            fonte == EX_IMDB ? .773f : .706f,
-            fonte == EX_IMDB ? .094f : .894f, a);
-    txt_desenhar_alpha(lm, x + 6, y + 5 + (26 - lm.h) * .5f, a);
+    if (fonte == EX_TRAKT) notasui_marca(fonte, x, y + 18, 26, a);
+    else {
+      gfx_cor((GfxRect){x, y + 5, w, 26}, 4.0f / 26.0f,
+              fonte == EX_IMDB ? .961f : .004f,
+              fonte == EX_IMDB ? .773f : .706f,
+              fonte == EX_IMDB ? .094f : .894f, a);
+      txt_desenhar_alpha(lm, x + 6, y + 5 + (26 - lm.h) * .5f, a);
+    }
     txt_desenhar_alpha(lv, x + w + 7, y + (36 - lv.h) * .5f, a);
   }
   return w + 7 + lv.w;
@@ -5516,12 +5519,26 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   const GfxRect epTile = { r.x, r.y + th.h - NV_DETP_EP_RAIO, r.w,
                            r.h - th.h + NV_DETP_EP_RAIO };
   const int epVidroTile = epModerna();
+  if (!epModerna()) {
+    if (f > 0.005f) {
+      GfxRect p = { r.x - NV_DETP_EP_PLACA_PAD, r.y - NV_DETP_EP_PLACA_PAD,
+                    r.w + NV_DETP_EP_PLACA_PAD * 2.0f,
+                    r.h + NV_DETP_EP_PLACA_PAD * 2.0f };
+      float pw = p.w, ph = p.h, s = 1.0f + 0.03f * ft;
+      p.w *= s; p.h *= s;
+      p.x -= (p.w - pw) * 0.5f; p.y -= (p.h - ph) * 0.5f;
+      gfx_cor(p, 24.0f / p.h, 1, 1, 1,
+              (ajustes_vidro() ? 0.07f : NV_DETP_EP_PLACA_A) * ft * a);
+    }
+    foco_anel(th, raioTh, f, a);
+    th = foco_zoom(th, f);
+  }
 
   const CatItem *serie = cat_item(idx);
   const char *arte = (ep && ep->thumb[0]) ? ep->thumb
                      : (serie && serie->backdrop[0] ? serie->backdrop : NULL);
-  // Focus keeps the same image rectangle and texture cache width.
-  const float texW = r.w;
+  // Standard reserves its maximum zoom size; Modern/Refined never zoom.
+  const float texW = r.w * (epModerna() || ajustes_borda_foco() ? 1.0f : 1.0f + FOCO_ZOOM);
   GLuint t2 = arte ? tex_obter_larg(arte, texW) : 0;
   // STILL QUE NAO EXISTE NEM NO METAHUB NEM NO TMDB (One Piece da 2a
   // temporada em diante, 23/09): o card nao fica cinza, leva o fundo da serie
@@ -5564,7 +5581,7 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   if (t2) {
     if (!mergedVeil && aArte < 0.999f) gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
     gfx_tex_aspect_atual = tex_aspecto(arte);
-    gfx_rect(th, t2, GFX_CARD, 0, 0, 0, raioTh, 0, 0, 0, mergedVeil ? a : a * aArte);
+    gfx_rect(th, t2, GFX_CARD, epModerna() ? 0 : f, 0, 0, raioTh, 0, 0, 0, mergedVeil ? a : a * aArte);
     gfx_tex_aspect_atual = 0.0f;
   } else if (arte && !tex_falhou(arte))
     gfx_esqueleto(th, raioTh, 0.133f, 0.133f, 0.133f, a);
@@ -5592,21 +5609,31 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   const char *epData = (ep && ep->data[0])    ? ep->data    : NULL;
   const char *epSin  = (ep && ep->sinopse[0]) ? ep->sinopse : NULL;
   int epNum = ep ? ep->episodio : c + 1;
+  // Extras provides the Trakt episode score for every layout.
+  int nota = 0;
+  if (ep) for (int st = 0; st < extras_n_temporadas(); st++) {
+    if (extras_temporada_numero(st) != ep->temporada) continue;
+    for (int ei = 0; ei < extras_n_eps(st); ei++)
+      if (extras_ep_numero(st, ei) == ep->episodio) {
+        nota = extras_ep_nota(st, ei); break;
+      }
+    break;
+  }
 
   float tx = r.x + NV_DETP_EP_PAD;
   const int moderna = epModerna();
   const float textoX = moderna ? r.x + NV_DETP_EPM_TEXTO_X : tx;
   float tituloW = epTextoW();
   if (moderna && ep) {
-    const int fontes[] = {EX_IMDB, EX_TMDB};
-    const int notas[] = {ep->notaImdb, ep->nota};
-    float larg[2] = {0}, total = 0;
-    for (int i = 0; i < 2; i++) if (notas[i] > 0 && ajustes_nota_episodio(fontes[i])) {
+    const int fontes[] = {EX_IMDB, EX_TRAKT, EX_TMDB};
+    const int notas[] = {ep->notaImdb, nota, ep->nota};
+    float larg[3] = {0}, total = 0;
+    for (int i = 0; i < 3; i++) if (notas[i] > 0 && ajustes_nota_episodio(fontes[i])) {
       larg[i] = epNotaPainel(0, 0, fontes[i], notas[i], 0);
       total += larg[i] + (total > 0 ? 14.0f : 0.0f);
     }
     float x = r.x + r.w - NV_DETP_EPM_TEXTO_X - total;
-    for (int i = 0; i < 2; i++) if (larg[i] > 0) {
+    for (int i = 0; i < 3; i++) if (larg[i] > 0) {
       epNotaPainel(x, r.y + th.h + NV_DETP_EPM_TIT_DY, fontes[i], notas[i], a);
       x += larg[i] + 14.0f;
     }
@@ -5745,17 +5772,6 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
       x += NV_DETP_EP_ICONE + 8.0f;
       { TxtLinha ld = txt_linha(TXT_CAPTION2, epDur, 179, 179, 179, 255);
         txt_desenhar_alpha(ld, x, y, a); x += ld.w + 16; }
-    }
-    // Extras fornece avaliacao Trakt por episodio, nao IMDb. Nunca usar
-    // a nota da serie ou o selo de outro provedor neste rodape.
-    int nota = 0;
-    if (ep) for (int st = 0; st < extras_n_temporadas(); st++) {
-      if (extras_temporada_numero(st) != ep->temporada) continue;
-      for (int ei = 0; ei < extras_n_eps(st); ei++)
-        if (extras_ep_numero(st, ei) == ep->episodio) {
-          nota = extras_ep_nota(st, ei); break;
-        }
-      break;
     }
     if (ep && ep->notaImdb > 0 && ajustes_nota_episodio(EX_IMDB))
       x += desenhaNotaEpisodio(x, y - 4, EX_IMDB, ep->notaImdb, a);

@@ -12,6 +12,16 @@ static float checkedSynopsis(TxtEstilo style, const char *s, int r, int g, int b
                              float x, float y, float w, float leading, float a, int lines);
 static float checkedMeta(TxtEstilo style, const char *s, int r, int g, int b,
                          float x, float y, float a, float tracking);
+static int checkP1, cardDraws, plateDraws, traktDraws;
+static GfxRect drawnArt;
+static float drawnFocus;
+static void checkedRect(GfxRect r, GLuint tex, GfxModo mode, float focus,
+                        float px, float py, float radius, float cr, float cg, float cb, float a);
+static void checkedColor(GfxRect r, float radius, float cr, float cg, float cb, float a);
+static float checkedBrand(int source, float x, float cy, float h, float a);
+#define gfx_rect checkedRect
+#define gfx_cor checkedColor
+#define notasui_marca checkedBrand
 #define sinopse_bloco_corta checkedSynopsis
 #define txt_tracking checkedMeta
 #define tex_obter_larg checkedThumbnail
@@ -21,6 +31,89 @@ static float checkedMeta(TxtEstilo style, const char *s, int r, int g, int b,
 #undef tex_obter_larg
 #undef sinopse_bloco_corta
 #undef txt_tracking
+#undef gfx_rect
+#undef gfx_cor
+#undef notasui_marca
+float notasui_marca(int source, float x, float cy, float h, float a);
+
+static void checkedRect(GfxRect r, GLuint tex, GfxModo mode, float focus,
+                        float px, float py, float radius, float cr, float cg, float cb, float a) {
+  if (checkP1 && mode == GFX_CARD && tex) {
+    drawnArt = r; drawnFocus = focus; cardDraws++;
+  }
+  gfx_rect(r,tex,mode,focus,px,py,radius,cr,cg,cb,a);
+}
+static void checkedColor(GfxRect r, float radius, float cr, float cg, float cb, float a) {
+  if (checkP1 && cr == 1 && cg == 1 && cb == 1 && r.w > panelCard.w &&
+      r.h > panelCard.h) {
+    float w = (panelCard.w + 2 * NV_DETP_EP_PLACA_PAD) * 1.03f;
+    float h = (panelCard.h + 2 * NV_DETP_EP_PLACA_PAD) * 1.03f;
+    assert(fabsf(r.w-w)<.001f && fabsf(r.h-h)<.001f);
+    assert(fabsf(r.x-(panelCard.x-(w-panelCard.w)*.5f))<.001f);
+    assert(fabsf(r.y-(panelCard.y-(h-panelCard.h)*.5f))<.001f);
+    assert(fabsf(a-(ajustes_vidro() ? .07f : NV_DETP_EP_PLACA_A))<.001f);
+    plateDraws++;
+  }
+  gfx_cor(r,radius,cr,cg,cb,a);
+}
+static float checkedBrand(int source, float x, float cy, float h, float a) {
+  if (checkP1 && epModerna() && source == EX_TRAKT && a > 0) {
+    assert(x >= panelCard.x + 24 && x < panelCard.x + panelCard.w - 24);
+    assert(cy >= panelCard.y + epThumbH() + NV_DETP_EPM_TIT_DY);
+    assert(cy <= panelCard.y + epThumbH() + NV_DETP_EPM_TIT_DY + 36);
+    traktDraws++;
+  }
+  return notasui_marca(source,x,cy,h,a);
+}
+
+static void saveShot(const char *path, int w, int h);
+static void checkReviewP1(const char *out, const char *finding) {
+  const int standard = !strcmp(finding,"standard-focus");
+  dados_gravar("aparencia-20.txt","1\n");
+  for (int layout=0;layout<3;layout++) {
+    if ((layout == HOME_LAYOUT_PADRAO) != standard) continue;
+    for (int glass=0;glass<(standard ? 2 : 1);glass++) {
+      for (int ring=0;ring<(standard ? 2 : 1);ring++) {
+        char path[900]; snprintf(path,sizeof path,"%s/ajustes.txt",dados_dir());
+        FILE *file=fopen(path,"w"); assert(file);
+        // Saved values 0/1 mean enabled/disabled for these toggles.
+        fprintf(file,"idioma 1\nhomeLayoutLocal %d\nbordaFocoCartaz %d\nvidroLocal %d\nnotaEpisodio 0\nselected_theme 2\nescalaTextoVersaoLocal 1\nescalaTextoLocal 2\n",layout,ring?0:1,glass?0:1);
+        fclose(file); ajustes_dir(dados_dir());
+        assert(ajustes_home_layout()==layout && ajustes_vidro()==glass && ajustes_borda_foco()==ring);
+        assert(ajustes_nota_episodio(EX_TRAKT));
+        montarCatalogo(); semear(1,T1_N,3); abrir(0,0); nosEpisodios(3);
+        parado=1; quadros(32);
+        panelCard=(GfxRect){100,100,epCardW(),epCardH()};
+        cardDraws=plateDraws=traktDraws=0; checkP1=1;
+        txt_novo_quadro(); desenhaEpisodio(panelCard,3,1,1,10000);
+        checkP1=0;
+        if (standard) {
+          assert(cardDraws==1 && drawnFocus==1 && plateDraws==1);
+          GfxRect expected=foco_zoom((GfxRect){100,100,panelCard.w,epThumbH()},1);
+          assert(drawnArt.x==expected.x && drawnArt.y==expected.y &&
+                 drawnArt.w==expected.w && drawnArt.h==expected.h);
+        } else {
+          assert(traktDraws==1 && cardDraws==1 && drawnFocus==0 && plateDraws==0);
+          assert(drawnArt.x==100 && drawnArt.y==100 && drawnArt.w==panelCard.w);
+          int option=ajustes_rapido_op("notaTituloTrakt");
+          assert(option>=0 && ajustes_rapido_passo(option,1));
+          traktDraws=0; checkP1=1;
+          txt_novo_quadro(); desenhaEpisodio(panelCard,3,1,1,10000);
+          checkP1=0; assert(traktDraws==0);
+          assert(ajustes_rapido_passo(option,1));
+        }
+        gfx_novo_quadro(); txt_novo_quadro(); gfx_sem_recorte();
+        glClearColor(.02f,.02f,.025f,1); glClear(GL_COLOR_BUFFER_BIT);
+        detail_desenhar(10000);
+        snprintf(path,sizeof path,"%s/p1-%s-1080p-dark%s.png",out,
+                 standard?"standard-focused":layout?"refined-trakt":"modern-trakt",
+                 standard ? (glass ? (ring ? "-glass-ring":"-glass-zoom") : (ring ? "-ring":"-zoom")) : "");
+        saveShot(path,1920,1080);
+      }
+    }
+  }
+  printf("PASS: %s\n",finding);
+}
 
 static float checkedSynopsis(TxtEstilo style, const char *s, int r, int g, int b,
                              float x, float y, float w, float leading, float a, int lines) {
@@ -111,6 +204,12 @@ int main(int argc, char **argv) {
   assert(gfx_iniciar()); assert(txt_iniciar("deploy/app",1));
   tex_iniciar(16); gfx_icones_dir("deploy/app/art");
   ajustes_iniciar(); dados_iniciar("deploy/app/art");
+  extras_carregar("deploy/app/art");
+
+  if (!strcmp(argv[2],"standard-focus") || !strcmp(argv[2],"trakt-ratings")) {
+    checkReviewP1(argv[1],argv[2]);
+    return 0;
+  }
 
   // Preserve image detail while exercising both luminance extremes.
   for (int light=0;light<2;light++) {
