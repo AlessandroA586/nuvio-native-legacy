@@ -43,5 +43,28 @@ int main(void) {
 #endif
   nv_ls_zerar(&s);nv_ls_passo(&s,1000,20,1,0,0,0);
   for(unsigned t=2000;t<60000;t+=1000)assert(nv_ls_passo(&s,t,10,1,1,0,60000)==NV_LS_NADA);
+  // Cube log: READY arrived 80 ms before a queued reconnect. Cancel even
+  // before the next position sample, and don't consume a retry that never ran.
+  for(unsigned recovered=10500;recovered<=11000;recovered+=500) {
+    nv_ls_zerar(&s);nv_ls_passo(&s,1000,31,1,0,0,0);
+    assert(nv_ls_passo(&s,10000,31,1,0,0,8006)==NV_LS_AGENDOU);
+    assert(nv_ls_passo(&s,recovered,31,1,0,0,0)==NV_LS_NADA);
+    assert(!s.pendente && s.tentativa==0);
+    for(unsigned t=recovered+250;t<recovered+8000;t+=250)
+      assert(nv_ls_passo(&s,t,31+(t-recovered)/1000.0,1,0,0,0)==NV_LS_NADA);
+  }
+  // READY is not a permanent exemption: a decoder that stays frozen must
+  // still be retried after the new grace period.
+  nv_ls_zerar(&s);nv_ls_passo(&s,1000,31,1,0,0,0);
+  assert(nv_ls_passo(&s,10000,31,1,0,0,8006)==NV_LS_AGENDOU);
+  assert(nv_ls_passo(&s,10500,20,1,0,0,0)==NV_LS_NADA);
+  assert(nv_ls_passo(&s,18500,20,1,0,0,0)==NV_LS_AGENDOU);
+  // A moving window alone still cannot cancel a frozen-position retry;
+  // forward motion after that rebase can.
+  nv_ls_zerar(&s);nv_ls_passo(&s,1000,31,1,0,0,0);
+  assert(nv_ls_passo(&s,9000,31,1,0,0,0)==NV_LS_AGENDOU);
+  assert(nv_ls_passo(&s,9250,20,1,0,0,0)==NV_LS_ESPERA);
+  assert(nv_ls_passo(&s,9500,20.25,1,0,0,0)==NV_LS_NADA);
+  assert(!s.pendente && s.tentativa==0);
   puts("PASS: sliding live windows keep playing; actual stalls, buffering, EOF, pause and retry limits remain protected");
 }
