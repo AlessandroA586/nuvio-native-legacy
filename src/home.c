@@ -522,6 +522,8 @@ static float palcoFundoT = 1.0f, palcoFundoInicio = 1.0f;
 static float palcoFundoAlpha = 1.0f;
 // Keep outgoing art until the incoming texture is ready, then crossfade.
 static int palcoMostra = -1, palcoAnterior = -1;
+// Metadata can replace artwork without changing the catalogue index.
+static CatItem palcoItens[2]; // displayed and outgoing; URLs keep their cache entries warm
 static float palcoItemA = 1.0f;
 static int dinPalcoSplit(void) {
   return ajustes_home_layout() == HOME_LAYOUT_DINAMICA && !focoHero &&
@@ -4828,8 +4830,7 @@ static const char *palcoArteOutra(const CatItem *item, const char *centro, const
   return NULL;
 }
 // Stage art concepts (owner 18/10): backdrops only, then the title logo.
-static void desenhaPalcoItem(int indice, float a) {
-  const CatItem *item = cat_item_exato(indice);
+static void desenhaPalcoItem(const CatItem *item, float a) {
   const char *art = palcoArte(item);
   GLuint tex = art ? tex_obter_palco(art) : 0;
   if (!tex || a <= 0.004f) return;
@@ -4898,16 +4899,27 @@ static void desenhaPalcoItem(int indice, float a) {
   }
 }
 static void desenhaPalcoArte(void) {
-  const char *art = palcoArte(cat_item_exato(palcoFundoItem));
+  const CatItem *item = cat_item_exato(palcoFundoItem);
+  const char *art = palcoArte(item);
   GLuint tex = art ? tex_obter_palco(art) : 0;
-  if (palcoMostra != palcoFundoItem && palcoItemA >= 1.0f && (tex || !art)) {
+  int mudou = palcoMostra != palcoFundoItem ||
+    strcmp(palcoItens[0].backdrop, art ? art : "") ||
+    (item && (strcmp(palcoItens[0].backdropTmdb, item->backdropTmdb) ||
+              strcmp(palcoItens[0].backdropTrakt, item->backdropTrakt) ||
+              strcmp(palcoItens[0].backdropCatalogo, item->backdropCatalogo) ||
+              strcmp(palcoItens[0].logo, item->logo)));
+  if (mudou && palcoItemA >= 1.0f && (tex || !art)) {
     palcoAnterior = palcoMostra;
+    palcoItens[1] = palcoItens[0];
     palcoMostra = palcoFundoItem;
+    if (item) palcoItens[0] = *item;
+    else memset(&palcoItens[0], 0, sizeof palcoItens[0]);
+    if (!art) palcoItens[0].backdrop[0] = 0;
     palcoItemA = palcoAnterior < 0 || ajustes_animacoes_reduzidas() ? 1.0f : 0.0f;
   }
   if (palcoItemA < 1.0f)
-    desenhaPalcoItem(palcoAnterior, palcoFundoAlpha * (1.0f - palcoItemA));
-  desenhaPalcoItem(palcoMostra, palcoFundoAlpha * palcoItemA);
+    desenhaPalcoItem(&palcoItens[1], palcoFundoAlpha * (1.0f - palcoItemA));
+  desenhaPalcoItem(&palcoItens[0], palcoFundoAlpha * palcoItemA);
 }
 static void desenhaHero(Uint32 agora, float saida) {
   (void)agora;

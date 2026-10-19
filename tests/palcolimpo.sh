@@ -14,8 +14,20 @@ for source in src/*.c src/dts/*.c; do
   sources+=("$source")
 done
 baseline_flags=()
-if [ "$phase" = before ]; then
-  git show 2f60a19ffd4939b3a41aa305d9af98ba676a9388:src/home.c > "$NUVIO_DADOS/home-baseline.c"
+if [ "$phase" = before ] || [ "$phase" = original-before ] || [ "$phase" = review-before ]; then
+  baseline=2f60a19ffd4939b3a41aa305d9af98ba676a9388
+  if [ "$phase" = original-before ]; then
+    # Before Stage settings existed: exercise the original full-hero/poster fallback.
+    baseline=c1e6553b7^
+    baseline_flags+=(-DPALCO_ORIGINAL)
+  elif [ "$phase" = review-before ]; then
+    baseline=30923efaf
+  fi
+  git show "$baseline:src/home.c" > "$NUVIO_DADOS/home-baseline.c"
+  if [ "$phase" = original-before ]; then
+    # The shared fixture references these later Stage fields; historical drawing stays intact.
+    printf '%s\n' 'static int palcoFundoModo = 1;' 'static float palcoFundoAlpha = 1;' >> "$NUVIO_DADOS/home-baseline.c"
+  fi
   baseline_flags+=("-DPALCO_BASELINE=\"$NUVIO_DADOS/home-baseline.c\"")
 fi
 cc "${sources[@]}" "${baseline_flags[@]}" tests/palcolimpo.c -Isrc -o "$NUVIO_DADOS/shot" \
@@ -25,7 +37,7 @@ cc "${sources[@]}" "${baseline_flags[@]}" tests/palcolimpo.c -Isrc -o "$NUVIO_DA
 rc=0
 scales="0.85 1"
 glasses="0 1"
-if [ "$phase" = before ] || [[ "$phase" = review-* ]]; then scales=1; glasses=0; fi
+if [ "$phase" = before ] || [ "$phase" = original-before ] || [[ "$phase" = review-* ]]; then scales=1; glasses=0; fi
 for scale in $scales; do
   for glass in $glasses; do
     case_data=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-homelayouts-shot.XXXXXX")

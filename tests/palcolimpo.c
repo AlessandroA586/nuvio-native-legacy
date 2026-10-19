@@ -84,6 +84,7 @@ static void setting(int layout, int glass, int mode) {
   assert(ajustes_palco_fundo() == mode);
 }
 
+#ifndef PALCO_ORIGINAL
 static void regressions(const char *dir, const char *phase, int glass) {
   int sr = foco.fileira;
   float expectedScroll = 0, expectedLabel;
@@ -180,6 +181,14 @@ static void regressions(const char *dir, const char *phase, int glass) {
 }
 
 static void reviewRegressions(const char *dir, const char *phase, int glass) {
+  // Stored IDs are append-only: old Black=0 now selects Cortina, 1/2 survive.
+  for (int stored = 0; stored <= 2; stored++) {
+    setting(0, glass, stored); quadros(90, NULL);
+    capture(dir, phase, stored, "stored-setting");
+    checkRegression(stored == 0 ? stageArtwork == 1 && heroInfo > 0 && !heroBackdrops :
+                    stored == 1 ? heroBackdrops > 0 : stageArtwork == 1 && !heroInfo,
+                    "Original stored Stage setting IDs render their migrated choice");
+  }
   // GLSL requires ascending smoothstep edges; desktop drivers can hide this bug.
   FILE *shader = fopen("src/gfx.c", "r");
   assert(shader);
@@ -209,6 +218,9 @@ static void reviewRegressions(const char *dir, const char *phase, int glass) {
   CatItem *next = (CatItem *)cat_item_exato(fileiraItemIndice(&fileiras[foco.fileira], foco.coluna + 1));
   assert(next);
   CatItem saved = *next;
+  // Keep the late-art fade's first frame deterministic, independent of decode timing.
+  for (int f = 0; f < 120; f++) { tex_obter_palco(saved.backdrop); quadros(1, NULL); }
+  assert(tex_obter_palco(saved.backdrop));
   next->backdrop[0] = 0;
   tecla(SDLK_RIGHT); quadros(5, NULL);
   capture(dir, phase, PALCO_CORTINA, "backdrop-missing-mid");
@@ -221,10 +233,69 @@ static void reviewRegressions(const char *dir, const char *phase, int glass) {
                   "Missing backdrop settles to Black");
   blankHero();
   *next = saved;
+  capture(dir, phase, PALCO_CORTINA, "same-title-late-start");
+  checkRegression(stageArtwork == 0 && palcoItemA == 0.0f,
+                  "Same-title late backdrop starts from Black with zero alpha");
+  quadros(5, NULL);
+  capture(dir, phase, PALCO_CORTINA, "same-title-late-mid");
+  checkRegression(stageArtwork == 1 && heroInfo > 0 && palcoItemA > 0 && palcoItemA < 1,
+                  "Same-title late backdrop and logo fade in together");
+  quadros(90, NULL);
+  capture(dir, phase, PALCO_CORTINA, "same-title-replace-old");
+  old = artworkTexture;
+  char replacement[900];
+  snprintf(replacement, sizeof replacement, "%s/replacement.bmp", dirDados);
+  SDL_Surface *image = SDL_CreateRGBSurfaceWithFormat(0, 1280, 720, 32, SDL_PIXELFORMAT_ABGR8888);
+  assert(image);
+  SDL_FillRect(image, NULL, SDL_MapRGB(image->format, 30, 170, 90));
+  assert(SDL_SaveBMP(image, replacement) == 0); SDL_FreeSurface(image);
+  snprintf(next->backdrop, sizeof next->backdrop, "%s", replacement);
+  // Hold uploads so the replacement remains cold beyond a full fade duration.
+  for (int f = 0; f < 30; f++) {
+    stageArtwork = heroInfo = 0; artworkTexture = 0;
+    home_atualizar(1.0f / 60.0f, SDL_GetTicks());
+    home_desenhar(SDL_GetTicks());
+  }
+  checkRegression(stageArtwork == 1 && artworkTexture == old && heroInfo > 0,
+                  "Same-title replacement retains outgoing artwork and logo while loading");
+  for (int f = 0; f < 120 && !tex_obter_palco(replacement); f++) quadros(1, NULL);
+  quadros(5, NULL);
+  capture(dir, phase, PALCO_CORTINA, "same-title-replace-mid");
+  int oldSeen = 0, newSeen = 0;
+  for (int t = 0; t < stageArtwork; t++) {
+    oldSeen |= stageTextures[t] == old;
+    newSeen |= stageTextures[t] != old;
+  }
+  checkRegression(oldSeen && newSeen && palcoItemA > 0 && palcoItemA < 1,
+                  "Same-title replacement crossfades outgoing and incoming artwork");
+  quadros(90, NULL);
+  capture(dir, phase, PALCO_CORTINA, "same-title-replace-end");
+  checkRegression(stageArtwork == 1 && artworkTexture != old && palcoItemA == 1,
+                  "Same-title replacement settles to incoming artwork");
+  *next = saved;
+  quadros(90, NULL);
+  // Warm a real poster first: even a ready poster must never become Stage art.
+  for (int f = 0; f < 90; f++) { tex_obter_palco(next->poster); quadros(1, NULL); }
+  const int concepts[] = { PALCO_CORTINA, PALCO_ARTE, PALCO_AURA, PALCO_TRIPTICO, PALCO_MONUMENTO };
+  for (int i = 0; i < 5; i++) {
+    setting(0, glass, concepts[i]); quadros(90, NULL);
+    next->backdrop[0] = 0; quadros(90, NULL);
+    capture(dir, phase, concepts[i], "never-poster-missing");
+    checkRegression(!stageArtwork && !heroBackdrops && !heroInfo,
+                    "Missing backdrop never falls back to a ready poster");
+    snprintf(next->backdrop, sizeof next->backdrop, "%s", next->poster);
+    quadros(90, NULL);
+    capture(dir, phase, concepts[i], "never-poster-same");
+    checkRegression(!stageArtwork && !heroBackdrops && !heroInfo,
+                    "Poster supplied as backdrop stays Black");
+    *next = saved; quadros(90, NULL);
+  }
   setting(0, glass, PALCO_TRIPTICO); quadros(90, NULL);
   capture(dir, phase, PALCO_TRIPTICO, "triptych");
   checkRegression(stageArtwork == 3, "Triptych renders three artwork panels");
 }
+
+#endif
 
 int main(int argc, char **argv) {
   assert(argc == 5);
@@ -295,6 +366,27 @@ int main(int argc, char **argv) {
   assert(heroBackdrops > 0); // First focus frames retain the fading hero.
   quadros(90, NULL);
   capture(dir, phase, PALCO_PRETO, "stage");
+#ifdef PALCO_ORIGINAL
+  for (int stored = 0; stored <= 2; stored++) {
+    setting(0, glass, stored); quadros(90, NULL);
+    capture(dir, phase, stored, "stored-setting");
+    checkRegression(stored == 0 ? stageArtwork == 1 && heroInfo > 0 && !heroBackdrops :
+                    stored == 1 ? heroBackdrops > 0 : stageArtwork == 1 && !heroInfo,
+                    "Original stored Stage setting IDs render their migrated choice");
+  }
+  CatItem *live = (CatItem *)cat_item(fileiraItemIndice(&fileiras[foco.fileira], foco.coluna));
+  for (int f = 0; f < 90; f++) { tex_obter_palco(live->poster); quadros(1, NULL); }
+  live->backdrop[0] = 0; quadros(90, NULL);
+  capture(dir, phase, 2, "never-poster-missing");
+  checkRegression(!stageArtwork && !heroBackdrops && !heroInfo,
+                  "Missing backdrop never falls back to a ready poster");
+  snprintf(live->backdrop, sizeof live->backdrop, "%s", live->poster);
+  quadros(90, NULL);
+  capture(dir, phase, 2, "never-poster-same");
+  checkRegression(!stageArtwork && !heroBackdrops && !heroInfo,
+                  "Poster supplied as backdrop stays Black");
+  return regressionFailures ? 1 : 0;
+#else
   if (!strcmp(phase, "review-before") || !strcmp(phase, "review-after")) {
     reviewRegressions(dir, phase, glass);
     tex_encerrar(); txt_encerrar();
@@ -302,6 +394,7 @@ int main(int argc, char **argv) {
     return regressionFailures ? 1 : 0;
   }
   regressions(dir, phase, glass);
+  reviewRegressions(dir, phase, glass);
 #ifdef PALCO_BASELINE
   return regressionFailures ? 1 : 0;
 #else
@@ -343,6 +436,7 @@ int main(int argc, char **argv) {
   CatItem *live = (CatItem *)focused;
   char saved[sizeof live->backdrop]; memcpy(saved, live->backdrop, sizeof saved);
   snprintf(live->backdrop, sizeof live->backdrop, "%s", live->poster);
+  quadros(90, NULL);
   capture(dir, phase, 2, "fallback");
   assert(heroInfo == 0 && heroBackdrops == 0 && stageArtwork == 0);
   blankHero(); memcpy(live->backdrop, saved, sizeof saved);
@@ -362,6 +456,7 @@ int main(int argc, char **argv) {
     for (int t = 0; t < stageArtwork; t++) assert(stageTextures[t] && stageTextures[t] != posterTex);
     if (concepts[i] == PALCO_TRIPTICO) assert(stageTextures[0] != stageTextures[1]);
     snprintf(live->backdrop, sizeof live->backdrop, "%s", live->poster);
+    quadros(90, NULL);
     capture(dir, phase, concepts[i], "fallback");
     assert(stageArtwork == 0 && heroBackdrops == 0); // no backdrop -> Black
     blankHero(); memcpy(live->backdrop, saved, sizeof saved);
@@ -390,5 +485,6 @@ int main(int argc, char **argv) {
   tex_encerrar(); txt_encerrar();
   SDL_GL_DeleteContext(gl); SDL_DestroyWindow(janela); SDL_Quit();
   return 0;
+#endif
 #endif
 }
