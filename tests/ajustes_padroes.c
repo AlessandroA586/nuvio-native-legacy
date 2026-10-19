@@ -11,6 +11,14 @@
 #include <assert.h>
 
 int main(void) {
+  assert(valor[AJ_HDR_INTERFACE] == 0 && !ajustes_hdr_interface());
+  assert(somenteDesteAparelho(AJ_HDR_INTERFACE) && !ajustePortavel(AJ_HDR_INTERFACE));
+  assert(!strcmp(CHAVE[AJ_HDR_INTERFACE], "hdrInterfaceLocal"));
+#ifndef NV_ANDROID
+  assert(!ajOpcaoDisponivel(AJ_HDR_INTERFACE));
+#endif
+  valor[AJ_HDR_INTERFACE] = 1; assert(ajustes_hdr_interface());
+  valor[AJ_HDR_INTERFACE] = 0;
   // Merge regression: both appended settings keep their parallel table entries.
   assert(valor[AJ_XTREAM_CONEXOES] == 0 && valor[AJ_AMPLIAR_UI] == 0);
   assert(!strcmp(CHAVE[AJ_XTREAM_CONEXOES], "-xtreamConexoes"));

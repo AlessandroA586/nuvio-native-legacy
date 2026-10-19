@@ -328,3 +328,4 @@
   0, /* #578: audio presentation offset, unchanged by default */
   0, /* Xtream limited connections: Auto; account storage owns the value. */
   0, /* interface scaling: TV hardware, preserving the existing drawable */
+  0, /* experimental HDR menus: Off */
