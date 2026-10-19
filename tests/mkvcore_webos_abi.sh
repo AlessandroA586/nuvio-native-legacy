@@ -2,7 +2,7 @@
 # Offline link gate: the installed Rust target must match the webOS SDK ABI.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-lib=$(CARGO_NET_OFFLINE=true bash tools/rust-mkvcore.sh armv7-unknown-linux-gnueabihf)
+lib=$(CARGO_NET_OFFLINE=true bash tools/rust-mkvcore.sh armv7-unknown-linux-gnueabi)
 "${NUVIO_CONTAINER_RUNTIME:-docker}" run --rm \
   --platform "${NUVIO_BUILD_PLATFORM:-linux/arm64}" \
   -v "$lib:/tmp/libmkvcore.a:ro" "${NUVIO_SDK_IMAGE:-nuvio-webos-sdk}" bash -c '
