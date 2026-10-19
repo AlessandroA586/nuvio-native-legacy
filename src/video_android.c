@@ -720,7 +720,7 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(JNIEn
     case EV_LIVE_RECOVERY:
       pthread_mutex_lock(&travaRetomada);
       if (ativo && (unsigned)b == sessao) {
-        unsigned prazo = a > 8000 ? 8000 : a > 0 ? (unsigned)a : 0;
+        unsigned prazo = a > 60000 ? 60000 : a > 0 ? (unsigned)a : 0;
         liveRecuperandoAte = prazo ? SDL_GetTicks() + prazo : 0;
         if (prazo && !liveRecuperandoAte) liveRecuperandoAte = 1;
       }

@@ -126,7 +126,7 @@ double video_buffer_fim(void); // ate onde o buffer cobre (s); 0 se desconhecido
 // (app.c) precisa deste numero para saber que a fonte morreu sem dizer.
 unsigned video_bufferando_ms(void);
 #ifdef NV_ANDROID
-// Same-player live-window repair, scoped to this open and bounded to 8 seconds.
+// Same-player live-window repair, scoped to this open and bounded to 60 seconds.
 int video_recuperando_live(void);
 // HLS target duration for this live session; zero for VOD/unknown.
 unsigned video_live_segmento_ms(void);

@@ -1919,8 +1919,8 @@ object NvPlayer {
             schedule = { tarefa, atraso -> principal.postDelayed(tarefa, atraso) },
             unschedule = { tarefa -> principal.removeCallbacks(tarefa) },
             active = { atual(minha) },
-            status = { recuperando ->
-                if (atual(minha)) ev(EV_LIVE_RECOVERY, if (recuperando) 8000 else 0, geracaoNative)
+            status = { prazoMs ->
+                if (atual(minha)) ev(EV_LIVE_RECOVERY, prazoMs.toInt(), geracaoNative)
             },
         )
         init { recuperacaoLive = live }
@@ -2054,8 +2054,9 @@ object NvPlayer {
             if (!atual(minha)) return
             val exo = error as? ExoPlaybackException
             val p = player
-            if (p != null && live.recover(p, error.errorCode, SystemClock.elapsedRealtime()) {
-                    Log.w(TAG, "[live] recuperacao excedeu 8000 ms sessao=$minha; seguindo erro normal")
+            val recoveryTimeout = LiveWindowRecovery.timeoutForSegment(liveSegmentMs)
+            if (p != null && live.recover(p, error.errorCode, SystemClock.elapsedRealtime(), recoveryTimeout) {
+                    Log.w(TAG, "[live] recuperacao excedeu $recoveryTimeout ms sessao=$minha; seguindo erro normal")
                     try { nativeErroTexto("ERROR_CODE_BEHIND_LIVE_WINDOW (1002): recovery timeout") } catch (_: Throwable) {}
                     ev(EV_ERRO, PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW, C.TRACK_TYPE_UNKNOWN)
                 }) {
