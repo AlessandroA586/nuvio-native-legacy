@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T00:48:22-03:00, HEAD `78d299575`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T02:47:51-03:00, HEAD `e5fc8f342`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -215,6 +215,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Library follows your chosen source**: Saved grids rebuild when the effective source changes, remember the choice per profile, preserve membership through server metadata refreshes, and consistently add or remove duplicate titles through Detail and context menus. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-bibfonte`, merge `e5fc8f342`, `8c85a5fd9`, `899530cda`, `de1f5417b`, `e69c40278`, `8bb9b6f72`, `7bd98ab61`, `54b6033d6`.
 
 - **Dynamic Stage honors its background choice**: Dynamic Home now respects Black, Current and Artwork Stage backgrounds with Hero enabled or disabled, while retaining Split artwork and Modern geometry. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `450c20891`, merge `71c53b8e1`.
 
@@ -558,7 +560,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-Tracking snapshot: 18 unmerged branches without running jobs; 12 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-bibfonte`, `agente/205-livefiltro`, `agente/205-palcoarte`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
+Tracking snapshot: 18 unmerged branches without running jobs; 12 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-livefiltro`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
