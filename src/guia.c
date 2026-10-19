@@ -273,6 +273,7 @@ typedef struct {
   const char *tvgNome;  // tvg-name (M3U)
   const char *url;      // M3U: a URL do canal (nunca em log)
   const char *ua, *ref; // M3U: cabecalhos do canal
+  const char *logoM3u, *logoVar;  // borrowed logos; never replace/cache provider metadata
   int  cat;             // indice em cats[]
   int  epg;             // -1 = ainda nao resolvido; -2 = sem grade real
   int  fav;             // espelho do arquivo, para o desenho nao varrer a lista
@@ -1692,6 +1693,56 @@ static int cmpCat(const void *a, const void *b) {
   return x->ordem - y->ordem;
 }
 
+// Missing/failed logos borrow loaded M3U metadata, then matched XMLTV, then
+// another channel variant. Index once when publishing, not once per grid row.
+// Borrowed pointers belong to the published arena and are rebuilt on removal.
+typedef struct { unsigned long long h; int i; } GLogoK;
+static unsigned long long hLogo(const char *tag, const char *s) {
+  unsigned long long h = 1469598103934665603ULL;
+  for (; *tag; tag++) { h ^= (unsigned char)*tag; h *= 1099511628211ULL; }
+  for (; *s; s++) { h ^= (unsigned char)tolower((unsigned char)*s); h *= 1099511628211ULL; }
+  return h;
+}
+static int cmpLogoK(const void *a, const void *b) {
+  const GLogoK *x = a, *y = b;
+  return x->h < y->h ? -1 : x->h > y->h ? 1 : x->i - y->i;
+}
+static int logoAchar(const GLogoK *v, int n, unsigned long long h, int excluir) {
+  int lo = 0, hi = n;
+  while (lo < hi) { int m = (lo + hi) / 2; if (v[m].h < h) lo = m + 1; else hi = m; }
+  for (; lo < n && v[lo].h == h; lo++)
+    if (v[lo].i != excluir && !tex_falhou(canais[v[lo].i].logo)) return v[lo].i;
+  return -1;
+}
+static void logosEmprestar(void) {
+  GLogoK *m3u = malloc(sizeof *m3u * (size_t)(nCanais * 2 + 1)), *todos = malloc(sizeof *todos * (size_t)(nCanais + 1));
+  int nm = 0, nt = 0, i, k;
+  char b[160];
+  if (!m3u || !todos) { free(m3u); free(todos); return; }
+  for (i = 0; i < nCanais; i++) {
+    const GCanal *c = &canais[i];
+    if (!c->logo || !c->logo[0]) continue;
+    nv_nome_base(c->nome, b, sizeof b);
+    if (b[0]) todos[nt++] = (GLogoK){ hLogo("n", b), i };
+    if (c->fonte < 0 || c->fonte >= nLtvF || ltvF[c->fonte].tipo != LTV_M3U) continue;
+    if (c->epgId && c->epgId[0]) m3u[nm++] = (GLogoK){ hLogo("i", c->epgId), i };
+    if (b[0]) m3u[nm++] = (GLogoK){ hLogo("n", b), i };
+  }
+  qsort(m3u, (size_t)nm, sizeof *m3u, cmpLogoK);
+  qsort(todos, (size_t)nt, sizeof *todos, cmpLogoK);
+  for (i = 0; i < nCanais; i++) {
+    GCanal *c = &canais[i];
+    c->logoM3u = c->logoVar = NULL;
+    nv_nome_base(c->nome, b, sizeof b);
+    k = c->epgId && c->epgId[0] ? logoAchar(m3u, nm, hLogo("i", c->epgId), i) : -1;
+    if (k < 0 && b[0]) k = logoAchar(m3u, nm, hLogo("n", b), i);
+    if (k >= 0) c->logoM3u = canais[k].logo;
+    k = b[0] ? logoAchar(todos, nt, hLogo("n", b), i) : -1;
+    c->logoVar = k >= 0 ? canais[k].logo : NULL;
+  }
+  free(m3u); free(todos);
+}
+
 // Ordena os canais por grupo (estavel na ordem de chegada) para que cada
 // linha seja uma janela contigua, e refaz Favoritos, contas e a vista. Roda ao
 // publicar e ao desligar um addon no painel (que tira canais sem esperar o fio).
@@ -1746,6 +1797,7 @@ static void empacotar(void) {
   free(ordem); free(mapa); free(pos); free(tmp);
   for (i = 0; i < nCanais; i++) if (canais[i].fonte >= 0 && canais[i].fonte < nLtvF) ltvF[canais[i].fonte].nCanais++;
   for (i = 0; i < nCats; i++) if (cats[i].fonte >= 0 && cats[i].fonte < nLtvF) ltvF[cats[i].fonte].nGrupos++;
+  logosEmprestar();
   favAplicar();
   nFavOrd = 0;
   for (i = 0; i < nCanais && nFavOrd < G_MAX_FAV; i++)
@@ -4081,9 +4133,20 @@ void guia_logo_desenhar(const char *logo, const char *nome, GfxRect cx,
       gfx_rect(lr, t, GFX_TEXTO, 0, 0, 0, 0.0f, 1, 1, 1, a);
   }
 }
+// Pending images keep their priority; only a confirmed failure falls through.
+static const char *logoDe(const GCanal *c) {
+  const char *s;
+  if (!c) return NULL;
+  if (c->logo && c->logo[0] && !tex_falhou(c->logo)) return c->logo;
+  if (c->logoM3u && !tex_falhou(c->logoM3u)) return c->logoM3u;
+  s = c->epg >= 0 ? epg_canal_icone(c->epg) : "";
+  if (!s[0]) s = epg_icone_id(chaveDo(c), c->epgId);
+  if (s[0] && !tex_falhou(s)) return s;
+  return c->logoVar && !tex_falhou(c->logoVar) ? c->logoVar : NULL;
+}
 static void logoNaCaixa(const GCanal *c, GfxRect cx, float maxW, float maxH,
                         float tom, float a) {
-  guia_logo_desenhar(c ? c->logo : NULL, c ? c->nome : "", cx, maxW, maxH, tom, a);
+  guia_logo_desenhar(logoDe(c), c ? c->nome : "", cx, maxW, maxH, tom, a);
 }
 
 static void desenharLogo(const GCanal *c, GfxRect cx, float lado, float tom,
@@ -6068,7 +6131,7 @@ static void buscaDesenhar(Uint32 agora) {
     if (i < buscaNC) {
       const GCanal *c = &canais[buscaCanal[i]];
       char n[16];
-      guia_logo_desenhar(c->logo, c->nome, (GfxRect){ r.x + 14.0f, r.y + 6.0f, 92.0f, r.h - 12.0f },
+      guia_logo_desenhar(logoDe(c), c->nome, (GfxRect){ r.x + 14.0f, r.y + 6.0f, 92.0f, r.h - 12.0f },
                          92.0f, r.h - 16.0f, 0.965f, ea);
       snprintf(n, sizeof n, "%d", buscaCanal[i] + 1);
       txt_desenhar_alpha(txt_linha(TXT_CAPTION, n, foc ? 30 : 150, foc ? 32 : 153, foc ? 38 : 162, 255),
@@ -6600,7 +6663,7 @@ int guia_canal_campos(int i, const char **id, const char **nome, const char **lo
   if (i < 0 || i >= nCanais) return 0;
   if (id) *id = canais[i].id;
   if (nome) *nome = canais[i].nome;
-  if (logo) *logo = canais[i].logo;
+  if (logo) { const char *l = logoDe(&canais[i]); *logo = l ? l : ""; }
   if (cat) *cat = canais[i].cat >= 0 ? cats[canais[i].cat].nome : "";
   if (base) *base = canais[i].base;
   return 1;
