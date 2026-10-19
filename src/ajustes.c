@@ -6627,10 +6627,11 @@ static const char *textoLeitura(int op) {
     }
   }
   if (op == AJ_TRAKT) {
-    if (traktauth_estado() == TRA_PARADO && trakt_ativo()) return i18n("conectado — OK desconecta");
+    if (trakt_aguardando()) return i18n("Não foi possível agora. Tente novamente.");
+    if (trakt_ativo()) return i18n("Sair da conta");
     switch (traktauth_estado()) {
-      case TRA_LIGADO:     return i18n("conectado — OK desconecta");
-      case TRA_PEDINDO:    return i18n("preparando…");
+      case TRA_LIGADO:     return i18n("Sair da conta");
+      case TRA_PEDINDO:    return traktauth_aguardando() ? i18n("Não foi possível agora. Tente novamente.") : i18n("preparando…");
       case TRA_AGUARDANDO: return i18n("aguardando");
       case TRA_ERRO:       return i18n("falhou");
       case TRA_INVALIDO:   return i18n("expirou — reconectar");
@@ -6649,8 +6650,10 @@ static const char *textoLeitura(int op) {
     }
   }
   if (op == AJ_SIMKL) {
+    if (simkl_aguardando()) return i18n("Não foi possível agora. Tente novamente.");
+    if (simkl_ativo()) return i18n("Sair da conta");
     switch (simklauth_estado()) {
-      case SMK_LIGADO:     return i18n("conectado — OK desconecta");
+      case SMK_LIGADO:     return i18n("Sair da conta");
       case SMK_PEDINDO:    return i18n("preparando…");
       case SMK_AGUARDANDO: return i18n("aguardando");
       case SMK_ERRO:       return i18n("falhou");
@@ -8933,7 +8936,7 @@ static void eventoTela(const SDL_Event *e) {
   // tela responde ao controle.
   { TraEstado ta = traktauth_estado();
     SmkEstado sa = simklauth_estado();
-    int traAtivo = (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO);
+    int traAtivo = !traktauth_aguardando() && (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO);
     int smkAtivo = (sa == SMK_PEDINDO || sa == SMK_AGUARDANDO || sa == SMK_ERRO);
     DisEstado da = discord_estado();
     int disAtivo = (da == DIS_PEDINDO || da == DIS_AGUARDANDO || da == DIS_ERRO);
@@ -10007,7 +10010,7 @@ static void ajDesenharTudo(Uint32 agora) {
 #ifdef AJUSTES_TESTE
     if (ajVinculoTeste) desenhaVinculo("Trakt", "8F3K2QPA", "https://trakt.tv/activate", NULL, 1); else
 #endif
-    if (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO)
+    if (!traktauth_aguardando() && (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO))
       desenhaVinculo("Trakt", traktauth_codigo(), traktauth_url(),
                      traktauth_erro(), ta == TRA_AGUARDANDO);
     else if (sa == SMK_PEDINDO || sa == SMK_AGUARDANDO || sa == SMK_ERRO)
@@ -10030,7 +10033,7 @@ int ajustes_relogio_cabe(void) {
   TraEstado ta = traktauth_estado();
   SmkEstado sa = simklauth_estado();
   if (teclado_aberto() || (ajModalAberto() && !filAberta)) return 0;
-  if (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO) return 0;
+  if (!traktauth_aguardando() && (ta == TRA_PEDINDO || ta == TRA_AGUARDANDO || ta == TRA_ERRO)) return 0;
   if (sa == SMK_PEDINDO || sa == SMK_AGUARDANDO || sa == SMK_ERRO) return 0;
   return 1;
 }

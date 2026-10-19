@@ -3554,8 +3554,8 @@ static int montarContinuar(CatItem *saida, int max) {
       int troca;
       int pa = emAndamento(juntos[k].item->progresso);
       int pb = emAndamento(juntos[k - 1].item->progresso);
-      if (pa != pb) troca = pa;
-      else if (a != b) troca = !b ? 0 : (!a ? 1 : a > b);
+      if (ajustes_cw_ordem() != CWO_PADRAO && pa != pb) troca = pa;
+      else if (a != b) troca = a > b;
       else        troca = juntos[k].ord < juntos[k - 1].ord;
       if (!troca) break;
       { Cand t = juntos[k - 1]; juntos[k - 1] = juntos[k]; juntos[k] = t; }
