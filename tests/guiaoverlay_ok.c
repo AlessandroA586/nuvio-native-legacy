@@ -5,7 +5,22 @@
 //
 //   bash tests/guiaoverlay_ok.sh               so as teclas
 //   bash tests/guiaoverlay_ok.sh /tmp/x/shot   + x/shot-faixa.png e -guia.png
+#include "plrui.h"
+#include "idioma.h"
+#include "idiomacod.h"
+static int fullGuideHintTranslated;
+static float guideHints(const char *const *keys, const char *const *labels, int n,
+                        float x, float y, int right, float alpha);
+#define plrui_dicas guideHints
 #include "../src/guia.c"
+#undef plrui_dicas
+
+static float guideHints(const char *const *keys, const char *const *labels, int n,
+                        float x, float y, int right, float alpha) {
+  if (n == 3 && !strcmp(keys[0], "OK") && !strcmp(keys[1], "OK"))
+    fullGuideHintTranslated = !strcmp(i18n(labels[1]), "Full guide");
+  return plrui_dicas(keys, labels, n, x, y, right, alpha);
+}
 #include "catalogo.h"
 #include "app.h"
 #include "tpkteclas.h"
@@ -111,7 +126,14 @@ int main(int argc, char **argv) {
   char id[64];
   SDL_Event e = {0};
   assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == 0);
+  char settings[1024];
+  snprintf(settings, sizeof settings, "%s/ajustes.txt", getenv("NUVIO_DADOS"));
+  FILE *f = fopen(settings, "w");
+  assert(f);
+  fprintf(f, "idioma %d\n", IDIOMA_EN);
+  fclose(f);
   ajustes_dir(getenv("NUVIO_DADOS"));
+  assert(ajustes_idioma() == IDIOMA_EN);
   assert(!ajustes_vidro());
   semear(C, 5);
 
@@ -229,6 +251,7 @@ int main(int argc, char **argv) {
     cat_definir(&tv, 1); player_abrir(0, NULL); player_marcar_canal(&tv); comFonte();
     aberta = 0; overlay = 1; entrada = 1; guia_focar_id(id);
     snprintf(nome, sizeof nome, "%s-faixa.png", argv[1]); foto(nome, w);
+    assert(fullGuideHintTranslated);
     { float x, y, w, h;
       guia_preview_rect(&x, &y, &w, &h);
       player_minimizar_para_guia(x, y, w, h);

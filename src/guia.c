@@ -5791,7 +5791,7 @@ static void desenharBanda(float a, Uint32 agora) {
 
   { TxtLinha t = txt_linha(TXT_G30B, "Guia de canais", 243, 242, 239, 255);
     const char *k[3] = { "OK", "OK", "Voltar" },
-      *r[3] = { "Troca de canal", "No canal atual: guia completo", "Fechar" };
+      *r[3] = { "Troca de canal", "Guia completo", "Fechar" };
     txt_desenhar_alpha(t, G_AREA_X, topo - 2.0f, a);
     plrui_dicas(k, r, 3, G_AREA_DIR, topo - 2.0f + (float)t.h * 0.5f, 1, a); }
   desenharReguaEm(a, ini, yR);

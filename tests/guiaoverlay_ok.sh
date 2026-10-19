@@ -35,4 +35,5 @@ cc "${sources[@]}" tests/guiaoverlay_ok.c -Isrc -o ${TMPDIR:-/tmp}/nuvio-guiaove
   -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL \
   -Wall -Wextra -Wno-deprecated-declarations -Wno-macro-redefined
+if [ "$#" -eq 0 ]; then set -- "$NUVIO_DADOS/shot"; fi
 ${TMPDIR:-/tmp}/nuvio-guiaoverlay-ok "$@"
