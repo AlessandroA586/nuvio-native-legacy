@@ -59,7 +59,11 @@ static int recoveryStage(const char *dir, const char *stage) {
     dados_gravar("xtream-p1.txt", "portal=test.invalid\nusuario=alice\nsenha=secret\n");
     dados_gravar("sessao-private.txt", "DO-NOT-UPLOAD");
     char nome[128]; ajustes_provedores_arquivo(nome, sizeof nome, "fontefalha");
-    dados_gravar(nome, "provedores 1\n");
+    dados_gravar(nome, "provedores 1\nfiltro_maxgb 10\n");
+    fil_registrar("org.test_movie_top", "Top", "Test", "movie", 10);
+    fil_registrar("org.test_series_new", "New", "Test", "series", 10);
+    fonteregra_definir_regex("1080p");
+    const char *order[] = {"Addon A", "Addon B"}; fonteregra_ordem_definir(order, 2);
     fil_definir_limite(3); fil_gravar_registro();
     player_leg_estilo_carregar();
     VideoLegendaEstilo style = *player_leg_estilo(); style.tamanho = 160;
@@ -70,6 +74,31 @@ static int recoveryStage(const char *dir, const char *stage) {
     check(pushes > 0, "external/device edits uploaded without dirty notification");
     check(strstr(cloud, "future_web") && strstr(cloud, "future_ext") && strstr(cloud, "c_future"), "unknown web and C fields preserved");
     check(!strstr(cloud, "DO-NOT-UPLOAD") && !strstr(cloud, "444f2d4e4f542d55504c4f4144"), "session files excluded");
+    const char *devices, *de, *device, *end, *files, *fe, *v, *f;
+    assert(ajJsonGet(cloud, cloud + strlen(cloud), "c_devices_v1", &devices, &de));
+    assert(ajJsonGet(devices, de, dados_aparelho_id(), &device, &end));
+    assert(ajJsonGet(device, end, "files", &files, &fe));
+    assert(ajJsonGet(files, fe, "file8", &v, &f));
+    char *rows = ajusteUnhex(v, f);
+    check(rows && strstr(rows, "limite 3\n") && !strstr(rows, "linha ") && !strstr(rows, "ordem "), "device snapshot holds only row device fields"); free(rows);
+    for (int i = 0; i < 3; i++) {
+      const char *keys[] = {"file22", "file24", "file25"};
+      assert(ajJsonGet(files, fe, keys[i], &v, &f));
+      check(f - v == 4 && !strncmp(v, "null", 4), "device snapshot excludes shared rules and filters");
+    }
+    // Keep an old client's whole-file device snapshot in the account too.
+    Jsw legacy; jsw_iniciar(&legacy); jsw_obj_ini(&legacy);
+    for (int i = 0; i < 4; i++) {
+      const char *keys[] = {"file8", "file22", "file24", "file25"};
+      const char *names[] = {"fileirasui-p1.txt", nome, "fonteregra.txt", nome};
+      char *text = dados_ler(names[i]); ajusteHex(&legacy, keys[i], text); free(text);
+    }
+    jsw_obj_fim(&legacy);
+    char *patch = malloc(strlen(cloud) + strlen(jsw_texto_final(&legacy)) + 1); assert(patch);
+    sprintf(patch, "%.*s%s%s", (int)(device - cloud), cloud, "{\"files\":", jsw_texto_final(&legacy));
+    strcat(patch, "}"); strcat(patch, end);
+    char *updated = ajJsonMerge(cloud, cloud + strlen(cloud), patch, patch + strlen(patch)); assert(updated);
+    free(patch); jsw_livre(&legacy); free(cloud); cloud = updated;
     snprintf(path, sizeof path, "%s/../cloud.json", dir); fileWrite(path, cloud, strlen(cloud));
   } else {
     snprintf(path, sizeof path, "%s/../cloud.json", dir); cloud = fileRead(path);
@@ -90,6 +119,13 @@ static int recoveryStage(const char *dir, const char *stage) {
       ajustes_aplicar_blob("{\"c_settings_v1\":{\"values\":{\"c_vidroLocal\":1,\"c_modernSidebarBlur\":1}}}");
       check(valor[AJ_VIDRO] == valorPadrao[AJ_VIDRO] && valor[AJ_RAIL_BLUR] == valorPadrao[AJ_RAIL_BLUR], "legacy shared blob cannot override device GPU choices");
       check(!dados_ler("fanart.txt"), "second TV receives no device credentials");
+      // B edits shared files after A's upload, with a different provider scope/quota.
+      fil_mover(1, -1); fil_definir_limite(5); fil_gravar_registro();
+      fonteregra_definir_regex("4K");
+      const char *order[] = {"Addon B", "Addon A"}; fonteregra_ordem_definir(order, 2);
+      fontefalha_definir_provedores(0);
+      FonteFiltroConfig filter; fontefalha_filtro(&filter); filter.maxGB = 25;
+      assert(fontefalha_filtro_definir(&filter));
       // A second TV writes its section without losing TV A's snapshot.
       valor[AJ_RESOLUCAO] = 0; sync_proteger_ajustes_locais(); cycle();
       snprintf(path, sizeof path, "%s/../cloud.json", dir); fileWrite(path, cloud, strlen(cloud));
@@ -102,6 +138,12 @@ static int recoveryStage(const char *dir, const char *stage) {
       check(!stat(protectedPath, &mode) && !(mode.st_mode & 077), "restored credentials retain owner-only permissions");
       check(!strcmp(curadoria_url(), "https://curated.invalid/feed"), "curation applied in memory");
       check(fil_limite_gravado() == 3, "same TV row quota restored");
+      check(!strcmp(fil_chave(0), "org.test_series_new"), "A receives B's newer shared home row order");
+      char rule[FR_REGEX_MAX], first[FR_NOME_MAX]; fonteregra_regex(rule, sizeof rule);
+      fonteregra_ordem_nome(0, first, sizeof first);
+      check(!strcmp(rule, "4K") && !strcmp(first, "Addon B"), "A receives B's newer addon rules");
+      FonteFiltroConfig filter; fontefalha_filtro(&filter);
+      check(!fontefalha_provedores() && filter.maxGB == 25, "A receives B's shared filters in A's provider scope");
       check(player_aspecto() == PLR_ASP_ESTICAR && player_leg_estilo()->tamanho == 160, "player and subtitle prefs restored");
       check(ajustes_nota_fonte(0) == EX_NFONTES - 1, "rating order restored");
       check(bibliotecaFonteEscolhida && memoriaEscolhida, "explicit choice markers restored");
@@ -111,6 +153,19 @@ static int recoveryStage(const char *dir, const char *stage) {
       sessao_sair(); sync_esquecer_usuario();
       memcpy(valor, valorPadrao, sizeof valor); login(); cycle();
       check(valor[AJ_RESOLUCAO] == RES_4K && valor[AJ_IDIOMA] == 4, "logout/login restores same TV");
+      check(!strcmp(fil_chave(0), "org.test_series_new") && fil_limite_gravado() == 3, "logout keeps shared order and device quota");
+      char *before = ajustesExtras(); assert(before);
+      sync_proteger_ajustes_locais(); cycle();
+      const char *shared, *end;
+      assert(ajJsonGet(cloud, cloud + strlen(cloud), "c_settings_v1", &shared, &end));
+      for (int i = 0; i < 3; i++) {
+        char key[16]; const char *v, *f, *next, *last;
+        snprintf(key, sizeof key, "store%d", i);
+        assert(ajJsonGet(before, before + strlen(before), key, &v, &f));
+        assert(ajJsonGet(shared, end, key, &next, &last));
+        check(f - v == last - next && !memcmp(v, next, (size_t)(f - v)), "A never re-uploads stale shared files");
+      }
+      free(before);
     }
   }
   printf("PASS: %s\n", stage); free(cloud); return 0;

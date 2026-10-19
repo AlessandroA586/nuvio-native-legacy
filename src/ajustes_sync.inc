@@ -52,6 +52,7 @@ static char *ajustesExtras(void) {
     char *t = nome[0] ? dados_ler(nome) : NULL;
     snprintf(key, sizeof key, "store%d", k);
     if (k == 1 && t) {
+      ajusteFileirasCampos(t, 0);
       char *out = t;
       for (char *p = t; *p;) {
         char *end = strchr(p, '\n');
@@ -62,7 +63,7 @@ static char *ajustesExtras(void) {
                          !strncmp(p, "addvence ", 9) ? p + 9 :
                          !strncmp(p, "nova ", 5) ? p + 5 :
                          !strncmp(p, "ordemfileira ", 13) ? p + 13 : NULL;
-        int safe = strncmp(p, "limite ", 7) && strncmp(p, "conta_auto ", 11);
+        int safe = 1;
         if (id) for (const char *q = id; q < p + n && *q != '\t' && *q != ' ' && *q != '\n'; q++)
           if (strchr(":/@?%=&", *q)) safe = 0;
         if (safe) { memmove(out, p, n); out += n; }
@@ -86,9 +87,10 @@ static char *ajustesExtras(void) {
 
 static int ajustesExtrasAplicar(const char *json) {
   const char *a, *b, *v, *f;
-  int mudou = 0;
+  // Resolve device fields and provider scope before choosing shared filenames.
+  int mudou = ajustesDeviceAplicar(json);
   if (!acharValor(json, json + strlen(json), "c_settings_v1", &a, &b) || *a != '{' ||
-      !acharValor(a, b, "values", &v, &f) || *v != '{') return ajustesDeviceAplicar(json);
+      !acharValor(a, b, "values", &v, &f) || *v != '{') return mudou;
   ajustesSnapshotAtual();
   for (int i = 0; i < AJ_N; i++) if (ajustePortavel(i) && !ajusteAparelho(i)) {
     const char *p, *end;
@@ -129,8 +131,12 @@ static int ajustesExtrasAplicar(const char *json) {
     }
     if (valid) {
       ajustesArquivoSync(k, nome, sizeof nome);
-      // Persist the device budget in the same atomic write as portable rows.
-      if (k == 1) snprintf(t + len / 2, 32, "\nlimite %d\n", fil_limite_gravado());
+      // Overlay only device fields, never replace newer shared rows.
+      if (k == 1) {
+        char *device = dados_ler(nome), *merged = ajusteFileirasMesclar(t, device);
+        free(device); free(t); t = merged;
+        if (!t) continue;
+      }
       if (nome[0] && dados_gravar(nome, t)) {
         if (k == 0) fonteregra_carregar();
         else if (k == 1) fil_recarregar();
@@ -145,7 +151,7 @@ static int ajustesExtrasAplicar(const char *json) {
   if (valor[AJ_IDIOMA] == 0) idiomaEscolhido();
   txt_definir_fonte_interface((TxtFamilia)valor[AJ_FONTE_UI]);
   if (mudou) gravar();
-  return mudou + ajustesDeviceAplicar(json);
+  return mudou;
 }
 
 int ajustes_mesclar_blob(const char *base, char **saida) {

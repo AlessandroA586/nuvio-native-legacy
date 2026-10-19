@@ -108,17 +108,17 @@ static void ajusteDeviceFile(int k, char *name, size_t cap) {
     "plex-p%d.txt", "discord-p%d.txt", "selos-p%d.txt",
     "selos-p%d-0.json", "selos-p%d-1.json", "selos-p%d-2.json"
   };
+  // Shared rules/filters are restored only from c_settings_v1, including when
+  // an older client left whole-file copies in these device slots.
+  if (k == 22 || k == 24 || k == 25) { name[0] = 0; return; }
   if (k < 8) snprintf(name, cap, "%s", fixed[k]);
   else if (k < 21) snprintf(name, cap, profile[k - 8], perfis_ativo());
   else if (k == 21) ajustes_provedores_arquivo(name, (unsigned)cap, "debrid");
-  else if (k == 22) ajustes_provedores_arquivo(name, (unsigned)cap, "fontefalha");
   else if (k == 23) {
     unsigned long long h = 1469598103934665603ULL;
     for (const char *p = sessao_usuario(); *p; p++) { h ^= (unsigned char)*p; h *= 1099511628211ULL; }
     snprintf(name, cap, "plugins-%08llx-p%d.txt", h & 0xffffffffULL, perfis_ativo_addons());
-  } else if (k == 24) snprintf(name, cap, "fonteregra.txt");
-  else if (k == 25) snprintf(name, cap, "fontefalha.txt");
-  else if (k == 26) debNomePerfil(name, (unsigned)cap, "provider-scope");
+  } else if (k == 26) debNomePerfil(name, (unsigned)cap, "provider-scope");
   else {
     static const char *const memory[] = {
       "audiomemoria-p%d.txt", "legmemoria-p%d.txt", "fontepref-p%d.txt",
@@ -126,6 +126,28 @@ static void ajusteDeviceFile(int k, char *name, size_t cap) {
     };
     snprintf(name, cap, memory[k - 27], perfis_ativo());
   }
+}
+// Split the mixed row file on both save and restore, including legacy snapshots.
+static void ajusteFileirasCampos(char *text, int device) {
+  if (!text) return;
+  char *out = text;
+  for (char *p = text; *p;) {
+    char *end = strchr(p, '\n');
+    size_t n = end ? (size_t)(end + 1 - p) : strlen(p);
+    int local = !strncmp(p, "limite ", 7) || !strncmp(p, "conta_auto ", 11);
+    if (local == device) { memmove(out, p, n); out += n; }
+    p += n;
+  }
+  *out = 0;
+}
+static char *ajusteFileirasMesclar(char *shared, char *device) {
+  ajusteFileirasCampos(shared, 0); ajusteFileirasCampos(device, 1);
+  size_t n = shared ? strlen(shared) : 0;
+  size_t cap = n + (device ? strlen(device) : 0) + 2;
+  char *out = malloc(cap);
+  if (out) snprintf(out, cap, "%s%s%s", shared ? shared : "",
+                    n && shared[n - 1] != '\n' ? "\n" : "", device ? device : "");
+  return out;
 }
 static void ajusteHex(Jsw *w, const char *key, const char *text) {
   if (!text) { jsw_chave(w, key); jsw_bruto(w, "null"); return; }
@@ -166,6 +188,7 @@ static char *ajustesDeviceSnapshot(void) {
     char name[128] = "", key[24]; ajusteDeviceFile(i, name, sizeof name);
     char *s = i == 26 ? strdup(valor[AJ_PROVEDORES_ESCOPO] ? "1\n" : "0\n") :
               (*name ? dados_ler(name) : NULL);
+    if (i == 8) ajusteFileirasCampos(s, 1);
     snprintf(key, sizeof key, "file%d", i); ajusteHex(&w, key, s); free(s);
   }
   jsw_obj_fim(&w); jsw_obj_fim(&w);
@@ -229,8 +252,13 @@ static int ajustesDeviceAplicar(const char *json) {
       snprintf(key, sizeof key, "file%d", i);
       if (!ajJsonGet(values, ve, key, &v, &f)) continue;
       ajusteDeviceFile(i, name, sizeof name); if (!*name) continue;
-      if (f - v == 4 && !strncmp(v, "null", 4)) { dados_apagar(name); continue; }
+      if (f - v == 4 && !strncmp(v, "null", 4)) { if (i != 8) dados_apagar(name); continue; }
       char *text = ajusteUnhex(v, f); if (!text) continue;
+      if (i == 8) {
+        char *shared = dados_ler(name), *merged = ajusteFileirasMesclar(shared, text);
+        free(shared); free(text); text = merged;
+        if (!text) continue;
+      }
       if (debGravarArquivo(name, text)) changed++;
       free(text);
     }
