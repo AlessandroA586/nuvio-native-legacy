@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T23:51:56-03:00, HEAD `dfb22a56e`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T00:48:22-03:00, HEAD `78d299575`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -215,6 +215,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Dynamic Stage honors its background choice**: Dynamic Home now respects Black, Current and Artwork Stage backgrounds with Hero enabled or disabled, while retaining Split artwork and Modern geometry. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `450c20891`, merge `71c53b8e1`.
+
+- **Open the full guide with ordinary remote keys**: During Live TV, OK opens the mini guide and a fresh OK on the current channel opens the full guide; held opening-key repeats cannot accidentally trigger it, and the hint uses your chosen language. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `a1860d530`, `617e8c5ec`, `9bf5ba890`, merge `4f244e2de`.
 
 - **Guide logos recover after failures**: Live TV can borrow eligible M3U, XMLTV and channel-variant logos when provider images fail, with bounded retries for recovery. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `65107e6fc`, `b0a172669`, `20f32990d`, merge `caea5e54d`.
 - **Custom poster templates accept optional IDs**: IMDb-only cards can use custom poster services whose TMDB identifier is optional while required identifiers retain their fallback. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #566, `6c3b323b2`, merge `25225cf86`.
@@ -467,6 +471,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Internal
 
+- **Avoid duplicate Samsung package builds**: Samsung package CI runs only for master pushes that change app code, avoiding duplicate integration builds and repeated cancellations. Platforms: Samsung .tpk. Refs `02989fd6c`, merge `4c8c80e9c`.
+
+- **Release card and Dynamic Stage regression upkeep**: Release copy and card capacity cover all current items, while Dynamic Stage rendering and source-order fixtures verify current integration behavior. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `1694cc299`, `26bf3bf32`, `3c5cc4eb1`, `c3f4d3e1d`, merge `78d299575`.
+
 - **Release card and rendering regression coverage**: Release notes and translated cards were refreshed, and headless Stage fixtures and guide-logo baseline checks were repaired. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `ed9bae8df`, `418cc57ce`, `1744000b3`.
 
 - **UI regression coverage**: Regression checks cover source-header clipping, action spacing, library scaling, regional-language sync and Samsung decoder handoff. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `b53c1e55f`, `ad0d2e044`, `e320c829a`, `bf27b2846`, `bd91a888d`.
@@ -545,7 +553,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-Tracking snapshot: 19 unmerged branches without running jobs; 12 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-bibfonte`, `agente/205-guiaoverlay`, `agente/205-livecat`, `agente/205-livefiltro`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/p2p`. Queued work and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
+Tracking snapshot: 18 unmerged branches without running jobs; 12 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-bibfonte`, `agente/205-livefiltro`, `agente/205-palcoarte`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
