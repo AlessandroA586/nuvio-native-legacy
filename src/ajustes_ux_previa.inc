@@ -260,15 +260,15 @@ static AjMini ajMiniPadrao(void) {
   return m;
 }
 static float ajPreviaLayout(float x, float y, float w) {
-  AjMini m = ajMiniPadrao(), o[HOME_LAYOUT_N];
-  static const char *const N[HOME_LAYOUT_N] = { "Moderna", "Padrão", "Dinâmica", "Imersiva" };
-  static const char *const N2[HOME_LAYOUT_N] = { "Moderna", "Padrão", "Dinâmica", "Imersiva" };   // v2: o nome inteiro esta no titulo
+  AjMini m = ajMiniPadrao(), o[3];
+  static const char *const N[3] = { "Moderna", "Padrão", "Dinâmica" };
+  static const char *const N2[3] = { "Moderna", "Padrão", "Dinâmica" };   // v2: o nome inteiro esta no titulo
   int i, sel = valor[AJ_HOME_LAYOUT];
   if (ajEditandoLinha(AJ_HOME_LAYOUT)) sel = uxPendente;
   m.lay = sel;
   ajMiniHome(m, x, y, w);
-  for (i = 0; i < HOME_LAYOUT_N; i++) { o[i] = m; o[i].lay = i; }
-  return w * 9.0f / 16.0f + 16.0f + ajOpcoesMini(o, ajMiniRotuloV2 ? N2 : N, HOME_LAYOUT_N, sel, x, y + w * 9.0f / 16.0f + 16.0f, w);
+  for (i = 0; i < 3; i++) { o[i] = m; o[i].lay = i; }
+  return w * 9.0f / 16.0f + 16.0f + ajOpcoesMini(o, ajMiniRotuloV2 ? N2 : N, 3, sel, x, y + w * 9.0f / 16.0f + 16.0f, w);
 }
 static float ajPreviaHome(float x, float y, float w) {
   ajMiniHome(ajMiniPadrao(), x, y, w);

@@ -329,12 +329,9 @@ int   ajustes_hero_sinopse_grande(void); // Normal (22/30) ou Grande (24/32)
 int   ajustes_hero_cheio(void);         // modernHeroFullScreenBackdropEnabled
 // LAYOUT DA HOME (local): a estrutura da tela inicial. Moderna e o desenho de
 // sempre; Padrao contem o destaque num banner; Dinamica e o estilo Apple TV.
-// Imersiva (experimental): so a fileira em cena sobre a arte do titulo em foco
-// (home_imersiva.inc); a geometria por baixo e a da Moderna (layoutHome).
 enum { HOME_LAYOUT_MODERNA = 0, HOME_LAYOUT_PADRAO = 1, HOME_LAYOUT_DINAMICA = 2,
-       HOME_LAYOUT_IMERSIVA = 3, HOME_LAYOUT_N = 4 };
-int   ajustes_home_layout(void);     // IMERSIVA le como MODERNA
-int   ajustes_home_imersiva(void);   // 1 = layout Imersiva (experimental)
+       HOME_LAYOUT_N = 3 };
+int   ajustes_home_layout(void);
 int   ajustes_hero_fonte(void);         // origem local da arte do hero (ARTEHERO_*)
 // 1 = destaque/detalhe com foto diferente da do card (regra em artehero.h).
 int   ajustes_hero_arte_diferente(void);

@@ -443,47 +443,6 @@ int main(int argc, char **argv) {
   return rc;
 #endif
 
-  // NV_IMERSIVA=1: layout Imersiva (experimental). Palco assentado, troca de
-  // fileira a 50%, cartaz aberto no lugar e o mesmo no nivel de GPU baixo.
-  if (getenv("NV_IMERSIVA")) {
-    ajusta(HOME_LAYOUT_IMERSIVA, 0);
-    assert(ajustes_home_imersiva() && ajustes_home_layout() == HOME_LAYOUT_MODERNA);
-    for (i = 0; i < 14; i++) tecla(SDLK_UP);
-    quadros(90, NULL);
-    printf("[imersiva] destaque: cromo=%.2f\n", home_cromo_alfa());
-    assert(home_cromo_alfa() > 0.99f);   // no destaque o menu e o relogio voltam
-    // Continuar, Amigos, Popular: a primeira fileira de cartazes com arte.
-    tecla(SDLK_DOWN); tecla(SDLK_DOWN); tecla(SDLK_DOWN);
-    tecla(SDLK_RIGHT); tecla(SDLK_RIGHT);
-    quadros(120, NULL);
-    assert(home_cromo_alfa() < 0.01f);   // nas fileiras: nada de UI
-    snprintf(bmp, sizeof bmp, "%s-imersiva-1-stage.bmp", saida);
-    quadros(1, bmp);
-    tecla(SDLK_DOWN);
-    quadros(14, NULL);   // 15 quadros de 1/60 s = ~250 ms dos 480 ms da troca
-    snprintf(bmp, sizeof bmp, "%s-imersiva-2-transition-50.bmp", saida);
-    quadros(1, bmp);
-    quadros(90, NULL);
-    tecla(SDLK_RETURN);
-    assert(!home_pediu_abrir());   // o primeiro OK abre no lugar, nao a pagina
-    quadros(60, NULL);
-    snprintf(bmp, sizeof bmp, "%s-imersiva-3-open.bmp", saida);
-    quadros(1, bmp);
-    gfx_definir_efeitos_leves(1);
-    quadros(30, NULL);
-    snprintf(bmp, sizeof bmp, "%s-imersiva-4-open-low.bmp", saida);
-    quadros(1, bmp);
-    printf("[imersiva] baixo: fill=%.2f rects=%d\n", fillVisUlt, rectUlt);
-    tecla(SDLK_BACKSPACE);
-    quadros(60, NULL);
-    tecla(SDLK_RETURN); quadros(40, NULL);
-    tecla(SDLK_RETURN);
-    assert(home_pediu_abrir());   // aberto, o OK segue para a pagina
-    tex_encerrar(); txt_encerrar();
-    SDL_GL_DeleteContext(gl); SDL_DestroyWindow(janela); SDL_Quit();
-    return 0;
-  }
-
   // Focused Stage/Split comparison, using the production renderer and local art.
   if (getenv("NV_DINPALCO")) {
     const char *l;
