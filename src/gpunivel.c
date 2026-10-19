@@ -13,6 +13,7 @@
 #include "dados.h"
 #include "perfiltv.h"
 #include "layout.h"
+#include "ajustes.h"
 #include "gl_compat.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -453,6 +454,19 @@ static int upscaleNitido(void) {
          telaW > intW && telaH > intH;
 }
 
+static const char* upscaleAlgoNome(void) {
+  int algo = ajustes_ampliacao_algo();
+  if (algo == 0) { // Automatico
+    if (!upscaleNitido()) return "bilinear";
+    return (telaW % intW || telaH % intH) ? "sgsr" : "sharp-bilinear";
+  }
+  if (algo == 1) return "sgsr";
+  if (algo == 2) return "fsr1";
+  if (algo == 3) return "lanczos";
+  if (algo == 4) return "bilinear";
+  return "bilinear";
+}
+
 static int intPreparar(void) {
   GLint ant = 0;
   GLenum st;
@@ -484,8 +498,7 @@ static int intPreparar(void) {
     return 0;
   }
   printf("[gpu-nivel] ampliar=%s upscale=%s %dx%d -> %dx%d\n",
-         ampliarApp ? "app" : "tv", !upscaleNitido() ? "bilinear" :
-         telaW % intW || telaH % intH ? "sgsr" : "sharp-bilinear",
+         ampliarApp ? "app" : "tv", upscaleAlgoNome(),
          intW, intH, telaW, telaH);
   fflush(stdout);
   return 1;

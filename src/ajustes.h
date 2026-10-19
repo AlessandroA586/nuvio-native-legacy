@@ -503,6 +503,8 @@ int   ajustes_1080p(void);
 int   ajustes_720p(void);
 // Device-local output choice; applied after restarting, only on a 4K panel.
 int   ajustes_ampliar_app(void);
+// Device-local upscaling algorithm (0=auto, 1=SGSR, 2=FSR1, 3=Lanczos, 4=bilinear); applied on next app start.
+int   ajustes_ampliacao_algo(void);
 // Actual drawable granted by the platform; controls the output-limit hint.
 void  ajustes_ui_saida(int w, int h);
 // Ilha do relogio (ilha.h). _ligado: 0 = sem pilula em repouso (os avisos

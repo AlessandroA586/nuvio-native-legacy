@@ -678,6 +678,7 @@ typedef enum {
   AJ_AUDIO_OFFSET,     // #578: device-local converted audio offset, append-only
   AJ_XTREAM_CONEXOES,  // Stored with this IPTV account, not global settings.
   AJ_AMPLIAR_UI,      // Device-local output scaler, append-only; App (4K) by default.
+  AJ_AMPLIACAO_ALGO,  // Device-local upscaling algorithm, append-only; automatic by default.
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -958,6 +959,7 @@ static const char *V_FONTE_UI[]  = { "Inter", "LG Display", "Droid Sans",
 // Order = RES_* (resolucao.h). The old order lives only in res_migrar.
 static const char *V_RESOLUCAO[] = { "Automática", "1080p", "4K (experimental)", "720p (leve)" };
 static const char *V_AMPLIAR_UI[] = { "Pela TV", "Pelo app (4K)" };
+static const char *V_AMPLIACAO_ALGO[] = { "Automático", "SGSR", "FSR 1 (EASU+RCAS)", "Lanczos", "Bilinear" };
 
 static const char *V_LEG_COR[] = { "Branco", "Amarelo", "Verde", "Azul", "Vermelho", "Preto" };
 static const char *V_LEG_COR_BORDA[] = { "Preto", "Branco", "Amarelo", "Verde", "Azul", "Vermelho" };
@@ -1748,6 +1750,7 @@ static const Opcao OPCOES[AJ_N] = {
   NUM("Ajuste do áudio (ms)", -AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_STEP_MS, " ms"),
   ESC("Conta com limite de conexões", V_CONEXOES, 3),
   ESC("Ampliar interface", V_AMPLIAR_UI, 2),
+  ESC("Algoritmo de ampliação", V_AMPLIACAO_ALGO, 5),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -2057,6 +2060,7 @@ static const char *CHAVE[] = {
   "audioOffsetMsLocal",
   "-xtreamConexoes",
   "ampliarUiLocal",
+  "ampliarAlgoLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2574,6 +2578,7 @@ static int perfilSeguro;
 static int saidaLimitada;
 void ajustes_ui_saida(int w, int h) { saidaLimitada = w > 0 && h > 0 && (w < 3840 || h < 2160); }
 int ajustes_ampliar_app(void) { return painel4k() && valor[AJ_AMPLIAR_UI] == 1 && !SEGURO; }
+int ajustes_ampliacao_algo(void)    { return valor[AJ_AMPLIACAO_ALGO]; }
 int ajustes_1080p(void)               { return valor[AJ_RESOLUCAO] == RES_1080 && !SEGURO; }
 int ajustes_4k(void)                  { return valor[AJ_RESOLUCAO] == RES_4K && !SEGURO; }
 int ajustes_res_auto(void)            { return valor[AJ_RESOLUCAO] == RES_AUTO && !SEGURO; }
@@ -5584,6 +5589,7 @@ static int somenteDesteAparelho(int op) {
     // A TV da sala e a do quarto nao tem a mesma memoria nem a mesma tela, e a
     // conta e uma so.
     case AJ_AMPLIAR_UI:    /* output workload belongs to this device */
+    case AJ_AMPLIACAO_ALGO: /* upscaling algorithm: depends on GPU capabilities */
     case AJ_RESOLUCAO:      /* pedir superficie 4K: depende do painel */
     case AJ_TEX_MB:         /* teto de memoria de imagem: depende da RAM */
     case AJ_QUALIDADE_IMG:  /* resolucao da arte decodificada: idem */
@@ -6892,6 +6898,7 @@ static int visivel(int i) {
     if (op == AJ_FUNDO_DIN_COR && ajustes_fundo_din() != 1) return 0;
     if ((op == AJ_PERFIL_PESQ || op == AJ_PERFIL_EDITAR) && !recomenda_ativo()) return 0;
     if (op == AJ_BUSCA_CINEMETA && valor[op] == 0 && !cinemetaInstalado()) return 0;
+    if (op == AJ_AMPLIACAO_ALGO && !gpun_upscale_suportado()) return 0;
     if (uxAvancada(op) && !lig(AJ_AVANCADAS) && !maisAberto[secDoItem[i]]) return 0;
   }
   // A linha "Mais opcoes" some com a pilula Avancadas ligada (ja esta tudo a vista).
@@ -7347,6 +7354,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ESPACO_TITULOS: return "O espaço horizontal entre os cartazes de uma fileira da Home.";
     case AJ_AMPLIAR_UI: return "Pelo app (4K): usa mais GPU. Reinicie o app depois de mudar.";
     case AJ_AUDIO_OFFSET: return "Positivo atrasa; negativo adianta. Só áudio convertido, a partir do próximo vídeo.";
+    case AJ_AMPLIACAO_ALGO: return "Automatico: SGSR ou Sharp Bilinear. SGSR: alinha aresta em qualidade. FSR 1: AMD FidelityFX. Lanczos: cubico de alta qualidade. Bilinear: mais rapido. Reinicie apos mudar.";
     case AJ_TAM_MIN: return "Na escolha automática, fontes menores que este tamanho ficam para o fim da fila. Se for maior que o tamanho máximo, o mínimo é ignorado. Só vale para arquivos com tamanho conhecido; se só houver fontes fora da faixa, a melhor delas ainda toca.";
 #ifdef NV_TPK
     case AJ_DTS_AC3: return "Esta TV não toca DTS nem TrueHD: o app converte o som na hora. 5.1 (Dolby Digital) mantém o surround para barra de som e receiver; 7.1, Atmos e DTS:X viram 5.1, sem os objetos. Estéreo (AAC) serve qualquer TV. Desligado: esses vídeos tocam sem som, como antes. Vale a partir do próximo vídeo.";
@@ -9965,7 +9973,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_NT_METAUSER: case AJ_NT_TRAKT: case AJ_NT_TMDB: case AJ_NT_LETTER:
     case AJ_NT_MAL: case AJ_NT_EBERT: case AJ_NT_SCORE: case AJ_NT_ORDEM: case AJ_NT_EP:
       return AJPV_MDB;
-    case AJ_AMPLIAR_UI: case AJ_RESOLUCAO: case AJ_GPU_EFEITOS:
+    case AJ_AMPLIAR_UI: case AJ_AMPLIACAO_ALGO: case AJ_RESOLUCAO: case AJ_GPU_EFEITOS:
     case AJ_QUALIDADE_IMG: case AJ_TEX_MB:
     case AJ_ESPACO:
       return AJPV_TV;

@@ -668,6 +668,7 @@
   { "Amostra concluída", "Sample complete" },
   { "Amplia a imagem do trailer e libera os modos de recorte e zoom da proporção no player; em algumas TVs Samsung pode deixar a tela preta ou mostrar a tela inicial da TV.", "Zooms the trailer image and unlocks the crop and zoom aspect modes in the player; on some Samsung TVs the screen may go black or the TV home screen may appear." },
   { "Ampliar interface", "Scale interface" },
+  { "Algoritmo de ampliação", "Upscaling algorithm" },
   { "Ana e Bruno viram · no pôster e na linha do hero", "Ana and Bruno watched it · on the poster and in the hero line" },
   { "Analisando…", "Analysing…" },
   { "Andar de lado numa fileira não espera a animação terminar. Serve para controle que repete rápido.", "Moving sideways in a row no longer waits for the animation. Useful for remotes that repeat quickly." },
