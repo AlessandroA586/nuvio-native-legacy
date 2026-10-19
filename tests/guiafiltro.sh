@@ -11,6 +11,35 @@ sources=(tests/guiafiltro_loader.c src/ltv.c src/js.c src/idcanal.c src/dados.c 
   src/fontecache.c src/cachearte.c src/cachedisco.c src/xmltv.c)
 common=(-Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -O1 -g -Wno-macro-redefined -lz)
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST -DGUIAFILTRO_RESET_TEST -o "$work/loader"
+git show e461614e5:src/guia.c > "$work/source-inventory-review.c"
+cc "${flags[@]}" "${sources[@]}" "${common[@]}" \
+  "-DGUIACACHE_SOURCE=\"$work/source-inventory-review.c\"" -o "$work/source-inventory-review"
+for regression in source-visibility inventory-bound; do
+  rc=0
+  GUIAFILTRO_CASE="$regression" NUVIO_DADOS="$work/review-$regression-data" \
+    "$work/source-inventory-review" "$work/review-$regression-data" > "$work/review-$regression.log" 2>&1 || rc=$?
+  if [ "$regression" = source-visibility ]; then expected='Assertion failed: (fN == 2)'
+  else expected='Assertion failed: (sNInventario <= 4000)'; fi
+  if [ "$rc" != 134 ] || ! rg -q -F "$expected" "$work/review-$regression.log"; then
+    tail -n 3 "$work/review-$regression.log"
+    exit 1
+  fi
+  printf 'PASS: reviewed revision fails %s (rc=134)\n' "$regression"
+done
+if [ "${1:-}" = source-inventory ]; then
+  failed=0
+  for regression in source-visibility inventory-bound; do
+    rc=0
+    GUIAFILTRO_CASE="$regression" NUVIO_DADOS="$work/$regression-data" \
+      "$work/loader" "$work/$regression-data" || rc=$?
+    if [ "$rc" != 0 ]; then failed=1; fi
+  done
+  exit "$failed"
+fi
+for regression in source-visibility inventory-bound; do
+  GUIAFILTRO_CASE="$regression" NUVIO_DADOS="$work/$regression-data" \
+    "$work/loader" "$work/$regression-data"
+done
 if [ "${1:-}" = default-loading ]; then
   failed=0
   for regression in cap default-inventory; do
@@ -71,7 +100,7 @@ sibling_sources=("${sources[@]}")
 for i in "${!sibling_sources[@]}"; do
   if [ "${sibling_sources[$i]}" = src/guiafiltro.c ]; then sibling_sources[$i]="$work/sibling-review.c"; fi
 done
-cc "${flags[@]}" "${sibling_sources[@]}" "${common[@]}" -o "$work/sibling-review"
+cc "${flags[@]}" "${sibling_sources[@]}" "${common[@]}" -DGUIAFILTRO_LEGACY_RULES -o "$work/sibling-review"
 for version in sibling-review loader; do
   rc=0
   GUIAFILTRO_CASE=sibling-visibility NUVIO_DADOS="$work/$version-data" \
@@ -105,7 +134,7 @@ latest_sources=("${sources[@]}")
 for i in "${!latest_sources[@]}"; do
   if [ "${latest_sources[$i]}" = src/guiafiltro.c ]; then latest_sources[$i]="$work/latest-rules.c"; fi
 done
-cc "${flags[@]}" "${latest_sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST \
+cc "${flags[@]}" "${latest_sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST -DGUIAFILTRO_LEGACY_RULES \
   "-DGUIACACHE_SOURCE=\"$work/latest-review.c\"" -o "$work/latest-review"
 git show f11f3a8af:src/guia.c > "$work/overflow-review.c"
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" \

@@ -1,6 +1,16 @@
 // Exercise the real staging, Xtream/M3U callbacks, cache and fallback paths.
 #include "guiafiltro.h"
 #include <errno.h>
+#ifdef GUIAFILTRO_LEGACY_RULES
+// Historical rule implementations predate source-qualified entry points.
+int guiafiltro_canal_oculto_fonte(const GuiaFiltro *f, const char *fonte, const char *id) {
+  (void)fonte; return guiafiltro_canal_oculto(f, id);
+}
+int guiafiltro_canal_alternar_fonte(GuiaFiltro *f, const char *fonte, const char *id,
+                                   const char *nome, const char *cat) {
+  (void)fonte; return guiafiltro_canal_alternar(f, id, nome, cat);
+}
+#endif
 static char *filtroResposta(const char *url);
 #define GUIAFILTRO_LOADER
 #define main cache_test_main
@@ -321,6 +331,92 @@ static void siblingVisibilityRegression(void) {
           begin(GF_TODAS, 3);
           assert(cacheFonteLer("xt") == 3);
         }
+}
+static void sourceVisibilityRegression(void) {
+  nAddons = 2; bases[0] = "https://a.invalid"; bases[1] = "https://b.invalid";
+  for (int mode = GF_TODAS; mode < GF_MODOS; mode++) {
+    begin(mode, 10);
+    int a = sFonte(LTV_ADDON, "https://a.invalid", "A", "https://a.invalid");
+    int b = sFonte(LTV_ADDON, "https://b.invalid", "B", "https://b.invalid");
+    channel(a, "News", "tv:news", "News 4K");
+    channel(b, "News", "tv:news", "News 4K");
+    adotarStaging(); cacheGravar();
+    filtrosAbrir(); fNivel = 1; strcpy(fCatNome, "News"); fMontarCanais("News");
+    assert(fN == 2);
+    paFoco = 0; filtrosOk();
+    assert(fIt[0].oculto && !fIt[1].oculto);
+    empacotar();
+    assert(nCanais == 1 && !strcmp(canais[0].base, "https://b.invalid"));
+    fltPerfil = -1; fltGarantir();
+    for (int offline = 0; offline < 2; offline++) {
+      stagingZerar(); sTeto = 10; sFltLive = fltLive;
+      if (offline) {
+        char key[LTV_CHAVE];
+        ltv_chave_fonte(LTV_ADDON, "https://a.invalid", key, sizeof key); cacheFonteLer(key);
+        ltv_chave_fonte(LTV_ADDON, "https://b.invalid", key, sizeof key); cacheFonteLer(key);
+      } else {
+        a = sFonte(LTV_ADDON, "https://a.invalid", "A", "https://a.invalid");
+        b = sFonte(LTV_ADDON, "https://b.invalid", "B", "https://b.invalid");
+        channel(a, "News", "tv:news", "News 4K");
+        channel(b, "News", "tv:news", "News 4K");
+      }
+      adotarStaging();
+      assert(nCanais == 1 && !strcmp(canais[0].base, "https://b.invalid"));
+      fMontarCanais("News"); assert(fN == 2);
+    }
+  }
+}
+static void inventoryBoundRegression(void) {
+#ifdef G_INVENTARIO_POR_CAT
+  for (int pass = 0; pass < 2; pass++) {
+    int fl = begin(GF_TODAS, 900);
+    for (int cat = 0; cat < 1000; cat++) {
+      char group[32]; snprintf(group, sizeof group, "Category %d", cat);
+      for (int i = 0; i < 64; i++) {
+        char id[40]; snprintf(id, sizeof id, "xtream:%d:%d", cat, i);
+        channel(fl, group, id, "News HD");
+      }
+    }
+    printf("inventory: %d entries, %zu bytes\n", sNInventario, (size_t)sNInventario * sizeof *sInventario);
+    fflush(stdout);
+    assert(sNInventario <= 4000);
+    assert((size_t)sNInventario * sizeof *sInventario <= 4 * 1024 * 1024);
+    adotarStaging();
+    assert(!sInventario && !sNInventario && nInventario <= 4000);
+    filtrosAbrir(); assert(fN == 1000);
+    fMontarCanais("Category 0"); assert(fN > 0);
+#ifdef G_INVENTARIO_MAX
+    // Callbacks keep late category counts but stop constructing channel controls.
+    fl = begin(GF_TODAS, 900);
+    M3uCtx mctx = {0}; mctx.fl = fl;
+    for (int cat = 0; cat < 1000; cat++) {
+      char group[32]; snprintf(group, sizeof group, "Category %d", cat);
+      for (int i = 0; i < 64; i++) {
+        char name[40]; snprintf(name, sizeof name, "Station %d %d HD", cat, i);
+        LtvM3uCanal m = {0};
+        m.nome = name; m.grupo = group; m.tvgId = ""; m3uCanal(&m, &mctx);
+      }
+    }
+    assert(sNInventario == 4000 && sNCanais == 900 && sLtvF[fl].ngi == 1000);
+    assert(sLtvF[fl].total == 64000);
+    adotarStaging();
+    filtrosAbrir(); assert(fN == 1000);
+    fl = begin(GF_TODAS, 900);
+    XtCtx x = {0}; x.fl = fl;
+    for (int cat = 0; cat < 1000; cat++) {
+      char group[32]; snprintf(group, sizeof group, "Category %d", cat);
+      xtCat(group, cat, 64, &x);
+      for (int i = 0; i < 64; i++) {
+        char id[40]; snprintf(id, sizeof id, "xtream:%d:%d", cat, i);
+        XtreamItem it = {0}; it.id = id; it.nome = "News HD"; it.categoria = group; it.catOrdem = cat;
+        xtCanal(&it, &x);
+      }
+    }
+    assert(sNInventario == 4000 && sNCanais == 900 && sLtvF[fl].ngi == 1000);
+    free(x.giDe); adotarStaging();
+#endif
+  }
+#endif
 }
 static void categoriesRegression(void) {
   int fl = begin(GF_PREFERIR_4K, 1);
@@ -682,6 +778,8 @@ int main(int argc, char **argv) {
     else if (!strcmp(regression, "visibility")) visibilityRegression();
     else if (!strcmp(regression, "variants")) variantsRegression();
     else if (!strcmp(regression, "sibling-visibility")) siblingVisibilityRegression();
+    else if (!strcmp(regression, "source-visibility")) sourceVisibilityRegression();
+    else if (!strcmp(regression, "inventory-bound")) inventoryBoundRegression();
     else if (!strcmp(regression, "categories")) categoriesRegression();
     else if (!strcmp(regression, "inventory")) inventoryRegression();
     else if (!strcmp(regression, "late-inventory")) lateInventoryRegression();

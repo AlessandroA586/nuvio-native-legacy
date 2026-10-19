@@ -5,7 +5,7 @@
 // livetv_regras.h dentro da mesma fonte, inclusive entre grupos. Categoria e canal
 // escondidos ficam por perfil, como os add-ons escondidos (guiaaddons.h).
 //
-// Channel visibility uses exact IDs in every quality mode; names and categories
+// Channel visibility uses source keys plus exact IDs in every quality mode; names and categories
 // stored with hidden IDs are panel metadata, never sibling visibility rules.
 //
 // Modulo sem rede nem tela: o guia chama guiafiltro_avaliar ANTES do teto de
@@ -19,16 +19,18 @@ enum { GF_TODAS = 0, GF_SO_4K, GF_PREFERIR_4K, GF_MODOS };
 
 #define GF_NOME 256
 #define GF_ID 256
+#define GF_FONTE 24
 #define GF_CATS_MAX 256
 #define GF_CANAIS_MAX 512
 
 typedef struct {
   int modo;
   int nCat;  char cat[GF_CATS_MAX][GF_NOME];
-  int nCan;  struct { char id[GF_ID], nome[GF_NOME], cat[GF_NOME]; } can[GF_CANAIS_MAX];
+  int nCan;  struct { char id[GF_ID], nome[GF_NOME], cat[GF_NOME], fonte[GF_FONTE]; int visivel; } can[GF_CANAIS_MAX];
 } GuiaFiltro;
 
-// Uma linha por item: "Q<modo>", "C<categoria>", "H<id>\t<nome>\t<categoria>".
+// Lines: Q<mode>, C<category>, S<source>\t<id>\t<hidden>\t<name>\t<category>.
+// Legacy H<id>\t<name>\t<category> migrates to wildcard source "*" on save.
 // Linha vazia, repetida, desconhecida ou alem do teto e ignorada.
 void   guiafiltro_ler(GuiaFiltro *f, const char *texto);
 size_t guiafiltro_texto(const GuiaFiltro *f, char *dst, size_t n);
@@ -38,6 +40,9 @@ int    guiafiltro_cat_oculta(const GuiaFiltro *f, const char *cat);
 int    guiafiltro_cat_alternar(GuiaFiltro *f, const char *cat);
 int    guiafiltro_canal_oculto(const GuiaFiltro *f, const char *id);
 int    guiafiltro_canal_alternar(GuiaFiltro *f, const char *id, const char *nome, const char *cat);
+// Source-qualified rules override legacy bare IDs; explicit show survives migration.
+int    guiafiltro_canal_oculto_fonte(const GuiaFiltro *f, const char *fonte, const char *id);
+int    guiafiltro_canal_alternar_fonte(GuiaFiltro *f, const char *fonte, const char *id, const char *nome, const char *cat);
 // "guia-filtro-p<perfil>.txt" — por perfil, como o cache do guia.
 const char *guiafiltro_arquivo(int perfil, char *dst, size_t n);
 

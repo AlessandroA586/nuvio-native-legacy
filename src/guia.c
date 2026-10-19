@@ -333,9 +333,11 @@ static int sTeto;            // visible channel limit
 #define G_RAW_BYTES_MAX (2 * 1024 * 1024)
 static size_t sCacheBytes;
 #define G_PF_CANAIS_MAX 4000
-// Reserve bounded raw controls for every source/category, even after visible caps.
+// Global and per-category limits; category metadata and disk lookup stay available.
 #define G_INVENTARIO_POR_CAT 64
-typedef struct { char id[GF_ID], nome[GF_NOME], cat[GF_NOME]; } GInventario;
+#define G_INVENTARIO_MAX 4000
+#define G_INVENTARIO_BYTES_MAX (4 * 1024 * 1024)
+typedef struct { char id[GF_ID], nome[GF_NOME], cat[GF_NOME], fonte[LTV_CHAVE]; } GInventario;
 static GInventario *inventario, *sInventario;
 static int nInventario, sNInventario;
 
@@ -521,16 +523,22 @@ static int sCanalAdd(int f, const GCru *c) {
     if (gi >= 0 && sLtvF[f].gi[gi].n > 0) sLtvF[f].gi[gi].n--;
   }
   int gi = sGrupoInfo(f, grupo, 0);
-  if (gi >= 0 && sLtvF[f].gi[gi].nInventario < G_INVENTARIO_POR_CAT) {
+  if (sNInventario >= G_INVENTARIO_MAX && sCotaCompleta()) { sLtvF[f].cortada = 1; return 0; }
+  if (c->id && c->id[0] && c->nome && c->nome[0] &&
+      sNInventario < G_INVENTARIO_MAX &&
+      (size_t)(sNInventario + G_INVENTARIO_POR_CAT) * sizeof *sInventario <= G_INVENTARIO_BYTES_MAX &&
+      gi >= 0 && sLtvF[f].gi[gi].nInventario < G_INVENTARIO_POR_CAT) {
     GInventario *v = sInventario;
     if (!(sNInventario % G_INVENTARIO_POR_CAT))
-      v = realloc(sInventario, sizeof *v * (size_t)(sNInventario + G_INVENTARIO_POR_CAT));
+      v = realloc(sInventario, sizeof *v * (size_t)(sNInventario + G_INVENTARIO_POR_CAT > G_INVENTARIO_MAX ?
+                  G_INVENTARIO_MAX : sNInventario + G_INVENTARIO_POR_CAT));
     if (v) {
       sInventario = v;
       v = &sInventario[sNInventario++];
       snprintf(v->id, sizeof v->id, "%s", c->id);
       snprintf(v->nome, sizeof v->nome, "%s", c->nome);
       snprintf(v->cat, sizeof v->cat, "%s", grupo);
+      snprintf(v->fonte, sizeof v->fonte, "%s", sLtvF[f].chave);
       sLtvF[f].gi[gi].nInventario++;
     }
   }
@@ -538,6 +546,7 @@ static int sCanalAdd(int f, const GCru *c) {
       (sFltLive.modo != GF_TODAS || sFltLive.nCat || sFltLive.nCan)) cacheCru(f, original, c);
   if (ns && !pendente && !nomeNaLista(grupo, sel, ns)) return 0;
   // Skip known invisible entries without spending the bounded candidate budget.
+  if (guiafiltro_canal_oculto_fonte(&sFltLive, sLtvF[f].chave, c->id)) { sFiltrados++; return 0; }
   int velho = -1;
   int quem = guiafiltro_avaliar(&sFltLive, &sDup, f, grupo, c->id, c->nome, sLtvF[f].nome, &velho);
   if (quem == GF_FORA) { sFiltrados++; return 0; }
@@ -1425,6 +1434,7 @@ static int xtCanal(const XtreamItem *it, void *u) {
       gi = inferred;
     }
   }
+  if (sNInventario >= G_INVENTARIO_MAX && sCotaCompleta()) { F->cortada = 1; return 1; }
   c.numero = it->num;
   c.desc = c.tvgNome = c.url = c.ua = c.ref = "";
   sCanalAdd(x->fl, &c);
@@ -1458,6 +1468,7 @@ static int m3uCanal(const LtvM3uCanal *m, void *u) {
   gi = sGrupoInfo(x->fl, g, 1);
   sLtvF[x->fl].total++;
   if (x->nsel && !(semCat && ajustes_livetv_sugerir()) && !nomeNaLista(g, x->sel, x->nsel)) { if (gi >= 0) sLtvF[x->fl].gi[gi].entra = 0; return 1; }
+  if (sNInventario >= G_INVENTARIO_MAX && sCotaCompleta()) { sLtvF[x->fl].cortada = 1; return 1; }
   // ID ESTAVEL sem a URL (que pode ter token que muda e credencial): tvg-id,
   // nome e grupo. Repetido exato e o mesmo canal duas vezes na lista.
   snprintf(chave, sizeof chave, "%s|%s|%s", m->tvgId, m->nome, g);
@@ -2030,7 +2041,7 @@ static void empacotar(void) {
   // Apply current visibility rules even when an offline refresh keeps this list.
   for (i = 0, w = 0; i < nCanais; i++)
     if ((!canais[i].base[0] || (baseLigada(canais[i].base) && !baseOculta(canais[i].base))) &&
-        !guiafiltro_canal_oculto(&fltLive, canais[i].id) &&
+        !guiafiltro_canal_oculto_fonte(&fltLive, ltvF[canais[i].fonte].chave, canais[i].id) &&
         !(canais[i].cat >= 0 && guiafiltro_cat_oculta(&fltLive, cats[canais[i].cat].nome)))
       canais[w++] = canais[i];
   nCanais = w;
@@ -2100,7 +2111,7 @@ static void selecionarSecoes(void) {
     int ns = sGruposEscolhidos(g->fonte, sel, 256);
     if (ns && !nomeNaLista(sCats[g->cat].nome, sel, ns)) continue;
     if (guiafiltro_cat_oculta(&sFltLive, sCats[g->cat].nome) ||
-        guiafiltro_canal_oculto(&sFltLive, g->id)) { sFiltrados++; continue; }
+        guiafiltro_canal_oculto_fonte(&sFltLive, sLtvF[g->fonte].chave, g->id)) { sFiltrados++; continue; }
     sCanais[w++] = *g;
   }
   guiafiltro_dup_zerar(&sDup);
@@ -2526,7 +2537,7 @@ static int   painel, paFoco, paMexeu;
 // Mesma gaveta, mesmo foco/rolagem/toque: so a lista de itens muda.
 static int   paModo;
 static Uint32 paOkTick;
-typedef struct { char id[GF_ID], nome[GF_NOME]; int oculto, n; } GFItem;
+typedef struct { char id[GF_ID], nome[GF_NOME], fonte[LTV_CHAVE]; int oculto, n; } GFItem;
 static GFItem *fIt;            // categorias (nivel 0) ou canais da categoria (nivel 1)
 static int   fN, fNivel, fSujo, fFocoCat;
 static char  fCatNome[GF_NOME];
@@ -2665,7 +2676,7 @@ int guia_variantes(const char *id, GuiaVariante *out, int max) {
   if (!base[0]) return n;
   for (i = 0; i < nCanais && n < max; i++) {
     if (&canais[i] == c || canais[i].fonte != c->fonte ||
-        guiafiltro_canal_oculto(&fltLive, canais[i].id) || !xtream_e_id(canais[i].id)) continue;
+        guiafiltro_canal_oculto_fonte(&fltLive, ltvF[canais[i].fonte].chave, canais[i].id) || !xtream_e_id(canais[i].id)) continue;
     nv_nome_base(canais[i].nome, outra, sizeof outra);
     if (strcmp(base, outra)) continue;
     snprintf(out[n].id, sizeof out[n].id, "%s", canais[i].id);
@@ -2676,7 +2687,7 @@ int guia_variantes(const char *id, GuiaVariante *out, int max) {
   // Reservas que o filtro "Preferir 4K" escondeu, da maior para a menor.
   for (i = 0, k = n; i < nAlts; i++) {
     int altura;
-    if (strcmp(alts[i].dono, c->id) || guiafiltro_canal_oculto(&fltLive, alts[i].id)) continue;
+    if (strcmp(alts[i].dono, c->id) || guiafiltro_canal_oculto_fonte(&fltLive, ltvF[c->fonte].chave, alts[i].id)) continue;
     altura = nv_res_do_texto(alts[i].nome);
     // Keep the best reserves while scanning, before applying the caller's cap.
     for (j = k; j < n && out[j].altura >= altura; j++) {}
@@ -3347,10 +3358,11 @@ static void fMontarCats(void) {
     fIt[k].oculto = 1;
   }
 }
-static void fCanalAdd(const char *id, const char *nome) {
+static void fCanalAdd(const char *fonte, const char *id, const char *nome) {
   int i;
-  for (i = 0; i < fN; i++) if (!strcmp(fIt[i].id, id)) return;
+  for (i = 0; i < fN; i++) if (!strcmp(fIt[i].fonte, fonte) && !strcmp(fIt[i].id, id)) return;
   if (fN >= G_PF_CANAIS_MAX) return;
+  snprintf(fIt[fN].fonte, sizeof fIt[fN].fonte, "%s", fonte);
   snprintf(fIt[fN].id, sizeof fIt[fN].id, "%s", id);
   snprintf(fIt[fN].nome, sizeof fIt[fN].nome, "%s", nome);
   fN++;
@@ -3384,7 +3396,7 @@ static void fCanaisCache(const char *chave, const char *cat) {
       if (field == 0 && fseek(fp, sizeof(long long), SEEK_CUR) != 0) goto fim;
     }
     if (header[1] >= 3 && fseek(fp, sizeof(long long), SEEK_CUR) != 0) goto fim;
-    if (!strcmp(grupo, cat)) fCanalAdd(id, canal);
+    if (!strcmp(grupo, cat)) fCanalAdd(chave, id, canal);
   }
 fim:
   fclose(fp);
@@ -3395,21 +3407,29 @@ static void fMontarCanais(const char *cat) {
   if (!fIt) return;
   // Reserve room for displayed channels even if this raw category filled the panel.
   for (i = 0; i < nInventario && fN < G_PF_CANAIS_MAX - nCanais; i++)
-    if (!strcmp(inventario[i].cat, cat)) fCanalAdd(inventario[i].id, inventario[i].nome);
+    if (!strcmp(inventario[i].cat, cat)) fCanalAdd(inventario[i].fonte, inventario[i].id, inventario[i].nome);
   for (i = 0; i < nCanais; i++)
     if (canais[i].cat >= 0 && !strcmp(cats[canais[i].cat].nome, cat))
-      fCanalAdd(canais[i].id, canais[i].nome);
+      fCanalAdd(ltvF[canais[i].fonte].chave, canais[i].id, canais[i].nome);
   for (i = 0; i < nLtvF && fN < G_PF_CANAIS_MAX; i++) fCanaisCache(ltvF[i].chave, cat);
   for (i = 0; i < fltLive.nCan; i++) {
     if (strcmp(fltLive.can[i].cat, cat)) continue;
-    for (k = 0; k < fN && strcmp(fIt[k].id, fltLive.can[i].id); k++) {}
-    if (k == fN) {
-      snprintf(fIt[k].id, sizeof fIt[k].id, "%s", fltLive.can[i].id);
-      snprintf(fIt[k].nome, sizeof fIt[k].nome, "%s", fltLive.can[i].nome);
-      fN++;
+    if (!fltLive.can[i].fonte[0]) {
+      for (k = 0; k < nLtvF; k++)
+        fCanalAdd(ltvF[k].chave, fltLive.can[i].id, fltLive.can[i].nome);
+    } else {
+      for (k = 0; k < fN; k++)
+        if (!strcmp(fIt[k].fonte, fltLive.can[i].fonte) && !strcmp(fIt[k].id, fltLive.can[i].id)) break;
+      if (k == fN) {
+        snprintf(fIt[k].fonte, sizeof fIt[k].fonte, "%s", fltLive.can[i].fonte);
+        snprintf(fIt[k].id, sizeof fIt[k].id, "%s", fltLive.can[i].id);
+        snprintf(fIt[k].nome, sizeof fIt[k].nome, "%s", fltLive.can[i].nome);
+        fN++;
+      }
     }
-    fIt[k].oculto = 1;
   }
+  for (i = 0; i < fN; i++)
+    fIt[i].oculto = guiafiltro_canal_oculto_fonte(&fltLive, fIt[i].fonte, fIt[i].id);
 }
 static void filtrosAbrir(void) {
 #ifdef NV_TOUCH_UI
@@ -3445,7 +3465,7 @@ static void filtrosOk(void) {
     return;
   }
   { GFItem *it = &fIt[fNivel ? paFoco : paFoco - 3];
-    if (fNivel) it->oculto = guiafiltro_canal_alternar(&fltLive, it->id, it->nome, fCatNome);
+    if (fNivel) it->oculto = guiafiltro_canal_alternar_fonte(&fltLive, it->fonte, it->id, it->nome, fCatNome);
     else it->oculto = guiafiltro_cat_alternar(&fltLive, it->nome);
     fSujo = 1; fltGravar(); }
 }

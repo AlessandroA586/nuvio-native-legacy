@@ -105,6 +105,26 @@ int main(void) {
   CHECA(g.modo == GF_TODAS && g.nCat == 1);
   // Arquivo por perfil.
   CHECA(!strcmp(guiafiltro_arquivo(2, nome, sizeof nome), "guia-filtro-p2.txt"));
+  // Legacy IDs apply to every source until an explicit source rule exists.
+  guiafiltro_ler(&g, "Htv:news\tNews 4K\tNews\n");
+  CHECA(guiafiltro_canal_oculto_fonte(&g, "a", "tv:news"));
+  CHECA(guiafiltro_canal_oculto_fonte(&g, "b", "tv:news"));
+  CHECA(!guiafiltro_canal_alternar_fonte(&g, "a", "tv:news", "News 4K", "News"));
+  CHECA(!guiafiltro_canal_oculto_fonte(&g, "a", "tv:news"));
+  CHECA(!guiafiltro_canal_oculto_fonte(&g, "b", "tv:news"));
+  CHECA(guiafiltro_canal_alternar_fonte(&g, "a", "tv:news", "News 4K", "News"));
+  CHECA(guiafiltro_texto(&g, buf, sizeof buf) > 0 && !strstr(buf, "Htv:news") && !strstr(buf, "S*\t"));
+  guiafiltro_ler(&g, buf);
+  CHECA(g.nCan == 1 && guiafiltro_canal_oculto_fonte(&g, "a", "tv:news"));
+  CHECA(!guiafiltro_canal_oculto_fonte(&g, "b", "tv:news"));
+  CHECA(!guiafiltro_canal_alternar_fonte(&g, "a", "tv:news", "News 4K", "News"));
+  CHECA(guiafiltro_texto(&g, buf, sizeof buf) > 0);
+  guiafiltro_ler(&g, buf);
+  CHECA(!guiafiltro_canal_oculto_fonte(&g, "a", "tv:news"));
+  guiafiltro_ler(&g, "Htv:news\tNews 4K\tNews\n");
+  CHECA(guiafiltro_texto(&g, buf, sizeof buf) > 0);
+  guiafiltro_ler(&g, buf);
+  CHECA(guiafiltro_canal_oculto_fonte(&g, "b", "tv:news"));
   // Teto das listas: nao estoura.
   memset(&g, 0, sizeof g);
   for (int i = 0; i < GF_CATS_MAX + 5; i++) { char c[32]; snprintf(c, sizeof c, "C%d", i); guiafiltro_cat_alternar(&g, c); }

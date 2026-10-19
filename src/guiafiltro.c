@@ -29,7 +29,7 @@ int guiafiltro_cat_alternar(GuiaFiltro *f, const char *cat) {
 }
 int guiafiltro_canal_oculto(const GuiaFiltro *f, const char *id) {
   if (!id) return 0;
-  for (int i = 0; i < f->nCan; i++) if (!strcmp(f->can[i].id, id)) return 1;
+  for (int i = 0; i < f->nCan; i++) if (!strcmp(f->can[i].id, id) && !f->can[i].visivel) return 1;
   return 0;
 }
 int guiafiltro_canal_alternar(GuiaFiltro *f, const char *id, const char *nome, const char *cat) {
@@ -41,11 +41,54 @@ int guiafiltro_canal_alternar(GuiaFiltro *f, const char *id, const char *nome, c
       return 0;
     }
   if (f->nCan >= GF_CANAIS_MAX) return 0;
+  memset(&f->can[f->nCan], 0, sizeof f->can[0]);
   copiar(f->can[f->nCan].id, GF_ID, id);
   copiar(f->can[f->nCan].nome, GF_NOME, nome);
   copiar(f->can[f->nCan].cat, GF_NOME, cat);
   f->nCan++;
   return 1;
+}
+int guiafiltro_canal_oculto_fonte(const GuiaFiltro *f, const char *fonte, const char *id) {
+  int legado = 0, qualificada = 0;
+  if (!id) return 0;
+  if (!fonte) fonte = "";
+  for (int i = 0; i < f->nCan; i++) {
+    if (strcmp(f->can[i].id, id)) continue;
+    if (!f->can[i].fonte[0]) legado = !f->can[i].visivel;
+    else {
+      qualificada = 1;
+      if (!strcmp(f->can[i].fonte, fonte)) return !f->can[i].visivel;
+    }
+  }
+  return qualificada ? 0 : legado;
+}
+int guiafiltro_canal_alternar_fonte(GuiaFiltro *f, const char *fonte, const char *id,
+                                   const char *nome, const char *cat) {
+  int i, oculto = guiafiltro_canal_oculto_fonte(f, fonte, id);
+  if (!fonte || !fonte[0] || !id || !id[0]) return oculto;
+  for (i = 0; i < f->nCan; i++)
+    if (!strcmp(f->can[i].fonte, fonte) && !strcmp(f->can[i].id, id)) break;
+  if (oculto) {
+    // Showing an ID also retires its legacy wildcard; other sources stay independent.
+    for (int k = 0; k < f->nCan; ) {
+      if (!strcmp(f->can[k].id, id) &&
+          (!f->can[k].fonte[0] || !strcmp(f->can[k].fonte, fonte))) {
+        memmove(&f->can[k], &f->can[k + 1], (size_t)(--f->nCan - k) * sizeof f->can[0]);
+      } else k++;
+    }
+    return 0;
+  }
+  if (i == f->nCan) {
+    if (i >= GF_CANAIS_MAX) return oculto;
+    memset(&f->can[i], 0, sizeof f->can[i]);
+    f->nCan++;
+  }
+  copiar(f->can[i].fonte, GF_FONTE, fonte);
+  copiar(f->can[i].id, GF_ID, id);
+  copiar(f->can[i].nome, GF_NOME, nome);
+  copiar(f->can[i].cat, GF_NOME, cat);
+  f->can[i].visivel = oculto;
+  return !oculto;
 }
 void guiafiltro_modo_definir(GuiaFiltro *f, int modo) { f->modo = modo > 0 && modo < GF_MODOS ? modo : GF_TODAS; }
 
@@ -55,16 +98,48 @@ void guiafiltro_ler(GuiaFiltro *f, const char *texto) {
   while (p && *p) {
     const char *fim = strpbrk(p, "\r\n");
     size_t len = fim ? (size_t)(fim - p) : strlen(p);
-    if (len > 1 && len < 800) {
-      char l[800];
+    if (len > 1 && len < 1024) {
+      char l[1024];
       memcpy(l, p + 1, len - 1);
       l[len - 1] = 0;
       if (*p == 'Q') guiafiltro_modo_definir(f, l[0] - '0');
       else if (*p == 'C') { if (!guiafiltro_cat_oculta(f, l)) guiafiltro_cat_alternar(f, l); }
+      else if (*p == 'S') {
+        char *v[5] = {l};
+        int k;
+        for (k = 1; k < 5; k++) {
+          char *tab = strchr(v[k - 1], '\t');
+          if (!tab) break;
+          *tab = 0; v[k] = tab + 1;
+        }
+        if (k == 5 && v[0][0] && v[1][0] && (!strcmp(v[2], "0") || !strcmp(v[2], "1"))) {
+          const char *fonte = !strcmp(v[0], "*") ? "" : v[0];
+          int i;
+          for (i = 0; i < f->nCan; i++)
+            if (!strcmp(f->can[i].fonte, fonte) && !strcmp(f->can[i].id, v[1])) break;
+          if (i == f->nCan && i < GF_CANAIS_MAX) f->nCan++;
+          if (i < GF_CANAIS_MAX) {
+            copiar(f->can[i].fonte, GF_FONTE, fonte);
+            copiar(f->can[i].id, GF_ID, v[1]);
+            copiar(f->can[i].nome, GF_NOME, v[3]);
+            copiar(f->can[i].cat, GF_NOME, v[4]);
+            f->can[i].visivel = *v[2] == '0';
+          }
+        }
+      }
       else if (*p == 'H') {
         char *nm = strchr(l, '\t'), *ct = NULL;
         if (nm) { *nm++ = 0; ct = strchr(nm, '\t'); if (ct) *ct++ = 0; }
-        if (!guiafiltro_canal_oculto(f, l)) guiafiltro_canal_alternar(f, l, nm ? nm : "", ct ? ct : "");
+        int i;
+        for (i = 0; i < f->nCan; i++)
+          if (!f->can[i].fonte[0] && !strcmp(f->can[i].id, l)) break;
+        if (i == f->nCan && i < GF_CANAIS_MAX) {
+          memset(&f->can[i], 0, sizeof f->can[i]);
+          copiar(f->can[i].id, GF_ID, l);
+          copiar(f->can[i].nome, GF_NOME, nm ? nm : "");
+          copiar(f->can[i].cat, GF_NOME, ct ? ct : "");
+          f->nCan++;
+        }
       }
     }
     if (!fim) break;
@@ -81,7 +156,16 @@ size_t guiafiltro_texto(const GuiaFiltro *f, char *dst, size_t n) {
     if (k_ < 0 || (size_t)k_ >= n - w) { dst[0] = 0; return 0; } w += (size_t)k_; } while (0)
   ESCREVE("Q%d\n", f->modo);
   for (i = 0; i < f->nCat; i++) ESCREVE("C%s\n", f->cat[i]);
-  for (i = 0; i < f->nCan; i++) ESCREVE("H%s\t%s\t%s\n", f->can[i].id, f->can[i].nome, f->can[i].cat);
+  for (i = 0; i < f->nCan; i++) {
+    if (!f->can[i].fonte[0]) {
+      int j;
+      for (j = 0; j < f->nCan; j++)
+        if (f->can[j].fonte[0] && !strcmp(f->can[j].id, f->can[i].id)) break;
+      if (j < f->nCan) continue;
+    }
+    ESCREVE("S%s\t%s\t%d\t%s\t%s\n", f->can[i].fonte[0] ? f->can[i].fonte : "*",
+            f->can[i].id, !f->can[i].visivel, f->can[i].nome, f->can[i].cat);
+  }
 #undef ESCREVE
   return w;
 }
@@ -114,7 +198,7 @@ int guiafiltro_avaliar(const GuiaFiltro *f, GuiaFiltroDup *d, int fonte, const c
   char base[160];
   int res;
   GuiaFiltroSlot *s;
-  if (guiafiltro_cat_oculta(f, grupo) || guiafiltro_canal_oculto(f, id)) return GF_FORA;
+  if (guiafiltro_cat_oculta(f, grupo) || guiafiltro_canal_oculto_fonte(f, "", id)) return GF_FORA;
   if (f->modo == GF_TODAS) return GF_ENTRA;
   res = nv_res_do_texto(nome);
   if (!res) res = nv_res_do_texto(origem);
