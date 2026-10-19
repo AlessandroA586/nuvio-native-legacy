@@ -1,5 +1,8 @@
 package space.nuvio.nativelegacy
 
+import android.net.Uri
+import androidx.media3.exoplayer.hls.playlist.HlsPlaylistTracker
+import java.io.IOException
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import org.junit.Assert.*
@@ -12,6 +15,7 @@ class LiveWindowRecoveryTest {
         val status = ArrayList<Long>()
         val scheduled = LinkedHashMap<Runnable, Long>()
         var active = true
+        var isLive = true
         var failed = 0
         var throwOnPrepare = false
         var playbackState = Player.STATE_BUFFERING
@@ -21,6 +25,7 @@ class LiveWindowRecoveryTest {
         val player = Proxy.newProxyInstance(Player::class.java.classLoader,
             arrayOf(Player::class.java)) { _, method, _ ->
             when (method.name) {
+                "isCurrentMediaItemLive" -> return@newProxyInstance isLive
                 "getPlaybackState" -> return@newProxyInstance playbackState
                 "stop" -> { calls.add("stop"); playbackState = Player.STATE_IDLE }
                 "seekToDefaultPosition" -> calls.add("live position")
@@ -39,8 +44,8 @@ class LiveWindowRecoveryTest {
             active = { active },
             status = { status.add(it) },
         )
-        fun recover(now: Long = 0, code: Int = PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW, timeoutMs: Long = 8_000L) =
-            recovery.recover(player, code, now, timeoutMs) { calls.add("failed"); failed++ }
+        fun recover(now: Long = 0, code: Int = PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW, timeoutMs: Long = 8_000L, cause: Throwable? = null) =
+            recovery.recover(player, PlaybackException("fixture", cause, code), now, timeoutMs) { calls.add("failed"); failed++ }
         fun timeout(): Runnable = scheduled.keys.single()
     }
 
@@ -57,7 +62,7 @@ class LiveWindowRecoveryTest {
 
     @Test fun ordinaryNetworkAuthenticationAndDecoderErrorsKeepNormalFallback() {
         val f = Fixture()
-        for (code in listOf(2001, 2002, 2004, 4001, 4003)) assertFalse(f.recover(code = code))
+        for (code in listOf(2000, 2001, 2002, 2004, 4001, 4003)) assertFalse(f.recover(code = code))
         assertTrue(f.calls.isEmpty())
         assertTrue(f.status.isEmpty())
         assertTrue(f.scheduled.isEmpty())
@@ -190,4 +195,61 @@ class LiveWindowRecoveryTest {
         assertEquals(listOf("live position", "prepare", "stop", "failed"), f.calls)
     }
 
+    private fun playlistReset() = HlsPlaylistTracker.PlaylistResetException(Uri.EMPTY)
+
+    @Test fun loggedPlaylistResetRecoversSameLivePlayer() {
+        val f = Fixture()
+        assertTrue(f.recover(code = 2000, cause = IOException(playlistReset())))
+        assertEquals(listOf("live position", "prepare"), f.calls)
+        assertTrue(f.recovery.ready())
+        assertEquals(0, f.failed)
+        assertTrue(f.scheduled.isEmpty())
+    }
+
+    @Test fun playlistResetDoesNotChangeVodOrOtherErrorPolicies() {
+        val f = Fixture()
+        f.isLive = false
+        assertFalse(f.recover(code = 2000, cause = playlistReset()))
+        f.isLive = true
+        assertFalse(f.recover(code = 2004, cause = playlistReset()))
+        assertFalse(f.recover(code = 2000, cause = IOException("PlaylistResetException")))
+        assertFalse(f.recover(code = 2000,
+            cause = HlsPlaylistTracker.PlaylistStuckException(Uri.EMPTY)))
+        assertTrue(f.calls.isEmpty())
+        assertTrue(f.status.isEmpty())
+    }
+
+    @Test fun resetAndExpiredWindowShareRetryBudget() {
+        val f = Fixture()
+        assertTrue(f.recover(code = 2000, cause = playlistReset()))
+        assertFalse(f.recover(now = 1, code = 2000, cause = playlistReset()))
+        f.recovery.ready()
+        assertTrue(f.recover(now = 10_000))
+        f.recovery.ready()
+        assertFalse(f.recover(now = 59_999, code = 2000, cause = playlistReset()))
+        assertTrue(f.recover(now = 60_000, code = 2000, cause = playlistReset()))
+        assertEquals(6, f.calls.size)
+    }
+
+    @Test fun failedResetStopsBeforeReportingSourceFailure() {
+        val f = Fixture()
+        assertTrue(f.recover(code = 2000, cause = playlistReset(), timeoutMs = 36_000L))
+        val task = f.timeout()
+        assertEquals(36_000L, f.scheduled[task])
+        task.run()
+        task.run()
+        assertEquals(listOf("live position", "prepare", "stop", "failed"), f.calls)
+        assertEquals(1, f.failed)
+    }
+
+    @Test fun replacedSessionCannotRecoverResetOrFireItsOldTimeout() {
+        val f = Fixture()
+        assertTrue(f.recover(code = 2000, cause = playlistReset()))
+        val task = f.timeout()
+        f.active = false
+        task.run()
+        assertFalse(f.recover(now = 60_000, code = 2000, cause = playlistReset()))
+        assertEquals(listOf("live position", "prepare"), f.calls)
+        assertEquals(0, f.failed)
+    }
 }
