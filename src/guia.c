@@ -340,7 +340,9 @@ static size_t sCacheBytes;
 typedef struct { char id[GF_ID], nome[GF_NOME], cat[GF_NOME], fonte[LTV_CHAVE]; } GInventario;
 static GInventario *inventario, *sInventario;
 static int nInventario, sNInventario;
-// Compact channel controls spill to disk; only one category page lives in RAM.
+// Compact records use source/group indexes instead of repeating their names.
+// ponytail: bounded circular blocks retain newest controls on overflow; refetch for a full unbounded catalog.
+#define G_INVENTARIO_BLOCO 4096
 static FILE *inventarioDisco, *sInventarioDisco;
 
 static FILE *sCache[G_MAX_LTV];
@@ -527,15 +529,31 @@ static int sCanalAdd(int f, const GCru *c) {
     if (gi >= 0 && sLtvF[f].gi[gi].n > 0) sLtvF[f].gi[gi].n--;
   }
   int gi = sGrupoInfo(f, grupo, 0);
-  if (c->id && c->id[0] && c->nome && c->nome[0]) {
-    GInventario item = {0};
-    snprintf(item.id, sizeof item.id, "%s", c->id);
-    snprintf(item.nome, sizeof item.nome, "%s", c->nome);
-    snprintf(item.cat, sizeof item.cat, "%s", grupo);
-    snprintf(item.fonte, sizeof item.fonte, "%s", sLtvF[f].chave);
+  if (c->id && c->id[0] && c->nome && c->nome[0] && gi >= 0 && gi <= USHRT_MAX) {
+    unsigned short h[] = {(unsigned short)f, (unsigned short)gi,
+      (unsigned short)(strnlen(c->id, GF_ID - 1) + 1),
+      (unsigned short)(strnlen(c->nome, GF_NOME - 1) + 1)};
+    char record[sizeof h + GF_ID + GF_NOME] = {0};
+    size_t bytes = sizeof h + h[2] + h[3];
+    memcpy(record, h, sizeof h);
+    memcpy(record + sizeof h, c->id, h[2] - 1);
+    memcpy(record + sizeof h + h[2], c->nome, h[3] - 1);
     if (!sInventarioDisco) sInventarioDisco = tmpfile();
-    if (sInventarioDisco && fwrite(&item, sizeof item, 1, sInventarioDisco) != 1) {
-      fclose(sInventarioDisco); sInventarioDisco = NULL;
+    if (sInventarioDisco) {
+      long pos = ftell(sInventarioDisco);
+      int ok = pos >= 0;
+      if (ok && bytes > G_INVENTARIO_BLOCO - pos % G_INVENTARIO_BLOCO)
+        pos += G_INVENTARIO_BLOCO - pos % G_INVENTARIO_BLOCO;
+      if (pos >= G_INVENTARIO_BYTES_MAX) pos = 0;
+      if (ok) ok = fseek(sInventarioDisco, pos, SEEK_SET) == 0;
+      if (ok && !(pos % G_INVENTARIO_BLOCO)) {
+        char empty[G_INVENTARIO_BLOCO] = {0};
+        ok = fwrite(empty, sizeof empty, 1, sInventarioDisco) == 1 &&
+             fseek(sInventarioDisco, pos, SEEK_SET) == 0;
+      }
+      if (!ok || fwrite(record, bytes, 1, sInventarioDisco) != 1) {
+        fclose(sInventarioDisco); sInventarioDisco = NULL;
+      }
     }
   }
   if (sNInventario >= G_INVENTARIO_MAX && sCotaCompleta()) { sLtvF[f].cortada = 1; return 0; }
@@ -3429,14 +3447,23 @@ static void fMontarCanaisPagina(const char *cat, int inicio) {
     for (i = 0; i < nCanais; i++)
       if (canais[i].cat >= 0 && !strcmp(cats[canais[i].cat].nome, cat))
         fCanalAdd(ltvF[canais[i].fonte].chave, canais[i].id, canais[i].nome);
-    GInventario item;
+    char block[G_INVENTARIO_BLOCO];
     int pos = 0;
     rewind(inventarioDisco);
-    while (fread(&item, sizeof item, 1, inventarioDisco) == 1) {
-      if (strcmp(item.cat, cat)) continue;
-      if (pos++ < inicio) continue;
-      if (fN == G_PF_CANAIS_MAX) { fProximo = pos - 1; break; }
-      fCanalAdd(item.fonte, item.id, item.nome);
+    while (!fProximo && fread(block, sizeof block, 1, inventarioDisco) == 1) {
+      for (size_t off = 0; off + 4 * sizeof(unsigned short) <= sizeof block;) {
+        unsigned short h[4];
+        memcpy(h, block + off, sizeof h); off += sizeof h;
+        if (!h[2] || !h[3] || h[2] > GF_ID || h[3] > GF_NOME ||
+            off + h[2] + h[3] > sizeof block) break;
+        const char *id = block + off, *nome = id + h[2];
+        off += h[2] + h[3];
+        if (h[0] >= nLtvF || h[1] >= ltvF[h[0]].ngi ||
+            id[h[2] - 1] || nome[h[3] - 1] || strcmp(ltvF[h[0]].gi[h[1]].nome, cat)) continue;
+        if (pos++ < inicio) continue;
+        if (fN == G_PF_CANAIS_MAX) { fProximo = pos - 1; break; }
+        fCanalAdd(ltvF[h[0]].chave, id, nome);
+      }
     }
   } else {
   // Reserve room for displayed channels even if this raw category filled the panel.

@@ -366,6 +366,67 @@ static void sourceVisibilityRegression(void) {
     }
   }
 }
+#if defined(G_INVENTARIO_BLOCO) || defined(GUIAFILTRO_SPOOL_TEST)
+static long inventorySpoolBytes(FILE *fp) {
+  if (!fp) return 0;
+  long pos = ftell(fp);
+  assert(pos >= 0 && fseek(fp, 0, SEEK_END) == 0);
+  long bytes = ftell(fp);
+  assert(bytes >= 0 && fseek(fp, pos, SEEK_SET) == 0);
+  return bytes;
+}
+static void inventorySpoolRegression(void) {
+  for (int pass = 0; pass < 2; pass++) {
+    int fl = begin(GF_TODAS, 900);
+    for (int cat = 0; cat < 1000; cat++) {
+      char group[32]; snprintf(group, sizeof group, "Category %d", cat);
+      for (int i = 0; i < 64; i++) {
+        char id[40]; snprintf(id, sizeof id, "xtream:%d:%d", cat, i);
+        channel(fl, group, id, "News HD");
+      }
+    }
+    long bytes = inventorySpoolBytes(sInventarioDisco);
+    long peak = bytes + inventorySpoolBytes(inventarioDisco);
+    printf("inventory spool: %ld bytes, refresh peak: %ld bytes\n", bytes, peak); fflush(stdout);
+    assert(bytes <= G_INVENTARIO_BYTES_MAX);
+    assert(peak <= 2 * G_INVENTARIO_BYTES_MAX);
+    adotarStaging();
+    assert(!sInventarioDisco && nCanais == 900);
+    filtrosAbrir(); assert(fN == 1000);
+    for (int cat = 0; cat < 1000; cat += cat == 0 ? 500 : 499) {
+      char group[32]; snprintf(group, sizeof group, "Category %d", cat);
+      fMontarCanais(group); assert(fN == 64);
+    }
+  }
+  // Long, distinct records exhaust the byte budget; late controls must survive.
+  int fl = begin(GF_TODAS, 900);
+  char id[GF_ID], name[GF_NOME];
+  memset(id, 'i', sizeof id - 1); id[sizeof id - 1] = 0;
+  memset(name, 'n', sizeof name - 1); name[sizeof name - 1] = 0;
+  for (int i = 0; i < 20000; i++) {
+    char prefix[32]; snprintf(prefix, sizeof prefix, "xtream:%014d", i);
+    memcpy(id, prefix, strlen(prefix));
+    channel(fl, "Sports", id, name);
+  }
+  channel(fl, "Late", "xtream:late", "Late HD");
+  long bytes = inventorySpoolBytes(sInventarioDisco);
+  assert(bytes == G_INVENTARIO_BYTES_MAX);
+  assert(bytes + inventorySpoolBytes(inventarioDisco) <= 2 * G_INVENTARIO_BYTES_MAX);
+  adotarStaging();
+  filtrosAbrir(); fMontarCanais("Late");
+  assert(fN == 1 && !strcmp(fIt[0].id, "xtream:late"));
+  fMontarCanais("Sports");
+  int found = 0;
+  for (int i = 0; i < fN; i++) if (!strcmp(fIt[i].id, id)) found++;
+  // The latest Sports entry is reached on a later page after the admitted prefix.
+  while (!found && fProximo) {
+    fMontarCanaisPagina("Sports", fProximo);
+    for (int i = 0; i < fN; i++) if (!strcmp(fIt[i].id, id)) found++;
+  }
+  assert(found == 1);
+  stagingZerar(); assert(!sInventarioDisco);
+}
+#endif
 static void inventoryBoundRegression(void) {
 #ifdef G_INVENTARIO_POR_CAT
   for (int pass = 0; pass < 2; pass++) {
@@ -820,6 +881,9 @@ int main(int argc, char **argv) {
     else if (!strcmp(regression, "sibling-visibility")) siblingVisibilityRegression();
     else if (!strcmp(regression, "source-visibility")) sourceVisibilityRegression();
     else if (!strcmp(regression, "inventory-bound")) inventoryBoundRegression();
+#if defined(G_INVENTARIO_BLOCO) || defined(GUIAFILTRO_SPOOL_TEST)
+    else if (!strcmp(regression, "inventory-spool")) inventorySpoolRegression();
+#endif
     else if (!strcmp(regression, "categories")) categoriesRegression();
     else if (!strcmp(regression, "inventory")) inventoryRegression();
     else if (!strcmp(regression, "late-inventory")) lateInventoryRegression();
