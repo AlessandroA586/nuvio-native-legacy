@@ -26,7 +26,7 @@ for section, translate in [(pt, lambda s: s), (en, master.__getitem__)]:
     expected = [f'- **{translate(name)}.** {translate(text)}' for name, text in entries]
     assert section.count('- **') == len(expected)
     assert [line for line in section.splitlines() if line.startswith('- **')] == expected
-assert len(entries) <= 32
+assert len(entries) <= 35
 print('PASS: release notes/card parity, translated keys and aligned language tables')
 PY
 export NUVIO_SHOT_SO=showoff NUVIO_SHOT_FONTE=3

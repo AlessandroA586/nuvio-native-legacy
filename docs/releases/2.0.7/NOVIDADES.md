@@ -10,14 +10,17 @@ Fonte do cartão "Novidades da 2.0.7": `src/novidades/207.inc`. Comunidade: **ht
 
 - **Palco.** O título em foco aparece grande à esquerda, com arte, nota, sinopse e elenco; os cartazes da fileira correm à direita.
 - **Herói dividido.** O título em foco ganha logo grande e sinopse ao lado dos pôsteres, com o texto alinhado à fileira.
-- **Guia de TV.** Canais por fonte e grupo, busca pelo número e volta ao último canal. Adicione suas listas M3U e guias XMLTV.
+- **Guia de TV.** Logos dos canais, listas M3U e guias XMLTV. OK abre a faixa sobre o vídeo; outro OK no canal atual abre o guia completo.
 - **Player externo.** Escolha qualquer player instalado e, se quiser, outro só para anime (Android).
 - **Trailer dublado.** Áudio do trailer põe o trailer dublado na frente, e Original mantém o idioma do título. Se o YouTube falhar, entra o da Apple ou do IMDb.
 - **Continuar assistindo.** Até 40 títulos, e a fileira chega primeiro sem segurar os outros catálogos da Home.
-- **Vidro fosco.** Telas mais fluidas, com vidro mais leve e menos sobreposição.
+- **TV ao vivo.** Prefira 4K sem repetir canais, mostre só 4K ou todas as versões. Escolha as seções, com sugestões para canais sem categoria e recuperação automática após falhas.
 
 **Mais novidades**
 
+- **Vidro fosco.** Telas mais fluidas, com vidro mais leve e menos sobreposição.
+- **Fundo do Palco.** Cortina, Aura, Tríptico ou Monumento, com troca suave da arte ao mudar de título.
+- **Biblioteca.** Escolha nos Ajustes de onde vem a Biblioteca e para onde o + salva, por perfil.
 - **Espanhol (América Latina).** Escolha o idioma dos títulos; a sincronização mantém a variante regional da sua conta.
 - **Modo TV e Mobile.** O APK padrão escolhe sozinho entre TV e Mobile; dá para fixar em Modo da interface (Android).
 - **Legendas no trailer.** O trailer do YouTube mostra legendas no idioma das suas legendas (LG webOS).
@@ -33,6 +36,7 @@ Fonte do cartão "Novidades da 2.0.7": `src/novidades/207.inc`. Comunidade: **ht
 
 **Correções**
 
+- **Layout Apple TV.** Palco e Herói dividido mostram a arte inteira e escondem as fileiras acima, como na Moderna. O fundo padrão é Cinza, e Fundo do Palco passa a valer nesse layout.
 - **Trakt.** A lista mostra os mais recentes primeiro e carrega mesmo sem IMDb. Desconectar Trakt ou Simkl vale só para o perfil (#610).
 - **Modelo de URL dos pôsteres.** Serviços de pôster personalizados aceitam títulos sem TMDB quando esse campo é opcional (#566).
 - **Ajuste do áudio (ms).** Positivo atrasa; negativo adianta. Só áudio convertido, a partir do próximo vídeo (Samsung .tpk) (#578).
@@ -54,14 +58,17 @@ Fonte do cartão "Novidades da 2.0.7": `src/novidades/207.inc`. Comunidade: **ht
 
 - **Stage.** The focused title appears large on the left, with art, rating, synopsis and cast; the row's posters run on the right.
 - **Split hero.** The focused title gets a large logo and synopsis beside the posters, with text aligned to the row.
-- **TV Guide.** Channels by source and group, number entry and a return to the last channel. Add your M3U lists and XMLTV guides.
+- **TV Guide.** Channel logos, M3U lists and XMLTV guides. OK opens the strip over the video; another OK on the current channel opens the full guide.
 - **External player.** Pick any installed player and, if you like, another one just for anime (Android).
 - **Dubbed trailers.** Trailer audio puts the dubbed trailer first, and Original keeps the title's language. If YouTube fails, Apple or IMDb steps in.
 - **Continue Watching.** Up to 40 titles, and the row loads first without holding up the other Home catalogs.
-- **Frosted glass.** Smoother screens, with lighter glass and less overdraw.
+- **Live TV.** Prefer 4K without duplicate channels, show only 4K or all versions. Choose sections, with suggestions for uncategorized channels and automatic recovery after failures.
 
 **Also new**
 
+- **Frosted glass.** Smoother screens, with lighter glass and less overdraw.
+- **Stage background.** Curtain, Aura, Triptych or Monument, with smooth artwork changes when switching titles.
+- **Library.** Choose in Settings where the Library comes from and where + saves, per profile.
 - **Spanish (Latin America).** Choose the language for title metadata; sync keeps your account's regional variant.
 - **TV and Mobile modes.** The standard APK picks TV or Mobile by itself; you can lock it in Interface mode (Android).
 - **Trailer captions.** YouTube trailers show captions in your subtitle language (LG webOS).
@@ -77,6 +84,7 @@ Fonte do cartão "Novidades da 2.0.7": `src/novidades/207.inc`. Comunidade: **ht
 
 **Fixes**
 
+- **Apple TV layout.** Stage and Split hero show full artwork and hide the rows above, as in Modern. Gray is the default background, and Stage background now works in this layout.
 - **Trakt.** The watchlist shows newest first and loads even without IMDb IDs. Disconnecting Trakt or Simkl affects only that profile (#610).
 - **Poster URL template.** Custom poster services accept titles without TMDB IDs when that field is optional (#566).
 - **Audio offset (ms).** Positive delays; negative advances. Converted audio only, starting with the next video (Samsung .tpk) (#578).
