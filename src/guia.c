@@ -295,7 +295,7 @@ typedef struct {
 
 // Todos os grupos que a fonte ofereceu, inclusive os que nao couberam no teto:
 // e a lista do "Escolher grupos".
-typedef struct { const char *nome; int n; unsigned char entra; } GGrupoInfo;
+typedef struct { const char *nome; int n, nInventario; unsigned char entra; } GGrupoInfo;
 
 typedef struct {
   char chave[LTV_CHAVE];
@@ -333,7 +333,8 @@ static int sTeto;            // visible channel limit
 #define G_RAW_BYTES_MAX (2 * 1024 * 1024)
 static size_t sCacheBytes;
 #define G_PF_CANAIS_MAX 4000
-// First raw entries stay in memory; category controls also read the source cache.
+// Reserve bounded raw controls for every source/category, even after visible caps.
+#define G_INVENTARIO_POR_CAT 64
 typedef struct { char id[GF_ID], nome[GF_NOME], cat[GF_NOME]; } GInventario;
 static GInventario *inventario, *sInventario;
 static int nInventario, sNInventario;
@@ -449,7 +450,7 @@ static int sGrupoInfo(int f, const char *nome, int somar) {
     }
     i = F->ngi++;
     F->gi[i].nome = ltv_dup(&sArena, nome);
-    F->gi[i].n = 0; F->gi[i].entra = 1;
+    F->gi[i].n = F->gi[i].nInventario = 0; F->gi[i].entra = 1;
   }
   F->gi[i].n += somar;
   return i;
@@ -492,6 +493,7 @@ typedef struct {
 static int sGruposEscolhidos(int f, const char **v, int max);
 static int nomeNaLista(const char *nome, const char *const *v, int n);
 static void cacheCru(int f, const char *grupo, const GCru *c);
+static int sCotaCompleta(void);
 // Uma versao escondida pelo "Preferir 4K" vira reserva do canal que ficou.
 static void sAltAdd(const char *dono, const char *id, const char *nome) {
   if (!xtream_e_id(id) || sNAlts >= G_ALT_MAX) return;
@@ -518,13 +520,18 @@ static int sCanalAdd(int f, const GCru *c) {
     sGrupoInfo(f, sec, 1);
     if (gi >= 0 && sLtvF[f].gi[gi].n > 0) sLtvF[f].gi[gi].n--;
   }
-  if (sNInventario < G_PF_CANAIS_MAX) {
-    if (!sInventario) sInventario = calloc(G_PF_CANAIS_MAX, sizeof *sInventario);
-    if (sInventario) {
-      GInventario *v = &sInventario[sNInventario++];
+  int gi = sGrupoInfo(f, grupo, 0);
+  if (gi >= 0 && sLtvF[f].gi[gi].nInventario < G_INVENTARIO_POR_CAT) {
+    GInventario *v = sInventario;
+    if (!(sNInventario % G_INVENTARIO_POR_CAT))
+      v = realloc(sInventario, sizeof *v * (size_t)(sNInventario + G_INVENTARIO_POR_CAT));
+    if (v) {
+      sInventario = v;
+      v = &sInventario[sNInventario++];
       snprintf(v->id, sizeof v->id, "%s", c->id);
       snprintf(v->nome, sizeof v->nome, "%s", c->nome);
       snprintf(v->cat, sizeof v->cat, "%s", grupo);
+      sLtvF[f].gi[gi].nInventario++;
     }
   }
   if (!sLtvF[f].deCache &&
@@ -539,7 +546,7 @@ static int sCanalAdd(int f, const GCru *c) {
     return 0;
   }
   if (quem != GF_TROCA &&
-      (sNCanais >= G_CANDIDATOS_MAX || (pendente && sPendentes >= G_MAX_PENDENTES))) {
+      (sCotaCompleta() || sNCanais >= G_CANDIDATOS_MAX || (pendente && sPendentes >= G_MAX_PENDENTES))) {
     sLtvF[f].cortada = 1; return 0;
   }
   cat = sCatDe(f, grupo);
@@ -1316,17 +1323,36 @@ static int lerPagina(const GFonte *f, int fl, int skip, int *novos) {
   return n;
 }
 
+// With no filter rules, later pages cannot change a full final visible list.
+// Count eligible rows without applying caps or discarding staging candidates.
+static int sCotaCompleta(void) {
+  int nc = 0, n = 0, visiveis[GUIACORTE_MAX_CAT];
+  if (sFltLive.modo != GF_TODAS || sFltLive.nCat || sFltLive.nCan || sPendentes) return 0;
+  for (int i = 0; i < sNCanais; i++) {
+    const GCanal *g = &sCanais[i];
+    int j;
+    // Suggestions can still move a channel into or out of an admitted row.
+    if (g->sug && ajustes_livetv_sugerir()) return 0;
+    for (j = 0; j < nc && visiveis[j] != g->cat; j++) {}
+    if (j == nc) {
+      if (nc == GUIACORTE_MAX_CAT) continue;
+      visiveis[nc++] = g->cat;
+    }
+    if (++n >= sTeto || n >= GUIACORTE_MAX_CANAL) return 1;
+  }
+  return 0;
+}
 static int carregarCatalogo(const GFonte *f, int fl) {
   int ok = 0;
   for (int skip = 0; cargaAtual() && skip < 100000 &&
-       sNCanais < G_CANDIDATOS_MAX && sPendentes < G_MAX_PENDENTES; skip += G_PAGINA) {
+       sNCanais < G_CANDIDATOS_MAX && sPendentes < G_MAX_PENDENTES && !sCotaCompleta(); skip += G_PAGINA) {
     int novos = 0, n = lerPagina(f, fl, skip, &novos);
     if (n <= 0) break;
     ok = 1;
     sLtvF[fl].respondeu = 1;
     if (n < G_PAGINA) break;
   }
-  if (sNCanais >= G_CANDIDATOS_MAX || sPendentes >= G_MAX_PENDENTES)
+  if (sNCanais >= G_CANDIDATOS_MAX || sPendentes >= G_MAX_PENDENTES || sCotaCompleta())
     sLtvF[fl].cortada = 1;
   return ok;
 }

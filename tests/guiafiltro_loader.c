@@ -77,10 +77,14 @@ static char *filtroResposta(const char *url) {
   int offset = pageScenario == 3 ? (pageRequests - 1) * 100 :
                pageScenario == 2 && pageRequests > 1 ? 100 : 0;
   int count = pageScenario == 2 && pageRequests > 1 ? 1 : 100;
-  for (int i = 0; i < count; i++)
+  for (int i = 0; i < count; i++) {
+    char name[64];
+    if (pageScenario == 3) snprintf(name, sizeof name, "Station%d 4K", offset + i);
+    else snprintf(name, sizeof name, "X %s", offset ? "4K" : "HD");
     used += (size_t)snprintf(body + used, sizeof body - used,
-      "%s{\"id\":\"channel:%d\",\"name\":\"X %s\",\"genre\":[\"%s\"]}",
-      i ? "," : "", offset + i, offset ? "4K" : "HD", i == 0 ? "Hidden" : "Sports");
+      "%s{\"id\":\"channel:%d\",\"name\":\"%s\",\"genre\":[\"%s\"]}",
+      i ? "," : "", offset + i, name, i == 0 ? "Hidden" : "Sports");
+  }
   snprintf(body + used, sizeof body - used, "]}");
   return strdup(body);
 }
@@ -117,11 +121,20 @@ static void capRegression(void) {
   pageRequests = 0; pageScenario = 3;
   fioGuia(NULL);
   rebuild();
+  printf("cap default requests=%d (maximum 9)\n", pageRequests); fflush(stdout);
+  assert(pageRequests <= 9 && sNCanais == 900);
 #ifdef GUIAFILTRO_FINAL_ADMISSION
-  assert(pageRequests == 300 && sNCanais == 900);
-#else
-  printf("cap requests=%d (expected 9)\n", pageRequests); fflush(stdout);
-  assert(pageRequests == 9 && sNCanais == 900);
+  // Active rules retain the bounded scan for later candidates and upgrades.
+  for (int mode = GF_TODAS; mode < GF_MODOS; mode++) {
+    memset(&sFltLive, 0, sizeof sFltLive); sFltLive.modo = mode;
+    if (mode == GF_TODAS) guiafiltro_cat_alternar(&sFltLive, "Unused");
+    nAddonsCarga = 1; addonsCarga = calloc(1, sizeof *addonsCarga);
+    strcpy(addonsCarga[0].base, sFontes[0].base); addonsCarga[0].ativo = 1;
+    pageRequests = 0;
+    fioGuia(NULL); rebuild();
+    printf("cap filtered mode=%d requests=%d\n", mode, pageRequests); fflush(stdout);
+    assert(pageRequests == 300 && sNCanais == 900);
+  }
 #endif
 }
 static void cacheRefreshRegression(void) {
@@ -374,6 +387,29 @@ static void lateInventoryRegression(void) {
     }
   }
 }
+static void defaultInventoryRegression(void) {
+  int fl = begin(GF_TODAS, 900);
+  // Exceed both the old inventory prefix and raw cache byte budget.
+  for (int i = 0; i < 30000; i++) {
+    char id[32]; snprintf(id, sizeof id, "xtream:%d", i);
+    channel(fl, "Sports", id, "Sports HD");
+  }
+  channel(fl, "Movies", "xtream:movie1", "Movie One HD");
+  channel(fl, "Movies", "xtream:movie2", "Movie Two HD");
+#ifdef GUIAFILTRO_FINAL_ADMISSION
+  assert(sNCanais == 900);
+#endif
+  adotarStaging(); cacheGravar();
+  assert(nCanais == 900 && !canalPorId("xtream:movie1"));
+  filtrosAbrir();
+  for (paFoco = 3; paFoco < 3 + fN && strcmp(fIt[paFoco - 3].nome, "Movies"); paFoco++) {}
+  assert(paFoco < 3 + fN);
+  filtrosEvento(SDLK_RIGHT, SDL_GetTicks());
+  assert(fNivel && fN == 2);
+  assert(!strcmp(fIt[0].id, "xtream:movie1") && !strcmp(fIt[1].id, "xtream:movie2"));
+  filtrosOk();
+  assert(guiafiltro_canal_oculto(&fltLive, "xtream:movie1"));
+}
 static void replacementMetadataRegression(void) {
   for (int reverse = 0; reverse < 2; reverse++) {
     int fl = begin(GF_PREFERIR_4K, 1);
@@ -543,6 +579,7 @@ static void rawCandidateCapRegression(void) {
 static void publicationStorageRegression(void) {
   for (int pass = 0; pass < 2; pass++) {
     int fl = begin(GF_TODAS, 900);
+    guiafiltro_cat_alternar(&sFltLive, "Unused");
     for (int i = 0; i < 30000; i++) {
       char id[32], name[40], description[1024];
       snprintf(id, sizeof id, "xtream:%d", i);
@@ -648,6 +685,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(regression, "categories")) categoriesRegression();
     else if (!strcmp(regression, "inventory")) inventoryRegression();
     else if (!strcmp(regression, "late-inventory")) lateInventoryRegression();
+    else if (!strcmp(regression, "default-inventory")) defaultInventoryRegression();
     else if (!strcmp(regression, "replacement-metadata")) replacementMetadataRegression();
     else if (!strcmp(regression, "replacement-category-cap")) replacementCategoryCapRegression();
     else if (!strcmp(regression, "collapsed-category-cap")) collapsedCategoryCapRegression();

@@ -11,6 +11,18 @@ sources=(tests/guiafiltro_loader.c src/ltv.c src/js.c src/idcanal.c src/dados.c 
   src/fontecache.c src/cachearte.c src/cachedisco.c src/xmltv.c)
 common=(-Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -O1 -g -Wno-macro-redefined -lz)
 cc "${flags[@]}" "${sources[@]}" "${common[@]}" -DGUIAFILTRO_RAW_TEST -DGUIAFILTRO_RESET_TEST -o "$work/loader"
+if [ "${1:-}" = default-loading ]; then
+  failed=0
+  for regression in cap default-inventory; do
+    rc=0
+    GUIAFILTRO_CASE="$regression" NUVIO_DADOS="$work/$regression-data" \
+      "$work/loader" "$work/$regression-data" || rc=$?
+    if [ "$rc" != 0 ]; then failed=1; fi
+  done
+  exit "$failed"
+fi
+GUIAFILTRO_CASE=default-inventory NUVIO_DADOS="$work/default-inventory-data" \
+  "$work/loader" "$work/default-inventory-data"
 if [ "${1:-}" = raw-storage ]; then
   failed=0
   for regression in raw-candidate-cap publication-storage; do
@@ -218,7 +230,7 @@ for regression in cap cache-refresh; do
     GUIAFILTRO_CASE="$regression" NUVIO_DADOS="$work/$version-$regression" \
       "$work/$version" "$work/$version-$regression" > "$work/$version-$regression.log" 2>&1 || rc=$?
     if [ "$version" = review ]; then
-      if [ "$regression" = cap ]; then expected='Assertion failed: (pageRequests == 9 && sNCanais == 900)';
+      if [ "$regression" = cap ]; then expected='Assertion failed: (pageRequests <= 9 && sNCanais == 900)';
       else expected='Assertion failed: (restored == 4)'; fi
       if [ "$rc" = 134 ] && rg -q -F "$expected" "$work/$version-$regression.log"; then
         printf 'PASS: reviewed revision fails %s (rc=134)\n' "$regression"
