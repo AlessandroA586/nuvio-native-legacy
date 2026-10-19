@@ -3915,6 +3915,18 @@ void player_evento(const SDL_Event *e) {
   }
   if (k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE ||
       k == SDLK_DELETE) {
+    // Back dismisses exactly one layer. Loading/buffering keeps its exit path.
+    if (pausao_visivel()) { pausao_fechar(); acordar(); return; }
+    if (!erroFonte && !player_carregando() && !video_bufferando_ms()) {
+      if (skipFoco) { skipFoco = 0; return; }
+      if (visivel || anim > 0.004f) {
+        if (scrubbing) terminarSalto();
+        esconderControles(); anim = 0.0f;
+        intro_botao_esconder(monoSeg());
+        return;
+      }
+      if (trechoPulavel(NULL)) { intro_botao_esconder(monoSeg()); return; }
+    }
 #ifdef NV_ANDROID
     if (erroFonte && !ehCanal()) {
       player_voltar_a_esperar(); pedFontes = 1;
