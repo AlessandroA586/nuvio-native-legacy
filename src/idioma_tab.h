@@ -4522,6 +4522,7 @@
   { "Rode o Diagnóstico da Live TV, ou aperte VERDE no guia. Ele testa os formatos e diz o que mudar.", "Run the Live TV diagnostics, or press GREEN in the guide. It tests the formats and tells you what to change." },
   { "Roger Ebert (crítica)", "Roger Ebert (critic)" },
   { "Rolar e pausar", "Scroll and pause" },
+  { "Role para baixo para os streamings", "Scroll down for streaming" },
   { "Romance", "Romance" },
   { "Romeno", "Romanian" },
   { "Română", "Română" },
