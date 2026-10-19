@@ -170,7 +170,7 @@ Feito: `rust/mkvcore` (no_std, staticlib, sem dependências, `panic=abort`, hand
 |---|---|---|
 | Android arm64-v8a / armeabi-v7a (`tools/android.sh`) | **ligada** (padrão) | `NUVIO_RUST_MKVCORE=0` volta ao C |
 | Mac (`tools/mac.sh`) | **ligada** (padrão) | idem |
-| webOS ARM (`tools/arm.sh`) | **desligada** | falta `rustup target add armv7-unknown-linux-gnueabi` (e `.a` na linha de link do SDK) |
+| webOS ARM (`tools/arm.sh`) | **OFF — blocked 2026-10-19** | Installed `armv7-unknown-linux-gnueabihf` builds offline, but SDK uses softfp and rejects the archive (`uses VFP register arguments`); softfp target/rust-src absent. See `docs/issues/rust-mkvcore-webos-abi.md`. |
 | Samsung `.tpk` 4/5 e 6+ (`tools/tpk.sh`) | **desligada** | mesmo alvo: `rustup target add armv7-unknown-linux-gnueabi` |
 | Samsung `.wgt` WASM (`tools/tizen.sh`) | **desligada** | falta `rustup target add wasm32-unknown-emscripten` |
 
