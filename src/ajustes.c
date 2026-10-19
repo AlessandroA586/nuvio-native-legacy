@@ -3209,9 +3209,10 @@ void ajustes_textura_quadro(void) {
 // moderna DESLIGA o recolhimento, e nao o contrario. Copiado de
 // normalizeLayoutPreferences para nao inventar precedencia.
 int ajustes_rail_moderna(void)        { return lig(AJ_RAIL_MODERNA); }
-// Dinamica always uses the top bar; portrait phones keep the compact menu.
+// #461: a barra no topo nao existe no Dinamica (a pilula dela ja e o topo) nem
+// no telefone em retrato (nao cabe).
 int ajustes_menu_topo(void) {
-  return (valor[AJ_MENU_TOPO] == 1 || ajustes_home_layout() == HOME_LAYOUT_DINAMICA) && !ajRetrato();
+  return valor[AJ_MENU_TOPO] == 1 && ajustes_home_layout() != HOME_LAYOUT_DINAMICA && !ajRetrato();
 }
 int ajustes_abas_estilo(void) { return valor[AJ_ABAS_ESTILO]; }
 void ajustes_definir_abas_estilo(int estilo) {
