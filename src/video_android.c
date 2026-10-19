@@ -1297,12 +1297,9 @@ int  video_velocidade_suportada(void) { return mVelocidade != NULL && !velRecusa
 void video_velocidade(int c) { if (!velRecusada) velPedida = (c <= 0 || c > 400) ? 100 : c; }
 int  video_velocidade_atual(void) { return velRecusada ? 100 : velPedida; }
 void video_velocidade_recusada(void) { velRecusada = 1; velPedida = 100; }   // o bombear manda o 100
-// PASSTHROUGH (medido na TCL, 06/10: EAC3 ao receptor, 1,5x pedido, video a
-// 1x). Trocar o audio para PCM decodificado enquanto a velocidade != 1 exigiria
-// reabrir o player com outra cadeia de audio no meio do filme (e o receptor
-// perderia o Atmos/5.1 por isso): nao e uma mudanca contida. A linha fica
-// esmaecida com o motivo.
-int  video_velocidade_bloqueada(void) { return cacheboost_ganho_estado() == CB_GANHO_PASSTHROUGH; }
+// The Android bridge decodes to PCM at non-normal speeds, restoring encoded
+// output eligibility at 1x. VelMedidor still verifies the actual media clock.
+int  video_velocidade_bloqueada(void) { return 0; }
 void video_forcar_sdr(void) {}
 void video_encerrar(void) { video_parar(); }
 #endif
