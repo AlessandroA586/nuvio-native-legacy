@@ -329,9 +329,12 @@ int   ajustes_hero_sinopse_grande(void); // Normal (22/30) ou Grande (24/32)
 int   ajustes_hero_cheio(void);         // modernHeroFullScreenBackdropEnabled
 // LAYOUT DA HOME (local): a estrutura da tela inicial. Moderna e o desenho de
 // sempre; Padrao contem o destaque num banner; Dinamica e o estilo Apple TV.
+// Imersiva (experimental): so a fileira em cena sobre a arte do titulo em foco
+// (home_imersiva.inc); a geometria por baixo e a da Moderna (layoutHome).
 enum { HOME_LAYOUT_MODERNA = 0, HOME_LAYOUT_PADRAO = 1, HOME_LAYOUT_DINAMICA = 2,
-       HOME_LAYOUT_N = 3 };
-int   ajustes_home_layout(void);
+       HOME_LAYOUT_IMERSIVA = 3, HOME_LAYOUT_N = 4 };
+int   ajustes_home_layout(void);     // IMERSIVA le como MODERNA
+int   ajustes_home_imersiva(void);   // 1 = layout Imersiva (experimental)
 int   ajustes_hero_fonte(void);         // origem local da arte do hero (ARTEHERO_*)
 // 1 = destaque/detalhe com foto diferente da do card (regra em artehero.h).
 int   ajustes_hero_arte_diferente(void);
@@ -497,9 +500,14 @@ int   ajustes_descobrir_na_busca(void); // searchDiscoverEnabled (derivado)
 int   ajustes_4k(void);
 // 1 = Automatica: 1080p, sondando o 4K onde a tela for 4K (resolucao.h, RES_AUTO_*).
 int   ajustes_res_auto(void);
+int   ajustes_1080p(void);
 // 1 = a pessoa escolheu 720p: desenhar em 1280x720 e ampliar (gpun_forcar_720).
 // Nunca automatico.
 int   ajustes_720p(void);
+// Device-local output choice; applied after restarting, only on a 4K panel.
+int   ajustes_ampliar_app(void);
+// Actual drawable granted by the platform; controls the output-limit hint.
+void  ajustes_ui_saida(int w, int h);
 // Ilha do relogio (ilha.h). _ligado: 0 = sem pilula em repouso (os avisos
 // continuam saindo dela). _pos: 0 automatica, 1 esquerda, 2 direita.
 int   ajustes_relogio_ligado(void);
@@ -536,7 +544,7 @@ enum { PALCO_CORTINA, PALCO_ATUAL, PALCO_ARTE, PALCO_PRETO, PALCO_AURA, PALCO_TR
 int   ajustes_palco_fundo(void);
 int   ajustes_titulo_fil(void);        // 0 Classico, 1 Ilha, 2 Editorial, 3 Acento
 int   ajustes_abertura_estilo(void);   // 0 Centro (A3), 1 Canto (B3)
-int   ajustes_fundo_din(void);         // #205: fundo da Dinamica, 0 Cinza (padrao), 1 Cor, 2 Imersivo
+int   ajustes_fundo_din(void);         // #205: fundo da Dinamica, 0 Cinza (padrao), 1 Cor, 2 Imersivo, 3 Cinza escuro
 void  ajustes_fundo_din_cor(float rgb[3]);   // #205: a cor escolhida para o fundo "Cor" (sRGB 0..1)
 // #205: tamanho dos cards de episodio (Moderna): 0 pequeno, 1 medio (padrao), 2 grande.
 int   ajustes_menu_cartaz_simples(void); // 0 On (default, enriched card), 1 Off (side list only); this TV only.
@@ -761,6 +769,8 @@ void ajustes_perfil_esquecer(void);
 // live under c_settings_v1. Device/display/decoder budgets, local endpoints
 // and credentials are excluded; see ajustePortavel in ajustes_sync.inc.
 int ajustes_mesclar_blob(const char *base, char **saida);
+// Main-thread local edit detector; avoids building the account JSON snapshot.
+unsigned long long ajustes_sync_hash(void);
 // #187: uma linha "[tmdb] idioma dos metadados: ..." com o que a TV pede ao
 // TMDB, de onde vem (ajuste desta TV) e o tmdb_language cru da conta.
 void ajustes_tmdb_idioma_relatar(const char *blob);

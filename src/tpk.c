@@ -31,15 +31,13 @@
 #include "streams.h"
 #include <stdlib.h>
 #include <string.h>
-#ifdef NV_TPK40
 #include <fcntl.h>
 #include <unistd.h>
-#endif
 
 int main(int argc, char **argv);
 
-#ifdef NV_TPK40
-// ---------------------------------------------------------------- RASTRO 4/5
+// Shared startup trace: persist native steps for every TPK host.
+// ---------------------------------------------------------------- RASTRO
 // Ver tpk.h. Caminho definido em nv_tpk_iniciar (data/tpk-etapas.txt); o host
 // .NET escreve no mesmo arquivo com O_APPEND, e cada linha e UM write, entao
 // as duas fontes nao se misturam. Sem stdio: se o processo morrer logo depois,
@@ -73,16 +71,15 @@ static void etapasAnteriorParaLog(void) {
   fclose(f);
   fflush(stdout);
 }
-#endif
 
+static char erro[512];
 TpkEgl tpkEgl;
 int tpk_egl_carregar(void) {
   static const char *const nomes[] = { "libEGL.so.1", "libEGL.so", "libEGL.so.1.4", NULL };
   void *h = NULL;
   int i;
-  if (tpkEgl.MakeCurrent) return 0;
   for (i = 0; nomes[i] && !h; i++) h = dlopen(nomes[i], RTLD_NOW | RTLD_GLOBAL);
-  if (!h) { printf("[tpk] libEGL nao encontrada: %s\n", dlerror()); fflush(stdout); return -1; }
+  if (!h) { snprintf(erro, sizeof erro, "libEGL not found: %s", dlerror()); return -1; }
 #define PEGA(c, n) *(void **)&tpkEgl.c = dlsym(h, n)
   PEGA(GetCurrentDisplay, "eglGetCurrentDisplay"); PEGA(GetCurrentSurface, "eglGetCurrentSurface");
   PEGA(GetCurrentContext, "eglGetCurrentContext"); PEGA(GetError, "eglGetError");
@@ -94,7 +91,19 @@ int tpk_egl_carregar(void) {
   PEGA(SwapInterval, "eglSwapInterval"); PEGA(SwapBuffers, "eglSwapBuffers");
   PEGA(MakeCurrent, "eglMakeCurrent"); PEGA(GetProcAddress, "eglGetProcAddress");
 #undef PEGA
-  return tpkEgl.MakeCurrent && tpkEgl.GetCurrentContext ? 0 : -1;
+  // These calls are unconditional in the context handoff and GL diagnostics.
+#define REQUIRED(c, n) if (!tpkEgl.c) { snprintf(erro, sizeof erro, "libEGL missing %s", n); return -1; }
+  REQUIRED(GetCurrentDisplay, "eglGetCurrentDisplay");
+  REQUIRED(GetCurrentSurface, "eglGetCurrentSurface");
+  REQUIRED(GetCurrentContext, "eglGetCurrentContext");
+  REQUIRED(MakeCurrent, "eglMakeCurrent");
+  REQUIRED(GetError, "eglGetError");
+  REQUIRED(QueryContext, "eglQueryContext");
+  REQUIRED(ChooseConfig, "eglChooseConfig");
+  REQUIRED(GetConfigAttrib, "eglGetConfigAttrib");
+#undef REQUIRED
+  erro[0] = 0;
+  return 0;
 }
 
 // A VEZ. Quem tem a vez pode ter o contexto corrente; o outro nao toca em GL.
@@ -112,12 +121,19 @@ static EGLDisplay dpy = EGL_NO_DISPLAY;
 static EGLSurface sup = EGL_NO_SURFACE;
 static EGLContext ctx = EGL_NO_CONTEXT;
 static int telaW = 1920, telaH = 1080;
+static int saidaPedida;
+void tpk_pedir_saida(int w, int h) {
+  __atomic_store_n(&saidaPedida, w >= 3840 && h >= 2160 ? 3840 : 1920, __ATOMIC_RELEASE);
+}
+// Read by the host before constructing GLWindow; zero means startup is pending.
+__attribute__((visibility("default")))
+int nv_tpk_saida_pedida(void) { return __atomic_load_n(&saidaPedida, __ATOMIC_ACQUIRE); }
 static char dirArte[512];
-static char erro[512];
 // Configuracao do host (nv_tpk_config): quanto o framework espera o app num
 // quadro (ms; <0 = ate ele terminar) e se desliga o vsync do eglSwapBuffers.
 static int esperaMs = 50, swapZero;
 static unsigned nQuadros, nPulados;
+static int contextoFalhou; // Render-thread only; do not poll the app thread's error buffer.
 
 // Fio do app: devolve a vez ao framework e espera ela voltar.
 static void appEsperaVez(int entregou) {
@@ -134,10 +150,9 @@ static void *fioApp(void *arg) {
   char *argv[] = { "nuvio", dirArte, NULL };
   int r;
   (void)arg;
-#ifdef NV_TPK40
   nv_tpk40_etapa("note app-main started");
-#endif
   r = main(2, argv);
+  nv_tpk40_etapa("note app-main returned");
   printf("[tpk] main devolveu %d\n", r);
   fflush(stdout);
   pthread_mutex_lock(&trava);
@@ -162,7 +177,11 @@ int nv_tpk_iniciar(const char *arte, const char *dados, int w, int h) {
   // O locale do host (.NET, idioma da TV) chega aqui ja aplicado; o main()
   // volta o numerico para o C, e isto cobre o que roda antes dele.
   setlocale(LC_NUMERIC, "C");
-  if (tpk_egl_carregar() != 0) { snprintf(erro, sizeof erro, "libEGL nao encontrada na TV"); return -1; }
+  snprintf(etapasArq, sizeof etapasArq, "%s/tpk-etapas.txt", dados);
+  snprintf(etapasAnt, sizeof etapasAnt, "%s/tpk-etapas-anterior.txt", dados);
+  nv_tpk40_etapa("begin egl-load");
+  if (tpk_egl_carregar() != 0) { nv_tpk40_etapa(erro); nv_tpk40_etapa("fail egl-load"); return -1; }
+  nv_tpk40_etapa("ok egl-load");
   if (w > 0 && h > 0) { telaW = w; telaH = h; }
   snprintf(dirArte, sizeof dirArte, "%s", arte);
   // <pacote>/res/art: o motor P2P (p2pmotor_motor.c) acha a libnuvio_engine.so
@@ -180,18 +199,21 @@ int nv_tpk_iniciar(const char *arte, const char *dados, int w, int h) {
     video_tpk_cdn_ganchos(&g);
     stream_cdn_lembrar = cdnlink_lembrar; }
   setenv("NUVIO_LOG", log, 1);
-#ifdef NV_TPK40
-  snprintf(etapasArq, sizeof etapasArq, "%s/tpk-etapas.txt", dados);
-  snprintf(etapasAnt, sizeof etapasAnt, "%s/tpk-etapas-anterior.txt", dados);
-  nv_tpk40_etapa("note nv_tpk_iniciar reached native");
-#endif
   setenv("HOME", dados, 1);
   setenv("SDL_VIDEODRIVER", "dummy", 1);
+  nv_tpk40_etapa("ok native-environment");
   pthread_attr_init(&at);
   // O main() e o laco usam pilha como um processo normal (buffers de 4-8 KB
   // aos montes); o padrao de fio do Tizen e 8 MB mas nao e garantido.
   pthread_attr_setstacksize(&at, 8 << 20);
-  if (pthread_create(&t, &at, fioApp, NULL) != 0) return -1;
+  nv_tpk40_etapa("begin app-thread");
+  int rc = pthread_create(&t, &at, fioApp, NULL);
+  pthread_attr_destroy(&at);
+  if (rc != 0) {
+    snprintf(erro, sizeof erro, "pthread_create failed: %d", rc);
+    nv_tpk40_etapa(erro); nv_tpk40_etapa("fail app-thread"); return -1;
+  }
+  nv_tpk40_etapa("ok app-thread");
   pthread_detach(t);
   return 0;
 }
@@ -234,10 +256,18 @@ void nv_tpk_config(int espera, int zero) { esperaMs = espera; swapZero = zero; }
 __attribute__((visibility("default")))
 int nv_tpk_quadro(void) {
   int r;
+  if (contextoFalhou) return -1;
   if (ctx == EGL_NO_CONTEXT) {
     dpy = eglGetCurrentDisplay();
     sup = eglGetCurrentSurface(EGL_DRAW);
     ctx = eglGetCurrentContext();
+    if (dpy == EGL_NO_DISPLAY || sup == EGL_NO_SURFACE || ctx == EGL_NO_CONTEXT) {
+      contextoFalhou = 1;
+      snprintf(erro, sizeof erro, "No current EGL display/surface/context (error 0x%x)", eglGetError());
+      nv_tpk40_etapa(erro); nv_tpk40_etapa("fail egl-context");
+      return -1;
+    }
+    nv_tpk40_etapa("ok egl-context");
     if (swapZero && tpkEgl.SwapInterval) tpkEgl.SwapInterval(dpy, 0);
     printf("[tpk] contexto do framework: dpy=%p sup=%p ctx=%p espera=%d swap0=%d\n",
            dpy, sup, ctx, esperaMs, swapZero);
@@ -354,15 +384,16 @@ int nv_tpk_quadro(void) {
 }
 
 void *tpk_gl_criar(void) {
-#ifdef NV_TPK40
   etapasAnteriorParaLog();   // o main() ja abriu o nuvio.log a esta altura
-#endif
+  nv_tpk40_etapa("begin app-context");
   appEsperaVez(0);
   if (!eglMakeCurrent(dpy, sup, sup, ctx)) {
     printf("[tpk] eglMakeCurrent no fio do app falhou: 0x%x\n", eglGetError());
     snprintf(erro, sizeof erro, "eglMakeCurrent no fio do app falhou: 0x%x", eglGetError());
+    nv_tpk40_etapa(erro); nv_tpk40_etapa("fail app-context");
     return NULL;
   }
+  nv_tpk40_etapa("ok app-context");
   return (void *)1;
 }
 

@@ -447,7 +447,7 @@ static const char *ajRotSeg(int op, int i) {
   char *p;
   snprintf(b[i % 3], sizeof b[0], "%s", i18n(OPCOES[op].valores[i]));
   p = strstr(b[i % 3], " (");
-  if (p && p != b[i % 3]) *p = 0;
+  if (p && p != b[i % 3] && op != AJ_AMPLIAR_UI) *p = 0;
   return b[i % 3];
 }
 // Escolha que cabe na linha: ate tres valores curtos viram o segmentado.

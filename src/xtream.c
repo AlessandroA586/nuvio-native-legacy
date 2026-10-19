@@ -43,6 +43,8 @@ typedef struct FonteContexto {
   NvPerfilSessao sessaoLida_;
   XtreamConta conta_;
   int formatoOk_;
+  int conexoesModo_; // 0 Auto, 1 On, 2 Off; belongs to this account.
+  int autoLimitada_; // Keep the login decision until this account/profile changes.
   int ultimaFalha_, ultimoHttp_, ultimoTotal_;
   int retryAfterUltimo_;
   pthread_mutex_t trava_;
@@ -62,6 +64,8 @@ typedef struct FonteContexto {
 #define sessaoLida (contexto()->sessaoLida_ )
 #define conta (contexto()->conta_ )
 #define formatoOk (contexto()->formatoOk_ )
+#define conexoesModo (contexto()->conexoesModo_ )
+#define autoLimitada (contexto()->autoLimitada_ )
 #define trava (contexto()->trava_ )
 
 static const char *arquivo(void) {
@@ -100,7 +104,7 @@ static void carregarTravado(void) {
   if (lido && p == perfilLido && sessao == sessaoLida) return;
   perfilLido = p; sessaoLida = sessao; lido = 1;
   servidor[0] = usuario[0] = senha[0] = 0;
-  memset(&conta, 0, sizeof conta); formatoOk = -1;
+  memset(&conta, 0, sizeof conta); formatoOk = -1; conexoesModo = autoLimitada = 0;
   b = dados_ler(arquivo());
   if (!b) return;
   for (linha = b; *linha; linha = fim) {
@@ -114,6 +118,9 @@ static void carregarTravado(void) {
     if (!strcmp(linha, "servidor")) snprintf(servidor, sizeof servidor, "%s", sep);
     else if (!strcmp(linha, "usuario")) snprintf(usuario, sizeof usuario, "%s", sep);
     else if (!strcmp(linha, "senha")) snprintf(senha, sizeof senha, "%s", sep);
+    else if (!strcmp(linha, "conexoesModo")) {
+      int m = atoi(sep); conexoesModo = m >= 0 && m <= 2 ? m : 0;
+    }
   }
   free(b);
 }
@@ -130,7 +137,7 @@ static int gravar(void) {
            "# CREDENCIAL. Usuario e senha do Xtream vao dentro de toda URL de\n"
            "# canal: valem como a assinatura. Nao versionar, nao empacotar, nao\n"
            "# colar em issue nem em log.\n"
-           "servidor\t%s\nusuario\t%s\nsenha\t%s\n", servidor, usuario, senha);
+           "servidor\t%s\nusuario\t%s\nsenha\t%s\nconexoesModo\t%d\n", servidor, usuario, senha, conexoesModo);
   return dados_gravar(arquivo(), txt);
 }
 
@@ -143,6 +150,7 @@ int xtream_definir_servidor(const char *s) {
   normalizarServidor(s, servidor, sizeof servidor);
   int ok=gravar();
   if(!ok)memcpy(servidor,anterior,sizeof anterior);
+  else { autoLimitada = 0; memset(&conta, 0, sizeof conta); }
   pthread_mutex_unlock(&trava);
   return ok;
 }
@@ -157,12 +165,13 @@ int xtream_conta_definir(const char *s,const char *u,const char *p) {
   int atual=nv_perfil_sessao_travar(sessaoLida),ok=atual && gravar();
   if(atual)nv_perfil_sessao_destravar();
   if(!ok) { memcpy(servidor,antigoS,sizeof antigoS);memcpy(usuario,antigoU,sizeof antigoU);memcpy(senha,antigoP,sizeof antigoP); }
-  else { memset(&conta,0,sizeof conta);formatoOk=-1; }
+  else { autoLimitada=0; memset(&conta,0,sizeof conta);formatoOk=-1; }
   memset(antigoP,0,sizeof antigoP);pthread_mutex_unlock(&trava);return ok;
 }
 void xtream_definir_usuario(const char *u) {
   pthread_mutex_lock(&trava);
   carregarTravado();
+  autoLimitada = 0; memset(&conta, 0, sizeof conta);
   snprintf(usuario, sizeof usuario, "%s", u ? u : "");
   gravar();
   pthread_mutex_unlock(&trava);
@@ -170,6 +179,7 @@ void xtream_definir_usuario(const char *u) {
 void xtream_definir_senha(const char *s) {
   pthread_mutex_lock(&trava);
   carregarTravado();
+  autoLimitada = 0; memset(&conta, 0, sizeof conta);
   snprintf(senha, sizeof senha, "%s", s ? s : "");
   gravar();
   pthread_mutex_unlock(&trava);
@@ -178,6 +188,7 @@ void xtream_definir_senha(const char *s) {
 void xtream_esquecer(void) {
   pthread_mutex_lock(&trava);
   dados_apagar(arquivo());
+  conexoesModo = autoLimitada = 0; memset(&conta, 0, sizeof conta); formatoOk = -1;
   servidor[0] = usuario[0] = senha[0] = 0;
   lido = 1; perfilLido = perfis_ativo();
   pthread_mutex_unlock(&trava);
@@ -230,6 +241,35 @@ const char *xtream_senha_mascarada(void) {
   }
   pthread_mutex_unlock(&trava);
   return m;
+}
+
+int xtream_conexoes_modo(void) {
+  int m;
+  pthread_mutex_lock(&trava); carregarTravado(); m = conexoesModo;
+  pthread_mutex_unlock(&trava); return m;
+}
+void xtream_definir_conexoes_modo(int m) {
+  if (m < 0 || m > 2) return;
+  pthread_mutex_lock(&trava); carregarTravado(); conexoesModo = m; gravar();
+  pthread_mutex_unlock(&trava);
+}
+static int limitadaTravado(void) {
+  return conexoesModo == 1 || (conexoesModo == 0 && autoLimitada);
+}
+int xtream_conexoes_limitadas(void) {
+  int on;
+  pthread_mutex_lock(&trava); carregarTravado(); on = limitadaTravado();
+  pthread_mutex_unlock(&trava); return on;
+}
+int xtream_url_limitada(const char *url) {
+  int on = 0;
+  pthread_mutex_lock(&trava); carregarTravado();
+  if (url && servidor[0] && limitadaTravado()) {
+    size_t n = strlen(servidor);
+    if (!strncmp(url, servidor, n) && (!strncmp(url + n, "/live/", 6) ||
+        !strncmp(url + n, "/movie/", 7) || !strncmp(url + n, "/series/", 8))) on = 1;
+  }
+  pthread_mutex_unlock(&trava); return on;
 }
 
 // --- rede ---------------------------------------------------------------
@@ -673,7 +713,11 @@ static int contaLerSessao(XtreamConta *out, NvPerfilSessao sessao) {
   free(corpo);
   pthread_mutex_lock(&trava);
   int atual = nv_perfil_sessao_travar(sessao);
-  if (atual) { conta = c; nv_perfil_sessao_destravar(); }
+  if (atual) {
+    conta = c;
+    if (c.valido && c.maxConexoes > 0 && (c.maxConexoes <= 1 || c.conexoes >= c.maxConexoes)) autoLimitada = 1;
+    nv_perfil_sessao_destravar();
+  }
   pthread_mutex_unlock(&trava);
   if (!atual) { if (out) memset(out, 0, sizeof *out); return 0; }
   if (out) *out = c;
@@ -920,6 +964,7 @@ void xtream_fontes_invalidar(void) {
   pthread_mutex_lock(&fontesTrava);
   for(FonteContexto *c=fontesContextos;c;c=c->proximo){ pthread_mutex_lock(&c->trava_); c->lido_=0;
     c->servidor_[0]=c->usuario_[0]=c->senha_[0]=0;memset(&c->conta_,0,sizeof c->conta_);c->formatoOk_=-1;
+    c->conexoesModo_=c->autoLimitada_=0;
     pthread_mutex_unlock(&c->trava_); }
   pthread_mutex_unlock(&fontesTrava);
 }

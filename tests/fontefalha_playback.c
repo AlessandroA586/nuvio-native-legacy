@@ -13,6 +13,14 @@ static int fake_join(pthread_t, void **);
 #undef pthread_join
 #include <assert.h>
 
+long memlog_livre_mb(void) { return 1024; }
+int memlog_pode_reabrir(long (*livre)(void), void (*aliviar)(void)) { (void)livre; (void)aliviar; return 1; }
+void tex_aliviar(void) {}
+void txt_aliviar(void) {}
+void mkvass_parar(void) {}
+void assrender_aliviar(void) {}
+void memlog_devolver(void) {}
+
 static Uint32 agora;
 static unsigned lista = 41;
 static Stream fontes[2];
@@ -68,7 +76,9 @@ unsigned video_bufferando_ms(void) { return (unsigned)bufferMs; }
 double video_pos(void) { return posicao; }
 double video_buffer_fim(void) { return bufferFim; }
 const char *video_url_atual(void) { return ""; }
+#ifndef I613_APP
 const char *video_erro_texto(void) { return "fixture playback error"; }
+#endif
 int stream_atual(void) { return 0; }
 unsigned stream_lista_geracao(void) { return lista; }
 int stream_n(void) { return 2; }
@@ -85,12 +95,28 @@ void marco(const char *s) { (void)s; }
 uint64_t badges_bit(const char *s) { (void)s; return 0; }
 int player_indice(void) { return 0; }
 void player_episodio_atual(int *t, int *e) { *t = *e = 0; }
+#ifndef I613_APP
+AddonsConsulta *addons_consulta_capturar(void) { return NULL; }
+int addons_consulta_atual(const AddonsConsulta *c) { (void)c; return 0; }
+void addons_consulta_liberar(AddonsConsulta *c) { (void)c; }
+int stream_vod_renovar(const AddonsConsulta *c, const char *id, const char *tipo,
+                       int i, unsigned g, int (*cancelado)(void *), void *ctx, Stream *s) {
+  (void)c; (void)id; (void)tipo; (void)i; (void)g; (void)cancelado; (void)ctx; (void)s;
+  assert(!"legacy failover must not renew VOD implicitly"); return 0;
+}
+int stream_vod_renovada_aplicar(int i, unsigned g, const Stream *s, uint64_t sessao) {
+  (void)i; (void)g; (void)s; (void)sessao; return 0;
+}
+void video_definir_cabecalhos(const char *s) { (void)s; }
 const CatItem *cat_item(int i) { (void)i; return NULL; }
+#endif
 int cat_id_stream(int i, int t, int e, char *url, unsigned n) {
   (void)i; (void)t; (void)e; (void)n; url[0] = 0; return 0;
 }
 void stream_definir_lista(const Stream *s, int n) { (void)s; (void)n; assert(!"VOD policy must not replace list"); }
+#ifndef I613_APP
 void stream_definir_atual(int i) { (void)i; assert(!"VOD consumer opens in the later UI phase"); }
+#endif
 int stream_automatico_disponivel(int i) { (void)i; return 1; }
 Uint32 stream_idade_ms(void) { return 0; }
 int stalker_resolver(const char *id, char *url, unsigned n) {

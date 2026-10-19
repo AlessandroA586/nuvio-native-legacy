@@ -283,7 +283,10 @@ typedef enum {
   //   uFoco  = Triptych skew: top edge shift, in fractions of the rect width
   //   uCor.a = alpha; uTexAsp = texture w/h
   GFX_PALCO_ARTE = 48,
-  GFX_NMODOS = 49
+  // Integer prescale with a bilinear transition. uPar=inverse source size,
+  // uFoco=integer scale; alpha remains the original bilinear sample.
+  GFX_COPIA_NITIDA = 49,
+  GFX_NMODOS = 50
 } GfxModo;
 
 typedef struct {

@@ -321,7 +321,7 @@ int main(void) {
   prog_definir_relogio(relogioProg);
   agoraMs = (long long)time(NULL) * 1000LL;
 
-  { static const char *const e[] = { "tt1", "tt2", "ttA:1:3", "ttB:2:1", "ttC:1:8" };
+  { static const char *const e[] = { "ttA:1:3", "tt1", "ttB:2:1", "ttC:1:8", "tt2" };
     modoTeste = CWO_PADRAO;
     conferir("padrao", e, 5);
     assert(!cwo_e_futuro("ttA:1:3") && !cwo_e_futuro("ttB:2:1"));
@@ -349,7 +349,8 @@ int main(void) {
     conferir("nao exibidos desligado", e, 3);
     assert(!cwo_e_futuro("ttA:1:3") && !cwo_e_futuro("ttB:2:1"));
     modoTeste = CWO_PADRAO;
-    conferir("nao exibidos desligado (padrao)", e, 3);
+    { static const char *const recent[] = { "tt1", "ttC:1:8", "tt2" };
+      conferir("nao exibidos desligado (padrao)", recent, 3); }
     puts("ok  nao exibidos desligado: futuros saem em qualquer modo"); }
 
   // --- BROTHERS: fileira cheia, o futuro e o mais recente ---------------------

@@ -68,6 +68,7 @@ static void heroTempoInicio(int indice) {
 #include "descoberta.h"
 #include "dados.h"
 #include "tendencia.h"
+#include "imersiva.h"
 #include <strings.h>
 // Os veus da base de cada forma de card (gfx_veu_base): a fracao da altura que
 // o degrade cobre e o alfa na base. Nomeados porque o laco da fileira os poe
@@ -506,6 +507,7 @@ static float  expAbre = 0.0f;   // 0 fechado, 1 aberto
 // a de posteres deitados ja mostram a arte larga — nao ha para o que abrir.
 static int podeExpandir(int r) {
   if (r < 0 || r >= nFileiras) return 0;
+  if (fileiras[r].tipo == FILEIRA_POSTER) return 1;
   if (fileiras[r].tipo != FILEIRA_NORMAL) return 0;
   return !ajustes_posteres_deitados();
 }
@@ -960,6 +962,10 @@ static void medidaColecao(int forma, float *w, float *h) {
 
 static float larguraDe(TipoFileira t) {
   switch (t) {
+    case FILEIRA_POSTER:
+      return layoutHome() == HOME_LAYOUT_PADRAO
+        ? escalaCartazPadrao() * NV_PAD_CARTAZ_W * gfx_poster_k()
+        : escalaDoAjuste() * escalaPosterTelefone() * NV_CARD_W * gfx_poster_k();
     case FILEIRA_CONTINUE: return NV_DESTAQUE_W * gfx_poster_k();
     // Opção editorial já existente: card panorâmico 16:9.
     case FILEIRA_DESTAQUE: return layoutHome() == HOME_LAYOUT_DINAMICA
@@ -1468,6 +1474,10 @@ static int foco_pode_pressao_longa(void) {
 
 static float alturaDe(TipoFileira t) {
   switch (t) {
+    case FILEIRA_POSTER:
+      return layoutHome() == HOME_LAYOUT_PADRAO
+        ? escalaCartazPadrao() * NV_PAD_CARTAZ_H * gfx_poster_k()
+        : escalaDoAjuste() * escalaPosterTelefone() * NV_CARD_H * gfx_poster_k();
     case FILEIRA_CONTINUE: return NV_DESTAQUE_H * gfx_poster_k();
     case FILEIRA_DESTAQUE: return layoutHome() == HOME_LAYOUT_DINAMICA
                                 ? NV_DIN_DEST_H * gfx_poster_k() : NV_DESTAQUE_EDITORIAL_H * gfx_poster_k();
@@ -1509,8 +1519,8 @@ static int temRotulo(TipoFileira t) {
   // bloco de fora (.home-poster-card.is-landscape .home-poster-copy{display:none}).
   if (t == FILEIRA_HEROI_DIVIDIDO) return 1;   // ano e nota embaixo do poster
   if (t == FILEIRA_REDONDA) return 1;   // pessoa sem nome embaixo nao se reconhece
-  return t == FILEIRA_NORMAL && ajustes_rotulos_poster()
-      && !ajustes_posteres_deitados();
+  return ajustes_rotulos_poster() && (t == FILEIRA_POSTER ||
+         (t == FILEIRA_NORMAL && !ajustes_posteres_deitados()));
 }
 // O gap comum é 24px. Cards editoriais grandes precisam de 40px porque crescem
 // 6% quando focados e, com o gap menor, quase encostam no vizinho.
@@ -2178,7 +2188,7 @@ static float homeScrollYPasso(float alvo, float dt, int reduzido) {
 // mede; fileiras.h nao pode incluir home.h sem fechar um ciclo de headers.
 static TipoFileira tipoDaEscolha(int t) {
   switch (t) {
-    case FIL_TIPO_CARTAZ:   return FILEIRA_NORMAL;
+    case FIL_TIPO_CARTAZ:   return FILEIRA_POSTER;
     case FIL_TIPO_DESTAQUE: return FILEIRA_DESTAQUE;
     // Os tres tamanhos sao a MESMA forma; o fator vem por fil_escala.
     case FIL_TIPO_DESTAQUE_QUADRADO:
@@ -2484,6 +2494,9 @@ static int focoVertical(int dy) {
   return 1;
 }
 
+static int imvEvento(const SDL_Event *e);
+static void imvAtualizar(float dt);
+static Imersiva imv;
 static void home_evento_(const SDL_Event *e) {
   pedidoRelogio = 0;
   if (e->type == SDL_QUIT) { sair = 1; return; }
@@ -2496,6 +2509,7 @@ static void home_evento_(const SDL_Event *e) {
       if (k == SDLK_DOWN || k == SDLK_RIGHT) return;
     }
   }
+  if (imvEvento(e)) return;   // layout Imersiva com o cartaz aberto no lugar
 #ifdef NV_TOUCH_UI
   if (e->type == SDL_KEYDOWN) {
     toqueHeroCancelar();
@@ -2612,6 +2626,8 @@ static void home_evento_(const SDL_Event *e) {
         // card dela ja e um convite a tocar. Segurar OK continua abrindo o
         // menu — o ramo NV_HOLD_MS acima nem chega aqui.
         const Fileira *fl = &fileiras[foco.fileira];
+        // Imersiva: o primeiro OK abre o cartaz no lugar; o segundo segue abaixo.
+        if (ajustes_home_imersiva() && !imv.aberto) { imv_abrir(&imv, foco.coluna); return; }
         // "Proximos episodios" (issue #127) NAO toca: o episodio ainda nao foi
         // ao ar, e nenhum addon tem fonte para ele. OK abre a pagina.
         if (ajustes_cw_ok_toca() && strcmp(fl->chave, "upcoming_section") &&
@@ -3442,7 +3458,7 @@ static void sincronizarFileiras(void) {
   // (menu.c). Depois do corte acima de proposito: fileira que a pessoa
   // desligou em Ajustes nao reaparece na barra. Ordem = a da fileira.
   nStreamBarra = 0;
-  if (ajustes_home_layout() == HOME_LAYOUT_DINAMICA) {
+  if (ajustes_home_layout() == HOME_LAYOUT_DINAMICA && !ajustes_menu_topo()) {
     int q;
     for (q = 0; q < destino; q++) {
       if (fileiras[q].tipo != FILEIRA_CATALOGOS ||
@@ -3637,6 +3653,7 @@ static void home_atualizar_(float dt, Uint32 agora) {
   if (!telefoneui_ativo()) { toqueHomeLimpar(); toqueHeroCancelar(); }
 #endif
   sincronizarFileiras();
+  if (ajustes_home_imersiva()) imvAtualizar(dt);
   // A FILEIRA DE AMIGOS tem tantas colunas quantos rostos (+ "Adicionar"), e
   // isso muda sem o catalogo mudar (um amigo novo chega do recomenda.c).
   for (int r = 0; r < nFileiras; r++) {
@@ -4052,17 +4069,18 @@ static void home_atualizar_(float dt, Uint32 agora) {
 // destaque desligado a fonte e a arte do primeiro cartao da fileira em foco, e
 // ela so tem cor se ja foi vista como destaque (corviva.txt lembra) — nao se
 // decodifica arte grande so para tingir o fundo.
-// TRES FUNDOS (ajustes_fundo_din, #205). O dono viu o fundo inteiro piscar de cor a
+// Background modes (ajustes_fundo_din, #205). O dono viu o fundo inteiro piscar de cor a
 // cada titulo ("fica feio"), entao o PADRAO e uma cor so:
 //   Cinza    #1C1C1E, o cinza escuro do tvOS (systemGray6 escuro). Liso, nunca muda.
 //   Cor      a cor escolhida em Ajustes, escurecida para o nivel do fundo (OKLab,
 //            L fixo): "Branco" ou "Dourado" cheios matariam o contraste do texto.
 //   Imersivo a cor do titulo de antes, mas presa: L numa faixa estreita, croma
 //            com teto, troca longa (~1,2 s) e so depois que o foco assenta (400 ms).
-// Cinza e Cor sao lisos (queda 1); so o Imersivo guarda o degrade para a base.
+// Cinza e Cor sao lisos (queda 1); Imersivo e Cinza escuro usam degrade.
 #define DIN_FUNDO_CINZA    0
 #define DIN_FUNDO_COR      1
 #define DIN_FUNDO_IMERSIVO 2
+#define DIN_FUNDO_CINZA_ESCURO 3
 #define DIN_QUEDA          0.34f   // Imersivo: o que sobra da cor na base da tela
 #define DIN_TROCA_TAU      0.11f   // s; troca de modo ou de cor fixa: ~0,45 s
 #define DIN_IMERSIVO_TAU   0.30f   // s; ~1,2 s para assentar, sem piscada
@@ -4070,6 +4088,7 @@ static void home_atualizar_(float dt, Uint32 agora) {
 #define DIN_IMERSIVO_L0    0.20f   // faixa de L (OKLab) do Imersivo: 0,05 de largura
 #define DIN_IMERSIVO_L1    0.25f
 static const float DIN_CINZA[3] = { 28 / 255.0f, 28 / 255.0f, 30 / 255.0f };   // #1C1C1E
+static const float DIN_CINZA_ESCURO[3] = { 26 / 255.0f, 27 / 255.0f, 31 / 255.0f }; // #1A1B1F; base ~#0E0F12
 static char  dinColArte[512];   // banner de colecao mostrado ("" = nenhum), ver dinArteColecao
 static float dinColAlfa = 0.0f;
 static float dinCor[3]  = { 28 / 255.0f, 28 / 255.0f, 30 / 255.0f };
@@ -4102,6 +4121,8 @@ static float dinPasso(Uint32 agora, const char *arte) {
   dinUlt = agora ? agora : 1u;
   if (modo == DIN_FUNDO_CINZA) {
     memcpy(dinAlvo, DIN_CINZA, sizeof dinAlvo); dinQuedaAlvo = 1.0f;
+  } else if (modo == DIN_FUNDO_CINZA_ESCURO) {
+    memcpy(dinAlvo, DIN_CINZA_ESCURO, sizeof dinAlvo); dinQuedaAlvo = 0.56f;
   } else if (modo == DIN_FUNDO_COR) {
     float c[3];
     ajustes_fundo_din_cor(c);
@@ -4137,7 +4158,7 @@ static const char *dinArteDaCor(void) {
   deitado = editorial(f->tipo) || f->tipo == FILEIRA_LARGA ||
             f->tipo == FILEIRA_HEROI ||
             f->tipo == FILEIRA_CONTINUE || f->tipo == FILEIRA_RETORNO ||
-            ajustes_posteres_deitados();
+            (f->tipo != FILEIRA_POSTER && ajustes_posteres_deitados());
   return arte_por_identidade(idx, deitado);
 }
 // O BANNER DA COLECAO NA DINAMICA. Com o foco num grupo de colecao o destaque
@@ -6541,7 +6562,7 @@ static void holofote(Uint32 agora) {
     if (clean) gfx_sem_recorte(); }
   holoTem = 0;
 }
-void home_holofote_desenhar(Uint32 agora) { TXT_INI(); holofote(agora); TXT_FIM(); }
+void home_holofote_desenhar(Uint32 agora) { if (ajustes_home_imersiva()) return; TXT_INI(); holofote(agora); TXT_FIM(); }
 // CARTAZ COM FICHA: a placa inteira atras, o texto a direita do cartaz. O
 // cartaz e desenhado depois, pelo caminho comum (pintarCartao), na largura 2:3.
 static void desenhaFicha(const CatItem *it, float px, float py, float w, float h, float f) {
@@ -7675,6 +7696,7 @@ static float desenhaTituloFil(int r, float y, const char *rot, int cr, int cg, i
   return x0 + tl->w;
 }
 
+#include "home_imersiva.inc"
 static void home_desenhar_(Uint32 agora) {
   // Nao conservar ponteiros para o catalogo de outro quadro/perfil quando
   // nenhuma tela de titulo publica um item (pasta, social ou estado vazio).
@@ -7689,6 +7711,7 @@ static void home_desenhar_(Uint32 agora) {
   // GFX_CARD (nao e um retangulo desenhado por cima): por isso vai por uma
   // variavel de modulo, uma vez por quadro, e nao em cada chamada.
   gfx_borda_foco_atual = ajustes_borda_foco() ? 1.0f : 0.0f;
+  if (ajustes_home_imersiva() && nFileiras > 0 && !homevazio_ativo(nFileiras)) { imvDesenhar(agora); return; }
   desenhaFundo(agora);
   float pd = detail_progresso();
   const int vazioQr = homevazio_ativo(nFileiras);   // sem add-ons: o cartao com o QR no lugar da Home
@@ -7808,7 +7831,7 @@ static void home_desenhar_(Uint32 agora) {
                        tipo == FILEIRA_HEROI_DIVIDIDO ? 59.0f : NV_LEGACY_ROW_HEAD_H);
 
     int deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
-                  ((tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO && tipo != FILEIRA_PALCO) &&
+                  ((tipo != FILEIRA_POSTER && tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO && tipo != FILEIRA_PALCO) &&
                    ajustes_posteres_deitados());
     int rotuloFora = temRotulo(tipo);
     if (y < NV_TELA_H + 200 && y + NV_LEGACY_ROW_HEAD_H + lh > -200) {

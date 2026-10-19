@@ -175,9 +175,18 @@ static int  temAjustesBlob;
 static int  aplicarAjustes = 1;
 // No local/default upload until the main thread has restored this login.
 static int ajustesRestaurando = 1;
+// Detect file-backed edits without building the full account JSON on the UI.
+static unsigned long long ajustesUltimoLocal;
+static int ajustesTemLocal;
+static void ajustesDetectarMudancas(void) {
+  if (__atomic_load_n(&ajustesRestaurando, __ATOMIC_ACQUIRE)) return;
+  unsigned long long hash = ajustes_sync_hash();
+  if (ajustesTemLocal && hash != ajustesUltimoLocal) sync_proteger_ajustes_locais();
+  ajustesUltimoLocal = hash; ajustesTemLocal = 1;
+}
 // Flag em disco: a pessoa ja mudou ajustes nesta TV depois do ultimo
 // sync_reaplicar_ajustes. Sem ela, CADA arranque comecava com aplicarAjustes=1
-// e o blob da conta (ainda sem as mudancas locais — a TV nao empurra layout)
+// e o blob da conta (ainda sem as mudancas locais pendentes de envio)
 // sobrescrevia ajustes.txt. Ver sync_proteger_ajustes_locais.
 #define SY_AJUSTES_LOCAIS "ajustes-locais.txt"
 
@@ -1121,7 +1130,7 @@ static void empurrarAjustes(void) {
     return;
   }
   if (ajustes_mesclar_blob(ajustesBlob, &mesclado) <= 0 || !mesclado) {
-    // Nada diferente do que a conta ja tem: pendencia resolvida sem viagem.
+    // Nothing differs from the freshly pulled account blob: skip the upload.
     free(mesclado);
     sujoAjustes = 0;
     nv_perfil_sessao_destravar();
@@ -1514,6 +1523,7 @@ void sync_iniciar(void) {
   if (fioVivo) { pedidoComFioVivo = 1; return; }
   pedidoComFioVivo = 0;
   if (nuvem_freio_ativo()) return;
+  ajustesDetectarMudancas();
   addonsPerfilCiclo = perfis_ativo_addons();
   cicloInterrompido = 0;
   perfilDoCiclo = perfis_ativo();
@@ -1853,6 +1863,7 @@ void sync_passo(unsigned agoraMs) {
     temAjustesBlob = 0;
     aplicarAjustes = 0;   // daqui para frente, o que a pessoa mudar na TV fica
     __atomic_store_n(&ajustesRestaurando, 0, __ATOMIC_RELEASE);
+    ajustesDetectarMudancas();
   }
   // #187: uma linha por blob novo (aplicado ou protegido) dizendo qual idioma
   // a TV pede ao TMDB e o que a conta guarda. A geracao muda a cada blob.
@@ -2144,6 +2155,7 @@ int sync_empurrar_credencial(const char *provider, const char *credJson) {
 }
 
 void sync_reaplicar_ajustes(void) {
+  ajustesTemLocal = 0;
   cat_historico_contexto(sessao_usuario(), perfis_ativo());
   // A conta ou o perfil ativo mudou: solta pins dos dois grupos para que cada
   // superfície publique em seguida o conjunto pertencente ao novo contexto.
@@ -2276,6 +2288,7 @@ void sync_proteger_ajustes_locais(void) {
 }
 
 void sync_esquecer_usuario(void) {
+  ajustesTemLocal = 0;
   // Reject old worker publications before any private cache is purged.
   perfis_invalidar_sessao();
   cat_historico_contexto("", 0);

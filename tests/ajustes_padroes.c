@@ -11,6 +11,11 @@
 #include <assert.h>
 
 int main(void) {
+  // Merge regression: both appended settings keep their parallel table entries.
+  assert(valor[AJ_XTREAM_CONEXOES] == 0 && valor[AJ_AMPLIAR_UI] == 1);
+  assert(!strcmp(CHAVE[AJ_XTREAM_CONEXOES], "-xtreamConexoes"));
+  assert(!strcmp(CHAVE[AJ_AMPLIAR_UI], "ampliarUiLocal"));
+  assert(OPCOES[AJ_XTREAM_CONEXOES].n == 3 && OPCOES[AJ_AMPLIAR_UI].n == 2);
   // c2e07fe41: 0 = follow the primary, then 50%..300% every 10%; the #439
   // indices saved by 2.0.5 are migrated on load (viuLeg2Escala).
   assert(OPCOES[AJ_LEG2_TAMANHO].n == 27);
@@ -191,7 +196,12 @@ int main(void) {
   AJ_URL_M3U_ADD == AJ_URL_LISTA + 1 &&
   AJ_URL_XMLTV_ADD == AJ_URL_M3U_ADD + 1 &&
   AJ_URL_REM == AJ_URL_XMLTV_ADD + 1 &&
-  AJ_GUIA_FONTE == AJ_URL_REM + 1 &&
+  AJ_NT_EP == AJ_URL_REM + 1 &&
+  AJ_LIVETV_SUGERIR == AJ_NT_EP + 1 &&
+  AJ_AUDIO_OFFSET == AJ_LIVETV_SUGERIR + 1 &&
+  AJ_XTREAM_CONEXOES == AJ_AUDIO_OFFSET + 1 &&
+  AJ_AMPLIAR_UI == AJ_XTREAM_CONEXOES + 1 &&
+  AJ_GUIA_FONTE == AJ_AMPLIAR_UI + 1 &&
   AJ_N == AJ_GUIA_CATEGORIAS + 1);   // 2.0.6: master's #535 views appended after
   assert(ajustes_guia_fonte()==0 && somenteDesteAparelho(AJ_GUIA_FONTE) && dePerfil(AJ_GUIA_FONTE));
   assert(!strcmp(CHAVE[AJ_GUIA_FONTE],"guiaFonteLocal"));
@@ -263,10 +273,12 @@ int main(void) {
   assert(!strcmp(CHAVE[AJ_FUNDO_DIN], "fundoDinamicaLocal") && somenteDesteAparelho(AJ_FUNDO_DIN) && !dePerfil(AJ_FUNDO_DIN));
   assert(!strcmp(CHAVE[AJ_FUNDO_DIN_COR], "fundoDinamicaCorLocal") && somenteDesteAparelho(AJ_FUNDO_DIN_COR) && !dePerfil(AJ_FUNDO_DIN_COR));
   valor[AJ_FUNDO_DIN] = 2; assert(ajustes_fundo_din() == 2);
+  valor[AJ_FUNDO_DIN] = 3; assert(ajustes_fundo_din() == 3);
   valor[AJ_FUNDO_DIN] = 9; assert(ajustes_fundo_din() == 0);   // arquivo de outra versao
   valor[AJ_FUNDO_DIN] = 0;
-  assert(OPCOES[AJ_FUNDO_DIN].n == 3 && !strcmp(OPCOES[AJ_FUNDO_DIN].valores[0], "Cinza") &&
-         !strcmp(OPCOES[AJ_FUNDO_DIN].valores[1], "Cor") && !strcmp(OPCOES[AJ_FUNDO_DIN].valores[2], "Imersivo"));
+  assert(OPCOES[AJ_FUNDO_DIN].n == 4 && !strcmp(OPCOES[AJ_FUNDO_DIN].valores[0], "Cinza") &&
+         !strcmp(OPCOES[AJ_FUNDO_DIN].valores[1], "Cor") && !strcmp(OPCOES[AJ_FUNDO_DIN].valores[2], "Imersivo") &&
+         !strcmp(OPCOES[AJ_FUNDO_DIN].valores[3], "Cinza escuro"));
   assert(!strcmp(i18n(OPCOES[AJ_FUNDO_DIN].rotulo), "Dynamic layout background"));
   assert(!strcmp(i18n(OPCOES[AJ_FUNDO_DIN].valores[0]), "Gray") && !strcmp(i18n(OPCOES[AJ_FUNDO_DIN].valores[2]), "Immersive"));
   assert(OPCOES[AJ_FUNDO_DIN_COR].n == 17 && !strcmp(OPCOES[AJ_FUNDO_DIN_COR].valores[valor[AJ_FUNDO_DIN_COR]], "Oceano"));
@@ -299,7 +311,7 @@ int main(void) {
   assert(valor[AJ_ESTAT_LADO] == 0 && ajustes_estat_lado() == 0);
   valor[AJ_ESTAT_LADO] = 1; assert(ajustes_estat_lado() == 1); valor[AJ_ESTAT_LADO] = 0;
   // 13/10: o layout "Apple TV" se chama Dinamica; o valor gravado nao muda.
-  assert(HOME_LAYOUT_DINAMICA == 2 && OPCOES[AJ_HOME_LAYOUT].n == 3);
+  assert(HOME_LAYOUT_DINAMICA == 2 && HOME_LAYOUT_IMERSIVA == 3 && OPCOES[AJ_HOME_LAYOUT].n == 4);
   assert(!strcmp(V_HOME_LAYOUT[HOME_LAYOUT_DINAMICA], "Dinâmica"));
   assert(!strcmp(i18n(V_HOME_LAYOUT[HOME_LAYOUT_DINAMICA]), "Dynamic"));
   puts("ajustes_padroes: ok");

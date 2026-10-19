@@ -12,7 +12,11 @@ int cwo_futuro(const CwoItem *it, long long agoraMs) {
 int cwo_ordenar(const CwoItem *v, int n, int modo, long long agoraMs, int *perm) {
   int i, w = 0, principal;
   if (!v || !perm || n <= 0) return 0;
-  // Pausados primeiro; recencia recebida preservada dentro de cada grupo.
+  // Default preserves last-watched order across paused and next-up items.
+  if (modo == CWO_PADRAO) {
+    for (i = 0; i < n; i++) perm[i] = i;
+    return n;
+  }
   for (i = 0; i < n; i++) if (!v[i].aSeguir) perm[w++] = i;
   for (i = 0; i < n; i++)
     if (v[i].aSeguir && (modo == CWO_PADRAO || !cwo_futuro(&v[i], agoraMs))) perm[w++] = i;

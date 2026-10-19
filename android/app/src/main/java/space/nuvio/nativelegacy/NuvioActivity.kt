@@ -659,12 +659,29 @@ class NuvioActivity : SDLActivity() {
         fun env(k: String, v: String) = Os.setenv(k, v, true)
         env("NUVIO_INTERFACE_AUTO", if (automaticMobile) "1" else "0")
         env("NUVIO_DADOS", dados.path)
+        // Scoped to signing key/user/device; stable across app reinstall.
+        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        if (!deviceId.isNullOrBlank()) env("NUVIO_DEVICE_ID", "android:$deviceId")
         env("NUVIO_LOG", File(dados, "nuvio.log").path)
         env("NUVIO_LOG_ANTERIOR", File(dados, "nuvio-anterior.log").path)
         env("HOME", dados.path)
         env("NUVIO_ARTE", File(res, "art").path)
         env("NUVIO_LOCALE", java.util.Locale.getDefault().toLanguageTag())
         env("NUVIO_TV_INFO", "${Build.MANUFACTURER} ${Build.MODEL}|${Build.VERSION.SDK_INT}|${Build.VERSION.RELEASE}|$versao")
+        // SDL may expose only the 1080p graphics plane on a 4K television.
+        // Mode dimensions describe the physical output, including supported UHD modes.
+        try {
+            if (Build.VERSION.SDK_INT >= 23) {
+                @Suppress("DEPRECATION")
+                val panel = windowManager.defaultDisplay.supportedModes.maxByOrNull {
+                    it.physicalWidth.toLong() * it.physicalHeight
+                }
+                if (panel != null) {
+                    env("NUVIO_PANEL_SIZE", "${panel.physicalWidth}x${panel.physicalHeight}")
+                    env("NUVIO_PANEL_SOURCE", "Android Display.Mode supportedModes")
+                }
+            }
+        } catch (_: Exception) { /* Keep the SDL fallback when display info is unavailable. */ }
         // Real metrics include physical DPI; use the same pixel space as that DPI.
         // Display.Mode.physicalWidth/Height are pixel counts, not inches.
         val panelInches = try {

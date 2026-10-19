@@ -320,8 +320,10 @@ static void *fioRede(void *u) {
   const char *v[8];
   const char *const *cabs;
   int f;
+  if (it->xt && xtream_conexoes_limitadas()) { atomic_store(&L.fioOcupado, 0); return NULL; }
   if (it == &L.it[0] && L.xtConfig) {
     L.contaLida = xtream_conta_ler(&L.conta);
+    if (it->xt && xtream_conexoes_limitadas()) { atomic_store(&L.fioOcupado, 0); return NULL; } // No stream probes.
     if (L.conta.valido)
       printf("[livetv-diag] conta: status=%s formatos=%s%s telas=%d/%d vence=%lld\n", L.conta.status,
              L.conta.formatosDeclarados ? (L.conta.temM3u8 ? "m3u8 " : "") : "nao declarados",
@@ -411,6 +413,7 @@ static void iniciarRede(int i) {
 // Qual formato vai ao pipeline primeiro: o que a REDE mostrou servindo video,
 // na ordem do Xtream (xtream_formatos: o que a conta declara e o que ja tocou).
 static int proximoFormato(const LtdItem *it) {
+  if (it->xt && xtream_conexoes_limitadas()) return -1;
   const char *ext[2];
   int k = it->xt ? xtream_formatos_canal(it->id, ext) : 0, i;
   for (i = 0; i < k; i++) {

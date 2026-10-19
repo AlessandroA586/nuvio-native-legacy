@@ -622,6 +622,10 @@ static int mudou(const Presenca *a, const Presenca *b) {
 }
 
 // ------------------------------------------------------------------ passo
+void discord_recarregar(void) {
+  gatewayFechar("settings restored");
+  pthread_mutex_lock(&trava); geracao++; perfil = -1; pthread_mutex_unlock(&trava);
+}
 void discord_passo(unsigned agora) {
   int tem;
   if (!discord_disponivel()) return;

@@ -15,6 +15,7 @@
 #include <stdatomic.h>
 #include <stdint.h>
 #define NV_PERFIL_SESSAO_FORTE
+#define NV_TEST_SESSAO_PROPRIA
 static void *montar(void *u);
 static int testeCriar(pthread_t *t, const pthread_attr_t *a, void *(*f)(void *), void *arg);
 #define pthread_create(t, a, f, arg) testeCriar(t, a, f, arg)

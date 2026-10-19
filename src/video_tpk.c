@@ -1587,6 +1587,10 @@ void video_bombear(void) {
       falhou = 1;
     }
   }
+  if (!falhou && !parado && (!pronto || reconBuscarMs >= 0 || (!pausaPedida && bufferando)) &&
+      nv_recon_expirou(&recon, SDL_GetTicks())) {
+    reconErroCod = NV_RECON_TPK_CONNECTION_FAILED; reconErroPend = 1;
+  }
   if (reconErroPend && !cv.ativo && !parado) {
     Uint32 agora = SDL_GetTicks();
     if (resgateAte) {

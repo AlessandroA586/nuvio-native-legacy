@@ -752,4 +752,5 @@ void traktauth_cancelar(void) {
 TraEstado   traktauth_estado(void) { return estado; }
 const char *traktauth_codigo(void) { return userCode; }
 const char *traktauth_url(void)    { return url; }
-const char *traktauth_erro(void)   { return erro; }
+int traktauth_aguardando(void) { return esperaMs || esperaArmada; }
+const char *traktauth_erro(void)   { return traktauth_aguardando() ? i18n("Não foi possível agora. Tente novamente.") : erro; }

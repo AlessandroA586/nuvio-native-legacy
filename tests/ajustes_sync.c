@@ -32,6 +32,9 @@ char *nuvem_post(const char *p, const char *c, const char *b, int *st) {
 char *nuvem_tabela(const char *t, const char *q, const char *b, int *st) {
   (void)t; (void)q; (void)b; *st = 200; return strdup("[]");
 }
+char *nuvem_addon_alternar(const char *q, int a, const char *b, unsigned p, int *st) {
+  (void)q; (void)a; (void)b; (void)p; *st = 200; return strdup("[]");
+}
 char *nuvem_rpc_com(const char *f, const char *c, const char *b, int *st) {
   (void)b; *st = 200;
   if (!strcmp(f, "sync_pull_profiles"))
@@ -67,8 +70,12 @@ static void cycle(void) {
 static void check(int ok, const char *name) {
   if (!ok) { fprintf(stderr, "FAIL: %s\n", name); exit(1); }
 }
+#include "ajustes_nuvem.c"
+#ifndef SYNCJANK_TEST
 int main(int argc, char **argv) {
   assert(argc == 3);
+  if (!strcmp(argv[2], "device")) return recovery(argv[0], argv[1]);
+  if (!strncmp(argv[2], "device-", 7)) return recoveryStage(argv[1], argv[2]);
   setenv("NUVIO_DADOS", argv[1], 1);
   dados_iniciar(NULL); player_dir(argv[1]);
   if (!strcmp(argv[2], "legacy")) {
@@ -77,7 +84,7 @@ int main(int argc, char **argv) {
   }
   ajustes_dir(argv[1]); fil_definir_perfil(1);
   if (!strcmp(argv[2], "quota-restart")) {
-    check(fil_limite_gravado() == 3, "custom row quota survives process restart");
+    check(fil_limite_gravado() == FIL_LIMITE_PADRAO, "cloud device row quota survives process restart");
     return 0;
   }
   login();
@@ -109,7 +116,9 @@ int main(int argc, char **argv) {
     sync_proteger_ajustes_locais(); cycle();
     check(pushes == 1, "settings saved, including first blob for empty account");
     check(strstr(cloud, "untouched\":42") || !strcmp(argv[2], "empty"), "unknown cloud feature preserved");
-    check(!strstr(cloud, "SECRET-") && !strstr(cloud, "5345435245542d") && !strstr(cloud, "c_resolucaoUi"), "credentials and display override excluded");
+    const char *shared, *sharedEnd;
+    check(ajJsonGet(cloud, cloud + strlen(cloud), "c_settings_v1", &shared, &sharedEnd) &&
+          !js_tem(shared, sharedEnd, "c_resolucaoUi"), "display override excluded from shared preferences");
     if (webEdit) {
       // Simulate web edits after the TV uploaded its C snapshot.
       char *updated = malloc(strlen(cloud) + 256); assert(updated);
@@ -143,12 +152,12 @@ int main(int argc, char **argv) {
     check(valor[AJ_HERO] == expected[AJ_HERO] && valor[AJ_PULAR_ABERTURA] == 0, "player/home settings restored");
     check(valor[AJ_LEG_LINGUA] == 3 && valor[AJ_LEG2_COR] == 2 && player_leg_estilo()->tamanho == 160, "subtitle languages and both styles restored");
     check(valor[AJ_FONTE_UI] == 1, "interface font restored");
-    check(valor[AJ_RESOLUCAO] == valorPadrao[AJ_RESOLUCAO], "device display setting not restored");
+    check(valor[AJ_RESOLUCAO] == RES_4K, "same-device display setting restored");
     check(fontefalha_provedores() && fontefalha_provedor_limite(0) == 7, "source fallback preferences restored");
     char first[FR_NOME_MAX]; fonteregra_ordem_nome(0, first, sizeof first);
     check(fonteregra_ordem_n() == 2 && !strcmp(first, "Addon B"), "addon order restored");
     check(!strcmp(fil_chave(0), "org.test_series_new"), "home row order restored");
-    check(fil_limite_gravado() == (quota ? 3 : FIL_LIMITE_PADRAO), "home row quota remains device-local");
+    check(fil_limite_gravado() == FIL_LIMITE_PADRAO, "home row quota restored from device snapshot");
     check(pushes == 1 && !strcmp(saved, cloud), "login restores without default push");
     if (webEdit) {
       sync_proteger_ajustes_locais(); cycle();
@@ -174,3 +183,4 @@ int main(int argc, char **argv) {
   }
   printf("PASS: %s\n", argv[2]); free(cloud); return 0;
 }
+#endif

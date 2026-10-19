@@ -1313,6 +1313,11 @@ void video_bombear(void) {
   if (est[EST_ALT]  > 0) vidH = (int)est[EST_ALT];
   if (pronto && posSeg > 0.5) reconIniciou = 1;
   if (pronto && reconBuscar < 0) nv_recon_progresso(&recon, posSeg);
+  if (!houveErro && (!pronto || reconBuscar >= 0 || (!pausaPedida && bufPct < 100)) &&
+      nv_recon_expirou(&recon, SDL_GetTicks())) {
+    snprintf(erroTexto, sizeof erroTexto, "network recovery timeout");
+    if (!nv_recon_erro(&recon, 1, SDL_GetTicks(), recon.alvo)) houveErro = 1;
+  }
   // Esperando a reconexao, o erro da sessao morta segue no estado ate o
   // proximo open: nao e erro novo.
   if (est[EST_ERRO] != 0 && !houveErro && !recon.pendente) {

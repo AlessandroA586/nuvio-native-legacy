@@ -326,6 +326,8 @@
   0, /* episode card rating: follow the title line */
   0, /* suggest Live TV categories: On, names only */
   0, /* #578: audio presentation offset, unchanged by default */
+  0, /* Xtream limited connections: Auto; account storage owns the value. */
+  1, /* interface scaling: App (4K) hardware, preserving the existing drawable */
   0, 0, 0, 0, 0, /* guide source, refresh and M3U actions */
 
   0, 0, 0, 0, 0, 0, 0, /* native Live TV account registry views/actions */

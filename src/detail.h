@@ -199,15 +199,8 @@ int ajustes_det_espaco(void);
 #define NV_DETP_EP_ICONE      28.0f
 #define NV_DETP_EP_BARRA_Y   390.0f   // barra 576x8, raio 999
 #define NV_DETP_EP_BARRA_H     8.0f
-// MODERNA: titulo e sinopse ficam ABAIXO da miniatura (16:9), nao sobre ela. Na
-// miniatura sobram o selo, o rodape de duracao/notas/data, a barra e o visto.
-//
-// #205 (dono): TRES TAMANHOS de card (Pequeno / Medio / Grande, no Ajustes)
-// e a sinopse passa a ter 4 linhas. Nenhuma destas medidas e mais fixa: as que
-// sao GEOMETRIA do card (largura, passo e miniatura) saem multiplicadas pela
-// escala de epEscala() em detail.c — o texto nao escala, as fontes sao as de
-// sempre. Por isso nao ha mais NV_DETP_EPM_H: epCardH() monta miniatura +
-// bloco de texto (titulo + 4 linhas de sinopse).
+// Modern variant C: unchanged 16:9 image, then title/ratings, runtime/date,
+// and five synopsis lines. Card sizes scale the image; text keeps its scale.
 #define NV_DETP_EPM_THUMB_H  360.0f   // do tamanho Medio: a base da escala
 // Selo "EPISODIO n": a BASE na mesma altura da base do selo Assistido
 // (dono, #205: "a base do episodio na mesma altura do watched"). O selo
@@ -216,12 +209,12 @@ int ajustes_det_espaco(void);
 // tamanho do card, senao a base andava junto com a miniatura e nao com o
 // Assistido.
 #define NV_DETP_EPM_SELO_Y    26.0f   // 26+38 = 18+46: bases alinhadas
-#define NV_DETP_EPM_META_DY   70.0f   // da base da miniatura ao rodape de duracao
+#define NV_DETP_EPM_META_DY   62.0f   // below the image: runtime and air date
 #define NV_DETP_EPM_BARRA_DY  24.0f   // da base da miniatura a barra de progresso
 #define NV_DETP_EPM_TIT_DY    16.0f   // base da miniatura ao topo do titulo
-#define NV_DETP_EPM_TEXTO_X   12.0f   // titulo/sinopse a partir da borda do card
-#define NV_DETP_EPM_SIN_DY    62.0f   // base da miniatura ao topo da sinopse
-#define NV_DETP_EPM_SIN_LINHAS 4      // #205: eram 2; o dono pediu 4
+#define NV_DETP_EPM_TEXTO_X   24.0f   // panel horizontal padding
+#define NV_DETP_EPM_SIN_DY   104.0f   // below title and metadata rows
+#define NV_DETP_EPM_SIN_LINHAS 5
 // Selo "Assistido": disco de check no canto superior direito da miniatura.
 // Medido no card de sempre; fixo nos tres tamanhos (nao escala), porque e
 // ele quem ancora a base do selo do numero.

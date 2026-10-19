@@ -231,12 +231,19 @@ static const char *ajVisualIcone(int op) {
     case AJ_XTREAM_SERVIDOR: return "aj_server";
     case AJ_XTREAM_USUARIO: return "aj_server";
     case AJ_XTREAM_SENHA: return "aj_server";
-    case AJ_XTREAM_CONTA: return "aj_server";
+    case AJ_XTREAM_CONTA: case AJ_XTREAM_CONEXOES: return "aj_server";
     case AJ_XTREAM_LIMPAR: return "aj_server";
     case AJ_STALKER_PORTAL: return "aj_server";
     case AJ_STALKER_MAC: return "aj_server";
     case AJ_STALKER_LIMPAR: return "aj_server";
     case AJ_GUIA_FONTE: case AJ_GUIA_RECARREGAR: case AJ_M3U_URL: case AJ_M3U_EPG: case AJ_M3U_LIMPAR:
+    case AJ_IPTV_CONTA: case AJ_IPTV_ADD_XTREAM: case AJ_IPTV_ADD_M3U: case AJ_IPTV_ADD_STALKER:
+    case AJ_IPTV_NOME: case AJ_IPTV_ATIVA: case AJ_IPTV_REMOVER:
+    case AJ_IPTV_LISTA_XTREAM: case AJ_IPTV_LISTA_M3U: case AJ_IPTV_LISTA_STALKER:
+    case AJ_IPTV_ACOES: case AJ_IPTV_EXCLUIR: case AJ_IPTV_SALVAR: case AJ_IPTV_CANCELAR:
+    case AJ_GUIA_ORDEM: case AJ_IPTV_ORDEM: case AJ_EPG_MEMORIA: case AJ_GUIA_CATEGORIAS:
+    case AJ_ESCALA_TEXTO: case AJ_DET_ESPACO: case AJ_NT_ORDEM: case AJ_ARTE_TOM: case AJ_PALCO_FUNDO:
+    case AJ_NT_EP: case AJ_AUDIO_OFFSET:
     case AJ_EPG_PAIS: return "aj_server";
     case AJ_LIVETV_DIAG: return "aj_stethoscope";
     case AJ_LIVETV_RES: return "aj_stethoscope";
@@ -280,7 +287,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_EM_SERVIDOR: case AJ_PX_SERVIDOR: return "aj_server";
     case AJ_EM_ENTRAR: case AJ_PX_ENTRAR: return "aj_log-in";
     case AJ_EM_SAIR: case AJ_PX_SAIR: return "aj_log-out";
-    case AJ_RESOLUCAO: return "aj_monitor-play";
+    case AJ_AMPLIAR_UI: case AJ_RESOLUCAO: return "aj_monitor-play";
     case AJ_QUALIDADE_IMG: return "aj_images";
     case AJ_NAV_RAPIDA: return "aj_zap";
     case AJ_MEDIDOR: return "aj_activity";
@@ -298,9 +305,7 @@ static const char *ajVisualIcone(int op) {
     case AJ_VER_REGISTRO: return "aj_scroll-text";
     case AJ_ENVIAR_LOG: return "aj_send";
     case AJ_ENVIO_AUTO: return "aj_scroll-text";
-#if defined(NV_TPK) || defined(NV_ANDROID)
     case AJ_GPU_EFEITOS: return "aj_zap";
-#endif
     default: return "aj_settings-2";
   }
 }
@@ -339,7 +344,7 @@ static const signed char AJ_ARTE_SEC[AJS_N + 1][AJ_ARTE_BLOCOS] = {
   { 18,  7, 22, 32,  7, 18, 19, -1, -1, -1 },   // Reproducao: Imagem e som, Escolha da fonte, Durante e depois, Miniatura; Mais: fonte, som e video, P2P
   { 21, 34, 24, 21, -1, -1, -1, -1, -1, -1 },   // Idiomas e legendas: Idiomas, Legenda principal, Segunda legenda; Mais: idiomas
   {  5, 28, 37, 10, -1, -1, -1, -1, -1, -1 },   // Fontes e addons: Addons, Falha na reproducao, Debrid, Servidores
-  {  2, 14, 14, -1, -1, -1, -1, -1, -1, -1 },   // TV ao vivo: Provedor, Se o canal nao abre; Mais
+  {  2, 19, 14, 14, -1, -1, -1, -1, -1, -1 },   // TV ao vivo: Contas, Guia de TV, Se o canal nao abre; Mais
   { 12,  0, 29, 20,  1, 31, 12,  0, 20,  1 },   // Tela inicial: Estilo, Fileiras, Colecoes, Continuar, Barra lateral, Escolha de perfil; Mais
   {  9, 36, 39, 38,  6, 11,  9, -1, -1, -1 },   // Aparencia: Cores e vidro, Fileiras, Logo e abertura, Texto e tamanho, Movimento e relogio, Tela de descanso; Mais
   {  3,  4, 17,  4, 17, -1, -1, -1, -1, -1 },   // Pagina do titulo: O que aparece, Notas, Dados do titulo; Mais: notas, dados

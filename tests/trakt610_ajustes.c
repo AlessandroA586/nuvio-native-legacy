@@ -31,7 +31,8 @@ int main(int argc, char **argv) {
   captura(out, win);
 #ifndef TRAKT610_CAPTURE_ONLY
   {
-    assert(strstr(textoLeitura(AJ_TRAKT), "OK desconecta"));
+    assert(!strcmp(textoLeitura(AJ_TRAKT), i18n("Sair da conta")));
+    assert(!strcmp(textoLeitura(AJ_SIMKL), i18n("Sair da conta")));
     tecla(SDLK_RETURN);
     assert(!trakt_ativo() && traktauth_estado() == TRA_PARADO);
     assert(traktauth_desconectado());

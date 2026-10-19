@@ -45,6 +45,12 @@ const char *xtream_servidor_curto(void);
 const char *xtream_usuario(void);
 const char *xtream_senha_mascarada(void);
 
+// Per-account connection policy: 0 Auto, 1 On, 2 Off. Unknown limits stay Off.
+int xtream_conexoes_modo(void);
+void xtream_definir_conexoes_modo(int modo);
+int xtream_conexoes_limitadas(void);
+int xtream_url_limitada(const char *url);
+
 // ----------------------------------------------------------------- canais
 typedef struct {
   char id[80];        // "xtream:<stream_id>"

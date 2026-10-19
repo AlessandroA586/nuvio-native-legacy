@@ -109,11 +109,11 @@ static void padroesEValores(void) {
   for (op = 0; op < AJ_N; op++) {
     assert(!uxDiferente(op));
     if (OPCOES[op].tipo == OP_ACAO || OPCOES[op].tipo == OP_LEITURA ||
-        (CHAVE[op][0] == '-' && !ajFalhaBackend(op) && !ajLegendaPrincipal(op)) || op == AJ_PERFIL_PESQ)
+        (CHAVE[op][0] == '-' && op != AJ_XTREAM_CONEXOES && !ajFalhaBackend(op) && !ajLegendaPrincipal(op)) || op == AJ_PERFIL_PESQ)
       assert(!uxTemPadrao(op));
     else {
       assert(uxTemPadrao(op));
-      assert(uxValorPadrao(op) == valorPadrao[op]);
+      assert(uxValorPadrao(op) == (op == AJ_SALVOS_DEST ? ajustes_fonte_resolver(valorPadrao[op], trakt_ativo(), simkl_ativo()) : valorPadrao[op]));
     }
   }
   assert(!uxTemPadrao(-1) && !uxTemPadrao(AJ_N));
@@ -727,8 +727,8 @@ int main(void) {
   assert(AJ_FONTE_GRUPO == AJ_ESCALA_TEXTO + 1 && AJ_LINK_PRAZO == AJ_FONTE_GRUPO + 3 &&
          AJ_DET_ESPACO == AJ_LINK_PRAZO + 1 && AJ_FOCO_ACENTO == AJ_DET_ESPACO + 1 &&
          AJ_NT_ORDEM == AJ_FOCO_ACENTO + 1 && AJ_ARTE_TOM == AJ_NT_ORDEM + 1 &&
-         AJ_NT_EP == AJ_URL_REM + 1 && AJ_AUDIO_OFFSET == AJ_NT_EP + 1 &&
-         AJ_AUDIO_OFFSET == AJ_N - 1 && !strcmp(CHAVE[AJ_URL_REM], "-urlRem"));
+         AJ_NT_EP == AJ_URL_REM + 1 && AJ_LIVETV_SUGERIR == AJ_NT_EP + 1 && AJ_AUDIO_OFFSET == AJ_LIVETV_SUGERIR + 1 &&
+         AJ_GUIA_CATEGORIAS == AJ_N - 1 && !strcmp(CHAVE[AJ_URL_REM], "-urlRem"));
   { static const char *CH[4] = { "fonteGrupoLocal", "fonteGrupoSessoesLocal", "linkReusarLocal", "linkPrazoLocal" };
     static const int PAD[4] = { 0, 0, 0, 5 }, NV[4] = { 2, 2, 2, 9 };
     for (int o = 0; o < 4; o++) {
