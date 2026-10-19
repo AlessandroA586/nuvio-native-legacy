@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T08:48:21-03:00, HEAD `4b7164642`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T10:57:30-03:00, HEAD `19cb1c982`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -115,7 +115,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 - **IPTV accounts with limited connections**: Per-account connection limits and serialized channel changes are integrated; equivalent transport handling across platforms remains unverified. Platforms: webOS, Android, Samsung .tpk, WASM; platform validation pending. Refs owner request, `agente/205-conexlim`.
 
 - **Read complete Trakt reviews**: Open comment cards to read full multiline reviews, reveal spoilers, scroll smoothly and move between adjacent reviews. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-cominteiro`, merge `93570ed75`, `1aae8f38f`.
-- **Choose sharper interface scaling**: Supported devices offer explicit TV or app scaling, using sharper integer or fractional scaling while preserving video transparency and saved fallback choices. Platforms: webOS, Android, Samsung .tpk, WASM, subject to GPU support. Refs owner request, `agente/205-ui720`, merge `688f08e53`, `691a26008`, `74a4f88cb`, `f0a87650d`, `9ab2b3781`, `f371a2571`, `f228d3816`, `d44f9a283`.
+- **Choose sharper interface scaling**: Supported devices offer explicit TV or app scaling, using sharper integer or fractional scaling while preserving video transparency and saved fallback choices. Platforms: webOS, Android, Samsung .tpk, WASM, subject to GPU support. Refs owner request, `agente/205-ui720`, merge `688f08e53`, `691a26008`, `74a4f88cb`, `f0a87650d`, `9ab2b3781`, `f371a2571`, `f228d3816`, `d44f9a283`, plus physical 4K panel detection behind 1080p desktops and App (4K) as the default (`de97e96e0`, `6b59c886d`, `7ed4baa4b`, merges `bbf42d6a0`, `93dac3e87`, `b26f0eff5`).
 
 - **More Stage artwork styles**: Cortina, Aura, Triptych and Monument offer different Stage artwork treatments, and the focused row moves its label below its cards. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `b5f4f9b18`, `2f60a19ff`.
 
@@ -232,6 +232,14 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Skip buttons wait until playback is ready**: Intro and credit skip actions stay hidden until video playback is active and remain available across pause or scrubbing until the source changes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-skipcarga`, merge `116f60053`, `5eda5fa1a`, `f518b8b1a`.
+
+- **Samsung live streams ignore premature completion events**: Tizen playback checks native pipeline state before acting on completion callbacks, preventing early stops on redirected or segmented streams. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-tpklive302`, merge `26240ab80`, `9ac30c587`.
+
+- **Profile picker keeps movie artwork at minimal GPU effects**: Automatic GPU adaptation preserves the selected profile picker movie backdrop even when effects drop to Minimal. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-perfilfundo`, merge `bb446d679`, `f809c7fe7`.
+
+- **Dynamic top bar labels never stack at startup**: Top bar text measurement skips caching widths when the frame raster budget is exhausted, keeping Dynamic menu labels spaced properly. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-menudin`, merge `ec722b7d8`, `2c080fea9`.
 
 - **Live TV filters and recovery remain stable**: Source-scoped visibility, quality choices, category caps and cached inventory stay consistent; Android avoids false stall restarts and cancels recovery when playback resumes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs PR #597; Live TV filter requests, `a3f2bc99e`, `e461614e5`, `de6d0da30`, `9da4c1f3f`, `61647910d`, `6ad003585`, `5386cf994`, `4a009af28`, `f11f3a8af`, `dc67e64b0`, `18d098046`, `30911f682`, `701a6e6eb`, `7e93a0ff3`, `2e8eb26cd`, `1129643aa`, `5dddb0955`, `3202cfd1f`, `46ee70c5d`, `620c1fa3b`, `6fa547b0d`, `ac13f88b5`, `9abea10c0`.
 
@@ -525,7 +533,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 - **Automatic TV and Mobile mode on Android** — @community, PR #431 (`c305e6f7e`, `875d7f18f`).
 - **Series identity during lookup and playback** — PR #561 (`cdf5bdd88`, `2537db6a0`, `86d194462`).
-- **Continue Watching without blocking catalogs** — @ghbarker, PR #538 (`cfc15aeab`, `a748ebf32`).
+- **Continue Watching without blocking catalogs** — @ghbarker, PR #538 (`cfc15aeab`, `a748ebf32`, `bc13aca67`, merge `19cb1c982`).
 - **Keep add-on cast portraits when TMDB fails** — @ghbarker, PR #540 (`a1eca619b`, `8cc5d723d`).
 - **Remove uninstalled add-on rows** — @ghbarker, PR #543 (`11e6e8535`, `0d44804f0`).
 - **Full recommendation backdrop and artwork quality** — @ghbarker, PR #546 (`946ad1819`, `66299e5f0`).
@@ -537,6 +545,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   `f6618db6b`, `22f3d22bb`).
 
 ### Internal
+
+- **AIOStreams integration research and 2.1 controls plan**: Capability matrix, user journeys and 2.1 control planning document AIOStreams integration and reverted experimental Imersiva home trials. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-aioestudo`, `agente/205-aiohub`, merges `185a01001`, `d649382e3`, `b1c40966f`, `1dcf51b83`, `74cea5346`, revert `72ad3345e`.
 
 - **Regression coverage and release tracking**: Offline regression checks and tracking document playlist recovery, library behavior, episode rendering, PIN profiles and platform investigation. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #607; tracking and test commits, `902a31ce2`, `72795e98a`, `97ce590bd`, `f08d20086`, `bb0d034ac`, `c6865b7c2`, `430ecc402`, `926051fd1`, `f1941a781`, `2c98dd2e8`, `ac92eacec`, `9da0183ae`, `eb4957bb7`, `60788e07b`, `9d2b509fe`, `a5fef4162`, `03b2c9625`, `95b2ed22b`, `a10cdd65f`, `e1faa6e56`, `0887480be`, `2de330bc6`, `0f3553992`, `74da097a2`, `10d1d2961`, `ddda65d97`, `81326cb55`, `57337bed6`, `0c89d10e9`, `eff214cd9`, `af10dd6d5`, `25c73b48e`, `315a61f12`, `4f66a1c1f`, `e7515c158`, `b5812a3d8`, `151b45208`, `ef77ae6b8`, `05426cdee`, `92bf71c7b`, `fe6a8c0bf`, `1e3c93994`, `ef3c51319`, `2c8e6e96a`, `e978236b6`, `5ff69db39`, `f41907092`, `51e1377d5`, `cbd3a2cd9`, `f9944a132`, `e7b0c9631`, `4821d35d3`, `a648c5d4e`, `2068ab77c`, `c38f8dd45`, `90a434bf2`, `64871e2e4`, `3e9f77e5c`, `af7ab651f`, `ad4ec990b`, `de28147ba`, `b207a8a51`, `af6b12394`, `9d89c6f60`, `995376c07`, `45f2397fd`, `8df743dff`, `61205f62e`, `dad0421d3`, `6304d2765`, `02c2ef1d7`, `97adfdd8a`, `7e4b2605b`, `b280cd698`, `1b5c9d39a`, `3118a0494`, `180241442`, `620f041d8`, `9b86a6af8`, `61417ac95`, `82dad7d43`, `ba38888fc`.
 
@@ -638,7 +648,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 
 
-Tracking snapshot: 19 unmerged branches without running jobs; 10 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/205-ui720b`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
+Tracking snapshot: 19 unmerged branches without running jobs; 11 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-livepr2`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
@@ -646,6 +656,7 @@ Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
 
 
+- **Live TV account limits, EPG search and shared XMLTV matching**: Ported PR #596/#601/#602 account and large-guide improvements with shared XMLTV schedule matching are under review on `agente/205-livepr2` (`db0cfe7c2`, `6d2fe5a66`, `d88561af4`, `71a96a9b2`, `dd8827fc8`). Platforms: webOS, Android, Samsung .tpk, WASM.
 - **Remaining PR #487 v2 branch by @ghbarker** (the missing language probes were ported through `agente/205-port487`, merge `24f78dbda`; original branch `e4fb8c08`) — `agente/205-pr487v2`, 3 commits out,
   Newer fix postdates review. **Needs final re-review.** Android, LG webOS.
 - **Remaining PR #493 v2 / v3 branch** (profile/session cleanup was ported through `agente/205-port493`, merge `415544539`; original branch still unmerged) — `agente/205-pr493`, 12 commits out. Latest fix postdates its review; review the newest tip before merging.
