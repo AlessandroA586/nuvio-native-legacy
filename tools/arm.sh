@@ -82,6 +82,14 @@ echo "==> compilando para ARM"
 LIXO=""
 limpar() { [ -n "$LIXO" ] && rm -rf $LIXO; }
 trap limpar EXIT
+# All ARM modes share the soft-float Rust core; =0 retains the C parser.
+RUST_MKVCORE="${NUVIO_RUST_MKVCORE:-1}"
+RUST_VOL=()
+if [ "$RUST_MKVCORE" = 1 ]; then
+  RUST_LIB=$(CARGO_NET_OFFLINE=true bash tools/rust-mkvcore.sh armv7-unknown-linux-gnueabi)
+  RUST_VOL=(-v "$RUST_LIB:/tmp/libmkvcore.a:ro")
+  export NUVIO_EXTRA_CFLAGS="${NUVIO_EXTRA_CFLAGS:-} -DNV_RUST_MKVCORE"
+fi
 ENVF=$(mktemp "${TMPDIR:-/tmp}/nuvio-arm-env.XXXXXXXX"); LIXO="$LIXO $ENVF"
 tools/env.sh --env-file "$ENVF"
 # NUVIO_EXTRA_CFLAGS: bandeiras a mais para uma build de teste, sem tocar no
@@ -106,6 +114,7 @@ if [ -n "${NUVIO_DTS_ROOT:-}" ]; then DTS_ENV=(-e "NUVIO_DTS_ROOT=$NUVIO_DTS_ROO
 "$CONTAINER_RUNTIME" run --rm --platform "$BUILD_PLATFORM" --env-file "$ENVF" \
   -e NUVIO_P2P_MOTOR="${NV_P2P_DIR:+1}" $P2P_VOL \
   -e NUVIO_BUILD_JOBS="${NUVIO_BUILD_JOBS:-3}" \
+  -e NUVIO_RUST_MKVCORE="$RUST_MKVCORE" "${RUST_VOL[@]}" \
   -e NUVIO_SDK_ID="$("$CONTAINER_RUNTIME" image inspect --format '{{.Id}}' "$SDK_IMAGE"):$NV_P2P_DIR" \
   -e CCACHE_DIR=/work/build/ccache-arm \
   -e NUVIO_EXTRA_CFLAGS="${NUVIO_EXTRA_CFLAGS:-}" \
@@ -115,6 +124,8 @@ if [ -n "${NUVIO_DTS_ROOT:-}" ]; then DTS_ENV=(-e "NUVIO_DTS_ROOT=$NUVIO_DTS_ROO
   -v "$PWD":/work:z "$SDK_IMAGE" bash -c '
   set -e
   SR=$NUVIO_SYSROOT
+  RUST_LIBS=""
+  if [ "$NUVIO_RUST_MKVCORE" = 1 ]; then RUST_LIBS=/tmp/libmkvcore.a; fi
   ASS=$NUVIO_ASS_ROOT
   ASS_CFLAGS=""
   ASS_LIBS=""
@@ -185,7 +196,7 @@ if [ -n "${NUVIO_DTS_ROOT:-}" ]; then DTS_ENV=(-e "NUVIO_DTS_ROOT=$NUVIO_DTS_ROO
     -DNV_DISCORD_CLIENT_ID="\"${NV_DISCORD_CLIENT_ID:-}\"" \
     -DNV_VERSAO="\"$NV_VERSAO\"" \
     -I$SR/usr/include -I$SR/usr/include/SDL2 \
-    -lSDL2 -lSDL2_image -lSDL2_ttf -lGLESv2 -lEGL $P2P_LIBS -ldl -lpthread -lz -lm $ASS_LIBS $DTS_LIBS \
+    $RUST_LIBS -lSDL2 -lSDL2_image -lSDL2_ttf -lGLESv2 -lEGL $P2P_LIBS -ldl -lpthread -lz -lm $ASS_LIBS $DTS_LIBS \
     -Wl,--export-dynamic-symbol=pthread_create -Wl,--exclude-libs,ALL
   # #317: --exclude-libs,ALL tira da tabela dinamica tudo o que vem de arquivo
   # .a (FreeType/harfbuzz do libass, libstdc++ do P2P, FFmpeg). Sem ele o ld
