@@ -3,6 +3,7 @@
 #include "ondever.h"
 #include "naovideo.h"
 #include "fonteantecipa.h"
+#include "xtream.h"
 #include "fonteparalela.h"
 #include "tex_cache.h"
 #include "livetv_regras.h"
@@ -1667,6 +1668,9 @@ static int verificarUma(int i, Conferencia *c) {
   fileIdx = lista[i].fileIdx;
   pthread_mutex_unlock(&verTrava);
 
+  // A limited account must never be probed beside its visible stream.
+  // Playback performs the account check after closing the previous HTTP request.
+  if (xtream_url_limitada(url)) return 1;
   if (!url[0] && infoHash[0]) {
     // Link recem-saido do unrestrict: nao precisa da segunda viagem abaixo.
     int fora = 0;

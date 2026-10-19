@@ -120,6 +120,7 @@ static void avisarCascaAberto(int v) { (void)v; tex_pressao_reproducao(v); }
 #include "ajustes.h"
 #include "esmaecer.h"
 #include "proxyts.h"
+#include "xtream.h"
 #include "perfis.h"
 #include "sessao.h"
 #include "legref.h"    // cabecalhos da fonte na leitura da referencia
@@ -896,6 +897,13 @@ int video_tpk_aviso_busca(void);   // video_tpk.c (mkvfix.h)
 // nao chegou, ou formato/decoder (esse sim pode ser app ou TV). Nunca a URL.
 static void erroCausaDoPlayer(void) {
   int http = 0, causa = fontesonda_causa(video_erro_texto(), &http);
+  const char *err = video_erro_texto();
+  if (xtream_url_limitada(video_url_atual()) && err &&
+      (strstr(err, "403") || strstr(err, "458") || strstr(err, "509"))) {
+    snprintf(erroTitulo, sizeof erroTitulo, "%s", i18n("Esta linha está em uso em outra tela"));
+    snprintf(erroDica, sizeof erroDica, "%s", i18n("Feche o Xtream em outro aparelho e tente de novo."));
+    return;
+  }
   if (causa == FS_CAUSA_NENHUMA) return;
   printf("[fonte] causa do erro: %d http=%d\n", causa, http);
   fflush(stdout);
@@ -1794,7 +1802,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   legsync_auto_habilitar(ajustes_legenda_sync_auto());
   legref_fonte_local(mkvass_referencia);
   legref_fonte_cabecalhos(video_cabecalhos);   // a sincronia le o video com os cabecalhos do addon
-  legsync_iniciar(comVideo ? video_url_atual() : "");   // F05: geracao nova, sem rede nem espera
+  legsync_iniciar(comVideo && !xtream_url_limitada(video_url_atual()) ? video_url_atual() : "");   // F05: geracao nova, sem rede nem espera
   legsync_ui_ligar();   // F05: a linha de AutoSync do seletor de legendas (legendasui.c)
   aspArmar();
   aplicarAspecto();
@@ -1847,7 +1855,7 @@ static int escolherLegendaPrebusca(const char *const *idiomas, int n) {
 static int prebuscaCabe(const char *url) {
   const char *pref = ling_legenda();
   const Stream *s = stream_item(stream_atual());
-  if (mini || ehCanal() || !url || !*url) return 0;
+  if (mini || ehCanal() || !url || !*url || xtream_url_limitada(url)) return 0;
   if (!pref || !*pref || !strcasecmp(pref, "none")) return 0;
   if (s && strcmp(s->url, url)) s = NULL;     // torrent resolvido: a url e outra
   if (s && s->mp4) return 0;
@@ -1883,7 +1891,8 @@ static int preTituloCriar(int indiceCatalogo, int t, int e, const Stream *s, uns
   const CatItem *c = cat_item(indiceCatalogo);
   const char *pref;
   int serie;
-  if (!ajustes_fonte_precarregar() || !token || !c || !s || !s->url[0] || mini || retido) return 0;
+  if (!ajustes_fonte_precarregar() || !token || !c || !s || !s->url[0] || mini || retido ||
+      xtream_url_limitada(s->url)) return 0;
   if (proximo ? (!aberto || !comVideo) : (aberto || video_ativo())) return 0;
   // Na ficha sem video, Original pertence ao titulo que sera aberto. O Next
   // apenas copia a politica atual, sem alterar o idioma da sessao em curso.
@@ -2662,7 +2671,7 @@ static int podeReter(void) {
   // Desligado; nunca no perfil seguro). Sem ele a saida fecha a sessao na hora
   // e o Retomar reabre pela fonte guardada (fontevolta.h) — exceto o voo da
   // saida no Android, que segura o quadro parado ate pousar (reterSoVoo).
-  return (ajustes_manter_video() || reterSoVoo()) &&
+  return !xtream_url_limitada(video_url_atual()) && (ajustes_manter_video() || reterSoVoo()) &&
          comVideo && !ehCanal() && c && c->imdb[0] && !erroFonte &&
          video_pronto() && video_ativo() && !video_falhou() && !video_terminou() &&
          !video_conflito_recurso() && !video_reconectando() && video_url_atual()[0] &&
@@ -2835,9 +2844,13 @@ static PlrRect miniDestino(void) {
   return o;
 }
 
-int  player_minimizavel(void) { return canalSessao && comVideo; }
+int  player_minimizavel(void) {
+  return canalSessao && comVideo && !(xtream_e_id(player_id_canal()) && xtream_conexoes_limitadas());
+}
 int  player_mini_ativo(void)  { return mini; }
-void player_manter_mini(void) { querMini = 1; }
+void player_manter_mini(void) {
+  querMini = !(xtream_e_id(player_id_canal()) && xtream_conexoes_limitadas());
+}
 
 void player_minimizar(void) {
   PlrRect r;
@@ -3738,7 +3751,7 @@ static void recuarAutomatico(double de, double para) {
 // Busca do dono: se substitui uma busca de creditosAuto ainda armada, desarma.
 static void buscarUsuario(double alvo) {
   if (comVideo && !ehCanal() && !strstr(video_url_atual(), "://127.0.0.1") && !strstr(video_url_atual(), "://localhost"))
-    seekprobe_iniciar(video_url_atual(), video_cabecalhos());   // #557: own proxies handle Range
+    if (!xtream_url_limitada(video_url_atual())) seekprobe_iniciar(video_url_atual(), video_cabecalhos());   // #557: own proxies handle Range
   creditosauto_destino(&creditosAuto, alvo);
   video_buscar(alvo);
 }
@@ -4356,7 +4369,7 @@ void player_atualizar(float dt, Uint32 agora) {
       // F06: o ajuste local decide se "Por audio" existe (padrao desligado).
       legsync_auto_habilitar(ajustes_legenda_sync_auto());
       legsync_audio_habilitar(ajustes_legenda_sync_audio());
-      legsync_passo(video_url_atual(), posSeg, bf > 0.5 ? bf - (double)posSeg : -1.0,
+      legsync_passo(xtream_url_limitada(video_url_atual()) ? "" : video_url_atual(), posSeg, bf > 0.5 ? bf - (double)posSeg : -1.0,
                     scrubbing || video_bufferando_ms() > 0, agora); }
     if (d > 1.0) {
       duracaoSeg = (float)d; duracaoReal = 1;
