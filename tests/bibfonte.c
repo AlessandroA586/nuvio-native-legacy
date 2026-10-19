@@ -124,6 +124,47 @@ int main(int argc, char **argv) {
   CHECK("Detail remove reaches Simkl", simklWrites == 0);
   CHECK("Simkl remove preserves Trakt membership", cat_item(0)->naLista && !biblioteca_na_lista(0));
   CHECK("menu offers save after Simkl remove", !strcmp(bibfonte_menu_label(0), "Salvar"));
+  // Upgraded profiles share a legacy write preference, not an explicit source.
+  dados_gravar("ajustes.txt", "salvosDestino 1\n");
+  dados_gravar("ajustes-p1.txt", "salvosDestino 1\n");
+  dados_gravar("ajustes-p2.txt", "salvosDestino 1\n");
+  ajustes_dir(dir);
+  for (int profile = 1; profile <= 2; profile++) {
+    ajustes_perfil_padrao();
+    assert(ajustes_perfil_restaurar(profile));
+    CHECK("upgraded profile initially uses Nuvio", ajustes_fonte_biblioteca() == AJ_SALVOS_LOCAL);
+  }
+  assert(ajustes_perfil_restaurar(1));
+  ajustes_definir_salvos_destino(AJ_SALVOS_TRAKT);
+  ajustes_perfil_guardar(1);
+  ajustes_perfil_padrao();
+  CHECK("profile reset clears explicit source", ajustes_fonte_biblioteca() == AJ_SALVOS_LOCAL);
+  assert(ajustes_perfil_restaurar(2));
+  CHECK("legacy B does not inherit A's explicit Trakt choice", ajustes_fonte_biblioteca() == AJ_SALVOS_LOCAL);
+  CHECK("legacy B Settings displays Nuvio", uxValorAtual(AJ_SALVOS_DEST) == AJ_SALVOS_LOCAL);
+  CHECK("legacy B excludes Trakt-only Library item", bibfonte_library_count() == 0);
+  int beforeTrakt = traktWrites, beforeSimkl = simklWrites;
+  ilhasalvar_executar(&ci, 1);
+  CHECK("legacy B + stays in Nuvio", traktWrites == beforeTrakt && simklWrites == beforeSimkl && bibfonte_library_count() == 1);
+  ilhasalvar_executar(&ci, 0);
+  ajustes_perfil_guardar(2);
+  // Reload defaults before restoring A: only its profile file can recover intent.
+  dados_gravar("ajustes.txt", "salvosDestino 1\n");
+  ajustes_dir(dir);
+  ajustes_perfil_padrao();
+  assert(ajustes_perfil_restaurar(1));
+  CHECK("A restores explicit Trakt after reload", ajustes_fonte_biblioteca() == AJ_SALVOS_TRAKT);
+  ajustes_definir_salvos_destino(AJ_SALVOS_SIMKL);
+  ajustes_perfil_guardar(1);
+  ajustes_perfil_padrao();
+  assert(ajustes_perfil_restaurar(1));
+  CHECK("A restores explicit Simkl with source value", ajustes_fonte_biblioteca() == AJ_SALVOS_SIMKL);
+  // Direct restores also clear intent when a legacy/new profile has no marker.
+  assert(ajustes_perfil_restaurar(2));
+  CHECK("saved untouched B retains Nuvio precedence", ajustes_fonte_biblioteca() == AJ_SALVOS_LOCAL);
+  ajustes_definir_salvos_destino(AJ_SALVOS_TRAKT);
+  assert(!ajustes_perfil_restaurar(3));
+  CHECK("missing profile does not inherit explicit source", ajustes_fonte_biblioteca() == AJ_SALVOS_LOCAL);
   SDL_Quit();
   printf("bibfonte: %d failure(s)\n", failures);
   return failures ? 1 : 0;

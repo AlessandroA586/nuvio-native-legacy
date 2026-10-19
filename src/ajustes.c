@@ -5683,6 +5683,7 @@ static void nomePerfil(char *dst, size_t tam, int perfil) {
 void ajustes_perfil_padrao(void) {
   int i;
   for (i = 0; i < AJ_N; i++) if (dePerfil(i)) valor[i] = valorPadrao[i];
+  bibliotecaFonteEscolhida = 0;
   aplicarIdioma(AJ_LEG_LINGUA); aplicarIdioma(AJ_LEG_LINGUA2); aplicarIdioma(AJ_AUD_LINGUA);
   ajSombraSync();
 }
@@ -5692,7 +5693,7 @@ void ajustes_perfil_guardar(int perfil) {
   size_t p = 0;
   int i;
   if (perfil <= 0) return;
-  buf[0] = 0;
+  p = (size_t)snprintf(buf, sizeof buf, "bibliotecaFonteEscolhidaLocal %d\n", bibliotecaFonteEscolhida);
   for (i = 0; i < AJ_N; i++) {
     int k;
     if (!dePerfil(i)) continue;
@@ -5707,7 +5708,7 @@ void ajustes_perfil_guardar(int perfil) {
 
 int ajustes_perfil_restaurar(int perfil) {
   char nome[32], *t, *l;
-  int mudou = 0, colecaoPropria = perfil == perfis_ativo();
+  int mudou = 0, colecaoPropria = perfil == perfis_ativo(), fonteEscolhida = 0;
   if (perfil <= 0) return 0;
   // As listas e a regex do auto-play (#202) seguem o perfil do mesmo jeito.
   fonteregra_perfil_restaurar(perfil);
@@ -5715,7 +5716,9 @@ int ajustes_perfil_restaurar(int perfil) {
   t = dados_ler(nome);
   if (!t) {
     // A new/older profile must not inherit another profile's collection default.
-    if (colecaoPropria && valor[AJ_COLECAO_EXIBICAO] != 0) { valor[AJ_COLECAO_EXIBICAO] = 0; gravar(); }
+    if (colecaoPropria && valor[AJ_COLECAO_EXIBICAO] != 0) { valor[AJ_COLECAO_EXIBICAO] = 0; mudou++; }
+    if (bibliotecaFonteEscolhida) { bibliotecaFonteEscolhida = 0; mudou++; }
+    if (mudou) gravar();
     return 0;
   }
   { int focoAntigo = -1, viuFoco = 0, viuTopo = 0, viuAbas = 0, viuColecao = 0;
@@ -5726,6 +5729,8 @@ int ajustes_perfil_restaurar(int perfil) {
     // Perfil guardado antes dos tres modos (ver focoTrailerMigrar).
     if (sscanf(l, "%63s %d", chave, &v) == 2 && !strcmp(chave, "focusedPosterBackdropTrailerEnabled"))
       focoAntigo = v;
+    else if (sscanf(l, "%63s %d", chave, &v) == 2 && !strcmp(chave, "bibliotecaFonteEscolhidaLocal"))
+      fonteEscolhida = v == 1;
     else if (sscanf(l, "%63s %d", chave, &v) == 2)
       for (i = 0; i < AJ_N; i++) {
         if (!dePerfil(i) || strcmp(CHAVE[i], chave)) continue;
@@ -5758,6 +5763,8 @@ int ajustes_perfil_restaurar(int perfil) {
   // Idem para o estilo das abas (#205).
   if (!viuAbas && valor[AJ_ABAS_ESTILO]) { valor[AJ_ABAS_ESTILO] = 0; mudou++; } }
   free(t);
+  // Legacy profile files preserve account precedence until this profile chooses.
+  if (bibliotecaFonteEscolhida != fonteEscolhida) { bibliotecaFonteEscolhida = fonteEscolhida; mudou++; }
   if (mudou) {
     gravar();
     aplicarIdioma(AJ_LEG_LINGUA);
