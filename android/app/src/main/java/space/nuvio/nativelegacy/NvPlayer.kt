@@ -90,6 +90,7 @@ object NvPlayer {
     private const val EV_AUDIO_SEM_DECODER = 9
     private const val EV_SUPERFICIE_ESTAVEL = 10
     private const val EV_LIVE_RECOVERY = 11
+    private const val EV_LIVE_SEGMENT = 12
 
     private const val TELA_W = 1920   // coordenadas de layout do app
     private const val TELA_H = 1080
@@ -1913,6 +1914,7 @@ object NvPlayer {
     // --- eventos do player ----------------------------------------------------
 
     private fun ouvinte(minha: Int) = object : Player.Listener {
+        private var liveSegmentMs = -1
         private val live = LiveWindowRecovery(
             schedule = { tarefa, atraso -> principal.postDelayed(tarefa, atraso) },
             unschedule = { tarefa -> principal.removeCallbacks(tarefa) },
@@ -1980,6 +1982,13 @@ object NvPlayer {
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
             if (!atual(minha)) return
             val p = player ?: return
+            val manifest = p.currentManifest as? HlsManifest
+            val segmentMs = if (p.isCurrentMediaItemLive && manifest != null)
+                (manifest.mediaPlaylist.targetDurationUs / 1000L).coerceIn(0L, 60_000L).toInt() else 0
+            if (segmentMs != liveSegmentMs) {
+                liveSegmentMs = segmentMs
+                ev(EV_LIVE_SEGMENT, segmentMs, geracaoNative)
+            }
             if (!pronto) { aplicarFracao(p); return }
             val d = duracaoMs(p)
             if (d != duracaoEnviada) { duracaoEnviada = d; ev(EV_PRONTO, d) }   // so a duracao muda

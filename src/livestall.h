@@ -72,8 +72,19 @@ static inline void nv_ls_reaberto(NvLiveStall *s, unsigned agora) {
 // tempo esta bufferando. Devolve NV_LS_*; NV_LS_REABRIR pede reabrir a fonte e
 // o chamador responde com nv_ls_reaberto. `fimBuf`: ate onde o buffer cobre (s,
 // video_buffer_fim; 0 = desconhecido).
-static inline int nv_ls_passo_buf(NvLiveStall *s, unsigned agora, double pos, int pronto,
-                                  int pausado, int terminou, unsigned bufMs, double fimBuf) {
+// HLS can take longer than the fixed watchdog to finish one segment. Allow
+// three target durations while buffering, bounded even for malformed metadata.
+static inline unsigned nv_ls_buffer_prazo(unsigned segmentoMs) {
+  if (!segmentoMs) return NV_LS_PARADO_MS;
+  if (segmentoMs >= 20000u) return 60000u;
+  return segmentoMs > 10000u ? segmentoMs * 3u : 30000u;
+}
+
+static inline int nv_ls_passo_buf_prazo(NvLiveStall *s, unsigned agora, double pos, int pronto,
+                                  int pausado, int terminou, unsigned bufMs, double fimBuf,
+                                  unsigned prazoBuffer) {
+  unsigned prazo = bufMs && prazoBuffer > NV_LS_PARADO_MS ? prazoBuffer : NV_LS_PARADO_MS;
+  if (prazo > 60000u) prazo = 60000u;
   int parado, seco = 0;
   if (pausado) {                       // pausa da pessoa: nada conta, o relogio recomeca
     s->movEm = agora; s->movDesde = 0; s->pos = pos; s->fimEm = agora;
@@ -122,18 +133,29 @@ static inline int nv_ls_passo_buf(NvLiveStall *s, unsigned agora, double pos, in
     if (!seco) return NV_LS_NADA;
   }
   if (!pronto) return NV_LS_NADA;      // abrindo: quem vigia e o prazo de abertura
+  // A deliberate HLS buffering wait is timed by bufMs, not by the last
+  // position sample. READY then gets a fresh frozen-decoder window even if
+  // its first position sample has not advanced yet.
+  if (bufMs && prazo > NV_LS_PARADO_MS && !terminou) {
+    s->movEm = agora; s->movDesde = 0;
+  }
   parado = terminou ||
-           (s->andou && (unsigned)(agora - s->movEm) >= NV_LS_PARADO_MS) ||
-           (s->andou && bufMs >= NV_LS_PARADO_MS);
+           (s->andou && (unsigned)(agora - s->movEm) >= prazo) ||
+           (s->andou && bufMs >= prazo);
   if (!parado && !seco) return NV_LS_NADA;
   s->movDesde = 0;
   if (s->tentativa >= NV_LS_MAX) return NV_LS_DESISTIR;
   s->tentativa++;
   s->pendente = 1;
   s->fonteSeca = seco && !parado;
-  s->bufferParado = !terminou && bufMs >= NV_LS_PARADO_MS;
+  s->bufferParado = !terminou && bufMs >= prazo;
   s->quando = agora + nv_ls_espera_ms(s->tentativa);
   return NV_LS_AGENDOU;
+}
+
+static inline int nv_ls_passo_buf(NvLiveStall *s, unsigned agora, double pos, int pronto,
+                                  int pausado, int terminou, unsigned bufMs, double fimBuf) {
+  return nv_ls_passo_buf_prazo(s, agora, pos, pronto, pausado, terminou, bufMs, fimBuf, NV_LS_PARADO_MS);
 }
 
 static inline int nv_ls_passo(NvLiveStall *s, unsigned agora, double pos, int pronto,

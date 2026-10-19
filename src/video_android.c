@@ -358,6 +358,7 @@ static volatile Uint32 bufferDesde, tocandoDesde;
 static volatile const char *hdrAtual = "none";
 static volatile int dvAtual, atmosAtual;
 static unsigned sessao;
+static unsigned liveSegmentoMs; // protected by travaRetomada; reset on each open
 static Uint32 liveRecuperandoAte; // protected by travaRetomada, with the open generation
 // F07: the player arms the next video_tocar with its cache limit
 // (cacheboost_backend_cache); trailers never arm, so they stay uncached and
@@ -589,7 +590,7 @@ static unsigned novaRetomada(int estado) {
   unsigned geracao;
   pthread_mutex_lock(&travaRetomada);
   if (++sessao == 0) sessao++;
-  geracao = sessao; retomadaInicialEstado = estado; liveRecuperandoAte = 0;
+  geracao = sessao; retomadaInicialEstado = estado; liveRecuperandoAte = 0; liveSegmentoMs = 0;
   pthread_mutex_unlock(&travaRetomada);
   return geracao;
 }
@@ -672,7 +673,7 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeCache(JNIEnv
 
 enum { EV_PRONTO = 1, EV_TOCANDO = 2, EV_PAUSADO = 3, EV_FIM = 4, EV_ERRO = 5,
        EV_TAMANHO = 6, EV_BUFFER = 7, EV_PRIMEIRO_QUADRO = 8, EV_AUDIO_SEM_DECODER = 9,
-       EV_SUPERFICIE_ESTAVEL = 10, EV_LIVE_RECOVERY = 11 };
+       EV_SUPERFICIE_ESTAVEL = 10, EV_LIVE_RECOVERY = 11, EV_LIVE_SEGMENT = 12 };
 
 JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(JNIEnv *env, jclass cls, jint tipo, jint a, jint b) {
   (void)env; (void)cls;
@@ -711,6 +712,11 @@ JNIEXPORT void JNICALL Java_space_nuvio_nativelegacy_NvPlayer_nativeEvento(JNIEn
     case EV_PRIMEIRO_QUADRO: marco("video: primeiro quadro (android)"); primeiroQuadro = 1; break;
     case EV_SUPERFICIE_ESTAVEL: superficieEstavel = 1; break;
     case EV_AUDIO_SEM_DECODER: semDecoderAudio = 1; break;
+    case EV_LIVE_SEGMENT:
+      pthread_mutex_lock(&travaRetomada);
+      if (ativo && (unsigned)b == sessao) liveSegmentoMs = a > 60000 ? 60000u : a > 0 ? (unsigned)a : 0u;
+      pthread_mutex_unlock(&travaRetomada);
+      break;
     case EV_LIVE_RECOVERY:
       pthread_mutex_lock(&travaRetomada);
       if (ativo && (unsigned)b == sessao) {
@@ -1099,6 +1105,13 @@ double video_duracao(void) { return durMs / 1000.0; }
 // Capitulos do MKV lidos por um fio lateral (capmkv.c, 203-capitulos).
 double video_creditos(void) { return capmkv_creditos(video_duracao()); }
 double video_buffer_fim(void) { return 0; }
+unsigned video_live_segmento_ms(void) {
+  unsigned ms;
+  pthread_mutex_lock(&travaRetomada);
+  ms = ativo ? liveSegmentoMs : 0;
+  pthread_mutex_unlock(&travaRetomada);
+  return ms;
+}
 int video_recuperando_live(void) {
   int recuperando;
   pthread_mutex_lock(&travaRetomada);

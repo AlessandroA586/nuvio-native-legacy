@@ -6024,12 +6024,22 @@ void app_atualizar(float dt, Uint32 agora) {
     Uint32 teto = espera > CANAL_ABRE_TETO_MS ? espera : CANAL_ABRE_TETO_MS;
     int semDecoder = (xt || canalViaProxy) && player_carregando() && desde > semDecMs &&
         video_buffer_fim() > 0.5 && !video_decoder_anunciou();
+    unsigned bufferMs = video_bufferando_ms();
+    unsigned travaMs = CANAL_TRAVA_MS, paradoMs = NV_LS_PARADO_MS;
+#ifdef NV_ANDROID
+    if (bufferMs) {
+      paradoMs = nv_ls_buffer_prazo(video_live_segmento_ms());
+      // Give the same-source watchdog its normal four-second lead over failover.
+      if (paradoMs > NV_LS_PARADO_MS) travaMs = paradoMs + 4000u;
+    }
+#endif
     int morta = player_fonte_falhou() || video_falhou() ||
         (player_carregando() && desde > prazo && video_buffer_fim() <= 0.5) ||
         (player_carregando() && desde > teto) ||
-        video_bufferando_ms() > CANAL_TRAVA_MS || semDecoder;
+        bufferMs > travaMs || semDecoder;
     // CANAL QUE PAROU DEPOIS DE TOCAR (#302): fim de fluxo, posicao parada ou
-    // buffering por 8 s. EOF de live TPK com progresso reabre imediatamente
+    // buffering por 8 s (HLS Android usa o prazo limitado do segmento).
+    // EOF de live TPK com progresso reabre imediatamente
     // sem gastar tentativa; as demais quedas reabrem a MESMA fonte, ate
     // NV_LS_MAX vezes (livestall.h); esgotou, cai no caminho de sempre (proxima
     // fonte). Pausa da pessoa nunca entra. No webOS o fim do buffer parado
@@ -6045,9 +6055,9 @@ void app_atualizar(float dt, Uint32 agora) {
         snprintf(lsId, sizeof lsId, "%s", player_id_canal());
       }
       int estavaPendente = liveStall.pendente;
-      ls = nv_ls_passo_buf(&liveStall, SDL_GetTicks(), video_pronto() ? video_pos() : 0.0,
+      ls = nv_ls_passo_buf_prazo(&liveStall, SDL_GetTicks(), video_pronto() ? video_pos() : 0.0,
                            video_pronto(), player_pausa_pessoa(), video_terminou(),
-                           video_bufferando_ms(), video_buffer_fim());
+                           bufferMs, video_buffer_fim(), paradoMs);
       if (morta) {
         nv_ls_zerar(&liveStall);
       } else if (estavaPendente && !liveStall.pendente && ls == NV_LS_NADA) {
