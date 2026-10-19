@@ -137,7 +137,7 @@ static void nomesFonte(const char *arq, char *url, size_t nu, char *xml, char *g
 // Canal da grade. Os textos ficam na arena de CHAVES (`k`), por deslocamento:
 // a arena cresce por realloc durante a carga.
 typedef struct {
-  long id, nome;
+  long id, nome, icone;               // icone: <icon src> (0 = sem)
   long chaves[EPG_MAX_CHAVES];
   int  nChaves;
   int  fonte;                         // 0 = epgshare01; 1.. = extras[fonte-1]
@@ -631,6 +631,11 @@ static void cbCanal(const char *id, const char *const *nomes, int nn, void *u) {
     wAddChave(p->g, i, nomes[j]);
   }
 }
+static void cbIcone(const char *id, const char *src, void *u) {
+  EpgProc *p = u;
+  int i = wCanalPorId(p->g, p->fonte, id);
+  if (i >= 0 && !p->g->canais[i].icone) p->g->canais[i].icone = kDup(p->g, src);
+}
 
 static void cbPrograma(const char *canal, const char *ini, const char *fim,
                        const char *titulo, void *u) {
@@ -651,7 +656,7 @@ static int processarBuf(EpgProc *p, const char *b, long n) {
   Xmltv x;
   long i;
   memset(&x, 0, sizeof x);
-  x.canal = cbCanal; x.programa = cbPrograma; x.u = p;
+  x.canal = cbCanal; x.icone = cbIcone; x.programa = cbPrograma; x.u = p;
   if (!xmltv_iniciar(&x)) return 0;
   for (i = 0; i < n; i += 65536)
     if (!xmltv_alimentar(&x, b + i, (size_t)(n - i < 65536 ? n - i : 65536))) break;
@@ -922,7 +927,7 @@ void epg_fonte_extra(const char *url) {
 // milissegundos e sem reabrir XML. Cabecalho com o hash da URL e do filtro:
 // trocou o provedor ou a lista, o cache nao vale.
 #define EPGX_MAGIA 0x3245564eu   /* "NVE2" */
-#define EPGX_VERSAO 1u
+#define EPGX_VERSAO 2u   /* 2: <icon src> por canal */
 static void nomeCacheX(const char *chave, char *d, size_t n) { snprintf(d, n, "epg-x-%s-p%d.bin", chave[0] ? chave : "geral", carga.perfil > 0 ? carga.perfil : 1); }
 
 static int escreveStr(FILE *f, const char *s) {
@@ -956,7 +961,8 @@ static void cacheXGravar(const EpgExtraInt *e, const EpgGrade *g, int c0, int e0
   ok = fwrite(u, sizeof u, 1, f) == 1 && fwrite(hu, 16, 1, f) == 1 &&
        fwrite(&e->hFiltro, sizeof e->hFiltro, 1, f) == 1 && fwrite(&ts, sizeof ts, 1, f) == 1;
   for (i = c0; ok && i < g->nCanais; i++)
-    ok = escreveStr(f, KS(g, g->canais[i].id)) && escreveStr(f, KS(g, g->canais[i].nome));
+    ok = escreveStr(f, KS(g, g->canais[i].id)) && escreveStr(f, KS(g, g->canais[i].nome)) &&
+         escreveStr(f, KS(g, g->canais[i].icone));
   for (i = e0; ok && i < g->nEvs; i++) {
     int loc[3];
     loc[0] = g->evs[i].canal - c0; loc[1] = g->evs[i].ini; loc[2] = g->evs[i].fim;
@@ -996,14 +1002,15 @@ static int cacheXLer(const EpgExtraInt *e, EpgGrade *g, int fonte, int fresco, l
   mapa = malloc(sizeof(int) * (u[2] ? u[2] : 1));
   if (!mapa) { free(b); return -1; }
   for (i = 0; i < (int)u[2]; i++) {
-    char id[160], nm[160];
-    if (!leStr(&p, fim, id, sizeof id) || !leStr(&p, fim, nm, sizeof nm)) break;
+    char id[160], nm[160], ic[600];
+    if (!leStr(&p, fim, id, sizeof id) || !leStr(&p, fim, nm, sizeof nm) || !leStr(&p, fim, ic, sizeof ic)) break;
     mapa[i] = wCanalPorId(g, fonte, id);
     if (mapa[i] < 0) mapa[i] = wNovoCanal(g, fonte, id);
     if (mapa[i] >= 0 && nm[0]) {
       if (!g->canais[mapa[i]].nome) g->canais[mapa[i]].nome = kDup(g, nm);
       wAddChave(g, mapa[i], nm);
     }
+    if (mapa[i] >= 0 && ic[0] && !g->canais[mapa[i]].icone) g->canais[mapa[i]].icone = kDup(g, ic);
   }
   if (i == (int)u[2]) {
     time_t agora = time(NULL);
@@ -1049,7 +1056,7 @@ static void carregarExtra(const EpgExtraInt *e, int fonte, EpgFonteInfo *info) {
   pr.g = &W; pr.fonte = fonte; pr.agora = time(NULL);
   pr.ids = e->ids; pr.nIds = e->nIds; pr.nomes = e->nomes; pr.nNomes = e->nNomes;
   memset(&x, 0, sizeof x);
-  x.canal = cbCanal; x.programa = cbPrograma; x.u = &pr;
+  x.canal = cbCanal; x.icone = cbIcone; x.programa = cbPrograma; x.u = &pr;
   if (!xmltv_iniciar(&x)) return;
   r = rede_baixar_fluxo(e->url, EPG_PRAZO_FLUXO_S, NULL, alimentarFluxo, &x, EPG_REDE_MAX, &st, &bytes);
   info->bytes = bytes;
@@ -1491,6 +1498,19 @@ const char *epg_canal_id(int epg) { return epg >= 0 && epg < P.nCanais ? KS(&P, 
 const char *epg_canal_nome(int epg) {
   if (epg < 0 || epg >= P.nCanais) return "";
   return P.canais[epg].nome ? KS(&P, P.canais[epg].nome) : KS(&P, P.canais[epg].id);
+}
+const char *epg_canal_icone(int epg) { return epg >= 0 && epg < P.nCanais ? KS(&P, P.canais[epg].icone) : ""; }
+const char *epg_icone_id(const char *fonte, const char *id) {
+  int c, f;
+  if (estado != EPG_PRONTO || !id || !id[0]) return "";
+  f = fontePorChave(fonte);
+  c = f >= 0 ? wCanalPorId(&P, f, id) : -1;
+  if (c >= 0 && P.canais[c].icone) return epg_canal_icone(c);
+  for (f = 0; f < nChaveFonteP; f++) {
+    c = wCanalPorId(&P, f, id);
+    if (c >= 0 && P.canais[c].icone) return epg_canal_icone(c);
+  }
+  return "";
 }
 const char *epg_canal_fonte(int epg) {
   int f;

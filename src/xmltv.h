@@ -21,6 +21,8 @@
 typedef struct {
   // <channel id="..."><display-name>...</display-name>...</channel>
   void (*canal)(const char *id, const char *const *nomes, int nNomes, void *u);
+  // <icon src="..."/> do mesmo <channel>, logo depois de `canal`. Opcional.
+  void (*icone)(const char *id, const char *src, void *u);
   // <programme channel start stop><title>...</title></programme>
   void (*programa)(const char *canal, const char *ini, const char *fim,
                    const char *titulo, void *u);
