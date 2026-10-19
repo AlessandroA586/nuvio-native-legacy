@@ -68,7 +68,6 @@ static void heroTempoInicio(int indice) {
 #include "descoberta.h"
 #include "dados.h"
 #include "tendencia.h"
-#include "imersiva.h"
 #include <strings.h>
 // Os veus da base de cada forma de card (gfx_veu_base): a fracao da altura que
 // o degrade cobre e o alfa na base. Nomeados porque o laco da fileira os poe
@@ -205,6 +204,24 @@ static int fileiraItemIndice(const Fileira *f, int coluna) {
 static int filmeVistoOculto(const CatItem *item) {
   return ajustes_ocultar_filmes_vistos() && item &&
          !strcmp(item->tipo, "movie") && cat_visto(item);
+}
+// #507: the Library row. The saved titles of the Library's source, in catalog
+// order, one card per title; drawn like any other poster row.
+static void montarBiblioteca(Fileira *f) {
+  int teto = ajustes_itens_fileira(), fonte = ajustes_fonte_biblioteca();
+  if (teto > DESC_ITENS_POR_FILEIRA) teto = DESC_ITENS_POR_FILEIRA;
+  memset(f, 0, sizeof *f);
+  for (int i = 0; i < cat_n() && f->n < teto; i++) {
+    const CatItem *it = cat_item(i);
+    int c = 0;
+    if (!it || !it->naLista || !(it->listaFontes & (1u << fonte))) continue;
+    while (c < f->n && strcmp(cat_item(f->itens[c])->imdb, it->imdb)) c++;
+    if (c == f->n) f->itens[f->n++] = i;
+  }
+  f->usaItens = 1;
+  f->tipo = FILEIRA_NORMAL;
+  snprintf(f->titulo, sizeof f->titulo, "%s", i18n("Biblioteca"));
+  snprintf(f->chave, sizeof f->chave, "library");
 }
 static void filtrarFilmesVistos(Fileira *f, const CatFileira *cf) {
   if (!f || !cf || !ajustes_ocultar_filmes_vistos() ||
@@ -2494,9 +2511,6 @@ static int focoVertical(int dy) {
   return 1;
 }
 
-static int imvEvento(const SDL_Event *e);
-static void imvAtualizar(float dt);
-static Imersiva imv;
 static void home_evento_(const SDL_Event *e) {
   pedidoRelogio = 0;
   if (e->type == SDL_QUIT) { sair = 1; return; }
@@ -2509,7 +2523,6 @@ static void home_evento_(const SDL_Event *e) {
       if (k == SDLK_DOWN || k == SDLK_RIGHT) return;
     }
   }
-  if (imvEvento(e)) return;   // layout Imersiva com o cartaz aberto no lugar
 #ifdef NV_TOUCH_UI
   if (e->type == SDL_KEYDOWN) {
     toqueHeroCancelar();
@@ -2626,8 +2639,6 @@ static void home_evento_(const SDL_Event *e) {
         // card dela ja e um convite a tocar. Segurar OK continua abrindo o
         // menu — o ramo NV_HOLD_MS acima nem chega aqui.
         const Fileira *fl = &fileiras[foco.fileira];
-        // Imersiva: o primeiro OK abre o cartaz no lugar; o segundo segue abaixo.
-        if (ajustes_home_imersiva() && !imv.aberto) { imv_abrir(&imv, foco.coluna); return; }
         // "Proximos episodios" (issue #127) NAO toca: o episodio ainda nao foi
         // ao ar, e nenhum addon tem fonte para ele. OK abre a pagina.
         if (ajustes_cw_ok_toca() && strcmp(fl->chave, "upcoming_section") &&
@@ -2779,7 +2790,8 @@ static int assinaturaPrefs(void) {
        // Ligar/desligar o destaque decide se a primeira fileira vira vitrine
        // (vitrineNaPrimeira).
        | (ajustes_hero_ligado() ? 1 << 12 : 0)
-       | (ajustes_ocultar_filmes_vistos() ? 1 << 13 : 0);
+       | (ajustes_ocultar_filmes_vistos() ? 1 << 13 : 0)
+       | (ajustes_bib_home() ? 1 << 14 : 0);
 }
 
 // A PRIMEIRA FILEIRA DE CATALOGO VIRA VITRINE (cartoes 16:9 grandes) so quando
@@ -2934,7 +2946,7 @@ static void sincronizarFileiras(void) {
   // que troca fils[].
   static unsigned ultCatRev, ultFilRev, ultColRev, ultFilLim, ultCwoRev, ultOrdemRev, ultRetRev, ultItensRev, ultCurRev;
   unsigned catRev = cat_revisao(), filRev = fil_revisao();
-  unsigned itensRev = ajustes_ocultar_filmes_vistos() ? cat_revisao_itens() : 0;
+  unsigned itensRev = ajustes_ocultar_filmes_vistos() || ajustes_bib_home() ? cat_revisao_itens() : 0;
   int filLim = fil_limite();
   // A CURADORIA da fileira Herói entra na guarda: a recomendação chega DEPOIS
   // do catálogo (e volta a cada 30 min), e sem este termo o cartão só trocaria
@@ -3036,6 +3048,7 @@ static void sincronizarFileiras(void) {
 #endif
   int temDestaque = 0;
   int destaqueIndice = -1;
+  int bib = ajustes_bib_home();
   nProxHome = 0;
   for (r = 0; r < nCat && destino < MAX_FIL - 1; r++) {
     const CatFileira *cf = cat_fileira(r);
@@ -3115,7 +3128,12 @@ static void sincronizarFileiras(void) {
     snprintf(fileiras[destino].chave, sizeof fileiras[destino].chave,
              "%s", cf->chave);
     destino++;
+    // #507: the Library row sits right below Continue Watching.
+    if (bib && !strcmp(cf->chave, "continue_watching") && destino < MAX_FIL - 1) {
+      montarBiblioteca(&fileiras[destino++]); bib = 0;
+    }
   }
+  if (bib && destino < MAX_FIL - 1) montarBiblioteca(&fileiras[destino++]);
   // UMA TERCEIRA OPÇÃO NO DESTAQUE. A fonte principal continua sendo a
   // primeira fileira escolhida pela conta; quando ela tem só dois títulos, a
   // terceira posição vem do próximo catálogo que já foi carregado. Assim o
@@ -3458,7 +3476,7 @@ static void sincronizarFileiras(void) {
   // (menu.c). Depois do corte acima de proposito: fileira que a pessoa
   // desligou em Ajustes nao reaparece na barra. Ordem = a da fileira.
   nStreamBarra = 0;
-  if (ajustes_home_layout() == HOME_LAYOUT_DINAMICA && !ajustes_menu_topo()) {
+  if (ajustes_home_layout() == HOME_LAYOUT_DINAMICA) {
     int q;
     for (q = 0; q < destino; q++) {
       if (fileiras[q].tipo != FILEIRA_CATALOGOS ||
@@ -3653,7 +3671,6 @@ static void home_atualizar_(float dt, Uint32 agora) {
   if (!telefoneui_ativo()) { toqueHomeLimpar(); toqueHeroCancelar(); }
 #endif
   sincronizarFileiras();
-  if (ajustes_home_imersiva()) imvAtualizar(dt);
   // A FILEIRA DE AMIGOS tem tantas colunas quantos rostos (+ "Adicionar"), e
   // isso muda sem o catalogo mudar (um amigo novo chega do recomenda.c).
   for (int r = 0; r < nFileiras; r++) {
@@ -6562,7 +6579,7 @@ static void holofote(Uint32 agora) {
     if (clean) gfx_sem_recorte(); }
   holoTem = 0;
 }
-void home_holofote_desenhar(Uint32 agora) { if (ajustes_home_imersiva()) return; TXT_INI(); holofote(agora); TXT_FIM(); }
+void home_holofote_desenhar(Uint32 agora) { TXT_INI(); holofote(agora); TXT_FIM(); }
 // CARTAZ COM FICHA: a placa inteira atras, o texto a direita do cartaz. O
 // cartaz e desenhado depois, pelo caminho comum (pintarCartao), na largura 2:3.
 static void desenhaFicha(const CatItem *it, float px, float py, float w, float h, float f) {
@@ -7696,7 +7713,6 @@ static float desenhaTituloFil(int r, float y, const char *rot, int cr, int cg, i
   return x0 + tl->w;
 }
 
-#include "home_imersiva.inc"
 static void home_desenhar_(Uint32 agora) {
   // Nao conservar ponteiros para o catalogo de outro quadro/perfil quando
   // nenhuma tela de titulo publica um item (pasta, social ou estado vazio).
@@ -7711,7 +7727,6 @@ static void home_desenhar_(Uint32 agora) {
   // GFX_CARD (nao e um retangulo desenhado por cima): por isso vai por uma
   // variavel de modulo, uma vez por quadro, e nao em cada chamada.
   gfx_borda_foco_atual = ajustes_borda_foco() ? 1.0f : 0.0f;
-  if (ajustes_home_imersiva() && nFileiras > 0 && !homevazio_ativo(nFileiras)) { imvDesenhar(agora); return; }
   desenhaFundo(agora);
   float pd = detail_progresso();
   const int vazioQr = homevazio_ativo(nFileiras);   // sem add-ons: o cartao com o QR no lugar da Home

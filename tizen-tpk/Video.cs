@@ -421,7 +421,18 @@ namespace NuvioTpk
                 bool viva;
                 lock (trocaTrava) { viva = minha == Volatile.Read(ref sessao); if (viva) { player = p; playerSessao = minha; } }
                 if (!viva) { Liberar(p); return; }
-                p.PlaybackCompleted += (s, e) => { if (minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_FIM, 0, 0); };
+                p.PlaybackCompleted += (s, e) => ComSessao(() => {
+                    // #302: completion alone is not proof that the pipeline ended.
+                    // A live segment must not reopen a player that is still playing.
+                    // Serialize the state read with player commands, never on the callback thread.
+                    if (minha != Volatile.Read(ref sessao) || player != p) return;
+                    try {
+                        if (p.State != PlayerState.Ready) return;
+                        lock (trocaTrava) {
+                            if (minha == sessao && player == p) NvVid.Evento(EV_FIM, 0, 0);
+                        }
+                    } catch (Exception ex) { Log("completion state: " + ex.Message); }
+                });
                 p.ErrorOccurred += (s, e) => { if (minha == Volatile.Read(ref sessao)) { Log("erro " + e.Error); NvVid.Evento(EV_ERRO, (int)e.Error, 0); } };
                 p.BufferingProgressChanged += (s, e) => { if (minha == Volatile.Read(ref sessao)) NvVid.Evento(EV_BUFFER, e.Percent, 0); };
                 p.PlaybackInterrupted += (s, e) => { if (minha == Volatile.Read(ref sessao)) { Log("interrompido: " + e.Reason); NvVid.Evento(EV_PAUSADO, 0, 0); } };

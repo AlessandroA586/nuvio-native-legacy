@@ -335,3 +335,6 @@
   0, 0, 0, 0, /* account actions, confirmation, Save and Cancel */
   0, 0, /* guide category/account order and account reorder action */
   0, 0, /* EPG memory policy and hidden-category editor */
+  1, /* #507: Library row on Home: Off */
+  0, /* upscaling algorithm: Automatic (default) */
+  2, /* upscaling RCAS sharpness, 0..4 */

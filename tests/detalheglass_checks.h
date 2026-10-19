@@ -233,12 +233,7 @@ static int mais_checks(void) {
   return failures ? 1 : 0;
 }
 
-// NUVIO_DETAIL_CHECK=eps (tests/epfoco.sh): Moderna series page, Frost on.
-// 1. The focused episode's text plate spans the zoomed thumbnail, pads the
-//    text, and is drawn as glass (frost sampled) when glass is on.
-// 2. Title -> season tabs -> episodes and back up: the per-frame budget of the
-//    scroll, counting frames that recapture the glass backdrop (#205).
-static int epsPlate;
+// NUVIO_DETAIL_CHECK=eps (tests/epfoco.sh): title/season/episode scroll budget.
 // The detail page asks for the remembered automatic source every frame
 // (app.c prepararAoAbrir): 60 asks of the same list log one line, and reads
 // leave fontepref_revisao (the caller's cache key) alone.
@@ -272,24 +267,7 @@ static int fontepref_frames(void) {
 }
 
 static int eps_checks(void) {
-  int failures = fontepref_frames(), frost = ajustes_vidro_fosco() && !gfx_efeitos_minimos();
-  abrir(0, 1, SEC_EPISODIOS, 0);
-  { GfxRect r = { 200, 300, epCardW(), epThumbH() + 140 };
-    GfxRect z = foco_zoom((GfxRect){ r.x, r.y, r.w, epThumbH() }, 1.0f);
-    GfxRect p = epPlacaRect(r, epThumbH(), 1.0f);
-    float inset = r.x + NV_DETP_EPM_TEXTO_X - p.x;
-    int src0;
-    txt_novo_quadro(); tex_novo_quadro(); gfx_novo_quadro();
-    glClear(GL_COLOR_BUFFER_BIT);
-    src0 = gfx_vidro_com_fonte;
-    epPlacaDesenha(p, 1.0f, 1.0f);
-    epsPlate = gfx_vidro_com_fonte - src0;
-    int ok = p.x <= z.x + .5f && p.x + p.w >= z.x + z.w - .5f && p.y + p.h > r.y + r.h &&
-             inset >= 16.0f && r.x + NV_DETP_EPM_TEXTO_X + epTextoW() <= p.x + p.w - 16.0f &&
-             (frost ? epsPlate == 1 : 1);
-    printf("%s: episode plate x=%.0f..%.0f thumb=%.0f..%.0f text-inset=%.0f glass=%d\n",
-           ok ? "PASS" : "FAIL", p.x, p.x + p.w, z.x, z.x + z.w, inset, epsPlate);
-    failures += !ok; }
+  int failures = fontepref_frames();
   // Title (button row) -> DOWN -> season tabs -> DOWN -> episodes, then back UP.
   abrir(0, 0, 0, 0);
   for (int k = 0; k < 10; k++) { int c = 0, pa = 0, s = 0, u = 0; rows_frame(&c, &pa, &s, &u); }

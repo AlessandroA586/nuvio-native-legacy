@@ -16,6 +16,7 @@
 #include "agenda.h"
 #include "comentordem.h"
 #include "idiomacod.h"
+#include "linguas.h"
 extern void cat_historico_definir_id(const char *imdb, const char *tipo, int visto);
 #include <pthread.h>
 #include <stdint.h>
@@ -27,7 +28,7 @@ extern void cat_historico_definir_id(const char *imdb, const char *tipo, int vis
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
-#ifdef NV_EXTRAS_TESTE
+#ifdef NUVIO_TRAILER_TEST
 // Costura de teste (tests/notas0.c): a rede sai por macros para que o fio de
 // extras_pedir rode num binario de mesa, sem libcurl e sem conta.
 char *rede_baixar_teste(const char *url, int segundos);
@@ -40,6 +41,9 @@ char *rede_postar_teste(const char *url, int segundos, const char *const *cab,
 #define rede_baixar_com  rede_baixar_com_teste
 #define rede_baixar_st   rede_baixar_st_teste
 #define rede_postar      rede_postar_teste
+static const char *testeAudioPref = "";
+const char *ling_conta_audio_valor(void) { return testeAudioPref; }
+void extras_teste_audio_pref(const char *v) { testeAudioPref = v ? v : ""; }
 #endif
 
 static int  notaTrakt, votosTrakt;
@@ -390,7 +394,12 @@ void extras_teste_trailer_audio(const char *cod) { testeAudio = cod ? cod : ""; 
 // pt-BR (a lista de idiomas nao distingue a variante).
 static void alvoDeVideo(const char *idioma, const char *original, char *dst, size_t cap) {
   const char *p = PREF_AUDIO();
-  if (!p || !p[0]) snprintf(dst, cap, "%s", idioma && idioma[0] && idioma[1] ? idioma : "en");
+  const char *audioLang = idioma;
+  if (!p || !p[0]) {
+    audioLang = ling_conta_audio_valor();
+    if (!audioLang || !audioLang[0]) audioLang = idioma;
+    snprintf(dst, cap, "%s", audioLang && audioLang[0] && audioLang[1] ? audioLang : "en");
+  }
   else if (!strcmp(p, "~")) snprintf(dst, cap, "%s", original && original[0] ? original : "en");
   else if (!strcmp(p, "pt") && idioma && !strncasecmp(idioma, "pt-", 3)) snprintf(dst, cap, "%s", idioma);
   else if (!strcmp(p, "pt")) snprintf(dst, cap, "pt-BR");

@@ -107,9 +107,9 @@ int main(void) {
   tecla(SDLK_ESCAPE);
   assert(!menu_aberto() && !menu_escolheu());
 
-  // Dinamica forces the top bar, independently of the saved preference.
-  gravar("homeLayoutLocal 2\nmodernSidebar 0\nmenuTopoLocal 0\n");
-  assert(ajustes_menu_topo());
+  // No Dinamica a opcao nao vale: a pilula dele ja e o topo.
+  gravar("homeLayoutLocal 2\nmodernSidebar 0\nmenuTopoLocal 1\n");
+  assert(!ajustes_menu_topo());
 
   // Desligado de novo: a rail e as setas dela voltam.
   gravar("homeLayoutLocal 0\nmodernSidebar 0\nmenuTopoLocal 0\n");

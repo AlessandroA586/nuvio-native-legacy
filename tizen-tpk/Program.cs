@@ -106,9 +106,15 @@ namespace NuvioTpk
         // WindowMode.Transparent. Alvo: (4). Se o lancador do Tizen 9 sobe a
         // principal por cima do GLWindow, uma principal OPACA cobre o GLWindow,
         // que e iconificado e para de desenhar; transparente, nao cobre. Liga
-        // so na API11 (o host do Tizen 7+/9, onde o (4) acontece); 6.0 e 6.5
-        // ficam como estao.
-#if NV_API11
+        // na API11 (o host do Tizen 7+/9, onde o (4) acontece) e na API9
+        // (Tizen 6.5, #612); 6.0 continua opaco.
+        // #612: on QE65QN91BATXXH (6.5), adWroc reported native rendering
+        // continuing behind a black screen. Transparent + no opaque state
+        // worked with unchanged native libraries: the main window may cover
+        // the separate GLWindow. An extra diagnostic window was also removed,
+        // so the cause is not isolated. Opaque state guarded against TV Plus
+        // showing underneath; the reporter saw no such issue on 6.5.
+#if NV_API11 || NV_API9
         const bool JANELA_PRINCIPAL_TRANSPARENTE = true;
 #else
         const bool JANELA_PRINCIPAL_TRANSPARENTE = false;
@@ -131,6 +137,8 @@ namespace NuvioTpk
         // alfa da janela (o furo continua chegando ao video).
 #if NV_API11
         const bool JANELA_PRINCIPAL_OPACA = API11_GLVIEW;
+#elif NV_API9
+        const bool JANELA_PRINCIPAL_OPACA = false; // #612: keep the main window transparent.
 #else
         const bool JANELA_PRINCIPAL_OPACA = true;
 #endif

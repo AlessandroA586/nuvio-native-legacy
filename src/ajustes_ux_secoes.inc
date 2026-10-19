@@ -181,7 +181,7 @@ static int ajCenaSecao(int op) {
       return AJC_HOME_ESTILO;
     case AJ_FIL_ORDEM: case AJ_FIL_LIMITE: case AJ_ITENS_FILEIRA: case AJ_ESPACO_FILEIRAS: case AJ_ESPACO_TITULOS: case AJ_OCULTAR_NLANC: case AJ_NOTAS_HOME:
     case AJ_ROTULOS: case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_SELO_VISTO: case AJ_ABAS_ESTILO:
-    case AJ_OCULTAR_FILMES_VISTOS: case AJ_AMIGOS_ESTILO:
+    case AJ_OCULTAR_FILMES_VISTOS: case AJ_BIB_HOME: case AJ_AMIGOS_ESTILO:
       return AJC_HOME_FILEIRAS;
     case AJ_TITULO_FIL: case AJ_PALCO_FUNDO:
       return AJC_APA_FILEIRAS;
@@ -259,7 +259,8 @@ static int ajCenaSecao(int op) {
     case AJ_JF_LIGADO: case AJ_JF_SERVIDOR: case AJ_JF_ENTRAR: case AJ_JF_SAIR: case AJ_EM_SERVIDOR:
     case AJ_EM_ENTRAR: case AJ_EM_SAIR: case AJ_PX_ENTRAR: case AJ_PX_SERVIDOR: case AJ_PX_SAIR:
       return AJC_CON_SERVIDORES;
-    case AJ_AMPLIAR_UI: case AJ_RESOLUCAO: case AJ_QUALIDADE_IMG: case AJ_GPU_EFEITOS: case AJ_NAV_RAPIDA: return AJC_DES_TELA;
+    case AJ_AMPLIAR_UI: case AJ_AMPLIACAO_ALGO: case AJ_AMPLIACAO_NITIDEZ:
+    case AJ_RESOLUCAO: case AJ_QUALIDADE_IMG: case AJ_GPU_EFEITOS: case AJ_NAV_RAPIDA: return AJC_DES_TELA;
     case AJ_MEDIDOR: case AJ_DIAGNOSTICO: case AJ_VELOCIDADE: return AJC_DES_DIAG;
     case AJ_GUIA: return AJC_SOB_GUIA;
     case AJ_VERSAO_I: case AJ_ATUALIZAR: return AJC_SOB_APP;

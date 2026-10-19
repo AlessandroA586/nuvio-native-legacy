@@ -329,12 +329,9 @@ int   ajustes_hero_sinopse_grande(void); // Normal (22/30) ou Grande (24/32)
 int   ajustes_hero_cheio(void);         // modernHeroFullScreenBackdropEnabled
 // LAYOUT DA HOME (local): a estrutura da tela inicial. Moderna e o desenho de
 // sempre; Padrao contem o destaque num banner; Dinamica e o estilo Apple TV.
-// Imersiva (experimental): so a fileira em cena sobre a arte do titulo em foco
-// (home_imersiva.inc); a geometria por baixo e a da Moderna (layoutHome).
 enum { HOME_LAYOUT_MODERNA = 0, HOME_LAYOUT_PADRAO = 1, HOME_LAYOUT_DINAMICA = 2,
-       HOME_LAYOUT_IMERSIVA = 3, HOME_LAYOUT_N = 4 };
-int   ajustes_home_layout(void);     // IMERSIVA le como MODERNA
-int   ajustes_home_imersiva(void);   // 1 = layout Imersiva (experimental)
+       HOME_LAYOUT_N = 3 };
+int   ajustes_home_layout(void);
 int   ajustes_hero_fonte(void);         // origem local da arte do hero (ARTEHERO_*)
 // 1 = destaque/detalhe com foto diferente da do card (regra em artehero.h).
 int   ajustes_hero_arte_diferente(void);
@@ -506,6 +503,9 @@ int   ajustes_1080p(void);
 int   ajustes_720p(void);
 // Device-local output choice; applied after restarting, only on a 4K panel.
 int   ajustes_ampliar_app(void);
+// Device-local upscaling algorithm and RCAS sharpness 0..4 (gpun_ampliacao).
+int   ajustes_ampliacao_algo(void);
+int   ajustes_ampliacao_nitidez(void);
 // Actual drawable granted by the platform; controls the output-limit hint.
 void  ajustes_ui_saida(int w, int h);
 // Ilha do relogio (ilha.h). _ligado: 0 = sem pilula em repouso (os avisos
@@ -609,6 +609,7 @@ int   ajustes_selo_visto_modo(void);   // 0 desligado, 1 icone (check), 2 escrit
 // #366: oculta filmes vistos so na descoberta, por perfil neste aparelho.
 // Desligado de fabrica; busca, biblioteca e historico nao sao filtrados.
 int   ajustes_ocultar_filmes_vistos(void);
+int   ajustes_bib_home(void);   // #507: Library row on Home
 void  ajustes_definir_ocultar_filmes_vistos(int ligado);
 // MODO SEGURO (seguro.h). Chamar no arranque, DEPOIS de ajustes_dir e de
 // avisos_iniciar: `caiu` = a sessao anterior nao se despediu. Desfaz o ajuste

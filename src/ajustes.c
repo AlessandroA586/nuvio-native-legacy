@@ -689,6 +689,9 @@ typedef enum {
   AJ_IPTV_LISTA_XTREAM, AJ_IPTV_LISTA_M3U, AJ_IPTV_LISTA_STALKER,
   AJ_IPTV_ACOES, AJ_IPTV_EXCLUIR, AJ_IPTV_SALVAR, AJ_IPTV_CANCELAR,
   AJ_GUIA_ORDEM, AJ_IPTV_ORDEM, AJ_EPG_MEMORIA, AJ_GUIA_CATEGORIAS,
+  AJ_BIB_HOME,        // #507: Library row on Home; default off; per profile on this device, append-only
+  AJ_AMPLIACAO_ALGO,  // Device-local upscaling algorithm, append-only; automatic by default.
+  AJ_AMPLIACAO_NITIDEZ, // Device-local RCAS sharpness for SGSR sharp / FSR 1, append-only.
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -885,7 +888,7 @@ static const char *V_POSTER_PROV[] = { "Desligado", "SpatialPosters", "RPDB", "M
 // A terceira e so "Dinâmica" (dono, 13/10: "pode tirar o apple tv"). A chave
 // era a do antigo tema de cor, que desde 03/10 se chama "Da arte"; a traducao
 // dela agora e a do layout. O valor gravado continua HOME_LAYOUT_DINAMICA.
-static const char *V_HOME_LAYOUT[] = { "Moderna", "Padrão", "Dinâmica", "Imersiva (experimental)" };
+static const char *V_HOME_LAYOUT[] = { "Moderna", "Padrão", "Dinâmica" };
 // "Fonte automatica" (issue #130). O INDICE e o gravado (fonteAutoLocal) e o
 // FONTEAUTO_* de fonteauto.h: 0 = a regra de pontuacao, 1 = a primeira da
 // lista do addon, e so ela — o "Auto-play first source" do Nuvio.
@@ -953,7 +956,9 @@ static const char *V_IDIOMA[]    = { "Automático", "Português", "English", "Ro
                                      "Italiano", "Nederlands", "Polski", "Türkçe", "Português (Portugal)",
                                      "Svenska", "Dansk", "Norsk", "Čeština", "Slovenčina", "Slovenščina",
                                      "Magyar", "Lietuvių", "Bosanski", "Srpski", "Български", "Ελληνικά",
-                                     "Bahasa Indonesia", "Tiếng Việt", "日本語", "简体中文", "繁體中文" };
+                                     "Bahasa Indonesia", "Tiếng Việt", "日本語", "简体中文", "繁體中文",
+                                     // IDIOMA_AR: text.c junta as letras (bidi.c) na fonte arabe.
+                                     "العربية" };
 static const char *V_ANIM[]      = { "Completas", "Reduzidas" };
 static const char *V_FONTE_UI[]  = { "Inter", "LG Display", "Droid Sans",
                                      "Montserrat", "Roboto",
@@ -969,6 +974,7 @@ static const char *V_FONTE_UI[]  = { "Inter", "LG Display", "Droid Sans",
 // Order = RES_* (resolucao.h). The old order lives only in res_migrar.
 static const char *V_RESOLUCAO[] = { "Automática", "1080p", "4K (experimental)", "720p (leve)" };
 static const char *V_AMPLIAR_UI[] = { "Pela TV", "Pelo app (4K)" };
+static const char *V_AMPLIACAO_ALGO[] = { "Automático", "SGSR", "SGSR nítido", "FSR 1 (EASU+RCAS)", "Lanczos", "Bilinear" };
 
 static const char *V_LEG_COR[] = { "Branco", "Amarelo", "Verde", "Azul", "Vermelho", "Preto" };
 static const char *V_LEG_COR_BORDA[] = { "Preto", "Branco", "Amarelo", "Verde", "Azul", "Vermelho" };
@@ -1526,7 +1532,7 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Chave do RPDB"),
   ACAO("Modelo de URL dos pôsteres"),
   ACAO("Testar pôsteres"),
-  ESC("Layout da home",             V_HOME_LAYOUT, 4), // local: ver V_HOME_LAYOUT
+  ESC("Layout da home",             V_HOME_LAYOUT, 3), // local: ver V_HOME_LAYOUT
   ACAO("Chave do AllDebrid"),
   ACAO("Testar chave do AllDebrid"),
   ACAO("Chave do Real-Debrid"),
@@ -1798,6 +1804,9 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Ordem"),
   ESC("Memória da programação", V_EPG_MEMORIA, 3),
   ESC("Ocultar categorias", NULL, 1),
+  ESC("Fileira da Biblioteca", V_LIGA, 2),   // local: libraryRowLocal
+  ESC("Algoritmo de ampliação", V_AMPLIACAO_ALGO, 6),
+  NUM("Nitidez", 0, 4, 1, NULL),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -2113,6 +2122,9 @@ static const char *CHAVE[] = {
   "-iptvListaXtream", "-iptvListaM3u", "-iptvListaStalker",
   "-iptvAcoes", "-iptvExcluir", "-iptvSalvar", "-iptvCancelar",
   "guiaOrdemLocal", "-iptvOrdem", "epgMemoriaLocal", "-guiaCategorias",
+  "libraryRowLocal",
+  "ampliarAlgoLocal",
+  "ampliarNitidezLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2720,6 +2732,8 @@ static int perfilSeguro;
 static int saidaLimitada;
 void ajustes_ui_saida(int w, int h) { saidaLimitada = w > 0 && h > 0 && (w < 3840 || h < 2160); }
 int ajustes_ampliar_app(void) { return painel4k() && valor[AJ_AMPLIAR_UI] == 1 && !SEGURO; }
+int ajustes_ampliacao_algo(void)    { return valor[AJ_AMPLIACAO_ALGO]; }
+int ajustes_ampliacao_nitidez(void) { return valor[AJ_AMPLIACAO_NITIDEZ]; }
 int ajustes_1080p(void)               { return valor[AJ_RESOLUCAO] == RES_1080 && !SEGURO; }
 int ajustes_4k(void)                  { return valor[AJ_RESOLUCAO] == RES_4K && !SEGURO; }
 int ajustes_res_auto(void)            { return valor[AJ_RESOLUCAO] == RES_AUTO && !SEGURO; }
@@ -3180,6 +3194,7 @@ unsigned ajustes_manter_video_ms(void) {
 int ajustes_selo_visto(void) { return valor[AJ_SELO_VISTO] != 1; }
 int ajustes_selo_visto_modo(void) { return valor[AJ_SELO_VISTO] == 1 ? 0 : valor[AJ_SELO_VISTO] == 2 ? 2 : 1; }
 int ajustes_ocultar_filmes_vistos(void) { return lig(AJ_OCULTAR_FILMES_VISTOS); }
+int ajustes_bib_home(void) { return lig(AJ_BIB_HOME); }
 void ajustes_definir_ocultar_filmes_vistos(int ligado) {
   valor[AJ_OCULTAR_FILMES_VISTOS] = ligado ? 0 : 1;
   AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar());
@@ -3367,9 +3382,10 @@ void ajustes_textura_quadro(void) {
 // moderna DESLIGA o recolhimento, e nao o contrario. Copiado de
 // normalizeLayoutPreferences para nao inventar precedencia.
 int ajustes_rail_moderna(void)        { return lig(AJ_RAIL_MODERNA); }
-// Dinamica always uses the top bar; portrait phones keep the compact menu.
+// #461: a barra no topo nao existe no Dinamica (a pilula dela ja e o topo) nem
+// no telefone em retrato (nao cabe).
 int ajustes_menu_topo(void) {
-  return (valor[AJ_MENU_TOPO] == 1 || ajustes_home_layout() == HOME_LAYOUT_DINAMICA) && !ajRetrato();
+  return valor[AJ_MENU_TOPO] == 1 && ajustes_home_layout() != HOME_LAYOUT_DINAMICA && !ajRetrato();
 }
 int ajustes_abas_estilo(void) { return valor[AJ_ABAS_ESTILO]; }
 void ajustes_definir_abas_estilo(int estilo) {
@@ -3394,11 +3410,8 @@ int ajustes_hero_cheio(void)          { return lig(AJ_HERO_CHEIO); }
 int ajustes_hero_sinopse_grande(void) { return valor[AJ_HERO_SINOPSE_TAM] == 1; }
 int ajustes_home_layout(void) {
   int v = valor[AJ_HOME_LAYOUT];
-  // A Imersiva e a Moderna por baixo: menu, detalhe e geometria seguem a
-  // Moderna; so home_imersiva.inc pergunta ajustes_home_imersiva().
-  return v >= 0 && v < HOME_LAYOUT_N && v != HOME_LAYOUT_IMERSIVA ? v : HOME_LAYOUT_MODERNA;
+  return v >= 0 && v < HOME_LAYOUT_N ? v : HOME_LAYOUT_MODERNA;
 }
-int ajustes_home_imersiva(void) { return valor[AJ_HOME_LAYOUT] == HOME_LAYOUT_IMERSIVA; }
 int ajustes_hero_arte_diferente(void) { return lig(AJ_HERO_ARTE_DIF); }
 int ajustes_hero_fonte(void) {
   int v = valor[AJ_HERO_FUNDO];
@@ -3751,6 +3764,7 @@ const char *ajustes_tmdb_idioma(void) {
       case IDIOMA_JA: return "ja-JP";
       case IDIOMA_ZHCN: return "zh-CN";
       case IDIOMA_ZHTW: return "zh-TW";
+      case IDIOMA_AR: return "ar-SA";
       default:        return "pt-BR";
     }
   }
@@ -5749,6 +5763,8 @@ static int somenteDesteAparelho(int op) {
     // A TV da sala e a do quarto nao tem a mesma memoria nem a mesma tela, e a
     // conta e uma so.
     case AJ_AMPLIAR_UI:    /* output workload belongs to this device */
+    case AJ_AMPLIACAO_ALGO: /* upscaling algorithm: depends on GPU capabilities */
+    case AJ_AMPLIACAO_NITIDEZ:
     case AJ_RESOLUCAO:      /* pedir superficie 4K: depende do painel */
     case AJ_TEX_MB:         /* teto de memoria de imagem: depende da RAM */
     case AJ_QUALIDADE_IMG:  /* resolucao da arte decodificada: idem */
@@ -5886,6 +5902,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_VIDRO_QUALIDADE: /* o custo do desfoque e da GPU desta TV */
     case AJ_SELO_VISTO:     /* o web nao tem a escolha */
     case AJ_OCULTAR_FILMES_VISTOS: /* por perfil desta TV; fora do blob da conta */
+    case AJ_BIB_HOME:       /* #507: idem */
     case AJ_REACAO_CREDITOS: /* o web nao tem a pergunta */
     case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PROXIMO_AUTO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_CONTAGEM: /* idem: local desta TV */
     case AJ_SEEKR_LIGADO: case AJ_SEEKR_FITA: case AJ_SEEKR_AJUSTE: /* o web nao tem o Seekr */
@@ -5915,6 +5932,8 @@ static int somenteDesteAparelho(int op) {
 static int perfilLocal(int i) {
   return i == AJ_GUIA_ORDEM || i == AJ_GUIA_FONTE || i == AJ_COLECAO_EXIBICAO || i == AJ_CW_FONTE || i == AJ_CW_PROXIMO || i == AJ_SALVOS_DEST || i == AJ_HIST_CONTA || i == AJ_SOCIAL ||
          i == AJ_MENU_TOPO || i == AJ_ABAS_ESTILO || i == AJ_OCULTAR_FILMES_VISTOS;
+  return i == AJ_COLECAO_EXIBICAO || i == AJ_CW_FONTE || i == AJ_CW_PROXIMO || i == AJ_SALVOS_DEST || i == AJ_HIST_CONTA || i == AJ_SOCIAL ||
+         i == AJ_MENU_TOPO || i == AJ_ABAS_ESTILO || i == AJ_OCULTAR_FILMES_VISTOS || i == AJ_BIB_HOME;
 }
 
 static int dePerfil(int i) {
@@ -7072,6 +7091,10 @@ static int visivel(int i) {
     if (op == AJ_FUNDO_DIN_COR && ajustes_fundo_din() != 1) return 0;
     if ((op == AJ_PERFIL_PESQ || op == AJ_PERFIL_EDITAR) && !recomenda_ativo()) return 0;
     if (op == AJ_BUSCA_CINEMETA && valor[op] == 0 && !cinemetaInstalado()) return 0;
+    // Only while the app upscales (App (4K) on a capable GPU); sharpness only for RCAS choices.
+    if ((op == AJ_AMPLIACAO_ALGO || op == AJ_AMPLIACAO_NITIDEZ) &&
+        !(ajustes_ampliar_app() && gpun_upscale_suportado())) return 0;
+    if (op == AJ_AMPLIACAO_NITIDEZ && valor[AJ_AMPLIACAO_ALGO] != 2 && valor[AJ_AMPLIACAO_ALGO] != 3) return 0;
     if (uxAvancada(op) && !lig(AJ_AVANCADAS) && !maisAberto[secDoItem[i]]) return 0;
   }
   // A linha "Mais opcoes" some com a pilula Avancadas ligada (ja esta tudo a vista).
@@ -7354,6 +7377,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_HERO_CATALOGOS: return "De onde vêm os títulos do destaque: os primeiros do catálogo, um sorteio, ou uma fileira da Home. OK troca.";
     case AJ_PS_FUNDO: return "Fundo da tela de escolha de perfil. Filmes: os cartazes do que cada perfil assistiu, numa parede inclinada. Luz: preto com uma luz na cor do perfil. Projetor: sala de cinema antes da sessão. Arte do perfil: o fundo escolhido ao editar o perfil no app Nuvio; sem ele, o avatar desfocado. Ou as listras do login.";
     case AJ_DESCOBRIR: return "Onde fica a tela Descobrir: junto da Busca, como item próprio na barra lateral, ou em lugar nenhum.";
+    case AJ_BIB_HOME: return "Mostra na Tela inicial uma fileira com os títulos salvos na Biblioteca, logo abaixo de Continuar assistindo.";
     case AJ_SELO_VISTO: return "Marca no pôster dos títulos que você já assistiu: um ícone de check ou a palavra Assistido.";
     case AJ_OCULTAR_FILMES_VISTOS: return "Oculta filmes já assistidos nas fileiras de descoberta. Busca e Biblioteca continuam mostrando todos. Vale para este perfil neste aparelho.";
     case AJ_ROTULOS: return "Escreve o nome do título abaixo do cartaz. A maior parte da arte já traz o nome impresso.";
@@ -7538,6 +7562,8 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ESPACO_TITULOS: return "O espaço horizontal entre os cartazes de uma fileira da Home.";
     case AJ_AMPLIAR_UI: return "Pelo app (4K): usa mais GPU. Reinicie o app depois de mudar.";
     case AJ_AUDIO_OFFSET: return "Positivo atrasa; negativo adianta. Só áudio convertido, a partir do próximo vídeo.";
+    case AJ_AMPLIACAO_ALGO: return "Como o app amplia a interface para a tela. Automático escolhe sozinho; SGSR nítido e FSR 1 usam mais GPU. Vale na hora.";
+    case AJ_AMPLIACAO_NITIDEZ: return "Reforço de contorno do SGSR nítido e do FSR 1. 0 desliga.";
     case AJ_TAM_MIN: return "Na escolha automática, fontes menores que este tamanho ficam para o fim da fila. Se for maior que o tamanho máximo, o mínimo é ignorado. Só vale para arquivos com tamanho conhecido; se só houver fontes fora da faixa, a melhor delas ainda toca.";
 #ifdef NV_TPK
     case AJ_DTS_AC3: return "Esta TV não toca DTS nem TrueHD: o app converte o som na hora. 5.1 (Dolby Digital) mantém o surround para barra de som e receiver; 7.1, Atmos e DTS:X viram 5.1, sem os objetos. Estéreo (AAC) serve qualquer TV. Desligado: esses vídeos tocam sem som, como antes. Vale a partir do próximo vídeo.";
@@ -7799,6 +7825,7 @@ static const char *beneficioProprio(int op) {
     case AJ_LIVETV_RES: return "Qual versão do canal entra primeiro: FHD, HD ou SD.";
     case AJ_XTREAM_CONTA: return "Se a assinatura está ativa, quando vence e quantas telas usa.";
     case AJ_PERFIL_EDITAR: return "Apelido, bio e o que os amigos veem no seu perfil.";
+    case AJ_BIB_HOME: return "Os títulos salvos numa fileira da Tela inicial.";
     case AJ_SELO_VISTO: return "Um check no cartaz do que você já assistiu.";
     case AJ_CW_ORDEM: return "Em que ordem a retomada mostra os títulos.";
     case AJ_FONTE_REGEX: return "Sobe ou exige fontes cujo nome casa com um padrão.";
@@ -10189,7 +10216,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_HERO_SINOPSE: case AJ_HERO_NOTAS: case AJ_HERO_ANO: case AJ_HERO_DURACAO:
     case AJ_PS_FUNDO: case AJ_PS_CONTINUAR: case AJ_DESCOBRIR: case AJ_ROTULOS:
     case AJ_NOME_ADDON: case AJ_SUFIXO_TIPO: case AJ_OCULTAR_NLANC: case AJ_MURAL_TITULOS:
-    case AJ_NOTAS_HOME: case AJ_GRAD_CLASSICO: case AJ_SELO_VISTO: case AJ_OCULTAR_FILMES_VISTOS: case AJ_TITULO_FIL:
+    case AJ_NOTAS_HOME: case AJ_GRAD_CLASSICO: case AJ_SELO_VISTO: case AJ_OCULTAR_FILMES_VISTOS: case AJ_BIB_HOME: case AJ_TITULO_FIL:
       return AJPV_HOME;
     case AJ_CW_LIGADO: case AJ_CW_OK: case AJ_CW_FONTE:
     case AJ_CW_ESTILO: case AJ_CW_THUMB: case AJ_CW_BLUR_PROX:
@@ -10245,7 +10272,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_NT_METAUSER: case AJ_NT_TRAKT: case AJ_NT_TMDB: case AJ_NT_LETTER:
     case AJ_NT_MAL: case AJ_NT_EBERT: case AJ_NT_SCORE: case AJ_NT_ORDEM: case AJ_NT_EP:
       return AJPV_MDB;
-    case AJ_AMPLIAR_UI: case AJ_RESOLUCAO: case AJ_GPU_EFEITOS:
+    case AJ_AMPLIAR_UI: case AJ_AMPLIACAO_ALGO: case AJ_AMPLIACAO_NITIDEZ: case AJ_RESOLUCAO: case AJ_GPU_EFEITOS:
     case AJ_QUALIDADE_IMG: case AJ_TEX_MB:
     case AJ_ESPACO:
       return AJPV_TV;
@@ -10437,6 +10464,9 @@ void ajustes_teste_ux_captura(int cenario) {
   if (cenario == 9) { valor[AJ_IDIOMA] = IDIOMA_EN + 1; focarOpcao(AJ_HOME_LAYOUT); uxAbrirEditor(AJ_HOME_LAYOUT); }
   if (cenario == 21) focarOpcao(getenv("NUVIO_SHOT_TRAILER_AUDIO") ? AJ_TRAILER_AUDIO : AJ_FOCO_TRAILER);
   if (cenario == 22) { focarOpcao(AJ_FOCO_TRAILER); uxAbrirEditor(AJ_FOCO_TRAILER); }
+  // Upscaling algorithm row (needs NUVIO_PANEL_SIZE=3840x2160): FSR 1 shows Sharpness.
+  if (cenario == 23 || cenario == 24) { valor[AJ_AMPLIACAO_ALGO] = 3; focarOpcao(AJ_AMPLIACAO_ALGO); }
+  if (cenario == 24) uxAbrirEditor(AJ_AMPLIACAO_ALGO);
   // NUVIO_SHOT_TRAILER_VETO=1: captura da linha Ligada que nao vale (veto de
   // GPU): a ajuda tem de dizer por que, em vez de a linha parecer obedecida.
   if (cenario == 21 && getenv("NUVIO_SHOT_TRAILER_VETO")) {

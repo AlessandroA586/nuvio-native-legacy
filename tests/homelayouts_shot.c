@@ -311,6 +311,10 @@ int main(int argc, char **argv) {
       if (getenv("NV_BACKDROP_FIXO")) snprintf(c->backdrop, sizeof c->backdrop, "%s", getenv("NV_BACKDROP_FIXO"));
       snprintf(c->backdropCatalogo, sizeof c->backdropCatalogo, "%s", c->backdrop);
       snprintf(c->poster, sizeof c->poster, "deploy/app/art/poster/%02d.jpg", a);
+      // NV_BIB=1 (#507): every third catalog title saved, for the Library row.
+      if (getenv("NV_BIB") && FILS[k].catalogo && i % 3 == 1) {
+        c->naLista = 1; c->listaFontes = 1u << ajustes_fonte_biblioteca();
+      }
       // NV_SEM_LOGO=1: nenhum titulo com logo (o cabecalho em texto do menu).
       if (a < 10 && !getenv("NV_SEM_LOGO")) snprintf(c->logo, sizeof c->logo, "deploy/app/art/logo/%02d.png", a);
       // NV_ARTE_ADDON=1: todo item vem de um addon (origem; inclusive o da
@@ -442,47 +446,6 @@ int main(int argc, char **argv) {
   SDL_GL_DeleteContext(gl); SDL_DestroyWindow(janela); SDL_Quit();
   return rc;
 #endif
-
-  // NV_IMERSIVA=1: layout Imersiva (experimental). Palco assentado, troca de
-  // fileira a 50%, cartaz aberto no lugar e o mesmo no nivel de GPU baixo.
-  if (getenv("NV_IMERSIVA")) {
-    ajusta(HOME_LAYOUT_IMERSIVA, 0);
-    assert(ajustes_home_imersiva() && ajustes_home_layout() == HOME_LAYOUT_MODERNA);
-    for (i = 0; i < 14; i++) tecla(SDLK_UP);
-    quadros(90, NULL);
-    printf("[imersiva] destaque: cromo=%.2f\n", home_cromo_alfa());
-    assert(home_cromo_alfa() > 0.99f);   // no destaque o menu e o relogio voltam
-    // Continuar, Amigos, Popular: a primeira fileira de cartazes com arte.
-    tecla(SDLK_DOWN); tecla(SDLK_DOWN); tecla(SDLK_DOWN);
-    tecla(SDLK_RIGHT); tecla(SDLK_RIGHT);
-    quadros(120, NULL);
-    assert(home_cromo_alfa() < 0.01f);   // nas fileiras: nada de UI
-    snprintf(bmp, sizeof bmp, "%s-imersiva-1-stage.bmp", saida);
-    quadros(1, bmp);
-    tecla(SDLK_DOWN);
-    quadros(14, NULL);   // 15 quadros de 1/60 s = ~250 ms dos 480 ms da troca
-    snprintf(bmp, sizeof bmp, "%s-imersiva-2-transition-50.bmp", saida);
-    quadros(1, bmp);
-    quadros(90, NULL);
-    tecla(SDLK_RETURN);
-    assert(!home_pediu_abrir());   // o primeiro OK abre no lugar, nao a pagina
-    quadros(60, NULL);
-    snprintf(bmp, sizeof bmp, "%s-imersiva-3-open.bmp", saida);
-    quadros(1, bmp);
-    gfx_definir_efeitos_leves(1);
-    quadros(30, NULL);
-    snprintf(bmp, sizeof bmp, "%s-imersiva-4-open-low.bmp", saida);
-    quadros(1, bmp);
-    printf("[imersiva] baixo: fill=%.2f rects=%d\n", fillVisUlt, rectUlt);
-    tecla(SDLK_BACKSPACE);
-    quadros(60, NULL);
-    tecla(SDLK_RETURN); quadros(40, NULL);
-    tecla(SDLK_RETURN);
-    assert(home_pediu_abrir());   // aberto, o OK segue para a pagina
-    tex_encerrar(); txt_encerrar();
-    SDL_GL_DeleteContext(gl); SDL_DestroyWindow(janela); SDL_Quit();
-    return 0;
-  }
 
   // Focused Stage/Split comparison, using the production renderer and local art.
   if (getenv("NV_DINPALCO")) {

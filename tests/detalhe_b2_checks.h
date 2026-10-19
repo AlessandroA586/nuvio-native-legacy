@@ -62,7 +62,7 @@ static int b2_checks(void) {
     printf("%s: text pixel height %d at scale %.2f (100%% height %d)\n",
            heightBad ? "FAIL" : "PASS", pixelHeight, gfx_escala(), baseTextHeight);
     fail += heightBad;
-    epPlacaDesenha((GfxRect){100, 100, 640, 414}, 1, 1);
+    desenhaEpisodio((GfxRect){100, 100, epCardW(), epCardH()}, 0, 1, 1, SDL_GetTicks());
     desenhaEstudio(100, 100, 0, 0, 1);
     int bad = b2Summary.w == 0 || b2TextBottom == 0 ||
               b2TextBottom > b2Summary.y + b2Summary.h - 20.0f;
@@ -74,7 +74,7 @@ static int b2_checks(void) {
     printf("%s: cast row %.1f contains tile bottom %.1f\n", bad ? "FAIL" : "PASS", alturaSecao(SEC_ELENCO), castBottom);
     fail += bad;
     bad = b2Panels || cardMaterial;
-    printf("%s: B2 tint-only ratings/episodes/studios panels=%d materials=%d\n", bad ? "FAIL" : "PASS", b2Panels, cardMaterial);
+    printf("%s: B2 ratings/episodes/studios without glass panels=%d materials=%d\n", bad ? "FAIL" : "PASS", b2Panels, cardMaterial);
     fail += bad;
     bad = b2Tiles != 8 || fabsf(b2Summary.w - 420) > .01f ||
           fabsf(b2Rects[0].y - b2Rects[3].y) > .01f ||

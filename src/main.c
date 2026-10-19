@@ -2174,6 +2174,7 @@ int main(int argc, char **argv) {
     // fechada, foco fora do cartaz). Ver gif_ocioso em gif.h.
     gif_ocioso();
     gfx_ambiente_descarregar();   // quadro sem desenho por cima: a luz ainda sai
+    gpun_ampliacao(ajustes_ampliacao_algo(), ajustes_ampliacao_nitidez());
     gpun_quadro_fim();
     fDes = NV_DT(t0);
     fGfxMs = gfx_ms_rect; fTexMs = tex_ms_busca;

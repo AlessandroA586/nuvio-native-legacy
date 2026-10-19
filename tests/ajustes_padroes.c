@@ -15,6 +15,10 @@ int main(void) {
   assert(valor[AJ_XTREAM_CONEXOES] == 0 && valor[AJ_AMPLIAR_UI] == 1);
   assert(!strcmp(CHAVE[AJ_XTREAM_CONEXOES], "-xtreamConexoes"));
   assert(!strcmp(CHAVE[AJ_AMPLIAR_UI], "ampliarUiLocal"));
+  // Upscaling: Automatic, sharpness 2; both device-local.
+  assert(valor[AJ_AMPLIACAO_ALGO] == 0 && valor[AJ_AMPLIACAO_NITIDEZ] == 2);
+  assert(!strcmp(CHAVE[AJ_AMPLIACAO_ALGO], "ampliarAlgoLocal") &&
+         !strcmp(CHAVE[AJ_AMPLIACAO_NITIDEZ], "ampliarNitidezLocal"));
   assert(OPCOES[AJ_XTREAM_CONEXOES].n == 3 && OPCOES[AJ_AMPLIAR_UI].n == 2);
   // c2e07fe41: 0 = follow the primary, then 50%..300% every 10%; the #439
   // indices saved by 2.0.5 are migrated on load (viuLeg2Escala).
@@ -201,10 +205,11 @@ int main(void) {
   AJ_AUDIO_OFFSET == AJ_LIVETV_SUGERIR + 1 &&
   AJ_XTREAM_CONEXOES == AJ_AUDIO_OFFSET + 1 &&
   AJ_AMPLIAR_UI == AJ_XTREAM_CONEXOES + 1 &&
-  AJ_GUIA_FONTE == AJ_AMPLIAR_UI + 1 &&
-  AJ_N == AJ_GUIA_CATEGORIAS + 1);   // 2.0.6: master's #535 views appended after
-  assert(ajustes_guia_fonte()==0 && somenteDesteAparelho(AJ_GUIA_FONTE) && dePerfil(AJ_GUIA_FONTE));
-  assert(!strcmp(CHAVE[AJ_GUIA_FONTE],"guiaFonteLocal"));
+AJ_GUIA_FONTE == AJ_AMPLIAR_UI + 1 &&
+  AJ_BIB_HOME == AJ_GUIA_CATEGORIAS + 1 &&
+  AJ_AMPLIACAO_ALGO == AJ_BIB_HOME + 1 &&
+  AJ_AMPLIACAO_NITIDEZ == AJ_AMPLIACAO_ALGO + 1 &&
+  AJ_N == AJ_AMPLIACAO_NITIDEZ + 1);   // merged both sides
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));

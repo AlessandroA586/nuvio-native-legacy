@@ -15,6 +15,7 @@
 
 void gpun_teste_reiniciar(void);
 int  gpun_teste_decidido(void);
+const char *gpun_teste_upscale(int sw, int sh, int iw, int ih, int app);
 
 // --- dubles ------------------------------------------------------------------
 float gfx_tex_aspect_atual, gfx_opacidade_grupo = 1.0f;
@@ -60,9 +61,6 @@ void glTexParameteri(GLenum t, GLenum p, GLint v) { (void)t; (void)p; (void)v; }
 void glFramebufferTexture2D(GLenum t, GLenum a, GLenum tt, GLuint v, GLint l) { (void)t; (void)a; (void)tt; (void)v; (void)l; }
 GLenum glCheckFramebufferStatus(GLenum t) { (void)t; return GL_FRAMEBUFFER_COMPLETE; }
 void glViewport(GLint x, GLint y, GLsizei w, GLsizei h) { (void)x; (void)y; (void)w; (void)h; }
-// Reinitializing after a framebuffer case must also stay independent of GL.
-void glDeleteTextures(GLsizei n, const GLuint *v) { (void)n; (void)v; }
-void glDeleteFramebuffers(GLsizei n, const GLuint *v) { (void)n; (void)v; }
 
 // `seg` segundos de quadros iguais.
 static void rodar(double seg, double dt, double espera, double cpu, int naHome, int cheia) {
@@ -255,6 +253,30 @@ static void maliLight(void) {
   }
   puts("ok  saved Light: Mali-400/450/470 level 2, Mali-G52 level 1");
 }
+// Settings > This TV > Upscaling algorithm picks the pass gpun_quadro_fim draws.
+static void upscaleEscolha(void) {
+  #define UP(a, n, sw, sh, iw, ih, app, nome) \
+    do { gpun_ampliacao(a, n); assert(!strcmp(gpun_teste_upscale(sw, sh, iw, ih, app), nome)); } while (0)
+  // Automatic keeps the original rule: fractional SGSR, integer Sharp-Bilinear.
+  UP(0, 2, 1920, 1080, 1280, 720, 1, "sgsr");
+  UP(0, 2, 3840, 2160, 1920, 1080, 1, "sharp-bilinear");
+  UP(1, 2, 3840, 2160, 1920, 1080, 1, "sgsr");
+  UP(2, 2, 1920, 1080, 1280, 720, 1, "sgsr+rcas");
+  UP(2, 0, 1920, 1080, 1280, 720, 1, "sgsr");
+  UP(3, 4, 3840, 2160, 1920, 1080, 1, "easu+rcas");
+  UP(3, 0, 1920, 1080, 1280, 720, 1, "easu");
+  UP(4, 2, 1920, 1080, 1280, 720, 1, "lanczos");
+  UP(5, 2, 1920, 1080, 1280, 720, 1, "bilinear");
+  // No app upscaling: every choice is the plain copy.
+  for (int a = 0; a <= 5; a++) {
+    UP(a, 2, 1920, 1080, 1280, 720, 0, "bilinear");
+    UP(a, 2, 1920, 1080, 1920, 1080, 1, "bilinear");
+  }
+  #undef UP
+  gpun_ampliacao(0, 0);
+  puts("ok  upscaling algorithm selects the drawn pass; Automatic unchanged");
+}
+
 int main(int argc, char **argv) {
   if (argc == 2 && !strcmp(argv[1], "mali-light")) { maliLight(); return 0; }
   if (argc == 2 && !strcmp(argv[1], "gpu1080")) { gpu1080(); return 0; }
@@ -390,6 +412,7 @@ int main(int argc, char **argv) {
   legadoInterrompido();
   referenciaAlternada();
   gpu1080(); combinations(); maliLight();
+  upscaleEscolha();
   puts("gpunivel: tudo ok");
   return 0;
 }
