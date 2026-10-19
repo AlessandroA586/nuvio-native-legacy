@@ -46,7 +46,10 @@ static const char streams[] =
   "{\"num\":4,\"name\":\"Canal M3U HD\",\"stream_id\":4,\"stream_icon\":\"\",\"epg_channel_id\":\"m3u.br\",\"category_id\":1},"
   "{\"num\":5,\"name\":\"No Logo\",\"stream_id\":5,\"category_id\":1},"
   "{\"num\":6,\"name\":\"Whitespace\",\"stream_id\":6,\"stream_icon\":\" \\nhttp://logos.test/espn.png\\t \",\"category_id\":1},"
-  "{\"num\":7,\"name\":\"Invalid\",\"stream_id\":7,\"stream_icon\":\"null\",\"epg_channel_id\":\"globo.rj\",\"category_id\":1}]";
+  "{\"num\":7,\"name\":\"Invalid\",\"stream_id\":7,\"stream_icon\":\"null\",\"epg_channel_id\":\"globo.rj\",\"category_id\":1},"
+  "{\"num\":8,\"name\":\"ESPN HD\",\"stream_id\":8,\"stream_icon\":\"http://logos.test/espn-hd.png\",\"category_id\":1},"
+  "{\"num\":9,\"name\":\"By ID\",\"stream_id\":9,\"epg_channel_id\":\"m3u.br\",\"category_id\":1},"
+  "{\"num\":10,\"name\":\"Canal M3U FHD\",\"stream_id\":10,\"category_id\":1}]";
 char *rede_baixar_st_retry(const char *url, int s, const char *const *c, int *st, int *retry) {
   (void)s; (void)c; *st = 200; if (retry) *retry = 0;
   if (strstr(url, "action=get_live_categories")) return strdup("[{\"category_id\":1,\"category_name\":\"Fixture\"}]");
@@ -64,10 +67,12 @@ int rede_baixar_fluxo(const char *u, int s, const char *const *c,
   (void)u; (void)s; (void)c; (void)cb; (void)x; (void)max; (void)st; (void)bytes; return 0;
 }
 
-static const char *failed;
+static const char *failed, *failed2;
 static char requested[600];
 static GLuint texture;
-int tex_falhou(const char *s) { return failed && s && !strcmp(failed, s); }
+int tex_falhou(const char *s) {
+  return s && ((failed && !strcmp(failed, s)) || (failed2 && !strcmp(failed2, s)));
+}
 GLuint tex_obter_larg(const char *s, float w) {
   (void)w; snprintf(requested, sizeof requested, "%s", s ? s : ""); return texture;
 }
@@ -90,7 +95,8 @@ static int failures;
 static void check(const char *name, const char *want) {
   row(channel(name), 80);
   int ok = !strcmp(requested, want);
-  printf("%s grid: %s\n", ok ? "PASS" : "FAIL", name);
+  printf("%s grid: %s (failed=%s; want=%s; got=%s)\n", ok ? "PASS" : "FAIL",
+         name, failed ? failed : "none", want, requested);
   if (!ok) failures++;
 }
 static void capture(const char *path) {
@@ -109,7 +115,8 @@ static void capture(const char *path) {
 int main(int argc, char **argv) {
   char xml[] = "<tv><channel id='globo.rj'><display-name>Globo RJ</display-name><icon src='http://xmltv.test/globo.png?a=1&amp;b=2'/></channel>"
     "<channel id='m3u.br'><display-name>Canal M3U</display-name><icon src='http://xmltv.test/lower-priority.png'/></channel></tv>";
-  const char m3u[] = "#EXTM3U\n#EXTINF:-1 tvg-id=\"m3u.br\" tvg-logo=\"http://m3u.test/canal.png\",Canal M3U\nhttp://fixture.invalid/live\n";
+  const char m3u[] = "#EXTM3U\n#EXTINF:-1 tvg-id=\"m3u.br\" tvg-logo=\"http://m3u.test/canal.png\",Canal M3U\nhttp://fixture.invalid/live\n"
+    "#EXTINF:-1 tvg-id=\"m3u.br\" tvg-logo=\"http://m3u.test/second.png\",Canal M3U SD\nhttp://fixture.invalid/live2\n";
   LtvM3u parser; M3uCtx ctx = {0};
   SDL_Window *win; SDL_GLContext gl; SDL_Surface *image;
   assert(argc == 3); dados_iniciar(argv[1]);
@@ -118,7 +125,7 @@ int main(int argc, char **argv) {
   ctx.fl = sFonte(LTV_M3U, "fixture-list", "Fixture M3U", "");
   ltv_m3u_iniciar(&parser, m3uCanal, &ctx);
   assert(ltv_m3u_alimentar(&parser, m3u, strlen(m3u))); ltv_m3u_fim(&parser);
-  assert(xtreamCarregar() == 7); adotarStaging();
+  assert(xtreamCarregar() == 10); adotarStaging();
   assert(epg_xml_processar(xml) == 0); // Icons work even without programmes.
   assert(SDL_Init(SDL_INIT_VIDEO) == 0); IMG_Init(IMG_INIT_PNG);
   win = SDL_CreateWindow("Offline Live TV", 0, 0, 1920, 1080, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN); assert(win);
@@ -146,15 +153,29 @@ int main(int argc, char **argv) {
   check("No Logo", "");
   check("Whitespace", "http://logos.test/espn.png");
   check("Invalid", "http://xmltv.test/globo.png?a=1&b=2");
+  // Donors are selected before downloads; confirmed failures must advance
+  // without republishing, while pending first donors retain priority.
+  failed = "http://logos.test/espn.png";
+  check("ESPN SD", "http://logos.test/espn-hd.png");
+  check("ESPN FHD", "http://logos.test/espn-hd.png");
+  failed2 = "http://m3u.test/canal.png";
   capture(argv[2]);
-#ifndef GUIA_LOGOS_BASELINE
+  failed2 = "http://logos.test/espn-hd.png";
+  check("ESPN SD", ""); failed = failed2 = NULL;
+  failed = "http://m3u.test/canal.png";
+  check("Canal M3U HD", "http://m3u.test/second.png");
+  check("By ID", "http://m3u.test/second.png");
+  check("Canal M3U FHD", "http://m3u.test/second.png");
+  failed2 = "http://m3u.test/second.png";
+  check("Canal M3U HD", "http://xmltv.test/lower-priority.png");
+  failed = failed2 = NULL;
   // Confirmed decode/HTTP failures advance priority; pending images do not.
   GCanal *c = channel("Canal M3U HD"); const char *original = c->logo;
   c->logo = "http://logos.test/broken.png";
   check("Canal M3U HD", c->logo);
   failed = c->logo; check("Canal M3U HD", "http://m3u.test/canal.png");
   c->logo = original; failed = "http://m3u.test/canal.png";
-  check("Canal M3U HD", "http://xmltv.test/lower-priority.png"); failed = NULL;
+  check("Canal M3U HD", "http://m3u.test/second.png"); failed = NULL;
   // XMLTV outranks another variant; failed XMLTV falls through to it.
   GCanal *variant = channel("ESPN SD"); int previous = variant->epg;
   variant->epg = channel("Globo RJ")->epg;
@@ -163,8 +184,9 @@ int main(int argc, char **argv) {
   check("ESPN SD", "http://logos.test/espn.png"); failed = NULL; variant->epg = previous;
   // Repack after donor removal must not retain/cache borrowed metadata.
   assert(!c->logo[0]); channel("Canal M3U")->logo = ""; empacotar();
+  check("Canal M3U HD", "http://m3u.test/second.png");
+  channel("Canal M3U SD")->logo = ""; empacotar();
   check("Canal M3U HD", "http://xmltv.test/lower-priority.png");
-#endif
   glDeleteTextures(1, &texture); txt_encerrar(); gfx_encerrar();
   SDL_GL_DeleteContext(gl); SDL_DestroyWindow(win); SDL_Quit();
   return failures ? 1 : 0;

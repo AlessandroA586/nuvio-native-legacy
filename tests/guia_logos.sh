@@ -19,8 +19,8 @@ compile() {
     -Wno-deprecated-declarations -Wno-macro-redefined -o "$work/test"
 }
 # Fixed parent preserves a reproducible pre-fix reference after commits.
-git show 10d1d2961:src/guia.c > "$work/guia.c"
-compile -DGUIA_LOGOS_BASELINE "-DGUIA_LOGOS_SOURCE=\"$work/guia.c\""
+git show 65107e6fc2a492d32b058e72ed337c8204d1ae6f:src/guia.c > "$work/guia.c"
+compile "-DGUIA_LOGOS_SOURCE=\"$work/guia.c\""
 set +e
 NUVIO_DADOS="$work/before" "$work/test" "$work/before" "$out/before.png"
 rc=$?
