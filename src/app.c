@@ -149,6 +149,7 @@
 #include "vazao.h"
 #include "stalker.h"
 #include "xtream.h"
+#include "m3u.h"
 #include "rede.h"
 #include "ts_sonda.h"
 #include <unistd.h>
@@ -691,7 +692,9 @@ static void *escolherFonteCanal(void *u) {
 static void *escolherFonteStalker(void *u) {
   FonteJob *job = u;
   char url[4096];
-  int ok = perfis_sessao_atual(job->sessaoPerfil) && stalker_resolver_sessao(job->id, url, sizeof url, job->sessaoPerfil);
+  int ok = perfis_sessao_atual(job->sessaoPerfil) && (m3u_e_id(job->id)
+    ? m3u_resolver_sessao(job->id, url, sizeof url, job->sessaoPerfil, job->renovando)
+    : stalker_resolver_sessao(job->id, url, sizeof url, job->sessaoPerfil));
   // O worker publica somente no seu job. O consumidor confere a geracao e o
   // id depois do acquire; nenhuma resposta velha toca o mailbox da sessao
   // corrente.
@@ -1403,8 +1406,9 @@ static int montarCanalStalker(const char *id, const char *url) {
   if (!id || !id[0] || !url || !url[0]) return -1;
   memset(&s, 0, sizeof s);
   snprintf(s.url, sizeof s.url, "%s", url);
-  snprintf(s.rotulo, sizeof s.rotulo, "%s", "Portal IPTV");
-  snprintf(s.provedor, sizeof s.provedor, "%s", "stalker");
+  snprintf(s.rotulo, sizeof s.rotulo, "%s", m3u_e_id(id) ? "M3U" : "Portal IPTV");
+  snprintf(s.provedor, sizeof s.provedor, "%s", m3u_e_id(id) ? "m3u" : "stalker");
+  if (m3u_e_id(id)) m3u_cabecalhos(id, s.cabecalhos, sizeof s.cabecalhos);
   s.fileIdx = -1;
   stream_definir_lista(&s, 1);
   return 0;
@@ -1429,7 +1433,7 @@ static int resolverCanalXtream(void) {
   static Stream s[3 * XT_VARIANTES_MAX];
   GuiaVariante v[XT_VARIANTES_MAX], ord[XT_VARIANTES_MAX];
   const char *ext[2];
-  int k = xtream_formatos(ext), i, j, n = 0, nv, no = 0;
+  int k = xtream_formatos_canal(player_id_canal(), ext), i, j, n = 0, nv, no = 0;
   int alvo = nv_res_opcao_altura(ajustes_livetv_resolucao());
   memset(s, 0, sizeof s);
   nv = guia_variantes(player_id_canal(), v, XT_VARIANTES_MAX);
@@ -1505,12 +1509,12 @@ static int resolverCanalM3u(void) {
 static void motivoCanalXtream(char *t, size_t nt, char *d, size_t nd) {
   XtreamConta c;
   const char *err = video_erro_texto();
-  int aviso = xtream_conta(&c) ? xtream_conta_aviso(&c, (long long)time(NULL)) : XA_NADA;
+  int aviso = xtream_conta_canal(player_id_canal(), &c) ? xtream_conta_aviso(&c, (long long)time(NULL)) : XA_NADA;
   // SO UM FORMATO TENTADO (#158, registro 13776): a conta declara
   // allowed_output_formats=["ts"], a lista do canal tem uma fonte so, e o
   // cartao dizia "nao abriu em HLS nem em TS" sem HLS nenhum ter sido pedido.
   const char *ext[2], *umFormato = NULL;
-  if (xtream_formatos(ext) == 1) umFormato = !strcmp(ext[0], "ts") ? "TS" : "HLS";
+  if (xtream_formatos_canal(player_id_canal(), ext) == 1) umFormato = !strcmp(ext[0], "ts") ? "TS" : "HLS";
   if (aviso == XA_EXPIRADA) {
     snprintf(t, nt, "%s", i18n("A assinatura Xtream venceu."));
     snprintf(d, nd, "%s", i18n("Renove com o seu provedor. Os canais voltam sozinhos depois disso."));
@@ -3459,7 +3463,7 @@ static void tocarCanal(const CatItem *it) {
   stalkerRenovando = 0;            // resposta de renovacao antiga sera descartada
   // Canal de portal nao esta em addon nenhum: perguntar seria esperar o prazo
   // de todos eles para receber lista vazia, com a pessoa olhando "carregando".
-  if (!stalker_e_id(it->imdb) && !xtream_e_id(it->imdb) && !guia_e_m3u(it->imdb)) {
+  if (!stalker_e_id(it->imdb) && !xtream_e_id(it->imdb) && !guia_e_m3u(it->imdb) && !m3u_e_id(it->imdb)) {
     // So o addon que publicou o canal responde por ele; ver alvoBase em
     // addons.c e o que o FrostView fora do ar custava.
     addons_definir_origem(guia_canal_origem());
@@ -5878,7 +5882,7 @@ void app_atualizar(float dt, Uint32 agora) {
       } else if (guia_e_m3u(player_id_canal())) {
         fonteEscolhida = resolverCanalM3u();
         canalFontePrazo = CANAL_FONTE_PRAZO_MS;
-      } else if (stalker_e_id(player_id_canal())) {
+      } else if (stalker_e_id(player_id_canal()) || m3u_e_id(player_id_canal())) {
         // UMA fonte, e ela acabou de nascer: nao ha lista para conferir nem
         // ranking para aplicar. O create_link bloqueia centenas de ms, entao
         // captura o id e deixa a rede fora do fio de desenho. Sem `return` de
@@ -6227,7 +6231,7 @@ void app_atualizar(float dt, Uint32 agora) {
     { static char tocouUrl[64];
       if (xt && video_pronto() && strncmp(tocouUrl, player_id_canal(), sizeof tocouUrl - 1)) {
         snprintf(tocouUrl, sizeof tocouUrl, "%s", player_id_canal());
-        xtream_formato_funcionou(video_url_atual());
+        xtream_formato_canal_funcionou(player_id_canal(), video_url_atual());
       }
       if (!video_pronto()) tocouUrl[0] = 0; }
     if (morta) {
@@ -6268,7 +6272,7 @@ void app_atualizar(float dt, Uint32 agora) {
       // Com teto: `stalkerTentativas` impede que um portal fora do ar vire um
       // laco de create_link a cada 12 s para sempre. O teto zera quando o canal
       // troca (canalFonteIdx = -1 em tocarCanal).
-      if (stalker_e_id(player_id_canal())) {
+      if (stalker_e_id(player_id_canal()) || m3u_e_id(player_id_canal())) {
         if (stalkerRenovando) return;
         if (stalkerTentativas < CANAL_STALKER_TENTATIVAS) {
           unsigned geracao = novaGeracaoFonte();

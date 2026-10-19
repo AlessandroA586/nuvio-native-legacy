@@ -14,6 +14,7 @@
 #include "perfiltv.h"
 #include "layout.h"
 #include "gl_compat.h"
+#include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -225,6 +226,11 @@ static void aplicar(int n, const char *porque) {
 }
 
 int gpun_upscale_suportado(void) {
+#ifdef NV_TPK
+  if (!tpkEgl.GetCurrentContext || eglGetCurrentContext() == EGL_NO_CONTEXT) return 0;
+#else
+  if (!SDL_GL_GetCurrentContext()) return 0;
+#endif
   const char *gpu = (const char *)glGetString(GL_RENDERER);
   if (!gpu || strstr(gpu, "Mali-4")) return 0;
 #if !defined(__APPLE__) || defined(NV_GLES_NO_MAC)

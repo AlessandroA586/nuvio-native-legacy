@@ -49,6 +49,8 @@ char *dados_ler(const char *n) { (void)n; return NULL; }
 int dados_gravar(const char *n, const char *v) { (void)n; (void)v; return 1; }
 const char *i18n(const char *s) { return s; }
 int xtream_e_id(const char *id) { return id && !strncmp(id, "xtream:", 7); }
+int ajustes_livetv_sugerir(void) { return 0; }
+const char *livecat_secao(const char *n,int *r) { (void)n;*r=0;return NULL; }
 int main(void) {
   GFonte f = {0};
   int novos;
@@ -60,7 +62,7 @@ int main(void) {
   strcpy(carga.base, f.base); carga.ativo = 1; addonsCarga = &carga; nAddonsCarga = 1;
   int fl = sFonte(LTV_ADDON, f.base, f.nome, f.base);
   assert(fl >= 0);
-  assert(lerPagina(&f, fl, 0, &novos, NULL) == 3);
+  assert(lerPagina(&f, fl, 0, &novos) == 3);
   assert(novos == 2 && sNCanais == 2);
   assert(!strcmp(sCanais[0].id, "m3u:canaisabertos:0"));
   assert(!strcmp(sCanais[1].id, "ec:aee"));
@@ -80,7 +82,7 @@ int main(void) {
   strcpy(carga.base, f.base);
   fl = sFonte(LTV_ADDON, f.base, f.nome, f.base);
   assert(fl >= 0);
-  assert(lerPagina(&f, fl, 0, &novos, NULL) == 4);
+  assert(lerPagina(&f, fl, 0, &novos) == 4);
   assert(novos == 3 && sNCanais == 5);
   assert(!strcmp(sCanais[2].id, "m3u-live-1") && !strcmp(sCanais[2].tipo, "channel"));
   assert(!strcmp(sCanais[3].id, "m3u-live-2") && !strcmp(sCanais[3].tipo, "channel")); // do catalogo

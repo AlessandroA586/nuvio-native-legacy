@@ -205,10 +205,11 @@ int main(void) {
   AJ_AUDIO_OFFSET == AJ_LIVETV_SUGERIR + 1 &&
   AJ_XTREAM_CONEXOES == AJ_AUDIO_OFFSET + 1 &&
   AJ_AMPLIAR_UI == AJ_XTREAM_CONEXOES + 1 &&
-  AJ_BIB_HOME == AJ_AMPLIAR_UI + 1 &&
+AJ_GUIA_FONTE == AJ_AMPLIAR_UI + 1 &&
+  AJ_BIB_HOME == AJ_GUIA_CATEGORIAS + 1 &&
   AJ_AMPLIACAO_ALGO == AJ_BIB_HOME + 1 &&
   AJ_AMPLIACAO_NITIDEZ == AJ_AMPLIACAO_ALGO + 1 &&
-  AJ_N == AJ_AMPLIACAO_NITIDEZ + 1);
+  AJ_N == AJ_AMPLIACAO_NITIDEZ + 1);   // merged both sides
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));
@@ -315,7 +316,7 @@ int main(void) {
   assert(valor[AJ_ESTAT_LADO] == 0 && ajustes_estat_lado() == 0);
   valor[AJ_ESTAT_LADO] = 1; assert(ajustes_estat_lado() == 1); valor[AJ_ESTAT_LADO] = 0;
   // 13/10: o layout "Apple TV" se chama Dinamica; o valor gravado nao muda.
-  assert(HOME_LAYOUT_DINAMICA == 2 && OPCOES[AJ_HOME_LAYOUT].n == 3);
+  assert(HOME_LAYOUT_DINAMICA == 2 && HOME_LAYOUT_IMERSIVA == 3 && OPCOES[AJ_HOME_LAYOUT].n == 4);
   assert(!strcmp(V_HOME_LAYOUT[HOME_LAYOUT_DINAMICA], "Dinâmica"));
   assert(!strcmp(i18n(V_HOME_LAYOUT[HOME_LAYOUT_DINAMICA]), "Dynamic"));
   puts("ajustes_padroes: ok");

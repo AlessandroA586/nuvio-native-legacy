@@ -134,7 +134,7 @@ else
 fi
 
 # Mesma lista de credenciais de pessoa do tools/release-samsung.sh.
-SEGREDO='(^|/)(debrid|provider-scope|fontefalha|fontesmortas|catalogo-|guia-(fav|modo|preview|cache|addons|lembretes)|epg-extra|recomendacoes|amigos-vistos)[^/]*\.(txt|json|bin|ts|id)(\.tmp[^/]*)?$|(^|/)(trakt|addons|tmdb|mdblist|sessao|simkl[^/]*|fanart|diag-token)\.txt$|collections\.json$|catalogo-rede\.bin|local\.properties|\.env$|(^|/)(trakt|stalker|xtream|listas)-p[0-9]|(^|/)conta-[^/]*\.txt(\.tmp)?$'
+SEGREDO='(^|/)(livetv-contas-|epg-conta-|m3u-|debrid|provider-scope|fontefalha|fontesmortas|catalogo-|guia-(fav|modo|preview|cache|addons|lembretes|categorias)|epg-extra|recomendacoes|amigos-vistos)[^/]*\.(txt|json|bin|ts|id)(\.tmp[^/]*)?$|(^|/)(trakt|addons|tmdb|mdblist|sessao|simkl[^/]*|fanart|diag-token)\.txt$|collections\.json$|catalogo-rede\.bin|local\.properties|\.env$|(^|/)(trakt|stalker|xtream|listas)-p[0-9]|(^|/)conta-[^/]*\.txt(\.tmp)?$'
 for a in "${APKS[@]}"; do
   L=$(unzip -Z1 "$a")
   for need in lib/arm64-v8a/libmain.so lib/armeabi-v7a/libmain.so lib/arm64-v8a/libSDL2.so lib/armeabi-v7a/libSDL2.so; do

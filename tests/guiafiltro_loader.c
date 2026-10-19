@@ -29,6 +29,7 @@ static void rebuild(void) {
 #endif
 }
 static int begin(int modo, int teto) {
+  xtOk = 1;
   memset(&fltLive, 0, sizeof fltLive);
   fltLive.modo = modo;
   sFltLive = fltLive;
@@ -225,6 +226,9 @@ static void filteredEmptyRegression(int type, int hidden, int retry) {
   char key[LTV_CHAVE];
   ltv_chave_fonte(type, ref, key, sizeof key);
   xtOk = type == LTV_XTREAM;
+#ifdef NV_IPTVFONTES_H
+  nCargaContas=iptv_contas(cargaContas,IPTV_MAX_CONTAS);
+#endif
   nCargaUrls = type == LTV_M3U;
   if (nCargaUrls) {
     cargaUrls[0].tipo = LTV_URL_M3U;

@@ -237,7 +237,7 @@ static void ajustesSnapshotAtual(void) {
     RES_ARQ_MIGRADA, "envio-151.txt", "trailer-1310.txt",
     "ajustesescala-203.txt", "ajustesescala-205.txt", "perfilfundo-20.txt",
     "aparencia-20.txt", "profundidade-205.txt", "idiomas-206.txt",
-    "memoriaimagens-205.txt", "efeitos720-205.txt"
+    "memoriaimagens-205.txt", "efeitos720-205.txt", "ampliarUi-206.txt"
   };
   for (size_t i = 0; i < sizeof markers / sizeof *markers; i++) {
     char *old = dados_ler(markers[i]);

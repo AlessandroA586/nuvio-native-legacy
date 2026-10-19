@@ -237,6 +237,7 @@ static int ajCenaSecao(int op) {
     case AJ_LEG_CONTORNO_COR:
       return AJC_IDI_LEGENDA2;
     case AJ_XTREAM_SERVIDOR: case AJ_XTREAM_USUARIO: case AJ_XTREAM_SENHA: case AJ_XTREAM_CONTA:
+    case AJ_GUIA_FONTE: case AJ_GUIA_RECARREGAR: case AJ_M3U_URL: case AJ_M3U_EPG: case AJ_M3U_LIMPAR:
     case AJ_XTREAM_CONEXOES: case AJ_XTREAM_LIMPAR: case AJ_STALKER_PORTAL: case AJ_STALKER_MAC: case AJ_STALKER_LIMPAR: case AJ_EPG_PAIS:
     case AJ_URL_LISTA: case AJ_URL_M3U_ADD: case AJ_URL_XMLTV_ADD: case AJ_URL_REM:
       return AJC_TV_PROVEDOR;

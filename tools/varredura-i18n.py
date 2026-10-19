@@ -370,6 +370,10 @@ IGNORAR = {
     "%s/catalogo-%016llx-p%d.bin", "%s/catalogo-%016llx-p%d.bin.tmp",
     "catalogo-%016llx-p%d.bin.tmp-", "catalogo-rede.bin.tmp-",
     "amigos-vistos-p%d.txt",
+    "epg-conta-%d-%08x-p%d.%s", "epg-conta-%d-%08x-p%d.bin",
+    "epg-conta-%d-%08x-p%d.ts", "epg-conta-%d-%08x-p%d.id",
+    "epg-conta-2-%08x-p%d.%s",  # private native-account guide cache names
+
     "%s/poster/%02d.jpg",           # caminho da arte dos dados de exemplo (socialvis.c, so teste)
     "biblioteca.h", "catalogo.h", "fileiras.h", "perfil.h", "legenda.h",
     "perfil.txt",                   # #include e nome de arquivo

@@ -734,6 +734,17 @@ static double avLat0 = -1.0, avAtraso;
 static Uint32 avPausaDesde;
 // Indice EPG do canal no ar, resolvido uma vez por abertura (-2 = sem grade).
 static int epgIdx = -1;
+static unsigned epgIdxRev;
+static void pEpgAtualizar(void) {
+  if(epgIdxRev!=epg_revisao()){epgIdxRev=epg_revisao();epgIdx=-1;}
+  if(epgIdx==-1) {
+    epgIdx=epg_match_canal(player_id_canal(),NULL,itemCanal.titulo);
+    if(epgIdx<0) {
+      int estadoFonte=epg_canal_estado(player_id_canal());
+      if(estadoFonte==EPG_PRONTO || estadoFonte==EPG_FALHOU)epgIdx=-2;
+    }
+  }
+}
 // Diagnostico da janela do cartao de proximo episodio. Zerados a cada episodio
 // por player_definir_episodio: um `static int` dentro da funcao registraria a
 // PRIMEIRA reproducao da sessao e ficaria mudo em todas as outras — que e
@@ -3469,10 +3480,7 @@ static void linhasCanal(char *l1, size_t n1, char *l2, size_t n2) {
   // item() ja devolve o canal congelado da sessao — o indice no catalogo pode
   // ter sido remapeado por uma republicacao da descoberta.
   if (!itemCanal.titulo[0]) { if (n1) snprintf(l1, n1, "%s", i18n("AO VIVO")); return; }
-  if (epgIdx == -1 && epg_estado() == EPG_PRONTO) {
-    epgIdx = epg_match(itemCanal.titulo);
-    if (epgIdx < 0) epgIdx = -2;
-  }
+  pEpgAtualizar();
   if (pAgora(epgIdx, agoraT, &ag)) {
     char h1[12], h2[12];
     localtime_r(&ag.ini, &lt); hora_tela(h1, sizeof h1, &lt);
@@ -3620,10 +3628,7 @@ static void avMontarOsd(AoVivoOsd *o) {
     if (sep) snprintf(cat, sizeof cat, "%s", sep + 3);
   }
   o->categoria = cat;
-  if (epgIdx == -1 && epg_estado() == EPG_PRONTO) {
-    epgIdx = epg_match(itemCanal.titulo);
-    if (epgIdx < 0) epgIdx = -2;
-  }
+  pEpgAtualizar();
   if (id[0] && xtream_e_id(id)) { xtepg_querer(id); xtepg_passo(); }
   { EpgProg fx[40]; time_t agT = time(NULL);
     int nf = guia_programa_faixa(id, agT - 4 * 3600, agT + 12 * 3600, fx, 40);
