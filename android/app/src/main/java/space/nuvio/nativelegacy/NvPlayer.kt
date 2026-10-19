@@ -341,6 +341,8 @@ object NvPlayer {
             else -> null
         }
         return "erro=${erro.javaClass.simpleName}" +
+            (if (erro is AudioSink.UnexpectedDiscontinuityException)
+                " expectedUs=${erro.expectedPresentationTimeUs} actualUs=${erro.actualPresentationTimeUs}" else "") +
             (codigo?.let { " errorCode=$it" } ?: "") +
             (formato?.let { " hz=${it.sampleRate} canais=${it.channelCount} encoding=${it.pcmEncoding} mime=${it.sampleMimeType}" } ?: "") +
             (recuperavel?.let { " isRecoverable=$it" } ?: "")
@@ -1981,6 +1983,17 @@ object NvPlayer {
             if (!pronto) { aplicarFracao(p); return }
             val d = duracaoMs(p)
             if (d != duracaoEnviada) { duracaoEnviada = d; ev(EV_PRONTO, d) }   // so a duracao muda
+        }
+
+        override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo,
+                                             newPosition: Player.PositionInfo, reason: Int) {
+            if (!atual(minha)) return
+            val p = player ?: return
+            if (!p.isCurrentMediaItemLive) return
+            // Numeric timing only: never log media IDs, manifest URLs or labels.
+            val linha = "[live] discontinuity sessao=$minha reason=$reason oldMs=${oldPosition.positionMs} newMs=${newPosition.positionMs} offsetMs=${p.currentLiveOffset} state=${p.playbackState} bufferedMs=${p.totalBufferedDuration}"
+            Log.i(TAG, linha)
+            try { nativeAudioLog(linha) } catch (_: UnsatisfiedLinkError) { }
         }
 
         override fun onRenderedFirstFrame() {

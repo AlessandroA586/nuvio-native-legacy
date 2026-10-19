@@ -49,6 +49,7 @@ typedef struct {
   int      eofGratis;  // TPK: a reabertura imediata desta queda ja foi usada
   int      pendente;   // esperando o prazo da reabertura
   int      fonteSeca;  // agendamento apenas por fonte seca, cancelavel se voltar
+  int      bufferParado; // buffering armou a tentativa; READY pode cancela-la
   unsigned quando;     // instante (ms) da reabertura
 } NvLiveStall;
 
@@ -62,7 +63,7 @@ static inline unsigned nv_ls_espera_ms(int n) {
 
 // Depois de reabrir: nova abertura, vigia desarmado ate a posicao andar de novo.
 static inline void nv_ls_reaberto(NvLiveStall *s, unsigned agora) {
-  s->pos = 0.0; s->movEm = agora; s->movDesde = 0; s->andou = 0; s->pendente = 0; s->fonteSeca = 0;
+  s->pos = 0.0; s->movEm = agora; s->movDesde = 0; s->andou = 0; s->pendente = 0; s->fonteSeca = 0; s->bufferParado = 0;
   s->fim = 0.0; s->fimEm = agora;
 }
 
@@ -82,12 +83,18 @@ static inline int nv_ls_passo_buf(NvLiveStall *s, unsigned agora, double pos, in
     s->fim = fimBuf; s->fimEm = agora;   // cresceu (ou o buffer recomecou)
   }
   if (s->pendente) {
-    if ((int)(agora - s->quando) < 0) return NV_LS_ESPERA;
-    // So cancela fonte seca que voltou a receber dados; buffer crescendo
-    // nao prova que o decoder recuperou de posicao parada, EOF ou buffering.
-    if (s->fonteSeca && s->fim > 0.5 && (unsigned)(agora - s->fimEm) < NV_LS_SEMDADO_MS) {
-      s->pendente = 0; s->tentativa--;
-    } else return NV_LS_REABRIR;
+    // A janela pode mover durante o backoff. Rebase nao prova progresso.
+    if (pronto && pos < s->pos - 0.05) s->pos = pos;
+    int recuperou = pronto && !terminou && !bufMs && !s->fonteSeca &&
+      (s->bufferParado || pos > s->pos + 0.05);
+    // READY apos buffering ou progresso real cancela ANTES do prazo. Dados
+    // chegando so bastam para fonte seca, nunca para decoder parado ou EOF.
+    int dadosVoltaram = s->fonteSeca && s->fim > 0.5 &&
+      (unsigned)(agora - s->fimEm) < NV_LS_SEMDADO_MS;
+    if (recuperou || dadosVoltaram) {
+      s->pendente = 0; s->tentativa--; s->fonteSeca = 0; s->bufferParado = 0;
+      if (recuperou) { s->pos = pos; s->movEm = agora; s->movDesde = 0; }
+    } else return (int)(agora - s->quando) < 0 ? NV_LS_ESPERA : NV_LS_REABRIR;
   }
 #ifdef NV_TPK
   // #302: o primeiro EOF com video e continuidade de live, nao fim de arquivo.
@@ -124,6 +131,7 @@ static inline int nv_ls_passo_buf(NvLiveStall *s, unsigned agora, double pos, in
   s->tentativa++;
   s->pendente = 1;
   s->fonteSeca = seco && !parado;
+  s->bufferParado = !terminou && bufMs >= NV_LS_PARADO_MS;
   s->quando = agora + nv_ls_espera_ms(s->tentativa);
   return NV_LS_AGENDOU;
 }

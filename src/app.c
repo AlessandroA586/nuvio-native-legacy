@@ -6044,11 +6044,15 @@ void app_atualizar(float dt, Uint32 agora) {
         lsIdx = canalFonteIdx;
         snprintf(lsId, sizeof lsId, "%s", player_id_canal());
       }
+      int estavaPendente = liveStall.pendente;
       ls = nv_ls_passo_buf(&liveStall, SDL_GetTicks(), video_pronto() ? video_pos() : 0.0,
                            video_pronto(), player_pausa_pessoa(), video_terminou(),
                            video_bufferando_ms(), video_buffer_fim());
       if (morta) {
         nv_ls_zerar(&liveStall);
+      } else if (estavaPendente && !liveStall.pendente && ls == NV_LS_NADA) {
+        printf("[canal] reproducao recuperou: reabertura pendente cancelada (fonte %d)\n", canalFonteIdx);
+        fflush(stdout);
       } else if (ls == NV_LS_AGENDOU) {
         printf("[canal] parou de tocar (fim de fluxo=%d, posicao %.1fs, buffering %u ms): "
                "reabrindo a fonte %d, tentativa %d/%d em %u ms\n", video_terminou(),
