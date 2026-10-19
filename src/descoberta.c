@@ -901,6 +901,17 @@ static int descPedidoCoube(const char *base, int w, size_t tam) {
   return nv_addon_pedido_coube(nome, w, tam);
 }
 
+// Catalog type and id are path segments, including ids containing '/' or '?'.
+// Keep extras separate and preserve the installed addon's query via nv_addon_url.
+static int catalogoUrl(char *url, size_t n, const char *base, const char *tipo,
+                       const char *id, const char *extra) {
+  char tipoUrl[24], idUrl[288];
+  if (!nv_addon_id(tipoUrl, sizeof tipoUrl, tipo) ||
+      !nv_addon_id(idUrl, sizeof idUrl, id)) { if (n) url[0] = 0; return -1; }
+  return nv_addon_url(url, n, base, "/catalog/%s/%s%s%s.json", tipoUrl, idUrl,
+                      extra && *extra ? "/" : "", extra ? extra : "");
+}
+
 typedef struct {
   // NV_ADDON_URL_MAX e nao 300: com 300 a base do Xperience (367) e a do Comet
   // (870) eram cortadas e a busca perguntava a outra URL, em silencio (#201).
@@ -987,7 +998,7 @@ void desc_alvo_busca(const char *base, const char *tipo, const char *id,
 // Consulta UM alvo. Devolve quantos itens leu.
 static int consultarAlvo(const AlvoBusca *a, const char *termo,
                          CatItem *saida, int max) {
-  char url[NV_ADDON_PEDIDO_MAX], esc[300];
+  char url[NV_ADDON_PEDIDO_MAX], esc[300], extra[320];
   char *corpo;
   const char *p;
   int n = 0;
@@ -1007,8 +1018,9 @@ static int consultarAlvo(const AlvoBusca *a, const char *termo,
   } else {
     urlEscapar(termo, esc, sizeof esc);
     if (addons_base_desligada(a->base)) return 0;
-    if (!descPedidoCoube(a->base, nv_addon_url(url, sizeof url, a->base, "/catalog/%s/%s/search=%s.json",
-                                           a->tipo, a->id, esc), sizeof url)) return 0;
+    snprintf(extra, sizeof extra, "search=%s", esc);
+    if (!descPedidoCoube(a->base, catalogoUrl(url, sizeof url, a->base,
+                                           a->tipo, a->id, extra), sizeof url)) return 0;
     corpo = rede_baixar(url, 6);
   }
   if (!corpo) return 0;
@@ -1489,7 +1501,7 @@ static int lerCatalogo(const char *base, const char *tipo, const char *id,
   int n = 0;
   if (respondeu) *respondeu = 0;
   if (addons_base_desligada(base)) return 0;   // desligado na conta: nenhuma rede
-  if (!descPedidoCoube(base, nv_addon_url(url, sizeof url, base, "/catalog/%s/%s.json", tipo, id),
+  if (!descPedidoCoube(base, catalogoUrl(url, sizeof url, base, tipo, id, ""),
                        sizeof url)) return 0;
   // 8 s e nao 25: um addon fora do ar segurava um dos tres fios por 25 s, e a
   // fileira dele atrasa TODAS as seguintes porque a montagem caminha em ordem.
@@ -1535,11 +1547,10 @@ static int lerCatalogoHomeParcial(const char *base, const char *tipo, const char
   if (addons_base_desligada(base)) return 0;
   origemDaBase(base, orig, sizeof orig);
   for (int pagina = 0; pagina < (paginavel ? 2 : 1); pagina++) {
-    char url[NV_ADDON_PEDIDO_MAX], *corpo;
+    char url[NV_ADDON_PEDIDO_MAX], extra[32] = "", *corpo;
     int w, raw = 0, novos = 0;
-    if (skip) w = nv_addon_url(url, sizeof url, base,
-                  "/catalog/%s/%s/skip=%d.json", tipo, id, skip);
-    else w = nv_addon_url(url, sizeof url, base, "/catalog/%s/%s.json", tipo, id);
+    if (skip) snprintf(extra, sizeof extra, "skip=%d", skip);
+    w = catalogoUrl(url, sizeof url, base, tipo, id, extra);
     if (!descPedidoCoube(base, w, sizeof url)) break;
     corpo = rede_baixar(url, 8);
     if (!corpo) break;
@@ -8950,6 +8961,34 @@ static int colecaoArray(const char *corpo, const char *chave, const char **prime
   return 1;
 }
 
+// Collection diagnostics deliberately omit the addon base/query and response body.
+static const char *colecaoLogCampo(const char *s) {
+  return s && !strstr(s, "://") ? s : "<redacted>";
+}
+static void colecaoLog(const char *nome, const char *base, const char *tipo, const char *id,
+                        const char *genre, int skip, int status, int itens,
+                        const char *motivo) {
+  char aba[128] = "";
+  if (nome && *nome) snprintf(aba, sizeof aba, "%s", nome);
+  else {
+    pthread_mutex_lock(&nomeCatTrava);
+    for (int i = 0; i < nNomeCat; i++)
+      if (nomeCatBase(i, base) && !strcmp(nomeCat[i].tipo, tipo) && !strcmp(nomeCat[i].id, id)) {
+        snprintf(aba, sizeof aba, "%s", nomeCat[i].nome); break;
+      }
+    pthread_mutex_unlock(&nomeCatTrava);
+  }
+  printf("[colecao] aba=%.127s catalogo=%.7s/%.95s extra=genre:%.95s,skip:%d rc=%d itens=%d motivo=%s\n",
+         colecaoLogCampo(aba[0] ? aba : id), colecaoLogCampo(tipo),
+         colecaoLogCampo(id), colecaoLogCampo(genre), skip, status, itens, motivo);
+  fflush(stdout);
+}
+static char *colecaoBaixar(const char *url, int *status) {
+  char *corpo = rede_baixar_st(url, 10, NULL, status);
+  if (*status < 200 || *status >= 300) { free(corpo); return NULL; }
+  return corpo;
+}
+
 int desc_colecao_inicial(const ColSource *fonte, const char *base,
                          NvPerfilSessao sessao, CatItem *itens, int limite,
                          DescColecaoResultado *resultado) {
@@ -8984,7 +9023,7 @@ int desc_colecao_inicial(const ColSource *fonte, const char *base,
     char *corpo = NULL, cabChave[160];
     const char *vetor = "metas", *p = NULL;
     const char *cab[] = { "trakt-api-version: 2", NULL, NULL };
-    int raw = 0, aceitos = 0, novos = 0, fim = 0, pronta = 1;
+    int raw = 0, aceitos = 0, novos = 0, fim = 0, pronta = 1, status = 0;
     // Congelar URL/chave/idioma enquanto o perfil ainda e o dono. A trava
     // termina antes de qualquer HTTP, inclusive a consulta do Trakt.
     if (!nv_perfil_sessao_travar(sessao)) { free(ids); return 0; }
@@ -9003,7 +9042,7 @@ int desc_colecao_inicial(const ColSource *fonte, const char *base,
         f.ordenar[0] ? f.ordenar : "rank", f.ordem[0] ? f.ordem : "asc");
       pronta = pronta && w >= 0 && (size_t)w < sizeof url;
     } else {
-      char encoded[sizeof f.genre * 3 + 1];
+      char encoded[sizeof f.genre * 3 + 1], extra[340] = "";
       int z = 0, w;
       for (const unsigned char *c = (const unsigned char *)f.genre; *c; c++) {
         if ((*c >= 'a' && *c <= 'z') || (*c >= 'A' && *c <= 'Z') ||
@@ -9011,20 +9050,25 @@ int desc_colecao_inicial(const ColSource *fonte, const char *base,
         else { snprintf(encoded + z, 4, "%%%02X", *c); z += 3; }
       }
       encoded[z] = 0;
-      if (encoded[0]) w = nv_addon_url(url, sizeof url, origem,
-        "/catalog/%s/%s/genre=%s&skip=%d.json", f.type, f.catId, encoded, skip);
-      else if (skip) w = nv_addon_url(url, sizeof url, origem,
-        "/catalog/%s/%s/skip=%d.json", f.type, f.catId, skip);
-      else w = nv_addon_url(url, sizeof url, origem,
-        "/catalog/%s/%s.json", f.type, f.catId);
+      if (encoded[0]) snprintf(extra, sizeof extra, "genre=%s&skip=%d", encoded, skip);
+      else if (skip) snprintf(extra, sizeof extra, "skip=%d", skip);
+      w = catalogoUrl(url, sizeof url, origem, f.type, f.catId, extra);
       pronta = !addons_base_desligada(origem) && descPedidoCoube(origem, w, sizeof url);
     }
     nv_perfil_sessao_destravar();
-    if (!pronta) { r.erro = 1; break; }
+    if (!pronta) {
+      if (!prov) colecaoLog(f.title, origem, f.type, f.catId, f.genre, skip, 0, 0, "request_unavailable");
+      r.erro = 1; break;
+    }
     if (!descSessaoAtual()) { free(ids); return 0; }
-    corpo = prov == 2 ? rede_baixar_com(url, 12, cab) : rede_baixar(url, prov ? 12 : 10);
+    corpo = !prov ? colecaoBaixar(url, &status) :
+            prov == 2 ? rede_baixar_com(url, 12, cab) : rede_baixar(url, 12);
     if (!descSessaoAtual()) { free(corpo); free(ids); return 0; }
-    if (!colecaoArray(corpo, vetor, &p)) { free(corpo); r.erro = 1; break; }
+    if (!colecaoArray(corpo, vetor, &p)) {
+      if (!prov) colecaoLog(f.title, origem, f.type, f.catId, f.genre, skip, status, 0,
+                             corpo ? "invalid_metas" : "http_or_transport");
+      free(corpo); r.erro = 1; break;
+    }
     if (prov == 1) {
       fim = !strcasecmp(f.tmdbTipo, "COLLECTION") || !strcasecmp(f.tmdbTipo, "PERSON") ||
             !strcasecmp(f.tmdbTipo, "DIRECTOR");
@@ -9068,6 +9112,8 @@ int desc_colecao_inicial(const ColSource *fonte, const char *base,
         prefixoVistos += visto;
       } else if (prefixoVistos && !visto && r.extraN < limite) itens[limite + r.extraN++] = item;
     }
+    if (!prov) colecaoLog(f.title, origem, f.type, f.catId, f.genre, skip, status, aceitos,
+                           !raw ? "empty_page" : !novos ? "no_new_items" : "ok");
     free(corpo);
     if (prov == 2 && raw < 40) fim = 1;
     r.mais = raw > 0 && novos > 0 && total < teto && !fim;
@@ -9097,7 +9143,7 @@ static void *fioVerTudo(void *u) {
   int paginas = 0;
   for (;;) {
   char url[NV_ADDON_PEDIDO_MAX], base[NV_ADDON_URL_MAX], type[8], id[96], genre[96], encoded[290], *corpo;
-  int raw=0, ocultos=0, skip, cap, prov, antes;unsigned generation;
+  int raw=0, ocultos=0, skip, cap, prov, antes, status=0;unsigned generation;
   ColSource fonte;
   pthread_mutex_lock(&vtTrava);
   skip=vtPagina;generation=vtGeracao;prov=vtProvedor;
@@ -9209,11 +9255,11 @@ static void *fioVerTudo(void *u) {
     if((*c>='a'&&*c<='z')||(*c>='A'&&*c<='Z')||(*c>='0'&&*c<='9')||*c=='-'||*c=='_')encoded[z++]=*c;
     else {snprintf(encoded+z,4,"%%%02X",*c);z+=3;}
   }encoded[z]=0;
-  { int w;
-  if(genre[0])w=nv_addon_url(url,sizeof url,base,"/catalog/%s/%s/genre=%s&skip=%d.json",type,id,encoded,skip);
-  else if(skip)w=nv_addon_url(url,sizeof url,base,"/catalog/%s/%s/skip=%d.json",type,id,skip);
-  else w=nv_addon_url(url,sizeof url,base,"/catalog/%s/%s.json",type,id);
-  corpo=(!addons_base_desligada(base)&&descPedidoCoube(base,w,sizeof url))?rede_baixar(url,10):NULL; }
+  { int w; char extra[340] = "";
+  if(genre[0])snprintf(extra,sizeof extra,"genre=%s&skip=%d",encoded,skip);
+  else if(skip)snprintf(extra,sizeof extra,"skip=%d",skip);
+  w=catalogoUrl(url,sizeof url,base,type,id,extra);
+  corpo=(!addons_base_desligada(base)&&descPedidoCoube(base,w,sizeof url))?colecaoBaixar(url,&status):NULL; }
   cap=strstr(id,"top100")?100:strstr(id,"top250")?250:VT_MAX;
   pthread_mutex_lock(&vtTrava);
   if(generation!=vtGeracao || !descSessaoAtual()){pthread_mutex_unlock(&vtTrava);free(corpo);continue;}
@@ -9237,6 +9283,9 @@ static void *fioVerTudo(void *u) {
       pthread_mutex_unlock(&vtTrava);
     }
   }
+  colecaoLog("", base, type, id, genre, skip, status, added,
+             !corpo ? "http_or_transport" : !valid ? "invalid_metas" :
+             !raw ? "empty_page" : !added ? "no_new_items" : "ok");
   free(corpo);
   pthread_mutex_lock(&vtTrava);
   if(generation!=vtGeracao || !descSessaoAtual()){pthread_mutex_unlock(&vtTrava);continue;}
