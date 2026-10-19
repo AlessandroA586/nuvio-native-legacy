@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T04:48:38-03:00, HEAD `f6d5a0d3f`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T05:48:27-03:00, HEAD `2e38d5397`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -490,6 +490,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Internal
 
+- **Rust MKV core enabled for webOS builds**: ARM builds now use the offline soft-float Rust MKV core by default, with the C implementation retained as an opt-out; playback on a physical TV remains unverified. Platforms: webOS. Refs owner request, `agente/205-mkvwebos`, merge `2e38d5397`, `b50df8df6`, `dc39713e9`.
+
 - **Isolated resolution migration checks**: Migration tests use temporary user data so existing settings cannot affect their results or be deleted. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `30319bec0`.
 
 - **More useful webOS crash diagnostics**: Crash reports retain firmware modules loaded late and include bounded thread diagnostics, helping investigate playback failures; the reported C9 playback crash remains unproven. Platforms: webOS. Refs owner request, `315f4af48`, merge `8626c596c`, `agente/205-c9queda`.
@@ -577,6 +579,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   generation token / "Play from beginning" (`5195cd14f`, `1165245fc`, `075fec9a4`, `6a6d5b71b`).
 
 ### Pending (not integrated yet)
+
+- **Collection folder diagnostics**: New collection tabs gain diagnostic evidence for failures reported with Kaptain; the underlying cause still needs confirmation. Platforms: Android / Google TV. Refs owner/community request, `agente/205-colecaonovos`, Discord report; review running; not integrated.
+
+- **Safer Back handling in the player**: Back is intended to close one visible player layer before leaving playback; implementation is awaiting review. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner/community request, `agente/205-voltarplayer`, `bbe5211df`; not integrated.
 
 - **Guide category suggestions stay current**: Pending guide changes refresh suggestions after regrouping, honor selected sections and bound optional category-request latency. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-livefiltro`, `7e93a0ff3`, `1129643aa`; running review, not integrated.
 
