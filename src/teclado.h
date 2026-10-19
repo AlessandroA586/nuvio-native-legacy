@@ -30,6 +30,7 @@
 #ifndef NV_TECLADO_H
 #define NV_TECLADO_H
 #include <SDL2/SDL.h>
+#include "arteurl.h"
 
 // Os 36 caracteres da grade, em ordem de leitura (6 fileiras de 6).
 const char *teclado_alfabeto(void);
@@ -44,7 +45,8 @@ const char *teclado_alfabeto(void);
 // regex de 450 vinda da conta era cortada so de abrir o campo e dar OK, e o corte
 // voltava para a conta. Em BYTES (o texto e UTF-8). Quem passa TECLADO_MAX ou
 // menos continua igual.
-#define TECLADO_LONGO 500
+// Posters Plus templates share the poster URL limit, including native/phone input.
+#define TECLADO_LONGO (NV_ARTE_URL_MAX - 1)
 
 // Abre a modal. `titulo` e a linha de cima ("Código do amigo"), `dica` a linha
 // de apoio logo abaixo, e `max` o teto de caracteres (limitado a TECLADO_MAX).
@@ -69,6 +71,9 @@ void teclado_abrir(const char *titulo, const char *dica, int max);
 // a nota no topo: a saida errada seria uma segunda modal.
 void teclado_abrir_com(const char *titulo, const char *dica, int max,
                        const char *alfabeto, const char *inicial);
+// Opt-in after opening an optional field: Concluir may submit empty text to
+// clear its saved value. Every new keyboard resets this to disabled.
+void teclado_permitir_vazio(int permitir);
 // Depois de teclado_abrir_com: que campo e este. SENHA mostra um ponto por
 // caractere; EMAIL e SENHA pedem o teclado certo ao sistema (Android). A
 // proxima abertura volta a TEXTO.

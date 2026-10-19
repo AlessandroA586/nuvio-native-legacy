@@ -45,20 +45,42 @@ Linhas abaixo incluem comentários/brancos. Includers = arquivos de `src/` (`.c/
 
 Não há servidor HLS próprio em `src/dts/`: usa AVIO/`libavformat`. `proxyts.c` escuta `127.0.0.1` e ingere HLS/TS remoto; `celular.c` escuta `INADDR_ANY`, valida Host/Origin/token e limita corpo/prazo. O motor P2P externo também serve HTTP loopback; sua implementação não está em `src/`. Não atribuir seus parsers ao adaptador DTS.
 
-### 1.2 A fase 0 aconteceu? Parcialmente, sem obrigatoriedade
+### 1.2 A fase 0 aconteceu? Sim, com obrigatoriedade
 
-| Medida reproduzida no git | `8ed4517c` | `9eb8cc2f` | Interpretação |
-|---|---:|---:|---|
-| `tests/*.sh` / `tests/*.c` | 548 / 567 | 666 / 683 | Crescimento da suíte |
-| Scripts com texto `SANITIZE` | 152 | **183** | +31; capacidade declarada, não prova de execução/êxito |
-| Scripts com linha não comentada `-fsanitize=thread` | **28** | **28** | O estudo dizia 29: contagem textual incluía `gif.sh`, cujo TSan está só em comentário |
-| Scripts com `-fsanitize=` e sem texto `SANITIZE` | 9 | 10 | Inclui ASan sempre ligado (`js_limites`, `selospacote`, `descanso_wake`) e TSan obrigatório (`trakt_play_corrida`, `sync_resumo_corrida`) |
-| `.github/workflows` versionado | Ausente | Ausente | Sem CI de sanitizador no repositório; CI externa não verificada |
-| `tools/testa-tudo.sh` / `mac.sh` passam flags de sanitizador | Não | Não | Ambiente pode ativar testes individuais; runner não impõe gate |
-| Harness libFuzzer/AFL em `tests/`/`tools/` | Não identificado | Não identificado | Fixtures/regressões não substituem fuzz de bytes hostis |
-| ASan do app inteiro | Manual no histórico | `15cd67e5`: `descanso_wake` exercita GL/cache com ASan/UBSan | Avanço real, mas não reproduziu queda da TV nem automatizou todos os fluxos |
+| Medida reproduzida no git | `8ed4517c` | `9eb8cc2f` | `6559dc3d`+runner (este ramo) | Interpretação |
+|---|---:|---:|---:|---|
+| `tests/*.sh` / `tests/*.c` | 548 / 567 | 666 / 683 | **676 / 692** | Crescimento da suíte |
+| Scripts com texto `SANITIZE` | 152 | **183** | **188** | +5; capacidade declarada, agora com flag única e runner |
+| Variáveis de sanitizador distintas | `SANITIZE`, `NV_SANITIZERS`, `NV_TSAN`, `TSAN`, `FONTEFALHA_SANITIZE` | idem | **1: `SANITIZE=1` \| `SANITIZE=thread`** | Unificada em `6559dc3d`; nomes antigos removidos dos scripts |
+| Scripts com `SANITIZE:-0` (opt-in) | — | — | **179** |Ligados só com `SANITIZE=1` |
+| Scripts com `SANITIZE:-1` (ASan por padrão) | — | — | **8** | `capmkv`, `capmkv_url_longa`, `catcachecorrida`, `cateps_corrida`, `colhash_corrida`, `herosinopse_corrida`, `htmlq`, `localizar_corrida` |
+| Scripts com linha não comentada `-fsanitize=thread` | **28** | **28** | **28** | Lista estática dentro de `tools/sanitiza.sh`; `sync_resumo_corrida` e `trakt_play_corrida` têm TSan fixo no código e não aceitam ASan |
+| Scripts com `-fsanitize=` e sem texto `SANITIZE` | 9 | 10 | **10** | ASan sempre ligado (`descanso_wake`, `js_limites`, `leitura`, `limpa`, `rede_buffer`, `redeurl`, `selospacote`, `tpkdesp`) e TSan obrigatório (`trakt_play_corrida`, `sync_resumo_corrida`) |
+| `.github/workflows` versionado | Ausente | Ausente | Ausente | Sem CI no repositório; o gate roda no Mac do dono |
+| Runner de sanitizador | Não existe | Não existe | **`tools/sanitiza.sh`** (`5377eb54`) | Reaproveita `tests/*.sh`; ASan+UBSan na suíte e TSan em job separado, nunca no mesmo build; rc≠0 por erro de sanitizador bloqueia; `SKIP` e dependência ausente saem em contagem à parte, nunca como passed |
+| `tools/testa-tudo.sh` passa flags de sanitizador | Não | Não | **Sim, com `--sanitizers`** (`6a353afa`) | Integração pode ser bloqueada pelo gate; sem a flag nada muda |
+| Harness libFuzzer/AFL em `tests/`/`tools/` | Não identificado | Não identificado | Não identificado | Fixtures/regressões não substituem fuzz de bytes hostis |
+| ASan do app inteiro | Manual no histórico | `15cd67e5`: `descanso_wake` exercita GL/cache com ASan/UBSan | idem + suíte completa instrumentada | Automatizado, mas ainda não reproduziu queda da TV |
 
-Há variáveis diferentes (`SANITIZE=thread`, `NV_TSAN=1`, `TSAN=1`) e testes sempre instrumentados: exportar uma variável global não cobre tudo. `tools/depura-mac.sh` usa LLDB, sem `-fsanitize`, e muda para `tools/` antes de referir `src/`; não é um runner ASan pronto. `tpk.sh` tem guards ELF; `tests/tpk40_tls.sh` pode sair 0 com “pulado” sem Docker/binários — CI não deve contar esse skip como validação.
+`tools/depura-mac.sh` continua sendo LLDB, sem `-fsanitize`, e não é o runner. `tpk.sh` tem guards ELF; `tests/tpk40_tls.sh` pode sair 0 com “pulado” sem Docker/binários — o runner conta isso como sem prova, não como passou. Observado no primeiro uso: `ASAN_OPTIONS` não pode levar `detect_leaks` no macOS (o clang aborta o run inteiro). `tests/abrirtitulo.sh` não linka sem `addons_lista_*`, e `tests/p2pmotor_real.sh` depende do motor P2P pré-compilado, incompatível com o `src/` atual — os dois saem como dependência, não como falha. Os testes que ligam a SDL2 do brew (`aovivo`, `cwremover`, `bordafileira`, `atividade_corrida`, `artetamanho`) travam no dyld sob ASan, exatamente o que `tests/bordafileira.sh:5` já descreve: o runner os conta como “sem terminar”, que não é prova nem é erro de sanitizador.
+
+### 1.3 Primeira execução obrigatória (este ramo, Mac do dono, `TMPDIR` em SSD externo)
+
+`bash tools/sanitiza.sh`, suíte inteira, ASan+UBSan em 6 paralelo (`SANITIZA_TIMEOUT=900`) e TSan serial. **588 execuções** = 560 ASan + 28 TSan; os 114 `*_shot`/`cinematic`/`director`/`*_perf` ficam fora, como em `testa-tudo.sh`, e os 2 com TSan fixo contam só no passo thread.
+
+| Veredito | Qtd. | Leitura |
+|---|---:|---|
+| `ok` | 514 | Passou instrumentado |
+| `ok*` | 2 | Passou com casos pulados no log (`herocat_regras`, `recomenda_e2e`) |
+| `ERRO` (sanitizer) | **0** | Nenhum relatório de ASan/UBSan/TSan nas 588 execuções |
+| `FALHA` | 31 | 24 já falhavam **sem** sanitizer (iguais aqui) |
+| `DEP` | 23 | Sem dependência: FFmpeg/curl headers, motor P2P velho, `tpk_x64`, link de `abrirtitulo` |
+| `SKIP` | 0 | Nenhum teste pediu pular |
+| `TIMEOUT` | 18 | Sem prova; a maioria é a classe SDL2+ASan do dyld |
+
+Os 31 `FALHA` foram rodados de novo **sem** sanitizer: 24 reproduzem igual (`ajustes_padroes`, `ajustes_ux_dados`, `ajustes_ux_interacao`, `detail_eps_repede`, `dts_pipeline`, `espaco`, `gpunivel_ajuda`, `player`, `proxprefetch`, `conta`, `cachearte-wasm`, `carrossel_cede`, `corviva`, `discord_ca_assets`, `dts_sonda_cache`, `dts_sonda_repetida`, `entrada_texto_wgt`, `i18n`, `ponteiro_telas`, `relogiofim`, `salvos_segurar`, `tizen-despedida`, `tizen-globalthis`, `trailer-hero-contract`) — estão fora do escopo desta fase. Os 7 restantes passam sem sanitizer e travam sob ASan (`aovivo`, `cwremover`, `bordafileira`, `atividade_corrida`, `artetamanho`, mais `dvsonda_contentor` e `tpk-responsive`), todos da mesma família SDL2/dyld já anotada em `tests/bordafileira.sh`. **Nenhum deles é erro de memória**: é ASan que não sobe com a SDL2 do brew.
+
+O gate sai em rc=1 por causa dos 24 `FALHA` pré-existentes. Para o piloto isso não é bloqueio novo: é a suíte que já estava vermelha antes da fase 0, e nenhum deles é sanitizer.
 
 ## 2. Mapa de candidatos: problema, FFI e custo alternativo
 
@@ -108,7 +130,7 @@ Tiers/ABIs consultados em [Rust platform support](https://doc.rust-lang.org/rust
 |---|---|
 | Link estático | `crate-type=staticlib` incorpora núcleo Rust ao binário C, **não** torna glibc/vendor estáticos. Não trocar para musl para contornar glibc dentro de processo glibc; manter allocator/libc existentes |
 | `no_std` vs `std` | Piloto sem heap/TLS/fios: só `core`, panic handler mínimo e `panic=abort`. Se precisar heap, `alloc` exige allocator explícito. `no_std` pode chamar pthread via FFI em projeto futuro: falta de `std` **não obriga C permanente**, mas wrapper seguro e prova por alvo custam mais |
-| Flags e exportações | `-DNV_RUST_MKVCORE` por alvo, desligada por padrão; proposta `NUVIO_RUST=1` nos scripts. `repr(C)`/inteiros de largura fixa, validar `long` 32/64 bits. `--exclude-libs,ALL` pode ocultar símbolos Rust internos **sem impedir chamadas dos objetos C**; só ABI host precisa exportação dinâmica |
+| Flags e exportações | `-DNV_RUST_MKVCORE` por alvo (ligada em Android e Mac, ver seção 7); proposta `NUVIO_RUST=1` nos scripts. `repr(C)`/inteiros de largura fixa, validar `long` 32/64 bits. `--exclude-libs,ALL` pode ocultar símbolos Rust internos **sem impedir chamadas dos objetos C**; só ABI host precisa exportação dinâmica |
 | Otimização/tamanho | `opt-level=z`, abort, dead stripping/GC onde possível; LTO Rust interno (não presumir LTO C/Rust compatível). **Suspeita**, não medido: núcleo core custa dezenas de KiB; std pode custar centenas de KiB ou mais. Comparar binário final stripped e pacote, não tamanho do `.a`; sem promessa de delta |
 | Guards | Sem novo NEEDED; símbolos GLIBC/GLIBCXX não sobem piso; sem TLS no 4/5; ABI float/relocs corretas; exports `nv_tpk_*` idênticos. `tpk.sh` já imprime GLIBC/NEEDED e barra TLS; falta tornar piso/tamanho gates explícitos |
 | Ferramentas | Cargo ausente conforme ambiente informado; nenhum install/build Rust feito. Pin de rustc/targets, hash da `.a` no cache dos objetos e orçamento de tamanho entram **só se piloto aprovado**; scripts atuais não têm etapa Rust |
@@ -140,9 +162,19 @@ Verificação deste estudo: `bash tests/js_limites.sh` e `bash tests/selospacote
 
 Não consultei novo banco de quedas nem executei firmware/toolchains; números de usuários vêm do estudo antigo. Linhas/includers e suporte declarado a sanitizadores são medidas estáticas, não cobertura. Pisos de TV, bytes/tempo de build, ROI dos parsers e portabilidade efetiva continuam **suspeita** até os gates. Este documento não autoriza implementação, publicação ou instalação.
 
-## 7. Relatório do piloto `mkvcore` (fase 1, flag `-DNV_RUST_MKVCORE`, desligada por padrão)
+## 7. Relatório do piloto `mkvcore` (fase 1, flag `-DNV_RUST_MKVCORE`)
 
-Feito: `rust/mkvcore` (no_std, staticlib, sem dependências, `panic=abort`, handler → `abort()`, sem estado global, profundidade máx. 8, aritmética checada); `src/mkvcore.h` (structs `#[repr(C)]` campo a campo); `src/mkv.c` com ganchos só sob a flag (assinaturas de `mkv_contentor`, `mkv_quadro_tem_rpu`, `mkv_faixas_do_trecho` e `lerCapitulos` mantidas; rede/diagnóstico seguem C). Ganchos de build opt-in: `NUVIO_RUST_MKVCORE=1` em `tools/mac.sh` e `tools/android.sh`, `-DNUVIO_RUST_MKVCORE=<pasta>` no CMake. **A flag não foi ligada em nenhum build de produto.**
+Feito: `rust/mkvcore` (no_std, staticlib, sem dependências, `panic=abort`, handler → `abort()`, sem estado global, profundidade máx. 8, aritmética checada); `src/mkvcore.h` (structs `#[repr(C)]` campo a campo); `src/mkv.c` com ganchos só sob a flag (assinaturas de `mkv_contentor`, `mkv_quadro_tem_rpu`, `mkv_faixas_do_trecho` e `lerCapitulos` mantidas; rede/diagnóstico seguem C). Ganchos de build: `NUVIO_RUST_MKVCORE` (padrão 1, `=0` desliga) em `tools/mac.sh` e `tools/android.sh`, `-DNUVIO_RUST_MKVCORE=<pasta>` no CMake. **Flag ligada nos builds de produto em 14/10/2026 (dono aprovou)**, por plataforma:
+
+| Plataforma | Estado | Observação |
+|---|---|---|
+| Android arm64-v8a / armeabi-v7a (`tools/android.sh`) | **ligada** (padrão) | `NUVIO_RUST_MKVCORE=0` volta ao C |
+| Mac (`tools/mac.sh`) | **ligada** (padrão) | idem |
+| webOS ARM (`tools/arm.sh`) | **ON — 2026-10-19** | Offline `armv7-unknown-linux-gnueabi` links with the SDK softfp ABI; all modes default to Rust, `NUVIO_RUST_MKVCORE=0` keeps C. Required GLIBC remains 2.12; binary 57,987,068 → 58,191,988 bytes. See `docs/issues/rust-mkvcore-webos-abi.md`. |
+| Samsung `.tpk` 4/5 e 6+ (`tools/tpk.sh`) | **desligada** | mesmo alvo: `rustup target add armv7-unknown-linux-gnueabi` |
+| Samsung `.wgt` WASM (`tools/tizen.sh`) | **desligada** | falta `rustup target add wasm32-unknown-emscripten` |
+
+Alvos instalados hoje: `aarch64-apple-darwin`, `aarch64-linux-android`, `armv7-linux-androideabi`. Nada foi instalado; as três plataformas desligadas seguem no C até o alvo existir e passar o gate de plataforma da seção 5.
 
 **Tamanho** (strip; release `opt-level=z`, LTO):
 
@@ -157,7 +189,9 @@ Delta pequeno: o núcleo Rust troca o C equivalente; `--gc-sections` remove o re
 
 **Testes** (todos rc=0, flag off **e** on): `mkv_contentor`, `mkv_dvrpu`, `mkv_caps`, `mkv_legendas`, `mkvass_limites`. Novo `tests/mkvcore_paridade.sh`: C×Rust por campos + fuzz limitado (LCG semente fixa, páginas PROT_NONE nas bordas): 25 512 casos, tudo igual. Teste validado por mutação (injeção de diferença é detectada). Android: link completo de `libmain.so` (CMake) com flag on e off, arm64 e armv7, rc=0; símbolos `nv_mkvcore_*` presentes só com flag on.
 
-**Achados no caminho:** (a) `0xFFu8 >> w` com `w=8` (vint de tamanho 8 bytes) estoura em release → Tracks não lidos; corrigido com `u32`. (b) ARM32: `compiler_builtins` referencia `rust_eh_personality`; sem std o link falhava; definido só em `target_arch="arm"`, nunca chamado.
+**Achados no caminho:** (a) `0xFFu8 >> w` com `w=8` (vint de tamanho 8 bytes) estoura em release → Tracks não lidos; corrigido com `u32`. (b) ARM32: `compiler_builtins` referencia `rust_eh_personality`; sem std o link falhava; definido só em `target_arch="arm"`, nunca chamado. (c) 14/10/2026: o link debug `aarch64` do APK (flag ligada por padrão) falhou com o mesmo símbolo indefinido; agora definido em todo alvo (`not(test)`).
+
+**Prova de 14/10/2026 (flag ligada):** `tools/android.sh` rc=0 (APK debug+release, arm64-v8a e armeabi-v7a), `nm` de `libmain.so` mostra `nv_mkvcore_achar_tracks`, `nv_mkvcore_cap_cabecalho` etc. nas duas ABIs; `tools/mac.sh` (compilar) rc=0 com 6 `T _nv_mkvcore_*`; flag desligada (`=0`) sem símbolos. Testes mkv rc=0 com `NV_RUST_MKVCORE=0` e `=1`.
 
 **Diferenças intencionais vs C:** profundidade máx. 8 na recursão; i64 em vez de `long` 32-bit no ARM32; alvo comparado como u64; sem overflow com sinal (UB no C). Rejeição de entrada hostil pode divergir do C nesses casos; não perpetuado para “paridade”.
 

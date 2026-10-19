@@ -13,7 +13,6 @@ int ajustes_livetv_formato(void);  // ajustes.h puxa SDL; o teste do xtream nao
 #include <time.h>
 
 #define XT_ARQ_FMT   "xtream-p%d.txt"
-#define XT_MAX_CAT   256
 #define XT_PRAZO_S   20
 #define XT_PRAZO_LISTA_S 60
 
@@ -40,6 +39,8 @@ static int  lido;
 static NvPerfilSessao sessaoLida;
 static XtreamConta conta;
 static int formatoOk = -1;
+static int conexoesModo; // 0 Auto, 1 On, 2 Off; belongs to this account.
+static int autoLimitada; // Keep the login decision until this account/profile changes.
 static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
 
 static const char *arquivo(void) {
@@ -77,7 +78,7 @@ static void carregarTravado(void) {
   if (lido && p == perfilLido && sessao == sessaoLida) return;
   perfilLido = p; sessaoLida = sessao; lido = 1;
   servidor[0] = usuario[0] = senha[0] = 0;
-  memset(&conta, 0, sizeof conta); formatoOk = -1;
+  memset(&conta, 0, sizeof conta); formatoOk = -1; conexoesModo = autoLimitada = 0;
   b = dados_ler(arquivo());
   if (!b) return;
   for (linha = b; *linha; linha = fim) {
@@ -91,6 +92,9 @@ static void carregarTravado(void) {
     if (!strcmp(linha, "servidor")) snprintf(servidor, sizeof servidor, "%s", sep);
     else if (!strcmp(linha, "usuario")) snprintf(usuario, sizeof usuario, "%s", sep);
     else if (!strcmp(linha, "senha")) snprintf(senha, sizeof senha, "%s", sep);
+    else if (!strcmp(linha, "conexoesModo")) {
+      int m = atoi(sep); conexoesModo = m >= 0 && m <= 2 ? m : 0;
+    }
   }
   free(b);
 }
@@ -107,7 +111,7 @@ static void gravar(void) {
            "# CREDENCIAL. Usuario e senha do Xtream vao dentro de toda URL de\n"
            "# canal: valem como a assinatura. Nao versionar, nao empacotar, nao\n"
            "# colar em issue nem em log.\n"
-           "servidor\t%s\nusuario\t%s\nsenha\t%s\n", servidor, usuario, senha);
+           "servidor\t%s\nusuario\t%s\nsenha\t%s\nconexoesModo\t%d\n", servidor, usuario, senha, conexoesModo);
   dados_gravar(arquivo(), txt);
 }
 
@@ -116,6 +120,7 @@ static void gravar(void) {
 void xtream_definir_servidor(const char *s) {
   pthread_mutex_lock(&trava);
   carregarTravado();
+  autoLimitada = 0; memset(&conta, 0, sizeof conta);
   normalizarServidor(s, servidor, sizeof servidor);
   gravar();
   pthread_mutex_unlock(&trava);
@@ -123,6 +128,7 @@ void xtream_definir_servidor(const char *s) {
 void xtream_definir_usuario(const char *u) {
   pthread_mutex_lock(&trava);
   carregarTravado();
+  autoLimitada = 0; memset(&conta, 0, sizeof conta);
   snprintf(usuario, sizeof usuario, "%s", u ? u : "");
   gravar();
   pthread_mutex_unlock(&trava);
@@ -130,6 +136,7 @@ void xtream_definir_usuario(const char *u) {
 void xtream_definir_senha(const char *s) {
   pthread_mutex_lock(&trava);
   carregarTravado();
+  autoLimitada = 0; memset(&conta, 0, sizeof conta);
   snprintf(senha, sizeof senha, "%s", s ? s : "");
   gravar();
   pthread_mutex_unlock(&trava);
@@ -138,6 +145,7 @@ void xtream_definir_senha(const char *s) {
 void xtream_esquecer(void) {
   pthread_mutex_lock(&trava);
   dados_apagar(arquivo());
+  conexoesModo = autoLimitada = 0; memset(&conta, 0, sizeof conta); formatoOk = -1;
   servidor[0] = usuario[0] = senha[0] = 0;
   lido = 1; perfilLido = perfis_ativo();
   pthread_mutex_unlock(&trava);
@@ -190,6 +198,35 @@ const char *xtream_senha_mascarada(void) {
   }
   pthread_mutex_unlock(&trava);
   return m;
+}
+
+int xtream_conexoes_modo(void) {
+  int m;
+  pthread_mutex_lock(&trava); carregarTravado(); m = conexoesModo;
+  pthread_mutex_unlock(&trava); return m;
+}
+void xtream_definir_conexoes_modo(int m) {
+  if (m < 0 || m > 2) return;
+  pthread_mutex_lock(&trava); carregarTravado(); conexoesModo = m; gravar();
+  pthread_mutex_unlock(&trava);
+}
+static int limitadaTravado(void) {
+  return conexoesModo == 1 || (conexoesModo == 0 && autoLimitada);
+}
+int xtream_conexoes_limitadas(void) {
+  int on;
+  pthread_mutex_lock(&trava); carregarTravado(); on = limitadaTravado();
+  pthread_mutex_unlock(&trava); return on;
+}
+int xtream_url_limitada(const char *url) {
+  int on = 0;
+  pthread_mutex_lock(&trava); carregarTravado();
+  if (url && servidor[0] && limitadaTravado()) {
+    size_t n = strlen(servidor);
+    if (!strncmp(url, servidor, n) && (!strncmp(url + n, "/live/", 6) ||
+        !strncmp(url + n, "/movie/", 7) || !strncmp(url + n, "/series/", 8))) on = 1;
+  }
+  pthread_mutex_unlock(&trava); return on;
 }
 
 // --- rede ---------------------------------------------------------------
@@ -321,33 +358,35 @@ static int campoTextoOuNumero(const char *ini, const char *fim, const char *chav
   return 1;
 }
 
-static int lerCategorias(XtCat *cats, int max, NvPerfilSessao sessao) {
+static int lerCategorias(XtCat **saida, NvPerfilSessao sessao) {
   char *corpo = chamar("get_live_categories", sessao);
   const char *p;
   int n = 0;
   if (!corpo) return 0;
   p = strchr(corpo, '[');
   p = p ? p + 1 : NULL;
-  while (p && *p && n < max) {
+  while (p && *p) {
     const char *fim;
     while (*p && (unsigned char)*p <= ' ') p++;
     if (*p != '{') break;
     fim = js_fim(p);
     if (!fim) break;
-    if (campoTextoOuNumero(p, fim, "category_id", cats[n].id, sizeof cats[n].id) &&
-        js_texto(p, fim, "category_name", cats[n].nome, sizeof cats[n].nome))
-      n++;
+    XtCat cat;
+    if (campoTextoOuNumero(p, fim, "category_id", cat.id, sizeof cat.id) &&
+        js_texto(p, fim, "category_name", cat.nome, sizeof cat.nome)) {
+      if (!(n % 64)) {
+        XtCat *v = realloc(*saida, sizeof *v * (size_t)(n + 64));
+        if (!v) break;
+        *saida = v;
+      }
+      (*saida)[n++] = cat;
+    }
     p = js_prox(fim);
   }
   free(corpo);
   return n;
 }
 
-static const char *nomeDaCategoria(const XtCat *cats, int n, const char *id) {
-  int i;
-  for (i = 0; i < n; i++) if (!strcmp(cats[i].id, id)) return cats[i].nome;
-  return "Outros";
-}
 
 // Escrito so pelo fio do guia (o unico que chama xtream_canais) e lido pelo
 // mesmo fio antes de publicar: nao precisa de trava.
@@ -358,18 +397,33 @@ int xtream_ultimo_http(void) { return ultimoHttp; }
 
 static int contaLerSessao(XtreamConta *out, NvPerfilSessao sessao);
 
-int xtream_canais_sessao(XtreamCanal *saida, int max, uint64_t sessao) {
-  static XtCat cats[XT_MAX_CAT];
-  int nCat, n = 0, total = 0, st = 0, classe;
+static int catIndice(const XtCat *cats, int n, const char *id) {
+  int i;
+  for (i = 0; i < n; i++) if (!strcmp(cats[i].id, id)) return i;
+  return -1;
+}
+
+// A LISTA EM FLUXO (guia de TV, M1/M2): cada canal vai para `cb` como chegou,
+// sem vetor de XtreamCanal (900 B cada: 57 mil canais seriam 51 MB). As
+// categorias vao antes, na ORDEM DO PAINEL e com a contagem de cada uma, para o
+// guia decidir que grupos inteiros cabem no teto da TV.
+int xtream_canais_cb_sessao(void (*cat)(const char *nome, int ordem, int n, void *u),
+                     XtreamCb cb, void *u, int *totalOut, uint64_t sessao) {
+  XtCat *cats = NULL;
+  int *conta;
+  int nCat, n = 0, total = 0, st = 0, classe, i, passo;
   char *corpo;
-  const char *p;
+  const char *p, *ini;
   ultimaFalha = XT_OK; ultimoHttp = 0; ultimoTotal = 0;
-  if (!nv_perfil_sessao_atual(sessao) || !xtream_configurado() || !saida || max < 1) return 0;
+  if (totalOut) *totalOut = 0;
+  if (!nv_perfil_sessao_atual(sessao) || !xtream_configurado() || !cb) return 0;
   // A conta ANTES da lista: e pequena, e o que ela diz (expirada, telas em
   // uso, formatos) e o que a tela precisa quando a lista falha. Sem resposta
   // aqui a lista ainda e tentada — o login pode ter caido por prazo.
   { XtreamConta c; contaLerSessao(&c, sessao); }
-  nCat = lerCategorias(cats, XT_MAX_CAT, sessao);
+  nCat = lerCategorias(&cats, sessao);
+  conta = calloc((size_t)nCat + 1, sizeof *conta);
+  if (!conta) { free(cats); return 0; }
   // PRAZO MAIOR SO PARA A LISTA. get_live_streams de um provedor europeu passa
   // de 7 MB (pesquisa do #158); 20 s num painel lento estoura antes do fim.
   corpo = chamarSt("get_live_streams", XT_PRAZO_LISTA_S, &st, sessao);
@@ -378,7 +432,7 @@ int xtream_canais_sessao(XtreamCanal *saida, int max, uint64_t sessao) {
   if (!corpo || st == 0) {
     printf("[xtream] servidor nao respondeu a lista de canais\n");
     ultimaFalha = XT_SEM_RESPOSTA;
-    free(corpo);
+    free(corpo); free(cats); free(conta);
     return 0;
   }
   if (st >= 400) {
@@ -386,17 +440,14 @@ int xtream_canais_sessao(XtreamCanal *saida, int max, uint64_t sessao) {
     // 458 e o limite de telas; 429 e rajada. O numero vai para a tela.
     printf("[xtream] lista de canais: HTTP %d (%s, %ld B)\n", st, nomeClasse(classe),
            (long)strlen(corpo));
-    // 502/504 sao o gateway (o proxy do Tizen, ou o do painel) dizendo que o
-    // painel nao respondeu no prazo: para a pessoa, e "nao respondeu".
     ultimaFalha = (strstr(corpo, "\"auth\":0") || st == 401) ? XT_RECUSOU
                 : (st == 502 || st == 504) ? XT_SEM_RESPOSTA : XT_HTTP;
-    free(corpo);
+    free(corpo); free(cats); free(conta);
     return 0;
   }
   // Credencial errada nao e "[]": o servidor responde {"user_info":{"auth":0}}
-  // ou uma pagina de erro. Sem array na raiz, e isso — e pagina HTML (WAF,
-  // Cloudflare, portal cativo) NAO e "senha errada": a primeira versao dizia
-  // "recusou a credencial" para qualquer resposta sem '['.
+  // ou uma pagina de erro. Pagina HTML (WAF, Cloudflare, portal cativo) NAO e
+  // "senha errada".
   p = pulaBom(corpo);
   if (*p != '[') {
     if (strstr(corpo, "\"auth\":0")) {
@@ -407,49 +458,102 @@ int xtream_canais_sessao(XtreamCanal *saida, int max, uint64_t sessao) {
              st, nomeClasse(classe), (long)strlen(corpo));
       ultimaFalha = classe == XC_HTML ? XT_PAGINA : XT_SEM_RESPOSTA;
     }
-    free(corpo);
+    free(corpo); free(cats); free(conta);
     return 0;
   }
-  p++;
-  while (p && *p) {
-    const char *fim;
-    char sid[24], cat[24];
-    XtreamCanal c;
-    while (*p && (unsigned char)*p <= ' ') p++;
-    if (*p != '{') break;
-    fim = js_fim(p);
-    if (!fim) break;
-    memset(&c, 0, sizeof c);
-    if (campoTextoOuNumero(p, fim, "stream_id", sid, sizeof sid) &&
-        js_texto(p, fim, "name", c.nome, sizeof c.nome) && c.nome[0]) {
-      total++;
-      if (n < max) {
-        snprintf(c.id, sizeof c.id, "xtream:%s", sid);
-        js_texto(p, fim, "stream_icon", c.logo, sizeof c.logo);
-        js_texto(p, fim, "epg_channel_id", c.epgId, sizeof c.epgId);
-        if (!campoTextoOuNumero(p, fim, "category_id", cat, sizeof cat)) cat[0] = 0;
-        snprintf(c.categoria, sizeof c.categoria, "%s", nomeDaCategoria(cats, nCat, cat));
-        saida[n++] = c;
-      }
+  ini = p + 1;
+  for (i = 0; i <= nCat; i++) conta[i] = 0;
+  // Passo 0 conta por categoria (o guia decide antes de receber canal); passo 1
+  // entrega. Ler o JSON duas vezes custa menos que guardar a lista inteira.
+  for (passo = 0; passo < 2; passo++) {
+    int parar = 0;
+    if (passo == 1 && cat) {
+      for (i = 0; i < nCat; i++) cat(cats[i].nome, i, conta[i], u);
+      if (conta[nCat]) cat("Outros", nCat, conta[nCat], u);
     }
-    p = js_prox(fim);
+    p = ini;
+    while (nv_perfil_sessao_atual(sessao) && p && *p && !parar) {
+      const char *fim;
+      char sid[24], cid[24], num[16];
+      XtreamCanal c;
+      while (*p && (unsigned char)*p <= ' ') p++;
+      if (*p == ',') { p++; continue; }
+      if (*p != '{') break;
+      fim = js_fim(p);
+      if (!fim) break;
+      if (campoTextoOuNumero(p, fim, "stream_id", sid, sizeof sid) &&
+          js_texto(p, fim, "name", c.nome, sizeof c.nome) && c.nome[0]) {
+        int ci;
+        if (!campoTextoOuNumero(p, fim, "category_id", cid, sizeof cid)) cid[0] = 0;
+        ci = catIndice(cats, nCat, cid);
+        if (passo == 0) { conta[ci >= 0 ? ci : nCat]++; total++; }
+        else {
+          XtreamItem it;
+          char arq[8];
+          memset(&it, 0, sizeof it);
+          snprintf(c.id, sizeof c.id, "xtream:%s", sid);
+          c.logo[0] = c.epgId[0] = 0;
+          js_texto(p, fim, "stream_icon", c.logo, sizeof c.logo);
+          // Trim panel whitespace; invalid URLs must allow guide fallbacks.
+          { char *s = c.logo, *e;
+            while (*s && (unsigned char)*s <= ' ') s++;
+            e = s + strlen(s);
+            while (e > s && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\r' || e[-1] == '\n')) *--e = 0;
+            if (strncmp(s, "http://", 7) && strncmp(s, "https://", 8)) *s = 0;
+            memmove(c.logo, s, strlen(s) + 1); }
+          js_texto(p, fim, "epg_channel_id", c.epgId, sizeof c.epgId);
+          it.id = c.id; it.nome = c.nome; it.logo = c.logo; it.epgId = c.epgId;
+          it.categoria = ci >= 0 ? cats[ci].nome : "Outros";
+          it.catOrdem = ci >= 0 ? ci : nCat;
+          it.semCategoria = ci < 0;
+          it.num = campoTextoOuNumero(p, fim, "num", num, sizeof num) ? atoi(num) : 0;
+          it.arquivo = campoTextoOuNumero(p, fim, "tv_archive", arq, sizeof arq) && atoi(arq) > 0;
+          it.arquivoDias = campoTextoOuNumero(p, fim, "tv_archive_duration", arq, sizeof arq) ? atoi(arq) : 0;
+          if (it.epgId[0]) n++;
+          if (!cb(&it, u)) parar = 1;
+        }
+      }
+      p = js_prox(fim);
+    }
   }
-  free(corpo);
+  free(corpo); free(cats); free(conta);
   ultimoTotal = total;
   // Contagem, e so: servidor, usuario e senha nao entram em log (registro.c
   // desenha o stdout na tela).
-  printf("[xtream] %d canal(is) em %d categoria(s)\n", n, nCat);
-  // O CORTE AGORA SE ANUNCIA. O guia guarda no maximo `max` canais; um
-  // provedor europeu tem dezenas de milhares, e ate aqui os que passavam do
-  // teto sumiam sem uma linha no log.
-  if (total > n)
-    printf("[xtream] lista cortada: %d de %d canais cabem no guia\n", n, total);
-  { int comId = 0, i;
-    for (i = 0; i < n; i++) if (saida[i].epgId[0]) comId++;
-    printf("[xtream] %d de %d canais com epg_channel_id\n", comId, n); }
-  return nv_perfil_sessao_atual(sessao) ? n : 0;
+  printf("[xtream] %d canal(is) em %d categoria(s), %d com epg_channel_id\n", total, nCat, n);
+  if (totalOut) *totalOut = total;
+  return total;
 }
 
+int xtream_canais_cb(void (*cat)(const char *, int, int, void *),
+                     XtreamCb cb, void *u, int *totalOut) {
+  return xtream_canais_cb_sessao(cat, cb, u, totalOut, nv_perfil_sessao_ler());
+}
+
+typedef struct { XtreamCanal *v; int n, max, total; } XtVetor;
+static int xtNoVetor(const XtreamItem *c, void *u) {
+  XtVetor *x = u;
+  x->total++;
+  if (x->n >= x->max) return 1;
+  memset(&x->v[x->n], 0, sizeof x->v[0]);
+  snprintf(x->v[x->n].id, sizeof x->v[0].id, "%s", c->id);
+  snprintf(x->v[x->n].nome, sizeof x->v[0].nome, "%s", c->nome);
+  snprintf(x->v[x->n].logo, sizeof x->v[0].logo, "%s", c->logo);
+  snprintf(x->v[x->n].categoria, sizeof x->v[0].categoria, "%s", c->categoria);
+  snprintf(x->v[x->n].epgId, sizeof x->v[0].epgId, "%s", c->epgId);
+  x->n++;
+  return 1;
+}
+int xtream_canais_sessao(XtreamCanal *saida, int max, uint64_t sessao) {
+  XtVetor x;
+  if (!nv_perfil_sessao_atual(sessao)) return 0;
+  if (!saida || max < 1) return 0;
+  x.v = saida; x.n = 0; x.max = max; x.total = 0;
+  xtream_canais_cb_sessao(NULL, xtNoVetor, &x, NULL, sessao);
+  if (x.total > x.n)
+    printf("[xtream] lista cortada: %d de %d canais cabem no guia\n", x.n, x.total);
+  return nv_perfil_sessao_atual(sessao) ? x.n : 0;
+}
 int xtream_canais(XtreamCanal *saida, int max) {
   return xtream_canais_sessao(saida, max, nv_perfil_sessao_ler());
 }
@@ -556,7 +660,11 @@ static int contaLerSessao(XtreamConta *out, NvPerfilSessao sessao) {
   free(corpo);
   pthread_mutex_lock(&trava);
   int atual = nv_perfil_sessao_travar(sessao);
-  if (atual) { conta = c; nv_perfil_sessao_destravar(); }
+  if (atual) {
+    conta = c;
+    if (c.valido && c.maxConexoes > 0 && (c.maxConexoes <= 1 || c.conexoes >= c.maxConexoes)) autoLimitada = 1;
+    nv_perfil_sessao_destravar();
+  }
   pthread_mutex_unlock(&trava);
   if (!atual) { if (out) memset(out, 0, sizeof *out); return 0; }
   if (out) *out = c;

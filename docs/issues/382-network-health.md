@@ -79,3 +79,65 @@ retry, a single unavailable addon, and actual internet loss/restoration.
 Capture DNS/TCP behavior during a recurrence to distinguish TV resolver,
 router/link and app transport problems. No TV build, push or deployment
 was performed.
+
+## KE4F4Z — cold boot, 2.0.5 release build (2026-10-14 16:37)
+
+Log `log-382-KE4F4Z.txt`, LG 50UT8050PSB, webOS 10.3.2. The log has no
+`[rede] libcurl=` line and no `[rede] saude=` transition line, so neither the
+curl/c-ares build nor a health transition is visible in it.
+
+Timeline (app clock, ms from boot; the first log lines have no timestamp):
+
+- 0–5200: Home painted from disk cache; first image fetches fail with
+  `curl 28 ... conexao reusada, 0 bytes, 4004 ms` (images.metahub.space).
+- ~5–20000: `Resolving timed out after 5001/2001/3499/5000 ms` across
+  api.nuvio.tv, postersplus.slokker.cc, aiometadata/aiostreams.stremio.ru,
+  submaker.elfhosted.com, api.themoviedb.org, api.github.com,
+  raw.githubusercontent.com, api.simkl.com, images.metahub.space — 19 failures,
+  all DNS, 9+ distinct hosts. No connect/TLS failures, no HTTP errors.
+- 20468: `catalogo da rede publicado` — requests succeed from here on
+  (catalog, simkl `plantowatch`). So the resolver recovered about 20 s after
+  boot, not an outage.
+- 22950 onward: Settings open; three `POST nuvio-recomendacoes.../v1/registro`
+  (log upload) fail with `Resolving timed out after 5001 ms`, ending
+  `[avisos] registro enviado: HTTP 0` (status 0 → "connection dropped
+  mid-upload"). The resolver is again slow for that one host (workers.dev, not
+  cached by the TV resolver, new name for this session) while other hosts work.
+  The upload made a single attempt and no retry.
+
+Would the reland fix (046fe5f5/1656ce21) have prevented the offline message?
+No, not fully. Each of the 19 failures is a *final* failure after the app's own
+retry (`2a tentativa`, 6–10 s each), across ≥3 distinct hosts, spanning far more
+than 3 s with no success in between (first success at ~20 s). That satisfies the
+health rule (3 failures, 2 hosts, 3 s), so even with the retry fix the state goes
+offline. The reland only removes false positives from *intermediate* attempts.
+(The message itself cannot be confirmed from the log: no `saude=` line exists in
+this build.)
+
+### Options considered
+
+- `CURLOPT_IPRESOLVE=V4`: not chosen. Every failure is "Resolving timed out"
+  from the resolver (many unrelated hosts fail identically, and later
+  requests succeed with the same options); no evidence of a hanging AAAA, no
+  c-ares version in the log to support it. Cheap to try later if the user reports
+  IPv6/custom DNS.
+- Shared DNS cache (`CURLSH`): not chosen. The failure is the *first* lookup per
+  name; a cache does nothing for it, and the per-thread handle design (reuse
+  tests) would need locking. Not justified by this log.
+- Chosen (a): health ignores pure DNS timeouts (curl 28 with `Resolving timed
+  out`) during the first 60 s after the first network note, until any request
+  has succeeded. After 60 s without a success, or once something succeeded, DNS
+  timeouts count normally, so real outages still show "No internet".
+- Chosen (b): the log upload (`rede_postar_repetindo`, 3 attempts, 1 s/2 s
+  waits) retries only when no HTTP status arrived and the attempt did not
+  consume its whole budget (>75 % of the 30 s limit stops it), so a user is not
+  left waiting more than once.
+
+### Validation
+
+`tests/rede_saude.sh`: new `testarDnsLento` — three DNS timeouts from distinct
+hosts at boot leave health online (FAIL before: offline, assertion); the upload
+retries twice and succeeds on the 3rd attempt (FAIL before: no retry helper);
+after 60 s with no success DNS timeouts still declare offline; an HTTP 503
+reply is not retried. Also `redesaude.sh`, `rede_reuso.sh`, `rede_parada.sh`,
+`tools/mac.sh`. Not verified on a TV.

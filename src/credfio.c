@@ -1,3 +1,4 @@
+#define NV_DUBLE_SESSAO
 #include "credfio.h"
 #include "sync.h"
 #include "perfisessao.h"
@@ -6,13 +7,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Isolated upstream fixtures omit sync.c. Complete apps always provide the
-// scoped APIs; the legacy fallback is only for those account-free fixtures.
+// Isolated fixtures omit sync.c: weak legacy-equivalent defaults; sync.c's strong scoped APIs override them.
 __attribute__((weak)) int sync_credencial_pedido(SyncCredencialPedido *p) {
   memset(p, 0, sizeof *p); p->sessao = nv_perfil_sessao_ler(); return 1;
 }
-__attribute__((weak)) int sync_empurrar_credencial_pedido(const SyncCredencialPedido *p, const char *prov, const char *json) {
-  (void)p; return sync_empurrar_credencial(prov, json);
+__attribute__((weak)) int sync_empurrar_credencial_pedido(const SyncCredencialPedido *p, const char *prov, const char *j) {
+  (void)p; return sync_empurrar_credencial(prov, j);
 }
 #define CF_SLOTS 4
 typedef struct { char prov[16]; int estado, res; uint64_t sessao, pedido; } Slot;

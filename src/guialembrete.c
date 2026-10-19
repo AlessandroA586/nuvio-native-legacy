@@ -155,7 +155,7 @@ static void glem_desenharCorpo_(Uint32 agora) {
     TxtLinha t = txt_linha_corta(TXT_BODY, aTexto, 240, 241, 246, 255, 900.0f);
     float w = (float)t.w + 96.0f, h = 60.0f;
     GfxRect r = { NV_TELA_W - NV_MARGEM_X - w, 44.0f - 16.0f * (1.0f - a), w, h };
-    gfx_cor(r, 0.5f, 0.055f, 0.058f, 0.068f, 0.96f * a);
+    gfx_vidro_ou_solido(r, 0.5f, GFX_VIDRO_DENS, a, 0.055f, 0.058f, 0.068f, 0.96f);
     gfx_icone((GfxRect){ r.x + 24.0f, r.y + (h - 28.0f) * 0.5f, 28.0f, 28.0f }, "sino",
               ar, ag, ab, a);
     txt_desenhar_alpha(t, r.x + 68.0f, r.y + (h - (float)t.h) * 0.5f, a);

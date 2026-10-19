@@ -4,7 +4,8 @@ static void guiaIrCapitulo(const char *icone);   // ajustes_ux_guia.inc
 enum { AJ2_T_BUSCA = 0, AJ2_T_AV, AJ2_T_PERFIL, AJ2_T_DIF, AJ2_T_LAYOUT, AJ2_T_TOUR, AJ2_T_RESOLVER, AJ2_T_N };
 static int aj2TopoVisivel(int t) { return t >= 0 && t < AJ2_T_N && (t != AJ2_T_LAYOUT || ajLayoutSelecionavel()); }
 static int ajEmLinha(int op);
-static int ajReguaMover(int v, int dx, int dy);
+static int ajPaleta(int op) { return op == AJ_TEMA || op == AJ_FUNDO_DIN_COR; }
+static int ajReguaMover(int op, int v, int dx, int dy);
 // Interação do seletor: só OK aplica; foco e rascunho nunca persistem.
 static int uxVoltar(SDL_Keycode k) {
   return k == SDLK_ESCAPE || k == SDLK_AC_BACK || k == SDLK_BACKSPACE || k == SDLK_DELETE;
@@ -44,15 +45,18 @@ static void uxListarDiferencas(void) {
 static int uxRequisito(int op) {
   switch (op) {
     case AJ_PROXIMO_CONTAGEM: return AJ_PROXIMO_AUTO;
-    case AJ_VIDRO_CONTORNO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: return AJ_VIDRO;
+    case AJ_FONTE_GRUPO_SESSOES: return AJ_FONTE_GRUPO;
+    case AJ_LINK_PRAZO: return AJ_LINK_REUSAR;
+    case AJ_VIDRO_CONTORNO: case AJ_FOCO_ACENTO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE: return AJ_VIDRO;
     case AJ_RAIL: case AJ_RAIL_BLUR: return AJ_RAIL_MODERNA;
     case AJ_HERO_CHEIO: return AJ_HOME_LAYOUT;
     case AJ_HERO_CATALOGOS: return AJ_HERO;
     case AJ_HERO_TRAILER_ESPERA: return AJ_HERO_TRAILER;
+    // #509: um ajuste de som para todo trailer; ativo sempre que algum trailer
+    // automatico pode tocar. Sem nenhum, o OK leva ao trailer do destaque.
     case AJ_HERO_TRAILER_SOM:
-      return !lig(AJ_HERO_TRAILER) ? AJ_HERO_TRAILER : -1;
-    case AJ_DET_TRAILER_SOM:
-      return !lig(AJ_DET_TRAILER_AUTO) ? AJ_DET_TRAILER_AUTO : -1;
+      return (lig(AJ_HERO_TRAILER) || valor[AJ_FOCO_TRAILER] != AJ_TRAILER_CARTAZ_DESLIGADO ||
+              lig(AJ_DET_TRAILER_AUTO)) ? -1 : AJ_HERO_TRAILER;
     case AJ_EXPANDIR_ATRASO: return AJ_EXPANDIR;
     case AJ_CW_OK: case AJ_CW_FONTE: case AJ_CW_PROXIMO: case AJ_CW_ESTILO: case AJ_CW_THUMB:
     case AJ_CW_FURTHEST: case AJ_CW_NAO_EXIBIDOS: case AJ_CW_ORDEM: case AJ_CW_RETIDO_TAMBEM:
@@ -199,9 +203,9 @@ static int uxEvento(SDL_Keycode k) {
     // movem o valor pendente; nao ha rodape de "Restaurar padrao" ali.
     // A REGUA DA COR: ← → na fileira, ↑ ↓ entre as fileiras (claros,
     // profundos, dinamicas, Textura), na ordem da tela.
-    if (uxOp == AJ_TEMA && ajEmLinha(uxOp) && uxEditor == 1 &&
+    if (ajPaleta(uxOp) && ajEmLinha(uxOp) && uxEditor == 1 &&
         (k == SDLK_LEFT || k == SDLK_RIGHT || k == SDLK_UP || k == SDLK_DOWN)) {
-      uxPendente = ajReguaMover(uxPendente, k == SDLK_RIGHT ? 1 : k == SDLK_LEFT ? -1 : 0,
+      uxPendente = ajReguaMover(uxOp, uxPendente, k == SDLK_RIGHT ? 1 : k == SDLK_LEFT ? -1 : 0,
                                 k == SDLK_DOWN ? 1 : k == SDLK_UP ? -1 : 0);
       return 1;
     }
@@ -230,6 +234,7 @@ static int uxEvento(SDL_Keycode k) {
       if (uxEditor == 2) {
         int req = uxRequisito(uxOp);
         if (req >= 0) { uxRetornarOp = uxOp; uxCancelar(); focarOpcao(req); }
+        else uxCancelar();
         return 1;
       }
       uxAplicar(); return 1;
@@ -243,10 +248,14 @@ static int uxEvento(SDL_Keycode k) {
       else {
         int ant = uxPendente;
         do uxPendente += d;
-        while (uxOp == AJ_TEX_MB && uxPendente >= 0 && uxPendente < nValores(uxOp) && texAcima(uxPendente));
+        while ((uxOp == AJ_TEX_MB || uxOp == AJ_SALVOS_DEST) && uxPendente >= 0 && uxPendente < nValores(uxOp) &&
+               (uxOp == AJ_TEX_MB ? texAcima(uxPendente)
+                                  : !ajustes_fonte_oferecida(uxPendente, trakt_ativo(), simkl_ativo())));
         if (uxPendente < 0) uxPendente = 0;
         if (uxPendente >= nValores(uxOp)) uxPendente = nValores(uxOp) - 1;
         if (uxOp == AJ_TEX_MB && texAcima(uxPendente)) uxPendente = ant;
+        else if (uxOp == AJ_SALVOS_DEST &&
+                 !ajustes_fonte_oferecida(uxPendente, trakt_ativo(), simkl_ativo())) uxPendente = ant;
       }
     }
     return 1;
@@ -260,6 +269,7 @@ static int uxEvento(SDL_Keycode k) {
   // para a linha de onde veio, que segue a mesma.
   if (uxCabLayout && !focoIndice) {
     int lista = valor[AJ_LAYOUT_AJUSTES] == 1;
+    if (k == SDLK_UP) { pediuRelogio = 1; return 1; }
     if (uxOk(k) || (k == SDLK_RIGHT && !lista) || (k == SDLK_LEFT && lista)) return uxAlternarLayout();
     if (uxVoltar(k) || k == SDLK_LEFT) { uxCabLayout = 0; focoIndice = 1; sairArmado = 0; return 1; }
     if (k == SDLK_DOWN) uxCabLayout = 0;
@@ -313,6 +323,7 @@ static int uxEvento(SDL_Keycode k) {
         if (t == AJ2_T_TOUR) uxTopo = AJ2_T_BUSCA;
         else if (t == AJ2_T_RESOLVER) uxTopo = AJ2_T_PERFIL;
         else if (ajustes_menu_topo()) { sair = 1; return 1; }
+        else pediuRelogio = 1;
       }
       return 1;
     }
@@ -350,7 +361,7 @@ static int uxEvento(SDL_Keycode k) {
   }
   if (uxIndice == 1) {
     if (uxVoltar(k) || k == SDLK_LEFT) { focoIndice = 1; return 1; }
-    if (k == SDLK_UP && uxDifFoco > 0) uxDifFoco--;
+    if (k == SDLK_UP) { if (uxDifFoco > 0) uxDifFoco--; else pediuRelogio = 1; }
     if (k == SDLK_DOWN && uxDifFoco + 1 < uxNDifs) uxDifFoco++;
     if (uxOk(k) && uxNDifs && !uxAlternarDireto(uxDifs[uxDifFoco])) uxAbrirEditor(uxDifs[uxDifFoco]);
     return 1;
@@ -369,6 +380,7 @@ static int uxEvento(SDL_Keycode k) {
       if (focavel(i)) { focar(i); return 1; }
     // #339: Cima na primeira linha sobe para o "Painel | Lista" do cabecalho.
     if (dir < 0 && uxIndice >= 2 && !uxVeioBusca && ajLayoutSelecionavel()) uxCabLayout = 1;
+    else if (dir < 0) pediuRelogio = 1;
     return 1;
   }
   if (k == SDLK_RIGHT) return 1;

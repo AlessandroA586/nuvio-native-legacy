@@ -148,7 +148,7 @@ static int faltasLembrandoSemTrava(const char *texto) {
 }
 
 // "^(?=A)(?!B)(?=C)" -> as partes "(?=A)", "(?!B)", "(?=C)". Flags em linha
-// no inicio ("(?i)") sao puladas. Colchete como no JS: o primeiro "]" fecha.
+// no inicio ("(?i)", "(?s)", "(?m)") sao puladas, e o tamanho delas vai em *pref. Colchete como no JS: o primeiro "]" fecha.
 // Devolve quantas (2 ou mais), ou 0 se o padrao nao e so isso (um lookaround
 // quantificado, texto solto, "|" no topo...): ai ele vale como uma condicao so.
 static int partes(const char *p, const char **ini, size_t *tam, int max, size_t *pre) {

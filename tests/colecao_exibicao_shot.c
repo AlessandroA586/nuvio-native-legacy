@@ -8,13 +8,14 @@
 #define desc_vertudo_n shot_vt_n
 #define desc_vertudo_item shot_vt_item
 #include "../src/vertudo.c"
+#include "nvtmp.h"
 #undef desc_vertudo_n
 #undef desc_vertudo_item
 #include "corviva.h"
 #include <SDL2/SDL_image.h>
 #include <assert.h>
 
-static CatItem semente[40];
+static CatItem semente[122];
 static int nSemente;
 int shot_vt_n(void) { return nSemente; }
 int shot_vt_item(int i, CatItem *dst) {
@@ -77,7 +78,7 @@ static ColFolder pasta;
 static ColSource fontes[3];
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nv-colecao-exibicao";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nv-colecao-exibicao");
   char nome[700], cam[700];
   SDL_GLContext gl;
   FILE *a;
@@ -151,6 +152,33 @@ int main(int argc, char **argv) {
   collection = &pasta;
   snprintf(titulo, sizeof titulo, "%s", pasta.title);
   aberta = 1; anim = 1.0f; source = 0; tabFocus = 0;
+
+  // Focused layout proof: identical 122-title fixture at both TV scales.
+  if (getenv("NUVIO_SHOT_LAYOUT")) {
+    const float scales[] = {0.85f, 1.0f};
+    const int modes[] = {VT_LAY_MURAL, VT_LAY_FLUXO, VT_LAY_LINHA};
+    const char *names[] = {"mural", "fluxo", "timeline"};
+    for (i = NF; i < 122; i++) semente[i] = semente[i % NF];
+    nSemente = 122;
+    snprintf(pasta.title, sizeof pasta.title, "MARVEL");
+    snprintf(titulo, sizeof titulo, "%s", pasta.title);
+    snprintf(semente[1].titulo, sizeof semente[1].titulo,
+             "Captain America: The Winter Soldier and the Return of the Avengers");
+    for (int s = 0; s < 2; s++) {
+      gfx_escala_txt_definir(scales[s]);
+      for (int m = 0; m < 3; m++) {
+        lay = layEscolha = modes[m];
+        resolverLayout(); celLay = -1; orderN = -1;
+        foco = 0; tabFocus = 0; scrollY = velY = 0;
+        captura(NULL, 20);
+        if (lay == VT_LAY_FLUXO)
+          for (int k = 0; k < 6; k++) tecla(SDLK_RIGHT);
+        snprintf(nome, sizeof nome, "%s-%s-%.2f.bmp", saida, names[m], scales[s]);
+        captura(nome, 140);
+      }
+    }
+    goto done;
+  }
 
   captura(NULL, 60);   // artes chegando ao cache
   // PADRAO (#362): pasta com abas, exibicao Automatico -> Grade com a barra de
@@ -294,6 +322,7 @@ int main(int argc, char **argv) {
       captura(nome, 120);
     } }
 
+done:
   tex_encerrar();
   txt_encerrar();
   SDL_GL_DeleteContext(gl);

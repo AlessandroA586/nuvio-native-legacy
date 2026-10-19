@@ -4,22 +4,47 @@
 #ifndef NV_PERFISESSAO_H
 #define NV_PERFISESSAO_H
 #include <stdint.h>
-#if defined(__GNUC__) || defined(__clang__)
-// The real producers live in perfis.c, which isolated fixtures may omit (an
-// undefined weak_import is a hard error in a plain Mach-O static link, so an
-// import-side test cannot work there). Weak DEFAULT definitions below supply
-// the no-profile behaviour — generation 0 — when perfis.c is absent; a linked
-// perfis.c overrides them, because a strong definition beats a weak one at
-// link time and duplicate weak definitions coalesce. perfis.c never includes
-// this header, so a translation unit never sees both.
+#if defined(__APPLE__) && (defined(__GNUC__) || defined(__clang__))
+// Mach-O distinguishes an optional undefined import from a weak definition.
+// A complete app supplies the strong producer; isolated fixtures may omit it.
+#define NV_PERFIL_OPCIONAL __attribute__((weak_import))
+#elif defined(__GNUC__) || defined(__clang__)
+#define NV_PERFIL_OPCIONAL __attribute__((weak))
+#else
+#define NV_PERFIL_OPCIONAL
+#endif
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(NV_PERFIL_SESSAO_FORTE)
+extern uint64_t perfis_sessao_geracao(void) NV_PERFIL_OPCIONAL;
+extern int perfis_sessao_atual(uint64_t) NV_PERFIL_OPCIONAL;
+extern int perfis_sessao_travar(uint64_t) NV_PERFIL_OPCIONAL;
+extern void perfis_sessao_destravar(void) NV_PERFIL_OPCIONAL;
+static inline uint64_t nv_perfil_sessao_ler(void) {
+  return perfis_sessao_geracao ? perfis_sessao_geracao() : 0;
+}
+static inline int nv_perfil_sessao_atual(uint64_t g) {
+  return perfis_sessao_atual ? perfis_sessao_atual(g) : g == 0;
+}
+static inline int nv_perfil_sessao_travar(uint64_t g) {
+  return perfis_sessao_travar ? perfis_sessao_travar(g) : g == 0;
+}
+static inline void nv_perfil_sessao_destravar(void) {
+  if (perfis_sessao_destravar) perfis_sessao_destravar();
+}
+// Mach-O: an undefined weak_import still fails a static link on this
+// toolchain, so the modules that must self-satisfy in isolated fixtures set
+// NV_DUBLE_* and emit weak DEFAULTS. The strong producer (perfis.c,
+// contapend.c) or a fixture stub overrides them in the final link.
+#ifdef NV_DUBLE_SESSAO
 __attribute__((weak)) uint64_t perfis_sessao_geracao(void) { return 0; }
-__attribute__((weak)) int perfis_sessao_atual(uint64_t geracao) { return geracao == 0; }
-__attribute__((weak)) int perfis_sessao_travar(uint64_t geracao) { return perfis_sessao_atual(geracao); }
+__attribute__((weak)) int perfis_sessao_atual(uint64_t g) { return g == 0; }
+__attribute__((weak)) int perfis_sessao_travar(uint64_t g) { return g == 0; }
 __attribute__((weak)) void perfis_sessao_destravar(void) {}
-static inline uint64_t nv_perfil_sessao_ler(void) { return perfis_sessao_geracao(); }
-static inline int nv_perfil_sessao_atual(uint64_t g) { return perfis_sessao_atual(g); }
-static inline int nv_perfil_sessao_travar(uint64_t g) { return perfis_sessao_travar(g); }
-static inline void nv_perfil_sessao_destravar(void) { perfis_sessao_destravar(); }
+#endif
+#ifdef NV_DUBLE_CONTAPEND
+__attribute__((weak)) int contapend_estado(const char *id, const char *tipo, int t, int e, long long ms, int remoto) {
+  (void)id; (void)tipo; (void)t; (void)e; (void)ms; return remoto;
+}
+#endif
 #else
 #include "perfis.h"
 #define nv_perfil_sessao_ler perfis_sessao_geracao

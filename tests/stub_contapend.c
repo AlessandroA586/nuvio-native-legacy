@@ -3,6 +3,8 @@
 long long contapend_agora_ms(void) { return 0; }
 int  contapend_aplicar_local(void) { return 0; }
 int  contapend_enviar(void) { return 0; }
+void visto_iniciar(void) {}
+int  contapend_reenviar(void) { return 0; }
 void contapend_esquecer(void) {}
 int  contapend_pendentes(void) { return 0; }
 void contapend_podar(long long desdeMs) { (void)desdeMs; }
@@ -65,7 +67,16 @@ WEAK void debrid_conta_iniciar(DebridConta *c) { (void)c; }
 WEAK void debrid_conta_definir(DebridConta *c, const char *s, const char *k) { (void)c; (void)s; (void)k; }
 WEAK int debrid_aplicar_chaves_conta(const DebridConta *c, uint64_t s) { (void)c; (void)s; return 0; }
 WEAK void ajustes_perfil_padrao(void) {}
+WEAK unsigned long long ajustes_sync_hash(void) { return 0; }
 int syncprog_puxar(void);
 int syncprog_empurrar(void);
 WEAK int syncprog_puxar_sessao(int p, uint64_t s) { (void)p; (void)s; return syncprog_puxar(); }
 WEAK int syncprog_empurrar_sessao(int p, uint64_t s) { (void)p; (void)s; return syncprog_empurrar(); }
+// Mach-O cannot link an undefined weak_import into a static fixture, so the
+// no-profile session (generation 0) and the sync.c logout hooks are weak defaults.
+WEAK uint64_t perfis_sessao_geracao(void) { return 0; }
+WEAK int perfis_sessao_atual(uint64_t g) { return g == 0; }
+WEAK int perfis_sessao_travar(uint64_t g) { return g == 0; }
+WEAK void perfis_sessao_destravar(void) {}
+WEAK void fontevolta_esquecer_tudo(void) {}
+WEAK void guia_fonte_esquecer(const char *id) { (void)id; }

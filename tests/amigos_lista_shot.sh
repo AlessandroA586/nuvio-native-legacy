@@ -1,10 +1,12 @@
 #!/bin/bash
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 # Capturas do cabecalho do painel Social (abas na linha do titulo, Editar, Agenda), em PNG, sem rede. Nao entra na suite (*_shot).
 #
 #   bash tests/amigos_lista_shot.sh /tmp/nv-amigos
 set -eu
 cd "$(dirname "$0")/.."
-saida="${1:-/tmp/nv-amigos}"
+saida="${1:-${TMPDIR:-/tmp}/nv-amigos}"
 mkdir -p "$saida"
 NUVIO_DADOS=$(mktemp -d "${TMPDIR:-/tmp}/nuvio-abas-shot.XXXXXX")
 export NUVIO_DADOS

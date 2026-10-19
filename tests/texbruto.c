@@ -21,6 +21,7 @@
 #include "../src/tex_cache.c"
 #include <assert.h>
 #include <stdio.h>
+#include "nvtmp.h"
 
 #define LOGO   "https://image.tmdb.org/t/p/w780/4AmlH0mEn8gL6HEmSX0QYbdItmA.png"
 #define POSTER "https://images.metahub.space/poster/medium/tt35672862/img"
@@ -91,7 +92,7 @@ int main(void) {
   long nLogo;
   int a, b;
 
-  snprintf(DIR_, sizeof DIR_, "%s/nuvio-texbruto-cache-%d", getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp", (int)getpid());
+  snprintf(DIR_, sizeof DIR_, "%s/nuvio-texbruto-cache-%d", nvt_dir(), (int)getpid());
   mkdir(DIR, 0755);
   memset(itens, 0, sizeof itens);
   nMax = 8;

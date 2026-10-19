@@ -4381,7 +4381,7 @@ static void recomenda_desenharCorpo_(Uint32 agora) {
   gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0.0f, 0, 0, 0,
           0.72f * cartaoEntrada);
   { GfxRect c = { RC_X, RC_Y + dy, RC_W, RC_H };
-    gfx_cor(c, 0.030f, 0.075f, 0.078f, 0.088f, 0.98f * a); }
+    gfx_vidro_ou_solido(c, 0.030f, GFX_VIDRO_DENS_MODAL, a, 0.075f, 0.078f, 0.088f, 0.98f); }
   gfx_recorte(RC_X, RC_Y + dy, RC_W, RC_H);
 
   { GfxRect p = { RC_X + RC_PAD, RC_Y + dy + (RC_H - RC_POSTER_H) * 0.5f,

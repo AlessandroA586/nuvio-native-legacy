@@ -13,6 +13,7 @@
 #include <stddef.h>
 #include "catalogo.h"
 #include "colecoes.h"
+#include "perfisessao.h"
 
 // Solta a cache de corpos de manifesto entre ciclos e zera o estado da
 // descoberta. Chamar no logout, junto de addons_esquecer/fil_esquecer: a cache
@@ -23,6 +24,8 @@ void desc_esquecer_catalogo_perfil(void);
 // Confirmed opening, including the same profile: invalidate detached jobs and
 // clear live results, without removing saved account/profile configuration.
 void desc_abrir_sessao(void);
+// Drawing-thread guard: discovery has been opened for the live generation.
+int desc_sessao_aberta(void);
 // Called after this session's cached addon list/configuration is restored.
 // Starts its pending discovery once, reusing an in-flight worker. Before the
 // first main.c bootstrap start this only marks the sources ready.
@@ -113,6 +116,13 @@ int desc_catalogos_fora(void);
 // ordem, de colecao ou de limite — ver a nota longa em descoberta.c. Chamar do
 // fio principal.
 void desc_remontar_fileiras(void);
+// #366: observa o ajuste no fio principal. Ligar pede UMA montagem silenciosa
+// para preencher fileiras curtas; desligar so devolve os indices ja recebidos.
+// Mudancas de progresso/historico se refletem nos indices, sem refazer a rede.
+void desc_ocultar_vistos_atualizar(void);
+// Mesmo estado do selo do catalogo para um meta recebido fora dele: historico
+// conhecido ou progresso local. So o tipo movie e excluivel, nunca serie/canal.
+int desc_filme_visto(const CatItem *item);
 
 // Le a chave do TMDB (art/tmdb.txt). Sem ela o elenco fica so com nomes, sem
 // foto nem personagem.
@@ -180,6 +190,9 @@ int  desc_busca_item(int i, CatItem *dst);
 // registrados, pulando os que ainda nao responderam ou vieram vazios. Assim o
 // primeiro catalogo a responder ja aparece, em vez de a tela esperar o mais
 // lento de dez.
+// Janela por catalogo de busca, compartilhada com Busca e Spotlight. Uma
+// fileira pode rolar: resultados depois dos primeiros 12 tambem abrem titulos.
+#define DESC_BUSCA_POR_ALVO 24
 int  desc_busca_n_alvos(void);
 const char *desc_busca_alvo_titulo(int alvo);   // "Filmes", "Séries"
 int desc_busca_alvo_nuvio(int alvo);             // 1 = catalogo do Nuvio (#311)
@@ -206,6 +219,8 @@ int  desc_busca_base_oculta(const char *base);
 // lista vazia. `f` devolve 0 (nao espere: sem conta), 1 (espere: perfil ainda
 // nao escolhido) ou 2 (espere ate 10 s). Sem gancho, nao ha espera.
 void desc_espera_addons_definir(int (*f)(void));
+// Troca de perfil: a proxima volta espera de novo o ciclo da conta antes de ler a lista.
+void desc_esperar_conta(void);
 void desc_alvo_busca(const char *base, const char *tipo, const char *id,
                      const char *titulo, const char *addon);
 
@@ -242,12 +257,33 @@ void desc_vertudo_filtro(const char *base, const char *tipo, const char *catId, 
 // "trakt" vindo do site. Os itens sao pedidos direto a esses servicos —
 // nao passa por catalogo de addon.
 void desc_vertudo_fonte(const ColSource *s);
+// Resume a Vitrine source after its saved bounded batch.
+void desc_vertudo_fonte_desde(const ColSource *s, int pagina);
+void desc_vertudo_filtro_desde(const char *base, const char *tipo, const char *catId, const char *genre, int pagina);
+int desc_vertudo_pagina(void);
+// Primeira carga independente de uma fileira da Vitrine. Nao altera o
+// carregador de abas acima. `itens` tem 2*limite vagas (limite de 1 a 20):
+// prefixo canonico em [0,n), reserva nao vista em [limite,limite+extraN).
+// 1 = terminou nesta sessao (erro distingue falha de lista vazia); 0 = pedido
+// invalido ou de sessao antiga. Quem chama possui fonte/base/buffers.
+typedef struct { int n, extraN, erro, pagina, mais; } DescColecaoResultado;
+int desc_colecao_inicial(const ColSource *fonte, const char *base,
+                         NvPerfilSessao sessao, CatItem *itens, int limite,
+                         DescColecaoResultado *resultado);
+
 int desc_vertudo_erro(void);
 // Pede a proxima pagina, se houver. Nada acontece se a ultima veio curta — sinal
 // de fim de lista no protocolo.
 void desc_vertudo_mais(void);
 int  desc_vertudo_n(void);
 int  desc_vertudo_item(int i, CatItem *dst);
+// Catalogo recebido, antes do filtro de vistos (#366). Para caches derivados
+// da Vitrine conservarem filmes que devem voltar ao desligar o ajuste.
+int  desc_vertudo_n_bruto(void);
+int  desc_vertudo_item_bruto(int i, CatItem *dst);
+// Muda junto da projecao visivel, inclusive quando so trocam as identidades
+// (mesma quantidade de cards): ordem, caches e foco guardado precisam reajustar.
+unsigned desc_vertudo_revisao(void);
 int  desc_vertudo_carregando(void);
 // 1 quando a ultima pagina veio curta: nao ha mais o que pedir.
 int  desc_vertudo_fim(void);
@@ -303,6 +339,15 @@ void desc_loc_apagar(void);
 // caixa nem pontuacao) e completa a lista com o resto do TMDB (#153). Pura;
 // devolve quantos nomes casaram.
 int  desc_tmdb_elenco(const char *json, CatItem *d);
+// Blocking person search: known title first, then most popular exact name.
+// Positive person ID, 0 for no match, -1 for unavailable/invalid response.
+long desc_buscar_pessoa(const char *nome, long titulo, const char *tipo);
+// Elenco/direcao do meta Stremio e app_extras (Nuvio/AIOMetadata), sem rede.
+// Preserva a ordem da raiz e casa fotos/papeis por nome; soVazios completa
+// lacunas sem trocar campos da fonte primaria. Devolve o numero de pessoas.
+int  desc_meta_elenco(const char *json, CatItem *d, int soVazios);
+// 1 quando o elenco tem nomes mas ninguem tem id de pessoa do TMDB ainda.
+int  desc_elenco_precisa_pessoas(const CatItem *c);
 // Tipo(s) em que perguntar o /meta do Cinemeta, na ordem (1 ou 2). Tipo
 // incerto ("anime" etc.) tenta serie e depois filme. Puras.
 int  desc_meta_tipos(const char *tipo, const char *saida[2]);

@@ -1,8 +1,10 @@
 #!/bin/bash
+export TMPDIR="${TMPDIR:-/tmp}"
+TMPDIR="${TMPDIR%/}"
 # Leitores privados EBML/lacing; sem sockets, SDL ou arquivos de midia.
 set -eu
 cd "$(dirname "$0")/.."
-DIR=$(mktemp -d /tmp/nuvio-mkvass-limites.XXXXXX)
+DIR=$(mktemp -d ${TMPDIR:-/tmp}/nuvio-mkvass-limites.XXXXXX)
 trap 'rm -rf "$DIR"' EXIT
 flags=(-ffunction-sections -fdata-sections)
 if [ "$(uname -s)" = Darwin ]; then flags+=(-Wl,-dead_strip); else flags+=(-Wl,--gc-sections -pthread -lm); fi

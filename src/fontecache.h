@@ -31,6 +31,7 @@
 #ifndef NV_FONTECACHE_H
 #define NV_FONTECACHE_H
 #include "streams.h"
+#include <stdint.h>
 
 // --- a chamada do guia --------------------------------------------------------
 //

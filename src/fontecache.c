@@ -7,11 +7,10 @@
 #include <string.h>
 #include <pthread.h>
 
-// Fixtures that omit addons.c's scoped search fall back to the legacy one.
-__attribute__((weak)) int addons_consultar_sessao(const char *id, const char *tipo, const char *base, int fios,
-    int (*cancelado)(void *), void *u, Stream **lista, uint64_t sessao) {
-  (void)sessao; return addons_consultar(id, tipo, base, fios, cancelado, u, lista);
-}
+#if defined(__GNUC__) || defined(__clang__)
+extern int addons_consultar_sessao(const char *, const char *, const char *, int,
+    int (*)(void *), void *, Stream **, uint64_t) NV_PERFIL_OPCIONAL;
+#endif
 // O relogio e um macro para o teste poder avancar o tempo sem dormir. No app
 // e SDL_GetTicks, o mesmo relogio de stream_idade_ms.
 #ifndef FC_AGORA
@@ -331,7 +330,12 @@ static void *prefetch(void *u) {
 
   n = -1;
   if (nv_perfil_sessao_atual(sessao)) {
-    n = addons_consultar_sessao(id, vodPedido ? "series" : FC_TIPO, base,
+#if defined(__GNUC__) || defined(__clang__)
+    if (!addons_consultar_sessao)
+      n = addons_consultar(id, vodPedido ? "series" : FC_TIPO, base, FONTECACHE_FIOS, cancelado, NULL, &lista);
+    else
+#endif
+      n = addons_consultar_sessao(id, vodPedido ? "series" : FC_TIPO, base,
                                  FONTECACHE_FIOS, cancelado, NULL, &lista, sessao);
   }
 

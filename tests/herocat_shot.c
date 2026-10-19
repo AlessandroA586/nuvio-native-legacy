@@ -2,6 +2,7 @@
 // e estado vazio. Sem rede. Nao entra na suite (precisa de janela GL).
 //   bash tests/herocat_shot.sh /tmp/nv-205/hc
 #include "ajustes.h"
+#include "nvtmp.h"
 #include "fileiras.h"
 #include "gfx.h"
 #include "text.h"
@@ -46,7 +47,7 @@ static void captura(const char *nome, SDL_Window *win) {
 }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nv-205/hc";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nv-205/hc");
   char nome[600];
   SDL_Window *w;
   SDL_GLContext gl;

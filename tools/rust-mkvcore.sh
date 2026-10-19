@@ -1,6 +1,6 @@
 #!/bin/bash
 # Builds rust/mkvcore as a static library and prints the path of the .a.
-# Only used with -DNV_RUST_MKVCORE (off by default; docs/plans/rust-mapa.md).
+# Used with -DNV_RUST_MKVCORE (on by default in the android/mac builds; docs/plans/rust-mapa.md).
 #   tools/rust-mkvcore.sh [rust-target]      e.g. aarch64-linux-android
 #   tools/rust-mkvcore.sh --android DIR      DIR/arm64-v8a/libmkvcore.a + DIR/armeabi-v7a/libmkvcore.a
 # Toolchain: RUSTUP_HOME/CARGO_HOME default to the external SSD install. Never

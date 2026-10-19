@@ -2,6 +2,7 @@
 #define _POSIX_C_SOURCE 200809L
 #define SDL_MAIN_HANDLED
 #include "../src/streams.c"
+#include "stub_player_source_actions.h"
 #include <assert.h>
 
 typedef struct { int servico, arquivo; char hash[48]; } Pedido;
@@ -14,6 +15,10 @@ static unsigned disponiveis = 15;
 static Stream substituta;
 static char ultimoCab[512];
 
+uint64_t perfis_sessao_geracao(void) { return 1; }
+int perfis_sessao_atual(uint64_t geracao) { return geracao == 1; }
+int perfis_sessao_travar(uint64_t geracao) { return geracao == 1; }
+void perfis_sessao_destravar(void) {}
 Uint32 SDL_GetTicks(void) { return 1000; }
 int debrid_ativo(void) { return 1; }
 int p2p_ativo(void) { return p2pHabilitado; }
@@ -89,6 +94,7 @@ int ajustes_fonte_usar_outros(void) { return 0; }
 int ajustes_fonte_prioridade(void) { return 1; }
 int ajustes_fonte_hdr(void) { return 1; }
 int ajustes_fonte_manual(void) { return 0; }
+int ajustes_fonte_idioma_audio(void) { return 0; }
 int ajustes_fonte_primeira(void) { return 0; }
 int ajustes_fonte_ordem_uso(void) { return 0; }
 int ajustes_dolby_vision(void) { return 0; }
@@ -166,11 +172,16 @@ static void ordemETotal(void) {
   int idx, serv; char url[4096];
   const int esperado[] = {1, 0, 1, 0};
   for (int i = 0; i < 4; i++) {
+    assert(stream_falha_tem_proxima(s, ger));
+    assert(stream_falha_tem_proxima(s, ger));
+    assert(fontefalha_tentativas(s) == i && nPedidos == i);
     assert(verificar(s, ger, &idx, &serv, url) == FONTEFALHA_PROXIMA);
     assert(idx == esperado[i] && serv == i / 2);
     fontefalha_marcar_aberta(s);
   }
   assert(verificar(s, ger, &idx, &serv, url) == FONTEFALHA_FIM);
+  assert(!stream_falha_tem_proxima(s, ger));
+  assert(!stream_falha_tem_proxima(s, ger + 1));
   assert(nPedidos == 4 && fontefalha_tentativas(s) == 4);
   assert(pedidos[0].servico == 0 && pedidos[1].servico == 0 && pedidos[2].servico == 1);
   assert(!strcmp(pedidos[0].hash, "hash-a") && !strcmp(pedidos[1].hash, "hash-b"));
@@ -404,6 +415,27 @@ static void resolvedorManual(const char *dir) {
   assert(stream_item(0)->debridServico == DEBRID_TB + 1 && !strcmp(stream_item(0)->url, url));
   assert(!strcmp(stream_item(0)->infoHash, "MANUAL-HASH") && stream_item(0)->fileIdx == 6);
   assert(stream_resolver_escolhida(0, ger, url, sizeof url, nome, sizeof nome, &pct) == 1 && nManual == 1);
+  // A downloading response overrides both addon and previous native cache hits.
+  for (int native = 0; native < 2; native++) {
+    Stream downloading = l;
+    downloading.emCache = 1; downloading.cacheNativo = native;
+    stream_definir_lista(&downloading, 1); ger = stream_lista_geracao();
+    assert(cacheConfirmado(stream_item(0)));
+    manualResultado = DEBRID_BAIXANDO;
+    assert(stream_resolver_escolhida(0, ger, url, sizeof url, nome, sizeof nome, &pct) == DEBRID_BAIXANDO);
+    assert(!cacheConfirmado(stream_item(0)));
+    assert(!stream_item(0)->emCache && !stream_item(0)->cacheNativo);
+    assert(stream_item(0)->cacheNegado && stream_item(0)->foraCache);
+    // A later ready result restores the author's native confirmation behavior.
+    manualResultado = 1;
+    assert(stream_resolver_escolhida(0, ger, url, sizeof url, nome, sizeof nome, &pct) == 1);
+    assert(cacheConfirmado(stream_item(0)));
+  }
+  nManual = 1;
+  // Integration #499 removes the addon lightning when the native icon is shown.
+  strcpy(l.rotulo, "⚡️  Addon 1080p"); l.emCache = 1;
+  tituloAddon(&l, url, sizeof url);
+  assert(!strcmp(url, "Addon 1080p"));
   // Feature off preserves the old cached-URL fast path.
   assert(fontefalha_definir_provedores(0));
   stream_definir_lista(&l, 1); ger = stream_lista_geracao();
@@ -431,6 +463,33 @@ static void resolvedorManual(const char *dir) {
   assert(nManual == 3 && nP2P == 3 && !stream_item(0)->url[0]);
   assert(fontefalha_definir_provedores(0));
 }
+static void canalIgnoraFiltros(const char *dir) {
+  resetar(); fontefalha_dir(dir);
+  FonteFiltroConfig previous, blocked = {0}; fontefalha_filtro(&previous);
+  for (int c = 0; c < FONTEFILTRO_N; c++)
+    blocked.excluir[c] = (UINT64_C(1) << fontefiltro_opcoes_n(c)) - 1;
+  assert(fontefalha_filtro_definir(&blocked));
+  Stream live = {0}; live.fileIdx = -1;
+  snprintf(live.url, sizeof live.url, "%s", "https://live.invalid/channel.m3u8");
+  stream_definir_lista(&live, 1);
+  unsigned generation = stream_lista_geracao(); char url[4096], service[32]; int pct;
+  stream_folha_canal(0);
+  assert(stream_resolver_escolhida(0, generation, url, sizeof url, service, sizeof service, &pct) == 0);
+  stream_folha_canal(1);
+  stream_filtro_tipo("custom-live-resource");
+  stream_definir_lista(&live, 1); generation = stream_lista_geracao();
+  assert(stream_resolver_escolhida(0, generation, url, sizeof url, service, sizeof service, &pct) == 1);
+  assert(!strcmp(url, live.url) && !nManual && !nPedidos && !nHttp);
+  FonteFiltroDados retained;
+  stream_filtro_dados(stream_item(0), &retained);
+  assert(retained.naoVod);
+  stream_folha_canal(0);
+  stream_filtro_tipo("movie");
+  assert(fontefiltro_permite(&blocked, &retained));
+  stream_definir_lista(&live, 1); generation = stream_lista_geracao();
+  assert(stream_resolver_escolhida(0, generation, url, sizeof url, service, sizeof service, &pct) == 0);
+  assert(fontefalha_filtro_definir(&previous));
+}
 int main(int argc, char **argv) {
   assert(argc == 2 && "runner supplies an isolated preference directory");
   ordemETotal(); identidadeEDedup(); missNaoExcluiOutroServico(); semTetosAntigos();
@@ -438,6 +497,7 @@ int main(int argc, char **argv) {
   cachePertenceAoServico(); hashCanonicoEAplicacaoSobreposta();
   geracaoECancelamento(); addonIndependente(); buscaParcial(); escolhaManual();
   resolvedorManual(argv[1]);
+  canalIgnoraFiltros(argv[1]);
   stream_definir_lista(NULL, 0);
   puts("fontefalha worker: PASS (provider order, total limits, dedup, identity, generation, cancellation, addon order, partial search, manual selection, cached winner, P2P isolation)");
   return 0;

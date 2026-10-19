@@ -10,6 +10,7 @@
 // de quem nunca abriu o app) e a captura nao mexe no fileirasui.txt de quem
 // roda o teste.
 #include "ajustes.h"
+#include "nvtmp.h"
 #include "ajustes_ux.h"
 #include "atualizacao.h"
 #include "badges.h"
@@ -20,10 +21,13 @@
 #include "dados.h"
 #include "gfx.h"
 #include "ilha.h"
+#include "ltv.h"
+#include "perfis.h"
 #include "iconeapp.h"
 #include "logoapp.h"
 #include "text.h"
 #include "tex_cache.h"
+#include "vidro_telas.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <assert.h>
@@ -31,6 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "menu_frost_probe.h"
 
 static const char *const AJ_IDS[] = {
   "AJ_QUALIDADE", "AJ_DV", "AJ_ATMOS", "AJ_LEG_LINGUA",
@@ -91,7 +96,7 @@ static void captura(const char *nome, SDL_Window *win) {
   rail_shot_aplicar();
   for (i = 0; i < quadrosCaptura; i++) {
     SDL_PumpEvents();
-    if (getenv("NUVIO_SHOT_PERF")) gfx_novo_quadro();   // os contadores do quadro, como app.c
+    if (getenv("NUVIO_SHOT_PERF") || getenv("NUVIO_SHOT_MENU_PROBE")) gfx_novo_quadro();   // os contadores do quadro, como app.c
     txt_novo_quadro();
     gfx_rastro_grandes = getenv("NUVIO_SHOT_RASTRO") && i == quadrosCaptura - 1;
     tex_novo_quadro();
@@ -106,7 +111,13 @@ static void captura(const char *nome, SDL_Window *win) {
     if (getenv("NUVIO_SHOT_MENU")) {
       menu_definir_destino(MENU_AJUSTES);
       menu_pilula_mostrar(1.0f);
+      if (atoi(getenv("NUVIO_SHOT_MENU")) == 2) {   // 2 = sidebar open over Settings
+        if (!menu_aberto()) menu_abrir();
+        menu_atualizar(1.0f / 60.0f, SDL_GetTicks());
+      }
+      menu_probe_draw();
       menu_desenhar(SDL_GetTicks());
+      if (getenv("NUVIO_SHOT_MENU_OPAQUE")) gfx_cor((GfxRect){330, 175, 81, 605}, 0, .1f, .1f, .1f, 1);
     }
     if (spot_visivel()) {   // "Buscar no guia" (o Spotlight no modo guia)
       spot_atualizar(1.0f / 60.0f, SDL_GetTicks());
@@ -147,6 +158,11 @@ static void captura(const char *nome, SDL_Window *win) {
         memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
       assert(strstr(nome, ".png") ? IMG_SavePNG(s, nome) == 0 : SDL_SaveBMP(s, nome) == 0);
       SDL_FreeSurface(s);
+      // NUVIO_SHOT_MENU=2: blur proof, as in detalhe_glass_shot.c (fraction of
+      // pixels with a luma step > 6 in the empty right strip of the sidebar).
+      if (getenv("NUVIO_SHOT_MENU") && atoi(getenv("NUVIO_SHOT_MENU")) == 2) {
+        menu_probe_check(pix);
+      }
       free(pix);
     }
     SDL_GL_SwapWindow(win);
@@ -155,8 +171,13 @@ static void captura(const char *nome, SDL_Window *win) {
   printf("captura: %s\n", nome);
 }
 
+#ifdef AJUSTES_PERF
+extern int perf_uploads;
+#include "ajustes_perf.h"
+#endif
+
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nuvio-ajustes";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-ajustes");
   char nome[600];
   SDL_Window *w;
   SDL_GLContext gl;
@@ -181,6 +202,13 @@ int main(int argc, char **argv) {
   gfx_icones_dir("deploy/app/art");
   ajustes_recursos("deploy/app/art");
   badges_carregar("deploy/app/art");   // marcas de formato (Dolby Vision, 4K...); no app quem faz e home_iniciar
+
+  // NUVIO_SHOT_URLS=1: duas fontes por URL (M9) para a linha "Listas e guias por URL".
+  if (getenv("NUVIO_SHOT_URLS")) {
+    ltv_urls_carregar(perfis_ativo());
+    ltv_urls_adicionar(LTV_URL_M3U, "iptv.exemplo.com", "https://iptv.exemplo.com/get.php?username=x&password=y&type=m3u");
+    ltv_urls_adicionar(LTV_URL_XMLTV, "epg.exemplo.org", "https://epg.exemplo.org/guia.xml.gz");
+  }
 
   // FILEIRAS DE MENTIRA cobrindo as origens que a folha sabe distinguir: o
   // catalogo de addon (com nome de addon e tipo), o grupo de colecoes, e as
@@ -234,6 +262,18 @@ int main(int argc, char **argv) {
   fileiras_prontas:
 
   ajustes_iniciar();
+  if (getenv("NV_TEXT_SCALE_NAV")) {
+    int op, sec, i, found = 0;
+    const char *key, *label;
+    for (i = 0; ajustes_teste_cena_item(i, &op, &sec, &key, &label); i++) {
+      if (strcmp(key, "escalaTextoLocal")) continue;
+      assert(ajustes_teste_focar_opcao(op));
+      found++;
+    }
+    assert(found == 1);
+    puts("PASS text scale settings navigation");
+    return 0;
+  }
   if (getenv("NUVIO_SHOT_AJUSTES_ESCALA"))
     ajustes_teste_escala(atoi(getenv("NUVIO_SHOT_AJUSTES_ESCALA")));
   ajustes_teste_vidro_env();   // NUVIO_SHOT_VIDRO_OPAC / _FOSCO
@@ -244,6 +284,36 @@ int main(int argc, char **argv) {
   if (getenv("NUVIO_SHOT_TEMA") || getenv("NUVIO_SHOT_VIDRO"))
     ajustes_teste_tema(getenv("NUVIO_SHOT_TEMA") ? atoi(getenv("NUVIO_SHOT_TEMA")) : -1,
                        getenv("NUVIO_SHOT_VIDRO") && atoi(getenv("NUVIO_SHOT_VIDRO")));
+
+  // NUVIO_VIDRO_TELAS=<dir> (tests/vidro_telas.sh): glass budget, first
+  // category (the settings list) static and while moving focus down it.
+  if (vt_ligado()) {
+    vt_vidro();
+    ajustes_teste_ux_captura(10);
+    for (i = 0; i < 150; i++) {
+      SDL_PumpEvents(); txt_novo_quadro(); tex_novo_quadro(); tex_bombear(6); gfx_novo_quadro(); vt_antes();
+      ajustes_atualizar(1.0f / 60.0f, SDL_GetTicks());
+      glClearColor(0.025f, 0.025f, 0.03f, 1.0f); glClear(GL_COLOR_BUFFER_BIT);
+      ajustes_desenhar(SDL_GetTicks()); vt_depois();
+      if (i == 119) vt_zerar();
+      if (i == 149) { vt_png("ajustes"); vt_relatar("settings", 1); }
+      SDL_Delay(2);
+    }
+    vt_zerar();
+    for (i = 0; i < 32; i++) {
+      if (i % 4 == 0) tecla(i % 8 ? SDLK_UP : SDLK_DOWN);
+      SDL_PumpEvents(); txt_novo_quadro(); tex_novo_quadro(); tex_bombear(6); gfx_novo_quadro(); vt_antes();
+      ajustes_atualizar(1.0f / 60.0f, SDL_GetTicks());
+      glClearColor(0.025f, 0.025f, 0.03f, 1.0f); glClear(GL_COLOR_BUFFER_BIT);
+      ajustes_desenhar(SDL_GetTicks()); vt_depois();
+    }
+    vt_relatar("settings", 0);
+    return vtFalhas ? 1 : 0;
+  }
+
+#ifdef AJUSTES_PERF
+  if (getenv("NUVIO_AJUSTES_PERF")) { perf_walk(w); return 0; }
+#endif
 
   // NUVIO_SHOT_CENAS=<pasta>: the generated preview of EVERY visible option,
   // drawn alone at a fixed instant (960x540 PNG each) plus indice.tsv, to find

@@ -18,6 +18,7 @@ static int shotGrade;
 #define desc_vertudo_n shot_vertudo_n
 #define desc_vertudo_item shot_vertudo_item
 #include "../src/vertudo.c"
+#include "nvtmp.h"
 #undef desc_vertudo_n
 #undef desc_vertudo_item
 int desc_vertudo_n(void);
@@ -69,12 +70,29 @@ static void captura(const char *nome, SDL_Window *win) {
       assert(s);
       for (y = 0; y < 1080; y++)
         memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
-      assert(SDL_SaveBMP(s, nome) == 0);
+      assert((strstr(nome,".png") ? IMG_SavePNG(s,nome) : SDL_SaveBMP(s,nome)) == 0);
       SDL_FreeSurface(s);
       free(pix);
     }
     SDL_GL_SwapWindow(win);
   }
+  printf("captura: %s\n", nome);
+}
+
+// O quadro atual da janela, em PNG (a captura de 3 quadros do foco usa).
+static void salvarQuadro(const char *nome) {
+  unsigned char *pix = malloc(1920 * 1080 * 4);
+  SDL_Surface *s;
+  int y;
+  assert(pix);
+  glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, pix);
+  s = SDL_CreateRGBSurfaceWithFormat(0, 1920, 1080, 32, SDL_PIXELFORMAT_RGBA32);
+  assert(s);
+  for (y = 0; y < 1080; y++)
+    memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
+  assert(IMG_SavePNG(s, nome) == 0);
+  SDL_FreeSurface(s);
+  free(pix);
   printf("captura: %s\n", nome);
 }
 
@@ -87,7 +105,7 @@ static void fonte(int i, const char *titulo, const char *tipo) {
 }
 
 int main(int argc, char **argv) {
-  const char *saida = argc > 1 ? argv[1] : "/tmp/nuvio-vertudo";
+  const char *saida = argc > 1 ? argv[1] : nvt("/nuvio-vertudo");
   char nome[600];
   SDL_Window *w;
   pasta.sources = pastaFontes;
@@ -107,6 +125,7 @@ int main(int argc, char **argv) {
   glViewport(0, 0, 1920, 1080);
   gfx_tamanho_alvo(1920, 1080);
   assert(gfx_iniciar());
+  ajustes_iniciar();
   assert(txt_iniciar("deploy/app", 1));
   tex_iniciar(64);
   gfx_icones_dir("deploy/app/art");
@@ -124,6 +143,81 @@ int main(int argc, char **argv) {
   collection = &pasta;
   snprintf(titulo, sizeof titulo, "%s", pasta.title);
   aberta = 1; anim = 1.0f; source = 0;
+
+  if (getenv("NUVIO_SHOT_ABASTOPO")) {
+    static const int idiomas[] = {IDIOMA_PT, IDIOMA_DE, IDIOMA_RU};
+    static const char *cod[] = {"pt", "de", "ru"};
+    for (int k = 0; k < 3; k++) {
+      char config[600];
+      snprintf(config,sizeof config,"%s/ajustes.txt",getenv("NUVIO_DADOS"));
+      FILE *f=fopen(config,"w"); assert(f);
+      fprintf(f,"idioma %d\n",idiomas[k]); fclose(f);
+      ajustes_dir(getenv("NUVIO_DADOS"));
+      ajustes_definir_abas_estilo(VT_AB_TOPO);
+      assert(estiloAbas()==VT_AB_TOPO);
+      shotGrade=12; tabFocus=0; tabCursor=0; foco=0;
+      snprintf(nome,sizeof nome,"%s-%s-menu.png",saida,cod[k]); captura(nome,w);
+      tabFocus=1; tabCursor=cabN()+1;
+      snprintf(nome,sizeof nome,"%s-%s-icone.png",saida,cod[k]); captura(nome,w);
+      SDL_Event e={0}; e.type=SDL_KEYDOWN; e.key.keysym.sym=SDLK_RETURN;
+      vertudo_evento(&e); assert(ajustes_abas_estilo()==VT_AB_CHIPS);
+      for(int j=0;j<4;j++)vertudo_evento(&e);
+      assert(estiloAbas()==VT_AB_TOPO && tabCursor==cabN()+1);
+      e.key.keysym.sym=SDLK_LEFT; vertudo_evento(&e); assert(tabCursor==cabN());
+      e.key.keysym.sym=SDLK_RIGHT; vertudo_evento(&e); assert(tabCursor==cabN()+1);
+    }
+    goto fim;
+  }
+
+  // AS ABAS DA PAGINA DE STREAMING (#205, Netflix na TCL): a fileira na ordem
+  // do catalogo, a primeira aba colada no logo, a capsula do foco deslizando
+  // e o degradê da marca sem o degrau duro no meio da tela.
+  if (getenv("NUVIO_SHOT_STREAMTABS")) {
+    memset(pastaFontes, 0, sizeof pastaFontes);
+    memset(&pasta, 0, sizeof pasta);
+    pasta.sources = pastaFontes;
+    snprintf(pasta.title, sizeof pasta.title, "Netflix");
+    snprintf(pasta.group, sizeof pasta.group, "Streaming");
+    fonte(0, "Latest Netflix", "movie");
+    fonte(1, "Latest Netflix", "series");
+    fonte(2, "Top Rated Netflix", "movie");
+    fonte(3, "Top Rated Netflix", "series");
+    fonte(4, "Netflix Kids Top 10", "movie");
+    fonte(5, "Netflix Kids Top 10", "series");
+    fonte(6, "New on Netflix", "movie");
+    fonte(7, "New on Netflix", "series");
+    pasta.nSources = 8;
+    collection = &pasta;
+    snprintf(titulo, sizeof titulo, "%s", pasta.title);
+    aberta = 1; anim = 1.0f; source = 0; shotGrade = 10;
+    ajustes_definir_abas_estilo(VT_AB_CHIPS);
+    // 1) REPOUSO: foco no conteudo, fileira encostada no logo, 1a aba visivel.
+    tabFocus = 0; tabCursor = 0; foco = 0;
+    snprintf(nome, sizeof nome, "%s-repouso.png", saida); captura(nome, w);
+    // 2) TRES QUADROS DO FOCO: o cursor salta para a 4a aba e a capsula
+    // desliza — partida, meio do caminho, assentada.
+    tabFocus = 1; tabCursor = 0;
+    { SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RIGHT;
+      int quadro = 0, i;
+      for (i = 0; i < 3; i++) vertudo_evento(&e);
+      assert(tabCursor == 3);
+      rail_shot_aplicar();
+      for (i = 0; i < 90; i++) {
+        SDL_PumpEvents(); txt_novo_quadro(); tex_novo_quadro(); tex_bombear(6);
+        gfx_novo_quadro();
+        glClearColor(0.051f, 0.051f, 0.051f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        vertudo_atualizar(1.0f / 60.0f, SDL_GetTicks());
+        vertudo_desenhar(SDL_GetTicks());
+        rail_shot_desenhar(MENU_INICIO);
+        if (i == 0 || i == 6 || i == 25) {
+          snprintf(nome, sizeof nome, "%s-foco-%d.png", saida, ++quadro);
+          salvarQuadro(nome);
+        }
+        SDL_GL_SwapWindow(w);
+      } }
+    goto fim;
+  }
 
   tabFocus = 1; tabCursor = 1;
   snprintf(nome, sizeof nome, "%s-abas-foco.bmp", saida);
@@ -224,6 +318,7 @@ int main(int argc, char **argv) {
     shotGrade = 0;
   }
 
+fim:
   tex_encerrar();
   txt_encerrar();
   SDL_GL_DeleteContext(gl);

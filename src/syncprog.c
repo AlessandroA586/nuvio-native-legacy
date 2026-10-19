@@ -228,47 +228,43 @@ int syncprog_empurrar_sessao(int perfil, uint64_t sessao) {
 // da serie.
 // The public backend contract and the official Android TV client both pass
 // p_profile_id here. Omitting it invokes the SQL default (profile 1).
-#include "sessaoopcional.h"
-// Fixtures that omit nuvem.c have no account RPC.
-__attribute__((weak)) char *nuvem_rpc_com(const char *f, const char *c, const char *j, int *s) {
-  (void)f; (void)c; (void)j; (void)s; return NULL;
-}
-// 1 when the account module is absent (the default identity copy returns -1).
-static int semModuloConta(void) {
-  char u[80], j[16];
-  return sessao_identidade_local_copiar(u, sizeof u, j, sizeof j) < 0;
-}
+extern int sessao_identidade_local_copiar(char *, size_t, char *, size_t) NV_PERFIL_OPCIONAL;
+extern const char *sessao_usuario(void) NV_PERFIL_OPCIONAL;
+extern int sessao_token_copiar(char *, size_t) NV_PERFIL_OPCIONAL;
+extern void sessao_token_recusado(const char *) NV_PERFIL_OPCIONAL;
+extern char *nuvem_rpc_com(const char *, const char *, const char *, int *) NV_PERFIL_OPCIONAL;
 int syncprog_remocao_capturar(SyncProgRemocao *p) {
   if (!p) return 0;
   memset(p, 0, sizeof *p); p->sessao = nv_perfil_sessao_ler();
   if (!nv_perfil_sessao_travar(p->sessao)) return 0;
   p->perfil = perfis_ativo();
-  int r = sessao_identidade_local_copiar(p->usuario, sizeof p->usuario, p->jwt, sizeof p->jwt);
-  if (r < 0) snprintf(p->usuario, sizeof p->usuario, "%s", sessao_usuario()); // account-free fixture
-  else p->autenticada = r;
+  if (sessao_identidade_local_copiar)
+    p->autenticada = sessao_identidade_local_copiar(p->usuario, sizeof p->usuario, p->jwt, sizeof p->jwt);
+  else snprintf(p->usuario, sizeof p->usuario, "%s", sessao_usuario ? sessao_usuario() : ""); // account-free fixture
   nv_perfil_sessao_destravar();
   return 1;
 }
 static int pedidoContaAtual(const SyncProgRemocao *p) {
-  if (semModuloConta()) return 1; // isolated fixtures
+  if (!sessao_identidade_local_copiar) return 1; // isolated fixtures
   char usuario[80], jwt[3000];
   int atual = sessao_identidade_local_copiar(usuario, sizeof usuario, jwt, sizeof jwt) && !strcmp(usuario, p->usuario);
   memset(jwt, 0, sizeof jwt); return atual;
 }
 static char *contaRpc(const SyncProgRemocao *p, const char *funcao, const char *corpo, int *status) {
   char *r = NULL; *status = 0;
-  if (p->autenticada && p->jwt[0]) {
+  if (p->autenticada && p->jwt[0] && nuvem_rpc_com) {
     const char *jwt = p->jwt;
     char atualUsuario[80], novo[3000], confirmado[3000];
     // Refresh is worker-only and only useful while the original account is
     // still current. A profile switch alone keeps the immutable destination;
     // a different login never supplies authentication for this old gesture.
-    if (sessao_identidade_local_copiar(atualUsuario, sizeof atualUsuario, novo, sizeof novo) &&
+    if (sessao_identidade_local_copiar && sessao_token_copiar &&
+        sessao_identidade_local_copiar(atualUsuario, sizeof atualUsuario, novo, sizeof novo) &&
         !strcmp(atualUsuario, p->usuario) && sessao_token_copiar(novo, sizeof novo) &&
         sessao_identidade_local_copiar(atualUsuario, sizeof atualUsuario, confirmado, sizeof confirmado) &&
         !strcmp(atualUsuario, p->usuario) && !strcmp(novo, confirmado)) jwt = confirmado;
     r = nuvem_rpc_com(funcao, corpo, jwt, status);
-    if (*status == 401 &&
+    if (*status == 401 && sessao_token_recusado && sessao_identidade_local_copiar &&
         sessao_identidade_local_copiar(atualUsuario, sizeof atualUsuario, novo, sizeof novo) &&
         !strcmp(atualUsuario, p->usuario) && !strcmp(novo, jwt)) {
       sessao_token_recusado(jwt);
@@ -281,7 +277,7 @@ static char *contaRpc(const SyncProgRemocao *p, const char *funcao, const char *
   }
   // Existing isolated fixtures provide only sessao_rpc. A complete app always
   // has local identity copy and never resolves a destination account here.
-  else if (semModuloConta() && nv_perfil_sessao_atual(p->sessao) && p->perfil == perfis_ativo())
+  else if (!sessao_identidade_local_copiar && nv_perfil_sessao_atual(p->sessao) && p->perfil == perfis_ativo())
     r = sessao_rpc(funcao, corpo, status);
   return r;
 }

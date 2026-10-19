@@ -13,6 +13,7 @@ void servidores_perfil_trocou(void);   // servidores.c: cancel in-flight work, l
 void fontepref_definir_perfil(int perfil);
 // Mesma razao: a legenda escolhida a mao (legmemoria.h, 2.0.3) e por perfil.
 void legmem_definir_perfil(int perfil);
+void audiomem_definir_perfil(int perfil);
 // Mesma razao (arteescolha.h nao puxa SDL, mas fica no mesmo molde).
 void arteesc_definir_perfil(int perfil);
 // Mesma razao: ajustes.h puxa SDL. O ajuste "Usar os addons do perfil
@@ -26,7 +27,7 @@ int ajustes_addons_do_principal(void);
 #include <pthread.h>
 #include <stdatomic.h>
 
-static atomic_uint sessaoGeracao = ATOMIC_VAR_INIT(1);
+static _Atomic uint64_t sessaoGeracao = 1;
 static pthread_mutex_t sessaoTrava;
 static pthread_once_t sessaoUmaVez = PTHREAD_ONCE_INIT;
 static void (*sessaoAntes)(void);
@@ -40,9 +41,7 @@ static void sessaoTravaIniciar(void) {
 uint64_t perfis_sessao_geracao(void) {
   return atomic_load_explicit(&sessaoGeracao, memory_order_acquire);
 }
-int perfis_sessao_atual(uint64_t geracao) {
-  return geracao == perfis_sessao_geracao();
-}
+int perfis_sessao_atual(uint64_t geracao) { return geracao == perfis_sessao_geracao(); }
 int perfis_sessao_travar(uint64_t geracao) {
   pthread_once(&sessaoUmaVez, sessaoTravaIniciar);
   pthread_mutex_lock(&sessaoTrava);
@@ -53,8 +52,14 @@ int perfis_sessao_travar(uint64_t geracao) {
 void perfis_sessao_destravar(void) { pthread_mutex_unlock(&sessaoTrava); }
 void perfis_ao_abrir_sessao(void (*antes)(void)) { sessaoAntes = antes; }
 static void sessaoAvancar(void) {
-  unsigned g = atomic_fetch_add_explicit(&sessaoGeracao, 1, memory_order_acq_rel) + 1;
+  uint64_t g = atomic_fetch_add_explicit(&sessaoGeracao, 1, memory_order_acq_rel) + 1;
   if (!g) atomic_fetch_add_explicit(&sessaoGeracao, 1, memory_order_acq_rel);
+}
+void perfis_invalidar_sessao(void) {
+  pthread_once(&sessaoUmaVez, sessaoTravaIniciar);
+  pthread_mutex_lock(&sessaoTrava);
+  sessaoAvancar();
+  pthread_mutex_unlock(&sessaoTrava);
 }
 
 #define ARQ_ATIVO "perfil.txt"
@@ -82,7 +87,15 @@ static int gravado;        // 1 quando perfil.txt existia no arranque
 
 // Existing isolated fixtures omit sessao.c. A complete app always captures
 // both fields locally, without refreshing or doing HTTP on the UI thread.
-#include "sessaoopcional.h"
+#if defined(__APPLE__) && (defined(__GNUC__) || defined(__clang__))
+// This producer must keep its epoch definitions strong. Import only the two
+// optional session helpers; Mach-O needs weak_import for an absent provider.
+extern int sessao_identidade_local_copiar(char *, size_t, char *, size_t) __attribute__((weak_import));
+extern void sessao_token_recusado(const char *) __attribute__((weak_import));
+#elif defined(__GNUC__) || defined(__clang__)
+#pragma weak sessao_identidade_local_copiar
+#pragma weak sessao_token_recusado
+#endif
 typedef struct {
   uint64_t sessao;
   char usuario[80], jwt[3000];
@@ -98,7 +111,8 @@ static char *rpcPerfis(PedidoPerfis *p, const char *funcao, int *st) {
   if (!pedidoPerfisAtual(p) || (!p->legado && !p->jwt[0])) return NULL;
   r = p->legado ? sessao_rpc(funcao, "{}", &status)
                 : nuvem_rpc_com(funcao, "{}", p->jwt, &status);
-  if (!p->legado && status == 401 && pedidoPerfisAtual(p)) {
+  if (!p->legado && status == 401 && pedidoPerfisAtual(p) &&
+      sessao_identidade_local_copiar && sessao_token_recusado) {
     char usuario[80], jwt[3000];
     sessao_token_recusado(p->jwt);
     if (sessao_identidade_local_copiar(usuario, sizeof usuario, jwt, sizeof jwt) &&
@@ -400,13 +414,14 @@ int perfis_puxar_sessao(uint64_t sessao, const char *usuario, const char *jwt) {
 }
 int perfis_puxar(void) {
   PedidoPerfis pedido = { .sessao = perfis_sessao_geracao() };
-  int r = sessao_identidade_local_copiar(pedido.usuario, sizeof pedido.usuario,
-                                         pedido.jwt, sizeof pedido.jwt);
-  if (r < 0) {
+  if (sessao_identidade_local_copiar) {
+    if (!sessao_identidade_local_copiar(pedido.usuario, sizeof pedido.usuario,
+                                      pedido.jwt, sizeof pedido.jwt)) return 0;
+  } else {
     // Fixtures that omit sessao.c provide their original synchronous RPC fake.
     pedido.legado = 1;
     snprintf(pedido.usuario, sizeof pedido.usuario, "%s", sessao_usuario());
-  } else if (!r) return 0;
+  }
   int quantidade = puxarPerfis(&pedido);
   memset(pedido.jwt, 0, sizeof pedido.jwt);
   return quantidade;
@@ -461,19 +476,13 @@ void perfis_carregar_ativo(void) {
   // escolheu, ate a primeira troca.
   fontepref_definir_perfil(ativo);
   legmem_definir_perfil(ativo);
+  audiomem_definir_perfil(ativo);
   arteesc_definir_perfil(ativo);
   lerCache();
 }
 
 // plugins.h puxa streams.h (SDL); perfis.c compila sem SDL nos testes.
 void plugins_perfil_mudou(void);
-
-void perfis_invalidar_sessao(void) {
-  pthread_once(&sessaoUmaVez, sessaoTravaIniciar);
-  pthread_mutex_lock(&sessaoTrava);
-  sessaoAvancar();
-  pthread_mutex_unlock(&sessaoTrava);
-}
 
 void perfis_definir_ativo(int indice) {
   char linha[32];
@@ -482,11 +491,12 @@ void perfis_definir_ativo(int indice) {
   pthread_once(&sessaoUmaVez, sessaoTravaIniciar);
   pthread_mutex_lock(&sessaoTrava);
   sessaoAvancar();
-  ativo = indice;
+  atomic_store_explicit(&ativo, indice, memory_order_release);
   pthread_mutex_unlock(&sessaoTrava);
   fil_definir_perfil(indice);
   fontepref_definir_perfil(indice);
   legmem_definir_perfil(indice);
+  audiomem_definir_perfil(indice);
   arteesc_definir_perfil(indice);
   // O estado dos plugins e da conta+perfil: trocar avanca a geracao, corta os
   // scrapers em voo e relê o liga/desliga e os repositorios do perfil novo.

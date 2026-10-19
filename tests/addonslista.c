@@ -10,11 +10,13 @@
 //
 // So o leitor: nada aqui vai a rede.
 #include <stdio.h>
+#include "nvtmp.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include "addons.h"
 #include "fontecache.h"
+#include "stub_perfisessao.h"
 
 // Provider discovery is tested in ondever_lookup.c. This isolated addon
 // transport fixture must not start an unrelated TMDB request.
@@ -23,6 +25,7 @@ void ondever_pedir(const char *id, int series, long tmdb) {
 }
 
 int dados_gravar_leve(const char *nome, const char *conteudo) { (void)nome; (void)conteudo; return 1; }
+void sync_sujar_addons(const char *url) { (void)url; }
 
 // ---------------------------------------------------------------- duble
 //
@@ -41,6 +44,18 @@ static int nDebridNovaBusca;
 // guarda o tipo de cada pedido, na ordem, para conferir quem foi primeiro.
 static const char *respCanalTv, *respCanalChannel;
 static char pedidosCanal[200];
+// live.test: o addon de IPTV caseiro do relato — manifesto MISTO (movie +
+// series + catalogo "live") e /stream/ so responde por "live".
+static const char *respCanalLive;
+static char pedidosLive[64];
+// #588: custom catalog/item types must reach the stream endpoint unchanged.
+static char pedidosSport[256];
+static const char *tipoSport = "sport";
+static int sportVazio;
+static unsigned sportDelayMs;
+static int sportTimeouts[16], sportRequests;
+static _Thread_local Uint32 sportTicks;
+
 // lento.test (#182): as primeiras `falhasLento` requisicoes NAO respondem (o
 // timeout do AIOStreams frio); as seguintes respondem com uma fonte.
 static int pedidosDesligado, pedidosLigado;
@@ -75,6 +90,29 @@ char *rede_baixar(const char *url, int s) {
     if (++chamadasLento <= falhasLento) return NULL;
     return strdup("{\"streams\":[{\"url\":\"https://x/l.mp4\"}]}");
   }
+  if (strstr(url, "sport.test")) {
+    const char *p = strstr(url, "/stream/");
+    if (!p) return NULL;
+    p += strlen("/stream/");
+    const char *fim = strchr(p, '/');
+    if (!fim) return NULL;
+    if (sportDelayMs) {
+      if (sportRequests < 16) sportTimeouts[sportRequests] = s;
+      sportRequests++;
+      sportTicks += sportDelayMs < (unsigned)s * 1000u ? sportDelayMs : (unsigned)s * 1000u;
+    }
+    snprintf(pedidosSport + strlen(pedidosSport), sizeof pedidosSport - strlen(pedidosSport),
+             "%.*s,", (int)(fim - p), p);
+    if ((size_t)(fim - p) == strlen(tipoSport) && !strncmp(p, tipoSport, strlen(tipoSport)))
+      return strdup("{\"streams\":[{\"url\":\"https://x/sport.m3u8\"}]}");
+    return sportVazio ? strdup("{\"streams\":[]}") : NULL;
+  }
+  if (strstr(url, "live.test")) {
+    int live = strstr(url, "/stream/live/") != NULL;
+    strncat(pedidosLive, live ? "live," : strstr(url, "/stream/tv/") ? "tv," : "channel,",
+            sizeof pedidosLive - strlen(pedidosLive) - 1);
+    return live && respCanalLive ? strdup(respCanalLive) : NULL;
+  }
   if (strstr(url, "canal.test")) {
     prazoCanal = s;
     int tv = strstr(url, "/stream/tv/") != NULL;
@@ -101,7 +139,13 @@ int servidores_fontes_pedir(const char *alvo) { (void)alvo; return 0; }
 int servidores_fontes_colher(const char *alvo, Stream **l, int *n) {
   (void)alvo; if (l) *l = NULL; if (n) *n = 0; return JF_FONTES_FALHOU; }
 uint64_t badges_detectar(const char *m) { (void)m; return 0; }
+static int liveRequest, filterVodRequest;
+void stream_folha_canal(int sim) { liveRequest = sim; }
+void stream_filtro_tipo(const char *tipo) {
+  filterVodRequest = tipo && (!strcasecmp(tipo, "movie") || !strcasecmp(tipo, "series"));
+}
 void stream_definir_lista(const Stream *l, int n) { (void)l; (void)n; }
+void stream_preparar_dica_p2p(const Stream *l, int n) { (void)l; (void)n; }
 void stream_definir_lista_idade(const Stream *l, int n, Uint32 idade) {
   (void)idade; stream_definir_lista(l, n); }
 void stream_lista_acrescentar(const Stream *l, int n, int o) { (void)l; (void)n; (void)o; }
@@ -110,7 +154,7 @@ int stream_n(void) { return 0; }
 int stream_lista_do_alvo(const char *id) { (void)id; return 0; }
 // addons.c recarimba o id normalizado ("tt:1:1") do pedido.
 void stream_definir_alvo(const char *id) { (void)id; }
-Uint32 SDL_GetTicks(void) { return 1000; }
+Uint32 SDL_GetTicks(void) { return 1000 + sportTicks; }
 const char *sessao_usuario(void) { return ""; }
 int perfis_ativo(void) { return 1; }
 // A integracao da poda com addons.c e exercitada em watchstate_poda.sh.
@@ -125,8 +169,8 @@ const char *rede_url_publica(const char *url, char *dst, unsigned tam) {
 void marco(const char *s) { (void)s; }
 int  fontecache_pegar(const char *id, const char *tipo, Stream **l, int *n) {
   (void)id; (void)tipo; *l = NULL; *n = 0; return FC_NADA; }
-void fontecache_guardar(const char *id, const char *tipo, const Stream *l, int n) {
-  (void)id; (void)tipo; (void)l; (void)n; }
+void fontecache_guardar_sessao(const char *id, const char *tipo, const Stream *l, int n, uint64_t sessao) {
+  (void)id; (void)tipo; (void)l; (void)n; (void)sessao; }
 void fontecache_ceder(void) {}
 void fontecache_avancar(void) {}
 unsigned fontecache_vod_geracao(void) { return 0; }
@@ -173,7 +217,24 @@ static void conferirTexto(const char *o_que, const char *obtido, const char *esp
 static int sempreCancelado(void *u) { (void)u; return 1; }
 
 int main(void) {
-  char dir[] = "/tmp/nuvio-addonslista-XXXXXX";
+  const char *liveTypes[] = {"tv", "channel", "channels", "live", "iptv", "LiVe", "sport", "sports"};
+  for (unsigned i = 0; i < sizeof liveTypes / sizeof *liveTypes; i++) {
+    addons_buscar("fixture:live", liveTypes[i]);
+    conferir("live context before player/sheet opens", liveRequest, 1);
+    conferir("live request outside VOD filters", filterVodRequest, 0);
+    addons_buscar("tt123", "movie");
+    conferir("VOD request restores filtering", liveRequest, 0);
+    conferir("movie request uses VOD filters", filterVodRequest, 1);
+  }
+  const char *customTypes[] = {"custom-live-resource", "events", "hockey", "24-hour-channel"};
+  for (unsigned i = 0; i < sizeof customTypes / sizeof *customTypes; i++) {
+    addons_buscar("fixture:custom", customTypes[i]);
+    conferir("arbitrary live resource outside VOD filters", filterVodRequest, 0);
+  }
+  addons_buscar("tt123:1:1", "series");
+  conferir("episode request restores VOD filters", filterVodRequest, 1);
+  nDebridNovaBusca = 0;
+  char dir[NVT_MAX]; nvt_set(dir, sizeof dir, "/nuvio-addonslista-XXXXXX");
   char caminho[600];
   FILE *f;
   int n;
@@ -203,9 +264,10 @@ int main(void) {
   conferir("legenda[0]", addons_fornece(0, ADD_LEGENDA), 1);
   conferir("fonte[1]",   addons_fornece(1, ADD_STREAM),   1);
   conferir("catalogo[1] (ativo e catalogo)", addons_tem_catalogo(1), 1);
-  // Formato antigo: fonte e catalogo valem 1, legenda 0.
+  // Formato antigo: sem colunas vale tudo 1, como na lista da conta (#552) —
+  // addon de legenda so com a URL no arquivo nao pode esperar a sonda.
   conferir("fonte[2]",   addons_fornece(2, ADD_STREAM),   1);
-  conferir("legenda[2]", addons_fornece(2, ADD_LEGENDA), 0);
+  conferir("legenda[2]", addons_fornece(2, ADD_LEGENDA), 1);
 
   // A base sai sem "/manifest.json" — a mesma regra de baseNormalizada.
   conferirTexto("base[1]", addons_base(1), "https://exemplo.test");
@@ -251,8 +313,7 @@ int main(void) {
   while (addons_estado() == ADD_BUSCANDO) usleep(1000);
   conferir("tv vazio -> channel traz a fonte", addons_estado(), ADD_PRONTO);
   conferirTexto("ordem sem manifesto", pedidosCanal, "tv,channel,");
-  // 8) Com o manifesto do FrostView (catalogo "channel"), "channel" vai
-  //    primeiro e sozinho: uma viagem por canal, nao duas.
+  // 8) The requested type stays first; the manifest type follows it.
   addons_manifesto_lido(3,
     "{\"id\":\"com.frostview\",\"name\":\"Canal TV\","
     "\"resources\":[\"catalog\",\"meta\",\"stream\"],\"types\":[\"channel\"],"
@@ -263,7 +324,7 @@ int main(void) {
   addons_definir_origem(NULL);
   while (addons_estado() == ADD_BUSCANDO) usleep(1000);
   conferir("channel declarado traz a fonte", addons_estado(), ADD_PRONTO);
-  conferirTexto("ordem com manifesto", pedidosCanal, "channel,");
+  conferirTexto("ordem com manifesto", pedidosCanal, "tv,channel,");
   // 9) Os dois nomes vazios: a causa fala de CANAL, e nao de titulo.
   respCanalChannel = "{\"streams\":[]}";
   addons_definir_origem("https://canal.test");
@@ -283,6 +344,98 @@ int main(void) {
     while (addons_estado() == ADD_BUSCANDO) usleep(1000);
     if (!addons_motivo_vazio(m, sizeof m)) snprintf(m, sizeof m, "(sem causa)");
     conferirTexto("channel mudo, tv vazio", m, "Canal TV não tem fonte para este canal agora"); }
+
+  // ---- manifesto MISTO (o do relato: movie+series+canal num addon so, estilo
+  // M3U Mux/custom IPTV). O catalogo declara "live" e o /stream/ so responde
+  // por esse nome — "tv"/"channel" voltam 404. Antes o app pedia so tv e
+  // channel e o canal nunca abria.
+  conferir("addon misto entrou", addons_adicionar("IPTV Caseiro", "https://live.test/manifest.json"), 1);
+  addons_manifesto_lido(addons_n() - 1,
+    "{\"id\":\"org.livecaseiro\",\"name\":\"IPTV Caseiro\","
+    "\"resources\":[\"stream\",\"meta\",\"catalog\"],\"types\":[\"movie\",\"series\",\"live\"],"
+    "\"catalogs\":[{\"id\":\"m3u-movies\",\"type\":\"movie\",\"name\":\"Filmes\"},"
+    "{\"id\":\"m3u-series\",\"type\":\"series\",\"name\":\"Series\"},"
+    "{\"id\":\"m3u-live\",\"type\":\"live\",\"name\":\"Canais\"}]}");
+  respCanalLive = "{\"streams\":[{\"url\":\"https://x/c1.m3u8\"}]}";
+  pedidosLive[0] = 0;
+  // O pedido chega pelo tipo declarado (guia_canal_tipo, app.c tocarCanal):
+  // "live" primeiro e sozinho.
+  addons_definir_origem("https://live.test");
+  addons_buscar("m3u-live-1", "live");
+  addons_definir_origem(NULL);
+  while (addons_estado() == ADD_BUSCANDO) usleep(1000);
+  conferir("canal live declarado traz a fonte", addons_estado(), ADD_PRONTO);
+  conferirTexto("ordem com tipo live", pedidosLive, "live,");
+  // E pedido por nome generico ("tv", como uma renovacao) ainda acha: o
+  // declarado vira a segunda tentativa.
+  pedidosLive[0] = 0;
+  addons_definir_origem("https://live.test");
+  addons_buscar("m3u-live-1", "tv");
+  addons_definir_origem(NULL);
+  while (addons_estado() == ADD_BUSCANDO) usleep(1000);
+  conferir("tv sem fonte -> declarado live traz", addons_estado(), ADD_PRONTO);
+  conferirTexto("ordem tv->live", pedidosLive, "tv,live,");
+
+  // #588: fake manifest and transport; no network, real stream lookup worker.
+  conferir("sport addon added", addons_adicionar("Live Sport", "https://sport.test/manifest.json"), 1);
+  addons_manifesto_lido(addons_n() - 1,
+    "{\"id\":\"org.sport\",\"resources\":[\"stream\",\"catalog\"],"
+    "\"catalogs\":[{\"id\":\"events\",\"type\":\"sport\"}]}");
+  {
+    const char *requested[] = { "tv", "sport", "event", "event", "movie" };
+    const char *served[] = { "sport", "sport", "event", "iptv", "sport" };
+    const char *expected[] = { "tv,sport,", "sport,", "event,",
+                              "event,sport,channel,tv,channels,live,iptv,", "movie,movie," };
+    for (int k = 0; k < 5; k++) {
+      Stream *sources = NULL;
+      tipoSport = served[k]; sportVazio = k == 3; pedidosSport[0] = 0;
+      int count = addons_consultar("sport:event-1", requested[k], "https://sport.test", 1,
+                                  NULL, NULL, &sources);
+      conferir("sport source received", count, k == 4 ? 0 : 1);
+      conferir("sport source allocated", sources != NULL, k != 4);
+      conferirTexto("exact item, catalog, then legacy types", pedidosSport, expected[k]);
+      free(sources);
+    }
+  }
+
+  // Slow live fallbacks share one deadline per addon and retry round.
+  // Virtual transport time keeps timeout regression coverage deterministic.
+  {
+    Stream *sources = NULL;
+    tipoSport = "unavailable";
+    sportVazio = 1; sportDelayMs = 4500; sportRequests = 0; pedidosSport[0] = 0;
+    conferir("slow custom fallback has no sources",
+      addons_consultar("sport:deadline", "event", "https://sport.test", 1, NULL, NULL, &sources), 0);
+    conferirTexto("deadline preserves item/catalog order", pedidosSport, "event,sport,channel,");
+    conferir("fallbacks stop at shared deadline", sportRequests, 3);
+    conferir("initial live timeout", sportTimeouts[0], 12);
+    conferir("catalog gets remaining whole seconds", sportTimeouts[1], 7);
+    conferir("legacy gets remaining whole seconds", sportTimeouts[2], 3);
+    free(sources);
+
+    sportDelayMs = 12000; sportRequests = 0; pedidosSport[0] = 0;
+    conferir("timed-out tv lookup has no sources",
+      addons_consultar("sport:deadline-tv", "tv", "https://sport.test", 1, NULL, NULL, &sources), 0);
+    conferirTexto("no fallback after deadline", pedidosSport, "tv,");
+    conferir("tv timeout is not multiplied", sportRequests, 1);
+    free(sources);
+
+    sportDelayMs = 11500; sportRequests = 0; pedidosSport[0] = 0;
+    conferir("subsecond budget has no sources",
+      addons_consultar("sport:deadline-fraction", "event", "https://sport.test", 1, NULL, NULL, &sources), 0);
+    conferir("subsecond remainder cannot start a one-second request", sportRequests, 1);
+    free(sources);
+
+    sportVazio = 0; sportDelayMs = 30000; sportRequests = 0; pedidosSport[0] = 0;
+    conferir("unresponsive custom lookup has no sources",
+      addons_consultar("sport:deadline-retry", "event", "https://sport.test", 1, NULL, NULL, &sources), 0);
+    conferirTexto("each retry round starts with item type", pedidosSport, "event,event,");
+    conferir("one timeout per retry round", sportRequests, 2);
+    conferir("first round keeps 12-second budget", sportTimeouts[0], 12);
+    conferir("second round keeps independent 20-second budget", sportTimeouts[1], 20);
+    free(sources);
+    sportDelayMs = 0;
+  }
 
   // ---- #182: addon lento aparece sozinho, sem recarregar a mao
   conferir("addon lento entrou", addons_adicionar("Lento", "https://lento.test/manifest.json"), 1);
@@ -334,6 +487,10 @@ int main(void) {
   // /stream/ a ele nem chama-lo de "sem resposta".
   conferir("so legenda entrou", addons_adicionar("OpenSubtitles v3", "https://legenda.test/manifest.json"), 1);
   idxLegenda = addons_n() - 1;
+  // Instalado pelo guia supoe legenda como a lista da conta (#552): sem isto o
+  // addon so de legenda ficava fora da busca ate a sonda, e para sempre se
+  // ela falhasse.
+  conferir("instalado pelo guia supoe legenda", addons_fornece(idxLegenda, ADD_LEGENDA), 1);
   pedidosLegendaStream = 0;
   addons_definir_origem("https://legenda.test");
   addons_buscar("tt0000013", "movie");
@@ -365,12 +522,14 @@ int main(void) {
     b = a + 1; c = a + 2;
     addons_manifesto_lido(a, "{\"id\":\"m.a\",\"name\":\"Meta A\",\"resources\":"
                              "[\"catalog\",{\"name\":\"meta\",\"types\":[\"series\"]}]}");
-    addons_manifesto_lido(b, "{\"id\":\"m.b\",\"name\":\"Meta B\",\"resources\":[\"meta\",\"subtitles\"]}");
+    addons_manifesto_lido(b, "{\"id\":\"m.b\",\"name\":\"Meta B\",\"resources\":[\"meta\","
+                             "{\"name\":\"subtitles\",\"types\":[\"movie\",\"series\"]}]}");
     addons_manifesto_lido(c, "{\"id\":\"m.c\",\"name\":\"Meta C\",\"resources\":[\"stream\"]}");
     conferir("meta (objeto)", addons_fornece(a, ADD_META), 1);
     conferir("meta (string)", addons_fornece(b, ADD_META), 1);
+    conferir("legenda (objeto)", addons_fornece(b, ADD_LEGENDA), 1);
     conferir("meta (nao declara)", addons_fornece(c, ADD_META), 0);
-    conferir("legenda segue lida do manifesto", addons_fornece(b, ADD_LEGENDA), 1); }
+    conferir("legenda segue lida do manifesto", addons_fornece(c, ADD_LEGENDA), 0); }
 
   // idPrefixes/types DO RESOURCE "meta" (addons_aceita_id). A raiz do manifesto
   // e o resource declaram; o do resource vence; o "idPrefixes" de OUTRO resource
@@ -465,3 +624,6 @@ int main(void) {
   printf("addonslista: ok\n");
   return 0;
 }
+
+// This fixture simulates account sync; the new owner marks add-on toggles dirty.
+void sync_sujar_addons(const char *url) { (void)url; }

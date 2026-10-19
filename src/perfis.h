@@ -11,7 +11,6 @@
 // addons filtra por ESSE id, nao pelo `sub` do token.
 #ifndef NV_PERFIS_H
 #define NV_PERFIS_H
-
 #include <stdint.h>
 
 #define CONTA_PERFIL_MAX 8

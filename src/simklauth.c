@@ -55,14 +55,16 @@ static pthread_mutex_t trava = PTHREAD_MUTEX_INITIALIZER;
 
 // O perfil pode mudar enquanto o PIN responde; a conta Nuvio nao pode herdar
 // a autorizacao de quem saiu. Captura local, sem renovacao/rede na UI.
-#include "sessaoopcional.h"
+extern int sessao_identidade_local_copiar(char *, size_t, char *, size_t) NV_PERFIL_OPCIONAL;
+extern const char *sessao_usuario(void) NV_PERFIL_OPCIONAL;
 static char usuarioFio[80], usuarioEstado[80];
 static void usuarioCopiar(char dst[80]) {
   char jwt[3000];
   dst[0] = 0;
-  int r = sessao_identidade_local_copiar(dst, 80, jwt, sizeof jwt);
-  memset(jwt, 0, sizeof jwt);
-  if (r < 0) snprintf(dst, 80, "%s", sessao_usuario()); // account-free fixture
+  if (sessao_identidade_local_copiar) {
+    sessao_identidade_local_copiar(dst, 80, jwt, sizeof jwt);
+    memset(jwt, 0, sizeof jwt);
+  } else if (sessao_usuario) snprintf(dst, 80, "%s", sessao_usuario());
 }
 static int mesmaConta(const char *usuario) {
   char atual[80];
@@ -125,7 +127,7 @@ int simklauth_carregar(void) {
   { char *fim = b + strlen(b);
     while (fim > b && (fim[-1] == '\n' || fim[-1] == '\r')) *--fim = 0; }
   pthread_mutex_lock(&trava);
-  if (b[0]) {
+  if (b[0] && strcmp(b, "!")) {
     if (strcmp(token, b)) credGeracao++;
     snprintf(token, sizeof token, "%s", b); estado = SMK_LIGADO;
   }
@@ -174,6 +176,14 @@ int simklauth_trocar_perfil(int p) {
          token[0] ? "vinculo deste perfil carregado" : "sem vinculo neste perfil");
   fflush(stdout);
   return antes || token[0];
+}
+
+void simklauth_desconectar(void) {
+  pthread_mutex_lock(&trava);
+  geracao++;
+  zerarEstado();
+  dados_gravar(arq(perfil).s, "!");
+  pthread_mutex_unlock(&trava);
 }
 
 void simklauth_esquecer(void) {
@@ -316,6 +326,12 @@ static void *fioPoll(void *u) {
     free(r);
     fioPronto = 1;
     return NULL;
+  }
+  char *salvo = dados_ler(arq(perfilFio).s);
+  int saiu = salvo && !strcmp(salvo, "!");
+  free(salvo);
+  if (saiu && gerFio != geracao) {
+    pthread_mutex_unlock(&trava); free(r); fioPronto = 1; return NULL;
   }
   if (gerFio != geracao) {
     // Autorizado depois da troca de perfil: e do perfil que pediu o PIN.
