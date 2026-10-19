@@ -336,6 +336,19 @@ int main(int argc, char **argv) {
   assert(!video_live_progresso(&raw,&edge) && sampleBytes==-1);
   assert(video_tocar("https://example.invalid/next-progress.m3u8"));
   assert(!video_live_progresso(&raw,&edge) && samplePeakBytes==-1);
+  // The reported Android buffer must not activate the webOS dry-source rule.
+  progressSession = video_android_sessao();
+  NvLiveStall draining; nv_ls_zerar(&draining);
+  for (unsigned elapsed=0;elapsed<=29000;elapsed+=250) {
+    jlong position=28591+(jlong)elapsed;
+    Java_space_nuvio_nativelegacy_NvPlayer_nativePos(NULL,NULL,position,58591,
+      JNI_TRUE,1024,(jint)progressSession);
+    assert(video_live_progresso(&raw,&edge) && edge==58.591);
+    assert(video_buffer_fim()==edge);
+    assert(nv_ls_passo_buf_prazo(&draining,1000+elapsed,raw,1,0,0,0,edge,36000)==NV_LS_NADA);
+  }
+  assert(!draining.pendente && draining.tentativa==0);
+  assert(nv_ls_passo_buf_prazo(&draining,38000,raw,1,0,0,0,edge,36000)==NV_LS_AGENDOU);
   puts("ok signed live progress, same-window buffer, actual allocator bytes, freeze and stale-session guards");
   puts("video Android retomada: PASS (JNI, geracoes, fallback e limites)");
 }

@@ -101,5 +101,24 @@ int main(void) {
   nv_ls_zerar(&s);nv_ls_passo(&s,1000,30,1,0,0,0);
   assert(nv_ls_passo_buf_prazo(&s,60999,30,1,0,0,59999,0,0xffffffffu)==NV_LS_NADA);
   assert(nv_ls_passo_buf_prazo(&s,61000,30,1,0,0,60000,0,0xffffffffu)==NV_LS_AGENDOU);
+#ifdef NV_ANDROID
+  // Logs75: READY playback advanced to within two seconds of a stale buffer
+  // edge. Low reserve alone must not tear down Media3's still-playing session.
+  nv_ls_zerar(&s);
+  for (unsigned t=0;t<=29000;t+=250)
+    assert(nv_ls_passo_buf_prazo(&s,1000+t,28.591+t/1000.0,1,0,0,0,58.591,36000)==NV_LS_NADA);
+  assert(!s.pendente && s.tentativa==0);
+  // A delayed segment can arrive without a reconnect or consumed retry.
+  assert(nv_ls_passo_buf_prazo(&s,30250,57.841,1,0,0,0,70.591,36000)==NV_LS_NADA);
+  // If video really freezes, eight seconds without motion still schedules it.
+  assert(nv_ls_passo_buf_prazo(&s,38250,57.841,1,0,0,0,70.591,36000)==NV_LS_AGENDOU);
+  // An empty buffer gets the bounded HLS wait instead of the dry-source rule.
+  nv_ls_zerar(&s);
+  for (unsigned t=0;t<=30000;t+=250)
+    assert(nv_ls_passo_buf_prazo(&s,1000+t,28.591+t/1000.0,1,0,0,0,58.591,36000)==NV_LS_NADA);
+  for (unsigned t=250;t<36000;t+=250)
+    assert(nv_ls_passo_buf_prazo(&s,31000+t,58.591,1,0,0,t,58.591,36000)==NV_LS_NADA);
+  assert(nv_ls_passo_buf_prazo(&s,67000,58.591,1,0,0,36000,58.591,36000)==NV_LS_AGENDOU);
+#endif
   puts("PASS: sliding live windows keep playing; actual stalls, buffering, EOF, pause and retry limits remain protected");
 }
