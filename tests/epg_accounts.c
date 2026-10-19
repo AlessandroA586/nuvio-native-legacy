@@ -52,5 +52,26 @@ int main(int argc,char **argv) {
   assert(epg_match_canal("xtream:@00000001:7","news","News HD")==-1);
   programa("nvm3u:@00000002:7","Account two");epg_abrir_sessao(1);
   puts("PASS: replacing sources during a slow load cancels the stale publication and reloads the current list");
+  EpgExtra shared[]={{.chave="x12345678",.url="https://epg.invalid/shared"},
+                     {.chave="xta00000001",.url="https://epg.invalid/one"}};
+  epg_so_provedores(1);epg_extras_definir(shared,1);epg_iniciar();esperar();
+  int sharedNews=epg_match_id("news"),sharedPrivate=epg_match_id("private");
+  assert(sharedNews>=0 && sharedPrivate>=0);
+  const char *sources[]={"xt","xta00000003","st","sta00000003","ma00000003","m12345678","a12345678"};
+  for(size_t i=0;i<sizeof sources/sizeof sources[0];i++) {
+    int method;
+    assert(epg_casar(sources[i],"news",NULL,NULL,&method)==sharedNews && method==EPG_M_ID);
+    assert(epg_casar(sources[i],NULL,"News HD",NULL,&method)==sharedNews && method==EPG_M_NOME);
+    assert(epg_casar(sources[i],NULL,NULL,"Private N",&method)==sharedPrivate && method==EPG_M_ALIAS);
+    assert(epg_casar(sources[i],NULL,NULL,"Private News Local",&method)==sharedPrivate && method==EPG_M_ALIAS);
+  }
+  programa("xtream:@00000003:7","Account two");
+  programa("stalker:@00000003:7","Account two");
+  programa("nvm3u:@00000003:7","Account two");
+  epg_extras_definir(shared,2);epg_iniciar();esperar();
+  programa("xtream:@00000001:7","Account one");
+  programa("xtream:@00000003:7","Account two");
+  epg_abrir_sessao(1);
+  puts("PASS: standalone XMLTV matches IDs, names and rules across sources; own account schedules retain priority");
   return 0;
 }

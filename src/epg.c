@@ -1315,13 +1315,20 @@ static int idxFaixa(const char *k, int *lo) {
   while (a + n < P.nIdx && !strcmp(P.k + P.idx[a + n].chave, k)) n++;
   return n;
 }
+// Standalone XMLTV keys are shared; provider/account schedules stay scoped.
+static int fonteCompativel(int candidata, int fonte) {
+  if (fonte == -1 || candidata == fonte || candidata == 0) return 1;
+  const char *chave = candidata > 0 && candidata < nChaveFonteP ? chaveFonteP[candidata] : "";
+  return chave[0] == 'x' && strspn(chave + 1, "0123456789abcdef") == 8 && chave[9] == 0;
+}
+
 // O melhor canal com a chave exata: com programa antes de sem, e da fonte
 // pedida antes das outras. -1 = nenhum. Com a trava tomada.
 static int idxMelhor(const char *k, int fonte) {
   int lo, n = k && k[0] ? idxFaixa(k, &lo) : 0, i, melhor = -1, pm = -1;
   for (i = 0; i < n; i++) {
     int c = P.idx[lo + i].canal;
-    if (fonte != -1 && P.canais[c].fonte != fonte && P.canais[c].fonte != 0) continue;
+    if (!fonteCompativel(P.canais[c].fonte, fonte)) continue;
     int pts = (P.canais[c].evN > 0 ? 2 : 0) + (fonte >= 0 && P.canais[c].fonte == fonte ? 1 : 0);
     if (pts > pm) { pm = pts; melhor = c; }
   }
@@ -1362,7 +1369,7 @@ static int porId(const char *id, int fonte) {
   if (!id || !id[0] || !P.nCanais) return -1;
   if (fonte >= 0 && (r = wCanalPorId(&P, fonte, id)) >= 0 && P.canais[r].evN > 0) return r;
   for (f = 0; f < nChaveFonteP || f == 0; f++) {
-    if (f == fonte || (fonte != -1 && f != 0)) continue;
+    if (f == fonte || !fonteCompativel(f, fonte)) continue;
     r = wCanalPorId(&P, f, id);
     if (r >= 0 && P.canais[r].evN > 0) return r;
   }
@@ -1427,7 +1434,7 @@ static int regras(const char *k1, const char *k2, const char *prim, int fonte) {
       const char *kv = P.k + P.idx[lo].chave;
       if (strncmp(kv, k1, (size_t)t)) break;
       int c = P.idx[lo].canal;
-      if (fonte != -1 && P.canais[c].fonte != fonte && P.canais[c].fonte != 0) continue;
+      if (!fonteCompativel(P.canais[c].fonte, fonte)) continue;
       if ((long)strlen(kv) <= t || cortaNumero(kv, t)) continue;
       if (P.idx[lo].canal != cand) { cand = P.idx[lo].canal; nCand++; kc = kv; }
     }
