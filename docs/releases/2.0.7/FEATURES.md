@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T05:48:27-03:00, HEAD `2e38d5397`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T06:48:58-03:00, HEAD `29260acfe`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -217,6 +217,16 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Back closes controls before leaving playback**: Back dismisses the visible player layer first, and holding the button cannot also exit playback before release. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner/community request, `agente/205-voltarplayer`, merge `29260acfe`, `bbe5211df`, `ce09230d7`, `a30e48d52`, `c4fb903c5`; physical TV validation remains pending.
+
+- **Collection tabs request the right catalog**: New movies and series folders encode catalog path segments correctly while preserving add-on options and retryable failures; the reported Kaptain instance still needs device logs. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner/community request, `agente/205-colecaonovos`, merge `3390780c7`, `fb0e4b8d9`.
+
+- **Live TV filters follow published channels**: Open filter panels refresh after catalog publication, retain focus and selected sections, and keep late categories and channels reachable through bounded storage and refetching. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-livefiltro`, merges `a1798ad71`, `4a88a523f`, `d768ee117`, `5d8a1a5ab`, `4434611f1`, `e35ee7ac6`, `e28fd824a`, `ebfbee119`.
+
+- **Live streams recover from stalled playlists**: Android revalidates stalled HLS manifests without restarting playback, while bounded buffering and playlist recovery give live sources time to recover. Platforms: Android. Refs PR #597, merge `f22d70933`, `3c8664c62`, `cf1c9ce9a`, `45ef58c6f`, `fec30da82`, `65eb75e81`.
+
+- **Live and custom sources keep useful results**: Live TV bypasses unsuitable source filters and per-add-on overrides let custom catalogs retain the sources they need. Platforms: webOS, Android, Samsung .tpk, WASM. Refs PR #587, merge `8f1328be0`, `957a5040e`.
 
 - **Retry protected Dolby Vision playback**: After an app update or a Settings retry, playback can retry while retaining the two-crash guard and a translated once-per-session explanation. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-dvtrava`, merge `4ca4e72ef`, `75798761c`.
 
@@ -473,6 +483,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Community
 
+- **Live playback and source controls from @ghbarker**: Live sources gain filter overrides and Android HLS stall recovery. Platforms: webOS, Android, Samsung .tpk, WASM; HLS recovery on Android. Refs PR #587, PR #597, `957a5040e`, `3c8664c62`, merges `8f1328be0`, `f22d70933`.
+
 - **Source-file and playback improvements from @Namer03**: Selected PR #567 improvements bring file browsing, release continuity and more resilient playback into the integrated release. Platforms: Samsung .tpk; shared source logic on webOS, Android and WASM. Refs PR #567, `385b44106`, merge `d8781e9a8`.
 
 - **Automatic TV and Mobile mode on Android** — @community, PR #431 (`c305e6f7e`, `875d7f18f`).
@@ -580,15 +592,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-- **Collection folder diagnostics**: New collection tabs gain diagnostic evidence for failures reported with Kaptain; the underlying cause still needs confirmation. Platforms: Android / Google TV. Refs owner/community request, `agente/205-colecaonovos`, Discord report; review running; not integrated.
-
-- **Safer Back handling in the player**: Back is intended to close one visible player layer before leaving playback; implementation is awaiting review. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner/community request, `agente/205-voltarplayer`, `bbe5211df`; not integrated.
-
-- **Guide category suggestions stay current**: Pending guide changes refresh suggestions after regrouping, honor selected sections and bound optional category-request latency. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-livefiltro`, `7e93a0ff3`, `1129643aa`; running review, not integrated.
-
 - **Sharper rendering at reduced UI resolution**: Upscaling experiments aim to improve text and artwork clarity while retaining reduced-resolution rendering savings; device performance and visual validation remain pending. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-ui720` (running; not integrated).
 
-Tracking snapshot: 18 unmerged branches without running jobs; 12 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-livefiltro`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/205-ui720`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
+Tracking snapshot: 18 unmerged branches without running jobs; 12 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-ajustesnuvem`, `agente/205-epinfo`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/205-ui720`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
