@@ -1305,7 +1305,9 @@ object NvPlayer {
                     DefaultDataSource.Factory(act, r.origem),
                     DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
                         .setConnectTimeoutMs(2000).setReadTimeoutMs(2000)
-                        .setUserAgent(ua).setDefaultRequestProperties(props),
+                        .setUserAgent(ua).setDefaultRequestProperties(props.filterKeys {
+                            !it.equals("If-None-Match", true) && !it.equals("If-Modified-Since", true)
+                        }),
                     report = { Log.i(TAG, it) },
                 ))
             if (construir) construirPlayer(act, r)
