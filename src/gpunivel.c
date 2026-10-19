@@ -461,9 +461,10 @@ static const char* upscaleAlgoNome(void) {
     return (telaW % intW || telaH % intH) ? "sgsr" : "sharp-bilinear";
   }
   if (algo == 1) return "sgsr";
-  if (algo == 2) return "fsr1";
-  if (algo == 3) return "lanczos";
-  if (algo == 4) return "bilinear";
+  if (algo == 2) return "sgsr-nitido";
+  if (algo == 3) return "fsr1";
+  if (algo == 4) return "lanczos";
+  if (algo == 5) return "bilinear";
   return "bilinear";
 }
 

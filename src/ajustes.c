@@ -959,7 +959,7 @@ static const char *V_FONTE_UI[]  = { "Inter", "LG Display", "Droid Sans",
 // Order = RES_* (resolucao.h). The old order lives only in res_migrar.
 static const char *V_RESOLUCAO[] = { "Automática", "1080p", "4K (experimental)", "720p (leve)" };
 static const char *V_AMPLIAR_UI[] = { "Pela TV", "Pelo app (4K)" };
-static const char *V_AMPLIACAO_ALGO[] = { "Automático", "SGSR", "FSR 1 (EASU+RCAS)", "Lanczos", "Bilinear" };
+static const char *V_AMPLIACAO_ALGO[] = { "Automático", "SGSR", "SGSR nítido", "FSR 1 (EASU+RCAS)", "Lanczos", "Bilinear" };
 
 static const char *V_LEG_COR[] = { "Branco", "Amarelo", "Verde", "Azul", "Vermelho", "Preto" };
 static const char *V_LEG_COR_BORDA[] = { "Preto", "Branco", "Amarelo", "Verde", "Azul", "Vermelho" };
@@ -1750,7 +1750,7 @@ static const Opcao OPCOES[AJ_N] = {
   NUM("Ajuste do áudio (ms)", -AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_STEP_MS, " ms"),
   ESC("Conta com limite de conexões", V_CONEXOES, 3),
   ESC("Ampliar interface", V_AMPLIAR_UI, 2),
-  ESC("Algoritmo de ampliação", V_AMPLIACAO_ALGO, 5),
+  ESC("Algoritmo de ampliação", V_AMPLIACAO_ALGO, 6),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por

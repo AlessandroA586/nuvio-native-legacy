@@ -1670,6 +1670,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  gl_FragColor = nv_dither(c, a);\n"
   "}\n",
   NV_SHARP_BILINEAR_SHADER,
+  NV_SGSR_SHARP_SHADER,
 };
 
 // Cada corpo declara o que usa; montar so o necessario mantem o shader enxuto.

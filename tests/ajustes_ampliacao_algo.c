@@ -35,7 +35,7 @@ int main(void) {
   // Test 3: Setting exists in OPCOES array
   printf("Test 3: Setting in OPCOES array...");
   assert(OPCOES[AJ_AMPLIACAO_ALGO].tipo == OP_ESCOLHA);
-  assert(OPCOES[AJ_AMPLIACAO_ALGO].n == 5);  // 5 algorithm options
+  assert(OPCOES[AJ_AMPLIACAO_ALGO].n == 6);  // 6 algorithm options
   printf(" OK\n");
 
   // Test 4: All enum values fit in expected range
