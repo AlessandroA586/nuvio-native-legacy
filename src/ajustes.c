@@ -8,6 +8,8 @@
 #include "player.h"
 #include "legenda.h"
 #include "legenda2.h"
+#include "audsync.h"
+#include "legsync.h"
 #include "vertudo.h"
 #include "ajlog.h"
 #include "horafmt.h"
@@ -48,6 +50,7 @@
 #include "ltv.h"
 #include "guia.h"
 #include "traktauth.h"
+#include "trakt.h"
 #include "simklauth.h"
 #include "discord.h"
 #include "simkl.h"
@@ -667,6 +670,8 @@ typedef enum {
   // teclado (TV ou celular) e REM remove a escolhida. Estado em
   // ltv-urls-p<N>.txt, nunca em ajustes.txt. No fim: valor[]/CHAVE[] posicionais.
   AJ_URL_LISTA, AJ_URL_M3U_ADD, AJ_URL_XMLTV_ADD, AJ_URL_REM,
+  AJ_NT_EP,            // episode card rating: 0 Follow title line, 1 IMDb, 2 TMDB, 3 Both, 4 Off; local, append-only
+  AJ_AUDIO_OFFSET,     // #578: device-local converted audio offset, append-only
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -696,6 +701,7 @@ static const char *V_TELA_ABERTURA[] = { "Cinema", "Detalhada" };
 static const char *V_ABERTURA_FUNDO[] = { "Desligado", "Arte", "Arte borrada" };
 static const char *V_ABERTURA_ESTILO[] = { "Centro", "Canto" };
 static const char *V_ARTE_TOM[] = { "Vívido", "Claro" };
+static const char *V_NT_EP[]    = { "Como na linha do título", "IMDb", "TMDB", "IMDb + TMDB", "Desligado" };
 static const char *V_PALCO_FUNDO[] = { "Cortina", "Como está", "Só arte", "Preto", "Aura", "Tríptico", "Monumento" };
 static const char *V_TITULO_FIL[] = { "Clássico", "Ilha", "Editorial", "Acento" };
 static const char *V_VIDRO_QUALIDADE[] = { "Automática", "Desempenho", "Alta" };
@@ -1065,10 +1071,13 @@ static const char *V_TMDB_LING[] = {
   // Arabe (relato do .tpk 4/5): sem ele o TMDB nunca era pedido em arabe e a
   // arte localizada (logo/fundo "ar") nunca chegava. A interface nao tem arabe;
   // e so o idioma dos metadados.
-  "العربية"
+  "العربية",
+  // Official NuvioTV 9f17e8bf: TmdbMetadataService.normalizeTmdbLanguage
+  // maps the account's es-419 to es-MX before sending TMDB requests.
+  "Espanhol (América Latina)"
 };
-_Static_assert(sizeof V_TMDB_LING / sizeof *V_TMDB_LING == 33,
-               "V_TMDB_LING casa com ESC(..., 33), W_TMDB_LING e L[] de ajustes_tmdb_idioma");
+_Static_assert(sizeof V_TMDB_LING / sizeof *V_TMDB_LING == 34,
+               "V_TMDB_LING casa com ESC(..., 34), W_TMDB_LING e L[] de ajustes_tmdb_idioma");
 _Static_assert(sizeof V_IDIOMA / sizeof *V_IDIOMA == IDIOMA_N + 1,
                "V_IDIOMA: \"Automático\" e um rotulo por IDIOMA_* de idiomacod.h");
 // Preenchido em rotulosDeIdioma(), no arranque: os nomes saem de linguas.c em
@@ -1427,7 +1436,7 @@ static const Opcao OPCOES[AJ_N] = {
   // nativo sempre enriqueceu por ele — nascer desligado apagaria elenco com
   // foto, ficha e trailers de quem ja usa o app sem nunca ter visto o ajuste.
   ESC("TMDB",                       V_LIGA, 2),   // tmdb_enabled
-  ESC("Idioma dos metadados",       V_TMDB_LING, 33), // tmdb_language
+  ESC("Idioma dos metadados",       V_TMDB_LING, 34), // tmdb_language
   ESC("Arte localizada",            V_LIGA, 2),   // tmdb_use_artwork
   ESC("Título e sinopse",           V_LIGA, 2),   // tmdb_use_basic_info
   ESC("Ficha técnica",              V_LIGA, 2),   // tmdb_use_details
@@ -1726,6 +1735,8 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Adicionar lista M3U"),
   ACAO("Adicionar guia XMLTV"),
   ACAO("Remover a escolhida"),
+  ESC("Nota nos episódios", V_NT_EP, 5),   // local: notaEpisodio
+  NUM("Ajuste do áudio (ms)", -AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_STEP_MS, " ms"),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -2030,6 +2041,8 @@ static const char *CHAVE[] = {
   "artToneLocal",
   "palcoFundoLocal",
   "-urlLista", "-urlM3uAdd", "-urlXmltvAdd", "-urlRem",
+  "notaEpisodio",
+  "audioOffsetMsLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2792,6 +2805,7 @@ static int ajOpcaoDisponivel(int op) {
 }
 int ajustes_layout_lista(void) { return !ajLayoutSelecionavel() || valor[AJ_LAYOUT_AJUSTES] == 1; }
 int ajustes_esconder_logo_trailer(void) { return lig(AJ_LOGO_TRAILER); }
+int ajustes_audio_offset_ms(void) { return audsync_offset_ms(valor[AJ_AUDIO_OFFSET]); }
 int ajustes_legenda_sync_auto(void) { return lig(AJ_LEG_SYNC_AUTO); }
 int ajustes_teclado_android(void) { int v = valor[AJ_TECLADO_ANDROID]; return v < 0 || v > 2 ? 0 : v; }   // 0 auto, 1 do app, 2 do Android
 int ajustes_mic_busca(void) { return valor[AJ_MIC_BUSCA]; }   // 0 auto, 1 ligado, 2 desligado
@@ -3509,7 +3523,7 @@ const char *ajustes_tmdb_idioma(void) {
     "ja-JP", "ko-KR", "zh-CN", "ro-RO", "uk-UA", "ru-RU",
     "nl-NL", "pl-PL", "tr-TR", "sv-SE", "da-DK", "nb-NO", "cs-CZ", "sk-SK",
     "sl-SI", "hu-HU", "lt-LT", "bs-BA", "sr-RS", "bg-BG", "el-GR", "id-ID",
-    "vi-VN", "zh-TW", "ar-SA"
+    "vi-VN", "zh-TW", "ar-SA", "es-MX"
   };
   int v = valor[AJ_TMDB_IDIOMA];
   if (v < 0 || v >= (int)(sizeof L / sizeof *L)) v = 0;
@@ -3602,6 +3616,15 @@ int ajustes_nota_titulo(int fonte) {
   return lig(OP[fonte]) && ajustes_mdblist_fonte(fonte);
 }
 
+// Which rating(s) the EPISODE cards show. 0 follows the title-line toggles
+// (Trakt included); 1-4 pick IMDb / TMDB / both / none, the only per-episode sources.
+int ajustes_nota_episodio(int fonte) {
+  int m = valor[AJ_NT_EP];
+  if (m <= 0 || m > 4) return ajustes_nota_titulo(fonte);
+  return (fonte == EX_IMDB && (m == 1 || m == 3)) || (fonte == EX_TMDB && (m == 2 || m == 3));
+}
+int ajustes_teste_op_nota_ep(void) { return AJ_NT_EP; }
+
 // Onde os ajustes ficam. Ate a versao anterior nada era gravado: mexer numa
 // opcao valia so enquanto o app estivesse aberto, e voltar depois mostrava tudo
 // no padrao — o que faz a tela inteira parecer decorativa.
@@ -3627,8 +3650,22 @@ static const char *W_TMDB_LING[] = {
   "interface", "pt", "en", "es", "fr", "de", "it", "pt-pt", "ja", "ko", "zh",
   "ro", "uk", "ru",
   "nl", "pl", "tr", "sv", "da", "no", "cs", "sk", "sl", "hu", "lt", "bs", "sr",
-  "bg", "el", "id", "vi", "zh-tw", "ar", NULL
+  "bg", "el", "id", "vi", "zh-tw", "ar", "es-419", NULL
 };
+
+// Indice de W_TMDB_LING para o texto da conta: exato, senao pela base antes do
+// '-' ("pt-BR" -> "pt"). -1 se a lista nao tem.
+static int igualSemCaixa(const char *a, const char *b);
+static int indiceTmdbLing(const char *texto) {
+  const char *const *lit = W_TMDB_LING;
+  char base[16]; int k; const char *h = strchr(texto, '-');
+  for (k = 0; lit[k]; k++) if (!igualSemCaixa(lit[k], texto)) return k;
+  if (h && h > texto && (size_t)(h - texto) < sizeof base) {
+    memcpy(base, texto, (size_t)(h - texto)); base[h - texto] = 0;
+    for (k = 1; lit[k]; k++) if (!igualSemCaixa(lit[k], base)) return k;
+  }
+  return -1;
+}
 
 // `heroSectionEnabled` -> `hero_section_enabled`. Uma sequencia de maiusculas
 // conta como uma palavra so (`homeImdbRatingsVisibility` ->
@@ -5409,18 +5446,8 @@ int ajustes_aplicar_blob(const char *json) {
       // web os escreve em minuscula. Ler so o codigo do web levava a rejeitar
       // o valor de verdade — e a rejeicao era CORRETA (melhor manter que
       // inventar), mas o efeito era o ajuste nunca chegar.
-      if (lit) { int k; for (k = 0; lit[k]; k++) if (!igualSemCaixa(lit[k], texto)) { novo = k; break; } }
-      // IDIOMA COM REGIAO: contas antigas guardam "pt-br"/"pt-BR" (22 logs
-      // no D1 em 01/10/2026) e a lista so tem a base. Sem casar exato,
-      // tenta a base antes do '-' ("pt-br" -> "pt"); "pt-pt" e "zh-tw" ja
-      // casaram exato acima.
-      if (novo < 0 && lit && i == AJ_TMDB_IDIOMA && strchr(texto, '-')) {
-        char base[16]; int k; size_t b = (size_t)(strchr(texto, '-') - texto);
-        if (b > 0 && b < sizeof base) {
-          memcpy(base, texto, b); base[b] = 0;
-          for (k = 1; lit[k]; k++) if (!igualSemCaixa(lit[k], base)) { novo = k; break; }
-        }
-      }
+      if (lit && i == AJ_TMDB_IDIOMA) novo = indiceTmdbLing(texto);
+      else if (lit) { int k; for (k = 0; lit[k]; k++) if (!igualSemCaixa(lit[k], texto)) { novo = k; break; } }
       if (novo < 0) {
         // Valor que este app nao conhece (versao nova do web, opcao nova).
         // Manter o que esta e a resposta certa: escolher um padrao aqui
@@ -5569,6 +5596,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_PLR_CLASSIF:    /* o web nao tem esta escolha */
     case AJ_CW_RETIDO_TAMBEM: /* o web nao tem a ilha */
     case AJ_PS_CONTINUAR:   /* o web nao tem este cartao; escolha desta TV */
+    case AJ_AUDIO_OFFSET:   /* audio presentation calibration belongs to this TV */
     case AJ_DTS_AC3:        /* o conversor de DTS e desta TV */
     case AJ_DV_MKV:         /* o demux e o decoder sao desta TV */
     case AJ_HIST_CONTA: case AJ_SOCIAL: /* por perfil desta TV (perfilLocal); o web nao tem */
@@ -5583,6 +5611,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_ESCALA_TEXTO:   /* text/component scale is this screen's, the web has none */
     case AJ_DET_ESPACO:     /* title page spacing is this screen's too */
     case AJ_NT_ORDEM:       /* the web has no title rating line */
+    case AJ_NT_EP:          /* nor episode cards with rating sources */
     case AJ_ARTE_TOM:       /* Art tone belongs to this device. */
     case AJ_FOCO_ACENTO:    /* look of this screen (depends on the local glass) */
     case AJ_LAYOUT_AJUSTES: /* #339: o arranjo dos Ajustes e desta TV */
@@ -5914,6 +5943,13 @@ static int ajustesMesclarWeb(const char *base, char **saida) {
         !acharValor(base, fim, chaveConta(i), &vi, &vf)) continue;
     // Valor embrulhado em {"type":...,"value":X}: o que se reescreve e o X.
     if (*vi == '{' && acharValor(vi, vf, "value", &ei, &ef)) { vi = ei; vf = ef; }
+    if (i == AJ_TMDB_IDIOMA) {
+      char conta[128];
+      // An equivalent local index must never shorten the account's region.
+      if ((textoCruDoBlob(base, fim, snake, conta, sizeof conta) ||
+           textoCruDoBlob(base, fim, chaveConta(i), conta, sizeof conta)) &&
+          indiceTmdbLing(conta) == valor[i]) continue;
+    }
     if (!textoDoValor(i, vi, vf, troca[n].texto, sizeof troca[n].texto)) {
       printf("[ajustes] %s nao tem forma para subir; mantido como esta na conta\n",
              CHAVE[i]);
@@ -6000,7 +6036,7 @@ static int foraDestaPlataforma(int op) {
   if (op == AJ_TRAILER_AUDIO) return 1;
 #endif
 #ifndef NV_TPK
-  if (op == AJ_TRAILER_ZOOM_TPK) return 1;
+  if (op == AJ_TRAILER_ZOOM_TPK || op == AJ_AUDIO_OFFSET) return 1;
 #endif
   // Botao de microfone das buscas: so onde ha o teclado da Samsung por tras
   // (.tpk de release e .wgt; o NuvioTpk40 do Tizen 4/5 nao tem o host dele).
@@ -6538,8 +6574,9 @@ static const char *textoLeitura(int op) {
     }
   }
   if (op == AJ_TRAKT) {
+    if (traktauth_estado() == TRA_PARADO && trakt_ativo()) return i18n("conectado — OK desconecta");
     switch (traktauth_estado()) {
-      case TRA_LIGADO:     return i18n("conectado");
+      case TRA_LIGADO:     return i18n("conectado — OK desconecta");
       case TRA_PEDINDO:    return i18n("preparando…");
       case TRA_AGUARDANDO: return i18n("aguardando");
       case TRA_ERRO:       return i18n("falhou");
@@ -6560,7 +6597,7 @@ static const char *textoLeitura(int op) {
   }
   if (op == AJ_SIMKL) {
     switch (simklauth_estado()) {
-      case SMK_LIGADO:     return i18n("conectado");
+      case SMK_LIGADO:     return i18n("conectado — OK desconecta");
       case SMK_PEDINDO:    return i18n("preparando…");
       case SMK_AGUARDANDO: return i18n("aguardando");
       case SMK_ERRO:       return i18n("falhou");
@@ -7194,6 +7231,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_PROVEDORES_ESCOPO: return "Compartilhada usa as mesmas contas de provedores neste aparelho. Separada guarda uma cópia para este perfil. Trocar de opção mantém as duas configurações.";
     case AJ_ADDONS_PRINCIPAL: return "Os outros perfis desta conta usam os addons do perfil principal. Desligado, cada perfil usa os seus — a não ser que a conta já diga para usar os do principal.";
     case AJ_VIDRO_CONTORNO: return "O contorno das linhas e dos cartões, inclusive o do foco. Desligado, o item em foco é marcado só por um fundo mais claro na cor de destaque.";
+    case AJ_NT_EP: return "Qual nota aparece nos cartões de episódio. Como na linha do título segue os interruptores de Notas (IMDb, Trakt, TMDB). Só nesta TV.";
     case AJ_ARTE_TOM: return "Vívido mantém as cores da arte. Claro usa tons pastel da mesma cor, com texto contrastante. Só nesta TV.";
     case AJ_COR_LOGO: return "Com um tema dinâmico, a cor sai do logo do título em vez da arte de fundo. Logo branco ou preto usa a arte.";
     case AJ_MANTER_VIDEO: return "Mantém o player pausado pelo tempo escolhido. Usa memória e decoder; o trailer espera. Desligado por padrão.";
@@ -7223,6 +7261,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_FONTE_REGEX_MODELO: return "Padrões prontos: idiomas como os add-ons escrevem, áudio MULTI ou DUAL, 4K e Remux. Escolher um troca o padrão da regex.";
     case AJ_ESPACO_FILEIRAS: return "O espaço vertical entre uma fileira da Home e a seguinte. Com menos cabem mais fileiras na tela, com mais a Home fica mais arejada.";
     case AJ_ESPACO_TITULOS: return "O espaço horizontal entre os cartazes de uma fileira da Home.";
+    case AJ_AUDIO_OFFSET: return "Positivo atrasa; negativo adianta. Só áudio convertido, a partir do próximo vídeo.";
     case AJ_TAM_MIN: return "Na escolha automática, fontes menores que este tamanho ficam para o fim da fila. Se for maior que o tamanho máximo, o mínimo é ignorado. Só vale para arquivos com tamanho conhecido; se só houver fontes fora da faixa, a melhor delas ainda toca.";
 #ifdef NV_TPK
     case AJ_DTS_AC3: return "Esta TV não toca DTS nem TrueHD: o app converte o som na hora. 5.1 (Dolby Digital) mantém o surround para barra de som e receiver; 7.1, Atmos e DTS:X viram 5.1, sem os objetos. Estéreo (AAC) serve qualquer TV. Desligado: esses vídeos tocam sem som, como antes. Vale a partir do próximo vídeo.";
@@ -7413,7 +7452,7 @@ static const char *efeitoOpcao(int op) {
       return "A lista desta TV recebe o título em todos os casos. Isto decide se ele também vai para o Trakt ou para o Simkl.";
     case AJ_TRAKT: case AJ_SIMKL:
       return (op == AJ_TRAKT ? traktauth_estado() == TRA_LIGADO : simklauth_estado() == SMK_LIGADO)
-        ? "OK abre o vínculo de novo, com QR e código. As setas laterais não fazem nada nesta linha."
+        ? "conectado — OK desconecta"
         : "OK abre o vínculo, com QR e código. As setas laterais não fazem nada nesta linha.";
     case AJ_ADDONS: case AJ_DISCORD: case AJ_PLUGINS:
       return "OK abre. As setas laterais não fazem nada nesta linha.";
@@ -9038,8 +9077,16 @@ static void eventoTela(const SDL_Event *e) {
       return;
     }
     if (debTesteServico(focoOp) >= 0) { adTesteIniciar(debTesteServico(focoOp)); return; }
-    if (focoOp == AJ_TRAKT) { traktauth_comecar(); return; }
-    if (focoOp == AJ_SIMKL) { simklauth_comecar(); return; }
+    if (focoOp == AJ_TRAKT) {
+      if (traktauth_estado() == TRA_LIGADO || (traktauth_estado() == TRA_PARADO && trakt_ativo())) { traktauth_desconectar(); desc_repetir(); }
+      else traktauth_comecar();
+      return;
+    }
+    if (focoOp == AJ_SIMKL) {
+      if (simklauth_token()[0]) { simklauth_desconectar(); simkl_esquecer(); desc_repetir(); }
+      else simklauth_comecar();
+      return;
+    }
     if (focoOp == AJ_DISCORD) {
       if (discord_estado() == DIS_LIGADO) discord_esquecer(); else discord_comecar();
       return;
@@ -9285,6 +9332,10 @@ static const char *textoValor(int op) {
     return buf;
   }
   if (op == AJ_FIL_LIMITE && fil_limite_ilimitado(valor[op])) return i18n("Ilimitado");
+  if (op == AJ_AUDIO_OFFSET) {
+    legsync_audio_offset_texto(ajustes_audio_offset_ms(), buf, sizeof buf);
+    return buf;
+  }
   if (o->tipo == OP_NUMERO) {
     snprintf(buf, sizeof buf, "%d%s", valor[op], o->sufixo ? o->sufixo : "");
     return buf;
@@ -9810,7 +9861,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_MDB_MAL:
     case AJ_NT_IMDB: case AJ_NT_TOMATES: case AJ_NT_AUDIENCIA: case AJ_NT_META:
     case AJ_NT_METAUSER: case AJ_NT_TRAKT: case AJ_NT_TMDB: case AJ_NT_LETTER:
-    case AJ_NT_MAL: case AJ_NT_EBERT: case AJ_NT_SCORE: case AJ_NT_ORDEM:
+    case AJ_NT_MAL: case AJ_NT_EBERT: case AJ_NT_SCORE: case AJ_NT_ORDEM: case AJ_NT_EP:
       return AJPV_MDB;
     case AJ_RESOLUCAO: case AJ_QUALIDADE_IMG: case AJ_TEX_MB:
     case AJ_ESPACO:

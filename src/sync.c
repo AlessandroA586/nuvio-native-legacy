@@ -1751,7 +1751,7 @@ void sync_passo(unsigned agoraMs) {
   // cinco minutos um ciclo de rede inteiro, e no arranque a montagem em voo
   // descartada ("remontagem pedida no meio") por uma credencial que ela ja
   // estava usando.
-  if (temTraktRem)  { if (traktauth_estado() != TRA_LIGADO) {
+  if (temTraktRem)  { if (traktauth_estado() != TRA_LIGADO && !traktauth_desconectado()) {
                         if (!trakt_credencial_igual(traktTok, nuvem_trakt_cliente())) {
                           trakt_definir(traktTok, nuvem_trakt_cliente()); remontar = 1; } }
                       else printf("[sync] trakt: vinculo local mantido, credencial da conta ignorada\n");

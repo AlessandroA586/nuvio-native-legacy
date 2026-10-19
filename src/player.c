@@ -3998,8 +3998,14 @@ void player_evento(const SDL_Event *e) {
     int sc = e->key.keysym.scancode;
     if (sc == NV_SCANCODE_CH_UP   || k == SDLK_PAGEUP)   { avZap(1);  return; }
     if (sc == NV_SCANCODE_CH_DOWN || k == SDLK_PAGEDOWN) { avZap(-1); return; }
+    if (k == SDLK_F10 || k == SDLK_MENU) { pedGuiaCheio = 1; return; }
     if (k == SDLK_DOWN || k == SDLK_s || sc == NV_SCANCODE_BLUE) {
       pedGuia = 1; return;
+    }
+    // Remotes without colour keys open the band with OK; visible panels keep OK.
+    if (!visivel && !erroFonte && (k == SDLK_RETURN || k == SDLK_KP_ENTER)) {
+      if (!e->key.repeat) pedGuia = 1;
+      return;
     }
     avTecla(k);
     return;

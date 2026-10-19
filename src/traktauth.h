@@ -65,5 +65,8 @@ int  traktauth_perfil(void);
 
 // Esquece o vinculo de TODOS os perfis (chamado ao sair da conta).
 void traktauth_esquecer(void);
+// Disconnect only this profile; keep the local opt-out across account sync.
+void traktauth_desconectar(void);
+int traktauth_desconectado(void);
 
 #endif

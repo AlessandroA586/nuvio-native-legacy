@@ -523,7 +523,14 @@ static float palcoFundoAlpha = 1.0f;
 // Keep outgoing art until the incoming texture is ready, then crossfade.
 static int palcoMostra = -1, palcoAnterior = -1;
 static float palcoItemA = 1.0f;
+static int dinPalcoSplit(void) {
+  return ajustes_home_layout() == HOME_LAYOUT_DINAMICA && !focoHero &&
+         foco.fileira >= 0 && foco.fileira < nFileiras &&
+         (fileiras[foco.fileira].tipo == FILEIRA_PALCO ||
+          fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO);
+}
 static int palcoFundoDestino(void) {
+  if (dinPalcoSplit()) return PALCO_ARTE;
   return ajustes_home_layout() == HOME_LAYOUT_MODERNA && !focoHero &&
          foco.fileira >= 0 && foco.fileira < nFileiras &&
          fileiras[foco.fileira].tipo == FILEIRA_PALCO ? ajustes_palco_fundo() : PALCO_ATUAL;
@@ -744,7 +751,10 @@ static float escalaDoAjuste(void) {
 // destaque e como ele se comporta (desenhaHero), e o fundo por baixo das
 // fileiras (home_desenhar). MODERNA devolve exatamente as constantes que este
 // arquivo sempre usou: tests/homelayouts_shot.sh compara o quadro byte a byte.
-static int layoutHome(void) { return ajustes_home_layout(); }
+// Focused Stage/Split share Moderna geometry; the saved layout stays Dinamica.
+static int layoutHome(void) {
+  return dinPalcoSplit() ? HOME_LAYOUT_MODERNA : ajustes_home_layout();
+}
 static int homeRetratoTelefone(void) {
 #ifdef NV_TOUCH_UI
   return layout_modo_mobile() && NV_TELA_H > NV_TELA_W;
@@ -3430,7 +3440,7 @@ static void sincronizarFileiras(void) {
   // (menu.c). Depois do corte acima de proposito: fileira que a pessoa
   // desligou em Ajustes nao reaparece na barra. Ordem = a da fileira.
   nStreamBarra = 0;
-  if (layoutHome() == HOME_LAYOUT_DINAMICA) {
+  if (ajustes_home_layout() == HOME_LAYOUT_DINAMICA) {
     int q;
     for (q = 0; q < destino; q++) {
       if (fileiras[q].tipo != FILEIRA_CATALOGOS ||
@@ -4202,7 +4212,7 @@ static void heroPublicarFoco(const CatItem *ci, float aTexto) {
 #endif
 int home_streaming_barra(const int **pastas) {
   if (pastas) *pastas = streamBarra;
-  return layoutHome() == HOME_LAYOUT_DINAMICA ? nStreamBarra : 0;
+  return ajustes_home_layout() == HOME_LAYOUT_DINAMICA ? nStreamBarra : 0;
 }
 
 // A pilula da barra (layout Dinamica, menu.c) so aparece com a pagina no
@@ -4210,7 +4220,7 @@ int home_streaming_barra(const int **pastas) {
 float home_topo_fracao(void) {
   float f;
   // Barra no topo (#461): so com o foco no destaque, como a pilula na pagina rolada.
-  if (layoutHome() != HOME_LAYOUT_DINAMICA) return ajustes_menu_topo() ? (float)focoHero : 1.0f;
+  if (ajustes_home_layout() != HOME_LAYOUT_DINAMICA) return ajustes_menu_topo() ? (float)focoHero : 1.0f;
   f = 1.0f + dinHeroY() / 140.0f;
   return f < 0.0f ? 0.0f : (f > 1.0f ? 1.0f : f);
 }
@@ -4903,6 +4913,20 @@ static void desenhaHero(Uint32 agora, float saida) {
   (void)agora;
   const int motionReduzido = ajustes_animacoes_reduzidas();
   float aArte = 1.0f;
+  if (ajustes_home_layout() == HOME_LAYOUT_DINAMICA && palcoFundoModo == PALCO_ARTE) {
+    const CatItem *item = cat_item_exato(palcoFundoItem);
+    const char *art = palcoArte(item);
+    GLuint tex = art ? tex_obter_hero(art) : 0;
+    if (tex && palcoFundoAlpha > 0.004f) {
+      gfx_tex_aspect_atual = tex_aspecto(art);
+      int split = dinPalcoSplit() && fileiras[foco.fileira].tipo == FILEIRA_HEROI_DIVIDIDO;
+      gfx_rect((GfxRect){0, 0, NV_TELA_W, NV_TELA_H}, tex,
+               split ? GFX_HERO_CHEIO : GFX_VITRINE,
+               split ? 0.0f : 0.20f, split ? 0.0f : 0.5f, 0, 0, 0, 0, 0, palcoFundoAlpha);
+      gfx_tex_aspect_atual = 0;
+    }
+    return;
+  }
   if (palcoFundoModo != PALCO_ATUAL) { desenhaPalcoArte(); return; }
   // MEDIDO no app web: .home-modern-hero-media fica em x=555, y=0, 1421x670.
   // A conta que estava aqui (0.28*W - 56 = 481,6 de largura 1438) vinha de
@@ -6009,10 +6033,10 @@ static void home_trailer_passo_(int topo, float dt, Uint32 agora) {
   // trailer toca onde a arte dele ja esta. Espera o mesmo tempo da expansao do
   // cartaz, contado de quando o foco parou nele.
   { int noHero = focoHero && ajustes_hero_ligado() && heroSetting;
-    // Na Dinamica o destaque ROLOU para fora quando o foco esta num cartaz: o
-    // trailer do cartaz tocaria onde ninguem ve.
+    // Use the saved layout: Dinamica hides the hero or forces opaque Stage/Split
+    // artwork, even when those rows borrow Moderna geometry.
     int noCartaz = !focoHero && posterSetting &&
-                   (destCartao || (ajustes_hero_ligado() && layoutHome() != HOME_LAYOUT_DINAMICA)) &&
+                   (destCartao || (ajustes_hero_ligado() && ajustes_home_layout() != HOME_LAYOUT_DINAMICA)) &&
                    (destCartao || heroPendente == heroAtual) &&
                    agora - heroPendenteEm >= (Uint32)(ajustes_expandir_poster_atraso() * 1000.0f);
     // No card: the focused card drawn last frame must accept the video.
@@ -6022,7 +6046,7 @@ static void home_trailer_passo_(int topo, float dt, Uint32 agora) {
     if (!topo) motivo = HERO_GATE_OVERLAY;
     else if (!destCartao && !ajustes_hero_ligado()) motivo = HERO_GATE_DISABLED;
     else if (focoHero ? !heroSetting : !posterSetting) motivo = HERO_GATE_SETTING;
-    else if (!destCartao && !focoHero && layoutHome() == HOME_LAYOUT_DINAMICA) motivo = HERO_GATE_DYNAMIC;
+    else if (!destCartao && !focoHero && ajustes_home_layout() == HOME_LAYOUT_DINAMICA) motivo = HERO_GATE_DYNAMIC;
     else if (!noHero && !noCartaz) motivo = HERO_GATE_POSTER_WAIT;
   }
   pronto = pronto && itemAtual >= 0 &&
@@ -7231,34 +7255,58 @@ static void desenhaHeroiCard(const CatItem *ci, int completo, const char *texto,
 }
 
 // Split Hero A: logo on art; metadata and two synopsis lines share the caption band.
+// The row runs to the screen edge: the last poster is clipped there, not at the margin.
+static float divididoDireita(void) {
+  return homeRetratoTelefone() ? homeConteudoDireita() : NV_TELA_W;
+}
 static int divididoItem(int r) { return fileiraItemIndice(&fileiras[r], colunaDaFileira(r)); }
 // O cartaz `c` (centro cx, largura w) entra na fila a direita do painel? O que
 // ja passou fica atras do painel (pintado depois).
 static int divididoCartazVisivel(int r, float cx, float w) {
   return cx + w * 0.5f > homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO + 0.5f &&
-         cx - w * 0.5f < homeConteudoDireita() - 0.5f;
+         cx - w * 0.5f < divididoDireita() - 0.5f;
 }
 static GfxRect divididoPainel(int r, float cardY) {
   return (GfxRect){ homeConteudoX() + bordaX(r), cardY, divPainelW(), divArteH() };
+}
+static float divididoRotuloAlfa(float k) { return 1.0f - anim_clamp(k, 0.0f, 1.0f); }
+// Focused: no card; the logo block ends on the text line of the side posters.
+static float divididoFimY(float cardY, float yh) {
+  return cardY + divArteH() + 18.0f + (fmaxf(34.0f, yh) + yh) * 0.5f;
+}
+typedef struct { float logoB, meta, ov; } DivBloco;
+// ovH is the block advance (lines x leading); the last line ends textH below its top.
+static DivBloco divididoBloco(float fim, float ovH, float lead, float textH, float metaH) {
+  DivBloco b = { 0, 0, fim - (ovH > 0 ? ovH - lead + textH : 0) };
+  b.meta = b.ov - 14.0f - metaH;
+  b.logoB = b.meta - 20.0f;
+  return b;
+}
+static GfxRect divididoLogoRect(float x, float bottom, float ap) {
+  float w = NV_DIV_LOGO_W, h = w / ap;
+  if (h > NV_DIV_LOGO_H) { h = NV_DIV_LOGO_H; w = h * ap; }
+  return (GfxRect){ x, bottom - h, w, h };
 }
 static void desenhaDividido(int r, float cardY) {
   GfxRect p = divididoPainel(r, cardY);
   int idx = divididoItem(r), d;
   const CatItem *ci = cat_item_exato(idx);
   const char *caminho = arte_por_identidade(idx, 1);
-  GLuint t = caminho ? tex_obter_larg(caminho, p.w) : 0;
+  const int em = foco.fileira == r && !focoHero;
+  GLuint t = caminho && !em ? tex_obter_larg(caminho, p.w) : 0;
   float x = p.x, y = p.y + p.h + 18.0f;
-  for (d = -1; d <= 1; d += 2) {
+  for (d = -1; d <= 1 && !em; d += 2) {
     int c = colunaDaFileira(r) + d;
     if (c >= 0 && c < fileiras[r].n) {
       const char *v = arte_por_identidade(fileiraItemIndice(&fileiras[r], c), 1);
       if (v) (void)tex_lookahead_pedir(v, p.w);
     }
   }
-  desenhaHeroiCard(ci, 0, NULL, caminho, t, 1.0f, p.x, p.y, p.w, p.h,
-                   raioDe(p.w, p.h), foco.fileira == r && !focoHero ? 1.0f : 0.0f, 0.0f);
+  if (!em)
+    desenhaHeroiCard(ci, 0, NULL, caminho, t, 1.0f, p.x, p.y, p.w, p.h,
+                     raioDe(p.w, p.h), 0.0f, 0.0f);
   // O foco mora no painel: o poster dele nao e mais desenhado na fila.
-  if (foco.fileira == r && !focoHero) {
+  if (em) {
     itemFoco = (HomeItem){ .indice = idx, .rect = p, .arte = caminho,
       .titulo = ci ? ci->titulo : NULL, .genero = ci ? ci->genero : NULL,
       .meta = ci ? ci->meta : NULL };
@@ -7266,10 +7314,33 @@ static void desenhaDividido(int r, float cardY) {
     ancoraFoco = p; temAncoraFoco = 1;
   }
   if (!ci) return;
-  y += heroiMeta(ci, x, y, p.w) + 14.0f;
-  if (ci->sinopse[0])
-    sinopse_bloco_corta(TXT_DET_SIN, ci->sinopse, 243, 242, 239,
-                        x, y, p.w, 36.0f, 0.95f, 2);
+  if (!em) {
+    y += heroiMeta(ci, x, y, p.w) + 14.0f;
+    if (ci->sinopse[0])
+      sinopse_bloco_corta(TXT_DET_SIN, ci->sinopse, 243, 242, 239,
+                          x, y, p.w, 36.0f, 0.95f, 2);
+    return;
+  }
+  const float tw = fminf(NV_DIV_LOGO_W, p.w);
+  float ovH = ci->sinopse[0]
+    ? sinopse_bloco_corta(TXT_DET_SIN, ci->sinopse, 243, 242, 239, x, 0, tw, 36.0f, 0, 2) : 0;
+  const float lead = sinopse_entrelinha(TXT_DET_SIN, 36.0f);
+  DivBloco b = divididoBloco(divididoFimY(cardY, txt_linha(TXT_CAPTION2, "2025", 218,222,232,255).h),
+                             ovH, lead, txt_linha(sinopse_estilo(TXT_DET_SIN), "Ag", 255,255,255,255).h,
+                             fmaxf(34.0f, BADGE_H));
+  if (ovH > 0)
+    sinopse_bloco_corta(TXT_DET_SIN, ci->sinopse, 243, 242, 239, x, b.ov, tw, 36.0f, 0.95f, 2);
+  heroiMeta(ci, x, b.meta, tw);
+  const char *urlL = artehero_logo_sessao_larg(ci, NV_DIV_LOGO_W);
+  GLuint tl = urlL ? tex_obter_logo_larg(urlL, NV_DIV_LOGO_W) : 0;
+  if (tl && tex_aspecto(urlL) > 0) {
+    GfxRect lr = divididoLogoRect(x, b.logoB, tex_aspecto(urlL));
+    gfx_tex_aspect_atual = 0;
+    gfx_rect(lr, tl, tex_marca_escura(urlL) ? GFX_MARCA : GFX_TEXTO, 0,0,0,0,1,1,1,1);
+  } else if (ci->titulo[0]) {
+    TxtLinha tn = txt_linha_corta(TXT_TITULO1, ci->titulo, 245,246,249,255, tw);
+    txt_desenhar(tn, x, b.logoB - tn.h);
+  }
 }
 
 static void pintarCartao(const CartaoFoco *k, float raio) {
@@ -7609,7 +7680,7 @@ static void home_desenhar_(Uint32 agora) {
   desenhaFundo(agora);
   float pd = detail_progresso();
   const int vazioQr = homevazio_ativo(nFileiras);   // sem add-ons: o cartao com o QR no lugar da Home
-  if (ajustes_hero_ligado() && !vazioQr && palcoFundoAlpha > 0.004f) {
+  if ((ajustes_hero_ligado() || dinPalcoSplit()) && !vazioQr && palcoFundoAlpha > 0.004f) {
     gfx_opacidade_grupo = palcoFundoModo == PALCO_ATUAL ? palcoFundoAlpha : 1.0f;
     desenhaHero(agora, pd);
     gfx_opacidade_grupo = 1.0f;
@@ -7760,7 +7831,10 @@ static void home_desenhar_(Uint32 agora) {
         int cb = 181 + (int)((249 - 181) * k + 0.5f);
         const float maxW = homeRetratoTelefone() ? homeLarguraUtil() - 76.0f : NV_TELA_W - homeConteudoX() - 180.0f;
         const int mudo = tipo == FILEIRA_SOCIAL && ajustes_amigos_estilo() == 3 && !amigosfil_convite();
-        fimTit = desenhaTituloFil(r, y, rotFil, cr, cg, cb, k, maxW, !mudo, &tl); }
+        const float og = gfx_opacidade_grupo;
+        if (tipo == FILEIRA_HEROI_DIVIDIDO) gfx_opacidade_grupo = og * divididoRotuloAlfa(k);
+        fimTit = desenhaTituloFil(r, y, rotFil, cr, cg, cb, k, maxW, !mudo, &tl);
+        gfx_opacidade_grupo = og; }
       // A FONTE (Trakt, Simkl...) NAO APARECE NA FILEIRA DE AMIGOS: a pessoa
       // quer saber quem viu e o que achou, nao de onde veio o dado. Ela fica
       // so no perfil do amigo (amigoperfil.c). Era a marca do Trakt aqui.
@@ -7874,7 +7948,7 @@ static void home_desenhar_(Uint32 agora) {
       // Keep partial posters moving inside the strip, with the row's vertical clip.
       if (tipo == FILEIRA_HEROI_DIVIDIDO) {
         float left = homeConteudoX() + bordaX(r) + divPainelW() + NV_DIV_VAO;
-        gfx_recorte(left, corte, homeConteudoDireita() - left, NV_TELA_H - corte);
+        gfx_recorte(left, corte, divididoDireita() - left, NV_TELA_H - corte);
       }
       for (int passe = 1; passe < 2; passe++) {
         for (int c = 0; c < fileiras[r].n; c++) {

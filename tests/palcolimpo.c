@@ -379,7 +379,9 @@ int main(int argc, char **argv) {
     setting(layout, glass, mode); quadros(90, NULL);
     tecla(SDLK_DOWN); quadros(90, NULL);
     capture(dir, phase, mode, layout == 1 ? "standard" : "dynamic");
-    assert(palcoFundoDestino() == 1 && palcoFundoAlpha == 1.0f);
+    assert(palcoFundoDestino() == (layout == HOME_LAYOUT_DINAMICA ? PALCO_ARTE : PALCO_ATUAL) &&
+           palcoFundoAlpha == 1.0f);
+    if (layout == HOME_LAYOUT_DINAMICA) assert(heroInfo == 0 && stageArtwork == 1);
     if (!mode) { otherInfo[layout] = heroInfo; otherBackdrops[layout] = stageArtwork; }
     else assert(heroInfo == otherInfo[layout] && stageArtwork == otherBackdrops[layout]);
     tecla(SDLK_UP); quadros(90, NULL);

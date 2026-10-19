@@ -534,6 +534,7 @@ int ajustes_leg2_atraso(void);
 int ajustes_leg2_definir_atraso(int ms);
 int   ajustes_legenda_forcada_auto(void);    // #287: 1 = audio in the subtitle language -> only the forced track (local, default on)
 int   ajustes_legenda_sync_auto(void);       // local, ligada por padrão
+int   ajustes_audio_offset_ms(void);        // Converted audio presentation, -500..500 ms; default 0.
 int   ajustes_legenda_sync_audio(void);      // 1 = offer "Por audio" in subtitle AutoSync (F06; local, default off)
 int   ajustes_trailer_zoom_tpk(void);        // #241: 1 = experimental trailer zoom on the native .tpk (local, default off)
 int   ajustes_teclado_na_tela(void);         // times the Teclado option is on the Ajustes list (0 = hidden here)
@@ -685,6 +686,8 @@ int         ajustes_seekr_ajuste_s(void);   // sincronia, em segundos (-60..60)
 int         ajustes_mdblist_fonte(int fonte);   // mdblist_show_*
 // A fonte (ExFonte) entra na linha do titulo? Escolha local + disponibilidade.
 int         ajustes_nota_titulo(int fonte);
+// A fonte aparece no cartao de EPISODIO? 0 = segue a linha do titulo; so IMDb/TMDB/Trakt tem nota por episodio.
+int         ajustes_nota_episodio(int fonte);
 // Source at each title-line position, including the saved custom order.
 int         ajustes_nota_fonte(int pos);
 

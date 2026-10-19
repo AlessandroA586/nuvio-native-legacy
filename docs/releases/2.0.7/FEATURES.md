@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-18T19:48:18-03:00, HEAD `415544539`. Community server:
+that landed in the same window. Last tracking sync: 2026-10-18T23:51:56-03:00, HEAD `dfb22a56e`. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -16,6 +16,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 ## Release features (English)
 
 ### Highlights
+
+- **Dynamic Stage and Split stay consistent**: Dynamic Home uses Modern Stage and Split geometry while retaining the saved layout identity, background choices and correct fullscreen trailer eligibility. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `1d3728312`, `e9354d12d`, `7d6317655`, merge `dfb22a56e`.
 
 - **Browse files and keep the same release**: Hold OK on a source to browse its complete file pack, choose another copy, continue multipart movies in order, and keep the selected release across episodes with the binge-group preference. Platforms: Samsung .tpk; shared source selection on webOS, Android and WASM. Refs PR #567, `agente/205-pr567port`, merge `d8781e9a8`, `75cf75a13`, `e13dcdb1d`, `66b5094aa`, `e14174c73`, `80c053592`, `366e3df74`, `dd1498e42`, `8a2a29540`, `0cb7d7a47`, `d4c07b768`, `2d13b3b31`, `1e45ce7b3`, `afd16f39b`, `72f9080c6`, `f23d14de9`, `1b081dcac`, `e46711c45`, `64b375d2c`.
 
@@ -32,7 +34,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   `bc19c5d32`, `d65bd546a`, `ae9e40109`, merges `ebf14de6b` (`feat/guia-tv`), `ba0639cf0`
   (`agente/205-guiatv`).
 
-- **Variant A Hero layouts**: Wide Hero cards and split Hero rows use the approved artwork and metadata anchors, keep posters visible while scrolling and match the active Dynamic background through transitions. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-heroisA`, `50455c6f9`, `77aa7f216`, `13a5f3bab`, `4ec7e93ee`, `d61e03956`, `124895d8c`, merge `8ff0623e9`; TV validation remains pending.
+- **Variant A Hero layouts**: Wide Hero cards and split Hero rows use the approved artwork and metadata anchors, keep posters visible while scrolling and match the active Dynamic background through transitions. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-heroisA`, `50455c6f9`, `77aa7f216`, `13a5f3bab`, `4ec7e93ee`, `d61e03956`, `124895d8c`, merge `8ff0623e9`; The focused Split row now shows a large logo block instead of a card, with overview text aligned to the last rendered line. Additional refs `6afda5a73`, `f008f67f1`, merge `a228c66f0`. TV validation remains pending.
 
 - **Stage rows show details beside the poster**: Focused Stage posters reveal genres, ratings, synopsis and cast beside the artwork, with an optional spotlight that follows focus. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `a7d5ccb51`, `2dc2e5dc2`, `0749d883e`, `f59c70b50`, `96457c78a`. Stage now includes anchored headlines, timed focus motion and editorial lighting; touch scrolling and viewport bounds remain aligned.
 
@@ -99,6 +101,13 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   is slow. All platforms. Refs #545 #551 #552 #504, `26b9c635b`, `1c9043ed0`, `455135df2`, `cbcf467f5`, `27988615e`.
 
 ### New
+
+- **Adjust converted Samsung audio timing**: A device-local audio offset from -500 to +500 ms in 20 ms steps lets you align converted audio without shifting video. Platforms: Samsung .tpk. Refs #578, `3c3aa2f2f`, merge `f8176128d`.
+- **More readable Apple TV style sidebar**: At interface scales up to 90%, the Apple TV style sidebar grows 20%, and Streaming expands when focus or a mobile swipe passes Settings. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `5bef8c621`, `b328b1749`, merge `8cb639b60`.
+
+- **Latin American Spanish metadata**: Choose Latin American Spanish for title metadata, while regional account languages survive unrelated settings sync. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `37f32a1f0`, `973e303a8`, `0247f87ba`, `bf27b2846`, merge `26472093a`.
+
+- **Choose episode-card ratings**: Select the title-line rating, IMDb, TMDB, both providers or no rating on episode cards. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `a829c328e`, merge `692e650aa`.
 
 
 - **Poster cards follow genre visibility**: Small and medium Poster cards hide genre and synopsis when the Home hero genre setting is disabled. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-generocard`, `bfa2f9603`, merge `d4314f5ce`.
@@ -206,6 +215,30 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Guide logos recover after failures**: Live TV can borrow eligible M3U, XMLTV and channel-variant logos when provider images fail, with bounded retries for recovery. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `65107e6fc`, `b0a172669`, `20f32990d`, merge `caea5e54d`.
+- **Custom poster templates accept optional IDs**: IMDb-only cards can use custom poster services whose TMDB identifier is optional while required identifiers retain their fallback. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #566, `6c3b323b2`, merge `25225cf86`.
+- **Sports sources keep their provider type**: Sports items try their original item and catalog types before legacy channel fallbacks, sharing the existing add-on timeout budget. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #588, `b3fde1a13`, `a017d44e0`, merge `3356994e8`.
+- **Trakt disconnect and retry remain reliable**: Profile disconnects survive delayed credential pushes, Android honors retry delays, and watchlists show newest entries first. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #610, `0ed0312f0`, `8bd79ad4c`, `4a1e17561`, merge `436ea511c`.
+- **Episode tiles retain their resting tint**: Episode text keeps its resting background across focus changes, page fades and glass settings. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `8a61d1c1f`, `a95079a43`, `2d26a3a87`, merge `5404c88ac`.
+
+- **Subtitle emphasis survives formatting tags**: SRT subtitles retain bold and italic emphasis while unsupported formatting is removed before display. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #604, `fc94e9c24`, merge `3ce5b5f22`.
+
+- **Samsung trailer volume survives handoff**: Trailer mute and volume choices survive delayed decoder release when playback changes. Platforms: Samsung .tpk. Refs #603, `bd91a888d`, merge `3645de3bd`.
+
+- **Samsung voice search remains available**: Automatic keyboard mode keeps the native microphone visible while respecting an explicit Off preference. Platforms: Samsung .tpk. Refs #585, `df83e19db`, merge `015e20cbf`.
+
+- **Home rows finish scrolling after focus moves**: Interrupted catalogue scrolling settles at the remembered column so rows and artwork prefetch no longer remain stuck. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #579, `4fe226636`, merge `9cd1ea29d`.
+
+- **Library fills the available width**: Library columns and the header badge stay aligned across text sizes, and watched badges stop flickering on LG C9. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `88c2c7c3e`, `ba954c907`, merges `2f35d2af7`, `c2fa09427`.
+
+- **Debrid can resolve hash-only sources**: Hash-only streams marked not web ready remain selectable when a configured debrid account can resolve them. Platforms: webOS, Android, Samsung .tpk, WASM. Refs #505 context, `d8f1d64b1`, merge `00700a9c3`.
+
+- **Source lists stay clean beneath tabs**: Scrolled sources clip at the list boundary without the dark band below the tabs across player and detail entry points. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `32f51412c`, `ad0d2e044`, `b53c1e55f`, merge `522d34bf0`.
+
+- **Title actions keep comfortable spacing**: Focused actions and reminder circles retain their gaps, while the restart pill opens with smoother timing. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `4e27522e9`, `019fa68a8`, `e320c829a`, merge `007a0607f`.
+
+- **Episode artwork stays aligned at every scale**: Episode backdrop strips clip correctly, glass retains its sampled backdrop, and text and veils remain stable on Mali GPUs. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `2e1a440cd`, `2f5f90c31`, `bbe0ee43d`.
 
 - **Episode ratings keep their own sources**: Episode IMDb scores remain independent, late ratings preserve enabled Letterboxd scores, and your preferred rating order survives reloads. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-notasep`, `4391fd482`, `4705f229a`.
 - **Tizen startup retains the accepted glass path**: Startup uses the accepted lazy glass linking path after experimental shader startup changes were reverted. Platforms: Samsung .tpk. Refs owner request, `agente/205-tpk60preta`, merge `6618b7068`, `291fe8e6d`, `b5498bbcb`; device confirmation remains pending.
@@ -434,6 +467,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Internal
 
+- **Release card and rendering regression coverage**: Release notes and translated cards were refreshed, and headless Stage fixtures and guide-logo baseline checks were repaired. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `ed9bae8df`, `418cc57ce`, `1744000b3`.
+
+- **UI regression coverage**: Regression checks cover source-header clipping, action spacing, library scaling, regional-language sync and Samsung decoder handoff. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `b53c1e55f`, `ad0d2e044`, `e320c829a`, `bf27b2846`, `bd91a888d`.
+
 - **Missing community regression probes**: The PR #487 port adds audio and subtitle language sanitizer probes, while PR #493 fixtures cover scoped sessions and profile reopening. Platforms: webOS, Android, Samsung .tpk, WASM. Refs @ghbarker, PR #487, PR #493, merge `24f78dbda`, `47ee6b167`, `404a58996`.
 
 
@@ -508,7 +545,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-Tracking snapshot: 19 unmerged branches without running jobs; 19 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-episodioslento`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/p2p`. Queued jobs and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
+Tracking snapshot: 19 unmerged branches without running jobs; 12 open issues without mapped jobs or prompts. Newer fixes need review on `agente/205-bibfonte`, `agente/205-guiaoverlay`, `agente/205-livecat`, `agente/205-livefiltro`, `agente/205-pr487v2`, `agente/205-pr493`, `agente/205-pr538`, `agente/p2p`. Queued work and 2.1 deferrals are not lost. Android install succeeded at `cb7ece972`; C9 install failed, so installed TV HEAD remains unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
