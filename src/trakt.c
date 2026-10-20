@@ -15,6 +15,9 @@
 #include "traktscrobble.h"
 #include "traktult.h"
 #include "metaep.h"
+#include "simkl.h"
+
+extern int simkl_e_a_seguir(const char *) NV_PERFIL_OPCIONAL;
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -591,10 +594,10 @@ static int enfeitar(CatItem *d, const char *tipo, uint64_t sessao) {
   // medido 2,1 s no Mac com paralelismo, e pior: se o Cinemeta falhava o
   // item SUMIA da fileira (compactacao). Metahub e deterministico pelo tt.
   arte_metahub_preencher(d);
-  // Id de addon de anime ("kitsu:41370"): o Cinemeta nao o conhece, e o corte
-  // no primeiro ':' pedia /meta/series/kitsu.json. Fica com o que o registro
-  // trouxe (sem arte, o item nao entra na fileira, como sempre).
-  if (strncmp(d->imdb, "tt", 2)) return d->poster[0] != 0;
+  // Cinemeta only understands IMDb. Keep confirmed Simkl next-up entries
+  // with their title even when the provider has no artwork for a fallback ID.
+  if (strncmp(d->imdb, "tt", 2))
+    return d->poster[0] || (d->titulo[0] && simkl_e_a_seguir && simkl_e_a_seguir(d->imdb));
   snprintf(serie, sizeof serie, "%s", d->imdb);
   dp = strchr(serie, ':');
   if (dp) *(char *)dp = 0;

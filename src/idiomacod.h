@@ -11,6 +11,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 enum { IDIOMA_PT = 0, IDIOMA_EN = 1, IDIOMA_RO = 2, IDIOMA_UK = 3, IDIOMA_RU = 4,
        IDIOMA_FR = 5, IDIOMA_DE = 6, IDIOMA_ES = 7,
@@ -71,6 +72,25 @@ static inline const char *idioma_iso(int idioma) {
 static inline int idioma_ponto_decimal(int idioma) {
   return idioma == IDIOMA_EN || idioma == IDIOMA_JA || idioma == IDIOMA_ZHCN ||
          idioma == IDIOMA_ZHTW || idioma == IDIOMA_AR;
+}
+
+// Integer grouping follows the selected UI locale, independent of LC_NUMERIC.
+static inline void idioma_inteiro(int idioma, int valor, char *out, unsigned cap) {
+  char raw[32];
+  const char *sep = idioma_ponto_decimal(idioma) ? "," : ".";
+  switch (idioma) {
+    case IDIOMA_FR: case IDIOMA_RU: case IDIOMA_UK: case IDIOMA_PL:
+    case IDIOMA_SV: case IDIOMA_NO: case IDIOMA_CS: case IDIOMA_SK:
+    case IDIOMA_HU: case IDIOMA_LT: sep=" "; break;
+    default: break;
+  }
+  snprintf(raw,sizeof raw,"%d",valor);
+  unsigned n=(unsigned)strlen(raw), pos=0;
+  for (unsigned i=0;i<n && pos+1<cap;i++) {
+    if (i && raw[i-1]!='-' && (n-i)%3==0 && pos+2<cap) out[pos++]=*sep;
+    out[pos++]=raw[i];
+  }
+  if (cap) out[pos]=0;
 }
 
 // Troca, NO LUGAR, o ponto decimal de um texto ja montado por virgula quando o

@@ -97,7 +97,7 @@ struct DtsEngine {
   int range_threads, range_stop;
   int64_t range_next;
   long range_bytes;
-  int dv, passthrough, range_slots, final_cross;
+  int dv, passthrough, range_slots, final_cross, opening;
   /* Samsung remux (dts_engine_open_demux): container only, large ranges and
    * the final address reused, like the Dolby Vision path, because the whole
    * video also flows through this reader. Never set on webOS. */
@@ -439,6 +439,18 @@ static void fx_close(DtsEngine *e) {
   if(e->fx_buf) rings_add(-e->fx_cap);
   free(e->fx_buf); e->fx_buf=NULL;
 }
+/* Only the embedded motor's loopback /stream route gets a startup budget.
+ * Cues near EOF are optional; media reads and later seeks keep their deadline. */
+static int optional_p2p_tail(DtsEngine *e) {
+  if(!e->opening || e->total<0 || e->pos<4*1024*1024 ||
+     e->pos<e->total-4*1024*1024) return 0;
+  const char *port=NULL;
+  if(!strncmp(e->url,"http://127.0.0.1:",17)) port=e->url+17;
+  else if(!strncmp(e->url,"http://localhost:",17)) port=e->url+17;
+  if(!port || *port<'0' || *port>'9') return 0;
+  while(*port>='0' && *port<='9') port++;
+  return !strncmp(port,"/stream/",8) && port[8];
+}
 static int read_range(void *opaque,uint8_t *dst,int n) {
   DtsEngine *e=opaque;
   if (cancelled(e) || __atomic_load_n(&e->interrupt,__ATOMIC_RELAXED)) return AVERROR_EXIT;
@@ -460,8 +472,20 @@ static int read_range(void *opaque,uint8_t *dst,int n) {
         if(e->ranges[i].state && e->ranges[i].start==e->pos) job=&e->ranges[i];
     }
     if(!job) { pthread_mutex_unlock(&e->range_lock); return AVERROR_EXIT; }
-    while(job->state!=3 && !cancelled(e) && !__atomic_load_n(&e->interrupt,__ATOMIC_RELAXED))
-      pthread_cond_wait(&e->range_wake,&e->range_lock);
+    int optional=optional_p2p_tail(e);
+    struct timespec deadline;
+    if(optional) { clock_gettime(CLOCK_REALTIME,&deadline); deadline.tv_sec++; }
+    while(job->state!=3 && !cancelled(e) && !__atomic_load_n(&e->interrupt,__ATOMIC_RELAXED)) {
+      if(optional) {
+        if(pthread_cond_timedwait(&e->range_wake,&e->range_lock,&deadline)==ETIMEDOUT && job->state!=3) {
+          pthread_mutex_unlock(&e->range_lock);
+          /* Cancel speculative tail reads too, so the next seek cannot wait
+           * for an abandoned request's 15-second transport timeout. */
+          clear_ranges(e);
+          return cancelled(e)?AVERROR_EXIT:AVERROR(EIO);
+        }
+      } else pthread_cond_wait(&e->range_wake,&e->range_lock);
+    }
     if(cancelled(e) || __atomic_load_n(&e->interrupt,__ATOMIC_RELAXED)) { pthread_mutex_unlock(&e->range_lock); return AVERROR_EXIT; }
     long count=job->count; int status=job->status; int64_t total=job->total, end=job->end;
     uint64_t ready_at=clock_ns(CLOCK_MONOTONIC);
@@ -596,7 +620,7 @@ int dts_engine_open(DtsEngine *e,const char *url,const char *headers,int audio,i
   e->pos=0; e->total=-1; e->cache_size=0; e->has_core=0;
   e->range_bytes=e->dv?RANGE_BYTES_DV:RANGE_BYTES; e->range_slots=e->dv?RANGE_SLOTS_DV:RANGE_SLOTS;
   if(g_ahead_mib>0) { e->range_bytes=RANGE_BYTES_DV; e->range_slots=(g_ahead_mib+3)/4; }
-  e->final_url[0]=0; e->final_cross=0; e->passthrough=0; e->remux=0;
+  e->final_url[0]=0; e->final_cross=0; e->passthrough=0; e->remux=0; e->opening=1;
   e->demux_eof=e->decoder_eof=e->resampler_eof=e->encoder_sent_eof=e->timeline=0;
   if (cancelled(e)) return fail(e,"Cancelled",0);
   if (audio < -1 || !isfinite(start) || start<0 || start>INT64_MAX/1000000000.0)
@@ -619,6 +643,7 @@ int dts_engine_open(DtsEngine *e,const char *url,const char *headers,int audio,i
   int r=avformat_open_input(&e->fmt,NULL,NULL,&opts); av_dict_free(&opts);
   if(r<0) return fail(e,"Container open",r);
   r=avformat_find_stream_info(e->fmt,NULL);
+  e->opening=0;
   if(r<0) return fail(e,"Container metadata",r);
   if(e->fmt->duration==AV_NOPTS_VALUE || e->fmt->duration<=0)
     return fail(e,"Finite VOD duration required",0);

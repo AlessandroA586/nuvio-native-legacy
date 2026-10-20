@@ -4175,7 +4175,8 @@ static const char *dinArteDaCor(void) {
   deitado = editorial(f->tipo) || f->tipo == FILEIRA_LARGA ||
             f->tipo == FILEIRA_HEROI ||
             f->tipo == FILEIRA_CONTINUE || f->tipo == FILEIRA_RETORNO ||
-            (f->tipo != FILEIRA_POSTER && ajustes_posteres_deitados());
+            (f->tipo != FILEIRA_POSTER && f->tipo != FILEIRA_TOP10_NUM &&
+             f->tipo != FILEIRA_TOP10 && ajustes_posteres_deitados());
   return arte_por_identidade(idx, deitado);
 }
 // O BANNER DA COLECAO NA DINAMICA. Com o foco num grupo de colecao o destaque
@@ -7846,7 +7847,7 @@ static void home_desenhar_(Uint32 agora) {
                        tipo == FILEIRA_HEROI_DIVIDIDO ? 59.0f : NV_LEGACY_ROW_HEAD_H);
 
     int deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
-                  ((tipo != FILEIRA_POSTER && tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO && tipo != FILEIRA_PALCO) &&
+                  ((tipo != FILEIRA_POSTER && tipo != FILEIRA_TOP10_NUM && tipo != FILEIRA_TOP10 && tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO && tipo != FILEIRA_PALCO) &&
                    ajustes_posteres_deitados());
     int rotuloFora = temRotulo(tipo);
     if (y < NV_TELA_H + 200 && y + NV_LEGACY_ROW_HEAD_H + lh > -200) {
@@ -8420,7 +8421,8 @@ static void home_desenhar_(Uint32 agora) {
           fileiraEhCanal(&fileiras[r])) continue;
       float lw = larguraFil(r);
       int deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
-                    (tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO &&
+                    (tipo != FILEIRA_TOP10_NUM && tipo != FILEIRA_TOP10 &&
+                     tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO &&
                      ajustes_posteres_deitados());
       for (int c = 0; c < fileiras[r].n && !pediu; c++) {
         float x = homeFileiraX(r, c);

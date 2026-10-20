@@ -16,6 +16,7 @@
 #include "ajustes_ux.h"
 #include "trailerfonte.h"   // NV_TRAILER_CONTINUA_DETALHE, nas ajudas do trailer
 #include "dados.h"
+#include "androidcache.h"
 #include "extplayer.h"
 #include "resolucao.h"
 #include "gpunivel.h"
@@ -682,7 +683,7 @@ typedef enum {
   AJ_LIVETV_SUGERIR,   // Live TV: Jev suggests sections for channels with none (livecat.h); default on; local, append-only
   AJ_AUDIO_OFFSET,     // #578: device-local converted audio offset, append-only
   AJ_XTREAM_CONEXOES,  // Stored with this IPTV account, not global settings.
-  AJ_AMPLIAR_UI,      // Device-local output scaler, append-only; App (4K) by default.
+  AJ_AMPLIAR_UI,      // Device-local output scaler, append-only; App (4K) hardware by default.
   AJ_GUIA_FONTE, AJ_GUIA_RECARREGAR, AJ_M3U_URL, AJ_M3U_EPG, AJ_M3U_LIMPAR,
   AJ_IPTV_CONTA, AJ_IPTV_ADD_XTREAM, AJ_IPTV_ADD_M3U, AJ_IPTV_ADD_STALKER,
   AJ_IPTV_NOME, AJ_IPTV_ATIVA, AJ_IPTV_REMOVER,
@@ -692,6 +693,8 @@ typedef enum {
   AJ_BIB_HOME,        // #507: Library row on Home; default off; per profile on this device, append-only
   AJ_AMPLIACAO_ALGO,  // Device-local upscaling algorithm, append-only; automatic by default.
   AJ_AMPLIACAO_NITIDEZ, // Device-local RCAS sharpness for SGSR sharp / FSR 1, append-only.
+  AJ_HDR_INTERFACE,    // Experimental Android HDR output; device-local
+  AJ_LIMPAR_CACHE,
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -758,7 +761,7 @@ static const char *V_LIVETV_ESPERA[] = { "Automática", "25 s", "45 s" };
 static const char *V_RELOGIO_POS[] = { "Automática", "Esquerda", "Direita" };
 // Indice gravado em fontePrazoLocal; ver ajustes_fonte_prazo_ms.
 // Indices gravados em fontePrioridadeLocal / fonteHdrLocal (ajustes_fonte_prioridade/_hdr).
-static const char *V_FONTE_PRIORIDADE[] = { "Equilíbrio", "Qualidade máxima", "Começar rápido" };
+static const char *V_FONTE_PRIORIDADE[] = { "Equilíbrio", "Qualidade máxima", "Começar rápido", "Do addon" };
 static const char *V_FONTE_HDR[] = { "Preferir", "Indiferente", "Evitar" };
 // 2.0: "ate 30 s" (dono, 05/10). Indices = esmaecer.h (ESM_ESCOLHAS); o
 // ajuste nunca saiu numa versao publicada, entao os indices antigos nao migram.
@@ -1628,7 +1631,7 @@ static const Opcao OPCOES[AJ_N] = {
   ACAO("Entrar no Plex"),
   ACAO("Servidor do Plex"),
   ACAO("Sair do Plex"),
-  ESC("A escolha automática prioriza",   V_FONTE_PRIORIDADE, 3), // local: fontePrioridadeLocal
+  ESC("A escolha automática prioriza",   V_FONTE_PRIORIDADE, 4), // local: fontePrioridadeLocal
   ESC("HDR e Dolby Vision",              V_FONTE_HDR, 3),        // local: fonteHdrLocal
   ESC("Logo do app",                     V_LOGO_APP, 2),         // local: logoAppLocal
   ESC("Abertura do app",                 V_ABERTURA, 3),         // local: aberturaAppLocal
@@ -1807,6 +1810,8 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Fileira da Biblioteca", V_LIGA, 2),   // local: libraryRowLocal
   ESC("Algoritmo de ampliação", V_AMPLIACAO_ALGO, 6),
   NUM("Nitidez", 0, 4, 1, NULL),
+  ESC("Interface em HDR (teste)", V_VIDRO_FOSCO, 2),
+  ACAO("Limpar cache"),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -2125,6 +2130,8 @@ static const char *CHAVE[] = {
   "libraryRowLocal",
   "ampliarAlgoLocal",
   "ampliarNitidezLocal",
+  "hdrInterfaceLocal",
+  "-limparCache",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2732,6 +2739,10 @@ static int perfilSeguro;
 static int saidaLimitada;
 void ajustes_ui_saida(int w, int h) { saidaLimitada = w > 0 && h > 0 && (w < 3840 || h < 2160); }
 int ajustes_ampliar_app(void) { return painel4k() && valor[AJ_AMPLIAR_UI] == 1 && !SEGURO; }
+// #205: a escolha so tem efeito com a resolucao em 1080p/720p (main.c
+// uiMenor4k). Na Automatica e na 4K quem amplia e a TV. O valor gravado NAO
+// muda: voltar a 1080p restaura a escolha da pessoa.
+static int ampliarUiVale(void) { return ajustes_720p() || ajustes_1080p(); }
 int ajustes_ampliacao_algo(void)    { return valor[AJ_AMPLIACAO_ALGO]; }
 int ajustes_ampliacao_nitidez(void) { return valor[AJ_AMPLIACAO_NITIDEZ]; }
 int ajustes_1080p(void)               { return valor[AJ_RESOLUCAO] == RES_1080 && !SEGURO; }
@@ -2749,8 +2760,8 @@ int ajustes_proximo_contagem(void)    { int n = valor[AJ_PROXIMO_CONTAGEM]; retu
 int ajustes_pular_creditos(void)      { return lig(AJ_PULAR_CREDITOS); }
 int ajustes_medidor_desempenho(void)  { return valor[AJ_MEDIDOR]; }
 int ajustes_fonte_manual(void)        { return lig(AJ_FONTE_MANUAL); }
-int ajustes_fonte_primeira(void)      { return valor[AJ_FONTE_AUTO] == 1; }
-int ajustes_fonte_prioridade(void) { int v = valor[AJ_FONTE_PRIORIDADE]; return v < 0 || v > 2 ? 0 : v; }
+int ajustes_fonte_primeira(void)      { return ajustes_fonte_prioridade() == 3 || valor[AJ_FONTE_AUTO] == 1; }
+int ajustes_fonte_prioridade(void) { int v = valor[AJ_FONTE_PRIORIDADE]; return v < 0 || v > 3 ? 0 : v; }
 int ajustes_enquetes(void)         { return lig(AJ_ENQUETES); }
 int ajustes_busca_cinemeta(void)   { return lig(AJ_BUSCA_CINEMETA); }
 int ajustes_esmaecer(void)         { int v = valor[AJ_ESMAECER]; return v < 0 || v > 5 ? 3 : v; }
@@ -2758,6 +2769,8 @@ int ajustes_descanso_estilo(void)  { int v = valor[AJ_DESCANSO_ESTILO]; return v
 int ajustes_descanso_fonte(void)   { int v = valor[AJ_DESCANSO_FONTE]; return v < 0 || v > 1 ? 0 : v; }
 // #202: -1 = ultimo modo usado; 0..7 = PlrAspecto a aplicar ao abrir o video.
 int ajustes_proporcao_padrao(void) { int v = valor[AJ_PROPORCAO_PADRAO]; return v < 1 || v > 8 ? -1 : v - 1; }
+// Experimental HDR menus left the menu: off everywhere, even if saved as on.
+int ajustes_hdr_interface(void) { return 0; }
 int ajustes_hdr_ui(void)            { return valor[AJ_HDR_UI] != 1; }   // 1 = Desligado
 int ajustes_brilho_player(void)    { int v = valor[AJ_BRILHO_PLAYER]; return v < 0 || v > 3 ? 1 : v; }
 void ajustes_espelhar_enquetes(int ligado) { int n = ligado ? 0 : 1; if (valor[AJ_ENQUETES] != n) { valor[AJ_ENQUETES] = n; AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar()); } }
@@ -2785,7 +2798,7 @@ int ajustes_fonte_tocar_conferindo(void) { return lig(AJ_FONTE_TOCAR_CONFERINDO)
 int ajustes_fonte_aquecer(void) { return lig(AJ_FONTE_AQUECER); }
 int ajustes_fonte_conferir_varias(void) { return lig(AJ_FONTE_CONFERIR_VARIAS); }
 int ajustes_fonte_preparar(void) { return lig(AJ_FONTE_PREPARAR); }
-int ajustes_fonte_grupo(void) { return lig(AJ_FONTE_GRUPO); }
+int ajustes_fonte_grupo(void) { return ajustes_fonte_prioridade() != 3 && lig(AJ_FONTE_GRUPO); }
 int ajustes_fonte_grupo_sessoes(void) { return lig(AJ_FONTE_GRUPO_SESSOES); }
 int ajustes_link_reusar(void) { return lig(AJ_LINK_REUSAR); }
 unsigned ajustes_link_prazo_s(void) {
@@ -2974,7 +2987,8 @@ float ajustes_tamanho_ajustes(void) {
 // The phone always uses List. Keep the stored TV preference unchanged.
 static int ajLayoutSelecionavel(void) { return !telefoneui_ativo(); }
 static int ajOpcaoDisponivel(int op) {
-  if (op == AJ_AMPLIAR_UI) return painel4k() && !telefoneui_ativo();
+  if (op == AJ_AMPLIAR_UI)
+    return painel4k() && !telefoneui_ativo() && valor[AJ_RESOLUCAO] != RES_720;
   if (op == AJ_ARTE_TOM) return valor[AJ_TEMA] == AJ_TEMA_DINAMICA;
   // Only the selected account's fields are editable. Adding another account
   // never overwrites the credentials of the first one.
@@ -2989,6 +3003,7 @@ static int ajOpcaoDisponivel(int op) {
   if(ajIptvGerenciador(op))return 1;
   if(op==AJ_IPTV_ORDEM)return iptv_contas(NULL,0)>0;
   if (op == AJ_FALHA_ADDON_LIMITE) return faAddonEditar[0] != 0;
+  if (op == AJ_HDR_INTERFACE) return 0;
 #ifndef NV_ANDROID
   if (op == AJ_FONTE_PRECARREGAR) return 0;
 #endif
@@ -5870,6 +5885,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_ABAS_ESTILO:    /* #205: idem */
     case AJ_LOGO_TRAILER:   /* so a protecao de OLED desta TV */
     case AJ_LEG_MOSTRAR:
+    case AJ_HDR_INTERFACE: /* HDR output belongs to this panel. */
     case AJ_HDR_UI:         /* o painel e desta TV */
     case AJ_LEG_SYNC_AUTO: /* escolha local desta TV */
     case AJ_TELA_ABERTURA: /* #205: o web nao tem; escolha desta TV */
@@ -6915,6 +6931,17 @@ static const char *textoLeitura(int op) {
     return extras_mdblist_tem_chave() ? i18n("definida") : i18n("ausente");
   }
   if (op == AJ_HERO_CATALOGOS) return heroFonteRotulo();
+  if (op == AJ_LIMPAR_CACHE) {
+    static Uint32 measuredAt;
+    static uint64_t measuredBytes;
+    Uint32 now = SDL_GetTicks();
+    if (!measuredAt || now - measuredAt >= 1000) {
+      measuredBytes = nv_android_cache_size_all(); measuredAt = now;
+    }
+    snprintf(buf, sizeof buf, "%.1f MB", measuredBytes / 1048576.0);
+    idioma_decimal_texto(buf, ajustes_idioma());
+    return buf;
+  }
   if (op == AJ_ESPACO) {
     // CURTO O BASTANTE PARA CABER NA COLUNA: "201.0 MB em 209 imagens" era
     // cortado em "209..." na TV, e o numero que sobrava era o menos util. O
@@ -6941,8 +6968,10 @@ static const char *textoLeitura(int op) {
 // ela continua no lugar, apagada e sem setas: a dependencia fica visivel em vez
 // de a linha sumir.
 static int inativa(int op) {
+  if (ajustes_fonte_prioridade() == 3 &&
+      (op == AJ_FONTE_AUTO || op == AJ_FONTE_GRUPO || op == AJ_FONTE_GRUPO_SESSOES || op == AJ_LINK_REUSAR || op == AJ_LINK_PRAZO)) return 1;
   switch (op) {
-    case AJ_AMPLIAR_UI: return !gpun_upscale_suportado();
+    case AJ_AMPLIAR_UI: return !gpun_upscale_suportado() || !ampliarUiVale();
     case AJ_VIDRO_CONTORNO: case AJ_FOCO_ACENTO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE: return !lig(AJ_VIDRO);
     case AJ_RAIL:         return ajustes_rail_moderna();
     case AJ_MENU_TOPO:    return ajustes_home_layout() == HOME_LAYOUT_DINAMICA;
@@ -7215,6 +7244,8 @@ static const char *ajudaOpcaoBase(int op) {
     // com elas ("Espera pelos add-ons" mandava ligar o Efeito de profundidade).
     if (op == AJ_SEEKR_FITA || op == AJ_SEEKR_AJUSTE)
       return "Ative Miniaturas na barra de tempo para ajustar as miniaturas.";
+    if (op == AJ_AMPLIAR_UI && !ampliarUiVale())
+      return "Na resolução Automática ou 4K quem amplia a interface é a TV. A escolha fica guardada e volta a valer em 1080p ou 720p.";
     if (op == AJ_SELOS_PACOTE_REM)
       return "Só dá para remover um pacote que foi adicionado nesta TV.";
     if (op == AJ_URL_REM)
@@ -7291,7 +7322,9 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_EPG_PAIS: return "De que país vem a programação dos canais no Guia. Automático escolhe pelo idioma e pelos nomes dos canais (RO:, |RO|…). A grade do próprio provedor Xtream entra sempre que existir.";
     case AJ_FONTE_MANUAL: return "Ao mandar reproduzir, abre a lista de fontes em vez de escolher sozinho. Canal ao vivo não pergunta.";
     case AJ_FONTE_AUTO: return "Melhor fonte: prefere 4K, Dolby Vision e MP4 e confere uma fonte por vez. Primeira da lista: toca a primeira que o addon mandou e não confere nenhuma outra — para quem já filtra e ordena no AIOStreams.";
-    case AJ_FONTE_PRIORIDADE: return "Equilíbrio: HDR e Dolby Vision ganham de SDR na mesma resolução ou numa abaixo, e uma fonte que a sua conexão claramente não sustenta desce. Qualidade máxima: a maior resolução permitida, depois Dolby Vision, HDR10+, HDR10 e SDR, sem rebaixar por velocidade. Começar rápido: prefere fontes em cache e arquivos menores, que abrem mais depressa. Sempre rebaixa uma fonte que a conexão medida não sustenta.";
+    case AJ_FONTE_PRIORIDADE:
+      if (ajustes_fonte_prioridade() == 3) return "Do addon: toca a primeira fonte permitida, sem priorizar qualidade nem reutilizar escolhas anteriores.";
+      return "Equilíbrio: HDR e Dolby Vision ganham de SDR na mesma resolução ou numa abaixo, e uma fonte que a sua conexão claramente não sustenta desce. Qualidade máxima: a maior resolução permitida, depois Dolby Vision, HDR10+, HDR10 e SDR, sem rebaixar por velocidade. Começar rápido: prefere fontes em cache e arquivos menores, que abrem mais depressa. Sempre rebaixa uma fonte que a conexão medida não sustenta.";
     case AJ_LOGO_APP: return "O símbolo que o Nuvio mostra na abertura e nas telas de entrada. Novo é o play em degradê; Clássico é a TV retrô de sempre. Vale só nesta TV.";
     case AJ_ABERTURA: return "Como o logo some quando o app abre. Padrão para um instante, aproxima e esmaece; Só esmaece não aproxima; Direto abre a Home sem parar. Vale só nesta TV.";
     case AJ_FONTE_HDR: return "Preferir: fontes com HDR ou Dolby Vision vêm na frente. Indiferente: o formato não conta. Evitar: prefere SDR na mesma resolução. O Dolby Vision só entra se estiver ligado em Imagem e som; perfil 5 sem HDR10 fica atrás do HDR10, porque sai com cores erradas fora de TV Dolby Vision. Só vale para a escolha automática.";
@@ -7560,7 +7593,8 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_FONTE_REGEX_MODELO: return "Padrões prontos: idiomas como os add-ons escrevem, áudio MULTI ou DUAL, 4K e Remux. Escolher um troca o padrão da regex.";
     case AJ_ESPACO_FILEIRAS: return "O espaço vertical entre uma fileira da Home e a seguinte. Com menos cabem mais fileiras na tela, com mais a Home fica mais arejada.";
     case AJ_ESPACO_TITULOS: return "O espaço horizontal entre os cartazes de uma fileira da Home.";
-    case AJ_AMPLIAR_UI: return "Pelo app (4K): usa mais GPU. Reinicie o app depois de mudar.";
+    case AJ_HDR_INTERFACE: return "HDR experimental para os menus. Branco limitado a 203 nits. Reinicie o app após mudar. Sem suporte, usa SDR.";
+    case AJ_AMPLIAR_UI: return "Só vale com a resolução em 1080p ou 720p: o app amplia a interface para a tela (usa mais GPU). Na Automática e na 4K quem amplia é a TV. Reinicie o app depois de mudar.";
     case AJ_AUDIO_OFFSET: return "Positivo atrasa; negativo adianta. Só áudio convertido, a partir do próximo vídeo.";
     case AJ_AMPLIACAO_ALGO: return "Como o app amplia a interface para a tela. Automático escolhe sozinho; SGSR nítido e FSR 1 usam mais GPU. Vale na hora.";
     case AJ_AMPLIACAO_NITIDEZ: return "Reforço de contorno do SGSR nítido e do FSR 1. 0 desliga.";
@@ -7608,6 +7642,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_SIMKL: return "Conecta a sua conta do Simkl, uma alternativa ao Trakt para acompanhar séries.";
     case AJ_DISCORD: return "Mostra no seu perfil do Discord o que você está assistindo, com o cartaz e o tempo. Só sai alguma coisa enquanto um vídeo toca neste perfil.";
     case AJ_SAIR: return "Sai da conta nesta TV e apaga daqui a sessão, os addons e o progresso guardados.";
+    case AJ_LIMPAR_CACHE: return "Remove arquivos temporários. Mantém perfis, contas, progresso e addons.";
     case AJ_ESPACO: return "Uso atual de memória pelo cache de imagens, não espaço ocupado no armazenamento da TV.";
     case AJ_TEX_MB: return "Quanta memória o cache de imagens pode usar. Automático escolhe pela RAM da TV. Um valor acima do que esta TV suporta é reduzido ao máximo dela — o painel ao lado mostra o teto em vigor.";
     case AJ_VERSAO_I: return "Versão do aplicativo. Esta informação não pode ser alterada.";
@@ -7671,7 +7706,7 @@ static const char *ajudaOpcaoBase(int op) {
 static const char *ajudaOpcao(int op) {
   const char *base = ajudaOpcaoBase(op);
   static char b[2048];
-  if (op == AJ_AMPLIAR_UI && saidaLimitada) {
+  if (op == AJ_AMPLIAR_UI && saidaLimitada && ampliarUiVale()) {
     snprintf(b, sizeof b, "%s\n%s",
       i18n("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K."), i18n(base));
     return b;
@@ -9292,6 +9327,13 @@ static void eventoTela(const SDL_Event *e) {
     }
     // O painel de envio (registro.h) dispara o envio e mostra o codigo ou o
     // motivo da falha; antes so o texto da linha mudava.
+    if (focoOp == AJ_LIMPAR_CACHE) {
+#ifdef NV_ANDROID
+      p2pmotor_parar();
+      android_limpar_cache();
+#endif
+      return;
+    }
     if (focoOp == AJ_ENVIAR_LOG) { registro_envio_abrir(); return; }
     if (focoOp == AJ_AVISO_LEGAL) { registro_legal_abrir(); return; }
     if (focoOp == AJ_VER_REGISTRO) { registro_abrir(); return; }
@@ -9717,7 +9759,10 @@ static int nValores(int op) {
 // Texto do valor de uma linha. Buffer estatico porque so uma linha e desenhada
 // por vez dentro de desenhaLinha.
 static const char *textoValor(int op) {
+  if (op == AJ_FONTE_AUTO && ajustes_fonte_prioridade() == 3) return i18n("Primeira da lista");
   if(op==AJ_GUIA_CATEGORIAS)return i18n("Abrir");
+  // Fora de 1080p/720p a linha mostra o valor EFETIVO, nao o gravado.
+  if (op == AJ_AMPLIAR_UI && !ampliarUiVale()) return "Pela TV";
   if(ajIptvGerenciador(op))return i18n("Abrir");
   if(op==AJ_IPTV_CONTA)return ajIptvNome(iptv_conta_indice());
   static char buf[48];

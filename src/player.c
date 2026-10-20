@@ -387,11 +387,13 @@ static unsigned trailerSessao;
 // Ultima posicao gravada DURANTE a sessao (gravarProgressoParcial); -1 = nenhuma.
 static double parcialPos = -1.0;
 static int parcialPausa;
+static float parcialRelogio, parcialConta;
 static void identidadeFonteAberta(void);
 static void zerarAssistido(void) {
   eofDesde = -1.0;
   assistidoSeg = 0; assistidoAmostra = 0; trailerSessao = trailer_geracao();
   parcialPos = -1.0; parcialPausa = 0;
+  parcialRelogio = parcialConta = 0;
   snprintf(fonteSessao, sizeof fonteSessao, "%s", comVideo ? video_url_atual() : "");
   identidadeFonteAberta();
 }
@@ -1553,6 +1555,14 @@ static void aplicarAspecto(void) {
                            (int)(o.w + 0.5f), (int)(o.h + 0.5f));
               return; }
 
+#ifdef NV_TPK
+  // Source lookup may still expose the previous live channel's dimensions.
+  if (ehCanal() && esperandoFonte) {
+    video_janela(0, 0, (int)NV_TELA_W, (int)NV_TELA_H);
+    return;
+  }
+#endif
+
   // Layout neutro ate o modo salvo ser liberado (ver aspArmar).
   if (aspPendente) return;
 
@@ -1748,7 +1758,10 @@ void player_abrir(int indiceCatalogo, const char *url) {
     // na troca — o stream velho segue no ar ate a fonte nova chegar pelo
     // fluxo de sempre. Qualquer outra abertura (OK no guia, filme, serie)
     // volta a tela cheia e para o video do canto.
-    if (ficaMini && canalSessao) { mini = 1; aberto = 0; }
+    // `miniGuia` armado pelo app (player_mini_no_guia) ANTES da busca tambem
+    // manda a sessao nova direto para o preview — inclusive na conta
+    // limitada, onde querMini e 0 (a conexao velha ja foi solta).
+    if ((ficaMini || miniGuia) && canalSessao) { mini = 1; aberto = 0; }
     else if (mini || ficaMini) { mini = 0; miniGuia = 0; video_parar(); }
     else miniGuia = 0;
     janAtiva = 0;
@@ -2706,13 +2719,9 @@ void player_preparar_retencao(void) {
   video_pausar(1);
 }
 
-// O PONTO GRAVADO DURANTE A SESSAO, e nao so ao sair — paridade com o NuvioTV
-// oficial (PlayerRuntimeControllerPlaybackEvents.kt): saveWatchProgress ao
-// pausar e ~0,7 s depois de um seek, e saveWatchProgressIfNeeded a cada 90 s
-// tocando, so quando a posicao andou >= 5 s. Mesmas guardas da saida (fonte
-// principal com video, duracao real e nao suspeita, nao canal). So o PONTO:
-// o visto e o scrobble continuam com a saida e com o pause do Trakt/Simkl.
-#define PLR_PARCIAL_INTERVALO_S 90.0f
+// Durable local checkpoint every 30 s; account updates every five minutes.
+// Keep source ownership, real-duration and watched-proof guards.
+#define PLR_PARCIAL_INTERVALO_S 30.0f
 #define PLR_PARCIAL_SEEK_S 0.7f
 #define PLR_PARCIAL_LIMIAR_S 5.0
 static void gravarProgressoParcial(int conta, const char *porque) {
@@ -2726,7 +2735,7 @@ static void gravarProgressoParcial(int conta, const char *porque) {
       assistidoSeg < PLR_PROVA_MIN_S ||
       (!partesAtiva() && player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo())))
     return;
-  if (parcialPos >= 0.0 && fabs(posSeg - parcialPos) < PLR_PARCIAL_LIMIAR_S) return;
+  if (parcialPos >= 0.0 && fabs(posSeg - parcialPos) < (conta ? 0.5 : PLR_PARCIAL_LIMIAR_S)) return;
   ia = cat_indice_por_imdb_tipo(ci->imdb, ci->tipo);
   if (ia < 0) {
     printf("[player] progresso parcial ignorado: sem copia do tipo %s para %s\n", ci->tipo, ci->imdb);
@@ -2740,8 +2749,19 @@ static void gravarProgressoParcial(int conta, const char *porque) {
   if (cred > 1.0 && cred - duracaoSeg > intro_creditos_janela(duracaoSeg)) chegou = 0;
   { double vp = posSeg, vd = duracaoSeg;
     if (partesVirt(&vp, &vd, NULL)) chegou = 0;   // o visto e so da saida da ultima parte
-    cat_salvar_progresso_ep(ia, vp, vd, epT, epE, chegou); }
-  if (conta) sync_sujar_progresso();
+    if (!cat_salvar_progresso_ep(ia, vp, vd, epT, epE, chegou)) return; }
+  dados_sincronizar_logo();
+  if (conta) {
+    sync_sujar_progresso();
+    char id[64];
+    if (epT >= 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(ci->imdb, ":"), ci->imdb, epT, epE);
+    else snprintf(id, sizeof id, "%s", ci->imdb);
+    double sp = posSeg, sd = duracaoSeg;
+    partesVirt(&sp, &sd, NULL);
+    trakt_scrobble(SCR_EV_PONTO, id, sp, sd, assistidoSeg, 0);
+    simkl_scrobble(SCR_EV_PONTO, id, sp, sd, assistidoSeg, 0);
+    parcialConta = 0;
+  }
   parcialPos = posSeg;
   printf("[visto] ponto gravado (%s) pos=%.1f dur=%.1f (%.0f%%)\n", porque, (double)posSeg,
          (double)duracaoSeg, 100.0 * posSeg / duracaoSeg);
@@ -2779,6 +2799,11 @@ void player_descartar_retido(void) {
 void player_ciclo_evento(Uint32 tipo) {
   if (tipo == SDL_APP_WILLENTERBACKGROUND || tipo == SDL_APP_DIDENTERBACKGROUND ||
       tipo == SDL_APP_LOWMEMORY || tipo == SDL_APP_TERMINATING) {
+    if (aberto && fontePrincipal() && !scrubbing) {
+      double p = video_pos();
+      if (isfinite(p) && p >= 0) posSeg = (float)p;
+      gravarProgressoParcial(1, "background");
+    }
     player_descartar_retido(); retomamorna_cancelar();
   }
 }
@@ -2892,7 +2917,14 @@ static void janelaMandar(PlrRect r) {
   video_janela((int)(r.x + 0.5f), (int)(r.y + 0.5f), (int)(r.w + 0.5f), (int)(r.h + 0.5f));
 }
 static void janelaAnimar(PlrRect de, PlrRect para) {
+#ifdef NV_TPK
+  // Native display writes block on Samsung; send only the final rectangle.
+  (void)de; (void)para;
+  janAtiva = 0;
+  aplicarAspecto();
+#else
   janDe = de; janPara = para; janAgora = de; janT = 0.0f; janEm = 0; janAtiva = 1;
+#endif
 }
 // Um degrau por PLR_ENC_MS. Curva ease-out (1-(1-t)^3): parte rapido e
 // assenta devagar, que e o que se le como "o video veio para a frente".
@@ -2935,7 +2967,8 @@ int  player_mini_no_guia_ativo(void) { return mini && miniGuia; }
 
 void player_minimizar_para_guia(float x, float y, float w, float h) {
   PlrRect de;
-  if (!player_minimizavel()) { player_encerrar(); return; }
+  // The guide reuses this pipeline; connection limits only guard new streams.
+  if (!canalSessao || !comVideo) { player_encerrar(); return; }
   de = telaCheia();
   miniGuiaCaixa = (PlrRect){ x, y, w, h };
   miniGuia = 1;
@@ -4525,7 +4558,7 @@ void player_atualizar(float dt, Uint32 agora) {
              !saindo && !erroFonte && !esperandoFonte && !ehCanal() &&
              duracaoSeg >= 120.0f &&
              (partesAtiva() || !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo()));   // PRONTO do trailer (129 s) nao e deste titulo
-    static float tocouS, parcialRelogio, parcialSeek;
+    static float tocouS, parcialSeek;
     static int scrubAnterior;
     const CatItem *cs = item();
     if (cs && (jfid_e(cs->imdb) || !identidadeValida())) cs = NULL;
@@ -4542,9 +4575,12 @@ void player_atualizar(float dt, Uint32 agora) {
         wsTocando();
       }
       parcialRelogio += dt;
+      parcialConta += dt;
       if (parcialRelogio >= PLR_PARCIAL_INTERVALO_S) {
         parcialRelogio = 0.0f;
-        gravarProgressoParcial(0, "90 s tocando");
+        int sincronizar = parcialConta >= 300.0f;
+        gravarProgressoParcial(sincronizar, "30 s playing");
+
       }
     } else {
       // Pausou (ou o video parou de andar): so fala se ha um start em pe.

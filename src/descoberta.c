@@ -1,7 +1,9 @@
 #include "arteurl.h"
 #include "descoberta.h"
+#include "dados.h"
 #include "idioma.h"
 #include "ajustes.h"
+#include "extras.h"
 #include "catordem.h"
 #include "cotacat.h"
 #include "fileiras.h"
@@ -2944,7 +2946,7 @@ static int continuarLocal(CatItem *saida, int max) {
     int j, repetido = 0;
     if (r->durSeg < 60.0) continue;
     p = r->posSeg / r->durSeg;
-    if (p * 100.0 < (double)ajustes_cw_minimo() || p * 100.0 >= ajustes_cw_concluido()) continue;
+    if (!prog_inicio_continuar(r, ajustes_cw_minimo()) || p * 100.0 >= ajustes_cw_concluido()) continue;
     // Uma serie com varios episodios gravados entra UMA vez, no mais recente.
     for (j = 0; j < n; j++) {
       size_t L = idbase_len(saida[j].imdb);   // "kitsu:41370" inteiro, nao "kitsu"
@@ -2961,6 +2963,7 @@ static int continuarLocal(CatItem *saida, int max) {
     d->temporada = r->temporada;
     d->episodio = r->episodio;
     d->progresso = (int)(100.0 * p);
+    if (d->progresso < 1) d->progresso = 1; // Keep early checkpoints in the paused section.
     d->restanteMin = (int)((r->durSeg - r->posSeg) / 60.0 + 0.5);
     // O instante ja esta aqui, no registro: carimbar agora poupa a busca por
     // chave que instanteDaConta faria depois. Ver retomadoMs em catalogo.h.
@@ -5973,9 +5976,9 @@ static void metaChaveContexto(const char *id, char *dst, size_t n) {
   snprintf(dst, n, "%s/%d/%s/%s", usuario ? usuario : "", perfis_ativo(), desc_tmdb_idioma(), id);
 }
 static int metaDiscoNome(const char *chave, char *dst, size_t n) {
-  const char *dir = dados_dir();
-  if (!dir || !dir[0]) return 0;
-  snprintf(dst, n, "%s/meta-%02u.txt", dir, hashBaseAddon(chave) % 64);
+  char nome[32];
+  snprintf(nome, sizeof nome, "meta-%02u.txt", hashBaseAddon(chave) % 64);
+  if (!dados_caminho(dst, (unsigned)n, nome)) return 0;
   return 1;
 }
 // ponytail: 64 slots (colisao vira miss), ate 256 KiB/corpo e validade 6 h.
@@ -6341,9 +6344,7 @@ const char *dados_dir(void);
 static int locDiscoLido;
 
 static int locCaminho(char *dst, size_t n) {
-  const char *d = dados_dir();
-  if (!d || !d[0]) return 0;
-  snprintf(dst, n, "%s/loc-texto.txt", d);
+  if (!dados_caminho(dst, (unsigned)n, "loc-texto.txt")) return 0;
   return 1;
 }
 
@@ -7419,6 +7420,8 @@ static int parsearEpisodios(const char *corpo, CatEp *eps, int max) {
       e->temporada = t;
       e->episodio = ne;
       { double rating = js_num(p, f, "imdbRating", 0.0);
+        // Cinemeta videos use `rating`; other metadata providers use `imdbRating`.
+        if (rating<=0) rating=js_num(p,f,"rating",0.0);
         if (rating > 0.0 && rating <= 10.0)
           e->notaImdb = (int)(rating * 10.0 + 0.5); }
       js_texto(p, f, "name", e->nome, sizeof e->nome);
@@ -8584,15 +8587,14 @@ static void *buscarEps(void *u) {
            edit.titulo, edit.nElenco, edit.direcao, edit.nTemporadas);
     fflush(stdout);
 
-    // NOTA POR EPISODIO (issue #87): o Cinemeta nao tem voto por episodio, o
-    // TMDB tem — uma viagem por temporada presente na lista, nao uma por
-    // episodio. edit.tmdb ja foi resolvido por fotosDoElenco; se o /find dela
-    // falhou (rede), resolve-se aqui pelo mesmo /find. "Titulo e sinopse" e a
-    // porta: quem desligou o TMDB nao quer este trafego. Republica so se alguma nota entrou.
-    if (!ehFilme && ajustes_tmdb_basico() && idbase_e_imdb(serie)) {
+    // TMDB episode scores: one request per season, independent of optional
+    // title/synopsis translation. Cinemeta's `rating` remains the IMDb score.
+    if (!ehFilme && (ajustes_tmdb_basico() || ajustes_nota_episodio(EX_TMDB)) &&
+        (idbase_e_imdb(serie) || !strncmp(serie,"tmdb:",5))) {
       const char *chave2 = desc_chave_tmdb();
       long tmdbId = edit.tmdb;
-      if (chave2[0] && tmdbId <= 0) {
+      if (tmdbId<=0 && !strncmp(serie,"tmdb:",5)) tmdbId=strtol(serie+5,NULL,10);
+      if (chave2[0] && tmdbId <= 0 && idbase_e_imdb(serie)) {
         char u2[400];
         char *c3;
         snprintf(u2, sizeof u2,
@@ -8614,8 +8616,8 @@ static void *buscarEps(void *u) {
             // Sinopse sempre (#150). O NOME so num idioma que nao e o ingles
             // (#176): em ingles o do Cinemeta ja e o do TMDB. Com o texto do
             // addon na lista, o TMDB so preenche o que ficou vazio.
-            int textosEp = DESC_EPT_SINOPSE | (idiomaNaoIngles() ? DESC_EPT_NOME : 0) |
-                           (epsDoAddon ? DESC_EPT_SO_VAZIO : 0);
+            int textosEp = ajustes_tmdb_basico() ? DESC_EPT_SINOPSE | (idiomaNaoIngles() ? DESC_EPT_NOME : 0) |
+                           (epsDoAddon ? DESC_EPT_SO_VAZIO : 0) : 0;
             for (i2 = 0; i2 < neps; i2++) {
               const CatEp *e0 = cat_episodio(alvoItem, i2);
               if (e0) tmp[i2] = *e0; else memset(&tmp[i2], 0, sizeof tmp[i2]);

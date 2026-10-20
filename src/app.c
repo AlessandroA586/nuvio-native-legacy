@@ -1273,6 +1273,9 @@ static const char *urlCanal(const Stream *s, char *buf, size_t n) {
 static int tocarFonteGuardada(void) {
   Stream s;
   char alvo[64];
+  // #618: a fresh automatic choice must use the add-on's current order.
+  // Keep the saved link intact for the other selection modes.
+  if (ajustes_fonte_prioridade() == 3) return 0;
   // "Escolher a fonte ao reproduzir": a URL da ultima sessao nao toca
   // sozinha. A folha e quem escolhe (detail_pediu_fontes, e o #62 quando a
   // lista chega). O Retomar do Continuar assistindo pede reproducao e cai
@@ -3504,8 +3507,8 @@ static void guiaComCanalNoAr(void) {
   float x, y, w, h;
   snprintf(id, sizeof id, "%s", player_id_canal());
   guia_preview_rect(&x, &y, &w, &h);
-  if (xtream_e_id(id) && xtream_conexoes_limitadas()) player_encerrar();
-  else if (player_mini_ativo()) player_mini_no_guia(x, y, w, h);
+  // Moving the current stream opens no connection, even on limited accounts.
+  if (player_mini_ativo()) player_mini_no_guia(x, y, w, h);
   else player_minimizar_para_guia(x, y, w, h);
   if (tela != TELA_GUIA || !guia_aberta()) {
     if (tela == TELA_GUIA) guia_abrir();
@@ -4428,7 +4431,27 @@ void app_evento(const SDL_Event *e) {
   // deixar a tecla vazar para a home moveria o foco dela debaixo do cartao.
   if (recintro_aberto()) { recintro_evento(e); return; }
   if (atualizacao_aberta()) { atualizacao_evento(e); return; }
-  if (agendaviso_aberto()) { agendaviso_evento(e); return; }
+  if (agendaviso_aberto()) {
+    agendaviso_evento(e);
+    AgItem aviso;
+    if (agendaviso_tomar_filme(&aviso)) {
+      int i = cat_indice_por_imdb_tipo(aviso.imdb, "movie");
+      if (i < 0) {
+        CatItem ci = {0};
+        snprintf(ci.imdb, sizeof ci.imdb, "%s", aviso.imdb);
+        snprintf(ci.tipo, sizeof ci.tipo, "movie");
+        snprintf(ci.titulo, sizeof ci.titulo, "%s", aviso.titulo);
+        snprintf(ci.poster, sizeof ci.poster, "%s", aviso.poster);
+        i = cat_acrescentar(&ci);
+      }
+      if (i >= 0) {
+        HomeItem it = {0}; it.indice = i;
+        it.rect = (GfxRect){0, 0, NV_TELA_W, NV_TELA_H};
+        abrirTitulo(&it, 0, 1);
+      }
+    }
+    return;
+  }
   if (recomenda_tecla(e)) return;
   // A MODAL DE RECOMENDAR fica acima do detalhe, do menu do cartaz e do
   // painel da tecla AZUL — as tres portas que a abrem. Abaixo do cartao de
@@ -4956,6 +4979,7 @@ void app_atualizar(float dt, Uint32 agora) {
   // Um ciclo por vez, e so quando a conta existe. O passo e barato: sem fio
   // terminado ele nao faz nada.
   sync_passo((unsigned)agora);
+  agenda_filmes_atualizar();
   // SERVIDOR DA CONTA FORA DO AR (#215): um aviso discreto na ilha, uma vez
   // por queda, e retirado quando ele volta. Sem isto a pessoa via a home sem
   // addons (ou com os de ontem) e concluia que o app quebrou — e saia da conta
@@ -5579,6 +5603,7 @@ void app_atualizar(float dt, Uint32 agora) {
         cwEspera = 0;
         if (cw && !strcmp(cw->tipo, "series")) {
           cwTocarT = cw->temporada; cwTocarE = cw->episodio;
+          if (cw->episodio <= 0) tocar = 0;
           // EPISODIO TERMINADO NUNCA TOCA DE NOVO DO COMECO. O card ja anuncia
           // o proximo quando a lista existe; sem lista (a copia do card nao
           // tem), a pagina abre e o toque espera a lista (cwEsperarProximo).
@@ -6499,12 +6524,20 @@ void app_atualizar(float dt, Uint32 agora) {
 
   // CANAL ESCOLHIDO NO GUIA — tela cheia ou faixa, mesma acao: toca direto.
   { CatItem it;
-    if (aguardandoFonte != 2 && guia_pediu_canal(&it)) tocarCanal(&it); }
+    if (aguardandoFonte != 2 && guia_pediu_canal(&it)) {
+      // OK num canal que nao e o do preview abre em tela cheia: a sessao do
+      // preview sai antes (miniGuia armado mandaria o canal novo para o preview).
+      if (player_mini_no_guia_ativo()) player_fechar_mini();
+      tocarCanal(&it);
+    } }
   // O PREVIEW DO GUIA e uma sessao "mini no guia" do player: mesma busca de
   // fonte, mesmo watchdog, e o OK nele depois so faz a janela crescer.
   { CatItem it;
-    if (aguardandoFonte != 2 && guia_pediu_preview(&it) &&
-        !(xtream_e_id(it.imdb) && xtream_conexoes_limitadas())) {
+    if (aguardandoFonte != 2 && guia_pediu_preview(&it)) {
+      // UMA conexao por vez (conta limitada ou nao): o preview novo so abre
+      // depois de a sessao anterior estar fechada — nunca duas no ar.
+      if (player_mini_no_guia_ativo() && strcmp(player_id_canal(), it.imdb))
+        player_fechar_mini();
       float x, y, w, h;
       guia_preview_rect(&x, &y, &w, &h);
       player_mini_no_guia(x, y, w, h);
@@ -6632,7 +6665,11 @@ void app_atualizar(float dt, Uint32 agora) {
   // VOLTAR NUM CANAL ABERTO PELO GUIA: o video encolhe para o preview do guia,
   // na hora (sem esperar o fade da interface do player) e sem recarregar. O
   // PiP de canto ficou para os canais abertos fora do guia.
-  if (player_quer_sair() && player_minimizavel() && tela == TELA_GUIA && guia_aberta())
+  // player_minimizavel exclui a conta Xtream limitada, mas AQUI o fluxo ja
+  // esta no ar: encolher para o preview nao abre conexao nenhuma, e BACK tem
+  // de se comportar como o botao GUIA (mesmo pipeline, sem recarregar).
+  if (player_quer_sair() && player_eh_canal() && player_com_video() &&
+      tela == TELA_GUIA && guia_aberta())
     guiaComCanalNoAr();
   if (player_quer_sair() && !player_minimizavel() && ajustes_saida_player_home())
     player_preparar_retencao();

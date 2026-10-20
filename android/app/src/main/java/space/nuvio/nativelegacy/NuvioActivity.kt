@@ -198,6 +198,12 @@ class NuvioActivity : SDLActivity() {
             camada, 0,
             ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         )
+        // SDL adds the SurfaceView WRAP_CONTENT; SurfaceView.onMeasure then
+        // resolves to min(setFixedSize, parent), so a buffer smaller than the
+        // screen (720p) shrank the view to the top-left. MATCH_PARENT lets the
+        // compositor scale the small buffer to the full view.
+        mSurface.layoutParams = RelativeLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         mSurface.setZOrderMediaOverlay(true)
         mSurface.holder.setFormat(PixelFormat.TRANSLUCENT)
         NvPlayer.iniciar(this, camada)
@@ -389,6 +395,57 @@ class NuvioActivity : SDLActivity() {
     // Chamado pelo C (android_pedir_superficie), do fio do SDL, antes de criar a
     // janela: fixa o buffer da SDLSurface em w x h e espera a superficie nova
     // chegar (ate 2 s). Devolve true se ela veio nesse tamanho.
+    // SDL calls this before EGL surface creation; request a ten-bit UI layer.
+    // ExoPlayer retains its separate SurfaceView and video color handling.
+    private var hdrCapabilitiesLogged = false
+    private var hdrSurfaceRequested = false
+
+    fun pedirHdrInterface(ativa: Boolean): Boolean {
+        if (Build.VERSION.SDK_INT < 26) return false
+        val done = CountDownLatch(1)
+        var ok = false
+        runOnUiThread {
+            try {
+                if (!ativa || (Build.VERSION.SDK_INT >= 34 && display?.isHdr == true)) {
+                    window.colorMode = if (ativa) ActivityInfo.COLOR_MODE_HDR else ActivityInfo.COLOR_MODE_DEFAULT
+                    if (ativa) {
+                        hdrSurfaceRequested = true
+                        mSurface.holder.setFormat(PixelFormat.RGBA_1010102)
+                        if (Build.VERSION.SDK_INT >= 35) {
+                            mSurface.setDesiredHdrHeadroom(1000.0f / 203.0f)
+                            window.setDesiredHdrHeadroom(1000.0f / 203.0f)
+                        }
+                    } else if (hdrSurfaceRequested) {
+                        mSurface.holder.setFormat(PixelFormat.TRANSLUCENT)
+                        if (Build.VERSION.SDK_INT >= 35) {
+                            mSurface.setDesiredHdrHeadroom(0.0f)
+                            window.setDesiredHdrHeadroom(0.0f)
+                        }
+                        hdrSurfaceRequested = false
+                    }
+                    ok = !ativa || window.colorMode == ActivityInfo.COLOR_MODE_HDR
+                }
+            } catch (_: Exception) {
+                ok = false
+            } finally {
+                if (ativa && !hdrCapabilitiesLogged) {
+                    hdrCapabilitiesLogged = true
+                    try {
+                        @Suppress("DEPRECATION")
+                        val screen = windowManager.defaultDisplay
+                        val caps = screen.hdrCapabilities
+                        Log.i("Nuvio", "[hdr-ui] cap=display types=${caps.supportedHdrTypes.joinToString(",")} maxLuminance=${caps.desiredMaxLuminance} mode=${screen.mode} isHdr=${if (Build.VERSION.SDK_INT >= 34) screen.isHdr else "unavailable"} colorMode=${window.colorMode} wideColorGamut=${screen.isWideColorGamut}")
+                    } catch (error: Exception) {
+                        Log.w("Nuvio", "[hdr-ui] cap=error ${error.javaClass.simpleName}: ${error.message}")
+                    }
+                }
+                done.countDown()
+            }
+        }
+        done.await()
+        return ok
+    }
+
     fun pedirSuperficie(w: Int, h: Int): Boolean {
         // SDL normalizes touches against the holder buffer dimensions. On a
         // phone that buffer must follow the viewport's physical view size.
@@ -418,7 +475,29 @@ class NuvioActivity : SDLActivity() {
     // nao foi queda, e o modo seguro nao desfaz ajustes por causa dela.
     private fun despedida() = File(filesDir, "dados/despedida.txt")
 
-    private var instalando = false
+    @Volatile private var instalando = false
+
+    @Suppress("DEPRECATION")
+    private fun apkVersion(file: File): Long? = try {
+        packageManager.getPackageArchiveInfo(file.path, 0)?.let {
+            if (Build.VERSION.SDK_INT >= 28) it.longVersionCode else it.versionCode.toLong()
+        }
+    } catch (_: Exception) { null }
+
+    @Suppress("DEPRECATION")
+    private fun installedVersion(): Long {
+        val info = packageManager.getPackageInfo(packageName, 0)
+        return if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
+    }
+
+    fun prepararApk(caminho: String): Boolean {
+        if (instalando) return false
+        val dir = File(cacheDir, "regenerable/atualizacao")
+        val file = File(caminho)
+        if (file.parentFile != dir) return false
+        ApkCache.prune(dir, installedVersion(), file.name, ::apkVersion)
+        return true
+    }
 
     // Chamado pelo C (android_instalar_apk, atualizacao.c), do fio do SDL.
     // 1 = instalador aberto, 2 = falta a permissao "instalar apps desta fonte"
@@ -590,7 +669,14 @@ class NuvioActivity : SDLActivity() {
         jaComecou = true
     }
 
+    private external fun nativeCheckpoint()
+
+    private fun checkpoint() {
+        if (!mBrokenLibraries) try { nativeCheckpoint() } catch (_: UnsatisfiedLinkError) {}
+    }
+
     override fun onStop() {
+        checkpoint()
         val ini = SystemClock.elapsedRealtime()
         try {
             val f = despedida()
@@ -620,6 +706,7 @@ class NuvioActivity : SDLActivity() {
     // do ciclo de vida (ANR ao apertar a tecla de ajustes da TV tocando, TCL,
     // 2.0.3). Direto no logcat: o printf do C passa por um pipe e pode esperar.
     override fun onPause() {
+        checkpoint()
         val ini = SystemClock.elapsedRealtime()
         vigia?.frente(false)
         NvPlayer.pausarPeloSistema()
@@ -642,6 +729,17 @@ class NuvioActivity : SDLActivity() {
 
     // Variaveis que o C le (contrato do porte Android). Tem de rodar antes do
     // super.onCreate: o SDL abre o main numa thread logo depois.
+    fun limparCache() {
+        runOnUiThread {
+            NvPlayer.parar()
+            CacheMidia.descartar("clear cache")
+            // Session release runs on the cache executor before deleting its files.
+            CacheMidia.limparTudo(cacheDir)
+        }
+        File(cacheDir, "logs/nuvio-anterior.log").delete()
+        File(cacheDir, "engine/p2p").deleteRecursively()
+    }
+
     private fun prepararAmbiente() {
         val dados = File(filesDir, "dados").apply { mkdirs() }
         val uiMode = (getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager)?.currentModeType
@@ -659,11 +757,23 @@ class NuvioActivity : SDLActivity() {
         fun env(k: String, v: String) = Os.setenv(k, v, true)
         env("NUVIO_INTERFACE_AUTO", if (automaticMobile) "1" else "0")
         env("NUVIO_DADOS", dados.path)
+        val regenerable = File(cacheDir, "regenerable").apply { mkdirs() }
+        ApkCache.prune(File(regenerable, "atualizacao"), installedVersion(), null, ::apkVersion)
+        val p2pCache = File(cacheDir, "engine").apply { mkdirs() }
+        env("NUVIO_CACHE", regenerable.path)
+        env("NUVIO_CACHE_ROOT", cacheDir.path)
+        env("TMPDIR", regenerable.path)
+        env("NUVIO_P2P_CACHE", p2pCache.path)
+        val logs = File(cacheDir, "logs").apply { mkdirs() }
+        File(dados, "atualizacao").deleteRecursively()
+        File(dados, "p2p").deleteRecursively()
+        File(dados, "nuvio.log").delete()
+        File(dados, "nuvio-anterior.log").delete()
         // Scoped to signing key/user/device; stable across app reinstall.
         val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         if (!deviceId.isNullOrBlank()) env("NUVIO_DEVICE_ID", "android:$deviceId")
-        env("NUVIO_LOG", File(dados, "nuvio.log").path)
-        env("NUVIO_LOG_ANTERIOR", File(dados, "nuvio-anterior.log").path)
+        env("NUVIO_LOG", File(logs, "nuvio.log").path)
+        env("NUVIO_LOG_ANTERIOR", File(logs, "nuvio-anterior.log").path)
         env("HOME", dados.path)
         env("NUVIO_ARTE", File(res, "art").path)
         env("NUVIO_LOCALE", java.util.Locale.getDefault().toLanguageTag())

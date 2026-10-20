@@ -100,6 +100,7 @@ float gfx_desliza_atual = 0.0f;
 float gfx_opacidade_grupo = 1.0f;
 float gfx_osd_mult = 1.0f;
 float gfx_hdr_ui = 1.0f;
+int gfx_hdr_output;
 // Tamanho real do alvo da tela (em retina, maior que 1920x1080). Guardado aqui
 // porque toda volta de FBO precisa restaurar o viewport com ele.
 static int telaW = (int)NV_TELA_BASE_W, telaH = (int)NV_TELA_BASE_H;
@@ -477,7 +478,7 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "uniform vec4 uHeroiVeu;\n"
   "#endif\n"
   "void main(){\n"
-  // Modern episode images join the opaque panel with square lower corners.
+  // Modern episode images keep square lower corners above the text panel.
   "  float d = sdf(vUv, uVeu.x < -1.5 && vUv.y > 0.5 ? 0.0 : uRaio, uAspect);\n"
   "  float m = borda(d);\n"
   "  if (m <= 0.001) discard;\n"
@@ -1670,9 +1671,28 @@ static const char *FS_CORPO[GFX_NMODOS] = {
   "  gl_FragColor = nv_dither(c, a);\n"
   "}\n",
   NV_SHARP_BILINEAR_SHADER,
-  NV_EASU_SHADER,
-  NV_LANCZOS_SHADER,
-  NV_RCAS_SHADER,
+  // Explicit slots keep independently merged output passes aligned with GfxModo.
+  // Decode sRGB, convert primaries for PQ, and anchor SDR white at 203 nits.
+  [GFX_HDR_OUTPUT] = "void main(){\n"
+  "  vec4 t=texture2D(uTex,vec2(vUv.x,1.0-vUv.y));\n"
+  "  vec3 s=clamp(t.rgb/max(t.a,0.00001),0.0,1.0);\n"
+  "  vec3 c=mix(s/12.92,pow((s+0.055)/1.055,vec3(2.4)),step(vec3(0.04045),s));\n"
+  "  if(abs(uFoco-2.0)>0.1)\n"
+  "    c=mat3(0.627404,0.069097,0.016392,0.329283,0.919540,0.088013,0.043313,0.011362,0.895595)*c;\n"
+  "  if(uFoco<1.5||uFoco>4.5){\n"
+  "    vec3 p=pow(c*0.0203,vec3(0.1593017578125));\n"
+  "    c=pow((0.8359375+18.8515625*p)/(1.0+18.6875*p),vec3(78.84375));\n"
+  "    if(uFoco>4.5)c=(vec3(64.0)+c*876.0)/1023.0;\n"
+  "  }else if(abs(uFoco-3.0)<0.1){\n"
+  "    float y=max(dot(c,vec3(0.2627,0.6780,0.0593)),0.000001);\n"
+  "    vec3 e=c*pow(0.203,1.0/1.2)*pow(y,1.0/1.2-1.0);\n"
+  "    c=mix(sqrt(3.0*e),0.17883277*log(max(12.0*e-0.28466892,vec3(0.000001)))+0.55991073,step(vec3(1.0/12.0),e));\n"
+  "  }else c*=203.0/80.0;\n"
+  "  gl_FragColor=vec4(c*t.a,t.a);\n"
+  "}\n",
+  [GFX_COPIA_EASU] = NV_EASU_SHADER,
+  [GFX_COPIA_LANCZOS] = NV_LANCZOS_SHADER,
+  [GFX_RCAS] = NV_RCAS_SHADER,
 };
 
 // Cada corpo declara o que usa; montar so o necessario mantem o shader enxuto.
@@ -1716,7 +1736,8 @@ static const struct { int sdf, cover; } PRECISA[GFX_NMODOS] = {
   {0,0},   /* GFX_PALCO_CHAO — procedural floor pool */
   {0,0},   /* GFX_PALCO_ARTE — own anchored cover */
   {0,0},   /* GFX_COPIA_NITIDA */
-  {0,0}, {0,0}, {0,0}   /* GFX_COPIA_EASU, GFX_COPIA_LANCZOS, GFX_RCAS */
+  {0,0}, {0,0}, {0,0},   /* GFX_COPIA_EASU, GFX_COPIA_LANCZOS, GFX_RCAS */
+  {0,0}    /* GFX_HDR_OUTPUT */
 };
 
 static GLuint compila(GLenum tipo, const char *src) {
@@ -1817,6 +1838,7 @@ int gfx_iniciar(void) {
   // interface" sem passar por Ajustes. No app quem define e ajustes.c.
   { const char *t = getenv("NUVIO_TAMANHO_UI"); if (t && *t) { gfx_escala_ui_definir((float)atof(t)); escUiFixa = 1; } }
   for (int m = 0; m < GFX_NMODOS; m++) {
+    if (m == GFX_VIDRO || m >= GFX_COPIA_EASU) continue;   // sob demanda   // sob demanda: progMontar em gfx_rect
     if (m == GFX_VIDRO || m >= GFX_COPIA_EASU) continue;   // sob demanda: progMontar em gfx_rect
     if (!progMontar(m)) return 0;
   }
@@ -4735,7 +4757,7 @@ void gfx_icone(GfxRect r, const char *nome, float cr, float cg, float cb, float 
     snprintf(cam, sizeof cam, "%s/%s.png", dirIcones, nome);
     // Pede pela largura de desenho: um icone de 38px nao precisa dos 128 do
     // arquivo, e o teto por uso e o que mantem o cache fora do vermelho.
-    t = tex_obter_larg(cam, r.w * escAtiva);
+    t = tex_obter_larg(cam, r.w);
   }
   if (!t) return;
   gfx_tex_aspect_atual = 0.0f;   // o arquivo ja e quadrado

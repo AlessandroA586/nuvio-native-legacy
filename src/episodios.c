@@ -141,7 +141,7 @@ static int vmFeito, vmFeitoN, vmFeitoVisto; static Uint32 vmFeitoAte;
 // desta tela —, e por isso so podia existir dentro dela. Guardando o alvo o
 // menu passa a servir tambem a pagina de detalhe, onde a folha nem esta aberta.
 static int  vmIdx = -1, vmT, vmE;
-static char vmNome[96], vmSinopse[420];
+static char vmNome[120], vmSinopse[420];
 // O TITULO, e nao so a posicao (#190). `titulo` e `vmIdx` sao indices no
 // catalogo, e o catalogo e refeito com a folha aberta — a refacao de
 // "Continuar assistindo" roda com o player tocando. A mesma posicao passava a
@@ -172,8 +172,25 @@ static int  vmFontesPed; // consumido por episodios_menu_pediu_fontes()
 static char     vmRot[VM_N][120], vmCab[160], vmMsg[120];
 static CtxLinha vmLin[VM_N];
 static int vmComentEstado;
+static int vmTroca, vmDirecao;
+static float vmTransicao=1;
+static CatEp vmPendente;
+static int vmMudar;
+static const CatEp *vmVizinho(int dir) {
+  const CatEp *best=NULL;
+  for (int i=0;i<cat_n_episodios(vmIdx);i++) {
+    const CatEp *ep=cat_episodio(vmIdx,i);
+    if (!ep) continue;
+    int order=ep->temporada==vmT ? ep->episodio-vmE : ep->temporada-vmT;
+    if ((dir>0 && order<=0) || (dir<0 && order>=0)) continue;
+    if (!best || (dir>0 ? (ep->temporada<best->temporada || (ep->temporada==best->temporada && ep->episodio<best->episodio))
+                        : (ep->temporada>best->temporada || (ep->temporada==best->temporada && ep->episodio>best->episodio)))) best=ep;
+  }
+  return best;
+}
 static char vmComentContagem[24];
 static float    vmLarg;
+static float vmTituloEscala=1, vmTituloLarg;
 static float    vmAnim, vmAnimV, vmFocoAnim[VM_N];
 // DE ONDE O MENU SAIU, na tela virtual: o card do episodio (a ilha nasce ao
 // lado dele, como a do cartaz) ou a ABA da temporada (que se abre em painel).
@@ -228,6 +245,7 @@ static void montarRotulos(void) {
   if (vmModoTemp) snprintf(vmCab, sizeof vmCab, i18n("Temporada %d"), vmT);
   else snprintf(vmCab, sizeof vmCab, i18n("T%dE%d · %s"), vmT, vmE, vmNome);
   vmLarg = ctx_menu_largura(vmLin, n);
+  vmTituloLarg=0;
 }
 
 // Abre o menu para um episodio qualquer. `t` e o NUMERO da temporada, nao o
@@ -236,7 +254,7 @@ static void menuAbrir(int idx, int t, int e, const char *nome, int so) {
   const CatItem *ci = cat_item(idx);
   if (!ci || !ci->imdb[0]) return;
   vmIdx = idx; vmT = t; vmE = e; vmSo = so; vmModoTemp = 0;
-  vmComentEstado = -2;
+  vmComentEstado = -2; vmTransicao=1; vmTroca=vmMudar=0;
   if (so && e > 0) epcoment_abrir(ci->imdb, t, e);
   guardarId(vmId, sizeof vmId, idx);
   snprintf(vmNome, sizeof vmNome, "%s", nome ? nome : "");
@@ -281,11 +299,23 @@ static void menuAbrir(int idx, int t, int e, const char *nome, int so) {
     }
     if (vmSinopse[0]) vmAcoes[vmN++] = VM_SINOPSE;
   }
+  montarRotulos();
+  float fixedWidth=vmLarg;
   // Abre do zero: a mola de um menu que acabou de fechar nao e a deste.
   vmAnim = vmAnimV = 0.0f;
   memset(vmFocoAnim, 0, sizeof vmFocoAnim);
   vmMsg[0] = 0;
-  montarRotulos();
+  montarRotulos(); vmLarg=fixedWidth;
+}
+
+// UP from the first action focuses the header. LEFT/RIGHT there navigates
+// episodes; RIGHT on an action still enters reviews. Boundaries never wrap.
+static void vmNavegar(int dir) {
+  if (vmTransicao<1) return; // Held keys must not restart a transition before it can advance.
+  const CatEp *ep=vmVizinho(dir);
+  if (!ep) return;
+  vmPendente=*ep; vmMudar=1; vmDirecao=dir;
+  vmTransicao=(ajustes_animacoes_reduzidas() || anim_politica_reduzida)?1:0;
 }
 
 static int nTemporadas(void) {
@@ -453,7 +483,7 @@ int episodios_escolheu(int *t, int *e) {
 // PONTEIRO (#99) no menu de visto: opcao sob o cursor ganha o foco (vmFoco,
 // o mesmo de cima/baixo), clique e o OK, clique fora fecha o menu.
 static void ponteiroVmOpcao(int i, int b) { (void)b; if (i >= 0 && i < vmOpcoes()) { vmFoco = i; epcoment_menu(); } }
-static void ponteiroVmFora(int a, int b) { (void)a; (void)b; vmAberto = 0; }
+static void ponteiroVmFora(int a, int b) { (void)a; (void)b; vmAberto = 0; if (vmSo && !vmModoTemp) extras_comentarios_ep_cancelar(); }
 
 // O MENU DE VISTO (segurar OK) E A ILHA DO MENU DO CARTAZ (ctxmenu.c): o nome
 // "T1E4 · nome", embaixo o que o gesto faz ("Marcar como assistido") e as
@@ -468,7 +498,7 @@ static void ponteiroVmFora(int a, int b) { (void)a; (void)b; vmAberto = 0; }
 // no menu do cartaz, e as linhas apagam: nao ha mais o que escolher.
 #define VM_TOPO_ILHA 104.0f   // do topo da ilha ao modal: o cabecalho (64) + 40
 #define VM_BORDA      48.0f   // margem minima da tela, a do menu do cartaz
-static float menuAltura(void) { return ctx_menu_altura(vmOpcoes()); }
+static float menuAltura(void) { return ctx_menu_altura(vmOpcoes()) + (vmSo && !vmModoTemp ? 30 : 0); }
 static float menuLargura(float cabe) { return vmLarg < cabe ? vmLarg : cabe; }
 
 // As molas do menu: a de abertura e a do foco de cada linha. O painel da
@@ -476,9 +506,19 @@ static float menuLargura(float cabe) { return vmLarg < cabe ? vmLarg : cabe; }
 // pouco, o texto nao —; o menu comum, na das telas, como o do cartaz.
 static void menuAtualizar(float dt) {
   int i, red = ajustes_animacoes_reduzidas();
+  if (vmTransicao<1) { vmTransicao+=dt/.180f; if (red || anim_politica_reduzida || vmTransicao>1) vmTransicao=1; }
+  if (vmMudar && vmTransicao>=.5f) {
+    CatEp next=vmPendente; GfxRect anchor=vmAncora; int has=vmTemAncora;
+    float phase=vmTransicao, width=vmLarg, opening=vmAnim;
+    extras_comentarios_ep_cancelar();
+    menuAbrir(vmIdx,next.temporada,next.episodio,next.nome,1);
+    vmLarg=width; vmAnim=opening; vmFoco=-1; vmTemAncora=has; vmAncora=anchor;
+    vmTroca=1; vmTransicao=phase;
+  }
   if (vmAberto && vmSo && !vmModoTemp) {
     epcoment_atualizar(dt);
-    int n = epcoment_quantidade();
+    int n = extras_n_comentarios_ep();
+    if (!n && extras_comentarios_ep_carregando()) n=-1;
     if (n != vmComentEstado) {
       if (vmN && vmAcoes[vmN - 1] == VM_COMENT) vmN--;
       if (n != 0) vmAcoes[vmN++] = VM_COMENT;
@@ -486,7 +526,7 @@ static void menuAtualizar(float dt) {
       vmComentEstado = n;
       if (n < 0) snprintf(vmComentContagem, sizeof vmComentContagem, "%s", "…");
       else snprintf(vmComentContagem, sizeof vmComentContagem, "%d", n);
-      montarRotulos();
+      float width=vmLarg; montarRotulos(); vmLarg=width;
     }
   }
   float alvo = vmAberto ? 1.0f : 0.0f;
@@ -603,7 +643,10 @@ static void menuDesenhar(GfxRect area, float a0) {
     if (ph > NV_TELA_H - 2 * VM_BORDA) ph = NV_TELA_H - 2 * VM_BORDA;
     if (m.x + MW + 24 + pw > NV_TELA_W - VM_BORDA) m.x = NV_TELA_W - VM_BORDA - MW - 24 - pw;
     if (m.y + ph > NV_TELA_H - VM_BORDA) m.y = NV_TELA_H - VM_BORDA - ph;
-    comentarios = (GfxRect){m.x + MW + 24, m.y, pw, ph};
+    float panelY=vmTemAncora ? vmAncora.y : (NV_TELA_H-ph)*.5f;
+    if (panelY+ph>NV_TELA_H-VM_BORDA) panelY=NV_TELA_H-VM_BORDA-ph;
+    if (panelY<VM_BORDA) panelY=VM_BORDA;
+    comentarios = (GfxRect){m.x + MW + 24, panelY, pw, ph};
   }
   if (vmAberto && ponteiro_ativo() && a > .5f) {
     ponteiro_camada();
@@ -617,18 +660,43 @@ static void menuDesenhar(GfxRect area, float a0) {
   else gfx_cor((GfxRect){ 0, 0, NV_TELA_W, NV_TELA_H }, 0, 0, 0, 0, 0.55f * a);
   if (vmFeito) meta = vmMsg;
   else if (vmModoTemp) { const CatItem *ci = cat_item(vmIdx); meta = ci ? ci->titulo : ""; }
-  else if (vmAcoes[vmFoco] == VM_COMENT) meta = "Comentários do Trakt";
+  else if (vmFoco<0) meta = "← / →";
+  else if (vmAcoes[vmFoco] == VM_COMENT) meta = extras_comentarios_ep_tmdb() ? "TMDB · reviews da série" : "Comentários do Trakt";
   else if (vmAcoes[vmFoco] == VM_SINOPSE) meta = "Ler sinopse";
   else meta = vmAcoes[vmFoco] != VM_DAQUI && vmVisto ? "Marcar como assistido" : "Desmarcar como assistido";
-  ctx_menu_desenhar(m, vmCab, meta, vmFeito ? 0.8f : 0.5f, vmLin, vmOpcoes(), vmFocoAnim,
+  float content=a;
+  if (vmSo && !vmModoTemp) {
+    float fade=fabsf(2*vmTransicao-1);
+    content*=fade*fade*(3-2*fade);
+    ctx_menu_ilha(m,24,a);
+    if (vmFoco<0) gfx_cor((GfxRect){m.x+14,m.y+14,m.w-28,96},.22f,1,1,1,.12f*content);
+    float slide=vmDirecao*8*(1-fade), hx=m.x+34+slide;
+    // Two complete title lines; no ellipsis. Reserve their height for every episode.
+    if (vmTituloLarg!=m.w) {
+      vmTituloLarg=m.w; vmTituloEscala=1;
+      while (txt_bloco(TXT_ILHA_NOME,vmCab,243,242,239,0,0,(m.w-68)/vmTituloEscala,28,0,0)>56)
+        vmTituloEscala*=.95f;
+    }
+    gfx_transformar(hx,m.y+26,vmTituloEscala,0,0);
+    txt_bloco(TXT_ILHA_NOME,vmCab,243,242,239,hx,m.y+26,(m.w-68)/vmTituloEscala,28,content,2);
+    gfx_sem_transformar();
+    txt_desenhar_alpha(txt_linha(TXT_ILHA_APOIO,vmFoco<0?meta:i18n(meta),243,242,239,255),hx,m.y+86,.5f*content);
+    for (int i=0;i<vmOpcoes();i++) {
+      GfxRect line={m.x+14,m.y+123+i*ctx_menu_passo(),m.w-28,60};
+      if (vmAberto && !vmFeito && a>.5f) ponteiro_alvo(line.x,line.y,line.w,line.h,ponteiroVmOpcao,NULL,i,0);
+      line.x+=slide;
+      ctx_menu_linha(line,vmLin[i].rot,vmLin[i].icone,vmFocoAnim[i],content*(vmFeito?.35f:1),1);
+    }
+  } else ctx_menu_desenhar(m, vmCab, i18n(meta), vmFeito ? 0.8f : 0.5f, vmLin, vmOpcoes(), vmFocoAnim,
                     vmFeito ? 0.35f : 1.0f, a, vmAberto && !vmFeito ? ponteiroVmOpcao : NULL);
   if (comentarios.w > 0) {
     if (vmN && vmAcoes[vmN - 1] == VM_COMENT) {
       TxtLinha v = txt_linha(TXT_G18R, vmComentContagem, 180, 181, 187, 255);
-      txt_desenhar_alpha(v, m.x + m.w - 34 - v.w, m.y + 14 + 75 + 4 + (vmN - 1) * ctx_menu_passo() + (60 - v.h) * .5f, a);
+      txt_desenhar_alpha(v, m.x + m.w - 34 - v.w, m.y + 123 + (vmN - 1) * ctx_menu_passo() + (60 - v.h) * .5f, content);
     }
     if (vmAberto && ponteiro_ativo()) ponteiro_alvo(comentarios.x, comentarios.y, comentarios.w, comentarios.h, NULL, NULL, 0, 0);
-    epcoment_desenhar(comentarios, a);
+    ctx_menu_ilha(comentarios,24,a);
+    epcoment_desenhar(comentarios, content);
   }
 }
 
@@ -649,13 +717,17 @@ static void menuEvento(const SDL_Event *ev) {
   if (ehOk && (ev->key.repeat || vmConsumir)) return;
   if (vmSo && !vmModoTemp && !vmFeito) {
     if (epcoment_evento(ev)) return;
+    if (vmFoco<0 && (ko==SDLK_RIGHT || ko==SDLK_LEFT)) {
+      if (!ev->key.repeat) vmNavegar(ko==SDLK_RIGHT?1:-1);
+      return;
+    }
     if (ko == SDLK_RIGHT) {
       if (epcoment_entrar()) for (int i = 0; i < vmN; i++) if (vmAcoes[i] == VM_COMENT) vmFoco = i;
       return;
     }
     if (ko == SDLK_LEFT) return;
   }
-  if (ko == SDLK_UP)   { if (vmFoco > 0) vmFoco--; return; }
+  if (ko == SDLK_UP)   { if (vmFoco > (vmSo && !vmModoTemp ? -1 : 0)) vmFoco--; return; }
   if (ko == SDLK_DOWN) { if (vmFoco < vmOpcoes() - 1) vmFoco++; return; }
   if (vmFeito) { vmAberto = 0; vmFeito = 0; return; }   // qualquer tecla encerra a confirmacao
   if (ehOk) {
@@ -664,6 +736,7 @@ static void menuEvento(const SDL_Event *ev) {
       menuFeito(aplicarVisto(VM_TEMP, v), v);
       return;
     }
+    if (vmFoco<0) { vmFoco=0; return; }
     int modo = vmAcoes[vmFoco], v = modo == VM_DAQUI ? 0 : vmVisto;
     if (modo == VM_COMENT) { epcoment_entrar(); return; }
     if (modo == VM_FONTES) { vmFontesPed = 1; vmAberto = 0; return; }
@@ -671,7 +744,8 @@ static void menuEvento(const SDL_Event *ev) {
     menuFeito(aplicarVisto(modo, v), v);
     return;
   }
-  vmAberto = 0;   // qualquer outra tecla fecha
+  vmAberto = 0;
+  if (vmSo && !vmModoTemp) extras_comentarios_ep_cancelar(); // Back cancels pending pages.
 }
 
 void episodios_evento(const SDL_Event *ev) {
@@ -1156,9 +1230,13 @@ void episodios_menu_atualizar(float dt) { if (vmSo) menuAtualizar(dt); }
 int  episodios_menu_caixa(GfxRect *r) { if (vmTemCaixa && r) *r = vmCaixa; return vmTemCaixa; }
 float episodios_menu_anim(void) { return vmAnim; }
 int  episodios_menu_foco(void) { return vmFoco; }
+int episodios_menu_trocou(int *t,int *e) {
+  if (!vmTroca) return 0; vmTroca=0; *t=vmT; *e=vmE; return 1;
+}
+float episodios_menu_transicao(int *dir) { *dir=vmDirecao; return vmTransicao; }
 void episodios_menu_ancora(GfxRect r) {
   if (!vmSo || !menuVisivel() || r.w < 8.0f || r.h < 8.0f) return;
-  vmAncora = r;
+  if (!vmTemAncora || vmModoTemp) vmAncora = r;
   vmTemAncora = 1;
 }
 int  episodios_menu_aberto_qualquer(void) { return vmAberto; }

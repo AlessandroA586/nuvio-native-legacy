@@ -76,6 +76,7 @@
 #define extras_agenda_status    fx_agenda_status
 #define extras_ficha_status       fx_ficha_status
 #define extras_ficha_lancamento   fx_ficha_lancamento
+#define extras_ficha_digital      fx_ficha_digital
 #define extras_ficha_duracao      fx_ficha_duracao
 #define extras_ficha_paises       fx_ficha_paises
 #define extras_ficha_classificacao fx_ficha_classificacao
@@ -131,6 +132,8 @@ size_t trakt_token_tam(const char *s) {
 }
 
 #include "dados.h"
+#include "perfis.h"
+#include "agendaviso.h"
 #include "fontepref.h"
 #include "streams.h"
 #include "ilha.h"
@@ -176,7 +179,8 @@ int fx_com_nota(int i)             { return COM_NOTA[i % 3]; }
 const char *fx_com_lingua(int i)   { (void)i; return ""; }
 
 const char *fx_ficha_status(void)        { return "Released"; }
-const char *fx_ficha_lancamento(void)    { return "2026-05-01"; }
+const char *fx_ficha_lancamento(void)    { return getenv("NUVIO_SHOT_AVISOFONTE") ? "2027-07-17" : "2026-05-01"; }
+const char *fx_ficha_digital(void)       { return ""; }
 int         fx_ficha_duracao(void)       { return 124; }
 const char *fx_ficha_paises(void)        { return "United States of America"; }
 const char *fx_ficha_classificacao(void) { return "12"; }
@@ -590,6 +594,49 @@ int main(int argc, char **argv) {
     return vtFalhas ? 1 : 0;
   }
 
+  if (getenv("NUVIO_SHOT_AVISOFONTE")) {
+    agenda_iniciar();
+    snprintf(itens[1].titulo, sizeof itens[1].titulo, "The Odyssey");
+    itens[1].logo[0] = 0;
+    snprintf(itens[1].sinopse, sizeof itens[1].sinopse, "A journey home after the Trojan War. Coming soon.");
+    CatFileira movieFil = {0}; movieFil.ini = 0; movieFil.n = 2;
+    snprintf(movieFil.titulo, sizeof movieFil.titulo, "Movies");
+    snprintf(movieFil.tipo, sizeof movieFil.tipo, "movie");
+    cat_definir_tudo(itens, 2, &movieFil, 1);
+    abrir(1, 0, 0, 0);
+    assert(temLembrar());
+    maisAcoes = 1; botao = 1 + (temInicio() ? 1 : 0);
+    SDL_Delay(450); quadros(40); gravar("movie-alert-rest");
+    int lemb = -1;
+    for (int i = 0; i < nBotoes(); i++) if (acaoEm(i) == ACAO_LEMBRAR) lemb = i;
+    assert(lemb >= 0); botao = lemb; quadros(40); gravar("movie-alert-focus");
+    agenda_filme_alternar(IMDB_FILME, itens[1].titulo, itens[1].poster);
+    quadros(40); gravar("movie-alert-active");
+    // Feed the real persisted available state, as the worker publishes it.
+    char registro[2600], nome[64];
+    snprintf(nome, sizeof nome, "lembretes-p%d.txt", perfis_ativo());
+    snprintf(registro, sizeof registro, "%s\t\t0\t\t1\t1\t100000\t%s\t%s\n",
+             IMDB_FILME, itens[1].titulo, itens[1].poster);
+    dados_gravar(nome, registro);
+    perfis_definir_ativo(2); agenda_iniciar(); perfis_definir_ativo(1); agenda_iniciar();
+    agendaviso_abrir_sessao(); agendaviso_mostrar_se_houver();
+    assert(agendaviso_aberto());
+    home_iniciar("deploy/app/art");
+    cat_definir_tudo(itens, 2, &movieFil, 1);
+    for (int i = 0; i < 90; i++) {
+      txt_novo_quadro(); tex_novo_quadro(); tex_bombear(32); gfx_novo_quadro();
+      glClear(GL_COLOR_BUFFER_BIT);
+      home_atualizar(1.0f / 60.0f, SDL_GetTicks()); home_desenhar(SDL_GetTicks());
+      agendaviso_atualizar(1.0f / 60.0f, SDL_GetTicks()); agendaviso_desenhar(SDL_GetTicks());
+      if (i < 89) SDL_GL_SwapWindow(janela);
+    }
+    gravar("home-movie-available");
+    SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RETURN;
+    agendaviso_evento(&e);
+    AgItem aviso; assert(agendaviso_tomar_filme(&aviso));
+    assert(!strcmp(aviso.imdb, IMDB_FILME)); assert(!agenda_lembrete(IMDB_FILME));
+    return 0;
+  }
   if (quer(argc, argv, "filme-topo")) { abrir(1, 0, 0, 0); gravar("filme-topo"); }
   // O ULTIMO circular da linha aberta em foco: hoje o "..." (Mais opcoes).
   if (quer(argc, argv, "filme-explorar")) {

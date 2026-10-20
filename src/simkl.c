@@ -8,11 +8,15 @@
 #include "nuvem.h"
 #include "rede.h"
 #include "js.h"
+#include "idbase.h"
 #include "idioma.h"
 #include "trakt.h"
 #include "traktscrobble.h"
 #include "artemetahub.h"
 #include "dados.h"
+#include "fichameta.h"
+#include "metaprov.h"
+#include "metaep.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -170,6 +174,28 @@ int simkl_ler_playback(const char *json, CatItem *dst, long long *ids, int max) 
   return n;
 }
 
+// Reuse the provider metadata cache; an unknown mapping opens the title only.
+static int animeAbsoluto(const char *id, int absoluto, int *t, int *e) {
+  char chave[64];
+  MetaEpInfo ep;
+  int ok;
+  snprintf(chave, sizeof chave, "series/%s/%s", id, metaprov_idioma());
+  char *corpo = fichameta_ler(chave, 6 * 3600);
+  ok = metaep_buscar(corpo, 1, 1, &ep);
+  // ponytail: repeated scans reuse provider ordering; index if long shows cost time.
+  for (int i = 1; ok && i < absoluto; i++) {
+    MetaEpInfo prox;
+    ok = metaep_proximo(corpo, ep.temporada, ep.episodio, &prox) &&
+         ((prox.temporada == ep.temporada && prox.episodio == ep.episodio + 1) ||
+          (prox.temporada == ep.temporada + 1 && prox.episodio == 1));
+    if (ok) ep = prox;
+  }
+  free(corpo);
+  *t = ok ? ep.temporada : 0;
+  *e = ok ? ep.episodio : 0;
+  return ok;
+}
+
 int simkl_ler_assistindo(const char *json, CatItem *dst, int max) {
   // O Simkl guarda anime num terceiro tipo: /sync/all-items/anime/<estado>
   // devolve a raiz "anime" e o objeto interno tambem se chama "anime".
@@ -186,17 +212,38 @@ int simkl_ler_assistindo(const char *json, CatItem *dst, int max) {
     const char *f = js_fim(p), *oi, *of;
     CatItem *d = &dst[n];
     char imdb[24], prox[16] = "", quando[40] = "";
-    int t = 0, e = 0;
+    int t = 0, e = 0, absoluto = 0;
     memset(d, 0, sizeof *d);
     // "S01E05". Em dia com o que foi ao ar vem null, e ai nao ha o que seguir.
     if (!js_texto_raiz_em(p, f, "next_to_watch", prox, sizeof prox)) continue;
-    if (sscanf(prox, "S%dE%d", &t, &e) != 2 || t < 0 || e <= 0) continue;
+    if (sscanf(prox, "S%dE%d", &t, &e) != 2) {
+      if (k != 1 || sscanf(prox, "E%d", &e) != 1) continue;
+      absoluto = e;
+    }
+    if (t < 0 || e <= 0) continue;
     if (!objetoRaiz(p, f, chaves[k], &oi, &of)) continue;
-    if (!lerObra(oi, of, d, imdb, sizeof imdb)) continue;
+    if (!lerObra(oi, of, d, imdb, sizeof imdb)) {
+      const char *ii, *ifim;
+      long id;
+      if (k != 1 || !objetoRaiz(oi, of, "ids", &ii, &ifim)) continue;
+      id = (long)js_num(ii, ifim, "tmdb", 0);
+      if (id > 0) snprintf(imdb, sizeof imdb, "tmdb:%ld", id);
+      else {
+        id = (long)js_num(ii, ifim, "simkl", 0);
+        if (id <= 0) continue;
+        snprintf(imdb, sizeof imdb, "simkl:%ld", id);
+      }
+    }
+    { const char *ii, *ifim;
+      if (objetoRaiz(oi, of, "ids", &ii, &ifim))
+        d->tmdb = (long)js_num(ii, ifim, "tmdb", 0);
+    }
+    if (absoluto) animeAbsoluto(imdb, absoluto, &t, &e);
     d->temporada = t;
     d->episodio = e;
     d->progresso = 0;
-    snprintf(d->imdb, sizeof d->imdb, "%s:%d:%d", imdb, t, e);
+    if (e > 0) snprintf(d->imdb, sizeof d->imdb, "%s:%d:%d", imdb, t, e);
+    else snprintf(d->imdb, sizeof d->imdb, "%s", imdb);
     snprintf(d->tipo, sizeof d->tipo, "series");
     // O instante do "a seguir" e o do ULTIMO EPISODIO VISTO, como no Trakt
     // (ult[].quandoMs): e ele que diz quando a pessoa mexeu nesta serie.
@@ -724,7 +771,7 @@ int simkl_e_a_seguir(const char *id) {
 }
 
 static int mesmaSerie(const char *a, const char *b) {
-  size_t la = strcspn(a, ":"), lb = strcspn(b, ":");
+  size_t la = idbase_len(a), lb = idbase_len(b);
   return la == lb && !strncmp(a, b, la);
 }
 
@@ -1272,6 +1319,8 @@ static int scrobbleDecidir(int evento, const char *id, double pct) {
     scrEstado.ativo = 1;
     return SCR_START;
   }
+  if (evento == SCR_EV_PONTO)
+    return scrEstado.ativo && mesmo && pct >= 1.0 && pct < 80.0 ? SCR_START : SCR_NADA;
   if (evento == SCR_EV_PAUSOU) {
     if (!scrEstado.ativo || !mesmo) return SCR_NADA;
     scrEstado.ativo = 0;

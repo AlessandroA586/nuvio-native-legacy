@@ -21,11 +21,26 @@ if 'gfx_opacidade_grupo' not in furos: fails.append('epFuros ignores row/group a
 rf = block(g, 'void gfx_rect_furos(', '\nvoid gfx_rect(')
 if 'fillGpuArea(r,' in rf or 'GFX_TR_RECT' not in rf or 'escAtiva' not in rf:
     fails.append('rect_furos visibility check uses unscaled coordinates')
-m = re.search(r'const int epVidroTile = ([^;]*);', d)
-if not m or 'ajustes_vidro' in m.group(1): fails.append('rest tile gated on glass setting')
-m = re.search(r'if \(epVidroTile\)\n.*?;', d, re.S)
-if not m or '(31 + 7 * ft) / 255.0f' not in m.group(0): fails.append('variant C panel focus color missing')
+if 'if (epModerna() && ft > .005f)' not in d:
+    fails.append('Modern C focus panel missing')
+if 'NUVIO_EP_MATERIAL' in d: fails.append('temporary material switch remains')
+if 'GfxRect th = {x, epRowY()-scrollY, epCardW(), epThumbH()};' not in furos:
+    fails.append('translucent panel wrongly culls backdrop')
 for f in fails: print('FAIL:', f)
 print('OK' if not fails else ''); sys.exit(1 if fails else 0)
+EOF
+python3 - <<'EOF'
+from pathlib import Path
+p=Path('src/epcoment.c').read_text(); m=Path('src/episodios.c').read_text()
+d=Path('src/descoberta.c').read_text()
+assert 'int selected=k==filtro;' in p
+assert 'int available[11] = {1}' in p and 'while (!available[filtro])' in p
+assert '{{"→",buf},{"←",i18n("Menu")}}' in p and 'notasui_desenhar_linha(&plano' in p
+assert 'VM_ANTERIOR' not in m and 'VM_PROXIMO' not in m
+assert 'txt_bloco(TXT_ILHA_NOME,vmCab' in m and 'vmTituloEscala' in m
+assert 'gfx_rect(th, t2, GFX_CARD, f,' in Path('src/detail.c').read_text()
+assert 'rating=js_num(p,f,"rating",0.0)' in d
+assert 'ajustes_tmdb_basico() || ajustes_nota_episodio(EX_TMDB)' in d
+print('PASS: episode direction, filter, full title, focus shader and rating data guards')
 EOF
 python3 tests/detail_episode_tint.py

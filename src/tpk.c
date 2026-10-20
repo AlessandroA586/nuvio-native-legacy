@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <locale.h>
 #include "video.h"
+#include "player.h"
 #include "cdnlink.h"
 #include "streams.h"
 #include <stdlib.h>
@@ -123,7 +124,11 @@ static EGLContext ctx = EGL_NO_CONTEXT;
 static int telaW = 1920, telaH = 1080;
 static int saidaPedida;
 void tpk_pedir_saida(int w, int h) {
-  __atomic_store_n(&saidaPedida, w >= 3840 && h >= 2160 ? 3840 : 1920, __ATOMIC_RELEASE);
+  // Menor que 1080 (o "720p leve") e pedido ao host tambem; sem suporte o
+  // host devolve 1920 e o codigo interno em 720 cobre a diferenca.
+  __atomic_store_n(&saidaPedida, w >= 3840 && h >= 2160 ? 3840 :
+                                  w <= 1280 && h <= 720 ? 1280 : 1920,
+                   __ATOMIC_RELEASE);
 }
 // Read by the host before constructing GLWindow; zero means startup is pending.
 __attribute__((visibility("default")))
@@ -136,12 +141,22 @@ static unsigned nQuadros, nPulados;
 static int contextoFalhou; // Render-thread only; do not poll the app thread's error buffer.
 
 // Fio do app: devolve a vez ao framework e espera ela voltar.
+static int cicloPendente;
 static void appEsperaVez(int entregou) {
   pthread_mutex_lock(&trava);
   if (entregou) { vez = VEZ_NUI; pendente = 1; pthread_cond_broadcast(&mudou); }
   appEsperando = 1;
   pthread_cond_broadcast(&mudou);
-  while (vez != VEZ_APP) pthread_cond_wait(&mudou, &trava);
+  while (vez != VEZ_APP || cicloPendente) {
+    if (cicloPendente) {
+      Uint32 tipo = cicloPendente == 2 ? SDL_APP_LOWMEMORY : SDL_APP_WILLENTERBACKGROUND;
+      cicloPendente = 0;
+      pthread_mutex_unlock(&trava);
+      player_ciclo_evento(tipo);
+      pthread_mutex_lock(&trava);
+      pthread_cond_broadcast(&mudou);
+    } else pthread_cond_wait(&mudou, &trava);
+  }
   appEsperando = 0;
   pthread_mutex_unlock(&trava);
 }
@@ -311,7 +326,9 @@ int nv_tpk_quadro(void) {
         // o "chuvisco" por cima do video da Tizen 4.0. O plano de video e
         // posicionado em pixels da superficie (video_escala_definir): errado
         // tambem fica o retangulo dele.
-        if (sw > 0 && sh > 0 && ((int)sw != telaW || (int)sh != telaH)) {
+        // 1x1 = janela do host ainda sem tamanho no primeiro quadro (Tizen 9,
+        // 2.0.7: tela preta, reabrir as vezes resolve). Fica o tamanho do host.
+        if (sw >= 640 && sh >= 360 && ((int)sw != telaW || (int)sh != telaH)) {
           telaW = (int)sw; telaH = (int)sh;
           printf("[tpk] tela adotada da superficie: %dx%d\n", telaW, telaH);
         }
@@ -430,9 +447,11 @@ int tpk_gl_atributo(SDL_GLattr a, int *v) {
 
 __attribute__((visibility("default")))
 void nv_tpk_ciclo(int memoria) {
-  SDL_Event e = {0};
-  e.type = memoria ? SDL_APP_LOWMEMORY : SDL_APP_WILLENTERBACKGROUND;
-  SDL_PushEvent(&e);
+  // Rendering may already be suspended: wake the app thread without needing GL.
+  pthread_mutex_lock(&trava);
+  cicloPendente = memoria ? 2 : 1;
+  pthread_cond_broadcast(&mudou);
+  pthread_mutex_unlock(&trava);
 }
 
 // Tecla do controle, pelo nome que o NUI da (Key.KeyPressedName). Vem do fio

@@ -172,8 +172,8 @@ void video_definir_reconexao(int sim);
 // velocidade e pausa. 1 = pedido aceito; 0 = indisponivel neste estado/alvo.
 int  video_recarregar(void);
 // MODO DO LOAD para o PROXIMO video_tocar (#158, LG C4: dado chega, VDEC
-// concedido, decoder nunca anuncia). 0 = o de sempre; 1 = sem o selectTrack
-// de video logo depois do load; 2 = o 1 e mais o payload enxuto de live
+// concedido, decoder nunca anuncia). 0/1 = default-track startup (the legacy
+// mode 1 is retained for saved settings); 2 = the lean live payload
 // (mediaTransportType HLS/URI, sem useSeekableRanges/bufferControl). Vale UMA
 // vez (video_modo_live_consumir zera); so a webOS le. Ver video_modo.c.
 void video_definir_modo_live(int modo);
@@ -328,10 +328,12 @@ void video_simular_estatisticas(const VideoStats *s);   // capturas; NULL zera
 // Tudo isto sai do evento sourceInfo da assinatura do uMS: o addon nao informa
 // nada disso, e so o pipeline sabe o que ha DENTRO do arquivo.
 
-// 32 e nao 12 (#92): um "Multi-Subs" de anime passa de doze legendas, e a
-// lista da TV cortada em 12 nunca casa pelo ordinal com o arquivo inteiro —
-// nenhuma faixa ASS ia ao overlay do app, todas ficavam com a TV.
-#define NV_FAIXA_MAX 32
+// 64 (era 12, depois 32; #92): um "Multi-Subs" de anime passa de doze legendas,
+// e um BD/remux multi-idioma passa de trinta. A lista da TV cortada abaixo do
+// total do arquivo nunca casa pelo ordinal (mkv_casar_legendas exige contagem
+// igual) — nenhuma faixa ASS ia ao overlay do app, todas ficavam com a TV. O
+// lado do arquivo (MKV_MAX_FAIXAS) ja era 64.
+#define NV_FAIXA_MAX 64
 
 typedef struct {
   char rotulo[48];   // "Ingles · Atmos 5.1" ou "Legenda 3"

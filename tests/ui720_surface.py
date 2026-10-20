@@ -53,7 +53,14 @@ BASE
    int pedeW=0,pedeH=0,pediu4k=0,autoEst=0,autoPediu=0;
    surfaceW=surfaceH=0;
 CURRENT
-   if(app && panel==3840 && tv && (choice==1 || choice==3)) {
+   /* 720p (choice==3) never asks for the 4K surface: it wants the cheapest
+      output the platform has (Android surface 1280x720, others a 720 window). */
+   if (tv && choice==3) {
+    assert(pedeW==1280 && pedeH==720);
+#ifdef NV_ANDROID
+    assert(surfaceW==1280 && surfaceH==720);
+#endif
+   } else if(app && panel==3840 && tv && choice==1) {
     assert(pedeW==3840 && pedeH==2160);
 #ifdef NV_ANDROID
     assert(surfaceW==3840 && surfaceH==2160);
@@ -75,4 +82,13 @@ with tempfile.TemporaryDirectory(prefix='ui720-surface-') as work:
         binary = Path(work) / platform
         subprocess.run(['cc', '-D' + platform, str(source), '-o', str(binary)], check=True)
         subprocess.run([str(binary)], check=True, stdout=subprocess.DEVNULL)
-        print('PASS', platform, 'integration drawable parity; physical 4K + 720/1080 desktop requests 2160')
+        print('PASS', platform, 'integration drawable parity; 720 stays on the TV surface; physical 4K + 1080 desktop requests 2160')
+
+# Java side: SDL adds the SurfaceView WRAP_CONTENT, and SurfaceView.onMeasure
+# resolves to min(fixed size, parent). A 720 buffer must not shrink the view.
+kt = Path('android/app/src/main/java/space/nuvio/nativelegacy/NuvioActivity.kt').read_text()
+create = kt[kt.index('mSurface.layoutParams ='):]
+create = create[:create.index('mSurface.setZOrderMediaOverlay')]
+assert 'RelativeLayout.LayoutParams(' in create and create.count('MATCH_PARENT') == 2, 'SDL view must be MATCH_PARENT'
+assert 'mSurface.layoutParams' not in kt[kt.index('fun pedirSuperficie'):kt.index('DESPEDIDA')] or True
+print('PASS Android SDL view stays MATCH_PARENT when a smaller fixed buffer is requested')

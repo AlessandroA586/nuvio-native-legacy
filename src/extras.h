@@ -93,6 +93,11 @@ const char *extras_comentario_ep_lingua(int i);
 // episodios usa; a parte depois do primeiro ':' e ignorada.
 void extras_pedir_comentarios_ep(const char *imdbSerie, int temporada, int episodio);
 int  extras_n_comentarios_ep(void);
+// Paged episode feed. Appends in the worker; repeated near-end requests coalesce.
+void extras_comentarios_ep_mais(void);
+void extras_comentarios_ep_cancelar(void);
+int extras_comentarios_ep_tem_mais(void);
+int extras_comentarios_ep_tmdb(void);
 // 1 enquanto a consulta esta em voo. Quem desenha usa isto para mostrar
 // "carregando" em vez de "nao ha comentarios" — os dois estados sao a lista
 // vazia, e confundi-los faz o episodio parecer sem comentario nenhum.
@@ -199,6 +204,7 @@ const char *extras_ficha_status(void);          // "Released", "Post Production"
 int         extras_ficha_duracao(void);         // minutos; 0 = nao ha
 const char *extras_ficha_paises(void);          // "United States of America, Canada"
 const char *extras_ficha_classificacao(void);   // "R", "PG-13", "14"
+const char *extras_ficha_digital(void);         // earliest announced digital release, ISO or empty
 const char *extras_ficha_lancamento(void);      // "2026-01-15"
 
 // TRAILERS. O id do YouTube, nome e miniatura saem do /movie/<id> ou /tv/<id>

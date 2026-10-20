@@ -17,6 +17,7 @@ __attribute__((weak)) int arte_reserva_registrar(const char *url, const char *im
 // sessao.h e perfis.h dizem DE QUEM e o que esta gravado. Ver a nota longa
 // sobre caminhoCache mais abaixo.
 #include "dados.h"
+#include "androidcache.h"
 #include "sessao.h"
 #include "perfis.h"
 #include "perfisessao.h"
@@ -918,6 +919,9 @@ static void caminhoCachePerfil(char *dst, size_t tam, const char *usuario, int p
 // src/dados.h) — nesse caso volta-se ao comportamento de sempre.
 static void caminhoCache(const char *dirArte, char *dst, size_t tam) {
   const char *d = dados_dir();
+#ifdef NV_ANDROID
+  d = nv_android_cache_dir();
+#endif
   if (!d || !*d) d = (dirArte && *dirArte) ? dirArte
                                            : (dirCache[0] ? dirCache : ".");
   if (d != dirCache) snprintf(dirCache, sizeof dirCache, "%s", d);
@@ -1788,10 +1792,10 @@ void cat_salvar_progresso(int indice, double posSeg, double durSeg) {
   cat_salvar_progresso_ep(indice,posSeg,durSeg,0,0,-1);
 }
 
-void cat_salvar_progresso_ep(int indice, double posSeg, double durSeg, int temporada, int episodio,
+int cat_salvar_progresso_ep(int indice, double posSeg, double durSeg, int temporada, int episodio,
                              int tocou) {
   indice = normalizarIndice(indice);
-  if (indice < 0 || !itens[indice].imdb[0]) return;
+  if (indice < 0 || !itens[indice].imdb[0]) return 0;
   // O arquivo e de progresso.c: chave igual a do web, pendente, com hora. O
   // imdb do item pode vir composto ("tt123:4:9", itens do Trakt) — a funcao
   // corta e usa o episodio explicito quando ha.
@@ -1799,9 +1803,10 @@ void cat_salvar_progresso_ep(int indice, double posSeg, double durSeg, int tempo
   // server's own check-ins (jellyfin.c) are their authority, and an opaque
   // server id would sync to every device of the account. The card still
   // shows the new position in this session.
-  if (jfid_e(itens[indice].imdb)) { cat_aplicar_progresso(indice, posSeg, durSeg, temporada, episodio); return; }
-  if (!prog_gravar_local(itens[indice].imdb, temporada, episodio, posSeg, durSeg, tocou)) return;
+  if (jfid_e(itens[indice].imdb)) { cat_aplicar_progresso(indice, posSeg, durSeg, temporada, episodio); return 1; }
+  if (!prog_gravar_local(itens[indice].imdb, temporada, episodio, posSeg, durSeg, tocou)) return 0;
   cat_aplicar_progresso(indice, posSeg, durSeg, temporada, episodio);
+  return 1;
 }
 
 unsigned cat_revisao(void) { return __atomic_load_n(&catRevisao, __ATOMIC_ACQUIRE); }

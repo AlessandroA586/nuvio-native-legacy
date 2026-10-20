@@ -8,6 +8,7 @@
 #include "gfx.h"
 #include "dados.h"
 #include "perfiltv.h"
+#include <SDL2/SDL.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +19,9 @@ int  gpun_teste_decidido(void);
 const char *gpun_teste_upscale(int sw, int sh, int iw, int ih, int app);
 
 // --- dubles ------------------------------------------------------------------
+SDL_GLContext SDL_GL_GetCurrentContext(void) { return NULL; }
 float gfx_tex_aspect_atual, gfx_opacidade_grupo = 1.0f;
+int gfx_hdr_output;
 static int leves = -1;
 void gfx_definir_efeitos_leves(int l) { leves = l; }
 static int minimos = -1;

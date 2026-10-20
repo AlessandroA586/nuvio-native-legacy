@@ -32,6 +32,7 @@ static float guideHints(const char *const *keys, const char *const *labels, int 
 #include "shot_arte.h"
 #include <SDL2/SDL_image.h>
 #include <assert.h>
+#include "guide_requests.h"
 
 typedef struct { const char *grupo, *nome; int numero; } TCanal;
 static void semear(const TCanal *v, int n) {
@@ -152,6 +153,25 @@ int main(int argc, char **argv) {
   e.key.repeat = 1; esconderOsd(); player_evento(&e); assert(!player_pediu_guia());
   e.key.repeat = 0;
 
+  // DOWN through app routing: opening may happen AFTER the frame timestamp.
+  tecla(SDLK_DOWN, 0);
+  testGuideRequests();
+  assert(guia_overlay_aberta() && !strcmp(guia_id_focado(), id));
+  { AddonRemoto addon = { .nome = "Fixture", .url = "https://example.invalid/manifest.json", .ativo = 1 };
+    assert(addons_definir_lista(&addon, 1));
+    ltv_chave_fonte(LTV_ADDON, addons_base(0), ltvF[0].chave, sizeof ltvF[0].chave); }
+  guia_atualizar(0.016f, bandaUlt - 1u);
+  assert(guia_overlay_aberta() && entrada > 0.01f && video_tocando());
+  guia_atualizar(0.016f, bandaUlt + G_B_OCIOSO_MS);
+  assert(guia_overlay_aberta());
+  guia_atualizar(0.016f, bandaUlt + G_B_OCIOSO_MS + 1u);
+  assert(!guia_overlay_aberta());
+  // SDL ticks wrap: an ordinary short interval must remain visible.
+  guia_overlay_abrir(); bandaUlt = (Uint32)-10;
+  guia_atualizar(0.016f, 10u);
+  assert(guia_overlay_aberta());
+  overlay = 0;
+
   // A FAIXA: abre no canal que toca; o OK que a abriu, repetido dentro do
   // repouso, nao conta como o segundo OK.
   guia_overlay_abrir(); guia_focar_id(id);
@@ -221,6 +241,133 @@ int main(int argc, char **argv) {
   { CatItem movie = {0}; snprintf(movie.tipo, sizeof movie.tipo, "movie"); cat_definir(&movie, 1); }
   esconderOsd(); tecla(SDLK_KP_ENTER, 0);
   assert(player_pediu_guia() && !strcmp(player_id_canal(), "xtream:42"));
+  // OSD Guide must keep the SAME stream even with a one-connection account.
+  xtream_definir_conexoes_modo(1);
+  assert(xtream_conexoes_limitadas());
+  tecla(SDLK_UP, 0); tecla(SDLK_RETURN, 0);
+  testGuideRequests();
+  assert(player_mini_no_guia_ativo() && previewPreso);
+  assert(!strcmp(previewId, "xtream:42") && video_tocando());
+  // CONTA LIMITADA + Preview ON: foco descansado noutro canal TROCA o
+  // preview — a sessao anterior fecha ANTES de a nova abrir (uma conexao).
+  pedPreview = 1; snprintf(pedPreviewItem.imdb, sizeof pedPreviewItem.imdb, "xtream:43");
+  testPreviewRequests();
+  assert(testPreviewConnections == 1 && !player_mini_ativo());
+  { CatItem novo = {0};
+    snprintf(novo.tipo, sizeof novo.tipo, "channel");
+    snprintf(novo.titulo, sizeof novo.titulo, "Canal 43");
+    snprintf(novo.imdb, sizeof novo.imdb, "xtream:43");
+    cat_definir(&novo, 1);
+    int ni = cat_indice_por_imdb("xtream:43"); assert(ni >= 0);
+    float x, y, w, h; guia_preview_rect(&x, &y, &w, &h);
+    player_mini_no_guia(x, y, w, h); player_manter_mini();
+    player_abrir(ni, NULL); player_marcar_canal(&novo); comFonte();
+    // Mesmo com querMini=0 (conta limitada) o destino armado no guia segura
+    // a sessao nova no preview — nao sobe a tela cheia.
+    assert(player_mini_no_guia_ativo() && !strcmp(player_id_canal(), "xtream:43")); }
+  player_restaurar();
+  assert(player_aberto() && !strcmp(player_id_canal(), "xtream:43"));
+  xtream_definir_conexoes_modo(0);
+
+  // GUIA CHEIO, PREVIEW LIGADO, SEM CANAL NO AR: o foco descansado num canal
+  // pede o preview (regressao TCL: preview ligado nunca arrancava).
+  player_encerrar();
+  aberta = 0; overlay = 0;
+  previewLigado = 1; previewLido = 1; previewPreso = 0; previewId[0] = 0;
+  guia_abrir();
+  assert(aberta && previewLigado && !pedPreview);
+  { Uint32 t0 = previewFocoMudou;
+    guia_atualizar(0.016f, t0 + G_PREVIEW_ESPERA_MS - 1u);
+    assert(!guia_pediu_preview(&it));            // dentro do descanso: nada
+    guia_atualizar(0.016f, t0 + G_PREVIEW_ESPERA_MS + 1u);
+    assert(guia_pediu_preview(&it) && !strcmp(it.imdb, guia_id_focado()));
+  }
+  snprintf(previewId, sizeof previewId, "%s", it.imdb); // o app ja atendeu
+  // O app atende ao pedido: sessao "mini no guia" e o canal tocando.
+  { float x, y, w, h;
+    int ni;
+    guia_preview_rect(&x, &y, &w, &h);
+    player_mini_no_guia(x, y, w, h);
+    player_manter_mini();
+    ni = cat_indice_por_imdb(it.imdb);
+    if (ni < 0) ni = cat_acrescentar(&it);
+    assert(ni >= 0);
+    player_abrir(ni, NULL); player_marcar_canal(&it); comFonte();
+    assert(player_mini_no_guia_ativo() && video_pronto());
+  }
+  // CANAL TOCANDO NO PREVIEW + foco noutro canal ANTES do descanso: o heroi
+  // segue furando para o video que toca (o foco nao esconde o canal no ar).
+  { int sessao = aberta && !overlay && player_mini_no_guia_ativo();
+    GCanal *outro = linhaItem(0, 1);
+    assert(outro && strcmp(outro->id, previewId));
+    int focado = sessao || previewFocoEh(outro->id);
+    assert(focado); }
+  guia_focar_id(previewId);   // o foco pode ter ido para o canal no ar
+  // O furo do video abre so para o canal focado — por ID, nao por ponteiro:
+  // o mesmo canal em duas fontes (M3U + addon) tem GCanal* diferentes.
+  assert(previewFocoEh(guia_id_focado()));
+  { int colFoco = focoCol, colOutro = focoCol ? 0 : 1;
+    focoCol = colOutro;              // outro canal da mesma linha
+    assert(!previewFocoEh(guia_id_focado()));
+    focoCol = colFoco;
+    assert(previewFocoEh(guia_id_focado())); }
+  // MESMO ID EM DOIS GCanal (favorito/duplicata): o foco no duplicado ainda
+  // conta como o canal do preview.
+  { int dup = nCanais;
+    canais = realloc(canais, sizeof(GCanal) * (size_t)(nCanais + 1));
+    assert(canais);
+    { GCanal *alvo = canalPorId(previewId);
+      canais[dup] = alvo ? *alvo : canais[0]; }
+    nCanais = dup + 1;
+    // foco direto no duplicado: canalPorId acha o PRIMEIRO, linhaItem daria o segundo
+    { GCanal *a = canalPorId(previewId);
+      assert(a && a != &canais[dup]);
+      assert(!strcmp(canais[dup].id, previewId));
+      assert(previewFocoEh(canais[dup].id));
+    }
+    nCanais = dup;                   // restaura
+  }
+  // BACK num canal AO VIVO aberto do guia = botao GUIA: a MESMA sessao vai
+  // para o preview, sem nova abertura (conta limitada inclusa: sem
+  // player_minimizavel no caminho).
+  { char tocandoAgora[64];
+    snprintf(tocandoAgora, sizeof tocandoAgora, "%s", player_id_canal());
+    player_restaurar();
+    assert(player_aberto() && video_tocando());
+    esconderOsd();
+    tecla(SDLK_ESCAPE, 0);
+    assert(player_quer_sair());
+    aberta = 1;
+    testBackToGuide();
+    assert(player_mini_no_guia_ativo() && video_tocando());
+    assert(!strcmp(player_id_canal(), tocandoAgora) && !strcmp(previewId, tocandoAgora));
+    assert(previewPreso);
+    // E volta a tela cheia pelo mesmo fluxo, para o resto do teste seguir.
+    player_restaurar();
+    assert(player_aberto());
+    // De volta ao preview para o bloco seguinte (furo/opcoes).
+    { float x, y, w, h;
+      guia_preview_rect(&x, &y, &w, &h);
+      player_minimizar_para_guia(x, y, w, h);
+      guia_adotar_canal(tocandoAgora);
+      assert(player_mini_no_guia_ativo()); } }
+  // DESLIGA/LIGA pelo menu Opcoes: o preview volta a pedir no mesmo foco.
+  topoAcionar(G_TOPO_OPCOES);
+  assert(opcoesAberto);
+  opcoesFoco = G_TOPO_PREVIEW;
+  { SDL_Event ok = {0};
+    ok.type = SDL_KEYDOWN; ok.key.keysym.sym = SDLK_RETURN;
+    guia_evento(&ok); }
+  assert(!previewLigado && guia_pediu_parar_preview());
+  topoAcionar(G_TOPO_OPCOES);
+  opcoesFoco = G_TOPO_PREVIEW;
+  { SDL_Event ok = {0};
+    ok.type = SDL_KEYDOWN; ok.key.keysym.sym = SDLK_RETURN;
+    guia_evento(&ok); }
+  assert(previewLigado && previewUltLin == -1);
+  guia_atualizar(0.016f, SDL_GetTicks() + G_PREVIEW_ESPERA_MS + 1u);
+  assert(guia_pediu_preview(&it) && !strcmp(it.imdb, guia_id_focado()));
+  previewParar();
 
   // FILME: o OK sem OSD continua do player (acorda os controles), nunca o guia.
   player_encerrar();
@@ -247,9 +394,39 @@ int main(int argc, char **argv) {
     glViewport(0, 0, 1920, 1080); gfx_tamanho_alvo(1920, 1080);
     assert(gfx_iniciar()); assert(txt_iniciar("deploy/app", 1)); tex_iniciar(64);
     gfx_icones_dir("deploy/app/art");
+    // Every supported translation gets measured title/clock separation.
+    for (int lang = 0; lang < IDIOMA_N; lang++) {
+      f = fopen(settings, "w"); assert(f);
+      fprintf(f, "idioma %d\nidiomaAutoLocal 0\n", lang); fclose(f);
+      ajustes_dir(getenv("NUVIO_DADOS"));
+      txt_novo_quadro();
+      const char *labels[G_TOPO_N]; float widths[G_TOPO_N], xs[G_TOPO_N];
+      gTopoRotulos(labels); gTopoLarguras(labels, widths);
+      float right = G_AREA_DIR - txt_linha(TXT_CALLOUT, "23:59", 255, 255, 255, 255).w - 36;
+      gTopoAjustar(widths, xs, right);
+      float titleRight = G_AREA_X + txt_linha(TXT_ILHA_TITULO, i18n("Guia TV"), 255, 255, 255, 255).w;
+      assert(xs[0] == G_AREA_X && titleRight < right);
+      assert(G_CHIPS_Y >= G_TOPO_Y + G_TOPO_H + 12);
+      for (int chip = 0; chip < G_TOPO_PRIMARIOS; chip++) {
+        float icon = chip == G_TOPO_PREVIEW ? 20 :
+                     (chip == G_TOPO_BUSCAR || chip == G_TOPO_CATEGORIAS) ? 26 : 0;
+        if (widths[chip] <= 2 * G_CHIP_PAD + icon)
+          fprintf(stderr, "header language=%d chip=%d width=%.1f text=%s area=%.1f\n", lang, chip, widths[chip], labels[chip], G_INFO_W);
+        assert(widths[chip] > 2 * G_CHIP_PAD + icon);
+        assert(xs[chip] + widths[chip] <= G_INFO_X + G_INFO_W + 0.1f);
+        if (chip) assert(xs[chip] >= xs[chip - 1] + widths[chip - 1]);
+      }
+    }
+    f = fopen(settings, "w"); assert(f);
+    fprintf(f, "idioma %d\nidiomaAutoLocal 0\n", IDIOMA_EN); fclose(f);
+    ajustes_dir(getenv("NUVIO_DADOS"));
     snprintf(tv.imdb, sizeof tv.imdb, "%s", id);
     cat_definir(&tv, 1); player_abrir(0, NULL); player_marcar_canal(&tv); comFonte();
-    aberta = 0; overlay = 1; entrada = 1; guia_focar_id(id);
+    aberta = 0;
+    tecla(SDLK_DOWN, 0); testGuideRequests();
+    guia_atualizar(0.016f, bandaUlt - 1u);
+    assert(guia_overlay_aberta() && entrada > 0.01f && video_tocando());
+    entrada = 1; guia_focar_id(id);
     snprintf(nome, sizeof nome, "%s-faixa.png", argv[1]); foto(nome, w);
     assert(fullGuideHintTranslated);
     { float x, y, w, h;
@@ -261,7 +438,13 @@ int main(int argc, char **argv) {
       guia_adotar_canal(id);
       assert(player_mini_no_guia_ativo() && previewPreso && !overlay);
     }
+    entrada = heroA = 1; dicaDesde = 0; previewLigado = 1;
     snprintf(nome, sizeof nome, "%s-guia.png", argv[1]); foto(nome, w);
+    modoLista = 1;
+    snprintf(nome, sizeof nome, "%s-lista.png", argv[1]); foto(nome, w);
+    focoLin = 0; focoCol = 1;
+    snprintf(nome, sizeof nome, "%s-outro-canal.png", argv[1]); foto(nome, w);
+    assert(video_tocando() && player_mini_no_guia_ativo());
   }
   return 0;
 }

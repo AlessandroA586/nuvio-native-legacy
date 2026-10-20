@@ -91,6 +91,9 @@ int addons_consulta_atual(const AddonsConsulta *consulta);
 // Uma consulta cancelada/incompleta devolve -1 e deixa *saida NULL.
 int addons_consulta_consultar(const AddonsConsulta *consulta, const char *id, const char *tipo,
                               int fios, int (*cancelado)(void *), void *ctx, void *saida /* Stream ** */);
+// Serial installed add-on availability probe; no plugins, retries, cache, or list publication.
+int addons_consulta_filme(const AddonsConsulta *consulta, const char *id,
+                          int (*cancelado)(void *), void *ctx);
 void addons_consulta_liberar(AddonsConsulta *consulta);
 const char *addons_base(int i);   // URL base, sem /manifest.json
 const char *addons_id_manifesto(int i);   // "id" do manifesto; "" ate a sonda ler

@@ -21,6 +21,7 @@
 // uPar = source size in texels. No-highp GLES2 compiles only bilinear.
 #define NV_EASU_SHADER \
 "#if !defined(GL_ES) || (defined(GL_FRAGMENT_PRECISION_HIGH) && !defined(NV_SGSR_MEDIUMP))\n" \
+"#ifdef GL_ES\nprecision highp float;\n#endif\n" \
 "highp vec2 eD;\n" \
 "vec3 eT(highp vec2 b, vec2 o) { return texture2D(uTex,(b+o+0.5)*eD).rgb; }\n" \
 "float eL(vec3 c) { return c.b*0.5+(c.r*0.5+c.g); }\n" \
@@ -85,6 +86,7 @@
 // Lanczos-2 (a = 2), separable 4x4 texel-center taps. uPar = source size.
 #define NV_LANCZOS_SHADER \
 "#if !defined(GL_ES) || (defined(GL_FRAGMENT_PRECISION_HIGH) && !defined(NV_SGSR_MEDIUMP))\n" \
+"#ifdef GL_ES\nprecision highp float;\n#endif\n" \
 "vec4 lzW(float f) {\n" \
 "  vec4 x = max(abs(vec4(f+1.0,f,1.0-f,2.0-f))*3.14159265,1e-5);\n" \
 "  vec4 w = sin(x)*sin(0.5*x)/(0.5*x*x);\n" \
@@ -112,8 +114,10 @@
 // FSR 1 RCAS at output resolution, without the optional denoise.
 // uPar = inverse texture size; uFoco = sharpness (1 = AMD's 0-stop maximum).
 #define NV_RCAS_SHADER \
+"#if !defined(GL_ES) || (defined(GL_FRAGMENT_PRECISION_HIGH) && !defined(NV_SGSR_MEDIUMP))\n" \
+"#ifdef GL_ES\nprecision highp float;\n#endif\n" \
 "void main() {\n" \
-"  vec2 uv = vec2(vUv.x,1.0-vUv.y);\n" \
+"  highp vec2 uv = vec2(vUv.x,1.0-vUv.y);\n" \
 "  vec4 e = texture2D(uTex,uv);\n" \
 "  vec3 b = texture2D(uTex,uv-vec2(0.0,uPar.y)).rgb, h = texture2D(uTex,uv+vec2(0.0,uPar.y)).rgb;\n" \
 "  vec3 d = texture2D(uTex,uv-vec2(uPar.x,0.0)).rgb, f = texture2D(uTex,uv+vec2(uPar.x,0.0)).rgb;\n" \
@@ -121,4 +125,7 @@
 "  vec3 lo = max(-min(mn,e.rgb)/max(4.0*mx,1e-4), (1.0-max(mx,e.rgb))/min(4.0*mn-4.0,-1e-4));\n" \
 "  float lobe = max(-0.1875, min(max(lo.r,max(lo.g,lo.b)),0.0))*uFoco;\n" \
 "  gl_FragColor = vec4(clamp((lobe*(b+d+f+h)+e.rgb)/(4.0*lobe+1.0),0.0,1.0),e.a);\n" \
-"}\n"
+"}\n" \
+"#else\n" \
+"void main() { gl_FragColor = texture2D(uTex,vec2(vUv.x,1.0-vUv.y)); }\n" \
+"#endif\n"

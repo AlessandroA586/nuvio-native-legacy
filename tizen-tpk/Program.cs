@@ -235,7 +235,7 @@ namespace NuvioTpk
             // Rastro nunca derruba o arranque: sem esses eventos, o app segue.
             try
             {
-                janela.VisibilityChanged += (s, e) => { principalVisivel = e.Visibility; Etapa("note main-window visible=" + e.Visibility + Contagem()); Janela("principal visivel=" + e.Visibility, false); };
+                janela.VisibilityChanged += (s, e) => { if (!e.Visibility) { try { nv_tpk_ciclo(0); } catch (EntryPointNotFoundException) { } } principalVisivel = e.Visibility; Etapa("note main-window visible=" + e.Visibility + Contagem()); Janela("principal visivel=" + e.Visibility, false); };
                 janela.FocusChanged += (s, e) => { Etapa("note main-window focus=" + e.FocusGained + Contagem()); if (e.FocusGained) SobeGlSePreciso("main-window focus"); };
             }
             catch (Exception e) { Etapa("note main-window events unavailable " + e.GetType().Name + ": " + e.Message); }
@@ -452,6 +452,9 @@ namespace NuvioTpk
                 () => Quadro(),
                 () => Etapa("note glview terminate callback" + Contagem()));
             glView.RenderingMode = GLRenderingMode.Continuous;
+            // GLView's mode does not keep its owning DALi window updating.
+            // A static video hole must still get frames between watchdog ticks.
+            NuiWindow.Instance.RenderingBehavior = RenderingBehaviorType.Continuously;
             NuiWindow.Instance.KeyEvent += (s, e) => Tecla(e.Key, "main");
             NuiWindow.Instance.Add(glView);
             Etapa("note glview created size=" + W + "x" + H + " format=RGBA8888 mode=Continuous" + Contagem());
@@ -582,7 +585,7 @@ namespace NuvioTpk
             NuiWindow.Instance.KeyEvent += (s, e) => Tecla(e.Key, "main");
             try
             {
-                gl.VisibilityChanged += (s, e) => { glVisivel = e.Visibility; Etapa("note gl-window visible=" + e.Visibility + Contagem()); Janela("gl visivel=" + e.Visibility, false); };
+                gl.VisibilityChanged += (s, e) => { if (!e.Visibility) { try { nv_tpk_ciclo(0); } catch (EntryPointNotFoundException) { } } glVisivel = e.Visibility; Etapa("note gl-window visible=" + e.Visibility + Contagem()); Janela("gl visivel=" + e.Visibility, false); };
                 gl.FocusChanged += (s, e) => Etapa("note gl-window focus=" + e.FocusGained + Contagem());
             }
             catch (Exception e) { Etapa("note gl-window events unavailable " + e.GetType().Name + ": " + e.Message); }
@@ -877,7 +880,10 @@ namespace NuvioTpk
                 }
             }
             if (abertas.Count == 0) return null;
-            if (abertas.Count == 1 && abertas[0] == "first-key" && terminou) return null;
+            // A TV fechou o app (terminate): o laco nui-run e o first-key ficam
+            // abertos porque o processo morre antes do "ok". Saida normal.
+            if (terminou) { abertas.Remove("nui-run"); abertas.Remove("first-key"); }
+            if (abertas.Count == 0) return null;
             string r = abertas[abertas.Count - 1];
             if (terminou) r += " (then the TV closed it)";
             if (ultimaNota != null) r += " — last: " + ultimaNota;
@@ -997,8 +1003,8 @@ namespace NuvioTpk
 #if !NV_TEXTO
             try { voz?.Cancelar(); } catch { }
 #endif
-            video?.PausarPeloSistema();
             try { nv_tpk_ciclo(0); } catch (EntryPointNotFoundException) { }
+            video?.PausarPeloSistema();
             base.OnPause();
         }
 

@@ -118,6 +118,7 @@ int ajustes_animacoes_reduzidas(void);
 // V_BRILHO_PLAYER (padrao 1 = 80%).
 int ajustes_esmaecer(void);
 int ajustes_brilho_player(void);
+int ajustes_hdr_interface(void); // Experimental Android HDR output; default off.
 int ajustes_hdr_ui(void);   // #205: 1 = Automatico (padrao), 0 = Desligado
 // #202: -1 = ultimo modo usado (padrao); 0..7 = PlrAspecto aplicado ao abrir o video.
 int ajustes_proporcao_padrao(void);
@@ -158,7 +159,8 @@ int ajustes_fonte_manual(void);
 
 // "Fonte automatica" = "Primeira da lista" (issue #130): o automatico toca a
 // primeira fonte na ordem do addon e confere SO ela. 0 = "Melhor fonte", a
-// regra de pontuacao de streams.c. Ver fonteauto.h.
+// regra de pontuacao de streams.c. "Do addon" na prioridade tambem ativa
+// primeira, sem teto de qualidade nem memoria de fonte. Ver fonteauto.h.
 int ajustes_fonte_primeira(void);
 // #400: ordem visual do addon, local; nao altera autoplay.
 int ajustes_fonte_ordem_addon(void);
@@ -193,7 +195,8 @@ int ajustes_fonte_regex_modo(void);
 // "Usar a ordem" dos add-ons (FR_ORDEM_*); 0 tambem quando nao ha ordem.
 int ajustes_fonte_ordem_uso(void);
 int ajustes_fonte_usar_outros(void);
-// R9b: 0 Equilibrio, 1 Qualidade maxima, 2 Começar rápido / 0 Preferir, 1 Indiferente, 2 Evitar HDR e DV.
+// 0 Equilibrio, 1 Qualidade maxima, 2 Começar rápido, 3 Do addon.
+// HDR: 0 Preferir, 1 Indiferente, 2 Evitar HDR e DV.
 int ajustes_fonte_prioridade(void);
 int ajustes_fonte_hdr(void);
 // 1 = a escolha automatica prefere fontes que anunciam o Idioma do audio

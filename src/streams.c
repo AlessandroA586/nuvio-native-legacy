@@ -892,6 +892,9 @@ static int cabeNoTeto(const Stream *s) {
   if (s->filtro.naoVod) return 1;
   return cabeNaAltura(s) && !foraDaFaixaTamanho(s);
 }
+/* #618: explicit add-on order bypasses soft quality priorities, not filters. */
+static int ordemDoAddon(void) { return ajustes_fonte_prioridade() == 3; }
+static int acimaDoTetoAuto(const Stream *s) { return !ordemDoAddon() && !cabeNoTeto(s); }
 
 // PLUGIN / EMBED (R9, 04/10). Fonte de scraper QuickJS (MegaEmbed etc.): o
 // bingeGroup que o adaptador de plugins poe e "nuvio-plugin|<id>|<q>". A
@@ -1489,6 +1492,23 @@ static int enderecoDeAviso(const char *u) {
          strstr(u, "slate.mp4") || strstr(u, "slate.m3u8") ? 1 : 0;
 }
 
+int stream_fonte_disponivel(const Stream *s) {
+  return s && (s->url[0] || s->infoHash[0]) && fonteOferecida(s) && !ehInformativa(s) && !s->foraCache &&
+    !enderecoDeAviso(s->url);
+}
+int stream_filme_consultar(const AddonsConsulta *consulta, const char *id,
+                           int (*cancelado)(void *), void *ctx) {
+  return addons_consulta_filme(consulta, id, cancelado, ctx);
+}
+int stream_filme_fontes(const char *id) {
+  if (!id || !*id || strcmp(id, alvoLista) || addons_ocupado()) return -1;
+  int qtd = 0;
+  pthread_mutex_lock(&verTrava);
+  for (int i = 0; i < n; i++) if (stream_fonte_disponivel(&lista[i])) qtd++;
+  pthread_mutex_unlock(&verTrava);
+  return qtd;
+}
+
 // PLAYLIST HLS SEM UM SEGMENTO SEQUER e fonte MORTA, e ela passava na
 // verificacao.
 //
@@ -2017,7 +2037,7 @@ static void logarEscolha(int escolhida, int pref, int modoPrimeira) {
   printf("[fonte] auto pick: \"%s\" [%s] points=%ld reason=%s | prefs: priority=%s hdr=%s dv=%s | size=%s | fit=%s | runner-up=",
          w->rotulo, a, pe, escolhida == pref ? "remembered for this title" : modoPrimeira ? "first in addon order"
          : "best score (resolution > HDR > release/bitrate/audio > cached > addon over plugin)",
-         ajustes_fonte_prioridade() == 1 ? "max-quality" : ajustes_fonte_prioridade() == 2 ? "smoothness" : "balanced",
+         ordemDoAddon() ? "addon-order" : ajustes_fonte_prioridade() == 1 ? "max-quality" : ajustes_fonte_prioridade() == 2 ? "smoothness" : "balanced",
          ajustes_fonte_hdr() == 1 ? "indifferent" : ajustes_fonte_hdr() == 2 ? "avoid" : "prefer",
          ajustes_dolby_vision() ? "on" : "off", tam, fit);
   if (vice >= 0) printf("\"%s\" [%s] points=%ld\n", lista[vice].rotulo, b, pv);
@@ -2086,8 +2106,8 @@ static int falhaCandidatas(unsigned geracao, int escolhida, int primeira, FonteF
     int i = ORD(q);
     const Stream *s = &lista[i];
     ordem[q] = i;
-    if (i == preferida && fonteregra_no_escopo(&escopo, ehPlugin(s))) pref = q;
-    pts[q] = pontos(s); acima[q] = (unsigned char)!cabeNoTeto(s);
+    if (!ordemDoAddon() && i == preferida && fonteregra_no_escopo(&escopo, ehPlugin(s))) pref = q;
+    pts[q] = pontos(s); acima[q] = (unsigned char)acimaDoTetoAuto(s);
     // A marca historica nao sabe qual debrid falhou. Aplicar a mesma marca a
     // outro servico esconderia justamente a alternativa que a pessoa pediu.
     // O addon pode estar dizendo "fora de cache no TB"; isso nao responde
@@ -2371,6 +2391,7 @@ void stream_preparo_definir_episodio(StreamPreparo *p, int t, int e) {
 }
 StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int preferidaNext, const char *alvo) {
   if (!fontes || total <= 0) return NULL;
+  if (ordemDoAddon()) preferidaNext = -1;
   StreamPreparo *p = calloc(1, sizeof *p);
   int *ordem = NULL, *fila = NULL, *rank = NULL;
   long *pts = NULL;
@@ -2415,7 +2436,7 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
   }
   for (int q = 0; q < total; q++) {
     int i = ordem[q]; const Stream *s = &fontes[i];
-    pts[q] = pontosDoAlvo(s, alvo ? alvo : ""); acima[q] = !cabeNoTeto(s);
+    pts[q] = pontosDoAlvo(s, alvo ? alvo : ""); acima[q] = acimaDoTetoAuto(s);
     excl[q] = !fontefiltro_permite(&p->filtro, &s->filtro) ||
               s->urlP2P || (s->foraCache && !s->infoHash[0]) || ehInformativa(s) || excedeDecoder(s) ||
               (!s->infoHash[0] && fontesmortas_idade(s) >= 0);
@@ -2425,7 +2446,7 @@ StreamPreparo *stream_preparo_criar_alvo(const Stream *fontes, int total, int pr
   if (lgMp4Primeiro()) mp4PrimeiroNasFontes(fontes, alvo ? alvo : "", ordem, pts, grupo, excl, total);
   int nc = fonteauto_fila_o(ajustes_fonte_primeira() ? FONTEAUTO_PRIMEIRA : FONTEAUTO_MELHOR,
             total, pref, pts, acima, excl, grupo, rank, ajustes_fonte_ordem_uso(), total, fila);
-  if (preferidaNext < 0 && alvo && alvo[0]) {
+  if (!ordemDoAddon() && preferidaNext < 0 && alvo && alvo[0]) {
     PreparoQualidade qualidade = {fontes, ordem, grupo, excl, total,
                                  nc > 0 ? ordem[fila[0]] : -1, lgMp4Primeiro()};
     // O preparo e sempre do PROXIMO episodio: primeiro o bingeGroup da fonte
@@ -2611,9 +2632,9 @@ int stream_primeira_boa_sessao(int tentativas, uint64_t sessao) {
       // A lembrada entra na frente da fila, mas nunca fora do escopo: plugin
       // escolhido a mao num dia nao toca sozinho com "so add-ons" (bloqueador
       // 2.0.3).
-      if (i == pref && fonteregra_no_escopo(&cfgEscopo, ehPlugin(&lista[i]))) posPref = q;
+      if (!ordemDoAddon() && i == pref && fonteregra_no_escopo(&cfgEscopo, ehPlugin(&lista[i]))) posPref = q;
       pts[q] = pontos(&lista[i]);
-      acima[q] = (unsigned char)!cabeNoTeto(&lista[i]);
+      acima[q] = (unsigned char)acimaDoTetoAuto(&lista[i]);
       int mot = motivoForaDoAuto(i, &c.filtro);
       excl[q] = (unsigned char)(mot != MOT_FICA);
       motivos[mot]++;
@@ -2788,7 +2809,7 @@ int stream_auto_pode_decidir(int preferida, int prefPendente, int prazoPassou, i
     int i = ORD(q);
     if (i == preferida) posPref = q;
     pts[q] = pontos(&lista[i]);
-    acima[q] = (unsigned char)!cabeNoTeto(&lista[i]);
+    acima[q] = (unsigned char)acimaDoTetoAuto(&lista[i]);
     excl[q] = (unsigned char)foraDoAuto(i);
     boa[q] = (unsigned char)boaParaJa(&lista[i]);
     ad[q] = chave ? (int)(chave[i] >> 16) : 0;
@@ -2798,7 +2819,8 @@ int stream_auto_pode_decidir(int preferida, int prefPendente, int prazoPassou, i
   if (lgMp4Primeiro()) mp4PrimeiroNaFaixa(NULL, pts, grp, excl, total);
   pthread_mutex_unlock(&verTrava);
   p.modo = ajustes_fonte_primeira() ? FONTEAUTO_PRIMEIRA : FONTEAUTO_MELHOR;
-  p.total = total; p.preferida = posPref; p.prefPendente = prefPendente;
+  p.total = total; p.preferida = ordemDoAddon() ? -1 : posPref;
+  p.prefPendente = !ordemDoAddon() && prefPendente;
   p.prazoPassou = prazoPassou;
   p.pontos = pts; p.acimaTeto = acima; p.excluida = excl; p.boa = boa;
   p.addon = ad; p.pendenteAntes = pendenteAntesCb;
@@ -3201,7 +3223,8 @@ int stream_grupo_sem_perda(int i, int forte) {
   }
   return 1;
 }
-int stream_automatico(void) { return automaticoCom(1); }
+static int automaticoPrimeira(void);
+int stream_automatico(void) { return ajustes_fonte_primeira() ? automaticoPrimeira() : automaticoCom(1); }
 int stream_automatico_canal(void) { return automaticoCom(0); }
 
 // "PRIMEIRA DA LISTA" NA FOLHA: o selo "Melhor para esta TV" e a primeira linha
@@ -3221,7 +3244,7 @@ static int automaticoPrimeira(void) {
     for (q = 0; q < total; q++) {
       int i = ORD(q);
       ordem[q] = i;
-      acima[q] = (unsigned char)!cabeNoTeto(&lista[i]);
+      acima[q] = (unsigned char)acimaDoTetoAuto(&lista[i]);
       excl[q] = (unsigned char)foraDoAuto(i);
       grp[q] = (signed char)grupoDe(i);
       rk[q] = fonteregra_ordem_rank(lista[i].provedor);
@@ -3396,7 +3419,7 @@ static int nFiltrados(void) {
 // na frente quando existe; senao, a de maior pontuacao. Pedido do dono, 16/09.
 // Uma vez por quadro, nunca por linha: stream_automatico percorre a lista.
 static int automaticaDaFolha(void) {
-  return preferida >= 0 && !lista[preferida].foraCache && !automaticaExcluida(preferida) &&
+  return !ordemDoAddon() && preferida >= 0 && !lista[preferida].foraCache && !automaticaExcluida(preferida) &&
          (canalFolha || (!excedeDecoder(&lista[preferida]) && stream_filtro_permite(&lista[preferida]))) ? preferida : automaticoDaFolhaModo();
 }
 
@@ -4145,16 +4168,16 @@ static void montar(int automatica) {
   }
   // #400/#402: ordem do addon, com negativas de cache conhecidas no fim.
   // A folha chama montar() a cada desenho: mudar o ajuste vale no proximo quadro.
-  if (ajustes_fonte_ordem_addon()) {
+  if (ordemDoAddon() || ajustes_fonte_ordem_addon()) {
     // A classificacao do StreamFit (avisos "Acima da conexao") e o
     // enriquecimento de canal (grupoRes -> stream_canal_enriquecer) continuam;
     // so a ordem e a do addon.
     fitAtualizar();
     memset(secN, 0, sizeof secN);
     nOrdem = 0;
-    for (int fora = 0; fora < 2; fora++) for (k = 0; k < n; k++) {
+    for (int fora = 0; fora < (ordemDoAddon() ? 1 : 2); fora++) for (k = 0; k < n; k++) {
       i = ORD(k);
-      if (!passaFiltro(i) || !!lista[i].foraCache != fora) continue;
+      if (!passaFiltro(i) || (!ordemDoAddon() && !!lista[i].foraCache != fora)) continue;
       (void)grupoRes(&lista[i]);
       porLinha(i, &y, automatica);
     }

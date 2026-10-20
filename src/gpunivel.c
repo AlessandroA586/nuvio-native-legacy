@@ -247,9 +247,12 @@ void gpun_ampliar_app(int app) {
   // The caller supplies panel eligibility via ajustes_ampliar_app(). A 4K panel
   // may grant only 1080p (C9); drawable size must not veto its 720p upscaler.
   ampliarApp = app && upscaleSgsr;
+  // Caminho identidade (sem alvo interno ou drawable 720 nativo): nao ha
+  // ampliacao pelo app, qualquer que seja a escolha gravada — o log diz o
+  // modo efetivo.
   if ((!forca720 && !alvo1080) || (forca720 && telaW <= 1280 && telaH <= 720))
-    printf("[gpu-nivel] ampliar=%s upscale=bilinear %dx%d -> %dx%d\n",
-           ampliarApp ? "app" : "tv", telaW, telaH, telaW, telaH);
+    printf("[gpu-nivel] ampliar=tv upscale=bilinear %dx%d -> %dx%d\n",
+           telaW, telaH, telaW, telaH);
 }
 
 static void alvoApagar(GLuint *fbo, GLuint *tex) {
@@ -528,6 +531,7 @@ static int intPreparar(void) {
   if (intFbo) return 1;
   if (intFalhou) return 0;
   if (alvo1080) { intW = (int)NV_TELA_W; intH = (int)NV_TELA_H; }
+  else if (gfx_hdr_output && !forca720) { intW = telaW; intH = telaH; }
   else { intW = 1280; intH = 720; }
   st = alvoCriar(&intFbo, &intTex, intW, intH);
   if (st != GL_FRAMEBUFFER_COMPLETE) {
@@ -547,8 +551,8 @@ static int intPreparar(void) {
 void gpun_quadro_inicio(void) {
   intLigado = 0;
   // A granted 720p drawable is already scaled by the platform compositor.
-  if (forca720 && telaW <= 1280 && telaH <= 720) return;
-  if ((!forca720 && !alvo1080) || !intPreparar()) return;
+  if (!gfx_hdr_output && forca720 && telaW <= 1280 && telaH <= 720) return;
+  if ((!gfx_hdr_output && !forca720 && !alvo1080) || !intPreparar()) return;
   glBindFramebuffer(GL_FRAMEBUFFER, intFbo);
   glViewport(0, 0, intW, intH);
   gfx_tamanho_alvo(intW, intH);
@@ -575,13 +579,15 @@ void gpun_quadro_fim(void) {
     gfx_opacidade_grupo = 1.0f;
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     // RCAS reads the upscaled frame back from a drawable-sized target.
-    int rcas = upRcas();
+    int rcas = !gfx_hdr_output && upRcas();
     if (rcas && !rcasFbo && alvoCriar(&rcasFbo, &rcasTex, telaW, telaH) != GL_FRAMEBUFFER_COMPLETE) {
       printf("[gpu-nivel] alvo RCAS %dx%d incompleto: sem nitidez\n", telaW, telaH);
       rcasFalhou = 1; rcas = 0;
     }
     if (rcas) glBindFramebuffer(GL_FRAMEBUFFER, rcasFbo);
-    switch (upEtapa()) {
+    if (gfx_hdr_output)
+      gfx_rect(tela, intTex, GFX_HDR_OUTPUT, (float)gfx_hdr_output, 0, 0, 0, 1, 1, 1, 1);
+    else switch (upEtapa()) {
       case UP_SGSR:
         gfx_rect(tela, intTex, GFX_COPIA, 0, (float)intW, (float)intH, 0.0f, 1, 1, 1, 1);
         break;
