@@ -1,68 +1,41 @@
 # Nuvio Legacy 2.0.8
 
-Tudo mergeado em `integracao/2.0.5` depois da tag `v2.0.7` (base `f840b4037`). Última sync: 2026-10-20T10:21:00-03:00.
-Comunidade: **https://discord.gg/9NWr6SHyzJ**
+Changes integrated after `v2.0.7`. Updated from local commit and branch snapshots; device validation remains pending.
+Community: **https://discord.gg/9NWr6SHyzJ**
 
-> Card in-app (`src/novidades/208.inc`) será a lista curta do owner; este arquivo é a fonte completa.
+Source for the in-app What's New card and release notes. English follows the owner's current language override.
 
----
+## Highlights
 
-## Destaques
+None recorded yet.
 
-(nenhum ainda)
+## New
 
-## Novidades
+None recorded yet.
 
-(nenhuma ainda)
+## Fixes
 
-## Correções
+- **Samsung opens at full size**: Ignore the temporary 1×1 startup surface to prevent the black screen that previously required reopening the app. Platforms: Samsung .tpk (Tizen 9/10). Refs #624, #628, #629, `f840b4037`. TV validation pending.
+- **No false interrupted-launch notice**: Closing the app normally through the TV no longer triggers a “Previous launch stopped” notice on the next launch. Platforms: Samsung .tpk. Refs `36a2d1f13` (no issue supplied).
+- **Torrent playback with less free memory**: Allow a 160 MB streaming window so TVs with roughly 460 MB free memory can start torrents previously rejected for insufficient space. Platforms: webOS. Refs `8e67f7be0` (no issue supplied).
 
-- **Tizen 9/10 abre sem tela preta**: o app ignora a superfície EGL 1x1 que o sistema entrega no primeiro quadro e espera o tamanho real — deve resolver o "abre preto, fecha e reabre" reportado na 2.0.7. Samsung .tpk. Refs #624 #628 #629, `f840b4037`. (aguardando validação na TV)
+## Performance
 
-## Desempenho
+None recorded separately; low-memory playback improvement listed under Fixes.
 
-(nada ainda)
+## Community
 
-## Comunidade
+No external contribution recorded in the supplied commits since `v2.0.7`.
 
-(nada ainda)
+## Internal
 
-## Interno
+- **Browser build link fix**: Restore the browser build's missing network-function stub so Samsung browser packages can link successfully. Platforms: Samsung browser/WASM. Refs `b84091f4c`.
+- **Issue tracking**: Keep release and issue tracking current. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `d2a392e14`, `dacee39da`, `9460c0dd8`.
 
-- `d2a392e14` docs(map): sync tracking — mapa de issues.
+## Pending (not integrated yet)
 
-## Pendente (ainda não integrado)
+Earlier report named `agente/205-i429hbs` (#429), `agente/205-p2pusb` (#334, #505), `agente/205-i513autoplay` (#513), `agente/205-barra27`, PRs #489/#490/#491/#493/#498, `agente/205-dicatoque` (#472), m3umisto, palco2, logos, fileiraui, diretorpol and triagem-velhas as pending. Their branches are absent from the current open snapshot; retain this historical record without presenting them as pending 2.0.8 features or duplicating already released work.
 
-Branches em revisão/OK para integrar (ver estado.md): agente/205-i429hbs (#429), agente/205-p2pusb (#334 #505), agente/205-i513autoplay (#513), agente/205-barra27, PRs #489 #490 #491 #493 #498, agente/205-dicatoque (#472), m3umisto, palco2, logos, fileiraui, diretorpol, triagem-velhas.
+- **Torrent engine follow-up**: Further torrent-engine work remains outside integration and needs review of the newer fix log before its user-visible scope can be confirmed. Platforms: confirm from review before release. Refs `agente/p2p`; current `open.txt` and review snapshot.
 
----
-
-## Release features (English)
-
-### Highlights
-
-(none yet)
-
-### New
-
-(none yet)
-
-### Fixes
-
-- **No more black screen on Tizen 9/10**: the app ignores the 1x1 placeholder EGL surface the system reports on the first frame and waits for the real size — should fix the "opens black, reopen to fix" reports on 2.0.7. Samsung .tpk. Refs #624 #628 #629, `f840b4037`. (pending TV validation)
-
-### Performance
-
-(nothing yet)
-
-### Community
-
-(nothing yet)
-
-### Internal
-
-- `d2a392e14` docs(map): sync tracking — issue map housekeeping.
-
-### Pending (not integrated yet)
-
-Branches in review / OK to merge (see estado.md): agente/205-i429hbs (#429), agente/205-p2pusb (#334 #505), agente/205-i513autoplay (#513), agente/205-barra27, PRs #489 #490 #491 #493 #498, agente/205-dicatoque (#472), m3umisto, palco2, logos, fileiraui, diretorpol, triagem-velhas.
+Other open branches are historical work or deferred plans; see the tracking map and external `estado.md`. No new feature or external contributor credit is inferred from branch names.
