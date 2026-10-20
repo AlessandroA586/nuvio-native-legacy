@@ -466,6 +466,10 @@ static void *run(void *user) {
       if (stopped(p)) break;
       const char *error = r < 0 ? dts_engine_error(p->engine) : "";
       if (r < 0 && !strcmp(error, DTS_ENGINE_TIMESTAMP_DISCONTINUITY)) {
+#ifndef NV_DTS_WEBOS_RECOVERY
+        fail(p, error); break;
+#endif
+        if (!p->allow_p7) { fail(p, error); break; }
         /* Use the latest presentation clock, never a packet fed ahead.
          * Pending user seek/track requests are handled by the next iteration. */
         int pending_control;

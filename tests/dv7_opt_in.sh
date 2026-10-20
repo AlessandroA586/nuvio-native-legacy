@@ -48,3 +48,15 @@ cc -std=gnu11 -Wall -Wextra -Werror -Wno-implicit-const-int-float-conversion -DN
   -fsyntax-only src/dts/dts_engine.c
 cc -std=c11 -Wall -Wextra -Werror "$task_tmp/test.c" -o "$task_tmp/test"
 "$task_tmp/test"
+# Run the controller with the opt-in disabled, then without webOS recovery.
+cc -std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror -Isrc \
+  -D__real_clock_gettime=clock_gettime -c tests/dts_playback.c -o "$task_tmp/fixture.o"
+cc -std=c11 -D_GNU_SOURCE -DNV_DTS_WEBOS_RECOVERY -Wall -Wextra -Werror -Isrc \
+  -Dclock_gettime=__wrap_clock_gettime "$task_tmp/fixture.o" \
+  src/dts/dts_playback.c src/js.c src/linguas.c -pthread -lm -o "$task_tmp/controller"
+DV7_OFF=1 "$task_tmp/controller" timestamp
+"$task_tmp/controller" timestamp
+cc -std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror -Isrc \
+  -Dclock_gettime=__wrap_clock_gettime "$task_tmp/fixture.o" \
+  src/dts/dts_playback.c src/js.c src/linguas.c -pthread -lm -o "$task_tmp/controller"
+RECOVERY_OFF=1 "$task_tmp/controller" timestamp
