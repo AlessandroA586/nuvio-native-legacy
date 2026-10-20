@@ -102,4 +102,5 @@ int main(void) {
   encode(rates[rate],formats[fmt],6,AV_CODEC_ID_AC3,11776);
  }
  puts("PASS: observed gaps, silence content, jitter/size/budget guards, reset, 18 real AAC/AC3 timelines with FIFO/resampler delay");
+ return 0;
 }
