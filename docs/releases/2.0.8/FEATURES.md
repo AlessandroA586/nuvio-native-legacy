@@ -15,6 +15,7 @@ None recorded yet.
 
 ## Fixes
 
+- **Interface follows your language again**: Restore sorted translation keys so selecting another language no longer leaves the interface in Portuguese. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner incident; `98ed41d91`.
 - **Resume survives TV power loss**: Save durable playback checkpoints while keeping tracker playback active during checkpoint updates. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request; 5623ab442, ceca13b7e; merges 9e6c12d47, eb5203637.
 - **LG buffer presets apply to direct video**: Apply the chosen buffer preset to direct HTTP video on demand. Platforms: webOS. Refs owner request; 6c9bc485b; merge 6c8233ded.
 - **Live diagnostics on limited accounts**: Run explicitly requested live-TV diagnostics even when the account has limited access. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request; 6a392a97f; merge bf6df9a8e.
@@ -47,15 +48,19 @@ No external contribution recorded in the supplied commits since `v2.0.7`.
 ## Internal
 
 - **Browser build link fix**: Restore the browser build's missing network-function stub so Samsung browser packages can link successfully. Platforms: Samsung browser/WASM. Refs `b84091f4c`.
-- **Issue tracking**: Keep release and issue tracking current. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`.
+- **Issue tracking**: Keep release and issue tracking current. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `89b48afe7`, `12bedced8`, `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`.
 
 ## Pending (not integrated yet)
 
 - **Add-on subtitle synchronization**: Subtitle add-on synchronization work awaits review before its final user-facing behavior can be confirmed. Platforms: Confirm from review. Refs agente/205-205-legaddonsync.
-- **Poster service coverage**: Poster-service changes unify coverage and support shape templates; authenticated rendering still needs validation. Platforms: Confirm from review. Refs agente/205-205-posterserv; a25def0.
+- **Poster service coverage**: Poster-service changes unify coverage and support shape templates; latest review is BLOQUEIA and authenticated rendering still needs validation. Platforms: Confirm from review. Refs agente/205-205-posterserv; a25def0.
 Earlier report named `agente/205-i429hbs` (#429), `agente/205-p2pusb` (#334, #505), `agente/205-i513autoplay` (#513), `agente/205-barra27`, PRs #489/#490/#491/#493/#498, `agente/205-dicatoque` (#472), m3umisto, palco2, logos, fileiraui, diretorpol and triagem-velhas as pending. Their branches are absent from the current open snapshot; retain this historical record without presenting them as pending 2.0.8 features or duplicating already released work.
 
 - **Plugin-only source errors**: Recognize enabled local scrapers when explaining unavailable sources, so plugin-only users do not receive a false missing-add-on message. Platforms: webOS, Android, Samsung .tpk, WASM with local plugins. Refs owner report, `agente/205-205-semaddon`. Finished job has no mapped review log; review and integration pending.
 - **Torrent engine follow-up**: Further torrent-engine work remains outside integration and needs review of the newer fix log before its user-visible scope can be confirmed. Platforms: confirm from review before release. Refs `agente/p2p`; current `open.txt` and review snapshot.
 
 Other open branches are historical work or deferred plans; see the tracking map and external `estado.md`. No new feature or external contributor credit is inferred from branch names.
+
+- **Expanded-card trailers fill their frame**: Restore the trailer rectangle to the expanded artwork area at different text scales; review remains pending and an existing trailer contract check fails. Platforms: webOS, Android, Samsung .tpk. Refs `agente/205-205-trailerquad`.
+
+- **Translation regression coverage**: Repair language-test coverage and check translation-key ordering; review remains pending. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `agente/205-205-idiomateste; 3b3906186`.
