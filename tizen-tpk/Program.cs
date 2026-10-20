@@ -864,7 +864,7 @@ namespace NuvioTpk
         static string EtapaAberta(string[] linhas)
         {
             var abertas = new List<string>();
-            bool terminou = false;
+            bool terminou = false, estavel = false;
             string ultimaNota = null;
             foreach (var l in linhas)
             {
@@ -872,7 +872,11 @@ namespace NuvioTpk
                 if (p.Length < 3) continue;
                 string verbo = p[1], etapa = p[2];
                 if (verbo == "begin") { abertas.Remove(etapa); abertas.Add(etapa); }
-                else if (verbo == "ok" || verbo == "fail") abertas.Remove(etapa);
+                else if (verbo == "ok" || verbo == "fail")
+                {
+                    abertas.Remove(etapa);
+                    if (verbo == "ok" && etapa == "steady-frames") estavel = true;
+                }
                 else if (verbo == "note")
                 {
                     if (etapa == "terminate") terminou = true;
@@ -880,9 +884,12 @@ namespace NuvioTpk
                 }
             }
             if (abertas.Count == 0) return null;
-            // A TV fechou o app (terminate): o laco nui-run e o first-key ficam
-            // abertos porque o processo morre antes do "ok". Saida normal.
-            if (terminou) { abertas.Remove("nui-run"); abertas.Remove("first-key"); }
+            // Background eviction may skip OnTerminate. A steady run or the last
+            // paused/unfocused state is normal; unfinished startup stages still warn.
+            bool emSegundoPlano = ultimaNota != null &&
+                (ultimaNota.Contains("paused=True") || ultimaNota.Contains("focus=False"));
+            if (terminou || estavel || emSegundoPlano)
+            { abertas.Remove("nui-run"); abertas.Remove("first-key"); }
             if (abertas.Count == 0) return null;
             string r = abertas[abertas.Count - 1];
             if (terminou) r += " (then the TV closed it)";
