@@ -46,6 +46,7 @@
 #include "fundo.h"
 #include "gpunivel.h"
 #include "fpscena.h"
+#include "player_pacing.h"
 #include "perftv.h"
 #include "vertudo.h"
 #include "ctxmenu.h"
@@ -1798,6 +1799,7 @@ int main(int argc, char **argv) {
   double fPrep = 0, fGlClr = 0;
   int    txtNQuadro = 0, piorTxtN = 0;
   int quadros = 0, janks = 0; double pior = 0;
+  int playerUiPrevious = 0;
   SwapInt swapInt = {0};   // intervalo real entre swaps (swapint.h)
 
   // TELEMETRIA POR FASE. O quadro pior custava 22ms num alvo de 20ms e nao
@@ -1845,6 +1847,7 @@ int main(int argc, char **argv) {
 #endif
          ) {
     SDL_Event e;
+    Uint32 frameStarted = SDL_GetTicks();
     Uint64 tEv = NV_T0();
     // VIRADA DE QUADRO DO CATALOGO, antes de qualquer tela tocar em cat_item():
     // aqui nenhum ponteiro de item do quadro anterior esta mais na mao, entao
@@ -2091,9 +2094,9 @@ int main(int argc, char **argv) {
     // um dt de varios segundos e a animacao daria um salto.
     double dtAnim = dtms > 100.0 ? 100.0 : dtms;
     float dt = (float)(dtAnim / 1000.0);
-    // Quadro de mais de 1 s entra no pior MESMO nos primeiros 20 da janela:
-    // com FPS de 0,1 a janela inteira tem 1 quadro, e o pior saia 0.0.
-    if (quadros > 20 || dtms > 1000.0) {
+    // Ignore startup only, not the first 21 frames of every sample: at 5 fps
+    // a three-second window has only 15 frames and otherwise reports 0 ms.
+    if (nvPrimeiroQuadroFeito) {
       if (dtms > pior) { pior = dtms; piorTxtMs = txtMsQuadro; piorTxtN = txtNQuadro;
                          pEv=fEv; pBomb=fBomb; pUpd=fUpd; pDes=fDes; pSwap=fSwap; pAux=fAux; pClr=fClr; pPrep=fPrep; pGlClr=fGlClr;
                          pUplN=fUplN; pUplB=fUplB;
@@ -2276,8 +2279,21 @@ int main(int argc, char **argv) {
     fAux = NV_DT(t0);
     gputempo_quadro_fim();
     t0 = NV_T0();
+    int playerUi = player_ui_frame(player_aberto(), gfx_n_rect, gfx_n_outros);
+    if (playerUi != playerUiPrevious) {
+#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+      SDL_GL_SetSwapInterval(playerUi ? 0 : 1);
+#endif
+      playerUiPrevious = playerUi;
+    }
     if (!nvPrimeiroQuadroFeito) arranque_etapa("primeiro SwapWindow");
     SDL_GL_SwapWindow(win);
+#ifndef __EMSCRIPTEN__
+    { unsigned wait = player_frame_wait(playerUi, SDL_GetTicks() - frameStarted);
+      if (wait) SDL_Delay(wait); }
+#else
+    (void)frameStarted;
+#endif
     swapint_marca(&swapInt, (double)SDL_GetPerformanceCounter() * 1000.0 / perFreq);
 #ifdef NV_ANDROID
     android_quadro();   // todo quadro apresentado, de qualquer tela (vigia #266)
@@ -2300,7 +2316,7 @@ int main(int argc, char **argv) {
       // atrasar, e o primeiro a descer.
       fio1_rodar(6.0);
 #endif
-      nv_ceder_quadro(player_aberto() && (gfx_n_rect > 1 || gfx_n_outros > 0));
+      nv_ceder_quadro(playerUi);
       fimCeder = SDL_GetPerformanceCounter();
       fora = (double)(fimCeder - c0) * 1000.0 / perFreq;
       if (fora > foraMaxMs) foraMaxMs = fora; }

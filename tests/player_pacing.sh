@@ -29,7 +29,7 @@ async function check(ui, rafFirst) {
   await check(1, false);
   await check(1, true);
   await check(0, true);
-  assert(/nv_ceder_quadro\(player_aberto\(\) && \(gfx_n_rect > 1 \|\| gfx_n_outros > 0\)\)/.test(source),
+  assert(source.includes('nv_ceder_quadro(playerUi)') && source.includes('player_ui_frame(player_aberto(), gfx_n_rect, gfx_n_outros)'),
     'player draws beyond the video hole must enable the UI deadline');
   console.log('PASS: delayed rAF cannot stall drawn player UI; bare video retains rAF pacing');
 })().catch(e => { console.error(e); process.exitCode = 1; });
