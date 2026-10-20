@@ -37,6 +37,11 @@ _Static_assert(AJ_SALVOS_LOCAL == 0 && AJ_SALVOS_TRAKT == 1 && AJ_SALVOS_SIMKL =
 
 // ---------------------------------------------------------------- stubs
 
+#ifndef SIMKL_ANIME_FIXTURE
+const char *metaprov_idioma(void) { return "en"; }
+char *fichameta_ler(const char *key, long ttl) { (void)key; (void)ttl; return NULL; }
+#endif
+
 char *dados_ler(const char *nome) { (void)nome; return NULL; }
 int dados_gravar(const char *nome, const char *buf) { (void)nome; (void)buf; return 1; }
 int dados_apagar(const char *nome) { (void)nome; return 1; }

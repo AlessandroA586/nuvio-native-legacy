@@ -1,4 +1,5 @@
 // Offline Simkl API-shaped fixtures exercise the actual CW merge.
+#define SIMKL_ANIME_FIXTURE
 #define main simkl_existing_main
 #define trakt_enfeitar_lote fixture_enfeitar_lote
 #define trakt_enfeitar_lote_sessao fixture_enfeitar_lote_sessao
@@ -36,7 +37,40 @@ int rede_pedir(const RedePedido *p, RedeResposta *r) {
 }
 void rede_resposta_limpar(RedeResposta *r) { (void)r; }
 
+static const char *episodeMeta;
+char *fichameta_ler(const char *key, long ttl) {
+  (void)ttl;
+  assert(!strcmp(key, "series/tt2560140/en") ||
+         !strcmp(key, "series/tt0388629/en") ||
+         !strncmp(key, "series/tmdb:", 12) || !strncmp(key, "series/simkl:", 13));
+  return episodeMeta && !strcmp(key, "series/tt2560140/en") ? strdup(episodeMeta) : NULL;
+}
+void fichameta_gravar(const char *key, const char *body) { (void)key; (void)body; }
+
 int main(void) {
+  // Unsorted provider episodes, including a special: absolute 26 is S02E01.
+  char meta[4096] = "{\"meta\":{\"videos\":[{\"season\":0,\"episode\":1},{\"season\":2,\"episode\":1}";
+  for (int e = 25; e > 0; e--) {
+    char video[64];
+    snprintf(video, sizeof video, ",{\"season\":1,\"episode\":%d}", e);
+    strcat(meta, video);
+  }
+  strcat(meta, "]}}");
+  static const char titan[] = "{\"anime\":[{\"next_to_watch\":\"E26\","
+    "\"anime\":{\"title\":\"Attack on Titan\",\"ids\":{\"imdb\":\"tt2560140\"}}}]}";
+  CatItem mapped[1];
+  episodeMeta = meta;
+  assert(simkl_ler_assistindo(titan, mapped, 1) == 1);
+  assert(!strcmp(mapped[0].imdb, "tt2560140:2:1"));
+  assert(mapped[0].temporada == 2 && mapped[0].episodio == 1);
+  episodeMeta = NULL;
+  assert(simkl_ler_assistindo(titan, mapped, 1) == 1);
+  assert(!strcmp(mapped[0].imdb, "tt2560140"));
+  assert(mapped[0].temporada == 0 && mapped[0].episodio == 0);
+  episodeMeta = "{\"meta\":{\"videos\":[{\"season\":1,\"episode\":25},{\"season\":2,\"episode\":1}]}}";
+  assert(simkl_ler_assistindo(titan, mapped, 1) == 1);
+  assert(!strcmp(mapped[0].imdb, "tt2560140") && mapped[0].episodio == 0);
+  episodeMeta = NULL;
   static const char fixture[] =
     "{\"anime\":["
     "{\"last_watched\":\"E1122\",\"next_to_watch\":\"E1123\","
@@ -59,16 +93,17 @@ int main(void) {
   WATCHING_ANIME = fixture;
   int n = simkl_continuar(v, 16);
   assert(n == 4);
-  const char *expected[] = {"tt0388629:1:1123", "tmdb:123:1:6", "tmdb:456:1:10", "simkl:10:1:2"};
+  const char *expected[] = {"tt0388629", "tmdb:123", "tmdb:456", "simkl:10"};
   for (int i = 0; i < n; i++) {
     assert(!strcmp(v[i].imdb, expected[i]));
     assert(!strcmp(v[i].tipo, "series") && v[i].progresso == 0);
     assert(simkl_e_a_seguir(v[i].imdb));
   }
-  assert(v[0].temporada == 1 && v[0].episodio == 1123 && v[0].tmdb == 37854);
+  for (int i = 0; i < n; i++) assert(v[i].temporada == 0 && v[i].episodio == 0);
+  assert(v[0].tmdb == 37854);
   assert(v[1].tmdb == 123 && v[2].tmdb == 456);
   proximoTeste = 0;
   assert(simkl_continuar(v, 16) == 0);
-  puts("PASS: absolute anime next episode, fallback IDs, dedup and next-up setting");
+  puts("PASS: absolute anime provider mapping, title fallback, dedup and next-up setting");
   return 0;
 }
