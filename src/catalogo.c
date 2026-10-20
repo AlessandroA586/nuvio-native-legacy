@@ -763,6 +763,10 @@ int cat_carregar(const char *dirArte) {
 // justamente o teste deste cache. Incluir o cabecalho troca um teste leve por
 // um que precisa da biblioteca grafica inteira para conferir um fwrite.
 int ajustes_idioma(void);
+extern const char *desc_tmdb_idioma(void) __attribute__((weak));
+static const char *cacheMetadataLanguage(void) {
+  return desc_tmdb_idioma ? desc_tmdb_idioma() : "";
+}
 
 #define CACHE_MAGIA  0x4E56434Bu   /* "NVCK" */
 // VERSAO 2: o cabecalho passou a carregar a identidade do dono. Subir a versao
@@ -792,7 +796,8 @@ int ajustes_idioma(void);
 // assim para o motivo da recusa ser o campo novo.
 // Version 8 adds per-source Saved membership, including builds where padding
 // keeps sizeof(CatItem) unchanged. Old shared marks cannot identify a source.
-#define CACHE_VERSAO 8
+// Version 9 records metadata language: cached poster URLs are localized too.
+#define CACHE_VERSAO 9
 // Mesmo cabecalho, itens CODIFICADOS (zeros em corrida). Um CatItem tem ~16 KB
 // e quase tudo e zero (buffers de URL dimensionados para o pior caso): 1600
 // titulos eram 25,6 MB gravados na MEMFS dentro da trava do sistema de arquivos
@@ -858,6 +863,7 @@ typedef struct {
   char usuario[64];   // `sub` do JWT; "" quando deslogado
   int  perfil;        // perfis_ativo()
   int  ingles;        // ajustes_idioma() (IDIOMA_*; 0 pt, 1 en como antes) quando o arquivo foi escrito
+  char metadataLanguage[16];
 } CacheCab;
 
 // Quem esta logado AGORA. Chamada nas duas pontas — gravar e ler — e por isso o
@@ -1051,6 +1057,7 @@ int cat_gravar_cache_se_sessao(const char *dirArte, const char *donoEsperado,
   memset(&c, 0, sizeof c);
   c.magia = CACHE_MAGIA; c.versao = CACHE_VERSAO;
   c.ingles = ajustes_idioma();
+  snprintf(c.metadataLanguage, sizeof c.metadataLanguage, "%s", cacheMetadataLanguage());
   c.tamItem = (unsigned)sizeof(CatItem);
   c.tamFileira = (unsigned)sizeof(CatFileira);
   identidadeAtual(c.usuario, sizeof c.usuario, &c.perfil);
@@ -1202,7 +1209,8 @@ int cat_ler_cache(const char *dirArte) {
   // os arquivos antigos UMA VEZ; sem esta linha, trocar de idioma depois disso
   // nao invalidaria nada e a home voltaria a dizer "Programa de TV" em ingles.
   if (strcmp(c.usuario, usuario) != 0 || c.perfil != perfil ||
-      c.ingles != ajustes_idioma()) {
+      c.ingles != ajustes_idioma() ||
+      strncmp(c.metadataLanguage, cacheMetadataLanguage(), sizeof c.metadataLanguage)) {
     fclose(f);
     printf("[cat] cache descartado (era de outro usuario/perfil/idioma)\n");
     fflush(stdout);
