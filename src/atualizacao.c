@@ -842,6 +842,7 @@ static int fioInstalarApk(void *arg) {
     apkFalhou(); return 0;
   }
   mkdir(dir, 0755);
+  if (!android_preparar_apk(arq)) { apkFalhou(); return 0; }
   // Ja baixado e conferido numa tentativa anterior?
   f = fopen(arq, "rb");
   if (f) {

@@ -286,6 +286,21 @@ int android_pedir_superficie(int w, int h) {
   return ok;
 }
 
+int android_preparar_apk(const char *caminho) {
+  JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
+  jobject act = (jobject)SDL_AndroidGetActivity();
+  if (!env || !act || !caminho) return 0;
+  jclass cls = (*env)->GetObjectClass(env, act);
+  jmethodID m = cls ? (*env)->GetMethodID(env, cls, "prepararApk", "(Ljava/lang/String;)Z") : NULL;
+  jstring js = (*env)->NewStringUTF(env, caminho);
+  int ok = m && js && (*env)->CallBooleanMethod(env, act, m, js);
+  if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); ok = 0; }
+  if (js) (*env)->DeleteLocalRef(env, js);
+  if (cls) (*env)->DeleteLocalRef(env, cls);
+  (*env)->DeleteLocalRef(env, act);
+  return ok;
+}
+
 int android_instalar_apk(const char *caminho) {
   JNIEnv *env = (JNIEnv *)SDL_AndroidGetJNIEnv();
   jobject act = (jobject)SDL_AndroidGetActivity();

@@ -33,6 +33,8 @@ int android_hdr_interface(int ativa);
 // FileProvider). 1 = instalador aberto, 2 = falta a permissao de instalar apps
 // desta fonte (a tela dela foi aberta), 0 = falhou. Chamar do fio do SDL.
 int android_instalar_apk(const char *caminho);
+// Prune superseded APKs before download; refuse while the installer is active.
+int android_preparar_apk(const char *caminho);
 // Texto do sistema (sistexto.h). Teclado do sistema com `inicial` no campo;
 // voz no idioma dado ("pt-BR"); fechar os dois; e o proximo evento da fila do
 // NuvioActivity (1 = veio um em dst). O formato dos eventos esta em sistexto.c.

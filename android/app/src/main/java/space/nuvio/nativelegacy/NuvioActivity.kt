@@ -475,7 +475,29 @@ class NuvioActivity : SDLActivity() {
     // nao foi queda, e o modo seguro nao desfaz ajustes por causa dela.
     private fun despedida() = File(filesDir, "dados/despedida.txt")
 
-    private var instalando = false
+    @Volatile private var instalando = false
+
+    @Suppress("DEPRECATION")
+    private fun apkVersion(file: File): Long? = try {
+        packageManager.getPackageArchiveInfo(file.path, 0)?.let {
+            if (Build.VERSION.SDK_INT >= 28) it.longVersionCode else it.versionCode.toLong()
+        }
+    } catch (_: Exception) { null }
+
+    @Suppress("DEPRECATION")
+    private fun installedVersion(): Long {
+        val info = packageManager.getPackageInfo(packageName, 0)
+        return if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
+    }
+
+    fun prepararApk(caminho: String): Boolean {
+        if (instalando) return false
+        val dir = File(cacheDir, "regenerable/atualizacao")
+        val file = File(caminho)
+        if (file.parentFile != dir) return false
+        ApkCache.prune(dir, installedVersion(), file.name, ::apkVersion)
+        return true
+    }
 
     // Chamado pelo C (android_instalar_apk, atualizacao.c), do fio do SDL.
     // 1 = instalador aberto, 2 = falta a permissao "instalar apps desta fonte"
@@ -736,6 +758,7 @@ class NuvioActivity : SDLActivity() {
         env("NUVIO_INTERFACE_AUTO", if (automaticMobile) "1" else "0")
         env("NUVIO_DADOS", dados.path)
         val regenerable = File(cacheDir, "regenerable").apply { mkdirs() }
+        ApkCache.prune(File(regenerable, "atualizacao"), installedVersion(), null, ::apkVersion)
         val p2pCache = File(cacheDir, "engine").apply { mkdirs() }
         env("NUVIO_CACHE", regenerable.path)
         env("NUVIO_CACHE_ROOT", cacheDir.path)
