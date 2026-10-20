@@ -72,6 +72,7 @@ enum { F_HLS = 0, F_TS = 1 };
 enum { E_PARADO, E_REDE, E_PLAYER, E_PRONTO };
 
 typedef struct {
+  int  solicitado;
   int  tentado, servido;  // pedido feito; respondeu 2xx com video
   int  http, curl;
   int  ms;                // pedido -> corpo
@@ -172,9 +173,10 @@ static int sondarTrecho(LtdFormato *f, const char *url, const char *const *cabs)
   Uint32 t0 = SDL_GetTicks();
   char *b;
   (void)cabs;  // rede_baixar_trecho_st nao leva cabecalho; os canais com cabecalho sao HLS de addon
+  f->solicitado = 1;
   b = rede_baixar_trecho_st(url, 8, 0, LTD_TRECHO_B, &n, &st, &er, NULL, 0);
   f->ms = (int)(SDL_GetTicks() - t0);
-  if (!f->http) f->http = st;
+  if (!f->http || st >= 400) f->http = st;
   f->curl = er;
   f->bytes = n;
   if (b && n > 0 && n < 4096) {
@@ -214,8 +216,9 @@ static void sondarHls(LtdFormato *f, const char *url, const char *const *cabs) {
     const char *l, *escolhida = NULL;
     int alvo = nv_res_opcao_altura(ajustes_livetv_resolucao()), melhorDif = 1 << 30;
     fin[0] = 0;
+    f->solicitado = 1;
     b = rede_baixar_trecho_st(atual, 6, 0, 262143, &n, &st, &er, fin, sizeof fin);
-    if (!volta) { f->http = st; f->curl = er; }
+    if (!volta || st >= 400) { f->http = st; f->curl = er; }
     if (!b || n < 7 || strncmp(b, "#EXTM3U", 7)) { free(b); return; }
     if (fin[0]) snprintf(atual, sizeof atual, "%s", fin);
     if (strstr(b, "#EXT-X-STREAM-INF")) {
@@ -272,7 +275,7 @@ static void sondarHls(LtdFormato *f, const char *url, const char *const *cabs) {
       if (mestre) { snprintf(atual, sizeof atual, "%s", prox); continue; } }
     { int http = f->http;
       sondarTrecho(f, prox, cabs);
-      f->http = http; }
+      if (f->http < 400) f->http = http; }
     return;
   }
 }
@@ -320,10 +323,8 @@ static void *fioRede(void *u) {
   const char *v[8];
   const char *const *cabs;
   int f;
-  if (it->xt && xtream_conexoes_limitadas()) { atomic_store(&L.fioOcupado, 0); return NULL; }
   if (it == &L.it[0] && L.xtConfig) {
     L.contaLida = xtream_conta_ler(&L.conta);
-    if (it->xt && xtream_conexoes_limitadas()) { atomic_store(&L.fioOcupado, 0); return NULL; } // No stream probes.
     if (L.conta.valido)
       printf("[livetv-diag] conta: status=%s formatos=%s%s telas=%d/%d vence=%lld\n", L.conta.status,
              L.conta.formatosDeclarados ? (L.conta.temM3u8 ? "m3u8 " : "") : "nao declarados",
@@ -348,7 +349,7 @@ static void *fioRede(void *u) {
     if (f == F_TS && x->corpoM3u && !L.cancelado) {
       int http = x->http;
       sondarHls(x, x->url, cabs);
-      x->http = http;
+      if (x->http < 400) x->http = http;
     }
     // O MESMO .ts COM USER-AGENT DE PLAYER: o provedor pode entregar outra
     // coisa ao "Nuvio/1.0" do curl e ao player (hipotese 3 do #158).
@@ -359,7 +360,9 @@ static void *fioRede(void *u) {
       long n = 0;
       char *b2;
       memset(&md, 0, sizeof md);
+      x->solicitado = 1;
       b2 = rede_baixar_bin_medido_controle(x->url, 8, ua, &ctl, &n, &md);
+      if (md.status >= 400) x->http = md.status;
       { TsSonda t; char r[300] = "-";
         if (b2 && n > 0) { ts_sondar((const unsigned char *)b2, n, &t); ts_resumo(&t, r, sizeof r); }
         printf("[livetv-diag] rede %s TS com UA de player: HTTP %d %ld B em %lu ms | %s\n", it->nome,
@@ -386,7 +389,8 @@ static void *fioRede(void *u) {
     if (it->f[F_HLS].servido && it->f[F_HLS].kbps > L.kbps) {
       L.kbps = it->f[F_HLS].kbps; L.redeMedida = 1; L.kbpsDoSegmento = 1;
       printf("[livetv-diag] rede ate o provedor: %d kbps (segmento HLS de %s)\n", L.kbps, it->nome);
-    } else if (!L.redeMedida && it->f[F_TS].servido) {
+    } else if (!L.redeMedida && it->f[F_TS].servido &&
+               !(it->xt && xtream_conexoes_limitadas())) {
       medirVelocidade(it->f[F_TS].url, cabs);
       L.kbpsDoSegmento = 0;
     }
@@ -413,7 +417,6 @@ static void iniciarRede(int i) {
 // Qual formato vai ao pipeline primeiro: o que a REDE mostrou servindo video,
 // na ordem do Xtream (xtream_formatos: o que a conta declara e o que ja tocou).
 static int proximoFormato(const LtdItem *it) {
-  if (it->xt && xtream_conexoes_limitadas()) return -1;
   const char *ext[2];
   int k = it->xt ? xtream_formatos_canal(it->id, ext) : 0, i;
   for (i = 0; i < k; i++) {
@@ -490,6 +493,7 @@ static void iniciarPlayer(int f) {
 
 static void fecharPlayer(void) {
   if (L.pfVivo) video_parar();
+  proxyts_parar();
   L.pfVivo = 0;
   L.pausaAte = SDL_GetTicks() + LTD_PAUSA_MS;
 }
@@ -614,6 +618,12 @@ static void comecar(void) {
 #endif
   L.cancelado = 0;
   juntarFio();
+  // Release preview, retained playback and proxy before the first request,
+  // including when the user repeats the diagnostic.
+  if (player_mini_ativo()) player_fechar_mini();
+  player_encerrar();
+  video_parar();
+  proxyts_parar();
   memset(L.it, 0, sizeof L.it);
   L.kbps = L.kbpsPior = 0; L.latenciaMs = -1; L.redeMedida = 0; L.kbpsDoSegmento = 0;
   L.aplicado = 0; L.enviou = 0; L.contaLida = 0;
@@ -642,9 +652,6 @@ void livetvdiag_iniciar(void) {
   toqueLtdOffset = 0.0f; toquerol_limpar(&toqueLtd);
 #endif
   L.sair = 0;
-  // O PREVIEW DO GUIA solta o pipeline: o teste precisa dele, e a conta de
-  // 1 tela nao aguenta o preview e o teste juntos.
-  if (player_mini_ativo()) player_fechar_mini();
   comecar();
 }
 
@@ -901,7 +908,12 @@ static void textoResultado(const LtdItem *it, char *res, size_t nr, char *det, s
     if (!p && ((it->f[F_TS].servido && it->f[F_TS].falha == LTD_SEM_TESTE) ||
                (it->f[F_HLS].servido && it->f[F_HLS].falha == LTD_SEM_TESTE)))
       p = it->f[F_TS].servido ? &it->f[F_TS] : &it->f[F_HLS];
+    int linhaOcupada = 0;
+    if (it->xt && xtream_conexoes_limitadas())
+      for (f = 0; f < 2; f++)
+        if (it->f[f].http == 403 || it->f[f].http == 458 || it->f[f].http == 509) linhaOcupada = 1;
     if (it->semFonte) snprintf(res, nr, "%s", i18n("O addon não mandou fonte"));
+    else if (linhaOcupada) snprintf(res, nr, "%s", i18n("Esta linha está em uso em outra tela"));
     else if (p && p->falha == LTD_SEM_TESTE) { snprintf(res, nr, "%s", i18n("Responde; o player só é testado na TV")); *cor = 3; }
     else if (p && p->falha == LTD_SEM_DECODER) snprintf(res, nr, "%s", i18n("Os dados chegam, mas a TV não decodifica"));
     else if (p && p->falha == LTD_SEM_RESPOSTA) snprintf(res, nr, "%s", i18n("O player não recebeu nada"));
@@ -909,6 +921,8 @@ static void textoResultado(const LtdItem *it, char *res, size_t nr, char *det, s
     else {
       int h = it->f[F_TS].http ? it->f[F_TS].http : it->f[F_HLS].http;
       if (h >= 400) snprintf(res, nr, i18n("O provedor recusou (HTTP %d)"), h);
+      else if (!it->f[F_HLS].solicitado && !it->f[F_TS].solicitado)
+        snprintf(res, nr, "%s", i18n("Cancelado"));
       else if (!h) snprintf(res, nr, "%s", i18n("O provedor não respondeu"));
       else snprintf(res, nr, "%s", i18n("A resposta não é vídeo"));
     }
