@@ -240,7 +240,8 @@ int main(void) {
   AJ_AMPLIACAO_ALGO == AJ_BIB_HOME + 1 &&
   AJ_AMPLIACAO_NITIDEZ == AJ_AMPLIACAO_ALGO + 1 &&
   AJ_HDR_INTERFACE == AJ_AMPLIACAO_NITIDEZ + 1 &&
-  AJ_N == AJ_HDR_INTERFACE + 1);
+  AJ_LIMPAR_CACHE == AJ_HDR_INTERFACE + 1 &&
+  AJ_TUNNELING == AJ_LIMPAR_CACHE + 1 && AJ_N == AJ_TUNNELING + 1);
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));
