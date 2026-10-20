@@ -33,6 +33,9 @@ band = source[start:end]
 start = source.index('  { CatItem it;\n    if (aguardandoFonte != 2 && guia_pediu_preview(&it)')
 end = source.index('\n  if (guia_pediu_parar_preview()', start)
 new_preview = source[start:end]
+start = source.index('  if (player_quer_sair() && player_eh_canal() && player_com_video() &&')
+end = source.index('guiaComCanalNoAr();', start) + len('guiaComCanalNoAr();')
+back_to_guide = source[start:end]
 Path(sys.argv[1]).write_text('''
 #define tela testGuideScreen
 #define TELA_GUIA 1
@@ -42,6 +45,9 @@ static int testGuideScreen = TELA_GUIA;
 static void testGuideRequests(void) {
 ''' + band + '''
   if (player_pediu_guia_cheio() && player_aberto() && player_id_canal()[0]) guiaComCanalNoAr();
+}
+static void testBackToGuide(void) {
+''' + back_to_guide + '''
 }
 #undef trocarTela
 #undef TELA_GUIA
