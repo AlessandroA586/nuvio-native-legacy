@@ -315,7 +315,9 @@ int nv_tpk_quadro(void) {
         // o "chuvisco" por cima do video da Tizen 4.0. O plano de video e
         // posicionado em pixels da superficie (video_escala_definir): errado
         // tambem fica o retangulo dele.
-        if (sw > 0 && sh > 0 && ((int)sw != telaW || (int)sh != telaH)) {
+        // 1x1 = janela do host ainda sem tamanho no primeiro quadro (Tizen 9,
+        // 2.0.7: tela preta, reabrir as vezes resolve). Fica o tamanho do host.
+        if (sw >= 640 && sh >= 360 && ((int)sw != telaW || (int)sh != telaH)) {
           telaW = (int)sw; telaH = (int)sh;
           printf("[tpk] tela adotada da superficie: %dx%d\n", telaW, telaH);
         }
