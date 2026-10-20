@@ -7,10 +7,29 @@
 // os cartoes sairam pilulas (arredondamento 126 dp, o padrao da LARGURA).
 // Este teste le o vetor ja compilado, antes de qualquer arquivo, e confere a
 // faixa que desalinhou mais as duas opcoes novas da arte do destaque.
+#include <SDL2/SDL.h>
+static int reportedDesktop(int display, SDL_DisplayMode *mode) {
+  (void)display; mode->w = 3840; mode->h = 2160; return 0;
+}
+#define SDL_GetDesktopDisplayMode reportedDesktop
 #include "../src/ajustes.c"
+#undef SDL_GetDesktopDisplayMode
 #include <assert.h>
+#include "nvtmp.h"
+#include <unistd.h>
 
 int main(void) {
+  // Fresh settings and Restore default must select Automatic on every platform.
+  const int automatic[] = { AJ_AMPLIACAO_ALGO, AJ_AMPLIAR_UI, AJ_RESOLUCAO,
+    AJ_GPU_EFEITOS, AJ_ANIM, AJ_VIDRO, AJ_VIDRO_CONTORNO, AJ_VIDRO_FOSCO, AJ_VIDRO_QUALIDADE };
+  for (unsigned i = 0; i < sizeof automatic / sizeof *automatic; i++) {
+    int op = automatic[i];
+    const char *label = OPCOES[op].valores[valor[op]];
+    assert(!strcmp(label, "Automático") || !strcmp(label, "Automática"));
+    assert(valor[op] == valorPadrao[op]);
+    assert(uxValorPadrao(op) == valorPadrao[op]);
+    assert(somenteDesteAparelho(op) && !dePerfil(op));
+  }
   assert(valor[AJ_HDR_INTERFACE] == 0 && !ajustes_hdr_interface());
   assert(somenteDesteAparelho(AJ_HDR_INTERFACE) && !ajustePortavel(AJ_HDR_INTERFACE));
   assert(!strcmp(CHAVE[AJ_HDR_INTERFACE], "hdrInterfaceLocal"));
@@ -20,14 +39,14 @@ int main(void) {
   valor[AJ_HDR_INTERFACE] = 1; assert(!ajustes_hdr_interface()); // experiment removed: saved "on" stays off
   valor[AJ_HDR_INTERFACE] = 0;
   // Merge regression: both appended settings keep their parallel table entries.
-  assert(valor[AJ_XTREAM_CONEXOES] == 0 && valor[AJ_AMPLIAR_UI] == 1);
+  assert(valor[AJ_XTREAM_CONEXOES] == 0 && valor[AJ_AMPLIAR_UI] == 2);
   assert(!strcmp(CHAVE[AJ_XTREAM_CONEXOES], "-xtreamConexoes"));
   assert(!strcmp(CHAVE[AJ_AMPLIAR_UI], "ampliarUiLocal"));
   // Upscaling: Automatic, sharpness 2; both device-local.
   assert(valor[AJ_AMPLIACAO_ALGO] == 0 && valor[AJ_AMPLIACAO_NITIDEZ] == 2);
   assert(!strcmp(CHAVE[AJ_AMPLIACAO_ALGO], "ampliarAlgoLocal") &&
          !strcmp(CHAVE[AJ_AMPLIACAO_NITIDEZ], "ampliarNitidezLocal"));
-  assert(OPCOES[AJ_XTREAM_CONEXOES].n == 3 && OPCOES[AJ_AMPLIAR_UI].n == 2);
+  assert(OPCOES[AJ_XTREAM_CONEXOES].n == 3 && OPCOES[AJ_AMPLIAR_UI].n == 3);
   // c2e07fe41: 0 = follow the primary, then 50%..300% every 10%; the #439
   // indices saved by 2.0.5 are migrated on load (viuLeg2Escala).
   assert(OPCOES[AJ_LEG2_TAMANHO].n == 27);
@@ -113,7 +132,7 @@ int main(void) {
   assert(valor[AJ_QUALIDADE_IMG] == 1);       // Padrao
   assert(valor[AJ_IDIOMA] == 0);              // Automatico
   assert(ajustes_idioma() == IDIOMA_EN);      // sem conta nem TV: English (release publico)
-  assert(valor[AJ_ANIM] == 0);                // animacoes completas
+  assert(valor[AJ_ANIM] == 2);                // Automatic
   assert(valor[AJ_RESOLUCAO] == RES_AUTO);    // Automatica (06/10: 1080p, nunca 720p sozinha)
   assert(!ajustes_4k() && !ajustes_720p());
   valor[AJ_RESOLUCAO] = RES_1080; assert(!ajustes_4k() && !ajustes_720p());
@@ -126,7 +145,7 @@ int main(void) {
   valor[AJ_SELO_VISTO] = 2; assert(ajustes_selo_visto() && ajustes_selo_visto_modo() == 2);    // Escrito
   valor[AJ_SELO_VISTO] = 0;
   assert(valor[AJ_TEMA] == AJ_TEMA_DINAMICA && valor[AJ_FUNDO] == 2);   // aparencia de fabrica da 2.0: Da arte + Frost
-  assert(valor[AJ_COR_LOGO] == 0 && valor[AJ_VIDRO] == 1);               // Cor da logo ligada, vidro desligado
+  assert(valor[AJ_COR_LOGO] == 0 && valor[AJ_VIDRO] == 2); // Logo color on, glass Automatic
   // O "+" salva no Trakt. Este assert passava POR ACASO de 22/09 ate o #149:
   // o vetor estava sete casas curto (as linhas do Stalker e do Xtream), e o 1
   // que caia aqui era o do envio automatico. As duas pontas da faixa agora.
@@ -240,7 +259,8 @@ int main(void) {
   AJ_AMPLIACAO_ALGO == AJ_BIB_HOME + 1 &&
   AJ_AMPLIACAO_NITIDEZ == AJ_AMPLIACAO_ALGO + 1 &&
   AJ_HDR_INTERFACE == AJ_AMPLIACAO_NITIDEZ + 1 &&
-  AJ_N == AJ_HDR_INTERFACE + 1);
+  AJ_LIMPAR_CACHE == AJ_HDR_INTERFACE + 1 &&
+  AJ_N == AJ_LIMPAR_CACHE + 1);
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));
@@ -350,6 +370,57 @@ int main(void) {
   assert(HOME_LAYOUT_DINAMICA == 2 && HOME_LAYOUT_N == 3 && OPCOES[AJ_HOME_LAYOUT].n == 3);
   assert(!strcmp(V_HOME_LAYOUT[HOME_LAYOUT_DINAMICA], "Dinâmica"));
   assert(!strcmp(i18n(V_HOME_LAYOUT[HOME_LAYOUT_DINAMICA]), "Dynamic"));
+  // Legacy manual choices migrate once; later choices survive repeated loads.
+  char dir[1024], path[1200];
+  snprintf(dir, sizeof dir, "%s/nuvio-perfauto-XXXXXX", nvt_dir());
+  assert(mkdtemp(dir));
+  setenv("NUVIO_DADOS", dir, 1); dados_iniciar(dir);
+  snprintf(path, sizeof path, "%s/ajustes.txt", dir);
+  FILE *f = fopen(path, "w"); assert(f);
+  for (unsigned i = 0; i < sizeof automatic / sizeof *automatic; i++) {
+    int op = automatic[i];
+    fprintf(f, "%s %d\n", CHAVE[op], valorPadrao[op] == 0 ? 1 : 0);
+  }
+  fclose(f);
+  ajustes_dir(dir);
+  for (unsigned i = 0; i < sizeof automatic / sizeof *automatic; i++)
+    assert(valor[automatic[i]] == valorPadrao[automatic[i]]);
+  for (unsigned i = 0; i < sizeof automatic / sizeof *automatic; i++)
+    assert(definirValorDireto(automatic[i], valorPadrao[automatic[i]] == 0 ? 1 : 0));
+  assert(gravar());
+  for (int load = 0; load < 2; load++) {
+    ajustes_dir(dir);
+    for (unsigned i = 0; i < sizeof automatic / sizeof *automatic; i++)
+      assert(valor[automatic[i]] == (valorPadrao[automatic[i]] == 0 ? 1 : 0));
+  }
+  // Fresh load records the migration too, before any user edit.
+  unlink(path); ajustes_dir(dir);
+  for (unsigned i = 0; i < sizeof automatic / sizeof *automatic; i++)
+    assert(valor[automatic[i]] == valorPadrao[automatic[i]]);
+  assert(definirValorDireto(AJ_ANIM, 1) && gravar());
+  ajustes_dir(dir); assert(valor[AJ_ANIM] == 1);
+  // Automatic keeps the existing panel eligibility; GPU support is gated downstream.
+  valor[AJ_AMPLIAR_UI] = 2;
+  assert(ajustes_ampliar_app());
+  perfilSeguro = 1; assert(!ajustes_ampliar_app()); perfilSeguro = 0;
+  // Automatic follows existing device effects tiers; manual values stay explicit.
+  for (int level = 0; level < 3; level++) {
+    gpun_definir_nivel(level);
+    valor[AJ_ANIM] = valor[AJ_VIDRO] = valor[AJ_VIDRO_CONTORNO] = valor[AJ_VIDRO_FOSCO] = 2;
+    assert(ajustes_animacoes_reduzidas() == (level >= 1));
+    assert(ajustes_vidro() == (level < 2));
+    assert(ajustes_vidro_contorno() == (level == 0));
+    assert(ajustes_vidro_fosco() == (level < 2));
+    valor[AJ_ANIM] = 0; assert(!ajustes_animacoes_reduzidas());
+    valor[AJ_ANIM] = 1; assert(ajustes_animacoes_reduzidas());
+    valor[AJ_VIDRO] = 0; assert(ajustes_vidro());
+    valor[AJ_VIDRO] = 1; assert(!ajustes_vidro());
+    valor[AJ_VIDRO_CONTORNO] = 0; assert(ajustes_vidro_contorno());
+    valor[AJ_VIDRO_CONTORNO] = 1; assert(!ajustes_vidro_contorno());
+    valor[AJ_VIDRO_FOSCO] = 1; assert(ajustes_vidro_fosco());
+    valor[AJ_VIDRO_FOSCO] = 0; assert(!ajustes_vidro_fosco());
+  }
+  unlink(path);
   puts("ajustes_padroes: ok");
   return 0;
 }
