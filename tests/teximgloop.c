@@ -54,6 +54,45 @@ int main(void) {
   assert(!tex_despejos_quentes);
   for (int i = 0; i < nMax; i++)
     if (itens[i].tex) glDeleteTextures(1, &itens[i].tex);
+  memset(itens, 0, sizeof itens);
+  bytesUsados = 0;
+  orcamento = 96L * 1024 * 1024;
+  for (int i = 0; i < 3; i++) {
+    decoded(i);
+    assert(tex_bombear(1) == 1);
+  }
+  // Model 90 MiB of hot residency without allocating large GPU textures.
+  for (int i = 0; i < 3; i++) {
+    itens[i].w = 3072; itens[i].h = 2560; itens[i].mip = 0;
+  }
+  bytesUsados = 90L * 1024 * 1024;
+  decoded(3);
+  liberarSup(itens[3].sup);
+  itens[3].sup = SDL_CreateRGBSurfaceWithFormat(0, 2048, 1024, 32,
+                                               SDL_PIXELFORMAT_ABGR8888);
+  assert(itens[3].sup);
+  itens[3].urgente = 1;
+  waiting = itens[3].sup;
+  for (int i = 4; i < 6; i++) {
+    decoded(i);
+    liberarSup(itens[i].sup);
+    itens[i].sup = SDL_CreateRGBSurfaceWithFormat(0, 512, 256, 32,
+                                                 SDL_PIXELFORMAT_ABGR8888);
+    assert(itens[i].sup);
+    assert(tex_bombear(1) == 1);
+    assert(itens[i].estado == PRONTO);
+    assert(itens[3].estado == DECODIFICADO && itens[3].sup == waiting);
+    assert(bytesUsados <= orcamento && !tex_despejos_quentes);
+    tex_novo_quadro();
+    for (int j = 0; j <= i; j++) itens[j].ultimoQuadro = quadroAtual;
+  }
+  // The skipped hero remains eligible once there is room next frame.
+  orcamento += 8L * 1024 * 1024;
+  for (int frame = 0; frame < 128 && itens[3].estado != PRONTO; frame++)
+    tex_bombear(1);
+  assert(itens[3].estado == PRONTO && bytesUsados <= orcamento);
+  for (int i = 0; i < nMax; i++)
+    if (itens[i].tex) glDeleteTextures(1, &itens[i].tex);
   SDL_DestroyMutex(mtx);
   SDL_GL_DeleteContext(gl); SDL_DestroyWindow(window); SDL_Quit();
   puts("teximgloop: visible textures stable; uploads wait without re-requests");
