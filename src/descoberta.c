@@ -2448,8 +2448,8 @@ static char *escolherPelaCota(const char *corpo, const char *fim,
   while (p) {
     const char *f = js_fim(p);
     char tipo[8] = "", id[96] = "", nome[96] = "", chave[192], desativar[352];
-    js_texto(p, f, "type", tipo, sizeof tipo);
-    js_texto(p, f, "id", id, sizeof id);
+    js_texto_raiz_em(p, f, "type", tipo, sizeof tipo);
+    js_texto_raiz_em(p, f, "id", id, sizeof id);
     js_texto_raiz_em(p, f, "name", nome, sizeof nome);
     if (tipo[0] && id[0] && !exigeBusca(p, f)) {
       if (n >= cap) {
@@ -2555,8 +2555,9 @@ static int lerManifesto(int iAddon, const char *base, Decl *saida, int max,
   while (p) {
     const char *f = js_fim(p);
     tipo[0] = id[0] = nome[0] = 0;
-    js_texto(p, f, "type", tipo, sizeof tipo);
-    js_texto(p, f, "id",   id,   sizeof id);
+    // Nested extra fields cannot define the catalog's request identity.
+    js_texto_raiz_em(p, f, "type", tipo, sizeof tipo);
+    js_texto_raiz_em(p, f, "id",   id,   sizeof id);
     // RAIZ DO OBJETO, e nao a primeira ocorrencia na faixa. O Bingecat escreve
     // `extra: [{name:"skip"}, {name:"genre"}, ...]` ANTES de `name`, e js_texto
     // devolvia o nome do primeiro extra: as fileiras dele apareciam como "Skip
