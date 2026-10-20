@@ -1526,6 +1526,13 @@ static void reabrindoVigiar(void) {
 }
 
 void video_bombear(void) {
+  // EOS wins over late polling errors and pending network retries.
+  if (terminou) {
+    nv_recon_zerar(&recon);
+    reconErroPend = 0; reconBuscarMs = reconPausa = -1;
+    atomic_store(&playerPreso, -2);
+    return;
+  }
   cdnBombear();
   mfBombear();
   convBombear();
@@ -1956,7 +1963,10 @@ static double posReal(void) {
   }
   return (hPos && pronto) ? hPos() / 1000.0 : 0;
 }
-double video_pos(void) { return cv.reabrindo ? cv.posMantida : posReal(); }
+double video_pos(void) {
+  if (terminou && video_duracao() > 0) return video_duracao();
+  return cv.reabrindo ? cv.posMantida : posReal();
+}
 double video_duracao(void) {
   // Progressivo: o player ve um fluxo sem fim; a duracao e a da fonte.
   if (cv.ativo && cv.prog) return dts_tpk_duracao();
