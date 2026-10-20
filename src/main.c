@@ -1102,7 +1102,7 @@ int main(int argc, char **argv) {
   // tex_escala recebem dw/NV_TELA_W, que e o mesmo caminho pelo qual a previa
   // no Mac (retina) desenha em 2x. Se voltar 1920x1080, a resposta e a mesma da
   // C9 e nao ha o que fazer neste lado.
-  int pedeW, pedeH, pediu4k = 0, autoPediu = 0, autoEst = 0, recuo1080 = 0;
+  int pedeW, pedeH, pediu4k = 0, autoPediu = 0, autoEst = 0;
 
   // OS DADOS ANTES DA JANELA, e so por causa desta escolha.
   //
@@ -1165,12 +1165,8 @@ int main(int argc, char **argv) {
       char *recuo = dados_ler(RES_ARQ_RECUO);
       if (recuo) {
         free(recuo); quer4k = 0;
-        // App scaling: same as the in-session fallback, a 1080p target on the
-        // 4K surface, so the chosen upscaler keeps working after a relaunch.
-        recuo1080 = ajustes_ampliar_app();
-        printf("[4k] esta TV nao aguentou 4K numa sessao anterior: comeca em 1080p%s "
-               "(escolher 4K de novo em Ajustes tenta outra vez)\n",
-               recuo1080 ? " ampliado pelo app" : "");
+        printf("[4k] esta TV nao aguentou 4K numa sessao anterior: comeca em 1080p "
+               "(escolher 4K de novo em Ajustes tenta outra vez)\n");
       }
     }
     pediu4k = quer4k;
@@ -1180,10 +1176,6 @@ int main(int argc, char **argv) {
       char *mem = dados_ler(RES_ARQ_AUTO);
       int est = res_auto_ler(mem, NV_VERSAO);
       SDL_DisplayMode dm; int tela4k = SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.w >= 3840;
-#ifdef NV_ANDROID
-      // A forced display size (wm size) shrinks the SDL desktop mode, not the panel.
-      tela4k = tela4k || ajustes_painel4k();
-#endif
       free(mem);
       autoEst = est;
       if (est != RES_AUTO_1080 && tela4k) {
@@ -1191,9 +1183,7 @@ int main(int argc, char **argv) {
         printf("[4k] automatico: %s\n", est == RES_AUTO_4K ? "4K aprovado nesta TV, pedindo 3840x2160"
                                                           : "tela 4K: sondando a GPU em 4K");
       } else {
-        if (est == RES_AUTO_1080 && tela4k) recuo1080 = ajustes_ampliar_app();
-        printf("[4k] automatico: 1080p (%s)%s\n", est == RES_AUTO_1080 ? "decidido antes nesta TV" : "tela nao e 4K",
-               recuo1080 ? " ampliado pelo app" : "");
+        printf("[4k] automatico: 1080p (%s)\n", est == RES_AUTO_1080 ? "decidido antes nesta TV" : "tela nao e 4K");
       }
     }
 #ifdef NV_PEDIR_4K
@@ -1202,8 +1192,8 @@ int main(int argc, char **argv) {
       printf("[4k] build de medicao: pedindo 3840x2160\n");
     }
 #endif
-    pedeW = quer4k || uiMenor4k || recuo1080 ? 3840 : (int)NV_TELA_W;
-    pedeH = quer4k || uiMenor4k || recuo1080 ? 2160 : (int)NV_TELA_H;
+    pedeW = quer4k || uiMenor4k ? 3840 : (int)NV_TELA_W;
+    pedeH = quer4k || uiMenor4k ? 2160 : (int)NV_TELA_H;
     if (quer4k) { printf("[4k] pedindo %dx%d — a linha `janela=` abaixo diz o "
                          "que a TV concedeu\n", pedeW, pedeH); fflush(stdout); } }
   SDL_Window *win;
@@ -1453,7 +1443,7 @@ int main(int argc, char **argv) {
   // Capability is known only after creating the GL context. A saved app choice
   // must not leave a weak GPU paying for a 4K drawable.
   if (resolucaoDaTv() && ajustes_ampliar_app() &&
-      (ajustes_720p() || ajustes_1080p() || recuo1080) && !gpun_upscale_suportado()) {
+      (ajustes_720p() || ajustes_1080p()) && !gpun_upscale_suportado()) {
 #ifdef NV_ANDROID
     android_pedir_superficie((int)NV_TELA_W, (int)NV_TELA_H);
 #endif
@@ -1607,7 +1597,7 @@ int main(int argc, char **argv) {
   int gpuPref = ajustes_gpu_efeitos();
   if (gpuPref) gpun_preferencia(gpuPref);
   if (ajustes_720p()) gpun_forcar_720();
-  else if ((ajustes_1080p() || recuo1080) && dw > (int)NV_TELA_W) gpun_alvo_1080();
+  else if (ajustes_1080p() && dw > (int)NV_TELA_W) gpun_alvo_1080();
   gpun_ampliar_app(resolucaoDaTv() && ajustes_ampliar_app());
 #ifdef NV_TPK
   video_tpk_zoom_roi_definir(ajustes_trailer_zoom_tpk());
