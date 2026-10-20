@@ -53,9 +53,13 @@ int main(int argc, char **argv) {
   gfx_icones_dir("deploy/app/art"); badges_carregar("deploy/app/art");
   seed(GF_TODAS); shot(win, argv[1], "grid-before");
   // Navigate through real top-bar and panel events.
-  focoTopo = 1; topoCol = G_TOPO_FILTROS;
+  focoTopo = 1; topoCol = G_TOPO_OPCOES;
   SDL_Event e = {0}; e.type = SDL_KEYDOWN; e.key.keysym.sym = SDLK_RETURN;
-  guia_evento(&e); assert(painel && paModo == 1);
+  guia_evento(&e); assert(opcoesAberto);
+  e.key.keysym.sym = SDLK_DOWN; guia_evento(&e);
+  assert(opcoesFoco == G_TOPO_FILTROS);
+  e.key.keysym.sym = SDLK_RETURN; guia_evento(&e);
+  assert(!opcoesAberto && painel && paModo == 1);
   shot(win, argv[1], "panel-quality");
   paFoco = 3; paRol = 200; shot(win, argv[1], "panel-categories");
   filtrosEvento(SDLK_RIGHT, SDL_GetTicks()); assert(fNivel && fN == 3);

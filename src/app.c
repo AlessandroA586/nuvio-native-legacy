@@ -3507,8 +3507,8 @@ static void guiaComCanalNoAr(void) {
   float x, y, w, h;
   snprintf(id, sizeof id, "%s", player_id_canal());
   guia_preview_rect(&x, &y, &w, &h);
-  if (xtream_e_id(id) && xtream_conexoes_limitadas()) player_encerrar();
-  else if (player_mini_ativo()) player_mini_no_guia(x, y, w, h);
+  // Moving the current stream opens no connection, even on limited accounts.
+  if (player_mini_ativo()) player_mini_no_guia(x, y, w, h);
   else player_minimizar_para_guia(x, y, w, h);
   if (tela != TELA_GUIA || !guia_aberta()) {
     if (tela == TELA_GUIA) guia_abrir();
