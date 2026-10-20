@@ -12,8 +12,8 @@ for source in src/*.c src/dts/*.c; do
 done
 flags=(-O1 -g -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 -Wno-deprecated-declarations -Wno-macro-redefined)
 cc "${flags[@]}" -Drede_pedir=epcoment_pedir -Drede_baixar_com=epcoment_baixar -Dtrakt_cabecalhos=epcoment_cabecalhos -Dtrakt_cabecalhos_publicos=epcoment_publicos -c src/extras.c -o "$NUVIO_DADOS/extras.o"
-cc "${flags[@]}" -Dtxt_linha=epreview_texto -c src/epcoment.c -o "$NUVIO_DADOS/epcoment.o"
+cc "${flags[@]}" -Dtxt_linha=epreview_texto -Dgfx_cor=epreview_color -c src/epcoment.c -o "$NUVIO_DADOS/epcoment.o"
 cc "${flags[@]}" -DNV_TEST_EPCOMENT "${sources[@]}" "$NUVIO_DADOS/extras.o" "$NUVIO_DADOS/epcoment.o" tests/menuep.c -o "$NUVIO_DADOS/teste" \
   -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf -lz -framework OpenGL
-mkdir -p /Volumes/ExternalSSD/tmp/rev/epcoment
-"$NUVIO_DADOS/teste" "${1:-/Volumes/ExternalSSD/tmp/rev/epcoment/panel}"
+mkdir -p /Volumes/ExternalSSD/tmp/rev/eppolish
+"$NUVIO_DADOS/teste" "${1:-/Volumes/ExternalSSD/tmp/rev/eppolish/after}"

@@ -8,7 +8,8 @@ source = Path('src/detail.c').read_text()
 card = source.split('static void desenhaEpisodio(', 1)[1].split('// Abas de informacao:', 1)[0]
 assert 'if (epApple())' not in card
 assert 'ft * 6.0f' not in card
-assert 'gfx_rect(th, t2, GFX_CARD, epModerna() ? 0 : f,' in card
+assert 'gfx_rect(th, t2, GFX_CARD, f,' in card
+assert 'gfx_varre_atual = foco.fileira==SEC_EPISODIOS' in card
 assert 'epModerna() ? -2.0f : -1.0f' in card
 shader = Path('src/gfx.c').read_text()
 assert 'uVeu.x < -1.5 && vUv.y > 0.5 ? 0.0 : uRaio' in shader

@@ -90,7 +90,7 @@ static void checkReviewP1(const char *out, const char *finding) {
           assert(drawnArt.x==expected.x && drawnArt.y==expected.y &&
                  drawnArt.w==expected.w && drawnArt.h==expected.h);
         } else {
-          assert(traktDraws==1 && cardDraws==1 && drawnFocus==0 && plateDraws==0);
+          assert(traktDraws==1 && cardDraws==1 && drawnFocus==1 && plateDraws==0);
           assert(drawnArt.x==100 && drawnArt.y==100 && drawnArt.w==panelCard.w);
           int option=ajustes_rapido_op("notaTituloTrakt");
           assert(option>=0 && ajustes_rapido_passo(option,1));
@@ -154,13 +154,17 @@ static void checkThumbnailHoles(void) {
     for (int c=0;c<epVisiveis() && c<N_ITENS && c<DET_REV_EP;c++) {
       float x=xItem(SEC_EPISODIOS,c)-scrollSec[SEC_EPISODIOS];
       if (x>NV_TELA_W || x+epCardW()<0) continue;
-      float y=epRowY()-scrollY, inset=NV_DETP_EP_RAIO+2;
-      GfxRect rects[] = {{x+inset,y+2,epCardW()-2*inset,epThumbH()-4},
-                         {x+2,y+inset,epCardW()-4,epThumbH()-2*inset}};
+      float ft=anim_clamp(animFoco[SEC_EPISODIOS][c],0,1), scale=1+.035f*ft;
+      float y=epRowY()-scrollY-epCardH()*(scale-1)*.5f-8*ft;
+      x-=epCardW()*(scale-1)*.5f;
+      float inset=(NV_DETP_EP_RAIO+2)*scale;
+      GfxRect rects[] = {{x+inset,y+2,epCardW()*scale-2*inset,epThumbH()*scale-4},
+                         {x+2,y+inset,epCardW()*scale-4,epThumbH()*scale-2*inset}};
       for (int i=0;i<2;i++) {
         assert(expected < n);
         GfxRect h=holes[expected++], r=rects[i];
-        assert(h.x==r.x && h.y==r.y && h.w==r.w && h.h==r.h);
+        assert(fabsf(h.x-r.x)<.001f && fabsf(h.y-r.y)<.001f &&
+               fabsf(h.w-r.w)<.001f && fabsf(h.h-r.h)<.001f);
       }
     }
     assert(expected == n);
@@ -274,12 +278,12 @@ int main(int argc, char **argv) {
           if (abs(rest[p+channel]-focused[p+channel])>delta)
             delta=abs(rest[p+channel]-focused[p+channel]);
         if (delta<=2) continue;
-        assert(x>=100 && x<740 && y>=428 && y<724);
-        if (y<460) assert(x<132 || x>=708); // Panel behind rounded image corners.
+        // Focus now lifts/scales the whole card and sweeps light over its image.
+        assert(x>=88 && x<752 && y>=81 && y<728);
         changes++;
       }
       assert(changes>1000); free(rest); free(focused);
-      puts("PASS: missing metadata, five synopsis lines, panel-only focus pixels");
+      puts("PASS: missing metadata, five synopsis lines, card lift/sheen pixels bounded");
       for(int h=1080;h>=720;h-=360) {
         int w=h*16/9;
         gfx_tamanho_alvo(w,h); glBindFramebuffer(GL_FRAMEBUFFER,fbo);

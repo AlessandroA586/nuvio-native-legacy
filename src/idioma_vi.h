@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "200 KB cuối"),
   T("“%s” volta em %d das suas histórias.", "“%s” quay lại trong %d câu chuyện của bạn."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "“Không có nguồn để đọc” và “chưa có dòng nào” là hai vấn đề khác nhau; mỗi cái có thông báo riêng."),
-  T("← Nota · → Menu", "← Điểm · → Menu"),
+  T("← Menu · → Nota", "← Menu · → Điểm"),
   T("← Voltar", "← Quay lại"),
   T("← no primeiro canal: opções do guia", "← ở kênh đầu tiên: tùy chọn hướng dẫn"),
   T("← ou Voltar   Categorias", "← hoặc Quay lại   Danh mục"),

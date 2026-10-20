@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "τελευταία 200 KB"),
   T("“%s” volta em %d das suas histórias.", "Το “%s” επανέρχεται σε %d από τις ιστορίες σου."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "«Δεν υπάρχει πηγή» και «δεν υπάρχουν ακόμη γραμμές» είναι διαφορετικά προβλήματα· το καθένα έχει το μήνυμά του."),
-  T("← Nota · → Menu", "← Βαθμός · → Μενού"),
+  T("← Menu · → Nota", "← Μενού · → Βαθμός"),
   T("← Voltar", "← Πίσω"),
   T("← no primeiro canal: opções do guia", "← στο πρώτο κανάλι: επιλογές οδηγού"),
   T("← ou Voltar   Categorias", "← ή Πίσω   Κατηγορίες"),

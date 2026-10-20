@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "直近 200 KB"),
   T("“%s” volta em %d das suas histórias.", "「%s」は、あなたの物語 %d 本で再び登場します。"),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "「読む元がない」と「まだ行がない」は別の問題で、それぞれ専用のメッセージがあります。"),
-  T("← Nota · → Menu", "← 評価 · → メニュー"),
+  T("← Menu · → Nota", "← メニュー · → 評価"),
   T("← Voltar", "← 戻る"),
   T("← no primeiro canal: opções do guia", "← 最初のチャンネルで: ガイドのオプション"),
   T("← ou Voltar   Categorias", "← または戻る   カテゴリ"),

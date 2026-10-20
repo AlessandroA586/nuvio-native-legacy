@@ -2,6 +2,7 @@
 #include "descoberta.h"
 #include "idioma.h"
 #include "ajustes.h"
+#include "extras.h"
 #include "catordem.h"
 #include "cotacat.h"
 #include "fileiras.h"
@@ -7419,6 +7420,8 @@ static int parsearEpisodios(const char *corpo, CatEp *eps, int max) {
       e->temporada = t;
       e->episodio = ne;
       { double rating = js_num(p, f, "imdbRating", 0.0);
+        // Cinemeta videos use `rating`; other metadata providers use `imdbRating`.
+        if (rating<=0) rating=js_num(p,f,"rating",0.0);
         if (rating > 0.0 && rating <= 10.0)
           e->notaImdb = (int)(rating * 10.0 + 0.5); }
       js_texto(p, f, "name", e->nome, sizeof e->nome);
@@ -8584,15 +8587,14 @@ static void *buscarEps(void *u) {
            edit.titulo, edit.nElenco, edit.direcao, edit.nTemporadas);
     fflush(stdout);
 
-    // NOTA POR EPISODIO (issue #87): o Cinemeta nao tem voto por episodio, o
-    // TMDB tem — uma viagem por temporada presente na lista, nao uma por
-    // episodio. edit.tmdb ja foi resolvido por fotosDoElenco; se o /find dela
-    // falhou (rede), resolve-se aqui pelo mesmo /find. "Titulo e sinopse" e a
-    // porta: quem desligou o TMDB nao quer este trafego. Republica so se alguma nota entrou.
-    if (!ehFilme && ajustes_tmdb_basico() && idbase_e_imdb(serie)) {
+    // TMDB episode scores: one request per season, independent of optional
+    // title/synopsis translation. Cinemeta's `rating` remains the IMDb score.
+    if (!ehFilme && (ajustes_tmdb_basico() || ajustes_nota_episodio(EX_TMDB)) &&
+        (idbase_e_imdb(serie) || !strncmp(serie,"tmdb:",5))) {
       const char *chave2 = desc_chave_tmdb();
       long tmdbId = edit.tmdb;
-      if (chave2[0] && tmdbId <= 0) {
+      if (tmdbId<=0 && !strncmp(serie,"tmdb:",5)) tmdbId=strtol(serie+5,NULL,10);
+      if (chave2[0] && tmdbId <= 0 && idbase_e_imdb(serie)) {
         char u2[400];
         char *c3;
         snprintf(u2, sizeof u2,
@@ -8614,8 +8616,8 @@ static void *buscarEps(void *u) {
             // Sinopse sempre (#150). O NOME so num idioma que nao e o ingles
             // (#176): em ingles o do Cinemeta ja e o do TMDB. Com o texto do
             // addon na lista, o TMDB so preenche o que ficou vazio.
-            int textosEp = DESC_EPT_SINOPSE | (idiomaNaoIngles() ? DESC_EPT_NOME : 0) |
-                           (epsDoAddon ? DESC_EPT_SO_VAZIO : 0);
+            int textosEp = ajustes_tmdb_basico() ? DESC_EPT_SINOPSE | (idiomaNaoIngles() ? DESC_EPT_NOME : 0) |
+                           (epsDoAddon ? DESC_EPT_SO_VAZIO : 0) : 0;
             for (i2 = 0; i2 < neps; i2++) {
               const CatEp *e0 = cat_episodio(alvoItem, i2);
               if (e0) tmp[i2] = *e0; else memset(&tmp[i2], 0, sizeof tmp[i2]);

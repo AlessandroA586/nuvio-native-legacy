@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "最近 200 KB"),
   T("“%s” volta em %d das suas histórias.", "“%s”在你的 %d 个故事中再次出现。"),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "“没有可读来源”和“还没有行”是不同的问题，各有各的提示。"),
-  T("← Nota · → Menu", "← 评分 · → 菜单"),
+  T("← Menu · → Nota", "← 菜单 · → 评分"),
   T("← Voltar", "← 返回"),
   T("← no primeiro canal: opções do guia", "← 在第一个频道：指南选项"),
   T("← ou Voltar   Categorias", "← 或返回   分类"),

@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "posledných 200 kB"),
   T("“%s” volta em %d das suas histórias.", "„%s“ sa vracia v %d vašich príbehoch."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "„Nie je odkiaľ čítať“ a „zatiaľ žiadny riadok“ sú rôzne problémy; každý má svoje hlásenie."),
-  T("← Nota · → Menu", "← Hodnotenie · → Ponuka"),
+  T("← Menu · → Nota", "← Ponuka · → Hodnotenie"),
   T("← Voltar", "← Späť"),
   T("← no primeiro canal: opções do guia", "← na prvom kanáli: možnosti sprievodcu"),
   T("← ou Voltar   Categorias", "← alebo Späť   Kategórie"),

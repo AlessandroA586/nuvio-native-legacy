@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "laatste 200 KB"),
   T("“%s” volta em %d das suas histórias.", "“%s” komt terug in %d van je verhalen."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "„Nergens om uit te lezen” en „nog geen regels” zijn verschillende problemen; elk heeft een eigen melding."),
-  T("← Nota · → Menu", "← Score · → Menu"),
+  T("← Menu · → Nota", "← Menu · → Score"),
   T("← Voltar", "← Terug"),
   T("← no primeiro canal: opções do guia", "← op het eerste kanaal: gidsopties"),
   T("← ou Voltar   Categorias", "← of Terug   Categorieën"),

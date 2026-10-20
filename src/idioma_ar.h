@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "آخر 200 كيلوبايت"),
   T("“%s” volta em %d das suas histórias.", "يتكرر “%s” في %d من قصصك."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "“لا مصدر للقراءة” و“لا أسطر بعد” مشكلتان مختلفتان؛ لكل منهما رسالتها."),
-  T("← Nota · → Menu", "← تقييم · → قائمة"),
+  T("← Menu · → Nota", "← قائمة · → تقييم"),
   T("← Voltar", "← رجوع"),
   T("← no primeiro canal: opções do guia", "← على القناة الأولى: خيارات الدليل"),
   T("← ou Voltar   Categorias", "← أو رجوع   الفئات"),

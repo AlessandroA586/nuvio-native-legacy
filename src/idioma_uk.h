@@ -6137,7 +6137,7 @@
   T("últimos 200 KB", "останні 200 КБ"),
   T("“%s” volta em %d das suas histórias.", "«%s» повертається у %d ваших історіях."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "«Нема звідки читати» і «рядків ще немає» — різні проблеми; кожна має своє повідомлення."),
-  T("← Nota · → Menu", "← Оцінка · → Меню"),
+  T("← Menu · → Nota", "← Меню · → Оцінка"),
   T("← Voltar", "← Назад"),
   T("← no primeiro canal: opções do guia", "← на першому каналі: параметри гіда"),
   T("← ou Voltar   Categorias", "← або Назад   Категорії"),
