@@ -1332,7 +1332,8 @@ static const char *arte_por_formato(const CatItem *item, int deitado) {
     if (b) { float ap = tex_aspecto(b);
       if (ap > 0.0f && ap < 1.0f) { const char *m = artehero_url_metahub_fundo(item);
         if (m) return m; } }
-    return b ? b : (item->poster[0] ? item->poster : NULL);
+    return posterprov_card_formato(item->origem, item->imdb, item->tmdb, item->tipo,
+                                   b ? b : (item->poster[0] ? item->poster : NULL), 1);
   }
   // POSTER PERSONALIZADO (posterprov.h): so o cartaz retrato de card. Desligado
   // (padrao) ou sem id que o provedor entenda, devolve item->poster como veio.
@@ -1396,7 +1397,8 @@ static const CatItem *cat_item_exato(int i) {
 static const char *arte_card_retomada(const CatItem *item) {
   if (item && ajustes_cw_thumb_episodio() && !strcmp(item->tipo, "series")) {
     const char *ep = artehero_url_episodio(item);
-    if (ep && !tex_falhou(ep)) return ep;
+    if (ep && !tex_falhou(ep))
+      return posterprov_card_formato(item->origem, item->imdb, item->tmdb, item->tipo, ep, 1);
   }
   return arte_por_formato(item, 1);
 }
@@ -8126,8 +8128,7 @@ static void home_desenhar_(Uint32 agora) {
             const float conteudoBase=py+h-24.0f;
             const float arteW=134.0f;
             const float arteX=px+w-24.0f-arteW;
-            const char *thumbPath=cItem->poster[0]?cItem->poster:
-                                  (cItem->backdrop[0]?cItem->backdrop:NULL);
+            const char *thumbPath=arte_por_formato(cItem,0);
             if(thumbPath){GLuint thumb=tex_obter_larg(thumbPath,arteW);
               if(thumb){GfxRect tr={arteX,conteudoTopo,arteW,conteudoBase-conteudoTopo};
                 gfx_tex_aspect_atual=tex_aspecto(thumbPath);
