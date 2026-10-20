@@ -9739,7 +9739,7 @@ static const char *textoValor(int op) {
   if (op == AJ_FONTE_AUTO && ajustes_fonte_prioridade() == 3) return i18n("Primeira da lista");
   if(op==AJ_GUIA_CATEGORIAS)return i18n("Abrir");
   // Fora de 1080p/720p a linha mostra o valor EFETIVO, nao o gravado.
-  if (op == AJ_AMPLIAR_UI && !ampliarUiVale()) return i18n("Pela TV");
+  if (op == AJ_AMPLIAR_UI && !ampliarUiVale()) return "Pela TV";
   if(ajIptvGerenciador(op))return i18n("Abrir");
   if(op==AJ_IPTV_CONTA)return ajIptvNome(iptv_conta_indice());
   static char buf[48];
