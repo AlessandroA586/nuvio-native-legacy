@@ -705,7 +705,10 @@ static Uint32 heroTrailerEspera(void) { return ajustes_trailer_hero_espera_ms();
 // Destino pedido ao trailer; o furo usa o plano final aplicado em video_tpk.c.
 static GfxRect cartaoVideoRect(GfxRect c) {
 #if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
-  GfxRect v; video_tpk_cartao_destino(c.x, c.y, c.w, c.h, &v.x, &v.y, &v.w, &v.h); return v;
+  float s = gfx_escala_tela_txt();
+  GfxRect v;
+  video_tpk_cartao_destino(c.x * s, c.y * s, c.w * s, c.h * s, &v.x, &v.y, &v.w, &v.h);
+  return (GfxRect){ v.x / s, v.y / s, v.w / s, v.h / s };
 #else
   return c;
 #endif
@@ -4827,7 +4830,7 @@ static GfxRect heroEditorialRect(int editorial, float aspect) {
 }
 #ifdef NV_TOUCH_UI
 static void heroTrailerAtualizaRect(GfxRect r, float saida) {
-  if (telefoneui_ativo() && saida <= 0.001f && heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
+  if (telefoneui_ativo() && !heroTrailerNoCartao && saida <= 0.001f && heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
       trailer_aberto() && !trailer_cheia() && trailer_dono() == TRAILER_DONO_HOME)
     trailer_rect(r);
 }
@@ -7436,7 +7439,11 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
           if (k->trailer > 0.004f) {
             GfxRect v = cartaoVideoRect(card);
 #if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
-            video_tpk_cartao_furo(card.x, card.y, card.w, card.h, &v.x, &v.y, &v.w, &v.h);
+            // The native plane is in screen px; intersect there, then draw in layer px.
+            float s = gfx_escala_tela_txt();
+            video_tpk_cartao_furo(card.x * s, card.y * s, card.w * s, card.h * s,
+                                 &v.x, &v.y, &v.w, &v.h);
+            v = (GfxRect){ v.x / s, v.y / s, v.w / s, v.h / s };
 #endif
             if (v.x != card.x || v.y != card.y || v.w != card.w || v.h != card.h) {
               gfx_cor(card, raio, 0.0f, 0.0f, 0.0f, 1.0f);
