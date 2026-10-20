@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T21:48:03-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T22:48:01-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -246,6 +246,12 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Public title comments without account linking**: Read public Trakt title comments without linking an account, with more space below season tabs. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request; 8ba27a3be.
+
+- **Clearer episode context and ratings**: Episode menus restore rating context, align rating sources with title ratings and keep navigation hints on the right; review cards remain safe when pages arrive during drawing. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request; 99c8cb985, 1d526b6a4, 65cf029c1, ecda96227.
+
+- **Experimental HDR menus disabled**: The Android HDR menu experiment stays disabled even when an earlier installation saved it as enabled. Platforms: Android. Refs owner request; c09e7470a.
 
 - **Compact episode cards and clearer ratings**: Standard cards regain separate artwork and text with ratings beside the air date, while Modern cards use the selected glass material. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `19e3cca2f`, `34641ab86`, merge `c895c3a65`.
 
@@ -594,6 +600,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   `f6618db6b`, `22f3d22bb`).
 
 ### Internal
+
+- **Container build helpers and GPU checks**: Build and test scripts share container helpers, container inspection reads CLI identifiers correctly, and upscaling selection has regression coverage. Platforms: webOS, Android, Samsung .tpk, WASM. Refs 8d99073c5, 89a018888, 8c7b840d7, 00855beab, e1171bd42, f6831c9eb, ac1ba9725; PR #487.
+
+- **Retained experiment history**: Tracking retains reverted Imersiva layout prototypes and intermediate HDR and episode material work without presenting them as shipped features. Platforms: webOS, Android, Samsung .tpk, WASM. Refs 5ac4a089d, bc101d7be, 772962327, 01d823c57, fd981c59b, d4916b9e7, a62a0aacd.
 
 - **Samsung builds on Apple containers**: Build the ARM32 package through an ARM64 cross SDK while preserving Linux Docker behavior and paths containing spaces. Platforms: Samsung .tpk. Refs `1c21c17ed`, `5c51cdf22`.
 
