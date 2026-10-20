@@ -5417,6 +5417,7 @@
   T("Velocidade", "Ταχύτητα"),
   T("Velocidade agora", "Ταχύτητα τώρα"),
   T("Velocidade de reprodução", "Ταχύτητα αναπαραγωγής"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Αβέβαιη ταχύτητα: όριο παρόχου. Η ανάλυση διατηρείται."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Ταχύτητα: %s Mbps (χειρότερο σημείο %s Mbps)"),
   T("Vem desligado ou em teste", "Έρχεται απενεργοποιημένο ή σε δοκιμή"),
   T("Vendo agora", "Βλέπει τώρα"),

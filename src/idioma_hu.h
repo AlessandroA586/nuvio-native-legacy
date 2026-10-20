@@ -5417,6 +5417,7 @@
   T("Velocidade", "Sebesség"),
   T("Velocidade agora", "Sebesség most"),
   T("Velocidade de reprodução", "Lejátszási sebesség"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Nem megbízható sebességmérés: szolgáltatói korlát. A felbontás változatlan."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Sebesség: %s Mbps (legrosszabb szakasz %s Mbps)"),
   T("Vem desligado ou em teste", "Kikapcsolva vagy tesztelés alatt érkezik"),
   T("Vendo agora", "Most nézi"),

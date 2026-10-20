@@ -5416,6 +5416,7 @@
   T("Velocidade", "Скорость"),
   T("Velocidade agora", "Скорость сейчас"),
   T("Velocidade de reprodução", "Скорость воспроизведения"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Скорость недостоверна: ограничение провайдера. Разрешение сохранено."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Скорость: %s Мбит/с (худший участок %s Мбит/с)"),
   T("Vem desligado ou em teste", "Выключено или в тестировании"),
   T("Vendo agora", "Смотрит сейчас"),

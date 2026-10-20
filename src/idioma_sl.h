@@ -5417,6 +5417,7 @@
   T("Velocidade", "Hitrost"),
   T("Velocidade agora", "Hitrost zdaj"),
   T("Velocidade de reprodução", "Hitrost predvajanja"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Hitrost ni zanesljiva: omejitev ponudnika. Ločljivost nespremenjena."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Hitrost: %s Mb/s (najslabši odsek %s Mb/s)"),
   T("Vem desligado ou em teste", "Pride izklopljeno ali v preizkusu"),
   T("Vendo agora", "Zdaj gleda"),

@@ -5417,6 +5417,7 @@
   T("Velocidade", "Snelheid"),
   T("Velocidade agora", "Snelheid nu"),
   T("Velocidade de reprodução", "Afspeelsnelheid"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Snelheid onduidelijk: providerlimiet. Resolutie ongewijzigd."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Snelheid: %s Mbps (slechtste stuk %s Mbps)"),
   T("Vem desligado ou em teste", "Staat uit of in test"),
   T("Vendo agora", "Kijkt nu"),

@@ -5416,6 +5416,7 @@
   T("Velocidade", "Vitesse"),
   T("Velocidade agora", "Débit actuel"),
   T("Velocidade de reprodução", "Vitesse de lecture"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Débit non concluant : limite du fournisseur. Résolution conservée."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Vitesse: %s Mbps (pire passage %s Mbps)"),
   T("Vem desligado ou em teste", "Désactivé ou en test"),
   T("Vendo agora", "En train de regarder"),

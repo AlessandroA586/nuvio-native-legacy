@@ -5417,6 +5417,7 @@
   T("Velocidade", "Rychlost"),
   T("Velocidade agora", "Rychlost nyní"),
   T("Velocidade de reprodução", "Rychlost přehrávání"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Rychlost neprůkazná: limit poskytovatele. Rozlišení nezměněno."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Rychlost: %s Mb/s (nejhorší úsek %s Mb/s)"),
   T("Vem desligado ou em teste", "Přichází vypnuté nebo v testu"),
   T("Vendo agora", "Právě se dívá"),

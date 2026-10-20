@@ -5417,6 +5417,7 @@
   T("Velocidade", "速度"),
   T("Velocidade agora", "現在の速度"),
   T("Velocidade de reprodução", "再生速度"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "速度測定は不確実です：プロバイダーの制限。解像度を維持します。"),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "速度: %s Mbps（最も遅い区間 %s Mbps）"),
   T("Vem desligado ou em teste", "オフまたはテスト中で届きます"),
   T("Vendo agora", "視聴中"),

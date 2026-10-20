@@ -5417,6 +5417,7 @@
   T("Velocidade", "Greitis"),
   T("Velocidade agora", "Greitis dabar"),
   T("Velocidade de reprodução", "Grojimo greitis"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Greičio matavimas nepatikimas: teikėjo limitas. Raiška nepakeista."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Greitis: %s Mbps (prasčiausias ruožas %s Mbps)"),
   T("Vem desligado ou em teste", "Ateina išjungta arba testuojama"),
   T("Vendo agora", "Dabar žiūri"),
