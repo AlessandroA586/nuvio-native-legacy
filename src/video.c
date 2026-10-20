@@ -2817,6 +2817,9 @@ void video_parar(void) {
 
 static void pararSessao(void) {
   char b[128];
+  /* Invalidate native callbacks before closing the DTS worker. A closing
+   * pipeline must not queue an error for the replacement source. */
+  __atomic_add_fetch(&sessao, 1, __ATOMIC_ACQ_REL);
   int tinhaDts = dtsSessao != NULL;
   DtsPlayback *antigoDts = dtsSessao;
   dtsSessao = NULL;
@@ -2826,7 +2829,6 @@ static void pararSessao(void) {
   // Invalida tambem a sessao que ainda esta esperando o retorno de load. Esse
   // era o caso abrir -> sair -> abrir que travava: nao havia mediaId para
   // descarregar, mas o callback antigo continuava vivo e contaminava o novo.
-  __atomic_add_fetch(&sessao, 1, __ATOMIC_ACQ_REL);
   bindPendente = 0;
   recuperando = 0; retomarEm = posAoCarregar = 0.0;
   audioAoCarregar = legAoCarregar = -1;
@@ -2848,6 +2850,9 @@ static void pararSessao(void) {
     if (dtsEstado != VIDEO_DTS_FALHOU) dtsEstado = 0;
   }
   midia[0] = 0; tocando = pronto = 0; falhou = 0; audioNaoSup = 0;
+  /* A queued error belongs to the pipeline just closed. Keep reconnection
+   * attempts/target intact, but never replay its pending event on a new load. */
+  reconErroPend = reconErroRede = 0;
   ackMidia = 0; ack_publicar();
   erroTexto[0] = 0;
 }

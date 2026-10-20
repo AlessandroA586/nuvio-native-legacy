@@ -1,5 +1,8 @@
 /* Exercise the actual AVIO byte transport without decoder timing obscuring it. */
 #define NV_DTS_FFMPEG
+#ifndef NV_TEST_LEGACY_RECOVERY
+#define NV_DTS_WEBOS_RECOVERY
+#endif
 #include "../src/dts/dts_engine.c"
 #include <assert.h>
 #include <unistd.h>
@@ -33,11 +36,11 @@ static void check_prefetch(DtsEngine *e) {
       if(job->state==3) { ready++; payload+=job->count; }
     }
     assert(active<=RANGE_WORKERS && occupied<=RANGE_SLOTS);
-    assert(payload<=RANGE_SLOTS*RANGE_BYTES);
+    assert(payload + e->cache_size <= (int64_t)(e->range_slots+1)*e->range_bytes);
     pthread_mutex_unlock(&e->range_lock);
-  } while(ready<RANGE_SLOTS && clock_ns(CLOCK_MONOTONIC)<deadline);
-  assert(ready==RANGE_SLOTS);
-  assert(e->range_next==(int64_t)(RANGE_SLOTS+1)*RANGE_BYTES);
+  } while(ready<e->range_slots && clock_ns(CLOCK_MONOTONIC)<deadline);
+  assert(ready==e->range_slots);
+  assert(e->range_next==(int64_t)(e->range_slots+1)*e->range_bytes);
   uint64_t blocked=e->metrics.range_blocked_ns;
   check_bytes(e,9*RANGE_BYTES-65536);
   assert(e->metrics.range_blocked_ns-blocked<UINT64_C(200000000));
@@ -55,6 +58,9 @@ static void check_prefetch(DtsEngine *e) {
 int main(int argc,char **argv) {
   assert(argc==2);
   DtsEngine *e=dts_engine_create(); assert(e);
+  if (strstr(argv[1],"dv-prefetch")) {
+    e->dv=1; e->range_bytes=RANGE_BYTES_DV; e->range_slots=RANGE_SLOTS_DV;
+  }
   e->url=strdup(argv[1]); e->headers=strdup("Authorization: Bearer engine-test\nX-Fixture: yes");
   if(strstr(argv[1],"/prefetch/")) { check_prefetch(e); return 0; }
   uint64_t begun=clock_ns(CLOCK_MONOTONIC);

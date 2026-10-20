@@ -12,7 +12,7 @@ ffmpeg -hide_banner -loglevel error -f lavfi -i color=size=64x64:rate=25:duratio
   -c:a eac3 -ac 2 "$dir/plain.mkv"
 ffprobe -v error -show_streams -show_packets -show_data -of json "$dir/plain.mkv" > "$dir/plain.json"
 python3 tests/dv7_fixture.py "$dir"
-cc -std=gnu11 -Wall -Wextra -Werror -DNV_DTS_FFMPEG -DNV_DV7_CONVERSION \
+cc -std=gnu11 -Wall -Wextra -Werror -DNV_DTS_FFMPEG ${NV_TEST_DTS_RECOVERY_CFLAGS--DNV_DTS_WEBOS_RECOVERY} -DNV_DV7_CONVERSION \
   -I"$prefix/include" src/dts/dts_engine.c tests/dv7_engine.c -o "$dir/engine" \
   -L"$prefix/lib" -Wl,--start-group -lavformat -lavcodec -lswresample -lavutil \
   -Wl,--end-group build/dv7-host/libnuvio_dv7.a -lm -lpthread -ldl
