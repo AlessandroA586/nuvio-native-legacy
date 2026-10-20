@@ -2,6 +2,7 @@
 #include <unistd.h>   // access (fontes de /system/fonts)
 #endif
 #include "text.h"
+#include "sdlcompat.h"
 #include "dobra.h"
 #include "idioma.h"
 #include "ajustes.h"
@@ -1577,7 +1578,7 @@ static SDL_Surface *renderCorridas(TTF_Font *f, TTF_Font *a, TTF_Font *b,
     w += sf[i]->w;
   }
   out = w > 0 && asc + abaixo > 0
-      ? SDL_CreateRGBSurfaceWithFormat(0, w, asc + abaixo, 32, SDL_PIXELFORMAT_ARGB8888) : NULL;
+      ? nv_superficie(0, w, asc + abaixo, 32, SDL_PIXELFORMAT_ARGB8888) : NULL;
   if (out) SDL_FillRect(out, NULL, 0);
   for (i = 0; i < n; i++) {
     if (!sf[i]) continue;
@@ -1846,7 +1847,7 @@ static SDL_Surface *rasterTracking(TxtEstilo estilo, const char *s, SDL_Color co
     lx += trk;
   }
   *larg = lx > 0.0f ? lx - trk : 0.0f;
-  out = w > 0 && h > 0 ? SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_ABGR8888) : NULL;
+  out = w > 0 && h > 0 ? nv_superficie(0, w, h, 32, SDL_PIXELFORMAT_ABGR8888) : NULL;
   if (out) SDL_FillRect(out, NULL, (Uint32)cor.r | (Uint32)cor.g << 8 | (Uint32)cor.b << 16);
   for (i = 0; i < n; i++) {
     int x, y;
