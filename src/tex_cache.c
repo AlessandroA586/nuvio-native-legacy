@@ -4544,6 +4544,19 @@ int tex_bombear(int max_por_quadro) {
         SDL_UnlockMutex(mtx);
         break;
       }
+      // Pruning cannot free current/last-frame artwork. Reserve room before
+      // allocating on the GPU; keep the decoded result queued if only hot
+      // textures remain, so drawing never triggers another download/decode.
+      long extra = bytesTexturaMip(s->w, s->h,
+                                  temPiramide(s->w, s->h, itens[alvo].card));
+      if (itens[alvo].tex) extra -= bytesTextura(&itens[alvo]);
+      long lim = limiteBytes();
+      while (bytesUsados + extra > lim)
+        if (despejar(0) < 0) break;
+      if (bytesUsados + extra > lim) {
+        SDL_UnlockMutex(mtx);
+        break;
+      }
       sup = s;
       filaEm = itens[alvo].filaUploadEm; itens[alvo].filaUploadEm = 0;
       snprintf(uploadPath, sizeof uploadPath, "%s", itens[alvo].caminho);
