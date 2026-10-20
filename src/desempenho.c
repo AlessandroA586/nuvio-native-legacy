@@ -61,7 +61,7 @@ static float montar(int forma, Linha *L) {
   char a[24], b[24], c[24];
   float w;
   num(a, sizeof a, uFps, 0);
-  snprintf(b, sizeof b, "%s fps", a);
+  snprintf(b, sizeof b, "%s UI fps", a);
   L->fps = lento() ? txt_linha(TXT_MONO18B, b, 232, 184, 74, 255) : dsT(TXT_MONO18B, b);
   w = DS_VAO + 1.5f + DS_VAO + DS_PONTO + 10.0f + (float)L->fps.w;
   L->pior.w = L->ram.w = 0;
