@@ -2227,7 +2227,8 @@ static float notasBloco(void) {
 }
 static float epExtraAltura(void) { return epAppleExtra() + notasBloco(); }
 static float epTempY(void) { return ANC(NV_DETP_TEMP_Y); }
-static float epRowY(void) { return ANC(NV_DETP_EP_Y - (epModerna() ? 40.0f : 0.0f)); }
+// +24: more air between the season tabs and the episode cards (owner, 19/10).
+static float epRowY(void) { return ANC(NV_DETP_EP_Y + 24.0f - (epModerna() ? 40.0f : 0.0f)); }
 static float epAbasY(void) { return ANC(NV_DETP_ABA_Y) + epExtraAltura(); }
 static float epElencoY(void) { return ANC(NV_DETP_EL_Y) + epExtraAltura(); }
 static float serieGrupo(int r) {

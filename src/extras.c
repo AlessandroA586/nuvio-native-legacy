@@ -972,11 +972,12 @@ static void *buscar(void *arg) {
   }
 
   // --- comentarios, os mais curtidos primeiro ---
-  if (parte != 1 && temTrakt) {
+  // Public like the episode reviews: the comments row must not need a linked account.
+  if (parte != 1 && (temTrakt || temChave)) {
   snprintf(url, sizeof url,
            "https://api.trakt.tv/%s/%s/comments/likes?limit=%d", tipo, id,
            EX_COMENT_MAX);
-  corpo = rede_baixar_com(url, 12, cab);
+  corpo = rede_baixar_com(url, 12, temTrakt ? cab : cabPub);
   if (corpo) {
     ComentAchado achado[EX_COMENT_MAX];
     int n = 0;
