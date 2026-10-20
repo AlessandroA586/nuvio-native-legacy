@@ -32,6 +32,7 @@ static float guideHints(const char *const *keys, const char *const *labels, int 
 #include "shot_arte.h"
 #include <SDL2/SDL_image.h>
 #include <assert.h>
+#include "guide_requests.h"
 
 typedef struct { const char *grupo, *nome; int numero; } TCanal;
 static void semear(const TCanal *v, int n) {
@@ -152,6 +153,25 @@ int main(int argc, char **argv) {
   e.key.repeat = 1; esconderOsd(); player_evento(&e); assert(!player_pediu_guia());
   e.key.repeat = 0;
 
+  // DOWN through app routing: opening may happen AFTER the frame timestamp.
+  tecla(SDLK_DOWN, 0);
+  testGuideRequests();
+  assert(guia_overlay_aberta() && !strcmp(guia_id_focado(), id));
+  { AddonRemoto addon = { .nome = "Fixture", .url = "https://example.invalid/manifest.json", .ativo = 1 };
+    assert(addons_definir_lista(&addon, 1));
+    ltv_chave_fonte(LTV_ADDON, addons_base(0), ltvF[0].chave, sizeof ltvF[0].chave); }
+  guia_atualizar(0.016f, bandaUlt - 1u);
+  assert(guia_overlay_aberta() && entrada > 0.01f && video_tocando());
+  guia_atualizar(0.016f, bandaUlt + G_B_OCIOSO_MS);
+  assert(guia_overlay_aberta());
+  guia_atualizar(0.016f, bandaUlt + G_B_OCIOSO_MS + 1u);
+  assert(!guia_overlay_aberta());
+  // SDL ticks wrap: an ordinary short interval must remain visible.
+  guia_overlay_abrir(); bandaUlt = (Uint32)-10;
+  guia_atualizar(0.016f, 10u);
+  assert(guia_overlay_aberta());
+  overlay = 0;
+
   // A FAIXA: abre no canal que toca; o OK que a abriu, repetido dentro do
   // repouso, nao conta como o segundo OK.
   guia_overlay_abrir(); guia_focar_id(id);
@@ -221,6 +241,20 @@ int main(int argc, char **argv) {
   { CatItem movie = {0}; snprintf(movie.tipo, sizeof movie.tipo, "movie"); cat_definir(&movie, 1); }
   esconderOsd(); tecla(SDLK_KP_ENTER, 0);
   assert(player_pediu_guia() && !strcmp(player_id_canal(), "xtream:42"));
+  // OSD Guide must keep the SAME stream even with a one-connection account.
+  xtream_definir_conexoes_modo(1);
+  assert(xtream_conexoes_limitadas());
+  tecla(SDLK_UP, 0); tecla(SDLK_RETURN, 0);
+  testGuideRequests();
+  assert(player_mini_no_guia_ativo() && previewPreso);
+  assert(!strcmp(previewId, "xtream:42") && video_tocando());
+  // A different preview WOULD open a connection, and remains blocked.
+  pedPreview = 1; snprintf(pedPreviewItem.imdb, sizeof pedPreviewItem.imdb, "xtream:43");
+  testPreviewRequests();
+  assert(!testPreviewConnections && !strcmp(player_id_canal(), "xtream:42"));
+  player_restaurar();
+  assert(player_aberto() && !strcmp(player_id_canal(), "xtream:42"));
+  xtream_definir_conexoes_modo(0);
 
   // FILME: o OK sem OSD continua do player (acorda os controles), nunca o guia.
   player_encerrar();
@@ -247,9 +281,36 @@ int main(int argc, char **argv) {
     glViewport(0, 0, 1920, 1080); gfx_tamanho_alvo(1920, 1080);
     assert(gfx_iniciar()); assert(txt_iniciar("deploy/app", 1)); tex_iniciar(64);
     gfx_icones_dir("deploy/app/art");
+    // Every supported translation gets measured title/clock separation.
+    for (int lang = 0; lang < IDIOMA_N; lang++) {
+      f = fopen(settings, "w"); assert(f);
+      fprintf(f, "idioma %d\nidiomaAutoLocal 0\n", lang); fclose(f);
+      ajustes_dir(getenv("NUVIO_DADOS"));
+      txt_novo_quadro();
+      const char *labels[G_TOPO_N]; float widths[G_TOPO_N], xs[G_TOPO_N];
+      gTopoRotulos(labels); gTopoLarguras(labels, widths);
+      float right = G_AREA_DIR - txt_linha(TXT_CALLOUT, "23:59", 255, 255, 255, 255).w - 36;
+      gTopoAjustar(widths, xs, right);
+      float titleRight = G_AREA_X + txt_linha(TXT_ILHA_TITULO, i18n("Guia TV"), 255, 255, 255, 255).w;
+      assert(xs[0] >= titleRight + 31);
+      for (int chip = 0; chip < G_TOPO_N; chip++) {
+        float icon = chip == G_TOPO_PREVIEW ? 20 :
+                     (chip == G_TOPO_BUSCAR || chip == G_TOPO_CATEGORIAS) ? 26 : 0;
+        assert(widths[chip] > 2 * G_CHIP_PAD + icon);
+        assert(xs[chip] + widths[chip] <= right + 0.1f);
+        if (chip) assert(xs[chip] >= xs[chip - 1] + widths[chip - 1]);
+      }
+    }
+    f = fopen(settings, "w"); assert(f);
+    fprintf(f, "idioma %d\nidiomaAutoLocal 0\n", IDIOMA_EN); fclose(f);
+    ajustes_dir(getenv("NUVIO_DADOS"));
     snprintf(tv.imdb, sizeof tv.imdb, "%s", id);
     cat_definir(&tv, 1); player_abrir(0, NULL); player_marcar_canal(&tv); comFonte();
-    aberta = 0; overlay = 1; entrada = 1; guia_focar_id(id);
+    aberta = 0;
+    tecla(SDLK_DOWN, 0); testGuideRequests();
+    guia_atualizar(0.016f, bandaUlt - 1u);
+    assert(guia_overlay_aberta() && entrada > 0.01f && video_tocando());
+    entrada = 1; guia_focar_id(id);
     snprintf(nome, sizeof nome, "%s-faixa.png", argv[1]); foto(nome, w);
     assert(fullGuideHintTranslated);
     { float x, y, w, h;
@@ -261,7 +322,10 @@ int main(int argc, char **argv) {
       guia_adotar_canal(id);
       assert(player_mini_no_guia_ativo() && previewPreso && !overlay);
     }
+    entrada = heroA = 1; dicaDesde = 0; previewLigado = 1;
     snprintf(nome, sizeof nome, "%s-guia.png", argv[1]); foto(nome, w);
+    modoLista = 1;
+    snprintf(nome, sizeof nome, "%s-lista.png", argv[1]); foto(nome, w);
   }
   return 0;
 }

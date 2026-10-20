@@ -2935,7 +2935,8 @@ int  player_mini_no_guia_ativo(void) { return mini && miniGuia; }
 
 void player_minimizar_para_guia(float x, float y, float w, float h) {
   PlrRect de;
-  if (!player_minimizavel()) { player_encerrar(); return; }
+  // The guide reuses this pipeline; connection limits only guard new streams.
+  if (!canalSessao || !comVideo) { player_encerrar(); return; }
   de = telaCheia();
   miniGuiaCaixa = (PlrRect){ x, y, w, h };
   miniGuia = 1;
