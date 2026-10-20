@@ -245,7 +245,9 @@ void epcoment_desenhar(GfxRect r, float a) {
   }
   if (quantidade != n) { quantidade = n; if (foco >= n) foco = 0; }
   gfx_recorte(x - 4, top - 4, w + 8, r.h - 290);
+  // The worker may append a page after reservar(): draw only reserved cards.
   int pos=-1, total=extras_n_comentarios_ep();
+  if (total > cardCap) total = cardCap;
   for (int i=0; i<total; i++) {
     if (filtro && extras_comentario_ep_nota(i)!=filtro) continue;
     pos++;
