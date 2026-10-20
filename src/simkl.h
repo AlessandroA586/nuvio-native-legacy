@@ -41,7 +41,7 @@
 // mais e mais um nome que o CORS do servidor precisa aceitar. User-Agent sai
 // de rede.c.
 //
-// Anime next_to_watch "E12" uses absolute numbering. Cached provider videos
+// Anime next_to_watch 12, "12" or "E12" uses absolute numbering. Cached provider videos
 // map it to season/episode; missing mapping keeps a title-only CW entry.
 // Paused anime uses tvdb_season/tvdb_number from /sync/playback.
 // Scrobble (start/pause/stop) and history are declared below.
