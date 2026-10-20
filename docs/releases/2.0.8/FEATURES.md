@@ -11,10 +11,14 @@ None recorded yet.
 
 ## New
 
-None recorded yet.
+- **Android cache controls**: Clear regenerable cache while preserving durable user data, APK staging and viable torrent streaming windows; superseded update APKs are removed. Platforms: Android. Refs owner request; d8699b55c, e731a7847, d35f60069, 70b1f55e3; merges a1169f5ad, fcc581387.
 
 ## Fixes
 
+- **Resume survives TV power loss**: Save durable playback checkpoints while keeping tracker playback active during checkpoint updates. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request; 5623ab442, ceca13b7e; merges 9e6c12d47, eb5203637.
+- **LG buffer presets apply to direct video**: Apply the chosen buffer preset to direct HTTP video on demand. Platforms: webOS. Refs owner request; 6c9bc485b; merge 6c8233ded.
+- **Live diagnostics on limited accounts**: Run explicitly requested live-TV diagnostics even when the account has limited access. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request; 6a392a97f; merge bf6df9a8e.
+- **Ranked posters keep their shape**: Keep numbered and stacked ranking rows in portrait format, including artwork loaded ahead of scrolling. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request; b19d8ec28; merge 35caf5df8.
 - **Simkl anime in Continue Watching**: Preserve absolute episode numbers and fallback IDs, using provider metadata to map long-running anime to the next episode. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner report, `1d2ab0a5b`, `af9250ab5`, merge `5d30131d6`. Latest review still reports BLOQUEIA; follow-up required before release.
 - **Complete Simkl library lists**: Keep library entries across all Simkl statuses so watched and watching lists do not lose titles during synchronization. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner report, `30efe6903`, merge `3e709ec43`.
 - **Stable Samsung live picture size**: Reset geometry when switching channels and settle guide transitions once, preventing crops from the previous channel and visible zoom steps. Platforms: Samsung .tpk. Refs owner report, `c3ac7d1ae`, merge `e3cd59e71`.
@@ -47,10 +51,11 @@ No external contribution recorded in the supplied commits since `v2.0.7`.
 
 ## Pending (not integrated yet)
 
+- **Add-on subtitle synchronization**: Subtitle add-on synchronization work awaits review before its final user-facing behavior can be confirmed. Platforms: Confirm from review. Refs agente/205-205-legaddonsync.
+- **Poster service coverage**: Poster-service changes unify coverage and support shape templates; authenticated rendering still needs validation. Platforms: Confirm from review. Refs agente/205-205-posterserv; a25def0.
 Earlier report named `agente/205-i429hbs` (#429), `agente/205-p2pusb` (#334, #505), `agente/205-i513autoplay` (#513), `agente/205-barra27`, PRs #489/#490/#491/#493/#498, `agente/205-dicatoque` (#472), m3umisto, palco2, logos, fileiraui, diretorpol and triagem-velhas as pending. Their branches are absent from the current open snapshot; retain this historical record without presenting them as pending 2.0.8 features or duplicating already released work.
 
 - **Plugin-only source errors**: Recognize enabled local scrapers when explaining unavailable sources, so plugin-only users do not receive a false missing-add-on message. Platforms: webOS, Android, Samsung .tpk, WASM with local plugins. Refs owner report, `agente/205-205-semaddon`. Finished job has no mapped review log; review and integration pending.
-- **Android storage follow-up**: Bound regenerable storage and expose cache clearing without breaking APK cache routing or torrent streaming windows. Platforms: Android. Refs owner request, `agente/205-205-armazenamento`, `d8699b55c`. Latest review BLOQUEIA; fix job running, review required afterward.
 - **Torrent engine follow-up**: Further torrent-engine work remains outside integration and needs review of the newer fix log before its user-visible scope can be confirmed. Platforms: confirm from review before release. Refs `agente/p2p`; current `open.txt` and review snapshot.
 
 Other open branches are historical work or deferred plans; see the tracking map and external `estado.md`. No new feature or external contributor credit is inferred from branch names.
