@@ -19,6 +19,11 @@ None recorded yet.
 - **No false interrupted-launch notice**: Closing the app normally through the TV no longer triggers a “Previous launch stopped” notice on the next launch. Platforms: Samsung .tpk. Refs `36a2d1f13` (no issue supplied).
 - **Torrent playback with less free memory**: Allow a 160 MB streaming window so TVs with roughly 460 MB free memory can start torrents previously rejected for insufficient space. Platforms: webOS. Refs `8e67f7be0` (no issue supplied).
 
+- **Live channels start on LG TVs**: Let playback discover its default tracks before selecting video, preventing premature track selection from blocking TS and HLS startup. Platforms: webOS. Refs #625, `abe573043`, merge `dda4428e4`.
+- **Responsive Samsung episode endings**: Keep playback controls responsive during stalls and record episode completion at the end without restarting recovery after playback finishes. Platforms: Samsung .tpk. Refs owner request, `06a178e07`, merge `b22929845`.
+- **Home loads with slow DNS**: Bound DNS retries and reuse successful answers across requests so slow resolution does not repeatedly exhaust connection deadlines. Platforms: Samsung .tpk. Refs #630, `25eac3a93`, merge `beb30e5b9`.
+- **Older LG TVs stay open after profile selection**: Use text surfaces compatible with SDL 2.0.4 to prevent the missing-symbol crash after choosing a profile. Platforms: webOS (older SDL runtime). Refs owner request, `7dc80ce7c`, merge `921210932`.
+
 ## Performance
 
 None recorded separately; low-memory playback improvement listed under Fixes.
@@ -30,13 +35,9 @@ No external contribution recorded in the supplied commits since `v2.0.7`.
 ## Internal
 
 - **Browser build link fix**: Restore the browser build's missing network-function stub so Samsung browser packages can link successfully. Platforms: Samsung browser/WASM. Refs `b84091f4c`.
-- **Issue tracking**: Keep release and issue tracking current. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`.
+- **Issue tracking**: Keep release and issue tracking current. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`.
 
 ## Pending (not integrated yet)
-
-- **Xtream live playback on LG C4**: Investigation targets TS channels that buffer without starting video; no fix is integrated yet. Platforms: webOS. Refs #625, `agente/205-205-livets`; running job `j-205-livets.log`.
-- **Responsive Samsung episode endings**: Investigation targets stalled playback and unresponsive controls near episode end; no fix is integrated yet. Platforms: Samsung .tpk. Refs owner request, `agente/205-205-fimvod`; running job `j-205-fimvod.log`.
-- **Home loading with a slow DNS resolver**: Investigation targets empty Home screens when DNS takes longer than request timeouts; no fix is integrated yet. Platforms: Samsung .tpk. Refs #630, `agente/205-205-dnslento`; running job `j-205-dnslento.log`.
 
 Earlier report named `agente/205-i429hbs` (#429), `agente/205-p2pusb` (#334, #505), `agente/205-i513autoplay` (#513), `agente/205-barra27`, PRs #489/#490/#491/#493/#498, `agente/205-dicatoque` (#472), m3umisto, palco2, logos, fileiraui, diretorpol and triagem-velhas as pending. Their branches are absent from the current open snapshot; retain this historical record without presenting them as pending 2.0.8 features or duplicating already released work.
 
