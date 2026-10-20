@@ -877,7 +877,10 @@ namespace NuvioTpk
                 }
             }
             if (abertas.Count == 0) return null;
-            if (abertas.Count == 1 && abertas[0] == "first-key" && terminou) return null;
+            // A TV fechou o app (terminate): o laco nui-run e o first-key ficam
+            // abertos porque o processo morre antes do "ok". Saida normal.
+            if (terminou) { abertas.Remove("nui-run"); abertas.Remove("first-key"); }
+            if (abertas.Count == 0) return null;
             string r = abertas[abertas.Count - 1];
             if (terminou) r += " (then the TV closed it)";
             if (ultimaNota != null) r += " — last: " + ultimaNota;
