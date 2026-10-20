@@ -22,6 +22,7 @@
 #include "rede.h"
 #include "velocidade.h"
 #include "cacheboost.h"
+#include "memlog.h"
 #include "dts/dts_playback.h"
 #include "dts_tv.h"
 #include "dts/dts_engine.h"
@@ -1566,11 +1567,11 @@ static void chamar(const char *metodo, const char *carga, Filtro cb) {
 // Variante para callbacks que precisam saber a qual sessao pertencem. O
 // contexto e um inteiro convertido em ponteiro; nao ha alocacao para vazar nem
 // memoria cujo tempo de vida possa acabar antes da resposta assincrona.
-static void chamarCtx(const char *metodo, const char *carga, Filtro cb,
+static int chamarCtx(const char *metodo, const char *carga, Filtro cb,
                       void *ctx) {
   char uri[128];
   snprintf(uri, sizeof uri, "luna://com.webos.media/%s", metodo);
-  lsChamar(uri, carga, cb, ctx, metodo);
+  return lsChamar(uri, carga, cb, ctx, metodo);
 }
 
 // Chamada a OUTRO servico. O recorte de fonte NAO mora no com.webos.media: ele
@@ -1593,6 +1594,15 @@ static void chamarEm(const char *servico, const char *metodo,
 
 static void protegerScreensaver(void);
 static int modoLoad;   // video_modo_live_consumir do load em curso
+static char cargaBufferPadrao[8192];
+static int bufferCustom;
+static int aoCarregar(LSHandle *h, LSMessage *m, void *u);
+static void repetirBufferPadrao(void *u) {
+  bufferCustom = 0;
+  printf("[video] bufferControl custom recusado, voltando ao padrao\n");
+  fflush(stdout);
+  chamarCtx("load", cargaBufferPadrao, aoCarregar, u);
+}
 static int aoCarregar(LSHandle *h, LSMessage *m, void *u) {
   const char *p = lsPayload(m), *q;
   char b[256];
@@ -1612,6 +1622,15 @@ static int aoCarregar(LSHandle *h, LSMessage *m, void *u) {
     }
     return 1;
   }
+  if (p && bufferCustom) {
+    char retorno[16] = "";
+    js_bruto(p, NULL, "returnValue", retorno, sizeof retorno);
+    if (!strcmp(retorno, "false") || js_num(p, NULL, "errorCode", 0) != 0) {
+      repetirBufferPadrao(u);
+      return 1;
+    }
+  }
+  bufferCustom = 0;
   if (!p || midia[0]) return 1;
   q = strstr(p, "\"mediaId\":\"");
   if (!q) return 1;
@@ -2587,6 +2606,41 @@ static void montarHttpHeader(char *dst, unsigned tam) {
   fflush(stdout);
 }
 
+static void montarCarga(char *dst, size_t tam, const char *url, int modo,
+                        const char *dolby, const char *hh, const char *janela,
+                        int preset, long livreMb) {
+  char buffer[192] = "\"bufferControl\":{\"userBufferCtrl\":false},";
+  int mb = !modo && (!strncasecmp(url, "http://", 7) ||
+                    !strncasecmp(url, "https://", 8))
+           ? cacheboost_buffer_mb(preset, livreMb) : 0;
+  if (mb) {
+    unsigned bytes = (unsigned)mb * 1024U * 1024U;
+    // Start at 1/8 capacity; refill below 1/4, up to the RAM-clamped limit.
+    snprintf(buffer, sizeof buffer,
+             "\"bufferControl\":{\"userBufferCtrl\":true,\"preBufferByte\":%u,"
+             "\"bufferMinLevel\":%u,\"bufferMaxLevel\":%u},",
+             bytes / 8, bytes / 4, bytes);
+  }
+  if (modo == 2) {
+    snprintf(dst, tam,
+        "{\"payload\":{\"option\":{"
+        "\"appId\":\"" NV_APP_ID "\","
+        "%s%s"
+        "\"mediaTransportType\":\"%s\","
+        "\"windowId\":\"%s\"}},"
+        "\"uri\":\"%s\",\"type\":\"media\"}",
+        dolby, hh, strstr(url, ".m3u8") ? "HLS" : "URI", janela, url);
+  } else {
+    snprintf(dst, tam,
+        "{\"payload\":{\"option\":{\"useSeekableRanges\":true,"
+        "\"appId\":\"" NV_APP_ID "\","
+        "%s%s%s"
+        "\"windowId\":\"%s\"}},"
+        "\"uri\":\"%s\",\"type\":\"media\"}",
+        dolby, hh, buffer, janela, url);
+  }
+}
+
 static int tocarInterno(const char *url, int comDV) {
   // 8 KB E NAO 2: a URL de fonte vai ate 4096 (Stream.url) e a do Pluto TV
   // leva ~1,7 KB de query com JWT. Com 2048 o snprintf CORTAVA o JSON no meio
@@ -2690,34 +2744,13 @@ static int tocarInterno(const char *url, int comDV) {
   }
   { char hh[768];
     montarHttpHeader(hh, sizeof hh);
-  if (modoLoad == 2) {
-    // PAYLOAD ENXUTO DE LIVE (#158, modo 2): o que o load de um <video> HLS
-    // costuma mandar — transporte dito pelo nome, sem useSeekableRanges nem
-    // bufferControl (que sao de VOD). Experimental, atras de Ajustes.
-    int hls = strstr(url, ".m3u8") != NULL;
-    snprintf(carga, sizeof carga,
-        "{\"payload\":{\"option\":{"
-        "\"appId\":\"" NV_APP_ID "\","
-        "%s%s"
-        "\"mediaTransportType\":\"%s\","
-        "\"windowId\":\"%s\"}},"
-        "\"uri\":\"%s\",\"type\":\"media\"}",
-        dolby, hh, hls ? "HLS" : "URI",
-        expWin[0] ? expWin : "window_id_dummy", url);
-  } else
-  snprintf(carga, sizeof carga,
-      "{\"payload\":{\"option\":{\"useSeekableRanges\":true,"
-      "\"appId\":\"" NV_APP_ID "\","
-      "%s%s"
-      "\"bufferControl\":{\"userBufferCtrl\":false},"
-      "\"windowId\":\"%s\"}},"
-      "\"uri\":\"%s\",\"type\":\"media\"}",
-      dolby, hh,
-      // No caminho do ACB o id e um marcador qualquer (so nao pode ser vazio,
-      // ver acima); no da webOS 5 ele e o endereco REAL do plano exportado e um
-      // valor errado aqui deixa o video sem para onde ir.
-      expWin[0] ? expWin : "window_id_dummy",
-      url);
+    montarCarga(carga, sizeof carga, url, modoLoad, dolby, hh,
+                expWin[0] ? expWin : "window_id_dummy",
+                ajustes_buffer_preset(), memlog_livre_mb());
+    bufferCustom = strstr(carga, "\"userBufferCtrl\":true") != NULL;
+    if (bufferCustom)
+      montarCarga(cargaBufferPadrao, sizeof cargaBufferPadrao, url, modoLoad,
+                  dolby, hh, expWin[0] ? expWin : "window_id_dummy", 0, 0);
     if (strlen(carga) >= sizeof carga - 1) {
       printf("[video] carga do load nao coube em %zu bytes (URL de %zu): recusando\n",
              sizeof carga, strlen(url));
@@ -2768,7 +2801,8 @@ static int tocarInterno(const char *url, int comDV) {
   if (expWin[0]) expJanelaAplicar();
   if (modoLoad) { printf("[video] modo do load: %d\n", modoLoad); fflush(stdout); }
   msDoLoad = agoraMs();
-  chamarCtx("load", carga, aoCarregar, (void *)(uintptr_t)minhaSessao);
+  if (!chamarCtx("load", carga, aoCarregar, (void *)(uintptr_t)minhaSessao) && bufferCustom)
+    repetirBufferPadrao((void *)(uintptr_t)minhaSessao);
   return 1;
 }
 
