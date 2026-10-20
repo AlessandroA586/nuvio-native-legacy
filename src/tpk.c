@@ -123,11 +123,7 @@ static EGLContext ctx = EGL_NO_CONTEXT;
 static int telaW = 1920, telaH = 1080;
 static int saidaPedida;
 void tpk_pedir_saida(int w, int h) {
-  // Menor que 1080 (o "720p leve") e pedido ao host tambem; sem suporte o
-  // host devolve 1920 e o codigo interno em 720 cobre a diferenca.
-  __atomic_store_n(&saidaPedida, w >= 3840 && h >= 2160 ? 3840 :
-                                  w <= 1280 && h <= 720 ? 1280 : 1920,
-                   __ATOMIC_RELEASE);
+  __atomic_store_n(&saidaPedida, w >= 3840 && h >= 2160 ? 3840 : 1920, __ATOMIC_RELEASE);
 }
 // Read by the host before constructing GLWindow; zero means startup is pending.
 __attribute__((visibility("default")))

@@ -2979,8 +2979,7 @@ float ajustes_tamanho_ajustes(void) {
 // The phone always uses List. Keep the stored TV preference unchanged.
 static int ajLayoutSelecionavel(void) { return !telefoneui_ativo(); }
 static int ajOpcaoDisponivel(int op) {
-  if (op == AJ_AMPLIAR_UI)
-    return painel4k() && !telefoneui_ativo() && valor[AJ_RESOLUCAO] != RES_720;
+  if (op == AJ_AMPLIAR_UI) return painel4k() && !telefoneui_ativo();
   if (op == AJ_ARTE_TOM) return valor[AJ_TEMA] == AJ_TEMA_DINAMICA;
   // Only the selected account's fields are editable. Adding another account
   // never overwrites the credentials of the first one.
@@ -7573,7 +7572,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ESPACO_FILEIRAS: return "O espaço vertical entre uma fileira da Home e a seguinte. Com menos cabem mais fileiras na tela, com mais a Home fica mais arejada.";
     case AJ_ESPACO_TITULOS: return "O espaço horizontal entre os cartazes de uma fileira da Home.";
     case AJ_HDR_INTERFACE: return "HDR experimental para os menus. Branco limitado a 203 nits. Reinicie o app após mudar. Sem suporte, usa SDR.";
-    case AJ_AMPLIAR_UI: return "Em 720p a TV faz a ampliação inteira de graça, então esta opção só aparece nas outras resoluções. Pelo app (4K): usa mais GPU. Reinicie o app depois de mudar.";
+    case AJ_AMPLIAR_UI: return "Pelo app (4K): usa mais GPU. Reinicie o app depois de mudar.";
     case AJ_AUDIO_OFFSET: return "Positivo atrasa; negativo adianta. Só áudio convertido, a partir do próximo vídeo.";
     case AJ_AMPLIACAO_ALGO: return "Como o app amplia a interface para a tela. Automático escolhe sozinho; SGSR nítido e FSR 1 usam mais GPU. Vale na hora.";
     case AJ_AMPLIACAO_NITIDEZ: return "Reforço de contorno do SGSR nítido e do FSR 1. 0 desliga.";

@@ -53,14 +53,7 @@ BASE
    int pedeW=0,pedeH=0,pediu4k=0,autoEst=0,autoPediu=0;
    surfaceW=surfaceH=0;
 CURRENT
-   /* 720p (choice==3) never asks for the 4K surface: it wants the cheapest
-      output the platform has (Android surface 1280x720, others a 720 window). */
-   if (tv && choice==3) {
-    assert(pedeW==1280 && pedeH==720);
-#ifdef NV_ANDROID
-    assert(surfaceW==1280 && surfaceH==720);
-#endif
-   } else if(app && panel==3840 && tv && choice==1) {
+   if(app && panel==3840 && tv && (choice==1 || choice==3)) {
     assert(pedeW==3840 && pedeH==2160);
 #ifdef NV_ANDROID
     assert(surfaceW==3840 && surfaceH==2160);
@@ -82,4 +75,4 @@ with tempfile.TemporaryDirectory(prefix='ui720-surface-') as work:
         binary = Path(work) / platform
         subprocess.run(['cc', '-D' + platform, str(source), '-o', str(binary)], check=True)
         subprocess.run([str(binary)], check=True, stdout=subprocess.DEVNULL)
-        print('PASS', platform, 'integration drawable parity; 720 stays on the TV surface; physical 4K + 1080 desktop requests 2160')
+        print('PASS', platform, 'integration drawable parity; physical 4K + 720/1080 desktop requests 2160')
