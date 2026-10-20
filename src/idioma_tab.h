@@ -6137,7 +6137,7 @@
   { "últimos 200 KB", "last 200 KB" },
   { "“%s” volta em %d das suas histórias.", "“%s” comes back in %d of your stories." },
   { "“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "“Nowhere to read from” and “no lines yet” are different problems; each has its own message." },
-  { "← Nota · → Menu", "← Rating · → Menu" },
+  { "← Menu · → Nota", "← Menu · → Rating" },
   { "← Voltar", "← Back" },
   { "← no primeiro canal: opções do guia", "← on the first channel: guide options" },
   { "← ou Voltar   Categorias", "← or Back   Categories" },

@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "siste 200 KB"),
   T("“%s” volta em %d das suas histórias.", "“%s” kommer tilbake i %d av historiene dine."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "«Ingenting å lese fra» og «ingen linjer ennå» er ulike problemer; hver har sin melding."),
-  T("← Nota · → Menu", "← Vurdering · → Meny"),
+  T("← Menu · → Nota", "← Meny · → Vurdering"),
   T("← Voltar", "← Tilbake"),
   T("← no primeiro canal: opções do guia", "← på første kanal: guidealternativer"),
   T("← ou Voltar   Categorias", "← eller Tilbake   Kategorier"),

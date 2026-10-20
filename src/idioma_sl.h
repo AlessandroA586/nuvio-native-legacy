@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "zadnjih 200 KB"),
   T("“%s” volta em %d das suas histórias.", "„%s“ se vrača v %d vaših zgodbah."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "»Ni od kod brati« in »še ni vrstic« sta različni težavi; vsaka ima svoje sporočilo."),
-  T("← Nota · → Menu", "← Ocena · → Meni"),
+  T("← Menu · → Nota", "← Meni · → Ocena"),
   T("← Voltar", "← Nazaj"),
   T("← no primeiro canal: opções do guia", "← na prvem kanalu: možnosti vodnika"),
   T("← ou Voltar   Categorias", "← ali Nazaj   Kategorije"),

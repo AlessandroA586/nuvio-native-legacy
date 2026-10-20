@@ -29,4 +29,18 @@ if 'GfxRect th = {x, epRowY()-scrollY, epCardW(), epThumbH()};' not in furos:
 for f in fails: print('FAIL:', f)
 print('OK' if not fails else ''); sys.exit(1 if fails else 0)
 EOF
+python3 - <<'EOF'
+from pathlib import Path
+p=Path('src/epcoment.c').read_text(); m=Path('src/episodios.c').read_text()
+d=Path('src/descoberta.c').read_text()
+assert 'int selected=k==filtro;' in p
+assert 'int available[11] = {1}' in p and 'while (!available[filtro])' in p
+assert '{{"→",buf},{"←",i18n("Menu")}}' in p and 'notasui_desenhar_linha(&plano' in p
+assert 'VM_ANTERIOR' not in m and 'VM_PROXIMO' not in m
+assert 'txt_bloco(TXT_ILHA_NOME,vmCab' in m and 'vmTituloEscala' in m
+assert 'gfx_rect(th, t2, GFX_CARD, f,' in Path('src/detail.c').read_text()
+assert 'rating=js_num(p,f,"rating",0.0)' in d
+assert 'ajustes_tmdb_basico() || ajustes_nota_episodio(EX_TMDB)' in d
+print('PASS: episode direction, filter, full title, focus shader and rating data guards')
+EOF
 python3 tests/detail_episode_tint.py

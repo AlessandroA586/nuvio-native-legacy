@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "последните 200 KB"),
   T("“%s” volta em %d das suas histórias.", "„%s“ се връща в %d от вашите истории."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "„Няма откъде да се чете“ и „още няма редове“ са различни проблеми; всеки има свое съобщение."),
-  T("← Nota · → Menu", "← Оценка · → Меню"),
+  T("← Menu · → Nota", "← Меню · → Оценка"),
   T("← Voltar", "← Назад"),
   T("← no primeiro canal: opções do guia", "← на първия канал: опции на ръководството"),
   T("← ou Voltar   Categorias", "← или Назад   Категории"),

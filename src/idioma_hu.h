@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "utolsó 200 KB"),
   T("“%s” volta em %d das suas histórias.", "A(z) „%s” %d történetedben tér vissza."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "„Nincs honnan olvasni” és „még nincs sor” két külön probléma; mindegyiknek saját üzenete van."),
-  T("← Nota · → Menu", "← Értékelés · → Menü"),
+  T("← Menu · → Nota", "← Menü · → Értékelés"),
   T("← Voltar", "← Vissza"),
   T("← no primeiro canal: opções do guia", "← az első csatornán: az útmutató beállításai"),
   T("← ou Voltar   Categorias", "← vagy Vissza   Kategóriák"),

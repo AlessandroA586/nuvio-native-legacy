@@ -8,6 +8,7 @@
 #include "idioma.h"
 #include "ajustes.h"
 #include "js.h"
+#include "notasui.h"
 #include "anim.h"
 #include "layout.h"
 #include "ponteiro.h"
@@ -18,7 +19,7 @@
 #include <time.h>
 
 static char show[64];
-static int temp, episodio, foco, dentro, quantidade, notaImdb;
+static int temp, episodio, foco, dentro, quantidade, notaImdb, notaTmdb;
 static float scroll;
 static int filtro, cardCap;
 static int rawIndex(int pos) {
@@ -53,11 +54,11 @@ void epcoment_abrir(const char *imdb, int t, int e) {
   quantidade = -2; scroll = 0;
   filtro=0;
   if (cards) memset(cards, 0, cardCap*sizeof *cards);
-  notaImdb = 0;
+  notaImdb = notaTmdb = 0;
   int item = cat_indice_por_imdb(show);
   for (int i = 0; item >= 0 && i < cat_n_episodios(item); i++) {
     const CatEp *ep = cat_episodio(item, i);
-    if (ep && ep->temporada == t && ep->episodio == e) { notaImdb = ep->notaImdb; break; }
+    if (ep && ep->temporada == t && ep->episodio == e) { notaImdb = ep->notaImdb; notaTmdb=ep->nota; break; }
   }
   if (ajustes_nota_episodio(EX_IMDB) && !notaImdb) {
     printf("[nuvio] episode IMDb %s S%dE%d: metadata has no per-episode IMDb rating\n", show, t, e);
@@ -100,13 +101,20 @@ int epcoment_evento(const SDL_Event *e) {
   SDL_Keycode k;
   if (!dentro || e->type != SDL_KEYDOWN) return 0;
   k = e->key.keysym.sym;
-  // TV: LEFT cycles All,10..1,All without moving focus into tiny histogram
-  // rows. RIGHT returns to actions; Back closes the modal, including empty filters.
-  if (k == SDLK_LEFT) {
-    if (!e->key.repeat) { filtro = filtro ? filtro-1 : 10; foco=0; scroll=0; }
+  // The menu is left of reviews. Cycle only ratings represented in the list.
+  if (k == SDLK_LEFT) { epcoment_menu(); return 1; }
+  if (k == SDLK_RIGHT) {
+    if (!e->key.repeat) {
+      int available[11] = {1};
+      for (int i=0; i<extras_n_comentarios_ep(); i++) {
+        int rating=extras_comentario_ep_nota(i);
+        if (rating>=1 && rating<=10) available[rating]=1;
+      }
+      do { filtro = filtro ? filtro-1 : 10; } while (!available[filtro]);
+      foco=0; scroll=0;
+    }
     return 1;
   }
-  if (k == SDLK_RIGHT) { epcoment_menu(); return 1; }
   if (k == SDLK_UP || k == SDLK_DOWN) {
     foco += k == SDLK_DOWN ? 1 : -1;
     if (foco >= epcoment_quantidade()) foco = epcoment_quantidade() - 1;
@@ -176,53 +184,62 @@ static void ativar(int i, int b) {
 void epcoment_desenhar(GfxRect r, float a) {
   ExEpNotas notas = {0}; char buf[120];
   int n = epcoment_quantidade();
-  float x = r.x + 28, top = r.y + 240, w = r.w - 56;
+  float x = r.x + 28, top = r.y + 270, w = r.w - 56;
   if (!reservar()) return;
-  ctx_menu_ilha(r, 24, a);
   if (n >= 0) extras_notas_ep(&notas);
   int tmdb=extras_comentarios_ep_tmdb();
   if (notas.nota) snprintf(buf, sizeof buf, idioma_ponto_decimal(ajustes_idioma()) ? "%d.%d" : "%d,%d", notas.nota / 10, notas.nota % 10);
   else snprintf(buf, sizeof buf, "%s", "—");
   float ar,ag,ab; ajustes_acento(&ar,&ag,&ab);
   if (!tmdb) {
-    texto(TXT_AJ_NUM64, buf, x, r.y + 22, a);
-    texto(TXT_G18R, "/ 10", x+124, r.y+65, .58f*a);
-    GLuint mark=tex_obter(extras_caminho_marca(EX_TRAKT));
-    if (mark) { float alpha=gfx_opacidade_grupo; gfx_opacidade_grupo*=a; gfx_textura((GfxRect){x,r.y+108,26,26},mark); gfx_opacidade_grupo=alpha; }
-    texto(TXT_G21B,"Trakt",x+36,r.y+106,.9f*a);
-    texto(TXT_G18R,"·",x+100,r.y+108,.58f*a);
-    char count[40]; idioma_inteiro(ajustes_idioma(),notas.votos,count,sizeof count);
-    snprintf(buf,sizeof buf,i18n("%s votos"),count);
-    texto(TXT_G18R,buf,x+116,r.y+109,.7f*a);
-    int total=0,mode=10;
-    for (int k=1;k<=10;k++) { total+=notas.distribuicao[k]; if (notas.distribuicao[k]>notas.distribuicao[mode]) mode=k; }
+    float scoreW=220;
+    TxtLinha score=txt_linha(TXT_AJ_NUM110,buf,243,242,239,255);
+    float sx=x+(scoreW-score.w*.85f)*.5f;
+    gfx_transformar(sx,r.y+44,.85f,0,0);
+    txt_desenhar_alpha(score,sx,r.y+44,a);
+    gfx_sem_transformar();
+    int total=0;
+    for (int k=1;k<=10;k++) total+=notas.distribuicao[k];
     // Show 10..5 to preserve the existing panel; shares include all ten buckets.
     float bx=x+266,bw=w-332;
-    for (int k=10;k>=5;k--) {
-      float y=r.y+24+(10-k)*27;
-      int selected=notas.distribuicao[k]>0 && k==mode;
+    int high=filtro>0 && filtro<5 ? filtro+5 : 10;
+    for (int k=high;k>=high-5;k--) {
+      float y=r.y+22+(high-k)*28;
+      int selected=k==filtro;
       snprintf(buf,sizeof buf,"%d",k);
-      texto(TXT_G21B,buf,bx-40,y,.85f*a);
-      gfx_cor((GfxRect){bx,y+10,bw,9},.5f,1,1,1,.12f*a);
+      texto(TXT_G18M,buf,bx-18-txt_largura(TXT_G18M,buf),y,.85f*a);
+      gfx_cor((GfxRect){bx,y+7,bw,12},.5f,1,1,1,.08f*a);
       float share=total ? (float)notas.distribuicao[k]/total : 0;
-      if (share>0) gfx_cor((GfxRect){bx,y+10,bw*share,9},.5f,selected?ar:.75f,selected?ag:.76f,selected?ab:.79f,a);
+      if (share>0) gfx_cor((GfxRect){bx,y+7,bw*share,12},.5f,selected?ar:.65f,selected?ag:.67f,selected?ab:.71f,a);
       snprintf(buf,sizeof buf,"%d%%",(int)(share*100+.5f));
-      texto(TXT_G20M,buf,bx+bw+12,y,selected?a:.65f*a);
+      texto(TXT_G18M,buf,x+w-txt_largura(TXT_G18M,buf),y,selected?a:.62f*a);
     }
   } else {
     texto(TXT_G28B,"TMDB",x,r.y+30,a);
     texto(TXT_ILHA_TEXTO,i18n("TMDB · reviews da série"),x,r.y+85,.8f*a);
   }
+  // Bottom row: the title page's rating line on the left, keycaps on the right.
+  // "→" shows the current filter, so the old separate chip is gone.
   if (filtro) snprintf(buf,sizeof buf,i18n("Nota %d/10"),filtro);
   else snprintf(buf,sizeof buf,"%s",i18n("Todas"));
-  float chip=txt_largura(TXT_G18M,buf)+24;
-  gfx_cor((GfxRect){x,r.y+190,chip,30},.5f,ar,ag,ab,.22f*a);
-  texto(TXT_G18M,buf,x+12,r.y+193,a);
-  texto(TXT_G18R,i18n("← Nota · → Menu"),x+chip+18,r.y+193,.62f*a);
-  if (notaImdb && ajustes_nota_episodio(EX_IMDB)) {
-    snprintf(buf, sizeof buf, idioma_ponto_decimal(ajustes_idioma()) ? "%d.%d" : "%d,%d", notaImdb / 10, notaImdb % 10);
-    texto(TXT_G18R, "IMDb", x, top - 70, .8f * a);
-    texto(TXT_G18R, buf, x + 60, top - 70, a);
+  const char *keys[2][2]={{"→",buf},{"←",i18n("Menu")}};
+  float kx=x+w;
+  for (int i=0;i<2;i++) {
+    float kw=txt_largura(TXT_G18M,keys[i][0])+txt_largura(TXT_G18R,keys[i][1])+34;
+    kx-=kw;
+    if (i==0 && filtro) gfx_cor((GfxRect){kx,r.y+208,kw,30},.5f,ar,ag,ab,.28f*a);
+    else gfx_cor((GfxRect){kx,r.y+208,kw,30},.5f,1,1,1,.07f*a);
+    texto(TXT_G18M,keys[i][0],kx+12,r.y+211,.8f*a);
+    texto(TXT_G18R,keys[i][1],kx+22+txt_largura(TXT_G18M,keys[i][0]),r.y+211,(i==0?.95f:.72f)*a);
+    kx-=10;
+  }
+  if (!tmdb) {
+    int cru[EX_NFONTES]={0}; unsigned char querer[EX_NFONTES]={0};
+    cru[EX_TRAKT]=notas.nota*10; querer[EX_TRAKT]=1;
+    cru[EX_IMDB]=notaImdb; querer[EX_IMDB]=ajustes_nota_episodio(EX_IMDB);
+    cru[EX_TMDB]=notaTmdb*10; querer[EX_TMDB]=ajustes_nota_episodio(EX_TMDB);
+    NotasPlano plano; notasui_planejar(&plano,cru,kx-x-10,0,querer);
+    notasui_desenhar_linha(&plano,x,r.y+223,a);
   }
   gfx_cor((GfxRect){x, top - 16, w, 1}, 0, 1, 1, 1, .12f * a);
   if (n <= 0) {
@@ -231,7 +248,7 @@ void epcoment_desenhar(GfxRect r, float a) {
     return;
   }
   if (quantidade != n) { quantidade = n; if (foco >= n) foco = 0; }
-  gfx_recorte(x - 4, top - 4, w + 8, r.h - 260);
+  gfx_recorte(x - 4, top - 4, w + 8, r.h - 290);
   // The worker may append a page after reservar(): draw only reserved cards.
   int pos=-1, total=extras_n_comentarios_ep();
   if (total > cardCap) total = cardCap;
@@ -286,7 +303,7 @@ void epcoment_desenhar(GfxRect r, float a) {
     gfx_cor((GfxRect){x,r.y+r.h-44,w,34},.5f,.08f,.085f,.10f,a);
     texto(TXT_G18R,i18n("Carregando mais comentários…"),x+16,r.y+r.h-39,.85f*a);
   }
-  float track = r.h - 268, thumb = track / n;
+  float track = r.h - 298, thumb = track / n;
   gfx_cor((GfxRect){r.x + r.w - 16, top, 4, track}, 2 / track, 1, 1, 1, .14f * a);
   float fraction = n > 1 ? foco / (float)(n - 1) : 0;
   gfx_cor((GfxRect){r.x + r.w - 16, top + fraction * (track - thumb), 4, thumb}, 2 / thumb, 1, 1, 1, .9f * a);

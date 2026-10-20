@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "ultimi 200 KB"),
   T("“%s” volta em %d das suas histórias.", "“%s” ritorna in %d delle tue storie."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "«Niente da cui leggere» e «ancora nessuna riga» sono problemi diversi; ognuno ha il suo messaggio."),
-  T("← Nota · → Menu", "← Voto · → Menu"),
+  T("← Menu · → Nota", "← Menu · → Voto"),
   T("← Voltar", "← Indietro"),
   T("← no primeiro canal: opções do guia", "← sul primo canale: opzioni della guida"),
   T("← ou Voltar   Categorias", "← o Indietro   Categorie"),

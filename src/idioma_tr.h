@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "son 200 KB"),
   T("“%s” volta em %d das suas histórias.", "“%s”, hikâyelerinin %d tanesinde geri dönüyor."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "“Okunacak yer yok” ile “henüz satır yok” farklı sorunlardır; her birinin kendi iletisi var."),
-  T("← Nota · → Menu", "← Puan · → Menü"),
+  T("← Menu · → Nota", "← Menü · → Puan"),
   T("← Voltar", "← Geri"),
   T("← no primeiro canal: opções do guia", "← ilk kanalda: rehber seçenekleri"),
   T("← ou Voltar   Categorias", "← veya Geri   Kategoriler"),

@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "200 KB terakhir"),
   T("“%s” volta em %d das suas histórias.", "“%s” muncul kembali di %d dari ceritamu."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "“Tidak ada sumber” dan “belum ada baris” adalah masalah berbeda; masing-masing punya pesannya."),
-  T("← Nota · → Menu", "← Nilai · → Menu"),
+  T("← Menu · → Nota", "← Menu · → Nilai"),
   T("← Voltar", "← Kembali"),
   T("← no primeiro canal: opções do guia", "← di kanal pertama: opsi panduan"),
   T("← ou Voltar   Categorias", "← atau Kembali   Kategori"),

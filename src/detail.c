@@ -564,9 +564,8 @@ static int temporada = 0;            // temporada ESCOLHIDA (nao a focada)
 // antes a troca de temporada arrastava o FOCO para o episodio, e com isso o
 // D-pad saia da fileira de abas: nao dava para passar da segunda temporada.
 static int    epAncora = 0;
-static CatEp menuEpAnterior;
-static int menuTemAnterior;
-static const CatEp *menuEpDesenho;
+static RevelaVarre epVarre = {.alvo=-1};
+static float epSheen;
 // Comentarios: 0 = da SERIE, 1 = do EPISODIO. E o seletor que a referencia poe
 // sob "Avaliações do Trakt". Em filme nao existe e fica cravado em 0.
 static int comentEp = 0;
@@ -3628,8 +3627,6 @@ static void detail_atualizar_(float dt, Uint32 agora) {
   episodios_menu_atualizar(dt);   // as molas do menu de visto / painel da temporada
   int menuT,menuE;
   if (aberto && episodios_menu_trocou(&menuT,&menuE)) {
-    const CatEp *previous=cat_episodio(idx,epAbsoluto(foco.coluna));
-    menuTemAnterior=previous!=NULL; if (previous) menuEpAnterior=*previous;
     const CatItem *ci=cat_item(idx);
     for (int i=0;ci && i<ci->nTemporadas;i++) if (ci->temporadas[i]==menuT) {
       if (temporada!=i) irParaTemporada(i,0);
@@ -4015,6 +4012,7 @@ static void detail_atualizar_(float dt, Uint32 agora) {
     okDesceEm = 0;
   }
 
+  epSheen=revela_varre(&epVarre,nivel>=1 && foco.fileira==SEC_EPISODIOS ? foco.coluna : -1,agora);
   for (int r = 0; r < N_SECOES; r++)
     for (int c = 0; c < secaoN(r) && c < N_ITENS; c++) {
       float alvo = (nivel >= 1 && focus_indice(&foco, r, c)) ? 1.0f : 0.0f;
@@ -5558,8 +5556,16 @@ static void desenhaAssistidoEpisodio(GfxRect th, float a) {
                      selo.y + (h - texto.h) * .5f, a);
 }
 
+static void desenhaEpisodioCorpo(GfxRect r, int c, float f, float a, Uint32 agora);
 static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
-  const CatEp *ep = menuEpDesenho ? menuEpDesenho : cat_episodio(idx, epAbsoluto(c));
+  float ft=anim_clamp(f,0,1);
+  // Reuse the focus spring and transform the complete card, including its text.
+  gfx_transformar(r.x+r.w*.5f,r.y+r.h*.5f,1+.035f*ft,0,-8*ft);
+  desenhaEpisodioCorpo(r,c,f,a,agora);
+  gfx_sem_transformar();
+}
+static void desenhaEpisodioCorpo(GfxRect r, int c, float f, float a, Uint32 agora) {
+  const CatEp *ep = cat_episodio(idx, epAbsoluto(c));
   GfxRect th = { r.x, r.y, r.w, epThumbH() };
   float raioTh = NV_DETP_EP_RAIO / epThumbH();
 
@@ -5616,8 +5622,10 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora) {
   if (t2) {
     if (!mergedVeil && aArte < 0.999f) gfx_cor(th, raioTh, 0.133f, 0.133f, 0.133f, a);
     gfx_tex_aspect_atual = tex_aspecto(arte);
-    gfx_rect(th, t2, GFX_CARD, epModerna() ? 0 : f, 0, 0, raioTh,
+    gfx_varre_atual = foco.fileira==SEC_EPISODIOS && c==foco.coluna ? epSheen : 0;
+    gfx_rect(th, t2, GFX_CARD, f, 0, 0, raioTh,
              0, 0, 0, mergedVeil ? a : a * aArte);
+    gfx_varre_atual = 0;
     gfx_tex_aspect_atual = 0.0f;
   } else if (arte && !tex_falhou(arte))
     gfx_esqueleto(th, raioTh, 0.133f, 0.133f, 0.133f, a);
@@ -7258,15 +7266,8 @@ static void menuDeVisto(Uint32 agora) {
   if (menuOrigem.w <= 8.0f) return;
   if (episodios_menu_painel()) desenhaTemporada(menuOrigem, menuOrigemCol, menuOrigemF, menuOrigemA);
   else if (foco.fileira == SEC_EPISODIOS) {
-    int dir; float t=episodios_menu_transicao(&dir), ease=1-(1-t)*(1-t)*(1-t);
-    if (menuTemAnterior && t<1 && !ajustes_animacoes_reduzidas()) {
-      GfxRect old=menuOrigem; old.x-=dir*28*ease;
-      menuEpDesenho=&menuEpAnterior;
-      desenhaEpisodio(old,menuOrigemCol,menuOrigemF,menuOrigemA*(1-ease),agora);
-      menuEpDesenho=NULL;
-    }
-    GfxRect moved=menuOrigem; moved.x+=dir*28*(1-ease);
-    desenhaEpisodio(moved, menuOrigemCol, menuOrigemF, menuOrigemA * anim_clamp(episodios_menu_anim(), 0.0f, 1.0f)*ease, agora);
+    desenhaEpisodio(menuOrigem, menuOrigemCol, menuOrigemF,
+                    menuOrigemA * anim_clamp(episodios_menu_anim(),0,1), agora);
   }
   menuOrigem.w = 0.0f;   // so vale a caixa do quadro em que a peca foi desenhada
 }
@@ -7824,8 +7825,13 @@ static int epFuros(GfxRect *holes) {
     if (!tex_obter_larg(ep->thumb, epCardW())) continue;
     // Translucent/absent panels need the existing page background beneath them.
     GfxRect th = {x, epRowY()-scrollY, epCardW(), epThumbH()};
+    // Match the complete card's focus transform without adding backdrop fill.
+    float ft=anim_clamp(animFoco[SEC_EPISODIOS][c],0,1), scale=1+.035f*ft;
+    th.x-=epCardW()*(scale-1)*.5f;
+    th.y-=epCardH()*(scale-1)*.5f+8*ft;
+    th.w*=scale; th.h*=scale;
     // Keep corners and their antialias fringe; only the solid interior occludes.
-    float inset = NV_DETP_EP_RAIO + 2;
+    float inset = (NV_DETP_EP_RAIO + 2)*scale;
     holes[n++] = (GfxRect){th.x+inset, th.y+2, th.w-2*inset, th.h-4};
     holes[n++] = (GfxRect){th.x+2, th.y+inset, th.w-4, th.h-2*inset};
   }

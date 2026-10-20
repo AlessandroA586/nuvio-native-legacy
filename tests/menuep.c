@@ -62,7 +62,7 @@ static const char *espNota;       // a nota que se procura ("7,4")
 static TxtLinha fx_txt_linha(TxtEstilo estilo, const char *s, int r, int g, int b, int a) {
   if (s && (!strcmp(s, "Trakt") || !strcmp(s, "TMDB"))) espRotuloFonte++;
   if (s && !strcmp(s, "IMDb")) espImdb++;
-  if (s && espNota && !strcmp(s, espNota)) espNotaEstilo = (int)estilo;
+  if (s && espNota && (!strcmp(s, espNota) || (!strcmp(espNota,"7,6") && !strcmp(s,"7.6")))) espNotaEstilo = (int)estilo;
   return txt_linha(estilo, s, r, g, b, a);
 }
 #define txt_linha fx_txt_linha
@@ -79,11 +79,31 @@ int extras_n_comentarios_ep(void);
 #include "epcoment.h"
 #include "rede.h"
 static int epRequests, epRatings, epEmpty, epImdbLabels, epImdbScores, epPaged;
+static int epBarsCheck, epColoredBars, epBarRows;
+void epreview_color(GfxRect rect,float radius,float r,float g,float b,float a) {
+  if (epBarsCheck && rect.h==12 && a>0) {
+    assert(radius==.5f);
+    if (a<.1f) epBarRows++;
+    else if (r!=.65f || g!=.67f || b!=.71f) epColoredBars++;
+  }
+  gfx_cor(rect,radius,r,g,b,a);
+}
+static void checkBars(int selected) {
+  epBarsCheck=1; epColoredBars=epBarRows=0;
+  epcoment_desenhar((GfxRect){1000,350,676,624},1);
+  epBarsCheck=0;
+  assert(epBarRows==6 && epColoredBars==selected);
+}
 char *epcoment_baixar(const char *,int,const char *const *);
 TxtLinha epreview_texto(TxtEstilo estilo, const char *s, int r, int g, int b, int a) {
-  if (s && !strcmp(s, "IMDb")) epImdbLabels++;
-  if (s && (!strcmp(s, "8,7") || !strcmp(s, "8.7"))) epImdbScores++;
+  if (s && !strncmp(s,"IMDb",4)) epImdbLabels++;
+  if (s && (strstr(s,"8,7") || strstr(s,"8.7"))) epImdbScores++;
   return txt_linha(estilo, s, r, g, b, a);
+}
+// The rating row draws IMDb as its badge (notasui.c is built with this hook).
+float epreview_badge_imdb(float x, float y, int nota, int escuro, float a) {
+  if (nota == 87) epImdbScores++;
+  return badge_imdb(x, y, nota, escuro, a);
 }
 static SDL_atomic_t epRelease;
 static int epMode, epPages[8], epTmdbRequests;
@@ -356,7 +376,7 @@ int main(int argc, char **argv) {
     fa = fopen(cam, "w"); assert(fa);
     fprintf(fa, "idioma %d\n", id ? atoi(id) : 0);
 #ifdef NV_TEST_EPCOMENT
-    fprintf(fa, "notaEpisodio 1\n");
+    fprintf(fa, "notaEpisodio 1\nselected_theme 2\nbordaFocoCartaz 1\n");
 #endif
     if (f && *f) fprintf(fa, "fonteInterface %d\n", atoi(f));
     fclose(fa); }
@@ -385,6 +405,9 @@ int main(int argc, char **argv) {
   gfx_icones_dir("deploy/app/art");
   extras_carregar("deploy/app/art");
   ajustes_iniciar();
+#ifdef NV_TEST_EPCOMENT
+  dados_gravar("aparencia-20.txt","1\n");
+#endif
   ajustes_dir(dados_dir());
   gfx_escala_txt_definir(1.0f);
   ponteiro_teste_relogio(agoraFn);
@@ -410,7 +433,7 @@ int main(int argc, char **argv) {
   for (int wait = 0; extras_comentarios_ep_carregando() && wait < 500; wait++) SDL_Delay(2);
   quadros(90); acordar(); quadros(2);
   n = alvosDoMenu(&caixa, lin);
-  CONFERE(n == 8 && epcoment_quantidade() == 2, "Comments row added with episode count 2");
+  CONFERE(n == 6 && epcoment_quantidade() == 2, "Comments row added with episode count 2");
   ExEpNotas ratings; extras_notas_ep(&ratings);
   CONFERE(ratings.nota == 84 && ratings.votos == 1284 && ratings.distribuicao[10] == 600,
           "episode ratings and distribution parsed from Trakt");
@@ -418,6 +441,9 @@ int main(int argc, char **argv) {
           "reply count and spoiler metadata retained");
   tecla(SDL_KEYDOWN, SDLK_RIGHT); tecla(SDL_KEYUP, SDLK_RIGHT); quadros(90);
   gravar("focused");
+  epSheen=-.35f; quadros(1); epSheen=-.35f;
+  gfx_novo_quadro(); txt_novo_quadro(); detail_desenhar(SDL_GetTicks());
+  gravar("focused-sheen");
   CONFERE(episodios_menu_aberto() && epcoment_foco() == 0, "Right enters first comment");
   tecla(SDL_KEYDOWN, SDLK_DOWN); tecla(SDL_KEYUP, SDLK_DOWN); quadros(90);
   gravar("next");
@@ -433,19 +459,19 @@ int main(int argc, char **argv) {
   voltar(); quadros(2);
   CONFERE(!sinopse_aberta() && episodios_menu_aberto() && epcoment_foco() == 1,
           "Back closes reader and preserves episode menu focus");
-  tecla(SDL_KEYDOWN, SDLK_LEFT); tecla(SDL_KEYUP, SDLK_LEFT); quadros(2);
-  CONFERE(epcoment_foco() == 0 && epcoment_quantidade() == 0 && episodios_menu_aberto(), "Left selects rating 10 without leaving reviews");
-  CONFERE(epPaged, "episode comments request includes page and limit");
-  for (int rating=9;rating>=1;rating--) {
-    tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); quadros(1);
-    CONFERE(epcoment_quantidade()==(rating==9 || rating==7),"filter matches exact rating");
-  }
-  tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); quadros(1);
-  CONFERE(epcoment_quantidade()==2,"filter wraps to All including unrated reviews");
-  tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); quadros(2);
-  tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); quadros(60);
+  tecla(SDL_KEYDOWN, SDLK_RIGHT); tecla(SDL_KEYUP, SDLK_RIGHT); quadros(2);
+  CONFERE(epcoment_foco() == 0 && epcoment_quantidade() == 1 && episodios_menu_aberto(), "Right skips empty 10 and selects rating 9");
   gravar("filter-active");
-  tecla(SDL_KEYDOWN, SDLK_RIGHT); tecla(SDL_KEYUP, SDLK_RIGHT);
+  checkBars(1); quadros(1);
+  CONFERE(epPaged, "episode comments request includes page and limit");
+  tecla(SDL_KEYDOWN,SDLK_RIGHT); tecla(SDL_KEYUP,SDLK_RIGHT); quadros(1);
+  CONFERE(epcoment_quantidade()==1,"filter skips empty 8 and selects 7");
+  tecla(SDL_KEYDOWN,SDLK_RIGHT); tecla(SDL_KEYUP,SDLK_RIGHT); quadros(1);
+  CONFERE(epcoment_quantidade()==2,"filter skips empty 6..1 and wraps to All");
+  gravar("all");
+  checkBars(0); quadros(1);
+  tecla(SDL_KEYDOWN, SDLK_LEFT); tecla(SDL_KEYUP, SDLK_LEFT);
+  CONFERE(epcoment_foco()==-1,"Left returns to menu on its left");
   voltar(); quadros(60);
   CONFERE(!episodios_menu_aberto(), "Back closes entire menu from comment list");
   epEmpty = 1;
@@ -453,13 +479,13 @@ int main(int argc, char **argv) {
   for (int wait = 0; extras_comentarios_ep_carregando() && wait < 500; wait++) SDL_Delay(2);
   quadros(90); acordar(); quadros(2);
   gravar("no-comments");
-  CONFERE(alvosDoMenu(&caixa, lin) == 7 && epcoment_quantidade() == 0, "empty episode omits Comments row");
+  CONFERE(alvosDoMenu(&caixa, lin) == 5 && epcoment_quantidade() == 0, "empty episode omits Comments row");
   CONFERE(epRequests == 2 && epRatings == 2, "one comments/ratings fetch per opened episode");
   voltar(); quadros(60);
   CONFERE(ajustes_nota_episodio(EX_IMDB) && !ajustes_nota_episodio(EX_TRAKT) &&
           !ajustes_nota_episodio(EX_TMDB), "notaEpisodio=1 selects only IMDb badges");
   CatEp scored = *cat_episodio(0, 5);
-  scored.notaImdb = 87;
+  scored.notaImdb = 87; scored.nota=76;
   cat_definir_episodios(0, &scored, 1);
   espImdb = 0; espNota = "8,7"; espNotaEstilo = -1;
   desenhaEpisodio((GfxRect){96, 350, 560, 580}, 0, 1, 1, SDL_GetTicks());
@@ -468,7 +494,19 @@ int main(int argc, char **argv) {
   epcoment_abrir(IMDB_SERIE, scored.temporada, scored.episodio);
   epImdbLabels = epImdbScores = 0;
   epcoment_desenhar((GfxRect){1000, 350, 676, 624}, 1);
-  CONFERE(epImdbLabels && epImdbScores, "selected IMDb episode score appears in review panel");
+  CONFERE(epImdbScores, /* the IMDb logo replaced the text label */ "selected IMDb episode score appears in review panel");
+  char settingsPath[700]; snprintf(settingsPath,sizeof settingsPath,"%s/ajustes.txt",dados_dir());
+  FILE *settings=fopen(settingsPath,"w"); assert(settings);
+  fputs("notaEpisodio 3\n",settings); fclose(settings); ajustes_dir(dados_dir());
+  CONFERE(ajustes_nota_episodio(EX_IMDB) && ajustes_nota_episodio(EX_TMDB),"both episode sources selected");
+  espNota="7,6"; espNotaEstilo=-1;
+  desenhaEpisodio((GfxRect){96,350,560,580},0,1,1,SDL_GetTicks());
+  CONFERE(espNotaEstilo>=0,"selected TMDB episode rating appears alongside IMDb");
+  epcoment_abrir(IMDB_SERIE, scored.temporada, scored.episodio);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo); glClearColor(.04f,.04f,.05f,1); glClear(GL_COLOR_BUFFER_BIT);
+  epcoment_desenhar((GfxRect){1000, 350, 676, 624}, 1);
+  gravar("ratings");
+  espNota=NULL;
   scored.notaImdb = 0;
   cat_definir_episodios(0, &scored, 1);
   epcoment_abrir(IMDB_SERIE, scored.temporada, scored.episodio);
@@ -494,23 +532,25 @@ int main(int argc, char **argv) {
   CONFERE(!extras_comentarios_ep_tem_mais(),"short last page stops infinite loading");
   for (int i=0;i<20;i++) extras_comentarios_ep_mais();
   CONFERE(epPages[3]==0,"no request after last page");
-  tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); quadros(2);
+  tecla(SDL_KEYDOWN,SDLK_RIGHT); tecla(SDL_KEYUP,SDLK_RIGHT); quadros(2);
   int countBefore=epcoment_quantidade();
-  SDL_Event held={0}; held.type=SDL_KEYDOWN; held.key.keysym.sym=SDLK_LEFT; held.key.repeat=1;
+  SDL_Event held={0}; held.type=SDL_KEYDOWN; held.key.keysym.sym=SDLK_RIGHT; held.key.repeat=1;
   epcoment_evento(&held);
-  CONFERE(epcoment_quantidade()==countBefore,"held Left does not skip rating filters");
-  for (int i=0;i<10;i++) { tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); }
+  CONFERE(epcoment_quantidade()==countBefore,"held Right does not skip rating filters");
+  for (int i=0;i<9;i++) { tecla(SDL_KEYDOWN,SDLK_RIGHT); tecla(SDL_KEYUP,SDLK_RIGHT); }
   CONFERE(epcoment_quantidade()==9,"All includes every appended review");
-  tecla(SDL_KEYDOWN,SDLK_RIGHT); tecla(SDL_KEYUP,SDLK_RIGHT);
+  tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT);
   for (int i=0;i<12;i++) { tecla(SDL_KEYDOWN,SDLK_UP); tecla(SDL_KEYUP,SDLK_UP); }
   tecla(SDL_KEYDOWN,SDLK_RIGHT); tecla(SDL_KEYUP,SDLK_RIGHT); quadros(20);
   int t1,e1; episodios_menu_fontes(&t1,&e1);
   CONFERE(t1==1 && e1==5 && episodios_menu_aberto(),"header Right switches episode without closing modal");
-  tecla(SDL_KEYDOWN,SDLK_DOWN); tecla(SDL_KEYUP,SDLK_DOWN);
-  for (int i=0;i<5;i++) { tecla(SDL_KEYDOWN,SDLK_DOWN); tecla(SDL_KEYUP,SDLK_DOWN); }
-  tecla(SDL_KEYDOWN,SDLK_RETURN); tecla(SDL_KEYUP,SDLK_RETURN); quadros(20);
+  GfxRect fixedPanel=caixa;
+  episodios_menu_caixa(&fixedPanel);
+  tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT); quadros(20);
   episodios_menu_fontes(&t1,&e1);
-  CONFERE(t1==1 && e1==4 && episodios_menu_aberto(),"Previous episode menu action updates modal");
+  CONFERE(t1==1 && e1==4 && episodios_menu_aberto(),"header Left replaces removed Previous action");
+  GfxRect afterPanel; episodios_menu_caixa(&afterPanel);
+  CONFERE(fabsf(fixedPanel.x-afterPanel.x)<.01f && fabsf(fixedPanel.y-afterPanel.y)<.01f,"context panel stays fixed while row moves");
   tecla(SDL_KEYDOWN,SDLK_RIGHT); tecla(SDL_KEYUP,SDLK_RIGHT); quadros(20);
   CONFERE(foco.coluna==4,"row behind follows selected episode");
   episodios_menu_visto(0,1,10,"Season end");
@@ -529,12 +569,20 @@ int main(int argc, char **argv) {
   tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT);
   phase=episodios_menu_transicao(&direction);
   CONFERE(phase==0 && direction==-1,"episode transition starts in travel direction");
-  quadros(5); phase=episodios_menu_transicao(&direction);
+  SDL_Event repeat={0}; repeat.type=SDL_KEYDOWN; repeat.key.keysym.sym=SDLK_LEFT; repeat.key.repeat=1;
+  float previousScroll=scrollSec[SEC_EPISODIOS];
+  for (int i=0;i<5;i++) { episodios_menu_evento(&repeat); quadros(1); }
+  phase=episodios_menu_transicao(&direction);
+  gravar("transition-out");
   CONFERE(phase>0 && phase<1,"episode crossfade progresses before 180 ms");
+  quadros(3); gravar("transition-in");
+  CONFERE(fabsf(previousScroll-scrollSec[SEC_EPISODIOS])>.01f,"episode row keeps moving during content transition");
   quadros(20); phase=episodios_menu_transicao(&direction);
-  CONFERE(phase==1,"episode crossfade ends after 180 ms");
+  CONFERE(phase==1,"episode crossfade ends after 180 ms under repeated keys");
   voltar(); quadros(20);
-  episodios_menu_visto(0,1,1,"First episode");
+  focar(SEC_EPISODIOS,0);
+  episodios_menu_visto(0,1,1,"The One Where Everybody Discovers What Happened After the Very Long Dinner");
+  quadros(60); gravar("long-title");
   tecla(SDL_KEYDOWN,SDLK_UP); tecla(SDL_KEYUP,SDLK_UP);
   tecla(SDL_KEYDOWN,SDLK_LEFT); tecla(SDL_KEYUP,SDLK_LEFT);
   episodios_menu_fontes(&t1,&e1);

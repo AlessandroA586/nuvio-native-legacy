@@ -6137,7 +6137,7 @@
   T("últimos 200 KB", "ultimii 200 KB"),
   T("“%s” volta em %d das suas histórias.", "„%s” revine în %d dintre poveștile tale."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "„Nu există de unde citi” și „încă nu există linii” sunt probleme diferite; fiecare are mesajul său."),
-  T("← Nota · → Menu", "← Notă · → Meniu"),
+  T("← Menu · → Nota", "← Meniu · → Notă"),
   T("← Voltar", "← Înapoi"),
   T("← no primeiro canal: opções do guia", "← pe primul canal: opțiunile ghidului"),
   T("← ou Voltar   Categorias", "← sau Înapoi   Categorii"),

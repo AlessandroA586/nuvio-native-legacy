@@ -48,6 +48,7 @@ Uint32 SDL_GetTicks(void) { return 0; }
 // traz — e mais os que este teste ja tinha)
 int         ajustes_idioma_ingles(void) { return 0; }
 int ajustes_idioma(void) { return 0; }
+int ajustes_fonte_biblioteca(void) { return 0; }
 int   ajustes_cw_concluido(void)         { return 90; }  // factory "watched" threshold
 int   ajustes_cw_minimo(void)             { return 1; }
 unsigned recomenda_geracao(void)         { return 0; }   // social generation: no social layer here
@@ -101,6 +102,7 @@ void  SDL_Delay(Uint32 ms)                 { usleep(ms * 1000); }
 int   ajustes_cw_fonte(void)               { return 0; }
 int   ajustes_tmdb_ligado(void)            { return 1; }
 int   ajustes_tmdb_basico(void)            { return 0; }
+int   ajustes_nota_episodio(int fonte)     { (void)fonte; return 1; }
 int   ajustes_meta_externo(void)           { return 0; }
 int   ajustes_meta_so_cinemeta(void)        { return 0; }
 int   ajustes_fundo_addon(void)            { return 0; }
@@ -238,6 +240,9 @@ char *rede_baixar(const char *u, int t) {
 }
 char *rede_baixar_com(const char *u, int t, const char *const *c) {
   (void)c; return rede_baixar(u, t); }
+char *rede_baixar_st(const char *u,int t,const char *const *c,int *status) {
+  (void)c; if (status) *status=200; return rede_baixar(u,t);
+}
 
 // cat_acrescentar publica a reserva junto com o item. Este espião deixa o
 // teste provar os dois campos sem depender de rede ou de uma implementação de
@@ -761,11 +766,11 @@ int main(void) {
     CatEp eps556[3]; EpSet tempos556 = {0};
     const char *ratings = "{\"imdbRating\":9.9,\"videos\":["
       "{\"season\":1,\"episode\":1,\"imdbRating\":\"9.2\"},"
-      "{\"season\":1,\"episode\":2},"
+      "{\"season\":1,\"episode\":2,\"rating\":\"7.4\"},"
       "{\"season\":1,\"episode\":3,\"imdbRating\":11}]}";
     assert(parsearEpisodios(ratings, eps556, 3) == 3);
     assert(eps556[0].notaImdb == 92 && eps556[0].nota == 0);
-    assert(eps556[1].notaImdb == 0 && eps556[2].notaImdb == 0);
+    assert(eps556[1].notaImdb == 74 && eps556[2].notaImdb == 0);
     { CatEp merged = {0};
       merged.temporada = merged.episodio = 1;
       desc_mesclar_episodios(&merged, 1, eps556, 3, DESC_MESCLA_VAZIOS);

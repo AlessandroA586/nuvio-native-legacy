@@ -6138,7 +6138,7 @@
   T("últimos 200 KB", "paskutiniai 200 KB"),
   T("“%s” volta em %d das suas histórias.", "„%s“ kartojasi %d jūsų istorijų."),
   T("“Não há de onde ler” e “ainda não há linha” são problemas diferentes; cada um tem a sua frase.", "„Nėra iš kur skaityti“ ir „eilučių dar nėra“ yra skirtingos problemos; kiekviena turi savo pranešimą."),
-  T("← Nota · → Menu", "← Įvertis · → Meniu"),
+  T("← Menu · → Nota", "← Meniu · → Įvertis"),
   T("← Voltar", "← Atgal"),
   T("← no primeiro canal: opções do guia", "← ties pirmu kanalu: vadovo parinktys"),
   T("← ou Voltar   Categorias", "← arba Atgal   Kategorijos"),
