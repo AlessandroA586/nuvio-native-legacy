@@ -452,6 +452,9 @@ namespace NuvioTpk
                 () => Quadro(),
                 () => Etapa("note glview terminate callback" + Contagem()));
             glView.RenderingMode = GLRenderingMode.Continuous;
+            // GLView's mode does not keep its owning DALi window updating.
+            // A static video hole must still get frames between watchdog ticks.
+            NuiWindow.Instance.RenderingBehavior = RenderingBehaviorType.Continuously;
             NuiWindow.Instance.KeyEvent += (s, e) => Tecla(e.Key, "main");
             NuiWindow.Instance.Add(glView);
             Etapa("note glview created size=" + W + "x" + H + " format=RGBA8888 mode=Continuous" + Contagem());
