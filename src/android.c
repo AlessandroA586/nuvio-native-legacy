@@ -66,6 +66,14 @@ void android_baixar_registro(const char *arquivo, const char *sucesso, const cha
   (*env)->DeleteLocalRef(env, act);
 }
 
+JNIEXPORT void JNICALL
+Java_space_nuvio_nativelegacy_NuvioActivity_nativeCheckpoint(JNIEnv *env, jobject act) {
+  (void)env; (void)act;
+  SDL_Event e = {0};
+  e.type = SDL_APP_WILLENTERBACKGROUND;
+  SDL_PushEvent(&e);
+}
+
 #ifdef NV_TOUCH_UI
 static SDL_atomic_t toqueCancelEvento;
 

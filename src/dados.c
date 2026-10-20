@@ -11,6 +11,7 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <pthread.h>
 #ifndef __EMSCRIPTEN__
 #include <ifaddrs.h>
@@ -542,8 +543,23 @@ static int gravarInterno(const char *nome, const char *conteudo, int leve) {
   if (!f) { NV_FS_LIBERAR(); return 0; }
   n = conteudo ? strlen(conteudo) : 0;
   if (n && fwrite(conteudo, 1, n, f) != n) { fclose(f); remove(tmp); NV_FS_LIBERAR(); return 0; }
+  // Progress must survive power loss, including the directory entry rename.
+#ifndef __EMSCRIPTEN__
+  int durable = !strcmp(nome, "progresso.txt");
+  if (durable && (fflush(f) != 0 || fsync(fileno(f)) != 0)) {
+    fclose(f); remove(tmp); NV_FS_LIBERAR(); return 0;
+  }
+#endif
   if (fclose(f) != 0) { remove(tmp); NV_FS_LIBERAR(); return 0; }
   if (rename(tmp, caminho) != 0) { remove(tmp); NV_FS_LIBERAR(); return 0; }
+#ifndef __EMSCRIPTEN__
+  if (durable) {
+    int fd = open(dir, O_RDONLY | O_DIRECTORY);
+    int ok = fd >= 0 && fsync(fd) == 0;
+    if (fd >= 0) close(fd);
+    if (!ok) { NV_FS_LIBERAR(); return 0; }
+  }
+#endif
   NV_FS_LIBERAR();
 #ifdef __EMSCRIPTEN__
   if (leve) sujoLeve = 1; else sujo = 1;
