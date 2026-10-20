@@ -99,6 +99,11 @@ static void foto(const char *nome, SDL_Window *w) {
       assert(pix && s);
       glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, pix);
       for (y = 0; y < 1080; y++) memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
+      if (!overlay && player_mini_no_guia_ativo() &&
+          strcmp(guia_id_focado(), previewId)) {
+        unsigned char *p = (unsigned char *)s->pixels + 240 * s->pitch + 1800 * 4;
+        assert(p[3] == 255); // Retained video from another channel stays covered.
+      }
       if (player_mini_no_guia_ativo()) {
         // Composite the fixture behind the real transparent video hole on Mac.
         SDL_Surface *frame = IMG_Load(getenv("NUVIO_SHOT_ARTE"));
@@ -292,12 +297,15 @@ int main(int argc, char **argv) {
       float right = G_AREA_DIR - txt_linha(TXT_CALLOUT, "23:59", 255, 255, 255, 255).w - 36;
       gTopoAjustar(widths, xs, right);
       float titleRight = G_AREA_X + txt_linha(TXT_ILHA_TITULO, i18n("Guia TV"), 255, 255, 255, 255).w;
-      assert(xs[0] >= titleRight + 31);
-      for (int chip = 0; chip < G_TOPO_N; chip++) {
+      assert(xs[0] == G_AREA_X && titleRight < right);
+      assert(G_CHIPS_Y >= G_TOPO_Y + G_TOPO_H + 12);
+      for (int chip = 0; chip < G_TOPO_PRIMARIOS; chip++) {
         float icon = chip == G_TOPO_PREVIEW ? 20 :
                      (chip == G_TOPO_BUSCAR || chip == G_TOPO_CATEGORIAS) ? 26 : 0;
+        if (widths[chip] <= 2 * G_CHIP_PAD + icon)
+          fprintf(stderr, "header language=%d chip=%d width=%.1f text=%s area=%.1f\n", lang, chip, widths[chip], labels[chip], G_INFO_W);
         assert(widths[chip] > 2 * G_CHIP_PAD + icon);
-        assert(xs[chip] + widths[chip] <= right + 0.1f);
+        assert(xs[chip] + widths[chip] <= G_INFO_X + G_INFO_W + 0.1f);
         if (chip) assert(xs[chip] >= xs[chip - 1] + widths[chip - 1]);
       }
     }
@@ -326,6 +334,9 @@ int main(int argc, char **argv) {
     snprintf(nome, sizeof nome, "%s-guia.png", argv[1]); foto(nome, w);
     modoLista = 1;
     snprintf(nome, sizeof nome, "%s-lista.png", argv[1]); foto(nome, w);
+    focoLin = 0; focoCol = 1;
+    snprintf(nome, sizeof nome, "%s-outro-canal.png", argv[1]); foto(nome, w);
+    assert(video_tocando() && player_mini_no_guia_ativo());
   }
   return 0;
 }

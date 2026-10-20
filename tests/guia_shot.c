@@ -90,7 +90,8 @@ static void capturaTela(const char *nome, SDL_Window *win, int comCanais) {
     tex_novo_quadro();
     tex_bombear(6);
     gfx_novo_quadro();
-    glClearColor(0.051f, 0.051f, 0.051f, 1.0f);
+    // A hostile underlying Home color must never survive preview-off rendering.
+    glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     guia_desenhar(SDL_GetTicks());
     glem_desenhar(SDL_GetTicks());
@@ -106,7 +107,11 @@ static void capturaTela(const char *nome, SDL_Window *win, int comCanais) {
       for (y = 0; y < 1080; y++)
         memcpy((char *)s->pixels + y * s->pitch,
                pix + (1079 - y) * 1920 * 4, 1920 * 4);
-      assert(SDL_SaveBMP(s, nome) == 0);
+      if (!previewLigado && !player_mini_no_guia_ativo()) {
+        unsigned char *p = (unsigned char *)s->pixels + 240 * s->pitch + 1800 * 4;
+        assert(p[3] == 255 && p[0] < 100 && p[2] < 100);
+      }
+      assert((strstr(nome, ".png") ? IMG_SavePNG(s, nome) : SDL_SaveBMP(s, nome)) == 0);
       SDL_FreeSurface(s);
       free(pix);
     }
@@ -244,10 +249,13 @@ static void semearGuia(void) {
     assert(!guia_m3u_canal(canais[2].id, u, sizeof u, ua, sizeof ua, rf, sizeof rf));
     canais[2].id = "m3u:canaisabertos:0";
     assert(!guia_e_m3u(canais[2].id)); // Add-on IDs keep the add-on stream resolver.
+    int tipoAntes = ltvF[canais[2].fonte].tipo;
+    ltvF[canais[2].fonte].tipo = LTV_M3U;
     canais[2].id = "m3u:m1234abcd:0000beef"; canais[2].url = "http://exemplo.invalid/c.m3u8";
     canais[2].ua = "VLC/3.0"; canais[2].ref = "";
     assert(guia_e_m3u(canais[2].id) && guia_m3u_canal(canais[2].id, u, sizeof u, ua, sizeof ua, rf, sizeof rf));
     assert(!strcmp(u, "http://exemplo.invalid/c.m3u8") && !strcmp(ua, "VLC/3.0") && !rf[0]);
+    ltvF[canais[2].fonte].tipo = tipoAntes;
     canais[2].id = idAntes; canais[2].url = urlAntes; canais[2].ua = uaAntes; canais[2].ref = refAntes; }
 }
 
@@ -295,9 +303,86 @@ int main(int argc, char **argv) {
   gfx_icones_dir("deploy/app/art");
   badges_carregar("deploy/app/art");   // marcas de resolucao no heroi; no app quem faz e home.c
 
+  if (argc > 2 && !strcmp(argv[2], "header")) {
+    const char *dir = getenv("NUVIO_DADOS");
+    char settings[600];
+    snprintf(settings, sizeof settings, "%s/ajustes.txt", dir);
+    semearGuia();
+    aberta = 1; entrada = heroA = 1; overlay = 0;
+    modoLista = 0; previewLigado = 0; previewLido = modoLido = 1;
+    focoLin = 0; focoCol = 2; focoTopo = focoFontes = 0;
+    SDL_Event e = {0}; e.type = SDL_KEYDOWN;
+    for (int lang = 0; lang < IDIOMA_N; lang++) {
+      FILE *f = fopen(settings, "w"); assert(f);
+      fprintf(f, "idioma %d\nidiomaAutoLocal 0\n", lang); fclose(f);
+      ajustes_dir(dir); txt_novo_quadro();
+      const char *labels[G_TOPO_N]; float widths[G_TOPO_N], xs[G_TOPO_N];
+      gTopoRotulos(labels); gTopoLarguras(labels, widths);
+      gTopoAjustar(widths, xs, G_INFO_X + G_INFO_W);
+      assert(xs[0] == G_AREA_X);
+      for (int i = 0; i < G_TOPO_PRIMARIOS; i++) {
+        float icon = i <= G_TOPO_CATEGORIAS ? 26 : 0;
+        assert(widths[i] > 2 * G_CHIP_PAD + icon);
+        assert(xs[i] + widths[i] <= G_INFO_X + G_INFO_W + .1f);
+        if (i) assert(xs[i] >= xs[i-1] + widths[i-1] + (i == G_TOPO_LISTA ? 0 : 11.9f));
+      }
+    }
+    // UP reaches chips directly even when the sources bar is visible.
+    for (int mode = 0; mode < 2; mode++) {
+      modoLista = mode; focoLin = focoCol = focoTopo = focoFontes = dirSeg = 0;
+      e.key.keysym.sym = SDLK_UP; guia_evento(&e);
+      assert(focoTopo && !focoFontes);
+      e.key.keysym.sym = SDLK_LEFT;
+      for (int i = 0; i < G_TOPO_PRIMARIOS; i++) guia_evento(&e);
+      assert(topoCol == G_TOPO_BUSCAR);
+      e.key.keysym.sym = SDLK_RIGHT;
+      for (int i = 0; i < G_TOPO_PRIMARIOS; i++) guia_evento(&e);
+      assert(topoCol == G_TOPO_OPCOES);
+      e.key.keysym.sym = SDLK_RETURN; guia_evento(&e);
+      assert(opcoesAberto && opcoesFoco == G_TOPO_ADDONS);
+      e.key.keysym.sym = SDLK_ESCAPE; guia_evento(&e);
+      assert(!opcoesAberto && aberta && focoTopo && topoCol == G_TOPO_OPCOES);
+    }
+    // Each entry dispatches its existing action; clear defaults to cancel.
+    for (int action = G_TOPO_ADDONS; action <= G_TOPO_PREVIEW; action++) {
+      e.key.keysym.sym = SDLK_RETURN; guia_evento(&e);
+      e.key.keysym.sym = SDLK_DOWN;
+      for (int i = G_TOPO_ADDONS; i < action; i++) guia_evento(&e);
+      assert(opcoesFoco == action);
+      e.key.keysym.sym = SDLK_RETURN; guia_evento(&e);
+      assert(!opcoesAberto);
+      if (action == G_TOPO_ADDONS) assert(painel && !paModo);
+      if (action == G_TOPO_FILTROS) assert(painel && paModo == 1);
+      if (action == G_TOPO_DIAG) assert(guia_pediu_livetv_diag());
+      if (action == G_TOPO_LIMPAR) assert(limparConfirm && limparFoco == 1);
+      if (action == G_TOPO_PREVIEW) assert(previewLigado);
+      if (painel || limparConfirm) {
+        e.key.keysym.sym = SDLK_ESCAPE; guia_evento(&e);
+      }
+      assert(aberta);
+    }
+    previewLigado = 0; previewParar();
+    modoLista = 0; focoLin = 0; focoCol = 2; focoTopo = focoFontes = 0;
+    for (int capture = 0; capture < 3; capture++) {
+      FILE *f = fopen(settings, "w"); assert(f);
+      fprintf(f, "idioma %d\nidiomaAutoLocal 0\n", capture == 2 ? 0 : IDIOMA_EN); fclose(f);
+      ajustes_dir(dir);
+      opcoesAberto = capture == 1; opcoesFoco = G_TOPO_PREVIEW;
+      focoTopo = opcoesAberto; topoCol = G_TOPO_OPCOES;
+      for (int i = 0; i < G_TOPO_N; i++) animTopo[i] = 0;
+      snprintf(nome, sizeof nome, "%s/depois-guia%s.png", saida,
+               capture == 1 ? "-opcoes" : capture == 2 ? "-ptbr" : "");
+      capturaTela(nome, w, 1);
+    }
+    puts("PASS: all UI languages fit four header groups; UP/arrows/Options/Back and five actions.");
+    tex_encerrar(); txt_encerrar(); gfx_encerrar();
+    SDL_GL_DeleteContext(gl); SDL_DestroyWindow(w); SDL_Quit();
+    return 0;
+  }
+
   if (getenv("NUVIO_GUIALIMPA_SHOT")) {
     semearGuia(); aberta = 1; entrada = 1; overlay = 0;
-    focoTopo = 1; topoCol = G_TOPO_LIMPAR;
+    focoTopo = 1; topoCol = G_TOPO_OPCOES; opcoesAberto = 1; opcoesFoco = G_TOPO_LIMPAR;
     snprintf(nome, sizeof nome, "%s-action.bmp", saida); capturaTela(nome, w, 1);
     limparConfirm = 1; limparFoco = 1;
     snprintf(nome, sizeof nome, "%s-confirm.bmp", saida); capturaTela(nome, w, 1);
@@ -430,16 +515,16 @@ int main(int argc, char **argv) {
   capturaTela(nome, w, 1);
   fopAberto = 0;
   focoLin = 0; focoCol = 1; rolL = 0.0f; focoAnelOk = 0;
-  focoTopo = 1; topoCol = G_TOPO_PREVIEW; animTopo[G_TOPO_PREVIEW] = 1.0f;
+  focoTopo = 1; topoCol = G_TOPO_OPCOES; animTopo[G_TOPO_OPCOES] = 1.0f;
   snprintf(nome, sizeof nome, "%s-lista-topo.bmp", saida);
   capturaTela(nome, w, 1);
-  focoTopo = 0; animTopo[G_TOPO_PREVIEW] = 0.0f;
+  focoTopo = 0; animTopo[G_TOPO_OPCOES] = 0.0f;
 
   // Barra de cima, cada botao em foco (W18): NUVIO_SHOT_TOPO=1; tema/material
   // pelo ambiente (NUVIO_SHOT_TEMA = selected_theme, NUVIO_SHOT_SOLIDO).
   if (getenv("NUVIO_SHOT_TOPO")) {
     int k;
-    for (k = 0; k < G_TOPO_N; k++) {
+    for (k = 0; k < G_TOPO_PRIMARIOS; k++) {
       int j;
       for (j = 0; j < G_TOPO_N; j++) animTopo[j] = 0.0f;
       focoTopo = 1; topoCol = k; animTopo[k] = 1.0f; focoAnelOk = 0;
