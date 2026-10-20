@@ -15,6 +15,8 @@ None recorded yet.
 
 ## Fixes
 
+- **Posters follow metadata language changes**: Refresh cached catalog posters when the metadata language changes so browsing artwork follows the new selection. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `21dc9f41f`, merge `564b557e2`.
+- **Clearer frame-rate overlay**: Label the performance overlay as UI fps so its interface frame rate is distinguishable from video playback cadence. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `15af443d8`, merge `84eae41cf`.
 - **Custom posters across catalogs**: Apply configured poster services consistently across browsing surfaces and support shape-dependent URL templates. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `a25def053`, merge `c450d139d`; authenticated service rendering still needs device validation.
 - **Expanded-card trailers fill their frame**: Keep focused-card trailer placement in its own coordinate space so video fills expanded artwork at different text scales. Platforms: webOS, Android, Samsung .tpk. Refs owner request, `8271a8dbb`, merge `a4d52842e`.
 
@@ -54,7 +56,7 @@ No external contribution recorded in the supplied commits since `v2.0.7`.
 - **C9 artwork comparison**: Verify native C9 artwork against the earlier rendering baseline while preserving both capture modes. Platforms: webOS; host verification. Refs `bdc7d7c8c`, merge `d072c891b`.
 
 - **Browser build link fix**: Restore the browser build's missing network-function stub so Samsung browser packages can link successfully. Platforms: Samsung browser/WASM. Refs `b84091f4c`.
-- **Issue tracking**: Keep release and issue tracking current. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `89b48afe7`, `12bedced8`, `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`.
+- **Issue tracking**: Keep release and issue tracking current. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `609ed3cc3`, `ad6ec6fb9`, `89b48afe7`, `12bedced8`, `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`.
 
 ## Pending (not integrated yet)
 
@@ -65,3 +67,19 @@ Earlier report named `agente/205-i429hbs` (#429), `agente/205-p2pusb` (#334, #50
 - **Torrent engine follow-up**: Further torrent-engine work remains outside integration and needs review of the newer fix log before its user-visible scope can be confirmed. Platforms: confirm from review before release. Refs `agente/p2p`; current `open.txt` and review snapshot.
 
 Other open branches are historical work or deferred plans; see the tracking map and external `estado.md`. No new feature or external contributor credit is inferred from branch names.
+
+- **Distinct AIOStreams instances**: Keep instances distinct by transport URL; final behavior awaits review and integration. Platforms: confirm from review before release. Refs owner request, `agente/205-205-aiomulti`.
+
+- **Artwork loading retries**: Keep visible artwork from repeatedly disappearing and reloading; final behavior awaits review and integration. Platforms: confirm from review before release. Refs owner request, `agente/205-205-imgloop`.
+
+- **Live TV automatic quality**: Correct automatic HLS quality selection and unreliable speed advice; final behavior awaits review and integration. Platforms: confirm from review before release. Refs owner request, `agente/205-205-livetv720`.
+
+- **Player frame-rate handling**: Keep visible player menus and overlays rendering smoothly; final behavior awaits review and integration. Platforms: confirm from review before release. Refs owner request, `agente/205-205-playerfps`.
+
+- **Plugin source labels**: Preserve source titles alongside descriptions; final behavior awaits review and integration. Platforms: confirm from review before release. Refs owner request, `agente/205-205-plugmeta`.
+
+- **Top ranking controls**: Restore missing configured TOP X catalogs; final behavior awaits review and integration. Platforms: confirm from review before release. Refs owner request, `agente/205-205-topx`.
+
+- **Android tunneled playback**: Offer an optional Android hardware audio/video synchronization setting, disabled by default; final behavior awaits review and integration. Platforms: confirm from review before release. Refs owner request, `agente/205-205-tunnel`.
+
+- **Dolby Vision playback follow-up**: Update Dolby Vision playback handling; final behavior awaits review and integration. Platforms: confirm from review before release. Refs owner request, `agente/205-205-dv7matis`.
