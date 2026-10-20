@@ -51,7 +51,7 @@
 #endif
 #ifndef P2PM_DURO_MAX_MB   // teto DURO absoluto da pasta; nunca > 1/2 do livre ao subir
 #ifdef NV_ANDROID
-#define P2PM_DURO_MAX_MB 60
+#define P2PM_DURO_MAX_MB 192 // 160 MiB streaming window plus 32 MiB headroom
 #else
 #define P2PM_DURO_MAX_MB 1536
 #endif

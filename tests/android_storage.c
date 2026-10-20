@@ -37,6 +37,13 @@ int main(int argc, char **argv) {
   for(unsigned i=0;i<sizeof keep/sizeof *keep;i++) { snprintf(p,sizeof p,"%s/%s",data,keep[i]); struct stat st; assert(!stat(p,&st)&&st.st_size==123); }
   assert(nv_android_cache_name("plugins-c-123.txt"));
   assert(nv_android_cache_name("tendencia/123.txt"));
+  assert(nv_android_cache_name("atualizacao"));
+  assert(nv_android_cache_name("atualizacao/Nuvio-2.0.7.apk"));
+  assert(!nv_android_cache_name("atualizacao/../accounts.txt"));
+  assert(!nv_android_cache_name("atualizacao-other/Nuvio.apk"));
+  snprintf(p,sizeof p,"%s/atualizacao",root); assert(!mkdir(p,0700));
+  snprintf(p,sizeof p,"%s/atualizacao/Nuvio-2.0.7.apk",root); file(p,123,1);
+  nv_android_cache_migrate(data); assert(!access(p,F_OK));
   assert(!nv_android_cache_name("plugins-p1.txt"));
   assert(!nv_android_cache_name("guia-favoritos-p1.txt"));
   assert(!nv_android_cache_name("../accounts.txt"));

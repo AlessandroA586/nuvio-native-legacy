@@ -26,7 +26,7 @@ int nv_android_cache_name(const char *n) {
       !strcmp(n,"negcache.txt") || !strcmp(n,"corviva.txt") ||
       !strcmp(n,"loc-texto.txt") || !strcmp(n,"queda.txt") ||
       !strcmp(n,"queda-nativa.txt")) return 1;
-  const char *subdirs[]={"trailer/","extras/","fontes/","legendas/","tendencia/"};
+  const char *subdirs[]={"atualizacao/","trailer/","extras/","fontes/","legendas/","tendencia/"};
   for (unsigned i=0;i<sizeof subdirs/sizeof *subdirs;i++)
     if (!strncmp(n,subdirs[i],strlen(subdirs[i]))) return 1;
   for (unsigned i=0;i<sizeof prefix/sizeof *prefix;i++)
