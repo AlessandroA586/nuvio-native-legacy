@@ -600,7 +600,7 @@ static void recomendar(void) {
   } else if (!L.kbpsDoSegmento) L.rec.resolucao = 0;   // .ts continuo: taxa do canal, nao da rede
   // Busy accounts and explicit throttling cannot measure network capacity.
   L.vazaoIncerta = L.conta.valido && L.conta.maxConexoes > 0 &&
-                   L.conta.conexoes > L.conta.maxConexoes;
+                   L.conta.conexoes >= L.conta.maxConexoes;
   for (i = 0; i < L.n; i++)
     for (f = 0; f < 2; f++) {
       int http = L.it[i].f[f].http;
