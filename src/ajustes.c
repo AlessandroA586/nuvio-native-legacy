@@ -2735,6 +2735,10 @@ static int perfilSeguro;
 static int saidaLimitada;
 void ajustes_ui_saida(int w, int h) { saidaLimitada = w > 0 && h > 0 && (w < 3840 || h < 2160); }
 int ajustes_ampliar_app(void) { return painel4k() && valor[AJ_AMPLIAR_UI] == 1 && !SEGURO; }
+// #205: a escolha so tem efeito com a resolucao em 1080p/720p (main.c
+// uiMenor4k). Na Automatica e na 4K quem amplia e a TV. O valor gravado NAO
+// muda: voltar a 1080p restaura a escolha da pessoa.
+static int ampliarUiVale(void) { return ajustes_720p() || ajustes_1080p(); }
 int ajustes_ampliacao_algo(void)    { return valor[AJ_AMPLIACAO_ALGO]; }
 int ajustes_ampliacao_nitidez(void) { return valor[AJ_AMPLIACAO_NITIDEZ]; }
 int ajustes_1080p(void)               { return valor[AJ_RESOLUCAO] == RES_1080 && !SEGURO; }
@@ -6951,7 +6955,7 @@ static int inativa(int op) {
   if (ajustes_fonte_prioridade() == 3 &&
       (op == AJ_FONTE_AUTO || op == AJ_FONTE_GRUPO || op == AJ_FONTE_GRUPO_SESSOES || op == AJ_LINK_REUSAR || op == AJ_LINK_PRAZO)) return 1;
   switch (op) {
-    case AJ_AMPLIAR_UI: return !gpun_upscale_suportado();
+    case AJ_AMPLIAR_UI: return !gpun_upscale_suportado() || !ampliarUiVale();
     case AJ_VIDRO_CONTORNO: case AJ_FOCO_ACENTO: case AJ_VIDRO_OPAC: case AJ_VIDRO_FOSCO: case AJ_VIDRO_QUALIDADE: return !lig(AJ_VIDRO);
     case AJ_RAIL:         return ajustes_rail_moderna();
     case AJ_MENU_TOPO:    return ajustes_home_layout() == HOME_LAYOUT_DINAMICA;
@@ -7224,6 +7228,8 @@ static const char *ajudaOpcaoBase(int op) {
     // com elas ("Espera pelos add-ons" mandava ligar o Efeito de profundidade).
     if (op == AJ_SEEKR_FITA || op == AJ_SEEKR_AJUSTE)
       return "Ative Miniaturas na barra de tempo para ajustar as miniaturas.";
+    if (op == AJ_AMPLIAR_UI && !ampliarUiVale())
+      return "Na resolução Automática ou 4K quem amplia a interface é a TV. A escolha fica guardada e volta a valer em 1080p ou 720p.";
     if (op == AJ_SELOS_PACOTE_REM)
       return "Só dá para remover um pacote que foi adicionado nesta TV.";
     if (op == AJ_URL_REM)
@@ -7572,7 +7578,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_ESPACO_FILEIRAS: return "O espaço vertical entre uma fileira da Home e a seguinte. Com menos cabem mais fileiras na tela, com mais a Home fica mais arejada.";
     case AJ_ESPACO_TITULOS: return "O espaço horizontal entre os cartazes de uma fileira da Home.";
     case AJ_HDR_INTERFACE: return "HDR experimental para os menus. Branco limitado a 203 nits. Reinicie o app após mudar. Sem suporte, usa SDR.";
-    case AJ_AMPLIAR_UI: return "Pelo app (4K): usa mais GPU. Reinicie o app depois de mudar.";
+    case AJ_AMPLIAR_UI: return "Só vale com a resolução em 1080p ou 720p: o app amplia a interface para a tela (usa mais GPU). Na Automática e na 4K quem amplia é a TV. Reinicie o app depois de mudar.";
     case AJ_AUDIO_OFFSET: return "Positivo atrasa; negativo adianta. Só áudio convertido, a partir do próximo vídeo.";
     case AJ_AMPLIACAO_ALGO: return "Como o app amplia a interface para a tela. Automático escolhe sozinho; SGSR nítido e FSR 1 usam mais GPU. Vale na hora.";
     case AJ_AMPLIACAO_NITIDEZ: return "Reforço de contorno do SGSR nítido e do FSR 1. 0 desliga.";
@@ -7683,7 +7689,7 @@ static const char *ajudaOpcaoBase(int op) {
 static const char *ajudaOpcao(int op) {
   const char *base = ajudaOpcaoBase(op);
   static char b[2048];
-  if (op == AJ_AMPLIAR_UI && saidaLimitada) {
+  if (op == AJ_AMPLIAR_UI && saidaLimitada && ampliarUiVale()) {
     snprintf(b, sizeof b, "%s\n%s",
       i18n("A saída da interface nesta TV está limitada a 1080p. O app amplia até esse limite; a TV completa até 4K."), i18n(base));
     return b;
@@ -9731,6 +9737,8 @@ static int nValores(int op) {
 static const char *textoValor(int op) {
   if (op == AJ_FONTE_AUTO && ajustes_fonte_prioridade() == 3) return i18n("Primeira da lista");
   if(op==AJ_GUIA_CATEGORIAS)return i18n("Abrir");
+  // Fora de 1080p/720p a linha mostra o valor EFETIVO, nao o gravado.
+  if (op == AJ_AMPLIAR_UI && !ampliarUiVale()) return i18n("Pela TV");
   if(ajIptvGerenciador(op))return i18n("Abrir");
   if(op==AJ_IPTV_CONTA)return ajIptvNome(iptv_conta_indice());
   static char buf[48];
