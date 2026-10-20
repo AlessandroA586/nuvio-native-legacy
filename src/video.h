@@ -172,8 +172,8 @@ void video_definir_reconexao(int sim);
 // velocidade e pausa. 1 = pedido aceito; 0 = indisponivel neste estado/alvo.
 int  video_recarregar(void);
 // MODO DO LOAD para o PROXIMO video_tocar (#158, LG C4: dado chega, VDEC
-// concedido, decoder nunca anuncia). 0 = o de sempre; 1 = sem o selectTrack
-// de video logo depois do load; 2 = o 1 e mais o payload enxuto de live
+// concedido, decoder nunca anuncia). 0/1 = default-track startup (the legacy
+// mode 1 is retained for saved settings); 2 = the lean live payload
 // (mediaTransportType HLS/URI, sem useSeekableRanges/bufferControl). Vale UMA
 // vez (video_modo_live_consumir zera); so a webOS le. Ver video_modo.c.
 void video_definir_modo_live(int modo);

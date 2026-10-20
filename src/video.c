@@ -1627,13 +1627,9 @@ static int aoCarregar(LSHandle *h, LSMessage *m, void *u) {
   chamar("notifyForeground", b, soLog);
   snprintf(b, sizeof b, "{\"mediaId\":\"%s\"}", midia);
   chamarCtx("subscribe", b, aoEvento, (void *)(uintptr_t)minhaSessao);
-  // MODO 1/2 (#158): sem selectTrack antes do sourceInfo — o pipeline de live
-  // ainda nao sabe que faixas tem, e e a unica chamada que este app manda que
-  // o navegador e o Kodi nao mandam no comeco.
-  if (!modoLoad) {
-    snprintf(b, sizeof b, "{\"mediaId\":\"%s\",\"type\":\"video\",\"index\":0}", midia);
-    chamar("selectTrack", b, soLog);
-  }
+  // Let uMS discover and select its default tracks. Selecting video index 0
+  // before sourceInfo can stall TS startup on webOS 24 (#625); a successful
+  // load only allocates the pipeline, so request play without selecting tracks.
   snprintf(b, sizeof b, "{\"mediaId\":\"%s\"}", midia);
   chamar("play", b, soLog);
   return 1;
