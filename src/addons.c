@@ -3301,6 +3301,9 @@ int addons_motivo_vazio(char *dst, unsigned n) {
               !strcmp(alvoTipo, "channels") || !strcmp(alvoTipo, "live") ||
               !strcmp(alvoTipo, "iptv");
   if (!dst || !n || !r->valido) return 0;
+  // Extra providers (local JS scrapers, Plex) are absent from this Stremio
+  // summary. Let callers use their generic source wording while one is active.
+  if (addons_origem_extra_ativa()) return 0;
   if (!r->instalados || !r->comFonte)
     snprintf(dst, n, "%s", i18n("Nenhum add-on de fontes instalado"));
   else if (!r->ligadosComFonte)
