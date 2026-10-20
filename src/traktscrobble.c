@@ -20,7 +20,8 @@ int scrobble_decidir(ScrobbleEstado *s, int evento, const char *id, double pct) 
     return SCR_START;
   }
   if (evento == SCR_EV_PONTO) {
-    return s->ativo && mesmo && pausaAceita(pct) ? SCR_PAUSE : SCR_NADA;
+    // Refresh progress without pausing remote Now Watching.
+    return s->ativo && mesmo && pausaAceita(pct) ? SCR_START : SCR_NADA;
   }
   if (evento == SCR_EV_PAUSOU) {
     if (!s->ativo || !mesmo) return SCR_NADA;
