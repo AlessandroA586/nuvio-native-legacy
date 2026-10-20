@@ -19,7 +19,7 @@ static DtsRangeJob *job_at(DtsEngine *e,int64_t at) {
 }
 static void *cancel_later(void *e) {usleep(50000);dts_engine_cancel(e);return NULL;}
 int main(int argc,char **argv) {
- assert(argc==2);DtsEngine *e=dts_engine_create();assert(e);e->range_slots=8;
+ assert(argc==2);DtsEngine *e=dts_engine_create();assert(e);dts_engine_allow_p7(e,1);e->range_slots=8;
  e->url=strdup(argv[1]);e->headers=strdup("Authorization: Bearer engine-test\nX-Fixture: yes");
  if(strstr(argv[1],"dv.bin")){e->dv=1;e->range_bytes=RANGE_BYTES_DV;}
  int64_t fault_at=e->dv?RANGE_BYTES_DV:4*1024*1024;

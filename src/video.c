@@ -3074,6 +3074,7 @@ static int iniciarDts(int stream) {
   dts_engine_set_ac3(ajustes_dts_ac3());
   dts_engine_set_ahead_mib(cacheboost_backend_buffer_mb());   // #338: Settings > Buffer size
   dts_playback_next_dv(dtsModoDv);
+  dts_playback_next_p7(ajustes_dv7());
   dtsSessao = dts_playback_start(urlAtual, cabsHttp, stream, alvo,
                                paused, expWin, 0, (a || trocada) ? &selected : NULL, ordinal, count);
   if (!dtsSessao) {

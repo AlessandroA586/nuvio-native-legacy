@@ -68,7 +68,7 @@ static int drain(DtsEngine *e) {
 int main(int argc,char **argv) {
   assert(argc==3);
   DtsEngine *e=dts_engine_create(); assert(e);
-  dts_engine_dv(e,1); check(e,dts_engine_open(e,argv[1],"",-1,0,0));
+  dts_engine_allow_p7(e,1); dts_engine_dv(e,1); check(e,dts_engine_open(e,argv[1],"",-1,0,0));
   const DtsMediaInfo *m=dts_engine_info(e);
   assert(m->dovi_profile==8 && !m->dovi_el_present && m->dovi_rpu_present &&
          m->dovi_bl_present && m->dovi_bl_compatibility_id==1);
@@ -77,7 +77,7 @@ int main(int argc,char **argv) {
   check(e,dts_engine_seek(e,.4)); assert(drain(e)>0);
   check(e,dts_engine_seek(e,0)); assert(drain(e)==20);
   dts_engine_destroy(e);
-  e=dts_engine_create(); dts_engine_dv(e,1);
+  e=dts_engine_create(); dts_engine_allow_p7(e,1); dts_engine_dv(e,1);
   check(e,dts_engine_open(e,argv[2],"",-1,0,0));
   DtsFrame f; int r;
   while ((r=dts_engine_next(e,&f))>0) {}

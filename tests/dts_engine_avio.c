@@ -57,7 +57,7 @@ static void check_prefetch(DtsEngine *e) {
 }
 int main(int argc,char **argv) {
   assert(argc==2);
-  DtsEngine *e=dts_engine_create(); assert(e);
+  DtsEngine *e=dts_engine_create(); assert(e); dts_engine_allow_p7(e,1);
   if (strstr(argv[1],"dv-prefetch")) {
     e->dv=1; e->range_bytes=RANGE_BYTES_DV; e->range_slots=RANGE_SLOTS_DV;
   }
@@ -86,7 +86,7 @@ int main(int argc,char **argv) {
   assert(seek_range(e,99,SEEK_SET)==99); check_bytes(e,2*1024*1024);
   assert(seek_range(e,-123,SEEK_END)==16*1024*1024-123); check_bytes(e,123);
   dts_engine_destroy(e);
-  e=dts_engine_create(); assert(e);
+  e=dts_engine_create(); assert(e); dts_engine_allow_p7(e,1);
   e->url=strdup(argv[1]); e->headers=strdup("Authorization: Bearer engine-test\nX-Fixture: yes");
   char *path=strchr(e->url+7,'/'); assert(path); strcpy(path,"/idle");
   pthread_t thread; assert(!pthread_create(&thread,NULL,cancel_read,e));

@@ -27,7 +27,7 @@
 typedef struct { DtsSubtitle cue; unsigned revision; } DtsQueuedSubtitle;
 #define DTS_DV_STARVED_WINDOWS 4
 struct DtsPlayback {
-  int dv, starved; /* Dolby Vision path: passthrough audio, starvation fallback. */
+  int allow_p7, dv, starved; /* Dolby Vision path: passthrough audio, starvation fallback. */
   pthread_t thread;
   pthread_mutex_t lock;
   pthread_cond_t wake;
@@ -406,7 +406,7 @@ static void *run(void *user) {
        * metadata and reset demux/decoder/encoder through engine_seek. The LG
        * native pipeline still receives a fresh Load and codec preroll. Error
        * recovery keeps a full source reopen; a failed seek also falls back. */
-      if (!prepareMode(p, stream, core, target,seek_reload && !stall_seek)) break;
+      if (!prepareMode(p, stream, core, target,p->allow_p7 && seek_reload && !stall_seek)) break;
       char event[256];
       snprintf(event, sizeof event,
         "{\"dtsStage\":{\"name\":\"%s\",\"detail\":\"at=%.3f attempt=%u seek=%d blocked=%d pts=%.3f stale=%.1fs\"}}",
@@ -618,7 +618,8 @@ done:
   return NULL;
 }
 
-static int dvNext;
+static int dvNext, p7Next;
+void dts_playback_next_p7(int enabled) { p7Next = !!enabled; }
 void dts_playback_next_dv(int enabled) { dvNext = !!enabled; }
 DtsPlayback *dts_playback_start(const char *url, const char *headers,
                                int audio_stream, double position,
@@ -635,6 +636,8 @@ DtsPlayback *dts_playback_start(const char *url, const char *headers,
   if (!p->engine) { dts_playback_close(p); return NULL; }
   p->dv = dvNext; dvNext = 0;
   dts_engine_dv(p->engine, p->dv);
+  p->allow_p7 = p7Next; p7Next = 0;
+  dts_engine_allow_p7(p->engine, p->allow_p7);
   snprintf(p->url, sizeof p->url, "%s", url);
   snprintf(p->headers, sizeof p->headers, "%s", headers ? headers : "");
   snprintf(p->window, sizeof p->window, "%s", window ? window : "");

@@ -31,6 +31,7 @@ struct DtsEngine { DtsMediaInfo info; };
 DtsEngine *dts_engine_create(void) { return calloc(1, sizeof(DtsEngine)); }
 int dts_engine_available(void) { return 0; }
 void dts_engine_dv(DtsEngine *e, int enabled) { (void)e; (void)enabled; }
+void dts_engine_allow_p7(DtsEngine *e, int enabled) { (void)e; (void)enabled; }
 void dts_engine_metrics(DtsEngine *e,DtsEngineMetrics *out) { (void)e; if(out) memset(out,0,sizeof(*out)); }
 int dts_engine_open(DtsEngine *e,const char *u,const char *h,int a,int c,double s) {
   (void)e;(void)u;(void)h;(void)a;(void)c;(void)s; return -1;
@@ -127,7 +128,7 @@ struct DtsEngine {
   SwrContext *swr;
   AVAudioFifo *fifo;
   AVPacket *in, *out;
-  int dv7;
+  int allow_p7, dv7;
   uint8_t *dv7_buffer;
   unsigned dv7_capacity;
   AVFrame *decoded, *encoded;
@@ -196,16 +197,17 @@ static void range_fetch(DtsEngine *e,DtsRangeJob *job,int fast,int *stalled) {
 #ifndef NV_DTS_WEBOS_RECOVERY
   (void)fast;
 #endif
-  if(!e->dv && !e->remux)
+  if(!e->dv && !e->remux) {
 #ifdef NV_DTS_WEBOS_RECOVERY
+    if(e->allow_p7)
     job->data=rede_baixar_trecho64_vigiado(e->url,e->headers,job->start,job->end,
       &job->count,&job->total,&job->status,&job->cancel,NULL,NULL,
       fast?&job->urgent:NULL,2500,stalled);
-#else
+    else
+#endif
     job->data=rede_baixar_trecho64_cab(e->url,e->headers,job->start,job->end,
       &job->count,&job->total,&job->status,&job->cancel);
-#endif
-  else {
+  } else {
     /* After the first answer, go straight to the address behind the add-on
      * redirects. Credential headers follow only on the same origin. A final
      * link that stops answering (expired: 403/410, or any failure) is
@@ -216,13 +218,14 @@ static void range_fetch(DtsEngine *e,DtsRangeJob *job,int fast,int *stalled) {
     snprintf(target,sizeof target,"%s",direct?e->final_url:e->url);
     pthread_mutex_unlock(&e->range_lock);
 #ifdef NV_DTS_WEBOS_RECOVERY
+    if(e->allow_p7)
     job->data=rede_baixar_trecho64_vigiado(target,direct&&cross?"":e->headers,job->start,job->end,
       &job->count,&job->total,&job->status,&job->cancel,fin,&cross,
       fast?&job->urgent:NULL,2500,stalled);
-#else
+    else
+#endif
     job->data=rede_baixar_trecho64_final(target,direct&&cross?"":e->headers,job->start,job->end,
       &job->count,&job->total,&job->status,&job->cancel,fin,&cross);
-#endif
     uint64_t first=clock_ns(CLOCK_MONOTONIC);
     int first_status=job->status, first_ok=job->data!=NULL;
     if(direct && !job->data && !*stalled && !__atomic_load_n(&job->cancel,__ATOMIC_RELAXED)) {
@@ -230,13 +233,14 @@ static void range_fetch(DtsEngine *e,DtsRangeJob *job,int fast,int *stalled) {
       if(!strcmp(e->final_url,target)) e->final_url[0]=0;
       pthread_mutex_unlock(&e->range_lock);
 #ifdef NV_DTS_WEBOS_RECOVERY
+      if(e->allow_p7)
       job->data=rede_baixar_trecho64_vigiado(e->url,e->headers,job->start,job->end,
         &job->count,&job->total,&job->status,&job->cancel,fin,&cross,
         fast?&job->urgent:NULL,2500,stalled);
-#else
+      else
+#endif
       job->data=rede_baixar_trecho64_final(e->url,e->headers,job->start,job->end,
         &job->count,&job->total,&job->status,&job->cancel,fin,&cross);
-#endif
       direct=0;
       /* #203 DV startup took ~19.5 s twice (LG C9): one stalled request
        * hitting the 15 s curl deadline plus a ~4.5 s add-on re-resolve is
@@ -278,17 +282,17 @@ static void *range_worker(void *opaque) {
     job->state=2;
     pthread_mutex_unlock(&e->range_lock);
     uint64_t begun=clock_ns(CLOCK_MONOTONIC);
-    int attempt=0;
-    for(;attempt<RANGE_ATTEMPTS;attempt++) {
+    int attempt=0, attempts=e->allow_p7?RANGE_ATTEMPTS:1;
+    for(;attempt<attempts;attempt++) {
       if(cancelled(e) || __atomic_load_n(&job->cancel,__ATOMIC_RELAXED)) break;
       int stalled=0;
-      range_fetch(e,job,attempt+1<RANGE_ATTEMPTS,&stalled);
+      range_fetch(e,job,attempt+1<attempts,&stalled);
       if(job->data || !range_retryable(job->status) || cancelled(e) ||
          __atomic_load_n(&job->cancel,__ATOMIC_RELAXED)) break;
       printf("[range-retry] start=%lld end=%lld attempt=%d/%d http=%d\n",
-             (long long)job->start,(long long)job->end,attempt+1,RANGE_ATTEMPTS,job->status);
+             (long long)job->start,(long long)job->end,attempt+1,attempts,job->status);
       fflush(stdout);
-      if(attempt+1==RANGE_ATTEMPTS || (!stalled && !range_backoff(e,job,150*(attempt+1)))) break;
+      if(attempt+1==attempts || (!stalled && !range_backoff(e,job,150*(attempt+1)))) break;
     }
     if(!cancelled(e) && !__atomic_load_n(&job->cancel,__ATOMIC_RELAXED) &&
        (attempt || !job->data)) {
@@ -676,6 +680,7 @@ DtsEngine *dts_engine_create(void) {
   return e;
 }
 void dts_engine_dv(DtsEngine *e, int enabled) { if (e) e->dv = !!enabled; }
+void dts_engine_allow_p7(DtsEngine *e, int enabled) { if (e) e->allow_p7 = !!enabled; }
 int dts_engine_available(void) {
   return avcodec_find_decoder(AV_CODEC_ID_DTS) && avcodec_find_encoder(AV_CODEC_ID_AAC) && av_bsf_get_by_name("h264_mp4toannexb")
       && av_bsf_get_by_name("hevc_mp4toannexb");
@@ -785,7 +790,8 @@ int dts_engine_open(DtsEngine *e,const char *url,const char *headers,int audio,i
     e->info.dovi_el_present=conf->el_present_flag;
     e->info.dovi_bl_present=conf->bl_present_flag;
     e->info.dovi_bl_compatibility_id=conf->dv_bl_signal_compatibility_id;
-    if (!nv_dv7_profile(conf->dv_profile,conf->el_present_flag,
+    if ((conf->dv_profile == 7 && !e->allow_p7) ||
+        !nv_dv7_profile(conf->dv_profile,conf->el_present_flag,
                        conf->bl_present_flag,conf->rpu_present_flag) || vp->codec_id!=AV_CODEC_ID_HEVC)
       return fail(e,"Dolby Vision layer/profile unsupported",0);
     if (conf->dv_profile == 7) {
@@ -932,6 +938,7 @@ static int resample(DtsEngine *e,AVFrame *f) {
 #ifndef NV_DTS_WEBOS_RECOVERY
       return fail(e,DTS_ENGINE_TIMESTAMP_DISCONTINUITY,0);
 #else
+      if(!e->allow_p7) return fail(e,DTS_ENGINE_TIMESTAMP_DISCONTINUITY,0);
       /* Numeric diagnostics survive export redaction; no source/header data. */
       printf("[dts] timestamp-gap incomingMs=%.3f expectedMs=%.3f deltaMs=%.3f "
              "fifoSamples=%d delaySamples=%lld frameSamples=%d inputRate=%d targetMs=%.3f\n",

@@ -62,6 +62,7 @@ static void aac_adts(FILE *out,const DtsFrame *f) {
 int main(int argc,char **argv) {
   assert(argc==3);
   DtsEngine *e=dts_engine_create(); assert(e && dts_engine_available());
+  dts_engine_allow_p7(e,1);
 #ifndef DTS_ENGINE_HTTP
   // Exercise the official 4 MiB queue configuration for
   // every preset; ASan catches slot-array overruns during container probing.

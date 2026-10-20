@@ -38,6 +38,7 @@ static void emit(const char *json) {
  assert(cb);cb(u,json);
 }
 int dts_engine_available(void) { return 1; }
+void dts_engine_allow_p7(DtsEngine *e,int on) { (void)e; (void)on; }
 void dts_engine_dv(DtsEngine *e,int on) { (void)e; last_dv=on; }
 DtsEngine *dts_engine_create(void) { return calloc(1,sizeof(DtsEngine)); }
 int dts_engine_open(DtsEngine *e,const char *url,const char *headers,int stream,int core,double target) {
@@ -236,6 +237,7 @@ static DtsPlaybackStatus wait_status(DtsPlayback *p,int fail,int eof) {
  fprintf(stderr,"status prepared=%d failed=%d eof=%d error=%s\n",s.prepared,s.failed,s.eof,s.error);assert(0);return s;
 }
 static DtsPlayback *start(int paused,int stream,const DtsTrack *selected,int ordinal,int total) {
+ dts_playback_next_p7(1);
  DtsPlayback *p=dts_playback_start("fixture://movie","X-Token: fixture",stream,0,paused,"window",0,selected,ordinal,total);assert(p);return p;
 }
 int main(int argc,char **argv) {
