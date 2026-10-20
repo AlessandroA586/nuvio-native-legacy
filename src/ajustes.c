@@ -2761,7 +2761,8 @@ int ajustes_descanso_estilo(void)  { int v = valor[AJ_DESCANSO_ESTILO]; return v
 int ajustes_descanso_fonte(void)   { int v = valor[AJ_DESCANSO_FONTE]; return v < 0 || v > 1 ? 0 : v; }
 // #202: -1 = ultimo modo usado; 0..7 = PlrAspecto a aplicar ao abrir o video.
 int ajustes_proporcao_padrao(void) { int v = valor[AJ_PROPORCAO_PADRAO]; return v < 1 || v > 8 ? -1 : v - 1; }
-int ajustes_hdr_interface(void) { return valor[AJ_HDR_INTERFACE] == 1 && !SEGURO; }
+// Experimental HDR menus left the menu: off everywhere, even if saved as on.
+int ajustes_hdr_interface(void) { return 0; }
 int ajustes_hdr_ui(void)            { return valor[AJ_HDR_UI] != 1; }   // 1 = Desligado
 int ajustes_brilho_player(void)    { int v = valor[AJ_BRILHO_PLAYER]; return v < 0 || v > 3 ? 1 : v; }
 void ajustes_espelhar_enquetes(int ligado) { int n = ligado ? 0 : 1; if (valor[AJ_ENQUETES] != n) { valor[AJ_ENQUETES] = n; AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar()); } }
@@ -2993,8 +2994,9 @@ static int ajOpcaoDisponivel(int op) {
   if(ajIptvGerenciador(op))return 1;
   if(op==AJ_IPTV_ORDEM)return iptv_contas(NULL,0)>0;
   if (op == AJ_FALHA_ADDON_LIMITE) return faAddonEditar[0] != 0;
+  if (op == AJ_HDR_INTERFACE) return 0;
 #ifndef NV_ANDROID
-  if (op == AJ_FONTE_PRECARREGAR || op == AJ_HDR_INTERFACE) return 0;
+  if (op == AJ_FONTE_PRECARREGAR) return 0;
 #endif
 #ifndef NV_TOUCH_UI
   if (op == AJ_INTERFACE_MODO) return 0;
