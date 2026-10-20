@@ -792,11 +792,10 @@ int rede_baixar_fluxo(const char *url, int segundos, const char *const *cab,
                       long long maxBytes, int *status, long long *bytes) {
   long tam = 0, i;
   char *b;
-  (void)segundos;
   if (bytes) *bytes = 0;
   if (status) *status = 0;
   if (!cb) return 0;
-  b = pedir("GET", url, cab, NULL, NULL, &tam, status);
+  b = pedir("GET", url, segundos, cab, NULL, NULL, &tam, status);
   if (!b) return 0;
   if (maxBytes > 0 && tam > maxBytes) { free(b); return 0; }
   if (bytes) *bytes = tam;
@@ -895,8 +894,7 @@ char *rede_postar_st_retry(const char *url, int segundos, const char *const *cab
 // Account row updates use the same WGT bridge as authenticated POST/DELETE.
 char *rede_patch_st(const char *url, int segundos, const char *const *cab,
                     const char *corpo, int *status) {
-  (void)segundos;
-  char *r = pedir("PATCH", url, cab, NULL, corpo, NULL, status);
+  char *r = pedir("PATCH", url, segundos, cab, NULL, corpo, NULL, status);
   if (!r && status && *status > 0) return strdup("");
   return r;
 }
