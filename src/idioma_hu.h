@@ -4113,6 +4113,7 @@
   T("Plugins", "Pluginek"),
   T("Plugins e P2P", "Bővítmények és P2P"),
   T("Plugins e P2P, desligados por padrão.", "Bővítmények és P2P, alapértelmezetten kikapcsolva."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "A bővítmények nem találtak forrást (%d / %d kereső ellenőrizve)"),
   T("Plugins permitidos", "Engedélyezett pluginok"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "A bővítmények, szavazások és a személyes szerver a választott profilt követik."),
   T("Pode pausar", "Szüneteltethető"),

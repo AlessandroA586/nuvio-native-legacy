@@ -4112,6 +4112,7 @@
   T("Plugins", "Плагіни"),
   T("Plugins e P2P", "Плагіни та P2P"),
   T("Plugins e P2P, desligados por padrão.", "Плагіни та P2P вимкнені за замовчуванням."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "Плагіни не знайшли джерел (перевірено %d із %d скрейперів)"),
   T("Plugins permitidos", "Дозволені плагіни"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Плагіни, опитування та особистий сервер залежать від обраного профілю."),
   T("Pode pausar", "Можливі паузи"),

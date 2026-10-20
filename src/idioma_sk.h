@@ -4113,6 +4113,7 @@
   T("Plugins", "Pluginy"),
   T("Plugins e P2P", "Pluginy a P2P"),
   T("Plugins e P2P, desligados por padrão.", "Pluginy a P2P, predvolene vypnuté."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "Pluginy nenašli zdroje (skontrolovaných %d z %d scraperov)"),
   T("Plugins permitidos", "Povolené pluginy"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Pluginy, ankety a osobný server sledujú profil, ktorý ste vybrali."),
   T("Pode pausar", "Dá sa pozastaviť"),

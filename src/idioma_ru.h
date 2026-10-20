@@ -4112,6 +4112,7 @@
   T("Plugins", "Плагины"),
   T("Plugins e P2P", "Плагины и P2P"),
   T("Plugins e P2P, desligados por padrão.", "Плагины и P2P выключены по умолчанию."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "Плагины не нашли источников (проверено %d из %d скрейперов)"),
   T("Plugins permitidos", "Разрешённые плагины"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Плагины, опросы и личный сервер следуют за выбранным профилем."),
   T("Pode pausar", "Возможны паузы"),

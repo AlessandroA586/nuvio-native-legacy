@@ -4113,6 +4113,7 @@
   T("Plugins", "Plugin"),
   T("Plugins e P2P", "Plugin e P2P"),
   T("Plugins e P2P, desligados por padrão.", "Plugin e P2P, disattivati per impostazione predefinita."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "I plugin non hanno trovato fonti (%d scraper su %d controllati)"),
   T("Plugins permitidos", "Plugin consentiti"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Plugin, sondaggi e server personale seguono il profilo che hai scelto."),
   T("Pode pausar", "Può andare in pausa"),

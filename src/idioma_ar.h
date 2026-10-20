@@ -4113,6 +4113,7 @@
   T("Plugins", "الملحقات"),
   T("Plugins e P2P", "الملحقات وP2P"),
   T("Plugins e P2P, desligados por padrão.", "الملحقات وP2P، متوقفة افتراضيًا."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "لم تعثر الإضافات على مصادر (تم فحص %d من %d أداة استخراج)"),
   T("Plugins permitidos", "الملحقات المسموح بها"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "الملحقات والاستطلاعات والخادم الشخصي تتبع الملف الشخصي الذي اخترته."),
   T("Pode pausar", "قد يتوقف"),

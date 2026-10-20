@@ -4113,6 +4113,7 @@
   T("Plugins", "插件"),
   T("Plugins e P2P", "插件和 P2P"),
   T("Plugins e P2P, desligados por padrão.", "插件和 P2P，默认关闭。"),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "插件未找到播放源（已检查 %d / %d 个抓取器）"),
   T("Plugins permitidos", "允许的扩展"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "插件、问卷和个人服务器会跟随你选择的资料。"),
   T("Pode pausar", "可暂停"),

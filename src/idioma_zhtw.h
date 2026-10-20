@@ -4113,6 +4113,7 @@
   T("Plugins", "外掛"),
   T("Plugins e P2P", "外掛和 P2P"),
   T("Plugins e P2P, desligados por padrão.", "外掛和 P2P，預設關閉。"),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "外掛程式未找到播放來源（已檢查 %d / %d 個擷取器）"),
   T("Plugins permitidos", "允許的外掛"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "外掛、問卷和個人伺服器會跟隨你選擇的個人檔案。"),
   T("Pode pausar", "可暫停"),

@@ -4113,6 +4113,7 @@
   T("Plugins", "プラグイン"),
   T("Plugins e P2P", "プラグインと P2P"),
   T("Plugins e P2P, desligados por padrão.", "プラグインと P2P は、初期設定ではオフ。"),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "プラグインでソースが見つかりませんでした（%d / %d スクレイパー確認済み）"),
   T("Plugins permitidos", "許可するプラグイン"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "プラグイン、アンケート、個人サーバーは、選んだプロフィールに従います。"),
   T("Pode pausar", "一時停止できます"),

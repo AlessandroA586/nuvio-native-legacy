@@ -4112,6 +4112,7 @@
   T("Plugins", "Pluginuri"),
   T("Plugins e P2P", "Pluginuri și P2P"),
   T("Plugins e P2P, desligados por padrão.", "Pluginuri și P2P, dezactivate implicit."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "Pluginurile nu au găsit surse (%d din %d scrapers verificați)"),
   T("Plugins permitidos", "Pluginuri permise"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Pluginurile, sondajele și serverul personal urmează profilul ales."),
   T("Pode pausar", "Poate face pauze"),

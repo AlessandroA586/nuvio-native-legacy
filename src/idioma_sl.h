@@ -4113,6 +4113,7 @@
   T("Plugins", "Vtičniki"),
   T("Plugins e P2P", "Vtičniki in P2P"),
   T("Plugins e P2P, desligados por padrão.", "Vtičniki in P2P, privzeto izklopljena."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "Vtičniki niso našli virov (preverjenih %d od %d strgalnikov)"),
   T("Plugins permitidos", "Dovoljeni vtičniki"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Vtičniki, ankete in osebni strežnik sledijo profilu, ki ste ga izbrali."),
   T("Pode pausar", "Lahko zaustavi"),

@@ -4113,6 +4113,7 @@
   T("Plugins", "Wtyczki"),
   T("Plugins e P2P", "Wtyczki i P2P"),
   T("Plugins e P2P, desligados por padrão.", "Wtyczki i P2P, domyślnie wyłączone."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "Wtyczki nie znalazły źródeł (sprawdzono %d z %d scraperów)"),
   T("Plugins permitidos", "Dozwolone wtyczki"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Wtyczki, ankiety i serwer osobisty podążają za wybranym profilem."),
   T("Pode pausar", "Można wstrzymać"),

@@ -4113,6 +4113,7 @@
   T("Plugins", "Plugin"),
   T("Plugins e P2P", "Plugin dan P2P"),
   T("Plugins e P2P, desligados por padrão.", "Plugin dan P2P, mati secara default."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "Plugin tidak menemukan sumber (%d dari %d scraper diperiksa)"),
   T("Plugins permitidos", "Plugin yang diizinkan"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Plugin, polling, dan server pribadi mengikuti profil yang Anda pilih."),
   T("Pode pausar", "Bisa dijeda"),
