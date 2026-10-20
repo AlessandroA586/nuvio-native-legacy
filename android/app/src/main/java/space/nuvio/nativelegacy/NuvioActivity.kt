@@ -198,6 +198,12 @@ class NuvioActivity : SDLActivity() {
             camada, 0,
             ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         )
+        // SDL adds the SurfaceView WRAP_CONTENT; SurfaceView.onMeasure then
+        // resolves to min(setFixedSize, parent), so a buffer smaller than the
+        // screen (720p) shrank the view to the top-left. MATCH_PARENT lets the
+        // compositor scale the small buffer to the full view.
+        mSurface.layoutParams = RelativeLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         mSurface.setZOrderMediaOverlay(true)
         mSurface.holder.setFormat(PixelFormat.TRANSLUCENT)
         NvPlayer.iniciar(this, camada)

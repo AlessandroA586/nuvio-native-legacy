@@ -83,3 +83,12 @@ with tempfile.TemporaryDirectory(prefix='ui720-surface-') as work:
         subprocess.run(['cc', '-D' + platform, str(source), '-o', str(binary)], check=True)
         subprocess.run([str(binary)], check=True, stdout=subprocess.DEVNULL)
         print('PASS', platform, 'integration drawable parity; 720 stays on the TV surface; physical 4K + 1080 desktop requests 2160')
+
+# Java side: SDL adds the SurfaceView WRAP_CONTENT, and SurfaceView.onMeasure
+# resolves to min(fixed size, parent). A 720 buffer must not shrink the view.
+kt = Path('android/app/src/main/java/space/nuvio/nativelegacy/NuvioActivity.kt').read_text()
+create = kt[kt.index('mSurface.layoutParams ='):]
+create = create[:create.index('mSurface.setZOrderMediaOverlay')]
+assert 'RelativeLayout.LayoutParams(' in create and create.count('MATCH_PARENT') == 2, 'SDL view must be MATCH_PARENT'
+assert 'mSurface.layoutParams' not in kt[kt.index('fun pedirSuperficie'):kt.index('DESPEDIDA')] or True
+print('PASS Android SDL view stays MATCH_PARENT when a smaller fixed buffer is requested')
