@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T23:55:31-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-20T00:48:01-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -820,7 +820,7 @@ Landing in 2.0.7, already in the sections above:
   **cast-person lookups** (`310f3aa3d`), the **hidden-torrent explanation** (`f246d8e91`), the
   **per-source Live TV guide** (`ebf14de6b`, `ba0639cf0`), the **quick-menu frost** (`31a597e54`), the
   **panel kicker / tab tint** (`31b8412f0`), **Settings at 85%** (`7507ec45a`), the **account-settings
-  sync** (`9d7db484b`) and the **empty-cast TMDB fill** (`bdc5faee1`).
+  sync** (`9d7db484b`), the **empty-cast TMDB fill** (`bdc5faee1`) and the **720p-leve native surface experiment** (`fce651f6c`, merged `7d551bc3e`, reverted `e52cd6472` — drew in the top-left quarter on TCL).
 
 ### Frost performance (to fill before tagging)
 
@@ -873,7 +873,7 @@ Landing in 2.0.7, already in the sections above:
   **cast-person lookups** (`310f3aa3d`), the **hidden-torrent explanation** (`f246d8e91`), the
   **per-source Live TV guide** (`ebf14de6b`, `ba0639cf0`), the **quick-menu frost** (`31a597e54`), the
   **panel kicker / tab tint** (`31b8412f0`), **Settings at 85%** (`7507ec45a`), the **account-settings
-  sync** (`9d7db484b`) and the **empty-cast TMDB fill** (`bdc5faee1`).
+  sync** (`9d7db484b`), the **empty-cast TMDB fill** (`bdc5faee1`) and the **720p-leve native surface experiment** (`fce651f6c`, merged `7d551bc3e`, reverted `e52cd6472` — drew in the top-left quarter on TCL).
 
 ### Frost performance (to fill before tagging)
 
