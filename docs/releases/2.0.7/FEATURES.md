@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T20:48:03-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T21:48:03-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -104,6 +104,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   is slow. All platforms. Refs #545 #551 #552 #504, `26b9c635b`, `1c9043ed0`, `455135df2`, `cbcf467f5`, `27988615e`.
 
 ### New
+
+- **Movie-source availability alerts**: Get notified when sources become available for a movie. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `00971bdcb`, merge `c77aedbe6`.
+
+- **Browse and filter episode reviews**: View rating distributions, filter comments by score, load more reviews and use a labelled TMDB fallback while moving between episodes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `4407482fa`, `agente/205-eppainel`, merge `ac0bf2ec8`.
 
 - **PGS subtitles on LG webOS**: Watch BD/remux releases with image subtitles through the app overlay when the native player does not expose them. Platforms: webOS. Refs PR #593, @I0-oX, `3fb7c9b3f`, merge `efb9af469`.
 
@@ -242,6 +246,8 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   episode, even with two identical tracks. All platforms. `3486c616b`.
 
 ### Fixes
+
+- **Compact episode cards and clearer ratings**: Standard cards regain separate artwork and text with ratings beside the air date, while Modern cards use the selected glass material. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `19e3cca2f`, `34641ab86`, merge `c895c3a65`.
 
 - **Friends artwork recovery**: Seed missing Friends titles through the shared artwork pipeline; now integrated into the release. Platforms: webOS, Android, Samsung .tpk, WASM. Refs a6e233df0; merge 28b2a8579, owner request, `agente/205-amigosarte`.
 
@@ -483,6 +489,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Performance
 
+- **Keep Android 4K fallback responsive**: Restore the previous startup surface after the newer 4K fallback path reduced TCL frame rate in local testing. Platforms: Android. Refs owner request, `b592c1618`, reverted by `3ccd70fc3`.
+
+- **Bound background source checks**: Movie availability checks stop oversized add-on responses at 2 MB to limit memory growth during playback. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `37b6f9b68`.
+
 - **Automatic effects follow sustained frame rate**: Automatic GPU effects reduce after sustained slow reports and recover with hysteresis while preserving manual choices. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `d4c3ad79b`.
 
 - **Responsive account synchronization**: Concurrent provider startup requests avoid unnecessary serialization and settings synchronization removes quadratic work. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `0c40a9cde`, `09acb815b`.
@@ -584,6 +594,10 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   `f6618db6b`, `22f3d22bb`).
 
 ### Internal
+
+- **Samsung builds on Apple containers**: Build the ARM32 package through an ARM64 cross SDK while preserving Linux Docker behavior and paths containing spaces. Platforms: Samsung .tpk. Refs `1c21c17ed`, `5c51cdf22`.
+
+- **Source-order regression coverage**: Checks cover settings, playback, preparation and the three-stream AIOStreams example. Platforms: webOS, Android, Samsung .tpk, WASM. Refs PR #620, #618, `ff5c2b699`, `a093a3894`.
 
 - **Remux subtitle regression coverage**: Track-header relayout and subtitle matching checks cover complete codec headers and rejected image-track ordinals. Platforms: webOS, Android, Samsung .tpk, WASM. Refs PR #593, `205c14995`, `82a3feef1`, `6ab0c1132`.
 
@@ -689,11 +703,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 ### Pending (not integrated yet)
 
-- **Reliable Android 4K selection**: Preserve 4K selection when HDR, startup work or missing GPU timing makes fallback measurements unreliable. Platforms: Android. Refs owner request, `agente/205-recuo4k`.
-
 - **Movie availability alerts**: Request a reminder when playable movie sources become available; review blocks integration pending bounded background processing. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-avisofonte`.
-
-- **Episode review panel**: Browse clearer rating distributions, filter reviews by score, load further comments and use a labelled TMDB fallback while navigating between episodes. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-eppainel`.
 
 - **Episode card materials**: Apply the selected Modern material and restore the requested Standard card presentation; the latest follow-up fix awaits review. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-epcor1019`.
 
@@ -704,7 +714,7 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
 
 
 
-Tracking snapshot: 22 unmerged branches without running jobs; 8 open issues without jobs or prompts. Newer fixes need review on `agente/205-epcor1019`, `agente/p2p`. Queued work and 2.1 deferrals are not lost. Android installation succeeded at `cb7ece972`; C9 installation failed and installed TV HEAD is unconfirmed.
+Tracking snapshot: 19 unmerged branches without running jobs; 8 open issues without mapped jobs or prompts. Newer fixes on `agente/p2p` need review. Queued work and 2.1 deferrals are not lost. Android installation succeeded at `cb7ece972`; C9 installation failed and installed TV HEAD is unconfirmed.
 
 Work on open branches with no merge — **not** part of 2.0.7 as it stands:
 
