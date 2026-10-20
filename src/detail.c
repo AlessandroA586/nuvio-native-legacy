@@ -7629,7 +7629,8 @@ static void desenhaPessoa(float a) {
 #endif
       if (lin < pessoaLinha) continue;
       GfxRect r = { x, y, PES_CARD_W, PES_CARD_H };
-      const char *po = pessoa_credito_poster(i);
+      const char *po = posterprov_card(pessoa_credito_imdb(i), pessoa_credito_tmdb(i),
+                                        pessoa_credito_tipo(i), pessoa_credito_poster(i));
       GLuint t = po[0] ? tex_obter_larg(po, PES_CARD_W) : 0;
 #ifdef NV_TOUCH_UI
       if (telefoneui_ativo())
