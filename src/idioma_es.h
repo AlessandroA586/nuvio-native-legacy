@@ -13,6 +13,7 @@
   T("\"Mais como este\"", "\"Más como este\""),
   T("%+d canais", "%+d canales"),
   T("%.*s/… (caminho cortado)", "%.*s/… (ruta cortada)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld libres"),
   T("%.1f MB · %d imagens", "%.1f MB · %d imágenes"),
   T("%.1f de %d MB · %d%%", "%.1f de %d MB · %d%%"),
   T("%.1f mi", "%.1f M"),

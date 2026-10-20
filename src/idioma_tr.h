@@ -14,6 +14,7 @@
   T("\"Mais como este\"", "\"Buna benzer olanlar\""),
   T("%+d canais", "%+d kanal"),
   T("%.*s/… (caminho cortado)", "%.*s/… (yol kesildi)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld boş"),
   T("%.1f MB · %d imagens", "%.1f MB · %d görsel"),
   T("%.1f de %d MB · %d%%", "%.1f / %d MB · %d%%"),
   T("%.1f mi", "%.1fM"),

@@ -14,6 +14,7 @@
   T("\"Mais como este\"", "\"Slično ovome\""),
   T("%+d canais", "%+d kanala"),
   T("%.*s/… (caminho cortado)", "%.*s/… (putanja skraćena)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld slobodno"),
   T("%.1f MB · %d imagens", "%.1f MB · slika: %d"),
   T("%.1f de %d MB · %d%%", "%.1f od %d MB · %d%%"),
   T("%.1f mi", "%.1fM"),

@@ -13,6 +13,7 @@
   T("\"Mais como este\"", "\"Plus comme celui-ci\""),
   T("%+d canais", "%+d chaînes"),
   T("%.*s/… (caminho cortado)", "%.*s/… (chemin coupé)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld libres"),
   T("%.1f MB · %d imagens", "%.1f Mo · %d images"),
   T("%.1f de %d MB · %d%%", "%.1f sur %d Mo · %d%%"),
   T("%.1f mi", "%.1f M"),

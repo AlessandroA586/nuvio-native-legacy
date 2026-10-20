@@ -14,6 +14,7 @@
   T("\"Mais como este\"", "\"Nội dung tương tự\""),
   T("%+d canais", "%+d kênh"),
   T("%.*s/… (caminho cortado)", "%.*s/… (đã cắt đường dẫn)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld trống"),
   T("%.1f MB · %d imagens", "%.1f MB · %d hình ảnh"),
   T("%.1f de %d MB · %d%%", "%.1f / %d MB · %d%%"),
   T("%.1f mi", "%.1fM"),

@@ -14,6 +14,7 @@
   T("\"Mais como este\"", "\"المزيد مثل هذا\""),
   T("%+d canais", "%+d قناة"),
   T("%.*s/… (caminho cortado)", "%.*s/… (المسار مقتطع)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld متاح"),
   T("%.1f MB · %d imagens", "%.1f ميغابايت · %d صورة"),
   T("%.1f de %d MB · %d%%", "%.1f من %d ميغابايت · %d%%"),
   T("%.1f mi", "%.1f مليون"),

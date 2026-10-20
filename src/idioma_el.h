@@ -14,6 +14,7 @@
   T("\"Mais como este\"", "\"Περισσότερα σαν αυτό\""),
   T("%+d canais", "%+d κανάλια"),
   T("%.*s/… (caminho cortado)", "%.*s/… (η διαδρομή κόπηκε)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld ελεύθερα"),
   T("%.1f MB · %d imagens", "%.1f MB · %d εικόνες"),
   T("%.1f de %d MB · %d%%", "%.1f από %d MB · %d%%"),
   T("%.1f mi", "%.1fM"),

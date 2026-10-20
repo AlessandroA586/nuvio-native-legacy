@@ -14,6 +14,7 @@
   T("\"Mais como este\"", "\"Podobné tituly\""),
   T("%+d canais", "%+d kanálů"),
   T("%.*s/… (caminho cortado)", "%.*s/… (cesta zkrácena)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld volných"),
   T("%.1f MB · %d imagens", "%.1f MB · Obrázků: %d"),
   T("%.1f de %d MB · %d%%", "%.1f z %d MB · %d%%"),
   T("%.1f mi", "%.1fM"),

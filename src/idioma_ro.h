@@ -13,6 +13,7 @@
   T("\"Mais como este\"", "\"Mai multe ca acesta\""),
   T("%+d canais", "%+d canale"),
   T("%.*s/… (caminho cortado)", "%.*s/… (cale tăiată)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld liberi"),
   T("%.1f MB · %d imagens", "%.1f MB · %d imagini"),
   T("%.1f de %d MB · %d%%", "%.1f din %d MB · %d%%"),
   T("%.1f mi", "%.1f mil."),
