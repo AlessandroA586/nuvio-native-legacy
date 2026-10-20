@@ -387,11 +387,13 @@ static unsigned trailerSessao;
 // Ultima posicao gravada DURANTE a sessao (gravarProgressoParcial); -1 = nenhuma.
 static double parcialPos = -1.0;
 static int parcialPausa;
+static float parcialRelogio, parcialConta;
 static void identidadeFonteAberta(void);
 static void zerarAssistido(void) {
   eofDesde = -1.0;
   assistidoSeg = 0; assistidoAmostra = 0; trailerSessao = trailer_geracao();
   parcialPos = -1.0; parcialPausa = 0;
+  parcialRelogio = parcialConta = 0;
   snprintf(fonteSessao, sizeof fonteSessao, "%s", comVideo ? video_url_atual() : "");
   identidadeFonteAberta();
 }
@@ -2717,13 +2719,9 @@ void player_preparar_retencao(void) {
   video_pausar(1);
 }
 
-// O PONTO GRAVADO DURANTE A SESSAO, e nao so ao sair — paridade com o NuvioTV
-// oficial (PlayerRuntimeControllerPlaybackEvents.kt): saveWatchProgress ao
-// pausar e ~0,7 s depois de um seek, e saveWatchProgressIfNeeded a cada 90 s
-// tocando, so quando a posicao andou >= 5 s. Mesmas guardas da saida (fonte
-// principal com video, duracao real e nao suspeita, nao canal). So o PONTO:
-// o visto e o scrobble continuam com a saida e com o pause do Trakt/Simkl.
-#define PLR_PARCIAL_INTERVALO_S 90.0f
+// Durable local checkpoint every 30 s; account updates every five minutes.
+// Keep source ownership, real-duration and watched-proof guards.
+#define PLR_PARCIAL_INTERVALO_S 30.0f
 #define PLR_PARCIAL_SEEK_S 0.7f
 #define PLR_PARCIAL_LIMIAR_S 5.0
 static void gravarProgressoParcial(int conta, const char *porque) {
@@ -2737,7 +2735,7 @@ static void gravarProgressoParcial(int conta, const char *porque) {
       assistidoSeg < PLR_PROVA_MIN_S ||
       (!partesAtiva() && player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo())))
     return;
-  if (parcialPos >= 0.0 && fabs(posSeg - parcialPos) < PLR_PARCIAL_LIMIAR_S) return;
+  if (parcialPos >= 0.0 && fabs(posSeg - parcialPos) < (conta ? 0.5 : PLR_PARCIAL_LIMIAR_S)) return;
   ia = cat_indice_por_imdb_tipo(ci->imdb, ci->tipo);
   if (ia < 0) {
     printf("[player] progresso parcial ignorado: sem copia do tipo %s para %s\n", ci->tipo, ci->imdb);
@@ -2751,8 +2749,19 @@ static void gravarProgressoParcial(int conta, const char *porque) {
   if (cred > 1.0 && cred - duracaoSeg > intro_creditos_janela(duracaoSeg)) chegou = 0;
   { double vp = posSeg, vd = duracaoSeg;
     if (partesVirt(&vp, &vd, NULL)) chegou = 0;   // o visto e so da saida da ultima parte
-    cat_salvar_progresso_ep(ia, vp, vd, epT, epE, chegou); }
-  if (conta) sync_sujar_progresso();
+    if (!cat_salvar_progresso_ep(ia, vp, vd, epT, epE, chegou)) return; }
+  dados_sincronizar_logo();
+  if (conta) {
+    sync_sujar_progresso();
+    char id[64];
+    if (epT >= 0 && epE > 0) snprintf(id, sizeof id, "%.*s:%d:%d", (int)strcspn(ci->imdb, ":"), ci->imdb, epT, epE);
+    else snprintf(id, sizeof id, "%s", ci->imdb);
+    double sp = posSeg, sd = duracaoSeg;
+    partesVirt(&sp, &sd, NULL);
+    trakt_scrobble(SCR_EV_PONTO, id, sp, sd, assistidoSeg, 0);
+    simkl_scrobble(SCR_EV_PONTO, id, sp, sd, assistidoSeg, 0);
+    parcialConta = 0;
+  }
   parcialPos = posSeg;
   printf("[visto] ponto gravado (%s) pos=%.1f dur=%.1f (%.0f%%)\n", porque, (double)posSeg,
          (double)duracaoSeg, 100.0 * posSeg / duracaoSeg);
@@ -2790,6 +2799,11 @@ void player_descartar_retido(void) {
 void player_ciclo_evento(Uint32 tipo) {
   if (tipo == SDL_APP_WILLENTERBACKGROUND || tipo == SDL_APP_DIDENTERBACKGROUND ||
       tipo == SDL_APP_LOWMEMORY || tipo == SDL_APP_TERMINATING) {
+    if (aberto && fontePrincipal() && !scrubbing) {
+      double p = video_pos();
+      if (isfinite(p) && p >= 0) posSeg = (float)p;
+      gravarProgressoParcial(1, "background");
+    }
     player_descartar_retido(); retomamorna_cancelar();
   }
 }
@@ -4544,7 +4558,7 @@ void player_atualizar(float dt, Uint32 agora) {
              !saindo && !erroFonte && !esperandoFonte && !ehCanal() &&
              duracaoSeg >= 120.0f &&
              (partesAtiva() || !player_duracao_suspeita((double)duracaoSeg, duracaoCatalogo()));   // PRONTO do trailer (129 s) nao e deste titulo
-    static float tocouS, parcialRelogio, parcialSeek;
+    static float tocouS, parcialSeek;
     static int scrubAnterior;
     const CatItem *cs = item();
     if (cs && (jfid_e(cs->imdb) || !identidadeValida())) cs = NULL;
@@ -4561,9 +4575,12 @@ void player_atualizar(float dt, Uint32 agora) {
         wsTocando();
       }
       parcialRelogio += dt;
+      parcialConta += dt;
       if (parcialRelogio >= PLR_PARCIAL_INTERVALO_S) {
         parcialRelogio = 0.0f;
-        gravarProgressoParcial(0, "90 s tocando");
+        int sincronizar = parcialConta >= 300.0f;
+        gravarProgressoParcial(sincronizar, "30 s playing");
+
       }
     } else {
       // Pausou (ou o video parou de andar): so fala se ha um start em pe.

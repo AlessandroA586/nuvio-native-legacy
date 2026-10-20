@@ -1887,8 +1887,8 @@ int main(int argc, char **argv) {
         // app_evento consome estes avisos antes de entregar teclas as paginas.
         if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST || e.window.event == SDL_WINDOWEVENT_HIDDEN)
           app_evento(&e);
-        if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
-          player_descartar_retido(); retomamorna_cancelar();
+        if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST || e.window.event == SDL_WINDOWEVENT_HIDDEN) {
+          player_ciclo_evento(SDL_APP_WILLENTERBACKGROUND);
           ponteiro_evento(&e, app_evento);
         }
 #ifdef NV_TOUCH_UI

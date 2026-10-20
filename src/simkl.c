@@ -1272,6 +1272,8 @@ static int scrobbleDecidir(int evento, const char *id, double pct) {
     scrEstado.ativo = 1;
     return SCR_START;
   }
+  if (evento == SCR_EV_PONTO)
+    return scrEstado.ativo && mesmo && pct >= 1.0 && pct < 80.0 ? SCR_PAUSE : SCR_NADA;
   if (evento == SCR_EV_PAUSOU) {
     if (!scrEstado.ativo || !mesmo) return SCR_NADA;
     scrEstado.ativo = 0;
