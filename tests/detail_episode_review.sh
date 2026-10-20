@@ -35,7 +35,7 @@ p=Path('src/epcoment.c').read_text(); m=Path('src/episodios.c').read_text()
 d=Path('src/descoberta.c').read_text()
 assert 'int selected=k==filtro;' in p
 assert 'int available[11] = {1}' in p and 'while (!available[filtro])' in p
-assert '← Menu · → Nota' in p
+assert '{{"→",buf},{"←",i18n("Menu")}}' in p and 'notasui_desenhar_linha(&plano' in p
 assert 'VM_ANTERIOR' not in m and 'VM_PROXIMO' not in m
 assert 'txt_bloco(TXT_ILHA_NOME,vmCab' in m and 'vmTituloEscala' in m
 assert 'gfx_rect(th, t2, GFX_CARD, f,' in Path('src/detail.c').read_text()

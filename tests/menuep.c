@@ -100,6 +100,11 @@ TxtLinha epreview_texto(TxtEstilo estilo, const char *s, int r, int g, int b, in
   if (s && (strstr(s,"8,7") || strstr(s,"8.7"))) epImdbScores++;
   return txt_linha(estilo, s, r, g, b, a);
 }
+// The rating row draws IMDb as its badge (notasui.c is built with this hook).
+float epreview_badge_imdb(float x, float y, int nota, int escuro, float a) {
+  if (nota == 87) epImdbScores++;
+  return badge_imdb(x, y, nota, escuro, a);
+}
 static SDL_atomic_t epRelease;
 static int epMode, epPages[8], epTmdbRequests;
 static char *epFixture(const char *url) {
@@ -489,7 +494,7 @@ int main(int argc, char **argv) {
   epcoment_abrir(IMDB_SERIE, scored.temporada, scored.episodio);
   epImdbLabels = epImdbScores = 0;
   epcoment_desenhar((GfxRect){1000, 350, 676, 624}, 1);
-  CONFERE(epImdbLabels && epImdbScores, "selected IMDb episode score appears in review panel");
+  CONFERE(epImdbScores, /* the IMDb logo replaced the text label */ "selected IMDb episode score appears in review panel");
   char settingsPath[700]; snprintf(settingsPath,sizeof settingsPath,"%s/ajustes.txt",dados_dir());
   FILE *settings=fopen(settingsPath,"w"); assert(settings);
   fputs("notaEpisodio 3\n",settings); fclose(settings); ajustes_dir(dados_dir());
@@ -497,6 +502,10 @@ int main(int argc, char **argv) {
   espNota="7,6"; espNotaEstilo=-1;
   desenhaEpisodio((GfxRect){96,350,560,580},0,1,1,SDL_GetTicks());
   CONFERE(espNotaEstilo>=0,"selected TMDB episode rating appears alongside IMDb");
+  epcoment_abrir(IMDB_SERIE, scored.temporada, scored.episodio);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo); glClearColor(.04f,.04f,.05f,1); glClear(GL_COLOR_BUFFER_BIT);
+  epcoment_desenhar((GfxRect){1000, 350, 676, 624}, 1);
+  gravar("ratings");
   espNota=NULL;
   scored.notaImdb = 0;
   cat_definir_episodios(0, &scored, 1);

@@ -8,6 +8,7 @@
 #include "idioma.h"
 #include "ajustes.h"
 #include "js.h"
+#include "notasui.h"
 #include "anim.h"
 #include "layout.h"
 #include "ponteiro.h"
@@ -191,18 +192,12 @@ void epcoment_desenhar(GfxRect r, float a) {
   else snprintf(buf, sizeof buf, "%s", "—");
   float ar,ag,ab; ajustes_acento(&ar,&ag,&ab);
   if (!tmdb) {
-    float scoreW=200;
+    float scoreW=220;
     TxtLinha score=txt_linha(TXT_AJ_NUM110,buf,243,242,239,255);
     float sx=x+(scoreW-score.w*.85f)*.5f;
-    gfx_transformar(sx,r.y+6,.85f,0,0);
-    txt_desenhar_alpha(score,sx,r.y+6,a);
+    gfx_transformar(sx,r.y+44,.85f,0,0);
+    txt_desenhar_alpha(score,sx,r.y+44,a);
     gfx_sem_transformar();
-    GLuint mark=tex_obter(extras_caminho_marca(EX_TRAKT));
-    float brandW=txt_largura(TXT_G21B,"Trakt")+36, brandX=x+(scoreW-brandW)*.5f;
-    if (mark) { float alpha=gfx_opacidade_grupo; gfx_opacidade_grupo*=a; gfx_textura((GfxRect){brandX,r.y+126,26,26},mark); gfx_opacidade_grupo=alpha; }
-    texto(TXT_G21B,"Trakt",brandX+36,r.y+124,.9f*a);
-    char count[40]; idioma_inteiro(ajustes_idioma(),notas.votos,count,sizeof count);
-    texto(TXT_G18R,count,x+(scoreW-txt_largura(TXT_G18R,count))*.5f,r.y+157,.62f*a);
     int total=0;
     for (int k=1;k<=10;k++) total+=notas.distribuicao[k];
     // Show 10..5 to preserve the existing panel; shares include all ten buckets.
@@ -223,19 +218,28 @@ void epcoment_desenhar(GfxRect r, float a) {
     texto(TXT_G28B,"TMDB",x,r.y+30,a);
     texto(TXT_ILHA_TEXTO,i18n("TMDB · reviews da série"),x,r.y+85,.8f*a);
   }
+  // Bottom row: the title page's rating line on the left, keycaps on the right.
+  // "→" shows the current filter, so the old separate chip is gone.
   if (filtro) snprintf(buf,sizeof buf,i18n("Nota %d/10"),filtro);
   else snprintf(buf,sizeof buf,"%s",i18n("Todas"));
-  float chip=txt_largura(TXT_G18M,buf)+24;
-  gfx_cor((GfxRect){x,r.y+190,chip,30},.5f,ar,ag,ab,.22f*a);
-  texto(TXT_G18M,buf,x+12,r.y+193,a);
-  texto(TXT_G18R,i18n("← Menu · → Nota"),x+chip+18,r.y+193,.62f*a);
-  const int sources[]={EX_IMDB,EX_TMDB}, scores[]={notaImdb,notaTmdb};
-  float scoreX=x+220;
-  for (int i=0;i<2;i++) if (scores[i] && ajustes_nota_episodio(sources[i])) {
-    snprintf(buf,sizeof buf,"%s %d%c%d",i?"TMDB":"IMDb",scores[i]/10,
-             idioma_ponto_decimal(ajustes_idioma())?'.':',',scores[i]%10);
-    texto(TXT_G18R,buf,scoreX,r.y+220,.8f*a);
-    scoreX+=txt_largura(TXT_G18R,buf)+22;
+  const char *keys[2][2]={{"→",buf},{"←",i18n("Menu")}};
+  float kx=x+w;
+  for (int i=0;i<2;i++) {
+    float kw=txt_largura(TXT_G18M,keys[i][0])+txt_largura(TXT_G18R,keys[i][1])+34;
+    kx-=kw;
+    if (i==0 && filtro) gfx_cor((GfxRect){kx,r.y+208,kw,30},.5f,ar,ag,ab,.28f*a);
+    else gfx_cor((GfxRect){kx,r.y+208,kw,30},.5f,1,1,1,.07f*a);
+    texto(TXT_G18M,keys[i][0],kx+12,r.y+211,.8f*a);
+    texto(TXT_G18R,keys[i][1],kx+22+txt_largura(TXT_G18M,keys[i][0]),r.y+211,(i==0?.95f:.72f)*a);
+    kx-=10;
+  }
+  if (!tmdb) {
+    int cru[EX_NFONTES]={0}; unsigned char querer[EX_NFONTES]={0};
+    cru[EX_TRAKT]=notas.nota*10; querer[EX_TRAKT]=1;
+    cru[EX_IMDB]=notaImdb; querer[EX_IMDB]=ajustes_nota_episodio(EX_IMDB);
+    cru[EX_TMDB]=notaTmdb*10; querer[EX_TMDB]=ajustes_nota_episodio(EX_TMDB);
+    NotasPlano plano; notasui_planejar(&plano,cru,kx-x-10,0,querer);
+    notasui_desenhar_linha(&plano,x,r.y+223,a);
   }
   gfx_cor((GfxRect){x, top - 16, w, 1}, 0, 1, 1, 1, .12f * a);
   if (n <= 0) {
