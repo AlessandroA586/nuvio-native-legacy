@@ -3479,6 +3479,12 @@ char *rede_baixar_trecho64_cab(const char *u, const char *h, int64_t s, int64_t 
   if (st) *st = 0;
   return NULL;
 }
+char *rede_baixar_trecho64_final(const char *u, const char *h, int64_t s, int64_t e, long *n, int64_t *t, int *st,
+                                 volatile int *c, char *f, int *x) {
+  if (f) f[0] = 0;
+  if (x) *x = 0;
+  return rede_baixar_trecho64_cab(u, h, s, e, n, t, st, c);
+}
 #endif
 
 static unsigned long redeAgoraMs(void) {
