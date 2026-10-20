@@ -804,7 +804,7 @@ static void capturaSeSolicitado(void) {
 }
 
 #ifdef __EMSCRIPTEN__
-// Cede o controle ao navegador uma vez por quadro, ESPERANDO O rAF.
+// Yield once per frame, preferring rAF with a deadline for drawn player UI.
 //
 // A primeira versao usava emscripten_sleep(0), que vira setTimeout(0). MEDIDO
 // no Chrome: 0,5 FPS, com o proprio app relatando "pior=0.0ms" — o trabalho de
@@ -812,12 +812,19 @@ static void capturaSeSolicitado(void) {
 // aba em segundo plano e estrangulado para uma chamada por segundo, e mesmo em
 // primeiro plano ele nao tem relacao nenhuma com o vsync.
 //
-// requestAnimationFrame e o unico relogio que o compositor do navegador
-// respeita. EM_ASYNC_JS suspende a funcao C (via ASYNCIFY) ate a promessa
-// resolver, entao o `while` do main continua sendo o laco do app — nada de
-// partir o corpo do quadro num callback.
-EM_ASYNC_JS(void, nv_ceder_quadro, (), {
-  await new Promise(function (r) { requestAnimationFrame(r); });
+// EM_ASYNC_JS suspends C through ASYNCIFY until either clock resolves;
+// the main loop continues to own the frame.
+EM_ASYNC_JS(void, nv_ceder_quadro, (int ui), {
+  // Bound browser frame waits while player UI is drawn over hardware video.
+  await new Promise(function (resolve) {
+    var timer, raf = requestAnimationFrame(done);
+    function done() {
+      cancelAnimationFrame(raf);
+      if (timer !== undefined) clearTimeout(timer);
+      resolve();
+    }
+    if (ui) timer = setTimeout(done, 1000 / 60);
+  });
 });
 #endif
 
@@ -1635,7 +1642,7 @@ int main(int argc, char **argv) {
   // rAF aqui e depois de app_iniciar nao encurta nada disso; parte a tarefa
   // em tres, e o navegador (e o vigia de pagina que nao responde, se a TV tiver
   // um) ve a pagina respirar no meio. O canvas ainda nao tem nada desenhado.
-  nv_ceder_quadro();
+  nv_ceder_quadro(0);
 #endif
   // fonts/ fica ao lado de art/: derruba o ultimo componente do caminho da arte
   char dirRec[512];
@@ -1704,7 +1711,7 @@ int main(int argc, char **argv) {
   // quem usa o tema dinamico ja abre o app na cor do ultimo titulo.
   corviva_carregar();
 #ifdef __EMSCRIPTEN__
-  nv_ceder_quadro();   // o segundo ponto: ver a nota logo depois de gfx_iniciar
+  nv_ceder_quadro(0);   // o segundo ponto: ver a nota logo depois de gfx_iniciar
 #endif
   // Progresso e dado DO USUARIO: sai da pasta do pacote, que e a mesma para
   // todo mundo que usar o aparelho, e passa para a pasta da instalacao.
@@ -2293,7 +2300,7 @@ int main(int argc, char **argv) {
       // atrasar, e o primeiro a descer.
       fio1_rodar(6.0);
 #endif
-      nv_ceder_quadro();
+      nv_ceder_quadro(player_aberto() && (gfx_n_rect > 1 || gfx_n_outros > 0));
       fimCeder = SDL_GetPerformanceCounter();
       fora = (double)(fimCeder - c0) * 1000.0 / perFreq;
       if (fora > foraMaxMs) foraMaxMs = fora; }
