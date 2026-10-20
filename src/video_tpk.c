@@ -1669,6 +1669,7 @@ void video_bombear(void) {
   }
 }
 void video_parar(void) {
+  largura = altura = 0; // Stopped stream metadata must not shape the next live open.
   parado = 1; resgateAte = 0;
   cdn.pend = 0; cdn.usado = 0; cdn.arquivo = 0;
   atomic_fetch_add(&cdnGer, 1);

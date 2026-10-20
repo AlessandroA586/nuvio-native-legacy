@@ -1553,6 +1553,14 @@ static void aplicarAspecto(void) {
                            (int)(o.w + 0.5f), (int)(o.h + 0.5f));
               return; }
 
+#ifdef NV_TPK
+  // Source lookup may still expose the previous live channel's dimensions.
+  if (ehCanal() && esperandoFonte) {
+    video_janela(0, 0, (int)NV_TELA_W, (int)NV_TELA_H);
+    return;
+  }
+#endif
+
   // Layout neutro ate o modo salvo ser liberado (ver aspArmar).
   if (aspPendente) return;
 
@@ -2895,7 +2903,14 @@ static void janelaMandar(PlrRect r) {
   video_janela((int)(r.x + 0.5f), (int)(r.y + 0.5f), (int)(r.w + 0.5f), (int)(r.h + 0.5f));
 }
 static void janelaAnimar(PlrRect de, PlrRect para) {
+#ifdef NV_TPK
+  // Native display writes block on Samsung; send only the final rectangle.
+  (void)de; (void)para;
+  janAtiva = 0;
+  aplicarAspecto();
+#else
   janDe = de; janPara = para; janAgora = de; janT = 0.0f; janEm = 0; janAtiva = 1;
+#endif
 }
 // Um degrau por PLR_ENC_MS. Curva ease-out (1-(1-t)^3): parte rapido e
 // assenta devagar, que e o que se le como "o video veio para a frente".
