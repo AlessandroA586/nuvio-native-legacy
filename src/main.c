@@ -1156,9 +1156,11 @@ int main(int argc, char **argv) {
   // NV_PEDIR_4K continua existindo para a build de medicao, que precisa pedir
   // sem depender de ajuste gravado.
   { int quer4k = resolucaoDaTv() && ajustes_4k();
-    // The larger output workload is an explicit device-local choice.
-    int uiMenor4k = resolucaoDaTv() && ajustes_ampliar_app() &&
-                    (ajustes_720p() || ajustes_1080p());
+    // The larger output workload is an explicit device-local choice — 1080p
+    // only. "720p (leve)" must never ask for the 4K surface: it renders
+    // 1280x720 and the TV scaler upscales for free, whatever AJ_AMPLIAR_UI.
+    int uiMenor4k = resolucaoDaTv() && ajustes_ampliar_app() && ajustes_1080p();
+    int uiMenor720 = resolucaoDaTv() && ajustes_720p();
     // 4K THAT DID NOT HOLD on this TV in an earlier session (resolucao.h):
     // start at 1080p. Picking 4K again in Settings deletes the file.
     if (quer4k) {
@@ -1192,8 +1194,8 @@ int main(int argc, char **argv) {
       printf("[4k] build de medicao: pedindo 3840x2160\n");
     }
 #endif
-    pedeW = quer4k || uiMenor4k ? 3840 : (int)NV_TELA_W;
-    pedeH = quer4k || uiMenor4k ? 2160 : (int)NV_TELA_H;
+    pedeW = quer4k || uiMenor4k ? 3840 : uiMenor720 ? 1280 : (int)NV_TELA_W;
+    pedeH = quer4k || uiMenor4k ? 2160 : uiMenor720 ? 720 : (int)NV_TELA_H;
     if (quer4k) { printf("[4k] pedindo %dx%d — a linha `janela=` abaixo diz o "
                          "que a TV concedeu\n", pedeW, pedeH); fflush(stdout); } }
   SDL_Window *win;
@@ -1203,8 +1205,10 @@ int main(int argc, char **argv) {
 #ifdef NV_ANDROID
   // No Android a janela do SDL tem o tamanho da SUPERFICIE: pedir 3840x2160 ao
   // SDL_CreateWindow nao muda nada. Ver android_pedir_superficie.
-  // TV mode preserves the integration surface; app mode explicitly asks for 4K.
-  if (pedeW > (int)NV_TELA_W) android_pedir_superficie(pedeW, pedeH);
+  // TV mode preserves the integration surface; app mode explicitly asks for 4K,
+  // and 720p explicitly asks for 1280x720 (the TV scaler upscales for free).
+  if (pedeW > (int)NV_TELA_W || pedeW < (int)NV_TELA_W)
+    android_pedir_superficie(pedeW, pedeH);
 #endif
   const char *windowTitle = "Nuvio";
 #ifdef NV_LINUX_DESKTOP
@@ -1442,8 +1446,8 @@ int main(int argc, char **argv) {
 #endif
   // Capability is known only after creating the GL context. A saved app choice
   // must not leave a weak GPU paying for a 4K drawable.
-  if (resolucaoDaTv() && ajustes_ampliar_app() &&
-      (ajustes_720p() || ajustes_1080p()) && !gpun_upscale_suportado()) {
+  if (resolucaoDaTv() && ajustes_ampliar_app() && ajustes_1080p() &&
+      !gpun_upscale_suportado()) {
 #ifdef NV_ANDROID
     android_pedir_superficie((int)NV_TELA_W, (int)NV_TELA_H);
 #endif
@@ -1470,7 +1474,7 @@ int main(int argc, char **argv) {
   SDL_GL_GetDrawableSize(win, &dw, &dh);
   SDL_GetWindowSize(win, &jw, &jh);
   ajustes_ui_saida(dw, dh);
-  if (resolucaoDaTv() && ajustes_ampliar_app())
+  if (resolucaoDaTv() && ajustes_ampliar_app() && ajustes_1080p())
     printf("[gpu-nivel] app output requested=%dx%d drawable=%dx%d%s\n",
            pedeW, pedeH, dw, dh, dw < 3840 || dh < 2160 ? " (platform limit; TV completes 4K)" : "");
 #ifdef NV_TOUCH_UI
@@ -1598,7 +1602,9 @@ int main(int argc, char **argv) {
   if (gpuPref) gpun_preferencia(gpuPref);
   if (ajustes_720p()) gpun_forcar_720();
   else if (ajustes_1080p() && dw > (int)NV_TELA_W) gpun_alvo_1080();
-  gpun_ampliar_app(resolucaoDaTv() && ajustes_ampliar_app());
+  // 720p desenha no alvo 1280x720 e a TV amplia de graca: a copia do app
+  // so vale no 1080p (alvo 1920x1080 -> 4K). Em drawable 720 ela sai sozinha.
+  gpun_ampliar_app(resolucaoDaTv() && ajustes_ampliar_app() && ajustes_1080p());
 #ifdef NV_TPK
   video_tpk_zoom_roi_definir(ajustes_trailer_zoom_tpk());
 #endif
