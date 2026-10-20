@@ -30,9 +30,13 @@ No external contribution recorded in the supplied commits since `v2.0.7`.
 ## Internal
 
 - **Browser build link fix**: Restore the browser build's missing network-function stub so Samsung browser packages can link successfully. Platforms: Samsung browser/WASM. Refs `b84091f4c`.
-- **Issue tracking**: Keep release and issue tracking current. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `d2a392e14`, `dacee39da`, `9460c0dd8`.
+- **Issue tracking**: Keep release and issue tracking current. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`.
 
 ## Pending (not integrated yet)
+
+- **Xtream live playback on LG C4**: Investigation targets TS channels that buffer without starting video; no fix is integrated yet. Platforms: webOS. Refs #625, `agente/205-205-livets`; running job `j-205-livets.log`.
+- **Responsive Samsung episode endings**: Investigation targets stalled playback and unresponsive controls near episode end; no fix is integrated yet. Platforms: Samsung .tpk. Refs owner request, `agente/205-205-fimvod`; running job `j-205-fimvod.log`.
+- **Home loading with a slow DNS resolver**: Investigation targets empty Home screens when DNS takes longer than request timeouts; no fix is integrated yet. Platforms: Samsung .tpk. Refs #630, `agente/205-205-dnslento`; running job `j-205-dnslento.log`.
 
 Earlier report named `agente/205-i429hbs` (#429), `agente/205-p2pusb` (#334, #505), `agente/205-i513autoplay` (#513), `agente/205-barra27`, PRs #489/#490/#491/#493/#498, `agente/205-dicatoque` (#472), m3umisto, palco2, logos, fileiraui, diretorpol and triagem-velhas as pending. Their branches are absent from the current open snapshot; retain this historical record without presenting them as pending 2.0.8 features or duplicating already released work.
 
