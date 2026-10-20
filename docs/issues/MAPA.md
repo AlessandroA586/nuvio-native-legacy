@@ -1,6 +1,6 @@
 # Mapa vivo das issues
 
-Base: `5eddbe92f` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-20T02:50:00-03:00. 509 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
+Base: `f840b4037` (v2.0.5 já publicada; pendências pós-release em TRIAGEM-2.0.5.md). Atualizado em 2026-10-20T10:25:00-03:00. 515 issues (abertas e fechadas) de iqui27/nuvio-native-legacy.
 
 ## Como atualizar
 
@@ -120,10 +120,10 @@ Plano de refatoração: `docs/plans/refatoracao-geral.md` (branch `agente/refato
 | 2.0.3 | 0 |  |
 | 2.0.4 | 0 |  |
 | 2.0.5 | 2 | #495, #512 |
-| 2.0.6 | 46 | #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #479, #492, #494, #496, #500, #501, #503, #505, #506, #507, #508, #530, #539, #545, #549, #551, #553, #555, #557, #558, #564, #565, #566, #570, #577, #578, #579, #581, #582, #584, #585 |
+| 2.0.6 | 44 | #407, #412, #413, #414, #415, #418, #423, #424, #451, #459, #461, #462, #468, #469, #471, #479, #492, #494, #496, #500, #501, #503, #505, #507, #508, #530, #539, #545, #549, #551, #553, #555, #557, #558, #564, #565, #570, #577, #578, #579, #581, #582, #584, #585 |
 | 2.1 | 7 | #420, #457, #458, #514, #589, #590, #591 |
 | 2.2 | 0 |  |
-| futuro | 24 | #437, #438, #450, #509, #510, #521, #542, #594, #595, #599, #603, #604, #605, #606, #607, #608, #610, #612, #613, #616, #617, #621, #622, #623 |
+| futuro | 30 | #437, #438, #450, #509, #510, #521, #542, #594, #595, #599, #603, #604, #605, #606, #607, #608, #610, #612, #613, #616, #617, #621, #622, #623, #624, #625, #626, #628, #629, #630 |
 | nao vamos fazer | 0 |  |
 | ja-lancada | 11 | #410, #416, #417, #419, #421, #422, #425, #426, #433, #439, #440 |
 
@@ -180,13 +180,13 @@ Por status:
 | Status | Qtd |
 |---|---|
 | lancada | 394 |
-| aberta | 32 |
+| aberta | 35 |
 | integrada | 29 |
 | respondida | 17 |
 | por-desenho | 15 |
 | fechada-sem-resposta | 8 |
+| em_revisao | 7 |
 | precisa-log | 4 |
-| em_revisao | 4 |
 | fora-do-escopo | 4 |
 | duplicada | 2 |
 
@@ -195,14 +195,14 @@ Por release (grupo de planejamento):
 | Grupo | Qtd |
 |---|---|
 | lançadas em tag v* (qualquer versão) | 394 |
-| sem release | 108 |
+| sem release | 114 |
 | futuro (2.1/2.2) | 6 |
 | 2.0.3 lançada, com pendência | 1 |
 
 Lançadas por versão: 1.0.7: 7, 1.0.8: 1, 1.0.10: 2, 1.0.11: 3, 1.0.15: 1, 1.0.22: 1, 1.0.24: 1, 1.0.29: 1, 1.0.30: 2, 1.0.31: 2, 1.0.32: 2, 1.0.34: 1, 1.0.35: 1, 1.0.37: 1, 1.0.38: 2, 1.0.39: 1, 1.0.42: 1, 1.0.43: 4, 1.0.44: 4, 1.0.45: 1, 1.0.51: 3, 1.0.52: 1, 1.0.53: 1, 1.0.55: 3, 1.2.1: 4, 1.3.0: 1, 1.3.2: 5, 1.3.4: 5, 1.3.5: 2, 1.3.8: 1, 1.3.9: 1, 1.3.10: 1, 1.3.11: 1, 1.3.12: 5, 1.4: 6, 1.4.1: 2, 1.4.2: 8, 1.4.3: 9, 1.4.4: 3, 1.4.5: 1, 1.4.6: 6, 1.4.7: 1, 1.5.0: 2, 1.5.1: 4, 1.5.2: 9, 1.5.3: 2, 1.5.4: 7, 1.6.0: 8, 1.6.1: 4, 1.6.2: 3, 1.6.3: 2, 1.6.4: 2, 1.6.5: 4, 1.7.0: 8, 1.7.1: 4, 1.7.2: 5, 1.7.4: 5, 2.0.0: 22, 2.0.1: 12, 2.0.2: 17, 2.0.3: 28, 2.0.4: 6, 2.0.5: 14, 2.0.7: 113, 2.1: 4.
 
-Abertas no GitHub: 90. Fechadas: 419.
-Abertas sem nenhum comentário nosso: 76.
+Abertas no GitHub: 94. Fechadas: 421.
+Abertas sem nenhum comentário nosso: 80.
 
 ## 2.0.3 lançada com pendência (precisa-log, respondida ou conserto parcial)
 
@@ -496,7 +496,7 @@ Snapshot 2026-10-20T02:50:00-03:00: agente/205-triagem3: merged; No mapped revie
 
 ## Futuro (2.1, 2.2, depois)
 
-19 issues.
+25 issues.
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -519,6 +519,12 @@ Snapshot 2026-10-20T02:50:00-03:00: agente/205-triagem3: merged; No mapped revie
 | [#621](https://github.com/iqui27/nuvio-native-legacy/issues/621) | Distorted gif avatars | ? | bug | aberta | - | futuro | - | sem comentários | Triage; assign a job. |
 | [#623](https://github.com/iqui27/nuvio-native-legacy/issues/623) | App doesn't install when there is other versions of the app  | ? | ? | aberta | - | futuro | - | sem comentários | Triage; assign a job. |
 | [#622](https://github.com/iqui27/nuvio-native-legacy/issues/622) | Autosync Feature | ? | ? | aberta | - | futuro | - | sem comentários | Triage; assign a job. |
+| [#624](https://github.com/iqui27/nuvio-native-legacy/issues/624) | 2.0.7 Broken on Tizen 9 | Samsung (tpk) | bug | em_revisao | - | futuro | f840b4037 | sem comentários | Validate candidate fix f840b4037 (ignore 1x1 placeholder EGL surface) on device; then clos |
+| [#625](https://github.com/iqui27/nuvio-native-legacy/issues/625) | Live tv doesn’t work | ? | bug | aberta | - | futuro | - | sem comentários | Triage; assign a job. |
+| [#626](https://github.com/iqui27/nuvio-native-legacy/issues/626) | [Feature Request] Android TV/Google TV: "Tunneled playback"  | Android | feature | aberta | - | futuro | - | sem comentários | Triage; assign a job. |
+| [#628](https://github.com/iqui27/nuvio-native-legacy/issues/628) | Versão 2.0.7 tela preta infinita ao iniciar Tizen 9.0 | Samsung (tpk) | bug | em_revisao | - | futuro | f840b4037 | sem comentários | Validate candidate fix f840b4037 (ignore 1x1 placeholder EGL surface) on device; then clos |
+| [#629](https://github.com/iqui27/nuvio-native-legacy/issues/629) | [Samsung Tizen 10 / v2.0.7 .tpk] App won't open, blank scree | Samsung (tpk) | bug | em_revisao | - | futuro | f840b4037 | sem comentários | Validate candidate fix f840b4037 (ignore 1x1 placeholder EGL surface) on device; then clos |
+| [#630](https://github.com/iqui27/nuvio-native-legacy/issues/630) | [Bug]: Addons installed but no movies or content displaying  | ? | bug | aberta | - | futuro | - | sem comentários | Triage; assign a job. |
 
 Notas:
 
@@ -950,6 +956,12 @@ Snapshot 2026-10-20T02:50:00-03:00: agente/205-i606: merged; j-rev1322-i606.log:
 - **#621**: Imported from local issues snapshot.
 - **#623**: Imported from local issues snapshot.
 - **#622**: Imported from local issues snapshot.
+- **#624**: Imported from GitHub snapshot 2026-10-20. Sync 2026-10-20: f840b4037 fix(tpk) ignore 1x1 placeholder EGL surface targets this blank-screen report; awaiting TV validation.
+- **#625**: Imported from GitHub snapshot 2026-10-20.
+- **#626**: Imported from GitHub snapshot 2026-10-20.
+- **#628**: Imported from GitHub snapshot 2026-10-20. Sync 2026-10-20: f840b4037 fix(tpk) ignore 1x1 placeholder EGL surface targets this blank-screen report; awaiting TV validation.
+- **#629**: Imported from GitHub snapshot 2026-10-20. Sync 2026-10-20: f840b4037 fix(tpk) ignore 1x1 placeholder EGL surface targets this blank-screen report; awaiting TV validation.
+- **#630**: Imported from GitHub snapshot 2026-10-20.
 
 ## Outras pendências
 
@@ -962,7 +974,7 @@ Snapshot 2026-10-20T02:50:00-03:00: agente/205-i606: merged; j-rev1322-i606.log:
 
 388 issues.
 
-### Lançadas e ainda abertas no GitHub (65)
+### Lançadas e ainda abertas no GitHub (63)
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -995,7 +1007,6 @@ Snapshot 2026-10-20T02:50:00-03:00: agente/205-i606: merged; j-rev1322-i606.log:
 | [#501](https://github.com/iqui27/nuvio-native-legacy/issues/501) | [Android TV] Add External Player Selection and Custom Subtit | ? | feature | lancada | 2.0.7 | 2.0.6 | 161cdebd2, 281b4af37, 059f4d4f3/276207fac/a04f2a820; | sem comentários | Verify merged result; build/install and check device. |
 | [#503](https://github.com/iqui27/nuvio-native-legacy/issues/503) | Low-resolution backdrop when opening a recommended title's d | ? | bug | lancada | 2.0.7 | 2.0.6 | d3fc8e5e, 20f1104f, agente/205-i502arte | sem comentários | Verify merged result; build/install and check device. |
 | [#505](https://github.com/iqui27/nuvio-native-legacy/issues/505) | My P2p add on sources don’t load with version2.05 | ? | bug | lancada | 2.0.7 | 2.0.6 | b576c7a9, b576c7a9a, cdb45cb92 | sem comentários | Verify merged result; build/install and check device. |
-| [#506](https://github.com/iqui27/nuvio-native-legacy/issues/506) | App fails to connect: "The Nuvio account server didn't respo | ? | bug | lancada | 2.0.7 | 2.0.6 | 0e567d1a, agente/205-dicascontrole, agente/205-i505 | sem comentários | Verify merged result; build/install and check device. |
 | [#507](https://github.com/iqui27/nuvio-native-legacy/issues/507) | Library on home | ? | feature | lancada | 2.0.7 | 2.0.6 | agente/205-i507, agente/205-i507 | sem comentários | Latest fix postdates review; review newest tip after queued/running work finishes. |
 | [#508](https://github.com/iqui27/nuvio-native-legacy/issues/508) | Stream loading backdrop | ? | feature | lancada | 2.0.7 | 2.0.6 | d57b79e9, d57b79e9b, agente/205-cineabre | sem comentários | Latest fix postdates review; review newest tip after queued/running work finishes. |
 | [#509](https://github.com/iqui27/nuvio-native-legacy/issues/509) | Expanded poster trailer | ? | enhancement | lancada | 2.0.7 | futuro | 13e13b92, 13e13b92a, agente/205-cardexp | sem comentários | Latest fix postdates review; review newest tip after queued/running work finishes. |
@@ -1012,7 +1023,6 @@ Snapshot 2026-10-20T02:50:00-03:00: agente/205-i606: merged; j-rev1322-i606.log:
 | [#558](https://github.com/iqui27/nuvio-native-legacy/issues/558) | Black screen on launch | ? | bug | lancada | 2.0.7 | 2.0.6 | cc49341e6, merged, a1888d007 | sem comentários | Verify merged result; build/install and check device. |
 | [#564](https://github.com/iqui27/nuvio-native-legacy/issues/564) | Request to Add Playback Speed Controls | ? | feature | lancada | 2.0.7 | 2.0.6 | agente/205-i564, agente/205-i564 | sem comentários | Verify merged result; build/install and check device. |
 | [#565](https://github.com/iqui27/nuvio-native-legacy/issues/565) | PenguPlay add on doesn't work | ? | bug | lancada | 2.0.7 | 2.0.6 | d25a3e513, 68cf2c63b/c32a87bbf, 5aad21874 | sem comentários | Verify merged result; build/install and check device. |
-| [#566](https://github.com/iqui27/nuvio-native-legacy/issues/566) | Some issues | ? | bug | lancada | 2.0.7 | 2.0.6 | agente/205-poster566, agente/205-poster566 | sem comentários | Verify merged result; build/install and check device. |
 | [#578](https://github.com/iqui27/nuvio-native-legacy/issues/578) | Converted audio slightly delayed / out of lip sync on Samsun | Samsung .tpk | ? | lancada | 2.0.7 | 2.0.6 | agente/205-audoff578, agente/205-audoff578 | sem comentários | Verify merged result; build/install and check device. |
 | [#579](https://github.com/iqui27/nuvio-native-legacy/issues/579) | V2.06 scrolling catalogue display glitch | ? | bug | lancada | 2.0.7 | 2.0.6 | agente/205-rolagem579, agente/205-rolagem579 | sem comentários | Verify merged result; build/install and check device. |
 | [#581](https://github.com/iqui27/nuvio-native-legacy/issues/581) | Changing Volume pauses the playback | ? | bug | lancada | 2.0.7 | 2.0.6 | 4a0b3408d, agente/205-i581, agente/205-i581 | sem comentários | Verify merged result; build/install and check device. |
@@ -3430,157 +3440,6 @@ Snapshot 2026-10-20T02:50:00-03:00: agente/205-fonte552: merged; j-rev2-fonte552
 Snapshot 2026-10-20T02:50:00-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. 
 Snapshot 2026-10-20T02:50:00-03:00: agente/205-i506: merged; No mapped review verdict. 
 Snapshot 2026-10-20T02:50:00-03:00: agente/205-p2pusb: merged; j-revg-p2pusb-v5.log: OK. 
-- **#506**: Snapshot 2026-10-14 10:15: job j-205-i506 RUNNING (branch agente/205-i506, 0 commits fora de integracao/2.0.5). Suspeita de causa comum com #505. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i506. | Escrivão 2026-10-14 16:11: merge 0e567d1a (ancestral) consta em log.txt da integracao. | Escrivao 2026-10-15 11:48: prompt p-205-i506 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i506 integrada]
-Snapshot 2026-10-17T12:48:52-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T12:48:52-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T12:48:52-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-17T13:48:33-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T13:48:33-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T13:48:33-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-17T14:53:44-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T14:53:44-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T14:53:44-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-17T17:50:20-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T17:50:20-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T17:50:20-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-17T19:49:50-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T19:49:50-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T19:49:50-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-17T20:49:37-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T20:49:37-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T20:49:37-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-17T20:52:34-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T20:52:34-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-17T20:52:34-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T02:48:06-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T02:48:06-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T02:48:06-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T03:47:49-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T03:47:49-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T03:47:49-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T04:47:23-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T04:47:23-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T04:47:23-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T05:47:47-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T05:47:47-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T05:47:47-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T06:47:51-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T06:47:51-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T06:47:51-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T07:47:39-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T07:47:39-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T07:47:39-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T08:48:04-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T08:48:04-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T08:48:04-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T09:47:49-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T09:47:49-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T09:47:49-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T09:51:17-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T09:51:17-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T09:51:17-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T10:47:32-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T10:47:32-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T10:47:32-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T11:47:16-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T11:47:16-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T11:47:16-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T11:47:32-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T11:47:32-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T11:47:32-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T12:48:06-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T12:48:06-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T12:48:06-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T13:47:15-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK.
-Snapshot 2026-10-18T13:47:15-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK.
-Snapshot 2026-10-18T13:47:15-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T14:47:42-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T14:47:42-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T14:47:42-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T15:49:53-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T15:49:53-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T15:49:53-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T16:47:55-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T16:47:55-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T16:47:55-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T17:47:44-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T17:47:44-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T17:47:44-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T18:47:55-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T18:47:55-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T18:47:55-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T19:47:41-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T19:47:41-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T19:47:41-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T21:57:35-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T21:57:35-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T21:57:35-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-18T23:51:00-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T23:51:00-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-18T23:51:00-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T00:47:30-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T00:47:30-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T00:47:30-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T02:47:13-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T02:47:13-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T02:47:13-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T03:49:03-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T03:49:03-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T03:49:03-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T04:47:31-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T04:47:31-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T04:47:31-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T05:47:44-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T05:47:44-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T05:47:44-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T06:48:20-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T06:48:20-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T06:48:20-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T07:47:14-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T07:47:14-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T07:47:14-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T08:47:32-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T08:47:32-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T08:47:32-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T10:55:01-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T10:55:01-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T10:55:01-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T11:48:24-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T11:48:24-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T11:48:24-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T12:51:31-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T12:51:31-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T12:51:31-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T17:47:17-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T17:47:17-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T17:47:17-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T18:47:30-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T18:47:30-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T18:47:30-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T19:48:16-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T19:48:16-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T19:48:16-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T20:47:34-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK.
-Snapshot 2026-10-19T20:47:34-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK.
-Snapshot 2026-10-19T20:47:34-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T21:47:18-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T21:47:18-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T21:47:18-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T22:47:23-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T22:47:23-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
-Snapshot 2026-10-19T22:47:23-03:00: agente/205-i506: merged; No mapped review verdict.
-Snapshot 2026-10-19T23:51:39-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review. 
-Snapshot 2026-10-19T23:51:39-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review. 
-Snapshot 2026-10-19T23:51:39-03:00: agente/205-i506: merged; No mapped review verdict. 
-Snapshot 2026-10-20T00:47:07-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. 
-Snapshot 2026-10-20T00:47:07-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. 
-Snapshot 2026-10-20T00:47:07-03:00: agente/205-i506: merged; No mapped review verdict. 
-Snapshot 2026-10-20T01:47:11-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. 
-Snapshot 2026-10-20T01:47:11-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. 
-Snapshot 2026-10-20T01:47:11-03:00: agente/205-i506: merged; No mapped review verdict. 
-Snapshot 2026-10-20T02:50:00-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. 
-Snapshot 2026-10-20T02:50:00-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. 
-Snapshot 2026-10-20T02:50:00-03:00: agente/205-i506: merged; No mapped review verdict. 
 - **#507**: Snapshot 2026-10-14 10:15: criada 2026-10-14, labels enhancement. Sem triagem local. | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34
 Snapshot 2026-10-19T17:47:17-03:00: agente/205-i507: merged; j-rev1425-i507.log: OK. Newer fix log requires review.
 Snapshot 2026-10-19T18:47:30-03:00: agente/205-i507: merged; j-rev1425-i507.log: OK. Newer fix log requires review.
@@ -5589,29 +5448,6 @@ Snapshot 2026-10-20T01:47:11-03:00: agente/205-notas207b: merged; No mapped revi
 Snapshot 2026-10-20T02:50:00-03:00: agente/205-i565pengu: merged; j-rev-i565pengu.log: OK. 
 Snapshot 2026-10-20T02:50:00-03:00: agente/205-notas2: merged; j-revg-notas2.log: OK. 
 Snapshot 2026-10-20T02:50:00-03:00: agente/205-notas207b: merged; No mapped review verdict. 
-- **#566**: Nova em 2026-10-16 21:13 (issues.json, labels [bug]). Sem job no snapshot. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova em 2026-10-16 21:13 (issues.json, labels [bug]) | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
-Snapshot 2026-10-18T23:51:00-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T00:47:30-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T02:47:13-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T03:49:03-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T04:47:31-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T05:47:44-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T06:48:20-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T07:47:14-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T08:47:32-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T10:55:01-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T11:48:24-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T12:51:31-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T17:47:17-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T18:47:30-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T19:48:16-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T20:47:34-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T21:47:18-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T22:47:23-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
-Snapshot 2026-10-19T23:51:39-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK. 
-Snapshot 2026-10-20T00:47:07-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK. 
-Snapshot 2026-10-20T01:47:11-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK. 
-Snapshot 2026-10-20T02:50:00-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK. 
 - **#578**: Sync 2026-10-17 04:55: issue nova (17/10 06:05), sem job. Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
 Snapshot 2026-10-18T23:51:00-03:00: agente/205-audoff578: merged; j-rev2216-audoff578.log: OK.
 Snapshot 2026-10-19T00:47:30-03:00: agente/205-audoff578: merged; j-rev2216-audoff578.log: OK.
@@ -6674,7 +6510,7 @@ Snapshot 2026-10-20T00:47:07-03:00: agente/205-i616: merged; j-rev0803-i616.log:
 Snapshot 2026-10-20T01:47:11-03:00: agente/205-i616: merged; j-rev0803-i616.log: OK. 
 Snapshot 2026-10-20T02:50:00-03:00: agente/205-i616: merged; j-rev0803-i616.log: OK. 
 
-### Lançadas e fechadas (323)
+### Lançadas e fechadas (325)
 
 | # | Título | Plat. | Tipo | Status | Release | Alvo | Conserto | Última resposta | Próximo passo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -6991,6 +6827,7 @@ Snapshot 2026-10-20T02:50:00-03:00: agente/205-i616: merged; j-rev0803-i616.log:
 | [#499](https://github.com/iqui27/nuvio-native-legacy/issues/499) | Cached / not cached indicator on Debrid sources (torbox, rea | ? | feature | lancada | 2.0.7 | - | aab8e18d, 57aee24fd, agente/205-499cache | sem comentários | Verify merged result; build/install and check device. |
 | [#502](https://github.com/iqui27/nuvio-native-legacy/issues/502) | Detail page keeps the low-res thumbnail instead of loading f | ? | bug | lancada | 2.0.7 | - | d3fc8e5e, 20f1104f, 20f1104fc | sem comentários | Verify merged result; build/install and check device. |
 | [#504](https://github.com/iqui27/nuvio-native-legacy/issues/504) | Catalog rows from removed add-ons remain in the “Not on home | ? | bug | lancada | 2.0.7 | - | be7c0dee, 3c58d0ce, 3c58d0ce6 | sem comentários | Verify merged result; build/install and check device. |
+| [#506](https://github.com/iqui27/nuvio-native-legacy/issues/506) | App fails to connect: "The Nuvio account server didn't respo | ? | bug | lancada | 2.0.7 | - | 0e567d1a, agente/205-dicascontrole, agente/205-i505 | sem comentários | Verify merged result; build/install and check device. |
 | [#511](https://github.com/iqui27/nuvio-native-legacy/issues/511) | Show subtitle track name instead of only showing language | ? | enhancement | lancada | 2.0.7 | - | f0ab7c91, f0ab7c918, agente/205-i511legnome | sem comentários | Verify merged result; build/install and check device. |
 | [#513](https://github.com/iqui27/nuvio-native-legacy/issues/513) | Any series episode autoplay even option is disabled | ? | bug | lancada | 2.0.7 | - | 84add4581, agente/205-i513autoplay, pr/531-fix2 | sem comentários | Verify merged result; build/install and check device. |
 | [#524](https://github.com/iqui27/nuvio-native-legacy/issues/524) | Anime series showing up as an altogether different movie | ? | bug | lancada | 2.0.7 | - | 86d194462, cdf5bdd88, agente/205-i524q | sem comentários | Verify merged result; build/install and check device. |
@@ -6999,6 +6836,7 @@ Snapshot 2026-10-20T02:50:00-03:00: agente/205-i616: merged; j-rev0803-i616.log:
 | [#548](https://github.com/iqui27/nuvio-native-legacy/issues/548) | Mark as watched not working | ? | bug | lancada | 2.0.7 | - | merged, 66a608ef7/8330673a8/2d04fbecc/da2c69701/f87c41ed7/9bc31cc9d/b074d9fd5/5b37cecd8, 91da5935e | sem comentários | Latest fix postdates review; review newest tip after queued/running work finishes. |
 | [#552](https://github.com/iqui27/nuvio-native-legacy/issues/552) | The add-on sources aren't appearing | ? | bug | lancada | 2.0.7 | - | cbcf467f5/6d524f947/27988615e, merged, 0d7821a01 | sem comentários | Verify merged result; build/install and check device. |
 | [#556](https://github.com/iqui27/nuvio-native-legacy/issues/556) | Special / out-of-order seasons recognised by Trakt are not s | ? | ? | lancada | 2.0.7 | - | 054ccef24, agente/205-port569, agente/205-temporadas | sem comentários | Latest fix postdates review; review newest tip after queued/running work finishes. |
+| [#566](https://github.com/iqui27/nuvio-native-legacy/issues/566) | Some issues | ? | bug | lancada | 2.0.7 | - | agente/205-poster566, agente/205-poster566 | sem comentários | Verify merged result; build/install and check device. |
 | [#588](https://github.com/iqui27/nuvio-native-legacy/issues/588) | Live Sport Stream addons | ? | bug | lancada | 2.0.7 | - | agente/205-sport588, agente/205-sport588 | sem comentários | Verify merged result; build/install and check device. |
 | [#618](https://github.com/iqui27/nuvio-native-legacy/issues/618) | What nuvio prioritizes setting | ? | ? | lancada | 2.0.7 | - | agente/205-pr620, agente/205-pr620 | sem comentários | Verify merged result; build/install and check device. |
 
@@ -10318,6 +10156,158 @@ Snapshot 2026-10-20T01:47:11-03:00: agente/205-catal551: merged; j-rev2-catal551
 Snapshot 2026-10-20T01:47:11-03:00: agente/205-i504: merged; j-revg-i504.log: OK. 
 Snapshot 2026-10-20T02:50:00-03:00: agente/205-catal551: merged; j-rev2-catal551.log: OK. 
 Snapshot 2026-10-20T02:50:00-03:00: agente/205-i504: merged; j-revg-i504.log: OK. 
+- **#506**: Snapshot 2026-10-14 10:15: job j-205-i506 RUNNING (branch agente/205-i506, 0 commits fora de integracao/2.0.5). Suspeita de causa comum com #505. OPEN no GitHub. Escrivão 14/10 14:47: integrada via i506. | Escrivão 2026-10-14 16:11: merge 0e567d1a (ancestral) consta em log.txt da integracao. | Escrivao 2026-10-15 11:48: prompt p-205-i506 em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: agente/205-i506 integrada]
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T12:48:52-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T13:48:33-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-17T14:53:44-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T14:53:44-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T14:53:44-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-17T17:50:20-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T17:50:20-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T17:50:20-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-17T19:49:50-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T19:49:50-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T19:49:50-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-17T20:49:37-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T20:49:37-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T20:49:37-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-17T20:52:34-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T20:52:34-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-17T20:52:34-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T02:48:06-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T03:47:49-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T03:47:49-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T03:47:49-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T04:47:23-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T04:47:23-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T04:47:23-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T05:47:47-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T05:47:47-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T05:47:47-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T06:47:51-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T06:47:51-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T06:47:51-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T07:47:39-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T07:47:39-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T07:47:39-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T08:48:04-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T08:48:04-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T08:48:04-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T09:47:49-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T09:47:49-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T09:47:49-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T09:51:17-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T09:51:17-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T09:51:17-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T10:47:32-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T10:47:32-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T10:47:32-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T11:47:16-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T11:47:16-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T11:47:16-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T11:47:32-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T11:47:32-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T11:47:32-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T12:48:06-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T12:48:06-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T12:48:06-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T13:47:15-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK.
+Snapshot 2026-10-18T13:47:15-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK.
+Snapshot 2026-10-18T13:47:15-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T14:47:42-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T14:47:42-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T14:47:42-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T15:49:53-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T15:49:53-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T15:49:53-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T16:47:55-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T16:47:55-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T16:47:55-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T17:47:44-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T17:47:44-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T17:47:44-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T18:47:55-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T18:47:55-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T18:47:55-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T19:47:41-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T19:47:41-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T19:47:41-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T21:57:35-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T21:57:35-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T21:57:35-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-18T23:51:00-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T23:51:00-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-18T23:51:00-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T00:47:30-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T00:47:30-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T00:47:30-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T02:47:13-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T02:47:13-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T02:47:13-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T03:49:03-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T03:49:03-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T03:49:03-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T04:47:31-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T04:47:31-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T04:47:31-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T05:47:44-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T05:47:44-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T05:47:44-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T06:48:20-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T06:48:20-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T06:48:20-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T07:47:14-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T07:47:14-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T07:47:14-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T08:47:32-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T08:47:32-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T08:47:32-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T10:55:01-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T10:55:01-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T10:55:01-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T11:48:24-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T11:48:24-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T11:48:24-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T12:51:31-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T12:51:31-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T12:51:31-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T17:47:17-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T17:47:17-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T17:47:17-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T18:47:30-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T18:47:30-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T18:47:30-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T19:48:16-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T19:48:16-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T19:48:16-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T20:47:34-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK.
+Snapshot 2026-10-19T20:47:34-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK.
+Snapshot 2026-10-19T20:47:34-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T21:47:18-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T21:47:18-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T21:47:18-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T22:47:23-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T22:47:23-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review.
+Snapshot 2026-10-19T22:47:23-03:00: agente/205-i506: merged; No mapped review verdict.
+Snapshot 2026-10-19T23:51:39-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-19T23:51:39-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. Newer fix log requires review. 
+Snapshot 2026-10-19T23:51:39-03:00: agente/205-i506: merged; No mapped review verdict. 
+Snapshot 2026-10-20T00:47:07-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. 
+Snapshot 2026-10-20T00:47:07-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. 
+Snapshot 2026-10-20T00:47:07-03:00: agente/205-i506: merged; No mapped review verdict. 
+Snapshot 2026-10-20T01:47:11-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. 
+Snapshot 2026-10-20T01:47:11-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. 
+Snapshot 2026-10-20T01:47:11-03:00: agente/205-i506: merged; No mapped review verdict. 
+Snapshot 2026-10-20T02:50:00-03:00: agente/205-dicascontrole: merged; j-revg-dicascontrole.log: OK. 
+Snapshot 2026-10-20T02:50:00-03:00: agente/205-i505: merged; j-revg-i505-r2.log: OK. 
+Snapshot 2026-10-20T02:50:00-03:00: agente/205-i506: merged; No mapped review verdict. 
+Sync 2026-10-20: fechada no GitHub.
 - **#511**: Criada 2026-10-14 (snapshot 14:46). Escrivao 14/10 19:1x: Fix 2e05dd94; j-revg-i511legnome-q OK 18:44; merge f0ab7c91 18:45. | Escrivao 2026-10-15 11:48: prompt p-205-i511legnome em /Volumes/ExternalSSD/tmp/rev; job terminado, sem job vivo [sync 2026-10-15: GitHub closed] [sync 2026-10-15: agente/205-i511legnome integrada]
 Snapshot 2026-10-17T12:48:52-03:00: agente/205-i511legnome: merged; j-revg-i511legnome-q.log: OK.
 Snapshot 2026-10-17T13:48:33-03:00: agente/205-i511legnome: merged; j-revg-i511legnome-q.log: OK.
@@ -11332,6 +11322,30 @@ Snapshot 2026-10-20T01:47:11-03:00: agente/205-temporadas: merged; j-rev-tempora
 Snapshot 2026-10-20T02:50:00-03:00: agente/205-port569: merged; j-rev-port569-r2.log: OK. 
 Snapshot 2026-10-20T02:50:00-03:00: agente/205-release207: merged; j-rev-release207.log: OK. 
 Snapshot 2026-10-20T02:50:00-03:00: agente/205-temporadas: merged; j-rev-temporadas-r2.log: OK. 
+- **#566**: Nova em 2026-10-16 21:13 (issues.json, labels [bug]). Sem job no snapshot. | [sync 2026-10-16 21:00] ainda sem job/branch no snapshot de 10-16 21:00. | [sync 2026-10-16 22:55] nova em 2026-10-16 21:13 (issues.json, labels [bug]) | Escrivão 2026-10-16 22:1x: sem job nem branch no snapshot 10-16 23:34 Sync 2026-10-17 07:05: segue sem job nem branch no snapshot 10-17 07:00.
+Snapshot 2026-10-18T23:51:00-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T00:47:30-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T02:47:13-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T03:49:03-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T04:47:31-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T05:47:44-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T06:48:20-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T07:47:14-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T08:47:32-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T10:55:01-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T11:48:24-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T12:51:31-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T17:47:17-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T18:47:30-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T19:48:16-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T20:47:34-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T21:47:18-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T22:47:23-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK.
+Snapshot 2026-10-19T23:51:39-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK. 
+Snapshot 2026-10-20T00:47:07-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK. 
+Snapshot 2026-10-20T01:47:11-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK. 
+Snapshot 2026-10-20T02:50:00-03:00: agente/205-poster566: merged; j-rev2216-poster566.log: OK. 
+Sync 2026-10-20: fechada no GitHub.
 - **#588**: Sync 2026-10-17 11:00: issue nova (createdAt 2026-10-17T13:15:04Z), sem job.
 Snapshot 2026-10-18T23:51:00-03:00: agente/205-sport588: merged; j-rev2238-sport588.log: OK.
 Snapshot 2026-10-19T00:47:30-03:00: agente/205-sport588: merged; j-rev2238-sport588.log: OK.
