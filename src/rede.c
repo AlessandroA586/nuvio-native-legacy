@@ -1243,6 +1243,42 @@ static int   (*curl_getinfo)(void *, int, ...);
 static void  (*curl_reset)(void *);
 static time_t (*curl_getdate_fn)(const char *, const time_t *);
 
+#ifdef NV_TPK
+static void *dnsShare;
+static pthread_mutex_t dnsTrava = PTHREAD_MUTEX_INITIALIZER;
+static void dnsLock(void *c, int data, int access, void *arg) {
+  (void)c; (void)data; (void)access; (void)arg;
+  pthread_mutex_lock(&dnsTrava);
+}
+static void dnsUnlock(void *c, int data, void *arg) {
+  (void)c; (void)data; (void)arg;
+  pthread_mutex_unlock(&dnsTrava);
+}
+static void prepararDns(void *h, const char *ares) {
+  void *(*init)(void);
+  int (*option)(void *, int, ...);
+  int (*cleanup)(void *);
+  void *s;
+  /* #630: c-ares 1.17 uses retrans: in milliseconds, retry: (not
+     timeout:/attempts:). Two rounds at 250/500 ms per nameserver fit
+     the usual 1-2 server setup inside the 2 s connect deadline. Keep
+     nameserver order, dual-stack and explicit operator RES_OPTIONS. */
+  if (ares && !strncmp(ares, "1.17.", 5))
+    setenv("RES_OPTIONS", "retrans:250 retry:2", 0);
+  *(void **)(&init) = dlsym(h, "curl_share_init");
+  *(void **)(&option) = dlsym(h, "curl_share_setopt");
+  *(void **)(&cleanup) = dlsym(h, "curl_share_cleanup");
+  if (!init || !option || !cleanup || !(s = init())) return;
+  /* CURLSHOPT_LOCKFUNC/UNLOCKFUNC/SHARE; CURL_LOCK_DATA_DNS only.
+     Process-lifetime cache survives failed handles and worker exits.
+     Connections and TLS sessions remain private to each worker. */
+  if (option(s, 3, dnsLock) || option(s, 4, dnsUnlock) || option(s, 1, 3)) {
+    cleanup(s); return;
+  }
+  dnsShare = s;
+}
+#endif
+
 // Chamado depois da repeticao existente do GET, diretamente nos demais caminhos.
 // So falha de TRANSPORTE que falhou RAPIDO: conexao recusada (7), aperto de mao
 // TLS que nao fechou (35), resposta vazia (52) e recepcao que caiu (56). O curl
@@ -1312,6 +1348,7 @@ static int    pronto;
 // pedidos do mesmo fio sem partilhar nada entre fios — `curl_easy_*` nao pode
 // ser usado por dois fios ao mesmo tempo, e assim nunca e. `curl_easy_reset`
 // limpa as opcoes do pedido anterior e PRESERVA conexoes, DNS e sessoes TLS.
+// On TPK, opcoesComuns attaches a shared DNS cache across these handles (#630).
 //
 // Bonus: `curl_easy_cleanup` era onde o OpenSSL 1.0 morria (ver
 // prepararOpenSSL); agora ele so roda no fim do fio.
@@ -1558,6 +1595,9 @@ static unsigned long conexaoMs(unsigned long prazoMs) {
   return m < prazoMs ? m : prazoMs;
 }
 static void opcoesComuns(void *c, unsigned long prazoMs) {
+#ifdef NV_TPK
+  if (dnsShare) curl_setopt(c, 10100 /* CURLOPT_SHARE */, dnsShare);
+#endif
   curl_setopt(c, OPT_TIMEOUT_MS, (long)prazoMs);
   curl_setopt(c, OPT_CONNECTTIMEOUT_MS, (long)conexaoMs(prazoMs));
   // O app roda com fios; sem NOSIGNAL a libcurl usa alarmes para o timeout de
@@ -1961,6 +2001,9 @@ static int abrirReal(void) {
                   (v->features & (1 << 7)) ? "threaded" : "no (synchronous)",
                   v->age >= 1 && v->ares ? v->ares : "");
     else printf("[rede] curl_version_info indisponivel\n");
+#ifdef NV_TPK
+    prepararDns(h, v && v->age >= 1 ? v->ares : NULL);
+#endif
     fflush(stdout);
   }
   // DEPOIS do global_init e ANTES de soltar a trava: a partir daqui qualquer fio
