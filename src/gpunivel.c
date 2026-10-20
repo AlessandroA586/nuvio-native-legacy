@@ -247,9 +247,12 @@ void gpun_ampliar_app(int app) {
   // The caller supplies panel eligibility via ajustes_ampliar_app(). A 4K panel
   // may grant only 1080p (C9); drawable size must not veto its 720p upscaler.
   ampliarApp = app && upscaleSgsr;
+  // Caminho identidade (sem alvo interno ou drawable 720 nativo): nao ha
+  // ampliacao pelo app, qualquer que seja a escolha gravada — o log diz o
+  // modo efetivo.
   if ((!forca720 && !alvo1080) || (forca720 && telaW <= 1280 && telaH <= 720))
-    printf("[gpu-nivel] ampliar=%s upscale=bilinear %dx%d -> %dx%d\n",
-           ampliarApp ? "app" : "tv", telaW, telaH, telaW, telaH);
+    printf("[gpu-nivel] ampliar=tv upscale=bilinear %dx%d -> %dx%d\n",
+           telaW, telaH, telaW, telaH);
 }
 
 static void alvoApagar(GLuint *fbo, GLuint *tex) {

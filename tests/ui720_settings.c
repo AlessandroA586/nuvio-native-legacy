@@ -35,6 +35,20 @@ void ui720_settings(int width, int height, int app, int weak, int sourceHeight) 
   if (!app) assert(OPCOES[AJ_AMPLIAR_UI].valores[0] && valor[AJ_AMPLIAR_UI] == 0);
   assert(!ajustePortavel(AJ_AMPLIAR_UI));
   assert(!strcmp(textoValor(AJ_AMPLIAR_UI), app ? "Pelo app (4K)" : "Pela TV"));
+  // #205: in Automatic the choice has no effect — the row shows the effective
+  // "Pela TV" and is unavailable, and the stored value is untouched. Back at
+  // 1080p/720p the stored choice is what shows.
+  int savedRes = valor[AJ_RESOLUCAO];
+  valor[AJ_RESOLUCAO] = RES_AUTO;
+  assert(inativa(AJ_AMPLIAR_UI));
+  assert(!strcmp(textoValor(AJ_AMPLIAR_UI), "Pela TV"));
+  assert(valor[AJ_AMPLIAR_UI] == app);
+  valor[AJ_RESOLUCAO] = RES_4K;
+  assert(inativa(AJ_AMPLIAR_UI));
+  assert(!strcmp(textoValor(AJ_AMPLIAR_UI), "Pela TV"));
+  valor[AJ_RESOLUCAO] = savedRes;
+  assert(!strcmp(textoValor(AJ_AMPLIAR_UI), app ? "Pelo app (4K)" : "Pela TV"));
+  assert(inativa(AJ_AMPLIAR_UI) == weak);
   int row = -1;
   for (int i = 0; i < AJ_N_TELA; i++)
     if (TELA[i].tipo == IT_OPC && TELA[i].op == AJ_AMPLIAR_UI) row = i;
