@@ -1,5 +1,6 @@
 #include "arteurl.h"
 #include "descoberta.h"
+#include "dados.h"
 #include "idioma.h"
 #include "ajustes.h"
 #include "extras.h"
@@ -5974,9 +5975,9 @@ static void metaChaveContexto(const char *id, char *dst, size_t n) {
   snprintf(dst, n, "%s/%d/%s/%s", usuario ? usuario : "", perfis_ativo(), desc_tmdb_idioma(), id);
 }
 static int metaDiscoNome(const char *chave, char *dst, size_t n) {
-  const char *dir = dados_dir();
-  if (!dir || !dir[0]) return 0;
-  snprintf(dst, n, "%s/meta-%02u.txt", dir, hashBaseAddon(chave) % 64);
+  char nome[32];
+  snprintf(nome, sizeof nome, "meta-%02u.txt", hashBaseAddon(chave) % 64);
+  if (!dados_caminho(dst, (unsigned)n, nome)) return 0;
   return 1;
 }
 // ponytail: 64 slots (colisao vira miss), ate 256 KiB/corpo e validade 6 h.
@@ -6342,9 +6343,7 @@ const char *dados_dir(void);
 static int locDiscoLido;
 
 static int locCaminho(char *dst, size_t n) {
-  const char *d = dados_dir();
-  if (!d || !d[0]) return 0;
-  snprintf(dst, n, "%s/loc-texto.txt", d);
+  if (!dados_caminho(dst, (unsigned)n, "loc-texto.txt")) return 0;
   return 1;
 }
 

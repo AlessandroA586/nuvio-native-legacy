@@ -699,6 +699,17 @@ class NuvioActivity : SDLActivity() {
 
     // Variaveis que o C le (contrato do porte Android). Tem de rodar antes do
     // super.onCreate: o SDL abre o main numa thread logo depois.
+    fun limparCache() {
+        runOnUiThread {
+            NvPlayer.parar()
+            CacheMidia.descartar("clear cache")
+            // Session release runs on the cache executor before deleting its files.
+            CacheMidia.limparTudo(cacheDir)
+        }
+        File(cacheDir, "logs/nuvio-anterior.log").delete()
+        File(cacheDir, "engine/p2p").deleteRecursively()
+    }
+
     private fun prepararAmbiente() {
         val dados = File(filesDir, "dados").apply { mkdirs() }
         val uiMode = (getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager)?.currentModeType
@@ -716,11 +727,22 @@ class NuvioActivity : SDLActivity() {
         fun env(k: String, v: String) = Os.setenv(k, v, true)
         env("NUVIO_INTERFACE_AUTO", if (automaticMobile) "1" else "0")
         env("NUVIO_DADOS", dados.path)
+        val regenerable = File(cacheDir, "regenerable").apply { mkdirs() }
+        val p2pCache = File(cacheDir, "engine").apply { mkdirs() }
+        env("NUVIO_CACHE", regenerable.path)
+        env("NUVIO_CACHE_ROOT", cacheDir.path)
+        env("TMPDIR", regenerable.path)
+        env("NUVIO_P2P_CACHE", p2pCache.path)
+        val logs = File(cacheDir, "logs").apply { mkdirs() }
+        File(dados, "atualizacao").deleteRecursively()
+        File(dados, "p2p").deleteRecursively()
+        File(dados, "nuvio.log").delete()
+        File(dados, "nuvio-anterior.log").delete()
         // Scoped to signing key/user/device; stable across app reinstall.
         val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         if (!deviceId.isNullOrBlank()) env("NUVIO_DEVICE_ID", "android:$deviceId")
-        env("NUVIO_LOG", File(dados, "nuvio.log").path)
-        env("NUVIO_LOG_ANTERIOR", File(dados, "nuvio-anterior.log").path)
+        env("NUVIO_LOG", File(logs, "nuvio.log").path)
+        env("NUVIO_LOG_ANTERIOR", File(logs, "nuvio-anterior.log").path)
         env("HOME", dados.path)
         env("NUVIO_ARTE", File(res, "art").path)
         env("NUVIO_LOCALE", java.util.Locale.getDefault().toLanguageTag())

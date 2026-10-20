@@ -8,6 +8,7 @@
 // espelha stdout/stderr no logcat (tag "nuvio") sem tirar nada do arquivo, e
 // pede ao SDL que o Voltar chegue ao app em vez de fechar a Activity.
 void android_iniciar(void);
+void android_limpar_cache(void);
 // Saved device mode: changes the existing Activity, without recreating native state.
 void android_interface_modo(int mobile);
 // Salva uma copia local do registro pelo seletor de arquivos do Android.

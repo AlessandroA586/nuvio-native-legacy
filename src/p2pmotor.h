@@ -43,10 +43,18 @@
 #include <stdint.h>
 
 #ifndef P2PM_DISCO_MB      // teto MOLE do motor (disk_cache_capacity); nunca > 1/4 do livre
+#ifdef NV_ANDROID
+#define P2PM_DISCO_MB 28
+#else
 #define P2PM_DISCO_MB 512
 #endif
+#endif
 #ifndef P2PM_DURO_MAX_MB   // teto DURO absoluto da pasta; nunca > 1/2 do livre ao subir
+#ifdef NV_ANDROID
+#define P2PM_DURO_MAX_MB 192 // 160 MiB streaming window plus 32 MiB headroom
+#else
 #define P2PM_DURO_MAX_MB 1536
+#endif
 #endif
 #define P2PM_LIVRE_MIN_MB 256   // menos livre que isto ao subir: recusa
 #define P2PM_RESERVA_MB   512   // limite FIXO (Ajustes): deixa ao menos isto livre na TV (#334)
