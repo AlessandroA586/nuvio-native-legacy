@@ -5603,6 +5603,7 @@ void app_atualizar(float dt, Uint32 agora) {
         cwEspera = 0;
         if (cw && !strcmp(cw->tipo, "series")) {
           cwTocarT = cw->temporada; cwTocarE = cw->episodio;
+          if (cw->episodio <= 0) tocar = 0;
           // EPISODIO TERMINADO NUNCA TOCA DE NOVO DO COMECO. O card ja anuncia
           // o proximo quando a lista existe; sem lista (a copia do card nao
           // tem), a pagina abre e o toque espera a lista (cwEsperarProximo).
