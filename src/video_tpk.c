@@ -781,13 +781,16 @@ int video_tocar(const char *u) {
   memset(&mf, 0, sizeof mf); atomic_store(&mfRecusas, 0); atomic_store(&mfAviso, 0);
   hostUrl[0] = hostCab[0] = 0;
   mkvfix_parar();
-  capmkv_iniciar(urlAtual);
-  mkvGeracao++; mkvN = 0; faixasNovas = 0; mkvOlhou = 0; mkvSondarJa = 0; mkvNaoMkv = 0;
+  // player.c supplies !ehCanal(): live must not open side connections to
+  // IPTV providers, which can evict the playing session at the next HLS window.
+  reconPermitida = reconProxima; reconProxima = 0;
+  if (reconPermitida) capmkv_iniciar(urlAtual);
+  else capmkv_zerar();
+  mkvGeracao++; mkvN = 0; faixasNovas = 0; mkvOlhou = 0; mkvSondarJa = 0; mkvNaoMkv = !reconPermitida;
   // Um fio da fonte anterior ainda na rede ve a geracao mudada e descarta.
-  mkvEstado = urlAtual[0] ? 1 : 0;
+  mkvEstado = urlAtual[0] && reconPermitida ? 1 : 0;
   pausaPedida = 0; reconPausa = -1;
   nv_recon_zerar(&recon);
-  reconPermitida = reconProxima; reconProxima = 0;
   reconIniciou = 0; reconErroPend = 0; reconLinhaRede = 0;
   reconAudio = reconLeg = -1; reconFaixasPend = 0; reconBuscarMs = -1;
   // CABECALHO JA LIDO (pre-busca do mkvass, sem rede): um MKV so com DTS/TrueHD
@@ -863,7 +866,7 @@ int video_tpk_codec_recusado(const char *codecId) {
 // por http(s) e sem desistencia nesta fonte. MKV decide pelo cabecalho; MP4 (e o
 // que nao e MKV) pela sonda do conversor, ao lado do original (convSondar).
 static int convPossivel(void) {
-  if (cv.desistiu || emTrailer || !urlAtual[0]) return 0;
+  if (!reconPermitida || cv.desistiu || emTrailer || !urlAtual[0]) return 0;
   if (strncmp(urlAtual, "http://", 7) && strncmp(urlAtual, "https://", 8)) return 0;
   if (proxyts_e_url(urlAtual) || dts_tpk_e_url(urlAtual)) return 0;
   if (ajustes_dts_tpk_modo() == DTSTPK_DESLIGADO || !videoConvertivel()) return 0;
