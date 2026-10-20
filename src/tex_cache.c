@@ -351,7 +351,11 @@ __attribute__((unused)) static void publicarCacheDisco(void) {
 #ifdef __EMSCRIPTEN__
 #define NV_CACHE_DISCO_MAX (48L * 1024L * 1024L)
 #else
+#ifdef NV_ANDROID
+#define NV_CACHE_DISCO_MAX (64L * 1024L * 1024L)
+#else
 #define NV_CACHE_DISCO_MAX (512L * 1024L * 1024L)
+#endif
 #define NV_CACHE_DISCO_RESERVA (128UL * 1024UL * 1024UL)
 // TETO PROPORCIONAL AO ESPACO, no LG (22/09/2026). 512 MB fixos era mais da
 // metade do que a C9 tinha: 497 MB de arte em 3309 arquivos numa particao de

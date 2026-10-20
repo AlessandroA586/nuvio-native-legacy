@@ -68,6 +68,7 @@
 #include "text.h"
 #include "detail.h"
 #include "dados.h"
+#include "androidcache.h"
 #include "negcache.h"
 #include "p2pmotor.h"
 #include <pthread.h>
@@ -1113,6 +1114,10 @@ int main(int argc, char **argv) {
   // ja esta resolvido desde o topo do main.
   NV_ETAPA("dados_iniciar");
   dados_iniciar(dirArte);
+#ifdef NV_ANDROID
+  nv_android_cache_migrate(dados_dir());
+  nv_android_cache_trim(NV_ANDROID_CACHE_BYTES);
+#endif
   dados_espaco_iniciar(dirArte);
   negcache_disco(dados_ler, dados_gravar_leve);   // 404 de API de metadados lembrado entre arranques
   #ifdef NV_LEVE
@@ -1746,6 +1751,9 @@ int main(int argc, char **argv) {
     // a pasta IDBFS continua disponivel para o caminho legado de GIFs.
     char c[600];
     snprintf(c, sizeof c, "%s/cache", dirDados);
+#ifdef NV_ANDROID
+    snprintf(c, sizeof c, "%s/images", nv_android_cache_dir());
+#endif
     tex_cache_dir(c); }
   // Os icones da interface saem de art/icones (SVG do app web rasterizados).
   gfx_icones_dir(dirArte);

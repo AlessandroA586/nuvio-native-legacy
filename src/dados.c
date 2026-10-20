@@ -4,6 +4,7 @@
 #endif
 #include "app_id.h"
 #include "dados.h"
+#include "androidcache.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -509,7 +510,12 @@ void dados_sincronizar(void) {
 
 char *dados_caminho(char *dst, unsigned tam, const char *nome) {
   if (!dir[0] || !nome || !*nome) return NULL;
-  snprintf(dst, tam, "%s/%s", dir, nome);
+  const char *base = dir;
+#ifdef NV_ANDROID
+  if (nv_android_cache_name(nome)) base = nv_android_cache_dir();
+#endif
+  if (!base[0]) return NULL;
+  snprintf(dst, tam, "%s/%s", base, nome);
   return dst;
 }
 
@@ -568,6 +574,9 @@ char *dados_ler(const char *nome) {
   NV_FS_TRAVAR();
   f = fopen(caminho, "rb");
   if (!f) { NV_FS_LIBERAR(); return NULL; }
+#ifdef NV_ANDROID
+  if (nv_android_cache_name(nome)) nv_android_cache_touch(caminho);
+#endif
   fseek(f, 0, SEEK_END);
   n = ftell(f);
   fseek(f, 0, SEEK_SET);

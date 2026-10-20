@@ -912,7 +912,7 @@ static void ass_garantir_naskh(void) {
     if (access(caminho, R_OK) == 0) { pronto = 1; return; }
   }
   if (!dados_dir() || !dados_dir()[0]) return;
-  snprintf(pasta, sizeof pasta, "%s/fontes", dados_dir());
+  if (!dados_caminho(pasta, sizeof pasta, "fontes")) goto falhou;
   snprintf(caminho, sizeof caminho, "%s/NotoNaskhArabic-Regular.ttf", pasta);
   if (access(caminho, R_OK) != 0) {
     if (NV_VERSAO[0] < '0' || NV_VERSAO[0] > '9') { pronto = 1; return; }

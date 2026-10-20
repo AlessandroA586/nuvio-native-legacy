@@ -369,6 +369,7 @@ IGNORAR = {
     # Usados apenas para ler, gravar e apagar arquivos; nunca texto de tela.
     "%s/catalogo-%016llx-p%d.bin", "%s/catalogo-%016llx-p%d.bin.tmp",
     "catalogo-%016llx-p%d.bin.tmp-", "catalogo-rede.bin.tmp-",
+    "catalogo-", "fontes/", "legendas/",  # Android cache paths, not UI.
     "amigos-vistos-p%d.txt",
     "epg-conta-%d-%08x-p%d.%s", "epg-conta-%d-%08x-p%d.bin",
     "epg-conta-%d-%08x-p%d.ts", "epg-conta-%d-%08x-p%d.id",

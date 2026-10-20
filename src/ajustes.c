@@ -16,6 +16,7 @@
 #include "ajustes_ux.h"
 #include "trailerfonte.h"   // NV_TRAILER_CONTINUA_DETALHE, nas ajudas do trailer
 #include "dados.h"
+#include "androidcache.h"
 #include "extplayer.h"
 #include "resolucao.h"
 #include "gpunivel.h"
@@ -693,6 +694,7 @@ typedef enum {
   AJ_AMPLIACAO_ALGO,  // Device-local upscaling algorithm, append-only; automatic by default.
   AJ_AMPLIACAO_NITIDEZ, // Device-local RCAS sharpness for SGSR sharp / FSR 1, append-only.
   AJ_HDR_INTERFACE,    // Experimental Android HDR output; device-local
+  AJ_LIMPAR_CACHE,
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -1809,6 +1811,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Algoritmo de ampliação", V_AMPLIACAO_ALGO, 6),
   NUM("Nitidez", 0, 4, 1, NULL),
   ESC("Interface em HDR (teste)", V_VIDRO_FOSCO, 2),
+  ACAO("Limpar cache"),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -2128,6 +2131,7 @@ static const char *CHAVE[] = {
   "ampliarAlgoLocal",
   "ampliarNitidezLocal",
   "hdrInterfaceLocal",
+  "-limparCache",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -6927,6 +6931,17 @@ static const char *textoLeitura(int op) {
     return extras_mdblist_tem_chave() ? i18n("definida") : i18n("ausente");
   }
   if (op == AJ_HERO_CATALOGOS) return heroFonteRotulo();
+  if (op == AJ_LIMPAR_CACHE) {
+    static Uint32 measuredAt;
+    static uint64_t measuredBytes;
+    Uint32 now = SDL_GetTicks();
+    if (!measuredAt || now - measuredAt >= 1000) {
+      measuredBytes = nv_android_cache_size_all(); measuredAt = now;
+    }
+    snprintf(buf, sizeof buf, "%.1f MB", measuredBytes / 1048576.0);
+    idioma_decimal_texto(buf, ajustes_idioma());
+    return buf;
+  }
   if (op == AJ_ESPACO) {
     // CURTO O BASTANTE PARA CABER NA COLUNA: "201.0 MB em 209 imagens" era
     // cortado em "209..." na TV, e o numero que sobrava era o menos util. O
@@ -7627,6 +7642,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_SIMKL: return "Conecta a sua conta do Simkl, uma alternativa ao Trakt para acompanhar séries.";
     case AJ_DISCORD: return "Mostra no seu perfil do Discord o que você está assistindo, com o cartaz e o tempo. Só sai alguma coisa enquanto um vídeo toca neste perfil.";
     case AJ_SAIR: return "Sai da conta nesta TV e apaga daqui a sessão, os addons e o progresso guardados.";
+    case AJ_LIMPAR_CACHE: return "Remove arquivos temporários. Mantém perfis, contas, progresso e addons.";
     case AJ_ESPACO: return "Uso atual de memória pelo cache de imagens, não espaço ocupado no armazenamento da TV.";
     case AJ_TEX_MB: return "Quanta memória o cache de imagens pode usar. Automático escolhe pela RAM da TV. Um valor acima do que esta TV suporta é reduzido ao máximo dela — o painel ao lado mostra o teto em vigor.";
     case AJ_VERSAO_I: return "Versão do aplicativo. Esta informação não pode ser alterada.";
@@ -9311,6 +9327,13 @@ static void eventoTela(const SDL_Event *e) {
     }
     // O painel de envio (registro.h) dispara o envio e mostra o codigo ou o
     // motivo da falha; antes so o texto da linha mudava.
+    if (focoOp == AJ_LIMPAR_CACHE) {
+#ifdef NV_ANDROID
+      p2pmotor_parar();
+      android_limpar_cache();
+#endif
+      return;
+    }
     if (focoOp == AJ_ENVIAR_LOG) { registro_envio_abrir(); return; }
     if (focoOp == AJ_AVISO_LEGAL) { registro_legal_abrir(); return; }
     if (focoOp == AJ_VER_REGISTRO) { registro_abrir(); return; }

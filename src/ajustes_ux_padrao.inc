@@ -339,3 +339,4 @@
   0, /* upscaling algorithm: Automatic (default) */
   2, /* upscaling RCAS sharpness, 0..4 */
   0, /* experimental HDR menus: Off */
+  0, /* clear cache action */
