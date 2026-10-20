@@ -2,6 +2,7 @@
 #if defined(NV_ANDROID) || defined(NV_CACHE_TEST)
 #include <dirent.h>
 #include <fcntl.h>
+#include <fnmatch.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,9 +18,17 @@ const char *nv_android_cache_dir(void) {
   return p ? p : "";
 }
 int nv_android_cache_name(const char *n) {
-  static const char *prefix[]={"epg-","ltv-","m3u-cache-","plugins-c-","mkvass-",
-    "noticias-","noticias2-","extras-","meta-","ficha-","serieaud-","catalogo-",
-    "anime-fribb.","explorar-","frases-","recomendacoes-feed", "recomendacoes-amigo"};
+  /* Only regenerated file formats belong here; unknown names stay durable. */
+  static const char *files[]={"epg-*.xml","epg-*.xml.gz","epg-*.ts","epg-x-*-p[0-9]*.bin",
+    "ltv-indice.txt","ltv-indice-p[0-9]*.txt",
+    "ltv-xt.bin","ltv-xt-p[0-9]*.bin","ltv-st.bin","ltv-st-p[0-9]*.bin",
+    "ltv-[max][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].bin",
+    "ltv-[max][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]-p[0-9]*.bin",
+    "m3u-cache-p[0-9]*.txt","plugins-c-*.txt","mkvass-*.ass",
+    "noticias-*.txt","noticias2-*.txt","extras-*.txt","meta-*.txt",
+    "ficha-*.json","serieaud-*.txt","catalogo-*.bin",
+    "anime-fribb.idx","anime-fribb.retry","explorar-mapa.txt","explorar-viz.txt",
+    "explorar-climas.txt","frases-*.txt","recomendacoes-feed.json","recomendacoes-amigo.json"};
   if (!n || strstr(n,"..") || n[0]=='/') return 0;
   if (!strcmp(n,"cache") || !strcmp(n,"atualizacao") || !strcmp(n,"trailer") || !strcmp(n,"extras") ||
       !strcmp(n,"fontes") || !strcmp(n,"legendas") || !strcmp(n,"tendencia") ||
@@ -29,8 +38,8 @@ int nv_android_cache_name(const char *n) {
   const char *subdirs[]={"atualizacao/","trailer/","extras/","fontes/","legendas/","tendencia/"};
   for (unsigned i=0;i<sizeof subdirs/sizeof *subdirs;i++)
     if (!strncmp(n,subdirs[i],strlen(subdirs[i]))) return 1;
-  for (unsigned i=0;i<sizeof prefix/sizeof *prefix;i++)
-    if (!strncmp(n,prefix[i],strlen(prefix[i]))) return 1;
+  for (unsigned i=0;i<sizeof files/sizeof *files;i++)
+    if (!fnmatch(files[i],n,FNM_PATHNAME)) return 1;
   return 0;
 }
 /* Walk only the dedicated cache tree, never symlinks. Temporary cache
@@ -45,6 +54,9 @@ static int scan(const char *dir, Entry **list, size_t *n, uint64_t *bytes, int c
     if (!strcmp(e->d_name,".") || !strcmp(e->d_name,"..")) continue;
     if (snprintf(p,sizeof p,"%s/%s",dir,e->d_name)>=(int)sizeof p || lstat(p,&st)) { ok=0; continue; }
     if (S_ISDIR(st.st_mode)) {
+      /* Update staging must survive every automatic trim until the installer
+       * consumes it. Size reporting and explicit clear still include it. */
+      if (list && depth==0 && !strcmp(e->d_name,"atualizacao")) continue;
       if (!scan(p,list,n,bytes,clear,depth+1)) ok=0;
       /* Retain empty cache directories: live writers reuse these paths. */
     } else if (clear) {
