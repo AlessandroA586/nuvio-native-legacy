@@ -751,11 +751,9 @@ int desc_filme_visto(const CatItem *it) {
 
 // --- DE QUAL ADDON VEIO O ITEM (CatItem.origem) ------------------------------
 //
-// O detalhe pergunta a ficha (/meta) primeiro a quem PUBLICOU o titulo, e para
-// isso o item precisa lembrar quem foi. Guarda-se o "id" do manifesto — nunca a
-// base: ela carrega credencial (o Xperience embute um JWT no caminho) e o
-// CatItem vai inteiro para o cache em disco. Enquanto o manifesto nao foi lido
-// (id vazio) vale "#<hash da base>", que tambem nao expoe nada.
+// Detail requests metadata from the instance that published the title.
+// Store the transport hash, never credentials or a shared manifest ID.
+// addonDaOrigem also accepts manifest IDs from existing disk caches.
 static unsigned hashBaseAddon(const char *b) {
   unsigned h = 2166136261u;
   for (; b && *b; b++) h = (h ^ (unsigned char)*b) * 16777619u;
@@ -794,9 +792,7 @@ static void origemDaBase(const char *base, char *dst, size_t n) {
   for (i = 0; i < k; i++) {
     const char *b = addons_base(i);
     if (b && !strcmp(b, base)) {
-      const char *id = addons_id_manifesto(i);
-      if (id && id[0]) snprintf(dst, n, "%s", id);
-      else snprintf(dst, n, "#%08x", hashBaseAddon(base));
+      snprintf(dst, n, "#%08x", hashBaseAddon(base));
       return;
     }
   }
@@ -2460,7 +2456,7 @@ static char *escolherPelaCota(const char *corpo, const char *fim,
         pr = novo;
       }
       // As MESMAS duas chaves que lerManifesto monta para o Decl.
-      snprintf(chave, sizeof chave, "%s_%s_%s", addonId[0] ? addonId : base, tipo, id);
+      addons_catalogo_chave(addonId, base, tipo, id, chave, sizeof chave);
       snprintf(desativar, sizeof desativar, "%s_%s_%s_%s", base, tipo, id, nome);
       pr[n].nivel = prioCatalogo(chave, desativar, base, tipo, id, &pr[n].pos);
       n++;
@@ -2635,8 +2631,7 @@ static int lerManifesto(int iAddon, const char *base, Decl *saida, int max,
       d->paginavel = aceitaSkip(p, f);
       snprintf(d->tipo, sizeof d->tipo, "%s", tipo);
       snprintf(d->id,   sizeof d->id,   "%s", id);
-      snprintf(d->chave, sizeof d->chave, "%s_%s_%s",
-               addonId[0] ? addonId : base, tipo, id);
+      addons_catalogo_chave(addonId, base, tipo, id, d->chave, sizeof d->chave);
       snprintf(d->desativar, sizeof d->desativar, "%s_%s_%s_%s", base, tipo, id, nome);
       formatarTitulo(nome, tipo, d->titulo, sizeof d->titulo);
       // Nome legivel do addon, para a linha "de <addon>" sob o titulo da
@@ -4900,13 +4895,8 @@ static void *montar(void *u) {
             if (dentroDeColecaoVisivel(d)) engolidasNaDeclaracao++;
             continue;
           }
-          // MESMA CHAVE DUAS VEZES = MESMA FILEIRA DUAS VEZES. Acontece quando
-          // o mesmo addon entra duas vezes na lista (`addons.txt` mais a conta)
-          // ou quando um manifesto declara o catalogo repetido: a chave e
-          // <addonId>_<tipo>_<catalogoId> e fica identica, e a home mostrava a
-          // fileira em duplicata com os MESMOS titulos. Dois addons DIFERENTES
-          // declarando o mesmo id nao caem aqui de proposito — sao catalogos
-          // distintos, com conteudo possivelmente distinto.
+          // Deduplicate repeated declarations within one installed instance.
+          // Shared manifest IDs on different transports remain separate rows.
           for (t = 0; t < nFil; t++)
             if (!strcmp(fil[t].chave, d->chave)) { repetida = 1; break; }
           for (t = 0; !repetida && t < nTarefas; t++)
