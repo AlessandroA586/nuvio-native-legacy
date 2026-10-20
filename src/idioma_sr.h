@@ -4113,6 +4113,7 @@
   T("Plugins", "Plaginovi"),
   T("Plugins e P2P", "Plugini i P2P"),
   T("Plugins e P2P, desligados por padrão.", "Dodaci i P2P, podrazumevano isključeni."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "Dodaci nisu pronašli izvore (provereno %d od %d pretraživača)"),
   T("Plugins permitidos", "Dozvoljeni plugini"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Dodaci, ankete i lični server prate profil koji ste odabrali."),
   T("Pode pausar", "Može da pauzira"),

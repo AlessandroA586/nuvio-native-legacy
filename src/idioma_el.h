@@ -4113,6 +4113,7 @@
   T("Plugins", "Plugins"),
   T("Plugins e P2P", "Πρόσθετα και P2P"),
   T("Plugins e P2P, desligados por padrão.", "Πρόσθετα και P2P, απενεργοποιημένα από προεπιλογή."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "Τα πρόσθετα δεν βρήκαν πηγές (ελέγχθηκαν %d από %d scrapers)"),
   T("Plugins permitidos", "Επιτρεπόμενα plugins"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Τα πρόσθετα, οι δημοσκοπήσεις και ο προσωπικός διακομιστής ακολουθούν το προφίλ που διαλέξατε."),
   T("Pode pausar", "Μπορεί να γίνει παύση"),

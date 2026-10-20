@@ -4113,6 +4113,7 @@
   T("Plugins", "Plugin"),
   T("Plugins e P2P", "Plugin và P2P"),
   T("Plugins e P2P, desligados por padrão.", "Plugin và P2P, tắt theo mặc định."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "Plugin không tìm thấy nguồn (đã kiểm tra %d trong %d trình thu thập)"),
   T("Plugins permitidos", "Plugin được phép"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Plugin, thăm dò và máy chủ cá nhân đi theo hồ sơ bạn đã chọn."),
   T("Pode pausar", "Có thể tạm dừng"),

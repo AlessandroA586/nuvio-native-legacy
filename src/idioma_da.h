@@ -4113,6 +4113,7 @@
   T("Plugins", "Plugins"),
   T("Plugins e P2P", "Plugins og P2P"),
   T("Plugins e P2P, desligados por padrão.", "Plugins og P2P, slået fra som standard."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "Plugins fandt ingen kilde (%d af %d scrapere kontrolleret)"),
   T("Plugins permitidos", "Tilladte plugins"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Plugins, afstemninger og personlig server følger den profil, du valgte."),
   T("Pode pausar", "Kan sættes på pause"),

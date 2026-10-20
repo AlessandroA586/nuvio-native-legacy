@@ -4112,6 +4112,7 @@
   { "Plugins", "Plugins" },
   { "Plugins e P2P", "Plugins and P2P" },
   { "Plugins e P2P, desligados por padrão.", "Plugins and P2P, off by default." },
+  { "Plugins não encontraram fontes (%d de %d scrapers verificados)", "Plugins found no source (%d of %d scrapers checked)" },
   { "Plugins permitidos", "Allowed plugins" },
   { "Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Plugins, polls and personal server follow the profile you chose." },
   { "Pode pausar", "May pause" },

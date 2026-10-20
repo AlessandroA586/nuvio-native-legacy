@@ -4113,6 +4113,7 @@
   T("Plugins", "Įskiepiai"),
   T("Plugins e P2P", "Įskiepiai ir P2P"),
   T("Plugins e P2P, desligados por padrão.", "Papildiniai ir P2P, pagal numatymą išjungti."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "Papildiniai nerado šaltinių (patikrinta %d iš %d rinktuvų)"),
   T("Plugins permitidos", "Leidžiami įskiepiai"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Papildiniai, apklausos ir asmeninis serveris seka jūsų pasirinktą profilį."),
   T("Pode pausar", "Gali pristabdyti"),

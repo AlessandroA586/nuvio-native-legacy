@@ -4113,6 +4113,7 @@
   T("Plugins", "Plugin'ler"),
   T("Plugins e P2P", "Eklentiler ve P2P"),
   T("Plugins e P2P, desligados por padrão.", "Eklentiler ve P2P, varsayılan olarak kapalı."),
+  T("Plugins não encontraram fontes (%d de %d scrapers verificados)", "Eklentiler kaynak bulamadı (%d / %d kazıyıcı kontrol edildi)"),
   T("Plugins permitidos", "İzin verilen eklentiler (plugin)"),
   T("Plugins, enquetes e servidor pessoal acompanham o perfil que você escolheu.", "Eklentiler, anketler ve kişisel sunucu seçtiğiniz profili izler."),
   T("Pode pausar", "Duraklatabilir"),

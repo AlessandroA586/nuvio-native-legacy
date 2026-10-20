@@ -1,4 +1,5 @@
 #include "addons.h"
+#include "plugins.h"
 #include "idbase.h"
 #include "idcanal.h"
 #include "idioma.h"
@@ -3301,7 +3302,12 @@ int addons_motivo_vazio(char *dst, unsigned n) {
               !strcmp(alvoTipo, "channels") || !strcmp(alvoTipo, "live") ||
               !strcmp(alvoTipo, "iptv");
   if (!dst || !n || !r->valido) return 0;
-  if (!r->instalados || !r->comFonte)
+  PlugResumo plugins;
+  plugins_resumo(alvoId, alvoTipo, &plugins);
+  if (plugins.enfileirados && !r->comFontes)
+    snprintf(dst, n, i18n("Plugins não encontraram fontes (%d de %d scrapers verificados)"),
+             plugins.terminados, plugins.enfileirados);
+  else if (!r->instalados || !r->comFonte)
     snprintf(dst, n, "%s", i18n("Nenhum add-on de fontes instalado"));
   else if (!r->ligadosComFonte)
     snprintf(dst, n, "%s", i18n("Os add-ons de fontes estão desligados"));
