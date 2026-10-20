@@ -26,6 +26,7 @@
 #include "dts/dts_playback.h"
 #include "dts_tv.h"
 #include "dts/dts_engine.h"
+#include "dts/dv7.h"
 #include "ajustes.h"
 #include "dts/dts_overlay.h"
 #include "legenda.h"
@@ -2898,7 +2899,7 @@ static int dvLiberadoNestaTv(void) {
 #ifdef NV_DTS_DEBUG
   forcado = access("/tmp/nuvio-dv-forcar", F_OK) == 0;
 #endif
-  if (!dts_playback_enabled() || (!ajustes_dv_mkv() && !forcado)) return 0;
+  if (!dts_playback_enabled() || (!ajustes_dv_mkv() && !ajustes_dv7() && !forcado)) return 0;
   if (!dvVersaoLiberada(webosMaior())) {
     printf("[dv] Dolby Vision in MKV unavailable on webOS %d\n", webosMaior()); fflush(stdout);
     return 0;
@@ -2926,8 +2927,8 @@ static void dvVoltarEntrada(void) {
   marco(m);
   video_buscar(dvEntradaSeg);
 }
-// The file decides: single-layer profile 5 or 8 (base layer + RPU, no
-// enhancement layer) and a selected audio track the path can feed (E-AC-3 and
+// The file decides: single-layer profile 5/8, or P7 with the experimental
+// converter built in; and audio the path can feed (E-AC-3 and
 // AC-3 pass through, DTS is converted). Anything else stays with the TV player.
 static int dvPronto(void) {
   if (fonteMp4) { dvHabilitado = 0; dvNao = VIDEO_DV_NAO_SEM_DV; return 0; }
@@ -2935,7 +2936,10 @@ static int dvPronto(void) {
     if (mkvPendente && !fioMkvVivo) video_sondar_mkv_agora();
     return 0;
   }
-  if (!(dvMkvPerfil == 5 || dvMkvPerfil == 8) || dvMkvEl || !dvMkvBl || !dvMkvRpu) {
+  if (dvMkvPerfil && !nv_dv7_selected(dvMkvPerfil,ajustes_dv_mkv(),ajustes_dv7())) {
+    dvNao=VIDEO_DV_NAO_NATIVE;dvHabilitado=0;return 0;
+  }
+  if (!nv_dv7_profile(dvMkvPerfil, dvMkvEl, dvMkvBl, dvMkvRpu)) {
     if (dvMkvPerfil) {
       printf("[dv] profile %d (el=%d): stays on the TV player\n", dvMkvPerfil, dvMkvEl);
       fflush(stdout);

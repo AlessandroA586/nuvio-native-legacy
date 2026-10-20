@@ -1,4 +1,5 @@
 #include "dts_engine.h"
+#include "dv7.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -125,6 +126,9 @@ struct DtsEngine {
   SwrContext *swr;
   AVAudioFifo *fifo;
   AVPacket *in, *out;
+  int dv7;
+  uint8_t *dv7_buffer;
+  unsigned dv7_capacity;
   AVFrame *decoded, *encoded;
   AVChannelLayout input_layout;
   enum AVSampleFormat input_format;
@@ -560,6 +564,7 @@ static void close_media(DtsEngine *e) {
   av_frame_free(&e->decoded); av_frame_free(&e->encoded);
   avcodec_free_context(&e->dec); avcodec_free_context(&e->enc);
   av_bsf_free(&e->bsf); swr_free(&e->swr); av_audio_fifo_free(e->fifo); e->fifo=NULL;
+  av_freep(&e->dv7_buffer); e->dv7_capacity=0; e->dv7=0;
   av_channel_layout_uninit(&e->input_layout);
   avformat_close_input(&e->fmt);
   if (e->io) { av_freep(&e->io->buffer); avio_context_free(&e->io); }
@@ -680,9 +685,15 @@ int dts_engine_open(DtsEngine *e,const char *url,const char *headers,int audio,i
     e->info.dovi_el_present=conf->el_present_flag;
     e->info.dovi_bl_present=conf->bl_present_flag;
     e->info.dovi_bl_compatibility_id=conf->dv_bl_signal_compatibility_id;
-    if ((conf->dv_profile!=5 && conf->dv_profile!=8) || conf->el_present_flag
-        || !conf->bl_present_flag || !conf->rpu_present_flag || vp->codec_id!=AV_CODEC_ID_HEVC)
+    if (!nv_dv7_profile(conf->dv_profile,conf->el_present_flag,
+                       conf->bl_present_flag,conf->rpu_present_flag) || vp->codec_id!=AV_CODEC_ID_HEVC)
       return fail(e,"Dolby Vision layer/profile unsupported",0);
+    if (conf->dv_profile == 7) {
+      e->dv7=1;
+      e->info.dovi_profile=8; e->info.dovi_el_present=0;
+      e->info.dovi_bl_compatibility_id=1;
+      printf("[dv7] experimental P7 -> P8.1: RPU converted, enhancement layer discarded\n");
+    }
     /* mp4toannexb preserves HEVC RPU NAL units; no video re-encode occurs. */
   }
   e->info.width=vp->width; e->info.height=vp->height;
@@ -972,7 +983,21 @@ static int next_frame(DtsEngine *e,DtsFrame *f) {
   }
 }
 int dts_engine_next(DtsEngine *e,DtsFrame *f) {
-  int result=next_frame(e,f);
+  int result;
+  for (;;) {
+    result=next_frame(e,f);
+    if(result!=1 || !e->dv7 || f->kind!=DTS_VIDEO) break;
+    size_t size=0;
+    if(f->size>INT_MAX-8192) return fail(e,"DV7 packet too large",0);
+    av_fast_malloc(&e->dv7_buffer,&e->dv7_capacity,(size_t)f->size+8192);
+    if(!e->dv7_buffer) return fail(e,"DV7 conversion buffer",AVERROR(ENOMEM));
+    if(nv_dv7_packet(f->data,(size_t)f->size,e->dv7_buffer,e->dv7_capacity,&size)<0)
+      return fail(e,"DV7 RPU conversion failed",0);
+    /* An EL-only packet is discarded, not mistaken for end of stream. */
+    if(!size) continue;
+    f->data=e->dv7_buffer; f->size=(int)size;
+    break;
+  }
 #ifdef NV_DTS_DEBUG
   if(e) {
     uint64_t now=clock_ns(CLOCK_MONOTONIC);
