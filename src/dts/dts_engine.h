@@ -2,6 +2,8 @@
 #define NV_DTS_ENGINE_H
 #include "dts_media.h"
 typedef struct DtsEngine DtsEngine;
+/* Recoverable by a fresh native Load/decoder timeline, not a decode failure. */
+#define DTS_ENGINE_TIMESTAMP_DISCONTINUITY "DTS timestamp discontinuity requires reload"
 /* Numeric worker-only transport diagnostics, reset on open. No URL or headers
  * are retained here. Short reads exclude the final range at end of content.
  * Counters describe consumed ranges; range_wait_ns sums their HTTP durations,
