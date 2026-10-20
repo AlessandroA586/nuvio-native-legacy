@@ -6523,12 +6523,20 @@ void app_atualizar(float dt, Uint32 agora) {
 
   // CANAL ESCOLHIDO NO GUIA — tela cheia ou faixa, mesma acao: toca direto.
   { CatItem it;
-    if (aguardandoFonte != 2 && guia_pediu_canal(&it)) tocarCanal(&it); }
+    if (aguardandoFonte != 2 && guia_pediu_canal(&it)) {
+      // OK num canal que nao e o do preview abre em tela cheia: a sessao do
+      // preview sai antes (miniGuia armado mandaria o canal novo para o preview).
+      if (player_mini_no_guia_ativo()) player_fechar_mini();
+      tocarCanal(&it);
+    } }
   // O PREVIEW DO GUIA e uma sessao "mini no guia" do player: mesma busca de
   // fonte, mesmo watchdog, e o OK nele depois so faz a janela crescer.
   { CatItem it;
-    if (aguardandoFonte != 2 && guia_pediu_preview(&it) &&
-        !(xtream_e_id(it.imdb) && xtream_conexoes_limitadas())) {
+    if (aguardandoFonte != 2 && guia_pediu_preview(&it)) {
+      // UMA conexao por vez (conta limitada ou nao): o preview novo so abre
+      // depois de a sessao anterior estar fechada — nunca duas no ar.
+      if (player_mini_no_guia_ativo() && strcmp(player_id_canal(), it.imdb))
+        player_fechar_mini();
       float x, y, w, h;
       guia_preview_rect(&x, &y, &w, &h);
       player_mini_no_guia(x, y, w, h);
@@ -6656,7 +6664,11 @@ void app_atualizar(float dt, Uint32 agora) {
   // VOLTAR NUM CANAL ABERTO PELO GUIA: o video encolhe para o preview do guia,
   // na hora (sem esperar o fade da interface do player) e sem recarregar. O
   // PiP de canto ficou para os canais abertos fora do guia.
-  if (player_quer_sair() && player_minimizavel() && tela == TELA_GUIA && guia_aberta())
+  // player_minimizavel exclui a conta Xtream limitada, mas AQUI o fluxo ja
+  // esta no ar: encolher para o preview nao abre conexao nenhuma, e BACK tem
+  // de se comportar como o botao GUIA (mesmo pipeline, sem recarregar).
+  if (player_quer_sair() && player_eh_canal() && player_com_video() &&
+      tela == TELA_GUIA && guia_aberta())
     guiaComCanalNoAr();
   if (player_quer_sair() && !player_minimizavel() && ajustes_saida_player_home())
     player_preparar_retencao();

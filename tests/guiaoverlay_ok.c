@@ -99,11 +99,6 @@ static void foto(const char *nome, SDL_Window *w) {
       assert(pix && s);
       glReadPixels(0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, pix);
       for (y = 0; y < 1080; y++) memcpy((char *)s->pixels + y * s->pitch, pix + (1079 - y) * 1920 * 4, 1920 * 4);
-      if (!overlay && player_mini_no_guia_ativo() &&
-          strcmp(guia_id_focado(), previewId)) {
-        unsigned char *p = (unsigned char *)s->pixels + 240 * s->pitch + 1800 * 4;
-        assert(p[3] == 255); // Retained video from another channel stays covered.
-      }
       if (player_mini_no_guia_ativo()) {
         // Composite the fixture behind the real transparent video hole on Mac.
         SDL_Surface *frame = IMG_Load(getenv("NUVIO_SHOT_ARTE"));
@@ -253,13 +248,126 @@ int main(int argc, char **argv) {
   testGuideRequests();
   assert(player_mini_no_guia_ativo() && previewPreso);
   assert(!strcmp(previewId, "xtream:42") && video_tocando());
-  // A different preview WOULD open a connection, and remains blocked.
+  // CONTA LIMITADA + Preview ON: foco descansado noutro canal TROCA o
+  // preview — a sessao anterior fecha ANTES de a nova abrir (uma conexao).
   pedPreview = 1; snprintf(pedPreviewItem.imdb, sizeof pedPreviewItem.imdb, "xtream:43");
   testPreviewRequests();
-  assert(!testPreviewConnections && !strcmp(player_id_canal(), "xtream:42"));
+  assert(testPreviewConnections == 1 && !player_mini_ativo());
+  { CatItem novo = {0};
+    snprintf(novo.tipo, sizeof novo.tipo, "channel");
+    snprintf(novo.titulo, sizeof novo.titulo, "Canal 43");
+    snprintf(novo.imdb, sizeof novo.imdb, "xtream:43");
+    cat_definir(&novo, 1);
+    int ni = cat_indice_por_imdb("xtream:43"); assert(ni >= 0);
+    float x, y, w, h; guia_preview_rect(&x, &y, &w, &h);
+    player_mini_no_guia(x, y, w, h); player_manter_mini();
+    player_abrir(ni, NULL); player_marcar_canal(&novo); comFonte();
+    // Mesmo com querMini=0 (conta limitada) o destino armado no guia segura
+    // a sessao nova no preview — nao sobe a tela cheia.
+    assert(player_mini_no_guia_ativo() && !strcmp(player_id_canal(), "xtream:43")); }
   player_restaurar();
-  assert(player_aberto() && !strcmp(player_id_canal(), "xtream:42"));
+  assert(player_aberto() && !strcmp(player_id_canal(), "xtream:43"));
   xtream_definir_conexoes_modo(0);
+
+  // GUIA CHEIO, PREVIEW LIGADO, SEM CANAL NO AR: o foco descansado num canal
+  // pede o preview (regressao TCL: preview ligado nunca arrancava).
+  player_encerrar();
+  aberta = 0; overlay = 0;
+  previewLigado = 1; previewLido = 1; previewPreso = 0; previewId[0] = 0;
+  guia_abrir();
+  assert(aberta && previewLigado && !pedPreview);
+  { Uint32 t0 = previewFocoMudou;
+    guia_atualizar(0.016f, t0 + G_PREVIEW_ESPERA_MS - 1u);
+    assert(!guia_pediu_preview(&it));            // dentro do descanso: nada
+    guia_atualizar(0.016f, t0 + G_PREVIEW_ESPERA_MS + 1u);
+    assert(guia_pediu_preview(&it) && !strcmp(it.imdb, guia_id_focado()));
+  }
+  snprintf(previewId, sizeof previewId, "%s", it.imdb); // o app ja atendeu
+  // O app atende ao pedido: sessao "mini no guia" e o canal tocando.
+  { float x, y, w, h;
+    int ni;
+    guia_preview_rect(&x, &y, &w, &h);
+    player_mini_no_guia(x, y, w, h);
+    player_manter_mini();
+    ni = cat_indice_por_imdb(it.imdb);
+    if (ni < 0) ni = cat_acrescentar(&it);
+    assert(ni >= 0);
+    player_abrir(ni, NULL); player_marcar_canal(&it); comFonte();
+    assert(player_mini_no_guia_ativo() && video_pronto());
+  }
+  // CANAL TOCANDO NO PREVIEW + foco noutro canal ANTES do descanso: o heroi
+  // segue furando para o video que toca (o foco nao esconde o canal no ar).
+  { int sessao = aberta && !overlay && player_mini_no_guia_ativo();
+    GCanal *outro = linhaItem(0, 1);
+    assert(outro && strcmp(outro->id, previewId));
+    int focado = sessao || previewFocoEh(outro->id);
+    assert(focado); }
+  guia_focar_id(previewId);   // o foco pode ter ido para o canal no ar
+  // O furo do video abre so para o canal focado — por ID, nao por ponteiro:
+  // o mesmo canal em duas fontes (M3U + addon) tem GCanal* diferentes.
+  assert(previewFocoEh(guia_id_focado()));
+  { int colFoco = focoCol, colOutro = focoCol ? 0 : 1;
+    focoCol = colOutro;              // outro canal da mesma linha
+    assert(!previewFocoEh(guia_id_focado()));
+    focoCol = colFoco;
+    assert(previewFocoEh(guia_id_focado())); }
+  // MESMO ID EM DOIS GCanal (favorito/duplicata): o foco no duplicado ainda
+  // conta como o canal do preview.
+  { int dup = nCanais;
+    canais = realloc(canais, sizeof(GCanal) * (size_t)(nCanais + 1));
+    assert(canais);
+    { GCanal *alvo = canalPorId(previewId);
+      canais[dup] = alvo ? *alvo : canais[0]; }
+    nCanais = dup + 1;
+    // foco direto no duplicado: canalPorId acha o PRIMEIRO, linhaItem daria o segundo
+    { GCanal *a = canalPorId(previewId);
+      assert(a && a != &canais[dup]);
+      assert(!strcmp(canais[dup].id, previewId));
+      assert(previewFocoEh(canais[dup].id));
+    }
+    nCanais = dup;                   // restaura
+  }
+  // BACK num canal AO VIVO aberto do guia = botao GUIA: a MESMA sessao vai
+  // para o preview, sem nova abertura (conta limitada inclusa: sem
+  // player_minimizavel no caminho).
+  { char tocandoAgora[64];
+    snprintf(tocandoAgora, sizeof tocandoAgora, "%s", player_id_canal());
+    player_restaurar();
+    assert(player_aberto() && video_tocando());
+    esconderOsd();
+    tecla(SDLK_ESCAPE, 0);
+    assert(player_quer_sair());
+    aberta = 1;
+    testBackToGuide();
+    assert(player_mini_no_guia_ativo() && video_tocando());
+    assert(!strcmp(player_id_canal(), tocandoAgora) && !strcmp(previewId, tocandoAgora));
+    assert(previewPreso);
+    // E volta a tela cheia pelo mesmo fluxo, para o resto do teste seguir.
+    player_restaurar();
+    assert(player_aberto());
+    // De volta ao preview para o bloco seguinte (furo/opcoes).
+    { float x, y, w, h;
+      guia_preview_rect(&x, &y, &w, &h);
+      player_minimizar_para_guia(x, y, w, h);
+      guia_adotar_canal(tocandoAgora);
+      assert(player_mini_no_guia_ativo()); } }
+  // DESLIGA/LIGA pelo menu Opcoes: o preview volta a pedir no mesmo foco.
+  topoAcionar(G_TOPO_OPCOES);
+  assert(opcoesAberto);
+  opcoesFoco = G_TOPO_PREVIEW;
+  { SDL_Event ok = {0};
+    ok.type = SDL_KEYDOWN; ok.key.keysym.sym = SDLK_RETURN;
+    guia_evento(&ok); }
+  assert(!previewLigado && guia_pediu_parar_preview());
+  topoAcionar(G_TOPO_OPCOES);
+  opcoesFoco = G_TOPO_PREVIEW;
+  { SDL_Event ok = {0};
+    ok.type = SDL_KEYDOWN; ok.key.keysym.sym = SDLK_RETURN;
+    guia_evento(&ok); }
+  assert(previewLigado && previewUltLin == -1);
+  guia_atualizar(0.016f, SDL_GetTicks() + G_PREVIEW_ESPERA_MS + 1u);
+  assert(guia_pediu_preview(&it) && !strcmp(it.imdb, guia_id_focado()));
+  previewParar();
 
   // FILME: o OK sem OSD continua do player (acorda os controles), nunca o guia.
   player_encerrar();

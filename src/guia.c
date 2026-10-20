@@ -2947,6 +2947,13 @@ static int pedLivetvDiag;
 int guia_pediu_livetv_diag(void) { int v = pedLivetvDiag; pedLivetvDiag = 0; return v; }
 
 static char pedidoBase[600], pedidoTipo[16];
+// The video hole opens only for the focused channel, by ID: duplicate
+// entries of the same channel (two sources, favorites) share the id but not
+// the GCanal*, and canalPorId() always returns the first.
+static int previewFocoEh(const char *id) {
+  return previewId[0] && id && id[0] && !strcmp(previewId, id);
+}
+
 static void previewPedir(GCanal *c) {
   if (!c || !c->id[0]) return;
   canalParaItem(c, &pedPreviewItem);
@@ -4843,7 +4850,10 @@ void guia_atualizar(float dt, Uint32 agora) {
   // O foco mudou de canal: o relogio do descanso recomeca.
   { static int ul = -1, uc = -1;
     if (focoLin != ul || focoCol != uc) { ul = focoLin; uc = focoCol; previewFocoMudou = agora; } }
-  if (aberta && !overlay && previewLigado && !previewPreso && !player_aberto() &&
+  // Com o preview LIGADO o descanso do foco troca o que toca, inclusive com
+  // canal adotado no ar (conta limitada: o app fecha a sessao antes de abrir
+  // a nova — uma conexao so). Preview desligado: o canal no ar fica.
+  if (aberta && !overlay && previewLigado && !player_aberto() &&
       nCanais > 0 && (estado == G_PRONTO || estado == G_BAIXANDO) &&
       (focoLin != previewUltLin || focoCol != previewUltCol) &&
       agora - previewFocoMudou >= G_PREVIEW_ESPERA_MS) {
@@ -5389,8 +5399,17 @@ static void desenharHero(float a, time_t agoraT, time_t tFoco) {
   { GCanal *pc = previewId[0] ? canalPorId(previewId) : NULL;
     int sessao = aberta && !overlay && player_mini_no_guia_ativo();
     int anda = player_janela_animando(NULL, NULL, NULL, NULL);
-    int focado = pc == c;
+    // Compare IDs, not pointers: the same channel id can occupy two GCanal
+    // entries (M3U + addon, favorites dup), and canalPorId returns the FIRST
+    // while linhaItem may focus the second — a pointer compare never opens
+    // the hole for it.
+    // O video do heroi e o da SESSAO do preview, nao o do foco: navegar pelo
+    // guia com um canal tocando mantem o video (e o audio) visivel; ele so
+    // sai quando o preview troca de canal ou o stream para. Compara por ID,
+    // nunca por ponteiro de GCanal.
+    int focado = sessao || previewFocoEh(c->id);
     if (!focado) pc = c;
+    if (!pc) pc = c;
   if (sessao && focado && !anda && video_pronto() && !player_carregando()) {
     gfx_furo_raio(pv, raio);
     // Selo sobre o video: GL opaco por cima do furo aparece por cima do plano.

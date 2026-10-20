@@ -1748,7 +1748,10 @@ void player_abrir(int indiceCatalogo, const char *url) {
     // na troca — o stream velho segue no ar ate a fonte nova chegar pelo
     // fluxo de sempre. Qualquer outra abertura (OK no guia, filme, serie)
     // volta a tela cheia e para o video do canto.
-    if (ficaMini && canalSessao) { mini = 1; aberto = 0; }
+    // `miniGuia` armado pelo app (player_mini_no_guia) ANTES da busca tambem
+    // manda a sessao nova direto para o preview — inclusive na conta
+    // limitada, onde querMini e 0 (a conexao velha ja foi solta).
+    if ((ficaMini || miniGuia) && canalSessao) { mini = 1; aberto = 0; }
     else if (mini || ficaMini) { mini = 0; miniGuia = 0; video_parar(); }
     else miniGuia = 0;
     janAtiva = 0;
