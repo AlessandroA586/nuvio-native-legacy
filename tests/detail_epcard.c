@@ -78,7 +78,7 @@ int main(void) {
     assert(NV_DETP_EPM_TIT_DY + 36 <= NV_DETP_EPM_META_DY);
     assert(NV_DETP_EPM_META_DY + 28 <= NV_DETP_EPM_SIN_DY);
     assert(h[v] - th[v] >= NV_DETP_EPM_SIN_DY + 5.0f * NV_DETP_EP_LD_SIN);
-    assert(epRowY() == ANC(NV_DETP_EP_Y - 40.0f));
+    assert(epRowY() == ANC(NV_DETP_EP_Y + 24.0f - 40.0f));
     // A secao mede o card que sera desenhado: o empilhamento acompanha.
     assert(alturaSecao(SEC_EPISODIOS) == h[v]);
     // Colunas lado a lado no passo certo (card + a margem do #205).
@@ -137,7 +137,7 @@ int main(void) {
     assert(ajustes_home_layout() == HOME_LAYOUT_PADRAO);
     assert(epCardW() == 420 && epThumbH() == 236 && epCardH() == 464);
     assert(epCardPasso() == 420 + NV_DETP_EP_GAP);
-    assert(epRowY() == ANC(NV_DETP_EP_Y));
+    assert(epRowY() == ANC(NV_DETP_EP_Y + 24.0f));
     assert(epSinLinhas() == 4 && epTituloEstilo() == TXT_DET_META2);
     assert(alturaSecao(SEC_EPISODIOS) == epCardH());
     assert(epCardH() - epThumbH() == 228);
