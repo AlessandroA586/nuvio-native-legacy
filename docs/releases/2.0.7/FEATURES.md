@@ -1,7 +1,7 @@
 # Nuvio Legacy 2.0.7
 
 Everything merged into `integracao/2.0.5` after the `v2.0.6` tag (base `ae9c3c138`), plus the owner requests
-that landed in the same window. Last tracking sync: 2026-10-19T22:48:01-03:00. Community server:
+that landed in the same window. Last tracking sync: 2026-10-19T23:55:31-03:00. Community server:
 **https://discord.gg/9NWr6SHyzJ**
 
 Release engineering is already merged on `agente/205-release207` (`b72189c5d`): version bumped to 2.0.7 in
@@ -35,7 +35,9 @@ needs the built .ipk (url, sha256, size) and the frost performance line below ha
   list's own User-Agent and Referer, and the player OSD EPG uses the same matching cascade. All platforms.
   Refs `f78b5470a`, `e87a44cb2`, `4f8fedfb4`, `c5b52caa7`, `a092fe530`, `695a1bc97`, `00189a790`,
   `bc19c5d32`, `d65bd546a`, `ae9e40109`, merges `ebf14de6b` (`feat/guia-tv`), `ba0639cf0`
-  (`agente/205-guiatv`).
+  (`agente/205-guiatv`). The guide band opens on DOWN, the guide keeps the video playing behind it, header
+  rows were cleaned up and the Options menu got a channel-only preview; late polish on top:
+  `a212582f7`, `41b9c25a6`, `07c98b91b`.
 
 - **Variant A Hero layouts**: Wide Hero cards and split Hero rows use the approved artwork and metadata anchors, keep posters visible while scrolling and match the active Dynamic background through transitions. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `agente/205-heroisA`, `50455c6f9`, `77aa7f216`, `13a5f3bab`, `4ec7e93ee`, `d61e03956`, `124895d8c`, merge `8ff0623e9`; The focused Split row now shows a large logo block instead of a card, with overview text aligned to the last rendered line. Additional refs `6afda5a73`, `f008f67f1`, merge `a228c66f0`. TV validation remains pending.
 
