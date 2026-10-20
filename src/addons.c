@@ -688,6 +688,24 @@ unsigned addons_versao(void) { return versaoLista; }
 // O id do manifesto ("com.frostview"), ou "" enquanto a sonda nao o leu. E o
 // prefixo da homeCatalogKey dos catalogos deste addon — e por isso a poda de
 // fantasmas de fileiras.c pede por ele.
+// Preserve the first instance's legacy row settings; further instances use URL keys.
+void addons_catalogo_chave(const char *id, const char *base, const char *tipo,
+                           const char *catalogo, char *dst, unsigned tam) {
+  int matches = 0;
+  char instance[32];
+  addons_lista_travar();
+  for (int i = 0; id && *id && i < nAddon; i++) {
+    if (!strcmp(addon[i].base, base)) break;
+    if (!strcmp(addon[i].id, id)) matches++;
+  }
+  addons_lista_destravar();
+  if (matches || !id || !*id) {
+    nv_addon_chave(base, instance, sizeof instance);
+    id = instance;
+  }
+  snprintf(dst, tam, "%s_%s_%s", id, tipo, catalogo);
+}
+
 const char *addons_id_manifesto(int i) {
   return (i >= 0 && i < nAddon) ? addon[i].id : "";
 }
