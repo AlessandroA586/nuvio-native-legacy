@@ -22,6 +22,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <math.h>
+#include <limits.h>
 #include <time.h>
 #include <unistd.h>
 #include "provedorhttp.h"
@@ -202,35 +203,54 @@ int simkl_ler_assistindo(const char *json, CatItem *dst, int max) {
   static const char *vetores[] = { "shows", "anime" };
   static const char *chaves[]  = { "show", "anime" };
   const char *p;
-  int n = 0, k;
+  int n = 0, k, animeEntries = 0, animeKept = 0;
   if (!json || !dst) return 0;
   // Sem nada em "watching" o Simkl responde `null` ou `{}` — js_array devolve
   // NULL e o laco nem comeca.
-  for (k = 0; k < 2 && n < max; k++)
-  for (p = js_array(json, NULL, vetores[k]); p && *p == '{' && n < max;
+  for (k = 0; k < 2; k++)
+  for (p = js_array(json, NULL, vetores[k]); p && *p == '{';
        p = js_prox(js_fim(p))) {
     const char *f = js_fim(p), *oi, *of;
-    CatItem *d = &dst[n];
-    char imdb[24], prox[16] = "", quando[40] = "";
+    CatItem *d;
+    char imdb[24] = "", prox[16] = "", quando[40] = "";
+    const char *reason = "missing next_to_watch";
     int t = 0, e = 0, absoluto = 0;
+    if (k == 1) animeEntries++;
+    if (n >= max) { reason = "candidate limit"; goto watchingDropped; }
+    d = &dst[n];
     memset(d, 0, sizeof *d);
-    // "S01E05". Em dia com o que foi ao ar vem null, e ai nao ha o que seguir.
-    if (!js_texto_raiz_em(p, f, "next_to_watch", prox, sizeof prox)) continue;
-    if (sscanf(prox, "S%dE%d", &t, &e) != 2) {
-      if (k != 1 || sscanf(prox, "E%d", &e) != 1) continue;
-      absoluto = e;
+    // Anime may return a bare absolute number, as a JSON number or string.
+    if (!js_texto_raiz_em(p, f, "next_to_watch", prox, sizeof prox)) {
+      const char *vi, *vf;
+      if (k != 1 || !valorRaiz(p, f, "next_to_watch", &vi, &vf) ||
+          *vi < '0' || *vi > '9') goto watchingDropped;
+      while (vf > vi && (unsigned char)vf[-1] <= ' ') vf--;
+      if (vf - vi >= (int)sizeof prox) goto watchingDropped;
+      snprintf(prox, sizeof prox, "%.*s", (int)(vf - vi), vi);
     }
-    if (t < 0 || e <= 0) continue;
-    if (!objetoRaiz(p, f, chaves[k], &oi, &of)) continue;
+    reason = "invalid next_to_watch";
+    if (sscanf(prox, "S%dE%d", &t, &e) != 2) {
+      char *end;
+      long number;
+      if (k != 1) goto watchingDropped;
+      const char *start = prox + (prox[0] == 'E');
+      number = strtol(start, &end, 10);
+      if (end == start || *end || number <= 0 || number > INT_MAX) goto watchingDropped;
+      absoluto = e = (int)number;
+    }
+    if (t < 0 || e <= 0) goto watchingDropped;
+    reason = "missing title object";
+    if (!objetoRaiz(p, f, chaves[k], &oi, &of)) goto watchingDropped;
     if (!lerObra(oi, of, d, imdb, sizeof imdb)) {
       const char *ii, *ifim;
       long id;
-      if (k != 1 || !objetoRaiz(oi, of, "ids", &ii, &ifim)) continue;
+      reason = "missing supported id";
+      if (k != 1 || !objetoRaiz(oi, of, "ids", &ii, &ifim)) goto watchingDropped;
       id = (long)js_num(ii, ifim, "tmdb", 0);
       if (id > 0) snprintf(imdb, sizeof imdb, "tmdb:%ld", id);
       else {
         id = (long)js_num(ii, ifim, "simkl", 0);
-        if (id <= 0) continue;
+        if (id <= 0) goto watchingDropped;
         snprintf(imdb, sizeof imdb, "simkl:%ld", id);
       }
     }
@@ -250,7 +270,18 @@ int simkl_ler_assistindo(const char *json, CatItem *dst, int max) {
     if (js_texto_raiz_em(p, f, "last_watched_at", quando, sizeof quando))
       d->retomadoMs = js_ms_iso(quando);
     n++;
+    if (k == 1) {
+      animeKept++;
+      printf("[simkl] anime watching #%d id=%s next=%s: candidate (%s)\n",
+             animeEntries, imdb, prox, e > 0 ? "episode mapped" : "title fallback");
+    }
+    continue;
+watchingDropped:
+    if (k == 1)
+      printf("[simkl] anime watching #%d: dropped (%s)\n", animeEntries, reason);
   }
+  printf("[simkl] anime watching: %d entries, %d candidates, %d dropped\n",
+         animeEntries, animeKept, animeEntries - animeKept);
   return n;
 }
 
@@ -790,6 +821,7 @@ int simkl_continuar(CatItem *saida, int max) {
   if (h && h == assCw && corpoPlay && corpoAssist && corpoAssistAnime) {
     cPlay = strdup(corpoPlay); cAssist = strdup(corpoAssist);
     cAnime = strdup(corpoAssistAnime);
+    printf("[simkl] resume: activities unchanged, cached playback/shows/anime bodies\n");
   }
   pedidoDestravar();
   if (!cPlay || !cAssist || !cAnime) {
@@ -799,6 +831,7 @@ int simkl_continuar(CatItem *saida, int max) {
     // Anime e um TERCEIRO tipo no Simkl: /sync/all-items/anime/<estado>.
     // Sem este pedido, nenhum anime aparece no Continuar assistindo.
     cAnime = pegar(pedido, "/sync/all-items/anime/watching", NULL, &st);
+    printf("[simkl] anime watching fetch: status=%d body=%s\n", st, cAnime ? "received" : "missing");
     if (pedidoTravar(pedido)) {
       if (h && cPlay && cAssist && cAnime) {
         trocar(&corpoPlay, strdup(cPlay)); trocar(&corpoAssist, strdup(cAssist));
@@ -814,26 +847,38 @@ int simkl_continuar(CatItem *saida, int max) {
   nP = prox && ajustes_cw_proximo() ? simkl_ler_assistindo(cAssist, prox, SMK_PLAY_MAX) : 0;
   // O mesmo leitor aceita a raiz "anime"; funde aqui, dedup por serie, para
   // nao repetir um titulo que o endpoint de shows ja tenha trazido.
-  if (prox && ajustes_cw_proximo() && nP < SMK_PLAY_MAX) {
+  if (!prox || !ajustes_cw_proximo())
+    printf("[simkl] anime watching: skipped (%s)\n", prox ? "next-up disabled" : "allocation failed");
+  if (prox && ajustes_cw_proximo()) {
     nA = simkl_ler_assistindo(cAnime, prox + nP, SMK_PLAY_MAX - nP);
     for (k = nP; k < nP + nA; k++) {
       int j, ja = 0;
       for (j = 0; j < nP && !ja; j++) ja = mesmaSerie(prox[j].imdb, prox[k].imdb);
-      if (ja) memmove(prox + k, prox + k + 1, sizeof prox[0] * (size_t)(nP + nA - k - 1)), nA--, k--;
+      if (ja) {
+        printf("[simkl] anime watching id=%s: dropped (duplicate show)\n", prox[k].imdb);
+        memmove(prox + k, prox + k + 1, sizeof prox[0] * (size_t)(nP + nA - k - 1));
+        nA--; k--;
+      }
     }
     nP += nA;
   }
   for (k = 0; k < nP; k++) {
     int ja = 0, alvo;
     for (i = 0; i < n && !ja; i++) ja = mesmaSerie(saida[i].imdb, prox[k].imdb);
-    if (ja) continue;
+    if (ja) {
+      printf("[simkl] watching id=%s: dropped (already in resume row)\n", prox[k].imdb);
+      continue;
+    }
     if (n < max) alvo = n++;
     else {
       int vel = -1;
       for (i = 0; i < n; i++)
         if (saida[i].progresso == 0 &&
             (vel < 0 || saida[i].retomadoMs < saida[vel].retomadoMs)) vel = i;
-      if (vel < 0 || saida[vel].retomadoMs >= prox[k].retomadoMs) continue;
+      if (vel < 0 || saida[vel].retomadoMs >= prox[k].retomadoMs) {
+        printf("[simkl] watching id=%s: dropped (resume row limit)\n", prox[k].imdb);
+        continue;
+      }
       alvo = vel;
     }
     saida[alvo] = prox[k];
