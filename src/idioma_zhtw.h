@@ -5417,6 +5417,7 @@
   T("Velocidade", "速度"),
   T("Velocidade agora", "目前速度"),
   T("Velocidade de reprodução", "播放速度"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "速度測量不可靠：供應商限制。解析度保持不變。"),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "速度：%s Mbps（最慢片段 %s Mbps）"),
   T("Vem desligado ou em teste", "預設關閉或處於測試中"),
   T("Vendo agora", "正在看"),

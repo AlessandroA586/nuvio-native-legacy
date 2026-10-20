@@ -5416,6 +5416,7 @@
   T("Velocidade", "Viteză"),
   T("Velocidade agora", "Viteză acum"),
   T("Velocidade de reprodução", "Viteza de redare"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Viteză neconcludentă: limita furnizorului. Rezoluție păstrată."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Viteză: %s Mbps (cea mai slabă porțiune %s Mbps)"),
   T("Vem desligado ou em teste", "Vine dezactivat sau în testare"),
   T("Vendo agora", "Se uită acum"),

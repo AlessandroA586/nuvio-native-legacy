@@ -5417,6 +5417,7 @@
   T("Velocidade", "Kecepatan"),
   T("Velocidade agora", "Kecepatan sekarang"),
   T("Velocidade de reprodução", "Kecepatan putar"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Kecepatan tidak meyakinkan: batas penyedia. Resolusi tetap."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Kecepatan: %s Mbps (bagian terburuk %s Mbps)"),
   T("Vem desligado ou em teste", "Datang dalam keadaan mati atau dalam pengujian"),
   T("Vendo agora", "Sedang menonton"),

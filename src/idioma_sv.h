@@ -5417,6 +5417,7 @@
   T("Velocidade", "Hastighet"),
   T("Velocidade agora", "Hastighet nu"),
   T("Velocidade de reprodução", "Uppspelningshastighet"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Hastigheten är osäker: leverantörsgräns. Upplösning oförändrad."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Hastighet: %s Mbps (sämsta passagen %s Mbps)"),
   T("Vem desligado ou em teste", "Kommer avstängt eller på prov"),
   T("Vendo agora", "Tittar nu"),

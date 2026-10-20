@@ -5417,6 +5417,7 @@
   T("Velocidade", "Brzina"),
   T("Velocidade agora", "Brzina sada"),
   T("Velocidade de reprodução", "Brzina reprodukcije"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Brzina nije pouzdana: ograničenje provajdera. Rezolucija zadržana."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Brzina: %s Mbps (najgora deonica %s Mbps)"),
   T("Vem desligado ou em teste", "Dolazi isključeno ili u testiranju"),
   T("Vendo agora", "Upravo gleda"),

@@ -5417,6 +5417,7 @@
   T("Velocidade", "Velocidade"),
   T("Velocidade agora", "Velocidade agora"),
   T("Velocidade de reprodução", "Velocidade de reprodução"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Velocidade inconclusiva: limite do fornecedor. Resolução mantida."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Velocidade: %s Mbps (pior troço %s Mbps)"),
   T("Vem desligado ou em teste", "Vem desligado ou em teste"),
   T("Vendo agora", "A ver agora"),

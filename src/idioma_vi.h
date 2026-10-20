@@ -5417,6 +5417,7 @@
   T("Velocidade", "Tốc độ"),
   T("Velocidade agora", "Tốc độ hiện tại"),
   T("Velocidade de reprodução", "Tốc độ phát"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Tốc độ chưa đáng tin cậy: giới hạn nhà cung cấp. Giữ nguyên độ phân giải."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Tốc độ: %s Mbps (đoạn tệ nhất %s Mbps)"),
   T("Vem desligado ou em teste", "Đến ở trạng thái tắt hoặc đang thử nghiệm"),
   T("Vendo agora", "Đang xem"),

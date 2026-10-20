@@ -5416,6 +5416,7 @@
   { "Velocidade", "Speed" },
   { "Velocidade agora", "Speed now" },
   { "Velocidade de reprodução", "Playback speed" },
+  { "Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Speed inconclusive: provider limit. Resolution unchanged." },
   { "Velocidade: %s Mbps (pior trecho %s Mbps)", "Speed: %s Mbps (worst stretch %s Mbps)" },
   { "Vem desligado ou em teste", "Comes off or in testing" },
   { "Vendo agora", "Watching now" },

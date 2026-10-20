@@ -5417,6 +5417,7 @@
   T("Velocidade", "السرعة"),
   T("Velocidade agora", "السرعة الآن"),
   T("Velocidade de reprodução", "سرعة التشغيل"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "قياس السرعة غير موثوق: حد مزود الخدمة. لم تتغير الدقة."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "السرعة: %s ميغابت/ث (أسوأ مقطع %s ميغابت/ث)"),
   T("Vem desligado ou em teste", "يأتي متوقفًا أو قيد الاختبار"),
   T("Vendo agora", "يشاهد الآن"),

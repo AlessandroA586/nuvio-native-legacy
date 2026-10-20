@@ -110,7 +110,7 @@ static struct {
   char grupo[64];
   int xtConfig, contaLida;
   XtreamConta conta;
-  int kbps, kbpsPior, latenciaMs, redeMedida, kbpsDoSegmento;
+  int kbps, kbpsPior, latenciaMs, redeMedida, kbpsDoSegmento, vazaoIncerta;
   // player em curso
   int pfFormato, pfModo, pfVivo;
   Uint32 pfDesde, pfTocouEm, pausaAte;
@@ -222,14 +222,13 @@ static void sondarHls(LtdFormato *f, const char *url, const char *const *cabs) {
     if (!b || n < 7 || strncmp(b, "#EXTM3U", 7)) { free(b); return; }
     if (fin[0]) snprintf(atual, sizeof atual, "%s", fin);
     if (strstr(b, "#EXT-X-STREAM-INF")) {
-      // MASTER: a variante mais perto da resolucao principal (sem ela, a
-      // primeira, que e a ordem do provedor).
+      // Match proxy playback: nearest explicit height, highest in Automatic.
       for (l = b; l && *l; l = strchr(l, '\n') ? strchr(l, '\n') + 1 : NULL) {
         if (strncmp(l, "#EXT-X-STREAM-INF", 17)) continue;
         { const char *r = strstr(l, "RESOLUTION="), *fimLinha = strchr(l, '\n');
           int h = 0, dif;
           if (r && (!fimLinha || r < fimLinha)) { const char *x = strchr(r, 'x'); if (x) h = atoi(x + 1); }
-          dif = alvo ? abs(h - alvo) : (escolhida ? 1 << 30 : 0);
+          dif = alvo ? abs(h - alvo) : -h;
           if (!escolhida || dif < melhorDif) { melhorDif = dif; escolhida = fimLinha ? fimLinha + 1 : NULL; } }
       }
     } else {
@@ -599,6 +598,15 @@ static void recomendar(void) {
     L.rec.kbpsMediana = L.kbps;
     L.rec.resolucao = ltd_resolucao_pela_vazao(L.kbps);
   } else if (!L.kbpsDoSegmento) L.rec.resolucao = 0;   // .ts continuo: taxa do canal, nao da rede
+  // Busy accounts and explicit throttling cannot measure network capacity.
+  L.vazaoIncerta = L.conta.valido && L.conta.maxConexoes > 0 &&
+                   L.conta.conexoes >= L.conta.maxConexoes;
+  for (i = 0; i < L.n; i++)
+    for (f = 0; f < 2; f++) {
+      int http = L.it[i].f[f].http;
+      if (http == 429 || http == 458 || http == 509) L.vazaoIncerta = 1;
+    }
+  if (L.vazaoIncerta) L.rec.resolucao = ajustes_livetv_resolucao();
   L.rec.latenciaMs = L.latenciaMs;
   printf("[livetv-diag] recomenda: formato=%d resolucao=%d espera=%d | tocaram HLS %d/%d TS %d/%d | "
          "sem decoder %d | 10 bits %d | %d kbps | tocaram por modo A %d B %d C %d D %d proxy %d -> modo %d\n",
@@ -626,7 +634,7 @@ static void comecar(void) {
   proxyts_parar();
   memset(L.it, 0, sizeof L.it);
   L.kbps = L.kbpsPior = 0; L.latenciaMs = -1; L.redeMedida = 0; L.kbpsDoSegmento = 0;
-  L.aplicado = 0; L.enviou = 0; L.contaLida = 0;
+  L.aplicado = 0; L.enviou = 0; L.contaLida = 0; L.vazaoIncerta = 0;
   memset(&L.conta, 0, sizeof L.conta);
   memset(&L.rec, 0, sizeof L.rec);
   L.xtConfig = xtream_configurado();
@@ -724,7 +732,7 @@ void livetvdiag_evento(const SDL_Event *e) {
   else if (k == SDLK_RETURN || k == SDLK_KP_ENTER) {
     int b = lista[L.botao];
     if (b == B_APLICAR) {
-      ajustes_livetv_aplicar(L.rec.resolucao, L.rec.formato, L.rec.espera);
+      ajustes_livetv_aplicar(L.vazaoIncerta ? -1 : L.rec.resolucao, L.rec.formato, L.rec.espera);
       if (L.recModo >= 0) ajustes_livetv_aplicar_modo(L.recModo);
       if (L.tocouModo[M_P]) ajustes_livetv_aplicar_proxy(1);
       if (L.n > 0) guia_fonte_gravar_diag(L.it[0].id, L.rec.formato, L.recModo, L.tocouModo[M_P] ? 1 : -1);
@@ -1078,6 +1086,8 @@ static void desenharRecomendacoes(GfxRect r, float ar, float ag, float ab) {
                                                                              : "Enviando o registro…"),
              st == 3 ? 244 : 150, st == 3 ? 170 : 222, st == 3 ? 140 : 170);
   }
+  if (L.vazaoIncerta)
+    linhaRec(r, &y, i18n("Velocidade inconclusiva: limite do provedor. Resolução mantida."), 244, 196, 150);
   if (L.rec.semDecoder) {
     snprintf(a, sizeof a, i18n("%d canal(is): o vídeo chega, mas a TV não começa a decodificar. Esperar mais não resolve; tente o outro formato ou outra resolução do canal."), L.rec.semDecoder);
     linhaRec(r, &y, a, 244, 196, 150);
@@ -1099,7 +1109,7 @@ static void desenharRecomendacoes(GfxRect r, float ar, float ag, float ab) {
     linhaRec(r, &y, i18n("O TS abriu mais canais que o HLS nesta TV: o formato do Xtream passa a pedir TS primeiro."), 214, 220, 230);
   if (L.xtConfig && L.conta.valido && L.conta.formatosDeclarados && !L.conta.temM3u8 && hlsServido)
     linhaRec(r, &y, i18n("O provedor entrega HLS mesmo com a conta declarando só TS."), 214, 220, 230);
-  if (L.redeMedida && L.rec.resolucao) {
+  if (L.redeMedida && L.rec.resolucao && !L.vazaoIncerta) {
     char m[32];
     mbps(m, sizeof m, L.rec.kbpsMediana);
     snprintf(a, sizeof a, i18n("Com %s até o provedor, %s é a resolução que toca sem travar."), m,
@@ -1174,6 +1184,8 @@ static float ltdPhoneRec(float x, float y, float w, float a) {
     int st = avisos_envio_estado();
     LTD_PHONE_REC(i18n(st == 2 ? "Resultado enviado no registro." : st == 3 ? "O envio do registro falhou." : "Enviando o registro…"));
   }
+  if (L.vazaoIncerta)
+    LTD_PHONE_REC(i18n("Velocidade inconclusiva: limite do provedor. Resolução mantida."));
   if (L.rec.semDecoder) {
     snprintf(b, sizeof b, i18n("%d canal(is): o vídeo chega, mas a TV não começa a decodificar. Esperar mais não resolve; tente o outro formato ou outra resolução do canal."), L.rec.semDecoder);
     LTD_PHONE_REC(b);
@@ -1191,7 +1203,7 @@ static float ltdPhoneRec(float x, float y, float w, float a) {
   else if (L.rec.formato == 2) LTD_PHONE_REC(i18n("O TS abriu mais canais que o HLS nesta TV: o formato do Xtream passa a pedir TS primeiro."));
   if (L.xtConfig && L.conta.valido && L.conta.formatosDeclarados && !L.conta.temM3u8 && hlsServido)
     LTD_PHONE_REC(i18n("O provedor entrega HLS mesmo com a conta declarando só TS."));
-  if (L.redeMedida && L.rec.resolucao) {
+  if (L.redeMedida && L.rec.resolucao && !L.vazaoIncerta) {
     char m[32]; mbps(m, sizeof m, L.rec.kbpsMediana);
     snprintf(b, sizeof b, i18n("Com %s até o provedor, %s é a resolução que toca sem travar."), m, i18n(nomeResOpcao(L.rec.resolucao)));
     LTD_PHONE_REC(b);

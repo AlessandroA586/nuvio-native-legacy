@@ -5417,6 +5417,7 @@
   T("Velocidade", "Hız"),
   T("Velocidade agora", "Şu anki hız"),
   T("Velocidade de reprodução", "Oynatma hızı"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Hız ölçümü güvenilir değil: sağlayıcı sınırı. Çözünürlük değişmedi."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Hız: %s Mbps (en kötü bölüm %s Mbps)"),
   T("Vem desligado ou em teste", "Kapalı ya da testte gelir"),
   T("Vendo agora", "Şu an izliyor"),

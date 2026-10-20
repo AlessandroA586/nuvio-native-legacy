@@ -5417,6 +5417,7 @@
   T("Velocidade", "Prędkość"),
   T("Velocidade agora", "Prędkość teraz"),
   T("Velocidade de reprodução", "Prędkość odtwarzania"),
+  T("Velocidade inconclusiva: limite do provedor. Resolução mantida.", "Pomiar prędkości niemiarodajny: limit dostawcy. Rozdzielczość bez zmian."),
   T("Velocidade: %s Mbps (pior trecho %s Mbps)", "Prędkość: %s Mb/s (najgorszy odcinek %s Mb/s)"),
   T("Vem desligado ou em teste", "Domyślnie wyłączone lub w testach"),
   T("Vendo agora", "Ogląda teraz"),

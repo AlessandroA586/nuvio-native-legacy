@@ -81,6 +81,27 @@ int main(void) {
   fioRede(&L.it[0]);
   assert(L.it[0].f[F_TS].servido);
   assert(!speed);
-  puts("PASS: limited diagnostic requests, busy-line results, skipped result, playback selection");
+  // A slow HLS sample must not lower resolution while the account is at or over
+  // its limit, or when any probe reports explicit throttling.
+  memset(&L, 0, sizeof L);
+  L.redeMedida = L.kbpsDoSegmento = 1; L.kbps = 5300;
+  recomendar();
+  assert(L.rec.resolucao == 4);
+  L.conta.valido = 1; L.conta.maxConexoes = 1; L.conta.conexoes = 2;
+  recomendar();
+  assert(L.rec.resolucao == ajustes_livetv_resolucao());
+  L.conta.conexoes = L.conta.maxConexoes;
+  L.n = 1; L.it[0].f[F_HLS].http = 200;
+  recomendar();
+  assert(L.vazaoIncerta);
+  assert(L.rec.resolucao == ajustes_livetv_resolucao());
+  L.conta.conexoes = 0; L.n = 1;
+  const int throttled[] = {429, 458, 509};
+  for (unsigned i = 0; i < sizeof throttled / sizeof throttled[0]; i++) {
+    L.it[0].f[F_TS].http = throttled[i];
+    recomendar();
+    assert(L.rec.resolucao == ajustes_livetv_resolucao());
+  }
+  puts("PASS: limited diagnostic requests, busy-line results, skipped result, playback selection, unreliable speed");
   return 0;
 }
