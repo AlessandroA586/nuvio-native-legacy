@@ -53,6 +53,7 @@ None recorded yet.
 - **Expanded-card trailers fill their frame**: Keep focused-card trailer placement in its own coordinate space so video fills expanded artwork at different text scales. Platforms: webOS, Android, Samsung .tpk. Refs owner request, `8271a8dbb`, merge `a4d52842e`.
 
 - **Interface follows your language again**: Restore sorted translation keys so selecting another language no longer leaves the interface in Portuguese. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner incident; `98ed41d91`.
+- **720p interface keeps rendering on weaker GPUs**: Start app-side 720p upscaling on 4K panels and retain the 720p surface when GPU upscaling is unsupported. Platforms: Android. Refs `8c083d04c`, `e85d5a89d`; merge `1890f9f67`.
 - **Resume survives TV power loss**: Save durable playback checkpoints while keeping tracker playback active during checkpoint updates. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request; 5623ab442, ceca13b7e; merges 9e6c12d47, eb5203637.
 - **LG buffer presets apply to direct video**: Apply the chosen buffer preset to direct HTTP video on demand. Platforms: webOS. Refs owner request; 6c9bc485b; merge 6c8233ded.
 - **Live diagnostics on limited accounts**: Run explicitly requested live-TV diagnostics even when the account has limited access. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request; 6a392a97f; merge bf6df9a8e.
@@ -82,6 +83,8 @@ None recorded yet.
 
 - **Useful scrapers run first**: Remember recent scraper hits per profile, defer anime-only scrapers for other titles, and show checked, queued and cut counts when no sources are found. Platforms: webOS, Android, Samsung .tpk, WASM with local plugins. Refs owner request, `cfe0215b4`, merge `f215e7fd8`.
 
+- **Manual graphics choices survive automatic recovery**: Order automatic frost and animation throttling and keep manual effects selections when adaptive reductions reset. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `4c7b5e47a`, `0b7036d03`, `c271714aa`; merge `59633662a`.
+
 Low-memory playback and bounded torrent-startup reads are listed under Fixes.
 
 ## Community
@@ -100,6 +103,8 @@ Low-memory playback and bounded torrent-startup reads are listed under Fixes.
 - **C9 artwork comparison**: Verify native C9 artwork against the earlier rendering baseline while preserving both capture modes. Platforms: webOS; host verification. Refs `bdc7d7c8c`, merge `d072c891b`.
 
 - **Browser build link fix**: Restore the browser build's missing network-function stub so Samsung browser packages can link successfully. Platforms: Samsung browser/WASM. Refs `b84091f4c`.
+- **DV7 converter builds on the host**: Build the host-side Dolby Vision converter outside the container so the ARM build has the required Rust toolchain. Platforms: webOS build. Refs `96c2ba90e`.
+
 - **Issue tracking**: Keep release and issue tracking current. Additional refs: `80a3b437b`. Additional refs: `612a2ecd2`. Additional refs: `c9e4f8038`. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `609ed3cc3`, `ad6ec6fb9`, `89b48afe7`, `12bedced8`, `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`.
 
 ## Pending (not integrated yet)
