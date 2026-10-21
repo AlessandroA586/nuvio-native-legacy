@@ -115,7 +115,7 @@ Low-memory playback and bounded torrent-startup reads are listed under Fixes.
 - **Browser build link fix**: Restore the browser build's missing network-function stub so Samsung browser packages can link successfully. Platforms: Samsung browser/WASM. Refs `b84091f4c`.
 - **DV7 converter builds on the host**: Build the host-side Dolby Vision converter outside the container so the ARM build has the required Rust toolchain. Platforms: webOS build. Refs `96c2ba90e`.
 
-- **Issue tracking**: Keep release and issue tracking current. Snapshot refs: `58342b5ce`. Additional refs: `d1563d5b3`. Snapshot refs: `cebe243ac`, `88f1a6d8a`, `1a9cf77eb`, `1e9121e7f`. Additional refs: `80a3b437b`. Additional refs: `612a2ecd2`. Additional refs: `c9e4f8038`. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `609ed3cc3`, `ad6ec6fb9`, `89b48afe7`, `12bedced8`, `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`, `324182411`, `a580c7eae`.
+- **Issue tracking**: Keep release and issue tracking current. Snapshot refs: `0870b8caa`. Snapshot refs: `58342b5ce`. Additional refs: `d1563d5b3`. Snapshot refs: `cebe243ac`, `88f1a6d8a`, `1a9cf77eb`, `1e9121e7f`. Additional refs: `80a3b437b`. Additional refs: `612a2ecd2`. Additional refs: `c9e4f8038`. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `609ed3cc3`, `ad6ec6fb9`, `89b48afe7`, `12bedced8`, `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`, `324182411`, `a580c7eae`.
 
 ## Pending (not integrated yet)
 
