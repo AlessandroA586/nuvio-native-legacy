@@ -118,6 +118,7 @@ int ajustes_animacoes_reduzidas(void);
 // V_BRILHO_PLAYER (padrao 1 = 80%).
 int ajustes_esmaecer(void);
 int ajustes_brilho_player(void);
+int ajustes_tunneling(void); // Android-only tunneled playback; default off.
 int ajustes_hdr_interface(void); // Experimental Android HDR output; default off.
 int ajustes_hdr_ui(void);   // #205: 1 = Automatico (padrao), 0 = Desligado
 // #202: -1 = ultimo modo usado (padrao); 0..7 = PlrAspecto aplicado ao abrir o video.
@@ -640,6 +641,7 @@ int   ajustes_hist_conta(void);          // 1 = this profile's history goes to t
 int   ajustes_amigos_estilo(void); // 0 Feed, 1 Live, 2 Stories, 3 Presence, 4 Poster, 5 Classic
 int   ajustes_social(void);              // 1 = friends/social features on (per profile, default on)
 int   ajustes_dv_mkv(void);              // 1 = Dolby Vision MKV through our demux (webOS, local, default off)
+int   ajustes_dv7(void);
 int   ajustes_cw_retido_tambem(void);   // 1 = o titulo da ilha/Retomar tambem fica em Continuar assistindo
 // Percentual (70-98, padrao 90) a partir do qual o episodio conta como
 // assistido: sai do Continuar assistindo e o card passa ao proximo. Local.

@@ -351,7 +351,11 @@ __attribute__((unused)) static void publicarCacheDisco(void) {
 #ifdef __EMSCRIPTEN__
 #define NV_CACHE_DISCO_MAX (48L * 1024L * 1024L)
 #else
+#ifdef NV_ANDROID
+#define NV_CACHE_DISCO_MAX (64L * 1024L * 1024L)
+#else
 #define NV_CACHE_DISCO_MAX (512L * 1024L * 1024L)
+#endif
 #define NV_CACHE_DISCO_RESERVA (128UL * 1024UL * 1024UL)
 // TETO PROPORCIONAL AO ESPACO, no LG (22/09/2026). 512 MB fixos era mais da
 // metade do que a C9 tinha: 497 MB de arte em 3309 arquivos numa particao de
@@ -4449,6 +4453,7 @@ static void uplAbortar(void) {
 
 int tex_bombear(int max_por_quadro) {
   int subiu = 0, trabalhou = 0, porClasse[3] = {0};
+  unsigned char blocked[MAX_ITENS_ABS] = {0};
   // UMA LINHA POR SESSAO com o caminho da piramide e a GPU: e o que separa,
   // num log de usuario, "lixo com mip=gpu" de "lixo com mip=cpu".
   { static int logado;
@@ -4462,7 +4467,7 @@ int tex_bombear(int max_por_quadro) {
     } }
   Uint64 inicio = SDL_GetPerformanceCounter();
   double freq = (double)SDL_GetPerformanceFrequency();
-  for (int passo = 0; passo < max_por_quadro + 16; passo++) {
+  for (int passo = 0; passo < max_por_quadro + nMax + 16; passo++) {
     if (trabalhou &&
         (double)(SDL_GetPerformanceCounter() - inicio) * 1000.0 / freq >=
             NV_TEX_UPLOAD_BUDGET_MS)
@@ -4525,7 +4530,7 @@ int tex_bombear(int max_por_quadro) {
     char uploadPath[512] = "";
     SDL_LockMutex(mtx);
     for (int i = 0; i < nMax; i++)
-      if (itens[i].estado == DECODIFICADO && itens[i].sup && itens[i].urgente > nivel) {
+      if (!blocked[i] && itens[i].estado == DECODIFICADO && itens[i].sup && itens[i].urgente > nivel) {
         alvo = i; nivel = itens[i].urgente;
         if (nivel >= 2) break;
       }
@@ -4539,6 +4544,20 @@ int tex_bombear(int max_por_quadro) {
           (trabalhou && (classe == 2 || gasto + uplPiorMs[classe] > NV_TEX_UPLOAD_BUDGET_MS))) {
         SDL_UnlockMutex(mtx);
         break;
+      }
+      // Pruning cannot free current/last-frame artwork. Reserve room before
+      // allocating on the GPU; keep the decoded result queued if only hot
+      // textures remain, so drawing never triggers another download/decode.
+      long extra = bytesTexturaMip(s->w, s->h,
+                                  temPiramide(s->w, s->h, itens[alvo].card));
+      if (itens[alvo].tex) extra -= bytesTextura(&itens[alvo]);
+      long lim = limiteBytes();
+      while (bytesUsados + extra > lim)
+        if (despejar(0) < 0) break;
+      if (bytesUsados + extra > lim) {
+        blocked[alvo] = 1;  // Retry next frame; smaller uploads may still fit.
+        SDL_UnlockMutex(mtx);
+        continue;
       }
       sup = s;
       filaEm = itens[alvo].filaUploadEm; itens[alvo].filaUploadEm = 0;

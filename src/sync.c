@@ -1990,7 +1990,25 @@ const char *sync_resumo(void) {
   }
 }
 unsigned    sync_ultimo_ok(void)   { return ultimoOk; }
-void        sync_sujar_progresso(void) { sujoProgresso = 1; }
+// Push only progress during playback; the full catalog sync stays deferred.
+static int pontoEmVoo;
+static struct { int perfil; uint64_t sessao; } pontoPedido;
+static void *empurrarPonto(void *arg) {
+  (void)arg;
+  syncprog_empurrar_sessao(pontoPedido.perfil, pontoPedido.sessao);
+  __atomic_store_n(&pontoEmVoo, 0, __ATOMIC_RELEASE);
+  return NULL;
+}
+void sync_sujar_progresso(void) {
+  sujoProgresso = 1;
+  if (!sessao_logada() || !ajustes_hist_conta() || nuvem_freio_ativo() ||
+      __atomic_exchange_n(&pontoEmVoo, 1, __ATOMIC_ACQUIRE)) return;
+  pontoPedido.perfil = perfis_ativo();
+  pontoPedido.sessao = nv_perfil_sessao_ler();
+  pthread_t fioPonto;
+  if (pthread_create(&fioPonto, NULL, empurrarPonto, NULL) == 0) pthread_detach(fioPonto);
+  else __atomic_store_n(&pontoEmVoo, 0, __ATOMIC_RELEASE);
+}
 // Addon flag state, per account (see addonsAplicar for the merge order):
 //  - CC_ADDONS_TOGGLES, keyed by the ACTIVE profile: each addon the user
 //    toggled, until the account acknowledges that row (PATCH 2xx) or drops it.

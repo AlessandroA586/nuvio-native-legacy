@@ -213,6 +213,8 @@ NAO_E_TELA = ("printf", "fprintf", "puts", "fputs", "perror", "marco",
               "curl_", "SDL_Log",
               # motivo de log da fonte guardada (fontevolta.h): nunca tela
               "fontevolta_", "addons_buscar", "cat_indice_por",
+              # video_tpk.c: motivo so vai para o log [mkvfix] (#638)
+              "mfLigar",
               "idioma_registrar", "assert", "_Static_assert",
               "EM_ASM", "MAIN_THREAD",
               # NOME DE ICONE NAO E TEXTO. gfx_icone recebe o basename do SVG
@@ -258,6 +260,7 @@ def contexto(txt, i):
 # "nao sei o que e": sem esta lista a ferramenta nao pode virar teste, e sem
 # virar teste ela nao impede a proxima regressao.
 IGNORAR = {
+    "catalogo-*.bin",                # androidcache.c: cache filename pattern, never UI text
     "ltv-fontes.txt", "ltv-fontes-p%d.txt",  # ltv.c: preference filenames, never UI labels
     "daqui em diante",  # episodios.c nomeModo: so no log [visto] menu, nunca rotulo
     "fechar",  # main.c: nome do evento de janela so no log "[ciclo] janela="
@@ -369,6 +372,7 @@ IGNORAR = {
     # Usados apenas para ler, gravar e apagar arquivos; nunca texto de tela.
     "%s/catalogo-%016llx-p%d.bin", "%s/catalogo-%016llx-p%d.bin.tmp",
     "catalogo-%016llx-p%d.bin.tmp-", "catalogo-rede.bin.tmp-",
+    "catalogo-", "fontes/", "legendas/",  # Android cache paths, not UI.
     "amigos-vistos-p%d.txt",
     "epg-conta-%d-%08x-p%d.%s", "epg-conta-%d-%08x-p%d.bin",
     "epg-conta-%d-%08x-p%d.ts", "epg-conta-%d-%08x-p%d.id",

@@ -1,5 +1,6 @@
 #include "arteurl.h"
 #include "descoberta.h"
+#include "dados.h"
 #include "idioma.h"
 #include "ajustes.h"
 #include "extras.h"
@@ -750,11 +751,9 @@ int desc_filme_visto(const CatItem *it) {
 
 // --- DE QUAL ADDON VEIO O ITEM (CatItem.origem) ------------------------------
 //
-// O detalhe pergunta a ficha (/meta) primeiro a quem PUBLICOU o titulo, e para
-// isso o item precisa lembrar quem foi. Guarda-se o "id" do manifesto — nunca a
-// base: ela carrega credencial (o Xperience embute um JWT no caminho) e o
-// CatItem vai inteiro para o cache em disco. Enquanto o manifesto nao foi lido
-// (id vazio) vale "#<hash da base>", que tambem nao expoe nada.
+// Detail requests metadata from the instance that published the title.
+// Store the transport hash, never credentials or a shared manifest ID.
+// addonDaOrigem also accepts manifest IDs from existing disk caches.
 static unsigned hashBaseAddon(const char *b) {
   unsigned h = 2166136261u;
   for (; b && *b; b++) h = (h ^ (unsigned char)*b) * 16777619u;
@@ -793,9 +792,7 @@ static void origemDaBase(const char *base, char *dst, size_t n) {
   for (i = 0; i < k; i++) {
     const char *b = addons_base(i);
     if (b && !strcmp(b, base)) {
-      const char *id = addons_id_manifesto(i);
-      if (id && id[0]) snprintf(dst, n, "%s", id);
-      else snprintf(dst, n, "#%08x", hashBaseAddon(base));
+      snprintf(dst, n, "#%08x", hashBaseAddon(base));
       return;
     }
   }
@@ -2447,8 +2444,8 @@ static char *escolherPelaCota(const char *corpo, const char *fim,
   while (p) {
     const char *f = js_fim(p);
     char tipo[8] = "", id[96] = "", nome[96] = "", chave[192], desativar[352];
-    js_texto(p, f, "type", tipo, sizeof tipo);
-    js_texto(p, f, "id", id, sizeof id);
+    js_texto_raiz_em(p, f, "type", tipo, sizeof tipo);
+    js_texto_raiz_em(p, f, "id", id, sizeof id);
     js_texto_raiz_em(p, f, "name", nome, sizeof nome);
     if (tipo[0] && id[0] && !exigeBusca(p, f)) {
       if (n >= cap) {
@@ -2459,7 +2456,7 @@ static char *escolherPelaCota(const char *corpo, const char *fim,
         pr = novo;
       }
       // As MESMAS duas chaves que lerManifesto monta para o Decl.
-      snprintf(chave, sizeof chave, "%s_%s_%s", addonId[0] ? addonId : base, tipo, id);
+      addons_catalogo_chave(addonId, base, tipo, id, chave, sizeof chave);
       snprintf(desativar, sizeof desativar, "%s_%s_%s_%s", base, tipo, id, nome);
       pr[n].nivel = prioCatalogo(chave, desativar, base, tipo, id, &pr[n].pos);
       n++;
@@ -2554,8 +2551,9 @@ static int lerManifesto(int iAddon, const char *base, Decl *saida, int max,
   while (p) {
     const char *f = js_fim(p);
     tipo[0] = id[0] = nome[0] = 0;
-    js_texto(p, f, "type", tipo, sizeof tipo);
-    js_texto(p, f, "id",   id,   sizeof id);
+    // Nested extra fields cannot define the catalog's request identity.
+    js_texto_raiz_em(p, f, "type", tipo, sizeof tipo);
+    js_texto_raiz_em(p, f, "id",   id,   sizeof id);
     // RAIZ DO OBJETO, e nao a primeira ocorrencia na faixa. O Bingecat escreve
     // `extra: [{name:"skip"}, {name:"genre"}, ...]` ANTES de `name`, e js_texto
     // devolvia o nome do primeiro extra: as fileiras dele apareciam como "Skip
@@ -2633,8 +2631,7 @@ static int lerManifesto(int iAddon, const char *base, Decl *saida, int max,
       d->paginavel = aceitaSkip(p, f);
       snprintf(d->tipo, sizeof d->tipo, "%s", tipo);
       snprintf(d->id,   sizeof d->id,   "%s", id);
-      snprintf(d->chave, sizeof d->chave, "%s_%s_%s",
-               addonId[0] ? addonId : base, tipo, id);
+      addons_catalogo_chave(addonId, base, tipo, id, d->chave, sizeof d->chave);
       snprintf(d->desativar, sizeof d->desativar, "%s_%s_%s_%s", base, tipo, id, nome);
       formatarTitulo(nome, tipo, d->titulo, sizeof d->titulo);
       // Nome legivel do addon, para a linha "de <addon>" sob o titulo da
@@ -2945,7 +2942,7 @@ static int continuarLocal(CatItem *saida, int max) {
     int j, repetido = 0;
     if (r->durSeg < 60.0) continue;
     p = r->posSeg / r->durSeg;
-    if (p * 100.0 < (double)ajustes_cw_minimo() || p * 100.0 >= ajustes_cw_concluido()) continue;
+    if (!prog_inicio_continuar(r, ajustes_cw_minimo()) || p * 100.0 >= ajustes_cw_concluido()) continue;
     // Uma serie com varios episodios gravados entra UMA vez, no mais recente.
     for (j = 0; j < n; j++) {
       size_t L = idbase_len(saida[j].imdb);   // "kitsu:41370" inteiro, nao "kitsu"
@@ -2962,6 +2959,7 @@ static int continuarLocal(CatItem *saida, int max) {
     d->temporada = r->temporada;
     d->episodio = r->episodio;
     d->progresso = (int)(100.0 * p);
+    if (d->progresso < 1) d->progresso = 1; // Keep early checkpoints in the paused section.
     d->restanteMin = (int)((r->durSeg - r->posSeg) / 60.0 + 0.5);
     // O instante ja esta aqui, no registro: carimbar agora poupa a busca por
     // chave que instanteDaConta faria depois. Ver retomadoMs em catalogo.h.
@@ -4897,13 +4895,8 @@ static void *montar(void *u) {
             if (dentroDeColecaoVisivel(d)) engolidasNaDeclaracao++;
             continue;
           }
-          // MESMA CHAVE DUAS VEZES = MESMA FILEIRA DUAS VEZES. Acontece quando
-          // o mesmo addon entra duas vezes na lista (`addons.txt` mais a conta)
-          // ou quando um manifesto declara o catalogo repetido: a chave e
-          // <addonId>_<tipo>_<catalogoId> e fica identica, e a home mostrava a
-          // fileira em duplicata com os MESMOS titulos. Dois addons DIFERENTES
-          // declarando o mesmo id nao caem aqui de proposito — sao catalogos
-          // distintos, com conteudo possivelmente distinto.
+          // Deduplicate repeated declarations within one installed instance.
+          // Shared manifest IDs on different transports remain separate rows.
           for (t = 0; t < nFil; t++)
             if (!strcmp(fil[t].chave, d->chave)) { repetida = 1; break; }
           for (t = 0; !repetida && t < nTarefas; t++)
@@ -5974,9 +5967,9 @@ static void metaChaveContexto(const char *id, char *dst, size_t n) {
   snprintf(dst, n, "%s/%d/%s/%s", usuario ? usuario : "", perfis_ativo(), desc_tmdb_idioma(), id);
 }
 static int metaDiscoNome(const char *chave, char *dst, size_t n) {
-  const char *dir = dados_dir();
-  if (!dir || !dir[0]) return 0;
-  snprintf(dst, n, "%s/meta-%02u.txt", dir, hashBaseAddon(chave) % 64);
+  char nome[32];
+  snprintf(nome, sizeof nome, "meta-%02u.txt", hashBaseAddon(chave) % 64);
+  if (!dados_caminho(dst, (unsigned)n, nome)) return 0;
   return 1;
 }
 // ponytail: 64 slots (colisao vira miss), ate 256 KiB/corpo e validade 6 h.
@@ -6342,9 +6335,7 @@ const char *dados_dir(void);
 static int locDiscoLido;
 
 static int locCaminho(char *dst, size_t n) {
-  const char *d = dados_dir();
-  if (!d || !d[0]) return 0;
-  snprintf(dst, n, "%s/loc-texto.txt", d);
+  if (!dados_caminho(dst, (unsigned)n, "loc-texto.txt")) return 0;
   return 1;
 }
 
@@ -7362,6 +7353,10 @@ static int metaListaDeArquivos(int distintos, int brutos) {
   return brutos >= 60 && brutos > distintos * 3;
 }
 
+// Em par com CAT_EP_MAX (catalogo.c): um titulo que caiba no store nao pode
+// truncar no parse, e um que nao caiba trunca aqui em vez de zerar os outros.
+#define VIDEOS_MAX 2400
+
 // Lista de arquivos so pode ampliar a numeracao do catalogo, nunca refaze-la
 // (One Piece anime vs live-action). Compara o corpo inteiro, antes do corte.
 static int metaArquivosCompativeis(const char *arquivos, const char *catalogo) {
@@ -7385,6 +7380,8 @@ static int metaArquivosCompativeis(const char *arquivos, const char *catalogo) {
       v = js_prox(f);
     }
   }
+  // Full-body coverage is meaningless if publication will truncate the list.
+  if (pares[0].n > VIDEOS_MAX) ok = 0;
   if (temps[1].n > 1 && temps[0].n < temps[1].n) ok = 0;
   for (j = 0; j < pares[1].cap && pares[1].v; j++) {
     unsigned long long k = pares[1].v[j];
@@ -7394,10 +7391,6 @@ static int metaArquivosCompativeis(const char *arquivos, const char *catalogo) {
   for (i = 0; i < 2; i++) { free(pares[i].v); free(temps[i].v); }
   return ok;                             // sem memoria, conserva o catalogo
 }
-
-// Em par com CAT_EP_MAX (catalogo.c): um titulo que caiba no store nao pode
-// truncar no parse, e um que nao caiba trunca aqui em vez de zerar os outros.
-#define VIDEOS_MAX 2400
 
 // videos[] de um /meta -> lista de CatEp ORDENADA por (temporada, episodio).
 // Inclui especiais (temporada 0) sem renumerar o par nem o id do video.

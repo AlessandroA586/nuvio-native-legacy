@@ -22,6 +22,14 @@ void rede_resposta_limpar(RedeResposta *r) { (void)r; }
 #define GB(x) ((uint64_t)(x) << 30)
 
 int main(void) {
+#ifdef NV_ANDROID
+  uint64_t ceiling = p2pmotor_teto_duro(GB(8), 0);
+  assert(p2pmotor_cabe(MB(700), ceiling));
+  assert(p2pmotor_cabe(GB(15), ceiling));
+  assert(p2pmotor_janela(ceiling) >= MB(P2PM_JANELA_MIN_MB));
+  assert(ceiling <= GB(8) / 2);
+  assert(!p2pmotor_cabe(GB(4), p2pmotor_teto_duro(MB(300), 0)));
+#else
   // Automatico = o de sempre: metade do livre, no maximo 1536 MB.
   assert(p2pmotor_teto_duro(MB(1379), 0) == MB(1379) / 2);   // a TV do #334: 689 MB
   assert(p2pmotor_teto_duro(GB(8), 0) == MB(1536));
@@ -50,6 +58,7 @@ int main(void) {
   assert(!p2pmotor_cabe(GB(4), p2pmotor_teto_duro(MB(300), 0)));     // 150 MB de teto: recusa
   assert(p2pmotor_cabe(MB(200), p2pmotor_teto_duro(MB(500), 0)));    // ... mas o que cabe toca
   assert(p2pmotor_cabe(GB(4), MB(192)) && !p2pmotor_cabe(GB(4), MB(191)));   // borda: 160 MB de janela
+#endif
   puts("p2pmotor_teto: ok");
   return 0;
 }

@@ -705,7 +705,10 @@ static Uint32 heroTrailerEspera(void) { return ajustes_trailer_hero_espera_ms();
 // Destino pedido ao trailer; o furo usa o plano final aplicado em video_tpk.c.
 static GfxRect cartaoVideoRect(GfxRect c) {
 #if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
-  GfxRect v; video_tpk_cartao_destino(c.x, c.y, c.w, c.h, &v.x, &v.y, &v.w, &v.h); return v;
+  float s = gfx_escala_tela_txt();
+  GfxRect v;
+  video_tpk_cartao_destino(c.x * s, c.y * s, c.w * s, c.h * s, &v.x, &v.y, &v.w, &v.h);
+  return (GfxRect){ v.x / s, v.y / s, v.w / s, v.h / s };
 #else
   return c;
 #endif
@@ -1332,7 +1335,8 @@ static const char *arte_por_formato(const CatItem *item, int deitado) {
     if (b) { float ap = tex_aspecto(b);
       if (ap > 0.0f && ap < 1.0f) { const char *m = artehero_url_metahub_fundo(item);
         if (m) return m; } }
-    return b ? b : (item->poster[0] ? item->poster : NULL);
+    return posterprov_card_formato(item->origem, item->imdb, item->tmdb, item->tipo,
+                                   b ? b : (item->poster[0] ? item->poster : NULL), 1);
   }
   // POSTER PERSONALIZADO (posterprov.h): so o cartaz retrato de card. Desligado
   // (padrao) ou sem id que o provedor entenda, devolve item->poster como veio.
@@ -1396,7 +1400,8 @@ static const CatItem *cat_item_exato(int i) {
 static const char *arte_card_retomada(const CatItem *item) {
   if (item && ajustes_cw_thumb_episodio() && !strcmp(item->tipo, "series")) {
     const char *ep = artehero_url_episodio(item);
-    if (ep && !tex_falhou(ep)) return ep;
+    if (ep && !tex_falhou(ep))
+      return posterprov_card_formato(item->origem, item->imdb, item->tmdb, item->tipo, ep, 1);
   }
   return arte_por_formato(item, 1);
 }
@@ -4175,7 +4180,8 @@ static const char *dinArteDaCor(void) {
   deitado = editorial(f->tipo) || f->tipo == FILEIRA_LARGA ||
             f->tipo == FILEIRA_HEROI ||
             f->tipo == FILEIRA_CONTINUE || f->tipo == FILEIRA_RETORNO ||
-            (f->tipo != FILEIRA_POSTER && ajustes_posteres_deitados());
+            (f->tipo != FILEIRA_POSTER && f->tipo != FILEIRA_TOP10_NUM &&
+             f->tipo != FILEIRA_TOP10 && ajustes_posteres_deitados());
   return arte_por_identidade(idx, deitado);
 }
 // O BANNER DA COLECAO NA DINAMICA. Com o foco num grupo de colecao o destaque
@@ -4826,7 +4832,7 @@ static GfxRect heroEditorialRect(int editorial, float aspect) {
 }
 #ifdef NV_TOUCH_UI
 static void heroTrailerAtualizaRect(GfxRect r, float saida) {
-  if (telefoneui_ativo() && saida <= 0.001f && heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
+  if (telefoneui_ativo() && !heroTrailerNoCartao && saida <= 0.001f && heroTrailerItem >= 0 && heroTrailerItem == heroAtual &&
       trailer_aberto() && !trailer_cheia() && trailer_dono() == TRAILER_DONO_HOME)
     trailer_rect(r);
 }
@@ -7435,7 +7441,11 @@ static void pintarCartao(const CartaoFoco *k, float raio) {
           if (k->trailer > 0.004f) {
             GfxRect v = cartaoVideoRect(card);
 #if defined(NV_TPK) && !defined(__EMSCRIPTEN__)
-            video_tpk_cartao_furo(card.x, card.y, card.w, card.h, &v.x, &v.y, &v.w, &v.h);
+            // The native plane is in screen px; intersect there, then draw in layer px.
+            float s = gfx_escala_tela_txt();
+            video_tpk_cartao_furo(card.x * s, card.y * s, card.w * s, card.h * s,
+                                 &v.x, &v.y, &v.w, &v.h);
+            v = (GfxRect){ v.x / s, v.y / s, v.w / s, v.h / s };
 #endif
             if (v.x != card.x || v.y != card.y || v.w != card.w || v.h != card.h) {
               gfx_cor(card, raio, 0.0f, 0.0f, 0.0f, 1.0f);
@@ -7846,7 +7856,7 @@ static void home_desenhar_(Uint32 agora) {
                        tipo == FILEIRA_HEROI_DIVIDIDO ? 59.0f : NV_LEGACY_ROW_HEAD_H);
 
     int deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
-                  ((tipo != FILEIRA_POSTER && tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO && tipo != FILEIRA_PALCO) &&
+                  ((tipo != FILEIRA_POSTER && tipo != FILEIRA_TOP10_NUM && tipo != FILEIRA_TOP10 && tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO && tipo != FILEIRA_PALCO) &&
                    ajustes_posteres_deitados());
     int rotuloFora = temRotulo(tipo);
     if (y < NV_TELA_H + 200 && y + NV_LEGACY_ROW_HEAD_H + lh > -200) {
@@ -8125,8 +8135,7 @@ static void home_desenhar_(Uint32 agora) {
             const float conteudoBase=py+h-24.0f;
             const float arteW=134.0f;
             const float arteX=px+w-24.0f-arteW;
-            const char *thumbPath=cItem->poster[0]?cItem->poster:
-                                  (cItem->backdrop[0]?cItem->backdrop:NULL);
+            const char *thumbPath=arte_por_formato(cItem,0);
             if(thumbPath){GLuint thumb=tex_obter_larg(thumbPath,arteW);
               if(thumb){GfxRect tr={arteX,conteudoTopo,arteW,conteudoBase-conteudoTopo};
                 gfx_tex_aspect_atual=tex_aspecto(thumbPath);
@@ -8420,7 +8429,8 @@ static void home_desenhar_(Uint32 agora) {
           fileiraEhCanal(&fileiras[r])) continue;
       float lw = larguraFil(r);
       int deitado = editorial(tipo) || tipo == FILEIRA_LARGA || tipo == FILEIRA_HEROI ||
-                    (tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO &&
+                    (tipo != FILEIRA_TOP10_NUM && tipo != FILEIRA_TOP10 &&
+                     tipo != FILEIRA_CONTINUE && tipo != FILEIRA_POSTER_GRANDE && tipo != FILEIRA_HEROI_DIVIDIDO &&
                      ajustes_posteres_deitados());
       for (int c = 0; c < fileiras[r].n && !pediu; c++) {
         float x = homeFileiraX(r, c);

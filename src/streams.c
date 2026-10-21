@@ -474,8 +474,13 @@ int stream_automatico_excluir(int indice) {
 // onde todo link tem o mesmo nome) tirar as irmas zeraria a fila na primeira
 // falha; ai fica o comportamento antigo, uma de cada vez.
 // Devolve quantas sairam alem da propria.
+static int mesmoAddon(const Stream *a, const Stream *b) {
+  if (a->addonChave[0] || b->addonChave[0])
+    return !strcmp(a->addonChave, b->addonChave);
+  return !strcmp(a->provedor, b->provedor);
+}
 static int irma(int i, int indice) {
-  return i != indice && !strcmp(lista[i].provedor, lista[indice].provedor) &&
+  return i != indice && mesmoAddon(&lista[i], &lista[indice]) &&
          !strcmp(lista[i].rotulo, lista[indice].rotulo);
 }
 int stream_automatico_excluir_irmas(int indice) {
@@ -3327,6 +3332,12 @@ static const char *iconeBotao(int b) {
       ? "pl_rotate-ccw" : b == BT_FECHAR ? "aj_x" : NULL;
 }
 static char provedores[13][96];
+static char provChaves[13][FONTEFALHA_CHAVE];
+static int doProvedor(const Stream *s, int p) {
+  if (s->addonChave[0] || provChaves[p][0])
+    return !strcmp(s->addonChave, provChaves[p]);
+  return !strcmp(s->provedor, provedores[p]);
+}
 static int nProvedores;
 
 static int temAudioPreferido(const Stream *s);
@@ -3352,7 +3363,7 @@ static int chipsOcultos(char *nomes, size_t nn) {
   if (filtro < 0 || !(soMp4 || soCache || soDub)) return 0;
   for (int i = 0; i < n; i++)
     if ((canalFolha || stream_filtro_permite(&lista[i])) && !chipsOk(i) &&
-        (filtro <= 0 || filtro >= nProvedores || !strcmp(lista[i].provedor, provedores[filtro]))) k++;
+        (filtro <= 0 || filtro >= nProvedores || doProvedor(&lista[i], filtro))) k++;
   if (k && nomes)
     for (int b = 0; b < BT_N; b++)
       if (botaoLigado(b)) {
@@ -3383,26 +3394,31 @@ static const char *fraseVazioChips(void) {
 static int passaFiltro(int i) {
   if (filtro < 0) return 0;
   if (!passaChips(i)) return 0;
-  if (filtro && strcmp(lista[i].provedor, provedores[filtro])) return 0;
+  if (filtro && !doProvedor(&lista[i], filtro)) return 0;
   return 1;
 }
 
 // Abas na ORDEM DE EXIBICAO (a dos addons), e a aba escolhida segue pelo
 // NOME: com a lista enchendo (#221) um addon novo pode entrar antes dela.
 static void atualizarProvedores(void) {
-  char escolhido[96];
+  char escolhido[96], chave[FONTEFALHA_CHAVE];
   snprintf(escolhido, sizeof escolhido, "%s", filtro > 0 && filtro < nProvedores ? provedores[filtro] : "");
+  snprintf(chave, sizeof chave, "%s", filtro > 0 && filtro < nProvedores ? provChaves[filtro] : "");
   nProvedores = 1;
   snprintf(provedores[0],sizeof provedores[0],"Todos");
   for (int k=0;k<n;k++) {
     int i=ORD(k), j;
-    for(j=1;j<nProvedores;j++) if(!strcmp(provedores[j],lista[i].provedor)) break;
-    if(j==nProvedores && nProvedores<13)
+    for(j=1;j<nProvedores;j++) if(doProvedor(&lista[i], j)) break;
+    if(j==nProvedores && nProvedores<13) {
+      snprintf(provChaves[nProvedores], sizeof provChaves[0], "%s", lista[i].addonChave);
       snprintf(provedores[nProvedores++],96,"%s",lista[i].provedor);
+    }
   }
   if (escolhido[0]) {
     int j;
-    for (j = 1; j < nProvedores; j++) if (!strcmp(provedores[j], escolhido)) break;
+    for (j = 1; j < nProvedores; j++)
+      if (chave[0] ? !strcmp(provChaves[j], chave) :
+          (!provChaves[j][0] && !strcmp(provedores[j], escolhido))) break;
     filtro = j < nProvedores ? j : 0;
   }
   if(filtro>=nProvedores) filtro=0;
@@ -4370,7 +4386,7 @@ float stream_folha_anim(void) { return anim; }
 // Url sozinha nao basta: torrent sem debrid resolvido tem url vazia e se
 // distingue pelo hash e pelo arquivo.
 static int mesmaFonte(const Stream *a, const Stream *b) {
-  return a->fileIdx == b->fileIdx && !strcmp(a->provedor, b->provedor) &&
+  return a->fileIdx == b->fileIdx && mesmoAddon(a, b) &&
          !strcmp(a->url, b->url) && !strcmp(a->infoHash, b->infoHash) &&
          !strcmp(a->rotulo, b->rotulo);
 }
@@ -5529,7 +5545,7 @@ static void corpoFolha(float x, float w, float anim, Uint32 agora, int ilha) {
     const float pin=(FOLHA_ABAS_H-FOLHA_ABA_H)*.5f;
     TxtLinha nome[14], num[14];
     for(int i=0;i<n;i++){ if(!passaChips(i)) continue; cnt[0]++;
-      for(int j=1;j<nProvedores;j++) if(!strcmp(provedores[j],lista[i].provedor)){cnt[j]++;break;} }
+      for(int j=1;j<nProvedores;j++) if(doProvedor(&lista[i], j)){cnt[j]++;break;} }
     for(int i=-1;i<nProvedores;i++){
       int qidx=i+1;
       int sel=i==filtro, foc=sel&&grupo==0, c=foc?ajustes_tinta_foco():sel?250:150;

@@ -15,6 +15,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "addons.h"
+#include "plugins.h"
 #include "fontecache.h"
 #include "stub_perfisessao.h"
 
@@ -217,6 +218,11 @@ static void conferirTexto(const char *o_que, const char *obtido, const char *esp
 static int sempreCancelado(void *u) { (void)u; return 1; }
 
 static int pluginsEnabled, pluginSources;
+static PlugResumo pluginSummary;
+void plugins_resumo(const char *id, const char *tipo, PlugResumo *saida) {
+  (void)id; (void)tipo;
+  *saida = pluginsEnabled ? pluginSummary : (PlugResumo){0};
+}
 static int pluginsActive(void) { return pluginsEnabled; }
 static int pluginProvider(const char *id, const char *tipo, int (*cancelado)(void *),
                           void *ctx, OrigemAviso aviso, void *avisoU, void *saida) {
@@ -638,6 +644,10 @@ int main(void) {
   conferirTexto("no providers", buscarMotivo("tt2050000"), "Nenhum add-on de fontes instalado");
   pluginsEnabled = 1;
   conferirTexto("plugins returned nothing", buscarMotivo("tt2050001"), "(sem causa)");
+  pluginSummary = (PlugResumo){ .enfileirados = 3, .terminados = 2 };
+  conferirTexto("plugin counts precede generic fallback", buscarMotivo("tt2050001"),
+                "Plugins não encontraram fontes (2 de 3 scrapers verificados)");
+  pluginSummary = (PlugResumo){0};
   pluginSources = 1;
   conferirTexto("plugin sources failed to open", buscarMotivo("tt2050002"), "(sem causa)");
   conferir("plugin list has sources", addons_estado(), ADD_PRONTO);

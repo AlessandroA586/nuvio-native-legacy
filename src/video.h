@@ -222,13 +222,14 @@ int video_dv_recuo_consumir(void);
 enum {
   VIDEO_DV_NAO_NADA = 0,
   VIDEO_DV_NAO_SEM_DV,    // o cabecalho do arquivo nao tem Dolby Vision
-  VIDEO_DV_NAO_PERFIL,    // perfil 7 com camada de realce (ou outro que nao 5/8)
+  VIDEO_DV_NAO_PERFIL,    // unsupported profile/layout or missing converter
   VIDEO_DV_NAO_AUDIO,     // nenhuma faixa de audio que o caminho alimenta
   VIDEO_DV_NAO_SONDA,     // o cabecalho nao veio (a sonda desistiu)
   VIDEO_DV_NAO_LENTO,     // o caminho abriu e a fonte nao acompanhou
   VIDEO_DV_NAO_FALHOU,    // o caminho nao abriu
   VIDEO_DV_NAO_PESSOA,    // a pessoa escolheu HDR10
-  VIDEO_DV_NAO_CONTENTOR  // o arquivo nao e Matroska (MP4/TS sem extensao na URL)
+  VIDEO_DV_NAO_CONTENTOR, // o arquivo nao e Matroska (MP4/TS sem extensao na URL)
+  VIDEO_DV_NAO_NATIVE     // selected profile stays on the native player
 };
 typedef struct {
   int sessao;          // muda a cada video_tocar (fonte nova)

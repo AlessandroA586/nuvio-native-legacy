@@ -1,4 +1,5 @@
 #include "addons.h"
+#include "plugins.h"
 #include "idbase.h"
 #include "idcanal.h"
 #include "idioma.h"
@@ -687,6 +688,24 @@ unsigned addons_versao(void) { return versaoLista; }
 // O id do manifesto ("com.frostview"), ou "" enquanto a sonda nao o leu. E o
 // prefixo da homeCatalogKey dos catalogos deste addon — e por isso a poda de
 // fantasmas de fileiras.c pede por ele.
+// Preserve the first instance's legacy row settings; further instances use URL keys.
+void addons_catalogo_chave(const char *id, const char *base, const char *tipo,
+                           const char *catalogo, char *dst, unsigned tam) {
+  int matches = 0;
+  char instance[32];
+  addons_lista_travar();
+  for (int i = 0; id && *id && i < nAddon; i++) {
+    if (!strcmp(addon[i].base, base)) break;
+    if (!strcmp(addon[i].id, id)) matches++;
+  }
+  addons_lista_destravar();
+  if (matches || !id || !*id) {
+    nv_addon_chave(base, instance, sizeof instance);
+    id = instance;
+  }
+  snprintf(dst, tam, "%s_%s_%s", id, tipo, catalogo);
+}
+
 const char *addons_id_manifesto(int i) {
   return (i >= 0 && i < nAddon) ? addon[i].id : "";
 }
@@ -1385,7 +1404,8 @@ static void *buscarUmAddon(void *u) {
       Legenda *d = &lote->itens[lote->n];
       if (!f || f <= q) break;
       js_texto(q, f, "id", id, sizeof id);
-      if (!strncmp(id, "error.", 6)) { q = js_prox(f); continue; }
+      // Subtitle Sync serves explanatory SRTs as notice-* entries, not dialogue.
+      if (!strncmp(id, "error.", 6) || !strncmp(id, "notice-", 7)) { q = js_prox(f); continue; }
       if (*q == '{' && episodioCorreto(q, f, B->temporada, B->episodio) &&
           js_texto(q, f, "lang", l, sizeof l)) {
         // "PORTUGUESE" / "Portuguese (Brazil)" / "por" / "pt-BR" viram um
@@ -1412,6 +1432,10 @@ static void *buscarUmAddon(void *u) {
           else
             snprintf(d->rotulo, sizeof d->rotulo, "%s%s%.36s",
                      i18n(ling_nome(cod)), nome[0] ? "  \xc2\xb7  " : "", nome);
+          // Stremio labels carry sync status and release details for providers
+          // that omit subtitleFileName. Keep them separate from release matching.
+          js_texto(q, f, "label", nome, sizeof nome);
+          if (nome[0]) snprintf(d->rotulo, sizeof d->rotulo, "%s", nome);
           lote->grupo[lote->n++] = (unsigned char)gi;
           noGrupo++;
         }
@@ -3301,10 +3325,15 @@ int addons_motivo_vazio(char *dst, unsigned n) {
               !strcmp(alvoTipo, "channels") || !strcmp(alvoTipo, "live") ||
               !strcmp(alvoTipo, "iptv");
   if (!dst || !n || !r->valido) return 0;
-  // Extra providers (local JS scrapers, Plex) are absent from this Stremio
-  // summary. Let callers use their generic source wording while one is active.
-  if (addons_origem_extra_ativa()) return 0;
-  if (!r->instalados || !r->comFonte)
+  PlugResumo plugins;
+  plugins_resumo(alvoId, alvoTipo, &plugins);
+  if (plugins.enfileirados && !r->comFontes)
+    snprintf(dst, n, i18n("Plugins não encontraram fontes (%d de %d scrapers verificados)"),
+             plugins.terminados, plugins.enfileirados);
+  // Other extra providers are absent from the Stremio summary. Let callers
+  // use their generic source wording while one is active.
+  else if (addons_origem_extra_ativa()) return 0;
+  else if (!r->instalados || !r->comFonte)
     snprintf(dst, n, "%s", i18n("Nenhum add-on de fontes instalado"));
   else if (!r->ligadosComFonte)
     snprintf(dst, n, "%s", i18n("Os add-ons de fontes estão desligados"));

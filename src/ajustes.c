@@ -16,6 +16,7 @@
 #include "ajustes_ux.h"
 #include "trailerfonte.h"   // NV_TRAILER_CONTINUA_DETALHE, nas ajudas do trailer
 #include "dados.h"
+#include "androidcache.h"
 #include "extplayer.h"
 #include "resolucao.h"
 #include "gpunivel.h"
@@ -682,7 +683,7 @@ typedef enum {
   AJ_LIVETV_SUGERIR,   // Live TV: Jev suggests sections for channels with none (livecat.h); default on; local, append-only
   AJ_AUDIO_OFFSET,     // #578: device-local converted audio offset, append-only
   AJ_XTREAM_CONEXOES,  // Stored with this IPTV account, not global settings.
-  AJ_AMPLIAR_UI,      // Device-local output scaler, append-only; App (4K) hardware by default.
+  AJ_AMPLIAR_UI,      // Device-local output scaler, append-only; Automatic by default.
   AJ_GUIA_FONTE, AJ_GUIA_RECARREGAR, AJ_M3U_URL, AJ_M3U_EPG, AJ_M3U_LIMPAR,
   AJ_IPTV_CONTA, AJ_IPTV_ADD_XTREAM, AJ_IPTV_ADD_M3U, AJ_IPTV_ADD_STALKER,
   AJ_IPTV_NOME, AJ_IPTV_ATIVA, AJ_IPTV_REMOVER,
@@ -693,6 +694,9 @@ typedef enum {
   AJ_AMPLIACAO_ALGO,  // Device-local upscaling algorithm, append-only; automatic by default.
   AJ_AMPLIACAO_NITIDEZ, // Device-local RCAS sharpness for SGSR sharp / FSR 1, append-only.
   AJ_HDR_INTERFACE,    // Experimental Android HDR output; device-local
+  AJ_LIMPAR_CACHE,
+  AJ_TUNNELING,        // Android-only, device-local; off by default, append-only.
+  AJ_DV7, // independent P7 conversion, append-only
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -742,6 +746,7 @@ _Static_assert(sizeof V_FUNDO_DIN_COR / sizeof *V_FUNDO_DIN_COR == sizeof FUNDO_
                "V_FUNDO_DIN_COR: um nome por linha de FUNDO_DIN_TEMA");
 static const char *V_QUALIDADE[] = { "Automática", "4K", "1080p", "720p" };
 static const char *V_LIGA[]      = { "Ligado", "Desligado" };
+static const char *V_LIGA_AUTO[] = { "Ligado", "Desligado", "Automático" };
 // TRAILER DO CARTAZ EM FOCO EM TRES MODOS (dono, 07/10/2026). O indice e o
 // AJ_TRAILER_CARTAZ_* de ajustes.h e o gravado em "trailerCartazModo"; a chave
 // antiga (V_LIGA, a mesma do web) migra no carregar (focoTrailerMigrar) e a
@@ -858,7 +863,7 @@ static int cacheSeekExiste(void) {
 // Indice gravado em fundoLocal (ajustes_fundo).
 static const char *V_FUNDO[] = { "Arte", "Arte borrada", "Frost" };
 static const char *V_VIDRO_OPAC[] = { "60%", "70%", "78%", "86%", "92%" };
-static const char *V_VIDRO_FOSCO[] = { "Desligado", "Ligado" };
+static const char *V_VIDRO_FOSCO[] = { "Desligado", "Ligado", "Automático" };
 // R4: segunda legenda. 0 = No topo (como sempre); 1 = empilhada logo acima da
 // principal, no pe da tela.
 static const char *V_LEG_CONTORNO_COR[] = { "Preto", "Branco", "Cinza", "Amarelo", "Verde", "Azul", "Vermelho" };
@@ -960,7 +965,7 @@ static const char *V_IDIOMA[]    = { "Automático", "Português", "English", "Ro
                                      "Bahasa Indonesia", "Tiếng Việt", "日本語", "简体中文", "繁體中文",
                                      // IDIOMA_AR: text.c junta as letras (bidi.c) na fonte arabe.
                                      "العربية" };
-static const char *V_ANIM[]      = { "Completas", "Reduzidas" };
+static const char *V_ANIM[]      = { "Completas", "Reduzidas", "Automático" };
 static const char *V_FONTE_UI[]  = { "Inter", "LG Display", "Droid Sans",
                                      "Montserrat", "Roboto",
                                      "Atkinson Hyperlegible Next",
@@ -974,7 +979,7 @@ static const char *V_FONTE_UI[]  = { "Inter", "LG Display", "Droid Sans",
 // to the window, independently of effects, on every platform.
 // Order = RES_* (resolucao.h). The old order lives only in res_migrar.
 static const char *V_RESOLUCAO[] = { "Automática", "1080p", "4K (experimental)", "720p (leve)" };
-static const char *V_AMPLIAR_UI[] = { "Pela TV", "Pelo app (4K)" };
+static const char *V_AMPLIAR_UI[] = { "Pela TV", "Pelo app (4K)", "Automático" };
 static const char *V_AMPLIACAO_ALGO[] = { "Automático", "SGSR", "SGSR nítido", "FSR 1 (EASU+RCAS)", "Lanczos", "Bilinear" };
 
 static const char *V_LEG_COR[] = { "Branco", "Amarelo", "Verde", "Azul", "Vermelho", "Preto" };
@@ -1431,7 +1436,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Qualidade da imagem",        V_QUALIMG, 3),
 
   ESC("Idioma do app",              V_IDIOMA, IDIOMA_N + 1),
-  ESC("Animações",                  V_ANIM, 2),
+  ESC("Animações",                  V_ANIM, 3),
   ESC("Resolução da interface",     V_RESOLUCAO, 4),
   ESC("Cor de destaque",            V_TEMA, AJ_N_TEMAS_OPC),  // selected_theme (+4 locais)
   // So vale com um tema dinamico: o destaque sai do LOGO do titulo em vez da
@@ -1518,7 +1523,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Itens por fileira",               V_ITENS_FIL, 3), // local: itensFileiraLocal
   ESC("Fonte da interface", V_FONTE_UI, 7),
   ESC("Efeitos visuais", V_GPU_EF, 4),   // local: gpuEfeitosLocal; append values for compatibility
-  ESC("Interface de vidro",              V_LIGA, 2),   // local: vidroLocal
+  ESC("Interface de vidro",              V_LIGA_AUTO, 3),   // local: vidroLocal
   // EXPERIMENTAL (p2p.h). Tocar torrent sem debrid, por um servidor de
   // streaming do Stremio na rede local. LOCAL: o web nao tem esta escolha.
   ESC("Servidor P2P (experimental)",     V_LIGA, 2),   // local: p2pLocal
@@ -1562,7 +1567,7 @@ static const Opcao OPCOES[AJ_N] = {
   // escondida estando visivel.
   ESC("Perfil pesquisável",              V_LIGA, 2),
   ACAO("Meu perfil público"),
-  ESC("Contorno do vidro",               V_LIGA, 2),   // local: vidroContornoLocal
+  ESC("Contorno do vidro",               V_LIGA_AUTO, 3),   // local: vidroContornoLocal
   ESC("Som do trailer",              V_LIGA, 2),   // local: trailerDestaqueSomLocal; #509: vale para todo trailer
   // Em DECIMOS de segundo (0,2 s a 10 s): textoValor escreve "2,2 s".
   NUM("Espera do trailer no destaque",   2, 100, 2, " s"), // local: trailerDestaqueEsperaLocal
@@ -1603,7 +1608,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Tamanho da interface",            V_TAMANHO_UI, 9),    // local: tamanhoUiLocal
   ESC("Fundo",                           V_FUNDO, 3),         // local: fundoLocal
   ESC("Opacidade do vidro",              V_VIDRO_OPAC, 5),    // local: vidroOpacLocal
-  ESC("Vidro fosco",                     V_VIDRO_FOSCO, 2),   // local: vidroFoscoLocal
+  ESC("Vidro fosco",                     V_VIDRO_FOSCO, 3),   // local: vidroFoscoLocal
   ESC("Ícone do app", V_ICONE_APP, ICONEAPP_N),
   ACAO("Discord"),
   ESC("Tamanho dos ajustes", V_TAMANHO_AJUSTES, 3),
@@ -1781,7 +1786,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Sugerir categorias dos canais", V_LIGA, 2),   // local: liveTvSugerirLocal
   NUM("Ajuste do áudio (ms)", -AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_MAX_MS, AUDSYNC_OFFSET_STEP_MS, " ms"),
   ESC("Conta com limite de conexões", V_CONEXOES, 3),
-  ESC("Ampliar interface", V_AMPLIAR_UI, 2),
+  ESC("Ampliar interface", V_AMPLIAR_UI, 3),
   ESC("Fontes do Guia de TV", V_GUIA_FONTE, 5),
   ACAO("Atualizar canais e programação"),
   ACAO("URL da lista M3U"),
@@ -1809,6 +1814,9 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Algoritmo de ampliação", V_AMPLIACAO_ALGO, 6),
   NUM("Nitidez", 0, 4, 1, NULL),
   ESC("Interface em HDR (teste)", V_VIDRO_FOSCO, 2),
+  ACAO("Limpar cache"),
+  ESC("Reprodução em túnel", V_VIDRO_FOSCO, 2),
+  ESC("Dolby Vision P7 para P8.1 (experimental)", V_LIGA, 2),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -2128,6 +2136,9 @@ static const char *CHAVE[] = {
   "ampliarAlgoLocal",
   "ampliarNitidezLocal",
   "hdrInterfaceLocal",
+  "-limparCache",
+  "tunneledPlaybackLocal",
+  "dv7ConversionLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2275,6 +2286,18 @@ static int valor[] = {
 static const int valorPadrao[] = {
 #include "ajustes_ux_padrao.inc"
 };
+static int performanceAutoVersao;
+static const int performanceAuto[] = {
+  AJ_AMPLIACAO_ALGO, AJ_AMPLIAR_UI, AJ_RESOLUCAO, AJ_GPU_EFEITOS,
+  AJ_ANIM, AJ_VIDRO, AJ_VIDRO_CONTORNO, AJ_VIDRO_FOSCO, AJ_VIDRO_QUALIDADE
+};
+static void performanceAutoMigrar(void) {
+  if (performanceAutoVersao >= 1) return;
+  for (unsigned i = 0; i < sizeof performanceAuto / sizeof *performanceAuto; i++)
+    valor[performanceAuto[i]] = valorPadrao[performanceAuto[i]];
+  performanceAutoVersao = 1;
+  gravar(); // Values and migration version share the atomic settings write.
+}
 // Account metadata/credentials live in the native registry, never the sync blob.
 static void ajIptvEspelhar(void) {
   IptvConta c;
@@ -2698,7 +2721,9 @@ static int cinemetaInstalado(void) {
   return 0;
 }
 
-int ajustes_animacoes_reduzidas(void) { return valor[AJ_ANIM] == 1; }
+int ajustes_animacoes_reduzidas(void) {
+  return valor[AJ_ANIM] == 1 || (valor[AJ_ANIM] == 2 && gpun_nivel() >= 1);
+}
 int ajustes_interface_mobile(void) {
 #ifdef NV_TOUCH_UI
   int automaticoMobile = 0;
@@ -2734,7 +2759,10 @@ static int perfilSeguro;
 #endif
 static int saidaLimitada;
 void ajustes_ui_saida(int w, int h) { saidaLimitada = w > 0 && h > 0 && (w < 3840 || h < 2160); }
-int ajustes_ampliar_app(void) { return painel4k() && valor[AJ_AMPLIAR_UI] == 1 && !SEGURO; }
+int ajustes_ampliar_app(void) {
+  // Automatic keeps the existing panel check and GPU gate in gpun_ampliar_app.
+  return painel4k() && (valor[AJ_AMPLIAR_UI] == 1 || valor[AJ_AMPLIAR_UI] == 2) && !SEGURO;
+}
 // #205: a escolha so tem efeito com a resolucao em 1080p/720p (main.c
 // uiMenor4k). Na Automatica e na 4K quem amplia e a TV. O valor gravado NAO
 // muda: voltar a 1080p restaura a escolha da pessoa.
@@ -2767,6 +2795,13 @@ int ajustes_descanso_fonte(void)   { int v = valor[AJ_DESCANSO_FONTE]; return v 
 int ajustes_proporcao_padrao(void) { int v = valor[AJ_PROPORCAO_PADRAO]; return v < 1 || v > 8 ? -1 : v - 1; }
 // Experimental HDR menus left the menu: off everywhere, even if saved as on.
 int ajustes_hdr_interface(void) { return 0; }
+int ajustes_tunneling(void) {
+#ifdef NV_ANDROID
+  return valor[AJ_TUNNELING] == 1;
+#else
+  return 0;
+#endif
+}
 int ajustes_hdr_ui(void)            { return valor[AJ_HDR_UI] != 1; }   // 1 = Desligado
 int ajustes_brilho_player(void)    { int v = valor[AJ_BRILHO_PLAYER]; return v < 0 || v > 3 ? 1 : v; }
 void ajustes_espelhar_enquetes(int ligado) { int n = ligado ? 0 : 1; if (valor[AJ_ENQUETES] != n) { valor[AJ_ENQUETES] = n; AJ_COM_ORIGEM(AJLOG_CENTRAL, gravar()); } }
@@ -2884,7 +2919,9 @@ int ajustes_cor_logo(void) { return lig(AJ_COR_LOGO); }
 // So nas capturas (tests/vidro_shots.sh): liga o vidro sem passar pelo arquivo.
 int ajustes_vidro(void) { return 1; }
 #else
-int ajustes_vidro(void) { return lig(AJ_VIDRO) && !SEGURO; }
+int ajustes_vidro(void) {
+  return (lig(AJ_VIDRO) || (valor[AJ_VIDRO] == 2 && gpun_nivel() < 2)) && !SEGURO;
+}
 int ajustes_fundo(void) {
 #ifdef NV_TIZEN3_LITE
   return 0;  // No frost background in the experimental 2017 build.
@@ -2892,7 +2929,9 @@ int ajustes_fundo(void) {
   int v = valor[AJ_FUNDO]; return v >= 0 && v < 3 ? v : 0;
 #endif
 }
-int ajustes_vidro_contorno(void) { return lig(AJ_VIDRO_CONTORNO); }
+int ajustes_vidro_contorno(void) {
+  return lig(AJ_VIDRO_CONTORNO) || (valor[AJ_VIDRO_CONTORNO] == 2 && gpun_nivel() == 0);
+}
 int ajustes_addons_do_principal(void) { return lig(AJ_ADDONS_PRINCIPAL); }
 #endif
 int ajustes_foco_acento(void) { return lig(AJ_FOCO_ACENTO) && ajustes_vidro(); }
@@ -2901,7 +2940,9 @@ float ajustes_vidro_opacidade(void) {
   int v = valor[AJ_VIDRO_OPAC];
   return v >= 0 && v < 5 ? F[v] : 0.78f;
 }
-int ajustes_vidro_fosco(void) { return valor[AJ_VIDRO_FOSCO] == 1; }
+int ajustes_vidro_fosco(void) {
+  return valor[AJ_VIDRO_FOSCO] == 1 || (valor[AJ_VIDRO_FOSCO] == 2 && gpun_nivel() < 2);
+}
 int ajustes_vidro_qualidade(void) { return valor[AJ_VIDRO_QUALIDADE] == 1 ? 1 : valor[AJ_VIDRO_QUALIDADE] == 2 ? 2 : 0; }   // 0 Automatica, 1 Desempenho, 2 Alta
 // Capturas do teste do vidro: NUVIO_SHOT_VIDRO_OPAC=60|70|78|86|92 e
 // NUVIO_SHOT_VIDRO_FOSCO=1 e NUVIO_SHOT_VIDRO_QUAL=0|1|2 (sem gravar nada). INTENCIONAL no release: so os
@@ -3001,7 +3042,7 @@ static int ajOpcaoDisponivel(int op) {
   if (op == AJ_FALHA_ADDON_LIMITE) return faAddonEditar[0] != 0;
   if (op == AJ_HDR_INTERFACE) return 0;
 #ifndef NV_ANDROID
-  if (op == AJ_FONTE_PRECARREGAR) return 0;
+  if (op == AJ_FONTE_PRECARREGAR || op == AJ_TUNNELING) return 0;
 #endif
 #ifndef NV_TOUCH_UI
   if (op == AJ_INTERFACE_MODO) return 0;
@@ -3635,6 +3676,7 @@ int ajustes_dts_tpk_modo(void) {
 #endif
 }
 int ajustes_dv_mkv(void)              { return lig(AJ_DV_MKV); }
+int ajustes_dv7(void) { return lig(AJ_DV7); }
 int ajustes_hist_conta(void)          { return lig(AJ_HIST_CONTA); }
 int ajustes_social(void)              { return lig(AJ_SOCIAL); }
 int ajustes_amigos_estilo(void)       { return valor[AJ_AMIGOS_ESTILO]; }
@@ -4507,7 +4549,7 @@ static void memoriaMigrar(void) {
 static void efeitos720Migrar(int legado) {
   char *m = dados_ler("efeitos720-205.txt");
   if (m) { free(m); return; }
-  if (legado && valor[AJ_RESOLUCAO] == RES_720 && valor[AJ_GPU_EFEITOS] == 0) {
+  if (legado && performanceAutoVersao < 1 && valor[AJ_RESOLUCAO] == RES_720 && valor[AJ_GPU_EFEITOS] == 0) {
     valor[AJ_GPU_EFEITOS] = 3;
     printf("[ajustes] efeitos em 720p -> Minimos (migracao unica da 2.0.5)\n");
   }
@@ -4586,6 +4628,9 @@ void ajustes_dir(const char *dir) {
   char caminho[600], linha[96];
   int viuLingua[3] = { 0, 0, 0 };
   int escalaVersao = 0;
+  performanceAutoVersao = 0;
+  for (unsigned i = 0; i < sizeof performanceAuto / sizeof *performanceAuto; i++)
+    valor[performanceAuto[i]] = valorPadrao[performanceAuto[i]];
   /* viuLingua: [AJ_LEG_LINGUA, AJ_LEG_LINGUA2, AJ_AUD_LINGUA] vistos no
      ajustes.txt — a migracao idiomas-206 so pode tocar o que o arquivo
      trouxe, nunca o padrao de valor[] */
@@ -4618,6 +4663,7 @@ void ajustes_dir(const char *dir) {
     efeitos720Migrar(0);
     // Nunca gravou nada: o idioma nasce automatico (o padrao de valor[]).
     valor[AJ_IDIOMA] = 0;
+    performanceAutoMigrar();
 #ifdef NV_TEX_MB_FIXO
     memoriaMigrar();
     if (valor[AJ_TEX_MB] > 0) tex_definir_orcamento_mb(ajustes_tex_mb());
@@ -4684,6 +4730,7 @@ void ajustes_dir(const char *dir) {
     if (!strcmp(chave, "bibliotecaFonteEscolhidaLocal")) { bibliotecaFonteEscolhida = v == 1; continue; }
     if (!strcmp(chave, "texturasEscolhaLocal")) { memoriaEscolhida = v == 1; continue; }
     if (!strcmp(chave, "escalaTextoVersaoLocal")) { escalaVersao = v; continue; }
+    if (!strcmp(chave, "performanceAutoVersaoLocal")) { performanceAutoVersao = v; continue; }
     // "resolucao_ui" (ate a 2.0.1) virou "resolucaoUi" com Automatica na
     // frente: ver res_migrar. A chave nova, quando existe, vence.
     if (!strcmp(chave, "resolucao_ui")) { resAntiga = v; continue; }
@@ -4816,10 +4863,10 @@ void ajustes_dir(const char *dir) {
   { char *m = dados_ler(RES_ARQ_MIGRADA);
     if (m) free(m);
     else {
-      if (valor[AJ_RESOLUCAO] != RES_AUTO)
-        printf("[ajustes] resolucao da interface %d -> Automatica (migracao unica da 2.0.2)\n", valor[AJ_RESOLUCAO]);
-      valor[AJ_RESOLUCAO] = RES_AUTO;
-      dados_apagar(RES_ARQ_RECUO); dados_apagar(RES_ARQ_AUTO);
+      if (performanceAutoVersao < 1) {
+        valor[AJ_RESOLUCAO] = RES_AUTO;
+        dados_apagar(RES_ARQ_RECUO); dados_apagar(RES_ARQ_AUTO);
+      }
       dados_gravar(RES_ARQ_MIGRADA, "1\n");
       gravar();
     } }
@@ -4918,7 +4965,7 @@ void ajustes_dir(const char *dir) {
       valor[AJ_TEMA] = AJ_TEMA_DINAMICA;
       valor[AJ_COR_LOGO] = 0;        // V_LIGA: 0 = Ligado
       valor[AJ_FUNDO] = FUNDO_FROST;
-      valor[AJ_VIDRO] = 1;           // V_LIGA: 1 = Desligado
+      if (performanceAutoVersao < 1) valor[AJ_VIDRO] = 1;
       dados_gravar("aparencia-20.txt", "1\n");
       gravar();
     } }
@@ -4943,7 +4990,7 @@ void ajustes_dir(const char *dir) {
   { char *m = dados_ler("ampliarUi-206.txt");
     if (m) free(m);
     else {
-      if (valor[AJ_AMPLIAR_UI] == 0) {
+      if (performanceAutoVersao < 1 && valor[AJ_AMPLIAR_UI] == 0) {
         valor[AJ_AMPLIAR_UI] = 1;
         printf("[ajustes] ampliar interface -> App (4K) by default (migracao unica da 2.0.6)\n");
       }
@@ -4978,6 +5025,9 @@ void ajustes_dir(const char *dir) {
       dados_gravar("idiomas-206.txt", "1\n");
       if (mexeu) gravar();
     } }
+  // Owner: reset even saved manual performance choices once per device.
+  // Run after legacy migrations so they cannot replace Automatic.
+  performanceAutoMigrar();
   // O limite mora em fileiras.c; esta linha e so o espelho dele. Ler daqui em
   // vez de gravar evita a divergencia: o arquivo de ajustes nao guarda o
   // numero, entao nao ha como os dois discordarem.
@@ -5030,6 +5080,7 @@ static int gravar(void) {
   for (i = 0; i < EX_NFONTES; i++) fprintf(f, " %d", ajustes_nota_fonte(i));
   fprintf(f, "\n");
   fprintf(f, "escalaTextoVersaoLocal 1\n");
+  fprintf(f, "performanceAutoVersaoLocal %d\n", performanceAutoVersao);
   if (memoriaEscolhida) fprintf(f, "texturasEscolhaLocal 1\n");
   if (bibliotecaFonteEscolhida) fprintf(f, "bibliotecaFonteEscolhidaLocal 1\n");
   { int erro = ferror(f);
@@ -5860,6 +5911,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_AUDIO_OFFSET:   /* audio presentation calibration belongs to this TV */
     case AJ_DTS_AC3:        /* o conversor de DTS e desta TV */
     case AJ_DV_MKV:         /* o demux e o decoder sao desta TV */
+    case AJ_DV7:
     case AJ_HIST_CONTA: case AJ_SOCIAL: /* por perfil desta TV (perfilLocal); o web nao tem */
     case AJ_TAM_MAX: case AJ_TAM_MIN: /* o web nao tem a faixa de tamanho */
     case AJ_ESPACO_FILEIRAS: case AJ_ESPACO_TITULOS: /* o web nao tem espacamento */
@@ -5881,6 +5933,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_ABAS_ESTILO:    /* #205: idem */
     case AJ_LOGO_TRAILER:   /* so a protecao de OLED desta TV */
     case AJ_LEG_MOSTRAR:
+    case AJ_TUNNELING:     /* Hardware playback capabilities belong to this device. */
     case AJ_HDR_INTERFACE: /* HDR output belongs to this panel. */
     case AJ_HDR_UI:         /* o painel e desta TV */
     case AJ_LEG_SYNC_AUTO: /* escolha local desta TV */
@@ -6321,9 +6374,10 @@ static int foraDestaPlataforma(int op) {
 #endif
 #if defined(NV_TPK) || defined(NV_ANDROID)
   if (op == AJ_DV_MKV) return 1;
+  if (op == AJ_DV7) return 1;
 #endif
 #ifndef NV_ANDROID
-  if (op == AJ_FONTE_PRECARREGAR || op == AJ_LEG_SYNC_AUDIO) return 1;
+  if (op == AJ_FONTE_PRECARREGAR || op == AJ_LEG_SYNC_AUDIO || op == AJ_TUNNELING) return 1;
 #endif
 #ifdef __EMSCRIPTEN__
   if (op == AJ_P2P_LIGADO || op == AJ_P2P_URL || op == AJ_P2P_TESTAR || op == AJ_P2P_LIMITE || op == AJ_P2P_DESTINO) return 1;
@@ -6927,6 +6981,17 @@ static const char *textoLeitura(int op) {
     return extras_mdblist_tem_chave() ? i18n("definida") : i18n("ausente");
   }
   if (op == AJ_HERO_CATALOGOS) return heroFonteRotulo();
+  if (op == AJ_LIMPAR_CACHE) {
+    static Uint32 measuredAt;
+    static uint64_t measuredBytes;
+    Uint32 now = SDL_GetTicks();
+    if (!measuredAt || now - measuredAt >= 1000) {
+      measuredBytes = nv_android_cache_size_all(); measuredAt = now;
+    }
+    snprintf(buf, sizeof buf, "%.1f MB", measuredBytes / 1048576.0);
+    idioma_decimal_texto(buf, ajustes_idioma());
+    return buf;
+  }
   if (op == AJ_ESPACO) {
     // CURTO O BASTANTE PARA CABER NA COLUNA: "201.0 MB em 209 imagens" era
     // cortado em "209..." na TV, e o numero que sobrava era o menos util. O
@@ -7578,6 +7643,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_FONTE_REGEX_MODELO: return "Padrões prontos: idiomas como os add-ons escrevem, áudio MULTI ou DUAL, 4K e Remux. Escolher um troca o padrão da regex.";
     case AJ_ESPACO_FILEIRAS: return "O espaço vertical entre uma fileira da Home e a seguinte. Com menos cabem mais fileiras na tela, com mais a Home fica mais arejada.";
     case AJ_ESPACO_TITULOS: return "O espaço horizontal entre os cartazes de uma fileira da Home.";
+    case AJ_TUNNELING: return "Sincronização de áudio e vídeo por hardware. Pode melhorar a reprodução em alguns aparelhos Android TV. Vale a partir do próximo vídeo.";
     case AJ_HDR_INTERFACE: return "HDR experimental para os menus. Branco limitado a 203 nits. Reinicie o app após mudar. Sem suporte, usa SDR.";
     case AJ_AMPLIAR_UI: return "Só vale com a resolução em 1080p ou 720p: o app amplia a interface para a tela (usa mais GPU). Na Automática e na 4K quem amplia é a TV. Reinicie o app depois de mudar.";
     case AJ_AUDIO_OFFSET: return "Positivo atrasa; negativo adianta. Só áudio convertido, a partir do próximo vídeo.";
@@ -7593,6 +7659,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_HIST_CONTA: return "Ligado (padrão): o que você assiste neste perfil sobe para a conta Nuvio, com o progresso e os vistos. Desligado: nada disso é enviado à conta; o Trakt e o Simkl vinculados a este perfil continuam recebendo. Vale só para este perfil.";
     case AJ_SOCIAL: return "Ligado (padrão): amigos, atividade deles e recomendações. Desligado: tudo isso some, com a fileira de amigos da Home, e o app para de falar com o serviço social. Salvos e Avisos continuam. Vale só para este perfil.";
     case AJ_DV_MKV: return "Arquivos MKV em Dolby Vision perfil 5 ou 8 tocam com o Dolby Vision ligado, em vez de HDR10. O áudio Dolby Digital e Dolby Digital Plus vai direto para a TV. Se a conexão não acompanhar, o vídeo continua em HDR10. Só em TVs LG com webOS 4 ou mais novo.";
+    case AJ_DV7: return "Converte MKV Dolby Vision perfil 7 para 8.1. Mantém o vídeo base e os metadados dinâmicos; descarta a camada de melhoria, incluindo FEL. Vale para o próximo vídeo.";
     case AJ_CW_RETIDO_TAMBEM: return "Quando o título está na ilha ou em Retomar agora, mostra também na fileira Continuar assistindo.";
     case AJ_EP_TAMANHO: return "Pequeno, Médio (padrão) ou Grande. Só vale no layout Moderno, na página de séries. Vale só nesta TV.";
     case AJ_ABERTURA_ADDON: return "Desligado (padrão): a tela Cinema mostra só a arte, o logo e a barra. Ligado: o nome do add-on aparece sob a barra. Vale só nesta TV.";
@@ -7627,6 +7694,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_SIMKL: return "Conecta a sua conta do Simkl, uma alternativa ao Trakt para acompanhar séries.";
     case AJ_DISCORD: return "Mostra no seu perfil do Discord o que você está assistindo, com o cartaz e o tempo. Só sai alguma coisa enquanto um vídeo toca neste perfil.";
     case AJ_SAIR: return "Sai da conta nesta TV e apaga daqui a sessão, os addons e o progresso guardados.";
+    case AJ_LIMPAR_CACHE: return "Remove arquivos temporários. Mantém perfis, contas, progresso e addons.";
     case AJ_ESPACO: return "Uso atual de memória pelo cache de imagens, não espaço ocupado no armazenamento da TV.";
     case AJ_TEX_MB: return "Quanta memória o cache de imagens pode usar. Automático escolhe pela RAM da TV. Um valor acima do que esta TV suporta é reduzido ao máximo dela — o painel ao lado mostra o teto em vigor.";
     case AJ_VERSAO_I: return "Versão do aplicativo. Esta informação não pode ser alterada.";
@@ -9125,7 +9193,7 @@ static int definirValorDireto(int op, int novo) {
   if (novo == 0) notaLigarPar(op);
   { int ok; ajOrigem = ajOrigemDireto; ok = gravar(); ajOrigem = 0;
     if (!ok) { valor[op] = antes; valor[AJ_LEG2_POSICAO] = posicaoAntes; memoriaEscolhida = memoriaAntes; bibliotecaFonteEscolhida = bibliotecaAntes; return 0; } }
-  if (op == AJ_DV_MKV && antes != 0 && novo == 0) video_dv_guard_reiniciar();
+  if ((op == AJ_DV_MKV || op == AJ_DV7) && antes != 0 && novo == 0) video_dv_guard_reiniciar();
   if (op == AJ_LIVETV_SUGERIR) guia_sugestoes_mudaram();
   if (op == AJ_FIL_LIMITE) {
     fil_ajustar_limite(novo);
@@ -9311,6 +9379,13 @@ static void eventoTela(const SDL_Event *e) {
     }
     // O painel de envio (registro.h) dispara o envio e mostra o codigo ou o
     // motivo da falha; antes so o texto da linha mudava.
+    if (focoOp == AJ_LIMPAR_CACHE) {
+#ifdef NV_ANDROID
+      p2pmotor_parar();
+      android_limpar_cache();
+#endif
+      return;
+    }
     if (focoOp == AJ_ENVIAR_LOG) { registro_envio_abrir(); return; }
     if (focoOp == AJ_AVISO_LEGAL) { registro_legal_abrir(); return; }
     if (focoOp == AJ_VER_REGISTRO) { registro_abrir(); return; }
@@ -9739,7 +9814,7 @@ static const char *textoValor(int op) {
   if (op == AJ_FONTE_AUTO && ajustes_fonte_prioridade() == 3) return i18n("Primeira da lista");
   if(op==AJ_GUIA_CATEGORIAS)return i18n("Abrir");
   // Fora de 1080p/720p a linha mostra o valor EFETIVO, nao o gravado.
-  if (op == AJ_AMPLIAR_UI && !ampliarUiVale()) return "Pela TV";
+  if (op == AJ_AMPLIAR_UI && valor[op] != 2 && !ampliarUiVale()) return "Pela TV";
   if(ajIptvGerenciador(op))return i18n("Abrir");
   if(op==AJ_IPTV_CONTA)return ajIptvNome(iptv_conta_indice());
   static char buf[48];
