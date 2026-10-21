@@ -6722,7 +6722,7 @@ static void desenharOsd(Uint32 agora, float a, float ac, const CatItem *c) {
 #define FORMATO_FIL_H 42.0f
 #define FORMATO_PIL_H 48.0f
 typedef struct { int tipo; int g; const char *ic; FormatoMarca f; TxtLinha l; float w; } FmtPeca;   // tipo: 0 texto, 1 arte, 2 selos do pacote; g: grupo da pilula (0 resolucao, 1 video/som, 2 idioma); ic: simbolo pequeno antes do texto (pilula)
-#define FMT_IC 22.0f
+#define FMT_IC 26.0f
 #define FMT_IC_GAP 8.0f
 static void fmtPecaDesenhar(const FmtPeca *p, float x, float yy, float H, float mh, float a,
                             const char *txtPac, float wPac, float hPac) {
