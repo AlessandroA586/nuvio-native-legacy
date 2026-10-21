@@ -118,7 +118,12 @@ def verify_packages(out, version, values):
             with zipfile.ZipFile(path) as z:
                 if path.suffix == '.apk':
                     # release-android.sh ja confere versionName, certificado e bibliotecas.
-                    targets = [f'lib/{abi}/libmain.so' for abi in ('arm64-v8a', 'armeabi-v7a')]
+                    abis = ('arm64-v8a', 'armeabi-v7a')
+                    if name.endswith('-lite-armv7.apk'):
+                        abis = ('armeabi-v7a',)
+                    elif name.endswith('-lite-arm64.apk'):
+                        abis = ('arm64-v8a',)
+                    targets = [f'lib/{abi}/libmain.so' for abi in abis]
                 else:
                     manifest = 'config.xml' if path.suffix == '.wgt' else 'tizen-manifest.xml'
                     if ET.fromstring(z.read(manifest)).get('version') != version:
