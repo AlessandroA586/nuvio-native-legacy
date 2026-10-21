@@ -7260,6 +7260,8 @@ static void desenhaEpisodio(GfxRect r, int c, float f, float a, Uint32 agora);
 static void menuDeVisto(Uint32 agora) {
   if (!episodios_menu_visivel()) { episodios_menu_desenhar(); return; }
   if (menuOrigem.w > 8.0f && (foco.fileira == SEC_EPISODIOS || foco.fileira == SEC_TEMPORADAS)) {
+    if (foco.fileira == SEC_EPISODIOS && gfx_escala_txt() > 1.0f)
+      menuOrigem.y = fminf(menuOrigem.y, NV_TELA_H - ANC(40.0f) - menuOrigem.h);
     float e = gfx_escala() / gfx_escala_ui();
     episodios_menu_ancora((GfxRect){ menuOrigem.x * e, menuOrigem.y * e, menuOrigem.w * e, menuOrigem.h * e });
   }
