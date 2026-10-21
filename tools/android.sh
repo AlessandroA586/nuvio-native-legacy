@@ -1,6 +1,7 @@
 #!/bin/bash
 # Build do Nuvio para Android TV/Mobile (SDL2 + GLES2, nucleo C em libmain.so).
 #
+#   NUVIO_APK_LITE=1 tools/android.sh --release-only -> signed APK without the P2P motor
 #   tools/android.sh --debug-only -> debug only, never read release signing keys
 #   tools/android.sh            -> APK debug em build/android/Nuvio-<v>-android-debug.apk
 #   NUVIO_RUST_MKVCORE=0 tools/android.sh -> nucleo mkv em C (padrao: Rust, ligado em 14/10/2026)
@@ -98,8 +99,13 @@ GR=(android/gradlew -p android --console=plain -Pnuvio.sdlSrc="$CACHE/src" -Pnuv
 # Motor P2P embutido: pasta achada por tools/p2p-motor/pasta.sh (NUVIO_P2P_MOTOR,
 # ou a pasta padrao); configurada e incompleta = erro, nunca pacote sem motor calado.
 . tools/p2p-motor/pasta.sh
-nv_p2p_resolver android
-[ -n "$NV_P2P_DIR" ] && GR+=(-Pnuvio.p2pMotor="$NV_P2P_DIR")
+LITE="${NUVIO_APK_LITE:-0}"
+NV_P2P_DIR=""
+if [ "$LITE" = 1 ]; then
+  GR+=(-Pnuvio.apkLite=1)
+else
+  nv_p2p_resolver android
+fi
 # Nucleo EBML/NAL do mkv.c em Rust, ligado por padrao (dono aprovou em 14/10/2026);
 # NUVIO_RUST_MKVCORE=0 volta ao C para comparar.
 if [ "${NUVIO_RUST_MKVCORE:-1}" = 1 ]; then
@@ -118,19 +124,29 @@ fi
 [ "$DEBUG_ONLY" = 0 ] && [ -n "${NUVIO_KEYSTORE:-}" ] && TAREFAS+=(assembleRelease)
 [ "${#TAREFAS[@]}" -gt 0 ] || { echo "android.sh: release-only exige chave" >&2; exit 1; }
 [ -z "${NUVIO_BUILD_JOBS:-}" ] || GR+=(--max-workers="$NUVIO_BUILD_JOBS")
-"${GR[@]}" "${TAREFAS[@]}"
+GR_FULL=("${GR[@]}")
+[ -z "$NV_P2P_DIR" ] || GR_FULL+=(-Pnuvio.p2pMotor="$NV_P2P_DIR")
+"${GR_FULL[@]}" "${TAREFAS[@]}"
 
 echo "[5/5] conferencia"
 SAIDA="$EST"
-DBG="android/app/build/outputs/apk/debug/app-debug.apk"
+APP_BUILD="android/app/build"
+SUFFIX=""
+if [ "$LITE" = 1 ]; then APP_BUILD="android/app/build-lite"; SUFFIX="-lite"; fi
+DBG="$APP_BUILD/outputs/apk/debug/app-debug.apk"
 APKS=()
 if [ "$RELEASE_ONLY" = 0 ]; then
-  cp "$DBG" "$SAIDA/Nuvio-$VER-android-debug.apk"
-  APKS+=("$SAIDA/Nuvio-$VER-android-debug.apk")
+  cp "$DBG" "$SAIDA/Nuvio-$VER-android${SUFFIX}-debug.apk"
+  APKS+=("$SAIDA/Nuvio-$VER-android${SUFFIX}-debug.apk")
 fi
 if [ "$DEBUG_ONLY" = 0 ] && [ -n "${NUVIO_KEYSTORE:-}" ]; then
-  cp android/app/build/outputs/apk/release/app-release.apk "$SAIDA/Nuvio-$VER-android.apk"
-  APKS+=("$SAIDA/Nuvio-$VER-android.apk")
+  cp "$APP_BUILD/outputs/apk/release/app-release.apk" "$SAIDA/Nuvio-$VER-android${SUFFIX}.apk"
+  APKS+=("$SAIDA/Nuvio-$VER-android${SUFFIX}.apk")
+  if [ "$LITE" != 1 ]; then
+    "${GR[@]}" -Pnuvio.apkLite=1 assembleRelease
+    cp android/app/build-lite/outputs/apk/release/app-release.apk "$SAIDA/Nuvio-$VER-android-lite.apk"
+    APKS+=("$SAIDA/Nuvio-$VER-android-lite.apk")
+  fi
 else
   echo "  release fora: sem NUVIO_KEYSTORE"
 fi
@@ -145,7 +161,12 @@ for a in "${APKS[@]}"; do
   printf '%s\n' "$L" | grep '^assets/art/' >/dev/null || { echo "android.sh: $a sem assets/art" >&2; exit 1; }
   printf '%s\n' "$L" | grep '^assets/fonts/' >/dev/null || { echo "android.sh: $a sem assets/fonts" >&2; exit 1; }
   printf '%s\n' "$L" | grep '^assets/licencas/p2p-avisos.txt$' >/dev/null || { echo "android.sh: $a sem assets/licencas" >&2; exit 1; }
-  if [ -n "$NV_P2P_DIR" ]; then   # motor pedido: o simbolo da API C tem de estar nas DUAS libmain.so
+  if [[ "$a" = *-lite*.apk ]]; then
+    for abi in arm64-v8a armeabi-v7a; do
+      m=$(unzip -p "$a" "lib/$abi/libmain.so" | strings | grep -c 'Nuvio Engine/' || true)
+      [ "$m" = 0 ] || { echo "android.sh: $a contains the P2P motor" >&2; exit 1; }
+    done
+  elif [ -n "$NV_P2P_DIR" ]; then   # motor pedido: o simbolo da API C tem de estar nas DUAS libmain.so
     for abi in arm64-v8a armeabi-v7a; do
       m=$(unzip -p "$a" "lib/$abi/libmain.so" | strings | grep -c 'Nuvio Engine/' || true)
       [ "$m" -ge 1 ] || { echo "android.sh: $a lib/$abi/libmain.so SEM o motor P2P (marca "Nuvio Engine/")" >&2; exit 1; }
