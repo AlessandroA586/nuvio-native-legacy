@@ -140,7 +140,7 @@ Playback, memory and catalog fixes after 2.0.7, plus work integrated from commun
 
 ## Known issues
 
-- The local issue map still requests TV confirmation for Samsung startup (#624, #628, #629). An integrated fix is not a claim that the affected devices have been retested.
+- Samsung startup fixes (#624, #628, #629) still need confirmation on affected TVs; please report back if your TV still starts blank.
 - The map retains review follow-ups for library synchronization (#639) and tunneled playback (#626). These notes describe the merged implementation; they do not replace that review or device validation.
 - Authenticated custom poster services and continuous Samsung HLS playback still need device confirmation recorded in the local history.
 - Older integrated issue-map entries include partial fixes, information requests and work already present in v2.0.7. They are accounted for below without presenting them as newly completed features.
@@ -158,7 +158,7 @@ Thank you to everyone who sent code, reported problems and tested builds.
 
 **Issue reporters**
 
-The local map records issue numbers and titles but does not preserve reporter handles for the new reports. Thank you to the reporters of #621, #624, #625, #626, #628, #629, #630, #634, #637 and #639, and to the testers who supplied the playback, memory, artwork and synchronization reports. No reporter identity is inferred from a reply author.
+Thank you to the reporters of #621, #624, #625, #626, #628, #629, #630, #634, #637 and #639, and to the testers who supplied the playback, memory, artwork and synchronization reports. No reporter identity is inferred from a reply author.
 
 ## Pull requests
 
@@ -173,11 +173,9 @@ All PRs named by the local `v2.0.7..HEAD` history:
 
 ## Issues closed or addressed
 
-Status here comes only from `docs/issues/mapa.json` and local git history. “Integrated” describes code inclusion, not a new GitHub closure. No GitHub API was queried.
-
 **Fixes or features in this release window**
 
-- **#649 — Lite APK request from @infojoe:** per-ABI Lite APKs without the P2P/torrent engine (`5d34d5c70`, `aecc7f971`, `2c7ef280d`). The local issue map does not record this request, so it is listed here from the branch history alone.
+- **#649 — Lite APK request from @infojoe:** per-ABI Lite APKs without the P2P/torrent engine (`5d34d5c70`, `aecc7f971`, `2c7ef280d`).
 - **#415 — Constant crashes on LG:** texture pressure now scales to total RAM, keeps sampled pressure until memory recovers, and protects visible artwork (`e626c1c24`). This continues the earlier low-memory fix without claiming every crash is resolved.
 - **#621 — Distorted GIF avatars:** centered cover cropping preserves aspect ratio (`58ccca756`).
 - **#624 — 2.0.7 broken on Tizen 9:** placeholder EGL surface fix (`f840b4037`); TV confirmation pending.
