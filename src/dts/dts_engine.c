@@ -199,14 +199,13 @@ static void range_fetch(DtsEngine *e,DtsRangeJob *job,int fast,int *stalled) {
 #endif
   if(!e->dv && !e->remux) {
 #ifdef NV_DTS_WEBOS_RECOVERY
-    if(e->allow_p7)
     job->data=rede_baixar_trecho64_vigiado(e->url,e->headers,job->start,job->end,
       &job->count,&job->total,&job->status,&job->cancel,NULL,NULL,
       fast?&job->urgent:NULL,2500,stalled);
-    else
-#endif
+#else
     job->data=rede_baixar_trecho64_cab(e->url,e->headers,job->start,job->end,
       &job->count,&job->total,&job->status,&job->cancel);
+#endif
   } else {
     /* After the first answer, go straight to the address behind the add-on
      * redirects. Credential headers follow only on the same origin. A final
@@ -218,14 +217,13 @@ static void range_fetch(DtsEngine *e,DtsRangeJob *job,int fast,int *stalled) {
     snprintf(target,sizeof target,"%s",direct?e->final_url:e->url);
     pthread_mutex_unlock(&e->range_lock);
 #ifdef NV_DTS_WEBOS_RECOVERY
-    if(e->allow_p7)
     job->data=rede_baixar_trecho64_vigiado(target,direct&&cross?"":e->headers,job->start,job->end,
       &job->count,&job->total,&job->status,&job->cancel,fin,&cross,
       fast?&job->urgent:NULL,2500,stalled);
-    else
-#endif
+#else
     job->data=rede_baixar_trecho64_final(target,direct&&cross?"":e->headers,job->start,job->end,
       &job->count,&job->total,&job->status,&job->cancel,fin,&cross);
+#endif
     uint64_t first=clock_ns(CLOCK_MONOTONIC);
     int first_status=job->status, first_ok=job->data!=NULL;
     if(direct && !job->data && !*stalled && !__atomic_load_n(&job->cancel,__ATOMIC_RELAXED)) {
@@ -233,14 +231,13 @@ static void range_fetch(DtsEngine *e,DtsRangeJob *job,int fast,int *stalled) {
       if(!strcmp(e->final_url,target)) e->final_url[0]=0;
       pthread_mutex_unlock(&e->range_lock);
 #ifdef NV_DTS_WEBOS_RECOVERY
-      if(e->allow_p7)
       job->data=rede_baixar_trecho64_vigiado(e->url,e->headers,job->start,job->end,
         &job->count,&job->total,&job->status,&job->cancel,fin,&cross,
         fast?&job->urgent:NULL,2500,stalled);
-      else
-#endif
+#else
       job->data=rede_baixar_trecho64_final(e->url,e->headers,job->start,job->end,
         &job->count,&job->total,&job->status,&job->cancel,fin,&cross);
+#endif
       direct=0;
       /* #203 DV startup took ~19.5 s twice (LG C9): one stalled request
        * hitting the 15 s curl deadline plus a ~4.5 s add-on re-resolve is
@@ -282,7 +279,7 @@ static void *range_worker(void *opaque) {
     job->state=2;
     pthread_mutex_unlock(&e->range_lock);
     uint64_t begun=clock_ns(CLOCK_MONOTONIC);
-    int attempt=0, attempts=e->allow_p7?RANGE_ATTEMPTS:1;
+    int attempt=0, attempts=RANGE_ATTEMPTS;
     for(;attempt<attempts;attempt++) {
       if(cancelled(e) || __atomic_load_n(&job->cancel,__ATOMIC_RELAXED)) break;
       int stalled=0;
@@ -938,7 +935,6 @@ static int resample(DtsEngine *e,AVFrame *f) {
 #ifndef NV_DTS_WEBOS_RECOVERY
       return fail(e,DTS_ENGINE_TIMESTAMP_DISCONTINUITY,0);
 #else
-      if(!e->allow_p7) return fail(e,DTS_ENGINE_TIMESTAMP_DISCONTINUITY,0);
       /* Numeric diagnostics survive export redaction; no source/header data. */
       printf("[dts] timestamp-gap incomingMs=%.3f expectedMs=%.3f deltaMs=%.3f "
              "fifoSamples=%d delaySamples=%lld frameSamples=%d inputRate=%d targetMs=%.3f\n",

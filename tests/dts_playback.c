@@ -237,7 +237,7 @@ static DtsPlaybackStatus wait_status(DtsPlayback *p,int fail,int eof) {
  fprintf(stderr,"status prepared=%d failed=%d eof=%d error=%s\n",s.prepared,s.failed,s.eof,s.error);assert(0);return s;
 }
 static DtsPlayback *start(int paused,int stream,const DtsTrack *selected,int ordinal,int total) {
- dts_playback_next_p7(scenario!=TIMESTAMP_ONCE || !getenv("DV7_OFF"));
+ dts_playback_next_p7(!getenv("DV7_OFF"));
  DtsPlayback *p=dts_playback_start("fixture://movie","X-Token: fixture",stream,0,paused,"window",0,selected,ordinal,total);assert(p);return p;
 }
 int main(int argc,char **argv) {
@@ -261,7 +261,7 @@ int main(int argc,char **argv) {
   if(cancel) {
    for(int i=0;i<1500 && !atomic_load(&timestamp_open_entered);i++) nap();
    assert(atomic_load(&timestamp_open_entered));dts_playback_close(p);assert(count(&loads)==1);
-  } else if(getenv("DV7_OFF") || getenv("RECOVERY_OFF")) {
+  } else if(getenv("RECOVERY_OFF")) {
    s=wait_status(p,1,0);assert(!strcmp(s.error,DTS_ENGINE_TIMESTAMP_DISCONTINUITY));
    wait_count(&destroys,1);
    assert(count(&opens)==1 && count(&loads)==1 && count(&destroys)==1);

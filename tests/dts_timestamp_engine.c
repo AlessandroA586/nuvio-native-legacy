@@ -6,7 +6,7 @@
 #include "../src/dts/dts_engine.c"
 #include <assert.h>
 static void init(DtsEngine *e,int channels,int codec) {
- memset(e,0,sizeof *e); dts_engine_allow_p7(e,1);
+ memset(e,0,sizeof *e); /* SDR DTS recovery with P7 conversion disabled. */
  const AVCodec *c=codec?avcodec_find_encoder(codec):NULL;
  e->enc=avcodec_alloc_context3(c);e->dec=avcodec_alloc_context3(NULL);assert(e->enc&&e->dec);
  e->enc->time_base=(AVRational){1,48000};e->enc->sample_fmt=AV_SAMPLE_FMT_FLTP;e->enc->sample_rate=48000;
