@@ -213,6 +213,8 @@ NAO_E_TELA = ("printf", "fprintf", "puts", "fputs", "perror", "marco",
               "curl_", "SDL_Log",
               # motivo de log da fonte guardada (fontevolta.h): nunca tela
               "fontevolta_", "addons_buscar", "cat_indice_por",
+              # video_tpk.c: motivo so vai para o log [mkvfix] (#638)
+              "mfLigar",
               "idioma_registrar", "assert", "_Static_assert",
               "EM_ASM", "MAIN_THREAD",
               # NOME DE ICONE NAO E TEXTO. gfx_icone recebe o basename do SVG
