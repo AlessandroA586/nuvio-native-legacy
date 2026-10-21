@@ -14,6 +14,7 @@
   T("\"Mais como este\"", "\"类似推荐\""),
   T("%+d canais", "%+d 个频道"),
   T("%.*s/… (caminho cortado)", "%.*s/…（路径已截断）"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld 可用"),
   T("%.1f MB · %d imagens", "%.1f MB · %d 张图片"),
   T("%.1f de %d MB · %d%%", "%.1f / %d MB · %d%%"),
   T("%.1f mi", "%.1fM"),

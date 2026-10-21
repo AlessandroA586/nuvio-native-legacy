@@ -14,6 +14,7 @@
   T("\"Mais como este\"", "\"Mere som denne\""),
   T("%+d canais", "%+d kanaler"),
   T("%.*s/… (caminho cortado)", "%.*s/… (sti afkortet)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld ledig"),
   T("%.1f MB · %d imagens", "%.1f MB · %d billeder"),
   T("%.1f de %d MB · %d%%", "%.1f af %d MB · %d%%"),
   T("%.1f mi", "%.1f mio."),

@@ -13,6 +13,7 @@
   { "\"Mais como este\"", "\"More like this\"" },
   { "%+d canais", "%+d channels" },
   { "%.*s/… (caminho cortado)", "%.*s/… (path cut)" },
+  { "%.0f MB · %ld livre", "%.0f MB · %ld free" },
   { "%.1f MB · %d imagens", "%.1f MB · %d images" },
   { "%.1f de %d MB · %d%%", "%.1f of %d MB · %d%%" },
   { "%.1f mi", "%.1fM" },

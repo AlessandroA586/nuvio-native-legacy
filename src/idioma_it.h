@@ -14,6 +14,7 @@
   T("\"Mais como este\"", "\"Simili a questo\""),
   T("%+d canais", "%+d canali"),
   T("%.*s/… (caminho cortado)", "%.*s/… (percorso tagliato)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld liberi"),
   T("%.1f MB · %d imagens", "%.1f MB · %d immagini"),
   T("%.1f de %d MB · %d%%", "%.1f di %d MB · %d%%"),
   T("%.1f mi", "%.1fM"),

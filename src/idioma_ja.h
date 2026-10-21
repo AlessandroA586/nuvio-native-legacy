@@ -14,6 +14,7 @@
   T("\"Mais como este\"", "\"これに似た作品\""),
   T("%+d canais", "%+d チャンネル"),
   T("%.*s/… (caminho cortado)", "%.*s/…（パスは省略）"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld 空き"),
   T("%.1f MB · %d imagens", "%.1f MB · 画像 %d 枚"),
   T("%.1f de %d MB · %d%%", "%.1f / %d MB · %d%%"),
   T("%.1f mi", "%.1fM"),

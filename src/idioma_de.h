@@ -13,6 +13,7 @@
   T("\"Mais como este\"", "\"Ähnliche Titel\""),
   T("%+d canais", "%+d Sender"),
   T("%.*s/… (caminho cortado)", "%.*s/… (Pfad gekürzt)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld frei"),
   T("%.1f MB · %d imagens", "%.1f MB · %d Bilder"),
   T("%.1f de %d MB · %d%%", "%.1f von %d MB · %d%%"),
   T("%.1f mi", "%.1f Mio."),

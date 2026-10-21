@@ -13,6 +13,7 @@
   T("\"Mais como este\"", "\"Більше схожого\""),
   T("%+d canais", "%+d каналів"),
   T("%.*s/… (caminho cortado)", "%.*s/… (шлях обрізано)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld вільно"),
   T("%.1f MB · %d imagens", "%.1f МБ · зображень: %d"),
   T("%.1f de %d MB · %d%%", "%.1f з %d МБ · %d%%"),
   T("%.1f mi", "%.1f млн"),

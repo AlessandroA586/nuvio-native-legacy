@@ -14,6 +14,7 @@
   T("\"Mais como este\"", "\"Lainnya yang serupa\""),
   T("%+d canais", "%+d kanal"),
   T("%.*s/… (caminho cortado)", "%.*s/… (jalur dipotong)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld tersedia"),
   T("%.1f MB · %d imagens", "%.1f MB · %d gambar"),
   T("%.1f de %d MB · %d%%", "%.1f dari %d MB · %d%%"),
   T("%.1f mi", "%.1fM"),

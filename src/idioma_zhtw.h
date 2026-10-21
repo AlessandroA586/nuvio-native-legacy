@@ -14,6 +14,7 @@
   T("\"Mais como este\"", "\"類似推薦\""),
   T("%+d canais", "%+d 個頻道"),
   T("%.*s/… (caminho cortado)", "%.*s/…（路徑已截斷）"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld 可用"),
   T("%.1f MB · %d imagens", "%.1f MB · %d 張圖片"),
   T("%.1f de %d MB · %d%%", "%.1f / %d MB · %d%%"),
   T("%.1f mi", "%.1fM"),

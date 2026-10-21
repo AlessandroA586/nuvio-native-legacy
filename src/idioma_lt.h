@@ -14,6 +14,7 @@
   T("\"Mais como este\"", "\"Panašu į šį\""),
   T("%+d canais", "%+d kanalai"),
   T("%.*s/… (caminho cortado)", "%.*s/… (kelias nukirptas)"),
+  T("%.0f MB · %ld livre", "%.0f MB · %ld laisva"),
   T("%.1f MB · %d imagens", "%.1f MB · vaizdų: %d"),
   T("%.1f de %d MB · %d%%", "%.1f iš %d MB · %d%%"),
   T("%.1f mi", "%.1fM"),
