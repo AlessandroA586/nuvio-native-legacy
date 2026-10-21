@@ -2104,7 +2104,7 @@ int main(int argc, char **argv) {
                          pNBind=fNBind; pNBusca=fNBusca; pOutMs=fOutMs; pNOut=fNOut; pFill=fFill; pNCheio=fNCheio; pTela=fTela; pTrans=fTrans; }
       if (dtms > swapint_limite_jank(&swapInt)) janks++;
     }
-    gfx_vidro_governar(dtms, swapint_periodo(&swapInt));
+    // Automatic glass belongs to the shared FPS ladder (gpunivel.h).
     // RASTRO POR QUADRO, so com /tmp/nuvio-quadros presente (conferido no
     // relatorio de 3 s): cada quadro acima de 25 ms sai com a reparticao, os
     // uploads e o texto rasterizado. O [quadro] de 3 s mostra UM pior por
@@ -2129,13 +2129,15 @@ int main(int argc, char **argv) {
         int it = 0, pe = 0, qu = 0; long b = 0, bq = 0;
         tex_estatisticas(&it, &pe, &b, &qu, &bq);
         cheia = qu >= 8; cheiaEm = agora; }
-      int home = app_na_home(), settings = !strcmp(app_tela_nome(), "ajustes");
-      int cena = home ? 1 : settings ? 2 : 0;
-      // A scene/effect change invalidates the FPS comparison, including a
-      // previously rejected trial. Settings needs no Home artwork cache.
-      if (cena) cena += 4 * (ajustes_home_layout() + 4 * (ajustes_vidro() +
-        2 * (ajustes_cor_viva() + 16 * (ajustes_vidro_fosco() + 2 * ajustes_vidro_qualidade()))));
-      int elegivel = settings || cheia;
+      int home = app_na_home();
+      const char *screen = app_tela_nome();
+      int browse = !strcmp(screen, "explorar") || !strcmp(screen, "biblioteca") ||
+                   !strcmp(screen, "busca");
+      int cena = !video_ativo() && !player_aberto() && !trailer_aberto() ?
+                 (home ? 1 : browse ? 2 : 0) : 0;
+      // Scene/effect changes break consecutive report streaks.
+      if (cena) cena += 4 * (ajustes_home_layout() + 4 * ajustes_cor_viva());
+      int elegivel = cheia;
       if (!quadros) { gpuRelatoCena = cena; gpuRelatoCheia = elegivel; }
       else if (cena != gpuRelatoCena || !elegivel) gpuRelatoMisto = 1;
       gpun_medir(dtms, fClr + fSwap, fEv + fBomb + fUpd + fDes + fAux, cena, elegivel); }

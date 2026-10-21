@@ -166,7 +166,7 @@
   0, 1, 1, 1, 1, 1,/* trakt, tmdb, letterboxd, mal, ebert, nota do mdblist */
   1,                /* perfil pesquisavel: DESLIGADO (V_LIGA: 1 = Desligado). Padrao de todo mundo. */
   0,                /* meu perfil publico: acao */
-  2,                /* glass contour: Automatic */
+  0,                /* glass contour: On (aesthetic, never automatic) */
   1,                /* som do trailer no destaque: DESLIGADO (V_LIGA: 1 = Desligado) */
   22,               /* espera do trailer no destaque: 2,2 s (em decimos de segundo) */
   90,               /* percentual assistido: 90%, o numero fixo de antes */
@@ -200,7 +200,7 @@
   0, 0, 0,          /* pacote de selos (espelho de selospacote_ativo), adicionar e remover: o embutido */
   UI_SIZE_AUTO,     /* Untouched interface size follows the physical panel. */
   2,                /* fundo: Frost desde a 2.0 (FUNDO_FROST; dono, 05/10/2026) */
-  2,                /* opacidade do vidro: 78%, a de sempre */
+  0,                /* glass opacity: 60%, owner default */
   2,                /* frosted glass: Automatic */
 
   0, /* app icon: Original */
