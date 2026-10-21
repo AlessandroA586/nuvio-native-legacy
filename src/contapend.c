@@ -1057,7 +1057,7 @@ void contapend_podar(long long desdeMs) {
   pthread_mutex_lock(&trava);
   if (garantir()) {
     for (i = nEnt - 1; i >= 0; i--)
-      if (ents[i].sup == 'L' && ents[i].conf && ents[i].confMs < desdeMs) { tirar(i); mudou = 1; }
+      if (ents[i].sup == 'L' && ents[i].op == '+' && ents[i].conf && ents[i].confMs < desdeMs) { tirar(i); mudou = 1; }
     if (mudou) gravar();
   }
   pthread_mutex_unlock(&trava);

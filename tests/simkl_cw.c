@@ -164,7 +164,7 @@ static void rota(const char *url, char *dst, size_t tam) {
   memcpy(dst, p, n); dst[n] = 0;
 }
 
-static int perfilRede, trocarNaResposta, perfilHistorySt = 200;
+static int perfilRede, trocarNaResposta, perfilHistorySt = 200, libraryFailure;
 static const char *perfilHistoryBody = "{\"movies\":[],\"shows\":[],\"anime\":[]}";
 
 char *rede_baixar_st(const char *url, int s, const char *const *cab, int *st) {
@@ -174,6 +174,9 @@ char *rede_baixar_st(const char *url, int s, const char *const *cab, int *st) {
   rota(url, r, sizeof r);
   snprintf(ultimaRota, sizeof ultimaRota, "%s", r);
   *st = 200;
+  if (libraryFailure && !strcmp(r, "/sync/all-items/shows/plantowatch")) {
+    *st = 400; return NULL;
+  }
   if (perfilRede && !strcmp(r, "/users/settings")) {
     if (trocarNaResposta == 1) { tokenAtual = "OUTRO-TOKEN-FALSO"; credGeracao++; }
     return strdup("{\"user\":{\"name\":\"Identidade Simkl\"}}");
@@ -199,6 +202,8 @@ char *rede_baixar_st(const char *url, int s, const char *const *cab, int *st) {
   *st = 404;
   return strdup("{\"error\":\"id_err\",\"code\":404}");
 }
+
+#include "library639_http.inc"
 
 char *rede_postar_st(const char *url, int s, const char *const *cab,
                      const char *corpo, int *st) {
@@ -417,6 +422,12 @@ static void maisMenos(void) {
   assert(esperarEscrita() == SMK_OP_CONFIRMADA);
   assert(!strcmp(ultimoCorpo, "{\"shows\":[{\"ids\":{\"imdb\":\"tt2788316\"}}]}"));
   OK("plantowatch da rede: naLista e a guarda do - conhece o que veio de la");
+  simkl_esquecer();
+  libraryFailure = 1;
+  assert(simkl_plantowatch(v, 12) == -1);
+  libraryFailure = 0;
+  simkl_esquecer();
+  OK("partial Simkl library is rejected instead of replacing complete membership");
 }
 
 static void perfilRedeCasos(void) {
@@ -498,7 +509,14 @@ static void perfilStats(void) {
   OK("perfil: identidade e estatisticas mensais saem do Simkl; outro mes fica fora");
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+  (void)argv;
+  if (argc > 1) {
+    CatItem *v = calloc(12, sizeof *v);
+    assert(v); tokenAtual = TOKEN; libraryFailure = 1;
+    assert(simkl_plantowatch(v, 12) == -1);
+    free(v); puts("#639 Simkl partial snapshot: PASS"); return 0;
+  }
   char caminho[NVT_MAX]; nvt_set(caminho, sizeof caminho, "/nuvio-simkl-cw-XXXXXX");
   int fd = mkstemp(caminho), salvo = dup(1);
   FILE *f;

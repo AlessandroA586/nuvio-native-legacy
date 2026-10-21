@@ -936,6 +936,10 @@ int simkl_plantowatch(CatItem *saida, int max) {
       pedidoDestravar();
     }
   }
+  if (!cF || !cS || !cA) {
+    free(cF); free(cS); free(cA);
+    return -1;
+  }
   n = simkl_ler_plantowatch(cF, 0, saida, max);
   n += simkl_ler_plantowatch(cS, 1, saida + n, max - n);
   nA = simkl_ler_plantowatch(cA, 1, saida + n, max - n);

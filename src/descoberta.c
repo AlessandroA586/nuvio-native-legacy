@@ -4255,9 +4255,44 @@ static void listasLiberar(ListasTrakt *j) {
   free(j->wl); free(j->col); free(j);
 }
 
+static int listaGuardada(CatItem *v, int max, int fonte, int colecao) {
+  int n = 0;
+  for (int i = 0; v && i < cat_n() && n < max; i++) {
+    const CatItem *c = cat_item(i);
+    if (!c || (colecao ? !c->naColecao : !(c->listaFontes & (1u << fonte)))) continue;
+    int j;
+    for (j = 0; j < n; j++) if (!strcmp(v[j].imdb, c->imdb)) break;
+    if (j == n) v[n++] = *c;
+  }
+  return n;
+}
+
 static CatItem *listaBuscar(const char *qual, int *n) {
   CatItem *v = NULL, *menor;
   *n = trakt_lista_cresc(qual, &v, LISTA_TRAKT_MAX);
+  int accepted = *n >= 0;
+  if (*n < 0 && descSessaoAtual()) {
+    free(v);
+    v = malloc(sizeof *v * (size_t)LISTA_TRAKT_MAX);
+    // Failed/partial remote reads retain this session's complete membership.
+    *n = listaGuardada(v, LISTA_TRAKT_MAX, AJ_SALVOS_TRAKT, strcmp(qual, "watchlist") != 0);
+  }
+  int before = 0, kept = 0;
+  for (int i = 0; i < cat_n(); i++) {
+    const CatItem *c = cat_item(i);
+    if (!c || (!strcmp(qual, "watchlist") ? !(c->listaFontes & (1u << AJ_SALVOS_TRAKT)) : !c->naColecao)) continue;
+    int j;
+    for (j = 0; j < i; j++) {
+      const CatItem *p = cat_item(j);
+      if (p && !strcmp(p->imdb, c->imdb) && (!strcmp(qual, "watchlist")
+          ? (p->listaFontes & (1u << AJ_SALVOS_TRAKT)) : p->naColecao)) break;
+    }
+    if (j < i) continue;
+    before++;
+    for (j = 0; j < *n; j++) if (!strcmp(v[j].imdb, c->imdb)) { kept++; break; }
+  }
+  printf("[library-sync] source=trakt-%s profile=%d added=%d removed=%d kept=%d accepted=%d\n",
+         qual, perfis_ativo(), *n - kept, before - kept, kept, accepted);
   if (*n <= 0) { free(v); *n = 0; return NULL; }
   menor = realloc(v, sizeof(CatItem) * (size_t)*n);
   return menor ? menor : v;
@@ -5230,9 +5265,16 @@ static void *montar(void *u) {
     listas = NULL;
   } else {
     GARANTE(TRAKT_LISTA_MAX);
-    n += trakt_lista("watchlist",  lote + n, cap - n);
-    GARANTE(TRAKT_LISTA_MAX);
-    n += trakt_lista("collection", lote + n, cap - n);
+    for (int t = 0; t < 2; t++) {
+      int count = 0;
+      CatItem *saved = listaBuscar(t ? "collection" : "watchlist", &count);
+      GARANTE(count);
+      if (count <= cap - n && count > 0) {
+        memcpy(lote + n, saved, sizeof *saved * (size_t)count);
+        n += count;
+      }
+      free(saved);
+    }
   }
   // PLAN TO WATCH DO SIMKL (issue #110), SO QUANDO O "+" SALVA LA. E a mesma
   // marca naLista da watchlist do Trakt, entao o painel de Salvos e a aba
@@ -5250,6 +5292,25 @@ static void *montar(void *u) {
     int k, w, np, novos;
     GARANTE(300);
     np = simkl_plantowatch(lote + n, cap - n < 300 ? cap - n : 300);
+    int accepted = np >= 0;
+    if (np < 0 && descSessaoAtual())
+      np = listaGuardada(lote + n, cap - n < 300 ? cap - n : 300, AJ_SALVOS_SIMKL, 0);
+    if (np < 0) np = 0;
+    int before = 0, kept = 0;
+    for (int i = 0; i < cat_n(); i++) {
+      const CatItem *c = cat_item(i);
+      if (!c || !(c->listaFontes & (1u << AJ_SALVOS_SIMKL))) continue;
+      int j;
+      for (j = 0; j < i; j++) {
+        const CatItem *p = cat_item(j);
+        if (p && (p->listaFontes & (1u << AJ_SALVOS_SIMKL)) && !strcmp(p->imdb, c->imdb)) break;
+      }
+      if (j < i) continue;
+      before++;
+      for (j = 0; j < np; j++) if (!strcmp(lote[n + j].imdb, c->imdb)) { kept++; break; }
+    }
+    printf("[library-sync] source=simkl profile=%d added=%d removed=%d kept=%d accepted=%d\n",
+           perfis_ativo(), np - kept, before - kept, kept, accepted);
     for (k = n, w = n; k < n + np; k++) {
       int jj, ja = 0;
       for (jj = 0; jj < n; jj++)
