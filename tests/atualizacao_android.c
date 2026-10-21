@@ -7,6 +7,7 @@
 #include "../src/atualizacao.c"
 
 int android_instalar_apk(const char *c) { (void)c; return 0; }
+int android_preparar_apk(const char *c) { (void)c; return 0; }
 
 static int falhas = 0;
 #define CONFERE(c, ...) do { if (!(c)) { falhas++; printf("FALHA: " __VA_ARGS__); printf("\n"); } } while (0)
