@@ -2427,9 +2427,18 @@ static char *baixarStream(const char *nome, const char *url, int segundos) {
     printf("[addons] %s: stream transport failure (HTTP %d, curl %d)\n", nome, status, curl);
     return NULL;
   }
-  if (!js_array(corpo, corpo + strlen(corpo), "streams")) {
-    printf("[addons] %s: stream parse error (missing streams array, HTTP %d)\n", nome, status);
-    free(corpo); return NULL;
+  {
+    const char *fim = corpo + strlen(corpo);
+    char curto[4];
+    // js_array devolve o primeiro ITEM: [] legítimo (addon sem fonte para o
+    // titulo) sai NULL e precisa ser distinguido de resposta sem o resource
+    // "streams" — o primeiro respondeu e conta como resposta, o segundo e
+    // erro de parse. js_bruto so cabe em 4 bytes quando o valor e `[]`.
+    if (!js_array(corpo, fim, "streams") &&
+        !(js_bruto(corpo, fim, "streams", curto, sizeof curto) && curto[0] == '[')) {
+      printf("[addons] %s: stream parse error (missing streams array, HTTP %d)\n", nome, status);
+      free(corpo); return NULL;
+    }
   }
   return corpo;
 }

@@ -16,6 +16,7 @@ char *rede_baixar(const char *url, int seconds) {
   assert(!strcmp(url, expected));
   requests++;
   if (status == 201) return strdup("<html>invalid response</html>");
+  if (status == 202) return strdup("{\"streams\":[]}");
   return status == 200 ? strdup("{\"streams\":[{\"url\":\"https://fixture.invalid/live.m3u8\"}]}") : NULL;
 }
 char *rede_baixar_st(const char *url, int seconds, const char *const *headers, int *st) {
@@ -38,7 +39,7 @@ int main(void) {
   strcpy(addon[0].nome, "CNCVerse Bridge Main");
   strcpy(addon[0].base, "https://fixture.invalid");
   addon[0].ativo = addon[0].fonte = 1;
-  for (int mode = 0; mode < 3; mode++) {
+  for (int mode = 0; mode < 4; mode++) {
     BaldeFonte b = {.idx = 0};
     Consulta c = {.id = alias, .tipo = "tv", .timeout = 12,
                   .baldes = &b, .nBaldes = 1, .rodada = 1};
@@ -49,10 +50,13 @@ int main(void) {
     if (mode) { status = 403; c.tipo = "movie";
       snprintf(expected, sizeof expected, "https://fixture.invalid/stream/movie/%s.json", encoded); }
     if (mode == 2) status = 201;
+    if (mode == 3) status = 202;
     fioFontes(&c);
     if (!mode) assert(requests == 1 && b.n == 1);
+    // Empty "streams" answered the addon: no retry, respondeu=1, 0 sources.
+    else if (mode == 3) assert(requests == 4 && b.respondeu && b.n == 0);
     else assert(requests == mode + 1 && b.n == 0);
     free(b.achados); free(c.origens); pthread_mutex_destroy(&c.trava);
   }
-  puts("PASS A: long CNC ID reaches the stream resource; HTTP errors diagnosed");
+  puts("PASS A: long CNC ID reaches the stream resource; HTTP errors diagnosed; empty streams answered");
 }
