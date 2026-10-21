@@ -21,6 +21,10 @@ Source for the in-app What's New card and release notes. English follows the own
 
 ## Fixes
 
+- **Stable library membership**: Preserve complete library synchronization snapshots and removal evidence, and keep local saved titles while their add action is pending. Platforms: Samsung .tpk; shared library code on webOS, Android and WASM. Refs #639, `75a1c56ae`, `515408fe5`, merge `afcf66f36`.
+
+- **Safer local network logs**: Remove URL credentials, nonstandard URL schemes and long tokens from local network logs. Platforms: Samsung .tpk. Refs PR #640, `b05a33bcc`, merge `82f8b16a9`.
+
 - **Empty add-on responses stay valid**: Accept an empty streams array as a valid response when an add-on has no sources to offer. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `d4d850204`.
 
 - **Large Live TV requests complete**: Handle long stream requests without the obsolete channel limit. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `a5f0675e5`, merge `b02444677`.
@@ -114,10 +118,6 @@ Low-memory playback and bounded torrent-startup reads are listed under Fixes.
 - **Issue tracking**: Keep release and issue tracking current. Additional refs: `80a3b437b`. Additional refs: `612a2ecd2`. Additional refs: `c9e4f8038`. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `609ed3cc3`, `ad6ec6fb9`, `89b48afe7`, `12bedced8`, `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`, `324182411`, `a580c7eae`.
 
 ## Pending (not integrated yet)
-
-- **Stable library membership**: Library synchronization fixes address disappearing, restored, or unexpected saved titles; the latest follow-up still needs review. Platforms: Samsung .tpk; shared library code. Refs #639, `agente/205-205-bib639`, `515408fe5`.
-
-- **Safer local network logs**: Sanitizer follow-up removes credentials and long tokens from local network logging; review remains pending in the supplied snapshot. Platforms: Samsung .tpk. Refs `agente/205-205-logrede`, `b05a33bcc`.
 
 
 - **Add-on subtitle synchronization**: Subtitle add-on synchronization work awaits review before its final user-facing behavior can be confirmed. Platforms: Confirm from review. Refs agente/205-205-legaddonsync.
