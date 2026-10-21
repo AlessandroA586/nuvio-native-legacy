@@ -41,7 +41,15 @@ static void tpk_pedir_saida(int w,int h) { (void)w;(void)h; }
 target_start = main.index('  if (ajustes_720p()) gpun_forcar_720();')
 target_end = main.index('#ifdef NV_TPK', target_start)
 target = main[target_start:target_end]
+fallback_start = main.index('  if (resolucaoDaTv() && ajustes_ampliar_app() &&\n')
+fallback_end = main.index('  // O cursor', fallback_start)
+fallback = main[fallback_start:fallback_end]
 prefix += r'''
+static int gpuSupported, windowW, windowH;
+static int gpun_upscale_suportado(void) { return gpuSupported; }
+static void SDL_SetWindowSize(int win, int w, int h) {
+ (void)win; windowW=w; windowH=h;
+}
 static int targetW, targetH, scaling;
 static void gpun_forcar_720(void) { targetW=1280; targetH=720; }
 static void gpun_alvo_1080(void) { targetW=1920; targetH=1080; }
@@ -87,11 +95,23 @@ TARGET
       desktop,tv,choice,app,pedeW,pedeH,oldW,oldH,surfaceW,surfaceH,oldSW,oldSH);
     return 1;
    }
+   for (gpuSupported=0;gpuSupported<2;gpuSupported++) {
+    int win=0;
+    windowW=surfaceW=pedeW; windowH=surfaceH=pedeH;
+FALLBACK
+    int rejected=tv && app && panel==3840 && !gpuSupported && (choice==1 || choice==3);
+    int expectedW=rejected ? (choice==3 ? 1280 : 1920) : pedeW;
+    int expectedH=rejected ? (choice==3 ? 720 : 1080) : pedeH;
+    assert(windowW==expectedW && windowH==expectedH);
+#ifdef NV_ANDROID
+    assert(surfaceW==expectedW && surfaceH==expectedH);
+#endif
+   }
   }
  }
  puts("PASS startup baseline and opt-in 4K: all resolutions, panel sizes, TV/desktop");
 }
-'''.replace('BASE', decision(base)).replace('CURRENT', decision(main)).replace('TARGET', target)
+'''.replace('BASE', decision(base)).replace('CURRENT', decision(main)).replace('TARGET', target).replace('FALLBACK', fallback)
 with tempfile.TemporaryDirectory(prefix='ui720-surface-') as work:
     source = Path(work) / 'surface.c'
     source.write_text(prefix + body)

@@ -1460,10 +1460,12 @@ int main(int argc, char **argv) {
   // must not leave a weak GPU paying for a 4K drawable.
   if (resolucaoDaTv() && ajustes_ampliar_app() &&
       (ajustes_720p() || ajustes_1080p()) && !gpun_upscale_suportado()) {
+    int fallbackW = ajustes_720p() ? 1280 : (int)NV_TELA_W;
+    int fallbackH = ajustes_720p() ? 720 : (int)NV_TELA_H;
 #ifdef NV_ANDROID
-    android_pedir_superficie((int)NV_TELA_W, (int)NV_TELA_H);
+    android_pedir_superficie(fallbackW, fallbackH);
 #endif
-    SDL_SetWindowSize(win, (int)NV_TELA_W, (int)NV_TELA_H);
+    SDL_SetWindowSize(win, fallbackW, fallbackH);
     printf("[gpu-nivel] app 4K unavailable: restoring TV surface\n");
   }
   // O cursor do Magic Remote e desenhado pelo app (ponteiro.c). Depois do
