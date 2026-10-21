@@ -130,13 +130,13 @@ int ajustes_dolby_atmos(void);
 // pauseOverlayEnabled: o painel de ficha que sobe alguns segundos depois de
 // pausar o video. Ver pausao.h.
 int ajustes_pausa_overlay(void);
+int ajustes_classif_player(void);   // 1 = mostra a classificacao/guia parental no player (padrao)
+// "O que achou?" nos creditos (reacao.h). Ligado de fabrica.
+int ajustes_reacao_creditos(void);
 // Formato do player (4K, HDR, Atmos, idioma do audio). Estilo: PLR_FMT_*; padrao
 // Pilula (fileira embaixo do titulo); Original = as marcas do canto de cima.
 enum { PLR_FMT_TEXTO = 0, PLR_FMT_PILULA, PLR_FMT_MARCAS, PLR_FMT_SELOS, PLR_FMT_ORIGINAL, PLR_FMT_OFF, PLR_FMT_N };
 int ajustes_plr_formato(void);
-int ajustes_classif_player(void);   // 1 = mostra a classificacao/guia parental no player (padrao)
-// "O que achou?" nos creditos (reacao.h). Ligado de fabrica.
-int ajustes_reacao_creditos(void);
 // #329: pula abertura/resumo sozinho quando ha marcador (desligado de fabrica).
 int ajustes_pular_abertura(void);
 int ajustes_pular_resumo(void);
