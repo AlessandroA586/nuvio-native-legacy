@@ -2795,8 +2795,8 @@ int ajustes_720p(void)                { return valor[AJ_RESOLUCAO] == RES_720 &&
 int ajustes_dolby_vision(void)        { return lig(AJ_DV); }
 int ajustes_dolby_atmos(void)         { return lig(AJ_ATMOS); }
 int ajustes_pausa_overlay(void)       { return lig(AJ_PAUSA_OVERLAY); }
-int ajustes_plr_formato(void)         { int v = valor[AJ_PLR_FORMATO]; return v >= 0 && v < PLR_FMT_N ? v : PLR_FMT_PILULA; }
 int ajustes_reacao_creditos(void)     { return lig(AJ_REACAO_CREDITOS); }
+int ajustes_plr_formato(void)         { int v = valor[AJ_PLR_FORMATO]; return v >= 0 && v < PLR_FMT_N ? v : PLR_FMT_PILULA; }
 int ajustes_pular_abertura(void)      { return lig(AJ_PULAR_ABERTURA); }
 int ajustes_pular_resumo(void)        { return lig(AJ_PULAR_RESUMO); }
 int ajustes_proximo_auto(void)        { return lig(AJ_PROXIMO_AUTO); }
@@ -10328,8 +10328,8 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_QUALIDADE: case AJ_DV: case AJ_ATMOS: case AJ_LEG_LINGUA: case AJ_LEG_LINGUA2: case AJ_CACHE_SEEK: case AJ_BUFFER: case AJ_PLAYER_EXTERNO: case AJ_PLAYER_ANIME: case AJ_ESTAT_TAMANHO: case AJ_ESTAT_LADO:
     case AJ_DV_MKV:
     case AJ_LEG_FORCADA:
-    case AJ_PLR_FORMATO:
     case AJ_AUD_LINGUA: case AJ_AUD_LINGUA2: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_ABERTURA_ADDON: case AJ_ABERTURA_FUNDO: case AJ_ABERTURA_ESTILO: case AJ_FONTE_MANUAL:
+    case AJ_PLR_FORMATO:
     case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_SELOS_CORES: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR: case AJ_FONTE_PRECARREGAR:
     case AJ_FONTE_GRUPO: case AJ_FONTE_GRUPO_SESSOES:
     case AJ_LINK_REUSAR: case AJ_LINK_PRAZO:
