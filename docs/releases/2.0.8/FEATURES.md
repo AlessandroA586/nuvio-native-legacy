@@ -1,6 +1,6 @@
 # Nuvio Legacy 2.0.8
 
-Changes integrated after `v2.0.7`. Updated from local commit and branch snapshots; device validation remains pending.
+Changes integrated after snapshot tag `v2.0.7-test.2` (existing release history retained). Updated from local commit and branch snapshots; device validation remains pending.
 Community: **https://discord.gg/9NWr6SHyzJ**
 
 Source for the in-app What's New card and release notes. English follows the owner's current language override.
@@ -11,6 +11,8 @@ None recorded yet.
 
 ## New
 
+- **Optional webOS Dolby Vision conversion**: Enable independent opt-in Dolby Vision P7 to P8.1 conversion and bounded DTS recovery, with recovery respecting the DV7 opt-in choice. Platforms: webOS. Refs `a790e161c`, `9c5062588`, `1998c125f`, `845fe8cb1`, `087d3a015`.
+
 - **Automatic performance defaults**: Start performance settings in Automatic mode and migrate saved choices to the updated selection model. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `fcdae1879`.
 
 - **Android tunneled playback**: Offer an optional hardware audio/video synchronization setting, disabled by default. Platforms: Android. Refs owner request, `19e638ea1`; `agente/205-205-tunnel`.
@@ -18,6 +20,20 @@ None recorded yet.
 - **Android cache controls**: Clear regenerable cache while preserving durable user data, APK staging and viable torrent streaming windows; superseded update APKs are removed. Platforms: Android. Refs owner request; d8699b55c, e731a7847, d35f60069, 70b1f55e3; merges a1169f5ad, fcc581387.
 
 ## Fixes
+
+- **More usable playback memory**: Lower the buffer safety floor and show the RAM available for playback. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `84d89ab0d`.
+
+- **GIF avatars keep their proportions**: Crop animated avatars centrally without stretching their original aspect ratio. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `58ccca756`.
+
+- **Subtitle provider and synchronization labels**: Show provider names and synchronization labels while excluding informational tracks from playback choices. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `9f9ac0eb8`, `30142a7e6`.
+
+- **Long anime episode catalogs**: Preserve episode catalogs when large source file lists exceed capacity. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `bfcd991a2`.
+
+- **Episode menus fit your screen**: Keep episode actions and ratings inside the screen when interface scaling is enabled. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `3d19bb70d`.
+
+- **Readable Arabic bold subtitles**: Honor bold text even when the Arabic fallback font supplies only a Regular face. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `7c8f1ea73`.
+
+- **Samsung ASS playback**: Avoid handing ASS subtitle tracks to the TV decoder, preventing playback stalls. Platforms: Samsung .tpk. Refs #638, PR #638, `5fb8810aa`.
 
 - **Top ranking controls**: Preserve root catalog identities while parsing manifests so configured TOP X catalogs remain available. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `c95fa330a`; `agente/205-205-topx`.
 
@@ -54,7 +70,9 @@ None recorded yet.
 
 ## Performance
 
-- **Player frame-rate handling**: Bound browser frame waits while player menus and overlays are drawn to keep controls responsive. Platforms: Samsung .tpk, WASM. Refs owner request, `2206b5a27`; `agente/205-205-playerfps`.
+- **Android artwork stays loaded**: Ignore background memory trim signals while the activity is visible so posters do not repeatedly disappear and reload. Platforms: Android. Refs `1aedd966b`.
+
+- **Player frame-rate handling**: Bound browser frame waits while player menus and overlays are drawn to keep controls responsive. Platforms: Samsung .tpk, WASM. Refs owner request, `2206b5a27`, `10096c8ca`; `agente/205-205-playerfps`.
 
 - **Artwork loading retries**: Defer artwork uploads when visible images fill memory and skip blocked uploads so smaller posters can still load. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `55d077c80, b7d7ed0e8`; `agente/205-205-imgloop`.
 
@@ -64,15 +82,21 @@ Low-memory playback and bounded torrent-startup reads are listed under Fixes.
 
 ## Community
 
-No external contribution recorded in the supplied commits since `v2.0.7`.
+- **Samsung subtitle contribution**: Playback benefits from the ASS decoder fix contributed by @Namer03 in PR #638. Platforms: Samsung .tpk. Refs PR #638, #638, `5fb8810aa`.
+
+
 
 ## Internal
+
+- **HTTP and DNS regression fixtures**: Keep strict DNS and webOS HTTP buffer regression fixtures buildable. Platforms: webOS; host verification. Refs `5fd18864f`, `83072bc99`.
+
+- **Subtitle log translation scan**: Classify the native playback reason as log-only during translation scanning. Platforms: Samsung .tpk. Refs `433b0f00a`, #638.
 
 - **Translation regression coverage**: Restore language-test coverage and verify translation-key ordering to catch language-selection regressions. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `3b3906186`, merge `d4f8c2845`.
 - **C9 artwork comparison**: Verify native C9 artwork against the earlier rendering baseline while preserving both capture modes. Platforms: webOS; host verification. Refs `bdc7d7c8c`, merge `d072c891b`.
 
 - **Browser build link fix**: Restore the browser build's missing network-function stub so Samsung browser packages can link successfully. Platforms: Samsung browser/WASM. Refs `b84091f4c`.
-- **Issue tracking**: Keep release and issue tracking current. Additional refs: `c9e4f8038`. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `609ed3cc3`, `ad6ec6fb9`, `89b48afe7`, `12bedced8`, `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`.
+- **Issue tracking**: Keep release and issue tracking current. Additional refs: `612a2ecd2`. Additional refs: `c9e4f8038`. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `609ed3cc3`, `ad6ec6fb9`, `89b48afe7`, `12bedced8`, `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`.
 
 ## Pending (not integrated yet)
 
@@ -83,15 +107,3 @@ Earlier report named `agente/205-i429hbs` (#429), `agente/205-p2pusb` (#334, #50
 - **Torrent engine follow-up**: Further torrent-engine work remains outside integration and needs review of the newer fix log before its user-visible scope can be confirmed. Platforms: confirm from review before release. Refs `agente/p2p`; current `open.txt` and review snapshot.
 
 Other open branches are historical work or deferred plans; see the tracking map and external `estado.md`. No new feature or external contributor credit is inferred from branch names.
-
-- **Dolby Vision playback follow-up**: Update Dolby Vision playback handling; final behavior awaits review and integration. Platforms: confirm from review before release. Refs owner request, `agente/205-205-dv7matis`.
-
-- **Arabic subtitle bold text**: Arabic subtitle bold rendering changes have review approval and await integration. Platforms: confirm from review before release. Refs owner request, `agente/205-205-arabbold`.
-
-- **Frame-rate settings across platforms**: Cross-platform frame-rate settings changes have review approval and await integration. Platforms: confirm from review before release. Refs owner request, `agente/205-205-fpstodas`.
-
-- **Long-running anime follow-up**: Long-running anime episode handling has review approval and awaits integration. Platforms: confirm from review before release. Refs owner request, `agente/205-205-onepiece`.
-
-- **Subtitle synchronization follow-up**: Subtitle synchronization changes remain blocked by the latest review. Platforms: confirm from review before release. Refs owner request, `agente/205-205-subsync`.
-
-- **Episode scaling**: Episode scaling changes await review before integration. Platforms: confirm from review before release. Refs owner request, `agente/205-205-epescala`.
