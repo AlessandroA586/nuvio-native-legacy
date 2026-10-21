@@ -8,6 +8,7 @@
 #                             que a auto-atualizacao procura em releases/latest
 #                             (atualizacao.c: sufixo "-android.apk"; debug e
 #                             preview nao casam).
+#   Nuvio-<v>-android-lite-armv7.apk / -arm64.apk (one ABI, no P2P motor)
 #   SHA256SUMS-android        juntar ao SHA256SUMS da LG/Samsung
 #
 # O que ele RECUSA (sai com erro):
@@ -87,13 +88,16 @@ else
   echo "release-android: ATENCAO, APK SEM motor P2P (NUVIO_P2P_MOTOR=none ou sem pasta)" >&2
 fi
 
-LITE="build/android/Nuvio-$VER-android-lite.apk"
+cp "$A" "$OUT/"
+for arch in armv7 arm64; do
+LITE="build/android/Nuvio-$VER-android-lite-$arch.apk"
 [ -f "$LITE" ] || { echo "release-android: missing $LITE" >&2; exit 1; }
 CERT=$("$BT/apksigner" verify --print-certs "$LITE" 2>/dev/null | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
 [ "$CERT" = "$CERT_SHA256" ] || { echo "release-android: lite signing certificate mismatch" >&2; exit 1; }
 VN=$("$BT/aapt2" dump badging "$LITE" 2>/dev/null | sed -n "s/.*versionName='\([^']*\)'.*/\1/p" | head -1)
 [ "$VN" = "$VER" ] || { echo "release-android: lite version mismatch" >&2; exit 1; }
-cp "$A" "$LITE" "$OUT/"
+cp "$LITE" "$OUT/"
+done
 ( cd "$OUT" &&
   if command -v shasum >/dev/null 2>&1; then shasum -a 256 Nuvio-*-android*.apk
   else sha256sum Nuvio-*-android*.apk; fi > SHA256SUMS-android )

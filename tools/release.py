@@ -87,7 +87,7 @@ def prepare_ass():
 
 def expected_files(version):
     return [f'space.nuvio.native.legacy_{version}_arm{suffix}.ipk' for suffix in ('', '-highcache')] + [
-        f'Nuvio-{version}-android.apk', f'Nuvio-{version}-android-lite.apk', f'NuvioTV-{version}-tizen.wgt',
+        f'Nuvio-{version}-android.apk', f'Nuvio-{version}-android-lite-armv7.apk', f'Nuvio-{version}-android-lite-arm64.apk', f'NuvioTV-{version}-tizen.wgt',
         *[f'Nuvio-{version}-{p}.tpk' for p in ('NuvioTpk40', 'NuvioTpk60', 'NuvioTpk65', 'NuvioTpk')],
         f'libnuvio-{version}-tpk-arm.so', f'libnuvio-{version}-tpk40-arm.so']
 

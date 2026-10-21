@@ -32,10 +32,11 @@ android {
         targetSdk = 35
         versionCode = vx * 10000 + vy * 100 + vz
         versionName = versao
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+        ndk { if (!lite) abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
         externalNativeBuild {
             cmake {
                 arguments += listOf(
+                    "-DNV_APK_LITE=${if (lite) "ON" else "OFF"}",
                     "-DANDROID_STL=c++_static",  // hidapi do SDL (hid.cpp) e C++
                     "-DNUVIO_RAIZ=$raiz",
                     "-DNUVIO_SDL_SRC=$sdlSrc",
@@ -45,6 +46,15 @@ android {
                 )
                 arguments += "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
             }
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = lite
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            isUniversalApk = false
         }
     }
 
