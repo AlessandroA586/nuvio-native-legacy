@@ -1333,7 +1333,8 @@ static int  arteFixaPoster;
 static GfxRect morphLogo;   // o logo do hero no ultimo quadro (player_morph_de)
 static const char *logoDe(int i) {
   const CatItem *c = cat_item(i);
-  if (i == idx && logoFixo[0]) return logoFixo;
+  if (i == idx && logoFixo[0] && !tex_falhou(logoFixo)) return logoFixo;
+  if (i == idx) logoFixo[0] = 0;
   if (i == idx) {
     const char *u = artehero_logo_sessao(c);
     if (u) {
@@ -4689,9 +4690,10 @@ static void heroWeb(float a, float desloc) {
     hSinInit = 1;
     hSin = hSinVis; }
   const char *arqLogo = logoDe(idx);
-  const char *nome = mostrarNomeLogo(ci, arqLogo && tex_falhou(arqLogo) ? NULL : arqLogo,
-                                    0, desc_tmdb_idioma()) ? tituloDe(idx) : NULL;
-  int nomeAbaixo = nome && arqLogo && !tex_falhou(arqLogo);
+  GLuint texLogo = arqLogo ? tex_obter_logo_larg_qualquer(arqLogo, larguraLogoHero()) : 0;
+  const char *nome = mostrarNomeLogo(ci, texLogo ? arqLogo : NULL,
+                                    texLogo != 0, desc_tmdb_idioma()) ? tituloDe(idx) : NULL;
+  int nomeAbaixo = nome && texLogo;
   float hNome = nome ? txt_bloco(TXT_DET_META2, nome, 255, 255, 255,
                                 -1, 0, larguraLogoHero(), 34, 0, 0) : 0;
   float hCaption = nomeAbaixo ? hNome + 16.0f : 0;
@@ -4741,7 +4743,6 @@ static void heroWeb(float a, float desloc) {
   // textura menor enquanto reprocessa se ela tiver ao menos metade do
   // pedido. Pedindo o teto, o logo sumia por um instante ao abrir o titulo;
   // pedindo a largura real, aparece na hora e troca pela nitida em seguida.
-  GLuint texLogo = arqLogo ? tex_obter_logo_larg_qualquer(arqLogo, larguraLogoHero()) : 0;
   titulo_tempo_logo(&detalheTempo, "detalhe", arqLogo, texLogo, 0);
   if (a > 0.05f) titulo_tempo_info(&detalheTempo, "detalhe", ci, 0);
   float baseLogo = ((temRetom > 0.0f || agLinha[0]) ? yEstado : yAcoes)
