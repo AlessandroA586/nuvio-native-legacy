@@ -7353,6 +7353,10 @@ static int metaListaDeArquivos(int distintos, int brutos) {
   return brutos >= 60 && brutos > distintos * 3;
 }
 
+// Em par com CAT_EP_MAX (catalogo.c): um titulo que caiba no store nao pode
+// truncar no parse, e um que nao caiba trunca aqui em vez de zerar os outros.
+#define VIDEOS_MAX 2400
+
 // Lista de arquivos so pode ampliar a numeracao do catalogo, nunca refaze-la
 // (One Piece anime vs live-action). Compara o corpo inteiro, antes do corte.
 static int metaArquivosCompativeis(const char *arquivos, const char *catalogo) {
@@ -7376,6 +7380,8 @@ static int metaArquivosCompativeis(const char *arquivos, const char *catalogo) {
       v = js_prox(f);
     }
   }
+  // Full-body coverage is meaningless if publication will truncate the list.
+  if (pares[0].n > VIDEOS_MAX) ok = 0;
   if (temps[1].n > 1 && temps[0].n < temps[1].n) ok = 0;
   for (j = 0; j < pares[1].cap && pares[1].v; j++) {
     unsigned long long k = pares[1].v[j];
@@ -7385,10 +7391,6 @@ static int metaArquivosCompativeis(const char *arquivos, const char *catalogo) {
   for (i = 0; i < 2; i++) { free(pares[i].v); free(temps[i].v); }
   return ok;                             // sem memoria, conserva o catalogo
 }
-
-// Em par com CAT_EP_MAX (catalogo.c): um titulo que caiba no store nao pode
-// truncar no parse, e um que nao caiba trunca aqui em vez de zerar os outros.
-#define VIDEOS_MAX 2400
 
 // videos[] de um /meta -> lista de CatEp ORDENADA por (temporada, episodio).
 // Inclui especiais (temporada 0) sem renumerar o par nem o id do video.
