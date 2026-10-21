@@ -590,6 +590,8 @@ IGNORAR = {
     "com", "configuração necessária", "doação", "donación", "faca uma doacao",
     "faça uma doação", "nao disponivel", "não disponível",
     "sem fontes disponiveis", "unterstutze das projekt", "unterstütze das projekt",
+    # legsync.c: motivos de autoEncerrar(), so no log "[legsync] automatico: encerra".
+    "sem progresso", "sem referencia nesta plataforma",
 }
 
 def sem_corpo_em_js(txt):
