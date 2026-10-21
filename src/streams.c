@@ -5196,7 +5196,11 @@ static void desenhaDetalhe(float x, float w, int ptr) {
   float pad=40.0f, ix=cx+pad, iw=cw-2*pad;
   // Veu so sobre a folha (a modal e dela): escurece a lista sem esconde-la.
   gfx_cor((GfxRect){x,0,w,NV_TELA_H},0,0,0,0,.55f*a);
-  ajustes_ui_ilha((GfxRect){cx,cy,cw,ch},FOLHA_RAIO_IL*.8f,1);
+  // The card fades WITH its contents (ajustes_ui_ilha_a). It used to stay at
+  // full opacity while the veil and the text faded: on Back the list rows
+  // showed through the glass under the fading text (ghosting, owner 20/10),
+  // then the card popped away at the end.
+  ajustes_ui_ilha_a((GfxRect){cx,cy,cw,ch},FOLHA_RAIO_IL*.8f,1,a);
   if(ptr) {
     ponteiro_alvo(0,0,NV_TELA_W,NV_TELA_H,NULL,ponteiroDetalhe,0,0);
     ponteiro_alvo(cx,cy,cw,ch,NULL,NULL,0,0);
@@ -5282,7 +5286,7 @@ static void desenhaPartes(float x, float w, int ptr, Uint32 agora) {
   float cx = x + (w - cw) * .5f, cy = (NV_TELA_H - ch) * .5f + (1.0f - a) * 16.0f;
   float pad = 40.0f, ix = cx + pad, iw = cw - 2 * pad;
   gfx_cor((GfxRect){x, 0, w, NV_TELA_H}, 0, 0, 0, 0, .55f * a);
-  ajustes_ui_ilha((GfxRect){cx, cy, cw, ch}, FOLHA_RAIO_IL * .8f, 1);
+  ajustes_ui_ilha_a((GfxRect){cx, cy, cw, ch}, FOLHA_RAIO_IL * .8f, 1, a);   // fades with it (see desenhaDetalhe)
   if (ptr) {
     ponteiro_alvo(0, 0, NV_TELA_W, NV_TELA_H, NULL, ponteiroPartesFora, 0, 0);
     ponteiro_alvo(cx, cy, cw, ch, NULL, NULL, 0, 0);
