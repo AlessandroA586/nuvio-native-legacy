@@ -64,8 +64,10 @@ static const Item TELA[] = {
 #ifndef __EMSCRIPTEN__
     // .wgt: sem socket TCP/UDP no navegador, sem motor; P2P escondido (a8e7685d).
     // #205: Android tambem lista o pendrive (NuvioActivity.volumesExternos).
-    ROT("P2P"), OPC(AJ_P2P_LIGADO), OPC(AJ_P2P_URL), OPC(AJ_P2P_TESTAR), OPC(AJ_P2P_LIMITE),
-    OPC(AJ_P2P_DESTINO),
+    ROT("P2P"), OPC(AJ_P2P_LIGADO), OPC(AJ_P2P_URL), OPC(AJ_P2P_TESTAR),
+#if !defined(NV_ANDROID) || defined(NV_P2P_MOTOR)
+    OPC(AJ_P2P_LIMITE), OPC(AJ_P2P_DESTINO),
+#endif
 #endif
 
   SEC("Idiomas e legendas", "Idioma da interface, áudio, legenda e metadados", "aj_languages"),
