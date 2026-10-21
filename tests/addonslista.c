@@ -65,6 +65,13 @@ static int falhasLento, chamadasLento, prazoLento[2], prazoCanal;
 // instalado sem capacidades (nasce "fonte"), o manifesto diz so "subtitles" e
 // /stream/ responde 404.
 static int pedidosLegendaStream, pedidosLegendaManifesto, idxLegenda = -1;
+char *rede_baixar(const char *url, int seconds);
+char *rede_baixar_st(const char *url, int seconds, const char *const *headers, int *status) {
+  (void)headers;
+  char *body = rede_baixar(url, seconds);
+  if (status) *status = body ? 200 : 0;
+  return body;
+}
 const char *rede_ultimo_erro(void) { return ""; }
 char *rede_baixar(const char *url, int s) {
   const char *r;
@@ -306,10 +313,10 @@ int main(void) {
   // 4) so um consultado, e ele nao responde
   addons_alternar(1);                       // "Fonte e catalogo" desligado
   conferirTexto("um mudo", buscarMotivo("tt0000004"), "Formato antigo não respondeu");
-  // 5) so um, e responde vazio
+  // Malformed resource responses are failures, not empty stream arrays.
   resp[1] = "{\"err\":\"Invalid debrid key\"}";
-  conferirTexto("um vazio", buscarMotivo("tt0000005"),
-                "Formato antigo respondeu: não tem este título");
+  conferirTexto("invalid resource", buscarMotivo("tt0000005"),
+                "Formato antigo não respondeu");
   // 6) D5: os de fonte desligados
   addons_alternar(2);
   conferirTexto("desligados", buscarMotivo("tt0000006"),
