@@ -3025,7 +3025,7 @@ float ajustes_tamanho_ajustes(void) {
 static int ajLayoutSelecionavel(void) { return !telefoneui_ativo(); }
 static int ajOpcaoDisponivel(int op) {
   if (op == AJ_AMPLIAR_UI)
-    return painel4k() && !telefoneui_ativo() && valor[AJ_RESOLUCAO] != RES_720;
+    return painel4k() && !telefoneui_ativo();
   if (op == AJ_ARTE_TOM) return valor[AJ_TEMA] == AJ_TEMA_DINAMICA;
   // Only the selected account's fields are editable. Adding another account
   // never overwrites the credentials of the first one.

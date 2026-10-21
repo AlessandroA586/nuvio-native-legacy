@@ -29,6 +29,11 @@ int main(int argc, char **argv) {
     if (TELA[i].tipo == IT_OPC && TELA[i].op == AJ_AMPLIAR_UI) row = i;
   assert(row >= 0 && visivel(row) == eligible);
   assert(ajustes_ampliar_app() == eligible);
+  valor[AJ_RESOLUCAO] = RES_720;
+  assert(ajOpcaoDisponivel(AJ_AMPLIAR_UI) == eligible);
+  assert(visivel(row) == eligible);
+  assert(!inativa(AJ_AMPLIAR_UI));
+  assert(ajustes_720p() && ajustes_ampliar_app() == eligible);
   valor[AJ_AMPLIAR_UI] = 0;
   assert(ajustes_ampliar_app() == 0);
   ajustes_ui_saida(1920, 1080);

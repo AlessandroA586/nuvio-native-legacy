@@ -38,6 +38,15 @@ static int res_auto_ler(const char *p,const char *v) { (void)p;(void)v;return 0;
 static int android_pedir_superficie(int w,int h) { surfaceW=w;surfaceH=h;return 1; }
 static void tpk_pedir_saida(int w,int h) { (void)w;(void)h; }
 '''
+target_start = main.index('  if (ajustes_720p()) gpun_forcar_720();')
+target_end = main.index('#ifdef NV_TPK', target_start)
+target = main[target_start:target_end]
+prefix += r'''
+static int targetW, targetH, scaling;
+static void gpun_forcar_720(void) { targetW=1280; targetH=720; }
+static void gpun_alvo_1080(void) { targetW=1920; targetH=1080; }
+static void gpun_ampliar_app(int enabled) { scaling=enabled; }
+'''
 body = r'''
 int main(void) {
  for(int d=0;d<3;d++) for(int p=0;p<2;p++) for(tv=0;tv<2;tv++) for(choice=0;choice<4;choice++) {
@@ -53,14 +62,22 @@ BASE
    int pedeW=0,pedeH=0,pediu4k=0,autoEst=0,autoPediu=0;
    surfaceW=surfaceH=0;
 CURRENT
-   /* 720p (choice==3) never asks for the 4K surface: it wants the cheapest
-      output the platform has (Android surface 1280x720, others a 720 window). */
-   if (tv && choice==3) {
+   /* Granted 1080p also needs the app scaler when 4K was refused. */
+   for (int granted=1920; granted<=3840; granted*=2) {
+    int dw=granted;
+    targetW=targetH=scaling=0;
+TARGET
+    if (choice==3) {
+     assert(targetW==1280 && targetH==720);
+     assert(scaling==(tv && app && panel==3840));
+    }
+   }
+   if (tv && choice==3 && !(app && panel==3840)) {
     assert(pedeW==1280 && pedeH==720);
 #ifdef NV_ANDROID
     assert(surfaceW==1280 && surfaceH==720);
 #endif
-   } else if(app && panel==3840 && tv && choice==1) {
+   } else if(app && panel==3840 && tv && (choice==1 || choice==3)) {
     assert(pedeW==3840 && pedeH==2160);
 #ifdef NV_ANDROID
     assert(surfaceW==3840 && surfaceH==2160);
@@ -74,7 +91,7 @@ CURRENT
  }
  puts("PASS startup baseline and opt-in 4K: all resolutions, panel sizes, TV/desktop");
 }
-'''.replace('BASE', decision(base)).replace('CURRENT', decision(main))
+'''.replace('BASE', decision(base)).replace('CURRENT', decision(main)).replace('TARGET', target)
 with tempfile.TemporaryDirectory(prefix='ui720-surface-') as work:
     source = Path(work) / 'surface.c'
     source.write_text(prefix + body)
@@ -82,7 +99,7 @@ with tempfile.TemporaryDirectory(prefix='ui720-surface-') as work:
         binary = Path(work) / platform
         subprocess.run(['cc', '-D' + platform, str(source), '-o', str(binary)], check=True)
         subprocess.run([str(binary)], check=True, stdout=subprocess.DEVNULL)
-        print('PASS', platform, 'integration drawable parity; 720 stays on the TV surface; physical 4K + 1080 desktop requests 2160')
+        print('PASS', platform, 'TV surface parity; 720/1080 app scaling requests 4K')
 
 # Java side: SDL adds the SurfaceView WRAP_CONTENT, and SurfaceView.onMeasure
 # resolves to min(fixed size, parent). A 720 buffer must not shrink the view.
