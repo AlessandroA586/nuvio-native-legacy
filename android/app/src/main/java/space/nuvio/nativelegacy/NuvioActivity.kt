@@ -310,9 +310,13 @@ class NuvioActivity : SDLActivity() {
     // a levar 16 s com o low-memory killer ativo. SDLActivity so repassa
     // onLowMemory (o aviso mais forte), nao estes degraus.
     private external fun nativeTrimMemoria(nivel: Int)
+    private var trimResumida = false
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
+        // Background trim levels describe lifecycle, not foreground pressure.
+        // Guard both paths: SDL also forwards a strongest-level memory event.
+        if (trimResumida && level >= 20) return
         if (level >= 5) SDLActivity.nativeLowMemory()
         // Antes de a libmain.so carregar nao ha para quem avisar.
         try { nativeTrimMemoria(level) } catch (_: UnsatisfiedLinkError) { }
@@ -691,6 +695,7 @@ class NuvioActivity : SDLActivity() {
     }
 
     override fun onResume() {
+        trimResumida = true
         super.onResume()
         aplicarOrientacaoTouch()
         telaCheiaTouch()
@@ -706,6 +711,7 @@ class NuvioActivity : SDLActivity() {
     // do ciclo de vida (ANR ao apertar a tecla de ajustes da TV tocando, TCL,
     // 2.0.3). Direto no logcat: o printf do C passa por um pipe e pode esperar.
     override fun onPause() {
+        trimResumida = false
         checkpoint()
         val ini = SystemClock.elapsedRealtime()
         vigia?.frente(false)
