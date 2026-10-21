@@ -992,6 +992,20 @@ int contapend_visto_oculto(const char *imdb, int temporada, int episodio,
   return contapend_estado(id, NULL, temporada, episodio, remotoMs, 1) == 0;
 }
 
+int contapend_lista_pendente(const char *imdb) {
+  char id[24];
+  int res = 0, perfil = perfis_ativo();
+  idLista(imdb, id, sizeof id);
+  if (!id[0]) return 0;
+  pthread_mutex_lock(&trava);
+  if (garantir()) {
+    int k = achar('L', perfil, id, 0, 0);
+    res = k >= 0 && ents[k].op == '+' && !ents[k].conf;
+  }
+  pthread_mutex_unlock(&trava);
+  return res;
+}
+
 int contapend_lista_oculta(const char *imdb, long long remotoMs) {
   char id[24];
   idLista(imdb, id, sizeof id);

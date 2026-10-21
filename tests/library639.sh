@@ -5,6 +5,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 bash tests/contaoffline_limites.sh
 bash tests/contapend.sh
+bash tests/contalib.sh
 bash tests/bibfonte.sh
 cc tests/trakt610_lista.c src/js.c -Isrc -I/opt/homebrew/include -I/opt/homebrew/include/SDL2 \
   -o "$tmp/trakt" -O1 -g -Wno-deprecated-declarations -ffunction-sections -fdata-sections -Wl,-dead_strip -lpthread
