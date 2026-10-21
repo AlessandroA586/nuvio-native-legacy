@@ -13,6 +13,11 @@ Playback, memory and catalog fixes after 2.0.7, plus work integrated from commun
 - **Resume survives TV power loss.** Durable playback checkpoints are saved without stopping tracker playback during checkpoint updates.
 - **Library and Simkl fixes.** Complete library snapshots and pending saves are preserved (#639); Simkl keeps all list statuses and maps absolute anime episode numbers using provider metadata.
 - **Less artwork churn.** Visible Android screens ignore background trim signals, blocked uploads no longer prevent smaller posters from loading, and webOS texture pressure handling is more stable.
+- **webOS/.tpk texture memory pressure stops flapping.** Sampled MemAvailable pressure holds its band until memory actually recovers instead of expiring and re-arming every 30 s, and the cap can never drop below the artwork already on screen. Slow and repeatedly reloading images on 1-1.5 GB TVs after 2.0.7 are addressed while the #415 low-memory protection stays in place.
+- **Android Lite APKs.** Optional per-ABI Lite builds ship without the embedded P2P/torrent engine, and in-app updates match the installed variant so a Lite user is never handed the full APK.
+- **Search artwork resolves.** Search results resolve their own backdrops, and title logos fall back to TMDB when metahub has none.
+- **Automatic-mode settings rows** turn on their prerequisites, including the Glass Automatic choice, instead of silently doing nothing.
+- **The effects ladder ignores transient slowdowns** and advances one rung at a time; subtitle references are downloaded once, without range errors.
 - **Automatic performance controls** reject short GPU slowdowns, reduce one step at a time and require measured gains before retaining a reduction. Manual effect choices survive recovery.
 - **Live TV fixes** cover LG startup (#625), Samsung picture geometry, Automatic HLS quality, long channel requests and diagnostics on limited accounts.
 - **Translations work again.** Sorted translation keys restore language selection; Arabic subtitle bold also works with Regular-only fallback fonts (#637).
@@ -54,7 +59,7 @@ Playback, memory and catalog fixes after 2.0.7, plus work integrated from commun
 
 - Android ignores background trim levels while the activity is visible, preventing artwork from repeatedly disappearing and reloading.
 - Texture uploads defer when visible artwork fills the memory budget. A blocked large upload no longer blocks smaller artwork behind it.
-- webOS texture memory pressure handling stabilizes cache admission and eviction, continuing the low-memory work for #415.
+- webOS texture memory pressure handling stabilizes cache admission and eviction, continuing the low-memory work for #415. The 150/300 MiB thresholds now scale with total RAM, each band holds until available memory clears its recovery margin, and pressure can no longer force the current screen above its own cap. Sampled pressure does not expire on the trim timer, so a TV reporting low memory every 3 s keeps a stable cap instead of re-arming pressure every 30 s.
 - Automatic reductions follow the glass, frost and animation order, reject transient GPU slowdowns, advance one rung at a time, and retain reductions only when measurements show a gain.
 - Resetting adaptive reductions preserves deliberately selected manual effects.
 - Player UI shares frame pacing and retains slow-frame measurements; the overlay labels the rate **UI fps** to distinguish it from video cadence.
@@ -62,6 +67,7 @@ Playback, memory and catalog fixes after 2.0.7, plus work integrated from commun
 - Optional torrent end-of-file cue reads are limited to one second at startup; playback continues without those cues when the pieces are unavailable.
 - A 160 MB torrent streaming window lets TVs with roughly 460 MB free start sources that were previously rejected.
 - Android bounds regenerable storage, preserves viable P2P windows and removes superseded update APKs.
+- Android Lite builds are optional and split per ABI: `Nuvio-<version>-android-lite-armv7.apk` (~47.8 MB) for Fire Stick class devices and `Nuvio-<version>-android-lite-arm64.apk` (~48.4 MB), against ~68 MB for the full APK. Neither Lite artifact contains the P2P/torrent engine, and the release check verifies the expected ABI libraries per APK.
 
 ## Fixed
 
@@ -90,6 +96,10 @@ Playback, memory and catalog fixes after 2.0.7, plus work integrated from commun
 - **Browser package link failure:** provide the missing `rede_baixar_trecho64_final` stub.
 - **webOS DV7 build:** build the converter on the host, where the Rust toolchain is available, before the ARM container build.
 - **Regression fixtures:** restore strict DNS, HTTP buffer and language-test dependencies; source priority expectations now include all four options.
+- **webOS/.tpk images slow or reloading after 2.0.7:** sampled memory pressure is no longer dropped and re-armed on the 30 s trim timer, and the thresholds scale down to the TV's total RAM, so a 1.2 GB TV keeps one steady texture cap. On-screen artwork is never evicted to satisfy pressure, and the #415 protection for TVs with about 460 MB free still applies.
+- **Automatic-mode settings rows doing nothing** (`0ad243e3e`): a row whose requirement is a Ligado/Desligado/Automático choice now enables that prerequisite, so Glass Automatic is applied when the row is switched on.
+- **Effects ladder losing its mind after the player:** transient slowdowns are ignored, the first report after a scene or player transition is discarded, and a step is only retained after repeated measured gains. Animations no longer disappear permanently after closing the player on a C9.
+- **Subtitle references downloaded three times with range errors:** a reference is downloaded once and its cancellation keeps its original reason.
 
 ## Platforms
 
@@ -124,6 +134,7 @@ Playback, memory and catalog fixes after 2.0.7, plus work integrated from commun
 - Optional tunneled playback (#626), off by default; device support still determines whether the hardware path is usable.
 - Regenerable cache can be cleared without removing durable data or APK staging. Superseded update APKs are pruned.
 - Visible screens ignore background trim signals, avoiding the repeated poster reload loop.
+- Optional per-ABI Lite APKs leave the P2P/torrent engine out of the package and hide the P2P rows that cannot apply to that variant. In-app updates match the installed variant, so a Lite device is offered `-android-lite-armv7.apk` or `-android-lite-arm64.apk` by pointer width rather than the full APK.
 - 720p rendering is preserved when GPU upscaling is unsupported, while compatible 4K panels can use app upscaling.
 - Shared resume, Simkl, library, subtitles, catalog and format-row improvements apply here too.
 
@@ -166,6 +177,7 @@ Status here comes only from `docs/issues/mapa.json` and local git history. “In
 
 **Fixes or features in this release window**
 
+- **#649 — Lite APK request from @infojoe:** per-ABI Lite APKs without the P2P/torrent engine (`5d34d5c70`, `aecc7f971`, `2c7ef280d`). The local issue map does not record this request, so it is listed here from the branch history alone.
 - **#415 — Constant crashes on LG:** texture pressure now scales to total RAM, keeps sampled pressure until memory recovers, and protects visible artwork (`e626c1c24`). This continues the earlier low-memory fix without claiming every crash is resolved.
 - **#621 — Distorted GIF avatars:** centered cover cropping preserves aspect ratio (`58ccca756`).
 - **#624 — 2.0.7 broken on Tizen 9:** placeholder EGL surface fix (`f840b4037`); TV confirmation pending.
@@ -212,21 +224,57 @@ These are the remaining items marked `integrada`. Their mapped fixes predate thi
 
 ## Commits since v2.0.7
 
-The complete local range through `eb3385718`, including community commits, `agente/*` integration merges and issue-map updates, follows. The release-preparation commit itself is not included in its own list.
+The complete local range through `ca4f44ae7`, including community commits, `agente/*` integration merges, test-harness repairs and issue-map updates, follows. The release-preparation commit itself is not included in its own list.
 
+- `ca4f44ae7` Merge agente/205-205-testes208
+- `0245c73fd` Merge agente/205-205-rel208
+- `49941d939` test: align release card assertions with 2.0.8
+- `5fbdaf20e` Merge agente/205-205-apklite
+- `2c7ef280d` fix: verify expected ABI libraries per release APK
 - `eb3385718` Merge agente/205-205-webosmem
 - `e626c1c24` fix: stabilize webOS texture memory pressure
+- `a3cef4262` test: remove duplicate live source stub from AIO instance fixture
+- `aecc7f971` fix(android): preserve Lite updates with per-ABI APKs
+- `67ba28ff4` test: retain explicit animation and episode glass choices in fixtures
+- `9185c1b6c` test: preserve explicit solid guide overlay settings across migration
+- `8a1170b17` test: preserve explicit glass settings in saved tab fixtures
 - `51d171e8b` Merge agente/205-205-buscaarte
+- `fd1180d71` test: supply session ownership and source age fixture boundaries
+- `1214db978` test: align Simkl resume fixtures with numeric anime and watched ordering
+- `6257ef79e` test: restore Seekr metrics and live badge fixture stubs
+- `0e2c5dda0` test: supply fixed profile sessions for network probe fixtures
+- `ae30aeb57` test: restore embedded text subtitle provider boundary
+- `e9ed26a3b` test: restore Android player and prepared source fixtures
 - `adfbb3d0c` i18n scan: allow legsync log-only autoEncerrar reasons
+- `ecb6ef57a` test: restore plugin parsing and Plex subtitle dependencies
+- `8f9da57cf` test: restore plain TV discovery and fresh guide pagination fixtures
+- `3fedb9910` test: repair P2P fixture source and storage signatures
 - `1bed62d8f` Merge agente/205-205-escada3
 - `3dec05f8f` Merge agente/205-205-legref
+- `71c29fcd1` test: capture addon ownership in manifest and profile fixtures
+- `c49e9163d` test: update provider and subtitle harness contracts
+- `3d7353282` test: restore extracted row and source worker boundaries
+- `95ab52571` test: restore source and subtitle fixture dependencies
+- `c9a0e1d1e` test: refresh episode and personal server fixture contracts
+- `ed569db86` test: update episode capacity text input and Discord fixtures
+- `a8068c440` test: use real settings collaborators for credit persistence coverage
 - `f5a13f154` fix: resolve Search backdrops and fall back to TMDB title logos
+- `5041945af` test: refresh collection discovery and control center navigation fixtures
+- `fb98d2e8b` test: update stale library language and keyboard expectations
+- `8b0786ebe` test: restore provider sync and extracted callback stubs
+- `e9bee674b` test: repair catalog and home module fixture linkage
 - `2e4b91a22` Merge agente/205-205-uxdados
+- `c215a33c1` test: align settings fixtures with account backup and IPTV flows
+- `0ad243e3e` fix: enable automatic-mode prerequisites from settings rows
+- `7ab0ccf24` test: refresh search playback and calendar fixture dependencies
+- `20e5dc16f` test: restore isolated rendering and storage fixture boundaries
 - `48eac22ab` fix: reject transient GPU slowdowns and advance one rung at a time
 - `cce2cc2fa` fix: cache session subtitles and preserve reference cancellation reasons
+- `db19cc44b` test: bound suite runtime and refresh addon discovery fixtures
 - `8f2b0548e` test(settings): expect four source priority options
 - `855414818` Merge agente/205-205-pr632: PR #632 format row under the player title (Original stays default)
 - `145d5d951` player format row: keep the Original style as the default
+- `5d34d5c70` feat(android): add signed lite APK without embedded P2P engine
 - `c26398525` Merge PR #632 (I0-oX): format row under the player title
 - `fdaed2485` feat(ajustes): refine preview scene for Formato no player
 - `8a46121a8` docs(map): sync tracking
