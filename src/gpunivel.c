@@ -3,6 +3,7 @@
 // SEM _Thread_local (a .so do Tizen 4/5 recusa TLS, tests/tpk40_tls.sh): tudo
 // aqui roda no fio de desenho, e os estaticos sao so dele.
 #include "gpunivel.h"
+#include "ajustes.h"
 #ifdef NV_TPK
 #include "video.h"
 #endif
@@ -28,21 +29,6 @@
 
 #define GPUN_NIVEL_AUTO_MAX 2   // Effects only; resolution is independent.
 #define GPUN_ARQ "gpu-nivel.txt"
-// Regra do adaptativo (gpunivel.h). Os numeros:
-//  - 45 fps: abaixo disso o registro 8825 (22-29) e o jank visivel; a Tizen 6
-//    que roda a 60 fica longe dele, entao ela nunca desce.
-//  - espera >= 6 ms e maior que a CPU: o quadro e decidido pelo que a GPU
-//    devolve, e nao pelo que a CPU submete (no 8825: espera 62, CPU 5).
-//  - janela de 4 s, aquecimento de 3 s na primeira entrada na home (a subida
-//    das primeiras artes e trabalho de CPU/upload, nao do regime) e 2 s depois
-//    de cada degrau; teto de 24 s de home medida por arranque.
-#define GPUN_FPS_BOM     45.0
-#define GPUN_ESPERA_MIN   6.0
-#define GPUN_JANELA_MS 4000.0
-#define GPUN_AQUECE_MS 3000.0
-#define GPUN_ASSENTA_MS 2000.0
-#define GPUN_TETO_MS  24000.0
-
 static int nivel = 0, adaptativo = 0, decidido = 0;
 static const char *origem = "padrao";
 static char renderer[160] = "?", versaoGl[160] = "?", modelo[96] = "?", tizen[32] = "?";
@@ -63,26 +49,19 @@ static PfnDescarte descarte;
 static const char *descarteNome = "nenhum";
 #endif
 static int profStencil;   // a janela tem profundidade/stencil para descartar
-// Medida.
-static double aquece = GPUN_AQUECE_MS, janMs, janEsp, janCpu, totalMs;
-static int janN, estavaNaHome, descartes, cenaAtual;
-// #410B: so vale perder efeitos com >= 15% E >= 5 fps. Os dois pisos
-// rejeitam ruido perto de 45 fps e ganhos absolutos pequenos em TV muito lenta.
-// ponytail: janelas de Home cheia, nao cena fixa; usar A/B/A se a navegacao
-// variar a carga o bastante para falsear esta comparacao.
-static double fpsNivel[3];
-static int anterior = -1, reavaliar, bloqueado;
-// Three 3-second reports to shed effects; ten near-vsync reports to restore.
-static int relatoAtivo, relatoCena, relatosLentos, relatosRapidos, relatosValidos;
-static int relatoPiso = 0, relatoTentativa = -1;
+// Three-second live FPS reports; see gpunivel.h for the ladder contract.
+static int bloqueado;
+static double fpsNivel[3]; // Retained in the version-1 disk format.
+static int relatoCena, relatosLentos, relatosRapidos, relatosValidos;
+static int relatoTentativa = -1;
+static int degrau, foscoVetado, recuperacaoEspera;
 
 static void reiniciarMedida(void) {
-  decidido = bloqueado = reavaliar = 0; anterior = -1;
-  relatoAtivo = relatoCena = relatosLentos = relatosRapidos = relatosValidos = 0;
-  relatoPiso = 0; relatoTentativa = -1;
+  decidido = bloqueado = 0;
+  relatoCena = relatosLentos = relatosRapidos = relatosValidos = 0;
+  degrau = foscoVetado = recuperacaoEspera = 0;
+  relatoTentativa = -1;
   memset(fpsNivel, 0, sizeof fpsNivel);
-  aquece = GPUN_AQUECE_MS; janMs = janEsp = janCpu = totalMs = 0;
-  janN = estavaNaHome = descartes = cenaAtual = 0;
 }
 
 #ifndef GL_FRAMEBUFFER_BINDING
@@ -168,9 +147,9 @@ static void gravar(void) {
   char buf[1024];
   if (!adaptativo) return;
   snprintf(buf, sizeof buf, "versao=1\nchave=%lx\nnivel=%d\ngpu=%s\ngl=%s\nmodelo=%s\ntizen=%s\n"
-           "avaliacao=1\nbloqueado=%d\nfps0=%.3f\nfps1=%.3f\nfps2=%.3f\n",
+           "avaliacao=1\nbloqueado=%d\nfps0=%.3f\nfps1=%.3f\nfps2=%.3f\nfoscoVetado=%d\n",
            chave, nivel, renderer, versaoGl, modelo, tizen,
-           bloqueado, fpsNivel[0], fpsNivel[1], fpsNivel[2]);
+           bloqueado, fpsNivel[0], fpsNivel[1], fpsNivel[2], foscoVetado);
   if (!dados_gravar(GPUN_ARQ, buf)) printf("[gpu-nivel] nao gravou %s\n", GPUN_ARQ);
 }
 
@@ -178,17 +157,13 @@ static void gravar(void) {
 static void ler(void) {
   char *t = dados_ler(GPUN_ARQ);
   unsigned long c = 0;
-  int v = 0, n = -1, avaliado = 0;
-  double f[3] = {0};
+  int v = 0, n = -1, veto = 0;
   const char *p;
   if (!t) { printf("[gpu-nivel] sem %s: comeca do 0\n", GPUN_ARQ); return; }
   if ((p = strstr(t, "versao=")) != NULL) v = atoi(p + 7);
   if ((p = strstr(t, "chave=")) != NULL) c = strtoul(p + 6, NULL, 16);
   if ((p = strstr(t, "nivel=")) != NULL) n = atoi(p + 6);
-  if ((p = strstr(t, "avaliacao=")) != NULL) avaliado = atoi(p + 10) == 1;
-  if ((p = strstr(t, "fps0=")) != NULL) f[0] = atof(p + 5);
-  if ((p = strstr(t, "fps1=")) != NULL) f[1] = atof(p + 5);
-  if ((p = strstr(t, "fps2=")) != NULL) f[2] = atof(p + 5);
+  if ((p = strstr(t, "foscoVetado=")) != NULL) veto = atoi(p + 12) == 1;
   free(t);
   if (v != 1 || n < 0 || n > 3) { printf("[gpu-nivel] %s invalido: comeca do 0\n", GPUN_ARQ); return; }
   if (c != chave) {
@@ -196,19 +171,10 @@ static void ler(void) {
            GPUN_ARQ, c, chave);
     return;
   }
-  nivel = n > GPUN_NIVEL_AUTO_MAX ? GPUN_NIVEL_AUTO_MAX : n;
-  origem = "salvo";
-  printf("[gpu-nivel] saved level %d: revalidate with live FPS reports\n", nivel);
-  if (avaliado) {
-    memcpy(fpsNivel, f, sizeof f);
-    // A rejected trial belongs to its scene/effects, not the GPU forever.
-    bloqueado = decidido = 0;
-  } else if (nivel > 0) {
-    reavaliar = nivel;
-    nivel = 0;
-    origem = "reavaliando salvo";
-    printf("[gpu-nivel] nivel salvo %d sem comparacao: reavalia uma vez a partir do 0\n", reavaliar);
-  }
+  // Reprobe recoverable effects from full quality on every launch. Only the
+  // frost veto is hardware evidence worth retaining across sessions.
+  foscoVetado = veto;
+  nivel = degrau = 0;
 }
 #endif
 
@@ -220,8 +186,11 @@ static void aplicar(int n, const char *porque) {
   if (n != nivel || (!porque[0] && strcmp(origem, "padrao")))
     printf("[gpu-nivel] nivel %d -> %d (%s)\n", nivel, n, porque[0] ? porque : origem);
   nivel = n;
-  gfx_definir_efeitos_leves(nivel >= 1);
-  gfx_definir_efeitos_minimos(nivel >= 2);
+  // Minimal's global flat-glass shortcut would override forced frost/outline.
+  // Automatic uses only the light budget after its animation step.
+  gfx_definir_efeitos_leves(adaptativo ? degrau >= 3 &&
+                           (ajustes_efeitos_automaticos() & 4) : nivel >= 1);
+  gfx_definir_efeitos_minimos(!adaptativo && nivel >= 2);
   fflush(stdout);
 }
 
@@ -288,6 +257,7 @@ void gpun_iniciar(int w, int h) {
   const char *ext = "";
   GLint db = 0, sb = 0;
   reiniciarMedida();
+  degrau = foscoVetado = 0;
   nivel = adaptativo = prefFixa = 0; origem = "padrao";
   alvoApagar(&intFbo, &intTex);
   alvoApagar(&rcasFbo, &rcasTex);
@@ -438,7 +408,6 @@ void gpun_alvo_1080(void) {
   if (!prefFixa) {
     reiniciarMedida();
     adaptativo = 1; origem = "adaptativo"; nivel = 0;
-    aquece = GPUN_ASSENTA_MS;
     ler();
     aplicar(nivel, "interface em 1080p: mede de novo");
   }
@@ -450,6 +419,8 @@ void gpun_alvo_1080(void) {
 int gpun_alvo_1080_ativo(void) { return alvo1080; }
 
 int gpun_nivel(void) { return nivel; }
+int gpun_degrau(void) { return degrau; }
+int gpun_fosco_vetado(void) { return foscoVetado; }
 int gpun_efeitos_automaticos(void) { return adaptativo && nivel > 0; }
 void gpun_definir_nivel(int n) { aplicar(n, "definido por gpun_definir_nivel"); }
 
@@ -640,21 +611,14 @@ const char *gpun_teste_upscale(int sw, int sh, int iw, int ih, int app) {
 }
 #endif
 
-static void decidir(const char *porque) {
-  decidido = 1;
-  printf("[gpu-nivel] decidido: fica no nivel %d (%s)\n", nivel, porque);
-  fflush(stdout);
-  gravar();
-}
-
 void gpun_relatar(double fps, double pior, double periodo, int cena, int cheia) {
   double alvo = periodo > 0 ? 1000.0 / periodo : 60.0;
+  int automaticos = ajustes_efeitos_automaticos();
   if (!adaptativo || nivel > GPUN_NIVEL_AUTO_MAX) return;
   if (alvo > 60.0) alvo = 60.0;
   if (cena != relatoCena) {
     relatoCena = cena;
-    relatosLentos = relatosRapidos = relatosValidos = relatoPiso = 0;
-    relatoTentativa = -1;
+    relatosLentos = relatosRapidos = relatosValidos = 0;
   }
   if (!cena || !cheia || !(fps > 0) || pior > 1000.0) {
     relatosLentos = relatosRapidos = 0;
@@ -662,32 +626,35 @@ void gpun_relatar(double fps, double pior, double periodo, int cena, int cheia) 
       printf("[gpu-nivel] report ignored: fps=%.1f worst=%.1fms (stall)\n", fps, pior);
     return;
   }
-  if (!relatoAtivo) {
-    // The live reporter owns subsequent decisions; cancel any legacy trial.
-    if (anterior >= 0) aplicar(anterior, "live FPS baseline");
-    anterior = -1;
-    reavaliar = 0;
-    relatoAtivo = 1;
-  }
   relatosValidos++;
   // 55/58 FPS on 60 Hz; preserve healthy 50 Hz panels (45/48 FPS).
   relatosLentos = fps < alvo - 5.0 ? relatosLentos + 1 : 0;
   relatosRapidos = fps >= alvo - 2.0 ? relatosRapidos + 1 : 0;
-  int proximo = nivel;
-  if (relatosLentos >= 3 && nivel < GPUN_NIVEL_AUTO_MAX) {
-    proximo++;
-    if (relatoTentativa >= 0) {
-      // A failed restoration must not oscillate for the same workload.
-      relatoPiso = relatoTentativa;
+  if (recuperacaoEspera > 0) recuperacaoEspera--;
+  int proximo = degrau;
+  if (relatosLentos >= 3) {
+    for (int s = degrau + 1; s <= 4; s++) {
+      if (!(automaticos & (1 << (s - 1))) || (s == 2 && foscoVetado)) continue;
+      proximo = s;
+      break;
+    }
+    if (proximo != degrau && relatoTentativa >= 0) {
+      // Retry after five minutes of eligible reports, never a permanent floor.
+      recuperacaoEspera = 100;
       relatoTentativa = -1;
     }
-  } else if (relatosRapidos >= 10 && nivel > relatoPiso) {
-    relatoTentativa = nivel;
+  } else if (relatosRapidos >= 10 && degrau > 0 && !recuperacaoEspera) {
+    relatoTentativa = degrau;
     proximo--;
+    while (proximo > 0 && (!(automaticos & (1 << (proximo - 1))) ||
+                          (proximo == 2 && foscoVetado))) proximo--;
   }
-  if (proximo != nivel) {
-    printf("[gpu-nivel] live decision: level %d -> %d fps=%.1f target=%.1f slow=%d fast=%d floor=%d\n",
-           nivel, proximo, fps, alvo, relatosLentos, relatosRapidos, relatoPiso);
+  if (proximo != degrau) {
+    degrau = proximo;
+    if (degrau == 2) foscoVetado = 1;
+    proximo = degrau >= 4 ? 2 : degrau >= 3 ? 1 : 0;
+    printf("[gpu-nivel] live decision: level %d -> %d fps=%.1f target=%.1f slow=%d fast=%d step=%d\n",
+           nivel, proximo, fps, alvo, relatosLentos, relatosRapidos, degrau);
     aplicar(proximo, "sustained FPS reports");
     relatosLentos = relatosRapidos = 0;
     decidido = 1; bloqueado = 0;
@@ -700,87 +667,6 @@ void gpun_relatar(double fps, double pior, double periodo, int cena, int cheia) 
 }
 
 void gpun_medir(double dtms, double espera, double cpu, int cena, int cheia) {
-  double fps, e, c;
-  if (!adaptativo || nivel > GPUN_NIVEL_AUTO_MAX || relatoAtivo) return;
-  // Scene and effect settings identify a comparable workload. A new workload
-  // gets a fresh baseline, including after a good/CPU-bound/rejected window.
-  if (cena != cenaAtual) {
-    if (anterior >= 0) aplicar(anterior, "comparacao interrompida");
-    int legado = reavaliar;
-    reiniciarMedida(); reavaliar = legado;
-    cenaAtual = cena;
-  }
-  if (decidido) return;
-  // GPU fraca pode nao terminar nem a referencia no 0. Tres descartes na
-  // tentativa, mesmo intercalados, ativam protecao so nesta sessao: sem
-  // janela comparavel nao ha avaliacao para gravar.
-  if (cena && cheia && ptv_gpu_fraca_atual() &&
-      espera >= GPUN_ESPERA_MIN && espera > cpu) {
-    if (dtms > 1000.0 && ++descartes >= 3) {
-      aplicar(GPUN_NIVEL_AUTO_MAX, "GPU fraca: referencia nao termina");
-      decidido = 1;
-      return;
-    }
-  } else descartes = 0;
-  if (!cena || !cheia || dtms <= 0 || dtms > 1000.0) {
-    // Outra cena invalida tambem a referencia do candidato. Volta ao ultimo
-    // nivel confirmado, sem gravar/bloquear; ao voltar mede a referencia nova.
-    if (anterior >= 0) {
-      fpsNivel[nivel] = fpsNivel[anterior] = 0;
-      aplicar(anterior, "comparacao interrompida");
-      anterior = -1;
-    }
-    if (estavaNaHome) { janN = 0; janMs = janEsp = janCpu = 0; if (aquece < GPUN_ASSENTA_MS) aquece = GPUN_ASSENTA_MS; }
-    estavaNaHome = 0;
-    return;
-  }
-  estavaNaHome = 1;
-  if (aquece > 0) { aquece -= dtms; return; }
-  janN++; janMs += dtms; janEsp += espera; janCpu += cpu; totalMs += dtms;
-  if (janMs < GPUN_JANELA_MS) return;
-  descartes = 0; // janela completa encerra a tentativa
-  fps = janN * 1000.0 / janMs;
-  e = janEsp / janN;
-  c = janCpu / janN;
-  printf("[gpu-nivel] janela na interface: nivel=%d fps=%.1f espera=%.1fms cpu=%.1fms (%d quadros)\n",
-         nivel, fps, e, c, janN);
-  janN = 0; janMs = janEsp = janCpu = 0;
-  fpsNivel[nivel] = fps;
-  if (anterior >= 0) {
-    double antes = fpsNivel[anterior];
-    reavaliar = 0; // legado so deixa de estar pendente com a comparacao completa
-    if (fps < antes * 1.15 || fps - antes < 5.0) {
-      printf("[gpu-nivel] nivel %d nao ajudou (%.1f -> %.1f fps): volta ao %d\n",
-             nivel, antes, fps, anterior);
-      aplicar(anterior, "sem ganho significativo");
-      bloqueado = 1;
-      decidir("trial rejected for this scene/session");
-      return;
-    }
-    anterior = -1;
-  }
-  // Um nivel legado nao tinha prova do ganho. Compara-o diretamente com o
-  // 0 na mesma sessao, inclusive se o 0 ja der 45 fps (migracao uma vez).
-  if (reavaliar) {
-    anterior = 0;
-    aplicar(reavaliar, "compara nivel salvo com efeitos completos");
-    aquece = GPUN_ASSENTA_MS;
-    return;
-  }
-  if (fps >= GPUN_FPS_BOM) { decidir("fps bom"); return; }
-  if (e >= GPUN_ESPERA_MIN && e > c) {
-    // Try the next effects tier while GPU-bound; never change pixels.
-    if (nivel < GPUN_NIVEL_AUTO_MAX) {
-      if (totalMs >= GPUN_TETO_MS) { decidir("teto de tempo de medida"); return; }
-      anterior = nivel;
-      aplicar(nivel + 1, nivel == 0 ? "GPU presa: efeitos leves"
-                                    : "GPU presa mesmo com efeitos leves: efeitos minimos");
-      // So grava depois de medir o candidato: interrupcao nao o confirma.
-      aquece = GPUN_ASSENTA_MS;
-      return;
-    }
-    decidir("GPU presa, mas ja no ultimo nivel");
-    return;
-  }
-  decidir("lento pela CPU ou pelo resto, nao pela GPU: menos pixel nao ajuda");
+  // Kept for callers; only the existing three-second FPS reporter adapts.
+  (void)dtms; (void)espera; (void)cpu; (void)cena; (void)cheia;
 }

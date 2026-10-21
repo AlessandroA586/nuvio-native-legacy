@@ -21,7 +21,7 @@ static int reportedDesktop(int display, SDL_DisplayMode *mode) {
 int main(void) {
   // Fresh settings and Restore default must select Automatic on every platform.
   const int automatic[] = { AJ_AMPLIACAO_ALGO, AJ_AMPLIAR_UI, AJ_RESOLUCAO,
-    AJ_GPU_EFEITOS, AJ_ANIM, AJ_VIDRO, AJ_VIDRO_CONTORNO, AJ_VIDRO_FOSCO, AJ_VIDRO_QUALIDADE };
+    AJ_GPU_EFEITOS, AJ_ANIM, AJ_VIDRO, AJ_VIDRO_FOSCO, AJ_VIDRO_QUALIDADE };
   for (unsigned i = 0; i < sizeof automatic / sizeof *automatic; i++) {
     int op = automatic[i];
     const char *label = OPCOES[op].valores[valor[op]];
@@ -393,6 +393,14 @@ int main(void) {
     for (unsigned i = 0; i < sizeof automatic / sizeof *automatic; i++)
       assert(valor[automatic[i]] == (valorPadrao[automatic[i]] == 0 ? 1 : 0));
   }
+  // Removed outline Automatic migrates to its old On default; manual Off stays.
+  for (int outline = 0; outline <= 2; outline++) {
+    f = fopen(path, "w"); assert(f);
+    fprintf(f, "performanceAutoVersaoLocal 1\nvidroContornoLocal %d\n", outline);
+    fclose(f); ajustes_dir(dir);
+    assert(valor[AJ_VIDRO_CONTORNO] == (outline == 2 ? 0 : outline));
+    assert(OPCOES[AJ_VIDRO_CONTORNO].n == 2);
+  }
   // Fresh load records the migration too, before any user edit.
   unlink(path); ajustes_dir(dir);
   for (unsigned i = 0; i < sizeof automatic / sizeof *automatic; i++)
@@ -403,14 +411,20 @@ int main(void) {
   valor[AJ_AMPLIAR_UI] = 2;
   assert(ajustes_ampliar_app());
   perfilSeguro = 1; assert(!ajustes_ampliar_app()); perfilSeguro = 0;
-  // Automatic follows existing device effects tiers; manual values stay explicit.
-  for (int level = 0; level < 3; level++) {
-    gpun_definir_nivel(level);
-    valor[AJ_ANIM] = valor[AJ_VIDRO] = valor[AJ_VIDRO_CONTORNO] = valor[AJ_VIDRO_FOSCO] = 2;
-    assert(ajustes_animacoes_reduzidas() == (level >= 1));
-    assert(ajustes_vidro() == (level < 2));
-    assert(ajustes_vidro_contorno() == (level == 0));
+  // Exercise real settings through every automatic ladder step.
+  gpun_preferencia(0);
+  for (int level = 0; level <= 4; level++) {
+    valor[AJ_ANIM] = valor[AJ_VIDRO] = valor[AJ_VIDRO_FOSCO] = 2;
+    valor[AJ_VIDRO_CONTORNO] = valor[AJ_VIDRO_QUALIDADE] = 0;
+    if (level) for (int r = 0; r < 3; r++) gpun_relatar(30, 40, 16.667, 1, 1);
+    assert(gpun_degrau() == level);
+    assert(ajustes_animacoes_reduzidas() == (level >= 3));
+    assert(ajustes_vidro() == (level < 4));
+    assert(ajustes_vidro_contorno());
     assert(ajustes_vidro_fosco() == (level < 2));
+    assert(ajustes_vidro_qualidade() == (level >= 1));
+    valor[AJ_VIDRO_QUALIDADE] = 2; assert(ajustes_vidro_qualidade() == 2);
+    valor[AJ_VIDRO_QUALIDADE] = 0;
     valor[AJ_ANIM] = 0; assert(!ajustes_animacoes_reduzidas());
     valor[AJ_ANIM] = 1; assert(ajustes_animacoes_reduzidas());
     valor[AJ_VIDRO] = 0; assert(ajustes_vidro());

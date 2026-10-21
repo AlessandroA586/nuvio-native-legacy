@@ -1567,7 +1567,7 @@ static const Opcao OPCOES[AJ_N] = {
   // escondida estando visivel.
   ESC("Perfil pesquisável",              V_LIGA, 2),
   ACAO("Meu perfil público"),
-  ESC("Contorno do vidro",               V_LIGA_AUTO, 3),   // local: vidroContornoLocal
+  ESC("Contorno do vidro",               V_LIGA, 2),   // local: vidroContornoLocal
   ESC("Som do trailer",              V_LIGA, 2),   // local: trailerDestaqueSomLocal; #509: vale para todo trailer
   // Em DECIMOS de segundo (0,2 s a 10 s): textoValor escreve "2,2 s".
   NUM("Espera do trailer no destaque",   2, 100, 2, " s"), // local: trailerDestaqueEsperaLocal
@@ -2289,7 +2289,7 @@ static const int valorPadrao[] = {
 static int performanceAutoVersao;
 static const int performanceAuto[] = {
   AJ_AMPLIACAO_ALGO, AJ_AMPLIAR_UI, AJ_RESOLUCAO, AJ_GPU_EFEITOS,
-  AJ_ANIM, AJ_VIDRO, AJ_VIDRO_CONTORNO, AJ_VIDRO_FOSCO, AJ_VIDRO_QUALIDADE
+  AJ_ANIM, AJ_VIDRO, AJ_VIDRO_FOSCO, AJ_VIDRO_QUALIDADE
 };
 static void performanceAutoMigrar(void) {
   if (performanceAutoVersao >= 1) return;
@@ -2722,7 +2722,7 @@ static int cinemetaInstalado(void) {
 }
 
 int ajustes_animacoes_reduzidas(void) {
-  return valor[AJ_ANIM] == 1 || (valor[AJ_ANIM] == 2 && gpun_nivel() >= 1);
+  return valor[AJ_ANIM] == 1 || (valor[AJ_ANIM] == 2 && gpun_degrau() >= 3);
 }
 int ajustes_interface_mobile(void) {
 #ifdef NV_TOUCH_UI
@@ -2920,7 +2920,7 @@ int ajustes_cor_logo(void) { return lig(AJ_COR_LOGO); }
 int ajustes_vidro(void) { return 1; }
 #else
 int ajustes_vidro(void) {
-  return (lig(AJ_VIDRO) || (valor[AJ_VIDRO] == 2 && gpun_nivel() < 2)) && !SEGURO;
+  return (lig(AJ_VIDRO) || (valor[AJ_VIDRO] == 2 && gpun_degrau() < 4)) && !SEGURO;
 }
 int ajustes_fundo(void) {
 #ifdef NV_TIZEN3_LITE
@@ -2930,7 +2930,7 @@ int ajustes_fundo(void) {
 #endif
 }
 int ajustes_vidro_contorno(void) {
-  return lig(AJ_VIDRO_CONTORNO) || (valor[AJ_VIDRO_CONTORNO] == 2 && gpun_nivel() == 0);
+  return lig(AJ_VIDRO_CONTORNO);
 }
 int ajustes_addons_do_principal(void) { return lig(AJ_ADDONS_PRINCIPAL); }
 #endif
@@ -2941,9 +2941,14 @@ float ajustes_vidro_opacidade(void) {
   return v >= 0 && v < 5 ? F[v] : 0.78f;
 }
 int ajustes_vidro_fosco(void) {
-  return valor[AJ_VIDRO_FOSCO] == 1 || (valor[AJ_VIDRO_FOSCO] == 2 && gpun_nivel() < 2);
+  return valor[AJ_VIDRO_FOSCO] == 1 || (valor[AJ_VIDRO_FOSCO] == 2 && !gpun_fosco_vetado());
 }
-int ajustes_vidro_qualidade(void) { return valor[AJ_VIDRO_QUALIDADE] == 1 ? 1 : valor[AJ_VIDRO_QUALIDADE] == 2 ? 2 : 0; }   // 0 Automatica, 1 Desempenho, 2 Alta
+int ajustes_efeitos_automaticos(void) {
+  return ((valor[AJ_VIDRO_QUALIDADE] == 0 && valor[AJ_VIDRO] != 1) ? 1 : 0) |
+         (valor[AJ_VIDRO_FOSCO] == 2 ? 2 : 0) |
+         (valor[AJ_ANIM] == 2 ? 4 : 0) | (valor[AJ_VIDRO] == 2 ? 8 : 0);
+}
+int ajustes_vidro_qualidade(void) { return valor[AJ_VIDRO_QUALIDADE] == 1 ? 1 : valor[AJ_VIDRO_QUALIDADE] == 2 ? 2 : gpun_degrau() >= 1 ? 1 : 0; }   // 0 Automatica, 1 Desempenho, 2 Alta
 // Capturas do teste do vidro: NUVIO_SHOT_VIDRO_OPAC=60|70|78|86|92 e
 // NUVIO_SHOT_VIDRO_FOSCO=1 e NUVIO_SHOT_VIDRO_QUAL=0|1|2 (sem gravar nada). INTENCIONAL no release: so os
 // tests/*_shot.c e ajustes_teste_ux_captura a chamam; nenhum caminho de src/ chega aqui na TV.
@@ -4766,6 +4771,8 @@ void ajustes_dir(const char *dir) {
       if (v >= 0 && v <= 20) leg2TamanhoAntigo = v;
       continue;
     }
+    // Outline is aesthetic: migrate its removed Automatic value to On.
+    if (!strcmp(chave, "vidroContornoLocal") && v == 2) v = 0;
     for (i = 0; i < AJ_N; i++) {
       if (!CHAVE[i] || strcmp(CHAVE[i], chave)) continue;
       if (OPCOES[i].tipo == OP_LEITURA || OPCOES[i].tipo == OP_ACAO) continue;

@@ -591,6 +591,8 @@ void  ajustes_teste_escala(int percentual); // fixture only; does not persist
 int   ajustes_fundo(void);
 float ajustes_vidro_opacidade(void);   // 0,60..0,92; 0,78 = o vidro de sempre
 int   ajustes_vidro_fosco(void);
+// Raw Automatic preferences: quality/frost/animations/glass, bits 0..3.
+int   ajustes_efeitos_automaticos(void);
 int   ajustes_vidro_qualidade(void);   // 0 Automatica (frost + governor), 1 Desempenho (smoked glass, no blur), 2 Alta (frost)
 void  ajustes_teste_vidro_env(void);   // so capturas        // 1 = arte borrada atras do vidro
 int   ajustes_icone_app(void);
