@@ -2412,12 +2412,43 @@ static int prazoDoAddon(const Consulta *c, int i) {
   return s;
 }
 
+// Diagnose stream failures without logging provider URLs or payloads.
+static char *baixarStream(const char *nome, const char *url, int segundos) {
+  int status = 0;
+  char *corpo = rede_baixar_st(url, segundos, NULL, &status);
+  if (status >= 400) {
+    printf("[addons] %s: stream HTTP %d\n", nome, status);
+    free(corpo); return NULL;
+  }
+  if (!corpo) {
+    int curl = 0;
+    const char *erro = rede_ultimo_erro();
+    if (erro) sscanf(erro, "curl %d", &curl);
+    printf("[addons] %s: stream transport failure (HTTP %d, curl %d)\n", nome, status, curl);
+    return NULL;
+  }
+  {
+    const char *fim = corpo + strlen(corpo);
+    char curto[4];
+    // js_array devolve o primeiro ITEM: [] legítimo (addon sem fonte para o
+    // titulo) sai NULL e precisa ser distinguido de resposta sem o resource
+    // "streams" — o primeiro respondeu e conta como resposta, o segundo e
+    // erro de parse. js_bruto so cabe em 4 bytes quando o valor e `[]`.
+    if (!js_array(corpo, fim, "streams") &&
+        !(js_bruto(corpo, fim, "streams", curto, sizeof curto) && curto[0] == '[')) {
+      printf("[addons] %s: stream parse error (missing streams array, HTTP %d)\n", nome, status);
+      free(corpo); return NULL;
+    }
+  }
+  return corpo;
+}
+
 static void *fioFontes(void *u) {
   Consulta *c = u;
   for (;;) {
     int meu, i, n, prazoS;
     const AddonPedido *origem;
-    char url[NV_ADDON_PEDIDO_MAX], idUrl[768], *corpo;
+    char url[NV_ADDON_PEDIDO_MAX], idUrl[3 * IDCANAL_LONGO_MAX + 1], *corpo;
     const char *t1;
     const char *tipos[7];
     int nTipos;
@@ -2434,7 +2465,10 @@ static void *fioFontes(void *u) {
     if (semStreamSondado(c, i)) continue;   // a sonda terminou depois dos baldes
     // Id codificado como o Nuvio web (nv_addon_id): "tt123:1:2" sai igual.
     { char longo[IDCANAL_LONGO_MAX + 1];   // apelido de canal longo (idcanal.h)
-      if (!nv_addon_id(idUrl, sizeof idUrl, idcanal_longo(c->id, longo, sizeof longo))) idUrl[0] = 0; }
+      if (!nv_addon_id(idUrl, sizeof idUrl, idcanal_longo(c->id, longo, sizeof longo)) || !idUrl[0]) {
+        printf("[addons] %s: stream build error (invalid or oversized ID; request not sent)\n", origem->nome);
+        continue;
+      } }
     // #588: preserve the clicked type, then the exact catalog type, before
     // legacy channel names. Movie/series requests keep their single type.
     t1 = c->tipo;
@@ -2448,7 +2482,7 @@ static void *fioFontes(void *u) {
     Uint32 inicioAddon = SDL_GetTicks();
     corpo = nv_addon_pedido_coube(origem->nome, nv_addon_url(url, sizeof url, origem->base, "/stream/%s/%s.json",
                                     t1, idUrl), sizeof url) && idUrl[0]
-            ? rede_baixar(url, prazoS) : NULL;
+            ? baixarStream(origem->nome, url, prazoS) : NULL;
     if (consultaCancelada(c)) { free(corpo); break; }
     achados = NULL; n = 0;
     if (corpo) n = stream_extrair(corpo, origem->nome, &achados);
@@ -2489,7 +2523,7 @@ static void *fioFontes(void *u) {
       char *alt;
       alt = nv_addon_pedido_coube(origem->nome, nv_addon_url(url, sizeof url, origem->base, "/stream/%s/%s.json",
                                     t2, idUrl), sizeof url) && idUrl[0]
-            ? rede_baixar(url, restanteS) : NULL;
+            ? baixarStream(origem->nome, url, restanteS) : NULL;
       if (consultaCancelada(c)) { free(alt); free(corpo); free(achados); return NULL; }
       if (alt) {
         Stream *a2 = NULL;
@@ -2507,13 +2541,8 @@ static void *fioFontes(void *u) {
     }
     if (!corpo) {
       free(achados);
-      // O MOTIVO NA MESMA LINHA (#202): "curl 28: Operation timed out after
-      // 12002 ms" ou o HTTP (a linha "[rede] HTTP 403 em <host>" sai antes, sem
-      // o nome do addon). Prazo junto: diz se foi a 1a ou a 2a rodada.
-      { const char *erro = rede_ultimo_erro();
-        printf("[addons] %s: sem resposta (%u ms, prazo %d s)%s%s\n", origem->nome,
-               (unsigned)(SDL_GetTicks() - c->inicio), prazoS,
-               erro && erro[0] ? ": " : "", erro ? erro : ""); }
+      printf("[addons] %s: stream query failed (%u ms, budget %d s; reason above)\n",
+             origem->nome, (unsigned)(SDL_GetTicks() - inicioAddon), prazoS);
       // Desistiu de vez quando nao ha segunda chance pela frente: a mesma regra
       // de segundaChance (mudoSeg ainda e o da consulta anterior aqui).
       if (c->progresso)
@@ -3151,7 +3180,7 @@ static void *fioConsultaCapturada(void *u) {
     if (!nv_perfil_sessao_atual(c->snapshot->sessao) || (c->cancelado && c->cancelado(c->ctx))) break;
     const AddonCapturado *a = &c->snapshot->addons[i];
     if (!a->ativo || !a->fonte) { c->baldes[i].respondeu = 1; continue; }
-    char url[NV_ADDON_PEDIDO_MAX], idUrl[768];
+    char url[NV_ADDON_PEDIDO_MAX], idUrl[3 * IDCANAL_LONGO_MAX + 1];
     char longo[IDCANAL_LONGO_MAX + 1];
     if (!nv_addon_id(idUrl, sizeof idUrl, idcanal_longo(c->id, longo, sizeof longo)) ||
         !nv_addon_url(url, sizeof url, a->base, "/stream/%s/%s.json", c->tipo, idUrl)) continue;
