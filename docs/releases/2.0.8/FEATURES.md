@@ -7,7 +7,7 @@ Source for the in-app What's New card and release notes. English follows the own
 
 ## Highlights
 
-None recorded yet.
+- **More precise Samsung playback controls**: Seek more accurately with the reworked seek gesture, inspect local network logs, and avoid source ghosting. Platforms: Samsung .tpk. Refs PR #640, @Namer03, `f67359b37`, `49714272a`, merge `178d3da67`.
 
 ## New
 
@@ -20,6 +20,10 @@ None recorded yet.
 - **Android cache controls**: Clear regenerable cache while preserving durable user data, APK staging and viable torrent streaming windows; superseded update APKs are removed. Platforms: Android. Refs owner request; d8699b55c, e731a7847, d35f60069, 70b1f55e3; merges a1169f5ad, fcc581387.
 
 ## Fixes
+
+- **Empty add-on responses stay valid**: Accept an empty streams array as a valid response when an add-on has no sources to offer. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `d4d850204`.
+
+- **Large Live TV requests complete**: Handle long stream requests without the obsolete channel limit. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `a5f0675e5`, merge `b02444677`.
 
 - **Stage backgrounds appear immediately**: Resolve stage backdrops from Home without first opening the title details. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `4befffb89`, merge `5eb14e909`.
 
@@ -89,6 +93,8 @@ Low-memory playback and bounded torrent-startup reads are listed under Fixes.
 
 ## Community
 
+- **Samsung playback and network tools contribution**: Enjoy precise seeking, revised seek gestures, network logging, and the source ghosting fix contributed by @Namer03. Platforms: Samsung .tpk. Refs PR #640, `f67359b37`.
+
 - **Samsung subtitle contribution**: Playback benefits from the ASS decoder fix contributed by @Namer03 in PR #638. Platforms: Samsung .tpk. Refs PR #638, #638, `5fb8810aa`.
 
 
@@ -109,8 +115,10 @@ Low-memory playback and bounded torrent-startup reads are listed under Fixes.
 
 ## Pending (not integrated yet)
 
-- **720p interface upscaling**: Upscaling work for a 720p interface on 4K panels awaits fixes requested by review. Platforms: Android; confirm other targets in review. Refs owner request, `agente/205-205-amp720`, `8c083d0`; latest review BLOQUEIA.
-- **Automatic graphics effects**: Automatic effects and frost adjustments await fixes requested by review. Platforms: confirm from review. Refs owner request, `agente/205-205-escada`; latest review BLOQUEIA.
+- **Stable library membership**: Library synchronization fixes address disappearing, restored, or unexpected saved titles; the latest follow-up still needs review. Platforms: Samsung .tpk; shared library code. Refs #639, `agente/205-205-bib639`, `515408fe5`.
+
+- **Safer local network logs**: Sanitizer follow-up removes credentials and long tokens from local network logging; review remains pending in the supplied snapshot. Platforms: Samsung .tpk. Refs `agente/205-205-logrede`, `b05a33bcc`.
+
 
 - **Add-on subtitle synchronization**: Subtitle add-on synchronization work awaits review before its final user-facing behavior can be confirmed. Platforms: Confirm from review. Refs agente/205-205-legaddonsync.
 Earlier report named `agente/205-i429hbs` (#429), `agente/205-p2pusb` (#334, #505), `agente/205-i513autoplay` (#513), `agente/205-barra27`, PRs #489/#490/#491/#493/#498, `agente/205-dicatoque` (#472), m3umisto, palco2, logos, fileiraui, diretorpol and triagem-velhas as pending. Their branches are absent from the current open snapshot; retain this historical record without presenting them as pending 2.0.8 features or duplicating already released work.
