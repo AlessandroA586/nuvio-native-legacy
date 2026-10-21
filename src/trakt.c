@@ -2186,7 +2186,7 @@ static int listaNucleo(const char *qual, CatItem **pv, int *cap, int cresce,
         snprintf(url, sizeof url, "https://api.trakt.tv/sync/%s/%s", qual, tipo);
       if (!historicoPedidoAtual(pedido)) break;
       corpo = provedorGet(url, 25, cab, NULL, &proxima, pagina);
-      if (!corpo) break;
+      if (!corpo) { free(anterior); return -1; }
       if (anterior && !strcmp(anterior, corpo)) { free(corpo); break; }
       paginas++;
       p = strchr(corpo, '[');
@@ -2260,7 +2260,7 @@ int trakt_lista(const char *qual, CatItem *saida, int max) {
   if (max <= 0) return 0;
   n = listaNucleo(qual, &v, &cap, 0, max, &pag, &total);
   listaLog(qual, n, total, pag, max);
-  return n;
+  return n < 0 ? 0 : n;
 }
 
 int trakt_lista_cresc(const char *qual, CatItem **saida, int max) {
