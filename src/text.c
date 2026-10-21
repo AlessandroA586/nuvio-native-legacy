@@ -1538,8 +1538,7 @@ static int medirCorridas(TTF_Font *f, TTF_Font *a, TTF_Font *b, const char *s,
     { TTF_Font *g = c[i].f; int ex = extra;
       if (bidi_tem_arabe(pedaco)) {
         TTF_Font *bf = arabeBoldFace(g);
-        if (bf) g = bf;
-        ex = extra & ~TTF_STYLE_BOLD;
+        if (bf) { g = bf; ex &= ~TTF_STYLE_BOLD; }
       }
       ant = estiloSoma(g, f, ex);
       if (TTF_SizeUTF8(g, pedaco, &cw, &ch) == 0) soma += cw;
@@ -1565,8 +1564,7 @@ static SDL_Surface *renderCorridas(TTF_Font *f, TTF_Font *a, TTF_Font *b,
     memcpy(pedaco, s + c[i].ini, (size_t)len); pedaco[len] = 0;
     if (bidi_tem_arabe(pedaco)) {
       TTF_Font *bf = arabeBoldFace(g);
-      if (bf) g = bf;
-      ex = extra & ~TTF_STYLE_BOLD;
+      if (bf) { g = bf; ex &= ~TTF_STYLE_BOLD; }
     }
     gf[i] = g; as = TTF_FontAscent(g);
     ant = estiloSoma(g, f, ex);
@@ -1797,8 +1795,8 @@ static SDL_Surface *rasterLinha(TxtEstilo estilo, const char *s, SDL_Color cor,
   arabeCorpo = (int)(corpoAtual(estilo) * ESC_T + 0.5f);
   if (bidi_tem_arabe(v) && !txtTemLatim(v)) {   // #335, #205: Naskh Bold em todo peso
     TTF_Font *bf = arabeBoldFace(fonte);
-    if (bf) fonte = bf;               // a face Bold de verdade
-    enfase &= ~TXT_ENF_NEGRITO;       // nunca o sintetico sobre arabe
+    if (bf) { fonte = bf; enfase &= ~TXT_ENF_NEGRITO; }
+    // Keep synthetic bold when the bundled Bold face is unavailable.
   }
   if (enfase) fonte = fonteComEnfase(familia, estilo, fonte, enfase, &novo);
   estiloAnt = TTF_GetFontStyle(fonte);
@@ -1942,8 +1940,8 @@ static int larguraLinhaMedir(TxtEstilo estilo, const char *s, TxtFamilia familia
   arabeCorpo = (int)(corpoAtual(estilo) * ESC_T + 0.5f);
   if (bidi_tem_arabe(v) && !txtTemLatim(v)) {   // #335, #205: Naskh Bold em todo peso
     TTF_Font *bf = arabeBoldFace(fonte);
-    if (bf) fonte = bf;               // a face Bold de verdade
-    enfase &= ~TXT_ENF_NEGRITO;       // nunca o sintetico sobre arabe
+    if (bf) { fonte = bf; enfase &= ~TXT_ENF_NEGRITO; }
+    // Keep synthetic bold when the bundled Bold face is unavailable.
   }
   if (enfase) fonte = fonteComEnfase(familia, estilo, fonte, enfase, &novo);
   estiloAnt = TTF_GetFontStyle(fonte);
