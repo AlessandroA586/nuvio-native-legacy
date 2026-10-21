@@ -381,6 +381,7 @@ int main(void) {
     int op = automatic[i];
     fprintf(f, "%s %d\n", CHAVE[op], valorPadrao[op] == 0 ? 1 : 0);
   }
+  fprintf(f, "vidroOpacLocal 4\n");
   fclose(f);
   ajustes_dir(dir);
   for (unsigned i = 0; i < sizeof automatic / sizeof *automatic; i++)
@@ -392,6 +393,11 @@ int main(void) {
     ajustes_dir(dir);
     for (unsigned i = 0; i < sizeof automatic / sizeof *automatic; i++)
       assert(valor[automatic[i]] == (valorPadrao[automatic[i]] == 0 ? 1 : 0));
+  }
+  assert(valor[AJ_VIDRO_OPAC] == 0);
+  assert(definirValorDireto(AJ_VIDRO_OPAC, 3) && gravar());
+  for (int load = 0; load < 2; load++) {
+    ajustes_dir(dir); assert(valor[AJ_VIDRO_OPAC] == 3);
   }
   // Removed outline Automatic migrates to its old On default; manual Off stays.
   for (int outline = 0; outline <= 2; outline++) {
@@ -417,6 +423,7 @@ int main(void) {
     valor[AJ_ANIM] = valor[AJ_VIDRO] = valor[AJ_VIDRO_FOSCO] = 2;
     valor[AJ_VIDRO_CONTORNO] = valor[AJ_VIDRO_QUALIDADE] = 0;
     if (level) for (int r = 0; r < 3; r++) gpun_relatar(30, 40, 16.667, 1, 1);
+    if (level) gpun_relatar(34, 40, 16.667, 1, 1);
     assert(gpun_degrau() == level);
     assert(ajustes_animacoes_reduzidas() == (level >= 3));
     assert(ajustes_vidro() == (level < 4));
@@ -434,6 +441,9 @@ int main(void) {
     valor[AJ_VIDRO_FOSCO] = 1; assert(ajustes_vidro_fosco());
     valor[AJ_VIDRO_FOSCO] = 0; assert(!ajustes_vidro_fosco());
   }
+  assert(gpun_fosco_vetado());
+  assert(definirValorDireto(AJ_VIDRO_FOSCO, 2));
+  assert(!gpun_fosco_vetado());
   unlink(path);
   puts("ajustes_padroes: ok");
   return 0;

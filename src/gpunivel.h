@@ -57,8 +57,11 @@ void gpun_log_perfil(long memMB, int texMb, int fios, int heroi);
 
 // Automatic ladder (only raw Automatic settings participate; forced values skip):
 // 0 full glass, frost on, full animations; 1 glass Performance; 2 frost off;
-// 3 reduced animations; 4 glass off. Step 2 persists foscoVetado in gpu-nivel.txt
-// under the existing GPU/driver/firmware/surface key. Recovery never clears it.
+// 3 reduced animations; 4 glass off. Each trial needs >=10% AND >=3 FPS gain
+// in the next eligible window, otherwise revert and skip it this boot. Only
+// accepted effects remain active. Step 2 persists foscoVetado in gpu-nivel.txt
+// under the existing GPU/driver/firmware/surface key after proven gain.
+// Explicit Frost Automatic resets the mark; recovery never clears it.
 // Existing ~3-second reports only: 3 consecutive FPS < min(refresh,60)-5
 // downgrade one eligible step (~9s); 10 FPS >= min(refresh,60)-2 recover one
 // (~30s). Neutral/invalid/mixed/stall >1s reports break streaks. Only full
@@ -69,6 +72,8 @@ void gpun_log_perfil(long memMB, int texMb, int fios, int heroi);
 // Global minimal is manual-only: its flat-glass/outline shortcuts override
 // forced frost/outline settings, so Automatic never enables it.
 int  gpun_degrau(void);
+int  gpun_efeito_ativo(int passo);
+void gpun_fosco_reiniciar(void);
 int  gpun_fosco_vetado(void);
 int  gpun_nivel(void);
 // Efeitos reduzidos pelo automatico, para a ajuda dos Ajustes.

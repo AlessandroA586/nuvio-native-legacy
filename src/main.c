@@ -2136,8 +2136,7 @@ int main(int argc, char **argv) {
       int cena = !video_ativo() && !player_aberto() && !trailer_aberto() ?
                  (home ? 1 : browse ? 2 : 0) : 0;
       // Scene/effect changes break consecutive report streaks.
-      if (cena) cena += 4 * (ajustes_home_layout() + 4 * (ajustes_vidro() +
-        2 * (ajustes_cor_viva() + 16 * (ajustes_vidro_fosco() + 2 * ajustes_vidro_qualidade()))));
+      if (cena) cena += 4 * (ajustes_home_layout() + 4 * ajustes_cor_viva());
       int elegivel = cheia;
       if (!quadros) { gpuRelatoCena = cena; gpuRelatoCheia = elegivel; }
       else if (cena != gpuRelatoCena || !elegivel) gpuRelatoMisto = 1;

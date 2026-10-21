@@ -200,7 +200,7 @@
   0, 0, 0,          /* pacote de selos (espelho de selospacote_ativo), adicionar e remover: o embutido */
   UI_SIZE_AUTO,     /* Untouched interface size follows the physical panel. */
   2,                /* fundo: Frost desde a 2.0 (FUNDO_FROST; dono, 05/10/2026) */
-  2,                /* opacidade do vidro: 78%, a de sempre */
+  0,                /* glass opacity: 60%, owner default */
   2,                /* frosted glass: Automatic */
 
   0, /* app icon: Original */

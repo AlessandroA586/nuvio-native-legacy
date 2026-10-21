@@ -2286,12 +2286,17 @@ static int valor[] = {
 static const int valorPadrao[] = {
 #include "ajustes_ux_padrao.inc"
 };
-static int performanceAutoVersao;
+static int performanceAutoVersao, vidroOpacVersao;
 static const int performanceAuto[] = {
   AJ_AMPLIACAO_ALGO, AJ_AMPLIAR_UI, AJ_RESOLUCAO, AJ_GPU_EFEITOS,
   AJ_ANIM, AJ_VIDRO, AJ_VIDRO_FOSCO, AJ_VIDRO_QUALIDADE
 };
 static void performanceAutoMigrar(void) {
+  if (vidroOpacVersao < 1) {
+    valor[AJ_VIDRO_OPAC] = 0;
+    vidroOpacVersao = 1;
+    gravar();
+  }
   if (performanceAutoVersao >= 1) return;
   for (unsigned i = 0; i < sizeof performanceAuto / sizeof *performanceAuto; i++)
     valor[performanceAuto[i]] = valorPadrao[performanceAuto[i]];
@@ -2722,7 +2727,7 @@ static int cinemetaInstalado(void) {
 }
 
 int ajustes_animacoes_reduzidas(void) {
-  return valor[AJ_ANIM] == 1 || (valor[AJ_ANIM] == 2 && gpun_degrau() >= 3);
+  return valor[AJ_ANIM] == 1 || (valor[AJ_ANIM] == 2 && gpun_efeito_ativo(3));
 }
 int ajustes_interface_mobile(void) {
 #ifdef NV_TOUCH_UI
@@ -2920,7 +2925,7 @@ int ajustes_cor_logo(void) { return lig(AJ_COR_LOGO); }
 int ajustes_vidro(void) { return 1; }
 #else
 int ajustes_vidro(void) {
-  return (lig(AJ_VIDRO) || (valor[AJ_VIDRO] == 2 && gpun_degrau() < 4)) && !SEGURO;
+  return (lig(AJ_VIDRO) || (valor[AJ_VIDRO] == 2 && !gpun_efeito_ativo(4))) && !SEGURO;
 }
 int ajustes_fundo(void) {
 #ifdef NV_TIZEN3_LITE
@@ -2938,7 +2943,7 @@ int ajustes_foco_acento(void) { return lig(AJ_FOCO_ACENTO) && ajustes_vidro(); }
 float ajustes_vidro_opacidade(void) {
   static const float F[] = { 0.60f, 0.70f, 0.78f, 0.86f, 0.92f };
   int v = valor[AJ_VIDRO_OPAC];
-  return v >= 0 && v < 5 ? F[v] : 0.78f;
+  return v >= 0 && v < 5 ? F[v] : 0.60f;
 }
 int ajustes_vidro_fosco(void) {
   return valor[AJ_VIDRO_FOSCO] == 1 || (valor[AJ_VIDRO_FOSCO] == 2 && !gpun_fosco_vetado());
@@ -2948,7 +2953,7 @@ int ajustes_efeitos_automaticos(void) {
          (valor[AJ_VIDRO_FOSCO] == 2 ? 2 : 0) |
          (valor[AJ_ANIM] == 2 ? 4 : 0) | (valor[AJ_VIDRO] == 2 ? 8 : 0);
 }
-int ajustes_vidro_qualidade(void) { return valor[AJ_VIDRO_QUALIDADE] == 1 ? 1 : valor[AJ_VIDRO_QUALIDADE] == 2 ? 2 : gpun_degrau() >= 1 ? 1 : 0; }   // 0 Automatica, 1 Desempenho, 2 Alta
+int ajustes_vidro_qualidade(void) { return valor[AJ_VIDRO_QUALIDADE] == 1 ? 1 : valor[AJ_VIDRO_QUALIDADE] == 2 ? 2 : gpun_efeito_ativo(1) ? 1 : 0; }   // 0 Automatica, 1 Desempenho, 2 Alta
 // Capturas do teste do vidro: NUVIO_SHOT_VIDRO_OPAC=60|70|78|86|92 e
 // NUVIO_SHOT_VIDRO_FOSCO=1 e NUVIO_SHOT_VIDRO_QUAL=0|1|2 (sem gravar nada). INTENCIONAL no release: so os
 // tests/*_shot.c e ajustes_teste_ux_captura a chamam; nenhum caminho de src/ chega aqui na TV.
@@ -4633,7 +4638,7 @@ void ajustes_dir(const char *dir) {
   char caminho[600], linha[96];
   int viuLingua[3] = { 0, 0, 0 };
   int escalaVersao = 0;
-  performanceAutoVersao = 0;
+  performanceAutoVersao = vidroOpacVersao = 0;
   for (unsigned i = 0; i < sizeof performanceAuto / sizeof *performanceAuto; i++)
     valor[performanceAuto[i]] = valorPadrao[performanceAuto[i]];
   /* viuLingua: [AJ_LEG_LINGUA, AJ_LEG_LINGUA2, AJ_AUD_LINGUA] vistos no
@@ -4735,6 +4740,7 @@ void ajustes_dir(const char *dir) {
     if (!strcmp(chave, "bibliotecaFonteEscolhidaLocal")) { bibliotecaFonteEscolhida = v == 1; continue; }
     if (!strcmp(chave, "texturasEscolhaLocal")) { memoriaEscolhida = v == 1; continue; }
     if (!strcmp(chave, "escalaTextoVersaoLocal")) { escalaVersao = v; continue; }
+    if (!strcmp(chave, "vidroOpacVersaoLocal")) { vidroOpacVersao = v; continue; }
     if (!strcmp(chave, "performanceAutoVersaoLocal")) { performanceAutoVersao = v; continue; }
     // "resolucao_ui" (ate a 2.0.1) virou "resolucaoUi" com Automatica na
     // frente: ver res_migrar. A chave nova, quando existe, vence.
@@ -5087,6 +5093,7 @@ static int gravar(void) {
   for (i = 0; i < EX_NFONTES; i++) fprintf(f, " %d", ajustes_nota_fonte(i));
   fprintf(f, "\n");
   fprintf(f, "escalaTextoVersaoLocal 1\n");
+  fprintf(f, "vidroOpacVersaoLocal %d\n", vidroOpacVersao);
   fprintf(f, "performanceAutoVersaoLocal %d\n", performanceAutoVersao);
   if (memoriaEscolhida) fprintf(f, "texturasEscolhaLocal 1\n");
   if (bibliotecaFonteEscolhida) fprintf(f, "bibliotecaFonteEscolhidaLocal 1\n");
@@ -9190,6 +9197,7 @@ static int definirValorDireto(int op, int novo) {
   }
   int posicaoAntes = valor[AJ_LEG2_POSICAO];
   if (op == AJ_LEG2_POS) valor[AJ_LEG2_POSICAO] = 0;
+  if (op == AJ_VIDRO_FOSCO && novo == 2) gpun_fosco_reiniciar();
   antes = valor[op];
   if (novo == antes && !(op == AJ_LEG2_POS && posicaoAntes != 0) &&
       (op != AJ_TEX_MB || memoriaEscolhida) && (op != AJ_SALVOS_DEST || bibliotecaFonteEscolhida)) return 1;

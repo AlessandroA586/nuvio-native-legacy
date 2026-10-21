@@ -55,12 +55,25 @@ static double fpsNivel[3]; // Retained in the version-1 disk format.
 static int relatoCena, relatosLentos, relatosRapidos, relatosValidos;
 static int relatoTentativa = -1;
 static int degrau, foscoVetado, recuperacaoEspera;
+static void aplicar(int n, const char *motivo);
+static unsigned efeitos, semGanho;
+static int testePasso, testeAntes;
+static double testeFps, medidaMs, medidaRuim;
+static int medidaN;
+
+int gpun_efeito_ativo(int passo) { return !!(efeitos & (1u << (passo - 1))); }
+static void aplicarEscada(void) {
+  aplicar(gpun_efeito_ativo(4) ? 2 : gpun_efeito_ativo(3) ? 1 : 0,
+          "automatic effects ladder");
+}
 
 static void reiniciarMedida(void) {
   decidido = bloqueado = 0;
   relatoCena = relatosLentos = relatosRapidos = relatosValidos = 0;
   degrau = foscoVetado = recuperacaoEspera = 0;
   relatoTentativa = -1;
+  efeitos = semGanho = 0; testePasso = 0;
+  medidaMs = medidaRuim = 0; medidaN = 0;
   memset(fpsNivel, 0, sizeof fpsNivel);
 }
 
@@ -188,7 +201,7 @@ static void aplicar(int n, const char *porque) {
   nivel = n;
   // Minimal's global flat-glass shortcut would override forced frost/outline.
   // Automatic uses only the light budget after its animation step.
-  gfx_definir_efeitos_leves(adaptativo ? degrau >= 3 &&
+  gfx_definir_efeitos_leves(adaptativo ? gpun_efeito_ativo(3) &&
                            (ajustes_efeitos_automaticos() & 4) : nivel >= 1);
   gfx_definir_efeitos_minimos(!adaptativo && nivel >= 2);
   fflush(stdout);
@@ -420,7 +433,17 @@ int gpun_alvo_1080_ativo(void) { return alvo1080; }
 
 int gpun_nivel(void) { return nivel; }
 int gpun_degrau(void) { return degrau; }
-int gpun_fosco_vetado(void) { return foscoVetado; }
+int gpun_fosco_vetado(void) { return foscoVetado || gpun_efeito_ativo(2); }
+void gpun_fosco_reiniciar(void) {
+  foscoVetado = 0;
+  efeitos &= ~2u; semGanho &= ~2u;
+  if (testePasso) efeitos &= ~(1u << (testePasso - 1));
+  testePasso = 0; relatosLentos = relatosRapidos = 0;
+  degrau = 4;
+  while (degrau && !gpun_efeito_ativo(degrau)) degrau--;
+  aplicarEscada();
+  gravar();
+}
 int gpun_efeitos_automaticos(void) { return adaptativo && nivel > 0; }
 void gpun_definir_nivel(int n) { aplicar(n, "definido por gpun_definir_nivel"); }
 
@@ -614,9 +637,20 @@ const char *gpun_teste_upscale(int sw, int sh, int iw, int ih, int app) {
 void gpun_relatar(double fps, double pior, double periodo, int cena, int cheia) {
   double alvo = periodo > 0 ? 1000.0 / periodo : 60.0;
   int automaticos = ajustes_efeitos_automaticos();
+  if (medidaN) {
+    if (medidaRuim > (medidaMs + medidaRuim) * 0.2 || medidaN < 10) cheia = 0;
+    if (medidaMs > 0) fps = medidaN * 1000.0 / medidaMs;
+  } else if (medidaRuim > 0) cheia = 0;
+  medidaMs = medidaRuim = 0; medidaN = 0;
   if (!adaptativo || nivel > GPUN_NIVEL_AUTO_MAX) return;
   if (alvo > 60.0) alvo = 60.0;
   if (cena != relatoCena) {
+    if (testePasso && cena) {
+      efeitos &= ~(1u << (testePasso - 1)); degrau = testeAntes;
+      printf("[gpu-escada] step %d -> %d fps %.1f/%.1f, reverted, scene changed\n",
+             testeAntes, testePasso, testeFps, fps);
+      testePasso = 0; aplicarEscada();
+    }
     relatoCena = cena;
     relatosLentos = relatosRapidos = relatosValidos = 0;
   }
@@ -624,6 +658,19 @@ void gpun_relatar(double fps, double pior, double periodo, int cena, int cheia) 
     relatosLentos = relatosRapidos = 0;
     if (pior > 1000.0)
       printf("[gpu-nivel] report ignored: fps=%.1f worst=%.1fms (stall)\n", fps, pior);
+    return;
+  }
+  if (testePasso) {
+    int passo = testePasso;
+    int ganho = fps >= testeFps * 1.10 && fps >= testeFps + 3.0;
+    if (!ganho) {
+      efeitos &= ~(1u << (passo - 1)); semGanho |= 1u << (passo - 1);
+      degrau = testeAntes; aplicarEscada();
+    } else if (passo == 2) { foscoVetado = 1; gravar(); }
+    printf("[gpu-escada] step %d -> %d fps %.1f/%.1f, %s, %s\n",
+           testeAntes, passo, testeFps, fps, ganho ? "kept" : "reverted",
+           ganho ? "gain >=10% and >=3 fps" : "no gain this boot");
+    testePasso = 0; relatosLentos = relatosRapidos = 0;
     return;
   }
   relatosValidos++;
@@ -634,7 +681,8 @@ void gpun_relatar(double fps, double pior, double periodo, int cena, int cheia) 
   int proximo = degrau;
   if (relatosLentos >= 3) {
     for (int s = degrau + 1; s <= 4; s++) {
-      if (!(automaticos & (1 << (s - 1))) || (s == 2 && foscoVetado)) continue;
+      if (!(automaticos & (1 << (s - 1))) || (semGanho & (1 << (s - 1))) ||
+          (s == 2 && foscoVetado)) continue;
       proximo = s;
       break;
     }
@@ -646,16 +694,23 @@ void gpun_relatar(double fps, double pior, double periodo, int cena, int cheia) 
   } else if (relatosRapidos >= 10 && degrau > 0 && !recuperacaoEspera) {
     relatoTentativa = degrau;
     proximo--;
-    while (proximo > 0 && (!(automaticos & (1 << (proximo - 1))) ||
+    while (proximo > 0 && (!gpun_efeito_ativo(proximo) || !(automaticos & (1 << (proximo - 1))) ||
                           (proximo == 2 && foscoVetado))) proximo--;
   }
   if (proximo != degrau) {
+    if (proximo > degrau) {
+      testeAntes = degrau; testePasso = proximo; testeFps = fps;
+      efeitos |= 1u << (proximo - 1);
+    } else {
+      efeitos &= ~(1u << (degrau - 1));
+      printf("[gpu-escada] step %d -> %d fps %.1f/%.1f, kept, recovery trial\n",
+             degrau, proximo, fps, fps);
+    }
     degrau = proximo;
-    if (degrau == 2) foscoVetado = 1;
     proximo = degrau >= 4 ? 2 : degrau >= 3 ? 1 : 0;
     printf("[gpu-nivel] live decision: level %d -> %d fps=%.1f target=%.1f slow=%d fast=%d step=%d\n",
            nivel, proximo, fps, alvo, relatosLentos, relatosRapidos, degrau);
-    aplicar(proximo, "sustained FPS reports");
+    aplicarEscada();
     relatosLentos = relatosRapidos = 0;
     decidido = 1; bloqueado = 0;
     fpsNivel[nivel] = fps;
@@ -667,6 +722,9 @@ void gpun_relatar(double fps, double pior, double periodo, int cena, int cheia) 
 }
 
 void gpun_medir(double dtms, double espera, double cpu, int cena, int cheia) {
-  // Kept for callers; only the existing three-second FPS reporter adapts.
-  (void)dtms; (void)espera; (void)cpu; (void)cena; (void)cheia;
+  (void)espera;
+  if (!cena || !cheia || dtms <= 0) return;
+  // Reject decode/upload, event/list work and isolated scroll-start stalls.
+  if (cpu > 8.0 || dtms > 100.0) medidaRuim += dtms;
+  else { medidaMs += dtms; medidaN++; }
 }
