@@ -731,7 +731,7 @@ int main(void) {
          AJ_BIB_HOME == AJ_GUIA_CATEGORIAS + 1 && AJ_AMPLIACAO_ALGO == AJ_BIB_HOME + 1 &&
          AJ_AMPLIACAO_NITIDEZ == AJ_AMPLIACAO_ALGO + 1 && AJ_HDR_INTERFACE == AJ_AMPLIACAO_NITIDEZ + 1 &&
          AJ_LIMPAR_CACHE == AJ_HDR_INTERFACE + 1 && AJ_TUNNELING == AJ_LIMPAR_CACHE + 1 &&
-         AJ_TUNNELING == AJ_N - 1 && !strcmp(CHAVE[AJ_URL_REM], "-urlRem"));
+         AJ_PLR_FORMATO == AJ_LOG_REDE + 1 && AJ_PLR_FORMATO == AJ_N - 1 && !strcmp(CHAVE[AJ_URL_REM], "-urlRem"));
   { static const char *CH[4] = { "fonteGrupoLocal", "fonteGrupoSessoesLocal", "linkReusarLocal", "linkPrazoLocal" };
     static const int PAD[4] = { 0, 0, 0, 5 }, NV[4] = { 2, 2, 2, 9 };
     for (int o = 0; o < 4; o++) {

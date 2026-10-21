@@ -261,9 +261,16 @@ int main(void) {
   AJ_HDR_INTERFACE == AJ_AMPLIACAO_NITIDEZ + 1 &&
   AJ_LIMPAR_CACHE == AJ_HDR_INTERFACE + 1 &&
   AJ_TUNNELING == AJ_LIMPAR_CACHE + 1 && AJ_DV7 == AJ_TUNNELING + 1 &&
-  AJ_LOG_REDE == AJ_DV7 + 1 && AJ_N == AJ_LOG_REDE + 1);
+  AJ_LOG_REDE == AJ_DV7 + 1 &&
+  AJ_PLR_FORMATO == AJ_LOG_REDE + 1 &&
+  AJ_N == AJ_PLR_FORMATO + 1);
   assert(valor[AJ_LOG_REDE] == 1 && valorPadrao[AJ_LOG_REDE] == 1 &&
          uxValorPadrao(AJ_LOG_REDE) == 1 && !ajustes_log_rede()); // V_LIGA: 1 = Off
+  // Formato do player: Pilula de fabrica; local (o web nao tem).
+  assert(valor[AJ_PLR_FORMATO] == PLR_FMT_PILULA && ajustes_plr_formato() == PLR_FMT_PILULA);
+  assert(!strcmp(CHAVE[AJ_PLR_FORMATO], "plrFormatoLocal") && somenteDesteAparelho(AJ_PLR_FORMATO));
+  valor[AJ_PLR_FORMATO] = 99; assert(ajustes_plr_formato() == PLR_FMT_PILULA);   // valor fora da lista: a pilula
+  valor[AJ_PLR_FORMATO] = PLR_FMT_PILULA;
   // #492: retomada morna e o prazo do video pronto
   assert(valor[AJ_RETOMADA_MORNA] == 0 && ajustes_retomada_morna());   // V_LIGA: 0 = Ligado
   assert(!strcmp(CHAVE[AJ_RETOMADA_MORNA], "retomadaMornaLocal") && somenteDesteAparelho(AJ_RETOMADA_MORNA) && !dePerfil(AJ_RETOMADA_MORNA));

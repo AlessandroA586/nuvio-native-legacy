@@ -4963,13 +4963,14 @@ static void desenharOnde(GfxRect r, float tx, float tr, const OndeVer *o, int se
 // a marca clara — o pacote e colorido), na altura `h` e com a proporcao dela;
 // sem imagem (ou imagem que nao baixou) vira uma pilula com o NOME e as cores
 // do filtro. Para no `maxW`. Devolve a largura usada.
-static float desenharSelosPacote(const Stream *s, float x, float y, float maxW, float h, float a,
-                                 float tom, int semResolucao) {
+// `medir` = so a conta da largura, sem desenhar (quem ancora pela direita).
+static float selosDesenhar(const unsigned short *ids, int n, float x, float y, float maxW, float h,
+                           float a, float tom, int semResolucao, int medir) {
   const float gap = 8.0f, padX = 9.0f, imgMaxW = 220.0f;
   float x0 = x;
   int k, colorido = ajustes_selos_coloridos();
-  for (k = 0; k < (int)s->nSelosPacote; k++) {
-    const SeloFiltro *f = selospacote_filtro(s->selosPacote[k]);
+  for (k = 0; k < n; k++) {
+    const SeloFiltro *f = selospacote_filtro(ids[k]);
     float w, r, g, b, al;
     int pronta = 0;
     if (!f) continue;
@@ -4990,22 +4991,25 @@ static float desenharSelosPacote(const Stream *s, float x, float y, float maxW, 
           w = ih * asp;
           if (w > 144.0f) { w = 144.0f; ih = w / asp; }
           if (x + w + pad * 2.0f > x0 + maxW) break;
-          { GfxRect p = (GfxRect){x, y - sobra, w + pad * 2.0f, ch};
+          if (!medir) {
+            GfxRect p = (GfxRect){x, y - sobra, w + pad * 2.0f, ch};
             if (ajustes_vidro()) gfx_vidro_chip(p, raio, 0.88f, a);
             else { gfx_cor(p, raio, 0.10f, 0.11f, 0.13f, 0.88f * a);
-                   gfx_anel(p, raio, 1.5f, 1.0f, 1.0f, 1.0f, 0.20f * a); } }
-          if (f->arte == SELO_ARTE_COR) {
-            gfx_tex_aspect_atual = 0.0f;
-            gfx_rect((GfxRect){x + pad, y + (h - ih) * .5f, w, ih}, t, GFX_TEXTO, 0, 0, 0, 0.0f, 1, 1, 1, a);
-          } else
-            gfx_rect((GfxRect){x + pad, y + (h - ih) * .5f, w, ih}, t, GFX_MARCA, 0, 0, 0, 0.0f, 1, 1, 1, a);
+                   gfx_anel(p, raio, 1.5f, 1.0f, 1.0f, 1.0f, 0.20f * a); }
+            if (f->arte == SELO_ARTE_COR) {
+              gfx_tex_aspect_atual = 0.0f;
+              gfx_rect((GfxRect){x + pad, y + (h - ih) * .5f, w, ih}, t, GFX_TEXTO, 0, 0, 0, 0.0f, 1, 1, 1, a);
+            } else
+              gfx_rect((GfxRect){x + pad, y + (h - ih) * .5f, w, ih}, t, GFX_MARCA, 0, 0, 0, 0.0f, 1, 1, 1, a);
+          }
           x += w + pad * 2.0f + gap;
         } else {
           float ih = h;
           w = ih * asp;
           if (w > 160.0f) { w = 160.0f; ih = w / asp; }
           if (x + w > x0 + maxW) break;
-          gfx_rect((GfxRect){x, y + (h - ih) * .5f, w, ih}, t, GFX_MARCA, 0, 0, 0, 0.0f, tom, tom, tom, a);
+          if (!medir)
+            gfx_rect((GfxRect){x, y + (h - ih) * .5f, w, ih}, t, GFX_MARCA, 0, 0, 0, 0.0f, tom, tom, tom, a);
           x += w + 16.0f;
         }
         continue;
@@ -5015,8 +5019,10 @@ static float desenharSelosPacote(const Stream *s, float x, float y, float maxW, 
         w = ih * asp;
         if (w > imgMaxW) { w = imgMaxW; ih = w / asp; }
         if (x + w > x0 + maxW) break;
-        gfx_tex_aspect_atual = 0.0f;
-        gfx_rect((GfxRect){x, y + (h - ih) * .5f, w, ih}, t, GFX_TEXTO, 0, 0, 0, 0.0f, 1, 1, 1, a);
+        if (!medir) {
+          gfx_tex_aspect_atual = 0.0f;
+          gfx_rect((GfxRect){x, y + (h - ih) * .5f, w, ih}, t, GFX_TEXTO, 0, 0, 0, 0.0f, 1, 1, 1, a);
+        }
         x += w + gap;
         continue;
       }
@@ -5039,17 +5045,23 @@ static float desenharSelosPacote(const Stream *s, float x, float y, float maxW, 
       GfxRect p;
       w = (float)l.w + padX * 2.0f;
       if (x + w > x0 + maxW) break;
-      p = (GfxRect){x, y - 3.0f, w, ph};
-      if (f->temTag) { r = f->tag[0]; g = f->tag[1]; b = f->tag[2]; al = f->tag[3]; }
-      else { r = .10f; g = .11f; b = .13f; al = .88f; }
-      if (al > 0.01f) gfx_cor(p, raio, r, g, b, al * a);
-      if (f->temBorda && f->borda[3] > 0.01f)
-        gfx_anel(p, raio, 1.5f, f->borda[0], f->borda[1], f->borda[2], f->borda[3] * a);
-      else if (!f->temTag) gfx_anel(p, raio, 1.5f, .35f, .36f, .40f, .60f * a);
-      txt_desenhar_alpha(l, x + padX, y + (h - (float)l.h) * .5f, a);
+      if (!medir) {
+        p = (GfxRect){x, y - 3.0f, w, ph};
+        if (f->temTag) { r = f->tag[0]; g = f->tag[1]; b = f->tag[2]; al = f->tag[3]; }
+        else { r = .10f; g = .11f; b = .13f; al = .88f; }
+        if (al > 0.01f) gfx_cor(p, raio, r, g, b, al * a);
+        if (f->temBorda && f->borda[3] > 0.01f)
+          gfx_anel(p, raio, 1.5f, f->borda[0], f->borda[1], f->borda[2], f->borda[3] * a);
+        else if (!f->temTag) gfx_anel(p, raio, 1.5f, .35f, .36f, .40f, .60f * a);
+        txt_desenhar_alpha(l, x + padX, y + (h - (float)l.h) * .5f, a);
+      }
       x += w + gap; }
   }
   return x > x0 ? x - x0 - gap : 0.0f;
+}
+static float desenharSelosPacote(const Stream *s, float x, float y, float maxW, float h, float a,
+                                 float tom, int semResolucao) {
+  return selosDesenhar(s->selosPacote, (int)s->nSelosPacote, x, y, maxW, h, a, tom, semResolucao, 0);
 }
 
 int stream_selos_ha(const Stream *s) { return s && selosPacoteDa((Stream *)s) > 0; }
@@ -5057,6 +5069,28 @@ float stream_selos_fileira(const Stream *s, float x, float y, float maxW, float 
   if (!s || !selosPacoteDa((Stream *)s)) return 0.0f;
   return desenharSelosPacote(s, x, y, maxW, h,
                              ajustes_selos_coloridos() ? a * 0.9f : a, tom, 0);
+}
+
+// SELOS DO QUE ESTA TOCANDO (OSD do player): o pacote ativo casado com um
+// texto montado do que o pipeline MEDIU ("4K Dolby Vision Dolby Atmos"). O
+// casamento roda so quando o texto ou o pacote mudam (regex, nunca por quadro).
+float stream_selos_medidos(const char *texto, float x, float y, float maxW, float h, float tom,
+                           float a, int medir) {
+  static char ult[160];
+  static unsigned ultVer;
+  static unsigned short ids[SELOS_MAX_CASADOS];
+  static int n;
+  selospacote_colorido(ajustes_selos_coloridos());
+  if (selospacote_ativo() < 0 && !selospacote_embutidos_ok()) return 0.0f;
+  if (!texto) texto = "";
+  if (ultVer != selospacote_versao() || strcmp(ult, texto)) {
+    const char *campos[1] = { ult };
+    snprintf(ult, sizeof ult, "%s", texto);
+    ultVer = selospacote_versao();
+    n = ult[0] ? selospacote_casar(campos, 1, ids, SELOS_MAX_CASADOS) : 0;
+  }
+  if (!n) return 0.0f;
+  return selosDesenhar(ids, n, x, y, maxW, h, ajustes_selos_coloridos() ? a * 0.9f : a, tom, 0, medir);
 }
 
 static float caixaAlta(const char *s, int r, int g, int b, float x, float y, float a) {
