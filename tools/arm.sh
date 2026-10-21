@@ -90,6 +90,12 @@ if [ "$RUST_MKVCORE" = 1 ]; then
   if [ "${NUVIO_DV7:-1}" = 1 ] && [ "$DTS_ENABLED" = 1 ]; then RUST_PERSONALITY=1; fi
   RUST_LIB=$(NUVIO_RUST_EXTERNAL_PERSONALITY="$RUST_PERSONALITY" CARGO_NET_OFFLINE=true bash tools/rust-mkvcore.sh armv7-unknown-linux-gnueabi)
   RUST_VOL=(-v "$RUST_LIB:/tmp/libmkvcore.a:ro")
+  # The container has no cargo: build the DV7 converter here with the same toolchain.
+  if [ "$RUST_PERSONALITY" = 1 ]; then
+    (export RUSTUP_HOME="${RUSTUP_HOME:-/Volumes/ExternalSSD/rust/rustup}" CARGO_HOME="${CARGO_HOME:-/Volumes/ExternalSSD/rust/cargo}"
+     export PATH="$CARGO_HOME/bin:$PATH" NUVIO_DV7_TARGET=armv7-unknown-linux-gnueabi
+     bash tools/build-dv7.sh >&2)
+  fi
   export NUVIO_EXTRA_CFLAGS="${NUVIO_EXTRA_CFLAGS:-} -DNV_RUST_MKVCORE"
 fi
 ENVF=$(mktemp "${TMPDIR:-/tmp}/nuvio-arm-env.XXXXXXXX"); LIXO="$LIXO $ENVF"
@@ -148,7 +154,7 @@ ctr_run --rm --platform "$BUILD_PLATFORM" --env-file "$ENVF" \
   DV7_LIBS=""
   if [ "${NUVIO_DV7:-1}" = 1 ] && [ "${NUVIO_DTS_FFMPEG:-1}" = 1 ]; then
     export NUVIO_DV7_TARGET=armv7-unknown-linux-gnueabi
-    bash tools/build-dv7.sh
+    [ -f build/dv7/libnuvio_dv7.a ] || bash tools/build-dv7.sh
     DTS_CFLAGS="$DTS_CFLAGS -DNV_DV7_CONVERSION"
     DV7_LIBS="build/dv7/libnuvio_dv7.a -ldl -lpthread -lm -lrt -Wl,-Bstatic -latomic -Wl,-Bdynamic -static-libgcc"
   fi
