@@ -700,6 +700,10 @@ typedef enum {
   AJ_DV7, // independent P7 conversion, append-only
   // REGISTRO NA REDE LOCAL (logrede.h, dono 16/10 e 20/10): Desligado. LOCAL, append-only.
   AJ_LOG_REDE,
+  // Fileira de formato do player (4K, HDR, Atmos, idioma do audio; player.c,
+  // fileiraFormato): o estilo. LOCAL (o web nao tem). No fim:
+  // valor[]/CHAVE[] posicionais.
+  AJ_PLR_FORMATO,
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -750,6 +754,9 @@ _Static_assert(sizeof V_FUNDO_DIN_COR / sizeof *V_FUNDO_DIN_COR == sizeof FUNDO_
 static const char *V_QUALIDADE[] = { "Automática", "4K", "1080p", "720p" };
 static const char *V_LIGA[]      = { "Ligado", "Desligado" };
 static const char *V_LIGA_AUTO[] = { "Ligado", "Desligado", "Automático" };
+// Estilo da fileira de formato do player; o indice e o PLR_FMT_* de ajustes.h
+// e o gravado em "plrFormatoLocal".
+static const char *V_PLR_FORMATO[] = { "Texto", "Pílula", "Marcas", "Selos", "Original", "Desligado" };
 // TRAILER DO CARTAZ EM FOCO EM TRES MODOS (dono, 07/10/2026). O indice e o
 // AJ_TRAILER_CARTAZ_* de ajustes.h e o gravado em "trailerCartazModo"; a chave
 // antiga (V_LIGA, a mesma do web) migra no carregar (focoTrailerMigrar) e a
@@ -1821,6 +1828,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Reprodução em túnel", V_VIDRO_FOSCO, 2),
   ESC("Dolby Vision P7 para P8.1 (experimental)", V_LIGA, 2),
   ESC("Registro na rede local", V_LIGA, 2),                   // local: logRedeLocal
+  ESC("Formato no player", V_PLR_FORMATO, 6),          // local: plrFormatoLocal
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -2144,6 +2152,7 @@ static const char *CHAVE[] = {
   "tunneledPlaybackLocal",
   "dv7ConversionLocal",
   "logRedeLocal",
+  "plrFormatoLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -2787,6 +2796,7 @@ int ajustes_dolby_vision(void)        { return lig(AJ_DV); }
 int ajustes_dolby_atmos(void)         { return lig(AJ_ATMOS); }
 int ajustes_pausa_overlay(void)       { return lig(AJ_PAUSA_OVERLAY); }
 int ajustes_reacao_creditos(void)     { return lig(AJ_REACAO_CREDITOS); }
+int ajustes_plr_formato(void)         { int v = valor[AJ_PLR_FORMATO]; return v >= 0 && v < PLR_FMT_N ? v : PLR_FMT_ORIGINAL; }
 int ajustes_pular_abertura(void)      { return lig(AJ_PULAR_ABERTURA); }
 int ajustes_pular_resumo(void)        { return lig(AJ_PULAR_RESUMO); }
 int ajustes_proximo_auto(void)        { return lig(AJ_PROXIMO_AUTO); }
@@ -5991,6 +6001,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_BIB_HOME:       /* #507: idem */
     case AJ_REACAO_CREDITOS: /* o web nao tem a pergunta */
     case AJ_PULAR_ABERTURA: case AJ_PULAR_RESUMO: case AJ_PROXIMO_AUTO: case AJ_PULAR_CREDITOS: case AJ_PROXIMO_CONTAGEM: /* idem: local desta TV */
+    case AJ_PLR_FORMATO: /* o web nao tem a fileira de formato */
     case AJ_SEEKR_LIGADO: case AJ_SEEKR_FITA: case AJ_SEEKR_AJUSTE: /* o web nao tem o Seekr */
     case AJ_MENU_EXPLORAR: case AJ_MENU_GUIA: case AJ_MENU_AGENDA: case AJ_MENU_PERFIL:
     // Linha do titulo: o web nao tem, e nenhuma conta pode desliga-las aqui.
@@ -7359,6 +7370,7 @@ static const char *ajudaOpcaoBase(int op) {
       snprintf(b, sizeof b, i18n("Nos créditos, uma contagem de %d s toca o próximo episódio enquanto eles ainda rolam. Voltar cancela e deixa os créditos terminarem. Desligado, o cartão espera você apertar OK."), ajustes_proximo_contagem());
       return b;
     }
+    case AJ_PLR_FORMATO: return "A fileira com o formato do vídeo e do áudio. Texto: embaixo do título, em negrito. Pílula: o mesmo texto dentro da pílula da hora. Marcas: Dolby Vision e Atmos com o logo. Selos: os selos do seu pacote, como na lista de fontes. Original: as marcas brancas no canto de cima, com o codec do áudio.";
     case AJ_REACAO_CREDITOS: return "Nos créditos de um filme, ou no fim de uma temporada, um cartão pequeno pergunta o que você achou. Some sozinho em 8 s. Com o Trakt ligado, a resposta vira nota lá.";
     case AJ_STALKER_PORTAL: return "Os canais do portal entram no Guia de TV, junto com os dos addons. Endereço sem http:// e sem barra no fim: meu-portal.exemplo.tv:8080";
     case AJ_STALKER_MAC: return "O MAC que o provedor cadastrou para você. É credencial: vale como senha, e só aparece nesta tela mascarado.";
@@ -10317,6 +10329,7 @@ static AjPreview familiaPreviaOpcao(int op) {
     case AJ_DV_MKV:
     case AJ_LEG_FORCADA:
     case AJ_AUD_LINGUA: case AJ_AUD_LINGUA2: case AJ_PAUSA_OVERLAY: case AJ_PLR_CLASSIF: case AJ_TELA_ABERTURA: case AJ_ABERTURA_ADDON: case AJ_ABERTURA_FUNDO: case AJ_ABERTURA_ESTILO: case AJ_FONTE_MANUAL:
+    case AJ_PLR_FORMATO:
     case AJ_FONTE_AUTO: case AJ_FONTE_REPOR: case AJ_FONTE_TEXTO: case AJ_FONTE_ORDEM_ADDON: case AJ_SELOS_CORES: case AJ_FONTE_TOCAR_CONFERINDO: case AJ_FONTE_AQUECER: case AJ_FONTE_CONFERIR_VARIAS: case AJ_FONTE_PREPARAR: case AJ_FONTE_PRECARREGAR:
     case AJ_FONTE_GRUPO: case AJ_FONTE_GRUPO_SESSOES:
     case AJ_LINK_REUSAR: case AJ_LINK_PRAZO:

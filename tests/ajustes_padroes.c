@@ -261,7 +261,7 @@ int main(void) {
   AJ_HDR_INTERFACE == AJ_AMPLIACAO_NITIDEZ + 1 &&
   AJ_LIMPAR_CACHE == AJ_HDR_INTERFACE + 1 &&
   AJ_TUNNELING == AJ_LIMPAR_CACHE + 1 && AJ_DV7 == AJ_TUNNELING + 1 &&
-  AJ_LOG_REDE == AJ_DV7 + 1 && AJ_N == AJ_LOG_REDE + 1);
+  AJ_LOG_REDE == AJ_DV7 + 1 && AJ_N > AJ_LOG_REDE);
   assert(valor[AJ_LOG_REDE] == 1 && valorPadrao[AJ_LOG_REDE] == 1 &&
          uxValorPadrao(AJ_LOG_REDE) == 1 && !ajustes_log_rede()); // V_LIGA: 1 = Off
   // #492: retomada morna e o prazo do video pronto
@@ -447,6 +447,12 @@ int main(void) {
   assert(gpun_fosco_vetado());
   assert(definirValorDireto(AJ_VIDRO_FOSCO, 2));
   assert(!gpun_fosco_vetado());
+  // Formato do player: Original de fabrica; local (o web nao tem).
+  assert(AJ_PLR_FORMATO > AJ_LOG_REDE && AJ_N > AJ_PLR_FORMATO);
+  assert(valor[AJ_PLR_FORMATO] == PLR_FMT_ORIGINAL && ajustes_plr_formato() == PLR_FMT_ORIGINAL);
+  assert(!strcmp(CHAVE[AJ_PLR_FORMATO], "plrFormatoLocal") && somenteDesteAparelho(AJ_PLR_FORMATO));
+  valor[AJ_PLR_FORMATO] = 99; assert(ajustes_plr_formato() == PLR_FMT_ORIGINAL);   // valor fora da lista: o original
+  valor[AJ_PLR_FORMATO] = PLR_FMT_ORIGINAL;
   unlink(path);
   puts("ajustes_padroes: ok");
   return 0;
