@@ -387,7 +387,13 @@ static struct {
   int ativo;             // o player le pelo servidor local
   int pend; double pendAlvo; Uint32 pendEm;   // seek pedido com a sonda em curso
   int avisou;            // "nao da para buscar" ja foi dito nesta fonte
+  // Legendas de texto escondidas da TV (mkvfix.h): a abertura espera a sonda
+  // quando o cabecalho ja mostrou ASS/SSA; senao, uma reabertura cedo.
+  int esperando; Uint32 esperaDesde;
+  int reabriuLeg;
 } mf;
+static char mfEspUrl[sizeof urlAtual], mfEspCab[sizeof cabecalhos];
+static int mfEsperarAntes(const char *url, const char *cab);
 static atomic_int mfRecusas;   // EV_BUSCA_FALHOU (fio do host)
 static atomic_int mfAviso;     // video_tpk_aviso_busca consome
 static void abrirHost(const char *url, const char *cab) {
@@ -416,6 +422,7 @@ static void abrirHost(const char *url, const char *cab) {
     snprintf(hostUrl, sizeof hostUrl, "%s", url ? url : "");
     snprintf(hostCab, sizeof hostCab, "%s", cab ? cab : "");
   }
+  if (mfEsperarAntes(url, cab)) return;   // mfBombear abre quando a sonda responder
   hAbrir(url, cab);
 }
 
@@ -660,7 +667,7 @@ static volatile int cartaoSemCover = 0;
 // Reabre pelo servidor local em `alvo` (mkvfix.h): para o app e um seek, como
 // a troca do link do CDN — posicao mantida, faixas devolvidas, capa por cima.
 static void mfLigar(double alvo, const char *porque) {
-  printf("[mkvfix] %s at %.1f s: the TV can't seek this file as served; reopening through the local fix\n", porque, alvo);
+  printf("[mkvfix] %s at %.1f s: reopening through the local fix\n", porque, alvo);
   fflush(stdout);
   mf.ativo = 1; mf.pend = 0;
   reconAudio = audioAtual; reconLeg = legAtual; reconFaixasPend = 1;
@@ -681,8 +688,55 @@ static void mfSondar(void) {
   if (cdn.arquivo) mkvfix_sondar_arquivo(hostUrl, hostCab, cdn.usenet, cdn.item, cdn.file);
   else mkvfix_sondar(hostUrl, hostCab, strcmp(urlAtual, hostUrl) ? urlAtual : NULL);
 }
+// Arquivo com ASS/SSA no cabecalho ja lido (a pre-busca da legenda, sem rede):
+// a TV nao pode receber o arquivo cru. A abertura espera a sonda (algumas
+// centenas de ms) e o player ja nasce no servidor local; sem resposta em
+// MF_ESPERA_MS, abre o link como sempre e a reabertura cedo cobre depois.
+#define MF_ESPERA_MS 4000u
+static int mkvTemAss(void) {
+  for (int i = 0; i < mkvN; i++)
+    if (mkvFx[i].tipo == 17 && (!strcmp(mkvFx[i].codec, "S_TEXT/ASS") || !strcmp(mkvFx[i].codec, "S_TEXT/SSA") ||
+                                !strcmp(mkvFx[i].codec, "S_ASS") || !strcmp(mkvFx[i].codec, "S_SSA"))) return 1;
+  return 0;
+}
+static int mfEsperarAntes(const char *url, const char *cab) {
+  if (!mfPode() || mf.ativo || mkvfix_e_url(url) || mkvEstado != 3 || !mkvTemAss()) return 0;
+  mf.sondou = 1; mf.esperando = 1; mf.esperaDesde = SDL_GetTicks();
+  snprintf(mfEspUrl, sizeof mfEspUrl, "%s", url ? url : "");
+  snprintf(mfEspCab, sizeof mfEspCab, "%s", cab ? cab : "");
+  if (cdn.arquivo) mkvfix_sondar_arquivo(hostUrl, hostCab, cdn.usenet, cdn.item, cdn.file);
+  else mkvfix_sondar(hostUrl, hostCab, strcmp(urlAtual, hostUrl) ? urlAtual : NULL);
+  printf("[mkvfix] the file has ASS/SSA subtitles: checking it before the TV opens it\n");
+  fflush(stdout);
+  // O player anterior nao segue tocando durante a sonda (como no cdnAbrir).
+  if (hParar) hParar();
+  return 1;
+}
+// A sessao atual toca pelo servidor com as legendas de texto escondidas da TV.
+static int legOcultas(void) { return mf.ativo && mkvfix_ocultas() > 0; }
+
 static void mfBombear(void) {
   int e;
+  if (mf.esperando) {
+    char u[256];
+    e = mkvfix_estado();
+    if (e == MKVFIX_SONDANDO && SDL_GetTicks() - mf.esperaDesde < MF_ESPERA_MS) return;
+    mf.esperando = 0;
+    if (!ativo || parado || !hAbrir) return;
+    if (mkvfix_ocultas() > 0 && mkvfix_url(u, sizeof u)) {
+      mf.ativo = 1;
+      printf("[mkvfix] the TV opens the file through the local server (subtitle tracks hidden), %u ms\n",
+             (unsigned)(SDL_GetTicks() - mf.esperaDesde));
+      fflush(stdout);
+      abrirHost(u, "");
+    } else {
+      printf("[mkvfix] %s: opening the file directly\n",
+             e == MKVFIX_SONDANDO ? "no answer from the check in time" : "nothing hidden");
+      fflush(stdout);
+      abrirHost(mfEspUrl, mfEspCab);
+    }
+    return;
+  }
   if (pronto && !mf.sondou) mfSondar();
   if (!mf.sondou) return;
   e = mkvfix_estado();
@@ -690,7 +744,14 @@ static void mfBombear(void) {
   if (mf.pend) {
     mf.pend = 0;
     if (e == MKVFIX_PRECISA && !mf.ativo && !cv.ativo && ativo && !parado && SDL_GetTicks() - mf.pendEm < 20000u)
-      mfLigar(mf.pendAlvo, "seek asked during the check");
+      mfLigar(mf.pendAlvo, "seek asked during the check (the TV can't seek this file as served)");
+  }
+  // Cabecalho sem ASS conhecido antes de abrir: a sonda de depois do pronto
+  // achou legenda a esconder. Reabre cedo, uma vez, no ponto atual.
+  if (mkvfix_ocultas() > 0 && !mf.ativo && !mf.reabriuLeg && !cv.ativo && ativo && !parado && pronto) {
+    mf.reabriuLeg = 1;
+    mfLigar(posReal(), "subtitle tracks hidden from the TV player (it hangs on some ASS drawings)");
+    return;
   }
   // A TV recusou seek e nao ha o que consertar: diz uma vez, em vez do nada.
   if (atomic_load(&mfRecusas) > 0 && !mf.ativo && !mf.avisou && (e == MKVFIX_SEM_INDICE || e == MKVFIX_NORMAL)) {
@@ -723,7 +784,11 @@ static void abrirSessao(void) {
   // nao mudam com o player: troca, seek do progressivo e reconexao abrem outro
   // player, mas a legenda escolhida (overlay do app) e o menu ficam. As
   // faixas_fim do player novo so trocam o audio (0 legendas = releitura).
-  if (!(cv.ativo && mkvN > 0)) { nAudio = nLeg = 0; audioAtual = 0; legAtual = -1; }
+  if (!(cv.ativo && mkvN > 0)) {
+    nAudio = 0; audioAtual = 0;
+    // Pelo servidor com as legendas escondidas: a lista e a do arquivo e fica.
+    if (!(legOcultas() && mkvN > 0)) { nLeg = 0; legAtual = -1; }
+  }
   audioNaoSup = faixasLidas = audioLogado = 0;
   comecou = 0; comecouEm = 0; audioComecou = 0; audioPend = legPend = -1;
   if (!travaLeg) travaLeg = SDL_CreateMutex();
@@ -795,7 +860,9 @@ int video_tocar(const char *u) {
   reconAudio = reconLeg = -1; reconFaixasPend = 0; reconBuscarMs = -1;
   // CABECALHO JA LIDO (pre-busca do mkvass, sem rede): um MKV so com DTS/TrueHD
   // ja abre convertido, sem o original mudo antes.
-  if (urlAtual[0] && convPossivel() && mkvass_cabecalho(urlAtual, NULL, NULL)) {
+  // Lido sempre que a pre-busca trouxe o cabecalho: as legendas ASS decidem
+  // a abertura pelo servidor local (mfEsperarAntes); o conversor, o resto.
+  if (urlAtual[0] && reconPermitida && mkvass_cabecalho(urlAtual, NULL, NULL)) {
     unsigned char *cab = NULL; long cabN = 0;
     if (mkvass_cabecalho(urlAtual, &cab, &cabN)) {
       MkvFaixa *fx = calloc(MKV_MAX_FAIXAS, sizeof *fx);
@@ -805,7 +872,7 @@ int video_tocar(const char *u) {
         guardarMkv(fx, n); mkvEstado = 3;
       }
       free(fx); free(cab);
-      { int t = mkvEstado == 3 ? trilhaParaConverter(-1) : 0;
+      if (convPossivel()) { int t = mkvEstado == 3 ? trilhaParaConverter(-1) : 0;
         if (t > 0 && convIniciar(t, 0.0, i18n("cabecalho lido antes de abrir: so DTS/TrueHD"))) return 1;
         t = mkvEstado == 3 ? trilhaPelaOrdem() : 0;
         if (t > 0 && convIniciar(t, 0.0, "cabecalho lido antes de abrir: a ordem do audio escolhe uma faixa DTS/TrueHD")) return 1; }
@@ -1004,6 +1071,23 @@ static void montarListaConvertida(void) {
   if (ordLeg >= 0) for (i = 0; i < nl; i++) if (l[i].ordinalMkv == ordLeg) legAtual = i;
   printf("[dts-tpk] menu: %d audio e %d legenda(s) de texto do arquivo; tocando faixa %d (%s)%s\n", na, nl, cv.track,
          na ? faixaAudio[sel].rotulo : "-", legAtual >= 0 ? i18n(", legenda escolhida mantida") : "");
+  fflush(stdout);
+}
+
+// Legendas escondidas da TV (mkvfix.h): a TV nao lista as de texto, entao o
+// menu de legendas e o do ARQUIVO, como no convertido. Os numeros seguem os do
+// original (legmem e a folha casam); nada disso e escrito no player
+// (video_escolher_legenda). A escolhida fica, pelo ordinal do mkvass.
+static void legendasDoArquivo(void) {
+  static VideoFaixa a[MAX_FAIXAS], l[MAX_FAIXAS];
+  int na, nl, i, ordLeg = legAtual >= 0 && legAtual < nLeg ? faixaLeg[legAtual].ordinalMkv : -1;
+  listaDoArquivo(a, &na, l, &nl);
+  memcpy(faixaLeg, l, sizeof faixaLeg);
+  nLeg = nl;
+  legAtual = -1;
+  if (ordLeg >= 0) for (i = 0; i < nl; i++) if (l[i].ordinalMkv == ordLeg) legAtual = i;
+  printf("[mkvfix] subtitle menu: %d subtitle(s) from the file (hidden from the TV, drawn by the app)%s\n",
+         nl, legAtual >= 0 ? i18n(", legenda escolhida mantida") : "");
   fflush(stdout);
 }
 
@@ -1266,6 +1350,7 @@ static void sondaMkv(double pos) {
     m = faixasmkv_aplicar(faixaAudio, nAudio, faixaLeg, nLeg, mkvFx, mkvN);
     // PGS: o player nao lista; entra no fim da lista, com o ordinal do arquivo.
     nLeg = faixasmkv_acrescentar_imagem(faixaLeg, nLeg, MAX_FAIXAS, mkvFx, mkvN);
+    if (legOcultas()) legendasDoArquivo();
     printf("[mkv] %d rotulo(s) de faixa vindos do cabecalho\n", m);
     fflush(stdout);
     // Voltando do convertido: a faixa que a pessoa escolheu, pelo rotulo.
@@ -1732,7 +1817,7 @@ void video_buscar(double s) {
     if (!mf.sondou) mfSondar();
     if (mf.sondou) {
       int e = mkvfix_estado();
-      if (e == MKVFIX_PRECISA) { mfLigar(s, "seek"); terminou = 0; return; }
+      if (e == MKVFIX_PRECISA) { mfLigar(s, "seek (the TV can't seek this file as served)"); terminou = 0; return; }
       if (e == MKVFIX_SONDANDO) { mf.pend = 1; mf.pendAlvo = s; mf.pendEm = SDL_GetTicks(); }
     }
   }
@@ -2128,6 +2213,11 @@ void video_escolher_legenda(int i) {
     printf("[dts-tpk] legenda %d (%s, %s) sem faixa no fluxo convertido: so o overlay do app desenha texto\n",
            i, faixaLeg[i].rotulo, faixaLeg[i].codec[0] ? faixaLeg[i].codec : "?");
     fflush(stdout);
+    return;
+  }
+  // Escondida da TV (mkvfix.h): so o overlay do app desenha; nada vai ao player.
+  if (i >= 0 && legOcultas()) {
+    legAtual = i; legPend = -1; legendaLimpar(1); legendaMarcarEnvio(-1);
     return;
   }
   legAtual = i;
