@@ -447,12 +447,12 @@ int main(void) {
   assert(gpun_fosco_vetado());
   assert(definirValorDireto(AJ_VIDRO_FOSCO, 2));
   assert(!gpun_fosco_vetado());
-  // Formato do player: Pilula de fabrica; local (o web nao tem).
+  // Formato do player: Original de fabrica; local (o web nao tem).
   assert(AJ_PLR_FORMATO > AJ_LOG_REDE && AJ_N > AJ_PLR_FORMATO);
-  assert(valor[AJ_PLR_FORMATO] == PLR_FMT_PILULA && ajustes_plr_formato() == PLR_FMT_PILULA);
+  assert(valor[AJ_PLR_FORMATO] == PLR_FMT_ORIGINAL && ajustes_plr_formato() == PLR_FMT_ORIGINAL);
   assert(!strcmp(CHAVE[AJ_PLR_FORMATO], "plrFormatoLocal") && somenteDesteAparelho(AJ_PLR_FORMATO));
-  valor[AJ_PLR_FORMATO] = 99; assert(ajustes_plr_formato() == PLR_FMT_PILULA);   // valor fora da lista: a pilula
-  valor[AJ_PLR_FORMATO] = PLR_FMT_PILULA;
+  valor[AJ_PLR_FORMATO] = 99; assert(ajustes_plr_formato() == PLR_FMT_ORIGINAL);   // valor fora da lista: o original
+  valor[AJ_PLR_FORMATO] = PLR_FMT_ORIGINAL;
   unlink(path);
   puts("ajustes_padroes: ok");
   return 0;

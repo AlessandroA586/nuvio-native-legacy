@@ -343,4 +343,4 @@
   0, /* tunneled playback: Off */
   1, /* experimental P7 conversion: Off until explicitly enabled */
   1, /* log page on the local network (logrede.h): Desligado */
-  1, /* player format style: Pill (V_PLR_FORMATO 1) */
+  4, /* player format style: Original (V_PLR_FORMATO 4) */
