@@ -356,7 +356,7 @@ int main(int argc, char **argv) {
     assert(qi >= fil_limite() && state == FIL_NA_HOME);
     assert(fil_escolhida("vivo_movie_quota") == 2);
     fileirasReagir();
-    assert(remounts == 1 && refreshes == 1);
+    assert(remounts == 1 && refreshes == 0 && fileirasBusca == 1);
   }
   puts("ok  explicit Add refreshes beyond fixed rows");
   puts("fileiras_removidas: tudo ok"); return 0;
