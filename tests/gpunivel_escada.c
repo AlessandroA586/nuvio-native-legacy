@@ -9,7 +9,36 @@ static void reports(int n, double fps) {
   while (n--) gpun_relatar(fps, 40, 1000.0 / 60, 1, 1);
 }
 static void fresh(void) { gravado[0] = 0; gpun_iniciar(1920, 1080); }
-int main(void) {
+int main(int argc, char **argv) {
+  if (argc > 1 && !strcmp(argv[1], "manual-effects")) {
+    testRenderer = "Mali-G52";
+    for (int mode = 1; mode <= 3; mode++) {
+      fresh();
+      for (int step = 1; step <= 4; step++) {
+        reports(3, 30); reports(1, 34);
+      }
+      assert(gpun_degrau() == 4);
+      gpun_preferencia(mode);
+      assert(gpun_nivel() == (mode == 1 ? 0 : mode == 2 ? 1 : 2));
+      for (int step = 1; step <= 4; step++) assert(!gpun_efeito_ativo(step));
+      reports(120, 30);
+      for (int step = 1; step <= 4; step++) assert(!gpun_efeito_ativo(step));
+    }
+    return 0;
+  }
+  if (argc > 1 && !strcmp(argv[1], "frost-automatic")) {
+    fresh();
+    gpun_preferencia(3);
+    automatic &= ~2; // Frost On does not reset the hardware mark.
+    assert(gpun_nivel() == 2);
+    automatic |= 2; // Settings calls this when Frost returns to Automatic.
+    gpun_fosco_reiniciar();
+    assert(!gpun_fosco_vetado());
+    assert(gpun_nivel() == 2);
+    reports(120, 30);
+    assert(gpun_nivel() == 2);
+    return 0;
+  }
   fresh();
   for (int step = 1; step <= 4; step++) {
     reports(3, 30); assert(gpun_degrau() == step);

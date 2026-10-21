@@ -389,6 +389,10 @@ void gpun_forcar_720(void) {
 void gpun_preferencia(int p) {
 #if !defined(NV_TPK_NIVEL_FORCADO)
   prefFixa = p >= 1 && p <= 3;
+  if (prefFixa) {
+    efeitos = semGanho = 0;
+    testePasso = degrau = 0;
+  }
   if (p == 3) { adaptativo = 0; aplicar(2, "ajuste: efeitos minimos"); return; }
   if (p == 1) { adaptativo = 0; aplicar(0, "ajuste: efeitos completos"); return; }
   if (p == 2) {
@@ -441,7 +445,7 @@ void gpun_fosco_reiniciar(void) {
   testePasso = 0; relatosLentos = relatosRapidos = 0;
   degrau = 4;
   while (degrau && !gpun_efeito_ativo(degrau)) degrau--;
-  aplicarEscada();
+  if (adaptativo) aplicarEscada();
   gravar();
 }
 int gpun_efeitos_automaticos(void) { return adaptativo && nivel > 0; }
