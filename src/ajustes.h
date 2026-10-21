@@ -190,6 +190,7 @@ int ajustes_fonte_grupo(void);
 int ajustes_fonte_grupo_sessoes(void);
 // Reusar o ultimo link (fontevolta.h): 1 = ligado; e a validade em segundos.
 int ajustes_link_reusar(void);
+int ajustes_log_rede(void);   // pagina de registro na rede local (logrede.h)
 unsigned ajustes_link_prazo_s(void);
 int ajustes_fonte_escopo(void);
 int ajustes_fonte_regex_modo(void);
@@ -368,6 +369,8 @@ void  ajustes_voltar_de_lista(int plugins);
 void  ajustes_ui_fundo(void);                                  // arte + veu
 void  ajustes_ui_arte(int n);   // amostra atras da tela sem catalogo (capturas)
 void  ajustes_ui_ilha(GfxRect r, float raioPx, int modal);     // miolo, luz, sombra
+// Same island at opacity `a`: a modal that fades has to fade its card too.
+void  ajustes_ui_ilha_a(GfxRect r, float raioPx, int modal, float a);
 void  ajustes_ui_veu(void);                                    // veu dos modais
 float ajustes_ui_kicker(const char *s, float x, float y, float a);
 float ajustes_ui_meta(const char *k, const char *v, float x, float y, float w);

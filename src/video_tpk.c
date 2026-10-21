@@ -396,6 +396,7 @@ static char mfEspUrl[sizeof urlAtual], mfEspCab[sizeof cabecalhos];
 static int mfEsperarAntes(const char *url, const char *cab);
 static atomic_int mfRecusas;   // EV_BUSCA_FALHOU (fio do host)
 static atomic_int mfAviso;     // video_tpk_aviso_busca consome
+static atomic_uint buscaFalhas;  // EV_BUSCA_FALHOU, so cresce (player.c: seek em voo)
 static void abrirHost(const char *url, const char *cab) {
   char seguros[sizeof cabecalhos];
   const char *orig = strstr(urlAtual, "://"), *dest = url ? strstr(url, "://") : NULL;
@@ -458,7 +459,7 @@ void nv_tpk_video_evento(int tipo, int a, int b) {
       if (a < 100 && !bufferando) { bufferando = 1; bufferDesde = SDL_GetTicks(); }
       else if (a >= 100) bufferando = 0;
       break;
-    case EV_BUSCA_FALHOU: atomic_fetch_add(&mfRecusas, 1); break;
+    case EV_BUSCA_FALHOU: atomic_fetch_add(&mfRecusas, 1); atomic_fetch_add(&buscaFalhas, 1u); break;
     case EV_VELOCIDADE:
       vel_log(a, b ? "plataforma ok" : "plataforma recusou");
       if (!b) { velRecusada = 1; velPedida = 100; }
@@ -2052,6 +2053,14 @@ static double posReal(void) {
   }
   return (hPos && pronto) ? hPos() / 1000.0 : 0;
 }
+// SEEK IN FLIGHT (player.c, owner 20/10): the host's position cache (posMs)
+// only moves when SetPlayPositionAsync finishes, so until then video_pos() is
+// the OLD position. The player keeps its target while this says 1.
+int video_busca_em_voo(void) {
+  return atomic_load(&buscaAlvoMs) >= 0 || reconBuscarMs >= 0 || cv.reabrindo ||
+         (cv.ativo && cv.seekPend) || mf.pend;
+}
+unsigned video_busca_falhas(void) { return atomic_load(&buscaFalhas); }
 double video_pos(void) {
   if (terminou && video_duracao() > 0) return video_duracao();
   return cv.reabrindo ? cv.posMantida : posReal();
