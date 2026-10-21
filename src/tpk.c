@@ -414,6 +414,12 @@ void *tpk_gl_criar(void) {
   return (void *)1;
 }
 
+int tpk_gl_intervalo(int intervalo) {
+  /* Called on the app thread while it owns the framework EGL context.
+   * API9+ already disables vsync: preserve that host configuration. */
+  return tpkEgl.SwapInterval && tpkEgl.SwapInterval(dpy, swapZero ? 0 : intervalo) ? 0 : -1;
+}
+
 void tpk_gl_trocar(void) {
   eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
   appEsperaVez(1);
