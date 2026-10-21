@@ -47,6 +47,12 @@ static int indice(const char *chave) {
 }
 static int filAba, filLista[FIL_MAX + 1], filListaN, filSep, filFoco;
 static int filForaAgrupada = 1;
+static int fileirasBusca;
+void sync_proteger_ajustes_locais(void) {}
+void addons_catalogo_chave(const char *id, const char *base, const char *type,
+                           const char *catalog, char *dst, unsigned size) {
+  (void)base; snprintf(dst, size, "%s_%s_%s", id, type, catalog);
+}
 #define AJ_FIL_DESTAQUE (-2)
 static int refreshes, remounts;
 static const char *loaded[] = { "continue_watching", "social_activity", "vivo_movie_a", "vivo_movie_b" };
