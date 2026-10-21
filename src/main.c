@@ -2125,20 +2125,25 @@ int main(int argc, char **argv) {
     // ESPERA (clr + swap: o driver devolvendo buffer, a GPU atrasada) e CPU.
     // "Cheia" = artes na tela (o conjunto quente do cache), conferido a cada
     // meio segundo: a home vazia roda a 60 e nao diz nada sobre a GPU.
-    { static Uint32 cheiaEm; static int cheia;
+    { static Uint32 cheiaEm; static int cheia, pendentes;
+      static Uint32 gpuTransienteAte;
+      static int gpuCenaAnterior;
       if (agora - cheiaEm >= 500u) {
         int it = 0, pe = 0, qu = 0; long b = 0, bq = 0;
         tex_estatisticas(&it, &pe, &b, &qu, &bq);
-        cheia = qu >= 8; cheiaEm = agora; }
+        cheia = qu >= 8; pendentes = pe; cheiaEm = agora; }
       int home = app_na_home();
       const char *screen = app_tela_nome();
-      int browse = !strcmp(screen, "explorar") || !strcmp(screen, "biblioteca") ||
-                   !strcmp(screen, "busca");
+      int browse = !strcmp(screen, "explorar") ? 2 :
+                   !strcmp(screen, "biblioteca") ? 3 : !strcmp(screen, "busca") ? 4 : 0;
       int cena = !video_ativo() && !player_aberto() && !trailer_aberto() ?
-                 (home ? 1 : browse ? 2 : 0) : 0;
+                 (home ? 1 : browse) : 0;
       // Scene/effect changes break consecutive report streaks.
-      if (cena) cena += 4 * (ajustes_home_layout() + 4 * ajustes_cor_viva());
-      int elegivel = cheia;
+      if (cena) cena += 8 * (ajustes_home_layout() + 4 * ajustes_cor_viva());
+      if (cena != gpuCenaAnterior || pendentes > 0 || fUplN > 0 || fUplB > 0)
+        gpuTransienteAte = agora + 3000u;
+      gpuCenaAnterior = cena;
+      int elegivel = cheia && (Sint32)(agora - gpuTransienteAte) >= 0;
       if (!quadros) { gpuRelatoCena = cena; gpuRelatoCheia = elegivel; }
       else if (cena != gpuRelatoCena || !elegivel) gpuRelatoMisto = 1;
       gpun_medir(dtms, fClr + fSwap, fEv + fBomb + fUpd + fDes + fAux, cena, elegivel); }
