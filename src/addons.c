@@ -3330,6 +3330,9 @@ int addons_motivo_vazio(char *dst, unsigned n) {
   if (plugins.enfileirados && !r->comFontes)
     snprintf(dst, n, i18n("Plugins não encontraram fontes (%d de %d scrapers verificados)"),
              plugins.terminados, plugins.enfileirados);
+  // Other extra providers are absent from the Stremio summary. Let callers
+  // use their generic source wording while one is active.
+  else if (addons_origem_extra_ativa()) return 0;
   else if (!r->instalados || !r->comFonte)
     snprintf(dst, n, "%s", i18n("Nenhum add-on de fontes instalado"));
   else if (!r->ligadosComFonte)
