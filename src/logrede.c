@@ -12,15 +12,38 @@
 static void cortarUrls(char *s) {
   char *p = s;
   while ((p = strstr(p, "://")) != NULL) {
-    char *h = p + 3, *fim;
-    while (*h && *h != '/' && *h != '?' && *h != ' ' && *h != '"' && *h != '\'') h++;
-    if (*h != '/' && *h != '?') { p = h; continue; }
-    fim = h;
+    char *h = p + 3, *at = NULL, *fim, *q;
+    for (q = h; *q && *q != '/' && *q != '?' && *q != ' ' && *q != '"' && *q != '\''; q++)
+      if (*q == '@') at = q;
+    // userinfo (usuario:senha@) fora, como rede_url_publica faz.
+    if (at) { memmove(h, at + 1, strlen(at + 1) + 1); q -= at + 1 - h; }
+    if (*q != '/' && *q != '?') { p = q; continue; }
+    fim = q;
     while (*fim && *fim != ' ' && *fim != '"' && *fim != '\'' && *fim != '>' && *fim != ')') fim++;
-    if (fim - h < 4) { p = fim; continue; }
-    memmove(h + 4, fim, strlen(fim) + 1);
-    memcpy(h, "/\xe2\x80\xa6", 4);
-    p = h + 4;
+    if (fim - q < 4) { p = fim; continue; }
+    memmove(q + 4, fim, strlen(fim) + 1);
+    memcpy(q, "/\xe2\x80\xa6", 4);
+    p = q + 4;
+  }
+}
+
+// Esquema sem "//" (magnet:, etc.): se o valor tem '=' (parametros), tudo do
+// ':' ao fim do token vira "…". Em magnet: caem xt (hash), dn (titulo) e
+// tr (rastreador) — os tres sensiveis.
+static void cortarEsquemas(char *s) {
+  for (char *p = s; *p; p++) {
+    char *a = p, *fim;
+    if (!isalpha((unsigned char)*p)) continue;
+    if (p > s && (isalnum((unsigned char)p[-1]) || p[-1] == '+' || p[-1] == '-' ||
+                  p[-1] == '.' || p[-1] == ':')) continue;
+    while (isalnum((unsigned char)*p) || *p == '+' || *p == '-' || *p == '.') p++;
+    if (*p != ':' || p - a < 2 || p - a > 16 || p[1] == '/' || p[1] == ':') continue;
+    fim = p + 1;
+    while (*fim && *fim != ' ' && *fim != '"' && *fim != '\'' && *fim != '>' && *fim != ')') fim++;
+    if (!memchr(p + 1, '=', (size_t)(fim - p - 1)) || fim - p < 5) continue;
+    memmove(p + 4, fim, strlen(fim) + 1);
+    memcpy(p, ":\xe2\x80\xa6", 4);
+    p += 4;
   }
 }
 
@@ -63,12 +86,12 @@ static void cortarLongas(char *s) {
   char *p = s;
   while (*p) {
     char *a = p;
-    int letra = 0, num = 0;
-    while (isalnum((unsigned char)*p) || *p == '_' || *p == '-') {
-      if (isdigit((unsigned char)*p)) num = 1; else if (isalpha((unsigned char)*p)) letra = 1;
-      p++;
-    }
-    if (p - a >= 32 && letra && num) {
+    // Sequencia longa do alfabeto de token/chave (letras, numeros e os
+    // extras de base64): mesmo sem digito pode ser uma chave (hex de
+    // rastreador, token so de letras), entao basta o comprimento.
+    while (isalnum((unsigned char)*p) || *p == '_' || *p == '+' || *p == '/' ||
+           *p == '=' || *p == '-') p++;
+    if (p - a >= 32) {
       memmove(a + 7, p, strlen(p) + 1);
       memcpy(a + 4, "\xe2\x80\xa6", 3);
       p = a + 7;
@@ -80,6 +103,7 @@ static void cortarLongas(char *s) {
 void logrede_limpar(char *linha) {
   if (!linha) return;
   cortarUrls(linha);
+  cortarEsquemas(linha);
   cortarSegredos(linha);
   cortarLongas(linha);
 }
