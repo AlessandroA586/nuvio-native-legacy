@@ -15,7 +15,7 @@ Source for the in-app What's New card and release notes. English follows the own
 
 - **Automatic performance defaults**: Start performance settings in Automatic mode and migrate saved choices to the updated selection model. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `fcdae1879`.
 
-- **Android tunneled playback**: Offer an optional hardware audio/video synchronization setting, disabled by default. Platforms: Android. Refs owner request, `19e638ea1`; `agente/205-205-tunnel`.
+- **Android tunneled playback**: Offer an optional hardware audio/video synchronization setting, disabled by default. Platforms: Android. Refs #626, owner request, `19e638ea1`; `agente/205-205-tunnel`.
 
 - **Android cache controls**: Clear regenerable cache while preserving durable user data, APK staging and viable torrent streaming windows; superseded update APKs are removed. Platforms: Android. Refs owner request; d8699b55c, e731a7847, d35f60069, 70b1f55e3; merges a1169f5ad, fcc581387.
 
@@ -115,7 +115,7 @@ Low-memory playback and bounded torrent-startup reads are listed under Fixes.
 - **Browser build link fix**: Restore the browser build's missing network-function stub so Samsung browser packages can link successfully. Platforms: Samsung browser/WASM. Refs `b84091f4c`.
 - **DV7 converter builds on the host**: Build the host-side Dolby Vision converter outside the container so the ARM build has the required Rust toolchain. Platforms: webOS build. Refs `96c2ba90e`.
 
-- **Issue tracking**: Keep release and issue tracking current. Snapshot refs: `cebe243ac`, `88f1a6d8a`, `1a9cf77eb`, `1e9121e7f`. Additional refs: `80a3b437b`. Additional refs: `612a2ecd2`. Additional refs: `c9e4f8038`. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `609ed3cc3`, `ad6ec6fb9`, `89b48afe7`, `12bedced8`, `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`, `324182411`, `a580c7eae`.
+- **Issue tracking**: Keep release and issue tracking current. Additional refs: `d1563d5b3`. Snapshot refs: `cebe243ac`, `88f1a6d8a`, `1a9cf77eb`, `1e9121e7f`. Additional refs: `80a3b437b`. Additional refs: `612a2ecd2`. Additional refs: `c9e4f8038`. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `609ed3cc3`, `ad6ec6fb9`, `89b48afe7`, `12bedced8`, `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`, `324182411`, `a580c7eae`.
 
 ## Pending (not integrated yet)
 
