@@ -696,6 +696,7 @@ typedef enum {
   AJ_HDR_INTERFACE,    // Experimental Android HDR output; device-local
   AJ_LIMPAR_CACHE,
   AJ_TUNNELING,        // Android-only, device-local; off by default, append-only.
+  AJ_DV7, // independent P7 conversion, append-only
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -1815,6 +1816,7 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Interface em HDR (teste)", V_VIDRO_FOSCO, 2),
   ACAO("Limpar cache"),
   ESC("Reprodução em túnel", V_VIDRO_FOSCO, 2),
+  ESC("Dolby Vision P7 para P8.1 (experimental)", V_LIGA, 2),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -2136,6 +2138,7 @@ static const char *CHAVE[] = {
   "hdrInterfaceLocal",
   "-limparCache",
   "tunneledPlaybackLocal",
+  "dv7ConversionLocal",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -3673,6 +3676,7 @@ int ajustes_dts_tpk_modo(void) {
 #endif
 }
 int ajustes_dv_mkv(void)              { return lig(AJ_DV_MKV); }
+int ajustes_dv7(void) { return lig(AJ_DV7); }
 int ajustes_hist_conta(void)          { return lig(AJ_HIST_CONTA); }
 int ajustes_social(void)              { return lig(AJ_SOCIAL); }
 int ajustes_amigos_estilo(void)       { return valor[AJ_AMIGOS_ESTILO]; }
@@ -5907,6 +5911,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_AUDIO_OFFSET:   /* audio presentation calibration belongs to this TV */
     case AJ_DTS_AC3:        /* o conversor de DTS e desta TV */
     case AJ_DV_MKV:         /* o demux e o decoder sao desta TV */
+    case AJ_DV7:
     case AJ_HIST_CONTA: case AJ_SOCIAL: /* por perfil desta TV (perfilLocal); o web nao tem */
     case AJ_TAM_MAX: case AJ_TAM_MIN: /* o web nao tem a faixa de tamanho */
     case AJ_ESPACO_FILEIRAS: case AJ_ESPACO_TITULOS: /* o web nao tem espacamento */
@@ -6369,6 +6374,7 @@ static int foraDestaPlataforma(int op) {
 #endif
 #if defined(NV_TPK) || defined(NV_ANDROID)
   if (op == AJ_DV_MKV) return 1;
+  if (op == AJ_DV7) return 1;
 #endif
 #ifndef NV_ANDROID
   if (op == AJ_FONTE_PRECARREGAR || op == AJ_LEG_SYNC_AUDIO || op == AJ_TUNNELING) return 1;
@@ -7653,6 +7659,7 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_HIST_CONTA: return "Ligado (padrão): o que você assiste neste perfil sobe para a conta Nuvio, com o progresso e os vistos. Desligado: nada disso é enviado à conta; o Trakt e o Simkl vinculados a este perfil continuam recebendo. Vale só para este perfil.";
     case AJ_SOCIAL: return "Ligado (padrão): amigos, atividade deles e recomendações. Desligado: tudo isso some, com a fileira de amigos da Home, e o app para de falar com o serviço social. Salvos e Avisos continuam. Vale só para este perfil.";
     case AJ_DV_MKV: return "Arquivos MKV em Dolby Vision perfil 5 ou 8 tocam com o Dolby Vision ligado, em vez de HDR10. O áudio Dolby Digital e Dolby Digital Plus vai direto para a TV. Se a conexão não acompanhar, o vídeo continua em HDR10. Só em TVs LG com webOS 4 ou mais novo.";
+    case AJ_DV7: return "Converte MKV Dolby Vision perfil 7 para 8.1. Mantém o vídeo base e os metadados dinâmicos; descarta a camada de melhoria, incluindo FEL. Vale para o próximo vídeo.";
     case AJ_CW_RETIDO_TAMBEM: return "Quando o título está na ilha ou em Retomar agora, mostra também na fileira Continuar assistindo.";
     case AJ_EP_TAMANHO: return "Pequeno, Médio (padrão) ou Grande. Só vale no layout Moderno, na página de séries. Vale só nesta TV.";
     case AJ_ABERTURA_ADDON: return "Desligado (padrão): a tela Cinema mostra só a arte, o logo e a barra. Ligado: o nome do add-on aparece sob a barra. Vale só nesta TV.";
@@ -9186,7 +9193,7 @@ static int definirValorDireto(int op, int novo) {
   if (novo == 0) notaLigarPar(op);
   { int ok; ajOrigem = ajOrigemDireto; ok = gravar(); ajOrigem = 0;
     if (!ok) { valor[op] = antes; valor[AJ_LEG2_POSICAO] = posicaoAntes; memoriaEscolhida = memoriaAntes; bibliotecaFonteEscolhida = bibliotecaAntes; return 0; } }
-  if (op == AJ_DV_MKV && antes != 0 && novo == 0) video_dv_guard_reiniciar();
+  if ((op == AJ_DV_MKV || op == AJ_DV7) && antes != 0 && novo == 0) video_dv_guard_reiniciar();
   if (op == AJ_LIVETV_SUGERIR) guia_sugestoes_mudaram();
   if (op == AJ_FIL_LIMITE) {
     fil_ajustar_limite(novo);

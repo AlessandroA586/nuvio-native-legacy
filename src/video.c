@@ -26,6 +26,7 @@
 #include "dts/dts_playback.h"
 #include "dts_tv.h"
 #include "dts/dts_engine.h"
+#include "dts/dv7.h"
 #include "ajustes.h"
 #include "dts/dts_overlay.h"
 #include "legenda.h"
@@ -2816,6 +2817,9 @@ void video_parar(void) {
 
 static void pararSessao(void) {
   char b[128];
+  /* Invalidate native callbacks before closing the DTS worker. A closing
+   * pipeline must not queue an error for the replacement source. */
+  __atomic_add_fetch(&sessao, 1, __ATOMIC_ACQ_REL);
   int tinhaDts = dtsSessao != NULL;
   DtsPlayback *antigoDts = dtsSessao;
   dtsSessao = NULL;
@@ -2825,7 +2829,6 @@ static void pararSessao(void) {
   // Invalida tambem a sessao que ainda esta esperando o retorno de load. Esse
   // era o caso abrir -> sair -> abrir que travava: nao havia mediaId para
   // descarregar, mas o callback antigo continuava vivo e contaminava o novo.
-  __atomic_add_fetch(&sessao, 1, __ATOMIC_ACQ_REL);
   bindPendente = 0;
   recuperando = 0; retomarEm = posAoCarregar = 0.0;
   audioAoCarregar = legAoCarregar = -1;
@@ -2847,6 +2850,9 @@ static void pararSessao(void) {
     if (dtsEstado != VIDEO_DTS_FALHOU) dtsEstado = 0;
   }
   midia[0] = 0; tocando = pronto = 0; falhou = 0; audioNaoSup = 0;
+  /* A queued error belongs to the pipeline just closed. Keep reconnection
+   * attempts/target intact, but never replay its pending event on a new load. */
+  reconErroPend = reconErroRede = 0;
   ackMidia = 0; ack_publicar();
   erroTexto[0] = 0;
 }
@@ -2898,7 +2904,7 @@ static int dvLiberadoNestaTv(void) {
 #ifdef NV_DTS_DEBUG
   forcado = access("/tmp/nuvio-dv-forcar", F_OK) == 0;
 #endif
-  if (!dts_playback_enabled() || (!ajustes_dv_mkv() && !forcado)) return 0;
+  if (!dts_playback_enabled() || (!ajustes_dv_mkv() && !ajustes_dv7() && !forcado)) return 0;
   if (!dvVersaoLiberada(webosMaior())) {
     printf("[dv] Dolby Vision in MKV unavailable on webOS %d\n", webosMaior()); fflush(stdout);
     return 0;
@@ -2926,8 +2932,8 @@ static void dvVoltarEntrada(void) {
   marco(m);
   video_buscar(dvEntradaSeg);
 }
-// The file decides: single-layer profile 5 or 8 (base layer + RPU, no
-// enhancement layer) and a selected audio track the path can feed (E-AC-3 and
+// The file decides: single-layer profile 5/8, or P7 with the experimental
+// converter built in; and audio the path can feed (E-AC-3 and
 // AC-3 pass through, DTS is converted). Anything else stays with the TV player.
 static int dvPronto(void) {
   if (fonteMp4) { dvHabilitado = 0; dvNao = VIDEO_DV_NAO_SEM_DV; return 0; }
@@ -2935,7 +2941,10 @@ static int dvPronto(void) {
     if (mkvPendente && !fioMkvVivo) video_sondar_mkv_agora();
     return 0;
   }
-  if (!(dvMkvPerfil == 5 || dvMkvPerfil == 8) || dvMkvEl || !dvMkvBl || !dvMkvRpu) {
+  if (dvMkvPerfil && !nv_dv7_selected(dvMkvPerfil,ajustes_dv_mkv(),ajustes_dv7())) {
+    dvNao=VIDEO_DV_NAO_NATIVE;dvHabilitado=0;return 0;
+  }
+  if (!nv_dv7_profile(dvMkvPerfil, dvMkvEl, dvMkvBl, dvMkvRpu)) {
     if (dvMkvPerfil) {
       printf("[dv] profile %d (el=%d): stays on the TV player\n", dvMkvPerfil, dvMkvEl);
       fflush(stdout);
@@ -3065,6 +3074,7 @@ static int iniciarDts(int stream) {
   dts_engine_set_ac3(ajustes_dts_ac3());
   dts_engine_set_ahead_mib(cacheboost_backend_buffer_mb());   // #338: Settings > Buffer size
   dts_playback_next_dv(dtsModoDv);
+  dts_playback_next_p7(ajustes_dv7());
   dtsSessao = dts_playback_start(urlAtual, cabsHttp, stream, alvo,
                                paused, expWin, 0, (a || trocada) ? &selected : NULL, ordinal, count);
   if (!dtsSessao) {
