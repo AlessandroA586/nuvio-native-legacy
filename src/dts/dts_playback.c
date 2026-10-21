@@ -406,7 +406,7 @@ static void *run(void *user) {
        * metadata and reset demux/decoder/encoder through engine_seek. The LG
        * native pipeline still receives a fresh Load and codec preroll. Error
        * recovery keeps a full source reopen; a failed seek also falls back. */
-      if (!prepareMode(p, stream, core, target,p->allow_p7 && seek_reload && !stall_seek)) break;
+      if (!prepareMode(p, stream, core, target,seek_reload && !stall_seek)) break;
       char event[256];
       snprintf(event, sizeof event,
         "{\"dtsStage\":{\"name\":\"%s\",\"detail\":\"at=%.3f attempt=%u seek=%d blocked=%d pts=%.3f stale=%.1fs\"}}",
@@ -469,7 +469,6 @@ static void *run(void *user) {
 #ifndef NV_DTS_WEBOS_RECOVERY
         fail(p, error); break;
 #endif
-        if (!p->allow_p7) { fail(p, error); break; }
         /* Use the latest presentation clock, never a packet fed ahead.
          * Pending user seek/track requests are handled by the next iteration. */
         int pending_control;

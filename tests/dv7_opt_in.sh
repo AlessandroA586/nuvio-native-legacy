@@ -2,19 +2,19 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 task_tmp=$(mktemp -d)
-trap 'rm -rf "$task_tmp"' EXIT
+server=''
+trap 'if [[ -n $server ]]; then kill "$server" 2>/dev/null || true; fi; rm -rf "$task_tmp"' EXIT
 python3 - "$task_tmp/test.c" <<'PY'
 import pathlib, sys
 source = pathlib.Path('src/dts/dts_engine.c').read_text()
 start = source.index('    if (', source.index('e->info.dovi_bl_compatibility_id=conf->dv_bl_signal_compatibility_id;'))
 end = source.index('    /* mp4toannexb', start)
-assert 'attempts=e->allow_p7?RANGE_ATTEMPTS:1' in source
-assert 'if(!e->allow_p7) return fail(e,DTS_ENGINE_TIMESTAMP_DISCONTINUITY,0);' in source
-assert source.count('if(e->allow_p7)\n') == 3
+# Only the setter and P7 metadata decision may reference the engine opt-in.
+assert source.count('e->allow_p7') == 2
 assert 'dts_playback_next_p7(ajustes_dv7());' in pathlib.Path('src/video.c').read_text()
 playback = pathlib.Path('src/dts/dts_playback.c').read_text()
 assert 'dts_engine_allow_p7(p->engine, p->allow_p7);' in playback
-assert 'target,p->allow_p7 && seek_reload && !stall_seek)' in playback
+assert playback.count('p->allow_p7') == 2
 # Execute the production metadata decision with P7 + a DTS fallback session.
 pathlib.Path(sys.argv[1]).write_text(r'''
 #include <assert.h>
@@ -54,9 +54,46 @@ cc -std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror -Isrc \
 cc -std=c11 -D_GNU_SOURCE -DNV_DTS_WEBOS_RECOVERY -Wall -Wextra -Werror -Isrc \
   -Dclock_gettime=__wrap_clock_gettime "$task_tmp/fixture.o" \
   src/dts/dts_playback.c src/js.c src/linguas.c -pthread -lm -o "$task_tmp/controller"
-DV7_OFF=1 "$task_tmp/controller" timestamp
+DV7_OFF=1 bash tests/dts_playback.sh
 "$task_tmp/controller" timestamp
 cc -std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror -Isrc \
   -Dclock_gettime=__wrap_clock_gettime "$task_tmp/fixture.o" \
   src/dts/dts_playback.c src/js.c src/linguas.c -pthread -lm -o "$task_tmp/controller"
 RECOVERY_OFF=1 "$task_tmp/controller" timestamp
+# Exercise the real resampler and HTTP workers with allow_p7=0.
+flags=(-std=gnu11 -O1 -g -Wall -Wextra -Werror -Wno-misleading-indentation -Wno-implicit-const-int-float-conversion -ffunction-sections -fdata-sections)
+link=(-Wl,--gc-sections)
+if [[ $(uname -s) == Darwin ]]; then link=(-Wl,-dead_strip); fi
+cc "${flags[@]}" $(pkg-config --cflags libavformat libavcodec libswresample libavutil) \
+  tests/dts_timestamp_engine.c "${link[@]}" \
+  $(pkg-config --libs libavformat libavcodec libswresample libavutil) -lm -lpthread -o "$task_tmp/timestamp"
+"$task_tmp/timestamp"
+cc "${flags[@]}" $(pkg-config --cflags libavformat libavcodec libswresample libavutil) \
+  tests/dts_range_retry.c src/rede.c src/redeurl.c "${link[@]}" \
+  $(pkg-config --libs libavformat libavcodec libswresample libavutil) -lm -lpthread -ldl -o "$task_tmp/range"
+python3 - "$task_tmp" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+size = 40 * 1024 * 1024
+(p/'range.bin').write_bytes((bytes(range(251)) * ((size+250)//251))[:size])
+(p/'dv.bin').symlink_to(p/'range.bin')
+PY
+python3 tests/dts_engine_server.py "$task_tmp" "$task_tmp/port" "$task_tmp/requests" &
+server=$!
+for i in $(seq 50); do [[ -s $task_tmp/port ]] && break; sleep .1; done
+port=$(<"$task_tmp/port")
+for mode in once twice exhaust live-hang live-bodyhang; do
+  "$task_tmp/range" "http://127.0.0.1:$port/retry-$mode/range.bin"
+done
+"$task_tmp/range" "http://127.0.0.1:$port/retry-once/dv.bin"
+python3 - "$task_tmp/requests" <<'PY'
+from collections import Counter
+import json, sys
+counts = Counter((r['path'], r['lo']) for r in map(json.loads, open(sys.argv[1])))
+for mode, want in [('once', 2), ('twice', 3), ('exhaust', 3), ('live-hang', 2), ('live-bodyhang', 2)]:
+    at = 0 if mode == 'exhaust' else 4*1024*1024
+    assert counts[(f'/retry-{mode}/range.bin', at)] == want, (mode, counts)
+assert counts[('/retry-once/dv.bin', 4*1024*1024-1)] == 2
+print('PASS: P7 off retains range retries and stalled-download recovery for SDR and DV')
+PY
