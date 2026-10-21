@@ -11,7 +11,7 @@ None recorded yet.
 
 ## New
 
-- **Optional webOS Dolby Vision conversion**: Enable independent opt-in Dolby Vision P7 to P8.1 conversion and bounded DTS recovery, with recovery respecting the DV7 opt-in choice. Platforms: webOS. Refs `a790e161c`, `9c5062588`, `1998c125f`, `845fe8cb1`, `087d3a015`.
+- **Optional webOS Dolby Vision conversion**: Enable optional Dolby Vision P7 to P8.1 conversion while bounded DTS recovery remains independent of that conversion choice. Platforms: webOS. Refs `a790e161c`, `9c5062588`, `1998c125f`, `845fe8cb1`, `087d3a015`, `d5e0185cc`.
 
 - **Automatic performance defaults**: Start performance settings in Automatic mode and migrate saved choices to the updated selection model. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `fcdae1879`.
 
@@ -20,6 +20,10 @@ None recorded yet.
 - **Android cache controls**: Clear regenerable cache while preserving durable user data, APK staging and viable torrent streaming windows; superseded update APKs are removed. Platforms: Android. Refs owner request; d8699b55c, e731a7847, d35f60069, 70b1f55e3; merges a1169f5ad, fcc581387.
 
 ## Fixes
+
+- **Stage backgrounds appear immediately**: Resolve stage backdrops from Home without first opening the title details. Platforms: webOS, Android, Samsung .tpk, WASM. Refs owner request, `4befffb89`, merge `5eb14e909`.
+
+- **Plugin-only source errors**: Recognize enabled local scrapers when explaining unavailable sources, so plugin-only users do not receive a false missing-add-on message. Platforms: webOS, Android, Samsung .tpk, WASM with local plugins. Refs owner report, `83fe3c59a`, merge `7a13a6bb3`; `agente/205-205-semaddon`.
 
 - **More usable playback memory**: Lower the buffer safety floor and show the RAM available for playback. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `84d89ab0d`.
 
@@ -96,14 +100,16 @@ Low-memory playback and bounded torrent-startup reads are listed under Fixes.
 - **C9 artwork comparison**: Verify native C9 artwork against the earlier rendering baseline while preserving both capture modes. Platforms: webOS; host verification. Refs `bdc7d7c8c`, merge `d072c891b`.
 
 - **Browser build link fix**: Restore the browser build's missing network-function stub so Samsung browser packages can link successfully. Platforms: Samsung browser/WASM. Refs `b84091f4c`.
-- **Issue tracking**: Keep release and issue tracking current. Additional refs: `612a2ecd2`. Additional refs: `c9e4f8038`. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `609ed3cc3`, `ad6ec6fb9`, `89b48afe7`, `12bedced8`, `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`.
+- **Issue tracking**: Keep release and issue tracking current. Additional refs: `80a3b437b`. Additional refs: `612a2ecd2`. Additional refs: `c9e4f8038`. Platforms: webOS, Android, Samsung .tpk, WASM. Refs `609ed3cc3`, `ad6ec6fb9`, `89b48afe7`, `12bedced8`, `d2a392e14`, `dacee39da`, `9460c0dd8`, `e901b95e7`, `f1743efe5`, `009bba7ae`.
 
 ## Pending (not integrated yet)
+
+- **720p interface upscaling**: Upscaling work for a 720p interface on 4K panels awaits fixes requested by review. Platforms: Android; confirm other targets in review. Refs owner request, `agente/205-205-amp720`, `8c083d0`; latest review BLOQUEIA.
+- **Automatic graphics effects**: Automatic effects and frost adjustments await fixes requested by review. Platforms: confirm from review. Refs owner request, `agente/205-205-escada`; latest review BLOQUEIA.
 
 - **Add-on subtitle synchronization**: Subtitle add-on synchronization work awaits review before its final user-facing behavior can be confirmed. Platforms: Confirm from review. Refs agente/205-205-legaddonsync.
 Earlier report named `agente/205-i429hbs` (#429), `agente/205-p2pusb` (#334, #505), `agente/205-i513autoplay` (#513), `agente/205-barra27`, PRs #489/#490/#491/#493/#498, `agente/205-dicatoque` (#472), m3umisto, palco2, logos, fileiraui, diretorpol and triagem-velhas as pending. Their branches are absent from the current open snapshot; retain this historical record without presenting them as pending 2.0.8 features or duplicating already released work.
 
-- **Plugin-only source errors**: Recognize enabled local scrapers when explaining unavailable sources, so plugin-only users do not receive a false missing-add-on message. Platforms: webOS, Android, Samsung .tpk, WASM with local plugins. Refs owner report, `agente/205-205-semaddon`. Finished job has no mapped review log; review and integration pending.
 - **Torrent engine follow-up**: Further torrent-engine work remains outside integration and needs review of the newer fix log before its user-visible scope can be confirmed. Platforms: confirm from review before release. Refs `agente/p2p`; current `open.txt` and review snapshot.
 
 Other open branches are historical work or deferred plans; see the tracking map and external `estado.md`. No new feature or external contributor credit is inferred from branch names.
