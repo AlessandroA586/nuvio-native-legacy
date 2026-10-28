@@ -1,0 +1,86 @@
+name: Build Android TV Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Version tag/name'
+        required: true
+        type: string
+        default: '2.0.8-cast.1'
+
+permissions:
+  contents: write
+
+jobs:
+  build_android_tv:
+    name: Build & Sign Android TV APK
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_VERSION: ${{ inputs.version_name }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK & NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK and Build Tools
+        run: |
+          yes | sdkmanager --install "ndk;27.2.12479018" "cmake;3.22.1" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build Native Dependencies & Assets
+        run: |
+          export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/27.2.12479018"
+          bash tools/android/deps.sh arm64-v8a armeabi-v7a || true
+          mkdir -p build/android
+          touch build/android/nuvio-env.cmake
+          NUVIO_ARTE_ESTAGIO="build/android/assets/art" bash tools/tizen-art.sh || true
+          mkdir -p build/android/assets/fonts build/android/assets/licencas
+          cp deploy/app/fonts/* build/android/assets/fonts/ || true
+          cp deploy/app/licencas/* build/android/assets/licencas/ || true
+
+      - name: Fetch SDL Sources for Java Classes
+        run: |
+          CACHE_SRC="${HOME}/.cache/nuvio-android/src"
+          mkdir -p "${CACHE_SRC}"
+          curl -fsSL https://github.com/libsdl-org/SDL/releases/download/release-2.30.9/SDL2-2.30.9.tar.gz | tar xz -C "${CACHE_SRC}" || true
+          curl -fsSL https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2.tar.gz | tar xz -C "${CACHE_SRC}" || true
+          curl -fsSL https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-2.22.0.tar.gz | tar xz -C "${CACHE_SRC}" || true
+
+      - name: Build Android TV Release APK
+        run: |
+          chmod +x android/gradlew
+          android/gradlew -p android assembleRelease \
+            -Pnuvio.app.versionName="${RELEASE_VERSION}" \
+            -Pnuvio.sdlSrc="${HOME}/.cache/nuvio-android/src" \
+            -Pnuvio.estagio="${PWD}/build/android" \
+            --stacktrace
+
+      - name: Collect Release APKs
+        run: |
+          mkdir -p release-apks
+          find android/app/build/outputs/apk/release -name "*.apk" -exec cp {} release-apks/ \;
+          ls -la release-apks/
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${RELEASE_VERSION}" release-apks/*.apk \
+            --title "Nuvio Legacy TV ${RELEASE_VERSION}" \
+            --notes "Nuvio Legacy para Android TV con receptor Chromecast (NuvioCast)" \
+            --target "${{ github.ref_name }}"

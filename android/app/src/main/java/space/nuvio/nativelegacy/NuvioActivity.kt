@@ -237,6 +237,7 @@ class NuvioActivity : SDLActivity() {
         mSurface.holder.setFormat(PixelFormat.TRANSLUCENT)
         NvPlayer.iniciar(this, camada)
         NvPlayer.interfaceModo(interfaceMobile)
+        space.nuvio.nativelegacy.cast.CastReceiverManager.start(this)
     }
 
     // SDL and video fill the window, including the camera cutout edges. Keeping
@@ -756,6 +757,7 @@ class NuvioActivity : SDLActivity() {
     }
 
     override fun onDestroy() {
+        space.nuvio.nativelegacy.cast.CastReceiverManager.stop()
         registroDownload.fechar()
         fontImport.fechar()
         vigia?.parar()

@@ -17,9 +17,13 @@ require(ffmpegAar == null || ffmpegAar.isFile) {
 }
 
 // Versao: fonte unica e deploy/app/appinfo.json (mesma do env.sh).
-val versao = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
+val versaoBase = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
     .find(File(raiz, "deploy/app/appinfo.json").readText())!!.groupValues[1]
-val (vx, vy, vz) = versao.split(".").map { it.toInt() }
+val customVersion = (findProperty("nuvio.app.versionName") as String?)
+    ?: System.getenv("RELEASE_VERSION")
+val versao = customVersion ?: "$versaoBase-cast.1"
+val cleanVer = versaoBase.split("-")[0]
+val (vx, vy, vz) = cleanVer.split(".").map { it.toIntOrNull() ?: 0 }
 
 android {
     namespace = "space.nuvio.nativelegacy"
@@ -85,7 +89,11 @@ android {
         }
         release {
             isMinifyEnabled = false
-            if (ks != null) signingConfig = signingConfigs.getByName("release")
+            if (ks != null) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
+            }
         }
     }
 
