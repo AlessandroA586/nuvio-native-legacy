@@ -7,7 +7,7 @@ on:
         description: 'Version tag/name'
         required: true
         type: string
-        default: '2.0.8-cast.1'
+        default: '2.0.8-cast.2'
 
 permissions:
   contents: write
@@ -65,9 +65,10 @@ jobs:
           done
 
           cat << 'EOF' > build/android/nuvio-env.cmake
-          set(NV_SUPABASE_URL "https://api-two.nuvioapp.space")
+          set(NV_SUPABASE_URL "https://api.nuvio.tv")
           set(NV_SUPABASE_ANON_KEY "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxNTIxMzQ2LCJleHAiOjE5MzkyMDEzNDZ9.tmQaj682pwzehpqlgCDMnySOqiUvpgRbrE43T4VJpDI")
-          set(NV_TV_LOGIN_BASE "https://api.nuvio.tv/tv")
+          set(NV_TV_LOGIN_BASE "https://nuvio.tv/tv-login")
+          set(NV_REC_URL "https://nuvio-recomendacoes.henriquef29.workers.dev")
           set(NV_TMDB_API_KEY "b1f56d4bd301ce3c51e4a96a49c834a6")
           set(NV_VERSAO "${RELEASE_VERSION}")
           EOF

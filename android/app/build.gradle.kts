@@ -21,7 +21,7 @@ val versaoBase = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
     .find(File(raiz, "deploy/app/appinfo.json").readText())!!.groupValues[1]
 val customVersion = (findProperty("nuvio.app.versionName") as String?)
     ?: System.getenv("RELEASE_VERSION")
-val versao = customVersion ?: "$versaoBase-cast.1"
+val versao = customVersion ?: "$versaoBase-cast.2"
 val cleanVer = versaoBase.split("-")[0]
 val (vx, vy, vz) = cleanVer.split(".").map { it.toIntOrNull() ?: 0 }
 
