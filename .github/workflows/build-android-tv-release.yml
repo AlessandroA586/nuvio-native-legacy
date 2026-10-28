@@ -32,12 +32,11 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Setup Android SDK & NDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install NDK, CMake, and Build Tools
+      - name: Setup Android NDK, CMake, and Build Tools
         run: |
-          yes | sdkmanager --install "ndk;27.2.12479018" "cmake;3.22.1" "platforms;android-35" "build-tools;35.0.0"
+          export PATH="${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${PATH}"
+          yes | sdkmanager --licenses || true
+          sdkmanager --install "ndk;27.2.12479018" "cmake;3.22.1" "platforms;android-35" "build-tools;35.0.0"
           sudo apt-get update && sudo apt-get install -y ninja-build
 
       - name: Setup Gradle
