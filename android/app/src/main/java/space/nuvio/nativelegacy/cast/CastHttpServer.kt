@@ -8,6 +8,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import org.json.JSONObject
+import androidx.media3.exoplayer.ExoPlayer
 import space.nuvio.nativelegacy.NuvioActivity
 import space.nuvio.nativelegacy.NvPlayer
 import java.io.BufferedReader
@@ -127,6 +128,16 @@ class CastHttpServer(
         }
     }
 
+    private fun getExoPlayer(): ExoPlayer? {
+        return try {
+            val field = NvPlayer::class.java.getDeclaredField("player")
+            field.isAccessible = true
+            field.get(null) as? ExoPlayer
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private fun handleStatus(output: OutputStream) {
         val deviceId = try {
             Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: Build.SERIAL
@@ -135,7 +146,7 @@ class CastHttpServer(
         }
         val deviceName = "Nuvio TV (${Build.MODEL})"
 
-        val p = NvPlayer.player
+        val p = getExoPlayer()
         val isPlaying = p?.isPlaying ?: false
         val playbackState = p?.playbackState ?: 1 // 1: IDLE, 2: BUFFERING, 3: READY, 4: ENDED
         val state = when {
