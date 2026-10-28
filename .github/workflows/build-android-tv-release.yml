@@ -35,31 +35,48 @@ jobs:
       - name: Setup Android SDK & NDK
         uses: android-actions/setup-android@v3
 
-      - name: Install NDK and Build Tools
+      - name: Install NDK, CMake, and Build Tools
         run: |
           yes | sdkmanager --install "ndk;27.2.12479018" "cmake;3.22.1" "platforms;android-35" "build-tools;35.0.0"
+          sudo apt-get update && sudo apt-get install -y ninja-build
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Build Native Dependencies & Assets
+      - name: Fetch SDL and WebP Sources
+        run: |
+          CACHE_SRC="${HOME}/.cache/nuvio-android/src"
+          mkdir -p "${CACHE_SRC}"
+          curl -fsSL https://github.com/libsdl-org/SDL/releases/download/release-2.30.9/SDL2-2.30.9.tar.gz | tar xz -C "${CACHE_SRC}"
+          curl -fsSL https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2.tar.gz | tar xz -C "${CACHE_SRC}"
+          curl -fsSL https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-2.22.0.tar.gz | tar xz -C "${CACHE_SRC}"
+          curl -fsSL https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.4.0.tar.gz | tar xz -C "${CACHE_SRC}"
+
+      - name: Build Native Dependencies & Prepare Assets
         run: |
           export ANDROID_NDK_HOME="${ANDROID_HOME}/ndk/27.2.12479018"
-          bash tools/android/deps.sh arm64-v8a armeabi-v7a || true
-          mkdir -p build/android
-          touch build/android/nuvio-env.cmake
+          bash tools/android/deps.sh arm64-v8a armeabi-v7a || echo "deps.sh finished with notice"
+          
+          mkdir -p build/android/jnilibs
+          for abi in arm64-v8a armeabi-v7a; do
+            if [ -d "${HOME}/.cache/nuvio-android/prefix/${abi}/lib" ]; then
+              mkdir -p "build/android/jnilibs/${abi}"
+              cp ${HOME}/.cache/nuvio-android/prefix/${abi}/lib/*.so "build/android/jnilibs/${abi}/" 2>/dev/null || true
+            fi
+          done
+
+          cat << 'EOF' > build/android/nuvio-env.cmake
+          set(NV_SUPABASE_URL "https://api-two.nuvioapp.space")
+          set(NV_SUPABASE_ANON_KEY "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxNTIxMzQ2LCJleHAiOjE5MzkyMDEzNDZ9.tmQaj682pwzehpqlgCDMnySOqiUvpgRbrE43T4VJpDI")
+          set(NV_TV_LOGIN_BASE "https://api.nuvio.tv/tv")
+          set(NV_TMDB_API_KEY "b1f56d4bd301ce3c51e4a96a49c834a6")
+          set(NV_VERSAO "${RELEASE_VERSION}")
+          EOF
+
           NUVIO_ARTE_ESTAGIO="build/android/assets/art" bash tools/tizen-art.sh || true
           mkdir -p build/android/assets/fonts build/android/assets/licencas
           cp deploy/app/fonts/* build/android/assets/fonts/ || true
           cp deploy/app/licencas/* build/android/assets/licencas/ || true
-
-      - name: Fetch SDL Sources for Java Classes
-        run: |
-          CACHE_SRC="${HOME}/.cache/nuvio-android/src"
-          mkdir -p "${CACHE_SRC}"
-          curl -fsSL https://github.com/libsdl-org/SDL/releases/download/release-2.30.9/SDL2-2.30.9.tar.gz | tar xz -C "${CACHE_SRC}" || true
-          curl -fsSL https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-2.8.2.tar.gz | tar xz -C "${CACHE_SRC}" || true
-          curl -fsSL https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.22.0/SDL2_ttf-2.22.0.tar.gz | tar xz -C "${CACHE_SRC}" || true
 
       - name: Build Android TV Release APK
         run: |
