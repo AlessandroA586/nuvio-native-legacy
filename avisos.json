@@ -1,0 +1,33 @@
+[
+  {
+    "id": "2026-10-01-teste-android",
+    "desde": "2026-10-01",
+    "ate": "2026-10-01",
+    "plataforma": "android",
+    "titulo": "Teste de aviso",
+    "titulo_en": "Notice test",
+    "texto": "Este é um aviso de teste do Nuvio. Pode ignorar.",
+    "texto_en": "This is a test notice from Nuvio. You can ignore it."
+  },
+  {
+    "id": "2026-09-30-samsung-nativo-154",
+    "desde": "2026-09-30",
+    "ate": "2026-11-30",
+    "plataforma": "tizen",
+    "titulo": "Native Nuvio for Samsung is here",
+    "titulo_en": "Native Nuvio for Samsung is here",
+    "texto": "Nuvio 1.5.4 brings the native Samsung app to every TV from 2018 on (Tizen 4.0 to 9): faster, no browser underneath. Get it on GitHub › Releases › v1.5.4 and pick the .tpk for your TV (the table is in the notes). Install it once with Apps2Samsung — from then on the native app updates itself. Already on a native preview? Install 1.5.4 over it.",
+    "texto_en": "Nuvio 1.5.4 brings the native Samsung app to every TV from 2018 on (Tizen 4.0 to 9): faster, no browser underneath. Get it on GitHub › Releases › v1.5.4 and pick the .tpk for your TV (the table is in the notes). Install it once with Apps2Samsung — from then on the native app updates itself. Already on a native preview? Install 1.5.4 over it."
+  },
+  {
+    "id": "2026-09-20-samsung-rc1",
+    "desde": "2026-09-20",
+    "ate": "2026-10-05",
+    "plataforma": "tizen",
+    "ate_versao": "1.3.3",
+    "titulo": "Samsung travando: versão de teste pronta",
+    "titulo_en": "Samsung stutter: test build ready",
+    "texto": "A 1.3.2 e a 1.3.3 engasgam e travam em várias Samsung. A 1.3.4-rc1 corrige o que já foi encontrado: instale pelo GitHub (Releases › v1.3.4-rc1 › NuvioTV-1.3.4-rc1-tizen.wgt). Se o app fechar sozinho, use “Enviar registro” — agora o log inteiro vai junto.",
+    "texto_en": "1.3.2 and 1.3.3 stutter and freeze on several Samsung TVs. 1.3.4-rc1 fixes what has been found so far: install it from GitHub (Releases › v1.3.4-rc1 › NuvioTV-1.3.4-rc1-tizen.wgt). If the app closes on its own, use “Send log” — the whole session log goes with it now."
+  }
+]
